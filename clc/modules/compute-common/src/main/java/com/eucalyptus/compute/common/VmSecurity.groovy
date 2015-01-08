@@ -24,6 +24,7 @@ package com.eucalyptus.compute.common;
 import com.eucalyptus.auth.policy.PolicyResourceType
 import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
+import com.google.common.base.Function
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
@@ -62,12 +63,21 @@ public class AuthorizeSecurityGroupIngressType extends VmSecurityMessage {
   ArrayList<IpPermissionType> ipPermissions = new ArrayList<IpPermissionType>();
 }
 /** *******************************************************************************/
+class AuthorizeSecurityGroupEgressType extends VmSecurityMessage {
+  String groupId;
+  @HttpEmbedded( multiple=true )
+  ArrayList<IpPermissionType> ipPermissions = new ArrayList<IpPermissionType>();
+}
+class AuthorizeSecurityGroupEgressResponseType extends VmSecurityMessage {
+}
+/** *******************************************************************************/
 public class CreateSecurityGroupResponseType extends VmSecurityMessage {
   String groupId;
 }
 public class CreateSecurityGroupType extends VmSecurityMessage {
   String groupName;
   String groupDescription;
+  String vpcId
 }
 /** *******************************************************************************/
 public class DeleteSecurityGroupResponseType extends VmSecurityMessage {
@@ -96,6 +106,14 @@ public class RevokeSecurityGroupIngressType extends VmSecurityMessage {
   ArrayList<IpPermissionType> ipPermissions = new ArrayList<IpPermissionType>();
 }
 /** *******************************************************************************/
+class RevokeSecurityGroupEgressType extends VmSecurityMessage {
+  String groupId;
+  @HttpEmbedded( multiple=true )
+  ArrayList<IpPermissionType> ipPermissions = new ArrayList<IpPermissionType>();
+}
+class RevokeSecurityGroupEgressResponseType extends VmSecurityMessage {
+}
+/** *******************************************************************************/
 public class DescribeSecurityGroupsResponseType extends VmSecurityMessage {
   ArrayList<SecurityGroupItemType> securityGroupInfo = new ArrayList<SecurityGroupItemType>();
 }
@@ -113,25 +131,36 @@ public class SecurityGroupItemType extends EucalyptusData {
   String groupName;
   String groupDescription;
   String groupId;
+  String vpcId;
   ArrayList<IpPermissionType> ipPermissions = new ArrayList<IpPermissionType>();
+  ArrayList<IpPermissionType> ipPermissionsEgress = new ArrayList<IpPermissionType>();
   ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
   
   public SecurityGroupItemType( ) {
     super( );
   }
-  public SecurityGroupItemType( String accountId, String groupId, String groupName, String groupDescription ) {
+  public SecurityGroupItemType( String accountId, String groupId, String groupName, String groupDescription, String vpcId ) {
     super( );
     this.accountId = accountId;
     this.groupId = groupId;
     this.groupName = groupName;
     this.groupDescription = groupDescription;
+    this.vpcId = vpcId
+  }
+
+  static Function<SecurityGroupItemType,String> groupId( ) {
+    { SecurityGroupItemType item -> item.groupId } as Function<SecurityGroupItemType,String>
+  }
+
+  static Function<SecurityGroupItemType,String> groupName( ) {
+    { SecurityGroupItemType item -> item.groupName } as Function<SecurityGroupItemType,String>
   }
 }
 
 public class IpPermissionType extends EucalyptusData {
   String ipProtocol;
-  int fromPort;
-  int toPort;
+  Integer fromPort;
+  Integer toPort;
   @HttpEmbedded( multiple=true )
   ArrayList<UserIdGroupPairType> groups = new ArrayList<UserIdGroupPairType>();
   @HttpEmbedded( multiple=true )
@@ -140,7 +169,7 @@ public class IpPermissionType extends EucalyptusData {
   def IpPermissionType(){
   }
   
-  def IpPermissionType(String ipProtocol, int fromPort, int toPort ) {
+  def IpPermissionType(String ipProtocol, Integer fromPort, Integer toPort ) {
     this.ipProtocol = ipProtocol;
     this.fromPort = fromPort;
     this.toPort = toPort;

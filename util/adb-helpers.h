@@ -854,7 +854,7 @@ static inline void copy_instance_to_adb(adb_instanceType_t * instance, const axu
         volume = adb_volumeType_create(env);
         adb_volumeType_set_volumeId(volume, env, outInst->volumes[i].volumeId);
         adb_volumeType_set_remoteDev(volume, env, outInst->volumes[i].attachmentToken);
-        adb_volumeType_set_localDev(volume, env, outInst->volumes[i].localDev);
+        adb_volumeType_set_localDev(volume, env, outInst->volumes[i].devName);
         adb_volumeType_set_state(volume, env, outInst->volumes[i].stateName);
         adb_instanceType_add_volumes(instance, env, volume);
     }
@@ -922,6 +922,7 @@ static inline ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, 
 
     euca_strncpy(outInst->guestStateName, (char *)adb_instanceType_get_guestStateName(instance, env), CHAR_BUFFER_SIZE);
     euca_strncpy(outInst->bundleTaskStateName, (char *)adb_instanceType_get_bundleTaskStateName(instance, env), CHAR_BUFFER_SIZE);
+    outInst->bundleTaskProgress = adb_instanceType_get_bundleTaskProgress(instance, env);
     outInst->blkbytes = adb_instanceType_get_blkbytes(instance, env);
     outInst->netbytes = adb_instanceType_get_netbytes(instance, env);
     outInst->migration_state = migration_state_from_string(adb_instanceType_get_migrationStateName(instance, env));
@@ -938,7 +939,7 @@ static inline ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, 
         adb_volumeType_t *volume = adb_instanceType_get_volumes_at(instance, env, i);
         euca_strncpy(outInst->volumes[i].volumeId, adb_volumeType_get_volumeId(volume, env), CHAR_BUFFER_SIZE);
         euca_strncpy(outInst->volumes[i].attachmentToken, adb_volumeType_get_remoteDev(volume, env), CHAR_BUFFER_SIZE);
-        euca_strncpy(outInst->volumes[i].localDev, adb_volumeType_get_localDev(volume, env), CHAR_BUFFER_SIZE);
+        euca_strncpy(outInst->volumes[i].devName, adb_volumeType_get_localDev(volume, env), CHAR_BUFFER_SIZE);
         euca_strncpy(outInst->volumes[i].stateName, adb_volumeType_get_state(volume, env), CHAR_BUFFER_SIZE);
     }
 

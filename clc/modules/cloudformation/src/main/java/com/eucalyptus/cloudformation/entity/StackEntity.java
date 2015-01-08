@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,37 +19,24 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.entity;
 
-import com.eucalyptus.cloudformation.Tag;
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.cloudformation.CloudFormationMetadata;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import com.eucalyptus.util.OwnerFullName;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
-import javax.persistence.CollectionTable;
 import javax.persistence.Column;
-import javax.persistence.ElementCollection;
-import javax.persistence.Embeddable;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
-import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Created by ethomas on 12/18/13.
@@ -58,7 +45,7 @@ import java.util.Map;
 @PersistenceContext( name = "eucalyptus_cloudformation" )
 @Table( name = "stacks" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class StackEntity extends AbstractPersistent {
+public class StackEntity extends AbstractPersistent implements CloudFormationMetadata.StackMetadata {
 
   @Temporal(TemporalType.TIMESTAMP)
   @Column(name = "create_operation_timestamp")
@@ -125,10 +112,12 @@ public class StackEntity extends AbstractPersistent {
   @Type(type="org.hibernate.type.StringClobType")
   String parametersJson;
 
-  @Column(name = "stack_id", nullable = false )
+  @Column(name = "stack_id", nullable = false, length = 400 )
   String stackId;
 
-  @Column( name = "stack_policy", length =  16384)
+  @Column( name = "stack_policy")
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   String stackPolicy;
 
   @Column(name = "stack_name", nullable = false )
@@ -148,7 +137,9 @@ public class StackEntity extends AbstractPersistent {
   @Type(type="org.hibernate.type.StringClobType")
   String tagsJson;
 
-  @Column( name = "template_body", length =  307200)
+  @Column( name = "template_body" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   String templateBody;
 
   @Column(name = "template_format_version", nullable = false )
@@ -159,6 +150,23 @@ public class StackEntity extends AbstractPersistent {
 
   @Column(name="is_record_deleted", nullable = false)
   Boolean recordDeleted;
+
+  /**
+   * Display name is the part of the ARN (stackId) following the type.
+   *
+   * $StackName/$NaturalId
+   *
+   * @return The name.
+   */
+  @Override
+  public String getDisplayName() {
+    return String.format( "%s/%s", getStackName( ), getNaturalId( ) );
+  }
+
+  @Override
+  public OwnerFullName getOwner() {
+    return AccountFullName.getInstance(accountId);
+  }
 
   public static class Output {
     String description;
@@ -428,6 +436,11 @@ public class StackEntity extends AbstractPersistent {
     this.stackId = stackId;
   }
 
+  @Override
+  public void setNaturalId( final String naturalId ) {
+    super.setNaturalId( naturalId );
+  }
+
   public String getStackName() {
     return stackName;
   }
@@ -490,5 +503,12 @@ public class StackEntity extends AbstractPersistent {
 
   public void setRecordDeleted(Boolean recordDeleted) {
     this.recordDeleted = recordDeleted;
+  }
+
+  public static StackEntity exampleUndeletedWithAccount(String accountId) {
+    StackEntity stackEntity = new StackEntity();
+    stackEntity.setAccountId(accountId);
+    stackEntity.setRecordDeleted(false);
+    return stackEntity;
   }
 }

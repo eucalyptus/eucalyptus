@@ -799,6 +799,7 @@ int total_instances(bunchOfInstances ** ppHead)
 //! @param[in] numberOfCoresMax the maximum number of cores available on this node
 //! @param[in] numberOfCoresAvailable the current number of cores available on this node
 //! @param[in] sPublicSubnets the available public subnet for this node
+//! @param[in] sHypervisor node's hypervisor
 //!
 //! @return a pointer to the newly allocated resource structure or NULL if any error occured.
 //!
@@ -811,7 +812,7 @@ int total_instances(bunchOfInstances ** ppHead)
 //! @note Caller is responsible to free the allocated memory using the free_resource() function call.
 //!
 ncResource *allocate_resource(const char *sNodeStatus, boolean migrationCapable, const char *sIQN, int memorySizeMax, int memorySizeAvailable, int diskSizeMax,
-                              int diskSizeAvailable, int numberOfCoresMax, int numberOfCoresAvailable, const char *sPublicSubnets)
+                              int diskSizeAvailable, int numberOfCoresMax, int numberOfCoresAvailable, const char *sPublicSubnets, const char *sHypervisor)
 {
     ncResource *pResource = NULL;
 
@@ -830,10 +831,10 @@ ncResource *allocate_resource(const char *sNodeStatus, boolean migrationCapable,
     if (sIQN)
         euca_strncpy(pResource->iqn, sIQN, CHAR_BUFFER_SIZE);
     pResource->migrationCapable = migrationCapable;
-
     if (sPublicSubnets)
         euca_strncpy(pResource->publicSubnets, sPublicSubnets, CHAR_BUFFER_SIZE);
-
+    if (sHypervisor)
+        euca_strncpy(pResource->hypervisor, sHypervisor, CHAR_BUFFER_SIZE);
     pResource->memorySizeMax = memorySizeMax;
     pResource->memorySizeAvailable = memorySizeAvailable;
     pResource->diskSizeMax = diskSizeMax;
@@ -958,8 +959,7 @@ boolean is_volume_used(const ncVolume * pVolume)
 //!       \li If the volume is found or if we have an empty slot, the volume information will be saved
 //!       \li If the volume is not found and if we do not have empty slot, NULL is returned and nothing is saved
 //!
-ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sVolumeAttachmentToken, const char *sConnectionString, const char *sLocalDev,
-                      const char *sLocalDevReal, const char *sStateName)
+ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sVolumeAttachmentToken, const char *sConnectionString, const char *sDevName, const char *sStateName, const char *sXml)
 {
     ncVolume *pVol = NULL;
 
@@ -980,14 +980,14 @@ ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char 
         if (sConnectionString)
             euca_strncpy(pVol->connectionString, sConnectionString, VERY_BIG_CHAR_BUFFER_SIZE);
 
-        if (sLocalDev)
-            euca_strncpy(pVol->localDev, sLocalDev, CHAR_BUFFER_SIZE);
-
-        if (sLocalDevReal)
-            euca_strncpy(pVol->localDevReal, sLocalDevReal, CHAR_BUFFER_SIZE);
+        if (sDevName)
+            euca_strncpy(pVol->devName, sDevName, CHAR_BUFFER_SIZE);
 
         if (sStateName)
             euca_strncpy(pVol->stateName, sStateName, CHAR_BUFFER_SIZE);
+
+        if (sXml)
+            euca_strncpy(pVol->volLibvirtXml, sXml, VERY_BIG_CHAR_BUFFER_SIZE);
     }
 
     return (pVol);

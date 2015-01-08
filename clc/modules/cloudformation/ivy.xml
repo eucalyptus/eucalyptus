@@ -28,6 +28,8 @@
         <dependency name="eucalyptus-cloudwatch-common" rev="latest.integration"/>
         <dependency name="eucalyptus-autoscaling-common" rev="latest.integration"/>
         <dependency name="eucalyptus-loadbalancing-common" rev="latest.integration"/>
+        <dependency name="eucalyptus-object-storage-common" rev="latest.integration"/>
+        <dependency name="eucalyptus-simpleworkflow-common" rev="latest.integration"/>
     </dependencies>
 </ivy-module>
 

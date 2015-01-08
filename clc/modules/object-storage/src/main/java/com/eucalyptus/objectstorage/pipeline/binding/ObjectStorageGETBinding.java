@@ -92,6 +92,7 @@ public class ObjectStorageGETBinding extends ObjectStorageRESTBinding {
         newMap.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.versions.toString(), "ListVersions");
         newMap.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.versioning.toString(), "GetBucketVersioningStatus");
         newMap.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "GetBucketLifecycle");
+        newMap.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "GetBucketTagging");
 
         // Multipart uploads
         newMap.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.uploads.toString(), "ListMultipartUploads");
@@ -123,7 +124,7 @@ public class ObjectStorageGETBinding extends ObjectStorageRESTBinding {
         opsMap.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.notification.toString(), "GET Bucket notification");
 
         // Tagging
-        opsMap.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "GET Bucket tagging");
+//        opsMap.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "GET Bucket tagging");
 
         // Request Payments // TODO HACK! binding code converts parameters to lower case. Fix that issue!
         opsMap.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.requestPayment.toString().toLowerCase(), "GET Bucket requestPayment");

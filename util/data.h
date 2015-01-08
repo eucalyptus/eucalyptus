@@ -294,6 +294,7 @@ typedef struct virtualBootRecord_t {
     char backingPath[CHAR_BUFFER_SIZE]; //!< path to file or block device that backs the resource
     char preparedResourceLocation[VERY_BIG_CHAR_BUFFER_SIZE];   //!< e.g., URL + resourceLocation for Walrus downloads, sc url for ebs volumes prior to SC call, then connection string for ebs volumes returned from SC
     //! @}
+    char guestDeviceSerialId[128];     //!< Serial ID to assign to the device
 } virtualBootRecord;
 
 //! Structure defining a virtual machine
@@ -327,10 +328,10 @@ typedef struct netConfig_t {
 typedef struct ncVolume_t {
     char volumeId[CHAR_BUFFER_SIZE];   //!< Remote volume identifier string
     char attachmentToken[CHAR_BUFFER_SIZE]; //!< Remote device name string, the token reference
-    char localDev[CHAR_BUFFER_SIZE];   //!< Local device name string
-    char localDevReal[CHAR_BUFFER_SIZE];    //!< Local device name (real) string
+    char devName[CHAR_BUFFER_SIZE];   //!< Canonical device name (without '/dev/')
     char stateName[CHAR_BUFFER_SIZE];  //!< Volume state name string
     char connectionString[VERY_BIG_CHAR_BUFFER_SIZE];   //!< Volume Token for attachment/detachment
+    char volLibvirtXml[VERY_BIG_CHAR_BUFFER_SIZE]; //!< XML for describing the disk to libvirt
 } ncVolume;
 
 //TODO: zhill, use this in the CC instead of ncVolume to save mem. Need to change the adb-helpers as well to copy nc->cc
@@ -338,8 +339,7 @@ typedef struct ncVolume_t {
 typedef struct ccVolume_t {
     char volumeId[CHAR_BUFFER_SIZE];   //!< Remote volume identifier string
     char attachmentToken[CHAR_BUFFER_SIZE]; //!< Remote device name string, the token reference
-    char localDev[CHAR_BUFFER_SIZE];   //!< Local device name string
-    char localDevReal[CHAR_BUFFER_SIZE];    //!< Local device name (real) string
+    char devName[CHAR_BUFFER_SIZE];   //!< Canonical device name (without '/dev/')
     char stateName[CHAR_BUFFER_SIZE];  //!< Volume state name string
 } ccVolume;
 
@@ -360,6 +360,7 @@ typedef struct ncInstance_t {
     //! @name state as reported to CC & CLC
     char stateName[CHAR_BUFFER_SIZE];  //!< Instance state as a string
     char bundleTaskStateName[CHAR_BUFFER_SIZE]; //!< Instance's bundle task state as a string
+    double bundleTaskProgress;         //!< Bundling task progress
     char createImageTaskStateName[CHAR_BUFFER_SIZE];    //!< Instance's image task state as a string
     //! @}
 
@@ -369,7 +370,6 @@ typedef struct ncInstance_t {
     //! @name state as NC thinks of it
     instance_states state;             //!< Instance state
     bundling_progress bundleTaskState; //!< Bundling task progress state
-    int bundlePid;                     //!< Bundling task PID value
     int bundleBucketExists;            //!< Boolean indicating if the bundle's bucket already exists
     int bundleCanceled;                //!< Boolean indicating if the bundle has been cancelled
     //! @}
@@ -441,12 +441,13 @@ typedef struct ncInstance_t {
     //! @}
     //
 
-    char credential[10240];   //!< credential string to be passed into the instance via floppy
+    char credential[10240];            //!< credential string to be passed into the instance via floppy
 
     //! @{
     //! @name field added in 4.0 for faster termination
-    boolean bail_flag; //!< instance termination was requested
+    boolean bail_flag;                 //!< instance termination was requested
     //! @}
+    char rootDirective[SMALL_CHAR_BUFFER_SIZE]; //!< root directive provided by user in the instance manifest
 } ncInstance;
 
 //! Structure defining NC resource information
@@ -461,6 +462,7 @@ typedef struct ncResource_t {
     int numberOfCoresMax;              //!< Maximum number of core supported by this node controller
     int numberOfCoresAvailable;        //!< Currently available number of core on this node controller
     char publicSubnets[CHAR_BUFFER_SIZE];   //!< Public subnet configured on this node controller
+    char hypervisor[CHAR_BUFFER_SIZE];  //!< Node hypervisor                   
 } ncResource;
 
 //! Instance list node structure
@@ -535,15 +537,14 @@ int total_instances(bunchOfInstances ** ppHead);
 //! @{
 //! @name Resources APIs
 ncResource *allocate_resource(const char *sNodeStatus, boolean migrationCapable, const char *sIQN, int memorySizeMax, int memorySizeAvailable, int diskSizeMax,
-                              int diskSizeAvailable, int numberOfCoresMax, int numberOfCoresAvailable, const char *sPublicSubnets) _attribute_wur_;
+                              int diskSizeAvailable, int numberOfCoresMax, int numberOfCoresAvailable, const char *sPublicSubnets, const char *sHypervisor) _attribute_wur_;
 void free_resource(ncResource ** ppresource);
 //! @}
 
 //! @{
 //! @name Volumes APIs
 boolean is_volume_used(const ncVolume * pVolume);
-ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sVolumeAttachementToken, const char *sRemoteDev, const char *sLocalDev, const char *sLocalDevReal,
-                      const char *sStateName);
+ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sVolumeAttachmentToken, const char *sConnectionString, const char *sDevName, const char *sStateName, const char *sXml);
 ncVolume *free_volume(ncInstance * pInstance, const char *sVolumeId);
 //! @}
 

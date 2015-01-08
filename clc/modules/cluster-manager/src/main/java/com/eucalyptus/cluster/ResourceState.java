@@ -62,7 +62,6 @@
 
 package com.eucalyptus.cluster;
 
-import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.NavigableSet;
@@ -72,6 +71,7 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.TimeUnit;
+import javax.annotation.Nonnull;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
@@ -80,6 +80,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Joiner;
@@ -87,7 +88,6 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.ResourceType;
-import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class ResourceState {
   private static Logger                                      LOG = Logger.getLogger( ResourceState.class );
@@ -97,6 +97,7 @@ public class ResourceState {
   private NavigableSet<ResourceToken>                        redeemedTokens;
   private String                                             clusterName;
   public static class NoSuchTokenException extends Exception {
+    private static final long serialVersionUID = 1L;
 
     public NoSuchTokenException( String message ) {
       super( message );
@@ -106,14 +107,14 @@ public class ResourceState {
 
   public ResourceState( String clusterName ) {
     this.clusterName = clusterName;
-    this.typeMap = new ConcurrentSkipListMap<String, VmTypeAvailability>( );
+    this.typeMap = new ConcurrentSkipListMap<>( );
     
     for ( VmType v : VmTypes.list( ) )
       this.typeMap.putIfAbsent( v.getName( ), new VmTypeAvailability( v, 0, 0 ) );
     
-    this.pendingTokens = new ConcurrentSkipListSet<ResourceToken>( );
-    this.submittedTokens = new ConcurrentSkipListSet<ResourceToken>( );
-    this.redeemedTokens = new ConcurrentSkipListSet<ResourceToken>( );
+    this.pendingTokens = new ConcurrentSkipListSet<>( );
+    this.submittedTokens = new ConcurrentSkipListSet<>( );
+    this.redeemedTokens = new ConcurrentSkipListSet<>( );
   }
   
   public boolean hasUnorderedTokens( ) {
@@ -133,7 +134,7 @@ public class ResourceState {
     LOG.debug( LogUtil.header( "BEFORE ALLOCATE" ) );
     LOG.debug( sorted );
     //:: if not enough, then bail out :://
-    Integer quantity = minAmount;
+    final Integer quantity;
     if ( vmTypeStatus.getAvailable( ) < minAmount ) {
       throw new NotEnoughResourcesException( "Not enough resources (" + available + " < " + minAmount + ": vm instances." );
     } else {
@@ -171,10 +172,31 @@ public class ResourceState {
     }
     return tokenList;
   }
-  
+
+  public int countUncommittedPendingInstances( final OwnerFullName ownerFullName ) {
+    int count = 0;
+    for ( final ResourceToken token : this.pendingTokens ) {
+      if ( !token.isCommitted( ) && token.getOwner( ).isOwner( ownerFullName ) ) {
+        count += token.getAmount( );
+      }
+    }
+    return count;
+  }
+
   public synchronized void releaseToken( ResourceToken token ) {
     LOG.debug( EventType.TOKEN_RELEASED.name( ) + ": " + token.toString( ) );
-    this.pendingTokens.remove( token );
+    if ( this.pendingTokens.remove( token ) ) {
+      // It is only safe to adjust availability for the vm type that was
+      // allocated. We do not know if larger types had any availability
+      // or what the availability was for smaller types.
+      //
+      // This is an optimization, other types availability will be updated
+      // on resource refresh.
+      final VmTypeAvailability vmAvailable = this.typeMap.get( token.getAllocationInfo( ).getVmType( ).getName( ) );
+      if ( vmAvailable != null ) {
+        vmAvailable.decrement( -1 );
+      }
+    }
     this.submittedTokens.remove( token );
     this.redeemedTokens.remove( token );
   }
@@ -210,7 +232,6 @@ public class ResourceState {
     long expiryAge = System.currentTimeMillis( ) - TimeUnit.MINUTES.toMillis( getExpiryMinutes( 15 ) );
     expirePendingTokens( expiryAge );
 
-    int outstandingCount = 0;
     int pending = 0, submitted = 0, redeemed = 0;
     for ( ResourceToken t : this.pendingTokens )
       pending += t.getAmount( );
@@ -218,7 +239,7 @@ public class ResourceState {
       submitted += t.getAmount( );
     for ( ResourceToken t : this.redeemedTokens )
       redeemed += t.getAmount( );
-    outstandingCount = pending + submitted;
+    final int outstandingCount = pending + submitted;
     EventRecord.here( ResourceState.class, EventType.CLUSTER_STATE_UPDATE, this.clusterName,
                       String.format( "outstanding=%d:pending=%d:submitted=%d:redeemed=%d", outstandingCount, pending, submitted, redeemed ) ).info( );
     this.redeemedTokens.clear( );
@@ -259,7 +280,7 @@ public class ResourceState {
   }
 
   private NavigableSet<VmTypeAvailability> sorted( ) {
-    NavigableSet<VmTypeAvailability> available = new TreeSet<VmTypeAvailability>( );
+    NavigableSet<VmTypeAvailability> available = new TreeSet<>( );
     for ( String typeName : this.typeMap.keySet( ) )
       available.add( this.typeMap.get( typeName ) );
     available.add( VmTypeAvailability.ZERO );
@@ -269,23 +290,6 @@ public class ResourceState {
   
   public VmTypeAvailability getAvailability( String vmTypeName ) {
     return this.typeMap.get( vmTypeName );
-  }
-  
-  public static ResourceComparator getComparator( VmTypeInfo vmTypeInfo ) {
-    return new ResourceComparator( vmTypeInfo );
-  }
-  
-  public static class ResourceComparator implements Comparator<ResourceState> {
-    
-    private VmTypeInfo vmTypeInfo;
-    
-    ResourceComparator( final VmTypeInfo vmTypeInfo ) {
-      this.vmTypeInfo = vmTypeInfo;
-    }
-    
-    public int compare( final ResourceState o1, final ResourceState o2 ) {
-      return o1.getAvailability( this.vmTypeInfo.getName( ) ).getAvailable( ) - o2.getAvailability( this.vmTypeInfo.getName( ) ).getAvailable( );
-    }
   }
   
   @Override
@@ -332,6 +336,7 @@ public class ResourceState {
       this.available = available;
     }
     
+    @SuppressWarnings( "RedundantIfStatement" )
     @Override
     public boolean equals( final Object o ) {
       if ( this == o ) return true;
@@ -349,7 +354,7 @@ public class ResourceState {
       return type.hashCode( );
     }
     
-    public int compareTo( final Object o ) {
+    public int compareTo( @Nonnull final Object o ) {
       VmTypeAvailability v = ( VmTypeAvailability ) o;
       if ( v.getAvailable( ) == this.getAvailable( ) ) return this.type.compareTo( v.getType( ) );
       return v.getAvailable( ) - this.getAvailable( );
@@ -371,7 +376,7 @@ public class ResourceState {
       }
       
       @Override
-      public int compareTo( final Object o ) {
+      public int compareTo( @Nonnull final Object o ) {
         VmTypeAvailability v = ( VmTypeAvailability ) o;
         if ( v == ZERO ) return 0;
         if ( v.getAvailable( ) > 0 )
@@ -385,6 +390,7 @@ public class ResourceState {
       @Override
       public void decrement( final int quantity ) {}
       
+      @SuppressWarnings( { "EqualsWhichDoesntCheckParameterClass", "RedundantIfStatement" } )
       @Override
       public boolean equals( final Object o ) {
         if ( this == o ) return true;

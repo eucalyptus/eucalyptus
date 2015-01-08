@@ -83,6 +83,7 @@
 #include <sys/types.h>                 // mode_t
 #include <linux/limits.h>
 #include <stdint.h>                    // uint32_t
+#include <pthread.h>
 
 #include <eucalyptus.h>
 
@@ -95,10 +96,13 @@
 //! @{
 //! @name Definition of the boolean values TRUE and FALSE
 
+#undef TRUE
 #define TRUE                                     1  //!< Defines the "TRUE" boolean value
+#undef FALSE
 #define FALSE                                    0  //!< Defines the "FALSE" boolean value
-
 //! @}
+
+#define NANOSECONDS_IN_SECOND           1000000000  //!< constant for conversion
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -175,15 +179,32 @@ int drop_privs(void);
 int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, int timeout);
 int get_remoteDevForNC(const char *the_iqn, const char *remoteDev, char *remoteDevForNC, int remoteDevForNCLen);
 int check_for_string_in_list(char *string, char **list, int count);
-char ** build_argv(const char * first, va_list va);
-int euca_execvp_fd(pid_t *ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, char **argv);
+char **build_argv(const char *first, va_list va);
+int euca_execvp_fd(pid_t * ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, char **argv);
 int euca_waitpid(pid_t pid, int *pStatus);
-int euca_execlp_fd(pid_t *ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, const char *file, ...);
+int euca_execlp_fd(pid_t * ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, const char *file, ...);
 int euca_execlp(int *pStatus, const char *file, ...);
-int euca_run_workflow_parser (const char *line, void *data);
-int euca_execlp_log(int *pStatus, int(*custom_parser)(const char *line, void *data), void *parser_data, const char *file, ...);
+int euca_run_workflow_parser(const char *line, void *data);
+int euca_execlp_log(int *pStatus, int (*custom_parser) (const char *line, void *data), void *parser_data, const char *file, ...);
 char *get_username(void);
+int euca_nanosleep(unsigned long long nsec);
+void euca_srand(void);
 
+//! global variable and functions for setting correlation id
+//! 
+typedef struct threadCorrelationId_t {
+    char correlation_id[128];
+    pid_t pid;
+    pthread_t tid;
+    boolean pthread;
+    struct threadCorrelationId_t *next;
+} threadCorrelationId;
+char *create_corrid(const char *);
+threadCorrelationId *set_corrid(const char *corr_id);
+threadCorrelationId *set_corrid_pthread(const char *corr_id, pthread_t);
+threadCorrelationId *set_corrid_fork(const char *corr_id, pid_t);
+void unset_corrid(threadCorrelationId *);
+threadCorrelationId *get_corrid();
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                           STATIC INLINE PROTOTYPES                         |

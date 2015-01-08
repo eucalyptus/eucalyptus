@@ -22,24 +22,31 @@ package com.eucalyptus.imaging.manifest;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 public class ImageManifestFile {
-	private final ImageManifest manifestType;
-	private final String location;
-	
-	public ImageManifestFile(String location, ImageManifest type) {
-		this.manifestType = type;
-		this.location = location;
-	}
+  private final ImageManifest manifestType;
+  private final String location;
+  private final int manifestSizeLimit;
 
-	public ImageManifest getManifestType() {
-		// TODO: return it base on manifest content
-		return manifestType;
-	}
+  public ImageManifestFile(String location, ImageManifest type,
+      int manifestSizeLimit) {
+    this.manifestType = type;
+    this.location = location;
+    this.manifestSizeLimit = manifestSizeLimit;
+  }
 
-	public String getManifest() throws EucalyptusCloudException {
-		return manifestType.getManifest(this.location);
-	}
+  public ImageManifest getManifestType() {
+    // TODO: return it base on manifest content
+    return manifestType;
+  }
 
-	public String getBaseBucket() throws EucalyptusCloudException {
-		return manifestType.getBaseBucket(this.location);
-	}
+  public String getManifest() throws EucalyptusCloudException {
+    return manifestType.getManifest(this.location, this.manifestSizeLimit);
+  }
+
+  public String getBaseBucket() throws EucalyptusCloudException {
+    return manifestType.getBaseBucket(this.location);
+  }
+
+  public int getManifestSizeLimit() {
+    return manifestSizeLimit;
+  }
 }

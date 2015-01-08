@@ -65,6 +65,7 @@ package com.eucalyptus.images;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -88,10 +89,14 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Databases;
+import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
 import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.EbsDeviceMapping;
+import com.eucalyptus.compute.common.ImageDetails;
 import com.eucalyptus.compute.common.ImageMetadata;
+import com.eucalyptus.compute.common.ImageMetadata.Architecture;
 import com.eucalyptus.compute.common.ImageMetadata.State;
-import com.eucalyptus.compute.common.ImageMetadata.StaticDiskImage;
+import com.eucalyptus.compute.common.StaticDiskImage;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -109,7 +114,6 @@ import com.eucalyptus.event.Listeners;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.tags.FilterSupport;
-import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
@@ -131,16 +135,13 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
-import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
-import edu.ucsb.eucalyptus.msgs.EbsDeviceMapping;
-import edu.ucsb.eucalyptus.msgs.ImageDetails;
-
 public class Images {
   private static Logger LOG  = Logger.getLogger( Images.class );
   
   static final String   SELF = "self";
   public static final String DEFAULT_ROOT_DEVICE = "/dev/sda";
   public static final String DEFAULT_PARTITIONED_ROOT_DEVICE = "/dev/sda1";
+  public static final String DEFAULT_EPHEMERAL_DEVICE = "/dev/sdb";
 
   public static Predicate<ImageInfo> filterExecutableBy( final Collection<String> executableSet ) {
     final boolean executableSelf = executableSet.remove( SELF );
@@ -374,7 +375,7 @@ public class Images {
   // Changing to method signature to accept a default size for generating ebs mappings. 
   // The default size will be used when both snapshot ID and volume size are missing. (AWS compliance)
   // The default size is usually size of the root device volume in case of boot from ebs images.
-  public static Function<BlockDeviceMappingItemType, DeviceMapping> deviceMappingGenerator( final ImageInfo parent, 
+  public static Function<BlockDeviceMappingItemType, DeviceMapping> deviceMappingGenerator( final ImageInfo parent,
                                                                                             final Integer rootVolSize ) {
     return deviceMappingGenerator( parent, rootVolSize, Collections.<String,String>emptyMap() );
   }
@@ -455,6 +456,7 @@ public class Images {
     AllowSuppressMapping,
     AllowEbsMapping,
     AllowDevSda1,
+    SkipExtraEphemeral,
     ;
 
     /**
@@ -467,7 +469,7 @@ public class Images {
   
   /**
    * <p>Validates the correctness of a block device mapping</p>
-   * 
+   * <p>Returns block device mapping that has only one ephemeral device if multiple were passed</p>
    * <p>Invalid cases:</p> 
    * <ul>
    * <li>Device name is assigned multiple times</li>
@@ -482,20 +484,30 @@ public class Images {
    * @param options Validation options
    * @throws MetadataException for any validation failure
    */
-  public static void validateBlockDeviceMappings(
+  public static ArrayList<BlockDeviceMappingItemType> validateBlockDeviceMappings(
       final List<BlockDeviceMappingItemType> bdms,
       final Set<DeviceMappingValidationOption> options
   ) throws MetadataException {
+    ArrayList<BlockDeviceMappingItemType> resultedBdms = new ArrayList<>();
     if ( bdms != null ) {
       Set<String> deviceNames = Sets.newHashSet();
+      boolean ephemeralAlreadyPresent = false;
       int ephemeralCount = 0;
-
       for ( final BlockDeviceMappingItemType bdm : bdms ) {
         checkParam( bdm, notNullValue( ) );
         checkParam( bdm.getDeviceName( ), notNullValue( ) );
         if( !deviceNames.add( bdm.getDeviceName( ).replace("/dev/","") ) ) {
           throw new MetadataException( bdm.getDeviceName() + " is assigned multiple times" );
         }
+        if ( DeviceMappingValidationOption.SkipExtraEphemeral.present(options) && StringUtils.isNotBlank(bdm.getVirtualName( )) ) {
+	      if( !ephemeralAlreadyPresent ) {
+	        ephemeralAlreadyPresent = true;
+	      } else {
+	        // skip all ephemerals except the first one
+	        continue;
+	      }
+        }
+        resultedBdms.add(bdm);
       }
       final Set<String> fullDeviceNames = Sets.newHashSet();
       for(final String name : deviceNames){
@@ -503,7 +515,7 @@ public class Images {
       }
       deviceNames = fullDeviceNames;
 
-      for ( final BlockDeviceMappingItemType bdm : bdms ) {
+      for ( final BlockDeviceMappingItemType bdm : resultedBdms ) {
     	if ( !bdm.getDeviceName().matches("(/dev/)?([svh]|xv)d[a-z]([1-9])*")){
     		throw new MetadataException("Device name " + bdm.getDeviceName() + " is invalid");
     	} else if( bdm.getDeviceName().matches(".*\\d\\Z") && 
@@ -517,9 +529,11 @@ public class Images {
           if ( !bdm.getVirtualName( ).matches( "ephemeral[0123]" ) ) {
             throw new MetadataException( "Virtual device name must be of the form ephemeral[0123]. Fix the mapping for " + bdm.getDeviceName() );
           }
-          ephemeralCount ++;
-          if( ephemeralCount > 1 ) {
-            throw new MetadataException( "Only one ephemeral device is supported. More than one ephemeral device mappings found" );
+          if ( !DeviceMappingValidationOption.SkipExtraEphemeral.present(options) ){
+            ephemeralCount++;
+            if( ephemeralCount > 1 ) {
+              throw new MetadataException( "Only one ephemeral device is supported. More than one ephemeral device mappings found" );
+            }
           }
         } else if ( null != bdm.getEbs( ) ) {
           if ( !DeviceMappingValidationOption.AllowEbsMapping.present( options ) ) {
@@ -546,6 +560,7 @@ public class Images {
         }
       }
     }
+    return resultedBdms;
   }
   
   public static boolean isImageNameValid(final String imgName){
@@ -647,7 +662,7 @@ public class Images {
           img.setState( ImageMetadata.State.deregistered );
       }
       tx.commit( );
-      if ( img instanceof ImageMetadata.StaticDiskImage ) {
+      if ( img instanceof StaticDiskImage ) {
         StaticDiskImages.flush( (StaticDiskImage) img );
       }
     } catch ( ConstraintViolationException cve ) {
@@ -834,9 +849,9 @@ public class Images {
       String eki,
       String eri,
       final String rootDeviceName, 
-      final List<BlockDeviceMappingItemType> blockDeviceMappings 
+      final List<BlockDeviceMappingItemType> blockDeviceMappings,
+      final Architecture imageArch
   ) throws EucalyptusCloudException {
-    final ImageMetadata.Architecture imageArch = ImageMetadata.Architecture.x86_64;//TODO:GRZE:OMGFIXME: track parent vol info; needed here 
     final ImageMetadata.Platform imagePlatform = platform;
     if(ImageMetadata.Platform.windows.equals(imagePlatform)){
       eki = null;
@@ -906,7 +921,6 @@ public class Images {
 		  ImageMetadata.Platform imagePlatform,
 		  final List<BlockDeviceMappingItemType> blockDeviceMappings
 		  ) throws Exception {
-
 	  final String imageId = ResourceIdentifiers.generateString( ImageMetadata.Type.machine.getTypePrefix() );
 	  BlockStorageImageInfo ret = new BlockStorageImageInfo( creator, imageId, imageNameArg, imageDescription, 
 			  new Long(-1), requestArch, imagePlatform, null, null, "snap-EUCARESERVED", false, Images.DEFAULT_ROOT_DEVICE ); 
@@ -919,12 +933,11 @@ public class Images {
 	  }
 	  if(toRemove!=null)
 		  blockDeviceMappings.remove(toRemove);
-	  
 	  final EntityTransaction tx = Entities.get( BlockStorageImageInfo.class );
 	  try {
 		  ret = Entities.merge( ret );
 		  ret.setState(ImageMetadata.State.pending);
-      ret.setImageFormat(ImageMetadata.ImageFormat.fulldisk.toString());
+		  ret.setImageFormat(ImageMetadata.ImageFormat.fulldisk.toString());
 	      ret.getDeviceMappings( ).addAll( Lists.transform( blockDeviceMappings, Images.deviceMappingGenerator( ret, -1 ) ) );
 		  tx.commit( );
 		  LOG.info( "Registering image pk=" + ret.getDisplayName( ) + " ownerId=" + creator );
@@ -1059,6 +1072,7 @@ public class Images {
     ImageMetadata.Architecture imageArch = ( requestArch != null )
       ? requestArch
       : manifest.getArchitecture( );
+
     final ImageMetadata.Platform imagePlatform = platform;    
     switch ( manifest.getImageType( ) ) {
       case kernel:
@@ -1075,12 +1089,14 @@ public class Images {
     	if(ImageMetadata.Platform.windows.equals(imagePlatform)){
     		  virtType = ImageMetadata.VirtualizationType.hvm;
     	}
-    	
+        String manifestAmi = manifest.getAmi();
     	ret = new MachineImageInfo( creator, ResourceIdentifiers.generateString( ImageMetadata.Type.machine.getTypePrefix() ),
     	    imageName, imageDescription, manifest.getSize( ), imageArch, imagePlatform,
-    	    manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ), eki, eri , virtType);
+    	    manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ), eki, eri , virtType,
+            manifestAmi, manifest.getRoot());
     	ret.setImageFormat(format.toString());
-    	if( ImageMetadata.VirtualizationType.hvm.equals(virtType) ){
+    	if( ImageMetadata.VirtualizationType.hvm.equals(virtType) 
+    		|| (!manifestAmi.isEmpty() && !ImageManager.isPathAPartition(manifestAmi) )){
     	  ((MachineImageInfo) ret).setRunManifestLocation(manifest.getImageLocation());
     	}
     	break;
@@ -1089,19 +1105,20 @@ public class Images {
       throw new IllegalArgumentException( "Failed to prepare image using the provided image manifest: " + manifest );
     } else {
       ret.setSignature( manifest.getSignature( ) );
+      ret.setManifestHash( ImageManifests.calculateManifestHash( manifest.getManifest() ) );
       return ret;
     }
   }
   
   private static PutGetImageInfo persistRegistration( UserFullName creator, ImageManifest manifest, PutGetImageInfo ret ) throws Exception {
-    
-    EntityTransaction tx = Entities.get( PutGetImageInfo.class );
-    try {
+    // check manifest's signature
+    if ( !manifest.checkManifestSignature( Accounts.lookupUserById(creator.getUserId()) ) )
+      throw new EucalyptusCloudException("Manifest has invalid signature");
+    try(TransactionResource tx = Entities.transactionFor( PutGetImageInfo.class  )) {
       ret = Entities.merge( ret );
       tx.commit( );
       LOG.info( "Registering image pk=" + ret.getDisplayName( ) + " ownerId=" + creator );
     } catch ( Exception e ) {
-      tx.rollback( );
       throw new EucalyptusCloudException( "Failed to register image: " + manifest + " because of: " + e.getMessage( ), e );
     }
     // TODO:GRZE:RESTORE
@@ -1110,7 +1127,7 @@ public class Images {
 // }
 // imageInfo.grantPermission( ctx.getAccount( ) );
     LOG.info( "Triggering cache population in Walrus for: " + ret.getDisplayName( ) );
-    if ( ret instanceof ImageMetadata.StaticDiskImage && ret.getRunManifestLocation()!=null) {
+    if ( ret instanceof StaticDiskImage && ret.getRunManifestLocation()!=null) {
       StaticDiskImages.prepare( ret.getRunManifestLocation( ) );
     }
     return ret;

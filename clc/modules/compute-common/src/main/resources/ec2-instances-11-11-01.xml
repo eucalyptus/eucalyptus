@@ -104,8 +104,11 @@
         <structure name="monitoring" usage="optional">
             <value name="state" field="monitoring" />
         </structure>
+        <value name="subnetId" field="subnetId" usage="optional" />
+        <value name="vpcId" field="vpcId" usage="optional" />
         <value name="privateIpAddress" field="privateIpAddress" usage="required" />
         <value name="ipAddress" field="ipAddress" usage="required" />
+        <value name="sourceDestCheck" field="sourceDestCheck" usage="optional" />
         <collection name="groupSet" field="groupSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
             <structure name="item"  map-as="com.eucalyptus.compute.common.GroupItemType"/>
         </collection>
@@ -122,6 +125,7 @@
                 <structure name="item" map-as="com.eucalyptus.compute.common.ResourceTag" />
             </collection>
         </structure>
+        <structure name="networkInterfaceSet" field="networkInterfaceSet" usage="optional" type="com.eucalyptus.compute.common.InstanceNetworkInterfaceSetType"/>
     </mapping>
 
     <mapping name="RunInstancesResponse" class="com.eucalyptus.compute.common.RunInstancesResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
@@ -172,6 +176,7 @@
         <value name="instanceInitiatedShutdownBehavior" field="shutdownAction" usage="optional" />
         <!-- 2010-08-31 -->
         <value name="clientToken" field="clientToken" usage="optional" />
+        <structure name="networkInterfaceSet" field="networkInterfaceSet" usage="optional" type="com.eucalyptus.compute.common.InstanceNetworkInterfaceSetRequestType"/>
     </mapping>
 
 
@@ -384,7 +389,67 @@
             <value name="state" field="monitoringState" />
         </structure>
     </mapping>
-    <!-- TODO:ADDED -->
+    <mapping class="com.eucalyptus.compute.common.InstanceNetworkInterfaceSetRequestType" abstract="true">
+        <collection field="item">
+            <structure name="item" type="com.eucalyptus.compute.common.InstanceNetworkInterfaceSetItemRequestType"/>
+        </collection>
+    </mapping>
+    <mapping class="com.eucalyptus.compute.common.InstanceNetworkInterfaceSetItemRequestType" abstract="true">
+        <value name="networkInterfaceId" field="networkInterfaceId" usage="optional"/>
+        <value name="deviceIndex" field="deviceIndex" usage="required"/>
+        <value name="subnetId" field="subnetId" usage="optional"/>
+        <value name="description" field="description" usage="optional"/>
+        <value name="privateIpAddress" field="privateIpAddress" usage="optional"/>
+        <structure name="groupSet" field="groupSet" usage="optional" type="com.eucalyptus.compute.common.SecurityGroupIdSetType"/>
+        <value name="deleteOnTermination" field="deleteOnTermination" usage="optional"/>
+        <structure name="privateIpAddressesSet" field="privateIpAddressesSet" usage="optional" type="com.eucalyptus.compute.common.PrivateIpAddressesSetRequestType"/>
+        <value name="secondaryPrivateIpAddressCount" field="secondaryPrivateIpAddressCount" usage="optional"/>
+        <value name="associatePublicIpAddress" field="associatePublicIpAddress" usage="optional"/>
+    </mapping>
+    <mapping class="com.eucalyptus.compute.common.InstanceNetworkInterfaceSetType" abstract="true">
+        <collection field="item">
+            <structure name="item" type="com.eucalyptus.compute.common.InstanceNetworkInterfaceSetItemType"/>
+        </collection>
+    </mapping>
+    <mapping class="com.eucalyptus.compute.common.InstanceNetworkInterfaceSetItemType" abstract="true">
+        <value name="networkInterfaceId" field="networkInterfaceId" usage="required"/>
+        <value name="subnetId" field="subnetId" usage="optional"/>
+        <value name="vpcId" field="vpcId" usage="optional"/>
+        <value name="description" field="description" usage="optional"/>
+        <value name="ownerId" field="ownerId" usage="required"/>
+        <value name="status" field="status" usage="required"/>
+        <value name="macAddress" field="macAddress" usage="optional"/>
+        <value name="privateIpAddress" field="privateIpAddress" usage="optional"/>
+        <value name="privateDnsName" field="privateDnsName" usage="optional"/>
+        <value name="sourceDestCheck" field="sourceDestCheck" usage="optional"/>
+        <structure name="groupSet" field="groupSet" usage="optional" type="com.eucalyptus.compute.common.GroupSetType"/>
+        <structure name="attachment" field="attachment" usage="required" type="com.eucalyptus.compute.common.InstanceNetworkInterfaceAttachmentType"/>
+        <structure name="association" field="association" usage="optional" type="com.eucalyptus.compute.common.InstanceNetworkInterfaceAssociationType"/>
+        <structure name="privateIpAddressesSet" field="privateIpAddressesSet" usage="optional" type="com.eucalyptus.compute.common.InstancePrivateIpAddressesSetType"/>
+    </mapping>
+    <mapping class="com.eucalyptus.compute.common.InstancePrivateIpAddressesSetType" abstract="true">
+        <collection field="item">
+            <structure name="item" type="com.eucalyptus.compute.common.InstancePrivateIpAddressesSetItemType"/>
+        </collection>
+    </mapping>
+    <mapping class="com.eucalyptus.compute.common.InstancePrivateIpAddressesSetItemType" abstract="true">
+        <value name="privateIpAddress" field="privateIpAddress" usage="optional"/>
+        <value name="privateDnsName" field="privateDnsName" usage="optional"/>
+        <value name="primary" field="primary" usage="optional"/>
+        <structure name="association" field="association" usage="optional" type="com.eucalyptus.compute.common.InstanceNetworkInterfaceAssociationType"/>
+    </mapping>
+    <mapping class="com.eucalyptus.compute.common.InstanceNetworkInterfaceAttachmentType" abstract="true">
+        <value name="attachmentId" field="attachmentId" usage="required"/>
+        <value name="deviceIndex" field="deviceIndex" usage="required"/>
+        <value name="status" field="status" usage="required"/>
+        <value name="attachTime" field="attachTime" usage="required"/>
+        <value name="deleteOnTermination" field="deleteOnTermination" usage="required"/>
+    </mapping>
+    <mapping class="com.eucalyptus.compute.common.InstanceNetworkInterfaceAssociationType" abstract="true">
+        <value name="publicIp" field="publicIp" usage="required"/>
+        <value name="publicDnsName" field="publicDnsName" usage="optional"/>
+        <value name="ipOwnerId" field="ipOwnerId" usage="optional"/>
+    </mapping>
     <mapping name="StopInstances" class="com.eucalyptus.compute.common.StopInstancesType" extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
         <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet"
@@ -417,19 +482,34 @@
             <structure name="item" map-as="com.eucalyptus.compute.common.TerminateInstancesItemType" />
         </collection>
     </mapping>
+    <mapping class="com.eucalyptus.compute.common.InstanceEbsBlockDeviceType" abstract="true">
+      <value name="volumeId" field="volumeId" usage="optional" />
+      <value name="deleteOnTermination" field="deleteOnTermination" usage="optional" />
+    </mapping>
+    <mapping class="com.eucalyptus.compute.common.InstanceBlockDeviceMappingItemType" abstract="true">
+      <value name="deviceName" field="deviceName" usage="required" />
+      <structure name="ebs" field="ebs" usage="optional" map-as="com.eucalyptus.compute.common.InstanceEbsBlockDeviceType" />
+    </mapping>
+    <mapping class="com.eucalyptus.compute.common.InstanceBlockDeviceMappingSetType" abstract="true">
+      <collection field="item">
+        <structure name="item" type="com.eucalyptus.compute.common.InstanceBlockDeviceMappingItemType"/>
+      </collection>
+    </mapping>
     <mapping name="ModifyInstanceAttribute" class="com.eucalyptus.compute.common.ModifyInstanceAttributeType"
              extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
         <value name="instanceId" field="instanceId" usage="required" />
-        <value name="instanceTypeValue" field="instanceTypeValue" usage="optional" />
-        <value name="kernelValue" field="kernelValue" usage="optional" />
-        <value name="ramdiskValue" field="ramdiskValue" usage="optional" />
-        <value name="userDataValue" field="userDataValue" usage="optional" />
-        <value name="blockDeviceMappingAttribute" field="blockDeviceMappingAttribute" usage="optional" />
-        <value name="blockDeviceMappingValue" field="blockDeviceMappingValue" usage="optional" />
-        <value name="blockDeviceMappingDeviceName" field="blockDeviceMappingDeviceName" usage="optional" />
-        <value name="blockDeviceMappingVolumeId" field="blockDeviceMappingVolumeId" usage="optional" />
-        <value name="blockDeviceMappingDeleteOnTermination" field="blockDeviceMappingDeleteOnTermination" usage="optional" />
+        <structure name="instanceType" field="instanceType" usage="optional" type="com.eucalyptus.compute.common.AttributeValueType"/>
+        <structure name="kernel" field="kernel" usage="optional" type="com.eucalyptus.compute.common.AttributeValueType"/>
+        <structure name="ramdisk" field="ramdisk" usage="optional" type="com.eucalyptus.compute.common.AttributeValueType"/>
+        <structure name="userData" field="userData" usage="optional" type="com.eucalyptus.compute.common.AttributeValueType"/>
+        <structure name="disableApiTermination" field="disableApiTermination" usage="optional" type="com.eucalyptus.compute.common.AttributeBooleanValueType"/>
+        <structure name="instanceInitiatedShutdownBehavior" field="instanceInitiatedShutdownBehavior" usage="optional" type="com.eucalyptus.compute.common.AttributeValueType"/>
+        <structure name="blockDeviceMapping" field="blockDeviceMappingSet" usage="optional" type="com.eucalyptus.compute.common.InstanceBlockDeviceMappingSetType"/>
+        <structure name="sourceDestCheck" field="sourceDestCheck" usage="optional" type="com.eucalyptus.compute.common.AttributeBooleanValueType"/>
+        <structure name="groupSet" field="groupIdSet" usage="optional" type="com.eucalyptus.compute.common.GroupIdSetType"/>
+        <structure name="ebsOptimized" field="ebsOptimized" usage="optional" type="com.eucalyptus.compute.common.AttributeBooleanFlatValueType"/>
+        <structure name="sriovNetSupport" field="sriovNetSupport" usage="optional" type="com.eucalyptus.compute.common.AttributeBooleanValueType"/>
     </mapping>
     <mapping name="ModifyInstanceAttributeResponse" class="com.eucalyptus.compute.common.ModifyInstanceAttributeResponseType"
              extends="com.eucalyptus.compute.common.ComputeMessage">
@@ -446,34 +526,46 @@
              extends="com.eucalyptus.compute.common.ComputeMessage">
         <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
         <value name="instanceId" field="instanceId" usage="required" />
-      <collection name="instanceType" usage="optional" field="instanceType" factory="org.jibx.runtime.Utility.arrayListFactory"
-                  item-type="java.lang.String" test-method="hasInstanceType">
-        <value name="value"/>
-      </collection>
-      <collection name="kernel" usage="optional" field="kernel" factory="org.jibx.runtime.Utility.arrayListFactory"
-                  item-type="java.lang.String" test-method="hasKernel">
-        <value name="value"/>
-      </collection>
-      <collection name="ramdisk" usage="optional" field="ramdisk" factory="org.jibx.runtime.Utility.arrayListFactory"
-                  item-type="java.lang.String" test-method="hasRamdisk">
-        <value name="value"/>
-      </collection>
-      <collection name="userData" usage="optional" field="userData" factory="org.jibx.runtime.Utility.arrayListFactory"
-                  item-type="java.lang.String" test-method="hasUserData">
-        <value name="value" />
-      </collection>
-      <collection name="rootDeviceName" usage="optional" field="rootDeviceName" factory="org.jibx.runtime.Utility.arrayListFactory"
-                  item-type="java.lang.String" test-method="hasRootDeviceName">
-        <value name="value"/>
-      </collection>
-      <collection name="blockDeviceMapping" field="blockDeviceMapping" usage="optional" factory="org.jibx.runtime.Utility.arrayListFactory"
+        <collection name="blockDeviceMapping" field="blockDeviceMapping" usage="optional" factory="org.jibx.runtime.Utility.arrayListFactory"
                   test-method="hasBlockDeviceMapping">
-        <structure name="item" map-as="com.eucalyptus.compute.common.InstanceBlockDeviceMapping" />
-      </collection>
+          <structure name="item" map-as="com.eucalyptus.compute.common.InstanceBlockDeviceMapping"/>
+        </collection>
+        <structure name="disableApiTermination" usage="optional" test-method="hasDisableApiTermination">
+          <value name="value" field="disableApiTermination" usage="optional"/>
+        </structure>
+        <structure name="ebsOptimized" usage="optional" test-method="hasEbsOptimized">
+          <value name="value" field="ebsOptimized" usage="optional"/>
+        </structure>
         <collection name="groupSet" field="groupSet" usage="optional" factory="org.jibx.runtime.Utility.arrayListFactory"
                     test-method="hasGroupSet">
-        <structure name="item"  map-as="com.eucalyptus.compute.common.GroupItemType"/>
-      </collection>
+            <structure name="item"  map-as="com.eucalyptus.compute.common.GroupItemType"/>
+        </collection>
+        <structure name="instanceInitiatedShutdownBehavior" usage="optional" test-method="hasInstanceInitiatedShutdownBehavior">
+          <value name="value" field="instanceInitiatedShutdownBehavior" usage="optional"/>
+        </structure>
+        <structure name="instanceType" usage="optional" test-method="hasInstanceType">
+          <value name="value" field="instanceType" usage="optional"/>
+        </structure>
+        <structure name="kernel" usage="optional" test-method="hasKernel">
+            <value name="value" field="kernel" usage="optional"/>
+        </structure>
+        <structure name="productCodes" usage="optional" test-method="hasProductCodes">
+        </structure>
+        <structure name="ramdisk" usage="optional" test-method="hasRamdisk">
+            <value name="value" field="ramdisk" usage="optional"/>
+        </structure>
+        <structure name="rootDeviceName" usage="optional" test-method="hasRootDeviceName">
+            <value name="value" field="rootDeviceName" usage="optional"/>
+        </structure>
+        <structure name="sourceDestCheck" usage="optional" test-method="hasSourceDestCheck">
+            <value name="value" field="sourceDestCheck" usage="optional"/>
+        </structure>
+        <structure name="sriovNetSupport" usage="optional" test-method="hasSriovNetSupport">
+            <value name="value" field="sriovNetSupport" usage="optional"/>
+        </structure>
+        <structure name="userData" usage="optional" test-method="hasUserData">
+            <value name="value" field="userData" usage="optional"/>
+        </structure>
     </mapping>
     <mapping name="ResetInstanceAttribute" class="com.eucalyptus.compute.common.ResetInstanceAttributeType"
              extends="com.eucalyptus.compute.common.ComputeMessage">

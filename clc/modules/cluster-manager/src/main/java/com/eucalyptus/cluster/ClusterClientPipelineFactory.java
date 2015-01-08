@@ -168,7 +168,7 @@ public final class ClusterClientPipelineFactory implements ChannelPipelineFactor
               try {
                 final long end = System.nanoTime();
                 LOG.trace( Joiner.on( " " ).join( uuid, remoteAddress,
-                                                  String.format( "%d/%d+%d-queue", semAvailable, CLUSTER_CLIENT_PERMITS, semQueued ),
+                                                  String.format( "%d/%d+%d-queue", semAvailable, CLUSTER_CLIENT_PERMITS.get(), semQueued ),
                                                   String.format( "%d+%d=%d-msec",
                                                                  TimeUnit.NANOSECONDS.toMillis( waitTime - start ),
                                                                  TimeUnit.NANOSECONDS.toMillis( end - waitTime ),

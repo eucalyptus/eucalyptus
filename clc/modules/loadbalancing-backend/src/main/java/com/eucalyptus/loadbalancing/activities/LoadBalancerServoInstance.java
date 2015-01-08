@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,7 +25,6 @@ import java.util.NoSuchElementException;
 import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EntityTransaction;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
@@ -38,8 +37,10 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
@@ -49,7 +50,6 @@ import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord;
 import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.LoadBalancerDnsRecordCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.LoadBalancerDnsRecordEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
-import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
 import com.eucalyptus.loadbalancing.common.LoadBalancingBackend;
@@ -59,7 +59,6 @@ import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
@@ -307,32 +306,22 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 		@Nullable
 		public LoadBalancerServoInstance apply(
 				@Nullable LoadBalancerServoInstanceCoreView arg0) {
-			final EntityTransaction db = Entities.get(LoadBalancerServoInstance.class);
-			try{
-				final LoadBalancerServoInstance servo = Entities.uniqueResult(arg0.entity);
-				db.commit();
-				return servo;
+			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
+				return Entities.uniqueResult(arg0.entity);
 			}catch(final Exception ex){
-				db.rollback();
 				throw Exceptions.toUndeclared(ex);
-			}finally{
-				if(db.isActive())
-					db.rollback();
 			}
 		}
 	}
 	
 	public static class LoadBalancerServoInstanceRelationView {
 	    private LoadBalancerZoneCoreView zone = null;
-	    private LoadBalancerSecurityGroupCoreView security_group = null;
-	    private LoadBalancerDnsRecordCoreView dns = null; 
+	    private LoadBalancerDnsRecordCoreView dns = null;
 	    private LoadBalancerAutoScalingGroupCoreView autoscaling_group = null; 
 	    
 		private LoadBalancerServoInstanceRelationView(final LoadBalancerServoInstance servo){
 			if(servo.zone!=null)
 				this.zone = TypeMappers.transform(servo.zone, LoadBalancerZoneCoreView.class);
-			if(servo.security_group!=null)
-				this.security_group = TypeMappers.transform(servo.security_group, LoadBalancerSecurityGroupCoreView.class);
 			if(servo.dns!=null)
 				this.dns = TypeMappers.transform(servo.dns, LoadBalancerDnsRecordCoreView.class);
 			if(servo.autoscaling_group!=null)
@@ -366,16 +355,10 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 			/// determine the BE instances to query
 			final List<LoadBalancerServoInstance> allInstances = Lists.newArrayList();
 			final List<LoadBalancerServoInstance> stateOutdated = Lists.newArrayList();
-			EntityTransaction db = Entities.get(LoadBalancerServoInstance.class);
-			try{
+			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
 				allInstances.addAll(
 						Entities.query(LoadBalancerServoInstance.named()));
-				db.commit();
 			}catch(final Exception ex){
-				db.rollback();
-			}finally{
-				if(db.isActive())
-					db.rollback();
 			}
 			final Date current = new Date(System.currentTimeMillis());
 
@@ -387,19 +370,13 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 				}
 			}
 			
-			db = Entities.get(LoadBalancerServoInstance.class);
-			try{
+			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
 				for(final LoadBalancerServoInstance se: stateOutdated){
 					final LoadBalancerServoInstance update = Entities.uniqueResult(se);
 					update.setLastUpdateTimestamp(current);
-					Entities.persist(update);
 				}
 				db.commit();
 			}catch(final Exception ex){
-				db.rollback();
-			}finally{
-				if(db.isActive())
-					db.rollback();
 			}
 			
 			for(final LoadBalancerServoInstance instance : stateOutdated){
@@ -409,7 +386,7 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 						String privateIpAddr = null;
 						if(instance.getAddress()==null){
 							try{
-								List<RunningInstancesItemType> result = 
+								List<RunningInstancesItemType> result =
 										EucalyptusActivityTasks.getInstance().describeSystemInstances(Lists.newArrayList(instance.getInstanceId()));
 								if(result!=null && result.size()>0){
 									ipAddr = result.get(0).getIpAddress();
@@ -437,24 +414,17 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 							continue;
 						}
 
-						db = Entities.get( LoadBalancerServoInstance.class );
-						try{
+						try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
 							final LoadBalancerServoInstance update = Entities.uniqueResult(instance);
 							update.setAddress(ipAddr);
 							if(privateIpAddr!=null)
 								update.setPrivateIp(privateIpAddr);
 							update.setDnsState(LoadBalancerServoInstance.DNS_STATE.Registered);
-							Entities.persist(update);
 							db.commit();
 						}catch(NoSuchElementException ex){
-							db.rollback();
 							LOG.warn("failed to find the servo instance named "+instance.getInstanceId(), ex);
 						}catch(Exception ex){
-							db.rollback();
 							LOG.warn("failed to update servo instance's ip address", ex);
-						}finally {
-							if(db.isActive())
-								db.rollback();
 						}
 					}
 				}else if (LoadBalancerServoInstance.STATE.OutOfService.equals(instance.getState()) ||
@@ -472,21 +442,14 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 							LOG.warn("failed to remove IP address from the dns A record", ex);
 							continue;
 						}
-						db = Entities.get( LoadBalancerServoInstance.class );
-						try{
+						try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
 							final LoadBalancerServoInstance update = Entities.uniqueResult(instance);
 							update.setDnsState(LoadBalancerServoInstance.DNS_STATE.Deregistered);
-							Entities.persist(update);
 							db.commit();
 						}catch(NoSuchElementException ex){
-							db.rollback();
 							LOG.warn("failed to find the servo instance named "+instance.getInstanceId(), ex);
 						}catch(Exception ex){
-							db.rollback();
 							LOG.warn("failed to update servo instance's ip address", ex);
-						}finally {
-							if(db.isActive())
-								db.rollback();
 						}
 					}
 				}

@@ -21,14 +21,19 @@ package com.eucalyptus.reporting.event_store;
 
 import static org.hamcrest.Matchers.notNullValue;
 import static com.eucalyptus.util.Parameters.checkParam;
+
 import java.util.Set;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
+import com.eucalyptus.component.annotation.RemotablePersistence;
+
 @Entity
-@PersistenceContext(name="eucalyptus_reporting")
+@PersistenceContext(name="eucalyptus_reporting_backend")
+@RemotablePersistence
 @Table(name="reporting_instance_usage_events")
 public class ReportingInstanceUsageEvent
 	extends ReportingEventSupport

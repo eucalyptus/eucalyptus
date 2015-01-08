@@ -21,6 +21,7 @@
 @GroovyAddClassUUID
 package com.eucalyptus.compute.common
 
+import com.eucalyptus.binding.HttpParameterMapping
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID;
 
@@ -55,6 +56,7 @@ public class CancelExportTaskResponseType extends VmExportResponseMessage {
 }
 /*********************************************************************************/
 public class DescribeExportTasksType extends VmExportMessage {
+  @HttpParameterMapping( parameter = "ExportTaskId" )
   ArrayList<String> exportTaskIdSet = new ArrayList<String>();
   public DescribeExportTasksType() {
   }

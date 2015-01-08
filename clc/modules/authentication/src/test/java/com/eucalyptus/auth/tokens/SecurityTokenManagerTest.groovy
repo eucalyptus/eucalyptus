@@ -70,6 +70,7 @@ class SecurityTokenManagerTest {
       SecurityToken token = manager.doIssueSecurityToken(
         Principals.nobodyUser(),
         testKey,
+          0,
         (int) TimeUnit.HOURS.toSeconds( desiredLifetimeHours ) )
 
     assertThat( "Null token issued", token, notNullValue() )
@@ -91,6 +92,7 @@ class SecurityTokenManagerTest {
     SecurityToken token = manager.doIssueSecurityToken(
         Principals.nobodyUser(),
         testKey,
+        0,
         (int) TimeUnit.HOURS.toSeconds( desiredLifetimeHours ) )
 
     AccessKey tokenKey = manager.doLookupAccessKey( token.getAccessKeyId(), token.getToken() )
@@ -115,6 +117,7 @@ class SecurityTokenManagerTest {
     SecurityTokenManager manager = manager( now, testKey, user )
     SecurityToken token = manager.doIssueSecurityToken(
         user,
+        0,
         (int) TimeUnit.HOURS.toSeconds( desiredLifetimeHours ) )
 
     assertThat( "Null token issued", token, notNullValue() )
@@ -139,6 +142,7 @@ class SecurityTokenManagerTest {
     SecurityTokenManager manager = manager( now, testKey, user )
     SecurityToken token = manager.doIssueSecurityToken(
         user,
+        0,
         (int) TimeUnit.HOURS.toSeconds( desiredLifetimeHours ) )
 
     AccessKey tokenKey = manager.doLookupAccessKey( token.getAccessKeyId(), token.getToken() )
@@ -156,7 +160,7 @@ class SecurityTokenManagerTest {
 
     AccessKey testKey = accessKey( now - TimeUnit.HOURS.toMillis( 24 ), Principals.nobodyUser() )
     SecurityTokenManager manager = manager( now, testKey )
-    SecurityToken token = manager.doIssueSecurityToken( Principals.nobodyUser(), testKey, TimeUnit.MINUTES.toSeconds( 15 ) as Integer  )
+    SecurityToken token = manager.doIssueSecurityToken( Principals.nobodyUser(), testKey, 0, TimeUnit.MINUTES.toSeconds( 15 ) as Integer  )
 
     assertThat( "Null token issued", token, notNullValue() )
     assertThat( "Token expiry", token.getExpires(), equalTo( now + TimeUnit.MINUTES.toMillis( 15 ) ) )
@@ -168,7 +172,7 @@ class SecurityTokenManagerTest {
 
     AccessKey testKey = accessKey( now - TimeUnit.HOURS.toMillis( 24 ), Principals.nobodyUser() )
     SecurityTokenManager manager = manager( now, testKey )
-    manager.doIssueSecurityToken( Principals.nobodyUser(), testKey, TimeUnit.MINUTES.toSeconds( 15 ) - 1 as Integer )
+    manager.doIssueSecurityToken( Principals.nobodyUser(), testKey, 0, TimeUnit.MINUTES.toSeconds( 15 ) - 1 as Integer )
   }
 
   @Test
@@ -177,7 +181,7 @@ class SecurityTokenManagerTest {
 
     AccessKey testKey = accessKey( now - TimeUnit.HOURS.toMillis( 24 ), Principals.nobodyUser() )
     SecurityTokenManager manager = manager( now, testKey )
-    SecurityToken token = manager.doIssueSecurityToken( Principals.nobodyUser(), testKey, TimeUnit.HOURS.toSeconds( 36 ) as Integer )
+    SecurityToken token = manager.doIssueSecurityToken( Principals.nobodyUser(), testKey, 0, TimeUnit.HOURS.toSeconds( 36 ) as Integer )
 
     assertThat( "Null token issued", token, notNullValue() )
     assertThat( "Token expiry", token.getExpires(), equalTo( now + TimeUnit.HOURS.toMillis( 36 ) ) )
@@ -189,7 +193,7 @@ class SecurityTokenManagerTest {
 
     AccessKey testKey = accessKey( now - TimeUnit.HOURS.toMillis( 24 ), Principals.nobodyUser() )
     SecurityTokenManager manager = manager( now, testKey )
-    manager.doIssueSecurityToken( Principals.nobodyUser(), testKey, TimeUnit.HOURS.toMillis( 36 ) + 1 as Integer  )
+    manager.doIssueSecurityToken( Principals.nobodyUser(), testKey, 0, TimeUnit.HOURS.toMillis( 36 ) + 1 as Integer  )
   }
 
   @Test
@@ -198,7 +202,7 @@ class SecurityTokenManagerTest {
 
     AccessKey testKey = accessKey( now - TimeUnit.HOURS.toMillis( 24 ), Principals.systemUser() )
     SecurityTokenManager manager = manager( now, testKey )
-    SecurityToken token = manager.doIssueSecurityToken( Principals.systemUser(), testKey, TimeUnit.HOURS.toSeconds( 1 ) as Integer  )
+    SecurityToken token = manager.doIssueSecurityToken( Principals.systemUser(), testKey, 0, TimeUnit.HOURS.toSeconds( 1 ) as Integer  )
 
     assertThat( "Null token issued", token, notNullValue() )
     assertThat( "Token expiry", token.getExpires(), equalTo( now + TimeUnit.HOURS.toMillis( 1 ) ) )
@@ -210,7 +214,7 @@ class SecurityTokenManagerTest {
 
     AccessKey testKey = accessKey( now - TimeUnit.HOURS.toMillis( 24 ), Principals.systemUser() )
     SecurityTokenManager manager = manager( now, testKey )
-    SecurityToken token = manager.doIssueSecurityToken( Principals.systemUser(), testKey, TimeUnit.HOURS.toSeconds( 1 ) + 1 as Integer  )
+    SecurityToken token = manager.doIssueSecurityToken( Principals.systemUser(), testKey, TimeUnit.HOURS.toSeconds( 1 ) as Integer, TimeUnit.HOURS.toSeconds( 1 ) + 1 as Integer  )
 
     assertThat( "Null token issued", token, notNullValue() )
     assertThat( "Token expiry", token.getExpires(), equalTo( now + TimeUnit.HOURS.toMillis( 1 ) ) ) // duration should be truncated to 1 hour
@@ -221,7 +225,7 @@ class SecurityTokenManagerTest {
     long now = System.currentTimeMillis()
     AccessKey testKey = accessKey( now - TimeUnit.HOURS.toMillis( 24 ), Principals.systemUser() )
     SecurityTokenManager manager = manager( now, testKey )
-    manager.doIssueSecurityToken( Principals.nobodyUser(), testKey, 300 )
+    manager.doIssueSecurityToken( Principals.nobodyUser(), testKey, 0, 300 )
   }
 
   private AccessKey accessKey( long created, User owner ) {

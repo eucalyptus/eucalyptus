@@ -19,26 +19,37 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare;
 
+import java.security.KeyFactory;
 import java.security.MessageDigest;
+import java.security.Principal;
 import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Calendar;
+import java.util.Date;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import javax.security.auth.x500.X500Principal;
 
+import org.apache.commons.lang.time.DateUtils;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.Arrays;
 import org.bouncycastle.util.encoders.Base64;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.ServerCertificate;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.component.auth.SystemCredentials;
+import com.eucalyptus.component.auth.SystemCredentials.Credentials;
 import com.eucalyptus.component.id.Euare;
+import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Digest;
@@ -78,20 +89,45 @@ public class EuareServerCertificateUtil {
       Cipher cipher = Ciphers.AES_CBC.get();
       final byte[] iv = new byte[16];
       Crypto.getSecureRandomSupplier().get().nextBytes(iv);
-      cipher.init( Cipher.ENCRYPT_MODE, symmKey, new IvParameterSpec( iv ) );
+      cipher.init( Cipher.ENCRYPT_MODE, symmKey, new IvParameterSpec( iv ), Crypto.getSecureRandomSupplier( ).get( ) );
       final byte[] cipherText = cipher.doFinal(Base64.encode( targetCert.getPrivateKey().getBytes() ));
       final String encPrivKey = new String(Base64.encode(Arrays.concatenate(iv, cipherText)));
 
       // encrypt the symmetric key using the certPem
       X509Certificate x509Cert = PEMFiles.getCert( B64.standard.dec( certPem ) );
       cipher = Ciphers.RSA_PKCS1.get();
-      cipher.init(Cipher.ENCRYPT_MODE, x509Cert.getPublicKey());
+      cipher.init(Cipher.ENCRYPT_MODE, x509Cert.getPublicKey(), Crypto.getSecureRandomSupplier( ).get( ));
       byte[] symmkey = cipher.doFinal(symmKey.getEncoded());
       final String b64SymKey = new String(Base64.encode(symmkey));
       
       return String.format("%s\n%s", b64SymKey, encPrivKey);
     }catch(final Exception ex){
       throw Exceptions.toUndeclared(ex);
+    }
+  }
+  
+  public static X509Certificate generateVMCertificate( final String b64PubKey, final String instanceId, int expirationDays ) 
+      throws EuareException {
+    try{
+      KeyFactory keyFactory = KeyFactory.getInstance( "RSA", "BC");
+      X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(B64.standard.dec(b64PubKey));
+      PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
+      X500Principal subjectDn = 
+          new X500Principal( String.format( "CN=%s, OU=Eucalyptus, O=Cloud, C=US", instanceId) ); 
+      final Credentials euareCred = SystemCredentials.lookup( Euare.class );
+      final Principal signer = 
+         (Principal) euareCred.getCertificate().getSubjectDN();
+      final PrivateKey signingKey = euareCred.getPrivateKey();
+      final Date notAfter = DateUtils.addDays(Calendar.getInstance().getTime(), expirationDays);
+      
+      final X509Certificate cert = 
+          Certs.generateCertificate(publicKey, subjectDn, new X500Principal(signer.getName()), signingKey, notAfter);
+      if(cert==null)
+        throw new Exception("Null returned");
+      return cert;
+    }catch(final Exception ex){
+      LOG.error("failed to generate VM certificate", ex);
+      throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
     }
   }
   
@@ -110,7 +146,22 @@ public class EuareServerCertificateUtil {
         throw Exceptions.toUndeclared(ex);
     }
   }
-  
+
+  public static boolean verifyCertificate(final String certPem, final boolean checkSigner) {
+    try{
+      final X509Certificate cert = PEMFiles.getCert( B64.standard.dec( certPem ) );
+      cert.checkValidity();
+      if(checkSigner) {
+        final Credentials euareCred = SystemCredentials.lookup( Euare.class );
+        final X509Certificate signer = euareCred.getCertificate();
+        cert.verify(signer.getPublicKey());
+      }
+      return true;
+    }catch(final Exception ex) {
+      return false;
+    }
+  }
+
   public static boolean verifySignature(final String certPem, final String msg, final String sigB64){
     try{
       final Signature sig = Signature.getInstance("SHA256withRSA");

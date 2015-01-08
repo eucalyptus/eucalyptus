@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,16 +20,15 @@
 package com.eucalyptus.vm;
 
 import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
-import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
@@ -40,6 +39,9 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
+import com.eucalyptus.compute.common.ComputeMessage;
+import com.eucalyptus.compute.common.EbsDeviceMapping;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.cluster.callback.StartInstanceCallback;
 import com.eucalyptus.cluster.callback.StopInstanceCallback;
@@ -48,7 +50,17 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.ReservationInfoType;
+import com.eucalyptus.compute.common.RunningInstancesItemType;
+import com.eucalyptus.compute.common.Snapshot;
+import com.eucalyptus.compute.common.backend.CreateSnapshotResponseType;
+import com.eucalyptus.compute.common.backend.CreateSnapshotType;
+import com.eucalyptus.compute.common.backend.DescribeInstancesResponseType;
+import com.eucalyptus.compute.common.backend.DescribeInstancesType;
+import com.eucalyptus.compute.common.backend.DescribeSnapshotsResponseType;
+import com.eucalyptus.compute.common.backend.DescribeSnapshotsType;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
@@ -72,18 +84,8 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
-import edu.ucsb.eucalyptus.msgs.CreateSnapshotResponseType;
-import edu.ucsb.eucalyptus.msgs.CreateSnapshotType;
-import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
-import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsType;
-import edu.ucsb.eucalyptus.msgs.EbsDeviceMapping;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
-import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
-import edu.ucsb.eucalyptus.msgs.Snapshot;
+import edu.ucsb.eucalyptus.msgs.StartInstanceResponseType;
+import edu.ucsb.eucalyptus.msgs.StopInstanceResponseType;
 
 /**
  * @author Sang-Min Park
@@ -392,8 +394,8 @@ public class CreateImageTask {
 	}
 	
 	private void setVmCreateImageTaskState(final VmCreateImageTask.CreateImageState state){
-		 final EntityTransaction db = Entities.get( VmInstance.class );
-		 try{
+		try ( TransactionResource db =
+		          Entities.transactionFor( VmInstance.class ) ) {
 			 final VmInstance vm = Entities.uniqueResult(VmInstance.named(this.instanceId));
 			 vm.getRuntimeState().setCreateImageTaskState(state);
 			 Entities.persist(vm);
@@ -402,15 +404,12 @@ public class CreateImageTask {
 			 throw ex;
 		 }catch(Exception ex){
 			 throw Exceptions.toUndeclared(ex);
-		 }finally{
-			 if(db.isActive())
-				 db.rollback();
 		 }
 	}
 	
 	private VmInstance getVmInstance() {
-		 final EntityTransaction db = Entities.get( VmInstance.class );
-		 try{
+		try ( TransactionResource db =
+		          Entities.transactionFor( VmInstance.class ) ) {
 			 final VmInstance vm = Entities.uniqueResult(VmInstance.named(this.instanceId));
 			 db.commit();
 			 return vm;
@@ -418,16 +417,13 @@ public class CreateImageTask {
 			 throw ex;
 		 }catch(Exception ex){
 			 throw Exceptions.toUndeclared(ex);
-		 }finally{
-			 if(db.isActive())
-				 db.rollback();
 		 }
 	}
 	
 	private static List<BlockDeviceMappingItemType> getDeviceMappingsFromImage(final String imageId){
 		List<BlockDeviceMappingItemType> deviceMaps = Lists.newArrayList();
-		final EntityTransaction db = Entities.get(BlockStorageImageInfo.class);
-		try{
+		try ( TransactionResource db =
+		          Entities.transactionFor( VmInstance.class ) ) {
 			final BlockStorageImageInfo image = (BlockStorageImageInfo) Entities.uniqueResult(BlockStorageImageInfo.named(imageId));
 			final List<DeviceMapping> dmSet = image.getDeviceMappings();
 			for(final DeviceMapping dm : dmSet){
@@ -438,9 +434,6 @@ public class CreateImageTask {
 			return deviceMaps;
 		}catch(final Exception ex){
 			throw Exceptions.toUndeclared(ex);
-		}finally{
-			if(db.isActive())
-				db.rollback();
 		}
 	}
 	
@@ -476,8 +469,8 @@ public class CreateImageTask {
 			this.setAccountAdmin();
 			// will throw Exception if check failed
 			this.validateVmInstance();
-			final EntityTransaction db = Entities.get( VmInstance.class );
-			try{
+			try ( TransactionResource db =
+			          Entities.transactionFor( VmInstance.class ) ) {
 				final VmInstance vm = Entities.uniqueResult(VmInstance.named(this.instanceId));
 				if(VmState.STOPPED.equals(vm.getState()) && !this.noReboot){
 					LOG.debug("Reboot is not possible for stopped instance");
@@ -490,9 +483,6 @@ public class CreateImageTask {
 				throw ex;
 			}catch(Exception ex){
 				throw Exceptions.toUndeclared(ex);
-			}finally{
-				if(db.isActive())
-					db.rollback();
 			}
 			createImageTasks.put(this.instanceId, this);
 			return;
@@ -567,23 +557,6 @@ public class CreateImageTask {
 		return deleteOnTerminates.contains(volumeId);
 	}
 	
-	private void setImageId(final String imageId){
-		 final EntityTransaction db = Entities.get( VmInstance.class );
-		 try{
-			 final VmInstance vm = Entities.uniqueResult(VmInstance.named(this.instanceId));
-			 vm.getRuntimeState().getVmCreateImageTask().setImageId(imageId);
-			 Entities.persist(vm);
-			 db.commit();
-		 }catch(NoSuchElementException ex){
-			 throw ex;
-		 }catch(Exception ex){
-			 throw Exceptions.toUndeclared(ex);
-		 }finally{
-			 if(db.isActive())
-				 db.rollback();
-		 }
-	}
-	
 	private String getImageId(){
 		final VmInstance vm = this.getVmInstance();
 		return vm.getRuntimeState().getVmCreateImageTask().getImageId();
@@ -591,8 +564,8 @@ public class CreateImageTask {
 	
 	private List<String> getSnapshotIds(){
 		List<String> snapshots = null;
-		final EntityTransaction db = Entities.get( VmInstance.class );
-		 try{
+		try ( TransactionResource db =
+		          Entities.transactionFor( VmInstance.class ) ) {
 			 final VmInstance vm = Entities.uniqueResult(VmInstance.named(this.instanceId));
 			 snapshots = Lists.transform(Lists.newArrayList(vm.getRuntimeState().getVmCreateImageTask().getSnapshots()), 
 					 new Function<VmCreateImageSnapshot, String>(){
@@ -608,9 +581,6 @@ public class CreateImageTask {
 			 throw ex;
 		 }catch(Exception ex){
 			 throw Exceptions.toUndeclared(ex);
-		 }finally{
-			 if(db.isActive())
-				 db.rollback();
 		 }
 	}
 
@@ -641,16 +611,28 @@ public class CreateImageTask {
 		final List<Map.Entry<String, String>> volumesToSnapshot = 
 				Lists.newArrayList();
 		volumesToSnapshot.add(this.getInstanceRootVolume());
-		if(this.blockDevices == null || this.blockDevices.size() <= 0){ // block device mapping not requested
-			volumesToSnapshot.addAll(this.getInstanceNonRootVolumes());
+		// blockDevices might have devices that should be suppressed as well as ephemeral devices
+		// first check if there are any volumes that should be suppressed
+		List<String> suppressedDevice = new ArrayList<String>();
+		for(BlockDeviceMappingItemType device : blockDevices){
+			if(device.getNoDevice() != null && device.getNoDevice())
+				suppressedDevice.add(device.getDeviceName());
 		}
+
+		// device -> volume-id
+		for(Map.Entry<String, String> vol:getInstanceNonRootVolumes()){
+			if (!suppressedDevice.contains(vol.getKey()))
+				volumesToSnapshot.add(vol);
+		}
+
 	    Boolean isRootDevice = true;
 		for(final Map.Entry<String,String> volume: volumesToSnapshot){
 			final String deviceName = volume.getKey();
 			final String volumeId = volume.getValue();
 			String snapshotId = null;
 			try{
-				final EucalyptusCreateSnapshotTask task = new EucalyptusCreateSnapshotTask(volumeId);
+				final EucalyptusCreateSnapshotTask task = new EucalyptusCreateSnapshotTask(volumeId,
+						String.format("Created by CreateImage(%s) for %s from %s", instanceId, getImageId(), volumeId));
 				final CheckedListenableFuture<Boolean> result = task.dispatch();
 				if(result.get()){
 					 snapshotId = task.getSnapshotId();
@@ -660,8 +642,8 @@ public class CreateImageTask {
 				throw Exceptions.toUndeclared(ex);
 			}
 			LOG.info(String.format("Created snapshot %s from volume %s for device %s", snapshotId, volumeId, deviceName));
-			final EntityTransaction db = Entities.get( VmInstance.class );
-			try{
+			try ( TransactionResource db =
+			          Entities.transactionFor( VmInstance.class ) ) {
 				final VmInstance vm = Entities.uniqueResult(VmInstance.named(this.instanceId));
 				vm.getRuntimeState().getVmCreateImageTask().addSnapshot(deviceName, snapshotId, isRootDevice, isDeleteOnTerminate(volumeId));
 				isRootDevice=false;
@@ -670,16 +652,13 @@ public class CreateImageTask {
 			}catch(final Exception ex){
 				LOG.error("failed to add new snapshot", ex);
 				throw Exceptions.toUndeclared(ex);
-			}finally{
-				if(db.isActive())
-					db.rollback();
 			}
 		}
 	}
 	
 	private List<VmCreateImageSnapshot> getSnapshots(){
-		final EntityTransaction db = Entities.get( VmInstance.class );
-		try{
+		try ( TransactionResource db =
+		          Entities.transactionFor( VmInstance.class ) ) {
 			final VmInstance vm = Entities.uniqueResult(VmInstance.named(this.instanceId));
 			final List<VmCreateImageSnapshot> snapshots =
 					Lists.newArrayList(vm.getRuntimeState().getVmCreateImageTask().getSnapshots());
@@ -688,9 +667,6 @@ public class CreateImageTask {
 		}catch(final Exception ex){
 			LOG.error("failed to pull snapshot info", ex);
 			throw Exceptions.toUndeclared(ex);
-		}finally{
-			if(db.isActive())
-				db.rollback();
 		}
 	}
 	
@@ -772,7 +748,7 @@ public class CreateImageTask {
 		}
 	}
 		
-	private class EucalyptusDescribeSnapshotTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+	private class EucalyptusDescribeSnapshotTask extends EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
 		private List<Snapshot> snapshots = null;
 		private List<String> snapshotIds = null;
 		private EucalyptusDescribeSnapshotTask(final List<String> snapshotIds){
@@ -786,15 +762,13 @@ public class CreateImageTask {
 		}
 		
 		@Override
-		void dispatchInternal(
-				Checked<EucalyptusMessage> callback) {
-			final DispatchingClient<EucalyptusMessage, Eucalyptus> client = this.getClient();
+		void dispatchInternal(Checked<ComputeMessage> callback) {
+			final DispatchingClient<ComputeMessage, Eucalyptus> client = this.getClient();
 			client.dispatch(describeSnapshots(), callback);				
 		}
 
 		@Override
-		void dispatchSuccess(
-				EucalyptusMessage response) {
+		void dispatchSuccess(ComputeMessage response) {
 			final DescribeSnapshotsResponseType resp = (DescribeSnapshotsResponseType) response;
 			this.snapshots = resp.getSnapshotSet();
 		}
@@ -804,28 +778,29 @@ public class CreateImageTask {
 		}
 	}
 
-	private class EucalyptusCreateSnapshotTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+	private class EucalyptusCreateSnapshotTask extends EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
 		private String volumeId = null;
 		private String snapshotId = null;
-		private EucalyptusCreateSnapshotTask(final String volumeId){
+		private String description = null;
+		private EucalyptusCreateSnapshotTask(final String volumeId, String description){
 			this.volumeId = volumeId;
+			this.description = description;
 		}
 		private CreateSnapshotType createSnapshot(){
 			final CreateSnapshotType req = new CreateSnapshotType();
 			req.setVolumeId(volumeId);
+			req.setDescription(description);
 			return req;
 		}
 		
 		@Override
-		void dispatchInternal(
-				Checked<EucalyptusMessage> callback) {
-			final DispatchingClient<EucalyptusMessage, Eucalyptus> client = this.getClient();
+		void dispatchInternal(Checked<ComputeMessage> callback) {
+			final DispatchingClient<ComputeMessage, Eucalyptus> client = this.getClient();
 			client.dispatch(createSnapshot(), callback);				
 		}
 
 		@Override
-		void dispatchSuccess(
-				EucalyptusMessage response) {
+		void dispatchSuccess(ComputeMessage response) {
 			final CreateSnapshotResponseType resp = (CreateSnapshotResponseType) response;
 			this.snapshotId = resp.getSnapshot().getSnapshotId();
 		}
@@ -835,7 +810,7 @@ public class CreateImageTask {
 		}
 	}
 	
-	private class EucalyptusDescribeInstanceTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+	private class EucalyptusDescribeInstanceTask extends EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
 		private RunningInstancesItemType result = null;
 		private EucalyptusDescribeInstanceTask(){}
 		private DescribeInstancesType describeInstances(){
@@ -845,15 +820,13 @@ public class CreateImageTask {
 		}
 		
 		@Override
-		void dispatchInternal(
-				Checked<EucalyptusMessage> callback) {
-			final DispatchingClient<EucalyptusMessage, Eucalyptus> client = this.getClient();
+		void dispatchInternal(Checked<ComputeMessage> callback) {
+			final DispatchingClient<ComputeMessage, Eucalyptus> client = this.getClient();
 			client.dispatch(describeInstances(), callback);				
 		}
 
 		@Override
-		void dispatchSuccess(
-				EucalyptusMessage response) {
+		void dispatchSuccess(ComputeMessage response) {
 			final DescribeInstancesResponseType resp = (DescribeInstancesResponseType) response;
 			final List<RunningInstancesItemType> resultInstances = Lists.newArrayList();
 			for(final ReservationInfoType res : resp.getReservationSet()){
@@ -911,9 +884,9 @@ public class CreateImageTask {
 	
 	    abstract void dispatchSuccess(TM response );
 	    
-	    protected DispatchingClient<EucalyptusMessage, Eucalyptus> getClient() {
+	    protected DispatchingClient<ComputeMessage, Eucalyptus> getClient() {
 			try{
-				final DispatchingClient<EucalyptusMessage, Eucalyptus> client =
+				final DispatchingClient<ComputeMessage, Eucalyptus> client =
 					new DispatchingClient<>(CreateImageTask.this.accountAdminId , Eucalyptus.class );
 				client.init();
 				return client;

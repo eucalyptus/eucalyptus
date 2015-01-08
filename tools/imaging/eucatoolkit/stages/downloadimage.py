@@ -77,6 +77,10 @@ class DownloadImage(object):
         parser.add_argument('--destispipe', dest='destispipe',
                             default=False, action='store_true',
                             help='''Indicate that destination is a pipe''')
+        parser.add_argument('--skip-size-validation', dest='skipsizevalidation',
+                            default=False, action='store_true',
+                            help='''Skip downloaded file size validation (use carefully)''')
+
 
         #Set any kwargs from init to default values for parsed args
         #Handle the cli arguments...
@@ -243,7 +247,7 @@ class DownloadImage(object):
                            + str(part.written_digest))
             if self.args.reportprogress:
                 stages.report_status('"bytes_downloaded":%d' % bytes)
-        if manifest.download_image_size is not None:
+        if manifest.download_image_size is not None and not self.args.skipsizevalidation:
             if bytes != manifest.download_image_size:
                 raise ValueError('Bytes Downloaded:"{0}" does not equal '
                                  'manifest image size:"{1}"'
@@ -397,7 +401,7 @@ class DownloadImage(object):
                        + str(manifest.download_image_size))
             self.log.debug('manifest unbundled size:'
                        + str(manifest.unbundled_image_size))
-            if bytes != expected_size:
+            if not self.args.skipsizevalidation and bytes != expected_size:
                 raise ValueError('Bytes written:"{0}" does not equal '
                                  'expected:"{1}"'.format(bytes, expected_size))
             if dest_file != "-" and not self.args.destispipe:

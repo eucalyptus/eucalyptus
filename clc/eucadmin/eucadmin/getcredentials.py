@@ -1,4 +1,4 @@
-# Copyright 2011-2012 Eucalyptus Systems, Inc.
+# Copyright 2011-2014 Eucalyptus Systems, Inc.
 #
 # Redistribution and use of this software in source and binary forms,
 # with or without modification, are permitted provided that the following
@@ -37,7 +37,7 @@ import hashlib
 import binascii
 from M2Crypto import RSA
 
-GetCertURL = 'https://localhost:8443/getX509?account=%s&user=%s&code=%s'
+GetCertURL = 'https://localhost:8443/getX509?account=%s&user=%s&force=%s&code=%s'
 
 EucaP12File = '%s/var/lib/eucalyptus/keys/euca.p12'
 CloudPKFile = '%s/var/lib/eucalyptus/keys/cloud-pk.pem'
@@ -60,7 +60,12 @@ class GetCredentials(AWSQueryRequest):
                     short_name='u', long_name='user',
                     ptype='string', optional=True, default='admin',
                     doc=('user name for which to get credentials '
-                         '(default: admin)'))]
+                         '(default: admin)')),
+              Param(name='force',
+                    short_name='f', long_name='force',
+                    ptype='boolean', optional=True, default=False,
+                    doc='Create new access key credentials even if limit '
+                    'exceeded')]
     Args = [Param(name='zipfile', long_name='zipfile',
                   ptype='string', optional=False,
                   doc='The path to the resulting zip file with credentials')]
@@ -85,6 +90,7 @@ class GetCredentials(AWSQueryRequest):
     def get_credentials(self):
         data = boto.utils.retry_url(GetCertURL % (self.account,
                                                   self.user,
+                                                  self.force,
                                                   self.token),
                                     num_retries=1)
         if not data:
@@ -100,7 +106,10 @@ class GetCredentials(AWSQueryRequest):
         d = hashlib.sha256()
         d.update("eucalyptus")
         pk = RSA.load_key(self.cloudpk_file,passphrase_callback)
-        self.db_pass = binascii.hexlify(pk.sign(d.digest(),algo="sha256"))
+        bs = pk.sign(d.digest(),algo="sha256")
+        h = hashlib.sha256()
+        h.update(bs)
+        self.db_pass = binascii.hexlify(h.digest())
 
     def cli_formatter(self, data):
         pass
@@ -121,6 +130,7 @@ class GetCredentials(AWSQueryRequest):
                     raise ValueError('Unable to find EUCALYPTUS home')
         self.account = self.request_params['account']
         self.user = self.request_params['user']
+        self.force = self.request_params['force']
         self.zipfile = self.request_params['zipfile']
         self.eucap12_file = EucaP12File % self.euca_home
         self.cloudpk_file = CloudPKFile % self.euca_home
@@ -136,14 +146,14 @@ class GetCredentials(AWSQueryRequest):
 
     def get_keys(self):
         self.setup_query()
-        con1 = db.connect(host='localhost:8777', user='eucalyptus', password=self.db_pass, database='eucalyptus_auth')
+        con1 = db.connect(host='localhost:8777', user='eucalyptus', password=self.db_pass, database='eucalyptus_shared')
         cur1 = con1.cursor()
         cur1.execute("""select k.auth_access_key_query_id, k.auth_access_key_key 
-                          from auth_access_key k 
-                          join auth_user u on k.auth_access_key_owning_user=u.id
-                          join auth_group_has_users gu on u.id=gu.auth_user_id 
-                          join auth_group g on gu.auth_group_id=g.id 
-                          join auth_account a on g.auth_group_owning_account=a.id 
+                          from eucalyptus_auth.auth_access_key k 
+                          join eucalyptus_auth.auth_user u on k.auth_access_key_owning_user=u.id
+                          join eucalyptus_auth.auth_group_has_users gu on u.id=gu.auth_user_id 
+                          join eucalyptus_auth.auth_group g on gu.auth_group_id=g.id 
+                          join eucalyptus_auth.auth_account a on g.auth_group_owning_account=a.id 
                          where a.auth_account_name=%(acctname)s and g.auth_group_name=%(grpname)s and k.auth_access_key_active=TRUE""",
                      params={'acctname': self.args.get('account'),
                              'grpname': '_' + self.args.get('user')})
@@ -153,13 +163,13 @@ class GetCredentials(AWSQueryRequest):
         return result[0]
 
     def get_token(self):
-        con1 = db.connect(host='localhost:8777', user='eucalyptus', password=self.db_pass, database='eucalyptus_auth')
+        con1 = db.connect(host='localhost:8777', user='eucalyptus', password=self.db_pass, database='eucalyptus_shared')
         cur1 = con1.cursor()
         cur1.execute("""select u.auth_user_token 
-                          from auth_user u 
-                          join auth_group_has_users gu on u.id=gu.auth_user_id
-                          join auth_group g on gu.auth_group_id=g.id 
-                          join auth_account a on g.auth_group_owning_account=a.id 
+                          from eucalyptus_auth.auth_user u 
+                          join eucalyptus_auth.auth_group_has_users gu on u.id=gu.auth_user_id
+                          join eucalyptus_auth.auth_group g on gu.auth_group_id=g.id 
+                          join eucalyptus_auth.auth_account a on g.auth_group_owning_account=a.id 
                           where a.auth_account_name=%(acctname)s and g.auth_group_name=%(grpname)s""",
                      params={'acctname': self.account, 'grpname': '_' + self.user})
         result = cur1.fetchall()

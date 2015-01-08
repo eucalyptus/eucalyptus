@@ -28,6 +28,7 @@ import java.security.PublicKey;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnull;
 import javax.crypto.Cipher;
@@ -44,13 +45,11 @@ import javax.xml.xpath.XPathFactory;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.Bucket;
 import com.amazonaws.services.s3.model.BucketLifecycleConfiguration;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.imaging.UrlValidator;
+import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.imaging.common.UrlValidator;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 
@@ -73,329 +72,380 @@ import com.eucalyptus.util.XMLParser;
 import com.google.common.base.Function;
 
 public class DownloadManifestFactory {
-	private static Logger LOG = Logger.getLogger( DownloadManifestFactory.class );
-	
-	private final static String uuid = Signatures.SHA256withRSA.trySign( Eucalyptus.class, "download-manifests".getBytes());
-	public static String DOWNLOAD_MANIFEST_BUCKET_NAME = (uuid != null ? uuid.substring(0, 6) : "system") + "-download-manifests";
-	private static String DOWNLOAD_MANIFEST_PREFIX = "DM-";
-	private static String MANIFEST_EXPIRATION = "expire";
-	private static int DEFAULT_EXPIRE_TIME_HR = 3;
+  private static Logger LOG = Logger.getLogger(DownloadManifestFactory.class);
 
-	public static String generateDownloadManifest(final ImageManifestFile baseManifest, final PublicKey keyToUse,
-      final String manifestName) throws DownloadManifestException {
-	  return generateDownloadManifest(baseManifest, keyToUse, manifestName, DEFAULT_EXPIRE_TIME_HR);
-	}
+  private final static String uuid = Signatures.SHA256withRSA.trySign(
+      Eucalyptus.class, "download-manifests".getBytes());
+  public static String DOWNLOAD_MANIFEST_BUCKET_NAME = (uuid != null ? uuid
+      .substring(0, 6) : "system") + "-download-manifests-v2";
+  private static String DOWNLOAD_MANIFEST_PREFIX = "DM-";
+  private static String MANIFEST_EXPIRATION = "expire";
+  private static int DEFAULT_EXPIRE_TIME_HR = 3;
 
-    public static User getDownloadManifestS3User() throws AuthException {
-        return Accounts.lookupSystemAdmin();
-    }
+  public static String generateDownloadManifest(
+      final ImageManifestFile baseManifest, final PublicKey keyToUse,
+      final String manifestName, boolean urlForNc)
+      throws DownloadManifestException {
+    return generateDownloadManifest(baseManifest, keyToUse, manifestName,
+        DEFAULT_EXPIRE_TIME_HR, urlForNc);
+  }
 
-	/**
-	 * Generates download manifest based on bundle manifest and puts in into system owned bucket
-	 * @param baseManifestLocation location of the base manifest file
-	 * @param keyToUse public key that used for encryption
-	 * @param manifestName name for generated manifest file
-	 * @param expirationHours expiration policy in hours for pre-signed URLs
-	 * @param manifestType what kind of manifest 
-	 * @return pre-signed URL that can be used to download generated manifest
-	 * @throws DownloadManifestException
-	 */
-	public static String generateDownloadManifest(final ImageManifestFile baseManifest, final PublicKey keyToUse,
-			final String manifestName, int expirationHours) throws DownloadManifestException {
-		try {
-			//prepare to do pre-signed urls
-      EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(getDownloadManifestS3User());
+  /**
+   * Generates download manifest based on bundle manifest and puts in into
+   * system owned bucket
+   * 
+   * @param baseManifest
+   *          the base manifest
+   * @param keyToUse
+   *          public key that used for encryption
+   * @param manifestName
+   *          name for generated manifest file
+   * @param expirationHours
+   *          expiration policy in hours for pre-signed URLs
+   * @param urlForNc
+   *          indicates if urs are constructed for NC use
+   * @return pre-signed URL that can be used to download generated manifest
+   * @throws DownloadManifestException
+   */
+  public static String generateDownloadManifest(
+      final ImageManifestFile baseManifest, final PublicKey keyToUse,
+      final String manifestName, int expirationHours, boolean urlForNc)
+      throws DownloadManifestException {
+    try (final EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3ClientForUser(
+            Accounts.lookupAwsExecReadAdmin(true), (int)TimeUnit.MINUTES.toSeconds( 15 )) ) {
+      // prepare to do pre-signed urls
+      if (!urlForNc)
+        s3Client.refreshEndpoint(true);
 
       Date expiration = new Date();
       long msec = expiration.getTime() + 1000 * 60 * 60 * expirationHours;
       expiration.setTime(msec);
-      
+
       // check if download-manifest already exists
-      if (objectExist(s3Client,DOWNLOAD_MANIFEST_BUCKET_NAME, DOWNLOAD_MANIFEST_PREFIX + manifestName)) {
-        LOG.debug("Manifest '" + (DOWNLOAD_MANIFEST_PREFIX + manifestName) + "' is alredy created and has not expired. Skipping creation");
-        URL s = s3Client.generatePresignedUrl(DOWNLOAD_MANIFEST_BUCKET_NAME,
-            DOWNLOAD_MANIFEST_PREFIX+manifestName, expiration, HttpMethod.GET);
-        return String.format("%s://imaging@%s%s?%s", s.getProtocol(), s.getAuthority(), s.getPath(), s.getQuery());
+      if (objectExist(s3Client, DOWNLOAD_MANIFEST_BUCKET_NAME,
+          DOWNLOAD_MANIFEST_PREFIX + manifestName)) {
+        LOG.debug("Manifest '" + (DOWNLOAD_MANIFEST_PREFIX + manifestName)
+            + "' is already created and has not expired. Skipping creation");
+        URL s = s3Client
+            .generatePresignedUrl(DOWNLOAD_MANIFEST_BUCKET_NAME,
+                DOWNLOAD_MANIFEST_PREFIX + manifestName, expiration,
+                HttpMethod.GET);
+        return String.format("%s://imaging@%s%s?%s", s.getProtocol(),
+            s.getAuthority(), s.getPath(), s.getQuery());
+      } else {
+        LOG.debug("Manifest '" + (DOWNLOAD_MANIFEST_PREFIX + manifestName)
+            + "' does not exist");
       }
 
       UrlValidator urlValidator = new UrlValidator();
 
-			final String manifest = baseManifest.getManifest();
-			if (manifest == null) {
-				throw new DownloadManifestException("Can't generate download manifest from null base manifest");
-			}
-			final Document inputSource;
-			final XPath xpath;
-			Function<String, String> xpathHelper;
-			DocumentBuilder builder = XMLParser.getDocBuilder( );
-			inputSource = builder.parse( new ByteArrayInputStream( manifest.getBytes( ) ) );
-			if ( !"manifest".equals(inputSource.getDocumentElement().getNodeName()) ) {
-				LOG.error("Expected image manifest. Got " + nodeToString(inputSource, false) );
-				throw new InvalidBaseManifestException("Base manifest does not have manifest element");
-			}
+      final String manifest = baseManifest.getManifest();
+      if (manifest == null) {
+        throw new DownloadManifestException(
+            "Can't generate download manifest from null base manifest");
+      }
+      final Document inputSource;
+      final XPath xpath;
+      Function<String, String> xpathHelper;
+      DocumentBuilder builder = XMLParser.getDocBuilder();
+      inputSource = builder
+          .parse(new ByteArrayInputStream(manifest.getBytes()));
+      if (!"manifest".equals(inputSource.getDocumentElement().getNodeName())) {
+        LOG.error("Expected image manifest. Got "
+            + nodeToString(inputSource, false));
+        throw new InvalidBaseManifestException(
+            "Base manifest does not have manifest element");
+      }
 
-			StringBuilder signatureSrc = new StringBuilder();
-			Document manifestDoc = builder.newDocument();
-			Element root = (Element) manifestDoc.createElement("manifest");
-			manifestDoc.appendChild(root);
-			Element el = manifestDoc.createElement("version");
-			el.appendChild(manifestDoc.createTextNode("2014-01-14"));
-			signatureSrc.append(nodeToString(el, false));
-			root.appendChild(el);
-			el = manifestDoc.createElement("file-format");
-			el.appendChild(manifestDoc.createTextNode( baseManifest.getManifestType().getFileType().toString() ));
-			root.appendChild(el);
-			signatureSrc.append(nodeToString(el, false));
-			
-			xpath = XPathFactory.newInstance( ).newXPath();
-			xpathHelper = new Function<String, String>( ) {
-				@Override
-				public String apply( String input ) {
-					try {
-						return ( String ) xpath.evaluate( input, inputSource, XPathConstants.STRING );
-					} catch ( XPathExpressionException ex ) {
-						return null;
-					}
-				}
-			};
+      StringBuilder signatureSrc = new StringBuilder();
+      Document manifestDoc = builder.newDocument();
+      Element root = (Element) manifestDoc.createElement("manifest");
+      manifestDoc.appendChild(root);
+      Element el = manifestDoc.createElement("version");
+      el.appendChild(manifestDoc.createTextNode("2014-01-14"));
+      signatureSrc.append(nodeToString(el, false));
+      root.appendChild(el);
+      el = manifestDoc.createElement("file-format");
+      el.appendChild(manifestDoc.createTextNode(baseManifest.getManifestType()
+          .getFileType().toString()));
+      root.appendChild(el);
+      signatureSrc.append(nodeToString(el, false));
 
-			// extract keys
-			//TODO: move this?
-			if (baseManifest.getManifestType().getFileType() == FileType.BUNDLE) {
-				String encryptedKey = xpathHelper.apply( "/manifest/image/ec2_encrypted_key" );
-				String encryptedIV = xpathHelper.apply( "/manifest/image/ec2_encrypted_iv" );
-				String size = xpathHelper.apply( "/manifest/image/size" );
-				EncryptedKey encryptKey = reEncryptKey(new EncryptedKey(encryptedKey, encryptedIV), keyToUse);
-				el = manifestDoc.createElement("bundle");
-				Element key = manifestDoc.createElement("encrypted-key");
-				key.appendChild(manifestDoc.createTextNode(encryptKey.getKey()));
-				Element iv = manifestDoc.createElement("encrypted-iv");
-				iv.appendChild(manifestDoc.createTextNode(encryptKey.getIV()));
-				el.appendChild(key);
-				el.appendChild(iv);
-				Element sizeEl = manifestDoc.createElement("unbundled-size");
-				sizeEl.appendChild(manifestDoc.createTextNode(size));
-				el.appendChild(sizeEl);
-				root.appendChild(el);
-				signatureSrc.append(nodeToString(el, false));
-			}
+      xpath = XPathFactory.newInstance().newXPath();
+      xpathHelper = new Function<String, String>() {
+        @Override
+        public String apply(String input) {
+          try {
+            return (String) xpath.evaluate(input, inputSource,
+                XPathConstants.STRING);
+          } catch (XPathExpressionException ex) {
+            return null;
+          }
+        }
+      };
 
-			el = manifestDoc.createElement("image");
-			String bundleSize = xpathHelper.apply( baseManifest.getManifestType().getSizePath() );
-			if (bundleSize == null) {
-				throw new InvalidBaseManifestException("Base manifest does not have size element");
-			}
-			Element size = manifestDoc.createElement("size");
-			size.appendChild(manifestDoc.createTextNode(bundleSize));		
-			el.appendChild(size);
-			
-			Element partsEl = manifestDoc.createElement("parts");
-			el.appendChild(partsEl);
-			//parts
-			NodeList parts = ( NodeList ) xpath.evaluate( baseManifest.getManifestType().getPartsPath(), inputSource, XPathConstants.NODESET );
-			if (parts == null) {
-				throw new InvalidBaseManifestException("Base manifest does not have parts");
-			}
+      // extract keys
+      // TODO: move this?
+      if (baseManifest.getManifestType().getFileType() == FileType.BUNDLE) {
+        String encryptedKey = xpathHelper
+            .apply("/manifest/image/ec2_encrypted_key");
+        String encryptedIV = xpathHelper
+            .apply("/manifest/image/ec2_encrypted_iv");
+        String size = xpathHelper.apply("/manifest/image/size");
+        EncryptedKey encryptKey = reEncryptKey(new EncryptedKey(encryptedKey,
+            encryptedIV), keyToUse);
+        el = manifestDoc.createElement("bundle");
+        Element key = manifestDoc.createElement("encrypted-key");
+        key.appendChild(manifestDoc.createTextNode(encryptKey.getKey()));
+        Element iv = manifestDoc.createElement("encrypted-iv");
+        iv.appendChild(manifestDoc.createTextNode(encryptKey.getIV()));
+        el.appendChild(key);
+        el.appendChild(iv);
+        Element sizeEl = manifestDoc.createElement("unbundled-size");
+        sizeEl.appendChild(manifestDoc.createTextNode(size));
+        el.appendChild(sizeEl);
+        root.appendChild(el);
+        signatureSrc.append(nodeToString(el, false));
+      }
 
-			for(int i=0; i<parts.getLength();i++){
-				Node part = parts.item(i);
-				String partIndex = part.getAttributes().getNamedItem("index").getNodeValue();
-				String partKey = ((Node) xpath.evaluate(baseManifest.getManifestType().getPartUrlElement(),
-						part, XPathConstants.NODE)).getTextContent();
-				String partDownloadUrl = partKey;
-				if (baseManifest.getManifestType().signPartUrl()) {
-					GeneratePresignedUrlRequest generatePresignedUrlRequest = 
-						new GeneratePresignedUrlRequest(baseManifest.getBaseBucket(), partKey, HttpMethod.GET);
-					generatePresignedUrlRequest.setExpiration(expiration);
-					URL s = s3Client.generatePresignedUrl(generatePresignedUrlRequest);
-					partDownloadUrl = s.toString();
-				} else {
-				  // validate url per EUCA-9144
-				  if (!urlValidator.isEucalyptusUrl(partDownloadUrl))
-				    throw new DownloadManifestException("Some parts in the manifest are not stored in the OS. Its location is outside Eucalyptus:" + partDownloadUrl);
-				}
-				Element aPart = manifestDoc.createElement("part");
-				Element getUrl = manifestDoc.createElement("get-url");
-				getUrl.appendChild(manifestDoc.createTextNode(partDownloadUrl));
-				aPart.setAttribute("index", partIndex);
-				aPart.appendChild(getUrl);
-				partsEl.appendChild(aPart);
-			}
-			root.appendChild(el);
-			signatureSrc.append(nodeToString(el, false));
-			String signatureData = signatureSrc.toString();
-			Element signature = manifestDoc.createElement("signature");
-			signature.setAttribute("algorithm", "RSA-SHA256");
-			signature.appendChild(manifestDoc.createTextNode(Signatures.SHA256withRSA.trySign(Eucalyptus.class,
-                    signatureData.getBytes())));
-			root.appendChild(signature);
-			String downloadManifest = nodeToString(manifestDoc, true);
-			//TODO: move this ?
-			createManifestsBucket(s3Client);
-			putManifestData(s3Client, DOWNLOAD_MANIFEST_BUCKET_NAME, DOWNLOAD_MANIFEST_PREFIX + manifestName, downloadManifest, expiration);
-			// generate pre-sign url for download manifest
-			URL s = s3Client.generatePresignedUrl(DOWNLOAD_MANIFEST_BUCKET_NAME,
-                    DOWNLOAD_MANIFEST_PREFIX+manifestName, expiration, HttpMethod.GET);
-			return String.format("%s://imaging@%s%s?%s", s.getProtocol(), s.getAuthority(), s.getPath(), s.getQuery());
-		} catch(Exception ex) {
-			LOG.error("Got an error", ex);
-			throw new DownloadManifestException("Can't generate download manifest");
-		}
-	}
-	
-	public static String generatePresignedUrl(final String manifestName) throws DownloadManifestException {
-	  try{
-	    EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(getDownloadManifestS3User());
-	    final long expirationHours = DEFAULT_EXPIRE_TIME_HR * 2;
-	    Date expiration = new Date();
-	    long msec = expiration.getTime() + 1000 * 60 * 60 * expirationHours;
-	    expiration.setTime(msec);
-	    URL s = s3Client.generatePresignedUrl(DOWNLOAD_MANIFEST_BUCKET_NAME,
-	        DOWNLOAD_MANIFEST_PREFIX+manifestName, expiration, HttpMethod.GET);
-	    return String.format("%s://imaging@%s%s?%s", s.getProtocol(), s.getAuthority(), s.getPath(), s.getQuery());
-	  }catch(final Exception ex){
-	    LOG.error("Failed to generate presigned url", ex);
-	    throw new DownloadManifestException("Failed to generate presigned url", ex);
-	  }
- }
-	
-	private static final String nodeToString(Node node, boolean addDeclaration) throws Exception {
-		Transformer tf = TransformerFactory.newInstance().newTransformer();
-		tf.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
-		if (!addDeclaration)
-			tf.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
-		Writer out = new StringWriter();
-		tf.transform(new DOMSource(node), new StreamResult(out));
-		return out.toString();
-	}
-	
-	private static class EncryptedKey {
-		final String key;
-		final String IV;
-		public EncryptedKey(String key, String IV){
-			this.key = key;
-			this.IV = IV;
-		}
-		public String getKey() { return key; }
-		public String getIV() { return IV; }
-	}
+      el = manifestDoc.createElement("image");
+      String bundleSize = xpathHelper.apply(baseManifest.getManifestType()
+          .getSizePath());
+      if (bundleSize == null) {
+        throw new InvalidBaseManifestException(
+            "Base manifest does not have size element");
+      }
+      Element size = manifestDoc.createElement("size");
+      size.appendChild(manifestDoc.createTextNode(bundleSize));
+      el.appendChild(size);
 
-	private static EncryptedKey reEncryptKey(EncryptedKey in, PublicKey keyToUse) throws Exception {
-		// Decrypt key and IV with Eucalyptus
-		PrivateKey pk = SystemCredentials.lookup(Eucalyptus.class).getPrivateKey();
-		Cipher cipher = Ciphers.RSA_PKCS1.get();
-		cipher.init(Cipher.DECRYPT_MODE, pk);
-		byte[] key = cipher.doFinal(Hashes.hexToBytes(in.getKey()));
-		byte[] iv = cipher.doFinal(Hashes.hexToBytes(in.getIV()));
-		//Encrypt key and IV with NC
-		cipher.init(Cipher.ENCRYPT_MODE, keyToUse);
-		return new EncryptedKey(Hashes.bytesToHex(cipher.doFinal(key)), Hashes.bytesToHex(cipher.doFinal(iv)));
-	}
-	
-	private static void putManifestData(@Nonnull EucaS3Client s3Client, String bucketName, String objectName,
-	    String data, Date expiration) throws EucalyptusCloudException {
+      Element partsEl = manifestDoc.createElement("parts");
+      el.appendChild(partsEl);
+      // parts
+      NodeList parts = (NodeList) xpath.evaluate(baseManifest.getManifestType()
+          .getPartsPath(), inputSource, XPathConstants.NODESET);
+      if (parts == null) {
+        throw new InvalidBaseManifestException(
+            "Base manifest does not have parts");
+      }
+
+      for (int i = 0; i < parts.getLength(); i++) {
+        Node part = parts.item(i);
+        String partIndex = part.getAttributes().getNamedItem("index")
+            .getNodeValue();
+        String partKey = ((Node) xpath.evaluate(baseManifest.getManifestType()
+            .getPartUrlElement(), part, XPathConstants.NODE)).getTextContent();
+        String partDownloadUrl = partKey;
+        if (baseManifest.getManifestType().signPartUrl()) {
+          GeneratePresignedUrlRequest generatePresignedUrlRequest = new GeneratePresignedUrlRequest(
+              baseManifest.getBaseBucket(), partKey, HttpMethod.GET);
+          generatePresignedUrlRequest.setExpiration(expiration);
+          URL s = s3Client.generatePresignedUrl(generatePresignedUrlRequest);
+          partDownloadUrl = s.toString();
+        } else {
+          // validate url per EUCA-9144
+          if (!urlValidator.isEucalyptusUrl(partDownloadUrl))
+            throw new DownloadManifestException(
+                "Some parts in the manifest are not stored in the OS. Its location is outside Eucalyptus:"
+                    + partDownloadUrl);
+        }
+        Element aPart = manifestDoc.createElement("part");
+        Element getUrl = manifestDoc.createElement("get-url");
+        getUrl.appendChild(manifestDoc.createTextNode(partDownloadUrl));
+        aPart.setAttribute("index", partIndex);
+        aPart.appendChild(getUrl);
+        partsEl.appendChild(aPart);
+      }
+      root.appendChild(el);
+      signatureSrc.append(nodeToString(el, false));
+      String signatureData = signatureSrc.toString();
+      Element signature = manifestDoc.createElement("signature");
+      signature.setAttribute("algorithm", "RSA-SHA256");
+      signature.appendChild(manifestDoc.createTextNode(Signatures.SHA256withRSA
+          .trySign(Eucalyptus.class, signatureData.getBytes())));
+      root.appendChild(signature);
+      String downloadManifest = nodeToString(manifestDoc, true);
+      // TODO: move this ?
+      createManifestsBucketIfNeeded(s3Client);
+      putManifestData(s3Client, DOWNLOAD_MANIFEST_BUCKET_NAME,
+          DOWNLOAD_MANIFEST_PREFIX + manifestName, downloadManifest, expiration);
+      // generate pre-sign url for download manifest
+      URL s = s3Client.generatePresignedUrl(DOWNLOAD_MANIFEST_BUCKET_NAME,
+          DOWNLOAD_MANIFEST_PREFIX + manifestName, expiration, HttpMethod.GET);
+      return String.format("%s://imaging@%s%s?%s", s.getProtocol(),
+          s.getAuthority(), s.getPath(), s.getQuery());
+    } catch (Exception ex) {
+      LOG.error("Got an error", ex);
+      throw new DownloadManifestException("Can't generate download manifest");
+    }
+  }
+
+  public static String generatePresignedUrl(final String manifestName)
+      throws DownloadManifestException {
+    try (final EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3ClientForUser(
+            Accounts.lookupAwsExecReadAdmin(true), (int)TimeUnit.MINUTES.toSeconds( 15 )) ) {
+      final long expirationHours = DEFAULT_EXPIRE_TIME_HR * 2;
+      Date expiration = new Date();
+      long msec = expiration.getTime() + 1000 * 60 * 60 * expirationHours;
+      expiration.setTime(msec);
+      URL s = s3Client.generatePresignedUrl(DOWNLOAD_MANIFEST_BUCKET_NAME,
+          DOWNLOAD_MANIFEST_PREFIX + manifestName, expiration, HttpMethod.GET);
+      return String.format("%s://imaging@%s%s?%s", s.getProtocol(),
+          s.getAuthority(), s.getPath(), s.getQuery());
+    } catch (final Exception ex) {
+      LOG.error("Failed to generate presigned url", ex);
+      throw new DownloadManifestException("Failed to generate presigned url",
+          ex);
+    }
+  }
+
+  private static final String nodeToString(Node node, boolean addDeclaration)
+      throws Exception {
+    Transformer tf = TransformerFactory.newInstance().newTransformer();
+    tf.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+    if (!addDeclaration)
+      tf.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+    Writer out = new StringWriter();
+    tf.transform(new DOMSource(node), new StreamResult(out));
+    return out.toString();
+  }
+
+  private static class EncryptedKey {
+    final String key;
+    final String IV;
+
+    public EncryptedKey(String key, String IV) {
+      this.key = key;
+      this.IV = IV;
+    }
+
+    public String getKey() {
+      return key;
+    }
+
+    public String getIV() {
+      return IV;
+    }
+  }
+
+  private static EncryptedKey reEncryptKey(EncryptedKey in, PublicKey keyToUse)
+      throws Exception {
+    // Decrypt key and IV with Eucalyptus
+    PrivateKey pk = SystemCredentials.lookup(Eucalyptus.class).getPrivateKey();
+    Cipher cipher = Ciphers.RSA_PKCS1.get();
+    cipher
+        .init(Cipher.DECRYPT_MODE, pk, Crypto.getSecureRandomSupplier().get());
+    byte[] key = cipher.doFinal(Hashes.hexToBytes(in.getKey()));
+    byte[] iv = cipher.doFinal(Hashes.hexToBytes(in.getIV()));
+    // Encrypt key and IV with NC
+    cipher.init(Cipher.ENCRYPT_MODE, keyToUse, Crypto.getSecureRandomSupplier()
+        .get());
+    return new EncryptedKey(Hashes.bytesToHex(cipher.doFinal(key)),
+        Hashes.bytesToHex(cipher.doFinal(iv)));
+  }
+
+  private static void putManifestData(@Nonnull EucaS3Client s3Client,
+      String bucketName, String objectName, String data, Date expiration)
+      throws EucalyptusCloudException {
     int retries = 3;
     long backoffTime = 500L; // 1 second to start.
-    for(int i = 0 ; i < retries; i++) {
+    for (int i = 0; i < retries; i++) {
       try {
         Map<String, String> metadata = new HashMap<String, String>();
-        metadata.put( MANIFEST_EXPIRATION, Long.toString(expiration.getTime()) );
-        String etag = s3Client.putObjectContent(bucketName, objectName, data, metadata);
-        LOG.debug("Added manifest to " + bucketName + "/" + objectName + " Etag: " + etag);
+        metadata.put(MANIFEST_EXPIRATION, Long.toString(expiration.getTime()));
+        String etag = s3Client.putObjectContent(bucketName, objectName, data,
+            metadata);
+        LOG.debug("Added manifest to " + bucketName + "/" + objectName
+            + " Etag: " + etag);
         return;
       } catch (AmazonClientException e) {
-          LOG.warn("Upload error while trying to upload manifest data. Attempt: " + String.valueOf((i + 1)) + " of " + String.valueOf(retries), e);
-      } catch(Exception e) {
-          LOG.warn("Non-upload error while trying to upload manifest data. Attempt: " + String.valueOf((i + 1)) + " of " + String.valueOf(retries), e);
+        LOG.warn("Upload error while trying to upload manifest data. Attempt: "
+            + String.valueOf((i + 1)) + " of " + String.valueOf(retries), e);
+      } catch (Exception e) {
+        LOG.warn(
+            "Non-upload error while trying to upload manifest data. Attempt: "
+                + String.valueOf((i + 1)) + " of " + String.valueOf(retries), e);
       }
 
       try {
-          Thread.sleep(backoffTime);
-      } catch(InterruptedException e) {
-          LOG.warn("Interrupted during backoff sleep for upload.", e);
-          throw new EucalyptusCloudException(e);
+        Thread.sleep(backoffTime);
+      } catch (InterruptedException e) {
+        LOG.warn("Interrupted during backoff sleep for upload.", e);
+        throw new EucalyptusCloudException(e);
       }
 
-      s3Client.refreshEndpoint(); //try another OSG if more than one.
+      s3Client.refreshEndpoint(); // try another OSG if more than one.
       backoffTime *= 2;
     }
-    throw new EucalyptusCloudException( "Failed to put manifest file: " + bucketName + "/" + objectName + ". Exceeded retry limit");
-	}
-	
-	private static boolean objectExist(@Nonnull EucaS3Client s3Client, String bucketName, String objectName) throws EucalyptusCloudException {
-	  try {
-	    ObjectMetadata metadata = s3Client.getS3Client().getObjectMetadata(bucketName, objectName);
-	    if (metadata == null || metadata.getUserMetadata() == null)
-	      return false;
-	    Map<String, String> userData = metadata.getUserMetadata();
-	    String expire = userData.get(MANIFEST_EXPIRATION);
-	    if (expire == null) {
-	      return false;
-	    } else {
-	      Long currentTime = (new Date()).getTime();
-	      Long expireTime = Long.parseLong(expire);
-	      return expireTime > currentTime;
-	    }
-	  } catch (Exception ex) {
-	    return false;
-	  }
-	}
+    throw new EucalyptusCloudException("Failed to put manifest file: "
+        + bucketName + "/" + objectName + ". Exceeded retry limit");
+  }
 
-	/**
-	 * Creates system owned bucket to store download manifest files
-	 * @throws EucalyptusCloudException
-	 */
-	public static void createManifestsBucket(@Nonnull EucaS3Client s3Client) throws EucalyptusCloudException {
-		if (checkManifestsBucket(s3Client))
-			return;
-
-        Bucket manifestBucket;
-        try {
-            manifestBucket = s3Client.createBucket(DOWNLOAD_MANIFEST_BUCKET_NAME);
-        } catch(Exception e) {
-            LOG.error("Error creating manifest bucket " + DOWNLOAD_MANIFEST_BUCKET_NAME, e);
-            throw new EucalyptusCloudException( "Failed to create bucket " + DOWNLOAD_MANIFEST_BUCKET_NAME, e );
-        }
-
-        try {
-            BucketLifecycleConfiguration lc = new BucketLifecycleConfiguration();
-            BucketLifecycleConfiguration.Rule expireRule= new BucketLifecycleConfiguration.Rule();
-            expireRule.setId("Manifest Expiration Rule");
-            expireRule.setPrefix(DOWNLOAD_MANIFEST_PREFIX);
-            expireRule.setStatus("Enabled");
-            expireRule.setExpirationInDays(1);
-            lc = lc.withRules(expireRule);
-            s3Client.setBucketLifecycleConfiguration(manifestBucket.getName(), lc);
-		} catch (Exception e) {
-			throw new EucalyptusCloudException( "Failed to set bucket lifecycle on bucket " + DOWNLOAD_MANIFEST_BUCKET_NAME, e );
-		}
-		LOG.debug( "Created bucket for download-manifests " + DOWNLOAD_MANIFEST_BUCKET_NAME);
-	}
-
-	private static boolean checkManifestsBucket(EucaS3Client s3Client) {
-		try {
-        //Since we're using the eucalyptus admin, which has access to all buckets, check the bucket owner explicitly
-        AccessControlList acl = s3Client.getBucketAcl(DOWNLOAD_MANIFEST_BUCKET_NAME);
-        if(!acl.getOwner().getId().equals(getDownloadManifestS3User().getAccount().getCanonicalId())) {
-            //Bucket exists, but is owned by another account
-            LOG.warn("Found existence of download manifest bucket: " + DOWNLOAD_MANIFEST_BUCKET_NAME +
-                " but it is owned by another account: " + acl.getOwner().getId() + ", " + acl.getOwner().getDisplayName());
-            return false;
-        }
-
-        BucketLifecycleConfiguration config = s3Client.getBucketLifecycleConfiguration(DOWNLOAD_MANIFEST_BUCKET_NAME);
-
-        return (config.getRules() != null &&
-                config.getRules().size() == 1 &&
-                config.getRules().get(0).getExpirationInDays() == 1 &&
-                "enabled".equalsIgnoreCase(config.getRules().get(0).getStatus()) &&
-                DOWNLOAD_MANIFEST_PREFIX.equals(config.getRules().get(0).getPrefix()));
-    } catch(AmazonServiceException e) {
-        //Expected possible path if doesn't exist.
+  private static boolean objectExist(@Nonnull EucaS3Client s3Client,
+      String bucketName, String objectName) throws EucalyptusCloudException {
+    try {
+      ObjectMetadata metadata = s3Client.getS3Client().getObjectMetadata(
+          bucketName, objectName);
+      if (metadata == null || metadata.getUserMetadata() == null)
         return false;
-    } catch(Exception e) {
-        LOG.warn("Unexpected error checking for download manifest bucket", e);
+      Map<String, String> userData = metadata.getUserMetadata();
+      String expire = userData.get(MANIFEST_EXPIRATION);
+      if (expire == null) {
         return false;
+      } else {
+        Long currentTime = (new Date()).getTime();
+        Long expireTime = Long.parseLong(expire);
+        return expireTime > currentTime;
+      }
+    } catch (Exception ex) {
+      return false;
     }
-	}
+  }
+
+  /**
+   * Creates system owned bucket to store download manifest files if needed
+   * 
+   * @throws EucalyptusCloudException
+   */
+  private static void createManifestsBucketIfNeeded(
+      @Nonnull EucaS3Client s3Client) throws EucalyptusCloudException {
+    Bucket manifestBucket = null;
+    try {
+      s3Client.getBucketAcl(DOWNLOAD_MANIFEST_BUCKET_NAME);
+    } catch (AmazonServiceException e1) {
+      try {
+        manifestBucket = s3Client.createBucket(DOWNLOAD_MANIFEST_BUCKET_NAME);
+      } catch (Exception e) {
+        LOG.error("Error creating manifest bucket "
+            + DOWNLOAD_MANIFEST_BUCKET_NAME, e);
+        throw new EucalyptusCloudException("Failed to create bucket "
+            + DOWNLOAD_MANIFEST_BUCKET_NAME, e);
+      }
+    }
+    BucketLifecycleConfiguration config = s3Client
+        .getBucketLifecycleConfiguration(DOWNLOAD_MANIFEST_BUCKET_NAME);
+    if (config.getRules() == null
+        || config.getRules().size() != 1
+        || config.getRules().get(0).getExpirationInDays() != 1
+        || !"enabled".equalsIgnoreCase(config.getRules().get(0).getStatus())
+        || !DOWNLOAD_MANIFEST_PREFIX.equals(config.getRules().get(0)
+            .getPrefix())) {
+      try {
+        BucketLifecycleConfiguration lc = new BucketLifecycleConfiguration();
+        BucketLifecycleConfiguration.Rule expireRule = new BucketLifecycleConfiguration.Rule();
+        expireRule.setId("Manifest Expiration Rule");
+        expireRule.setPrefix(DOWNLOAD_MANIFEST_PREFIX);
+        expireRule.setStatus("Enabled");
+        expireRule.setExpirationInDays(1);
+        lc = lc.withRules(expireRule);
+        s3Client.setBucketLifecycleConfiguration(manifestBucket.getName(), lc);
+      } catch (Exception e) {
+        throw new EucalyptusCloudException(
+            "Failed to set bucket lifecycle on bucket "
+                + DOWNLOAD_MANIFEST_BUCKET_NAME, e);
+      }
+    }
+    LOG.debug("Created bucket for download-manifests "
+        + DOWNLOAD_MANIFEST_BUCKET_NAME);
+  }
 }

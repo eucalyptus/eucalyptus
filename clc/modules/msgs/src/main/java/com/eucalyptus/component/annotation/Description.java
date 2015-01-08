@@ -1,5 +1,3 @@
-package com.eucalyptus.component.annotation;
-
 /*************************************************************************
  * Copyright 2009-2013 Eucalyptus Systems, Inc.
  * 
@@ -61,6 +59,7 @@ package com.eucalyptus.component.annotation;
  * IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  * NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
+package com.eucalyptus.component.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

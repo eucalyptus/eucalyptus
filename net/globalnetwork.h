@@ -50,10 +50,20 @@ typedef struct gni_name_t {
     char name[1024];
 } gni_name;
 
+typedef struct gni_rule_t {
+    int protocol;
+    int fromPort, toPort, icmpType, icmpCode, slashnet;
+    char cidr[16];
+    char groupId[16];
+    char groupOwnerId[16];
+} gni_rule;
+
 typedef struct gni_secgroup_t {
     char accountId[128], name[128], chainname[32];
     gni_name *grouprules;
     int max_grouprules;
+    gni_rule *ingress_rules, *egress_rules;
+    int max_ingress_rules, max_egress_rules;
     gni_name *instance_names;
     int max_instance_names;
 } gni_secgroup;
@@ -62,7 +72,9 @@ typedef struct gni_instance_t {
     char name[16];
     char accountId[128];
     u8 macAddress[6];
+    char vpc[16], subnet[16];
     u32 publicIp, privateIp;
+    char node[HOSTNAME_SIZE], nodehostname[HOSTNAME_SIZE];
     gni_name *secgroup_names;
     int max_secgroup_names;
 } gni_instance;
@@ -88,10 +100,49 @@ typedef struct gni_cluster_t {
     int max_nodes;
 } gni_cluster;
 
+typedef struct gni_network_acl_t {
+} gni_network_acl;
+
+typedef struct gni_route_table_t {
+} gni_route_table;
+
+typedef struct gni_internet_gateway_t {
+} gni_internet_gateway;
+
+typedef struct gni_vpcsubnet_t {
+    char name[16];
+    char accountId[128];
+    char cidr[24];
+    char cluster_name[HOSTNAME_SIZE];
+    char networkAcl_name[16];
+    char routeTable_name[16];
+} gni_vpcsubnet;
+
+typedef struct gni_vpc_t {
+    char name[16];
+    char accountId[128];
+    char cidr[24];
+    char dhcpOptionSet[16];
+    gni_vpcsubnet *subnets;
+    int max_subnets;
+    gni_network_acl *networkAcls;
+    int max_networkAcls;
+    gni_route_table *routeTables;
+    int max_routeTables;
+    gni_internet_gateway *internetGateways;
+    int max_internetGateways;
+} gni_vpc;
+
 typedef struct globalNetworkInfo_t {
     int init;
     char networkInfo[MAX_NETWORK_INFO];
     u32 enabledCLCIp;
+    char EucanetdHost[HOSTNAME_SIZE];
+    char GatewayHost[HOSTNAME_SIZE];
+    char GatewayIP[HOSTNAME_SIZE];
+    char GatewayInterface[32];
+    char PublicNetworkCidr[HOSTNAME_SIZE];
+    char PublicGatewayIP[HOSTNAME_SIZE];
     char instanceDNSDomain[HOSTNAME_SIZE];
     u32 *instanceDNSServers;
     int max_instanceDNSServers;
@@ -105,6 +156,8 @@ typedef struct globalNetworkInfo_t {
     int max_instances;
     gni_secgroup *secgroups;
     int max_secgroups;
+    gni_vpc *vpcs;
+    int max_vpcs;
 } globalNetworkInfo;
 
 globalNetworkInfo *gni_init(void);
@@ -118,6 +171,7 @@ int gni_cluster_clear(gni_cluster * cluster);
 int gni_node_clear(gni_node * node);
 int gni_instance_clear(gni_instance * instance);
 int gni_secgroup_clear(gni_secgroup * secgroup);
+int gni_vpc_clear(gni_vpc * vpc);
 
 int gni_is_self(char *test_ip);
 int gni_find_self_node(globalNetworkInfo * gni, gni_node ** outnodeptr);

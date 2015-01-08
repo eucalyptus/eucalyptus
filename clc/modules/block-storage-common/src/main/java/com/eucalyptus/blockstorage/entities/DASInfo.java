@@ -69,43 +69,42 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableIdentifier;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.entities.Transactions;
 
 @Entity
-@PersistenceContext(name="eucalyptus_storage")
-@Table( name = "das_info" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ConfigurableClass(root = "storage", alias = "das", description = "Basic storage controller configuration for DAS.", singleton=false, deferred = true)
+@PersistenceContext(name = "eucalyptus_storage")
+@Table(name = "das_info")
+@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+@ConfigurableClass(root = "storage", alias = "das", description = "Basic storage controller configuration for DAS.", singleton = false, deferred = true)
 public class DASInfo extends AbstractPersistent {
-	private static Logger LOG = Logger.getLogger( DASInfo.class );
-	
+	private static Logger LOG = Logger.getLogger(DASInfo.class);
+
 	@ConfigurableIdentifier
-	@Column( name = "storage_name", unique=true)
+	@Column(name = "storage_name", unique = true)
 	private String name;
-	@ConfigurableField( description = "Direct attached storage device location", displayName = "Direct attached block device or volume group" )
+	@ConfigurableField(description = "Direct attached storage device location", displayName = "Direct attached block device or volume group")
 	@Column(name = "das_device")
 	private String DASDevice;
 
-	public DASInfo(){
+	public DASInfo() {
 		this.name = StorageProperties.NAME;
 	}
 
-	public DASInfo( final String name )
-	{
+	public DASInfo(final String name) {
 		this.name = name;
 	}
 
-	public DASInfo(final String name, 
-			final String DASDevice) {
+	public DASInfo(final String name, final String DASDevice) {
 		this.name = name;
 		this.DASDevice = DASDevice;
 	}
@@ -152,31 +151,32 @@ public class DASInfo extends AbstractPersistent {
 	}
 
 	@Override
-	public String toString()
-	{
+	public String toString() {
 		return this.name;
 	}
 
 	public static DASInfo getStorageInfo() {
-		EntityWrapper<DASInfo> storageDb = EntityWrapper.get(DASInfo.class);
 		DASInfo conf = null;
+
 		try {
-			conf = storageDb.getUnique(new DASInfo(StorageProperties.NAME));
-			storageDb.commit();
+			conf = Transactions.find(new DASInfo());
+		} catch (Exception e) {
+			LOG.warn("DAS information for " + StorageProperties.NAME + " not found. Loading defaults.");
+			try {
+				conf = Transactions.saveDirect(new DASInfo(StorageProperties.NAME, StorageProperties.DAS_DEVICE));
+			} catch (Exception e1) {
+				try {
+					conf = Transactions.find(new DASInfo());
+				} catch (Exception e2) {
+					LOG.warn("Failed to persist and retrieve DASInfo entity");
+				}
+			}
 		}
-		catch ( EucalyptusCloudException e ) {
-			LOG.warn("Failed to get storage info for: " + StorageProperties.NAME + ". Loading defaults.");
-			conf =  new DASInfo(StorageProperties.NAME, 
-					StorageProperties.DAS_DEVICE);
-			storageDb.add(conf);
-			storageDb.commit();
+
+		if (conf == null) {
+			conf = new DASInfo(StorageProperties.NAME, StorageProperties.DAS_DEVICE);
 		}
-		catch (Exception t) {
-			LOG.error("Unable to get storage info for: " + StorageProperties.NAME);
-			storageDb.rollback();
-			return new DASInfo(StorageProperties.NAME, 
-					StorageProperties.DAS_DEVICE);
-		}
+
 		return conf;
 	}
 }

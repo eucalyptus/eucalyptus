@@ -20,6 +20,7 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.auth.euare.AccessKeyMetadataType;
 import com.eucalyptus.auth.euare.CreateAccessKeyResponseType;
 import com.eucalyptus.auth.euare.CreateAccessKeyType;
@@ -39,19 +40,22 @@ import com.eucalyptus.cloudformation.resources.ResourceProperties;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSIAMAccessKeyResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSIAMAccessKeyProperties;
 import com.eucalyptus.cloudformation.template.JsonHelper;
+import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.StackActivity;
+import com.eucalyptus.cloudformation.workflow.steps.CreateMultiStepPromise;
+import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
+import com.eucalyptus.cloudformation.workflow.steps.Step;
+import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Euare;
-import com.eucalyptus.compute.common.AllocateAddressResponseType;
-import com.eucalyptus.compute.common.AllocateAddressType;
-import com.eucalyptus.compute.common.AssociateAddressResponseType;
-import com.eucalyptus.compute.common.AssociateAddressType;
-import com.eucalyptus.compute.common.Compute;
-import com.eucalyptus.compute.common.DescribeInstancesResponseType;
-import com.eucalyptus.compute.common.DescribeInstancesType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
+import com.netflix.glisten.WorkflowOperations;
+
+import java.util.List;
+import javax.annotation.Nullable;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -60,6 +64,133 @@ public class AWSIAMAccessKeyResourceAction extends ResourceAction {
 
   private AWSIAMAccessKeyProperties properties = new AWSIAMAccessKeyProperties();
   private AWSIAMAccessKeyResourceInfo info = new AWSIAMAccessKeyResourceInfo();
+
+  public AWSIAMAccessKeyResourceAction() {
+    for (CreateSteps createStep: CreateSteps.values()) {
+      createSteps.put(createStep.name(), createStep);
+    }
+    for (DeleteSteps deleteStep: DeleteSteps.values()) {
+      deleteSteps.put(deleteStep.name(), deleteStep);
+    }
+
+  }
+  private enum CreateSteps implements Step {
+    CREATE_KEY {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSIAMAccessKeyResourceAction action = (AWSIAMAccessKeyResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        if (action.properties.getStatus() == null) action.properties.setStatus("Active");
+        if (!"Active".equals(action.properties.getStatus()) && !"Inactive".equals(action.properties.getStatus())) {
+          throw new ValidationErrorException("Invalid status " + action.properties.getStatus());
+        }
+        CreateAccessKeyType createAccessKeyType = MessageHelper.createMessage(CreateAccessKeyType.class, action.info.getEffectiveUserId());
+        createAccessKeyType.setUserName(action.properties.getUserName());
+        CreateAccessKeyResponseType createAccessKeyResponseType = AsyncRequests.<CreateAccessKeyType,CreateAccessKeyResponseType> sendSync(configuration, createAccessKeyType);
+        // access key id = physical resource id
+        action.info.setPhysicalResourceId(createAccessKeyResponseType.getCreateAccessKeyResult().getAccessKey().getAccessKeyId());
+        action.info.setSecretAccessKey(JsonHelper.getStringFromJsonNode(new TextNode(createAccessKeyResponseType.getCreateAccessKeyResult().getAccessKey().getSecretAccessKey())));
+        action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+        return action;
+      }
+    },
+    SET_STATUS {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSIAMAccessKeyResourceAction action = (AWSIAMAccessKeyResourceAction) resourceAction;
+        if (action.properties.getStatus() == null) action.properties.setStatus("Active");
+        ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        UpdateAccessKeyType updateAccessKeyType = MessageHelper.createMessage(UpdateAccessKeyType.class, action.info.getEffectiveUserId());
+        updateAccessKeyType.setUserName(action.properties.getUserName());
+        updateAccessKeyType.setAccessKeyId(action.info.getPhysicalResourceId());
+        updateAccessKeyType.setStatus(action.properties.getStatus());
+        AsyncRequests.<UpdateAccessKeyType,UpdateAccessKeyResponseType> sendSync(configuration, updateAccessKeyType);
+        return action;
+      }
+    };
+
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
+
+  private enum DeleteSteps implements Step {
+    DELETE_KEY {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSIAMAccessKeyResourceAction action = (AWSIAMAccessKeyResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        if (action.info.getPhysicalResourceId() == null) return action;
+
+        if (action.properties.getStatus() == null) action.properties.setStatus("Active");
+        // if no user, return
+        boolean seenAllUsers = false;
+        boolean foundUser = false;
+        String userMarker = null;
+        while (!seenAllUsers && !foundUser) {
+          ListUsersType listUsersType = MessageHelper.createMessage(ListUsersType.class, action.info.getEffectiveUserId());
+          if (userMarker != null) {
+            listUsersType.setMarker(userMarker);
+          }
+          ListUsersResponseType listUsersResponseType = AsyncRequests.<ListUsersType,ListUsersResponseType> sendSync(configuration, listUsersType);
+          if (listUsersResponseType.getListUsersResult().getIsTruncated() == Boolean.TRUE) {
+            userMarker = listUsersResponseType.getListUsersResult().getMarker();
+          } else {
+            seenAllUsers = true;
+          }
+          if (listUsersResponseType.getListUsersResult().getUsers() != null && listUsersResponseType.getListUsersResult().getUsers().getMemberList() != null) {
+            for (UserType userType: listUsersResponseType.getListUsersResult().getUsers().getMemberList()) {
+              if (userType.getUserName().equals(action.properties.getUserName())) {
+                foundUser = true;
+                break;
+              }
+            }
+          }
+        }
+        if (!foundUser) return action;
+
+        boolean seenAllAccessKeys = false;
+        boolean foundAccessKey = false;
+        String accessKeyMarker = null;
+        while (!seenAllAccessKeys && !foundAccessKey) {
+          ListAccessKeysType listAccessKeysType = MessageHelper.createMessage(ListAccessKeysType.class, action.info.getEffectiveUserId());
+          listAccessKeysType.setUserName(action.properties.getUserName());
+          if (accessKeyMarker != null) {
+            listAccessKeysType.setMarker(accessKeyMarker);
+          }
+          ListAccessKeysResponseType listAccessKeysResponseType = AsyncRequests.<ListAccessKeysType,ListAccessKeysResponseType> sendSync(configuration, listAccessKeysType);
+          if (listAccessKeysResponseType.getListAccessKeysResult().getIsTruncated() == Boolean.TRUE) {
+            accessKeyMarker = listAccessKeysResponseType.getListAccessKeysResult().getMarker();
+          } else {
+            seenAllAccessKeys = true;
+          }
+          if (listAccessKeysResponseType.getListAccessKeysResult().getAccessKeyMetadata() != null && listAccessKeysResponseType.getListAccessKeysResult().getAccessKeyMetadata().getMemberList() != null) {
+            for (AccessKeyMetadataType accessKeyMetadataType: listAccessKeysResponseType.getListAccessKeysResult().getAccessKeyMetadata().getMemberList()) {
+              if (accessKeyMetadataType.getAccessKeyId().equals(action.info.getPhysicalResourceId())) {
+                foundAccessKey = true;
+                break;
+              }
+            }
+          }
+        }
+        if (!foundAccessKey) return action;
+        DeleteAccessKeyType deleteAccessKeyType = MessageHelper.createMessage(DeleteAccessKeyType.class, action.info.getEffectiveUserId());
+        deleteAccessKeyType.setUserName(action.properties.getUserName());
+        deleteAccessKeyType.setAccessKeyId(action.info.getPhysicalResourceId());
+        AsyncRequests.<DeleteAccessKeyType,DeleteAccessKeyResponseType> sendSync(configuration, deleteAccessKeyType);
+        return action;
+      }
+    };
+
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
+
   @Override
   public ResourceProperties getResourceProperties() {
     return properties;
@@ -81,118 +212,15 @@ public class AWSIAMAccessKeyResourceAction extends ResourceAction {
   }
 
   @Override
-  public int getNumCreateSteps() {
-    return 2;
+  public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
+    return new CreateMultiStepPromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
   @Override
-  public void create(int stepNum) throws Exception {
-    ServiceConfiguration configuration = Topology.lookup(Euare.class);
-    if (properties.getStatus() == null) properties.setStatus("Active");
-    switch (stepNum) {
-      case 0: // create key
-        if (!"Active".equals(properties.getStatus()) && !"Inactive".equals(properties.getStatus())) {
-          throw new ValidationErrorException("Invalid status " + properties.getStatus());
-        }
-        CreateAccessKeyType createAccessKeyType = new CreateAccessKeyType();
-        createAccessKeyType.setEffectiveUserId(info.getEffectiveUserId());
-        createAccessKeyType.setUserName(properties.getUserName());
-        CreateAccessKeyResponseType createAccessKeyResponseType = AsyncRequests.<CreateAccessKeyType,CreateAccessKeyResponseType> sendSync(configuration, createAccessKeyType);
-        // access key id = physical resource id
-        info.setPhysicalResourceId(createAccessKeyResponseType.getCreateAccessKeyResult().getAccessKey().getAccessKeyId());
-        info.setSecretAccessKey(JsonHelper.getStringFromJsonNode(new TextNode(createAccessKeyResponseType.getCreateAccessKeyResult().getAccessKey().getSecretAccessKey())));
-        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
-        break;
-      case 1: // set status
-        UpdateAccessKeyType updateAccessKeyType = new UpdateAccessKeyType();
-        updateAccessKeyType.setUserName(properties.getUserName());
-        updateAccessKeyType.setAccessKeyId(info.getPhysicalResourceId());
-        updateAccessKeyType.setStatus(properties.getStatus());
-        updateAccessKeyType.setEffectiveUserId(info.getEffectiveUserId());
-        AsyncRequests.<UpdateAccessKeyType,UpdateAccessKeyResponseType> sendSync(configuration, updateAccessKeyType);
-        break;
-      default:
-        throw new IllegalStateException("Invalid step " + stepNum);
-    }
-  }
-
-  @Override
-  public void update(int stepNum) throws Exception {
-    throw new UnsupportedOperationException();
-  }
-
-  public void rollbackUpdate() throws Exception {
-    // can't update so rollbackUpdate should be a NOOP
-  }
-
-  @Override
-  public void delete() throws Exception {
-    if (info.getPhysicalResourceId() == null) return;
-    ServiceConfiguration configuration = Topology.lookup(Euare.class);
-    if (properties.getStatus() == null) properties.setStatus("Active");
-    // if no user, return
-    boolean seenAllUsers = false;
-    boolean foundUser = false;
-    String userMarker = null;
-    while (!seenAllUsers && !foundUser) {
-      ListUsersType listUsersType = new ListUsersType();
-      listUsersType.setEffectiveUserId(info.getEffectiveUserId());
-      if (userMarker != null) {
-        listUsersType.setMarker(userMarker);
-      }
-      ListUsersResponseType listUsersResponseType = AsyncRequests.<ListUsersType,ListUsersResponseType> sendSync(configuration, listUsersType);
-      if (listUsersResponseType.getListUsersResult().getIsTruncated() == Boolean.TRUE) {
-        userMarker = listUsersResponseType.getListUsersResult().getMarker();
-      } else {
-        seenAllUsers = true;
-      }
-      if (listUsersResponseType.getListUsersResult().getUsers() != null && listUsersResponseType.getListUsersResult().getUsers().getMemberList() != null) {
-      for (UserType userType: listUsersResponseType.getListUsersResult().getUsers().getMemberList()) {
-        if (userType.getUserName().equals(properties.getUserName())) {
-          foundUser = true;
-          break;
-        }
-      }
-      }
-    }
-    if (!foundUser) return;
-
-    boolean seenAllAccessKeys = false;
-    boolean foundAccessKey = false;
-    String accessKeyMarker = null;
-    while (!seenAllAccessKeys && !foundAccessKey) {
-      ListAccessKeysType listAccessKeysType = new ListAccessKeysType();
-      listAccessKeysType.setUserName(properties.getUserName());
-      listAccessKeysType.setEffectiveUserId(info.getEffectiveUserId());
-      if (accessKeyMarker != null) {
-        listAccessKeysType.setMarker(accessKeyMarker);
-      }
-      ListAccessKeysResponseType listAccessKeysResponseType = AsyncRequests.<ListAccessKeysType,ListAccessKeysResponseType> sendSync(configuration, listAccessKeysType);
-      if (listAccessKeysResponseType.getListAccessKeysResult().getIsTruncated() == Boolean.TRUE) {
-        accessKeyMarker = listAccessKeysResponseType.getListAccessKeysResult().getMarker();
-      } else {
-        seenAllAccessKeys = true;
-      }
-      if (listAccessKeysResponseType.getListAccessKeysResult().getAccessKeyMetadata() != null && listAccessKeysResponseType.getListAccessKeysResult().getAccessKeyMetadata().getMemberList() != null) {
-        for (AccessKeyMetadataType accessKeyMetadataType: listAccessKeysResponseType.getListAccessKeysResult().getAccessKeyMetadata().getMemberList()) {
-          if (accessKeyMetadataType.getAccessKeyId().equals(info.getPhysicalResourceId())) {
-            foundAccessKey = true;
-            break;
-          }
-        }
-      }
-    }
-    if (!foundAccessKey) return;
-    DeleteAccessKeyType deleteAccessKeyType = new DeleteAccessKeyType();
-    deleteAccessKeyType.setUserName(properties.getUserName());
-    deleteAccessKeyType.setAccessKeyId(info.getPhysicalResourceId());
-    deleteAccessKeyType.setEffectiveUserId(info.getEffectiveUserId());
-    AsyncRequests.<DeleteAccessKeyType,DeleteAccessKeyResponseType> sendSync(configuration, deleteAccessKeyType);
-  }
-
-  @Override
-  public void rollbackCreate() throws Exception {
-    delete();
+  public Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
+    return new DeleteMultiStepPromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
 }

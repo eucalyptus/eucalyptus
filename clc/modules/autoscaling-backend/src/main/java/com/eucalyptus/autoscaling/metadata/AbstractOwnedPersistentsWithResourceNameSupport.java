@@ -25,6 +25,7 @@ import java.util.NoSuchElementException;
 
 import javax.annotation.Nullable;
 
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
 import com.eucalyptus.autoscaling.common.AutoScalingResourceName;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
@@ -116,16 +117,14 @@ public abstract class AbstractOwnedPersistentsWithResourceNameSupport<AOP extend
 
   @Override
   public boolean delete( final AutoScalingMetadata metadata ) throws AutoScalingMetadataException {
-    if ( metadata instanceof AutoScalingMetadataWithResourceName ) {
-      try {
-        return Transactions.delete( exampleWithUuid( AutoScalingResourceName.parse( ((AutoScalingMetadataWithResourceName)metadata).getArn(), type ).getUuid() ) );
-      } catch ( NoSuchElementException e ) {
-        return false;
-      } catch ( Exception e ) {
-        throw new AutoScalingMetadataException( "Error deleting "+typeDescription+" '"+describe( metadata )+"'", e );
-      }
-    } else {
-      return super.delete( metadata );
+    try {
+      return !withRetries( ).deleteByExample(
+          metadata instanceof AutoScalingMetadataWithResourceName ?
+              exampleWithUuid( AutoScalingResourceName.parse( ((AutoScalingMetadataWithResourceName)metadata).getArn(), type ).getUuid() ) :
+              exampleWithName( AccountFullName.getInstance( metadata.getOwner().getAccountNumber() ), metadata.getDisplayName( ) )
+      ).isEmpty( );
+    } catch ( Exception e ) {
+      throw new AutoScalingMetadataException( "Error deleting "+typeDescription+" '"+describe( metadata )+"'", e );
     }
   }
 
@@ -137,6 +136,8 @@ public abstract class AbstractOwnedPersistentsWithResourceNameSupport<AOP extend
       return super.describe( metadata );
     }
   }
+
+  protected abstract AOP exampleWithUuid( String uuid );
 
   private String getNameFromScopeNameOrArn( final String scopeNameOrArn ) {
     final String scopeName;

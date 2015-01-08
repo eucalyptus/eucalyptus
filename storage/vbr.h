@@ -158,7 +158,7 @@ host_config localhost_config;
  |                             EXPORTED PROTOTYPES                            |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-int vbr_init_hostconfig(char *hostIqn, char *hostIp, char *ws_sec_policy_file, int use_ws_sec);
+int vbr_init_hostconfig(char *hostIqn, char *hostIp, char *ws_sec_policy_file, int use_ws_sec, boolean use_virtio_root, boolean use_virtio_disk);
 int vbr_update_hostconfig_scurl(char *new_sc_url);
 int get_localhost_sc_url(char *dest);
 
@@ -177,7 +177,8 @@ artifact *art_alloc(const char *id, const char *sig, long long size_bytes, boole
                     int (*creator) (artifact * a), virtualBootRecord * vbr);
 
 void art_set_instanceId(const char *instanceId);
-artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean do_make_work_copy, boolean is_migration_dest, const char *sshkey, boolean *bail_flag, const char *instanceId);
+artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean do_make_work_copy, boolean is_migration_dest, const char *sshkey, boolean * bail_flag,
+                         const char *instanceId);
 int art_implement_tree(artifact * root, blobstore * work_bs, blobstore * cache_bs, const char *work_prefix, long long timeout_usec);
 
 /*----------------------------------------------------------------------------*\

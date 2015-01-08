@@ -541,7 +541,7 @@ int ncBroadcastNetworkInfoStub(ncStub * pStub, ncMetadata * pMeta, char *network
 int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId,
                       char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId,
                       char *keyName, netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime, char **groupNames,
-                      int groupNamesSize, ncInstance ** outInstPtr)
+                      int groupNamesSize, char *rootDirective, ncInstance ** outInstPtr)
 {
     int i = 0;
     int foundidx = -1;
@@ -558,7 +558,7 @@ int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *inst
     loadNcStuff();
 
     instance = allocate_instance(uuid, instanceId, reservationId, params, instance_state_names[PENDING], PENDING, pMeta->userId, ownerId, accountId,
-                                 netparams, keyName, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize);
+                                 netparams, keyName, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize, rootDirective);
     if (instance) {
         instance->launchTime = time(NULL);
         foundidx = -1;
@@ -743,11 +743,12 @@ int ncDescribeInstancesStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, 
 //! @param[in] userPublicKey the public key string
 //! @param[in] S3Policy the S3 engine policy
 //! @param[in] S3PolicySig the S3 engine policy signature
+//! @param[in] architecture the image/instance architecture
 //!
 //! @return Always return EUCA_OK
 //!
 int ncBundleInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL,
-                         char *userPublicKey, char *S3Policy, char *S3PolicySig)
+                         char *userPublicKey, char *S3Policy, char *S3PolicySig, char *architecture)
 {
     return (EUCA_OK);
 }

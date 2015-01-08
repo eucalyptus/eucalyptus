@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,25 @@
  * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
+ *
+ * This file may incorporate work covered under the following copyright
+ * and permission notice:
+ *
+ *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
+ *   Reserved.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License").
+ *   You may not use this file except in compliance with the License.
+ *   A copy of the License is located at
+ *
+ *   http://aws.amazon.com/apache2.0
+ *
+ *   or in the "license" file accompanying this file. This file is
+ *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
+ *   ANY KIND, either express or implied. See the License for the specific
+ *   language governing permissions and limitations under the License.
  ************************************************************************/
+
 package com.eucalyptus.cloudwatch.domain.alarms;
 
 import java.util.ArrayList;
@@ -60,6 +78,9 @@ import com.eucalyptus.cloudwatch.domain.alarms.AlarmHistory.HistoryItemType;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.ComputeMessage;
+import com.eucalyptus.compute.common.backend.StopInstancesType;
+import com.eucalyptus.compute.common.backend.TerminateInstancesType;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
@@ -74,10 +95,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
-
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.StopInstancesType;
-import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 
 public class AlarmManager {
   private static final Logger LOG = Logger.getLogger(AlarmManager.class);
@@ -434,7 +451,7 @@ public class AlarmManager {
       @Nullable final Integer maxRecords,
       @Nullable final StateValue stateValue,
       @Nullable final String nextToken,
-                final Predicate<CloudWatchMetadata.AlarmMetadata> filter
+                final Predicate<? super CloudWatchMetadata.AlarmMetadata> filter
   ) throws CloudWatchException {
     final List<AlarmEntity> results = Lists.newArrayList();
     final EntityTransaction db = Entities.get(AlarmEntity.class);
@@ -498,7 +515,7 @@ public class AlarmManager {
     @Nullable final Integer period,
     @Nullable final Statistic statistic,
     @Nullable final Units unit,
-    @Nonnull  final Predicate<CloudWatchMetadata.AlarmMetadata> filter
+    @Nonnull  final Predicate<? super CloudWatchMetadata.AlarmMetadata> filter
   ) {
     final List<AlarmEntity> results = Lists.newArrayList();
     final EntityTransaction db = Entities.get(AlarmEntity.class);
@@ -751,7 +768,7 @@ public class AlarmManager {
     }
   }
 
-  private static class EucalyptusClient extends DispatchingClient<EucalyptusMessage,Eucalyptus> {
+  private static class EucalyptusClient extends DispatchingClient<ComputeMessage,Eucalyptus> {
     public EucalyptusClient( final String userId ) {
       super( userId, Eucalyptus.class );
     }
@@ -839,9 +856,9 @@ public class AlarmManager {
     public void executeAction(final String action, final Map<String, String> dimensionMap, final AlarmEntity alarmEntity, final Date now) {
       TerminateInstancesType terminateInstances = new TerminateInstancesType();
       terminateInstances.getInstancesSet().add( dimensionMap.get("InstanceId"));
-      Callback.Checked<EucalyptusMessage> callback = new Callback.Checked<EucalyptusMessage>() {
+      Callback.Checked<ComputeMessage> callback = new Callback.Checked<ComputeMessage>() {
         @Override
-        public void fire(EucalyptusMessage input) {
+        public void fire(ComputeMessage input) {
           success(action, alarmEntity, now);
         }
 
@@ -884,9 +901,9 @@ public class AlarmManager {
     public void executeAction(final String action, final Map<String, String> dimensionMap, final AlarmEntity alarmEntity, final Date now) {
       StopInstancesType stopInstances = new StopInstancesType();
       stopInstances.getInstancesSet().add( dimensionMap.get("InstanceId"));
-      Callback.Checked<EucalyptusMessage> callback = new Callback.Checked<EucalyptusMessage>() {
+      Callback.Checked<ComputeMessage> callback = new Callback.Checked<ComputeMessage>() {
         @Override
-        public void fire(EucalyptusMessage input) {
+        public void fire(ComputeMessage input) {
           success(action, alarmEntity, now);
         }
 

@@ -79,6 +79,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.RestrictedTypes;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
 @Provides( Empyrean.class )
@@ -87,9 +88,14 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( DatabaseAuthBootstrapper.class );
     
   public boolean load( ) throws Exception {
-  	DatabaseAuthProvider dbAuth = new DatabaseAuthProvider( );
-  	Accounts.setAccountProvider( dbAuth );
-  	Permissions.setPolicyEngine( new PolicyEngineImpl( ) );
+    DatabaseAuthProvider dbAuth = new DatabaseAuthProvider( );
+    Accounts.setAccountProvider( dbAuth );
+    Permissions.setPolicyEngine( new PolicyEngineImpl( new Supplier<Boolean>( ){
+      @Override
+      public Boolean get( ) {
+        return AuthenticationProperties.SYSTEM_ACCOUNT_QUOTA_ENABLED;
+      }
+    } ) );
     return true;
   }
   
@@ -103,6 +109,10 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
       this.ensureUserInfoNormalized( );
       // EUCA-9376 - Workaround to avoid multiple admin users in the blockstorage account due to EUCA-9635  
       this.ensureBlockStorageAccountExists();
+      //EUCA-9644 - CloudFormation account for buckets and user to launch SWF workflows
+      this.ensureCloudFormationAccountExists();
+      //EUCA-9533 - System account for pre-signed urls in download manifests
+      this.ensureExecReadAccountExists();
       LdapSync.start( );
     }
     return true;
@@ -237,4 +247,32 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
       }
     }
   }
+
+  //EUCA-9644 - CloudFormation account for buckets and user to launch SWF workflows
+  private void ensureCloudFormationAccountExists( ) throws Exception {
+    try {
+      Accounts.lookupAccountByName( Account.CLOUDFORMATION_SYSTEM_ACCOUNT );
+    } catch ( Exception e ) {
+      try {
+        Accounts.addSystemAccountWithAdmin( Account.CLOUDFORMATION_SYSTEM_ACCOUNT );
+      } catch (Exception e1) {
+        LOG.error("Error during account creation for " + Account.CLOUDFORMATION_SYSTEM_ACCOUNT, e1);
+      }
+    }
+  }
+
+  //EUCA-9533 - System account for pre-signed urls in download manifests
+  private void ensureExecReadAccountExists( ) throws Exception {
+    try {
+      Accounts.lookupAccountByName( Account.AWS_EXEC_READ_SYSTEM_ACCOUNT );
+    } catch ( Exception e ) {
+      try {
+        Accounts.addSystemAccountWithAdmin( Account.AWS_EXEC_READ_SYSTEM_ACCOUNT );
+        LOG.info("Created " + Account.AWS_EXEC_READ_SYSTEM_ACCOUNT + " account");
+      } catch (Exception e1) {
+        LOG.error("Error during account creation for " + Account.AWS_EXEC_READ_SYSTEM_ACCOUNT, e1);
+      }
+    }
+  }
+
 }

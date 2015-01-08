@@ -62,6 +62,7 @@
 
 package com.eucalyptus.compute.policy;
 
+import org.apache.log4j.Logger;
 import net.sf.json.JSONException;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -70,6 +71,7 @@ import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.PolicyKey;
 import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.common.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.component.id.Euare;
@@ -100,7 +102,7 @@ public class VmInstanceNumberQuotaKey extends QuotaKey {
   }
   
   @Override
-  public String value( Scope scope, String id, String resource, Long quantity ) throws AuthException {
+  public String value( Authorization.Scope scope, String id, String resource, Long quantity ) throws AuthException {
     switch ( scope ) {
       case ACCOUNT:
         return Long.toString( RestrictedTypes.quantityMetricFunction( VmInstanceMetadata.class ).apply( AccountFullName.getInstance( id ) ) + quantity );

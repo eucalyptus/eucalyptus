@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,24 +63,17 @@
 package com.eucalyptus.ws.util;
 
 import static com.eucalyptus.crypto.util.Timestamps.Type;
-import java.io.UnsupportedEncodingException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableSet;
-import java.util.Set;
-import java.util.TreeSet;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import org.apache.commons.codec.DecoderException;
-import org.apache.commons.codec.net.URLCodec;
 import org.apache.log4j.Logger;
-import org.apache.xml.security.utils.Base64;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.crypto.Hmac;
@@ -89,6 +82,7 @@ import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.util.Strings;
 import com.eucalyptus.ws.protocol.RequiredQueryParams;
+import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Splitter;
@@ -492,62 +486,15 @@ public class HmacUtils {
     return signatureDate;
   }
 
-  public static String getSignature( final String queryKey, final String subject, final Hmac mac ) throws AuthenticationException {
-    SecretKeySpec signingKey = new SecretKeySpec( queryKey.getBytes( ), mac.toString( ) );
+  public static byte[] getSignature( final String key, final String subject, final Hmac mac ) throws AuthenticationException {
+    final SecretKeySpec signingKey = new SecretKeySpec( key.getBytes( Charsets.UTF_8 ), mac.toString( ) );
     try {
-      Mac digest = mac.getInstance( );
+      final Mac digest = mac.getInstance( );
       digest.init( signingKey );
-      byte[] rawHmac = digest.doFinal( subject.getBytes( ) );
-      return Base64.encode( rawHmac ).replaceAll( "=", "" );
+      return digest.doFinal( subject.getBytes( Charsets.UTF_8 ) );
     } catch ( Exception e ) {
       LOG.error( e, e );
       throw new AuthenticationException( "Failed to compute signature" );
-    }
-  }
-
-  public static String makeSubjectString( final Map<String, String> parameters ) {
-    String paramString = "";
-    Set<String> sortedKeys = new TreeSet<String>( String.CASE_INSENSITIVE_ORDER );
-    sortedKeys.addAll( parameters.keySet( ) );
-    for ( String key : sortedKeys )
-      paramString = paramString.concat( key ).concat( parameters.get( key ).replaceAll( "\\+", " " ) );
-    try {
-      return new String(URLCodec.decodeUrl( paramString.getBytes() ) );
-    } catch ( DecoderException e ) {
-      return paramString;
-    }
-  }
-
-  public static String makeV2SubjectString( String httpMethod, String host, String path, final Map<String, String> parameters ) {
-    parameters.remove("");
-    StringBuilder sb = new StringBuilder( );
-    sb.append( httpMethod );
-    sb.append( "\n" );
-    sb.append( host );
-    sb.append( "\n" );
-    sb.append( path );
-    sb.append( "\n" );
-    String prefix = sb.toString( );
-    sb = new StringBuilder( );
-    NavigableSet<String> sortedKeys = new TreeSet<String>( );
-    sortedKeys.addAll( parameters.keySet( ) );
-    String firstKey = sortedKeys.pollFirst( );
-    if( firstKey != null ) { 
-      sb.append( urlEncode( firstKey ) ).append( "=" ).append( urlEncode( parameters.get( firstKey ).replaceAll( "\\+", " " ) ) );
-    } 
-    while ( ( firstKey = sortedKeys.pollFirst( ) ) != null ) {
-      sb.append( "&" ).append( urlEncode( firstKey ) ).append( "=" ).append( urlEncode( parameters.get( firstKey ).replaceAll( "\\+", " " ) ) );
-    }
-    String subject = prefix + sb.toString( );
-    LOG.trace( "VERSION2: " + subject );
-    return subject;
-  }
-
-  public static String urlEncode( String s ) {
-    try {
-      return new URLCodec().encode( s ,"UTF-8" );
-    } catch ( UnsupportedEncodingException e ) {
-      return s;
     }
   }
 

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright 2009-2013 Eucalyptus Systems, Inc.
+# Copyright 2009-2014 Eucalyptus Systems, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@
 # main
 import json
 import os
-from pprint import pprint
 import random
 import shutil
 import subprocess
@@ -64,6 +63,10 @@ class WF_base():
         self.check_deps(args)
         if len(self.problems) > 0:
             raise WF_InsufficientDependencies(self.problems)
+        if hasattr(args, 'pid_path') and args.pid_path is not None:
+            f = open(args.pid_path, 'w+')
+            f.write(str(os.getpid()))
+            f.close()
 
 # specific workflows, one per class
 
@@ -175,12 +178,22 @@ class Euca2ools(object):
             op_args.extend(['--image-size', args.image_size])
         if hasattr(args, 'upload_policy') and args.upload_policy is not None:
             policy = args.upload_policy
+            policyObject = None
             try:
-                json.loads(policy) # try parsing as JSON
+                policyObject = json.loads(policy) # try parsing as JSON
             except ValueError:
                 policy = args.upload_policy.decode('base64', 'strict')
-                json.loads(policy) # try parsing again, which should work
+                policyObject = json.loads(policy) # try parsing again, which should work
             op_args.extend(['--upload-policy', policy])
+            if policyObject is not None:
+              policyConditions = policyObject.get('conditions')
+              if policyConditions is not None:
+                for policyCondition in policyConditions:
+                  if hasattr( policyCondition, 'get' ):
+                    policySecurityToken = policyCondition.get('x-amz-security-token')
+                    if policySecurityToken is not None:
+                      op_args.extend(['--security-token', policySecurityToken])
+                      break
         if hasattr(args, 'upload_policy_signature') and args.upload_policy_signature is not None:
             op_args.extend(['--upload-policy-signature', args.upload_policy_signature])
         if (self.debug):
@@ -261,13 +274,17 @@ class WF_DownParts_WriteRaw(WF_base):
         parser.add_argument('--output-path', required=True, metavar='PATH', help="Path to the file or block device to write output into")
         parser.add_argument('--import-manifest-url', required=True, metavar='URL', help="URL of the download manifest for the import")
         parser.add_argument('--cloud-cert-path', required=True, metavar='URL', help="Path to the cloud certificate")
+        parser.add_argument('--skip-size-validation', required=False, help="Skip downloaded size validation", default=False, action='store_true')
 
     def check_deps(self, args):
         self.problems = _check_euca2ools(self.problems)
 
     def execute(self, args):
         WF_base.execute(self, args)
-        download = DownloadImage(reportprogress=True, manifest=args.import_manifest_url, destination=args.output_path, cloudcert=args.cloud_cert_path)
+        if args.skip_size_validation:
+            download = DownloadImage(reportprogress=True, manifest=args.import_manifest_url, destination=args.output_path, cloudcert=args.cloud_cert_path, skipsizevalidation=True)
+        else:
+            download = DownloadImage(reportprogress=True, manifest=args.import_manifest_url, destination=args.output_path, cloudcert=args.cloud_cert_path)
         download.main()
 
 class WF_DownBundle_UpVMDK(WF_base):
@@ -414,6 +431,7 @@ def _add_up_bundle_args(parser):
     parser.add_argument('--secret-key', required=False, metavar='NAME', help="The secret string for object store account (or --upload-policy)")
     parser.add_argument('--upload-policy', required=False, metavar='PATH', help="Path to upload policy (or --secret-key)")
     parser.add_argument('--upload-policy-signature', required=False, metavar='PATH', help="Path to upload policy signature (or --secret-key)")
+    parser.add_argument('--pid-path', required=False, metavar='PATH', help='Path to process PID')
 
 def _add_vmdk_args(parser):
     parser.add_argument('--vsphere-url', required=True, metavar='URL', help="URL of the vSphere endpoint")

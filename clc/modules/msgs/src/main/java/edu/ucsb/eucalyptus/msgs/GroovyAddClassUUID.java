@@ -30,6 +30,6 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass;
  */
 @Target( ElementType.PACKAGE )
 @Retention( RetentionPolicy.RUNTIME )
-@GroovyASTTransformationClass( "edu.ucsb.eucalyptus.msgs.GroovyAddClassUUIDASTTransformation" )
+@GroovyASTTransformationClass( classes = GroovyAddClassUUIDASTTransformation.class )
 public @interface GroovyAddClassUUID {
 }

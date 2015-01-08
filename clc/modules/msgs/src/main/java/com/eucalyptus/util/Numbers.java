@@ -82,4 +82,9 @@ public class Numbers {
     return number == null ? null : number.intValue();   
   }
 
+  public static int log2( final int value ) {
+    if( value == 0 )
+      return 0; // or throw exception
+    return 31 - Integer.numberOfLeadingZeros( value );
+  }
 }

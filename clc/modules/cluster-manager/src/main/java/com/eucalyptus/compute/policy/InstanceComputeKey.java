@@ -21,8 +21,6 @@ package com.eucalyptus.compute.policy;
 
 import static com.eucalyptus.auth.policy.PolicySpec.*;
 import java.util.Set;
-import java.util.regex.Pattern;
-import net.sf.json.JSONException;
 import com.google.common.collect.ImmutableSet;
 
 /**
@@ -31,7 +29,10 @@ import com.google.common.collect.ImmutableSet;
 public abstract class InstanceComputeKey implements ComputeKey {
 
   private static final Set<String> actions = ImmutableSet.<String>builder()
+      .add( qualifiedName( VENDOR_EC2, EC2_ATTACHVOLUME ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_DETACHVOLUME ) )
       .add( qualifiedName( VENDOR_EC2, EC2_REBOOTINSTANCES ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_RUNINSTANCES ) )
       .add( qualifiedName( VENDOR_EC2, EC2_STARTINSTANCES ) )
       .add( qualifiedName( VENDOR_EC2, EC2_STOPINSTANCES ) )
       .add( qualifiedName( VENDOR_EC2, EC2_TERMINATEINSTANCES ) )

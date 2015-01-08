@@ -63,6 +63,8 @@
 package com.eucalyptus.component.id;
 
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.ComponentDatabase;
+import com.eucalyptus.component.annotation.DatabaseNamingStrategy;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PolicyVendor;
@@ -73,6 +75,7 @@ import com.eucalyptus.empyrean.Empyrean;
 @Partition( Empyrean.class )
 @FaultLogPrefix( "cloud" )
 @PolicyVendor( Reporting.VENDOR_REPORTING )
+@ComponentDatabase( namingStrategy = DatabaseNamingStrategy.Schema)
 public class Reporting extends ComponentId {
   private static final long serialVersionUID = 1L;
   public static final String VENDOR_REPORTING = "eureport";

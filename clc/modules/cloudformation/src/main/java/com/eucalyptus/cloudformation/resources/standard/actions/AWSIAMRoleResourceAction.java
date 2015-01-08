@@ -20,21 +20,18 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.auth.euare.CreateRoleResponseType;
 import com.eucalyptus.auth.euare.CreateRoleType;
 import com.eucalyptus.auth.euare.DeleteRolePolicyResponseType;
 import com.eucalyptus.auth.euare.DeleteRolePolicyType;
 import com.eucalyptus.auth.euare.DeleteRoleResponseType;
 import com.eucalyptus.auth.euare.DeleteRoleType;
-import com.eucalyptus.auth.euare.GroupType;
-import com.eucalyptus.auth.euare.ListGroupsResponseType;
-import com.eucalyptus.auth.euare.ListGroupsType;
 import com.eucalyptus.auth.euare.ListRolesResponseType;
 import com.eucalyptus.auth.euare.ListRolesType;
 import com.eucalyptus.auth.euare.PutRolePolicyResponseType;
 import com.eucalyptus.auth.euare.PutRolePolicyType;
 import com.eucalyptus.auth.euare.RoleType;
-import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
@@ -42,12 +39,22 @@ import com.eucalyptus.cloudformation.resources.standard.info.AWSIAMRoleResourceI
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSIAMRoleProperties;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EmbeddedIAMPolicy;
 import com.eucalyptus.cloudformation.template.JsonHelper;
+import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.StackActivity;
+import com.eucalyptus.cloudformation.workflow.steps.CreateMultiStepPromise;
+import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
+import com.eucalyptus.cloudformation.workflow.steps.Step;
+import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Euare;
-import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.common.collect.Lists;
+import com.netflix.glisten.WorkflowOperations;
+
+import java.util.List;
+import javax.annotation.Nullable;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -56,6 +63,118 @@ public class AWSIAMRoleResourceAction extends ResourceAction {
 
   private AWSIAMRoleProperties properties = new AWSIAMRoleProperties();
   private AWSIAMRoleResourceInfo info = new AWSIAMRoleResourceInfo();
+
+  public AWSIAMRoleResourceAction() {
+    for (CreateSteps createStep: CreateSteps.values()) {
+      createSteps.put(createStep.name(), createStep);
+    }
+    for (DeleteSteps deleteStep: DeleteSteps.values()) {
+      deleteSteps.put(deleteStep.name(), deleteStep);
+    }
+  }
+
+  private enum CreateSteps implements Step {
+    CREATE_ROLE {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSIAMRoleResourceAction action = (AWSIAMRoleResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        String roleName = action.getDefaultPhysicalResourceId();
+        CreateRoleType createRoleType = MessageHelper.createMessage(CreateRoleType.class, action.info.getEffectiveUserId());
+        createRoleType.setRoleName(roleName);
+        createRoleType.setPath(action.properties.getPath());
+        createRoleType.setAssumeRolePolicyDocument(action.properties.getAssumeRolePolicyDocument().toString());
+        CreateRoleResponseType createRoleResponseType = AsyncRequests.<CreateRoleType,CreateRoleResponseType> sendSync(configuration, createRoleType);
+        String arn = createRoleResponseType.getCreateRoleResult().getRole().getArn();
+        action.info.setPhysicalResourceId(roleName);
+        action.info.setArn(JsonHelper.getStringFromJsonNode(new TextNode(arn)));
+        action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+        return action;
+      }
+    },
+    ADD_POLICIES {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSIAMRoleResourceAction action = (AWSIAMRoleResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        if (action.properties.getPolicies() != null) {
+          for (EmbeddedIAMPolicy policy: action.properties.getPolicies()) {
+            PutRolePolicyType putRolePolicyType = MessageHelper.createMessage(PutRolePolicyType.class, action.info.getEffectiveUserId());
+            putRolePolicyType.setRoleName(action.info.getPhysicalResourceId());
+            putRolePolicyType.setPolicyName(policy.getPolicyName());
+            putRolePolicyType.setPolicyDocument(policy.getPolicyDocument().toString());
+            AsyncRequests.<PutRolePolicyType,PutRolePolicyResponseType> sendSync(configuration, putRolePolicyType);
+          }
+        }
+        return action;
+      }
+    };
+
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
+
+  private enum DeleteSteps implements Step {
+    DELETE_ROLE {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSIAMRoleResourceAction action = (AWSIAMRoleResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        if (action.info.getPhysicalResourceId() == null) return action;
+
+        // if no role, bye...
+        boolean seenAllRoles = false;
+        boolean foundRole = false;
+        String RoleMarker = null;
+        while (!seenAllRoles && !foundRole) {
+          ListRolesType listRolesType = MessageHelper.createMessage(ListRolesType.class, action.info.getEffectiveUserId());
+          if (RoleMarker != null) {
+            listRolesType.setMarker(RoleMarker);
+          }
+          ListRolesResponseType listRolesResponseType = AsyncRequests.<ListRolesType,ListRolesResponseType> sendSync(configuration, listRolesType);
+          if (listRolesResponseType.getListRolesResult().getIsTruncated() == Boolean.TRUE) {
+            RoleMarker = listRolesResponseType.getListRolesResult().getMarker();
+          } else {
+            seenAllRoles = true;
+          }
+          if (listRolesResponseType.getListRolesResult().getRoles() != null && listRolesResponseType.getListRolesResult().getRoles().getMember() != null) {
+            for (RoleType roleType: listRolesResponseType.getListRolesResult().getRoles().getMember()) {
+              if (roleType.getRoleName().equals(action.info.getPhysicalResourceId())) {
+                foundRole = true;
+                break;
+              }
+            }
+          }
+        }
+        if (!foundRole) return action;
+        // remove all policies added by us.  (Note: this could cause issues if an admin added some, but we delete what we create)
+        // Note: deleting a non-existing policy doesn't do anything so we just delete them all...
+        if (action.properties.getPolicies() != null) {
+          for (EmbeddedIAMPolicy policy: action.properties.getPolicies()) {
+            DeleteRolePolicyType deleteRolePolicyType = MessageHelper.createMessage(DeleteRolePolicyType.class, action.info.getEffectiveUserId());
+            deleteRolePolicyType.setRoleName(action.info.getPhysicalResourceId());
+            deleteRolePolicyType.setPolicyName(policy.getPolicyName());
+            AsyncRequests.<DeleteRolePolicyType,DeleteRolePolicyResponseType> sendSync(configuration, deleteRolePolicyType);
+          }
+        }
+        DeleteRoleType deleteRoleType = MessageHelper.createMessage(DeleteRoleType.class, action.info.getEffectiveUserId());
+        deleteRoleType.setRoleName(action.info.getPhysicalResourceId());
+        AsyncRequests.<DeleteRoleType,DeleteRoleResponseType> sendSync(configuration, deleteRoleType);
+        return action;
+      }
+    };
+
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
+
+
   @Override
   public ResourceProperties getResourceProperties() {
     return properties;
@@ -77,104 +196,15 @@ public class AWSIAMRoleResourceAction extends ResourceAction {
   }
 
   @Override
-  public int getNumCreateSteps() {
-    return 2;
+  public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
+    return new CreateMultiStepPromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
   @Override
-  public void create(int stepNum) throws Exception {
-    ServiceConfiguration configuration = Topology.lookup(Euare.class);
-    switch (stepNum) {
-      case 0: // create role
-        String roleName = getDefaultPhysicalResourceId();
-        CreateRoleType createRoleType = new CreateRoleType();
-        createRoleType.setEffectiveUserId(info.getEffectiveUserId());
-        createRoleType.setRoleName(roleName);
-        createRoleType.setPath(properties.getPath());
-        createRoleType.setAssumeRolePolicyDocument(properties.getAssumeRolePolicyDocument().toString());
-        CreateRoleResponseType createRoleResponseType = AsyncRequests.<CreateRoleType,CreateRoleResponseType> sendSync(configuration, createRoleType);
-        String arn = createRoleResponseType.getCreateRoleResult().getRole().getArn();
-        info.setPhysicalResourceId(roleName);
-        info.setArn(JsonHelper.getStringFromJsonNode(new TextNode(arn)));
-        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
-        break;
-      case 1: // add policies
-        if (properties.getPolicies() != null) {
-          for (EmbeddedIAMPolicy policy: properties.getPolicies()) {
-            PutRolePolicyType putRolePolicyType = new PutRolePolicyType();
-            putRolePolicyType.setRoleName(info.getPhysicalResourceId());
-            putRolePolicyType.setPolicyName(policy.getPolicyName());
-            putRolePolicyType.setPolicyDocument(policy.getPolicyDocument().toString());
-            putRolePolicyType.setEffectiveUserId(info.getEffectiveUserId());
-            AsyncRequests.<PutRolePolicyType,PutRolePolicyResponseType> sendSync(configuration, putRolePolicyType);
-          }
-        }
-        break;
-      default:
-        throw new IllegalStateException("Invalid step " + stepNum);
-    }
-  }
-
-  @Override
-  public void update(int stepNum) throws Exception {
-    throw new UnsupportedOperationException();
-  }
-
-  public void rollbackUpdate() throws Exception {
-    // can't update so rollbackUpdate should be a NOOP
-  }
-
-  @Override
-  public void delete() throws Exception {
-    if (info.getPhysicalResourceId() == null) return;
-    ServiceConfiguration configuration = Topology.lookup(Euare.class);
-    // if no role, bye...
-    boolean seenAllRoles = false;
-    boolean foundRole = false;
-    String RoleMarker = null;
-    while (!seenAllRoles && !foundRole) {
-      ListRolesType listRolesType = new ListRolesType();
-      listRolesType.setEffectiveUserId(info.getEffectiveUserId());
-      if (RoleMarker != null) {
-        listRolesType.setMarker(RoleMarker);
-      }
-      ListRolesResponseType listRolesResponseType = AsyncRequests.<ListRolesType,ListRolesResponseType> sendSync(configuration, listRolesType);
-      if (listRolesResponseType.getListRolesResult().getIsTruncated() == Boolean.TRUE) {
-        RoleMarker = listRolesResponseType.getListRolesResult().getMarker();
-      } else {
-        seenAllRoles = true;
-      }
-      if (listRolesResponseType.getListRolesResult().getRoles() != null && listRolesResponseType.getListRolesResult().getRoles().getMember() != null) {
-        for (RoleType roleType: listRolesResponseType.getListRolesResult().getRoles().getMember()) {
-          if (roleType.getRoleName().equals(info.getPhysicalResourceId())) {
-            foundRole = true;
-            break;
-          }
-        }
-      }
-    }
-    if (!foundRole) return;
-    // remove all policies added by us.  (Note: this could cause issues if an admin added some, but we delete what we create)
-    // Note: deleting a non-existing policy doesn't do anything so we just delete them all...
-    if (properties.getPolicies() != null) {
-      for (EmbeddedIAMPolicy policy: properties.getPolicies()) {
-        DeleteRolePolicyType deleteRolePolicyType = new DeleteRolePolicyType();
-        deleteRolePolicyType.setRoleName(info.getPhysicalResourceId());
-        deleteRolePolicyType.setPolicyName(policy.getPolicyName());
-        deleteRolePolicyType.setEffectiveUserId(info.getEffectiveUserId());
-        AsyncRequests.<DeleteRolePolicyType,DeleteRolePolicyResponseType> sendSync(configuration, deleteRolePolicyType);
-      }
-    }
-    DeleteRoleType deleteRoleType = new DeleteRoleType();
-    deleteRoleType.setRoleName(info.getPhysicalResourceId());
-    deleteRoleType.setEffectiveUserId(info.getEffectiveUserId());
-    AsyncRequests.<DeleteRoleType,DeleteRoleResponseType> sendSync(configuration, deleteRoleType);
-  }
-
-
-  @Override
-  public void rollbackCreate() throws Exception {
-    delete();
+  public Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
+    return new DeleteMultiStepPromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
 }

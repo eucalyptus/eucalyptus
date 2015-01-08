@@ -30,12 +30,13 @@ import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
 import java.lang.reflect.Field
 import javax.annotation.Nonnull
-import com.eucalyptus.system.Ats
 import com.google.common.collect.Maps
 import com.google.common.base.Function
 import com.eucalyptus.util.CollectionUtils
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 import com.google.common.base.Predicate
+
+import static com.eucalyptus.util.MessageValidation.validateRecursively
 
 public class DescribeMetricCollectionTypesType extends AutoScalingBackendMessage {
   public DescribeMetricCollectionTypesType() {  }
@@ -47,7 +48,10 @@ public class Alarm extends EucalyptusData {
 }
 public class MetricGranularityTypes extends EucalyptusData {
   public MetricGranularityTypes() {  }
-  ArrayList<MetricGranularityType> member = [ new MetricGranularityType(granularity: "1Minute") ] as ArrayList<MetricGranularityType>
+  public MetricGranularityTypes( final Collection<MetricGranularityType> member ) {
+    this.member = Lists.newArrayList( member )
+  }
+  ArrayList<MetricGranularityType> member = Lists.newArrayList( )
 }
 public class DescribeAutoScalingNotificationTypesResponseType extends AutoScalingBackendMessage {
   public DescribeAutoScalingNotificationTypesResponseType() {  }
@@ -66,77 +70,28 @@ public class AutoScalingBackendMessage extends BaseMessage {
   @Override
   def <TYPE extends BaseMessage> TYPE getReply() {
     TYPE type = super.getReply()
-    try {
-      Field responseMetadataField = type.class.getDeclaredField("responseMetadata")
-      responseMetadataField.setAccessible( true )
-      ((ResponseMetadata) responseMetadataField.get( type )).requestId = getCorrelationId()
-    } catch ( Exception e ) {
+    getResponseMetadata( type )?.with{
+      requestId = getCorrelationId( )
     }
     return type
   }
 
-  Map<String,String> validate( ) {
-    Map<String,String> errors = Maps.newTreeMap()
-    validateRecursively( errors, "", this )
-    errors
+  static ResponseMetadata getResponseMetadata( final BaseMessage message ) {
+    try {
+      Field responseMetadataField = message.class.getDeclaredField("responseMetadata")
+      responseMetadataField.setAccessible( true )
+      return ((ResponseMetadata) responseMetadataField.get( message ))
+    } catch ( Exception e ) {
+    }
+    null
   }
 
-  static void validateRecursively( Map<String,String> errorMap,
-                                   String prefix,
-                                   Object target ) {
-    target.class.declaredFields.each { Field field ->
-      Ats fieldAts = Ats.from( field )
-      field.setAccessible( true )
-      Object value = field.get( target );
-      String displayName = prefix + AutoScalingMessageValidation.displayName( field )
-
-      // validate null constraint
-      if ( fieldAts.has( Nonnull.class ) && value == null ) {
-        errorMap.put( displayName, displayName + " is required" )
-      }
-
-      // validate regex
-      AutoScalingMessageValidation.FieldRegex regex = fieldAts.get( AutoScalingMessageValidation.FieldRegex.class )
-      if ( regex && value != null && !(value instanceof Iterable) && !regex.value().pattern().matcher( String.valueOf( value ) ).matches( ) ) {
-        errorMap.put( displayName, String.valueOf(value) + " for parameter " + displayName + " is invalid" )
-      } else if ( regex && value instanceof Iterable ) {
-        value.eachWithIndex { Object item, int index  ->
-          if ( !regex.value().pattern().matcher( String.valueOf( item ) ).matches( ) ) {
-            errorMap.put( displayName + "." + (index + 1), String.valueOf(item) + " for parameter " + displayName + "." + (index + 1) + " is invalid" )
-          }
-        }
-      }
-
-      // validate range
-      AutoScalingMessageValidation.FieldRange range = fieldAts.get( AutoScalingMessageValidation.FieldRange.class )
-      if ( range != null && value instanceof Number ) {
-        Long longValue = ((Number) value).longValue()
-        if ( longValue < range.min() || longValue > range.max() ) {
-          errorMap.put( displayName, String.valueOf(value) + " for parameter " + displayName + " is invalid" )
-        }
-      }
-      if ( range != null && value instanceof List ) {
-        Long longValue = (long) ((List)value).size()
-        if ( longValue < range.min() && range.min() == 1 ) {
-          errorMap.put( displayName + ".1", displayName + ".1 is required" )
-        } else if ( longValue < range.min() ) {
-          errorMap.put( displayName, displayName + " length too short" )
-        } else if ( longValue > range.max() ) {
-          errorMap.put( displayName, displayName + " length too long" )
-        }
-      }
-
-      // validate recursively
-      if ( value instanceof EucalyptusData ) {
-        validateRecursively( errorMap, displayName + ".", value )
-      } else if ( value instanceof Iterable ) {
-        value.eachWithIndex { Object item, int index ->
-          if ( item instanceof EucalyptusData ) {
-            validateRecursively( errorMap, displayName + "." + (index + 1) + ".", item )
-          }
-        }
-      }
-    }
+  Map<String,String> validate( ) {
+    validateRecursively(
+        Maps.<String,String>newTreeMap( ),
+        new AutoScalingMessageValidation.AutoScalingMessageValidationAssistant(),
+        "",
+        this )
   }
 }
 public class SuspendProcessesResponseType extends AutoScalingBackendMessage {
@@ -197,7 +152,6 @@ public class DeleteAutoScalingGroupType extends AutoScalingBackendMessage {
   public DeleteAutoScalingGroupType() {  }
 }
 public class DescribeNotificationConfigurationsType extends AutoScalingBackendMessage {
-  @HttpEmbedded
   AutoScalingGroupNames autoScalingGroupNames
   String nextToken
   Integer maxRecords
@@ -286,7 +240,6 @@ public class DescribeAutoScalingInstancesResponseType extends AutoScalingBackend
 public class PutNotificationConfigurationType extends AutoScalingBackendMessage {
   String autoScalingGroupName
   String topicARN
-  @HttpEmbedded
   AutoScalingNotificationTypes notificationTypes
   public PutNotificationConfigurationType() {  }
 }
@@ -352,7 +305,6 @@ public class InstanceMonitoring extends EucalyptusData {
 }
 public class DescribeScheduledActionsType extends AutoScalingBackendMessage {
   String autoScalingGroupName
-  @HttpEmbedded
   ScheduledActionNames scheduledActionNames
   Date startTime
   Date endTime
@@ -363,7 +315,6 @@ public class DescribeScheduledActionsType extends AutoScalingBackendMessage {
 public class Filter extends EucalyptusData {
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.TAG_FILTER)
   String name
-  @HttpEmbedded
   Values values
   public Filter() {  }
   public List<String> values() {
@@ -397,7 +348,6 @@ public class DescribeAutoScalingInstancesResult extends EucalyptusData {
   public DescribeAutoScalingInstancesResult() {  }
 }
 public class DescribeLaunchConfigurationsType extends AutoScalingBackendMessage {
-  @HttpEmbedded
   LaunchConfigurationNames launchConfigurationNames = new LaunchConfigurationNames()
   String nextToken
   Integer maxRecords
@@ -420,7 +370,6 @@ public class AutoScalingInstances extends EucalyptusData {
   ArrayList<AutoScalingInstanceDetails> member = new ArrayList<AutoScalingInstanceDetails>()
 }
 public class DescribeTagsType extends AutoScalingBackendMessage {
-  @HttpEmbedded
   Filters filters
   String nextToken
   Integer maxRecords
@@ -457,9 +406,7 @@ public class CreateAutoScalingGroupType extends AutoScalingBackendMessage {
   Integer desiredCapacity
   @AutoScalingMessageValidation.FieldRange
   Integer defaultCooldown
-  @Nonnull @HttpEmbedded
   AvailabilityZones availabilityZones
-  @HttpEmbedded
   LoadBalancerNames loadBalancerNames
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.HEALTH_CHECK)
   String healthCheckType
@@ -467,12 +414,10 @@ public class CreateAutoScalingGroupType extends AutoScalingBackendMessage {
   Integer healthCheckGracePeriod
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
   String placementGroup
-  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.VPC_ZONE_IDENTIFIER)
   @HttpParameterMapping(parameter="VPCZoneIdentifier")
   String vpcZoneIdentifier
-  @HttpEmbedded
   TerminationPolicies terminationPolicies
-  @HttpEmbedded
   Tags tags
   public CreateAutoScalingGroupType() {  }
   public Collection<String> availabilityZones() {
@@ -500,13 +445,15 @@ public class CreateAutoScalingGroupType extends AutoScalingBackendMessage {
     if ( availabilityZones && availabilityZones.member.isEmpty() ) {
       errors.put( "AvailabilityZones.member.1", "AvailabilityZones.member.1 is required" )
     }
+    if ( vpcZoneIdentifier == null && (!availabilityZones || availabilityZones.member.isEmpty( ) ) ) {
+      errors.put( "AvailabilityZones.member.1", "One of AvailabilityZones or VPCZoneIdentifier is required" )
+    }
     errors
   }
 }
 public class DisableMetricsCollectionType extends AutoScalingBackendMessage {
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
-  @HttpEmbedded
   Metrics metrics
   public DisableMetricsCollectionType() {  }
 }
@@ -578,7 +525,6 @@ public class DescribeNotificationConfigurationsResult extends EucalyptusData {
 public class EnableMetricsCollectionType extends AutoScalingBackendMessage {
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
-  @HttpEmbedded
   Metrics metrics
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.METRIC_GRANULARITY)
   String granularity
@@ -636,7 +582,6 @@ public class Filters extends EucalyptusData {
 public class ResumeProcessesType extends AutoScalingBackendMessage {
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
-  @HttpEmbedded
   ProcessNames scalingProcesses
   public ResumeProcessesType() {  }
 }
@@ -654,7 +599,6 @@ public class InstanceIds extends EucalyptusData {
 public class SuspendProcessesType extends AutoScalingBackendMessage {
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
-  @HttpEmbedded
   ProcessNames scalingProcesses
   public SuspendProcessesType() {  }
 }
@@ -676,7 +620,6 @@ public class DescribeScheduledActionsResult extends EucalyptusData {
   public DescribeScheduledActionsResult() {  }
 }
 public class DescribeAutoScalingInstancesType extends AutoScalingBackendMessage {
-  @HttpEmbedded
   InstanceIds instanceIds
   Integer maxRecords
   String nextToken
@@ -691,7 +634,6 @@ public class DescribeAutoScalingInstancesType extends AutoScalingBackendMessage 
 }
 public class DeleteTagsType extends AutoScalingBackendMessage {
   @Nonnull
-  @HttpEmbedded
   Tags tags
   public DeleteTagsType() {  }
 }
@@ -755,6 +697,9 @@ public class ActivityIds extends EucalyptusData {
 public class MetricGranularityType extends EucalyptusData {
   String granularity
   public MetricGranularityType() {  }
+  public MetricGranularityType(final String granularity) {
+    this.granularity = granularity
+  }
 }
 public class AdjustmentTypes extends EucalyptusData {
   public AdjustmentTypes() {  }
@@ -781,7 +726,6 @@ public class SetDesiredCapacityResponseType extends AutoScalingBackendMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
 public class DescribeScalingActivitiesType extends AutoScalingBackendMessage {
-  @HttpEmbedded
   ActivityIds activityIds
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
@@ -812,6 +756,7 @@ public class LaunchConfigurationType extends EucalyptusData {
   String iamInstanceProfile
   Date createdTime
   Boolean ebsOptimized
+  Boolean associatePublicIpAddress
   public LaunchConfigurationType() {  }
 }
 public class Processes extends EucalyptusData {
@@ -846,7 +791,6 @@ public class UpdateAutoScalingGroupType extends AutoScalingBackendMessage {
   Integer desiredCapacity
   @AutoScalingMessageValidation.FieldRange
   Integer defaultCooldown
-  @HttpEmbedded
   AvailabilityZones availabilityZones
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.HEALTH_CHECK)
   String healthCheckType
@@ -857,7 +801,6 @@ public class UpdateAutoScalingGroupType extends AutoScalingBackendMessage {
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
   @HttpParameterMapping(parameter="VPCZoneIdentifier")
   String vpcZoneIdentifier
-  @HttpEmbedded
   TerminationPolicies terminationPolicies
   public UpdateAutoScalingGroupType() {  }
   public Collection<String> availabilityZones() {
@@ -891,7 +834,6 @@ public class BlockDeviceMappingType extends EucalyptusData {
   String virtualName
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
   String deviceName
-  @HttpEmbedded
   Ebs ebs
   public BlockDeviceMappingType() {  }
   public BlockDeviceMappingType( String deviceName, String virtualName, String snapshotId, Integer volumeSize ) {
@@ -1049,7 +991,6 @@ public class Activities extends EucalyptusData {
 public class DescribePoliciesType extends AutoScalingBackendMessage {
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
-  @HttpEmbedded
   PolicyNames policyNames
   String nextToken
   Integer maxRecords
@@ -1071,7 +1012,6 @@ public class ResumeProcessesResponseType extends AutoScalingBackendMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
 public class DescribeAutoScalingGroupsType extends AutoScalingBackendMessage {
-  @HttpEmbedded
   AutoScalingGroupNames autoScalingGroupNames
   String nextToken
   Integer maxRecords
@@ -1085,13 +1025,13 @@ public class DescribeAutoScalingGroupsType extends AutoScalingBackendMessage {
   }
 }
 public class CreateLaunchConfigurationType extends AutoScalingBackendMessage {
+  Boolean associatePublicIpAddress
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME)
   String launchConfigurationName
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_MACHINE_IMAGE)
   String imageId
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
   String keyName
-  @HttpEmbedded
   SecurityGroups securityGroups
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_USERDATA)
   String userData
@@ -1101,10 +1041,10 @@ public class CreateLaunchConfigurationType extends AutoScalingBackendMessage {
   String kernelId
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_RAMDISK_IMAGE)
   String ramdiskId
-  @HttpEmbedded
   BlockDeviceMappings blockDeviceMappings
-  @HttpEmbedded
   InstanceMonitoring instanceMonitoring
+  @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_PLACEMENT_TENANCY)
+  String placementTenancy
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_SPOT_PRICE)
   String spotPrice
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.IAM_NAME_OR_ARN)
@@ -1143,7 +1083,7 @@ public class DescribeScalingProcessTypesType extends AutoScalingBackendMessage {
   public DescribeScalingProcessTypesType() {  }
 }
 public class CreateOrUpdateTagsType extends AutoScalingBackendMessage {
-  @Nonnull @HttpEmbedded
+  @Nonnull
   Tags tags
   public CreateOrUpdateTagsType() {  }
 }

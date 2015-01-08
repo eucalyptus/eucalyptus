@@ -20,6 +20,9 @@
 package com.eucalyptus.util
 
 import com.eucalyptus.scripting.Groovyness
+import com.google.common.base.Functions
+import com.google.common.collect.Iterables
+import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.google.common.net.InetAddresses
 import spock.lang.Specification
@@ -96,6 +99,25 @@ class CidrSpecification extends Specification {
     '10.0.0.0/8'        | '10.1.0.1'        | true
   }
 
+  def 'should be able to check for contained cidrs'(){
+    expect: 'parsed cidr containment check has expected result'
+    Groovyness.expandoMetaClass( parse( cidr ) ).contains( Groovyness.expandoMetaClass( parse( perhapsContains ) ) ) == result
+
+    where:
+    cidr                | perhapsContains   | result
+    '0.0.0.0/0'         | '10.1.0.0/32'     | true
+    '0.0.0.0/0'         | '0.0.0.0/0'       | true
+    '0.0.0.0/0'         | '0.0.0.0/1'       | true
+    '10.1.0.0/32'       | '10.1.0.0/32'     | true
+    '10.1.0.0/16'       | '10.1.0.0/16'     | true
+    '10.1.0.0/16'       | '10.0.0.0/15'     | false
+    '10.1.0.0/16'       | '10.1.0.0/17'     | true
+    '10.1.0.0/24'       | '10.1.1.0/24'     | false
+    '10.1.0.0/32'       | '10.1.0.1/32'     | false
+    '10.0.0.0/8'        | '10.1.0.1/32'     | true
+    '10.10.0.0/16'      | '10.11.0.0/16'    | false
+  }
+
   def 'should have a string representation'(){
     expect: 'parsed cidr string conversion check'
     Groovyness.expandoMetaClass( parse( cidr ) ).toString( ) == result
@@ -139,6 +161,18 @@ class CidrSpecification extends Specification {
     '0.0.0.0'         | 0         | '0.0.0.0/0'
     '0.0.0.0'         | 1         | '0.0.0.0/1'
   }
+
+  def 'should be able to split a CIDR'(){
+    expect: 'cidr split has expected result'
+    Lists.newArrayList( Iterables.transform( Groovyness.expandoMetaClass( parse( cidr ) ).split( split ), Functions.toStringFunction( ) ) ) == result
+
+    where:
+    cidr              | split     | result
+    '172.31.0.0/16'   | 16        | [ '172.31.0.0/20', '172.31.16.0/20', '172.31.32.0/20', '172.31.48.0/20', '172.31.64.0/20', '172.31.80.0/20', '172.31.96.0/20', '172.31.112.0/20', '172.31.128.0/20', '172.31.144.0/20', '172.31.160.0/20', '172.31.176.0/20', '172.31.192.0/20', '172.31.208.0/20', '172.31.224.0/20', '172.31.240.0/20' ]
+    '172.31.0.0/16'   | 1         | [ '172.31.0.0/16' ]
+    '10.0.0.0/8'      | 2         | [ '10.0.0.0/9', '10.128.0.0/9' ]
+  }
+
 
   private static Cidr cidr( int ip, int prefix ) {
     Cidr.of( ip, prefix )

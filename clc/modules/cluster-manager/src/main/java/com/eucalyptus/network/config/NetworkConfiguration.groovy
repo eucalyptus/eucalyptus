@@ -20,8 +20,13 @@
 package com.eucalyptus.network.config
 
 import com.eucalyptus.network.IPRange
+import com.eucalyptus.network.NetworkMode
+import com.eucalyptus.util.Cidr
 import com.google.common.base.CaseFormat
+import com.google.common.base.Functions
+import com.google.common.base.Joiner
 import com.google.common.base.Strings
+import com.google.common.collect.Iterables
 import com.google.common.net.InetAddresses
 import com.google.common.net.InternetDomainName
 import groovy.transform.Canonical
@@ -38,13 +43,26 @@ import java.util.regex.Pattern
 @CompileStatic
 @Canonical
 class NetworkConfiguration {
+  String mode
   String instanceDnsDomain
   List<String> instanceDnsServers
   String macPrefix
+  Midonet mido
   List<String> publicIps  // List of ip address ranges
   List<String> privateIps // List of ip address ranges
   List<Subnet> subnets
   List<Cluster> clusters
+}
+
+@CompileStatic
+@Canonical
+class Midonet {
+  String eucanetdHost
+  String gatewayHost
+  String gatewayIP
+  String gatewayInterface
+  String publicNetworkCidr
+  String publicGatewayIP
 }
 
 @CompileStatic
@@ -98,7 +116,7 @@ abstract class TypedValidator<T> implements Validator {
   }
 
   String pathTranslate( String path, String name = null ) {
-    String pathPrefix  = Strings.isNullOrEmpty( path ) ? '' : "${path}."
+    String pathPrefix  = Strings.isNullOrEmpty( path ) ? '' : "${path}${path.endsWith('.')?'':'.'}"
     String fullPath = name ? "${pathPrefix}${name}" : path
     fullPath.split('\\.').collect{ String item -> toPropertyName(item) }.join('.')
   }
@@ -142,18 +160,49 @@ abstract class TypedValidator<T> implements Validator {
 @PackageScope
 class NetworkConfigurationValidator extends TypedValidator<NetworkConfiguration> {
   public static final Pattern MAC_PREFIX_PATTERN = Pattern.compile( '[0-9a-fA-F]{2}:[0-9a-fA-F]{2}' )
+  public static final Pattern MODE_PATTERN = Pattern.compile(
+      Joiner.on('|').join( Iterables.transform( Arrays.asList( NetworkMode.values( ) ), Functions.toStringFunction( ) ) )
+  )
+
   Errors errors
 
   @Override
   void validate( final NetworkConfiguration configuration ) {
-    require( configuration.&getPublicIps );
+    require( configuration.&getPublicIps )
+    validate( configuration.&getMode, new RegexValidator( errors, MODE_PATTERN, 'Invalid mode "{0}": "{1}"' ) )
     validate( configuration.&getInstanceDnsDomain, new DomainValidator(errors) )
     validateAll( configuration.&getInstanceDnsServers, new IPValidator(errors) )
     validate( configuration.&getMacPrefix, new RegexValidator( errors, MAC_PREFIX_PATTERN, 'Invalid MAC prefix "{0}": "{1}"' ) )
+    if ( configuration.mode == 'VPCMIDO' ) {
+      require( configuration.&getMido )
+      if ( configuration.mido ) validate( configuration.&getMido, new MidonetValidator(errors) )
+    }
     validateAll( configuration.&getPublicIps, new IPRangeValidator(errors) )
     validateAll( configuration.&getPrivateIps, new IPRangeValidator(errors) )
     validateAll( configuration.&getSubnets, new SubnetValidator(errors) )
     validateAll( configuration.&getClusters, new ClusterValidator(errors, configuration.subnets?.collect{Subnet subnet -> subnet.name?:subnet.subnet}?:[] as List<String>) )
+  }
+}
+
+@CompileStatic
+@Canonical
+@PackageScope
+class MidonetValidator extends TypedValidator<Midonet> {
+  Errors errors
+
+  @Override
+  void validate( final Midonet midonet ) {
+    require( midonet.&getEucanetdHost )
+    require( midonet.&getGatewayHost )
+    require( midonet.&getGatewayIP )
+    require( midonet.&getGatewayInterface )
+    require( midonet.&getPublicNetworkCidr )
+    require( midonet.&getPublicGatewayIP )
+    validate( midonet.&getEucanetdHost, new HostValidator(errors) )
+    validate( midonet.&getGatewayHost, new HostValidator(errors) )
+    validate( midonet.&getGatewayIP, new IPValidator(errors) )
+    validate( midonet.&getPublicNetworkCidr, new CidrValidator(errors) )
+    validate( midonet.&getPublicGatewayIP, new IPValidator(errors) )
   }
 }
 
@@ -167,6 +216,30 @@ class DomainValidator extends TypedValidator<String> {
   void validate( final String domain ) {
     if ( domain && !InternetDomainName.isValid( domain ) ) {
       errors.reject( "property.invalid.domain", [pathTranslate( errors.getNestedPath( ) ), domain ] as Object[], 'Invalid domain \"{0}\": \"{1}\"' )
+    }
+  }
+}
+
+@CompileStatic
+@Canonical
+@PackageScope
+class HostValidator extends TypedValidator<String> {
+  private static final boolean skipHostValidation = Boolean.valueOf( System.getProperty( 'com.eucalyptus.network.config.skipHostValidation', 'false' ) )
+  Errors errors
+
+  @Override
+  void validate( final String host ) {
+    if ( host && !skipHostValidation ) {
+      boolean valid
+      try {
+        InetAddresses.forString( host );
+        valid = true;
+      } catch ( IllegalArgumentException ) {
+        valid = InternetDomainName.isValid( host )
+      }
+      if ( !valid ) {
+        errors.reject( "property.invalid.host", [pathTranslate( errors.getNestedPath( ) ), host ] as Object[], 'Invalid host \"{0}\": \"{1}\"' )
+      }
     }
   }
 }
@@ -220,6 +293,20 @@ class NetmaskValidator extends TypedValidator<String> {
       if ( i!=-1 ) {
         errors.reject( "property.invalid.netmask", [pathTranslate( errors.getNestedPath( ) ), netmask] as Object[], 'Invalid netmask for \"{0}\": \"{1}\"' )
       }
+    }
+  }
+}
+
+@CompileStatic
+@Canonical
+@PackageScope
+class CidrValidator extends TypedValidator<String> {
+  Errors errors
+
+  @Override
+  void validate( final String cidr ) {
+    if ( !Cidr.parse( ).apply( cidr ).isPresent( ) ) {
+      errors.reject( "property.invalid.cidr", [pathTranslate( errors.getNestedPath( ) ), cidr ] as Object[], 'Invalid CIDR for \"{0}\": \"{1}\"' )
     }
   }
 }
@@ -286,7 +373,7 @@ class ClusterValidator extends TypedValidator<Cluster> {
     validate( cluster.&getMacPrefix, new RegexValidator( errors, NetworkConfigurationValidator.MAC_PREFIX_PATTERN, 'Invalid MAC prefix "{0}": "{1}"' ) )
     if ( subnetNames.size() > 1 || cluster.subnet ) {
       require( cluster.&getSubnet )
-      validate( cluster.&getSubnet, new ReferenceSubnetValidator( errors, subnetNames ) )
+      if ( cluster.subnet ) validate( cluster.&getSubnet, new ReferenceSubnetValidator( errors, subnetNames ) )
     }
     validateAll( cluster.&getPrivateIps, new IPRangeValidator( errors ) )
   }

@@ -23,16 +23,39 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.lang.reflect.Field;
 import java.util.regex.Pattern;
-import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.system.Ats;
-import com.google.common.base.CaseFormat;
+import com.eucalyptus.util.MessageValidation;
+import com.eucalyptus.util.Pair;
+import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
 /**
  *
  */
 public class AutoScalingMessageValidation {
+
+  public static class AutoScalingMessageValidationAssistant implements MessageValidation.ValidationAssistant {
+    @Override
+    public boolean validate( final Object object ) {
+      return object instanceof EucalyptusData;
+    }
+
+    @Override
+    public Pair<Long, Long> range( final Ats ats ) {
+      final FieldRange range = ats.get( FieldRange.class );
+      return range == null ?
+          null :
+          Pair.pair( range.min( ), range.max( ) );
+    }
+
+    @Override
+    public Pattern regex( final Ats ats ) {
+      final FieldRegex regex = ats.get( FieldRegex.class );
+      return regex == null ?
+          null :
+          regex.value( ).pattern( );
+    }
+  }
 
   @Target( ElementType.FIELD)
   @Retention( RetentionPolicy.RUNTIME)
@@ -66,6 +89,7 @@ public class AutoScalingMessageValidation {
     TAG_FILTER( "auto-scaling-group|key|value|propagate-at-launch" ),
     TAG_RESOURCE( "auto-scaling-group" ),
     TERMINATION_POLICY( "OldestInstance|NewestInstance|OldestLaunchConfiguration|ClosestToNextInstanceHour|Default" ),
+    VPC_ZONE_IDENTIFIER( "subnet-[0-9a-fA-F]{8}(?: +, +subnet-[0-9a-fA-F]{8})*" ),
 
     // EC2
     EC2_NAME( "(?s).{1,255}" ),
@@ -77,6 +101,7 @@ public class AutoScalingMessageValidation {
     EC2_INSTANCE_VERBOSE( "i-[0-9a-fA-F]{8}|verbose" ),
     EC2_USERDATA( "(?s).{0,90000}" ), // Enough for 64KiB Base64 encoded with some formatting
     EC2_SPOT_PRICE( "[0-9]{1,4}\\.[0-9]{2,4}" ),
+    EC2_PLACEMENT_TENANCY( "default|dedicated" ),
 
     // ELB
     ELB_NAME( "(?s).{1,255}" ),
@@ -97,12 +122,7 @@ public class AutoScalingMessageValidation {
     }
   }
 
-  public static String displayName( Field field ) {
-    HttpParameterMapping httpParameterMapping = Ats.from( field ).get( HttpParameterMapping.class );
-    return httpParameterMapping != null ?
-        httpParameterMapping.parameter()[0] :
-        CaseFormat.LOWER_CAMEL.to( CaseFormat.UPPER_CAMEL, field.getName() );
-  }
+
 
 
 }

@@ -56,6 +56,20 @@ public class Strings {
     }
   }
 
+  /**
+   * Remove optional suffix from the given text.
+   *
+   * @param text The text to trim
+   * @return The trimmed text or null if text was null
+   */
+  public static String trimSuffix( @Nonnull  final String suffix,
+                                   @Nullable final String text ) {
+    if ( text != null && text.endsWith( suffix ) ) {
+      return text.substring( 0, text.length( ) - suffix.length( ) );
+    } else {
+      return text;
+    }
+  }
 
   /**
    * Get a Function for trimming a String.
@@ -159,6 +173,52 @@ public class Strings {
             return prefix != null && text.endsWith( prefix );
           }
         };
+  }
+
+  /**
+   * Get a Function that appends the given text to it's parameter.
+   *
+   * @param suffix The suffix to append.
+   * @return The function
+   */
+  public static Function<String,String> append( final String suffix ) {
+    return new Function<String, String>( ) {
+      @Nullable
+      @Override
+      public String apply( @Nullable final String text ) {
+        return text == null ?
+            suffix :
+            text + suffix;
+      }
+    };
+  }
+
+  /**
+   * Get a Function that prepends the given text to it's parameter.
+   *
+   * @param prefix The prefix to prepend.
+   * @return The function
+   */
+  public static Function<String,String> prepend( final String prefix ) {
+    return new Function<String, String>( ) {
+      @Nullable
+      @Override
+      public String apply( @Nullable final String text ) {
+        return text == null ?
+            prefix :
+            prefix + text;
+      }
+    };
+  }
+
+  public static Function<String,Function<String,String>> join( ) {
+    return new Function<String,Function<String,String>>( ) {
+      @Nullable
+      @Override
+      public Function<String,String> apply( @Nullable final String prefix ) {
+        return prepend( prefix );
+      }
+    };
   }
 
   /**

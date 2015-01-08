@@ -66,6 +66,8 @@ import static java.util.Collections.unmodifiableMap;
 import com.eucalyptus.auth.AuthContext;
 import com.eucalyptus.auth.AuthContextSupplier;
 import static com.google.common.collect.Maps.newHashMap;
+
+import com.eucalyptus.ws.server.MessageStatistics;
 import edu.ucsb.eucalyptus.msgs.EvaluatedIamConditionKey;
 import java.lang.ref.WeakReference;
 import java.net.InetAddress;
@@ -95,7 +97,6 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.CollectionUtils;
-import com.eucalyptus.ws.server.Statistics;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseCallerContext;
@@ -103,7 +104,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Context {
   private static Logger                LOG       = Logger.getLogger( Context.class );
-  private final String                 correlationId;
+  private String                 correlationId;
   private Long                         creationTime;
   private BaseMessage                  request   = null;
   private final MappingHttpRequest     httpRequest;
@@ -140,7 +141,7 @@ public class Context {
   
   protected Context( MappingHttpRequest httpRequest, Channel channel ) {
     UUID uuid = UUID.randomUUID( );
-    Statistics.startRequest( channel );
+    MessageStatistics.startRequest(channel);
     this.correlationId = uuid.toString( );
     this.creationTime = System.nanoTime( );
     this.httpRequest = httpRequest;
@@ -166,19 +167,16 @@ public class Context {
     return check( this.httpRequest );
   }
   
+  public void setCorrelationId(final String corrId){
+    this.correlationId = corrId;
+  }
+  
   public String getCorrelationId( ) {
     return this.correlationId;
   }
   
   public Long getCreationTime( ) {
     return this.creationTime;
-  }
-  
-  public void setRequest( BaseMessage msg ) {
-    if ( msg != null ) {
-      EventRecord.caller( Context.class, EventType.CONTEXT_MSG, this.correlationId, msg.toSimpleString( ) ).debug( );
-      this.request = msg;
-    }
   }
   
   public BaseMessage getRequest( ) {

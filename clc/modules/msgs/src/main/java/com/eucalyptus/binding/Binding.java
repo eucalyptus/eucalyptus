@@ -177,8 +177,7 @@ public class Binding {
         ? altNs
         : origNs;
     if ( this.bindingFactory == null ) {
-      LOG.error( "Binding factory is empty" );
-      throw new BindingException( "Failed to prepare binding factory for message: " + param.getClass( ).getCanonicalName( ) + " with namespace: " + useNs );
+      throw new BindingException( "Failed to prepare binding factory (unset) for message: " + param.getClass( ).getCanonicalName( ) + " with namespace: " + useNs );
     }
     if ( this.bindingFactory.getElementNamespaces( ) == null ) {
       LOG.error( "Binding factory's element namespace is empty" );

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,6 +30,8 @@ import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
@@ -44,6 +46,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.InvalidAccessKeyAuthException;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.TemporaryAccessKey;
@@ -54,10 +57,13 @@ import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Pair;
 import com.google.common.base.Charsets;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
@@ -69,7 +75,12 @@ public class SecurityTokenManager {
 
   private static final Logger log = Logger.getLogger( SecurityTokenManager.class );
   private static final Supplier<SecureRandom> randomSupplier = Crypto.getSecureRandomSupplier();
-  private static final SecurityTokenManager instance = new SecurityTokenManager();
+  private static final SecurityTokenManager instance = new SecurityTokenManager( );
+  private static final int tokenCacheSize = Objects.firstNonNull(
+      Ints.tryParse( System.getProperty( "com.eucalyptus.auth.tokens.cache.maximumSize", "500" ) ),
+      500 );
+  private static final Cache<Pair<String,String>,EncryptedSecurityToken> tokenCache =
+      CacheBuilder.newBuilder( ).expireAfterAccess( 5, TimeUnit.MINUTES ).maximumSize( tokenCacheSize ).build( );
 
   /**
    * Issue a security token.
@@ -82,6 +93,7 @@ public class SecurityTokenManager {
    *
    * @param user The user for the token
    * @param accessKey The originating access key for the token
+   * @param durationTruncationSeconds The duration at which to truncate without error
    * @param durationSeconds The desired duration for the token
    * @return The newly issued security token
    * @throws AuthException If an error occurs
@@ -90,8 +102,9 @@ public class SecurityTokenManager {
   @Nonnull
   public static SecurityToken issueSecurityToken( @Nonnull  final User user,
                                                   @Nullable final AccessKey accessKey,
+                                                            final int durationTruncationSeconds,
                                                             final int durationSeconds ) throws AuthException {
-    return instance.doIssueSecurityToken( user, accessKey, durationSeconds );
+    return instance.doIssueSecurityToken( user, accessKey, durationTruncationSeconds, durationSeconds );
   }
 
   /**
@@ -109,7 +122,27 @@ public class SecurityTokenManager {
   @Nonnull
   public static SecurityToken issueSecurityToken( @Nonnull  final User user,
                                                   final int durationSeconds ) throws AuthException {
-    return instance.doIssueSecurityToken( user, durationSeconds );
+    return instance.doIssueSecurityToken( user, 0, durationSeconds );
+  }
+
+  /**
+   * Issue a security token.
+   *
+   * <p>The credential associated with the token is of type
+   * TemporaryAccessKey#Access.</p>
+   *
+   * @param user The user for the token
+   * @param durationTruncationSeconds The duration at which to truncate without error
+   * @param durationSeconds The desired duration for the token
+   * @return The newly issued security token
+   * @throws AuthException If an error occurs
+   * @see com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType#Access
+   */
+  @Nonnull
+  public static SecurityToken issueSecurityToken( @Nonnull  final User user,
+                                                  final int durationTruncationSeconds,
+                                                  final int durationSeconds ) throws AuthException {
+    return instance.doIssueSecurityToken( user, durationTruncationSeconds, durationSeconds );
   }
 
   /**
@@ -150,6 +183,7 @@ public class SecurityTokenManager {
   @Nonnull
   protected SecurityToken doIssueSecurityToken( @Nonnull  final User user,
                                                 @Nullable final AccessKey accessKey,
+                                                          final int durationTruncationSeconds,
                                                           final int durationSeconds ) throws AuthException {
     Preconditions.checkNotNull( user, "User is required" );
 
@@ -164,7 +198,7 @@ public class SecurityTokenManager {
       throw new AuthException("Key not found for user");
 
     final long restrictedDurationMillis =
-        restrictDuration( 36, user.isAccountAdmin(), durationSeconds );
+        restrictDuration( 36, durationTruncationSeconds, durationSeconds );
 
     if ( !key.getUser().getUserId().equals( user.getUserId() ) ) {
       throw new AuthException("Key not valid for user");
@@ -188,6 +222,7 @@ public class SecurityTokenManager {
    */
   @Nonnull
   protected SecurityToken doIssueSecurityToken( @Nonnull  final User user,
+                                                final int durationTruncationSeconds,
                                                 final int durationSeconds ) throws AuthException {
     Preconditions.checkNotNull( user, "User is required" );
 
@@ -197,7 +232,7 @@ public class SecurityTokenManager {
     }
 
     final long restrictedDurationMillis =
-        restrictDuration( 36, user.isAccountAdmin(), durationSeconds );
+        restrictDuration( 36, durationTruncationSeconds, durationSeconds );
 
     final EncryptedSecurityToken encryptedToken = new EncryptedSecurityToken(
         null,
@@ -218,7 +253,7 @@ public class SecurityTokenManager {
     Preconditions.checkNotNull( role, "Role is required" );
 
     final long restrictedDurationMillis =
-        restrictDuration( 1, false, durationSeconds );
+        restrictDuration( 1, 0, durationSeconds );
 
     if ( role.getSecret()==null || role.getSecret().length() < 30 ) {
       throw new AuthException("Cannot generate token for role");
@@ -244,10 +279,16 @@ public class SecurityTokenManager {
 
     final EncryptedSecurityToken encryptedToken;
     try {
-      encryptedToken = EncryptedSecurityToken.decrypt( accessKeyId, getEncryptionKey( accessKeyId ), token );
-    } catch ( GeneralSecurityException e ) {
+      final Pair<String,String> tokenKey = Pair.pair( accessKeyId, token );
+      encryptedToken = tokenCache.get( tokenKey, new Callable<EncryptedSecurityToken>( ) {
+        @Override
+        public EncryptedSecurityToken call() throws Exception {
+          return EncryptedSecurityToken.decrypt( accessKeyId, getEncryptionKey( accessKeyId ), token );
+        }
+      } );
+    } catch ( ExecutionException e ) {
       log.debug( e, e );
-      throw new AuthException("Invalid security token");
+      throw new InvalidAccessKeyAuthException("Invalid security token");
     }
 
     final String originatingAccessKeyId = encryptedToken.getOriginatingAccessKeyId();
@@ -339,7 +380,7 @@ public class SecurityTokenManager {
   }
 
   private long restrictDuration( final int maximumDurationHours,
-                                 final boolean isAdmin,
+                                 final int durationTruncationSeconds,
                                  final int durationSeconds ) throws SecurityTokenValidationException {
     long durationMillis = durationSeconds == 0 ?
         TimeUnit.HOURS.toMillis( 12 ) : // use default
@@ -355,8 +396,8 @@ public class SecurityTokenManager {
       validationFailure( "Invalid duration requested, minimum permitted duration is 900 seconds." );
     }
 
-    if ( isAdmin && durationMillis > TimeUnit.HOURS.toMillis( 1 ) ) {
-      durationMillis = TimeUnit.HOURS.toMillis( 1 );
+    if ( durationTruncationSeconds > 0 && durationMillis > TimeUnit.SECONDS.toMillis( durationTruncationSeconds ) ) {
+      durationMillis = TimeUnit.SECONDS.toMillis( durationTruncationSeconds );
     }
 
     return durationMillis;
@@ -373,14 +414,17 @@ public class SecurityTokenManager {
     return new SecretKeySpec( digest.digest(), "AES" );
   }
 
+  /**
+   * Immutable token representation
+   */
   private static final class EncryptedSecurityToken {
     private static final byte[] TOKEN_PREFIX = new byte[]{ 'e', 'u', 'c', 'a', 0, 1 };
 
-    private String accessKeyId;
-    private String originatingId;
-    private String nonce;
-    private long created;
-    private long expires;
+    private final String accessKeyId;
+    private final String originatingId;
+    private final String nonce;
+    private final long created;
+    private final long expires;
 
     /**
      * Generate a new token
@@ -504,7 +548,7 @@ public class SecurityTokenManager {
         final Cipher cipher = Ciphers.AES_GCM.get();
         final byte[] iv = new byte[32];
         randomSupplier.get().nextBytes(iv);
-        cipher.init( Cipher.ENCRYPT_MODE, key, new IvParameterSpec( iv ) );
+        cipher.init( Cipher.ENCRYPT_MODE, key, new IvParameterSpec( iv ), randomSupplier.get( ) );
         final ByteArrayOutputStream out = new ByteArrayOutputStream();
         out.write( TOKEN_PREFIX );
         out.write( iv );
@@ -526,7 +570,12 @@ public class SecurityTokenManager {
           throw new GeneralSecurityException("Invalid token format");
         }
 
-        cipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec( securityTokenBytes, TOKEN_PREFIX.length, 32 ));
+        cipher.init(
+            Cipher.DECRYPT_MODE,
+            key,
+            new IvParameterSpec( securityTokenBytes, TOKEN_PREFIX.length, 32 ),
+            randomSupplier.get( )
+        );
         final int offset = TOKEN_PREFIX.length + 32;
         final SecurityTokenInput in = new SecurityTokenInput(
             cipher.doFinal( securityTokenBytes, offset, securityTokenBytes.length-offset ) );

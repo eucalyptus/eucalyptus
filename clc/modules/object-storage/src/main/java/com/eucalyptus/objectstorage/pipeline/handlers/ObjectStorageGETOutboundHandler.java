@@ -65,13 +65,14 @@ package com.eucalyptus.objectstorage.pipeline.handlers;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetResponseType;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.common.ChunkedDataStream;
 import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.ws.WebServicesException;
-import com.eucalyptus.ws.server.Statistics;
+import com.eucalyptus.ws.server.MessageStatistics;
 import com.google.common.base.Strings;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import org.apache.log4j.Logger;
@@ -91,6 +92,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import java.io.InputStream;
 import java.io.PushbackInputStream;
 import java.util.Date;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
 @ChannelPipelineCoverage("one")
@@ -106,7 +108,7 @@ public class ObjectStorageGETOutboundHandler extends ObjectStorageBasicOutboundH
             if (channelEvent instanceof MessageEvent) {
                 final MessageEvent msgEvent = (MessageEvent) channelEvent;
                 if (msgEvent.getMessage() != null) {
-                    Callable<Long> stat = Statistics.startDownstream(ctx.getChannel(), this);
+                    Callable<Long> stat = MessageStatistics.startDownstream(ctx.getChannel(), this);
                     boolean isDone = this.handleMessage(ctx, msgEvent);
                     stat.call();
 
@@ -216,10 +218,30 @@ public class ObjectStorageGETOutboundHandler extends ObjectStorageBasicOutboundH
             httpResponse.addHeader(ObjectStorageProperties.AMZ_META_HEADER_PREFIX + m.getName(), m.getValue());
         }
 
+        // add copied headers
+        OSGUtil.addCopiedHeadersToResponse(httpResponse, reply);
+
         //write extra headers
         if (reply.getByteRangeEnd() != null) {
             httpResponse.addHeader("Content-Range", reply.getByteRangeStart() + "-" + reply.getByteRangeEnd() + "/" + reply.getSize());
         }
+        overrideHeaders(reply, httpResponse);
         return httpResponse;
+    }
+
+    private void overrideHeaders(ObjectStorageDataResponseType response, DefaultHttpResponse httpResponse) {
+        Map<String,String> overrides = response.getResponseHeaderOverrides();
+        if (overrides == null || overrides.size() == 0) {
+            return ;
+        }
+        for (ObjectStorageProperties.ResponseHeaderOverrides elem : ObjectStorageProperties.ResponseHeaderOverrides.values() ) {
+            String elemString = elem.toString();
+            if (overrides.containsKey( elemString )) {
+                httpResponse.setHeader(
+                        ObjectStorageProperties.RESPONSE_OVERRIDE_HTTP_HEADER_MAP.get( elemString ),
+                        overrides.get( elemString )
+                );
+            }
+        }
     }
 }

@@ -42,6 +42,13 @@ public class ResourceTag extends EucalyptusData {
 public class DeleteResourceTag extends EucalyptusData {
   String key;   // optional
   String value; // optional
+
+  DeleteResourceTag() {
+  }
+
+  DeleteResourceTag( String key ) {
+    this.key = key;
+  }
 }
 
 public class ResourceTagMessage extends ComputeMessage {
@@ -57,6 +64,8 @@ public class ResourceTagMessage extends ComputeMessage {
 }
 
 public class DescribeTagsType extends ResourceTagMessage  {
+  Integer maxResults
+  String nextToken
   @HttpParameterMapping( parameter = "Filter" )
   @HttpEmbedded( multiple = true )
   ArrayList<Filter> filterSet = new ArrayList<Filter>();

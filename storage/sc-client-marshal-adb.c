@@ -287,8 +287,8 @@ int scExportVolumeStub(scStub * pStub, char *correlationId, char *userId, char *
     adb_ExportVolume_t *input = NULL;
     adb_ExportVolumeResponse_t *output = NULL;
     adb_ExportVolumeType_t *request = NULL;
-    adb_ExportVolumeResponseType_t *response = NULL;
 
+    adb_ExportVolumeResponseType_t *response = NULL;
     if (!connection_string) {
         return -1;
     }
@@ -298,6 +298,9 @@ int scExportVolumeStub(scStub * pStub, char *correlationId, char *userId, char *
     input = adb_ExportVolume_create(env);
     request = adb_ExportVolumeType_create(env);
 
+    if (correlationId != NULL) {
+        adb_ExportVolumeType_set_correlationId(request, env, correlationId);
+    }
     // set op-specific input fields
     adb_ExportVolumeType_set_token(request, env, token);
     adb_ExportVolumeType_set_volumeId(request, env, volumeId);
@@ -364,6 +367,9 @@ int scUnexportVolumeStub(scStub * pStub, char *correlationId, char *userId, char
     adb_UnexportVolumeType_set_ip(request, env, ip);
     adb_UnexportVolumeType_set_iqn(request, env, iqn);
 
+    if (correlationId != NULL) {
+        adb_UnexportVolumeType_set_correlationId(request, env, correlationId);
+    }
     //Add the request structure to the message type
     adb_UnexportVolume_set_UnexportVolume(input, env, request);
 

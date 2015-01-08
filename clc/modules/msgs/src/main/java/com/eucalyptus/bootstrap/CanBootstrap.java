@@ -74,7 +74,7 @@ public interface CanBootstrap {
    * @throws Exception should contain detail any malady which may be present.
    */
   public abstract boolean check( ) throws Exception;
-  
+
   /**
    * Initiate a forced shutdown releasing all used resources and effectively unloading the this
    * bootstrapper.

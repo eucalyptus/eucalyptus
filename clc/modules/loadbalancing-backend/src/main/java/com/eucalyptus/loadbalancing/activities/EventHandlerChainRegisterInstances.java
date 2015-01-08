@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,10 +22,9 @@ package com.eucalyptus.loadbalancing.activities;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import javax.persistence.EntityTransaction;
-
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.loadbalancing.common.backend.msgs.Instance;
+import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.loadbalancing.common.msgs.Instance;
 import com.google.common.collect.Lists;
 
 /**
@@ -54,28 +53,21 @@ public class EventHandlerChainRegisterInstances extends EventHandlerChain<Regist
 				return;
 			
 			final List<Instance> instances = Lists.newArrayList(evt.getInstances());
-			final EntityTransaction db = Entities.get( LoadBalancerServoInstance.class );
-			
-			try{
+			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
 				for(final Instance instance : instances){
 					// make sure the instance is not a servo VM
 					try{
 						LoadBalancerServoInstance servo = Entities.uniqueResult(LoadBalancerServoInstance.named(instance.getInstanceId()));
-						db.commit();
 						if(servo!=null)
 							throw new EventHandlerException("Loadbalancer VM cannot be registered");
 					}catch(EventHandlerException ex){
 						throw ex;
 					}catch(NoSuchElementException ex){
-						;
+						// pass
 					}catch(Exception ex){
-						db.rollback();
 						break;
 					}
 				}
-			}finally{
-				if(db.isActive())
-					db.rollback();
 			}
 		}
 

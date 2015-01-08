@@ -65,7 +65,6 @@ package com.eucalyptus.cluster.callback;
 import org.apache.log4j.Logger;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.ConnectionException;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.util.async.MessageCallback;
@@ -74,15 +73,14 @@ import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmVolumeAttachment;
 import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
 import com.google.common.base.Function;
-import edu.ucsb.eucalyptus.msgs.AttachedVolume;
-import edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.DetachVolumeType;
+import edu.ucsb.eucalyptus.msgs.ClusterDetachVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.ClusterDetachVolumeType;
 
-public class VolumeDetachCallback extends MessageCallback<DetachVolumeType,DetachVolumeResponseType> {
+public class VolumeDetachCallback extends MessageCallback<ClusterDetachVolumeType,ClusterDetachVolumeResponseType> {
   
   private static Logger LOG = Logger.getLogger( VolumeDetachCallback.class );
   
-  public VolumeDetachCallback( DetachVolumeType request ) {
+  public VolumeDetachCallback( ClusterDetachVolumeType request ) {
     super( request );
     final Function<String, VmInstance> removeVolAttachment = new Function<String, VmInstance>( ) {
       public VmInstance apply( final String input ) {
@@ -106,7 +104,7 @@ public class VolumeDetachCallback extends MessageCallback<DetachVolumeType,Detac
   }
   
   @Override
-  public void fire( DetachVolumeResponseType reply ) {}
+  public void fire( ClusterDetachVolumeResponseType reply ) {}
 
   /**
    * TODO: DOCUMENT

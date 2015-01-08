@@ -123,6 +123,13 @@ typedef struct eucanetdConfig_t {
     char pubInterface[32];
     char privInterface[32];
     char dhcpDaemon[EUCA_MAX_PATH];
+    char midoeucanetdhost[HOSTNAME_SIZE];
+    char midosetupcore[32];
+    char midogwhost[HOSTNAME_SIZE];
+    char midogwip[HOSTNAME_SIZE];
+    char midogwiface[HOSTNAME_SIZE];
+    char midopubnw[HOSTNAME_SIZE];
+    char midopubgwip[HOSTNAME_SIZE];
 
     atomic_file global_network_info_file;
 
@@ -130,6 +137,7 @@ typedef struct eucanetdConfig_t {
     int polling_frequency, disable_l2_isolation, nc_router_ip, nc_router, metadata_use_vm_private, metadata_ip;
 
     int debug, flushmode;
+    char vnetMode[32];
     int init;
 } eucanetdConfig;
 

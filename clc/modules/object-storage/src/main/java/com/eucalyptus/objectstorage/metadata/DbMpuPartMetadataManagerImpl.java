@@ -24,7 +24,6 @@ package com.eucalyptus.objectstorage.metadata;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
-import com.eucalyptus.objectstorage.BucketMetadataManagers;
 import com.eucalyptus.objectstorage.MpuPartMetadataManagers;
 import com.eucalyptus.objectstorage.ObjectState;
 import com.eucalyptus.objectstorage.PaginatedResult;
@@ -34,6 +33,7 @@ import com.eucalyptus.objectstorage.exceptions.IllegalResourceStateException;
 import com.eucalyptus.objectstorage.exceptions.MetadataOperationFailureException;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageInternalException;
 import com.eucalyptus.objectstorage.exceptions.s3.EntityTooSmallException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidArgumentException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidPartException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidPartOrderException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
@@ -60,8 +60,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * Database backed implementation of ObjectMetadataManager
@@ -415,6 +413,10 @@ public class DbMpuPartMetadataManagerImpl implements MpuPartMetadataManager {
         int numPartsProcessed = 0;
         for (Part partInManifest : partsInManifest) {
             Integer partNumber = partInManifest.getPartNumber();
+            if (partNumber < ObjectStorageProperties.MIN_PART_NUMBER || partNumber > ObjectStorageProperties.MAX_PART_NUMBER) {
+				throw new InvalidArgumentException("PartNumber", "Part number must be an integer between " + ObjectStorageProperties.MIN_PART_NUMBER + " and "
+						+ ObjectStorageProperties.MAX_PART_NUMBER + ", inclusive");
+            }
             if (partNumber <= lastPartNumber) {
                 throw new InvalidPartOrderException("partNumber: " + partNumber);
             }
@@ -453,8 +455,8 @@ public class DbMpuPartMetadataManagerImpl implements MpuPartMetadataManager {
     public PaginatedResult<PartEntity> listPartsForUpload(final Bucket bucket,
                                                           final String objectKey,
                                                           final String uploadId,
-                                                          final Integer partNumberMarker,
-                                                          final Integer maxParts) throws Exception {
+                                                          final int partNumberMarker,
+                                                          final int maxParts) throws Exception {
 
         EntityTransaction db = Entities.get(PartEntity.class);
         try {
@@ -471,12 +473,12 @@ public class DbMpuPartMetadataManagerImpl implements MpuPartMetadataManager {
                 objCriteria.setFetchSize(queryStrideSize);
                 objCriteria.add(Example.create(searchPart));
                 objCriteria.addOrder(Order.asc("partNumber"));
-                objCriteria.addOrder(Order.desc("objectModifiedTimestamp"));
                 objCriteria.setMaxResults(queryStrideSize);
-
-                if (partNumberMarker!= null) {
-                    objCriteria.add(Restrictions.gt("partNumber", partNumberMarker));
+                
+                if (partNumberMarker > 0) {
+                	objCriteria.add(Restrictions.gt("partNumber", partNumberMarker));
                 }
+                    
                 objCriteria = getSearchByBucket(objCriteria, bucket);
 
                 List<PartEntity> partInfos = null;

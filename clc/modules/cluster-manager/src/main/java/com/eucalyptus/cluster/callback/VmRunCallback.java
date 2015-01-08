@@ -63,19 +63,26 @@
 package com.eucalyptus.cluster.callback;
 
 import static com.eucalyptus.cloud.VmInstanceLifecycleHelpers.NetworkResourceVmInstanceLifecycleHelper;
+
 import javax.persistence.EntityTransaction;
+
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.address.AddressingDispatcher;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.VmRunType;
 import com.eucalyptus.cluster.ResourceState.NoSuchTokenException;
+import com.eucalyptus.compute.common.backend.RunInstancesType;
 import com.eucalyptus.compute.common.network.PublicIPResource;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.network.EdgeNetworking;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.tracking.MessageContexts;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusClusterException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.MessageCallback;
@@ -87,6 +94,7 @@ import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
+
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -109,7 +117,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
 
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      final VmInstance vm = VmInstances.lookup( msg.getInstanceId( ) );
+      final VmInstance vm = VmInstances.lookupAny( msg.getInstanceId( ) );
       msg.setUserId( vm.getOwnerUserId( ) );
       msg.setOwnerId( vm.getOwnerUserId( ) );
       msg.setAccountId( vm.getOwnerAccountNumber( ) );
@@ -118,7 +126,9 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       }
       db.rollback( );
     } catch ( final Exception e ) {
-      LOG.error( e );
+      if ( !Exceptions.isCausedBy( e, EucalyptusClusterException.class ) ) {
+        LOG.error( e );
+      }
       Logs.extreme( ).error( e, e );
       db.rollback( );
       try {
@@ -153,7 +163,9 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       @Override
       public Boolean apply( final VmInfo input ) {
         final VmInstance vm = VmInstances.lookup( input.getInstanceId( ) );
-        vm.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
+        if ( !EdgeNetworking.isEnabled( ) ) {
+          vm.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
+        }
         try {
           vm.updateMacAddress( input.getNetParams( ).getMacAddress( ) );
           vm.setServiceTag( input.getServiceTag( ) );
@@ -162,9 +174,10 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
           Logs.extreme( ).error( VmRunCallback.this.token + ": " + ex, ex );
         }
         final Address addr = getAddress( );
-        if ( addr != null ) {
+        if ( addr != null && !addr.isReallyAssigned( ) ) {
+            final BaseMessage runInstanceReq = MessageContexts.lookup(input.getInstanceId(), RunInstancesType.class);
             AddressingDispatcher.dispatch(
-                AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) ).then(
+                AsyncRequests.newRequest( addr.assign( vm ).getCallback(runInstanceReq) ).then(
                     new Callback.Success<BaseMessage>( ) {
                       @Override
                       public void fire( final BaseMessage response ) {

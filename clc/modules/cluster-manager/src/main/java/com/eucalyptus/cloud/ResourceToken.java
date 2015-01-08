@@ -80,12 +80,14 @@ import com.eucalyptus.cluster.ResourceState.NoSuchTokenException;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.network.Networking;
 import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypedContext;
 import com.eucalyptus.util.TypedKey;
 import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.collect.Maps;
 
@@ -108,6 +110,7 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   private final Cluster       cluster;
   private boolean             aborted;
   private final boolean       unorderedType;
+  private boolean             zombie;
 
   public ResourceToken( final Allocation allocInfo, final int launchIndex ) {
     this.allocation = allocInfo;
@@ -178,6 +181,9 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
 
       try {
         final ReleaseNetworkResourcesType releaseNetworkResourcesType = new ReleaseNetworkResourcesType( );
+        releaseNetworkResourcesType.setVpc( allocation.getSubnet( ) == null ?
+            null :
+            CloudMetadatas.toDisplayName( ).apply( allocation.getSubnet( ).getVpc( ) ) );
         releaseNetworkResourcesType.getResources( ).addAll( getAttribute( NetworkResourceVmInstanceLifecycleHelper.NetworkResourcesKey ) );
         Networking.getInstance( ).release( releaseNetworkResourcesType );
       } catch ( final Exception ex ) {
@@ -186,7 +192,7 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
 
       if ( this.vmInst != null ) {
         try {
-          this.vmInst.release( );
+          VmInstances.terminated( this.vmInst );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
@@ -273,7 +279,11 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   public String getDisplayName( ) {
     return this.getInstanceId( );
   }
-  
+
+  public boolean isCommitted( ) {
+    return this.allocation.isCommitted( );
+  }
+
   @Override
   public OwnerFullName getOwner( ) {
     return this.allocation.getOwnerFullName( );
@@ -317,4 +327,11 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
     return this.cluster;
   }
 
+  public boolean isZombie() {
+    return zombie;
+  }
+
+  public void setZombie( final boolean zombie ) {
+    this.zombie = zombie;
+  }
 }

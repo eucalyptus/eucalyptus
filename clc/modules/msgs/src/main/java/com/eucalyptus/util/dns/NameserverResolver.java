@@ -185,9 +185,9 @@ public class NameserverResolver implements DnsResolver {
         final Record ptrRecord = DomainNameRecords.ptrRecord( nsName, hostAddr );
         return DnsResponse.forName( query.getName( ) ).answer( ptrRecord );
       }
-      return DnsResponse.forName( query.getName( ) ).nxdomain( );
+      // EUCA-10245: return zero answer so that the next reverse resolver would answer
+      return DnsResponse.forName( query.getName( ) ).answer();
     }
-    
   }
 
   @SuppressWarnings( "ConstantConditions" )

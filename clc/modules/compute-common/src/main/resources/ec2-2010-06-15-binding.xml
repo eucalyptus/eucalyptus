@@ -41,6 +41,6 @@
   <include path="classpath:ec2-ebs-snapshots-09-08-15.xml" />
   <include path="classpath:ec2-filters-tags-10-06-15.xml" />
   <include path="classpath:ec2-placement-10-06-15.xml" />
-  <include path="classpath:ec2-vpc.xml" />
+  <include path="classpath:ec2-vpc-10-06-15.xml" />
   <include path="classpath:ec2-unimplemented.xml" />
 </binding>

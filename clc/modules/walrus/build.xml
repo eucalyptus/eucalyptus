@@ -75,12 +75,6 @@
 		<copy todir="${DESTDIR}${euca.lib.dir}" overwrite="true">
 			<fileset file="${jar.file}" />
 		</copy>
-		<!-- copy sample drbd config over -->
-		<copy todir="${DESTDIR}${euca.etc.dir}" overwrite="true">
-			<fileset dir="${basedir}/conf/drbd">
-				<include name="**/*" />
-			</fileset>
-		</copy>
 		<mkdir dir="${DESTDIR}${euca.udev.dir}" />
 		<copy todir="${DESTDIR}${euca.udev.dir}" overwrite="true">
 			<fileset dir="${basedir}/udev">

@@ -135,7 +135,7 @@ public class StorageControllerConfiguration extends ComponentConfiguration imple
 	/*
 	 * Change Listener for san provider and backend config options.
 	 * The semantics enforced are that they can be set once per registered SC. If the value has already been configured it will
-	 * throw an exception if the user tries to reconfigure them.
+	 * throw an exception if the user tries to reconfigure them, unless the user is simply specifying the same value (for idempotence)
 	 *
 	 * This is done to prevent data loss and database corruption that can occur if the user tries to change the backend after it
 	 * already has some state.
@@ -148,7 +148,9 @@ public class StorageControllerConfiguration extends ComponentConfiguration imple
 		public void fireChange(ConfigurableProperty t, String newValue) throws ConfigurablePropertyException {			
 			String existingValue = (String)t.getValue();
 			if(existingValue != null && !"<unset>".equals(existingValue)) {
-				throw new ConfigurablePropertyException("Cannot change extant storage backend configuration. You must deregister all SCs in the partition before you can change the configuration value");
+                if (newValue != null && !newValue.equals(existingValue)) {
+                    throw new ConfigurablePropertyException("Cannot change extant storage backend configuration. You must deregister all SCs in the partition before you can change the configuration value");
+                }
 			} else {
 				//Try to figure out the partition name for the request
 				String probablePartitionName = ((MultiDatabasePropertyEntry)t).getEntrySetName();
@@ -202,7 +204,7 @@ public class StorageControllerConfiguration extends ComponentConfiguration imple
 					})) {
 						//Nothing matched.
 						throw new ConfigurablePropertyException("Cannot modify " + t.getQualifiedName() + "." + t.getFieldName() + " new value is not a valid value.  " +				
-								"Legal values are: " + Joiner.on( "," ).join( validEntries) );
+								"Legal values are: " + Joiner.on( "," ).join( Sets.filter(validEntries, StorageManagers.SUPPORTED_PROVIDER_PREDICATE)) );
 					}
 				} finally {
 					tx.rollback();

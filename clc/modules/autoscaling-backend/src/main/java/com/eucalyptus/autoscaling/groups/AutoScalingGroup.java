@@ -25,6 +25,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.Nullable;
@@ -38,6 +39,7 @@ import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.MapKeyColumn;
 import javax.persistence.OneToMany;
 import javax.persistence.OrderColumn;
 import javax.persistence.PersistenceContext;
@@ -61,6 +63,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 /**
@@ -114,6 +117,14 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @OrderColumn( name = "metadata_availability_zone_index")
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<String> availabilityZones = Lists.newArrayList();
+
+  @ElementCollection
+  @CollectionTable( name = "metadata_auto_scaling_group_zones_to_subnets" )
+  @MapKeyColumn( name = "metadata_availability_zone" )
+  @Column( name = "metadata_subnet_id" )
+  @JoinColumn( name = "metadata_auto_scaling_group_id" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  private Map<String,String> subnetIdByZone = Maps.newHashMap( );
 
   @ElementCollection
   @CollectionTable( name = "metadata_auto_scaling_group_termination_policies" )
@@ -266,6 +277,14 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
 
   public void setAvailabilityZones( final List<String> availabilityZones ) {
     this.availabilityZones = availabilityZones;
+  }
+
+  public Map<String, String> getSubnetIdByZone() {
+    return subnetIdByZone;
+  }
+
+  public void setSubnetIdByZone( final Map<String, String> subnetIdByZone ) {
+    this.subnetIdByZone = subnetIdByZone;
   }
 
   public List<TerminationPolicyType> getTerminationPolicies() {
@@ -434,6 +453,7 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
     private HealthCheckType healthCheckType;
     private LaunchConfiguration launchConfiguration;
     private Set<String> availabilityZones = Sets.newLinkedHashSet();
+    private Map<String,String> subnetsByZone = Maps.newHashMap();
     private Set<TerminationPolicyType> terminationPolicies = Sets.newLinkedHashSet();
     private Set<String> loadBalancerNames = Sets.newLinkedHashSet();
     private List<AutoScalingGroupTag> tags = Lists.newArrayList();
@@ -472,23 +492,30 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
       return builder();
     }
 
-    public T withAvailabilityZones( final Collection<String> availabilityZones ) {
+    public T withAvailabilityZones( final Iterable<String> availabilityZones ) {
       if ( availabilityZones != null ) {
-        this.availabilityZones.addAll( availabilityZones );
+        Iterables.addAll( this.availabilityZones, availabilityZones );
       }
       return builder();
     }
 
-    public T withTerminationPolicyTypes( final Collection<TerminationPolicyType> terminationPolicies ) {
+    public T withSubnetsByZone( final Map<String,String> subnetsByZone ) {
+      if ( subnetsByZone != null ) {
+        this.subnetsByZone.putAll( subnetsByZone );
+      }
+      return builder();
+    }
+
+    public T withTerminationPolicyTypes( final Iterable<TerminationPolicyType> terminationPolicies ) {
       if ( terminationPolicies != null ) {
-        this.terminationPolicies.addAll( terminationPolicies );
+        Iterables.addAll( this.terminationPolicies, terminationPolicies );
       }
       return builder();
     }
 
-    public T withLoadBalancerNames( final Collection<String> loadBalancerNames ) {
+    public T withLoadBalancerNames( final Iterable<String> loadBalancerNames ) {
       if ( loadBalancerNames != null ) {
-        this.loadBalancerNames.addAll( loadBalancerNames );
+        Iterables.addAll( this.loadBalancerNames, loadBalancerNames );
       }
       return builder();
     }
@@ -508,7 +535,8 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
       group.setHealthCheckGracePeriod( Objects.firstNonNull( healthCheckGracePeriod, 0 ) );
       group.setHealthCheckType( Objects.firstNonNull( healthCheckType, HealthCheckType.EC2 ) );
       group.setAvailabilityZones( Lists.newArrayList( availabilityZones ) );
-      group.setTerminationPolicies( terminationPolicies.isEmpty() ? 
+      group.setSubnetIdByZone( Maps.newHashMap( subnetsByZone ) );
+      group.setTerminationPolicies( terminationPolicies.isEmpty() ?
           Collections.singletonList(TerminationPolicyType.Default) :
           Lists.newArrayList( terminationPolicies ) );
       group.setLoadBalancerNames( Lists.newArrayList( loadBalancerNames ) );

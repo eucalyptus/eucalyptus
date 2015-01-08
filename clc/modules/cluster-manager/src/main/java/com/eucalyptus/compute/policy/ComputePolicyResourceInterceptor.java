@@ -19,8 +19,9 @@
  ************************************************************************/
 package com.eucalyptus.compute.policy;
 
+import static com.eucalyptus.auth.PolicyResourceContext.PolicyResourceInfo;
 import static com.eucalyptus.compute.policy.ComputePolicyContext.ComputePolicyContextResource;
-import static com.eucalyptus.util.RestrictedTypes.PolicyResourceInterceptor;
+import static com.eucalyptus.auth.PolicyResourceContext.PolicyResourceInterceptor;
 import java.util.Set;
 import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.records.Logs;
@@ -35,21 +36,22 @@ public class ComputePolicyResourceInterceptor implements PolicyResourceIntercept
   private static final Set<Class<? extends RestrictedType>> accepted = Sets.newCopyOnWriteArraySet( );
   private static final Set<Class<? extends RestrictedType>> rejected = Sets.newCopyOnWriteArraySet( );
 
-  @Override
-  public void onResource( final RestrictedType resource, final String action ) {
+  @SuppressWarnings( "unchecked" )
+	@Override
+  public void onResource( final PolicyResourceInfo resource, final String action ) {
     ComputePolicyContext.clearContext( );
 
-    if ( resource != null ) {
-      if ( accepted.contains( resource.getClass() ) ||
-          (!rejected.contains( resource.getClass() ) &&
-            CloudMetadata.class.isAssignableFrom( resource.getClass( ) ) ) ) try {
+    if ( resource != null && RestrictedType.class.isAssignableFrom( resource.getResourceClass( ) ) ) {
+      if ( accepted.contains( resource.getResourceClass( ) ) ||
+          (!rejected.contains( resource.getResourceClass( ) ) &&
+            CloudMetadata.class.isAssignableFrom( resource.getResourceClass( ) ) ) ) try {
         ComputePolicyContext.setComputePolicyContextResource(
-            TypeMappers.transform( resource, ComputePolicyContextResource.class ) );
-        accepted.add( resource.getClass() );
+            TypeMappers.transform( resource.getResourceObject( ), ComputePolicyContextResource.class ) );
+        accepted.add( (Class<? extends RestrictedType>) resource.getResourceClass( ) );
       } catch ( IllegalArgumentException e ) {
-        rejected.add( resource.getClass() );
+        rejected.add( (Class<? extends RestrictedType>) resource.getResourceClass( ) );
         Logs.exhaust( ).info(
-            "Policy context not set for resource type: " + resource.getClass().getSimpleName( ) );
+            "Policy context not set for resource type: " + resource.getResourceClass().getSimpleName( ) );
       }
     }
   }

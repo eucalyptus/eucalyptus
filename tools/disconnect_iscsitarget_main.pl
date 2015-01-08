@@ -63,103 +63,108 @@
 delete @ENV{qw(IFS CDPATH ENV BASH_ENV)};
 $ENV{'PATH'}='/bin:/usr/bin:/sbin:/usr/sbin/';
 
-$ISCSIADM = untaint(`which iscsiadm`);
-$MULTIPATH = untaint(`which multipath`);
-$DMSETUP = untaint(`which dmsetup`);
 $YES_RESCAN = "rescan";
 
 $CONF_IFACES_KEY = "STORAGE_INTERFACES";
-
-# check binaries
-if (!-x $ISCSIADM) {
-  print STDERR "Unable to find iscsiadm\n";
-  do_exit(1);
-}
 
 # check input params
 $dev_string = untaint(shift @ARGV);
 
 #2nd param is if a rescan should be done or not
 $do_rescan = untaint(shift @ARGV);
-($euca_home, $user, $auth_mode, $lun, $encrypted_password, @paths) = parse_devstring($dev_string);
+($euca_home, $volume_id, $target_device, $target_serial, $target_bus, $ceph_user, $ceph_keyring, $ceph_conf, $protocol, $provider, $user, $auth_mode, $lun, $encrypted_password, @paths) = parse_devstring($dev_string);
 
 if (is_null_or_empty($euca_home)) {
   print STDERR "EUCALYPTUS path is not defined:$dev_string\n";
   do_exit(1);
 }
 
-$EUCALYPTUS_CONF = $euca_home."/etc/eucalyptus/eucalyptus.conf";
-%conf_iface_map = get_conf_iface_map(); 
+if (!is_null_or_empty($protocol) && $protocol eq $PROTOCOL_RBD) {
+  print STDERR "Found rbd as protocol in connection string, disconnecting is a no-op\n";
+} else {
+  $ISCSIADM = untaint(`which iscsiadm`);
+  $MULTIPATH = untaint(`which multipath`);
+  $DMSETUP = untaint(`which dmsetup`);
 
-# prepare target paths:
-# <netdev0>,<ip0>,<store0>,<netdev1>,<ip1>,<store1>,...
-if ((@paths < 1) || ((@paths % 3) != 0)) {
-  print STDERR "Target paths are not complete:$dev_string\n";
-  do_exit(1);
-}
+  # check binaries
+  if (!-x $ISCSIADM) {
+    print STDERR "Unable to find iscsiadm\n";
+    do_exit(1);
+  }
+  
+  $EUCALYPTUS_CONF = $euca_home."/etc/eucalyptus/eucalyptus.conf";
+  %conf_iface_map = get_conf_iface_map(); 
 
-$multipath = 0;
-$multipath = 1 if @paths > 3;
-if (($multipath == 1) && ((!-x $MULTIPATH) || (!-x $DMSETUP))) {
-  print STDERR "Unable to find multipath or dmsetup\n";
-}
-sanitize_path(\@paths);
+  # prepare target paths:
+  # <netdev0>,<ip0>,<store0>,<netdev1>,<ip1>,<store1>,...
+  if ((@paths < 1) || ((@paths % 3) != 0)) {
+    print STDERR "Target paths are not complete:$dev_string\n";
+    do_exit(1);
+  }
 
-if (is_null_or_empty($lun)) {
-  $lun = -1;
-}
+  $multipath = 0;
+  $multipath = 1 if @paths > 3;
+  if (($multipath == 1) && ((!-x $MULTIPATH) || (!-x $DMSETUP))) {
+   print STDERR "Unable to find multipath or dmsetup\n";
+  }
+  sanitize_path(\@paths);
 
-if ($multipath == 1) {
-  $mpath = get_mpath_device_by_paths(@paths);
-}
+  if (is_null_or_empty($lun)) {
+    $lun = -1;
+  }
 
-# Remove unused mpath device
-if ($multipath == 1 && !is_null_or_empty($mpath)) {
-  sleep(1);
-  # flush device map
-  run_cmd(1, 1, "$MULTIPATH -f $mpath") if (-x $MULTIPATH);
-  sleep(1);
-}
+  if ($multipath == 1) {
+    $mpath = get_mpath_device_by_paths(@paths);
+  }
 
-while (@paths > 0) {
-  $conf_iface = shift(@paths);
-  $ip = shift(@paths);
-  $store = shift(@paths);
-  # get netdev from iface name using eucalyptus.conf
-  $netdev = get_netdev_by_conf($conf_iface);
-  if ($lun > -1) {
-    # keep trying lun deletion until it is really gone
-    for ($i = 0; $i < 10; $i++) {
-      delete_lun($netdev, $ip, $store, $lun);
+  # Remove unused mpath device
+  if ($multipath == 1 && !is_null_or_empty($mpath)) {
+    sleep(1);
+    # flush device map
+    run_cmd(1, 1, "$MULTIPATH -f $mpath") if (-x $MULTIPATH);
+    sleep(1);
+  }
+
+  while (@paths > 0) {
+    $conf_iface = shift(@paths);
+    $ip = shift(@paths);
+    $store = shift(@paths);
+    # get netdev from iface name using eucalyptus.conf
+    $netdev = get_netdev_by_conf($conf_iface);
+    if ($lun > -1) {
+      # keep trying lun deletion until it is really gone
+      for ($i = 0; $i < 10; $i++) {
+        delete_lun($netdev, $ip, $store, $lun);
       
-      if($do_rescan eq $YES_RESCAN) {
-      	# rescan target
-      	run_cmd(1, 1, "$ISCSIADM -m session -R");
-      	last if is_null_or_empty(get_iscsi_device($netdev, $ip, $store, $lun));
-      	sleep(5);
-      } else {
-      	#Don't rescan, continue
-      	last if is_null_or_empty(get_iscsi_device($netdev, $ip, $store, $lun));      	
+        if($do_rescan eq $YES_RESCAN) {
+      	  # rescan target
+      	  run_cmd(1, 1, "$ISCSIADM -m session -R");
+      	  last if is_null_or_empty(get_iscsi_device($netdev, $ip, $store, $lun));
+      	  sleep(5);
+        } else {
+      	  #Don't rescan, continue
+      	  last if is_null_or_empty(get_iscsi_device($netdev, $ip, $store, $lun));      	
+        }
+      }
+      print STDERR "Tried deleting lun $lun $i times in iSCSI session IP=$ip, IQN=$store\n";
+      next if retry_until_true(\&has_device_attached, [$netdev, $ip, $store], 5) == 1;
+    }
+    # logout
+    if (!is_null_or_empty($netdev)) {
+      $iface = retry_until_exists(\&get_iface, [$netdev], 5);
+      if (is_null_or_empty($iface)) {
+        print STDERR "Failed to get iface.\n";
+        do_exit(1);
       }
     }
-    print STDERR "Tried deleting lun $lun $i times in iSCSI session IP=$ip, IQN=$store\n";
-    next if retry_until_true(\&has_device_attached, [$netdev, $ip, $store], 5) == 1;
-  }
-  # logout
-  if (!is_null_or_empty($netdev)) {
-    $iface = retry_until_exists(\&get_iface, [$netdev], 5);
     if (is_null_or_empty($iface)) {
-      print STDERR "Failed to get iface.\n";
-      do_exit(1);
+      run_cmd(1, 0, "$ISCSIADM -m node -p $ip -T $store -u");
+    } else {
+      run_cmd(1, 0, "$ISCSIADM -m node -p $ip -T $store -I $iface -u");
     }
+    # Delete /var/lib/iscsi/node 
+    run_cmd(1, 0, "$ISCSIADM -m node -p $ip -T $store -o delete");
   }
-  if (is_null_or_empty($iface)) {
-    run_cmd(1, 0, "$ISCSIADM -m node -p $ip -T $store -u");
-  } else {
-    run_cmd(1, 0, "$ISCSIADM -m node -p $ip -T $store -I $iface -u");
-  }
- # Delete /var/lib/iscsi/node 
-  run_cmd(1, 0, "$ISCSIADM -m node -p $ip -T $store -o delete");
 }
 
 #####################################################

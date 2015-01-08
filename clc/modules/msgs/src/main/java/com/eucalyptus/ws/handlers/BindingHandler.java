@@ -63,21 +63,26 @@
 package com.eucalyptus.ws.handlers;
 
 import java.util.regex.Pattern;
+
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMNamespace;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
+
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.WebServicesException;
+
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
@@ -164,6 +169,22 @@ public class BindingHandler extends MessageStackHandler {
         } catch ( Exception ex ) {
           LOG.warn( "FAILED TO PARSE:\n" + httpMessage.getMessageString( ) );
           throw new WebServicesException( e1 );
+        }
+      }
+      
+      // in case the base message has request ID in its correlation ID prefix, 
+      // we should reset the correlation ID using the request ID
+      if ( httpMessage.getCorrelationId() != null && 
+          msg.getCorrelationId()!=null && 
+          msg.hasRequestId()) {
+        try{
+          final Context ctx = Contexts.lookup(httpMessage.getCorrelationId());
+          // reset correlation ID
+          msg.regardingRequestId(msg.getCorrelationId());
+          httpMessage.setCorrelationId(msg.getCorrelationId());
+          Contexts.update(ctx,  httpMessage.getCorrelationId());
+        }catch(final Exception ex){
+          ;
         }
       }
       msg.setCorrelationId( httpMessage.getCorrelationId( ) );

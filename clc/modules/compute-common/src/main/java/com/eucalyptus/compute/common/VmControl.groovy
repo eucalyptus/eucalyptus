@@ -23,10 +23,15 @@ package com.eucalyptus.compute.common;
 
 import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
+import com.eucalyptus.binding.HttpValue
 import com.google.common.collect.Lists
 import com.google.common.collect.Sets
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
+import groovy.transform.TupleConstructor
+
+import static edu.ucsb.eucalyptus.msgs.ComputeMessageValidation.FieldRegex
+import static edu.ucsb.eucalyptus.msgs.ComputeMessageValidation.FieldRegexValue
 
 public class VmControlMessage extends ComputeMessage {
   
@@ -78,6 +83,8 @@ public class DescribeInstancesType extends VmControlMessage {
   
   @HttpParameterMapping (parameter = "InstanceId")
   ArrayList<String> instancesSet = new ArrayList<String>();
+  Integer maxResults
+  String nextToken
   @HttpParameterMapping (parameter = "Filter")
   @HttpEmbedded( multiple = true )
   ArrayList<Filter> filterSet = new ArrayList<Filter>();
@@ -153,6 +160,17 @@ public class DescribeInstanceStatusResponseType extends VmControlMessage {
   public DescribeInstanceStatusResponseType() {  }
 }
 
+public class ReportInstanceStatusType extends VmControlMessage {
+  ArrayList<String> instanceId
+  String status
+  Date startTime
+  Date endTime
+  ArrayList<String> reasonCode
+  String description
+}
+
+public class ReportInstanceStatusResponseType extends VmControlMessage { }
+
 /** *******************************************************************************/
 
 public class RebootInstancesType extends VmControlMessage {
@@ -187,7 +205,6 @@ public class RunInstancesType extends VmControlMessage {
   ArrayList<String> groupSet = Lists.newArrayList() // Query binding
   @HttpParameterMapping (parameter = "SecurityGroupId")
   ArrayList<String> groupIdSet = Lists.newArrayList()  // Query binding and also SOAP binding before 2011-01-01
-  @HttpEmbedded
   ArrayList<GroupItemType> securityGroups = Lists.newArrayList() // Used in SOAP binding since 2011-01-01
   String additionalInfo;
   String userData;
@@ -215,6 +232,8 @@ public class RunInstancesType extends VmControlMessage {
   /** InstanceLicenseRequest license; **/
   String privateIpAddress = "";
   String clientToken;
+  @HttpEmbedded
+  InstanceNetworkInterfaceSetRequestType networkInterfaceSet;
   @HttpParameterMapping(parameter = "IamInstanceProfile.Arn")
   String iamInstanceProfileArn
   @HttpParameterMapping(parameter = "IamInstanceProfile.Name")
@@ -265,6 +284,21 @@ public class RunInstancesType extends VmControlMessage {
         this.iamInstanceProfileName = nameOrArn;
     }
   }
+
+  InstanceNetworkInterfaceSetItemRequestType primaryNetworkInterface( boolean create ) {
+    if ( networkInterfaceSet == null ) {
+      networkInterfaceSet = new InstanceNetworkInterfaceSetRequestType( )
+    }
+    InstanceNetworkInterfaceSetItemRequestType primary = networkInterfaceSet.item.find{
+      InstanceNetworkInterfaceSetItemRequestType networkInterface ->
+        0 == networkInterface.deviceIndex
+    }
+    if ( primary == null && create ) {
+      primary = new InstanceNetworkInterfaceSetItemRequestType( deviceIndex: 0 )
+      networkInterfaceSet.item << primary
+    }
+    primary
+  }
 }
 /** *******************************************************************************/
 public class GetConsoleOutputResponseType extends VmControlMessage {
@@ -277,6 +311,13 @@ public class GetConsoleOutputResponseType extends VmControlMessage {
 public class GetConsoleOutputType extends VmControlMessage {
   @HttpParameterMapping (parameter = ["InstanceId", "InstanceId.1"])
   String instanceId;
+
+  GetConsoleOutputType( ) {
+  }
+
+  GetConsoleOutputType( final String instanceId ) {
+    this.instanceId = instanceId
+  }
 }
 
 public class GetPasswordDataType extends VmControlMessage {
@@ -295,18 +336,18 @@ public class ReservationInfoType extends EucalyptusData {
   ArrayList<GroupItemType> groupSet = Lists.newArrayList()
   ArrayList<RunningInstancesItemType> instancesSet = Lists.newArrayList()
 
-  def ReservationInfoType( String reservationId, String ownerId, Map<String,String> groupIdsToNames ) {
-      this.reservationId = reservationId;
+  def ReservationInfoType( String reservationId, String ownerId, Collection<GroupItemType> groupIdsToNames ) {
+      this.reservationId = reservationId
       this.ownerId = ownerId
-      this.groupSet.addAll( groupIdsToNames.entrySet().collect{
-        Map.Entry<String,String> entry -> new GroupItemType( entry.key, entry.value ) } );
+      this.groupSet.addAll( groupIdsToNames )
+      Collections.sort( this.groupSet )
   }
   
   def ReservationInfoType() {
   }
 }
 
-public class GroupItemType extends EucalyptusData {
+public class GroupItemType extends EucalyptusData implements Comparable<GroupItemType> {
   String groupId;
   String groupName;
 
@@ -315,6 +356,184 @@ public class GroupItemType extends EucalyptusData {
   def GroupItemType( String groupId, String groupName ) {
     this.groupId = groupId;
     this.groupName = groupName;
+  }
+
+  @Override
+  int compareTo(final GroupItemType o) {
+    return (groupId?:'').compareTo( o.groupId?:'' )
+  }
+}
+class InstanceNetworkInterfaceSetRequestType extends EucalyptusData {
+  InstanceNetworkInterfaceSetRequestType() {  }
+  @HttpParameterMapping(parameter = "NetworkInterface")
+  @HttpEmbedded(multiple = true)
+  ArrayList<InstanceNetworkInterfaceSetItemRequestType> item = new ArrayList<InstanceNetworkInterfaceSetItemRequestType>();
+}
+class InstanceNetworkInterfaceSetItemRequestType extends EucalyptusData {
+  String networkInterfaceId;
+  Integer deviceIndex;
+  String subnetId;
+  String description;
+  String privateIpAddress;
+  @HttpEmbedded
+  SecurityGroupIdSetType groupSet;
+  Boolean deleteOnTermination;
+  @HttpEmbedded
+  PrivateIpAddressesSetRequestType privateIpAddressesSet;
+  Integer secondaryPrivateIpAddressCount;
+  Boolean associatePublicIpAddress;
+  InstanceNetworkInterfaceSetItemRequestType() {  }
+
+  void securityGroups( Iterable<String> groupIds ) {
+    groupSet = new SecurityGroupIdSetType(
+        item: groupIds.collect{ String id -> new SecurityGroupIdSetItemType( groupId: id ) } as ArrayList<SecurityGroupIdSetItemType>
+    )
+  }
+}
+class GroupIdSetType extends EucalyptusData {
+  GroupIdSetType() {  }
+  @HttpParameterMapping(parameter = "GroupId")
+  @HttpEmbedded(multiple = true)
+  ArrayList<SecurityGroupIdSetItemType> item = new ArrayList<SecurityGroupIdSetItemType>();
+}
+class SecurityGroupIdSetType extends EucalyptusData {
+  SecurityGroupIdSetType() {  }
+  @HttpParameterMapping(parameter = "SecurityGroupId")
+  @HttpEmbedded(multiple = true)
+  ArrayList<SecurityGroupIdSetItemType> item = new ArrayList<SecurityGroupIdSetItemType>();
+  ArrayList<String> groupIds( ) {
+    (item?.collect{ SecurityGroupIdSetItemType item -> item.groupId } ?: [ ]) as ArrayList<String>
+  }
+}
+class SecurityGroupIdSetItemType extends EucalyptusData {
+  @HttpValue
+  String groupId;
+  SecurityGroupIdSetItemType() {  }
+}
+class PrivateIpAddressesSetRequestType extends EucalyptusData {
+  PrivateIpAddressesSetRequestType() {  }
+  @HttpParameterMapping(parameter = "PrivateIpAddresses")
+  @HttpEmbedded(multiple = true)
+  ArrayList<PrivateIpAddressesSetItemRequestType> item = new ArrayList<PrivateIpAddressesSetItemRequestType>();
+}
+class PrivateIpAddressesSetItemRequestType extends EucalyptusData {
+  @FieldRegex( FieldRegexValue.IP_ADDRESS )
+  String privateIpAddress;
+  Boolean primary;
+  PrivateIpAddressesSetItemRequestType() {  }
+}
+public class InstanceNetworkInterfaceSetType extends EucalyptusData {
+  InstanceNetworkInterfaceSetType() {  }
+  ArrayList<InstanceNetworkInterfaceSetItemType> item = new ArrayList<InstanceNetworkInterfaceSetItemType>();
+}
+class InstanceNetworkInterfaceSetItemType extends EucalyptusData {
+  String networkInterfaceId;
+  String subnetId;
+  String vpcId;
+  String description;
+  String ownerId;
+  String status;
+  String macAddress;
+  String privateIpAddress;
+  String privateDnsName;
+  Boolean sourceDestCheck;
+  GroupSetType groupSet;
+  InstanceNetworkInterfaceAttachmentType attachment = new InstanceNetworkInterfaceAttachmentType( )
+  InstanceNetworkInterfaceAssociationType association;
+  InstancePrivateIpAddressesSetType privateIpAddressesSet;
+
+  InstanceNetworkInterfaceSetItemType() {  }
+
+  InstanceNetworkInterfaceSetItemType(
+      final String networkInterfaceId,
+      final String subnetId,
+      final String vpcId,
+      final String description,
+      final String ownerId,
+      final String status,
+      final String macAddress,
+      final String privateIpAddress,
+      final String privateDnsName,
+      final Boolean sourceDestCheck,
+      final GroupSetType groupSet,
+      final InstanceNetworkInterfaceAttachmentType attachment,
+      final InstanceNetworkInterfaceAssociationType association,
+      final InstancePrivateIpAddressesSetType privateIpAddressesSet) {
+    this.networkInterfaceId = networkInterfaceId
+    this.subnetId = subnetId
+    this.vpcId = vpcId
+    this.description = description
+    this.ownerId = ownerId
+    this.status = status
+    this.macAddress = macAddress
+    this.privateIpAddress = privateIpAddress
+    this.privateDnsName = privateDnsName
+    this.sourceDestCheck = sourceDestCheck
+    this.groupSet = groupSet
+    this.attachment = attachment
+    this.association = association
+    this.privateIpAddressesSet = privateIpAddressesSet
+  }
+}
+class InstanceNetworkInterfaceAttachmentType extends EucalyptusData {
+  String attachmentId;
+  Integer deviceIndex;
+  String status;
+  Date attachTime;
+  Boolean deleteOnTermination;
+  InstanceNetworkInterfaceAttachmentType( ) {  }
+
+  InstanceNetworkInterfaceAttachmentType(
+      final String attachmentId,
+      final Integer deviceIndex,
+      final String status,
+      final Date attachTime,
+      final Boolean deleteOnTermination) {
+    this.attachmentId = attachmentId
+    this.deviceIndex = deviceIndex
+    this.status = status
+    this.attachTime = attachTime
+    this.deleteOnTermination = deleteOnTermination
+  }
+}
+class InstanceNetworkInterfaceAssociationType extends EucalyptusData {
+  String publicIp;
+  String publicDnsName;
+  String ipOwnerId;
+  InstanceNetworkInterfaceAssociationType( ) {  }
+
+  InstanceNetworkInterfaceAssociationType( final String publicIp,
+                                           final String publicDnsName,
+                                           final String ipOwnerId ) {
+    this.publicIp = publicIp
+    this.publicDnsName = publicDnsName
+    this.ipOwnerId = ipOwnerId
+  }
+}
+class InstancePrivateIpAddressesSetType extends EucalyptusData {
+  InstancePrivateIpAddressesSetType( ) {  }
+
+  InstancePrivateIpAddressesSetType( final Collection<InstancePrivateIpAddressesSetItemType> item ) {
+    this.item = Lists.newArrayList( item )
+  }
+  ArrayList<InstancePrivateIpAddressesSetItemType> item = new ArrayList<InstancePrivateIpAddressesSetItemType>();
+}
+class InstancePrivateIpAddressesSetItemType extends EucalyptusData {
+  String privateIpAddress;
+  String privateDnsName;
+  Boolean primary;
+  InstanceNetworkInterfaceAssociationType association;
+  InstancePrivateIpAddressesSetItemType( ) {  }
+
+  InstancePrivateIpAddressesSetItemType(
+      final String privateIpAddress,
+      final String privateDnsName,
+      final Boolean primary,
+      final InstanceNetworkInterfaceAssociationType association) {
+    this.privateIpAddress = privateIpAddress
+    this.privateDnsName = privateDnsName
+    this.primary = primary
+    this.association = association
   }
 }
 public class RunningInstancesItemType extends EucalyptusData implements Comparable<RunningInstancesItemType> {
@@ -348,6 +567,10 @@ public class RunningInstancesItemType extends EucalyptusData implements Comparab
   IamInstanceProfile iamInstanceProfile = new IamInstanceProfile();
   ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
   ArrayList<GroupItemType> groupSet = Lists.newArrayList()
+  String subnetId;
+  String vpcId;
+  Boolean sourceDestCheck;
+  InstanceNetworkInterfaceSetType networkInterfaceSet;
 
   @Override
   public int compareTo( RunningInstancesItemType that ) {
@@ -416,6 +639,7 @@ public class EbsDeviceMapping extends EucalyptusData {  //** added 2008-02-01  *
   String virtualName; // ephemeralN, root, ami, swap
   String snapshotId;
   Integer volumeSize = null;
+  Boolean encrypted
   Boolean deleteOnTermination = Boolean.TRUE;
   String volumeType = "standard"
   Integer iops
@@ -538,31 +762,41 @@ public class StartInstancesResponseType extends VmControlMessage{
 public class StartInstancesType extends VmControlMessage{
   @HttpParameterMapping( parameter = "InstanceId" )
   ArrayList<String> instancesSet = new ArrayList<String>();
+  String additionalInfo
   public StartInstancesType() {  }
 }
 
+public class InstanceEbsBlockDeviceType extends EucalyptusData {
+  String volumeId
+  Boolean deleteOnTermination = true
+}
+
+public class InstanceBlockDeviceMappingItemType extends EucalyptusData {
+  String deviceName
+  InstanceEbsBlockDeviceType ebs = new InstanceEbsBlockDeviceType( )
+}
+
+public class InstanceBlockDeviceMappingSetType extends EucalyptusData {
+  @HttpParameterMapping(parameter = "BlockDeviceMapping")
+  @HttpEmbedded(multiple = true)
+  ArrayList<InstanceBlockDeviceMappingItemType> item = Lists.newArrayList( )
+}
+
 public class ModifyInstanceAttributeType extends VmControlMessage {
-  @HttpParameterMapping( parameter = "InstanceId" )
   String instanceId;
-  @HttpParameterMapping( parameter = "InstanceType.Value" )
-  String instanceTypeValue;
-  @HttpParameterMapping( parameter = "Kernel.Value" )
-  String kernelValue;
-  @HttpParameterMapping( parameter = "Ramdisk.Value" )
-  String ramdiskValue;
-  @HttpParameterMapping( parameter = "UserData.Value" )
-  String userDataValue;
-  // TODO - probably use a better way to handle these values; also, only one mapping can be used at a time, so kind of okay
-  @HttpParameterMapping( parameter = "Attribute" )
-  String blockDeviceMappingAttribute
-  @HttpParameterMapping( parameter = "BlockDeviceMapping.Value" )
-  String blockDeviceMappingValue
-  @HttpParameterMapping( parameter = "BlockDeviceMapping.1.DeviceName" )
-  String blockDeviceMappingDeviceName
-  @HttpParameterMapping( parameter = "BlockDeviceMapping.1.Ebs.VolumeId" )
-  String blockDeviceMappingVolumeId
-  @HttpParameterMapping( parameter = "BlockDeviceMapping.1.Ebs.DeleteOnTermination" )
-  Boolean blockDeviceMappingDeleteOnTermination = true
+  AttributeValueType instanceType;
+  AttributeValueType kernel;
+  AttributeValueType ramdisk;
+  AttributeValueType userData;
+  AttributeBooleanValueType disableApiTermination
+  AttributeValueType instanceInitiatedShutdownBehavior
+  @HttpEmbedded
+  InstanceBlockDeviceMappingSetType blockDeviceMappingSet
+  AttributeBooleanValueType sourceDestCheck
+  @HttpEmbedded
+  GroupIdSetType groupIdSet
+  AttributeBooleanFlatValueType ebsOptimized
+  AttributeBooleanValueType sriovNetSupport
 }
 
 public class ModifyInstanceAttributeResponseType extends VmControlMessage {
@@ -584,35 +818,59 @@ public class DescribeInstanceAttributeType extends VmControlMessage {
   public DescribeInstanceAttributeType() {  }
 }
 public class DescribeInstanceAttributeResponseType extends VmControlMessage {
-  String instanceId;
-  ArrayList<String> instanceType = new ArrayList<String>();
-  ArrayList<String> kernel = new ArrayList<String>();
-  ArrayList<String> ramdisk = new ArrayList<String>();
-  ArrayList<String> userData = new ArrayList<String>();
-  ArrayList<String> rootDeviceName = new ArrayList<String>();
-  ArrayList<GroupItemType> groupSet = Lists.newArrayList();
-  ArrayList<InstanceBlockDeviceMapping> blockDeviceMapping = new ArrayList<InstanceBlockDeviceMapping>();
+  String instanceId
+  ArrayList<InstanceBlockDeviceMapping> blockDeviceMapping = Lists.newArrayList( )
+  Boolean disableApiTermination
+  Boolean ebsOptimized
+  ArrayList<GroupItemType> groupSet = Lists.newArrayList( )
+  String instanceInitiatedShutdownBehavior
+  String instanceType
+  String kernel
+  Boolean productCodes // not supported, would be a list of codes
+  String ramdisk
+  String rootDeviceName
+  Boolean sourceDestCheck
+  Boolean sriovNetSupport
+  String userData
 
+  boolean hasDisableApiTermination( ) {
+    this.disableApiTermination != null
+  }
+  boolean hasEbsOptimized( ) {
+    this.ebsOptimized != null
+  }
   boolean hasInstanceType() {
-    this.instanceType
+    this.instanceType != null
+  }
+  boolean hasInstanceInitiatedShutdownBehavior( ) {
+    this.instanceInitiatedShutdownBehavior != null
   }
   boolean hasKernel() {
-    this.kernel
+    this.kernel != null
+  }
+  boolean hasProductCodes() {
+    this.productCodes != null
   }
   boolean hasRamdisk() {
-    this.ramdisk
+    this.ramdisk != null
   }
   boolean hasRootDeviceName() {
-    this.rootDeviceName
+    this.rootDeviceName != null
   }
   boolean hasUserData() {
-    this.userData
+    this.userData != null
   }
   boolean hasBlockDeviceMapping() {
-    this.blockDeviceMapping
+    !this.blockDeviceMapping.isEmpty( )
   }
   boolean hasGroupSet( ) {
-    this.groupSet
+    !this.groupSet.isEmpty( )
+  }
+  boolean hasSourceDestCheck( ) {
+    this.sourceDestCheck != null
+  }
+  boolean hasSriovNetSupport( ) {
+    return this.sriovNetSupport != null
   }
 }
 public class MonitorInstanceState extends EucalyptusData {

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,6 @@ import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
@@ -51,13 +50,13 @@ import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreViewTransform;
-import com.eucalyptus.loadbalancing.common.backend.msgs.Listener;
+import com.eucalyptus.loadbalancing.common.msgs.Listener;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMapper;
-import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import com.google.common.collect.Collections2;
@@ -73,7 +72,7 @@ import com.google.common.collect.Lists;
  *
  */
 @SuppressWarnings("deprecation")
-@ConfigurableClass(root = "loadbalancing", description = "Parameters controlling loadbalancing")
+@ConfigurableClass(root = "services.loadbalancing", description = "Parameters controlling loadbalancing")
 @Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_listener" )
@@ -147,7 +146,7 @@ public class LoadBalancerListener extends AbstractPersistent
 			type = ConfigurableFieldType.KEYVALUE,
 			changeListener = ELBPortRestrictionChangeListener.class
 			)
-	public static String LOADBALANCER_RESTRICTED_PORTS = DEFAULT_PORT_RESTRICTION;
+	public static String RESTRICTED_PORTS = DEFAULT_PORT_RESTRICTION;
 	
 	public enum PROTOCOL{
 		HTTP, HTTPS, TCP, SSL, NONE
@@ -356,7 +355,7 @@ public class LoadBalancerListener extends AbstractPersistent
 			
 			int lbPort =listener.getLoadBalancerPort();
 			int instancePort = listener.getInstancePort();
-			return ! PortRangeMapper.apply(LOADBALANCER_RESTRICTED_PORTS).contains(lbPort);
+			return ! PortRangeMapper.apply(RESTRICTED_PORTS).contains(lbPort);
 		}catch(Exception e){
 			return false;
 		}
@@ -400,7 +399,7 @@ public class LoadBalancerListener extends AbstractPersistent
 			return this.listener.getCertificateId();
 		}
 	}
-	
+
 	@TypeMapper
 	public enum LoadBalancerListenerCoreViewTransform implements Function<LoadBalancerListener, LoadBalancerListenerCoreView> {
 		INSTANCE;
@@ -410,9 +409,9 @@ public class LoadBalancerListener extends AbstractPersistent
 		public LoadBalancerListenerCoreView apply(
 				@Nullable LoadBalancerListener arg0) {
 			return new LoadBalancerListenerCoreView(arg0);
-		}	
+		}
 	}
-	
+
 	public enum LoadBalancerListenerEntityTransform implements Function<LoadBalancerListenerCoreView, LoadBalancerListener> {
 		INSTANCE;
 
@@ -420,28 +419,23 @@ public class LoadBalancerListener extends AbstractPersistent
 		@Nullable
 		public LoadBalancerListener apply(
 				@Nullable LoadBalancerListenerCoreView arg0) {
-			final EntityTransaction db = Entities.get(LoadBalancerListener.class);
-			try{
-				final LoadBalancerListener listener = Entities.uniqueResult(arg0.listener);
-				db.commit();
-				return listener;
+			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerListener.class ) ) {
+				return Entities.uniqueResult(arg0.listener);
 			}catch(final Exception ex){
-				db.rollback();
 				throw Exceptions.toUndeclared(ex);
-			}finally{
-				if(db.isActive())
-					db.rollback();
 			}
 			
 		}
 	}
 	
 	public static class LoadBalancerListenerRelationView {
-		private LoadBalancerCoreView loadbalancer = null;
+		private LoadBalancer loadbalancer = null;
 		private ImmutableList<LoadBalancerPolicyDescriptionCoreView> policies = null;
 		private LoadBalancerListenerRelationView(final LoadBalancerListener listener){
-			if(listener.loadbalancer!=null)
-				this.loadbalancer = TypeMappers.transform(listener.loadbalancer, LoadBalancerCoreView.class);
+			if(listener.loadbalancer!=null) {
+				Entities.initialize( listener.loadbalancer );
+				this.loadbalancer = listener.loadbalancer;
+			}
 			if(listener.policies!=null){
 			   this.policies = ImmutableList.copyOf(Collections2.transform(listener.policies,
 	            LoadBalancerPolicyDescriptionCoreViewTransform.INSTANCE)); 
@@ -449,7 +443,7 @@ public class LoadBalancerListener extends AbstractPersistent
 		}
 		
 		public LoadBalancerCoreView getLoadBalancer(){
-			return this.loadbalancer;
+			return this.loadbalancer.getCoreView( );
 		}
 		
 		public ImmutableList<LoadBalancerPolicyDescriptionCoreView> getPolicies(){

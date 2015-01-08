@@ -106,11 +106,8 @@ public interface MpuPartMetadataManager {
 
     public long processPartListAndGetSize(List<Part> partsInManifest, HashMap<Integer, PartEntity> availableParts) throws S3Exception;
 
-    public PaginatedResult<PartEntity> listPartsForUpload(Bucket bucket,
-                                                   String objectKey,
-                                                   String uploadId,
-                                                   Integer partNumberMarker,
-                                                   Integer maxParts) throws Exception;
+	public PaginatedResult<PartEntity> listPartsForUpload(Bucket bucket, String objectKey, String uploadId, int partNumberMarker, int maxParts)
+			throws Exception;
 
     /**
      * Returns the conservative sum size of all parts in the given bucket. Includes

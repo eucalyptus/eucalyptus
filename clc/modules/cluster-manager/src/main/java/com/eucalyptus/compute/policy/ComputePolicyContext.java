@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.compute.policy;
 
+import java.util.Date;
 import javax.annotation.Nullable;
 import com.eucalyptus.blockstorage.Snapshots;
 import com.eucalyptus.records.Logs;
@@ -50,9 +51,21 @@ public class ComputePolicyContext {
   }
 
   @Nullable
+  static Boolean isPublic( ) {
+    final ComputePolicyContextResource resource = resourceLocal.get( );
+    return resource == null ? null : resource.isPublic();
+  }
+
+  @Nullable
   static String getInstanceProfileArn( ) {
     final ComputePolicyContextResource resource = resourceLocal.get( );
     return resource == null ? null : resource.getInstanceProfileArn();
+  }
+
+  @Nullable
+  static String getImageType( ) {
+    final ComputePolicyContextResource resource = resourceLocal.get( );
+    return resource == null ? null : resource.getImageType();
   }
 
   @Nullable
@@ -62,9 +75,21 @@ public class ComputePolicyContext {
   }
 
   @Nullable
+  static String getOwner( ) {
+    final ComputePolicyContextResource resource = resourceLocal.get( );
+    return resource == null ? null : resource.getOwner();
+  }
+
+  @Nullable
   static String getParentSnapshotArn( ) {
     final ComputePolicyContextResource resource = resourceLocal.get( );
     return resource == null ? null : resource.getParentSnapshotArn( );
+  }
+
+  @Nullable
+  static String getParentVolumeArn( ) {
+    final ComputePolicyContextResource resource = resourceLocal.get( );
+    return resource == null ? null : resource.getParentVolumeArn();
   }
 
   @Nullable
@@ -82,6 +107,18 @@ public class ComputePolicyContext {
   static String getRootDeviceType( ) {
     final ComputePolicyContextResource resource = resourceLocal.get( );
     return resource == null ? null : resource.getRootDeviceType();
+  }
+
+  @Nullable
+  static Date getSnapshotTime() {
+    final ComputePolicyContextResource resource = resourceLocal.get( );
+    return resource == null ? null : resource.getSnapshotTime();
+  }
+
+  @Nullable
+  static String getSubnetArn() {
+    final ComputePolicyContextResource resource = resourceLocal.get( );
+    return resource == null ? null : resource.getSubnetArn();
   }
 
   @Nullable
@@ -122,19 +159,37 @@ public class ComputePolicyContext {
     Boolean isEbsOptimized( );
 
     @Nullable
+    Boolean isPublic( );
+
+    @Nullable
     String getInstanceProfileArn( );
+
+    @Nullable
+    String getImageType( );
 
     @Nullable
     String getInstanceType( );
 
     @Nullable
+    String getOwner( );
+
+    @Nullable
     String getParentSnapshotArn( );
+
+    @Nullable
+    String getParentVolumeArn( );
 
     @Nullable
     String getPlacementGroupArn( );
 
     @Nullable
     String getRootDeviceType( );
+
+    @Nullable
+    Date getSnapshotTime( );
+
+    @Nullable
+    String getSubnetArn( );
 
     @Nullable
     String getTenancy( );
@@ -167,7 +222,19 @@ public class ComputePolicyContext {
 
     @Override
     @Nullable
+    public Boolean isPublic( ) {
+      return null;
+    }
+
+    @Override
+    @Nullable
     public String getInstanceProfileArn( ) {
+      return null;
+    }
+
+    @Override
+    @Nullable
+    public String getImageType( ) {
       return null;
     }
 
@@ -179,7 +246,19 @@ public class ComputePolicyContext {
 
     @Override
     @Nullable
+    public String getOwner( ) {
+      return null;
+    }
+
+    @Override
+    @Nullable
     public String getParentSnapshotArn( ) {
+      return null;
+    }
+
+    @Nullable
+    @Override
+    public String getParentVolumeArn( ) {
       return null;
     }
 
@@ -192,6 +271,18 @@ public class ComputePolicyContext {
     @Override
     @Nullable
     public String getRootDeviceType( ) {
+      return null;
+    }
+
+    @Nullable
+    @Override
+    public Date getSnapshotTime() {
+      return null;
+    }
+
+    @Nullable
+    @Override
+    public String getSubnetArn() {
       return null;
     }
 

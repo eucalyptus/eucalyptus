@@ -222,7 +222,7 @@ public class StackResourceEntityManager {
       // There is some weirdness in this request.  The stack name represents either the stack name of the
       // non-deleted stack or the stack id of the deleted or non-deleted stack.
       Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
-        .add(Restrictions.eq("accountId", accountId));
+        .add( accountId != null ? Restrictions.eq("accountId", accountId) : Restrictions.conjunction( ) );
       if (stackNameOrId != null) {
         criteria.add(Restrictions.or(
           Restrictions.and(Restrictions.eq("recordDeleted", Boolean.FALSE), Restrictions.eq("stackName", stackNameOrId)),

@@ -72,12 +72,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
@@ -85,33 +88,33 @@ import javax.persistence.PrePersist;
 import javax.persistence.PreRemove;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.DatabaseAuthProvider;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.compute.common.CloudMetadata.NetworkGroupMetadata;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.vpc.Vpc;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransientEntityException;
+import com.eucalyptus.upgrade.Upgrades;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Numbers;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 import groovy.sql.Sql;
 
 @Entity
@@ -136,12 +139,20 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   
   @Column( name = "metadata_network_group_description" )
   private String           description;
-  
-  @OneToMany( cascade = CascadeType.ALL, orphanRemoval = true ) //, fetch = FetchType.EAGER )
+
+  @ManyToOne( fetch = FetchType.LAZY )
+  @JoinColumn( name = "metadata_vpc", updatable = false )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  private Vpc              vpc;
+
+  @Column( name = "metadata_vpc_id", updatable = false )
+  private String           vpcId;
+
+  @OneToMany( cascade = CascadeType.ALL, orphanRemoval = true )
   @JoinColumn( name = "metadata_network_group_rule_fk" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<NetworkRule> networkRules = new HashSet<>( );
-  
+
   @OneToOne( cascade = CascadeType.ALL, fetch = FetchType.EAGER, optional = true, orphanRemoval = true, mappedBy = "networkGroup" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private ExtantNetwork    extantNetwork;
@@ -149,49 +160,102 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "networkGroup" )
   private Collection<NetworkGroupTag> tags;
 
-  NetworkGroup( ) {}
+  protected NetworkGroup( ) {}
   
-  NetworkGroup( final OwnerFullName ownerFullName ) {
+  protected NetworkGroup( final OwnerFullName ownerFullName ) {
     super( ownerFullName );
   }
-  
-  NetworkGroup( final OwnerFullName ownerFullName, final String groupName ) {
+
+  protected NetworkGroup( final OwnerFullName ownerFullName, final String groupName ) {
     super( ownerFullName, groupName );
   }
-  
-  NetworkGroup( final OwnerFullName ownerFullName, final String groupName, final String groupDescription ) {
+
+  protected NetworkGroup( final OwnerFullName ownerFullName,
+                          final Vpc vpc,
+                          final String groupId,
+                          final String groupName,
+                          final String groupDescription ) {
     this( ownerFullName, groupName );
     checkParam( groupDescription, notNullValue() );
+    this.vpc = vpc;
+    this.vpcId = CloudMetadatas.toDisplayName( ).apply( vpc );
     this.description = groupDescription;
-    this.groupId = ResourceIdentifiers.generateString( ID_PREFIX );
+    this.groupId = groupId;
+  }
+
+  protected NetworkGroup( final String naturalId ) {
+    this.setNaturalId( naturalId );
+  }
+
+  public static NetworkGroup create( final OwnerFullName ownerFullName,
+                                     final Vpc vpc,
+                                     final String groupId,
+                                     final String groupName,
+                                     final String groupDescription ) {
+    return new NetworkGroup( ownerFullName, vpc, groupId, groupName, groupDescription );
   }
 
   public static NetworkGroup withOwner( final OwnerFullName ownerFullName ) {
     return new NetworkGroup( ownerFullName );
   }
 
-  public static NetworkGroup named( final OwnerFullName ownerFullName, final String groupName ) {
-    return new NetworkGroup( ownerFullName, groupName );
+  public static NetworkGroup named( @Nonnull final OwnerFullName ownerFullName, final String groupName ) {
+    return groupName == null ?
+        withOwner( ownerFullName ) :
+        withUniqueName( ownerFullName, null, groupName );
   }
-  
+
   public static NetworkGroup withNaturalId( final String naturalId ) {
     return new NetworkGroup( naturalId );
   }
-  
+
   public static NetworkGroup withGroupId( final OwnerFullName ownerFullName, final String groupId ) {
       return networkGroupWithGroupId(ownerFullName, groupId);
   }
-  
-  private NetworkGroup( final String naturalId ) {
-    this.setNaturalId( naturalId );
+
+  /**
+   * Specify VPC identifier for names in a VPC, when VPC identifier is omitted only
+   * non-VPC groups will match.
+   */
+  public static NetworkGroup withUniqueName( @Nonnull final OwnerFullName ownerFullName,
+                                             @Nullable final String vpcId,
+                                             final String groupName ) {
+    final NetworkGroup networkGroup = new NetworkGroup( ownerFullName );
+    networkGroup.setUniqueName( createUniqueName( ownerFullName.getAccountNumber( ), vpcId, groupName ) );
+    return networkGroup;
   }
-  
+
+  /**
+   * Example for finding a group by name in a VPC
+   *
+   * @see #withUniqueName(com.eucalyptus.util.OwnerFullName, String, String) withUniqueName - For use when owner is specified
+   */
+  public static NetworkGroup namedForVpc( final String vpcId,
+                                          final String groupName ) {
+    final NetworkGroup networkGroup = new NetworkGroup( null, groupName );
+    networkGroup.setVpcId( vpcId );
+    return networkGroup;
+  }
+
   private static NetworkGroup networkGroupWithGroupId( final OwnerFullName ownerFullName, final String groupId ) {
       NetworkGroup findGroupWithId = new NetworkGroup(ownerFullName);
       findGroupWithId.setGroupId(groupId);
       return findGroupWithId;
   }
-  
+
+  private static String createUniqueName( final String accountNumber,
+                                          final String vpcId,
+                                          final String groupName ) {
+    return vpcId == null ?
+        accountNumber + ":" + groupName :
+        accountNumber + "\u05c3" + vpcId + "\u05c3" + groupName; // non-ascii punctuation guarantees no collisions as group name must be ascii
+  }
+
+  @Override
+  protected String createUniqueName( ) {
+    return createUniqueName( getOwnerAccountNumber( ), getVpcId( ), getDisplayName( ) );
+  }
+
   @PreRemove
   private void preRemove( ) {
     if ( this.extantNetwork != null && this.extantNetwork.teardown( ) ) {
@@ -208,7 +272,25 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     }
     
   }
-  
+
+  @Nullable
+  public Vpc getVpc( ) {
+    return vpc;
+  }
+
+  protected void setVpc( final Vpc vpc ) {
+    this.vpc = vpc;
+  }
+
+  @Nullable
+  public String getVpcId( ) {
+    return vpcId;
+  }
+
+  protected void setVpcId( final String vpcId ) {
+    this.vpcId = vpcId;
+  }
+
   public String getDescription( ) {
     return this.description;
   }
@@ -224,7 +306,15 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   public Set<NetworkRule> getNetworkRules( ) {
     return this.networkRules;
   }
-  
+
+  public Iterable<NetworkRule> getIngressNetworkRules( ) {
+    return Iterables.filter( getNetworkRules( ), Predicates.not( NetworkRule.egress( ) ) );
+  }
+
+  public Iterable<NetworkRule> getEgressNetworkRules( ) {
+    return Iterables.filter( getNetworkRules( ), NetworkRule.egress( ) );
+  }
+
   private void setGroupId( final String groupId ){
      this.groupId = groupId;
   }
@@ -232,7 +322,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   private void setNetworkRules( final Set<NetworkRule> networkRules ) {
     this.networkRules = networkRules;
   }
-  
+
   @Override
   public String getPartition( ) {
     return ComponentIds.lookup( Eucalyptus.class ).name( );
@@ -272,24 +362,6 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   public String toString( ) {
     return String.format( "NetworkRulesGroup:%s:description=%s:networkRules=%s", this.getUniqueName( ), this.description, Entities.isReadable( this.networkRules ) ? this.networkRules : "<Not loaded>" );
   }
-  
-  @Transient
-  private final Function<NetworkRule, PacketFilterRule> ruleTransform = new Function<NetworkRule, PacketFilterRule>( ) {
-                                                                        
-                                                                        @Override
-                                                                        public PacketFilterRule apply( final NetworkRule from ) {
-                                                                          final PacketFilterRule pfrule = new PacketFilterRule(
-                                                                                                                                NetworkGroup.this.getOwnerAccountNumber( ),
-                                                                                                                                NetworkGroup.this.getDisplayName( ),
-                                                                                                                                from.getProtocol( ).name( ),
-                                                                                                                                from.getLowPort( ),
-                                                                                                                                from.getHighPort( ) );
-                                                                          pfrule.getSourceCidrs( ).addAll( from.getIpRanges( ) );
-                                                                          for ( final NetworkPeer peer : from.getNetworkPeers( ) )
-                                                                            pfrule.addPeer( peer.getUserQueryKey( ), peer.getGroupName( ) );
-                                                                          return pfrule;
-                                                                        }
-                                                                      };
   
   public String getClusterNetworkName( ) {
     return this.getOwnerAccountNumber( ) + "-" + this.getNaturalId( );
@@ -424,13 +496,13 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     }
   }
   
-  @PreUpgrade( value = Eucalyptus.class, since = Version.v3_4_0 )
+  @PreUpgrade( value = Eucalyptus.class, since = Version.v4_1_0 ) // originally v3_4_0
   public static class NetworkGroupPreUpgrade34 implements Callable<Boolean> {
     @Override
     public Boolean call( ) throws Exception {
       Sql sql = null;
       try {
-        sql = Databases.getBootstrapper().getConnection( "eucalyptus_cloud" );
+        sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection( "eucalyptus_cloud" );
         sql.execute( "alter table metadata_network_group drop column if exists vm_network_index" );
         return true;
       } catch ( Exception ex ) {

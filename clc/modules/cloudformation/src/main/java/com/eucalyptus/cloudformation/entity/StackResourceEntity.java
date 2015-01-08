@@ -51,6 +51,8 @@ public class StackResourceEntity extends AbstractPersistent {
   @Type(type="org.hibernate.type.StringClobType")
   String metadataJson;
   @Column(name = "physical_resource_id" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   String physicalResourceId;
   @Column(name = "resource_status", nullable = false )
   @Enumerated(EnumType.STRING)
@@ -92,7 +94,7 @@ public class StackResourceEntity extends AbstractPersistent {
     this.recordDeleted = recordDeleted;
   }
 
-  @Column(name = "stack_id", nullable = false )
+  @Column(name = "stack_id", nullable = false, length = 400)
   String stackId;
   @Column(name = "stack_name", nullable = false )
   String stackName;

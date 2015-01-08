@@ -19,6 +19,7 @@
  ************************************************************************/
 package edu.ucsb.eucalyptus.msgs;
 
+import java.lang.reflect.Modifier;
 import java.util.UUID;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.AnnotationNode;
@@ -46,7 +47,7 @@ public class GroovyAddClassUUIDASTTransformation implements ASTTransformation {
     if (!(nodes[1] instanceof PackageNode)) return;
 
     for ( ClassNode cNode : sourceUnit.getAST().getClasses() ) {
-      if ( cNode.getDeclaredField( "$EUCA_CLASS_UUID" ) == null ) {
+      if ( !Modifier.isInterface( cNode.getModifiers( ) ) && cNode.getDeclaredField( "$EUCA_CLASS_UUID" ) == null ) {
         final FieldNode field = new FieldNode(
             "$EUCA_CLASS_UUID",
             Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL | Opcodes.ACC_SYNTHETIC,

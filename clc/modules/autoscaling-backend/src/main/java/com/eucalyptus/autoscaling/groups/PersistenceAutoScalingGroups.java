@@ -36,6 +36,7 @@ import com.eucalyptus.autoscaling.instances.HealthStatus;
 import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistents;
 import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistentsWithResourceNameSupport;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
@@ -48,6 +49,7 @@ import com.google.common.collect.Sets;
 /**
  *
  */
+@ComponentNamed
 public class PersistenceAutoScalingGroups extends AutoScalingGroups {
   
   private PersistenceSupport persistenceSupport = new PersistenceSupport();

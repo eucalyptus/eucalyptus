@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,6 +68,7 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -75,6 +76,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
@@ -83,6 +85,7 @@ import com.eucalyptus.binding.HttpEmbedded;
 import com.eucalyptus.binding.HttpEmbeddeds;
 import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.binding.HttpParameterMappings;
+import com.eucalyptus.binding.HttpValue;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.StackConfiguration;
@@ -297,14 +300,17 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
     }
     
     for ( final Map.Entry<String, String> e : paramFieldMap.entrySet( ) ) {
+      Field field = null;
       Class<?> declaredType = null;
       try {
-        declaredType = getRecursiveField( obj.getClass( ), e.getValue( ) ).getType( );
+        field = getRecursiveField( obj.getClass( ), e.getValue( ) );
+        declaredType = field.getType( );
       } catch ( final Exception e2 ) {
         LOG.debug( "Field not found: " + e.getValue(), e2 );
       }
       
       if ( params.containsKey( e.getKey( ) )
+           && ( declaredType == null || !EucalyptusData.class.isAssignableFrom( declaredType ) )
            && !this.populateObjectField( obj, e, params ) ) {
         failedMappings.add( e.getKey( ) );
       } else if ( ( declaredType != null )
@@ -312,16 +318,30 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
         try {
           final Map<String, String> fieldMap = this.buildFieldMap( declaredType );
           final Object newInstance = declaredType.newInstance( );
-          final Map<String, String> subParams = Maps.newHashMap( );
-          
-          for ( final String item : Sets.newHashSet( params.keySet( ) ) ) {
-            if ( item.startsWith( e.getKey( ) ) ) {
-              params.get( item );
-              subParams.put( item.replace( e.getKey( ) + ".", "" ), params.remove( item ) );
+          Map<String, String> subParams = Maps.newHashMap( );
+
+          HttpEmbedded httpEmbedded = null;
+          if ( field != null && (
+              field.isAnnotationPresent( HttpEmbedded.class ) ||
+              field.isAnnotationPresent( HttpEmbeddeds.class ) ) ) {
+            httpEmbedded = getHttpEmbeddedAnnotation( field );
+          }
+          if ( httpEmbedded != null && !httpEmbedded.multiple( ) ) {
+            subParams = params;
+          } else {
+            for ( final String item : Sets.newHashSet( params.keySet( ) ) ) {
+              if ( item.startsWith( e.getKey( ) ) ) {
+                params.get( item );
+                subParams.put( item.replace( e.getKey( ) + ".", "" ), params.remove( item ) );
+              }
             }
           }
-          this.populateObject( ( GroovyObject ) newInstance, fieldMap, subParams );
-          obj.setProperty( e.getValue( ), newInstance );
+          if ( !subParams.isEmpty( ) ) {
+            this.populateObject( (GroovyObject) newInstance, fieldMap, subParams );
+            obj.setProperty( e.getValue(), newInstance );
+          } else if ( params.containsKey( e.getKey( ) ) ) {
+            obj.setProperty( e.getValue(), newInstance );
+          }
         } catch ( final Exception e1 ) {
           LOG.debug( "Error binding object", e1 );
         }
@@ -412,24 +432,36 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
         // :: build the parameter map and call populate object recursively :://
         if ( annoteEmbedded.multiple( ) ) {
           final List<String> keys = Lists.newArrayList( params.keySet( ) );
-          final Map<String,Map<String,String>> subParamMaps = new TreeMap<String,Map<String,String>>( Ordering.natural().onResultOf( FunctionToInteger.INSTANCE ) );
-          for ( final String k : keys ) {            
-            if ( k.startsWith( paramFieldPair.getKey( ) + "." ) ) {
+          final Map<String,Map<String,String>> subParamMaps = new TreeMap<>( Ordering.natural().onResultOf( FunctionToInteger.INSTANCE ) );
+          final Map<String,String> valueMap = new TreeMap<>( Ordering.natural().onResultOf( FunctionToInteger.INSTANCE ) );
+          for ( final String k : keys ) {
+            if ( k.matches( Pattern.quote( paramFieldPair.getKey( ) ) + "\\.[0-9]{1,7}\\..*" ) ) {
               final String currentValue = params.remove( k );
               final String setKey = k.replaceAll( "^"+ paramFieldPair.getKey( ) + "\\.([0-9]{1,7})\\..*", "$1" );
               if ( setKey.length() > 7 ) continue;
               final String subKey = k.replaceAll( "^"+ paramFieldPair.getKey( ) + "\\.[0-9]{1,7}\\." , "" );
               Map<String,String> subMap = subParamMaps.get( setKey );
               if ( subMap == null ) {
-                subParamMaps.put( setKey, subMap = Maps.newHashMap() );  
+                subParamMaps.put( setKey, subMap = Maps.newHashMap() );
               }
 
               subMap.put( subKey, currentValue );
+            } else if ( k.matches( Pattern.quote( paramFieldPair.getKey( ) ) + "\\.[0-9]{1,7}" ) ) {
+              final String currentValue = params.remove( k );
+              final String orderKey = k.replaceAll( "^"+ paramFieldPair.getKey( ) + "\\.([0-9]{1,7})", "$1" );
+              if ( orderKey.length() > 7 ) continue;
+              valueMap.put( orderKey, currentValue );
             }
           }
-          
-          for ( final Map<String,String> subParams : subParamMaps.values() ) {
-            failedMappings.addAll( this.populateEmbedded( genericType, subParams, theList ) );
+
+          if ( subParamMaps.isEmpty( ) ) {
+            for ( final String value : valueMap.values() ) {
+              failedMappings.addAll( this.populateEmbedded( genericType, value, theList ) );
+            }
+          } else {
+            for ( final Map<String,String> subParams : subParamMaps.values() ) {
+              failedMappings.addAll( this.populateEmbedded( genericType, subParams, theList ) );
+            }
           }
         } else {
           failedMappings.addAll( this.populateEmbedded( genericType, params, theList ) );
@@ -452,7 +484,39 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
     
     return embeddedFailures;
   }
-  
+
+  private List<String> populateEmbedded( final Class<?> genericType, final String value, @SuppressWarnings( "rawtypes" ) final ArrayList theList ) throws InstantiationException, IllegalAccessException {
+    final GroovyObject embedded = ( GroovyObject ) genericType.newInstance( );
+    final Field valueField = this.findValueField( genericType );
+    if ( valueField == null ) {
+      throw new IllegalArgumentException( "Simple type cannot be mapped for " + genericType.getSimpleName( ) );
+    }
+    final List<String> embeddedFailures = this.populateObject(
+        embedded,
+        Maps.newHashMap( Collections.singletonMap( "value", valueField.getName() ) ),
+        Maps.newHashMap( Collections.singletonMap( "value", value ) ) );
+    if ( embeddedFailures.isEmpty( ) ) theList.add( embedded );
+
+    return embeddedFailures;
+  }
+
+  @Nullable
+  private Field findValueField( Class<?> targetType ) {
+    while ( !BaseMessage.class.equals( targetType ) && !EucalyptusMessage.class.equals( targetType ) && !EucalyptusData.class.equals( targetType )
+        && !BaseData.class.equals( targetType ) ) {
+      final Field[] fields = targetType.getDeclaredFields( );
+      for ( final Field f : fields ) {
+        if ( Modifier.isStatic( f.getModifiers( ) ) ) {
+          continue;
+        } else if ( f.isAnnotationPresent( HttpValue.class ) ) {
+          return f;
+        }
+      }
+      targetType = targetType.getSuperclass( );
+    }
+    return null;
+  }
+
   private Map<String, String> buildFieldMap( Class<?> targetType ) {
     final Map<String, String> fieldMap = new HashMap<String, String>( );
     while ( !BaseMessage.class.equals( targetType ) && !EucalyptusMessage.class.equals( targetType ) && !EucalyptusData.class.equals( targetType )

@@ -19,26 +19,26 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.activities;
 
+import static com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView.name;
+import static com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView.subnetId;
+
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 
-import javax.persistence.EntityTransaction;
-
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Faults.CheckException;
-import com.eucalyptus.component.ServiceConfigurations;
 
 import org.apache.log4j.Logger;
 import org.springframework.util.StringUtils;
 
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseType;
 import com.eucalyptus.autoscaling.common.msgs.LaunchConfigurationType;
@@ -52,6 +52,9 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.DescribeKeyPairsResponseItemType;
+import com.eucalyptus.compute.common.ImageDetails;
+import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
@@ -61,6 +64,7 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancers;
 import com.eucalyptus.loadbalancing.common.LoadBalancingBackend;
@@ -69,24 +73,26 @@ import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.InstanceProf
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.SecurityGroupSetup;
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.TagCreator;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
-import com.google.common.base.Function;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Collections2;
-import com.google.common.net.HostSpecifier;
+import com.google.common.base.Functions;
+import com.google.common.base.Joiner;
+import com.google.common.base.Predicates;
+import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
-
-import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
-import edu.ucsb.eucalyptus.msgs.ImageDetails;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+import com.google.common.net.HostSpecifier;
 
 /**
  * @author Sang-Min Park
  *
  */
-@ConfigurableClass(root = "loadbalancing", description = "Parameters controlling loadbalancing")
-public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbalancerEvent> implements StoredResult<String>{
+@ConfigurableClass(root = "services.loadbalancing.worker", description = "Parameters controlling loadbalancing")
+public class LoadBalancerASGroupCreator extends AbstractEventHandler<LoadbalancingEvent> implements StoredResult<String>{
 	private static Logger  LOG     = Logger.getLogger( LoadBalancerASGroupCreator.class );
 
 	public static class ElbEmiChangeListener implements PropertyChangeListener {
@@ -95,7 +101,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 			    try {
 			          if ( newValue instanceof String  ) {
 				    	  if(t.getValue()!=null && ! t.getValue().equals(newValue))
-				    		  onPropertyChange((String)newValue, null, null);
+				    		  onPropertyChange((String)newValue, null, null, null);
 				      }
 			    } catch ( final Exception e ) {
 					throw new ConfigurablePropertyException("Could not change EMI ID", e);
@@ -108,10 +114,10 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 		   public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
 			    try {
 			      if ( newValue instanceof String ) {
-			    	  if(newValue == null || ((String) newValue).equals(""))
+			    	  if( newValue.equals( "" ) )
 			    		  throw new EucalyptusCloudException("Instance type cannot be unset");
 			    	  if(t.getValue()!=null && ! t.getValue().equals(newValue))
-						 onPropertyChange(null, (String)newValue, null);
+						 onPropertyChange(null, (String)newValue, null, null);
 			      }
 			    } catch ( final Exception e ) {
 					throw new ConfigurablePropertyException("Could not change instance type", e);
@@ -125,7 +131,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 			    try {
 			      if ( newValue instanceof String ) {	  
 			    	  if(t.getValue()!=null && ! t.getValue().equals(newValue))
-			    		  onPropertyChange(null, null, (String)newValue);
+			    		  onPropertyChange(null, null, (String)newValue, null);
 			      }
 			    } catch ( final Exception e ) {
 					throw new ConfigurablePropertyException("Could not change key name", e);
@@ -133,7 +139,22 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 			}
 	}
 	
-	private static void onPropertyChange(final String emi, final String instanceType, final String keyname) throws EucalyptusCloudException{
+	public static class ElbVmExpirationDaysChangeListener implements PropertyChangeListener<String> {
+    @Override
+    public void fireChange(ConfigurableProperty t, String newValue)
+        throws ConfigurablePropertyException {
+      try{
+        final int newExp = Integer.parseInt(newValue);
+        if(newExp <= 0 )
+          throw new Exception();
+      }catch(final Exception ex) {
+        throw new ConfigurablePropertyException("The value must be number type and bigger than 0");
+      }
+    }
+	}
+	
+	private static void onPropertyChange(final String emi, final String instanceType,
+	    final String keyname, String initScript) throws EucalyptusCloudException{
 		if (!( Bootstrap.isFinished() &&
 		          Topology.isEnabledLocally( LoadBalancingBackend.class ) &&
 		          Topology.isEnabled( Eucalyptus.class ) ) )
@@ -142,7 +163,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 		// should validate the parameters
 		if(emi!=null){
 			try{
-				final List<ImageDetails> images = 
+				final List<ImageDetails> images =
 					EucalyptusActivityTasks.getInstance().describeImages(Lists.newArrayList(emi));
 				if(images == null || images.size()<=0)
 					throw new EucalyptusCloudException("No such EMI is found in the system");
@@ -155,13 +176,9 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 			}
 		}
 		
-		if(instanceType != null){
-			;
-		}
-		
 		if(keyname != null && ! keyname.equals("")){
 			try{
-				final List<DescribeKeyPairsResponseItemType> keypairs = 
+				final List<DescribeKeyPairsResponseItemType> keypairs =
 						EucalyptusActivityTasks.getInstance().describeKeyPairs(Lists.newArrayList(keyname));
 				if(keypairs ==null || keypairs.size()<=0)
 					throw new EucalyptusCloudException("No such keypair is found in the system");
@@ -174,7 +191,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 			}
 		}
 		
-		if((emi!=null && emi.length()>0) || (instanceType!=null && instanceType.length()>0) || (keyname!=null && keyname.length()>0)){
+		if((emi!=null && emi.length()>0) || (instanceType!=null && instanceType.length()>0) || (keyname!=null && keyname.length()>0) || (initScript != null) ){
 			// 
 			final List<LoadBalancer> lbs = LoadBalancers.listLoadbalancers();
 			for(final LoadBalancer lb : lbs){
@@ -201,7 +218,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 						final String lcName = asgType.getLaunchConfigurationName();
 						final LaunchConfigurationType lc = EucalyptusActivityTasks.getInstance().describeLaunchConfiguration(lcName);
 
-						String launchConfigName = null;
+						String launchConfigName;
 						do{
 							launchConfigName = String.format("lc-euca-internal-elb-%s-%s-%s", 
 									lb.getOwnerAccountNumber(), lb.getDisplayName(), UUID.randomUUID().toString().substring(0, 8));
@@ -214,9 +231,15 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 						final String newType = instanceType != null? instanceType : lc.getInstanceType();
 						String newKeyname = keyname != null ? keyname : lc.getKeyName();
 
+            final String newUserdata = B64.standard.encString(String.format(
+                "%s\n%s",
+                getCredentialsString(),
+                getLoadBalancerUserData(initScript)));
+   
 						try{
 							EucalyptusActivityTasks.getInstance().createLaunchConfiguration(newEmi, newType, lc.getIamInstanceProfile(), 
-									launchConfigName, lc.getSecurityGroups().getMember().get(0), newKeyname, lc.getUserData());
+									launchConfigName, lc.getSecurityGroups().getMember(), newKeyname, newUserdata,
+									Boolean.TRUE.equals( lc.getAssociatePublicIpAddress( ) ) );
 						}catch(final Exception ex){
 							throw new EucalyptusCloudException("failed to create new launch config", ex);
 						}
@@ -230,6 +253,16 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 						}catch(final Exception ex){
 							LOG.warn("unable to delete the old launch configuration", ex);
 						}	
+	          // copy all tags from image to ASG
+	          try {
+	            final List<ImageDetails> images =
+	                EucalyptusActivityTasks.getInstance().describeImages(Lists.newArrayList(emi));
+	            // image should exist at this point
+	            for(ResourceTag tag:images.get(0).getTagSet())
+	              EucalyptusActivityTasks.getInstance().createOrUpdateAutoscalingTags(tag.getKey(), tag.getValue(), asgName);
+	          } catch (final Exception ex) {
+	            LOG.warn("unable to propogate tags from image to ASG", ex);
+	          }
 						LOG.debug(String.format("autoscaling group '%s' was updated", asgName));
 					}
 				}catch(final EucalyptusCloudException ex){
@@ -257,7 +290,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 						}
 					}else{
 						final String address = (String) newValue;
-						if(address != null && ! address.equals("")){
+						if( !address.equals("") ){
 							if(!HostSpecifier.isValid(String.format("%s.com", address)))
 								throw new EucalyptusCloudException("Invalid address");
 						}
@@ -286,50 +319,65 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
        }catch (final ConfigurablePropertyException ex){
          throw ex;
        }catch (final Exception ex) {
-         throw new ConfigurablePropertyException("Could not change instance type", ex);
+         throw new ConfigurablePropertyException("Could not change ELB app cookie duration", ex);
        }
    }
 }
 
-	@ConfigurableField( displayName = "loadbalancer_emi", 
+	@ConfigurableField( displayName = "image", 
         description = "EMI containing haproxy and the controller",
         initial = "NULL", 
         readonly = false,
         type = ConfigurableFieldType.KEYVALUE,
         changeListener = ElbEmiChangeListener.class)
-	public static String LOADBALANCER_EMI = "NULL";
+	public static String IMAGE = "NULL";
 	
-	@ConfigurableField( displayName = "loadbalancer_instance_type", 
+	@ConfigurableField( displayName = "instance_type", 
 		description = "instance type for loadbalancer instances",
 		initial = "m1.small", 
 		readonly = false,
 		type = ConfigurableFieldType.KEYVALUE,
 		changeListener = ElbInstanceTypeChangeListener.class)
-	public static String LOADBALANCER_INSTANCE_TYPE = "m1.small";
+	public static String INSTANCE_TYPE = "m1.small";
 	
-	@ConfigurableField( displayName = "loadbalancer_vm_keyname", 
+	@ConfigurableField( displayName = "keyname", 
 			description = "keyname to use when debugging loadbalancer VMs",
 			readonly = false,
 			type = ConfigurableFieldType.KEYVALUE,
 			changeListener = ElbKeyNameChangeListener.class)
-	public static String LOADBALANCER_VM_KEYNAME = null;
+	public static String KEYNAME = null;
 	
-	@ConfigurableField( displayName = "loadbalancer_vm_ntp_server", 
+	@ConfigurableField( displayName = "ntp_server", 
 			description = "the address of the NTP server used by loadbalancer VMs", 
 			readonly = false,
 			type = ConfigurableFieldType.KEYVALUE,
 			changeListener = ElbNTPServerChangeListener.class
 			)
-	public static String LOADBALANCER_VM_NTP_SERVER = null;
+	public static String NTP_SERVER = null;
 	
-	@ConfigurableField( displayName = "loadbalancer_app_cookie_duration",
+	@ConfigurableField( displayName = "app_cookie_duration",
 	    description = "duration of app-controlled cookie to be kept in-memory (hours)",
 	    initial = "24", // 24 hours by default 
 	    readonly = false,
 	    type = ConfigurableFieldType.KEYVALUE,
 	    changeListener = ElbAppCookieDurationChangeListener.class)
-	public static String LOADBALANCER_APP_COOKIE_DURATION = "24";
+	public static String APP_COOKIE_DURATION = "24";
 	
+	@ConfigurableField( displayName = "expiration_days",
+      description = "the days after which the loadbalancer Vms expire",
+      initial = "365", // 1 year by default 
+      readonly = false,
+      type = ConfigurableFieldType.KEYVALUE,
+      changeListener = ElbVmExpirationDaysChangeListener.class)
+  public static String EXPIRATION_DAYS = "365";
+
+  @ConfigurableField(displayName = "init_script",
+      description = "bash script that will be executed before service configuration and start up",
+      readonly = false,
+      type = ConfigurableFieldType.KEYVALUE,
+      changeListener = InitScriptChangeListener.class)
+  public static String INIT_SCRIPT = null;
+	 
 	@Provides(LoadBalancingBackend.class)
 	@RunDuring(Bootstrap.Stage.Final)
 	@DependsLocal(LoadBalancingBackend.class)
@@ -355,15 +403,12 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 	  private static boolean EmiCheckResult = true;
 	  @Override
     public boolean check( ) throws Exception {
-      if ( CloudMetadatas.isMachineImageIdentifier( LoadBalancerASGroupCreator.LOADBALANCER_EMI ) ) {
-        if(CheckCounter == 3){
+      if ( CloudMetadatas.isMachineImageIdentifier( LoadBalancerASGroupCreator.IMAGE ) ) {
+        if( CheckCounter >= 3 && Topology.isEnabled( Eucalyptus.class ) ){
           try{
             final List<ImageDetails> emis =
-                EucalyptusActivityTasks.getInstance().describeImages(Lists.newArrayList(LoadBalancerASGroupCreator.LOADBALANCER_EMI));
-            if( LoadBalancerASGroupCreator.LOADBALANCER_EMI.equals(emis.get(0).getImageId()))
-              EmiCheckResult = true;
-            else 
-              EmiCheckResult =  false;
+                EucalyptusActivityTasks.getInstance().describeImages(Lists.newArrayList(LoadBalancerASGroupCreator.IMAGE));
+            EmiCheckResult = LoadBalancerASGroupCreator.IMAGE.equals( emis.get( 0 ).getImageId() );
           }catch(final Exception ex){
             EmiCheckResult=false;
           }
@@ -399,65 +444,76 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 	}
 
 		
-	private NewLoadbalancerEvent event = null;
-	private LoadBalancer loadbalancer = null;
 	private int capacityPerZone = 1;
-	
 	private String launchConfigName = null;
 	private String asgName = null;
-	private LoadBalancerASGroupCreator(
-			EventHandlerChain<NewLoadbalancerEvent> chain) {
+	public LoadBalancerASGroupCreator(EventHandlerChain<? extends LoadbalancingEvent> chain, int capacityPerZone){
 		super(chain);
-	}
-	public LoadBalancerASGroupCreator(EventHandlerChain<NewLoadbalancerEvent> chain, int capacityPerZone){
-		this(chain);
 		this.capacityPerZone = capacityPerZone;
 	}
 
+  public static String getCredentialsString() {
+    final String credStr = String.format("euca-%s:%s",
+        B64.standard.encString("setup-credential"),
+        EXPIRATION_DAYS);
+    return credStr;
+  }
+ 
 	@Override
-	public void apply(NewLoadbalancerEvent evt) throws EventHandlerException {
-		if(LOADBALANCER_EMI == null)
+	public void apply( LoadbalancingEvent evt) throws EventHandlerException {
+		if(IMAGE == null)
 			throw new EventHandlerException("Loadbalancer's EMI is not configured");
-		this.event = evt;
-		if(evt.getZones() == null || evt.getZones().size() <= 0)
-			return;	// do nothing when zone is not specified
-		
-		LoadBalancer lb = null;
+
+		Collection<String> eventZones = null;
+		Collection<String> eventSecurityGroupIds = Collections.emptySet( );
+		Map<String,String> zoneToSubnetIdMap = null;
+		if ( evt instanceof NewLoadbalancerEvent ) {
+			eventZones = ((NewLoadbalancerEvent) evt ).getZones( );
+			zoneToSubnetIdMap = ((NewLoadbalancerEvent) evt ).getZoneToSubnetIdMap( );
+		} else if ( evt instanceof ApplySecurityGroupsEvent ) {
+			final Map<String,String> groupIdToNameMap = ( (ApplySecurityGroupsEvent) evt ).getSecurityGroupIdsToNames( );
+			eventSecurityGroupIds = groupIdToNameMap == null ? eventSecurityGroupIds : groupIdToNameMap.keySet( );
+		}
+
+		if( eventZones == null && eventSecurityGroupIds.isEmpty( ) )
+			return;	// do nothing when zone/groups are not specified
+
+		final LoadBalancer lbEntity;
+		final LoadBalancer.LoadBalancerCoreView lb;
 		try{
-			lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
-			this.loadbalancer = lb;
+			lbEntity = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
+			lb = lbEntity.getCoreView( );
+			if ( zoneToSubnetIdMap == null ) {
+				zoneToSubnetIdMap = CollectionUtils.putAll(
+						Iterables.filter( lbEntity.getZones( ), Predicates.compose( Predicates.notNull( ), subnetId( ) ) ),
+						Maps.<String, String>newHashMap( ),
+						name( ),
+						subnetId( ) );
+			}
 		}catch(NoSuchElementException ex){
 			throw new EventHandlerException("Failed to find the loadbalancer "+evt.getLoadBalancer(), ex);
 		}catch(Exception ex){
 			throw new EventHandlerException("Failed due to query exception", ex);
 		}
 		
-		// create user data to supply to haproxy tooling
-		InstanceUserDataBuilder userDataBuilder  = null;
-		try{
-			userDataBuilder= new DefaultInstanceUserDataBuilder();
-		}catch(Exception ex){
-			throw new EventHandlerException("failed to create service parameters", ex);
-		}
-		
-		String launchConfigName = String.format("lc-euca-internal-elb-%s-%s-%s", 
+		String newlaunchConfigName = String.format("lc-euca-internal-elb-%s-%s-%s",
 				lb.getOwnerAccountNumber(), lb.getDisplayName(), UUID.randomUUID().toString().substring(0, 8));
-		if(launchConfigName.length()>255)
-			launchConfigName = launchConfigName.substring(0, 255);
-		
-		String groupName = String.format("asg-euca-internal-elb-%s-%s", lb.getOwnerAccountNumber(), lb.getDisplayName());
-		if(groupName.length()>255)
-			groupName = groupName.substring(0, 255);
-		
+		if(newlaunchConfigName.length()>255)
+			newlaunchConfigName = newlaunchConfigName.substring(0, 255);
+		String launchConfigName = newlaunchConfigName;
+		String launchConfigToDelete = null;
+
+		String groupName = getAutoScalingGroupName( lb.getOwnerAccountNumber(), lb.getDisplayName() );
+
 		String instanceProfileName = null;
 		try{
 			List<String> result = this.chain.findHandler(InstanceProfileSetup.class).getResult();
 			instanceProfileName = result.get(0);
 		}catch(Exception ex){
-			;
 		}
 		
 		boolean asgFound = false;
+		boolean updateLaunchConfig = false;
 		try{
 			final DescribeAutoScalingGroupsResponseType response = 
 					EucalyptusActivityTasks.getInstance().describeAutoScalingGroups(Lists.newArrayList(groupName));
@@ -466,36 +522,66 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 			if(groups.size()>0 && groups.get(0).getAutoScalingGroupName().equals(groupName)){
 				asgFound =true;
 				launchConfigName = groups.get(0).getLaunchConfigurationName();
+				if ( !eventSecurityGroupIds.isEmpty( ) ) {
+					final LaunchConfigurationType lc = EucalyptusActivityTasks.getInstance().describeLaunchConfiguration( launchConfigName );
+					updateLaunchConfig = lc == null ||
+							lc.getSecurityGroups( ) == null ||
+							!Sets.newHashSet( lc.getSecurityGroups( ).getMember( ) ).equals( Sets.newHashSet( eventSecurityGroupIds ) );
+					if ( updateLaunchConfig ) {
+						launchConfigToDelete = launchConfigName;
+						launchConfigName = newlaunchConfigName;
+					}
+				}
 			}
 		}catch(final Exception ex){
 			asgFound = false;
 		}
 		
 		// create launch config based on the parameters
-		int capacity =1;
-		if(!asgFound){
+		if ( !asgFound || updateLaunchConfig ) {
 			try{
-				StoredResult<String> sgroupSetup = this.getChain().findHandler(SecurityGroupSetup.class);
-				final List<String> group = sgroupSetup.getResult();
-				final String sgroupName = group.size()>0 ? group.get(0) : null;
-				final String keyName = 
-						LOADBALANCER_VM_KEYNAME!=null && LOADBALANCER_VM_KEYNAME.length()>0 ? LOADBALANCER_VM_KEYNAME : null;
-				final String userData = B64.standard.encString(String.format("%s\n%s", 
-				    "euca-"+B64.standard.encString("setup-credential"),
-				    userDataBuilder.build()));
-				
-				EucalyptusActivityTasks.getInstance().createLaunchConfiguration(LOADBALANCER_EMI, LOADBALANCER_INSTANCE_TYPE, instanceProfileName,
-						launchConfigName, sgroupName, keyName, userData);
+				final Set<String> securityGroupNamesOrIds = Sets.newHashSet( eventSecurityGroupIds );
+				if ( securityGroupNamesOrIds.isEmpty( ) ) {
+					if ( !lb.getSecurityGroupIdsToNames().isEmpty() ) {
+						securityGroupNamesOrIds.addAll( lb.getSecurityGroupIdsToNames().keySet() );
+					} else {
+						final StoredResult<String> sgroupSetup = this.getChain().findHandler( SecurityGroupSetup.class );
+						final List<String> group = sgroupSetup.getResult();
+						if ( !group.isEmpty() ) {
+							securityGroupNamesOrIds.add( group.get( 0 ) );
+						}
+					}
+				}
+				final String keyName =
+						KEYNAME!=null && KEYNAME.length()>0 ? KEYNAME : null;
+
+				final String userData = B64.standard.encString(String.format("%s\n%s",
+				    getCredentialsString(),
+				    getLoadBalancerUserData(INIT_SCRIPT)));
+
+				EucalyptusActivityTasks.getInstance().createLaunchConfiguration(IMAGE, INSTANCE_TYPE, instanceProfileName,
+						launchConfigName, securityGroupNamesOrIds, keyName, userData, !zoneToSubnetIdMap.isEmpty( ) );
 				this.launchConfigName = launchConfigName;
 			}catch(Exception ex){
 				throw new EventHandlerException("Failed to create launch configuration", ex);
 			}
-			
+		}
+
+		Integer capacity;
+		if(!asgFound){
 			// create autoscaling group with zones and desired capacity
+			if ( eventZones == null ) {
+				throw new EventHandlerException("Availability zones required to create auto scaling group.");
+			}
 			try{
-				final List<String> availabilityZones = Lists.newArrayList(evt.getZones());
+				final List<String> availabilityZones = Lists.newArrayList( eventZones );
+				final String vpcZoneIdentifier = zoneToSubnetIdMap.isEmpty( ) ?
+						null :
+						Strings.emptyToNull( Joiner.on( ',' ).skipNulls().join( Iterables.transform(
+								availabilityZones,
+								Functions.forMap( zoneToSubnetIdMap ) ) ) );
 				capacity = availabilityZones.size() * this.capacityPerZone;
-				EucalyptusActivityTasks.getInstance().createAutoScalingGroup(groupName, availabilityZones, 
+				EucalyptusActivityTasks.getInstance().createAutoScalingGroup(groupName, availabilityZones, vpcZoneIdentifier,
 						capacity, launchConfigName, TagCreator.TAG_KEY, TagCreator.TAG_VALUE);
 				this.asgName = groupName;
 			}catch(Exception ex){
@@ -503,28 +589,33 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 			}
 		}else{
 			try{
-				final List<String> availabilityZones = Lists.newArrayList(evt.getZones());
-				capacity = availabilityZones.size() * this.capacityPerZone;
-				EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(groupName, availabilityZones, capacity);
+				final List<String> availabilityZones = eventZones == null ? null : Lists.newArrayList( eventZones );
+				capacity = availabilityZones == null ? null : availabilityZones.size() * this.capacityPerZone;
+				EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(groupName, availabilityZones, capacity, launchConfigName);
 			}catch(Exception ex){
 				throw new EventHandlerException("Failed to update the autoscaling group", ex);
+			}
+			if ( launchConfigToDelete != null ) try {
+				EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration( launchConfigToDelete );
+			}catch(final Exception ex) {
+				LOG.warn( "unable to delete launch configuration (" + launchConfigToDelete + ")", ex );
 			}
 			this.asgName = groupName;
 			this.launchConfigName = launchConfigName;
 		}
-		
+
 		// commit ASG record to the database
-		final EntityTransaction db = Entities.get( LoadBalancerAutoScalingGroup.class );
-		try{
-			Entities.uniqueResult(LoadBalancerAutoScalingGroup.named(lb));
-			db.commit(); // should not happen
-		}catch(NoSuchElementException ex){
-			final LoadBalancerAutoScalingGroup group = LoadBalancerAutoScalingGroup.newInstance(lb, groupName, this.launchConfigName);
-			group.setCapacity(capacity);
-			Entities.persist(group);
+		try ( final TransactionResource db = Entities.transactionFor( LoadBalancerAutoScalingGroup.class ) ) {
+			try {
+				final LoadBalancerAutoScalingGroup group = Entities.uniqueResult( LoadBalancerAutoScalingGroup.named( lbEntity ) );
+				if ( capacity != null ) group.setCapacity( capacity );
+			}catch(NoSuchElementException ex){
+				final LoadBalancerAutoScalingGroup group = LoadBalancerAutoScalingGroup.newInstance(lbEntity, groupName, this.launchConfigName);
+				if ( capacity != null ) group.setCapacity(capacity);
+				Entities.persist(group);
+			}
 			db.commit();
 		}catch(Exception ex){
-			db.rollback();
 			throw new EventHandlerException("Failed to commit the database", ex);
 		}
 	}
@@ -554,7 +645,6 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 
 	@Override
 	public List<String> getResult() {
-		// TODO Auto-generated method stub
 		List<String> result= Lists.newArrayList();
 		if(this.launchConfigName != null)
 			result.add(this.launchConfigName);
@@ -563,112 +653,77 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 		return result;
 	}
 
-	private class InstanceUserDataWithCredential extends DefaultInstanceUserDataBuilder{
-		private UserFullName user = null;
-		InstanceUserDataWithCredential(UserFullName requestingUser){
-			/// credentials
-			this.user = requestingUser;
-			/// TODO: SPARK: Assuming that the ELB service has an access to database
-			try{
-				/// ASSUMING LB SERVICE HAS ACCESS TO LOCAL DB
-				final User adminUser= Accounts.lookupSystemAdmin( );
-				final List<AccessKey> adminKeys = adminUser.getKeys();
-				if(adminKeys.size() <= 0)
-					throw new EucalyptusActivityException("No access key is found for the admin user");
-				final AccessKey adminKey = adminKeys.get(0);
-				this.add("access_key", adminKey.getAccessKey());
-				this.add("secret_key", adminKey.getSecretKey());
-			}catch(Exception ex){
-				throw Exceptions.toUndeclared(ex);
-			}
-		}
+	static String getAutoScalingGroupName( final String ownerAccountNumber, final String loadBalancerName ) {
+		String groupName = String.format("asg-euca-internal-elb-%s-%s", ownerAccountNumber, loadBalancerName );
+		if(groupName.length()>255)
+			groupName = groupName.substring(0, 255);
+		return groupName;
 	}
-	
-	private class DefaultInstanceUserDataBuilder implements InstanceUserDataBuilder {
-		ConcurrentHashMap<String,String> dataDict= null;
-		protected DefaultInstanceUserDataBuilder(){
-			dataDict = new ConcurrentHashMap<String,String>();
-			// describe-services to retrieve the info:
-			try{
-				List<ServiceStatusType> services = 
-						EucalyptusActivityTasks.getInstance().describeServices("eucalyptus");
-			
-				if(services == null || services.size()<=0)
-					throw new EucalyptusActivityException("failed to describe eucalyptus services");
-				
-				ServiceStatusType service = services.get(0); 
-				String serviceUrl = service.getServiceId().getUri();
-				
-				// parse the service Url: e.g., http://192.168.0.1:8773/services/Eucalyptus 
-				String tmp = serviceUrl.replace("http://", "").replace("https://", "");
-				String host = tmp.substring(0, tmp.indexOf(":"));
-				tmp = tmp.replace(host+":", "");
-				String port = tmp.substring(0, tmp.indexOf("/"));
-				String path = tmp.replace(port+"/", "");
-				this.add("eucalyptus_host", host);
-				this.add("eucalyptus_port", port);
-				this.add("eucalyptus_path", path);
-				this.add("elb_service_url", String.format("loadbalancing.%s",DNSProperties.DOMAIN));
-				this.add("euare_service_url", String.format("euare.%s", DNSProperties.DOMAIN));
-				
-				//final ServiceConfiguration dns = Topology.lookup(Dns.class);
-				final List<String> dnsHosts = Lists.newArrayList(Iterables.transform(ServiceConfigurations.list(Eucalyptus.class),
-				    new Function<ServiceConfiguration, String>() {
-              @Override
-              public String apply(ServiceConfiguration arg0) {
-                return arg0.getInetAddress().getHostAddress();
-              }
-				}));
-				final List<String> enabledDns = Lists.newArrayList(Collections2.transform(Topology.enabledServices(Eucalyptus.class), 
-				    new Function<ServiceConfiguration, String>(){
-              @Override
-              public String apply(ServiceConfiguration arg0) {
-                return arg0.getInetAddress().getHostAddress();
-              }
-				}));
-				
-				final StringBuilder sbDns= new StringBuilder();
-				for(final String address : enabledDns){
-				  if(sbDns.length()<=0)
-				    sbDns.append(address);
-				  else
-				    sbDns.append(","+address);
-				}
-				for(final String address : dnsHosts){
-				  if(! enabledDns.contains(address)){
-	          if(sbDns.length()<=0)
-	            sbDns.append(address);
-	          else
-	            sbDns.append(","+address);
-				  } 
-				}
-	      this.add("dns_server", sbDns.toString());
-	      if(LOADBALANCER_VM_NTP_SERVER != null && LOADBALANCER_VM_NTP_SERVER.length()>0){
-					this.add("ntp_server", LOADBALANCER_VM_NTP_SERVER);
-				}
-				if(LOADBALANCER_APP_COOKIE_DURATION != null){
-				  this.add("app-cookie-duration", LOADBALANCER_APP_COOKIE_DURATION);
-				}
-			}catch(Exception ex){
-				throw Exceptions.toUndeclared(ex);
-			}
-		}
-		
-		protected void add(String name, String value){
-			dataDict.put(name, value);
-		}
-		
-		@Override
-		public String build(){
-			StringBuilder sb  = new StringBuilder();
-			for (String key : dataDict.keySet()){
-				String value = dataDict.get(key);
-				sb.append(String.format("%s=%s;", key, value));
-			}
-			return sb.toString();
-		}
-	}
-	interface InstanceUserDataBuilder {
-		String build();
-	}
+
+	public static String getLoadBalancerUserData(String initScript) {
+    Map<String, String> kvMap = new HashMap<String, String>();
+    if (NTP_SERVER != null)
+      kvMap.put("ntp_server", NTP_SERVER);
+
+    if(APP_COOKIE_DURATION != null){
+      kvMap.put("app-cookie-duration", APP_COOKIE_DURATION);
+    }
+
+    kvMap.put("elb_service_url", String.format("loadbalancing.%s",DNSProperties.DOMAIN));
+    kvMap.put("euare_service_url", String.format("euare.%s", DNSProperties.DOMAIN));
+    
+    try {
+      List<ServiceStatusType> services = 
+          EucalyptusActivityTasks.getInstance().describeServices("eucalyptus");
+    
+      if(services == null || services.size()<=0)
+        throw new EucalyptusActivityException("failed to describe eucalyptus services");
+
+      ServiceStatusType service = services.get(0); 
+      String serviceUrl = service.getServiceId().getUri();
+
+      // parse the service Url: e.g., http://192.168.0.1:8773/services/Eucalyptus 
+      String tmp = serviceUrl.replace("http://", "").replace("https://", "");
+      String host = tmp.substring(0, tmp.indexOf(":"));
+      tmp = tmp.replace(host+":", "");
+      String port = tmp.substring(0, tmp.indexOf("/"));
+      String path = tmp.replace(port+"/", "");
+      kvMap.put("eucalyptus_host", host);
+      kvMap.put("eucalyptus_port", port);
+      kvMap.put("eucalyptus_path", path);
+    }catch(Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
+
+    final StringBuilder sb = new StringBuilder("#!/bin/bash").append("\n");
+    if (initScript != null && initScript.length()>0)
+      sb.append(initScript);
+    sb.append("\n#System generated Load Balancer Servo config\n");
+    sb.append("mkdir -p /etc/load-balancer-servo/\n");
+    sb.append("yum -y --disablerepo \\* --enablerepo eucalyptus-service-image install load-balancer-servo\n");
+    sb.append("echo \"");
+    for (String key : kvMap.keySet()) {
+      String value = kvMap.get(key);
+      sb.append(String.format("\n%s=%s", key, value));
+    }
+    sb.append("\" > /etc/load-balancer-servo/servo.conf");
+    sb.append("\ntouch /var/lib/load-balancer-servo/ntp.lock");
+    sb.append("\nchown -R servo:servo /etc/load-balancer-servo");
+    sb.append("\nservice load-balancer-servo start");
+    return sb.toString();
+  }
+
+  public static class InitScriptChangeListener implements PropertyChangeListener<String> {
+    @Override
+    public void fireChange(ConfigurableProperty t, String newValue)
+        throws ConfigurablePropertyException {
+      try {
+        // init script can be empty
+        if (t.getValue() != null && !t.getValue().equals(newValue))
+          onPropertyChange(null, null, null, (String) newValue);
+      } catch (final Exception e) {
+        throw new ConfigurablePropertyException("Could not change init script", e);
+      }
+    }
+  }
 }

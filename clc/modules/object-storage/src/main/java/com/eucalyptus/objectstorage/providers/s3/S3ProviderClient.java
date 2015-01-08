@@ -20,6 +20,25 @@
 
 package com.eucalyptus.objectstorage.providers.s3;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.Socket;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+
+import javax.annotation.Nonnull;
+
+import org.apache.log4j.Logger;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
@@ -64,7 +83,7 @@ import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.model.VersionListing;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.storage.config.ConfigurationCache;
+import com.eucalyptus.objectstorage.client.OsgInternalS3Client;
 import com.eucalyptus.objectstorage.entities.S3ProviderConfiguration;
 import com.eucalyptus.objectstorage.exceptions.S3ExceptionMapper;
 import com.eucalyptus.objectstorage.exceptions.s3.AccountProblemException;
@@ -132,10 +151,9 @@ import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyType;
 import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
 import com.eucalyptus.objectstorage.msgs.UploadPartType;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviderClient;
-import com.eucalyptus.objectstorage.providers.ObjectStorageProviders.ObjectStorageProviderClientProperty;
 import com.eucalyptus.objectstorage.util.AclUtils;
-import com.eucalyptus.objectstorage.client.OsgInternalS3Client;
 import com.eucalyptus.storage.common.DateFormatter;
+import com.eucalyptus.storage.config.ConfigurationCache;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.BucketListEntry;
@@ -155,20 +173,7 @@ import com.eucalyptus.storage.msgs.s3.Part;
 import com.eucalyptus.storage.msgs.s3.VersionEntry;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Strings;
-import org.apache.log4j.Logger;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-
-import javax.annotation.Nonnull;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.Socket;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.NoSuchElementException;
+import com.google.common.collect.Lists;
 
 /**
  * Base class for S3-api based backends. Uses the Amazon Java SDK as the client.
@@ -182,7 +187,7 @@ import java.util.NoSuchElementException;
  * or any separation between Euca-users.
  *
  */
-@ObjectStorageProviderClientProperty("s3")
+
 public class S3ProviderClient implements ObjectStorageProviderClient {
 	private static final Logger LOG = Logger.getLogger(S3ProviderClient.class);
     private volatile URI upstreamEndpoint;
@@ -331,6 +336,13 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
                 ConfigurationCache.getConfiguration(S3ProviderConfiguration.class).getS3SecretKey());
 	}
 
+    private static final List<String> copyableHeaders = Collections.unmodifiableList( Lists.newArrayList(
+                            // per REST API PUT Object docs as of 10/13/2014
+            HttpHeaders.Names.CACHE_CONTROL,
+            "Content-Disposition", // strangely not included
+            HttpHeaders.Names.CONTENT_ENCODING,
+            HttpHeaders.Names.EXPIRES));
+
 	protected ObjectMetadata getS3ObjectMetadata(PutObjectType request) {
 		ObjectMetadata meta = new ObjectMetadata();
 		if(request.getMetaData() != null) {
@@ -350,6 +362,31 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 		if(!Strings.isNullOrEmpty(request.getContentType())) {
 			meta.setContentType(request.getContentType());
 		}
+
+        Map<String,String> headersToCopy = request.getCopiedHeaders();
+        if (headersToCopy != null && headersToCopy.size() > 0) {
+            for (String header : copyableHeaders) {
+                // content-length, content-md5 and content-type are copied above
+                if (headersToCopy.containsKey(header)) {
+                    String v = headersToCopy.get(header);
+                    if (HttpHeaders.Names.CACHE_CONTROL.equals(header) ) {
+                        meta.setCacheControl(v);
+                    }
+                    if ("Content-Disposition".equals(header) ) {
+                        meta.setContentDisposition(v);
+                    }
+                    if (HttpHeaders.Names.CONTENT_ENCODING.equals(header) ) {
+                        meta.setContentEncoding(v);
+                    }
+                    if (HttpHeaders.Names.EXPIRES.equals(header) ) {
+                        Date expireDate = DateFormatter.dateFromHeaderFormattedString(v);
+                        if (expireDate != null) {
+                            meta.setHttpExpiresDate(expireDate);
+                        }
+                    }
+                }
+            }
+        }
 
 		return meta;
 	}
@@ -710,6 +747,10 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
         reply.setSize(metadata.getContentLength());
         reply.setContentDisposition(metadata.getContentDisposition());
         reply.setContentType(metadata.getContentType());
+        reply.setCacheControl(metadata.getCacheControl());
+        reply.setContentEncoding(metadata.getContentEncoding());
+        Date expires = metadata.getHttpExpiresDate();
+        reply.setExpires(DateFormatter.dateToHeaderFormattedString(expires));
         reply.setEtag(metadata.getETag());
         reply.setLastModified(metadata.getLastModified());
 
@@ -1226,10 +1267,10 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
         String uploadId = request.getUploadId();
         ListPartsRequest listPartsRequest = new ListPartsRequest(bucketName, key, uploadId);
         if (request.getMaxParts() != null) {
-            listPartsRequest.setMaxParts(request.getMaxParts());
+            listPartsRequest.setMaxParts(Integer.parseInt(request.getMaxParts()));
         }
         if(request.getPartNumberMarker() != null) {
-            listPartsRequest.setPartNumberMarker(request.getPartNumberMarker());
+            listPartsRequest.setPartNumberMarker(Integer.parseInt(request.getPartNumberMarker()));
         }
         try {
             internalS3Client = getS3Client(requestUser);
@@ -1278,7 +1319,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 
         String bucketName = request.getBucket();
         ListMultipartUploadsRequest listMultipartUploadsRequest = new ListMultipartUploadsRequest(bucketName);
-        listMultipartUploadsRequest.setMaxUploads(request.getMaxUploads());
+        listMultipartUploadsRequest.setMaxUploads(Integer.parseInt(request.getMaxUploads()));
         listMultipartUploadsRequest.setKeyMarker(request.getKeyMarker());
         listMultipartUploadsRequest.setDelimiter(request.getDelimiter());
         listMultipartUploadsRequest.setPrefix(request.getPrefix());

@@ -105,7 +105,7 @@ public class TypeMappers {
   public static <A, B> B transform( A from, Class<B> to ) {
     Class target = from.getClass( );
     for ( Class p : Classes.ancestors( from ) ) {
-      if ( knownMappers.containsKey( p ) && !knownMappers.get( p ).isEmpty( ) ) {
+      if ( knownMappers.containsKey( p ) && knownMappers.get( p ).contains( to ) ) {
         target = p;
         break;
       }
@@ -143,7 +143,7 @@ public class TypeMappers {
             registerMapper( generics.get( 0 ), generics.get( 1 ), ( Function ) Classes.newInstance( candidate ) );
             return true;
           } catch ( Exception ex1 ) {
-            LOG.error( ex1, ex1 );
+            LOG.error( "Error registering type mapper: " + candidate, ex1 );
           }
         }
       }

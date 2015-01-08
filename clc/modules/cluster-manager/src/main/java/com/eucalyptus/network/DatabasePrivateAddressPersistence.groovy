@@ -37,10 +37,10 @@ class DatabasePrivateAddressPersistence implements PrivateAddressPersistence {
   private final Logger logger = Logger.getLogger( DatabasePrivateAddressPersistence )
 
   @Override
-  Optional<PrivateAddress> tryCreate( final String address ) {
+  Optional<PrivateAddress> tryCreate( final String scope, final String tag, final String address ) {
     try {
       transaction( PrivateAddress ) { EntityTransaction db ->
-        PrivateAddress privateAddress = PrivateAddress.create( address ).allocate( )
+        PrivateAddress privateAddress = PrivateAddress.create( scope, tag, address ).allocate( )
         Entities.persist( privateAddress )
         db.commit( )
         Optional.of( privateAddress )
@@ -61,7 +61,7 @@ class DatabasePrivateAddressPersistence implements PrivateAddressPersistence {
                                       final String ownerId,
                                       final Closure<V> closure ) {
     asTransaction( PrivateAddress, { PrivateAddress privateAddress ->
-      Entities.query( privateAddress, Entities.queryOptions( ).build( ) )?.getAt( 0 )?.with{
+      Entities.query( privateAddress )?.getAt( 0 )?.with{
         PrivateAddress entity ->
           if ( ownerId == null || entity.instanceId == ownerId ) {
             Optional.fromNullable( closure.call( entity ) )

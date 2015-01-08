@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -66,10 +66,6 @@ package edu.ucsb.eucalyptus.cloud
 import com.eucalyptus.component.Component
 import com.eucalyptus.component.Faults
 
-import java.util.ArrayList
-import java.util.List
-import com.eucalyptus.records.*
-import com.google.common.collect.*
 import edu.ucsb.eucalyptus.msgs.*
 import com.google.common.base.Joiner
 
@@ -132,6 +128,7 @@ public class VmInfo extends EucalyptusData {
   String placement;
   String platform;
   String bundleTaskStateName;
+  Double bundleTaskProgress;
   String createImageStateName;
   String guestStateName;
   //TODO:GRZE: these are to be cleaned up into a separate object rather than being munged in and possibly null.
@@ -146,7 +143,6 @@ public class VmInfo extends EucalyptusData {
     return "VmInfo ${reservationId} ${instanceId} ${ownerId} ${stateName} ${instanceType} ${imageId} ${kernelId} ${ramdiskId} ${launchIndex} ${serviceTag} ${netParams} ${volumes}";
   }
 }
-
 
 public class VirtualBootRecord extends EucalyptusData implements Cloneable {
   String id = "none";
@@ -203,6 +199,7 @@ public class NodeInfo implements Comparable {
   String serviceTag;
   String name;
   String partition;
+  Hypervisor hypervisor = Hypervisor.Unknown;
   Boolean hasClusterCert = false;
   Boolean hasNodeCert = false;
   Component.State lastState;
@@ -227,6 +224,7 @@ public class NodeInfo implements Comparable {
     this.partition = partition;
     this.serviceTag = nodeType.getServiceTag( );
     this.iqn = nodeType.getIqn( );
+	this.hypervisor = Hypervisor.fromString(nodeType.getHypervisor());
     this.name = (new URI(this.serviceTag)).getHost();
     this.lastSeen = new Date();
     this.certs.setServiceTag(this.serviceTag);
@@ -281,6 +279,28 @@ public class NodeInfo implements Comparable {
   
   @Override
   public String toString( ) {
-    return "NodeInfo name=${name} lastSeen=${lastSeen} serviceTag=${serviceTag} iqn=${iqn}";
+    return "NodeInfo name=${name} lastSeen=${lastSeen} serviceTag=${serviceTag} iqn=${iqn} hypervisor=${hypervisor}";
+  }
+  
+  public enum Hypervisor {
+	KVM(true), ESXI(false), Unknown(false);
+
+	private final boolean supportsEkiEri;
+
+	public Hypervisor(boolean supportsEkiEri) {
+	  this.supportsEkiEri = supportsEkiEri;
+	}
+
+    public static Hypervisor fromString(String hypervisor) {
+	  try {
+	    return Hypervisor.valueOf(hypervisor);
+	  } catch (IllegalArgumentException ex) {
+	    return Unknown;
+	  }
+	}
+
+    public boolean supportEkiEri() {
+      return supportsEkiEri;
+    }
   }
 }

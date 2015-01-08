@@ -28,6 +28,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.common.CloudMetadata;
+import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.compute.ClientComputeException;
@@ -58,15 +59,15 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import edu.ucsb.eucalyptus.cloud.InvalidParameterValueException;
-import edu.ucsb.eucalyptus.msgs.CreateTagsResponseType;
-import edu.ucsb.eucalyptus.msgs.CreateTagsType;
-import edu.ucsb.eucalyptus.msgs.DeleteResourceTag;
-import edu.ucsb.eucalyptus.msgs.DeleteTagsResponseType;
-import edu.ucsb.eucalyptus.msgs.DeleteTagsType;
-import edu.ucsb.eucalyptus.msgs.DescribeTagsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeTagsType;
-import edu.ucsb.eucalyptus.msgs.ResourceTag;
-import edu.ucsb.eucalyptus.msgs.TagInfo;
+import com.eucalyptus.compute.common.backend.CreateTagsResponseType;
+import com.eucalyptus.compute.common.backend.CreateTagsType;
+import com.eucalyptus.compute.common.backend.DeleteTagsResponseType;
+import com.eucalyptus.compute.common.backend.DeleteTagsType;
+import com.eucalyptus.compute.common.backend.DescribeTagsResponseType;
+import com.eucalyptus.compute.common.backend.DescribeTagsType;
+import com.eucalyptus.compute.common.DeleteResourceTag;
+import com.eucalyptus.compute.common.ResourceTag;
+import com.eucalyptus.compute.common.TagInfo;
 
 /**
  * Service implementation for Tag operations
@@ -95,11 +96,15 @@ public class TagManager {
       final String key = resourceTag.getKey();
       final String value = Strings.nullToEmpty( resourceTag.getValue() ).trim();
 
-      if ( Strings.isNullOrEmpty( key ) || key.trim().length() > 128 || isReserved( key ) ) {
-        throw new InvalidParameterValueException( "Invalid key (max length 128, must not be empty, reserved prefixes "+reservedPrefixes+"): "+key );     
+      if ( isReserved( key ) ) {
+        throw new ClientComputeException( "InvalidParameterValue", "Tag keys starting with 'aws:' and 'euca:' are reserved for internal use" );
       }
-      if ( value.length() > 256 || isReserved( key ) ) {
-        throw new InvalidParameterValueException( "Invalid value (max length 256, reserved prefixes "+reservedPrefixes+"): "+value );
+
+      if ( Strings.isNullOrEmpty( key ) || key.trim().length() > 127 ) {
+        throw new ClientComputeException( "InvalidParameterValue", "Tag key exceeds the maximum length of 127 characters" );
+      }
+      if ( value.length() > 255 ) {
+        throw new ClientComputeException( "InvalidParameterValue", "Tag value exceeds the maximum length of 255 characters" );
       }
     }
     
@@ -131,7 +136,7 @@ public class TagManager {
       try {
         reply.set_return( Entities.asTransaction( Tag.class, creator ).apply( null ) );
       } catch ( TagLimitException e ) {
-        throw new TagLimitExceededException( );
+        throw new ClientComputeException( "TagLimitExceeded", "The maximum number of Tags for a resource has been reached." );
       } catch ( RuntimeException e ) {
         handleException( e );
       }
@@ -193,13 +198,17 @@ public class TagManager {
     final Context context = Contexts.lookup();
 
     final Filter filter = Filters.generate( request.getFilterSet(), Tag.class );
+    final Predicate<? super Tag> requestedAndAccessible = CloudMetadatas.filteringFor(Tag.class)
+        .byPredicate( filter.asPredicate( ) )
+        .byPrivileges( )
+        .buildPredicate( );
     final Ordering<Tag> ordering = Ordering.natural().onResultOf( Tags.resourceId() )
         .compound( Ordering.natural().onResultOf( Tags.key() ) )
         .compound( Ordering.natural().onResultOf( Tags.value() ) );
     Iterables.addAll( reply.getTagSet(), Iterables.transform(
         ordering.sortedCopy( Tags.list(
             context.getUserFullName().asAccountFullName(),
-            Predicates.and( filter.asPredicate(), RestrictedTypes.<Tag>filterPrivileged() ),
+            requestedAndAccessible,
             filter.asCriterion(),
             filter.getAliases() ) ),
         TypeMappers.lookup( Tag.class, TagInfo.class )

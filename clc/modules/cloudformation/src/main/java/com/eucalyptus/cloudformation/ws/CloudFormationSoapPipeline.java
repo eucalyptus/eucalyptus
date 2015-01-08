@@ -29,6 +29,7 @@ public class CloudFormationSoapPipeline extends SoapPipeline {
   public CloudFormationSoapPipeline( ) {
     super(
         "cloudformation-soap",
+        CloudFormation.class,
         "/services/CloudFormation",
         "http://cloudformation.amazonaws.com/doc/2010-05-15/",
         "http://cloudformation.amazonaws.com/doc/\\d\\d\\d\\d-\\d\\d-\\d\\d/" );

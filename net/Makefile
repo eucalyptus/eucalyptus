@@ -62,7 +62,7 @@
 
 include ../Makedefs
 
-all: vnetwork.o ipt_handler.o eucanetd.o globalnetwork.o eucanetd
+all: vnetwork.o ipt_handler.o eucanetd.o globalnetwork.o midonet-api.o euca-to-mido.o eucanetd
 
 build: all
 
@@ -76,12 +76,16 @@ indent:
 	done
 
 eucanetd: vnetwork.o ipt_handler.o globalnetwork.o eucanetd.o 
-	$(CC) $(CPPFLAGS) $(CFLAGS) `xslt-config --cflags` $(INCLUDES) eucanetd.c ipt_handler.o globalnetwork.o ../util/sequence_executor.o ../util/atomic_file.o ../net/vnetwork.o ../util/log.o ../util/ipc.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/hash.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/euca_auth.o ../storage/diskutil.o ../storage/http.o ../util/config.o -I../util -I../net  -lpthread -lm -lssl  -lxml2 -lcurl -lcrypto -lxml2 -o eucanetd
+	$(CC) $(CPPFLAGS) $(CFLAGS) `xslt-config --cflags` $(INCLUDES) eucanetd.c ipt_handler.o globalnetwork.o midonet-api.o euca-to-mido.o ../util/sequence_executor.o ../util/atomic_file.o ../net/vnetwork.o ../util/log.o ../util/ipc.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/hash.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/euca_auth.o ../storage/diskutil.o ../storage/http.o ../util/config.o -I../util -I../net  -lpthread -lm -lssl  -lxml2 -lcurl -lcrypto -lxml2 -ljson -o eucanetd
 
 clean:
 	rm -rf *~ *.o eucanetd
 
-distclean:
+test:
+	$(CC) $(CPPFLAGS) $(CFLAGS) `xslt-config --cflags` -DEUCANETD_TEST $(INCLUDES) eucanetd.c ipt_handler.o globalnetwork.o ../util/sequence_executor.o ../util/atomic_file.o ../net/vnetwork.o ../util/log.o ../util/ipc.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/hash.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/euca_auth.o ../storage/diskutil.o ../storage/http.o ../util/config.o -I../util -I../net  -lpthread -lm -lssl  -lxml2 -lcurl -lcrypto -lxml2 -o eucanetd
+	$(CC) $(CPPFLAGS) $(CFLAGS) `xslt-config --cflags` -DMIDONET_API_TEST $(INCLUDES) midonet-api.c ipt_handler.o globalnetwork.o ../util/sequence_executor.o ../util/atomic_file.o ../net/vnetwork.o ../util/log.o ../util/ipc.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/hash.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/euca_auth.o ../storage/diskutil.o ../storage/http.o ../util/config.o -I../util -I../net  -lpthread -lm -lssl  -lxml2 -lcurl -lcrypto -lxml2 -ljson -o midonet-api
+
+distclean: clean
 
 install:
 	@$(INSTALL) -d $(DESTDIR)$(sbindir)

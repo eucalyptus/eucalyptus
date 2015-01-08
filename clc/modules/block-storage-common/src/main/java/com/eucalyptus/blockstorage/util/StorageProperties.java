@@ -63,16 +63,15 @@
 package com.eucalyptus.blockstorage.util;
 
 import java.util.NoSuchElementException;
+import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.blockstorage.Storage;
-import com.eucalyptus.blockstorage.entities.VolumeInfo;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.system.BaseDirectory;
 
@@ -80,9 +79,14 @@ import edu.ucsb.eucalyptus.util.ConfigParser;
 import edu.ucsb.eucalyptus.util.StreamConsumer;
 
 public class StorageProperties {
-
 	private static Logger LOG = Logger.getLogger( StorageProperties.class );
 
+    /*
+    Threshold after which the SC will cleanup the failed volume record by deleting it.
+    This value ensures that the SC can send the volume state to the CLC possibly multiple times so that
+    a single missed message will not cause the CLC to hit its much longer timeout for volume state (2 hrs).
+     */
+    public static final long FAILED_STATE_CLEANUP_THRESHOLD_MS = 10 * 60 * 1000l; //10 minutes
 	public static final String storageRootDirectory = BaseDirectory.VAR.getChildPath( "volumes" );
 	public static final long GB = 1024*1024*1024;
 	public static final long MB = 1024*1024;
@@ -136,6 +140,21 @@ public class StorageProperties {
                     "]}";
 
     public static final Integer DELETED_VOLUME_EXPIRATION_TIME =  24;//hours
+    
+	/**
+	 * <p>Perl connection script returns xml output for libvirt usage. Use this pattern for parsing the block device name from the output.</p>
+	 * 
+	 * Example output from perl script: <pre> {@code 
+	 * <disk type='block'> 
+	 * <driver cache='none' name='qemu'/> 
+	 * <source dev='/dev/disk/by-id/dm-uuid-mpath-3600a098037542d68732b447869397146'/> 
+	 * <target bus='virtio' dev='vdb'/> <serial>vol-5062e8f1-dev-sdb</serial> </disk>
+	 * }</pre>
+	 * 
+	 * Use this regex pattern for parsing the block device string /dev/disk/by-id/dm-uuid-mpath-3600a098037542d68732b447869397146
+	 */
+	public static final Pattern PARSE_BLOCK_DEVICE = Pattern.compile("source.* dev='([^']*)'");
+    
     public static String formatVolumeAttachmentTokenForTransfer(String token, String volumeId) {
 		return TOKEN_PREFIX + volumeId + "," + token;
 	}
@@ -208,9 +227,4 @@ public class StorageProperties {
 	public enum StorageParameters {
 		EucaSignature, EucaSnapSize, EucaCert, EucaEffectiveUserId
 	}
-	
-	public static <T> EntityWrapper<T> getEntityWrapper( ) {
-		return ( EntityWrapper<T> ) EntityWrapper.get( VolumeInfo.class );
-	}
-
 }

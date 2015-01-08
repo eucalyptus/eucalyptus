@@ -69,7 +69,7 @@ import org.xbill.DNS.DClass;
 import org.xbill.DNS.NSRecord;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.NameTooLongException;
-import org.xbill.DNS.Record;
+import org.xbill.DNS.TextParseException;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
@@ -79,7 +79,6 @@ import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
-import com.google.common.net.InetAddresses;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 /**
@@ -160,7 +159,7 @@ public class DomainNames {
    * Get the list of Name Server Records for the given Name if we are authoritative. That is, only
    * ever return Names which refer to our interna DNS server.
    * 
-   * @param name Name the name for which to return our nameserver set for if we are authoritative
+   * @param systemDomain the name for which to return our nameserver set for if we are authoritative
    * @return List of Name's of the local systems if we are authoritative
    * @throws NoSuchElementException if the name is not authoritivately served by us
    */
@@ -181,10 +180,13 @@ public class DomainNames {
       
     },
     EXTERNAL {
-      
       @Override
       public Name get( ) {
-        return DomainNames.absolute( Name.fromConstantString( SystemConfiguration.getSystemConfiguration( ).getDnsDomain( ) ) );
+        try {
+          return DomainNames.absolute( Name.fromString( SystemConfiguration.getSystemConfiguration().getDnsDomain() ) );
+        } catch ( final TextParseException e ) {
+          return DomainNames.absolute( Name.fromConstantString( "localhost" ) );
+        }
       }
       
     };

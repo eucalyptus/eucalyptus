@@ -32,6 +32,7 @@ import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
 import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistents;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.OwnerFullName;
@@ -44,6 +45,7 @@ import com.google.common.collect.Lists;
 /**
  *
  */
+@ComponentNamed
 public class PersistenceScalingActivities extends ScalingActivities {
 
   private PersistenceSupport persistenceSupport = new PersistenceSupport();
@@ -131,11 +133,6 @@ public class PersistenceScalingActivities extends ScalingActivities {
   private static class PersistenceSupport extends AbstractOwnedPersistents<ScalingActivity> {
     private PersistenceSupport() {
       super( "scaling activity" );
-    }
-
-    @Override
-    protected ScalingActivity exampleWithUuid( final String uuid ) {
-      return ScalingActivity.withUuid( uuid );
     }
 
     @Override

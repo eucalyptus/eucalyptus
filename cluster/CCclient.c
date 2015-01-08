@@ -202,6 +202,7 @@ int main(int argc, char **argv)
     virtualMachine params = { 64, 1, 64, "m1.small" };
     sensorResource **res;
 
+    euca_srand();                      // seed the random number generator
     bzero(&mymeta, sizeof(ncMetadata));
 
     mymeta.userId = strdup("admin");
@@ -231,7 +232,7 @@ int main(int argc, char **argv)
         euca_home = "";
     }
     snprintf(configFile, 1024, EUCALYPTUS_CONF_LOCATION, euca_home);
-    snprintf(policyFile, 1024, EUCALYPTUS_KEYS_DIR "/cc-client-policy.xml", euca_home);
+    snprintf(policyFile, 1024, EUCALYPTUS_POLICIES_DIR "/cc-client-policy.xml", euca_home);
 
     rc = get_conf_var(configFile, "CC_PORT", &tmpstr);
     if (rc != 1) {

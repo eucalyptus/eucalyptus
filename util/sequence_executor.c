@@ -215,6 +215,10 @@ int se_add(sequence_executor * se, char *command, char *cleanup_command, void *c
         return (1);
     }
 
+    if (se->max_commands >= MAX_SE_COMMANDS) {
+        return(1);
+    }
+
     if (command) {
         snprintf(cmd, EUCA_MAX_PATH, "%s %s", se->cmdprefix, command);
         se->commands[se->max_commands] = strdup(cmd);
@@ -314,7 +318,7 @@ int se_execute(sequence_executor * se)
             failed = 1;
             break;
         } else {
-            LOGDEBUG("COMMAND SUCCESS: command='%s'\n", se->commands[i]);
+            LOGDEBUG("COMMAND SUCCESS: command='%s' stdout='%s' stderr='%s'\n", se->commands[i], out, err);
         }
     }
 

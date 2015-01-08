@@ -62,15 +62,16 @@
 
 package com.eucalyptus.ws.server;
 
-import java.io.ByteArrayOutputStream;
+import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.security.auth.login.LoginException;
-import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandler;
@@ -89,7 +90,6 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.jboss.netty.handler.timeout.WriteTimeoutException;
 import com.eucalyptus.binding.Binding;
-import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpMessage;
@@ -99,8 +99,8 @@ import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.Handlers;
 import com.eucalyptus.ws.WebServicesException;
+import com.eucalyptus.ws.handlers.ExceptionMarshallerHandler;
 import com.eucalyptus.ws.server.FilteredPipeline.InternalPipeline;
-import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.google.common.base.Optional;
 
 public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE: this needs to move up dependency tree.
@@ -109,7 +109,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
   
   @Override
   public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
-    Callable<Long> stat = Statistics.startUpstream( ctx.getChannel( ), this );
+    Callable<Long> stat = MessageStatistics.startUpstream(ctx.getChannel(), this);
     try {
       if ( this.pipeline.get( ) == null ) {
         lookupPipeline( ctx, e );
@@ -134,7 +134,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
       LOG.trace( ex );
       Logs.extreme( ).error( ex, ex );
       stat.call( );
-      this.sendError( ctx, HttpResponseStatus.NOT_FOUND, ex );
+      this.sendError( ctx, e, HttpResponseStatus.NOT_FOUND, ex );
     }
   }
   
@@ -178,57 +178,54 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
     final Throwable cause = e.getCause( );
     Logs.extreme( ).error( cause, cause );
     try {
-      if ( ch != null ) {
-        Contexts.clear( Contexts.lookup( ch ) );
+      if ( cause instanceof ReadTimeoutException ) {//TODO:ASAP:GRZE: wth are all these exception types?!?! ONLY WebServicesException caught; else wrap.
+        this.sendError( ctx, e, HttpResponseStatus.REQUEST_TIMEOUT, cause );
+      } else if ( cause instanceof WriteTimeoutException ) {
+        ctx.sendUpstream( e );
+        ctx.getChannel().close();
+      } else if ( cause instanceof TooLongFrameException ) {
+        this.sendError( ctx, e, HttpResponseStatus.BAD_REQUEST, cause );
+      } else if ( cause instanceof IllegalArgumentException ) {
+        this.sendError( ctx, e, HttpResponseStatus.BAD_REQUEST, cause );
+      } else if ( cause instanceof LoginException ) {
+        this.sendError( ctx, e, HttpResponseStatus.FORBIDDEN, cause );
+      } else if ( e.getCause() instanceof WebServicesException ) {
+        final WebServicesException webEx = (WebServicesException) e.getCause();
+        if ( webEx.getStatus().getCode() != 403 ) LOG.error( "Internal Error: " + cause.getMessage() );
+        Logs.extreme().error( cause, cause );
+        this.sendError( ctx, e, webEx.getStatus(), cause );
+      } else {
+        this.sendError( ctx, e, HttpResponseStatus.BAD_REQUEST, cause );
       }
-    } catch ( Exception ex ) {
+    } finally {
+      try {
+        if ( ch != null ) {
+          Contexts.clear( Contexts.lookup( ch ) );
+        }
+      } catch ( Exception ex ) {
 //      LOG.error( ex, ex );
-    }
-    if ( cause instanceof ReadTimeoutException ) {//TODO:ASAP:GRZE: wth are all these exception types?!?! ONLY WebServicesException caught; else wrap.
-      this.sendError( ctx, HttpResponseStatus.REQUEST_TIMEOUT, cause );
-    } else if ( cause instanceof WriteTimeoutException ) {
-      ctx.sendUpstream( e );
-      ctx.getChannel( ).close( );
-    } else if ( cause instanceof TooLongFrameException ) {
-      this.sendError( ctx, HttpResponseStatus.BAD_REQUEST, cause );
-    } else if ( cause instanceof IllegalArgumentException ) {
-      this.sendError( ctx, HttpResponseStatus.BAD_REQUEST, cause );
-    } else if ( cause instanceof LoginException ) {
-      this.sendError( ctx, HttpResponseStatus.FORBIDDEN, cause );
-    } else if ( e.getCause( ) instanceof WebServicesException ) {
-      final WebServicesException webEx = (WebServicesException) e.getCause( );
-      if ( webEx.getStatus( ).getCode( ) != 403 ) LOG.error( "Internal Error: " + cause.getMessage( ) );
-      Logs.extreme( ).error( cause, cause );
-      this.sendError( ctx, webEx.getStatus( ), cause );
-    } else {
-      this.sendError( ctx, HttpResponseStatus.BAD_REQUEST, cause );
+      }
     }
   }
   
-  private void sendError( final ChannelHandlerContext ctx, final HttpResponseStatus restStatus, Throwable t ) {
+  private void sendError( final ChannelHandlerContext ctx,
+                          final ChannelEvent event,
+                          final HttpResponseStatus restStatus,
+                          Throwable t ) {
     Logs.exhaust( ).error( t, t );
 
     HttpResponseStatus status = restStatus;
     ChannelBuffer buffer = null;
-    Optional<String> contentType = Optional.absent();
-    if ( ctx.getPipeline().get( SoapMarshallingHandler.class ) != null ) {
-      final SOAPEnvelope soapEnvelope = Binding.createFault(
-          status.getCode()<500 ? "soapenv:Client" : "soapenv:Server",
-          t.getMessage(),
-          Logs.isExtrrreeeme() ?
-            Exceptions.string( t ) :
-            t.getMessage() );
+    Map<String,String> headers = Collections.emptyMap( );
+    final ExceptionMarshallerHandler exceptionMarshallerHandler =
+        ctx.getPipeline().get( ExceptionMarshallerHandler.class );
+    if ( exceptionMarshallerHandler != null ) {
       try {
-        final ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
-        HoldMe.canHas.lock( );
-        try {
-          soapEnvelope.serialize( byteOut );
-        } finally {
-          HoldMe.canHas.unlock( );
-        }
-        status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
-        buffer = ChannelBuffers.wrappedBuffer( byteOut.toByteArray( ) );
-        contentType = Optional.of( "text/xml; charset=UTF-8" );
+        final ExceptionMarshallerHandler.ExceptionResponse exceptionResponse =
+            exceptionMarshallerHandler.marshallException( event, status, t );
+        status = exceptionResponse.getStatus();
+        buffer = exceptionResponse.getContent();
+        headers = exceptionResponse.getHeaders();
       } catch ( Exception e ) {
         Logs.exhaust().error( e, e );
       }
@@ -242,8 +239,11 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
     }
 
     final HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, status );
-    response.addHeader( HttpHeaders.Names.CONTENT_TYPE, contentType.or( "text/plain; charset=UTF-8" ) );
-    response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes( ) ) );
+    response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
+    response.setHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes() ) );
+    for ( final Map.Entry<String,String> headerEntry : headers.entrySet( ) ) {
+      response.setHeader( headerEntry.getKey( ), headerEntry.getValue( ) );
+    }
     response.setContent( buffer );
 
     ChannelFuture writeFuture = Channels.future( ctx.getChannel( ) );

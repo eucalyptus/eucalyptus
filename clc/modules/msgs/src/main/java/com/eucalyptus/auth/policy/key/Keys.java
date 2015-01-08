@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -72,7 +72,6 @@ import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 
 /**
@@ -97,6 +96,8 @@ public class Keys {
   public static final String EC2_QUOTA_SNAPSHOT_NUMBER = "ec2:quota-snapshotnumber";
   public static final String EC2_QUOTA_ADDRESS_NUMBER = "ec2:quota-addressnumber";
   public static final String EC2_QUOTA_SECURITYGROUP_NUMBER = "ec2:quota-securitygroupnumber";
+  public static final String EC2_QUOTA_VPC_NUMBER = "ec2:quota-vpcnumber";
+  public static final String EC2_QUOTA_INTERNETGATEWAY_NUMBER = "ec2:quota-internetgatewaynumber";
 
   public static final String S3_QUOTA_BUCKET_NUMBER = "s3:quota-bucketnumber";
   public static final String S3_QUOTA_BUCKET_TOTAL_SIZE = "s3:quota-buckettotalsize";
@@ -114,6 +115,8 @@ public class Keys {
   public static final String IAM_QUOTA_ROLE_NUMBER = "iam:quota-rolenumber";
   public static final String IAM_QUOTA_INSTANCE_PROFILE_NUMBER = "iam:quota-instanceprofilenumber";
   public static final String IAM_QUOTA_SERVER_CERTIFICATE_NUMBER = "iam:quota-servercertificatenumber";
+  public static final String IAM_QUOTA_ACCESS_KEY_NUMBER_PER_USER = "iam:quota-accesskeynumberperuser";
+  public static final String IAM_QUOTA_SIGNING_CERTIFICATE_NUMBER_PER_USER = "iam:quota-signingcertificatenumberperuser";
 
   private static final Map<String, Class<? extends Key>> KEY_MAP = Maps.newHashMap( );
     

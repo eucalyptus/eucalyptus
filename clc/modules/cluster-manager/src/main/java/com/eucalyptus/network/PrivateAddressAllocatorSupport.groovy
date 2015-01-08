@@ -47,36 +47,36 @@ abstract class PrivateAddressAllocatorSupport implements PrivateAddressAllocator
   }
 
   @Override
-  String allocate( Iterable<Integer> addresses ) throws NotEnoughResourcesException {
+  String allocate( String scope, String tag, Iterable<Integer> addresses ) throws NotEnoughResourcesException {
     allocate( addresses, { Integer address ->
-      getDistinctPersistence( ).tryCreate( PrivateAddresses.fromInteger( address.intValue( ) ) )
+      getDistinctPersistence( ).tryCreate( scope, tag, PrivateAddresses.fromInteger( address.intValue( ) ) )
           .transform( RestrictedTypes.toDisplayName( ) ).orNull( )
     } as Closure<String>) ?: typedThrow(String){ new NotEnoughResourcesException( 'Insufficient addresses' ) }
   }
 
   @Override
   void associate( String address, VmInstance instance ) throws ResourceAllocationException {
-    getPersistence( ).withFirstMatch( PrivateAddress.named( address ), null ) { PrivateAddress privateAddress ->
+    getPersistence( ).withFirstMatch( PrivateAddress.named( instance.getVpcId( ), address ), null ) { PrivateAddress privateAddress ->
       privateAddress.set( instance )
     }
   }
 
   @Override
-  void release( String address, String ownerId ) {
-    getDistinctPersistence( ).withFirstMatch( PrivateAddress.named( address ), ownerId ) { PrivateAddress privateAddress ->
+  String release( String scope, String address, String ownerId ) {
+    getDistinctPersistence( ).withFirstMatch( PrivateAddress.named( scope, address ), ownerId ) { PrivateAddress privateAddress ->
       if ( EXTANT.apply( privateAddress ) || !privateAddress.assignedPartition ) {
         getPersistence( ).teardown( privateAddress )
       } else {
         privateAddress.set( null )
         privateAddress.releasing( )
       }
-      void
-    }
+      privateAddress.tag
+    }.orNull( )
   }
 
   @Override
-  boolean verify( String address, String ownerId ) {
-    getPersistence( ).withFirstMatch( PrivateAddress.named( address ), ownerId ) { PrivateAddress privateAddress ->
+  boolean verify( String scope, String address, String ownerId ) {
+    getPersistence( ).withFirstMatch( PrivateAddress.named( scope, address ), ownerId ) { PrivateAddress privateAddress ->
       ownerId != null && ownerId == privateAddress.instanceId
     }.with{
       present ? get( ) : false
@@ -86,7 +86,7 @@ abstract class PrivateAddressAllocatorSupport implements PrivateAddressAllocator
   @Override
   void releasing( Iterable<String> activeAddresses, String partition ) {
     getPersistence( ).withMatching( PrivateAddress.inState( RELEASING, partition ) ) { PrivateAddress privateAddress ->
-      if ( !Iterables.contains( activeAddresses, privateAddress.name ) ) {
+      if ( !Iterables.contains( activeAddresses, privateAddress.name ) && privateAddress.getScope( ) == null ) {
         logger.debug( "Releasing private IP address ${privateAddress.name}" )
         getPersistence( ).teardown( privateAddress )
       }

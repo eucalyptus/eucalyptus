@@ -1,10 +1,29 @@
+/*************************************************************************
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
+
 package com.eucalyptus.loadbalancing;
 
 import java.util.Collection;
 import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
@@ -25,40 +44,20 @@ import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMapper;
-import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.net.HostSpecifier;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-
-/*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; version 3 of the License.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
- ************************************************************************/
 
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
  *
  */
-@ConfigurableClass(root = "loadbalancing", description = "Parameters controlling loadbalancing")
+@ConfigurableClass(root = "services.loadbalancing", description = "Parameters controlling loadbalancing")
 @Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_dns" )
@@ -78,6 +77,19 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 		    }
 		}
 	}
+	
+	       
+	public static class ELBDnsTtlChangeListener implements PropertyChangeListener {
+	    @Override
+	    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+	      try{
+	        final int ttl = Integer.parseInt((String)newValue);
+	      }catch(final Exception ex){
+	       throw new ConfigurablePropertyException("Malformed ttl value"); 
+	      }
+	    }
+	}
+
 
 	private static Logger    LOG     = Logger.getLogger( LoadBalancerDnsRecord.class );
 	@ConfigurableField( displayName = "loadbalancer_dns_subdomain",
@@ -87,11 +99,23 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 			type = ConfigurableFieldType.KEYVALUE,
 			changeListener = ELBDnsChangeListener.class
 			)
-	public static String LOADBALANCER_DNS_SUBDOMAIN = "lb";
+	public static String DNS_SUBDOMAIN = "lb";
+	
+	@ConfigurableField( displayName = "loadbalancer_dns_ttl",
+	    description = "loadbalancer dns ttl value",
+	    initial = "60",
+	    readonly = false,
+	    type = ConfigurableFieldType.KEYVALUE,
+	    changeListener = ELBDnsTtlChangeListener.class
+	    )
+	public static String DNS_TTL = "60";
+	public static int getLoadbalancerTTL(){
+	  return Integer.parseInt(DNS_TTL);
+	}
 	
 	@Transient
 	private static final long serialVersionUID = 1L;
-	
+
 	@Transient
 	private LoadBalancerDnsRecordRelationView view = null;
 	
@@ -118,7 +142,7 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 		dnsPrefix = dnsPrefix.replace(".", "_");
 		
 		final int maxPrefixLength = 253 - 
-				String.format(".%s.%s", LOADBALANCER_DNS_SUBDOMAIN, 
+				String.format(".%s.%s", DNS_SUBDOMAIN, 
 						SystemConfiguration.getSystemConfiguration().getDnsDomain()).length();
 		if(maxPrefixLength < 0 )
 			throw Exceptions.toUndeclared("invalid dns name length");
@@ -126,7 +150,7 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 			dnsPrefix = dnsPrefix.substring(0, maxPrefixLength);
 				
 		instance.dnsName = dnsPrefix;
-		instance.dnsZone = LOADBALANCER_DNS_SUBDOMAIN;
+		instance.dnsZone = DNS_SUBDOMAIN;
 		instance.uniqueName = instance.createUniqueName();
 		return instance;
 	}
@@ -157,11 +181,11 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 	public void setLoadbalancer(final LoadBalancer lb){
 		this.loadbalancer = lb;
 	}
-	
+
 	public LoadBalancerCoreView getLoadbalancer(){
 		return this.view.getLoadBalancer();
 	}
-	
+
 	public String getName(){
 		return String.format("%s.%s", this.dnsName, this.dnsZone);
 	}
@@ -209,11 +233,11 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 			return this.dns.getDnsName();
 		}
 	}
-	
+
 	@TypeMapper
 	public enum LoadBalancerDnsRecordCoreViewTransform implements Function<LoadBalancerDnsRecord, LoadBalancerDnsRecordCoreView>{
 		INSTANCE;
-		
+
 		@Override
 		@Nullable
 		public LoadBalancerDnsRecordCoreView apply(
@@ -221,7 +245,7 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 			return new LoadBalancerDnsRecordCoreView(arg0);
 		}
 	}
-	
+
 	public enum LoadBalancerDnsRecordEntityTransform implements Function<LoadBalancerDnsRecordCoreView, LoadBalancerDnsRecord>{
 		INSTANCE;
 
@@ -229,31 +253,24 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 		@Nullable
 		public LoadBalancerDnsRecord apply(
 				@Nullable LoadBalancerDnsRecordCoreView arg0) {
-			final EntityTransaction db = Entities.get(LoadBalancerDnsRecord.class);
-			try{
-				final LoadBalancerDnsRecord dns = Entities.uniqueResult(arg0.dns);
-				db.commit();
-				return dns;
+			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerDnsRecord.class ) ) {
+				return Entities.uniqueResult(arg0.dns);
 			}catch(final Exception ex){
-				db.rollback();
 				throw Exceptions.toUndeclared(ex);
-			}finally{
-				if(db.isActive())
-					db.rollback();
 			}
 		}
 	}
 	
 	public static class LoadBalancerDnsRecordRelationView {
 		private LoadBalancerDnsRecord dns = null;
-		private LoadBalancerCoreView loadbalancer = null;
+		private LoadBalancer loadbalancer = null;
 		LoadBalancerDnsRecordRelationView(LoadBalancerDnsRecord dns){
 			this.dns = dns;
-			if(dns.loadbalancer!=null)
-				this.loadbalancer = TypeMappers.transform(dns.loadbalancer, LoadBalancerCoreView.class);
+			Entities.initialize( dns.loadbalancer );
+			this.loadbalancer = dns.loadbalancer;
 		}
 		public LoadBalancerCoreView getLoadBalancer(){
-			return this.loadbalancer;
+			return this.loadbalancer.getCoreView( );
 		}
 	}
 }

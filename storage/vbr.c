@@ -170,6 +170,9 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+boolean virtio_root = FALSE; //!< flag that forces use of Virtio for root disk
+boolean virtio_disk = FALSE; //!< flag that forces use of Virtio for non-root disks
+
 #ifdef _UNIT_TEST
 const char *euca_this_component_name = "sc";    //!< Eucalyptus Component Name
 const char *euca_client_component_name = "nc";  //!< The client component name
@@ -233,8 +236,8 @@ static int copy_creator(artifact * a);
 static void art_print_tree(const char *prefix, artifact * a);
 static int art_gen_id(char *buf, unsigned int buf_size, const char *first, const char *sig);
 static void convert_id(const char *src, char *dst, unsigned int size);
-static char *url_get_digest(const char *url, boolean *bail_flag);
-static artifact *art_alloc_vbr(virtualBootRecord * vbr, boolean do_make_work_copy, boolean is_migration_dest, boolean must_be_file, const char *sshkey, boolean *bail_flag);
+static char *url_get_digest(const char *url, boolean * bail_flag);
+static artifact *art_alloc_vbr(virtualBootRecord * vbr, boolean do_make_work_copy, boolean is_migration_dest, boolean must_be_file, const char *sshkey, boolean * bail_flag);
 static artifact *art_alloc_disk(virtualBootRecord * vbr, artifact * prereqs[], int num_prereqs, artifact * parts[], int num_parts,
                                 artifact * emi_disk, boolean do_make_bootable, boolean do_make_work_copy, boolean is_migration_dest);
 static int find_or_create_blob(int flags, blobstore * bs, const char *id, long long size_bytes, const char *sig, blockblob ** bbp);
@@ -291,7 +294,7 @@ static void dummy_err_fn(const char *msg);
 //!
 //! @note
 //!
-int vbr_init_hostconfig(char *hostIqn, char *hostIp, char *ws_sec_policy_file, int use_ws_sec)
+int vbr_init_hostconfig(char *hostIqn, char *hostIp, char *ws_sec_policy_file, int use_ws_sec, boolean use_virtio_root, boolean use_virtio_disk)
 {
     LOGDEBUG("Initializing host config for VBR. Setting IP, IQN, and security policy\n");
     euca_strncpy(localhost_config.iqn, hostIqn, CHAR_BUFFER_SIZE);
@@ -301,6 +304,8 @@ int vbr_init_hostconfig(char *hostIqn, char *hostIp, char *ws_sec_policy_file, i
     LOGDEBUG("VBR host config set to ip: %s iqn: %s, use_sec = %d, policy file = %s\n", localhost_config.ip, localhost_config.iqn, localhost_config.use_ws_sec,
              localhost_config.ws_sec_policy_file);
     hostconfig_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
+    virtio_root = use_virtio_root;
+    virtio_disk = use_virtio_disk;
     return (EUCA_OK);
 }
 
@@ -730,9 +735,6 @@ int vbr_parse(virtualMachine * vm, ncMetadata * pMeta)
         if (parse_rec(vbr, vm, pMeta) != EUCA_OK)
             return (EUCA_ERROR);
 
-        if (vbr->type != NC_RESOURCE_KERNEL && vbr->type != NC_RESOURCE_RAMDISK)
-            partitions[vbr->guestDeviceBus][vbr->diskNumber][vbr->partitionNumber] = vbr;
-
         if (vm->root == NULL) {        // we have not identified the EMI yet
             if (vbr->type == NC_RESOURCE_IMAGE || (vbr->type == NC_RESOURCE_EBS && vbr->diskNumber == 0 && vbr->partitionNumber == 0)) {
                 vm->root = vbr;
@@ -742,6 +744,31 @@ int vbr_parse(virtualMachine * vm, ncMetadata * pMeta)
                 LOGERROR("more than one EMI specified in the boot record\n");
                 return (EUCA_ERROR);
             }
+        }
+        
+        if (vbr->guestDeviceType == DEV_TYPE_DISK) {
+
+            // force use of Virtio, based on node config
+            if ((vm->root == vbr && virtio_root)
+                ||
+                (vm->root != vbr && virtio_disk)) { 
+                vbr->guestDeviceBus = BUS_TYPE_VIRTIO;
+                vbr->guestDeviceName[0] = 'v';
+            }
+            
+            // compute serial ID
+            char disk_id[128];
+            if (vbr->type == NC_RESOURCE_EBS) {
+                snprintf(disk_id, sizeof(disk_id), "%s", vbr->id);
+            } else {
+                snprintf(disk_id, sizeof(disk_id), "bdm-%s", vbr->typeName);
+            }
+            snprintf(vbr->guestDeviceSerialId, sizeof(vbr->guestDeviceSerialId),
+                     "euca-%s-dev-%s", disk_id, vbr->guestDeviceName);
+        }
+
+        if (vbr->type != NC_RESOURCE_KERNEL && vbr->type != NC_RESOURCE_RAMDISK) {
+            partitions[vbr->guestDeviceBus][vbr->diskNumber][vbr->partitionNumber] = vbr;
         }
     }
 
@@ -962,7 +989,7 @@ static void update_vbr_with_backing_info(artifact * a)
         }
         char linkpath[PATH_MAX];
         snprintf(linkpath, sizeof(linkpath), "%s/link-to-%s", bbdirpath, linkname);
-        if (check_path(linkpath) == 0) { // symlink exists because lower-level artifact created it
+        if (check_path(linkpath) == 0) {    // symlink exists because lower-level artifact created it
             unlink(linkpath);
         }
         if (symlink(path, linkpath) == 0) {
@@ -1143,14 +1170,16 @@ static int partition_creator(artifact * a)
     }
 
     LOGDEBUG("[%s] mapping euca-zero device into partition %s\n", a->instanceId, a->id);
-    blockmap map = { BLOBSTORE_SNAPSHOT, BLOBSTORE_ZERO, {blob:NULL}, 0, 0, a->size_bytes / 512};
+blockmap map = { BLOBSTORE_SNAPSHOT, BLOBSTORE_ZERO, {blob:NULL}
+    , 0, 0, a->size_bytes / 512
+    };
     if (blockblob_clone(a->bb, &map, 1) == -1) {
         int ret = blobstore_get_error();
         LOGERROR("[%s] failed to clone euca-zero device into partition: %d %s\n", a->instanceId, ret, blobstore_get_last_msg());
         return EUCA_ERROR;
     }
 
-    LOGINFO("[%s] creating partition of size %lld bytes and type %s in %s\n", a->instanceId, a->size_bytes, vbr->formatName, a->id);    
+    LOGINFO("[%s] creating partition of size %lld bytes and type %s in %s\n", a->instanceId, a->size_bytes, vbr->formatName, a->id);
     int format = EUCA_ERROR;
     switch (vbr->format) {
     case NC_FORMAT_NONE:
@@ -1501,7 +1530,7 @@ static int disk_expander(artifact * a)
     blockmap map[EUCA_MAX_PARTITIONS]; // the map of disk sections
     int map_entries = 0;               // first map entry is for the disk
     long long offset_bytes = 0;
-    struct partition_table_entry parts[4]; // 4 is maximum for primary partitions
+    struct partition_table_entry parts[4];  // 4 is maximum for primary partitions
     int parts_entries = 0;
 
     for (int i = 0; i < MAX_ARTIFACT_DEPS && a->deps[i]; i++) {
@@ -1538,16 +1567,15 @@ static int disk_expander(artifact * a)
                 LOGERROR("[%s] unexpected additional partition (currently known: %d)\n", a->instanceId, parts_entries);
                 goto cleanup;
             }
-
             // shift the boot partition further down the list
             memcpy(parts + parts_entries, parts + parts_entries - 1, sizeof(struct partition_table_entry));
-            struct partition_table_entry * p = parts + parts_entries - 1;
+            struct partition_table_entry *p = parts + parts_entries - 1;
             p->start_sector = map[map_entries].first_block_dst;
-            p->end_sector   = map[map_entries].first_block_dst + map[map_entries].len_blocks - 1;
+            p->end_sector = map[map_entries].first_block_dst + map[map_entries].len_blocks - 1;
             if (dep->vbr->type == NC_FORMAT_SWAP) {
                 strncpy(p->filesystem, "linux-swap", sizeof(parts[parts_entries].filesystem));
             } else {
-                strncpy(p->filesystem, "ext2", sizeof(parts[parts_entries].filesystem)); // ext2 is all 'parted' knows
+                strncpy(p->filesystem, "ext2", sizeof(parts[parts_entries].filesystem));    // ext2 is all 'parted' knows
             }
             snprintf(p->type, sizeof(p->type), "primary");
             parts_entries++;
@@ -1572,15 +1600,12 @@ static int disk_expander(artifact * a)
         LOGERROR("[%s] failed to add MBR to disk: %d %s\n", a->instanceId, blobstore_get_error(), blobstore_get_last_msg());
         goto cleanup;
     }
-
     // add the information to MBR for all partitions
     for (int i = 0; i < parts_entries; i++) {
         LOGINFO("[%s] adding partition %d to partition table (%s)\n", a->instanceId, i, blockblob_get_dev(a->bb));
         if (diskutil_part(blockblob_get_dev(a->bb), // issues `parted mkpart`
                           "primary",   // admittedly, only works with 4 partitions max
-                          parts[i].filesystem,
-                          parts[i].start_sector,
-                          parts[i].end_sector) != EUCA_OK) {
+                          parts[i].filesystem, parts[i].start_sector, parts[i].end_sector) != EUCA_OK) {
             LOGERROR("[%s] failed to add partition %d to disk: %d %s\n", a->instanceId, i, blobstore_get_error(), blobstore_get_last_msg());
             goto cleanup;
         }
@@ -1606,7 +1631,7 @@ cleanup:
 static int iqn_creator(artifact * a)
 {
     int rc = EUCA_OK;
-    char *dev = NULL;
+    char *libvirt_xml = NULL;
     ebs_volume_data *vol_data = NULL;
     virtualBootRecord *vbr = NULL;
 
@@ -1614,17 +1639,16 @@ static int iqn_creator(artifact * a)
     vbr = a->vbr;
     assert(vbr);
 
-    rc = connect_ebs_volume(vbr->preparedResourceLocation, vbr->resourceLocation, localhost_config.use_ws_sec, localhost_config.ws_sec_policy_file, localhost_config.ip,
-                            localhost_config.iqn, &dev, &vol_data);
+    rc = connect_ebs_volume(vbr->guestDeviceName, vbr->guestDeviceSerialId, libvirtBusTypeNames[vbr->guestDeviceBus], vbr->preparedResourceLocation, vbr->resourceLocation, localhost_config.use_ws_sec, localhost_config.ws_sec_policy_file, localhost_config.ip, localhost_config.iqn, &libvirt_xml, &vol_data);
     if (rc) {
         LOGERROR("[%s] failed to attach volume during VBR construction for %s\n", a->instanceId, vbr->guestDeviceName);
         EUCA_FREE(vol_data);
         return (EUCA_ERROR);
     }
 
-    if (!dev || !strstr(dev, "/dev")) {
+    if (!libvirt_xml) {
         EUCA_FREE(vol_data);
-        LOGERROR("[%s] failed to connect to iSCSI target\n", a->instanceId);
+        LOGERROR("[%s] failed to connect to EBS target\n", a->instanceId);
         return (EUCA_ERROR);
     } else {
         //Update the vbr preparedResourceLocation with the connection_string returned from token resolution
@@ -1632,7 +1656,7 @@ static int iqn_creator(artifact * a)
     }
 
     // update VBR with device location
-    euca_strncpy(vbr->backingPath, dev, sizeof(vbr->backingPath));
+    euca_strncpy(vbr->backingPath, libvirt_xml, sizeof(vbr->backingPath));
     vbr->backingType = SOURCE_TYPE_BLOCK;
     EUCA_FREE(vol_data);
     return (EUCA_OK);
@@ -2023,7 +2047,7 @@ static void convert_id(const char *src, char *dst, unsigned int size)
 //!
 //! @note
 //!
-static char *url_get_digest(const char *url, boolean *bail_flag)
+static char *url_get_digest(const char *url, boolean * bail_flag)
 {
     char *digest_str = NULL;
     char *digest_path = strdup("/tmp/url-digest-XXXXXX");
@@ -2066,7 +2090,7 @@ static char *url_get_digest(const char *url, boolean *bail_flag)
 //!
 //! @note
 //!
-static artifact *art_alloc_vbr(virtualBootRecord * vbr, boolean do_make_work_copy, boolean is_migration_dest, boolean must_be_file, const char *sshkey, boolean *bail_flag)
+static artifact *art_alloc_vbr(virtualBootRecord * vbr, boolean do_make_work_copy, boolean is_migration_dest, boolean must_be_file, const char *sshkey, boolean * bail_flag)
 {
     artifact *a = NULL;
     char *blob_digest = NULL;
@@ -2131,43 +2155,55 @@ w_out:
         }
 
     case NC_LOCATION_IMAGING:{
-        char * manifest = NULL;
+            char *manifest = NULL;
 
-        // get the manifest for size and signature
-        if ((manifest = http_get2str(vbr->preparedResourceLocation, bail_flag)) == NULL) {
-            LOGERROR("[%s] failed to obtain image manifest from object storage\n", current_instanceId);
-            goto i_out;
-        }
-        // extract size from the manifest
-        long long bb_size_bytes = euca_strtoll(manifest, "<unbundled-size>", "</unbundled-size>");
-        if (bb_size_bytes < 1) {
-            LOGERROR("[%s] incorrect image manifest [no size] or error from object storage\n", current_instanceId);
-            goto i_out;
-        }
-        vbr->sizeBytes = bb_size_bytes; // record size in VBR now that we know it
+            // If this is a migration destination, we do not want to use
+            // pre-signed URLs generated at run time, since they may have
+            // expired (see EUCA-9887). So we only pull the manifest on
+            // the original run request, purely as a sanity check. The 
+            // info we need (image size) should already be in the VBR.
+            long long bb_size_bytes = 0;
+            if (!is_migration_dest) {
+                // get the manifest for size and signature
+                if ((manifest = http_get2str(vbr->preparedResourceLocation, bail_flag)) == NULL) {
+                    LOGERROR("[%s] failed to obtain image manifest from object storage\n", current_instanceId);
+                    goto i_out;
+                }
+                // extract size from the manifest
+                bb_size_bytes = euca_strtoll(manifest, "<unbundled-size>", "</unbundled-size>");
+                if (bb_size_bytes < 1) {
+                    LOGERROR("[%s] incorrect image manifest [no size] or error from object storage\n", current_instanceId);
+                    goto i_out;
+                }
+                // the -1 is valid value during invocation from 'Downloads a file-system bundle, converting to a disk' work-flow
+                // and vbr->sizeBytes > bb_size_bytes case is possible in cases of image conversion where download manifest has
+                // size for converted image and VBR for original image
+                if (vbr->sizeBytes != -1 && vbr->sizeBytes > bb_size_bytes) {
+                    LOGERROR("[%s] image size in manifest (%lld) and in VBR (%lld) do not match\n", current_instanceId, bb_size_bytes, vbr->sizeBytes);
+                    goto i_out;
+                }
+            } else {
+                bb_size_bytes = vbr->sizeBytes;
+            }
 
-        //! @TODO add proper image checksum into download manifests and use that
-        //!       instead of using the image size as the digest
-        blob_digest = euca_strestr(manifest, "<unbundled-size>", "</unbundled-size>");
-        if (blob_digest == NULL) {
-            LOGERROR("[%s] incorrect image manifest [no signature] or error from object storage\n", current_instanceId);
-            goto i_out;
-        }
+            //! @TODO add proper image checksum into download manifests and use that
+            //!       instead of using the image size as the digest
+            char blob_digest[128];
+            snprintf(blob_digest, sizeof(blob_digest), "%lld", bb_size_bytes);
 
-        // generate ID of the artifact (append -##### hash of sig)
-        char art_id[48];
-        if (art_gen_id(art_id, sizeof(art_id), vbr->id, blob_digest) != EUCA_OK) {
-            LOGERROR("[%s] failed to generate artifact id\n", current_instanceId);
-            goto i_out;
-        }
-        // allocate artifact struct
-        a = art_alloc(art_id, art_id, bb_size_bytes, !is_migration_dest, must_be_file, FALSE, imaging_creator, vbr);
+            // generate ID of the artifact (append -##### hash of sig)
+            char art_id[48];
+            if (art_gen_id(art_id, sizeof(art_id), vbr->id, blob_digest) != EUCA_OK) {
+                LOGERROR("[%s] failed to generate artifact id\n", current_instanceId);
+                goto i_out;
+            }
+            // allocate artifact struct
+            a = art_alloc(art_id, art_id, bb_size_bytes, !is_migration_dest, must_be_file, FALSE, imaging_creator, vbr);
 
-        i_out:
-        EUCA_FREE(blob_digest);
-        EUCA_FREE(manifest);
-        break;
-    }
+i_out:
+            EUCA_FREE(manifest);
+            break;
+        }
 
     case NC_LOCATION_FILE:{
 
@@ -2569,7 +2605,8 @@ void art_set_instanceId(const char *instanceId)
 //!
 //! @note
 //!
-artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean do_make_work_copy, boolean is_migration_dest, const char *sshkey, boolean *bail_flag, const char *instanceId)
+artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean do_make_work_copy, boolean is_migration_dest, const char *sshkey, boolean * bail_flag,
+                         const char *instanceId)
 {
     if (instanceId)
         euca_strncpy(current_instanceId, instanceId, sizeof(current_instanceId));
@@ -2665,7 +2702,7 @@ artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean 
                         LOGERROR("[%s] invalid VBR: disk cannot be expanded by more than 2 partitions\n", instanceId);
                         goto free;
                     }
-                    disk_arts[0] = art_realloc_disk(disk_arts[0]->vbr, prereq_arts, total_prereq_arts, // the prereqs
+                    disk_arts[0] = art_realloc_disk(disk_arts[0]->vbr, prereq_arts, total_prereq_arts,  // the prereqs
                                                     disk_arts[0],   // the disk artifact
                                                     disk_arts + 2, partitions,  // the partition artifacts (2nd & maybe 3rd)
                                                     do_make_bootable, do_make_work_copy, is_migration_dest);
@@ -3333,7 +3370,7 @@ int main(int argc, char **argv)
     char cwd[1024];
 
     if (getcwd(cwd, sizeof(cwd)) != NULL) {
-        srandom(time(NULL));
+        euca_srand();                  // seed the random number generator
         blobstore_set_error_function(dummy_err_fn);
 
         printf("testing vbr.c\n");

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,6 +36,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Hex;
 import com.eucalyptus.auth.AccessKeys;
+import com.eucalyptus.auth.InvalidSignatureAuthException;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.crypto.Digest;
@@ -83,7 +84,9 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
     if ( !MessageDigest.isEqual( computedSig, providedSig ) ) {
       final String canonicalStringNoPath = this.makeSubjectString( credentials, signatureCredential, authorizationParameters, date, true );
       final byte[] computedSigNoPath = this.getHmacSHA256( signatureKey, canonicalStringNoPath );
-      if( !MessageDigest.isEqual( computedSigNoPath, providedSig ) ) return false;
+      if( !MessageDigest.isEqual( computedSigNoPath, providedSig ) ) {
+        throw new InvalidSignatureAuthException( "Signature validation failed" );
+      }
     }
     super.setCredential( credentials.getQueryIdCredential( AccessKeys.getKeyType( accessKey ) ) );
     super.setPrincipal( user );
@@ -103,7 +106,7 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
     sb.append( signatureCredential.getCredentialScope() ).append("\n");
     sb.append( digestUTF8( makeCanonicalRequest( credentials, authorizationParameters, skipPath ) ) );
     final String subject = sb.toString( );
-    LOG.trace( "VERSION4: " + subject );
+    signatureLogger.trace( "VERSION4: " + subject );
     return subject;
   }
 
@@ -116,7 +119,7 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
     sb.append( skipPath ? "/" : canonicalizePath( credentials.getServicePath() ) ); // AWS Java SDK always uses "/"
     sb.append( "\n" );
     boolean addedParam = false;
-    for ( final String parameter : Ordering.from( String.CASE_INSENSITIVE_ORDER ).sortedCopy( credentials.getParameters().keySet() ) ) {
+    for ( final String parameter : Ordering.natural( ).sortedCopy( credentials.getParameters().keySet() ) ) {
       if ( credentials.getVariant() == HmacUtils.SignatureVariant.SignatureV4Query && SecurityParameter.X_Amz_Signature.parameter().equals( parameter ) ) {
         continue;
       }
@@ -146,7 +149,9 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
     sb.append( authorizationParameters.get("SignedHeaders") );
     sb.append( "\n" );
     sb.append( digestUTF8( credentials.getBody() ) );
-    return sb.toString();
+    final String request = sb.toString( );
+    signatureLogger.trace( "VERSION4: " + request );
+    return request;
   }
 
   private String digestUTF8( final String text ) {

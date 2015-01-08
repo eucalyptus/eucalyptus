@@ -20,13 +20,13 @@
 package com.eucalyptus.autoscaling.activities;
 
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.compute.common.backend.VmTypeMessage;
+import com.eucalyptus.compute.common.ComputeMessage;
 import com.eucalyptus.util.DispatchingClient;
 
 /**
  *
  */
-public class VmTypesClient extends DispatchingClient<VmTypeMessage,Eucalyptus> {
+public class VmTypesClient extends DispatchingClient<ComputeMessage,Eucalyptus> {
 
   public VmTypesClient( final String userId ) {
     super( userId, Eucalyptus.class );

@@ -90,7 +90,7 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
@@ -311,23 +311,27 @@ public class SANInfo extends AbstractPersistent {
 	}
 
 	public static SANInfo getStorageInfo() {
-		EntityWrapper<SANInfo> storageDb = EntityWrapper.get(SANInfo.class);
 		SANInfo conf = null;
+
 		try {
-			conf = storageDb.getUnique(new SANInfo(StorageProperties.NAME));
-			storageDb.commit();
+			conf = Transactions.find(new SANInfo());
+		} catch (Exception e) {
+			LOG.warn("Storage information for " + StorageProperties.NAME + " not found. Loading defaults.");
+			try {
+				conf = Transactions.saveDirect(newDefault());
+			} catch (Exception e1) {
+				try {
+					conf = Transactions.find(new SANInfo());
+				} catch (Exception e2) {
+					LOG.warn("Failed to persist and retrieve SANInfo entity");
+				}
+			}
 		}
-		catch ( EucalyptusCloudException e ) {
-			LOG.warn("Failed to get storage info for: " + StorageProperties.NAME + ". Loading defaults.");
+
+		if (conf == null) {
 			conf = newDefault();
-			storageDb.add(conf);
-			storageDb.commit();
 		}
-		catch (Exception t) {
-			LOG.error("Unable to get storage info for: " + StorageProperties.NAME);
-			storageDb.rollback();
-			conf = newDefault();
-		}
+
 		return conf;
 	}
 

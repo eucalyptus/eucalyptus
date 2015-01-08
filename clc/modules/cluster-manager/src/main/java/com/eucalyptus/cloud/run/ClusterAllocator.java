@@ -81,10 +81,18 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import javax.persistence.EntityTransaction;
 
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.callback.ResourceStateCallback;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
+import com.eucalyptus.compute.common.backend.RunInstancesType;
+import com.eucalyptus.compute.common.backend.StartInstancesType;
 import com.google.common.collect.Sets;
+
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.DescribeResourcesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeResourcesType;
+
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.Arrays;
 import org.bouncycastle.util.encoders.Base64;
@@ -129,6 +137,7 @@ import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.keys.SshKeyPair;
@@ -136,6 +145,8 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.system.tracking.MessageContexts;
+import com.eucalyptus.util.ByteArray;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
@@ -156,7 +167,6 @@ import java.util.concurrent.TimeUnit;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
-import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class ClusterAllocator implements Runnable {
@@ -198,15 +208,23 @@ public class ClusterAllocator implements Runnable {
           @Override
           public Boolean call( ) {
             try {
-              new ClusterAllocator( allocInfo ).run( );
+              new ClusterAllocator( allocInfo, config ).run( );
             } catch ( final Exception ex ) {
-              LOG.warn( "Failed to prepare allocator for: " + allocInfo.getAllocationTokens( ) );
               LOG.error( "Failed to prepare allocator for: " + allocInfo.getAllocationTokens( ), ex );
             }
             return Boolean.TRUE;
           }
         };
-        Threads.enqueue( config, 32, runnable );
+        BaseMessage baseReq = null; 
+        for(final String instId : allocInfo.getInstanceIds()){
+          baseReq = MessageContexts.lookupLast(instId, Sets.<Class>newHashSet(
+              RunInstancesType.class,
+              StartInstancesType.class
+              ));
+          if(baseReq!=null)
+            break;
+        }
+        Threads.enqueue( config, 32, runnable, baseReq == null ? null : baseReq.getCorrelationId() );
         return true;
       } catch ( final Exception ex ) {
         throw Exceptions.toUndeclared( ex );
@@ -219,15 +237,15 @@ public class ClusterAllocator implements Runnable {
     return SubmitAllocation.INSTANCE;
   }
   
-  private ClusterAllocator( final Allocation allocInfo ) {
+  private ClusterAllocator( final Allocation allocInfo, final ServiceConfiguration clusterConfig ) {
     this.allocInfo = allocInfo;
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      this.cluster = Clusters.lookup( Topology.lookup( ClusterController.class, allocInfo.getPartition( ) ) );
+      this.cluster = Clusters.lookup( clusterConfig );
       this.messages = new StatefulMessageSet<State>( this.cluster, State.values( ) );
       this.setupNetworkMessages( );
       this.setupVolumeMessages( );
-      this.setupCredentialMessages();
+      this.setupCredentialMessages( );
       this.updateResourceMessages( );
       db.commit( );
     } catch ( final Exception e ) {
@@ -262,6 +280,7 @@ public class ClusterAllocator implements Runnable {
     for ( final Cluster cluster : clustersToUpdate ) {
       ResourceStateCallback cb = new ResourceStateCallback();
       cb.setSubject( cluster );
+     
       Request<DescribeResourcesType,DescribeResourcesResponseType> request = AsyncRequests.newRequest( cb );
       this.messages.addRequest( State.UPDATE_RESOURCES, request );
     }
@@ -278,7 +297,6 @@ public class ClusterAllocator implements Runnable {
           VmInstances.stopped( vm );
         } else {
           VmInstances.terminated( vm );
-          VmInstances.terminated( vm );
         }
       } catch ( final Exception e1 ) {
         LOG.error( e1 );
@@ -286,7 +304,7 @@ public class ClusterAllocator implements Runnable {
       }
     }
   }
-  
+
   private void setupCredentialMessages( ) {
     try{
       final User owner = Accounts.lookupUserById(this.allocInfo.getOwnerFullName().getUserId());
@@ -295,35 +313,52 @@ public class ClusterAllocator implements Runnable {
     }catch(final AuthException ex){
       return;
     }
+    if (allocInfo.getUserData() == null || allocInfo.getUserData().length<=0)
+      return;
+    
     // determine if credential setup is requested
-    if(allocInfo.getUserData()==null || 
-        allocInfo.getUserData().length< VmInstances.VmSpecialUserData.EUCAKEY_CRED_SETUP.toString().length())
+    final String userData = new String(allocInfo.getUserData());
+    if(! VmInstances.VmSpecialUserData.apply(userData))
       return;
-    String userData = new String(allocInfo.getUserData(), 0, 
-        VmInstances.VmSpecialUserData.EUCAKEY_CRED_SETUP.toString().length());
-    if(!userData.startsWith(VmInstances.VmSpecialUserData.EUCAKEY_CRED_SETUP.toString()))
-      return;
-    userData = new String(allocInfo.getUserData());
+    
     String payload = null;
-    if(userData.length()> VmInstances.VmSpecialUserData.EUCAKEY_CRED_SETUP.toString().length()) {
-        payload=userData.substring(VmInstances.VmSpecialUserData.EUCAKEY_CRED_SETUP.toString().length()).trim();
-    } 
-    this.allocInfo.setUserDataAsString( payload );
+    int expirationDays = 180;
+    try{
+      final VmInstances.VmSpecialUserData specialData = new VmInstances.VmSpecialUserData(userData);
+      if(! VmInstances.VmSpecialUserData.EUCAKEY_CRED_SETUP.equals(specialData.getKey() ))
+        return;
+      final String strExpDay = specialData.getExpirationDays();
+      if (strExpDay != null )
+        expirationDays = Integer.parseInt(strExpDay);
+      payload = specialData.getPayload();
+    }catch(final Exception ex) {
+      LOG.error("Failed to parse VM user data", ex);
+      return;
+    }
+    // update user data for instances in the reservation
+    for(String s : this.allocInfo.getInstanceIds()) {
+      try ( final TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
+        final VmInstance instance = VmInstances.lookup( s );
+        instance.setUserDataAsString(payload);
+      } catch ( NoSuchElementException e ) {
+        LOG.error("Can't find instance " + s + " to change its user data");
+      }
+    }
+
     // create rsa keypair
     try{
       final KeyPair kp = Certs.generateKeyPair();
-      final X509Certificate kpCert = Certs.generateCertificate(kp, 
-          String.format("Certificate-for-%s/%s", this.allocInfo.getOwnerFullName().getAccountName(),  
-              this.allocInfo.getOwnerFullName().getUserName()));
-      
-      // call iam:signCertificate with the pub key
-      final String b64PubKey = B64.standard.encString( PEMFiles.getBytes( kpCert ) );
       final ServiceConfiguration euare = Topology.lookup(Euare.class);
       final SignCertificateType req = new SignCertificateType();
-      req.setCertificate(b64PubKey);
+      final String pubkey =B64.standard.encString( kp.getPublic().getEncoded());
       
+      req.setKey(pubkey);
+      req.setInstance(allocInfo.getInstanceId(0));
+      req.setExpirationDays(expirationDays);
       final SignCertificateResponseType resp= AsyncRequests.sendSync( euare, req );
-      final String token = resp.getSignCertificateResult().getSignature(); //in Base64
+      final X509Certificate kpCert = 
+          PEMFiles.getCert( B64.standard.dec( resp.getSignCertificateResult().getCertificate() ) );
+      final String b64PubKey = B64.standard.encString( PEMFiles.getBytes( kpCert ) );
       
       // use NODECERT to encrypt the pk
       // generate symmetric key
@@ -337,34 +372,41 @@ public class ClusterAllocator implements Runnable {
       Cipher cipher = Ciphers.AES_GCM.get();
       final byte[] iv = new byte[12];
       Crypto.getSecureRandomSupplier().get().nextBytes(iv);
-      cipher.init( Cipher.ENCRYPT_MODE, symmKey, new IvParameterSpec( iv ) );
+      cipher.init( Cipher.ENCRYPT_MODE, symmKey, new IvParameterSpec( iv ), Crypto.getSecureRandomSupplier( ).get( ) );
       final byte[] cipherText = cipher.doFinal(Base64.encode(PEMFiles.getBytes(kp.getPrivate())));
       final String encPrivKey = new String(Base64.encode(Arrays.concatenate(iv, cipherText)));
-      
+            
+      // with EUCA-8651, no signature needs to be delivered; left here for backward compatibility
+      final String token = "NULL";
       // encrypt the token from EUARE
       cipher = Ciphers.AES_GCM.get();
-      cipher.init( Cipher.ENCRYPT_MODE, symmKey, new IvParameterSpec( iv ) );
+      cipher.init( Cipher.ENCRYPT_MODE, symmKey, new IvParameterSpec( iv ), Crypto.getSecureRandomSupplier( ).get( ) );
       final byte[] byteToken = cipher.doFinal(token.getBytes());
       final String encToken = new String(Base64.encode(Arrays.concatenate(iv, byteToken)));
       
       // encrypt the symmetric key
       X509Certificate nodeCert = this.allocInfo.getPartition().getNodeCertificate();
       cipher = Ciphers.RSA_PKCS1.get();
-      cipher.init(Cipher.ENCRYPT_MODE, nodeCert.getPublicKey());
+      cipher.init(Cipher.ENCRYPT_MODE, nodeCert.getPublicKey(), Crypto.getSecureRandomSupplier( ).get( ));
       byte[] symmkey = cipher.doFinal(symmKey.getEncoded());
       final String encSymmKey = new String(Base64.encode(symmkey));
       
       X509Certificate euareCert = SystemCredentials.lookup(Euare.class).getCertificate();
       final String b64EuarePubkey = B64.standard.encString( PEMFiles.getBytes( euareCert ) );
     
-      // EUARE's pubkey, VM's pubkey, token from EUARE(ENCRYPTED), SYM_KEY(ENCRYPTED), VM_KEY(ENCRYPTED)
+      X509Certificate eucalyptusCert = SystemCredentials.lookup(Eucalyptus.class).getCertificate();
+      final String b64EucalyptusPubkey = B64.standard.encString( PEMFiles.getBytes( eucalyptusCert ) );
+
+      // EUARE's pubkey, VM's pubkey, token from EUARE(ENCRYPTED),
+      // SYM_KEY(ENCRYPTED), VM_KEY(ENCRYPTED), EUCALYPTUS's pubkey
       // each field all in B64
-      final String credential = String.format("%s\n%s\n%s\n%s\n%s",
+      final String credential = String.format("%s\n%s\n%s\n%s\n%s\n%s",
           b64EuarePubkey,
-          b64PubKey, 
-          encToken, // iam token
+          b64PubKey,
+          encToken,
           encSymmKey, 
-          encPrivKey);
+          encPrivKey,
+          b64EucalyptusPubkey);
       this.allocInfo.setCredential(credential);
     }catch(final Exception ex){
       LOG.error("failed to setup instance credential", ex);
@@ -373,65 +415,81 @@ public class ClusterAllocator implements Runnable {
 
   // Modifying the logic to enable multiple block device mappings for boot from ebs. Fixes EUCA-3254 and implements EUCA-4786
   private void setupVolumeMessages( ) throws NoSuchElementException, MetadataException, ExecutionException {
-    
-	if (  this.allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo  ) {
-	  List<BlockDeviceMappingItemType> instanceDeviceMappings = new ArrayList<BlockDeviceMappingItemType>(this.allocInfo.getRequest().getBlockDeviceMapping());
-		
-	  final ServiceConfiguration sc = Topology.lookup( Storage.class, this.cluster.getConfiguration( ).lookupPartition( ) );
+
+    if (  this.allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo  ) {
+      List<BlockDeviceMappingItemType> instanceDeviceMappings = new ArrayList<BlockDeviceMappingItemType>(this.allocInfo.getRequest().getBlockDeviceMapping());
+      final ServiceConfiguration sc = Topology.lookup( Storage.class, this.cluster.getConfiguration( ).lookupPartition( ) );
       
       final BlockStorageImageInfo imgInfo = ( ( BlockStorageImageInfo ) this.allocInfo.getBootSet( ).getMachine( ) );   	                
-      String rootDevName = imgInfo.getRootDeviceName();
+      final String rootDevName = imgInfo.getRootDeviceName();
       Long volSizeBytes = imgInfo.getImageSizeBytes( );
-    	        
+
       // Find out the root volume size so that device mappings that don't have a size or snapshot ID can use the root volume size
       for ( final BlockDeviceMappingItemType blockDevMapping : Iterables.filter( instanceDeviceMappings, findEbsRootOptionalSnapshot(rootDevName) ) ) {
-    	if ( blockDevMapping.getEbs( ).getVolumeSize( ) != null ) {
-    	  volSizeBytes = BYTES_PER_GB * blockDevMapping.getEbs( ).getVolumeSize( );
-    	}
+        if ( blockDevMapping.getEbs( ).getVolumeSize( ) != null ) {
+          volSizeBytes = BYTES_PER_GB * blockDevMapping.getEbs( ).getVolumeSize( );
+        }
       } 
-    	  
+
       int rootVolSizeInGb = ( int ) Math.ceil( ( ( double ) volSizeBytes ) / BYTES_PER_GB );
-    	        
+
       for ( final ResourceToken token : this.allocInfo.getAllocationTokens( ) ) {
-    	final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
-        if ( !vm.getBootRecord( ).hasPersistentVolumes( ) ) { // First time a bfebs instance starts up, there are no persistent volumes
-          
-          for (BlockDeviceMappingItemType mapping : instanceDeviceMappings) {
-            if( Images.isEbsMapping( mapping ) ) {
-              LOG.debug("About to prepare volume for instance " + vm.getDisplayName() + " to be mapped to " + mapping.getDeviceName() + " device");
-              
-              //spark - EUCA-7800: should explicitly set the volume size
-              int volumeSize = mapping.getEbs().getVolumeSize()!=null? mapping.getEbs().getVolumeSize() : -1;
-              if(volumeSize<=0){
-                if(mapping.getEbs().getSnapshotId() != null){
-                  final Snapshot originalSnapshot =
-                      Snapshots.lookup(null, ResourceIdentifiers.tryNormalize().apply( mapping.getEbs().getSnapshotId() ) );
-                  volumeSize = originalSnapshot.getVolumeSize();
-                }else
-                  volumeSize = rootVolSizeInGb;
+        final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
+        if ( !vm.getBootRecord( ).hasPersistentVolumes( ) ) { // No persistent volumes in the db
+          if (!instanceDeviceMappings.isEmpty()) { // First time a bfebs instance starts up 
+            for (final BlockDeviceMappingItemType mapping : instanceDeviceMappings) {
+              if( Images.isEbsMapping( mapping ) ) {
+                LOG.debug("About to prepare volume for instance " + vm.getDisplayName() + " to be mapped to " + mapping.getDeviceName() + " device");
+
+                //spark - EUCA-7800: should explicitly set the volume size
+                int volumeSize = mapping.getEbs().getVolumeSize()!=null? mapping.getEbs().getVolumeSize() : -1;
+                if(volumeSize<=0){
+                  if(mapping.getEbs().getSnapshotId() != null){
+                    final Snapshot originalSnapshot = Snapshots.lookup(null, ResourceIdentifiers.tryNormalize().apply( mapping.getEbs().getSnapshotId() ) );
+                    volumeSize = originalSnapshot.getVolumeSize();
+                  }else
+                    volumeSize = rootVolSizeInGb;
+                }
+                final UserFullName fullName = this.allocInfo.getOwnerFullName();
+                final String snapshotId = ResourceIdentifiers.tryNormalize().apply( mapping.getEbs().getSnapshotId() );
+                final int volSize = volumeSize;
+                final BaseMessage request = this.allocInfo.getRequest();
+                final Callable<Volume> createVolume = new Callable<Volume>( ) {
+                    public Volume call( ) throws Exception {
+                      return Volumes.createStorageVolume(sc, fullName, snapshotId, volSize, request);
+                    }
+                };
+
+                final Volume volume; // allocate in separate transaction to ensure metadata matches back-end
+                try {
+                  volume = Threads.enqueue( Eucalyptus.class, ClusterAllocator.class, createVolume ).get( );
+                } catch ( InterruptedException e ) {
+                  throw Exceptions.toUndeclared( "Interrupted when creating volume from snapshot.", e );
+                }
+
+                final Boolean isRootDevice = mapping.getDeviceName().equals(rootDevName);
+                if ( mapping.getEbs().getDeleteOnTermination() ) {
+                  vm.addPersistentVolume( mapping.getDeviceName(), volume, isRootDevice );
+                } else {
+                  vm.addPermanentVolume( mapping.getDeviceName(), volume, isRootDevice );
+                }
+
+                // Populate all volumes into resource token so they can be used for attach ops and vbr construction
+                if( isRootDevice ) {
+                  token.setRootVolume( volume );
+                } else {
+                  token.getEbsVolumes().put(mapping.getDeviceName(), volume);
+                }
+              } else if ( mapping.getVirtualName() != null ) {
+                vm.addEphemeralAttachment(mapping.getDeviceName(), mapping.getVirtualName());
+                // Populate all ephemeral devices into resource token so they can used for vbr construction
+                token.getEphemeralDisks().put(mapping.getDeviceName(), mapping.getVirtualName());
               }
-              
-              final Volume volume = Volumes.createStorageVolume( sc,
-                  this.allocInfo.getOwnerFullName( ),
-                  ResourceIdentifiers.tryNormalize().apply( mapping.getEbs().getSnapshotId() ),
-                  volumeSize, this.allocInfo.getRequest( ) );
-              Boolean isRootDevice = mapping.getDeviceName().equals(rootDevName);
-              if ( mapping.getEbs().getDeleteOnTermination() ) {
-                vm.addPersistentVolume( mapping.getDeviceName(), volume, isRootDevice );
-              } else {
-                vm.addPermanentVolume( mapping.getDeviceName(), volume, isRootDevice );
-              }
-              // Populate all volumes into resource token so they can be used for attach ops and vbr construction
-              if( isRootDevice ) {
-               	token.setRootVolume( volume ); 
-              } else {
-            	token.getEbsVolumes().put(mapping.getDeviceName(), volume);  
-              }
-            } else if ( mapping.getVirtualName() != null ) {
-              vm.addEphemeralAttachment(mapping.getDeviceName(), mapping.getVirtualName());
-              // Populate all ephemeral devices into resource token so they can used for vbr construction
-              token.getEphemeralDisks().put(mapping.getDeviceName(), mapping.getVirtualName());
             }
+          } else { // Stopped instance is started with no attached volumes
+            LOG.error("Volume attachment for root device not found. Attach an EBS volume to root device of " + vm.getInstanceId() + " and retry");
+            throw new MetadataException("Volume attachment for root device not found. Attach an EBS volume to root device of " + vm.getInstanceId()
+                + " and retry");
           }
         } else { // This block is hit when starting a stopped bfebs instance
           // Although volume attachment records exist and the volumes are marked attached, all volumes are in detached state when the instance is stopped. 
@@ -449,13 +507,14 @@ public class ClusterAllocator implements Runnable {
           
           // Root volume may have been detached. In that case throw an error and exit
           if ( !foundRoot ) {
-          	LOG.error("No volume attachment found for root device. Attach a volume to root device and retry");
-          	throw new MetadataException("No volume attachment found for root device. Attach a volume to root device and retry");
+            LOG.error("Volume attachment for root device not found. Attach an EBS volume to root device of " + vm.getInstanceId() + " and retry");
+            throw new MetadataException("Volume attachment for root device not found. Attach an EBS volume to root device of " + vm.getInstanceId()
+                + " and retry");
           }
           
           // Go through all ephemeral attachment records and populate them into resource token so they can used for vbr construction
           for (VmEphemeralAttachment attachment : vm.getBootRecord( ).getEphemeralStorage()) {
-        	token.getEphemeralDisks().put(attachment.getDevice(), attachment.getEphemeralId());
+            token.getEphemeralDisks().put(attachment.getDevice(), attachment.getEphemeralId());
           }
         }
       }
@@ -469,10 +528,12 @@ public class ClusterAllocator implements Runnable {
   
   private void setupVmMessages( final ResourceToken token ) throws Exception {
     final VmTypeInfo vmInfo = this.allocInfo.getVmTypeInfo( this.allocInfo.getPartition( ), token.getAllocationInfo().getReservationId() );
+    allocInfo.setRootDirective();
     try {
       final VmTypeInfo childVmInfo = this.makeVmTypeInfo( vmInfo, token );
       final VmRunCallback callback = this.makeRunCallback( token, childVmInfo );
       final Request<VmRunType, VmRunResponseType> req = AsyncRequests.newRequest( callback );
+      
       this.messages.addRequest( State.CREATE_VMS, req );
       this.messages.addCleanup( new Runnable( ) {
         @Override
@@ -651,6 +712,7 @@ public class ClusterAllocator implements Runnable {
                                    .credential( this.allocInfo.getCredential( ) )
                                    .vmTypeInfo( vmInfo )
                                    .owner( this.allocInfo.getOwnerFullName( ) )
+                                   .rootDirective( this.allocInfo.getRootDirective() )
                                    .create( );
     return new VmRunCallback( run, childToken );
   }

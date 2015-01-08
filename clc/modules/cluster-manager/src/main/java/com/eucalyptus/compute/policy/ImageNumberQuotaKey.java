@@ -70,6 +70,7 @@ import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.PolicyKey;
 import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.component.id.Euare;
@@ -100,7 +101,7 @@ public class ImageNumberQuotaKey extends QuotaKey {
   }
   
   @Override
-  public String value( final Scope scope, final String id, final String resource, final Long quantity ) throws AuthException {
+  public String value( final Authorization.Scope scope, final String id, final String resource, final Long quantity ) throws AuthException {
     switch ( scope ) {
       case ACCOUNT:
         return Long.toString( RestrictedTypes.quantityMetricFunction( ImageMetadata.class ).apply( AccountFullName.getInstance( id ) ) + 1 );

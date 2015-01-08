@@ -76,6 +76,7 @@
  |                                  INCLUDES                                  |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+#include "data.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -135,6 +136,7 @@ char *file2str_seek(char *file, size_t size, int mode);
 int str2file(const char *str, char *path, int flags, mode_t mode, boolean mktemp);
 int copy_file(const char *src, const char *dst);
 long long file_size(const char *file_path);
+void dedup_path(char *src_path);
 int ensure_directories_exist(const char *path, int is_file_path, const char *user, const char *group, mode_t mode);
 char *safe_mkdtemp(char *template);
 int safe_mkstemp(char *template);

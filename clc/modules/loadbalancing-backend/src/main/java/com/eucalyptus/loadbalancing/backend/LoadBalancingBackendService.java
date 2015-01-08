@@ -20,16 +20,21 @@
 
 package com.eucalyptus.loadbalancing.backend;
 
-import java.net.InetSocketAddress;
+import static com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView.name;
+import static com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView.subnetId;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Set;
 
 import javax.annotation.Nullable;
-import javax.persistence.EntityTransaction;
+import javax.persistence.EntityNotFoundException;
+import javax.persistence.OptimisticLockException;
 
 import org.apache.log4j.Logger;
 
@@ -39,13 +44,20 @@ import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloudwatch.common.msgs.MetricData;
+import com.eucalyptus.compute.common.ClusterInfoType;
+import com.eucalyptus.compute.common.InternetGatewayType;
+import com.eucalyptus.compute.common.RunningInstancesItemType;
+import com.eucalyptus.compute.common.SecurityGroupItemType;
+import com.eucalyptus.compute.common.SubnetType;
+import com.eucalyptus.compute.common.VpcType;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreViewTransform;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreView;
@@ -63,31 +75,31 @@ import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPo
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyTypeDescription;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroupRef;
 import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancers;
+import com.eucalyptus.loadbalancing.activities.ApplySecurityGroupsEvent;
 import com.eucalyptus.loadbalancing.activities.CreateListenerEvent;
 import com.eucalyptus.loadbalancing.activities.DeleteListenerEvent;
 import com.eucalyptus.loadbalancing.activities.DeleteLoadbalancerEvent;
 import com.eucalyptus.loadbalancing.activities.DeregisterInstancesEvent;
 import com.eucalyptus.loadbalancing.activities.DisabledZoneEvent;
 import com.eucalyptus.loadbalancing.activities.EnabledZoneEvent;
+import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.loadbalancing.activities.NewLoadbalancerEvent;
 import com.eucalyptus.loadbalancing.activities.ActivityManager;
 import com.eucalyptus.loadbalancing.activities.RegisterInstancesEvent;
-import com.eucalyptus.loadbalancing.backend.InternalFailureException;
 import com.eucalyptus.loadbalancing.common.LoadBalancingMetadatas;
-import com.eucalyptus.loadbalancing.common.backend.msgs.AppCookieStickinessPolicies;
-import com.eucalyptus.loadbalancing.common.backend.msgs.AppCookieStickinessPolicy;
+import com.eucalyptus.loadbalancing.common.backend.msgs.AddTagsResponseType;
+import com.eucalyptus.loadbalancing.common.backend.msgs.AddTagsType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.ApplySecurityGroupsToLoadBalancerResponseType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.ApplySecurityGroupsToLoadBalancerType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.AttachLoadBalancerToSubnetsResponseType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.AttachLoadBalancerToSubnetsType;
-import com.eucalyptus.loadbalancing.common.backend.msgs.AvailabilityZones;
 import com.eucalyptus.loadbalancing.common.backend.msgs.ConfigureHealthCheckResponseType;
-import com.eucalyptus.loadbalancing.common.backend.msgs.ConfigureHealthCheckResult;
 import com.eucalyptus.loadbalancing.common.backend.msgs.ConfigureHealthCheckType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.CreateAppCookieStickinessPolicyResponseType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.CreateAppCookieStickinessPolicyType;
@@ -98,89 +110,134 @@ import com.eucalyptus.loadbalancing.common.backend.msgs.CreateLoadBalancerListen
 import com.eucalyptus.loadbalancing.common.backend.msgs.CreateLoadBalancerPolicyResponseType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.CreateLoadBalancerPolicyType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.CreateLoadBalancerResponseType;
-import com.eucalyptus.loadbalancing.common.backend.msgs.CreateLoadBalancerResult;
 import com.eucalyptus.loadbalancing.common.backend.msgs.CreateLoadBalancerType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.DeleteLoadBalancerListenersResponseType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.DeleteLoadBalancerListenersType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.DeleteLoadBalancerPolicyResponseType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.DeleteLoadBalancerPolicyType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.DeleteLoadBalancerResponseType;
-import com.eucalyptus.loadbalancing.common.backend.msgs.DeleteLoadBalancerResult;
 import com.eucalyptus.loadbalancing.common.backend.msgs.DeleteLoadBalancerType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.DeregisterInstancesFromLoadBalancerResponseType;
-import com.eucalyptus.loadbalancing.common.backend.msgs.DeregisterInstancesFromLoadBalancerResult;
 import com.eucalyptus.loadbalancing.common.backend.msgs.DeregisterInstancesFromLoadBalancerType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.DescribeInstanceHealthResponseType;
-import com.eucalyptus.loadbalancing.common.backend.msgs.DescribeInstanceHealthResult;
 import com.eucalyptus.loadbalancing.common.backend.msgs.DescribeInstanceHealthType;
+import com.eucalyptus.loadbalancing.common.backend.msgs.DescribeLoadBalancerAttributesResponseType;
+import com.eucalyptus.loadbalancing.common.backend.msgs.DescribeLoadBalancerAttributesType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.DescribeLoadBalancerPoliciesResponseType;
-import com.eucalyptus.loadbalancing.common.backend.msgs.DescribeLoadBalancerPoliciesResult;
 import com.eucalyptus.loadbalancing.common.backend.msgs.DescribeLoadBalancerPoliciesType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.DescribeLoadBalancerPolicyTypesResponseType;
-import com.eucalyptus.loadbalancing.common.backend.msgs.DescribeLoadBalancerPolicyTypesResult;
 import com.eucalyptus.loadbalancing.common.backend.msgs.DescribeLoadBalancerPolicyTypesType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.DescribeLoadBalancersByServoResponseType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.DescribeLoadBalancersByServoType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.DescribeLoadBalancersResponseType;
-import com.eucalyptus.loadbalancing.common.backend.msgs.DescribeLoadBalancersResult;
 import com.eucalyptus.loadbalancing.common.backend.msgs.DescribeLoadBalancersType;
+import com.eucalyptus.loadbalancing.common.backend.msgs.DescribeTagsResponseType;
+import com.eucalyptus.loadbalancing.common.backend.msgs.DescribeTagsType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.DetachLoadBalancerFromSubnetsResponseType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.DetachLoadBalancerFromSubnetsType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.DisableAvailabilityZonesForLoadBalancerResponseType;
-import com.eucalyptus.loadbalancing.common.backend.msgs.DisableAvailabilityZonesForLoadBalancerResult;
 import com.eucalyptus.loadbalancing.common.backend.msgs.DisableAvailabilityZonesForLoadBalancerType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.EnableAvailabilityZonesForLoadBalancerResponseType;
-import com.eucalyptus.loadbalancing.common.backend.msgs.EnableAvailabilityZonesForLoadBalancerResult;
 import com.eucalyptus.loadbalancing.common.backend.msgs.EnableAvailabilityZonesForLoadBalancerType;
-import com.eucalyptus.loadbalancing.common.backend.msgs.HealthCheck;
-import com.eucalyptus.loadbalancing.common.backend.msgs.Instance;
-import com.eucalyptus.loadbalancing.common.backend.msgs.InstanceState;
-import com.eucalyptus.loadbalancing.common.backend.msgs.InstanceStates;
-import com.eucalyptus.loadbalancing.common.backend.msgs.Instances;
-import com.eucalyptus.loadbalancing.common.backend.msgs.LBCookieStickinessPolicies;
-import com.eucalyptus.loadbalancing.common.backend.msgs.LBCookieStickinessPolicy;
-import com.eucalyptus.loadbalancing.common.backend.msgs.Listener;
-import com.eucalyptus.loadbalancing.common.backend.msgs.ListenerDescription;
-import com.eucalyptus.loadbalancing.common.backend.msgs.ListenerDescriptions;
-import com.eucalyptus.loadbalancing.common.backend.msgs.LoadBalancerDescription;
-import com.eucalyptus.loadbalancing.common.backend.msgs.LoadBalancerDescriptions;
-import com.eucalyptus.loadbalancing.common.backend.msgs.Policies;
-import com.eucalyptus.loadbalancing.common.backend.msgs.PolicyAttribute;
-import com.eucalyptus.loadbalancing.common.backend.msgs.PolicyDescription;
-import com.eucalyptus.loadbalancing.common.backend.msgs.PolicyDescriptions;
-import com.eucalyptus.loadbalancing.common.backend.msgs.PolicyNames;
-import com.eucalyptus.loadbalancing.common.backend.msgs.PolicyTypeDescription;
-import com.eucalyptus.loadbalancing.common.backend.msgs.PolicyTypeDescriptions;
+import com.eucalyptus.loadbalancing.common.msgs.AccessLog;
+import com.eucalyptus.loadbalancing.common.msgs.AppCookieStickinessPolicies;
+import com.eucalyptus.loadbalancing.common.msgs.AppCookieStickinessPolicy;
+import com.eucalyptus.loadbalancing.common.msgs.AvailabilityZones;
+import com.eucalyptus.loadbalancing.common.msgs.ConfigureHealthCheckResult;
+import com.eucalyptus.loadbalancing.common.msgs.ConnectionDraining;
+import com.eucalyptus.loadbalancing.common.msgs.ConnectionSettings;
+import com.eucalyptus.loadbalancing.common.msgs.CreateLoadBalancerResult;
+import com.eucalyptus.loadbalancing.common.msgs.CrossZoneLoadBalancing;
+import com.eucalyptus.loadbalancing.common.msgs.DeleteLoadBalancerResult;
+import com.eucalyptus.loadbalancing.common.msgs.DeregisterInstancesFromLoadBalancerResult;
+import com.eucalyptus.loadbalancing.common.msgs.DescribeInstanceHealthResult;
+import com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancerPoliciesResult;
+import com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancerPolicyTypesResult;
+import com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancersResult;
+import com.eucalyptus.loadbalancing.common.msgs.DisableAvailabilityZonesForLoadBalancerResult;
+import com.eucalyptus.loadbalancing.common.msgs.EnableAvailabilityZonesForLoadBalancerResult;
+import com.eucalyptus.loadbalancing.common.msgs.HealthCheck;
+import com.eucalyptus.loadbalancing.common.msgs.Instance;
+import com.eucalyptus.loadbalancing.common.msgs.InstanceState;
+import com.eucalyptus.loadbalancing.common.msgs.InstanceStates;
+import com.eucalyptus.loadbalancing.common.msgs.Instances;
+import com.eucalyptus.loadbalancing.common.msgs.LBCookieStickinessPolicies;
+import com.eucalyptus.loadbalancing.common.msgs.LBCookieStickinessPolicy;
+import com.eucalyptus.loadbalancing.common.msgs.Listener;
+import com.eucalyptus.loadbalancing.common.backend.msgs.ModifyLoadBalancerAttributesResponseType;
+import com.eucalyptus.loadbalancing.common.backend.msgs.ModifyLoadBalancerAttributesType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.PutServoStatesResponseType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.PutServoStatesType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.RegisterInstancesWithLoadBalancerResponseType;
-import com.eucalyptus.loadbalancing.common.backend.msgs.RegisterInstancesWithLoadBalancerResult;
 import com.eucalyptus.loadbalancing.common.backend.msgs.RegisterInstancesWithLoadBalancerType;
+import com.eucalyptus.loadbalancing.common.backend.msgs.RemoveTagsResponseType;
+import com.eucalyptus.loadbalancing.common.backend.msgs.RemoveTagsType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.SetLoadBalancerListenerSSLCertificateResponseType;
-import com.eucalyptus.loadbalancing.common.backend.msgs.SetLoadBalancerListenerSSLCertificateResult;
 import com.eucalyptus.loadbalancing.common.backend.msgs.SetLoadBalancerListenerSSLCertificateType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.SetLoadBalancerPoliciesForBackendServerResponseType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.SetLoadBalancerPoliciesForBackendServerType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.SetLoadBalancerPoliciesOfListenerResponseType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.SetLoadBalancerPoliciesOfListenerType;
-import com.eucalyptus.loadbalancing.common.backend.msgs.SourceSecurityGroup;
+import com.eucalyptus.loadbalancing.common.msgs.ListenerDescription;
+import com.eucalyptus.loadbalancing.common.msgs.ListenerDescriptions;
+import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerAttributes;
+import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerDescription;
+import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerDescription;
+import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerDescriptions;
+import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerServoDescription;
+import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerServoDescriptions;
+import com.eucalyptus.loadbalancing.common.msgs.Policies;
+import com.eucalyptus.loadbalancing.common.msgs.PolicyAttribute;
+import com.eucalyptus.loadbalancing.common.msgs.PolicyDescription;
+import com.eucalyptus.loadbalancing.common.msgs.PolicyDescriptions;
+import com.eucalyptus.loadbalancing.common.msgs.PolicyNames;
+import com.eucalyptus.loadbalancing.common.msgs.PolicyTypeDescription;
+import com.eucalyptus.loadbalancing.common.msgs.PolicyTypeDescriptions;
+import com.eucalyptus.loadbalancing.common.msgs.SecurityGroups;
+import com.eucalyptus.loadbalancing.common.msgs.SetLoadBalancerListenerSSLCertificateResult;
+import com.eucalyptus.loadbalancing.common.msgs.SourceSecurityGroup;
+import com.eucalyptus.loadbalancing.common.msgs.Subnets;
+import com.eucalyptus.loadbalancing.common.msgs.Tag;
+import com.eucalyptus.loadbalancing.common.msgs.TagDescription;
+import com.eucalyptus.loadbalancing.common.msgs.TagDescriptions;
+import com.eucalyptus.loadbalancing.common.msgs.TagKeyOnly;
+import com.eucalyptus.loadbalancing.common.msgs.TagList;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.RestrictedTypes;
+import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
+import com.google.common.base.Optional;
+import com.google.common.base.Predicates;
+import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.base.Predicate;
+import com.google.common.collect.BiMap;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.HashBiMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.net.HostSpecifier;
 
 /**
  * @author Sang-Min Park
  */
+@SuppressWarnings( "UnusedDeclaration" )
 public class LoadBalancingBackendService {
   private static Logger    LOG     = Logger.getLogger( LoadBalancingBackendService.class );
-  
+  private static final int MIN_HEALTHCHECK_INTERVAL_SEC = 5;
+  private static final int MIN_HEALTHCHECK_THRESHOLDS = 2;
+  private static final int MAX_TAGS = 10;
+
+  private static final Set<String> reservedPrefixes =
+      ImmutableSet.<String>builder().add("aws:").add("euca:").build();
+
   private void isValidServoRequest(String instanceId, String remoteHost) throws LoadBalancingException{
 	  try{
 		  final LoadBalancerServoInstance instance = LoadBalancers.lookupServoInstance( instanceId );
@@ -194,163 +251,161 @@ public class LoadBalancingBackendService {
   }
   
   /// EUCA-specific, internal operations for fetching listener specification
-  public DescribeLoadBalancersByServoResponseType describeLoadBalancersByServo(DescribeLoadBalancersByServoType request) throws EucalyptusCloudException {
-  	  final DescribeLoadBalancersByServoResponseType reply = request.getReply();
-  	  final String instanceId = request.getInstanceId();
-  	  // lookup servo instance Id to see which LB zone it is assigned to
-  	  LoadBalancerZoneCoreView zoneView = null;
-  	  LoadBalancerZone zone = null;
-  	  try{
-  	    isValidServoRequest(instanceId, request.getSourceIp());
-  	    final LoadBalancerServoInstance instance = LoadBalancers.lookupServoInstance(instanceId);
-  	    zoneView = instance.getAvailabilityZone();
-  	    zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(zoneView);
-  	  }catch(final Exception ex){
-  	    throw new InternalFailureException("Failed to verify request sender");
-  	  }
+  public DescribeLoadBalancersByServoResponseType describeLoadBalancersByServo(
+      final DescribeLoadBalancersByServoType request
+  ) throws EucalyptusCloudException {
+    final DescribeLoadBalancersByServoResponseType reply = request.getReply( );
+    final String instanceId = request.getInstanceId( );
+    // lookup servo instance Id to see which LB zone it is assigned to
+    LoadBalancerZoneCoreView zoneView;
+    LoadBalancerZone zone;
+    try{
+      isValidServoRequest(instanceId, request.getSourceIp());
+      final LoadBalancerServoInstance instance = LoadBalancers.lookupServoInstance(instanceId);
+      zoneView = instance.getAvailabilityZone();
+      zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(zoneView);
+    }catch(final Exception ex){
+      throw new InternalFailureException("Failed to verify request sender");
+    }
 
-	  
-  	  final Function<LoadBalancerZone, Set<LoadBalancerDescription>> lookupLBDescriptions = new Function<LoadBalancerZone, Set<LoadBalancerDescription>> () {
-		  @Override
-  		  public Set<LoadBalancerDescription> apply (LoadBalancerZone zone){
-	    		final Set<LoadBalancerDescription> descs = Sets.newHashSet();
-	    		final LoadBalancerCoreView lbView= zone.getLoadbalancer();
-	    		final String lbName = lbView.getDisplayName();
+    final Function<LoadBalancerZone, Optional<LoadBalancerServoDescription>> lookupLBDescriptions =
+        new Function<LoadBalancerZone, Optional<LoadBalancerServoDescription>>( ) {
+      @Override
+      public Optional<LoadBalancerServoDescription> apply( final LoadBalancerZone zone ){
+        final LoadBalancerCoreView lbView= zone.getLoadbalancer();
+        final String lbName = lbView.getDisplayName();
 
-	    		LoadBalancerDescription desc = new LoadBalancerDescription();
-	    		desc.setLoadBalancerName(lbName); /// loadbalancer name
-	    		desc.setCreatedTime(lbView.getCreationTimestamp());/// createdtime
-	    		LoadBalancer lb = null;
-	    		try{
-	    			lb=LoadBalancerEntityTransform.INSTANCE.apply(lbView);
-	    		}catch(final Exception ex){
-	    			Sets.<LoadBalancerDescription>newHashSet();
-	    		}
-	    		
-	    		final LoadBalancerDnsRecordCoreView dnsView = lb.getDns();
-	    			
-	    		desc.setDnsName(dnsView.getDnsName());           /// dns name
-	    		
-	    		Collection<LoadBalancerBackendInstanceCoreView> notInError =
-	    				Collections2.filter(zone.getBackendInstances(), new Predicate<LoadBalancerBackendInstanceCoreView>(){
-							@Override
-							public boolean apply(
-									@Nullable LoadBalancerBackendInstanceCoreView arg0) {
-								return ! LoadBalancerBackendInstance.STATE.Error.equals(arg0.getBackendState());
-							}
-	    				});
-	    		
-	    		if(notInError.size()>0){
-  		  			desc.setInstances(new Instances());
-	    			desc.getInstances().setMember(new ArrayList<Instance>(
-	    		    	Collections2.transform(notInError, new Function<LoadBalancerBackendInstanceCoreView, Instance>(){
-    		    			@Override
-    		    			public Instance apply(final LoadBalancerBackendInstanceCoreView be){
-    		    				Instance instance = new Instance();
-    		    				// re-use instanceId field to mark the instance's IP 
-    		    				// servo tool should interpret it properly
-    		    				instance.setInstanceId(be.getInstanceId() +":"+ be.getIpAddress());
-    		    				return instance;
-    		    			}
-    		    		})));
-	    		}
-	    			/// availability zones
-	    		desc.setAvailabilityZones(new AvailabilityZones());
-	    		desc.getAvailabilityZones().setMember(Lists.newArrayList(zone.getName()));
-	    			                                  /// listeners
-	    		if(lb.getListeners().size()>0){
-	    			desc.setListenerDescriptions(new ListenerDescriptions());
-	    			desc.getListenerDescriptions().setMember(new ArrayList<ListenerDescription>(
-	    					Collections2.transform(lb.getListeners(), new Function<LoadBalancerListenerCoreView, ListenerDescription>(){
-    							@Override
-    							public ListenerDescription apply(final LoadBalancerListenerCoreView input){
-    								ListenerDescription desc = new ListenerDescription();
-    								Listener listener = new Listener();
-    								listener.setLoadBalancerPort(input.getLoadbalancerPort());
-    								listener.setInstancePort(input.getInstancePort());
-    								if(input.getInstanceProtocol() != PROTOCOL.NONE)
-    								  listener.setInstanceProtocol(input.getInstanceProtocol().name());
-    								listener.setProtocol(input.getProtocol().name());
-    								if(input.getCertificateId()!=null)
-    								  listener.setSSLCertificateId(input.getCertificateId());
-    								desc.setListener(listener);
-    								final LoadBalancerListener lbListener = LoadBalancerListenerEntityTransform.INSTANCE.apply(input);
-    								final PolicyNames pnames = new PolicyNames();
-    								pnames.setMember(new ArrayList<String>(Lists.transform(lbListener.getPolicies(), new Function<LoadBalancerPolicyDescriptionCoreView, String>(){
-    								  @Override
-    								  public String apply(
-    								      LoadBalancerPolicyDescriptionCoreView arg0) {
-    								    try{
-      								    // HACK: to send the values associated with the cookie stickiness policy
-      								    final LoadBalancerPolicyDescription policy = LoadBalancerPolicyDescriptionEntityTransform.INSTANCE.apply(arg0);
-      								    if("LBCookieStickinessPolicyType".equals(arg0.getPolicyTypeName())){
-      								      final String expiration=
-      								          policy.findAttributeDescription("CookieExpirationPeriod").getAttributeValue();
-      								      return String.format("LBCookieStickinessPolicyType:%s", expiration);
-      								    }else if("AppCookieStickinessPolicyType".equals(arg0.getPolicyTypeName())){
-      								      final String cookieName=
-      								          policy.findAttributeDescription("CookieName").getAttributeValue();
-      								      return String.format("AppCookieStickinessPolicyType:%s", cookieName);
-      								    }else{
-      								      return arg0.getPolicyName(); // No other policy types are supported
-      								    }
-    								    }catch(final Exception ex){
-    								      return arg0.getPolicyName(); // No other policy types are supported
-    								    }
-    								  }
-    								})));
-                    desc.setPolicyNames(pnames);
-    								return desc;
-    							}
-    						})));
-    			}
-	    			                                  /// health check
-	    		try{
-	 				  int interval = lb.getHealthCheckInterval();
-	 				  String target = lb.getHealthCheckTarget();
-	 				  int timeout = lb.getHealthCheckTimeout();
-	 				  int healthyThresholds = lb.getHealthyThreshold();
-	 				  int unhealthyThresholds = lb.getHealthCheckUnhealthyThreshold();
-	 				  
-	 				  final HealthCheck hc = new HealthCheck();
-	 				  hc.setInterval(interval);
-	 				  hc.setHealthyThreshold(healthyThresholds);
-	 				  hc.setTarget(target);
-	 				  hc.setTimeout(timeout);
-	 				  hc.setUnhealthyThreshold(unhealthyThresholds);
-	 				  desc.setHealthCheck(hc);
-	    		}catch(IllegalStateException ex){
-	    				;
-	    		}catch(Exception ex){
-	    				;
-	    		}
-	    	  
-    			descs.add(desc);
-	    		return descs;
-	    	}
-  	  };
+        final LoadBalancerServoDescription desc = new LoadBalancerServoDescription();
+        desc.setLoadBalancerName(lbName); /// loadbalancer name
+        desc.setCreatedTime(lbView.getCreationTimestamp());/// createdtime
+        final LoadBalancer lb;
+        try {
+          lb = LoadBalancerEntityTransform.INSTANCE.apply(lbView);
+        } catch( final Exception ex ){
+          return Optional.<LoadBalancerServoDescription>absent();
+        }
 
-	  Set<LoadBalancerDescription> descs = null;
-	  
-	  LoadBalancer lb = null;
-	  try{
-		  lb = LoadBalancerEntityTransform.INSTANCE.apply(zone.getLoadbalancer());
-	  	  if(zone != null && LoadBalancingMetadatas.filterPrivilegedWithoutOwner().apply( lb ) && zone.getState().equals(LoadBalancerZone.STATE.InService)){
-	  			 descs= lookupLBDescriptions.apply(zone);
-	  	  }else
-	  		  descs = Sets.<LoadBalancerDescription>newHashSet();
-	  }catch(final Exception ex){
-  		  descs = Sets.<LoadBalancerDescription>newHashSet();
-	  }
-  		  
-	  DescribeLoadBalancersResult descResult = new DescribeLoadBalancersResult();
-	  LoadBalancerDescriptions lbDescs = new LoadBalancerDescriptions();
-	  lbDescs.setMember(new ArrayList<LoadBalancerDescription>(descs));
-	  descResult.setLoadBalancerDescriptions(lbDescs);
-	  reply.setDescribeLoadBalancersResult(descResult);
-	  reply.set_return(true);
-	    
-	  return reply;
+        final LoadBalancerDnsRecordCoreView dnsView = lb.getDns();
+
+        /// dns name
+        desc.setDnsName(dnsView.getDnsName());
+
+        Collection<LoadBalancerBackendInstanceCoreView> notInError =
+            Collections2.filter(zone.getBackendInstances(), new Predicate<LoadBalancerBackendInstanceCoreView>(){
+              @Override
+              public boolean apply( LoadBalancerBackendInstanceCoreView arg0 ) {
+                return !LoadBalancerBackendInstance.STATE.Error.equals( arg0.getBackendState( ) ) && 
+                    !(arg0.getIpAddress()==null || arg0.getIpAddress().length()<=0)  ;
+              }
+            });
+
+        if( !notInError.isEmpty( ) ){
+          desc.setInstances( new Instances( ) );
+          desc.getInstances( ).getMember( ).addAll(
+              Collections2.transform(notInError, new Function<LoadBalancerBackendInstanceCoreView, Instance>(){
+                @Override
+                public Instance apply(final LoadBalancerBackendInstanceCoreView be){
+                  Instance instance = new Instance();
+                  // re-use instanceId field to mark the instance's IP
+                  // servo tool should interpret it properly
+                  instance.setInstanceId(be.getInstanceId() +":"+ be.getIpAddress());
+                  return instance;
+                }
+              }));
+        }
+
+        /// availability zones
+        desc.setAvailabilityZones(new AvailabilityZones( ));
+        desc.getAvailabilityZones( ).getMember( ).add( zone.getName( ) );
+
+        /// listeners
+        if(lb.getListeners().size()>0){
+          desc.setListenerDescriptions(new ListenerDescriptions());
+          desc.getListenerDescriptions().setMember(new ArrayList<>(
+              Collections2.transform(lb.getListeners(), new Function<LoadBalancerListenerCoreView, ListenerDescription>(){
+                @Override
+                public ListenerDescription apply(final LoadBalancerListenerCoreView input){
+                  ListenerDescription desc = new ListenerDescription();
+                  Listener listener = new Listener();
+                  listener.setLoadBalancerPort(input.getLoadbalancerPort());
+                  listener.setInstancePort(input.getInstancePort());
+                  if(input.getInstanceProtocol() != PROTOCOL.NONE)
+                    listener.setInstanceProtocol(input.getInstanceProtocol().name());
+                  listener.setProtocol(input.getProtocol().name());
+                  if(input.getCertificateId()!=null)
+                    listener.setSSLCertificateId(input.getCertificateId());
+                  desc.setListener(listener);
+                  final LoadBalancerListener lbListener = LoadBalancerListenerEntityTransform.INSTANCE.apply(input);
+                  final PolicyNames pnames = new PolicyNames();
+                  pnames.setMember(new ArrayList<>(Lists.transform(lbListener.getPolicies(), new Function<LoadBalancerPolicyDescriptionCoreView, String>(){
+                    @Override
+                    public String apply(
+                        LoadBalancerPolicyDescriptionCoreView arg0) {
+                      try{
+                        // HACK: to send the values associated with the cookie stickiness policy
+                        final LoadBalancerPolicyDescription policy = LoadBalancerPolicyDescriptionEntityTransform.INSTANCE.apply(arg0);
+                        if("LBCookieStickinessPolicyType".equals(arg0.getPolicyTypeName())){
+                          final String expiration=
+                              policy.findAttributeDescription("CookieExpirationPeriod").getAttributeValue();
+                          return String.format("LBCookieStickinessPolicyType:%s", expiration);
+                        }else if("AppCookieStickinessPolicyType".equals(arg0.getPolicyTypeName())){
+                          final String cookieName=
+                              policy.findAttributeDescription("CookieName").getAttributeValue();
+                          return String.format("AppCookieStickinessPolicyType:%s", cookieName);
+                        }else{
+                          return arg0.getPolicyName(); // No other policy types are supported
+                        }
+                      }catch(final Exception ex){
+                        return arg0.getPolicyName(); // No other policy types are supported
+                      }
+                    }
+                  })));
+                  desc.setPolicyNames(pnames);
+                  return desc;
+                }
+              })));
+        }
+
+        /// health check
+        try{
+          int interval = lb.getHealthCheckInterval();
+          String target = lb.getHealthCheckTarget();
+          int timeout = lb.getHealthCheckTimeout();
+          int healthyThresholds = lb.getHealthyThreshold();
+          int unhealthyThresholds = lb.getHealthCheckUnhealthyThreshold();
+
+          final HealthCheck hc = new HealthCheck();
+          hc.setInterval(interval);
+          hc.setHealthyThreshold(healthyThresholds);
+          hc.setTarget(target);
+          hc.setTimeout(timeout);
+          hc.setUnhealthyThreshold(unhealthyThresholds);
+          desc.setHealthCheck(hc);
+        } catch(Exception ex){
+        }
+
+        // attributes
+        desc.setLoadBalancerAttributes( TypeMappers.transform( lb, LoadBalancerAttributes.class ) );
+
+        return Optional.of( desc );
+      }
+    };
+
+    Optional<LoadBalancerServoDescription> descs = Optional.<LoadBalancerServoDescription>absent( );
+    try {
+      final LoadBalancer lb = LoadBalancerEntityTransform.INSTANCE.apply(zone.getLoadbalancer());
+      if( zone != null && LoadBalancingMetadatas.filterPrivilegedWithoutOwner().apply( lb ) && zone.getState().equals(LoadBalancerZone.STATE.InService)){
+        descs= lookupLBDescriptions.apply( zone );
+      }
+    } catch( final Exception ex ) {
+    }
+
+    final LoadBalancerServoDescriptions lbDescs = new LoadBalancerServoDescriptions( );
+    lbDescs.getMember().addAll( descs.asSet( ) );
+    reply.getDescribeLoadBalancersResult( ).setLoadBalancerDescriptions( lbDescs );
+    reply.set_return(true);
+
+    return reply;
   }
   
   /// EUCA-specific, internal operations for storing instance health check and cloudwatch metrics
@@ -409,8 +464,7 @@ public class LoadBalancingBackendService {
 				  }  
 			  }
 			  if(found!=null){
-			 	  final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
-				  try{
+				  try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
 					  final LoadBalancerBackendInstance update = Entities.uniqueResult(
 							  LoadBalancerBackendInstance.named(lb, found.getInstanceId()));
 				
@@ -426,14 +480,9 @@ public class LoadBalancingBackendService {
 					  Entities.persist(update);
 					  db.commit();
 				  }catch(final NoSuchElementException ex){
-					  db.rollback();
 					  LOG.error("unable to find the loadbancer backend instance", ex);
 				  }catch(final Exception ex){
-					  db.rollback();
 					  LOG.error("unable to update the state of loadbalancer backend instance", ex);
-				  }finally{
-					  if(db.isActive())
-						  db.rollback();
 				  }
 			  }
 		  }
@@ -441,25 +490,19 @@ public class LoadBalancingBackendService {
 	  
 	  /// Update Cloudwatch
 	  for(final LoadBalancerBackendInstanceCoreView sample : lb.getBackendInstances()){
-		  final EntityTransaction db = Entities.get( LoadBalancerBackendInstance.class );
-	 	  try{
+	 	  try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
 	 		  final LoadBalancerBackendInstance found = Entities.uniqueResult(
 	 				  LoadBalancerBackendInstance.named(lb, sample.getInstanceId()));
 	 		  final String zoneName = found.getAvailabilityZone().getName();
 	 		  if(found.getState().equals(LoadBalancerBackendInstance.STATE.InService)){
-	 			  LoadBalancerCwatchMetrics.getInstance().updateHealthy(LoadBalancerCoreViewTransform.INSTANCE.apply(lb), zoneName, found.getInstanceId());
+	 			  LoadBalancerCwatchMetrics.getInstance().updateHealthy(lb.getCoreView(), zoneName, found.getInstanceId());
 	 		  }else if (found.getState().equals(LoadBalancerBackendInstance.STATE.OutOfService)){
-	 			  LoadBalancerCwatchMetrics.getInstance().updateUnHealthy(LoadBalancerCoreViewTransform.INSTANCE.apply(lb), zoneName, found.getInstanceId());
+	 			  LoadBalancerCwatchMetrics.getInstance().updateUnHealthy(lb.getCoreView(), zoneName, found.getInstanceId());
 	 		  }
 	 		  db.commit();
 	 	  }catch(NoSuchElementException ex){
-	 		  db.rollback();
 	 	  }catch(Exception ex){
-	 		  db.rollback();
 	 		  LOG.warn("Failed to query loadbalancer backend instance", ex);
-	 	  }finally {
-	 		  if(db.isActive())
-	 			  db.rollback();
 	 	  }
 	  }
 	  
@@ -474,42 +517,45 @@ public class LoadBalancingBackendService {
 	  return reply;
   }
  
-  public CreateLoadBalancerResponseType createLoadBalancer(CreateLoadBalancerType request) throws EucalyptusCloudException {
-    final CreateLoadBalancerResponseType reply = request.getReply();
-    final Context ctx = Contexts.lookup();
-    final UserFullName ownerFullName = ctx.getUserFullName();
-    final String lbName = request.getLoadBalancerName();
+  public CreateLoadBalancerResponseType createLoadBalancer(
+      final CreateLoadBalancerType request
+  ) throws EucalyptusCloudException {
+    final CreateLoadBalancerResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final UserFullName ownerFullName = ctx.getUserFullName( );
+    final String lbName = request.getLoadBalancerName( );
 
     // verify loadbalancer name
-    final Predicate<String> nameChecker = new Predicate<String>(){
-		@Override
-		public boolean apply(@Nullable String arg0) {
-			if(arg0==null)
-				return false;
-			if(!HostSpecifier.isValid(String.format("%s.com", arg0)))
-				return false;
-			if(!arg0.matches("[a-zA-Z0-9-]{1,255}"))
-			  return false;
-			return true;
-		  }
-    };
-    
-    if(!nameChecker.apply(lbName)){
-    	throw new InvalidConfigurationRequestException("Invalid character found in the loadbalancer name");
+    if( lbName == null ||
+        !HostSpecifier.isValid(String.format("%s.com", lbName)) ||
+        !lbName.matches("[a-zA-Z0-9-]{1,32}")){
+      throw new InvalidConfigurationRequestException("Invalid character found in the loadbalancer name");
     }
 
-    // To be AWS compatible, the ELB name must not exceed 32 characters. To remain DNS compliant, in case
-    // AWS increase this number in the future, the ELB name must never exceed 63 characters.
-    if(lbName.length() > 32){
-    	throw new InvalidConfigurationRequestException("Loadbalancer name must not exceed 32 characters");
+    final Map<String,String> tags = Maps.newHashMap( );
+    if ( request.getTags( ) != null ) {
+      for ( final Tag tag : request.getTags( ).getMember( ) ) {
+        if ( tags.put( tag.getKey( ), Strings.nullToEmpty( tag.getValue( ) ) ) != null ) {
+          throw new LoadBalancingBackendClientException( "DuplicateTagKeys", "Duplicate tag key (" + tag.getKey( ) + ")" );
+        }
+      }
+      final int userTags = Iterables.size( Iterables.filter( tags.keySet( ), Predicates.not( isReservedTagPrefix( ) ) ) );
+      if ( tags.size( ) - userTags > 0 && !Contexts.lookup( ).isPrivileged( ) ) {
+        throw new InvalidConfigurationRequestException("Invalid tag key (reserved prefix)");
+      }
+      if ( userTags > MAX_TAGS ) {
+        throw Exceptions.toUndeclared( new LoadBalancingBackendClientException( "TooManyTags", "Tag limit exceeded" ) );
+      }
     }
 
-    if(request.getListeners()!=null && request.getListeners().getMember()!=null)
-    	LoadBalancers.validateListener(request.getListeners().getMember());
+    final List<Listener> listeners = request.getListeners( ) != null ?
+        request.getListeners( ).getMember( ) :
+        Collections.<Listener>emptyList( );
+
+    LoadBalancers.validateListener( listeners );
     
     // Check SSL Certificate Id before creating LB
-    Collection<Listener> listeners=request.getListeners().getMember();
-    try{
+    try {
       for(final Listener l : listeners){
         if("HTTPS".equals(l.getProtocol().toUpperCase()) || "SSL".equals(l.getProtocol().toUpperCase())){
           final String certArn = l.getSSLCertificateId();
@@ -525,110 +571,219 @@ public class LoadBalancingBackendService {
       }
       throw (LoadBalancingException) ex;
     }
-    
+
+    if ( request.getAvailabilityZones( ) != null && !request.getAvailabilityZones( ).getMember( ).isEmpty( ) ) {
+      final Set<String> validZones = Sets.newHashSet( );
+      try {
+        Iterables.addAll(
+            validZones,
+            Iterables.transform(
+                EucalyptusActivityTasks.getInstance().describeAvailabilityZones( false ),
+                ClusterInfoType.zoneName() ) );
+      } catch( Exception ex ){
+        throw new InternalFailure400Exception("Unable to verify the requested zones");
+      }
+      for( final String zone : request.getAvailabilityZones( ).getMember( ) ) {
+        if( !validZones.contains( zone ) ) {
+          throw new InvalidConfigurationRequestException( "No cluster named " + zone + " is available" );
+        }
+      }
+    }
+
+    String subnetVpcId = null;
+    final Map<String,String> zoneToSubnetIdMap = Maps.newHashMap( );
+    if ( request.getSubnets( ) != null ) {
+      final List<SubnetType> subnets =
+          EucalyptusActivityTasks.getInstance( ).describeSubnets( request.getSubnets( ).getMember( ) );
+      if ( subnets.size( ) != request.getSubnets( ).getMember( ).size( ) ) {
+        throw new LoadBalancingBackendClientException( "SubnetNotFound", "Invalid subnet(s)" );
+      }
+      for ( final SubnetType subnetType : subnets ) {
+        if ( subnetVpcId == null ) {
+          subnetVpcId = subnetType.getVpcId( );
+        } else if ( !subnetVpcId.equals( subnetType.getVpcId( ) ) ) {
+          throw new InvalidConfigurationRequestException( "Subnets must belong to the same VPC" );
+        }
+        if ( zoneToSubnetIdMap.put( subnetType.getAvailabilityZone( ), subnetType.getSubnetId( ) ) != null ) {
+          throw new InvalidConfigurationRequestException( "Multiple subnets for zone ("+subnetType.getAvailabilityZone( )+")" );
+        }
+      }
+    }
+    final String adminUserId = lookupAdmin( ctx );
+    boolean defaultVpc = false;
+    if ( subnetVpcId == null ) { // check for a default VPC
+      final Optional<VpcType> vpcOptional = EucalyptusActivityTasks.getInstance( ).defaultVpc( adminUserId );
+      subnetVpcId = vpcOptional.transform( VpcType.id( ) ).orNull( );
+      defaultVpc = subnetVpcId != null;
+    }
+    final String vpcId = subnetVpcId;
+    if ( defaultVpc && zoneToSubnetIdMap.isEmpty( ) && request.getAvailabilityZones( ) != null ) {
+      final List<SubnetType> subnets = EucalyptusActivityTasks.getInstance( ).describeSubnetsByZone(
+          vpcId, true, request.getAvailabilityZones( ).getMember( ) );
+      CollectionUtils.putAll( subnets, zoneToSubnetIdMap, SubnetType.zone( ), SubnetType.id( ) );
+      if ( request.getAvailabilityZones( ).getMember( ).size( ) != zoneToSubnetIdMap.size( ) ) {
+        throw new InvalidConfigurationRequestException( "Default subnet not found for zone(s)" );
+      }
+    }
+
+    LoadBalancer.Scheme reqScheme = LoadBalancer.Scheme.fromString( request.getScheme( ) ).orNull( );
+    if ( reqScheme == null && !Strings.isNullOrEmpty( request.getScheme( ) ) ) {
+      throw new InvalidConfigurationRequestException("Invalid scheme ("+request.getScheme( )+")");
+    }
+    if ( reqScheme != null && vpcId == null ) {
+      if ( reqScheme != LoadBalancer.Scheme.InternetFacing ) {
+        throw new InvalidConfigurationRequestException( "Scheme (" + request.getScheme() + ") should not be specified for EC2-Classic platform" );
+      } else {
+        reqScheme = null; // ignore internet-facing scheme for non-vpc ELB
+      }
+    }
+    final LoadBalancer.Scheme scheme = reqScheme;
+
+    if ( vpcId != null && scheme != LoadBalancer.Scheme.Internal ) try {
+      final List<InternetGatewayType> internetGateways =
+          EucalyptusActivityTasks.getInstance( ).describeInternetGateways( Collections.singleton( vpcId ) );
+      if ( internetGateways.isEmpty( ) ) {
+        throw new LoadBalancingBackendClientException( "InvalidSubnet", "VPC "+vpcId+" has no internet gateway" );
+      }
+    } catch ( final LoadBalancingException e ) {
+      throw e;
+    } catch ( final Exception e ) {
+      LOG.error( "Error checking internet gateway", e );
+      throw new InternalFailureException( "Unable to verify VPC configuration" );
+    }
+
+    final Set<String> securityGroupIds = Sets.newHashSet( );
+    if ( request.getSecurityGroups( ) != null ) {
+      securityGroupIds.addAll( request.getSecurityGroups( ).getMember( ) );
+    } else if ( vpcId != null && !defaultVpc ) { // for default VPC a group is created/discovered later
+      final List<SecurityGroupItemType> groups =  EucalyptusActivityTasks.getInstance( )
+          .describeUserSecurityGroupsByName( adminUserId, vpcId, "default" );
+      if ( groups.isEmpty( ) ) {
+        throw new InvalidConfigurationRequestException( "Default security group not found for VPC " + vpcId );
+      }
+      securityGroupIds.add( groups.get( 0 ).getGroupId( ) );
+    }
+    if ( !securityGroupIds.isEmpty( ) && vpcId == null ) {
+      throw new InvalidConfigurationRequestException("Security groups should not be specified for EC2-Classic platform");
+    }
+    final List<SecurityGroupItemType> groups = securityGroupIds.isEmpty() ?
+        Collections.<SecurityGroupItemType>emptyList( ) :
+        EucalyptusActivityTasks.getInstance().describeUserSecurityGroupsById( adminUserId, vpcId, securityGroupIds );
+    if ( groups.size( ) != securityGroupIds.size( ) ) {
+      throw new LoadBalancingBackendClientException( "InvalidSecurityGroup", "Invalid security group(s)" );
+    }
+
+    final Collection<String> zones = Lists.newArrayList( );
+    if ( request.getAvailabilityZones( ) != null ) zones.addAll( request.getAvailabilityZones( ).getMember( ) );
+    if ( zones.isEmpty( ) ) zones.addAll( zoneToSubnetIdMap.keySet( ) );
+    if ( !zoneToSubnetIdMap.isEmpty( ) && !zoneToSubnetIdMap.keySet( ).equals( Sets.newHashSet( zones ) ) ) {
+      throw new InvalidConfigurationRequestException("Availability zones and subnets are inconsistent");
+    }
+
     final Supplier<LoadBalancer> allocator = new Supplier<LoadBalancer>() {
       @Override
       public LoadBalancer get() {
         try {
-          return LoadBalancers.addLoadbalancer(ownerFullName, lbName);
+          final Map<String,String> securityGroupIdsToNames = CollectionUtils.putAll(
+              groups,
+              Maps.<String,String>newHashMap( ),
+              SecurityGroupItemType.groupId( ),
+              SecurityGroupItemType.groupName( ) );
+          return LoadBalancers.addLoadbalancer( ownerFullName, lbName, vpcId, scheme, securityGroupIdsToNames, tags );
         } catch ( LoadBalancingException e ) {
           throw Exceptions.toUndeclared( e );
         }
       }
     };
 
-    LoadBalancer lb = null;
+    final LoadBalancer lb;
     try {
       lb = LoadBalancingMetadatas.allocateUnitlessResource( allocator );
     } catch ( Exception e ) {
-      handleException( e );
+      throw handleException( e );
     }
-    final Collection<String> zones = request.getAvailabilityZones().getMember();
-
 
     Function<String, Boolean> rollback = new Function<String, Boolean>(){
-    	@Override
-    	public Boolean apply(String lbName){
-    		try{
-    			LoadBalancers.unsetForeignKeys(ctx, lbName);
-    		}catch(final Exception ex){
-    			LOG.warn("unable to unset foreign keys", ex);
-    		}
+      @Override
+      public Boolean apply(String lbName){
+        try{
+          LoadBalancers.unsetForeignKeys(ctx, lbName);
+        }catch(final Exception ex){
+          LOG.warn("unable to unset foreign keys", ex);
+        }
 
-    		try{
-    			LoadBalancers.removeZone(lbName, ctx, zones);
-    		}catch(final Exception ex){
-    			LOG.error("unable to delete availability zones during rollback", ex);
-    		}
-    	
-    		try{
-        		LoadBalancers.deleteLoadbalancer(ownerFullName, lbName);
-        	}catch(LoadBalancingException ex){
-        		LOG.error("failed to rollback the loadbalancer: " + lbName, ex);
-        		return false;
-        	}
-    		return true;
-    	}
+        try{
+          LoadBalancers.removeZone(lbName, ctx, zones);
+        }catch(final Exception ex){
+          LOG.error("unable to delete availability zones during rollback", ex);
+        }
+
+        try{
+            LoadBalancers.deleteLoadbalancer(ownerFullName, lbName);
+          }catch(LoadBalancingException ex){
+            LOG.error("failed to rollback the loadbalancer: " + lbName, ex);
+            return false;
+          }
+        return true;
+      }
     };
-    
+
     final LoadBalancerDnsRecord dns = LoadBalancers.getDnsRecord(lb);
     if(dns == null || dns.getName() == null){
-    	rollback.apply(lbName);
-    	throw new InternalFailure400Exception("Dns name could not be created");
+      rollback.apply(lbName);
+      throw new InternalFailure400Exception("Dns name could not be created");
     }
-  
+
     if(zones != null && zones.size()>0){
-    	try{
-    		LoadBalancers.addZone(lbName, ctx, zones);
-    	}catch(LoadBalancingException ex){
-    		rollback.apply(lbName);
-    		throw ex;
-    	}catch(Exception ex){
-    		rollback.apply(lbName);
-    		throw new InternalFailure400Exception("Failed to persist the zone");
-    	}
+      try{
+        LoadBalancers.addZone( lbName, ctx, zones, zoneToSubnetIdMap );
+      }catch(LoadBalancingException ex){
+        rollback.apply(lbName);
+        throw ex;
+      }catch(Exception ex){
+        rollback.apply(lbName);
+        throw new InternalFailure400Exception("Failed to persist the zone");
+      }
     }
-    
+
+    Entities.evictCache( LoadBalancer.class );
+
     /// trigger new loadbalancer event 
     try{
-    	NewLoadbalancerEvent evt = new NewLoadbalancerEvent();
-    	evt.setLoadBalancer(lbName);
-    	evt.setContext(ctx);
-    	evt.setZones(zones);
-    	ActivityManager.getInstance().fire(evt);
+      NewLoadbalancerEvent evt = new NewLoadbalancerEvent();
+      evt.setLoadBalancer(lbName);
+      evt.setContext(ctx);
+      evt.setZones(zones);
+      ActivityManager.getInstance().fire(evt);
     }catch(EventFailedException e){
-    	LOG.error("failed to handle new loadbalancer event", e);
-    	rollback.apply(lbName);
-    	final String reason = e.getCause() != null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
-    	throw new InternalFailure400Exception(String.format("Failed to create the loadbalancer: %s", reason), e);
+      LOG.error("failed to handle new loadbalancer event", e);
+      rollback.apply(lbName);
+      final String reason = e.getCause() != null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
+      throw new InternalFailure400Exception(String.format("Failed to create the loadbalancer: %s", reason), e);
     }
     
-    if(listeners!=null && listeners.size()>0){
-    	LoadBalancers.createLoadbalancerListener(lbName,  ctx, Lists.newArrayList(listeners));
-    	try{
-    		CreateListenerEvent evt = new CreateListenerEvent();
-    		evt.setLoadBalancer(lbName);
-    		evt.setListeners(listeners);
-    		evt.setContext(ctx);
-    		ActivityManager.getInstance().fire(evt);
-    	}catch(EventFailedException e){
-    		  LOG.error("failed to handle createListener event", e);
-        	// rollback.apply(lbName);
-    		  // TODO: this will leave the loadbalancer, which  will not be functional. 
-    		  // ideally, we should rollback the whole loadbalancer creation pipeline
-        	final String reason = e.getCause() != null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
-        	throw new InternalFailure400Exception(String.format("Faild to setup the listener: %s", reason), e);
-    	}
+    if( !listeners.isEmpty( ) ){
+      LoadBalancers.createLoadbalancerListener(lbName,  ctx, Lists.newArrayList(listeners));
+      try{
+        CreateListenerEvent evt = new CreateListenerEvent();
+        evt.setLoadBalancer(lbName);
+        evt.setListeners(listeners);
+        evt.setContext(ctx);
+        ActivityManager.getInstance().fire(evt);
+      }catch(EventFailedException e){
+        LOG.error("failed to handle createListener event", e);
+        // rollback.apply(lbName);
+        // TODO: this will leave the loadbalancer, which  will not be functional.
+        // ideally, we should rollback the whole loadbalancer creation pipeline
+        final String reason = e.getCause() != null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
+        throw new InternalFailure400Exception(String.format("Failed to setup the listener: %s", reason), e);
+      }
     }
     
-    final CreateLoadBalancerResult result = new CreateLoadBalancerResult();
-    if(dns==null || dns.getDnsName() == null){
-    	LOG.warn("No DNS name is assigned to the loadbalancer: "+lbName);
-    }
-    
-    result.setDnsName(dns.getDnsName());
-    reply.setCreateLoadBalancerResult(result);
-    reply.set_return(true);
+    final CreateLoadBalancerResult result = new CreateLoadBalancerResult( );
+    result.setDnsName( dns.getDnsName( ) );
+    reply.setCreateLoadBalancerResult( result );
+    reply.set_return( true );
     return reply;
   }
 
@@ -637,7 +792,7 @@ public class LoadBalancingBackendService {
     final Context ctx = Contexts.lookup( );
     final String accountNumber = ctx.getAccount().getAccountNumber();
     final Set<String> requestedNames = Sets.newHashSet( );
-    if ( !request.getLoadBalancerNames().getMember().isEmpty()) {
+    if ( request.getLoadBalancerNames( ) != null ) {
       requestedNames.addAll( request.getLoadBalancerNames().getMember() );
     }
     final boolean showAll = requestedNames.remove( "verbose" ) && ctx.isAdministrator();
@@ -645,17 +800,22 @@ public class LoadBalancingBackendService {
     final Function<Set<String>, Set<LoadBalancer>> lookupAccountLBs = new Function<Set<String>, Set<LoadBalancer>>( ) {
           @Override
           public Set<LoadBalancer> apply( final Set<String> identifiers ) {
-            final Predicate<? super LoadBalancer> requestedAndAccessible =
-                LoadBalancingMetadatas.filteringFor( LoadBalancer.class )
-                    .byId( identifiers )
-                    .byPrivileges( )
-                    .buildPredicate( );
+            try {
+              final Predicate<? super LoadBalancer> requestedAndAccessible =
+                  LoadBalancingMetadatas.filteringFor( LoadBalancer.class )
+                      .byId( identifiers )
+                      .byPrivileges( )
+                      .buildPredicate( );
 
-            final LoadBalancer example = showAll ?
-                LoadBalancer.named( null, null ) :
-                LoadBalancer.namedByAccountId( accountNumber , null );
-            final List<LoadBalancer> lbs = Entities.query( example, true);
-            return Sets.newHashSet( Iterables.filter( lbs, requestedAndAccessible ) );
+              final LoadBalancer example = showAll ?
+                  LoadBalancer.named( null, null ) :
+                  LoadBalancer.namedByAccountId( accountNumber, null );
+              final List<LoadBalancer> lbs = Entities.query( example, true );
+              return Sets.newHashSet( Iterables.filter( lbs, requestedAndAccessible ) );
+            } catch ( EntityNotFoundException e ) {
+              Entities.evictCache( LoadBalancer.class );
+              throw new OptimisticLockException( "Error loading load balancers", e );
+            }
           }
     };
 
@@ -670,46 +830,55 @@ public class LoadBalancingBackendService {
           if(lb==null) // loadbalancer not found
             continue;
           final String lbName = lb.getDisplayName();
-          desc.setLoadBalancerName(lbName); /// loadbalancer name
-          desc.setCreatedTime(lb.getCreationTimestamp());/// createdtime
-          final LoadBalancerDnsRecordCoreView dns = lb.getDns();
+          desc.setLoadBalancerName(lbName);
+          desc.setCreatedTime(lb.getCreationTimestamp());
 
-          desc.setDnsName(dns.getDnsName());           /// dns name
-                                            /// instances
+          // dns name
+          final LoadBalancerDnsRecordCoreView dns = lb.getDns();
+          if ( dns != null ) {
+            desc.setDnsName( dns.getDnsName() );
+          }
+
+          // instances
           if(lb.getBackendInstances().size()>0){
             desc.setInstances(new Instances());
-            desc.getInstances().setMember(new ArrayList<Instance>(
-                Collections2.transform(lb.getBackendInstances(), new Function<LoadBalancerBackendInstanceCoreView, Instance>(){
-                  @Override
-                  public Instance apply(final LoadBalancerBackendInstanceCoreView be){
-                    Instance instance = new Instance();
-                    instance.setInstanceId(be.getInstanceId());
-                    return instance;
-                  }
-                })));
+            Iterables.addAll( desc.getInstances().getMember( ), Iterables.transform(
+                lb.getBackendInstances(),
+                Functions.compose( Instance.instance( ), LoadBalancerBackendInstanceCoreView.instanceId( ) ) ) );
           }
-          /// availability zones
-          if(lb.getZones().size()>0){
+
+          // availability zones
+          final List<String> subnetIds = Lists.newArrayList( );
+          if( !lb.getZones().isEmpty( ) ){
             desc.setAvailabilityZones(new AvailabilityZones());
             final List<LoadBalancerZoneCoreView> currentZones = 
-					Lists.newArrayList(Collections2.filter(lb.getZones(), new Predicate<LoadBalancerZoneCoreView>(){
-						@Override
-						public boolean apply(@Nullable LoadBalancerZoneCoreView arg0) {
-							return arg0.getState().equals(LoadBalancerZone.STATE.InService);
-						}
-			}));
-            desc.getAvailabilityZones().setMember(new ArrayList<String>(
-                Lists.transform(currentZones, new Function<LoadBalancerZoneCoreView, String>(){
-                  @Override
-                  public String apply(final LoadBalancerZoneCoreView zone){
-                    return zone.getName();
-                  }
-                })));
+              Lists.newArrayList(Iterables.filter(lb.getZones(), new Predicate<LoadBalancerZoneCoreView>(){
+                @Override
+                public boolean apply( LoadBalancerZoneCoreView arg0 ) {
+                  return arg0.getState().equals(LoadBalancerZone.STATE.InService);
+                }
+              }));
+            Iterables.addAll(
+                desc.getAvailabilityZones().getMember( ),
+                Iterables.transform( currentZones, LoadBalancerZoneCoreView.name( ) ) );
+            Iterables.addAll(
+                subnetIds,
+                Iterables.filter(
+                    Iterables.transform( currentZones, LoadBalancerZoneCoreView.subnetId() ),
+                    Predicates.notNull() ) );
           }
-                                            /// listeners
+
+          // subnets
+          if ( !subnetIds.isEmpty( ) ) {
+            desc.setSubnets( new Subnets( subnetIds ) );
+          }
+
+          desc.setVpcId( lb.getVpcId( ) );
+
+          // listeners
           if(lb.getListeners().size()>0){
             desc.setListenerDescriptions(new ListenerDescriptions());
-            desc.getListenerDescriptions().setMember(new ArrayList<ListenerDescription>(
+            desc.getListenerDescriptions().setMember(new ArrayList<>(
                 Collections2.transform(lb.getListeners(), new Function<LoadBalancerListenerCoreView, ListenerDescription>(){
                   @Override
                   public ListenerDescription apply(final LoadBalancerListenerCoreView input){
@@ -726,7 +895,7 @@ public class LoadBalancingBackendService {
                     desc.setListener(listener);
                     final LoadBalancerListener lbListener = LoadBalancerListenerEntityTransform.INSTANCE.apply(input);
                     final PolicyNames pnames = new PolicyNames();
-                    pnames.setMember(new ArrayList<String>(Lists.transform(lbListener.getPolicies(), new Function<LoadBalancerPolicyDescriptionCoreView, String>(){
+                    pnames.setMember(new ArrayList<>(Lists.transform(lbListener.getPolicies(), new Function<LoadBalancerPolicyDescriptionCoreView, String>(){
                       @Override
                       public String apply(
                           LoadBalancerPolicyDescriptionCoreView arg0) {
@@ -738,7 +907,8 @@ public class LoadBalancingBackendService {
                   }
                 })));
           }
-                                            /// health check
+
+          /// health check
           try{
             int interval = lb.getHealthCheckInterval();
             String target = lb.getHealthCheckTarget();
@@ -753,22 +923,25 @@ public class LoadBalancingBackendService {
             hc.setTimeout(timeout);
             hc.setUnhealthyThreshold(unhealthyThresholds);
             desc.setHealthCheck(hc);
-          }catch(IllegalStateException ex){
-            ;
-          }catch(Exception ex){
-            ;
+          } catch(Exception ex){
           }
-                                            /// backend server description
-          									/// source security group
+          /// backend server description
+          /// source security group
           try{
-        	  desc.setSourceSecurityGroup(new SourceSecurityGroup());
-        	  LoadBalancerSecurityGroupCoreView group = lb.getGroup();
-        	  if(group!=null){
-        		  desc.getSourceSecurityGroup().setOwnerAlias(group.getGroupOwnerAccountId());
-        		  desc.getSourceSecurityGroup().setGroupName(group.getName());
-        	  }
+            LoadBalancerSecurityGroupCoreView group = lb.getGroup();
+            if(group!=null){
+              desc.setSourceSecurityGroup( new SourceSecurityGroup( group.getGroupOwnerAccountId(), group.getName() ) );
+            }
           }catch(Exception ex){
-        	  ;
+          }
+
+          if ( !lb.getCoreView( ).getSecurityGroupIdsToNames( ).isEmpty() ) {
+            desc.setSecurityGroups( new SecurityGroups( lb.getCoreView( ).getSecurityGroupIdsToNames( ).keySet( ) ) );
+            if ( desc.getSourceSecurityGroup( ) == null ) {
+              desc.setSourceSecurityGroup( new SourceSecurityGroup(
+                  lb.getOwnerAccountNumber( ),
+                  Iterables.get( lb.getCoreView().getSecurityGroupIdsToNames().values(), 0 ) ) );
+            }
           }
           
           // policies
@@ -805,6 +978,8 @@ public class LoadBalancingBackendService {
             p.setLbCookieStickinessPolicies(lbp);
             p.setOtherPolicies(other);
             desc.setPolicies(p);
+
+            desc.setScheme( Objects.toString( lb.getScheme( ), "internet-facing" ) );
           } catch(final Exception ex){
             LOG.error("Failed to retrieve policies", ex);
           }
@@ -817,7 +992,7 @@ public class LoadBalancingBackendService {
 
     DescribeLoadBalancersResult descResult = new DescribeLoadBalancersResult();
     LoadBalancerDescriptions lbDescs = new LoadBalancerDescriptions();
-    lbDescs.setMember(new ArrayList<LoadBalancerDescription>(descs));
+    lbDescs.setMember(new ArrayList<>(descs));
     descResult.setLoadBalancerDescriptions(lbDescs);
     reply.setDescribeLoadBalancersResult(descResult);
     reply.set_return(true);
@@ -862,7 +1037,6 @@ public class LoadBalancingBackendService {
           lb = findLoadBalancer.apply(candidateLB);
           lbToDelete = lb.getDisplayName();
         } catch ( NoSuchElementException ex ) {
-        	;
         } catch ( Exception ex){
         	if(ex.getCause() != null && ex.getCause() instanceof LoadBalancingException)
         		throw (LoadBalancingException) ex.getCause();
@@ -932,7 +1106,7 @@ public class LoadBalancingBackendService {
 	  final String lbName = request.getLoadBalancerName();
 	  final List<Listener> listeners = request.getListeners().getMember();
 	  
-	  LoadBalancer lb = null;
+	  LoadBalancer lb;
 	  try{
 	  		lb = LoadBalancers.getLoadbalancer(ctx, lbName);
 	  }catch(Exception ex){
@@ -1042,8 +1216,7 @@ public class LoadBalancingBackendService {
             final LoadBalancerListener exist = Entities.uniqueResult(LoadBalancerListener.named(lb, port));
             Entities.delete(exist);
 	       }catch(NoSuchElementException ex){
-	              ;
-	       }catch(Exception ex){
+          }catch(Exception ex){
 	          LOG.error("Failed to delete the listener", ex);
 	          throw Exceptions.toUndeclared(ex);
 	       }
@@ -1075,91 +1248,81 @@ public class LoadBalancingBackendService {
     return reply;
   }
   
-  public RegisterInstancesWithLoadBalancerResponseType registerInstancesWithLoadBalancer(RegisterInstancesWithLoadBalancerType request) throws EucalyptusCloudException {
-	  RegisterInstancesWithLoadBalancerResponseType reply = request.getReply( );
-	  final Context ctx = Contexts.lookup( );
-	  final UserFullName ownerFullName = ctx.getUserFullName( );
-	  final String lbName = request.getLoadBalancerName();
-	  final Collection<Instance> instances = request.getInstances().getMember();
-	  
-	  LoadBalancer lb = null;
-	  try{
-		  lb= LoadBalancers.getLoadbalancer(ctx, lbName);
-	  }catch(final Exception ex){
-		  throw new AccessPointNotFoundException();
-	  }
-	  if( !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
-		  throw new AccessPointNotFoundException();
-	  }
-	  
-	  Set<String> backends = Sets.newHashSet(Collections2.transform(lb.getBackendInstances(), new Function<LoadBalancerBackendInstanceCoreView, String>(){
-		@Override
-		@Nullable
-		public String apply(@Nullable LoadBalancerBackendInstanceCoreView arg0) {
-			return arg0.getInstanceId();
-		} 
-	  }));
-	  
-	  final Predicate<LoadBalancer> creator = new Predicate<LoadBalancer>(){
-	        @Override
-	        public boolean apply( LoadBalancer lb ) {
-	        	for(Instance vm : instances){
-	        		if(lb.hasBackendInstance(vm.getInstanceId()))
-	        			continue;	// the vm instance is already registered
-	        		try{
-		        		final LoadBalancerBackendInstance beInstance = 
-		        				LoadBalancerBackendInstance.newInstance(ownerFullName, lb, vm.getInstanceId());
-		        		beInstance.setState(LoadBalancerBackendInstance.STATE.OutOfService);
-		        		Entities.persist(beInstance);
-	        		}catch(final LoadBalancingException ex){
-	        			throw Exceptions.toUndeclared(ex);
-	        		}
-	        	}
-	        	return true;
-	        }
-	  };
-	 
-	 try{
-		 RegisterInstancesEvent evt = new RegisterInstancesEvent();
-		 evt.setLoadBalancer(lbName);
-    	 evt.setContext(ctx);
-    	 evt.setInstances(instances);
-    	 ActivityManager.getInstance().fire(evt);
-     }catch(EventFailedException e){
-    	 LOG.error("failed to handle RegisterInstances event", e);
-    	 final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
-    	 throw new InternalFailure400Exception(String.format("Failed to register instances: %s", reason), e );
-     }
-	    
-	 if(instances!=null){
-	    try{
-	    	reply.set_return(Entities.asTransaction(LoadBalancerBackendInstance.class, creator).apply(lb));
-	    	backends.addAll(Collections2.transform(instances, new Function<Instance, String>(){
-				@Override
-				@Nullable
-				public String apply(@Nullable Instance arg0) {
-					return arg0.getInstanceId();
-				}
-	    	}));
-	    }catch(Exception ex){
-	    	handleException(ex);
-	    }
-	 }
-	    
-	 RegisterInstancesWithLoadBalancerResult result = new RegisterInstancesWithLoadBalancerResult();
-	 Instances returnInstances = new Instances();
-	 returnInstances.setMember( Lists.newArrayList( Collections2.transform(backends, new Function<String, Instance>(){
-		@Override
-		@Nullable
-		public Instance apply(@Nullable String arg0) {
-			Instance instance = new Instance();
-			instance.setInstanceId(arg0);
-			return instance;
-		}
-	 } )));
-	 result.setInstances(returnInstances);
-	 reply.setRegisterInstancesWithLoadBalancerResult(result);
-	 return reply;
+  public RegisterInstancesWithLoadBalancerResponseType registerInstancesWithLoadBalancer(
+      final RegisterInstancesWithLoadBalancerType request
+  ) throws EucalyptusCloudException {
+    final RegisterInstancesWithLoadBalancerResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final UserFullName ownerFullName = ctx.getUserFullName( );
+    final String lbName = request.getLoadBalancerName( );
+    final Collection<Instance> instances = request.getInstances( ).getMember( );
+
+    final LoadBalancer lb;
+    try{
+      lb = LoadBalancers.getLoadbalancer( ctx, lbName );
+    }catch(final Exception ex){
+      throw new AccessPointNotFoundException();
+    }
+    if( !LoadBalancingMetadatas.filterPrivileged( ).apply( lb ) ) { // IAM policy restriction
+      throw new AccessPointNotFoundException( );
+    }
+
+    final Set<String> backends = Sets.newHashSet(
+        Iterables.transform( lb.getBackendInstances( ), LoadBalancerBackendInstanceCoreView.instanceId( ) ) );
+
+    if ( lb.getVpcId( ) != null ) {
+      final List<RunningInstancesItemType> instanceItems =
+          EucalyptusActivityTasks.getInstance( ).describeSystemInstances(
+              Lists.newArrayList( Iterables.transform( instances, Instance.instanceId( ) ) ) );
+      for ( final RunningInstancesItemType instanceItem : instanceItems ) {
+        if ( !lb.getVpcId( ).equals( instanceItem.getVpcId( ) ) ) {
+          throw new InvalidConfigurationRequestException( "Invalid instance(s) for load balancer." );
+        }
+      }
+    }
+
+    final Predicate<LoadBalancer> creator = new Predicate<LoadBalancer>(){
+          @Override
+          public boolean apply( LoadBalancer lb ) {
+            for(Instance vm : instances){
+              if(lb.hasBackendInstance(vm.getInstanceId()))
+                continue;	// the vm instance is already registered
+              try{
+                final LoadBalancerBackendInstance beInstance =
+                    LoadBalancerBackendInstance.newInstance(ownerFullName, lb, vm.getInstanceId());
+                beInstance.setState(LoadBalancerBackendInstance.STATE.OutOfService);
+                Entities.persist(beInstance);
+              }catch(final LoadBalancingException ex){
+                throw Exceptions.toUndeclared(ex);
+              }
+            }
+            return true;
+          }
+    };
+
+   try{
+     final RegisterInstancesEvent evt = new RegisterInstancesEvent();
+     evt.setLoadBalancer(lbName);
+     evt.setContext(ctx);
+     evt.setInstances(instances);
+     ActivityManager.getInstance().fire(evt);
+   }catch(EventFailedException e){
+     LOG.error("failed to handle RegisterInstances event", e);
+     final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
+     throw new InternalFailure400Exception(String.format("Failed to register instances: %s", reason), e );
+   }
+
+    try{
+      Entities.asTransaction( LoadBalancerBackendInstance.class, creator ).apply( lb );
+      Iterables.addAll( backends, Iterables.transform( instances, Instance.instanceId( ) ) );
+    }catch(Exception ex){
+      throw handleException( ex );
+    }
+
+    final Instances returnInstances = new Instances();
+    Iterables.addAll( returnInstances.getMember( ), Iterables.transform( backends, Instance.instance( ) ) );
+    reply.getRegisterInstancesWithLoadBalancerResult( ).setInstances( returnInstances );
+    return reply;
   }
 
   public DeregisterInstancesFromLoadBalancerResponseType deregisterInstancesFromLoadBalancer(DeregisterInstancesFromLoadBalancerType request) throws EucalyptusCloudException {
@@ -1168,7 +1331,7 @@ public class LoadBalancingBackendService {
 	  final String lbName = request.getLoadBalancerName();
 	  final Collection<Instance> instances = request.getInstances().getMember();
 	    
-	  LoadBalancer lb = null;
+	  LoadBalancer lb;
 	  try{
 		  lb = LoadBalancers.getLoadbalancer(ctx, lbName);
 	  }catch(Exception ex){
@@ -1207,7 +1370,7 @@ public class LoadBalancingBackendService {
 	  	public boolean apply(Void v){
 	      	for(final LoadBalancerBackendInstanceCoreView instanceView : instancesToRemove){
 	      		final LoadBalancerBackendInstance sample = LoadBalancerBackendInstanceEntityTransform.INSTANCE.apply(instanceView);
-	      	    LoadBalancerBackendInstance toDelete = null;
+	      	    LoadBalancerBackendInstance toDelete;
 	      	    try{
 	      	    	toDelete = Entities.uniqueResult(sample);
 	      	    }catch(NoSuchElementException ex){
@@ -1227,7 +1390,7 @@ public class LoadBalancingBackendService {
 	  final Function<Void, ArrayList<Instance>> finder = new Function<Void, ArrayList<Instance>>(){
 	  @Override
 	  public ArrayList<Instance> apply(Void v){
-	  	  	 LoadBalancer lb = null;
+	  	  	 LoadBalancer lb;
 	  	  	 try{
 	  	  		lb= LoadBalancers.getLoadbalancer(ctx, lbName);
 	  	  	 }catch(Exception ex){
@@ -1235,7 +1398,7 @@ public class LoadBalancingBackendService {
 	   	    	return Lists.newArrayList();
 	   	    }
 	  	  	Entities.refresh(lb);
-	  	    ArrayList<Instance> result = new ArrayList<Instance>(Collections2.transform(lb.getBackendInstances(), new Function<LoadBalancerBackendInstanceCoreView, Instance>(){
+	  	    ArrayList<Instance> result = new ArrayList<>(Collections2.transform(lb.getBackendInstances(), new Function<LoadBalancerBackendInstanceCoreView, Instance>(){
 		  		@Override
 		  		public Instance apply(final LoadBalancerBackendInstanceCoreView input){
 		  			final Instance newInst = new Instance();
@@ -1268,7 +1431,7 @@ public class LoadBalancingBackendService {
 	  DeregisterInstancesFromLoadBalancerResult result = new DeregisterInstancesFromLoadBalancerResult();
 	  Instances returnInstances = new Instances();
 	  returnInstances.setMember(
-			  new ArrayList<Instance>(Collections2.transform(allInstances, new Function<LoadBalancerBackendInstanceCoreView, Instance>(){
+			  new ArrayList<>(Collections2.transform(allInstances, new Function<LoadBalancerBackendInstanceCoreView, Instance>(){
 			  		@Override
 			  		public Instance apply(final LoadBalancerBackendInstanceCoreView input){
 			  			final Instance newInst = new Instance();
@@ -1283,53 +1446,60 @@ public class LoadBalancingBackendService {
   }
   
   public EnableAvailabilityZonesForLoadBalancerResponseType enableAvailabilityZonesForLoadBalancer(EnableAvailabilityZonesForLoadBalancerType request) throws EucalyptusCloudException {
-	  final EnableAvailabilityZonesForLoadBalancerResponseType reply = request.getReply( );
-	  final Context ctx = Contexts.lookup( );
-	  final String lbName = request.getLoadBalancerName();
-	  final Collection<String> requestedZones = request.getAvailabilityZones().getMember();
-	    
-	  LoadBalancer lb = null;
-	  try{
-		  lb = LoadBalancers.getLoadbalancer(ctx, lbName);
-	  }catch(final Exception ex){
-		  throw new AccessPointNotFoundException();
-	  }
-		 
-	  final Set<String> allZones = Sets.newHashSet(Collections2.transform(lb.getZones(), new Function<LoadBalancerZoneCoreView, String>(){
-		@Override
-		@Nullable
-		public String apply(@Nullable LoadBalancerZoneCoreView arg0) {
-			return arg0.getName();
-		} 
-	  }));
-	  if( lb!=null && !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
-		  throw new AccessPointNotFoundException();
-	  }
-	    
-	  if(requestedZones != null && requestedZones.size()>0){
-		  try{
-			  final EnabledZoneEvent evt = new EnabledZoneEvent();
-			  evt.setLoadBalancer(lbName);
-			  evt.setContext(ctx);
-			  evt.setZones(requestedZones);
-			  ActivityManager.getInstance().fire(evt);
-		  }catch(EventFailedException e){
-			  LOG.error("failed to handle EnabledZone event", e);
-	    	  final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
-	    	  throw new InternalFailure400Exception(String.format("Failed to enable zones: %s", reason),e );
-	      }
-	  }
-	    
-	  allZones.addAll(requestedZones);
-	  
-	  final EnableAvailabilityZonesForLoadBalancerResult result = new EnableAvailabilityZonesForLoadBalancerResult();
-	  final AvailabilityZones availZones = new AvailabilityZones();
-	  availZones.setMember(Lists.newArrayList(allZones));
-	  result.setAvailabilityZones(availZones);
-	  reply.setEnableAvailabilityZonesForLoadBalancerResult(result);
-  	  reply.set_return(true);
-	    
-  	  return reply;
+    final EnableAvailabilityZonesForLoadBalancerResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final String lbName = request.getLoadBalancerName( );
+    final Collection<String> requestedZones = request.getAvailabilityZones().getMember();
+
+    LoadBalancer lb;
+    try{
+      lb = LoadBalancers.getLoadbalancer(ctx, lbName);
+    }catch(final Exception ex){
+      throw new AccessPointNotFoundException();
+    }
+
+    if( !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
+      throw new AccessPointNotFoundException();
+    }
+
+    final Set<String> allZones = Sets.newHashSet( Iterables.transform( lb.getZones(), LoadBalancerZoneCoreView.name( ) ) );
+
+    // check for a default VPC
+    final Optional<VpcType> vpcOptional = EucalyptusActivityTasks.getInstance( ).defaultVpc( lookupAdmin( ctx ) );
+    final Map<String,String> zoneToSubnetIdMap = Maps.newHashMap( );
+    if ( vpcOptional.isPresent( ) && Objects.equals( lb.getVpcId( ), vpcOptional.get( ) ) ) {
+      final List<SubnetType> subnets = EucalyptusActivityTasks.getInstance( ).describeSubnetsByZone( lb.getVpcId( ), true, requestedZones );
+      CollectionUtils.putAll( subnets, zoneToSubnetIdMap, SubnetType.zone( ), SubnetType.id( ) );
+      if ( requestedZones.size( ) != zoneToSubnetIdMap.size( ) ) {
+        throw new InvalidConfigurationRequestException( "Cannot enable zone for VPC loadbalancer, default subnet not found." );
+      }
+    } else if ( lb.getVpcId( ) != null ) {
+      throw new InvalidConfigurationRequestException( "Cannot enable zone for VPC loadbalancer" );
+    }
+
+    if( !requestedZones.isEmpty( ) ){
+      try{
+        final EnabledZoneEvent evt = new EnabledZoneEvent( );
+        evt.setLoadBalancer( lbName );
+        evt.setContext( ctx );
+        evt.setZones( requestedZones );
+        evt.setZoneToSubnetIdMap( zoneToSubnetIdMap );
+        ActivityManager.getInstance( ).fire( evt );
+      }catch(EventFailedException e){
+        LOG.error("failed to handle EnabledZone event", e);
+        final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
+        throw new InternalFailure400Exception(String.format("Failed to enable zones: %s", reason),e );
+      }
+    }
+
+    allZones.addAll( requestedZones );
+
+    final EnableAvailabilityZonesForLoadBalancerResult result = new EnableAvailabilityZonesForLoadBalancerResult();
+    final AvailabilityZones availZones = new AvailabilityZones( );
+    availZones.getMember( ).addAll( allZones );
+    reply.getEnableAvailabilityZonesForLoadBalancerResult( ).setAvailabilityZones( availZones );
+
+    return reply;
   }
 
   public DisableAvailabilityZonesForLoadBalancerResponseType disableAvailabilityZonesForLoadBalancer(DisableAvailabilityZonesForLoadBalancerType request) throws EucalyptusCloudException {
@@ -1338,7 +1508,7 @@ public class LoadBalancingBackendService {
 	  final String lbName = request.getLoadBalancerName();
 	  final Collection<String> zones = request.getAvailabilityZones().getMember();
 	
-	  LoadBalancer lb = null;
+	  LoadBalancer lb;
 	  try{
 		  lb = LoadBalancers.getLoadbalancer(ctx, lbName);
 	  }catch(final Exception ex){
@@ -1373,8 +1543,7 @@ public class LoadBalancingBackendService {
 					}
 		    });
 	  }catch(Exception ex){
-	    	;
-	  }
+    }
 	  final DisableAvailabilityZonesForLoadBalancerResult result = new DisableAvailabilityZonesForLoadBalancerResult();
   	  final AvailabilityZones availZones = new AvailabilityZones();
   	  availZones.setMember(Lists.newArrayList(availableZones));
@@ -1383,9 +1552,6 @@ public class LoadBalancingBackendService {
   	  reply.set_return(true);
 	  return reply;
   }
-  
-  private final int MIN_HEALTHCHECK_INTERVAL_SEC = 5;
-  private final int MIN_HEALTHCHECK_THRESHOLDS = 2;
   
   public ConfigureHealthCheckResponseType configureHealthCheck(ConfigureHealthCheckType request) throws EucalyptusCloudException {
     ConfigureHealthCheckResponseType reply = request.getReply( );
@@ -1422,36 +1588,30 @@ public class LoadBalancingBackendService {
     			String.format("Unhealthy thresholds must be larger than %d", MIN_HEALTHCHECK_THRESHOLDS));
     }
     
-    LoadBalancer lb = null;
+    LoadBalancer lb;
     try{
-    	lb = LoadBalancers.getLoadbalancer(ctx, lbName);
+      lb = LoadBalancers.getLoadbalancer(ctx, lbName);
     }catch(NoSuchElementException ex){
-    	throw new AccessPointNotFoundException();
+      throw new AccessPointNotFoundException();
     }catch(Exception ex){
-    	throw new InternalFailure400Exception("Failed to find the loadbalancer");
+      throw new InternalFailure400Exception("Failed to find the loadbalancer");
     }
     
     if( lb!=null && !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
-	    throw new AccessPointNotFoundException();
+      throw new AccessPointNotFoundException();
     }
 
-    final EntityTransaction db = Entities.get( LoadBalancer.class );
-    try{
-    	final LoadBalancer update = Entities.uniqueResult(lb);
-    	update.setHealthCheck(healthyThreshold, interval, target, timeout, unhealthyThreshold);
-		Entities.persist(update);
-		db.commit();
+    try ( final TransactionResource db = Entities.transactionFor( LoadBalancer.class ) ){
+      final LoadBalancer update = Entities.uniqueResult(lb);
+      update.setHealthCheck(healthyThreshold, interval, target, timeout, unhealthyThreshold);
+      Entities.persist(update);
+      db.commit();
     }catch(final IllegalArgumentException ex){
-      db.rollback();
       throw new InvalidConfigurationRequestException(ex.getMessage());
     }catch(final Exception ex){
-    	db.rollback();
-    	LOG.error("failed to persist health check config", ex);
-    	throw new InternalFailure400Exception("Failed to persist the health check config", ex);
-    }finally {
-		if(db.isActive())
-			db.rollback();
-	}
+      LOG.error("failed to persist health check config", ex);
+      throw new InternalFailure400Exception("Failed to persist the health check config", ex);
+    }
     ConfigureHealthCheckResult result = new ConfigureHealthCheckResult();
     result.setHealthCheck(hc);
     reply.setConfigureHealthCheckResult(result);
@@ -1464,7 +1624,7 @@ public class LoadBalancingBackendService {
  	final String lbName = request.getLoadBalancerName();
  	Instances instances = request.getInstances();
  	
-	LoadBalancer lb = null;
+	LoadBalancer lb;
 	try{
 		lb= LoadBalancers.getLoadbalancer(ctx, lbName);
 	}catch(NoSuchElementException ex){
@@ -1478,7 +1638,7 @@ public class LoadBalancingBackendService {
     }
 
 	List<LoadBalancerBackendInstanceCoreView> lbInstances = Lists.newArrayList(lb.getBackendInstances());
-	List<LoadBalancerBackendInstanceCoreView> instancesFound = null;
+	List<LoadBalancerBackendInstanceCoreView> instancesFound;
 	List<LoadBalancerBackendInstanceCoreView> stateOutdated= Lists.newArrayList();
 	
 	final int healthyTimeoutSec = 3*(lb.getHealthCheckInterval() * lb.getHealthyThreshold());
@@ -1502,7 +1662,7 @@ public class LoadBalancingBackendService {
  	final ArrayList<InstanceState> stateList = Lists.newArrayList();
  	for(final LoadBalancerBackendInstanceCoreView instance : instancesFound){
 		boolean outdated = false;
- 		Date lastUpdated = null;
+ 		Date lastUpdated;
 		if((lastUpdated = instance.instanceStateLastUpdated()) != null){
 			final int diffSec = (int)((currentTime - lastUpdated.getTime())/1000.0);
 			if(LoadBalancerBackendInstance.STATE.InService.equals(instance.getState()) &&
@@ -1530,8 +1690,7 @@ public class LoadBalancingBackendService {
  	}
  	
  	if(! stateOutdated.isEmpty()){
- 		final EntityTransaction db = Entities.get(LoadBalancerBackendInstance.class);
- 		try{
+ 		try ( TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ){
 	 		for(final LoadBalancerBackendInstanceCoreView instanceView : stateOutdated){
 	 			final LoadBalancerBackendInstance sample = LoadBalancerBackendInstanceEntityTransform.INSTANCE.apply(instanceView);
 	 			final LoadBalancerBackendInstance update = Entities.uniqueResult(sample);
@@ -1541,13 +1700,7 @@ public class LoadBalancingBackendService {
 	 			Entities.persist(update);
 	 		}
 	 		db.commit();
- 		}catch(final NoSuchElementException ex){
- 			db.rollback();
- 		}catch(final Exception ex){
- 			db.rollback();
- 		}finally{
- 			if(db.isActive())
- 				db.rollback();
+ 		} catch(final Exception ex){
  		}
  	}
  	
@@ -1572,7 +1725,7 @@ public class LoadBalancingBackendService {
     if(certArn == null || certArn.length()<=0)
       throw new InvalidConfigurationRequestException("SSLCertificateId is not specified");
     
-    LoadBalancer lb = null;
+    LoadBalancer lb;
     try{
       lb = LoadBalancers.getLoadbalancer(ctx, lbName);
     }catch(NoSuchElementException ex){
@@ -1631,7 +1784,7 @@ public class LoadBalancingBackendService {
       result.setPolicyDescriptions(descs);
       reply.setDescribeLoadBalancerPoliciesResult(result);
     }else{
-      LoadBalancer lb = null;
+      LoadBalancer lb;
       try{
         lb= LoadBalancers.getLoadbalancer(ctx, lbName);
       }catch(NoSuchElementException ex){
@@ -1644,7 +1797,7 @@ public class LoadBalancingBackendService {
       if( lb!=null && !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
         throw new AccessPointNotFoundException();
       }
-      List<LoadBalancerPolicyDescription> lbPolicies = null;
+      List<LoadBalancerPolicyDescription> lbPolicies;
       try{
         if(policyNames != null && policyNames.getMember()!=null && policyNames.getMember().size()>0)
           lbPolicies = LoadBalancerPolicies.getLoadBalancerPolicyDescription(lb, policyNames.getMember());
@@ -1682,7 +1835,7 @@ public class LoadBalancingBackendService {
     if(policyTypeName==null || policyTypeName.isEmpty())
       throw new InvalidConfigurationRequestException("policy type name must be specified");
     
-    LoadBalancer lb = null;
+    LoadBalancer lb;
     try{
       lb= LoadBalancers.getLoadbalancer(ctx, lbName);
     }catch(NoSuchElementException ex){
@@ -1720,7 +1873,7 @@ public class LoadBalancingBackendService {
     if(policyName==null || policyName.isEmpty())
       throw new InvalidConfigurationRequestException("policy name must be specified");
     
-    LoadBalancer lb = null;
+    LoadBalancer lb;
     try{
       lb= LoadBalancers.getLoadbalancer(ctx, lbName);
     }catch(NoSuchElementException ex){
@@ -1757,10 +1910,10 @@ public class LoadBalancingBackendService {
       throw new InvalidConfigurationRequestException("Loadbalancer name must be specified");
     if(policyName==null || policyName.isEmpty())
       throw new InvalidConfigurationRequestException("Policy name must be specified");
-    if(expiration == null || expiration.longValue() <= 0)
+    if(expiration == null || expiration <= 0)
       throw new InvalidConfigurationRequestException("Expiration period must be bigger than 0");
     
-    LoadBalancer lb = null;
+    LoadBalancer lb;
     try{
       lb= LoadBalancers.getLoadbalancer(ctx, lbName);
     }catch(final NoSuchElementException ex){
@@ -1804,7 +1957,7 @@ public class LoadBalancingBackendService {
     if(cookieName == null)
       throw new InvalidConfigurationRequestException("Cookie name must be specified");
     
-    LoadBalancer lb = null;
+    LoadBalancer lb;
     try{
       lb= LoadBalancers.getLoadbalancer(ctx, lbName);
     }catch(final NoSuchElementException ex){
@@ -1847,7 +2000,7 @@ public class LoadBalancingBackendService {
       throw new InvalidConfigurationRequestException("Invalid port number specified");
     final List<String> policyNames = pNames.getMember();
     
-    LoadBalancer lb = null;
+    LoadBalancer lb;
     try{
       lb= LoadBalancers.getLoadbalancer(ctx, lbName);
     }catch(final NoSuchElementException ex){
@@ -1904,26 +2057,458 @@ public class LoadBalancingBackendService {
     return reply;
   }
 
+  public ApplySecurityGroupsToLoadBalancerResponseType applySecurityGroupsToLoadBalancer(
+      final ApplySecurityGroupsToLoadBalancerType request
+  ) throws EucalyptusCloudException {
+    final ApplySecurityGroupsToLoadBalancerResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup();
+    final String accountNumber = ctx.getAccount( ).getAccountNumber();
+    final String adminUserId;
+    try {
+      adminUserId = ctx.getAccount().lookupAdmin().getUserId();
+    } catch ( final AuthException e ) {
+      throw new LoadBalancingException( "Error accessing default security group" );
+    }
+    final Set<String> securityGroupIds = Sets.newHashSet( request.getSecurityGroups( ).getMember( ) );
+    final List<SecurityGroupItemType> groups =
+        EucalyptusActivityTasks.getInstance( ).describeUserSecurityGroupsById( adminUserId, null, securityGroupIds );
+    if ( groups.size( ) != securityGroupIds.size( ) ) {
+      throw new LoadBalancingBackendClientException( "InvalidSecurityGroup", "Invalid security group(s)" );
+    }
+    final Function<String, ApplySecurityGroupsEvent> updateSecurityGroups = new Function<String, ApplySecurityGroupsEvent>( ) {
+      @Override
+      public ApplySecurityGroupsEvent apply( final String identifier ) {
+        try {
+          final LoadBalancer example = LoadBalancer.namedByAccountId( accountNumber, identifier );
+          final LoadBalancer loadBalancer = Entities.uniqueResult( example );
+          if ( RestrictedTypes.filterPrivileged( ).apply( loadBalancer ) ) {
+            final List<SecurityGroupItemType> sortedGroups =
+                Ordering.natural( ).onResultOf( SecurityGroupItemType.groupId( ) ).sortedCopy( groups );
+            loadBalancer.setSecurityGroupRefs( Lists.newArrayList( Iterables.transform(
+                sortedGroups,
+                TypeMappers.lookup( SecurityGroupItemType.class, LoadBalancerSecurityGroupRef.class ) ) ) );
+            final ApplySecurityGroupsEvent evt = new ApplySecurityGroupsEvent( );
+            evt.setContext( ctx );
+            evt.setLoadBalancer( loadBalancer.getDisplayName( ) );
+            evt.setSecurityGroupIdsToNames( CollectionUtils.putAll(
+                sortedGroups,
+                Maps.<String, String>newLinkedHashMap( ),
+                SecurityGroupItemType.groupId( ),
+                SecurityGroupItemType.groupName( ) ) );
+            return evt;
+          } else {
+            throw new NoSuchElementException( );
+          }
+        } catch ( NoSuchElementException e ) {
+          throw Exceptions.toUndeclared( new AccessPointNotFoundException( ) );
+        } catch ( TransactionException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      }
+    };
 
-  //////////////////////// VPC - non support ////////////////////////////////
-  public ApplySecurityGroupsToLoadBalancerResponseType applySecurityGroupsToLoadBalancer(ApplySecurityGroupsToLoadBalancerType request) throws EucalyptusCloudException {
-    ApplySecurityGroupsToLoadBalancerResponseType reply = request.getReply( );
+    final ApplySecurityGroupsEvent event;
+    try {
+      event = Entities.asTransaction( LoadBalancer.class, updateSecurityGroups ).apply( request.getLoadBalancerName( ) );
+    } catch ( Exception e ) {
+      throw handleException( e );
+    }
+
+    try {
+      ActivityManager.getInstance( ).fire( event );
+    } catch( final EventFailedException e ){
+      LOG.error("Failed to handle new apply security groups event", e);
+      final String reason = Optional.fromNullable( e.getCause( ) ).transform( Exceptions.message( ) ).or( "internal error" );
+      throw new InternalFailure400Exception(String.format("Failed to apply security groups to loadbalancer: %s", reason), e);
+    }
+
     return reply;
   }
   
-/// VPC - non support
-  public AttachLoadBalancerToSubnetsResponseType attachLoadBalancerToSubnets(AttachLoadBalancerToSubnetsType request) throws EucalyptusCloudException {
-    AttachLoadBalancerToSubnetsResponseType reply = request.getReply( );
+  public AttachLoadBalancerToSubnetsResponseType attachLoadBalancerToSubnets(
+      final AttachLoadBalancerToSubnetsType request
+  ) throws EucalyptusCloudException {
+    final AttachLoadBalancerToSubnetsResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final String lbName = request.getLoadBalancerName( );
+    final Collection<String> requestedSubnetIds = request.getSubnets( ).getMember( );
+
+    final String vpcId;
+    final BiMap<String,String> zoneToSubnetIdMap = HashBiMap.create( );
+    final LoadBalancerCoreView lb;
+    try {
+      final LoadBalancer lbEntity = LoadBalancers.getLoadbalancer( ctx, lbName );
+      if ( !LoadBalancingMetadatas.filterPrivileged().apply( lbEntity ) ) { // IAM policy restriction
+        throw new AccessPointNotFoundException();
+      }
+      lb = lbEntity.getCoreView();
+      vpcId = lb.getVpcId();
+      CollectionUtils.putAll( lbEntity.getZones(), zoneToSubnetIdMap, name(), subnetId() );
+    } catch ( final LoadBalancingException e ) {
+      throw e;
+    } catch ( final Exception ex ){
+      throw new AccessPointNotFoundException( );
+    }
+
+    if ( vpcId == null ) {
+      throw new InvalidConfigurationRequestException( "Invalid subnet for load balancer" );
+    }
+
+    final List<SubnetType> subnets =
+        EucalyptusActivityTasks.getInstance( ).describeSubnets( requestedSubnetIds );
+    if ( subnets.size( ) != requestedSubnetIds.size( ) ) {
+      throw new LoadBalancingBackendClientException( "SubnetNotFound", "Invalid subnet(s)" );
+    }
+    for ( final SubnetType subnetType : subnets ) {
+      if ( !vpcId.equals( subnetType.getVpcId( ) ) ) {
+        throw new InvalidConfigurationRequestException( "Invalid subnet for load balancer" );
+      }
+      final String previousSubnetId = zoneToSubnetIdMap.put( subnetType.getAvailabilityZone( ), subnetType.getSubnetId( ) );
+      if ( previousSubnetId != null && !previousSubnetId.equals( subnetType.getSubnetId( ) ) ) {
+        throw new InvalidConfigurationRequestException( "Multiple subnets for zone ("+subnetType.getAvailabilityZone( )+")" );
+      }
+    }
+
+    final List<String> requestedZones = Lists.newArrayList(  );
+    Iterables.addAll( requestedZones, Iterables.transform( requestedSubnetIds, Functions.forMap( zoneToSubnetIdMap.inverse( ) ) ) );
+    try{
+      final EnabledZoneEvent evt = new EnabledZoneEvent( );
+      evt.setLoadBalancer( lbName );
+      evt.setContext( ctx );
+      evt.setZones( requestedZones );
+      evt.setZoneToSubnetIdMap( zoneToSubnetIdMap );
+      ActivityManager.getInstance( ).fire( evt );
+    }catch(EventFailedException e){
+      LOG.error("failed to handle EnabledZone event", e);
+      final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
+      throw new InternalFailure400Exception(String.format("Failed to enable zones: %s", reason),e );
+    }
+
+    final Subnets replySubnets = new Subnets( );
+    replySubnets.getMember().addAll( zoneToSubnetIdMap.values( ) );
+    reply.getAttachLoadBalancerToSubnetsResult( ).setSubnets( replySubnets );
     return reply;
   }
   
-/// VPC- non support
-  public DetachLoadBalancerFromSubnetsResponseType detachLoadBalancerFromSubnets(DetachLoadBalancerFromSubnetsType request) throws EucalyptusCloudException {
-    DetachLoadBalancerFromSubnetsResponseType reply = request.getReply( );
+  public DetachLoadBalancerFromSubnetsResponseType detachLoadBalancerFromSubnets(
+      final DetachLoadBalancerFromSubnetsType request
+  ) throws EucalyptusCloudException {
+    final DetachLoadBalancerFromSubnetsResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final String lbName = request.getLoadBalancerName();
+    final Collection<String> requestedSubnetIds = request.getSubnets( ).getMember( );
+
+    final BiMap<String,String> zoneToSubnetIdMap = HashBiMap.create( );
+    final String vpcId;
+    final LoadBalancerCoreView lb;
+    try {
+      final LoadBalancer lbEntity = LoadBalancers.getLoadbalancer( ctx, lbName );
+      if ( !LoadBalancingMetadatas.filterPrivileged( ).apply( lbEntity ) ) { // IAM policy restriction
+        throw new AccessPointNotFoundException( );
+      }
+      lb = lbEntity.getCoreView( );
+      vpcId = lb.getVpcId( );
+      CollectionUtils.putAll( lbEntity.getZones(), zoneToSubnetIdMap, name(), subnetId() );
+    } catch ( final LoadBalancingException e ) {
+      throw e;
+    } catch ( final Exception ex ){
+      throw new AccessPointNotFoundException( );
+    }
+
+    if ( vpcId == null ) {
+      throw new InvalidConfigurationRequestException( "Invalid subnet for load balancer" );
+    }
+
+    final List<String> zones = Lists.newArrayList(  );
+    Iterables.addAll( zones, Iterables.transform( requestedSubnetIds, Functions.forMap( zoneToSubnetIdMap.inverse( ) ) ) );
+    if( !zones.isEmpty( ) ){
+      try{
+        final DisabledZoneEvent evt = new DisabledZoneEvent( );
+        evt.setLoadBalancer( lbName );
+        evt.setContext( ctx );
+        evt.setZones( zones );
+        ActivityManager.getInstance( ).fire( evt );
+      }catch(EventFailedException e){
+        LOG.error("failed to handle DisabledZone event", e);
+        final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
+        throw new InternalFailure400Exception(String.format("Failed to disable zones: %s", reason), e );
+      }
+    }
+
+    List<String> availableZones = Lists.newArrayList();
+    try{
+      final LoadBalancer updatedLb = LoadBalancers.getLoadbalancer(ctx, lbName);
+      availableZones = Lists.transform(LoadBalancers.findZonesInService(updatedLb), new Function<LoadBalancerZoneCoreView, String>(){
+        @Override
+        public String apply(@Nullable LoadBalancerZoneCoreView arg0) {
+          return arg0.getName();
+        }
+      });
+    }catch(Exception ex){
+    }
+
+    final Subnets replySubnets = new Subnets( );
+    replySubnets.getMember().addAll( zoneToSubnetIdMap.values( ) );
+    reply.getDetachLoadBalancerFromSubnetsResult( ).setSubnets( replySubnets );
     return reply;
   }
 
-  private static void handleException( final Exception e ) throws LoadBalancingException {
+  public AddTagsResponseType addTags( final AddTagsType request ) throws EucalyptusCloudException {
+    final AddTagsResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final String accountNumber = ctx.getAccount( ).getAccountNumber( );
+
+    final Set<String> requestedNames = Sets.newHashSet( );
+    if ( request.getLoadBalancerNames( ) != null ) {
+      requestedNames.addAll( request.getLoadBalancerNames( ).getMember( ) );
+    }
+    if ( requestedNames.size( ) > 1 ) {
+      throw new LoadBalancingBackendClientException( "InvalidParameterValue", "Too many load balancers" );
+    }
+
+    final Map<String,String> tags = Maps.newHashMap( );
+    if ( request.getTags( ) != null ) {
+      for ( final Tag tag : request.getTags( ).getMember( ) ) {
+        if ( tags.put( tag.getKey( ), Strings.nullToEmpty( tag.getValue( ) ) ) != null ) {
+          throw new LoadBalancingBackendClientException( "DuplicateTagKeys", "Duplicate tag key (" + tag.getKey( ) + ")" );
+        }
+      }
+      final int reservedTags = Iterables.size( Iterables.filter( tags.keySet( ), isReservedTagPrefix() ) );
+      if ( reservedTags > 0 && !Contexts.lookup( ).isPrivileged( ) ) {
+        throw new InvalidConfigurationRequestException("Invalid tag key (reserved prefix)");
+      }
+    }
+
+    final Function<String, Void> updateTags = new Function<String, Void>( ) {
+      @Override
+      public Void apply( final String identifier ) {
+        try {
+          final LoadBalancer example = LoadBalancer.namedByAccountId( accountNumber, identifier );
+          final LoadBalancer loadBalancer = Entities.uniqueResult( example );
+          if ( RestrictedTypes.filterPrivileged( ).apply( loadBalancer ) ) {
+            final Map<String,String> lbTags = loadBalancer.getTags( );
+            lbTags.putAll( tags );
+            if ( Iterables.size( Iterables.filter( lbTags.keySet( ), Predicates.not( isReservedTagPrefix( ) ) ) ) > MAX_TAGS ) {
+              throw Exceptions.toUndeclared( new LoadBalancingBackendClientException( "TooManyTags", "Tag limit exceeded" ) );
+            }
+            return null;
+          } else {
+            throw new NoSuchElementException( );
+          }
+        } catch ( NoSuchElementException e ) {
+          throw Exceptions.toUndeclared( new AccessPointNotFoundException( ) );
+        } catch ( TransactionException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      }
+    };
+
+    try {
+      Entities.asTransaction( LoadBalancer.class, updateTags ).apply( Iterables.getOnlyElement( requestedNames ) );
+    } catch ( Exception e ) {
+      throw handleException( e );
+    }
+
+    return reply;
+  }
+
+  public DescribeTagsResponseType describeTags(
+      final DescribeTagsType request
+  ) throws EucalyptusCloudException {
+    final DescribeTagsResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final String accountNumber = ctx.getAccount( ).getAccountNumber( );
+    final Set<String> requestedNames = Sets.newHashSet( );
+    if ( request.getLoadBalancerNames( ) != null ) {
+      requestedNames.addAll( request.getLoadBalancerNames().getMember() );
+    }
+    final boolean showAll = requestedNames.remove( "verbose" ) && ctx.isAdministrator();
+    final Function<Set<String>, TagDescriptions> lookupAccountLBs = new Function<Set<String>, TagDescriptions>( ) {
+      @Override
+      public TagDescriptions apply( final Set<String> identifiers ) {
+        try {
+          final Predicate<? super LoadBalancer> requestedAndAccessible =
+              LoadBalancingMetadatas.filteringFor( LoadBalancer.class )
+                  .byId( identifiers )
+                  .byPrivileges( )
+                  .buildPredicate( );
+
+          final LoadBalancer example = showAll ?
+              LoadBalancer.named( null, null ) :
+              LoadBalancer.namedByAccountId( accountNumber, null );
+          final List<LoadBalancer> lbs = Entities.query( example, true );
+          final TagDescriptions tagDescriptions = new TagDescriptions( );
+          for ( final LoadBalancer loadBalancer : Iterables.filter( lbs, requestedAndAccessible ) ) {
+            final TagDescription tagDescription = new TagDescription( );
+            tagDescription.setLoadBalancerName( loadBalancer.getName( ) );
+            final TagList tagList = new TagList( );
+            tagDescription.setTags( tagList );
+            for ( final Map.Entry<String,String> tagKeyAndValue : loadBalancer.getTags( ).entrySet( ) ) {
+              final Tag tag = new Tag();
+              tag.setKey( tagKeyAndValue.getKey( ) );
+              tag.setValue( Strings.emptyToNull( tagKeyAndValue.getValue( ) ) );
+              tagList.getMember().add( tag );
+            }
+            tagDescriptions.getMember().add( tagDescription );
+          }
+          return tagDescriptions;
+        } catch ( EntityNotFoundException e ) {
+          Entities.evictCache( LoadBalancer.class );
+          throw new OptimisticLockException( "Error loading load balancers", e );
+        }
+      }
+    };
+
+    final TagDescriptions tagDescriptions =
+        Entities.asTransaction( LoadBalancer.class, lookupAccountLBs ).apply( requestedNames );
+
+    reply.getDescribeTagsResult( ).setTagDescriptions( tagDescriptions );
+
+    return reply;
+  }
+
+  public RemoveTagsResponseType removeTags( final RemoveTagsType request ) throws EucalyptusCloudException {
+    final RemoveTagsResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final String accountNumber = ctx.getAccount( ).getAccountNumber( );
+
+    final Set<String> requestedNames = Sets.newHashSet( );
+    if ( request.getLoadBalancerNames( ) != null ) {
+      requestedNames.addAll( request.getLoadBalancerNames( ).getMember( ) );
+    }
+    if ( requestedNames.size( ) > 1 ) {
+      throw new LoadBalancingBackendClientException( "InvalidParameterValue", "Too many load balancers" );
+    }
+
+    final Set<String> tags = Sets.newHashSet( );
+    if ( request.getTags( ) != null ) {
+      for ( final TagKeyOnly tag : request.getTags( ).getMember( ) ) {
+        tags.add( tag.getKey( ) );
+      }
+      final int reservedTags = Iterables.size( Iterables.filter( tags, isReservedTagPrefix( ) ) );
+      if ( reservedTags > 0 && !Contexts.lookup( ).isPrivileged( ) ) {
+        throw new InvalidConfigurationRequestException("Invalid tag key (reserved prefix)");
+      }
+    }
+
+    final Function<String, Void> removeTags = new Function<String, Void>( ) {
+      @Override
+      public Void apply( final String identifier ) {
+        try {
+          final LoadBalancer example = LoadBalancer.namedByAccountId( accountNumber, identifier );
+          final LoadBalancer loadBalancer = Entities.uniqueResult( example );
+          if ( RestrictedTypes.filterPrivileged( ).apply( loadBalancer ) ) {
+            final Map<String,String> lbTags = loadBalancer.getTags( );
+            lbTags.keySet( ).removeAll( tags );
+            return null;
+          } else {
+            throw new NoSuchElementException( );
+          }
+        } catch ( NoSuchElementException e ) {
+          throw Exceptions.toUndeclared( new AccessPointNotFoundException( ) );
+        } catch ( TransactionException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      }
+    };
+
+    try {
+      Entities.asTransaction( LoadBalancer.class, removeTags ).apply( Iterables.getOnlyElement( requestedNames ) );
+    } catch ( Exception e ) {
+      throw handleException( e );
+    }
+
+    return reply;
+  }
+
+  public ModifyLoadBalancerAttributesResponseType modifyLoadBalancerAttributes(
+      final ModifyLoadBalancerAttributesType request
+  ) throws EucalyptusCloudException {
+    final ModifyLoadBalancerAttributesResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final String accountNumber = ctx.getAccount( ).getAccountNumber( );
+
+    final Function<String, LoadBalancerAttributes> modifyAttributes = new Function<String, LoadBalancerAttributes>( ) {
+      @Override
+      public LoadBalancerAttributes apply( final String identifier ) {
+        try {
+          final LoadBalancer example = LoadBalancer.namedByAccountId( accountNumber, identifier );
+          final LoadBalancer loadBalancer = Entities.uniqueResult( example );
+          if ( RestrictedTypes.filterPrivileged( ).apply( loadBalancer ) ) {
+            final ConnectionSettings connectionSettings = request.getLoadBalancerAttributes( ).getConnectionSettings( );
+            if ( connectionSettings != null ) {
+              loadBalancer.setConnectionIdleTimeout( connectionSettings.getIdleTimeout( ) );
+            }
+            return TypeMappers.transform( loadBalancer, LoadBalancerAttributes.class );
+          } else {
+            throw new NoSuchElementException( );
+          }
+        } catch ( NoSuchElementException e ) {
+          throw Exceptions.toUndeclared( new AccessPointNotFoundException( ) );
+        } catch ( TransactionException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      }
+    };
+
+    final LoadBalancerAttributes attributes =
+        Entities.asTransaction( LoadBalancer.class, modifyAttributes ).apply( request.getLoadBalancerName( ) );
+
+    reply.getModifyLoadBalancerAttributesResult().setLoadBalancerAttributes( attributes );
+
+    return reply;
+  }
+
+  public DescribeLoadBalancerAttributesResponseType describeLoadBalancerAttributes(
+      final DescribeLoadBalancerAttributesType request
+  ) throws EucalyptusCloudException {
+    final DescribeLoadBalancerAttributesResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final String accountNumber = ctx.getAccount( ).getAccountNumber( );
+    final Function<String, LoadBalancerAttributes> lookupAttributes = new Function<String, LoadBalancerAttributes>( ) {
+      @Override
+      public LoadBalancerAttributes apply( final String identifier ) {
+        try {
+          final LoadBalancer example = LoadBalancer.namedByAccountId( accountNumber, identifier );
+          final LoadBalancer loadBalancer = Entities.uniqueResult( example );
+          if ( RestrictedTypes.filterPrivileged( ).apply( loadBalancer ) ) {
+            return TypeMappers.transform( loadBalancer, LoadBalancerAttributes.class );
+          } else {
+            throw new NoSuchElementException( );
+          }
+        } catch ( NoSuchElementException e ) {
+          throw Exceptions.toUndeclared( new AccessPointNotFoundException( ) );
+        } catch ( TransactionException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      }
+    };
+
+    final LoadBalancerAttributes attributes =
+        Entities.asTransaction( LoadBalancer.class, lookupAttributes ).apply( request.getLoadBalancerName( ) );
+
+    reply.getDescribeLoadBalancerAttributesResult( ).setLoadBalancerAttributes( attributes );
+
+    return reply;
+  }
+
+  private static Predicate<String> isReservedTagPrefix( ) {
+    final Collection<Predicate<String>> predicates = Lists.newArrayList( );
+    for ( final String prefix : reservedPrefixes ) {
+      predicates.add(  com.eucalyptus.util.Strings.startsWith( prefix ) );
+    }
+    return Predicates.or( predicates );
+  }
+
+  private static String lookupAdmin( final Context ctx ) throws LoadBalancingException {
+    try {
+      return ctx.getAccount( ).lookupAdmin( ).getUserId( );
+    } catch ( final AuthException e ) {
+      throw new LoadBalancingException( "Error accessing account information" );
+    }
+  }
+
+  private static LoadBalancingException handleException( final Exception e ) throws LoadBalancingException {
     final LoadBalancingException cause = Exceptions.findCause( e, LoadBalancingException.class );
     if ( cause != null ) {
       throw cause;

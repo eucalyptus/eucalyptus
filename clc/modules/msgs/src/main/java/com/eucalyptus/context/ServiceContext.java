@@ -67,6 +67,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+
 import org.apache.log4j.Logger;
 import org.mule.DefaultMuleEvent;
 import org.mule.RequestContext;
@@ -87,6 +88,7 @@ import org.mule.module.client.MuleClient;
 import org.mule.session.DefaultMuleSession;
 import org.mule.transport.vm.VMConnector;
 import org.mule.transport.vm.VMMessageDispatcherFactory;
+
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.component.ComponentId;
@@ -98,6 +100,7 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
+
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 @ConfigurableClass( root = "bootstrap.servicebus", description = "Parameters having to do with the service bus." )
@@ -149,9 +152,13 @@ public class ServiceContext {
                                           + ex.getMessage( ), ex );
     }
     MuleSession muleSession = new DefaultMuleSession( );
-    final Context ctx = msg instanceof BaseMessage
-      ? Contexts.createWrapped( dest, ( BaseMessage ) msg )
-      : null;
+    final Context ctx;
+    if( msg instanceof BaseMessage) {
+      msg = ((BaseMessage) msg).lookupAndSetCorrelationId();
+      ctx = Contexts.createWrapped( dest, ( BaseMessage ) msg );
+    }else
+      ctx = null;
+    
     MessageDispatcher dispatcher = null;
     try {
       dispatcher = dispatcherFactory.create( endpoint );
@@ -197,6 +204,7 @@ public class ServiceContext {
     MuleEvent context = RequestContext.getEvent( );
     Context ctx = null;
     if ( msg instanceof BaseMessage ) {
+     msg = ((BaseMessage) msg).lookupAndSetCorrelationId();
       ctx = Contexts.createWrapped( dest, ( BaseMessage ) msg );
     }
     try {

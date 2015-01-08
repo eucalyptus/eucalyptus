@@ -22,17 +22,18 @@ package com.eucalyptus.imaging.manifest;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 public interface ImageManifest {
-	FileType getFileType();
-	
-	String getPartsPath();
-	
-	String getPartUrlElement();
+  FileType getFileType();
 
-	boolean signPartUrl();
-	
-	String getSizePath();
+  String getPartsPath();
 
-	String getManifest(String location) throws EucalyptusCloudException;
+  String getPartUrlElement();
 
-	String getBaseBucket(String location);
+  boolean signPartUrl();
+
+  String getSizePath();
+
+  String getManifest(String location, int maximumSize)
+      throws EucalyptusCloudException;
+
+  String getBaseBucket(String location);
 }

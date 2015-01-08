@@ -296,7 +296,7 @@ public class DatabaseAccountProxy implements Account {
     UserEntity newUser = new UserEntity( userName );
     newUser.setPath( path );
     newUser.setEnabled( enabled );
-    newUser.setPasswordExpires( System.currentTimeMillis( ) + User.PASSWORD_LIFETIME );
+    newUser.setPasswordExpires( System.currentTimeMillis( ) + AuthenticationLimitProvider.Values.getDefaultPasswordExpiry( ) );
     newUser.setRegistrationStatus( User.RegistrationStatus.CONFIRMED );
     if ( info != null ) {
       newUser.getInfo( ).putAll( info );
@@ -339,7 +339,9 @@ public class DatabaseAccountProxy implements Account {
   private boolean roleHasResourceAttached( String roleName, String accountName ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( RoleEntity.class ) ) {
       final RoleEntity roleEntity = DatabaseAuthUtils.getUniqueRole( roleName, accountName );
-      return roleEntity.getPolicies( ).size( ) > 0;
+      return
+          !roleEntity.getPolicies( ).isEmpty( ) ||
+          !roleEntity.getInstanceProfiles( ).isEmpty( );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to check role " + roleName + " in " + accountName );
       throw new AuthException( AuthException.NO_SUCH_ROLE, e );
@@ -712,13 +714,13 @@ public class DatabaseAccountProxy implements Account {
       Cipher cipher = Ciphers.AES_GCM.get();
       final byte[] iv = new byte[32];
       Crypto.getSecureRandomSupplier().get().nextBytes(iv);
-      cipher.init( Cipher.ENCRYPT_MODE, symmKey, new IvParameterSpec( iv ) );
+      cipher.init( Cipher.ENCRYPT_MODE, symmKey, new IvParameterSpec( iv ), Crypto.getSecureRandomSupplier( ).get( ) );
       final byte[] cipherText = cipher.doFinal(pk.getBytes());
       encPk = new String(Base64.encode(Arrays.concatenate(iv, cipherText)));
       
       final PublicKey euarePublicKey = SystemCredentials.lookup(Euare.class).getCertificate().getPublicKey();
       cipher = Ciphers.RSA_PKCS1.get();
-      cipher.init(Cipher.WRAP_MODE, euarePublicKey);
+      cipher.init(Cipher.WRAP_MODE, euarePublicKey, Crypto.getSecureRandomSupplier( ).get( ));
       byte[] wrappedKeyBytes = cipher.wrap(symmKey);
       sessionKey = new String(Base64.encode(wrappedKeyBytes));
     } catch ( final Exception e ) {

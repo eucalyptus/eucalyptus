@@ -62,6 +62,29 @@
 
 package com.eucalyptus.objectstorage.entities;
 
+
+import groovy.sql.GroovyRowResult;
+import groovy.sql.Sql;
+
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Set;
+
+import javax.annotation.Nullable;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
+import javax.persistence.Transient;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
@@ -73,25 +96,18 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.objectstorage.ObjectStorage;
+import com.eucalyptus.objectstorage.providers.ObjectStorageProviders;
 import com.eucalyptus.storage.config.CacheableConfiguration;
 import com.eucalyptus.upgrade.Upgrades;
+import com.eucalyptus.upgrade.Upgrades.DatabaseFilters;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.walrus.entities.WalrusInfo;
+import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
+import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
-import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
-import javax.annotation.Nullable;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
-import javax.persistence.Transient;
-import java.util.NoSuchElementException;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 
 /**
  * The OSG global configuration parameters. These are common
@@ -150,6 +166,10 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
     @Column
     @ConfigurableField(description = "Should provider client attempt a GET / PUT when backend does not support Copy operation", displayName = "attempt GET/PUT on Copy fail", type = ConfigurableFieldType.BOOLEAN)
     protected Boolean doGetPutOnCopyFail;
+    
+    @Column
+    @ConfigurableField( description = "Object Storage Provider client to use for backend", displayName = "Object Storage Provider Client", changeListener = ObjectStorageProviderChangeListener.class)
+    protected String providerClient; //configured by user to specify which back-end client to use
 
     protected ObjectStorageGlobalConfiguration initializeDefaults() {
         this.setBucket_creation_wait_interval_seconds(DEFAULT_CLEANUP_INTERVAL_SEC);
@@ -232,6 +252,14 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
     public void setDoGetPutOnCopyFail(Boolean doGetPutOnCopyFail) {
         this.doGetPutOnCopyFail = doGetPutOnCopyFail;
     }
+    
+    public String getProviderClient() {
+      return providerClient;
+    }
+
+    public void setProviderClient(String providerClient) {
+      this.providerClient = providerClient;
+    }
 
     /**
      * Gets this config from the DB. May throw an exception on db failure
@@ -260,7 +288,9 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
                 "FailedPutTimeoutHrs=" + failed_put_timeout_hrs + " , " +
                 "CleanupTaskIntervalSec=" + cleanup_task_interval_seconds + " , " +
                 "BucketCreationWaitIntervalSec=" + bucket_creation_wait_interval_seconds + " , " +
-                "BucketNamingRestrictions=" + bucket_naming_restrictions + "]";
+                "BucketNamingRestrictions=" + bucket_naming_restrictions +  " , " +
+                "DoGetPutOnCopyFail=" + doGetPutOnCopyFail +  " , " +
+                "ProviderClient=" + providerClient + "]";
         return value;
     }
 
@@ -282,6 +312,7 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
                 config.setMax_buckets_per_account(walrusConfig.getStorageMaxBucketsPerAccount());
                 config.setMax_total_reporting_capacity_gb(walrusConfig.getStorageMaxTotalCapacity());
                 config.setBucket_naming_restrictions((walrusConfig.getBucketNamesRequireDnsCompliance() ? "dns-compliant" : "extended"));
+                config.setProviderClient("walrus"); // set the provider client to walrus since its an upgrade to 4.0.0
                 trans.commit();
                 return true;
             } catch(Exception e) {
@@ -290,5 +321,155 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
             }
         }
     }
-
+    
+    /**
+     * Upgrade code to copy global provider client to osg config
+     *
+     */
+    @Upgrades.EntityUpgrade(entities = {ObjectStorageGlobalConfiguration.class}, since = Upgrades.Version.v4_1_0, value = ObjectStorage.class)
+    public static enum ProviderClientUpgrade implements Predicate<Class> {
+      INSTANCE;
+  
+      private static final Logger LOG = Logger.getLogger(ProviderClientUpgrade.class);
+  
+      @Override
+      public boolean apply(@Nullable Class arg0) {
+        try (TransactionResource tr = Entities.transactionFor(arg0)) {
+          // look for global config
+          ObjectStorageGlobalConfiguration osgc = null;
+          try {
+            osgc = Entities.uniqueResult(new ObjectStorageGlobalConfiguration());
+          } catch (NoSuchElementException e) {
+            osgc = new ObjectStorageGlobalConfiguration().initializeDefaults();
+            Entities.persist(osgc); // create global config with defaults
+          }
+  
+          // check if provider client is set
+          if (StringUtils.isNotBlank(osgc.getProviderClient())) {
+            // This could be the case if cloud was upgraded from 3.4.x release. Upgrade logic to 4.0.0 (OSGConfigUpgrade) may have populated the
+            // provider client. Don't overwrite the provider client, just move on
+            LOG.info("Nothing to upgrade as objectstorage provider client is already configured to " + osgc.getProviderClient());
+          } else {
+            // Cloud was upgraded from 4.0.x release, look for provider client property in static global properties table and copy it
+            String prevClient = getStaticProviderClient();
+            if (StringUtils.isNotBlank(prevClient)) {
+              LOG.info("Found global objectstorage.providerclient=" + prevClient
+                  + ". Copying value to providerClient of ObjectStorageGlobalConfiguration entity");
+              osgc.setProviderClient(prevClient);
+            } else { // else block should never be hit
+              LOG.info("Global objectstorage.providerclient not found. Defaulting providerClient of ObjectStorageGlobalConfiguration entity to walrus");
+              osgc.setProviderClient("walrus");
+            }
+          }
+          tr.commit();
+          return true;
+        } catch (Exception e) {
+          LOG.error("Error upgrading global osg configuration", e);
+          throw Exceptions.toUndeclared("Error upgrading global osg configuration", e);
+        }
+  
+      }
+  
+      /*
+       * Get the value of objectstorage.providerclient stored in config_static_property table. Had to use sql directly as StaticDatabasePropertyEntry
+       * has a private constructor that restricts its usage for lookup/delete operations
+       */
+      private String getStaticProviderClient() {
+        String propertyValue = null;
+        Sql sql = null;
+  
+        try {
+          sql = DatabaseFilters.NEWVERSION.getConnection("eucalyptus_config");
+          String query = "select config_static_field_value from config_static_property where config_static_prop_name='objectstorage.providerclient'";
+  
+          try {
+            // Look for static property objectstorage.providerclient
+            List<GroovyRowResult> result = sql.rows(query);
+            if (result != null && result.size() == 1 && result.get(0) != null) {
+              propertyValue = (String) result.get(0).getProperty("config_static_field_value");
+              // Delete the static property
+              query = "delete from config_static_property where config_static_prop_name='objectstorage.providerclient'";
+              sql.execute(query);
+            } else {
+              // static property not found, nothing to return here
+            }
+          } catch (Exception e) {
+            LOG.warn("Failed to execute query: " + query, e);
+          }
+        } catch (Exception e) {
+          LOG.warn("Failed to connect to database", e);
+        } finally {
+          try {
+            if (sql != null) {
+              sql.close();
+            }
+          } catch (Exception e) {
+            LOG.warn("Failed to close database connection", e);
+          }
+        }
+  
+        return propertyValue;
+      }
+    }
+    
+    /**
+     * Change listener for the osg provider client setting.
+     * 
+     * @author zhill
+     *
+     */
+    public static class ObjectStorageProviderChangeListener implements PropertyChangeListener<String> {
+      /*
+       * Ensures that the proposed value is valid based on the set of valid values for OSGs Additional DB lookup required for remote OSGs where the CLC
+       * doesn't have the OSG bits installed and therefore doesn't have the same view of the set of valid values. (non-Javadoc)
+       * 
+       * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty, java.lang.Object)
+       */
+      @Override
+      public void fireChange(ConfigurableProperty t, String newValue) throws ConfigurablePropertyException {
+        String existingValue = (String) t.getValue();
+  
+        List<ServiceConfiguration> objConfigs = null;
+        try {
+          objConfigs = ServiceConfigurations.list(ObjectStorage.class);
+        } catch (NoSuchElementException e) {
+          throw new ConfigurablePropertyException("No ObjectStorage configurations found");
+        }
+  
+        final String proposedValue = newValue;
+        final Set<String> validEntries = Sets.newHashSet();
+        try (TransactionResource tr = Entities.transactionFor(ObjectStorageConfiguration.class)) {
+          boolean match = Iterables.any(Components.lookup(ObjectStorage.class).services(), new Predicate<ServiceConfiguration>() {
+            @Override
+            public boolean apply(ServiceConfiguration config) {
+              if (config.isVmLocal()) {
+                // Service is local, so add entries to the valid list (in case of HA configs)
+                // and then check the local memory state
+                validEntries.addAll(ObjectStorageProviders.list());
+                return ObjectStorageProviders.contains(proposedValue);
+              } else {
+                try {
+                  // Remote OSG, so check the db for the list of valid entries.
+                  ObjectStorageConfiguration objConfig = Entities.uniqueResult((ObjectStorageConfiguration) config);
+                  for (String entry : Splitter.on(",").split(objConfig.getAvailableClients())) {
+                    validEntries.add(entry);
+                  }
+                  return validEntries.contains(proposedValue);
+                } catch (Exception e) {
+                  return false;
+                }
+              }
+            }
+          });
+          tr.commit();
+          if (!match) {
+            // Nothing matched.
+            throw new ConfigurablePropertyException("Cannot modify " + t.getQualifiedName() + "." + t.getFieldName()
+                + " new value is not a valid value.  " + "Legal values are: " + Joiner.on(",").join(validEntries));
+          } else {
+            // matching provider client found
+          }
+        }
+      }
+    }
 }

@@ -206,10 +206,10 @@ int ncStubDestroy(ncStub * pStub)
 int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId,
                       char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId,
                       char *keyName, netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime, char **groupNames,
-                      int groupNamesSize, ncInstance ** outInstPtr)
+                      int groupNamesSize, char *rootDirective, ncInstance ** outInstPtr)
 {
     return doRunInstance(pMeta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, ownerId,
-                         accountId, keyName, netparams, userData, credential, launchIndex, platform, expiryTime, groupNames, groupNamesSize, outInstPtr);
+                         accountId, keyName, netparams, userData, credential, launchIndex, platform, expiryTime, groupNames, groupNamesSize, rootDirective, outInstPtr);
 }
 
 //!
@@ -304,11 +304,12 @@ int ncDescribeInstancesStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, 
 //! @param[in] userPublicKey the public key string
 //! @param[in] S3Policy the S3 engine policy
 //! @param[in] S3PolicySig the S3 engine policy signature
+//! @param[in] architecture the image/instance architecture
 //!
 //! @return Always return EUCA_OK
 //!
 int ncBundleInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL,
-                         char *userPublicKey, char *S3Policy, char *S3PolicySig)
+                         char *userPublicKey, char *S3Policy, char *S3PolicySig, char *architecture)
 {
     return (EUCA_OK);
 }
@@ -411,7 +412,7 @@ int ncAttachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, cha
 //!
 int ncDetachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
 {
-    return doDetachVolume(pMeta, instanceId, volumeId, remoteDev, localDev, force, 1);
+    return doDetachVolume(pMeta, instanceId, volumeId, remoteDev, localDev, force);
 }
 
 //!

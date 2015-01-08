@@ -23,18 +23,18 @@ package com.eucalyptus.objectstorage.asynctask;
 import java.util.List;
 import java.util.Random;
 
-import com.eucalyptus.objectstorage.*;
-import com.eucalyptus.objectstorage.BucketMetadataManagers;
-import com.eucalyptus.objectstorage.ObjectMetadataManagers;
-import com.eucalyptus.objectstorage.entities.ObjectStorageGlobalConfiguration;
-import com.eucalyptus.objectstorage.exceptions.NoSuchEntityException;
-import com.eucalyptus.objectstorage.exceptions.s3.NoSuchBucketException;
-import com.eucalyptus.objectstorage.providers.ObjectStorageProviders;
-import com.eucalyptus.storage.config.ConfigurationCache;
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.objectstorage.BucketMetadataManagers;
+import com.eucalyptus.objectstorage.BucketState;
+import com.eucalyptus.objectstorage.ObjectMetadataManagers;
+import com.eucalyptus.objectstorage.OsgBucketFactory;
+import com.eucalyptus.objectstorage.PaginatedResult;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
+import com.eucalyptus.objectstorage.entities.ObjectStorageGlobalConfiguration;
+import com.eucalyptus.objectstorage.providers.ObjectStorageProviders;
+import com.eucalyptus.storage.config.ConfigurationCache;
 
 /**
  * Scans metadata for each objects in a bucket and cleans history for each

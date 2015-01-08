@@ -23,30 +23,39 @@ import static com.eucalyptus.loadbalancing.common.LoadBalancingMetadata.LoadBala
 
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
+import javax.persistence.CollectionTable;
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
 import javax.persistence.Embeddable;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
-import javax.persistence.EntityTransaction;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
+import javax.persistence.MapKeyColumn;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
+import javax.persistence.OrderColumn;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PostLoad;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
-import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreView;
@@ -61,17 +70,31 @@ import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreViewTransform;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
+import com.eucalyptus.loadbalancing.common.msgs.AccessLog;
+import com.eucalyptus.loadbalancing.common.msgs.ConnectionDraining;
+import com.eucalyptus.loadbalancing.common.msgs.ConnectionSettings;
+import com.eucalyptus.loadbalancing.common.msgs.CrossZoneLoadBalancing;
+import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerAttributes;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
+import com.google.common.base.CaseFormat;
+import com.google.common.base.Enums;
 import com.google.common.base.Function;
+import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 /**
  * @author Sang-Min Park
@@ -83,13 +106,30 @@ import com.google.common.collect.Lists;
 @Table( name = "metadata_loadbalancer" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements LoadBalancerMetadata {
-	private static Logger    LOG     = Logger.getLogger( LoadBalancer.class );
+
+	public enum Scheme {
+		Internal,
+		InternetFacing;
+
+		@Override
+		public String toString() {
+			return CaseFormat.UPPER_CAMEL.to( CaseFormat.LOWER_HYPHEN, name( ) );
+		}
+
+		public static Optional<Scheme> fromString( final String scheme ) {
+			return Enums.getIfPresent( Scheme.class, CaseFormat.LOWER_HYPHEN.to( CaseFormat.UPPER_CAMEL, Strings.nullToEmpty( scheme ) ) );
+		}
+	}
 
 	@Transient
-	private LoadBalancerRelationView relationView = null;
+	private transient LoadBalancerCoreView coreView = null;
+	@Transient
+	private transient LoadBalancerRelationView relationView = null;
 	
 	@PostLoad
 	private void onLoad(){
+		if(this.coreView==null)
+			this.coreView = new LoadBalancerCoreView(this);
 		if(this.relationView==null)
 			this.relationView = new LoadBalancerRelationView(this);
 	}
@@ -105,10 +145,6 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		super(null, null);
 	}
 	
-	private LoadBalancer(final String lbName){
-		super(null, lbName);
-	}
-	
 	private LoadBalancer(final OwnerFullName userFullName, final String lbName){
 		super(userFullName, lbName);
 	}
@@ -121,8 +157,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	}
 	
 	static LoadBalancer named(){
-		final LoadBalancer instance = new LoadBalancer();
-		return instance;
+		return new LoadBalancer();
 	}
 	
 	public static LoadBalancer named(final OwnerFullName userFullName, final String lbName){
@@ -132,15 +167,28 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		return instance;
 	}
 	
+	public static LoadBalancer ownedByAccount(final String accountNumber) {
+	  final LoadBalancer instance = new LoadBalancer();
+	  instance.setOwnerAccountNumber(accountNumber);
+	  return instance;
+	}
+	
 	public static LoadBalancer namedByAccountId(final String accountId, final String lbName){
 		final LoadBalancer instance = new LoadBalancer(null, lbName);
 		instance.setOwnerAccountNumber(accountId);
 		return instance;
 	}
-	
+
+	@Column( name = "loadbalancer_vpc_id", nullable=true, updatable = false )
+	private String vpcId; // only available for LoadBalancers attached to an Amazon VPC
+
 	@Column( name = "loadbalancer_scheme", nullable=true)
-	private String scheme = null; // only available for LoadBalancers attached to an Amazon VPC
-	
+	@Enumerated( EnumType.STRING )
+	private Scheme scheme; // only available for LoadBalancers attached to an Amazon VPC
+
+	@Column( name = "loadbalancer_connection_idle_timeout" )
+	private Integer connectionIdleTimeout;
+
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, mappedBy = "loadbalancer")
 	@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerBackendInstance> backendInstances = null;
@@ -165,18 +213,65 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
 	private LoadBalancerDnsRecord dns = null;
 	
-  @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
-  @Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Collection<LoadBalancerPolicyDescription> policies = null;
-	
-	public void setScheme(String scheme){
+	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
+	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
+	private Collection<LoadBalancerPolicyDescription> policies = null;
+
+	@ElementCollection
+	@CollectionTable( name = "metadata_loadbalancer_security_groups" )
+	@JoinColumn( name = "metadata_loadbalancer_id" )
+	@OrderColumn( name = "metadata_security_group_ordinal")
+	@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+	private List<LoadBalancerSecurityGroupRef> securityGroupRefs = Lists.newArrayList( );
+
+	@ElementCollection
+	@CollectionTable( name = "metadata_loadbalancer_tag" )
+	@MapKeyColumn( name = "metadata_key" )
+	@Column( name = "metadata_value" )
+	@JoinColumn( name = "metadata_loadbalancer_id" )
+	@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+	private Map<String,String> tags;
+
+	public String getVpcId( ) {
+		return vpcId;
+	}
+
+	public void setVpcId( final String vpcId ) {
+		this.vpcId = vpcId;
+	}
+
+	public void setScheme(Scheme scheme){
 		this.scheme = scheme;
 	}
 	
-	public String getScheme(){
+	public Scheme getScheme(){
 		return this.scheme;
 	}
-	
+
+	public Integer getConnectionIdleTimeout( ) {
+		return connectionIdleTimeout;
+	}
+
+	public void setConnectionIdleTimeout( final Integer connectionIdleTimeout ) {
+		this.connectionIdleTimeout = connectionIdleTimeout;
+	}
+
+	public List<LoadBalancerSecurityGroupRef> getSecurityGroupRefs() {
+    return securityGroupRefs;
+  }
+
+	public void setSecurityGroupRefs( final List<LoadBalancerSecurityGroupRef> securityGroupRefs ) {
+		this.securityGroupRefs = securityGroupRefs;
+	}
+
+	public Map<String, String> getTags() {
+		return tags;
+	}
+
+	public void setTags( final Map<String, String> tags ) {
+    this.tags = tags;
+  }
+
 	public LoadBalancerBackendInstanceCoreView findBackendInstance(final String instanceId){
 		return this.relationView.findBackendInstance(instanceId);
 	}
@@ -232,7 +327,11 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	    return;
 	  this.policies.remove(desc);
 	}
-	
+
+	public LoadBalancerCoreView getCoreView( ) {
+		return coreView;
+	}
+
 	public Collection<LoadBalancerPolicyDescriptionCoreView> getPolicies(){
 	  return this.relationView.getPolicies();
 	}
@@ -375,9 +474,9 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	@Override
 	public FullName getFullName( ) {
 		return FullName.create.vendor( "euca" )
-                       .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
-                       .namespace( this.getOwnerAccountNumber( ) )
-                       .relativeId( "loadbalancer", this.getDisplayName( ) );
+				.region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
+				.namespace( this.getOwnerAccountNumber( ) )
+				.relativeId( "loadbalancer", this.getDisplayName( ) );
 	} 
 	
 	public static class LoadBalancerRelationView {
@@ -385,14 +484,14 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		private LoadBalancerSecurityGroupCoreView group = null;
 		private LoadBalancerAutoScalingGroupCoreView autoscale_group = null;
 		private LoadBalancerDnsRecordCoreView dns = null;
-		
+
 		private ImmutableList<LoadBalancerBackendInstanceCoreView> backendInstances = null;
 		private ImmutableList<LoadBalancerListenerCoreView> listeners = null;
 		private ImmutableList<LoadBalancerZoneCoreView> zones = null;
 		private ImmutableList<LoadBalancerPolicyDescriptionCoreView> policies = null;
 		LoadBalancerRelationView(final LoadBalancer lb){
 			this.loadbalancer = lb;
-			
+
 			if(lb.group!=null)
 				this.group = TypeMappers.transform(lb.group, LoadBalancerSecurityGroupCoreView.class);
 			if(lb.autoscale_group!=null)
@@ -480,9 +579,15 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	}
 	
 	public static class LoadBalancerCoreView {
-		private LoadBalancer loadbalancer = null;
+		private LoadBalancer loadbalancer;
+		private ImmutableMap<String,String> securityGroupIdsToNames;
 		LoadBalancerCoreView(final LoadBalancer lb){
 			this.loadbalancer = lb;
+			this.securityGroupIdsToNames = ImmutableMap.copyOf( CollectionUtils.putAll(
+					lb.getSecurityGroupRefs( ),
+					Maps.<String,String>newLinkedHashMap( ),
+					LoadBalancerSecurityGroupRef.groupId( ),
+					LoadBalancerSecurityGroupRef.groupName( ) ) );
 		}
 		
 		public String getDisplayName(){
@@ -496,15 +601,31 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		public String getOwnerUserName(){
 			return this.loadbalancer.getOwnerUserName();
 		}
-		
+
+		public String getOwnerAccountNumber() {
+			return this.loadbalancer.getOwnerAccountNumber();
+		}
+
 		public Date getCreationTimestamp(){
 			return this.loadbalancer.getCreationTimestamp();
 		}
-		
-		public String getScheme(){
+
+		public String getVpcId() {
+			return this.loadbalancer.getVpcId(  );
+		}
+
+		public Scheme getScheme(){
 			return this.loadbalancer.getScheme();
 		}
-		
+
+		public Integer getConnectionIdleTimeout( ) {
+			return this.loadbalancer.getConnectionIdleTimeout( );
+		}
+
+		public Map<String,String> getSecurityGroupIdsToNames( ) {
+			return this.securityGroupIdsToNames;
+		}
+
 		public boolean isHealthcheckConfigured(){
 			return this.loadbalancer.isHealthcheckConfigured();
 		}
@@ -532,31 +653,47 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	}
 
 	@TypeMapper
-	public enum LoadBalancerCoreViewTransform implements Function<LoadBalancer, LoadBalancerCoreView> {
+	public enum LoadBalancerCoreViewToLoadBalancerAttributesTransform
+			implements Function<LoadBalancer,LoadBalancerAttributes> {
 		INSTANCE;
 
+		@Nullable
 		@Override
-		public LoadBalancerCoreView apply( final LoadBalancer lb ) {
-			return new LoadBalancerCoreView( lb );
+		public LoadBalancerAttributes apply( @Nullable final LoadBalancer loadBalancer ) {
+			LoadBalancerAttributes attributes = null;
+			if ( loadBalancer != null ) {
+				attributes = new LoadBalancerAttributes( );
+
+				final AccessLog accessLog = new AccessLog( );
+				accessLog.setEnabled( false );
+				attributes.setAccessLog( accessLog );
+
+				final ConnectionDraining connectionDraining = new ConnectionDraining( );
+				connectionDraining.setEnabled( false );
+				attributes.setConnectionDraining( connectionDraining );
+
+				final ConnectionSettings connectionSettings = new ConnectionSettings( );
+				connectionSettings.setIdleTimeout(
+						Objects.firstNonNull( loadBalancer.getConnectionIdleTimeout( ), 60 ) );
+				attributes.setConnectionSettings( connectionSettings );
+
+				final CrossZoneLoadBalancing crossZoneLoadBalancing = new CrossZoneLoadBalancing( );
+				crossZoneLoadBalancing.setEnabled( false );
+				attributes.setCrossZoneLoadBalancing( crossZoneLoadBalancing );
+			}
+			return attributes;
 		}
 	}
-	
-	public enum LoadBalancerEntityTransform implements Function<LoadBalancerCoreView, LoadBalancer> {
+
+	public enum LoadBalancerEntityTransform implements NonNullFunction<LoadBalancerCoreView, LoadBalancer> {
 		INSTANCE;
+		@Nonnull
 		@Override
-		@Nullable
-		public LoadBalancer apply(@Nullable LoadBalancerCoreView arg0) {
-			final EntityTransaction db = Entities.get(LoadBalancer.class);
-			try{
-				final LoadBalancer lb = Entities.uniqueResult(arg0.loadbalancer);
-				db.commit();
-				return lb;
+		public LoadBalancer apply( LoadBalancerCoreView arg0) {
+			try ( final TransactionResource db = Entities.transactionFor( LoadBalancer.class ) ) {
+				return Entities.uniqueResult(arg0.loadbalancer);
 			}catch(final Exception ex){
-				db.rollback();
 				throw Exceptions.toUndeclared(ex);
-			}finally{
-				if(db.isActive())
-					db.rollback();
 			}
 		}
 	}

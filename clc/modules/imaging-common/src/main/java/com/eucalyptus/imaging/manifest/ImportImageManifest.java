@@ -30,58 +30,62 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 public enum ImportImageManifest implements ImageManifest {
-	INSTANCE;
-	
-	private static Logger LOG = Logger.getLogger( ImportImageManifest.class );
+  INSTANCE;
 
-	@Override
-	public FileType getFileType() {
-		// TODO: return actual type from import manifest
-		return FileType.RAW;
-	}
+  private static Logger LOG = Logger.getLogger(ImportImageManifest.class);
 
-	@Override
-	public String getPartsPath() {
-		return "/manifest/import/parts/part";
-	}
+  @Override
+  public FileType getFileType() {
+    // TODO: return actual type from import manifest
+    return FileType.RAW;
+  }
 
-	@Override
-	public String getPartUrlElement() {
-		return "get-url";
-	}
+  @Override
+  public String getPartsPath() {
+    return "/manifest/import/parts/part";
+  }
 
-	@Override
-	public boolean signPartUrl() {
-		return false;
-	}
+  @Override
+  public String getPartUrlElement() {
+    return "get-url";
+  }
 
-	@Override
-	public String getSizePath() {
-		return "/manifest/import/size";
-	}
+  @Override
+  public boolean signPartUrl() {
+    return false;
+  }
 
-	@Override
-	public String getManifest(String location) throws EucalyptusCloudException {
-		HttpClient client = new HttpClient();
-		client.getParams().setParameter(HttpMethodParams.RETRY_HANDLER, new DefaultHttpMethodRetryHandler());
-		GetMethod method = new GetMethod(location);
-		String s = null;
-		try {
-			client.executeMethod(method);
-			s = method.getResponseBodyAsString();
-			if (s == null) {
-				throw new EucalyptusCloudException("Can't download manifest from " + location + " content is null");
-			}
-		} catch(IOException ex) {
-			throw new EucalyptusCloudException("Can't download manifest from " + location, ex);
-		} finally {
-			method.releaseConnection();
-		}
-		return s;
-	}
+  @Override
+  public String getSizePath() {
+    return "/manifest/import/size";
+  }
 
-	@Override
-	public String getBaseBucket(String location) {
-		throw new UnsupportedOperationException();
-	}
+  @Override
+  public String getManifest(String location, int maximumSize)
+      throws EucalyptusCloudException {
+    HttpClient client = new HttpClient();
+    client.getParams().setParameter(HttpMethodParams.RETRY_HANDLER,
+        new DefaultHttpMethodRetryHandler());
+    GetMethod method = new GetMethod(location);
+    String s = null;
+    try {
+      client.executeMethod(method);
+      s = method.getResponseBodyAsString(maximumSize);
+      if (s == null) {
+        throw new EucalyptusCloudException("Can't download manifest from "
+            + location + " content is null");
+      }
+    } catch (IOException ex) {
+      throw new EucalyptusCloudException("Can't download manifest from "
+          + location, ex);
+    } finally {
+      method.releaseConnection();
+    }
+    return s;
+  }
+
+  @Override
+  public String getBaseBucket(String location) {
+    throw new UnsupportedOperationException();
+  }
 }

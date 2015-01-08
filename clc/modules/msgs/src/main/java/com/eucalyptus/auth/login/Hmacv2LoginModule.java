@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -70,6 +70,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.apache.log4j.Logger;
 import org.apache.xml.security.utils.Base64;
 import com.eucalyptus.auth.AccessKeys;
+import com.eucalyptus.auth.InvalidSignatureAuthException;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.crypto.Hmac;
@@ -112,7 +113,7 @@ public class Hmacv2LoginModule extends HmacLoginModuleSupport {
           computedSigWithPort = this.getSignature( secretKey, canonicalStringWithPort.replaceAll("\\*","%2A"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
           computedSigWithAwsCliPath = this.getSignature( secretKey, canonicalStringWithAwsCliPath.replaceAll("\\*","%2A"), credentials.getSignatureMethod( ) ).replaceAll("\\+"," ");
           if( !computedSig.equals( sig ) && !computedSigWithPort.equals( sig ) && !computedSigWithAwsCliPath.equals( sig ) ) {
-            return false;
+            throw new InvalidSignatureAuthException( "Signature validation failed" );
           }
         }
       }
@@ -146,7 +147,7 @@ public class Hmacv2LoginModule extends HmacLoginModuleSupport {
     }
     if (addedParam) sb.setLength( sb.length() - 1 );
     String subject = prefix + sb.toString( );
-    LOG.trace( "VERSION2: " + subject );
+    signatureLogger.trace( "VERSION2: " + subject );
     return subject;
   }
 

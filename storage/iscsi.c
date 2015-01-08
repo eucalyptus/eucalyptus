@@ -85,12 +85,14 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <limits.h> /* LOGIN_NAME_MAX */
 
-#include <eucalyptus.h>
-#include <config.h>
-#include <misc.h>
-#include <ipc.h>
-#include <euca_string.h>
+#include "eucalyptus.h"
+#include "config.h"
+#include "misc.h"
+#include "ipc.h"
+#include "euca_string.h"
+#include "iscsi.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -147,6 +149,13 @@ static char connect_storage_cmd_path[EUCA_MAX_PATH] = "";
 static char disconnect_storage_cmd_path[EUCA_MAX_PATH] = "";
 static char get_storage_cmd_path[EUCA_MAX_PATH] = "";
 
+// ceph username for use by the specific NC
+static char ceph_user[LOGIN_NAME_MAX] = DEFAULT_CEPH_USER;
+// path to ceph keyring file on the local host
+static char ceph_keyring[EUCA_MAX_PATH] = DEFAULT_CEPH_KEYRING;
+// path to ceph conf file on the local host
+static char ceph_conf[EUCA_MAX_PATH] = DEFAULT_CEPH_CONF;
+
 static sem *iscsi_sem = NULL;          //!< for serializing attach and detach invocations
 
 /*----------------------------------------------------------------------------*\
@@ -172,7 +181,7 @@ static sem *iscsi_sem = NULL;          //!< for serializing attach and detach in
 //!
 //! @param[in] euca_home
 //!
-void init_iscsi(const char *euca_home)
+void init_iscsi(const char *euca_home, const char *new_ceph_user, const char *new_ceph_keyring, const char *new_ceph_conf)
 {
     const char *tmp = NULL;
     if (euca_home) {
@@ -187,7 +196,25 @@ void init_iscsi(const char *euca_home)
     snprintf(connect_storage_cmd_path, EUCA_MAX_PATH, EUCALYPTUS_CONNECT_ISCSI, home, home);
     snprintf(disconnect_storage_cmd_path, EUCA_MAX_PATH, EUCALYPTUS_DISCONNECT_ISCSI, home, home);
     snprintf(get_storage_cmd_path, EUCA_MAX_PATH, EUCALYPTUS_GET_ISCSI, home, home);
-    iscsi_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
+
+    // override defaults for the Ceph parameters
+    if (new_ceph_user != NULL) {
+        euca_strncpy(ceph_user, new_ceph_user, sizeof(ceph_user));
+        LOGDEBUG("              Ceph user: %s\n", ceph_user);
+    }
+    if (new_ceph_keyring != NULL) {
+        euca_strncpy(ceph_keyring, new_ceph_keyring, sizeof(ceph_keyring));
+        LOGDEBUG("      Ceph keyring path: %s\n", ceph_keyring);
+    }
+    if (new_ceph_conf != NULL) {
+        euca_strncpy(ceph_conf, new_ceph_conf, sizeof(ceph_conf));
+        LOGDEBUG("Ceph configuration path: %s\n", ceph_conf);
+    }
+
+    // initialize the semaphore on first invocation only
+    if (iscsi_sem == NULL) {
+        iscsi_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
+    }
 }
 
 //!
@@ -197,7 +224,7 @@ void init_iscsi(const char *euca_home)
 //!
 //! @return a pointer
 //!
-char *connect_iscsi_target(const char *dev_string)
+char *connect_iscsi_target(const char *volume_id, const char *target_dev, const char *target_serial, const char *target_bus, const char *dev_string)
 {
     int ret = 0;
     char command[EUCA_MAX_PATH] = "";
@@ -206,8 +233,18 @@ char *connect_iscsi_target(const char *dev_string)
 
     assert(strlen(home));
 
-    snprintf(command, EUCA_MAX_PATH, "%s %s,%s", connect_storage_cmd_path, home, dev_string);
-    LOGTRACE("invoking `%s`\n", command);
+    snprintf(command, EUCA_MAX_PATH, "%s %s,%s,%s,%s,%s,%s,%s,%s,%s", 
+             connect_storage_cmd_path, 
+             home,
+             volume_id,
+             target_dev,
+             target_serial,
+             target_bus,
+             ceph_user,
+             ceph_keyring,
+             ceph_conf,
+             dev_string);
+    LOGDEBUG("invoking `%s`\n", command);
 
     sem_p(iscsi_sem);
     ret = timeshell(command, stdout_str, stderr_str, MAX_OUTPUT, CONNECT_TIMEOUT);
@@ -227,7 +264,7 @@ char *connect_iscsi_target(const char *dev_string)
 //!
 //! @return -1 for any failures, 0 if a timeout occured or a positive value is success.
 //!
-int disconnect_iscsi_target(const char *dev_string, int do_rescan)
+int disconnect_iscsi_target(const char *dev_string, boolean do_rescan)
 {
     int ret = 0;
     char command[EUCA_MAX_PATH] = "";
@@ -236,13 +273,12 @@ int disconnect_iscsi_target(const char *dev_string, int do_rescan)
 
     assert(strlen(home));
 
-    if (do_rescan) {
-        snprintf(command, EUCA_MAX_PATH, "%s %s,%s", disconnect_storage_cmd_path, home, dev_string);
-    } else {
-        snprintf(command, EUCA_MAX_PATH, "%s %s,%s %s", disconnect_storage_cmd_path, home, dev_string, "norescan");
-    }
-
-    LOGTRACE("invoking `%s`\n", command);
+    snprintf(command, EUCA_MAX_PATH, "%s %s,,,,,,,,%s%s", 
+             disconnect_storage_cmd_path, 
+             home,
+             dev_string,
+             (do_rescan)?(" norescan"):(""));
+    LOGDEBUG("invoking `%s`\n", command);
 
     sem_p(iscsi_sem);
     ret = timeshell(command, stdout_str, stderr_str, MAX_OUTPUT, DISCONNECT_TIMEOUT);
@@ -267,8 +303,10 @@ char *get_iscsi_target(const char *dev_string)
     char stderr_str[MAX_OUTPUT] = "";
 
     assert(strlen(home));
-
-    snprintf(command, EUCA_MAX_PATH, "%s %s,%s", get_storage_cmd_path, home, dev_string);
+    snprintf(command, EUCA_MAX_PATH, "%s %s,,,,,,,,%s", 
+             get_storage_cmd_path, 
+             home,
+             dev_string);
     LOGDEBUG("invoking `%s`\n", command);
 
     sem_p(iscsi_sem);

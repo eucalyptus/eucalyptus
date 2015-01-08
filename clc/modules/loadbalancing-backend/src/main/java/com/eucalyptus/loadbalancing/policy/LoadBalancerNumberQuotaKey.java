@@ -26,7 +26,9 @@ import com.eucalyptus.auth.policy.key.KeyUtils;
 import com.eucalyptus.auth.policy.key.PolicyKey;
 import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.loadbalancing.common.policy.LoadBalancingPolicySpec;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import net.sf.json.JSONException;
@@ -47,12 +49,12 @@ public class LoadBalancerNumberQuotaKey extends QuotaKey {
   @Override
   public final boolean canApply( String action, String resourceType ) {
     return PolicySpec.qualifiedName(
-        PolicySpec.VENDOR_LOADBALANCING,
-        PolicySpec.LOADBALANCING_CREATELOADBALANCER ).equals( action );
+        LoadBalancingPolicySpec.VENDOR_LOADBALANCING,
+        LoadBalancingPolicySpec.LOADBALANCING_CREATELOADBALANCER ).equals( action );
   }
 
   @Override
-  public final String value( final QuotaKey.Scope scope,
+  public final String value( final Authorization.Scope scope,
                              final String id,
                              final String resource,
                              final Long quantity ) throws AuthException {

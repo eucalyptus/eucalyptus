@@ -68,17 +68,17 @@
     <value name="localDev" field="device" usage="required" />
     <value name="state" field="status" usage="required" />
   </mapping>
-  <mapping name="AttachVolume" class="edu.ucsb.eucalyptus.msgs.AttachVolumeType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="AttachVolume" class="edu.ucsb.eucalyptus.msgs.ClusterAttachVolumeType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="volumeId" field="volumeId" usage="required" />
     <value name="instanceId" field="instanceId" usage="required" />
     <value name="remoteDev" field="remoteDevice" usage="required" />
     <value name="localDev" field="device" usage="required" />
   </mapping>
-  <mapping name="AttachVolumeResponse" class="edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="AttachVolumeResponse" class="edu.ucsb.eucalyptus.msgs.ClusterAttachVolumeResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
   </mapping>
-  <mapping name="DetachVolume" class="edu.ucsb.eucalyptus.msgs.DetachVolumeType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="DetachVolume" class="edu.ucsb.eucalyptus.msgs.ClusterDetachVolumeType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="instanceId" field="instanceId" usage="required" />
     <value name="volumeId" field="volumeId" usage="required" />
@@ -86,7 +86,7 @@
     <value name="localDev" field="device" usage="required" />
     <value name="force" field="force" usage="required" />
   </mapping>
-  <mapping name="DetachVolumeResponse" class="edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="DetachVolumeResponse" class="edu.ucsb.eucalyptus.msgs.ClusterDetachVolumeResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
   </mapping>
 

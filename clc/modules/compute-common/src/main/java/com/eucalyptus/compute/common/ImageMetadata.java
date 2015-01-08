@@ -72,14 +72,6 @@ import com.google.common.base.Predicate;
 @PolicyResourceType( "image" )
 public interface ImageMetadata extends CloudMetadata {
   
-  public interface StaticDiskImage extends ImageMetadata {
-    public abstract String getManifestLocation( );
-    
-    public abstract String getRunManifestLocation();
-    
-    public abstract String getSignature( );
-  }
-  
   public static final String TYPE_MANIFEST_XPATH = "/manifest/image/type/text()";
   
   public enum Type {
@@ -213,7 +205,7 @@ public interface ImageMetadata extends CloudMetadata {
   }
   
   public enum DeviceMappingType {
-    root, swap, suppress, ephemeral, blockstorage
+    root, swap, suppress, ephemeral, blockstorage, ami
   }
   
   public enum Architecture {

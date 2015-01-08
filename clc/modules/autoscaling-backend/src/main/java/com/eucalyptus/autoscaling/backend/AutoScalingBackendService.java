@@ -23,6 +23,7 @@ import static com.eucalyptus.autoscaling.common.AutoScalingResourceName.InvalidR
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingGroupMetadata;
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.LaunchConfigurationMetadata;
 import static com.eucalyptus.autoscaling.common.AutoScalingResourceName.Type.autoScalingGroup;
+import static com.google.common.base.Strings.nullToEmpty;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -33,7 +34,9 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
+import javax.inject.Inject;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.exception.ConstraintViolationException;
@@ -44,7 +47,6 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.autoscaling.activities.ActivityManager;
-import com.eucalyptus.autoscaling.activities.PersistenceScalingActivities;
 import com.eucalyptus.autoscaling.activities.ScalingActivities;
 import com.eucalyptus.autoscaling.activities.ScalingActivity;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
@@ -109,6 +111,8 @@ import com.eucalyptus.autoscaling.common.backend.msgs.ExecutePolicyType;
 import com.eucalyptus.autoscaling.common.backend.msgs.Filter;
 import com.eucalyptus.autoscaling.common.backend.msgs.LaunchConfigurationType;
 import com.eucalyptus.autoscaling.common.backend.msgs.MetricCollectionTypes;
+import com.eucalyptus.autoscaling.common.backend.msgs.MetricGranularityType;
+import com.eucalyptus.autoscaling.common.backend.msgs.MetricGranularityTypes;
 import com.eucalyptus.autoscaling.common.backend.msgs.ProcessType;
 import com.eucalyptus.autoscaling.common.backend.msgs.PutNotificationConfigurationResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.PutNotificationConfigurationType;
@@ -136,14 +140,12 @@ import com.eucalyptus.autoscaling.config.AutoScalingConfiguration;
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
 import com.eucalyptus.autoscaling.configurations.LaunchConfigurationMinimumView;
 import com.eucalyptus.autoscaling.configurations.LaunchConfigurations;
-import com.eucalyptus.autoscaling.configurations.PersistenceLaunchConfigurations;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroupCoreView;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroupMinimumView;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroups;
 import com.eucalyptus.autoscaling.groups.MetricCollectionType;
 import com.eucalyptus.autoscaling.groups.HealthCheckType;
-import com.eucalyptus.autoscaling.groups.PersistenceAutoScalingGroups;
 import com.eucalyptus.autoscaling.groups.ScalingProcessType;
 import com.eucalyptus.autoscaling.groups.SuspendedProcess;
 import com.eucalyptus.autoscaling.groups.TerminationPolicyType;
@@ -151,11 +153,9 @@ import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstanceGroupView;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstances;
 import com.eucalyptus.autoscaling.instances.HealthStatus;
-import com.eucalyptus.autoscaling.instances.PersistenceAutoScalingInstances;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException;
 import com.eucalyptus.autoscaling.policies.AdjustmentType;
-import com.eucalyptus.autoscaling.policies.PersistenceScalingPolicies;
 import com.eucalyptus.autoscaling.policies.ScalingPolicies;
 import com.eucalyptus.autoscaling.policies.ScalingPolicy;
 import com.eucalyptus.autoscaling.policies.ScalingPolicyView;
@@ -163,6 +163,7 @@ import com.eucalyptus.autoscaling.tags.AutoScalingGroupTag;
 import com.eucalyptus.autoscaling.tags.Tag;
 import com.eucalyptus.autoscaling.tags.TagSupport;
 import com.eucalyptus.autoscaling.tags.Tags;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
@@ -170,6 +171,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.Consumers;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Numbers;
@@ -183,6 +185,7 @@ import com.google.common.base.Functions;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Splitter;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
@@ -192,6 +195,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 
+@SuppressWarnings( "UnusedDeclaration" )
+@ComponentNamed
 public class AutoScalingBackendService {
   private static final Logger logger = Logger.getLogger( AutoScalingBackendService.class );
 
@@ -219,23 +224,14 @@ public class AutoScalingBackendService {
   private final ScalingPolicies scalingPolicies;
   private final ActivityManager activityManager;
   private final ScalingActivities scalingActivities;
-  
-  public AutoScalingBackendService() {
-    this( 
-        new PersistenceLaunchConfigurations( ),
-        new PersistenceAutoScalingGroups( ),
-        new PersistenceAutoScalingInstances( ),
-        new PersistenceScalingPolicies( ),
-        new ActivityManager( ),
-        new PersistenceScalingActivities( ) );
-  }
 
-  protected AutoScalingBackendService( final LaunchConfigurations launchConfigurations,
-                                       final AutoScalingGroups autoScalingGroups,
-                                       final AutoScalingInstances autoScalingInstances,
-                                       final ScalingPolicies scalingPolicies,
-                                       final ActivityManager activityManager,
-                                       final ScalingActivities scalingActivities ) {
+  @Inject
+  public AutoScalingBackendService( final LaunchConfigurations launchConfigurations,
+                                    final AutoScalingGroups autoScalingGroups,
+                                    final AutoScalingInstances autoScalingInstances,
+                                    final ScalingPolicies scalingPolicies,
+                                    final ActivityManager activityManager,
+                                    final ScalingActivities scalingActivities ) {
     this.launchConfigurations = launchConfigurations;
     this.autoScalingGroups = autoScalingGroups;
     this.autoScalingInstances = autoScalingInstances;
@@ -446,7 +442,7 @@ public class AutoScalingBackendService {
         }
       }
 
-      if ( request.getTags().getMember().size() >= MAX_TAGS_PER_RESOURCE ) {
+      if ( request.getTags().getMember().size() > MAX_TAGS_PER_RESOURCE ) {
         throw Exceptions.toUndeclared( new LimitExceededException("Tag limit exceeded") );
       }
     }
@@ -466,14 +462,16 @@ public class AutoScalingBackendService {
             throw Exceptions.toUndeclared( new ValidationErrorException( "DesiredCapacity must not be greater than MaxSize" ) );
           }
 
+          final Iterable<String> subnetIds = Splitter.on( ',' ).trimResults().omitEmptyStrings().split( nullToEmpty( request.getVpcZoneIdentifier() ) );
+          final AtomicReference<Map<String,String>> subnetsByZone = new AtomicReference<>( );
           final List<String> referenceErrors = activityManager.validateReferences(
               ctx.getUserFullName(),
+              Consumers.atomic( subnetsByZone ),
               request.availabilityZones(),
-              request.loadBalancerNames()
+              request.loadBalancerNames(),
+              subnetIds
           );
-          verifyUnsupportedReferences( referenceErrors,
-              request.getPlacementGroup(),
-              request.getVpcZoneIdentifier() );
+          verifyUnsupportedReferences( referenceErrors, request.getPlacementGroup( ) );
 
           if ( !referenceErrors.isEmpty() ) {
             throw Exceptions.toUndeclared( new ValidationErrorException( "Invalid parameters " + referenceErrors ) );
@@ -486,7 +484,11 @@ public class AutoScalingBackendService {
               verifyOwnership( accountFullName, launchConfigurations.lookup( accountFullName, request.getLaunchConfigurationName(), Functions.<LaunchConfiguration>identity() ) ),
               minSize,
               maxSize )
-              .withAvailabilityZones( request.availabilityZones() )
+              .withAvailabilityZones( request.availabilityZones( ) != null && !request.availabilityZones( ).isEmpty( ) ?
+                  request.availabilityZones( ) :
+                  subnetsByZone.get( ) == null ? null : subnetsByZone.get( ).keySet( )
+              )
+              .withSubnetsByZone( subnetsByZone.get( ) )
               .withDefaultCooldown( Numbers.intValue( request.getDefaultCooldown() ) )
               .withDesiredCapacity( desiredCapacity )
               .withHealthCheckGracePeriod( Numbers.intValue( request.getHealthCheckGracePeriod() ) )
@@ -494,10 +496,10 @@ public class AutoScalingBackendService {
                   request.getHealthCheckType()==null ? null : HealthCheckType.valueOf( request.getHealthCheckType() ) )
               .withLoadBalancerNames( request.loadBalancerNames() )
               .withTerminationPolicyTypes( request.terminationPolicies() == null ? null :
-                  Collections2.filter( Collections2.transform( 
-                    request.terminationPolicies(), Enums.valueOfFunction( TerminationPolicyType.class) ),
-                    Predicates.not( Predicates.isNull() ) ) )
-              .withTags( request.getTags()==null ?
+                  Collections2.filter( Collections2.transform(
+                          request.terminationPolicies(), Enums.valueOfFunction( TerminationPolicyType.class ) ),
+                      Predicates.not( Predicates.isNull() ) ) )
+              .withTags( request.getTags() == null ?
                   null :
                   Iterables.transform( request.getTags().getMember(), TypeMappers.lookup( TagType.class, AutoScalingGroupTag.class ) ) );
 
@@ -906,7 +908,7 @@ public class AutoScalingBackendService {
 
     for ( final TagType tagType : request.getTags().getMember() ) {
       final String key = tagType.getKey();
-      final String value = com.google.common.base.Strings.nullToEmpty( tagType.getValue() ).trim();
+      final String value = nullToEmpty( tagType.getValue() ).trim();
 
       if ( com.google.common.base.Strings.isNullOrEmpty( key ) || key.trim().length() > 128 || isReserved( key ) ) {
         throw new ValidationErrorException( "Invalid key (max length 128, must not be empty, reserved prefixes "+reservedPrefixes+"): "+key );
@@ -934,8 +936,8 @@ public class AutoScalingBackendService {
                 throw Exceptions.toUndeclared( new ValidationErrorException( "Resource not found " + tagType.getResourceId() ) );
               }
 
-              final String key = com.google.common.base.Strings.nullToEmpty( tagType.getKey() ).trim();
-              final String value = com.google.common.base.Strings.nullToEmpty( tagType.getValue() ).trim();
+              final String key = nullToEmpty( tagType.getKey() ).trim();
+              final String value = nullToEmpty( tagType.getValue() ).trim();
               final Boolean propagateAtLaunch = Objects.firstNonNull( tagType.getPropagateAtLaunch(), Boolean.FALSE );
               tagSupport.createOrUpdate( resource, ownerFullName, key, value, propagateAtLaunch );
 
@@ -1056,7 +1058,8 @@ public class AutoScalingBackendService {
             .withUserData( request.getUserData() )
             .withInstanceMonitoring( request.getInstanceMonitoring() != null ? request.getInstanceMonitoring().getEnabled() : null )
             .withInstanceProfile( request.getIamInstanceProfile() )
-            .withSecurityGroups( request.getSecurityGroups() != null ? request.getSecurityGroups().getMember() : null );          
+            .withSecurityGroups( request.getSecurityGroups() != null ? request.getSecurityGroups().getMember() : null )
+            .withAssociatePublicIpAddress( request.getAssociatePublicIpAddress( ) );
             
           if ( request.getBlockDeviceMappings() != null ) {
             for ( final BlockDeviceMappingType blockDeviceMappingType : request.getBlockDeviceMappings().getMember() ) {
@@ -1180,8 +1183,6 @@ public class AutoScalingBackendService {
         @Override
         public void fire( final AutoScalingGroup autoScalingGroup ) {
           if ( RestrictedTypes.filterPrivileged().apply( autoScalingGroup ) ) {
-            if ( request.availabilityZones() != null && !request.availabilityZones().isEmpty() )
-              autoScalingGroup.updateAvailabilityZones( Lists.newArrayList( Sets.newLinkedHashSet( request.availabilityZones() ) ) );
             if ( request.getDefaultCooldown() != null )
               autoScalingGroup.setDefaultCooldown( Numbers.intValue( request.getDefaultCooldown( ) ) );
             if ( request.getHealthCheckGracePeriod( ) != null )
@@ -1226,17 +1227,29 @@ public class AutoScalingBackendService {
               throw Exceptions.toUndeclared( new ValidationErrorException( "DesiredCapacity must not be greater than MaxSize" ) );
             }
 
+            final Iterable<String> subnetIds = Splitter.on( ',' ).trimResults().omitEmptyStrings().split( nullToEmpty( request.getVpcZoneIdentifier() ) );
+            final AtomicReference<Map<String, String>> subnetsByZone = new AtomicReference<>();
             final List<String> referenceErrors = activityManager.validateReferences(
                 autoScalingGroup.getOwner(),
+                Consumers.atomic( subnetsByZone ),
                 autoScalingGroup.getAvailabilityZones(),
-                Collections.<String>emptyList() // load balancer names cannot be updated
+                Collections.<String>emptyList(), // load balancer names cannot be updated
+                subnetIds
             );
-            verifyUnsupportedReferences( referenceErrors,
-                request.getPlacementGroup(),
-                request.getVpcZoneIdentifier() );
+            verifyUnsupportedReferences( referenceErrors, request.getPlacementGroup() );
 
             if ( !referenceErrors.isEmpty() ) {
               throw Exceptions.toUndeclared( new ValidationErrorException( "Invalid parameters " + referenceErrors ) );
+            }
+
+            if ( request.getVpcZoneIdentifier() != null ) {
+              autoScalingGroup.setSubnetIdByZone( subnetsByZone.get( ) );
+              autoScalingGroup.updateAvailabilityZones( Lists.newArrayList( Sets.newLinkedHashSet(
+                  request.availabilityZones( ) != null && !request.availabilityZones( ).isEmpty( ) ?
+                      request.availabilityZones( ) :
+                      subnetsByZone.get( ).keySet( ) ) ) );
+            } else if ( request.availabilityZones() != null && !request.availabilityZones().isEmpty() ) {
+              autoScalingGroup.updateAvailabilityZones( Lists.newArrayList( Sets.newLinkedHashSet( request.availabilityZones() ) ) );
             }
           }
         }
@@ -1310,6 +1323,9 @@ public class AutoScalingBackendService {
         Collections2.transform(
             Collections2.filter( EnumSet.allOf( MetricCollectionType.class ), RestrictedTypes.filterPrivilegedWithoutOwner() ),
             Strings.toStringFunction() ) ) );
+    reply.getDescribeMetricCollectionTypesResult().setGranularities( new MetricGranularityTypes(
+        Collections.singletonList( new MetricGranularityType( "1Minute" ) )
+    ) );
 
     return reply;
   }
@@ -1444,14 +1460,9 @@ public class AutoScalingBackendService {
   }
 
   private static void verifyUnsupportedReferences( final List<String> referenceErrors,
-                                                   final String placementGroup,
-                                                   final String vpcZoneIdentifier ) {
+                                                   final String placementGroup ) {
     if ( !com.google.common.base.Strings.isNullOrEmpty( placementGroup ) ) {
       referenceErrors.add( "Invalid placement group: " + placementGroup );
-    }
-
-    if ( !com.google.common.base.Strings.isNullOrEmpty( vpcZoneIdentifier ) ) {
-      referenceErrors.add( "Invalid VPC zone identifier: " + vpcZoneIdentifier );
     }
   }
 
@@ -1466,7 +1477,7 @@ public class AutoScalingBackendService {
   }
 
   private static boolean isReserved( final String text ) {
-    return Iterables.any( reservedPrefixes, Strings.isPrefixOf( text ) );
+    return !Contexts.lookup( ).isPrivileged( ) && Iterables.any( reservedPrefixes, Strings.isPrefixOf( text ) );
   }
 
   private static void handleException( final Exception e ) throws AutoScalingException {

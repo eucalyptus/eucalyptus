@@ -112,7 +112,7 @@ public class ObjectStorageSchedulerManager {
     static final String BUCKET_REAPER_DEFAULT_SCHEDULE = "interval: 60";
 
     private static Scheduler scheduler = null;
-    private static Lock lock = new ReentrantLock(true);
+    private static final Lock lock = new ReentrantLock(true);
     private static boolean initted = false;
 
     static {

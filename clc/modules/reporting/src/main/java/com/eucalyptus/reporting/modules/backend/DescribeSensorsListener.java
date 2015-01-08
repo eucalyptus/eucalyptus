@@ -21,12 +21,11 @@
 package com.eucalyptus.reporting.modules.backend;
 
 import com.eucalyptus.component.id.Reporting;
+import com.eucalyptus.reporting.service.ReportingService;
 import com.eucalyptus.system.Threads;
-import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
-import com.google.common.util.concurrent.SettableFuture;
+import com.eucalyptus.util.HasName;
 import edu.ucsb.eucalyptus.msgs.DescribeSensorsResponse;
-import edu.ucsb.eucalyptus.msgs.DescribeSensorsType;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
@@ -35,14 +34,11 @@ import com.eucalyptus.cluster.callback.DescribeSensorCallback;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmInstance.VmState;
 
@@ -54,7 +50,6 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
-import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -83,7 +78,13 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
 
   @Override
   public void fireEvent( final Hertz event ) {
-    if (!Bootstrap.isOperational() || !BootstrapArgs.isCloudController() || !event.isAsserted(DEFAULT_POLL_INTERVAL_MINS)) {
+    if (!ReportingService.DATA_COLLECTION_ENABLED) {
+      ReportingService.faultDisableReportingServiceIfNecessary();
+      LOG.trace("Reporting service data collection has been disabled....DescribeSensorsEvent discarded");
+      return;
+    }
+    final long defaultPollIntervalSeconds = TimeUnit.MINUTES.toSeconds( DEFAULT_POLL_INTERVAL_MINS );
+    if (!Bootstrap.isOperational() || !BootstrapArgs.isCloudController() || !event.isAsserted(defaultPollIntervalSeconds)) {
       return;
     } else {
       if (DEFAULT_POLL_INTERVAL_MINS >= 1) {
@@ -98,9 +99,7 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
       } else if (COLLECTION_INTERVAL_TIME_MS <= MAX_WRITE_INTERVAL_MS) {
 
         try {
-
-          if (event.isAsserted(TimeUnit.MINUTES
-              .toSeconds(DEFAULT_POLL_INTERVAL_MINS))) {
+          if (event.isAsserted(defaultPollIntervalSeconds)) {
             if (Bootstrap.isFinished() && Hosts.isCoordinator()) {
               if ( busy.compareAndSet( false, true ) ) {
                 Threads.lookup( Reporting.class ).limitTo( REPORTING_NUM_THREADS ).submit( new Callable<Object>() {
@@ -108,22 +107,13 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
                   @Override
                   public Object call() throws Exception {
                     try {
-
-                      List<VmInstance> instList = VmInstances.list( VmState.RUNNING );
-
-                      List<String> instIdList = Lists.newArrayList();
-
-                      for ( final VmInstance inst : instList ) {
-                        instIdList.add( inst.getInstanceId() );
-                      }
-                      Iterable<List<String>> processInts = Iterables.paddedPartition( instIdList, SENSOR_QUERY_BATCH_SIZE );
-
+                      final Iterable<List<String>> processInts = Iterables.partition(
+                          Iterables.transform( VmInstances.list( VmState.RUNNING ), HasName.GET_NAME ),
+                          SENSOR_QUERY_BATCH_SIZE );
 
                       for ( final ServiceConfiguration ccConfig : Topology.enabledServices( ClusterController.class ) ) {
-                        for ( List<String> instIds : processInts ) {
-
+                        for ( final List<String> instIds : processInts ) {
                           ArrayList<String> instanceIds = Lists.newArrayList( instIds );
-                          Iterables.removeIf( instanceIds, Predicates.isNull() );
                           //                  LOG.info("DecribeSensorCallback about to be sent");
                           /**
                            * Here this is hijacking the sensor callback in order to control the thread of execution used when invoking the

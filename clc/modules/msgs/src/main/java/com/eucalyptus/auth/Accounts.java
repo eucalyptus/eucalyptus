@@ -242,6 +242,25 @@ public class Accounts {
     return system.lookupAdmin();
   }
   
+  public static User lookupAwsExecReadAdmin(boolean ensureActiveKey) throws AuthException {
+	Account system = Accounts.getAccountProvider( ).lookupAccountByName( Account.AWS_EXEC_READ_SYSTEM_ACCOUNT );
+	User user = system.lookupAdmin();
+	if (ensureActiveKey) {
+      boolean hasActiveKey = false;
+      for (AccessKey k:user.getKeys()) {
+	    if ( k.isActive() ) {
+          hasActiveKey = true;
+          break;
+	    }
+      }
+      if (!hasActiveKey) {
+        user.createKey();
+	    LOG.debug("Created new user key for " + user.getName());
+      }
+	}
+	return user;
+  }
+
   public static String getFirstActiveAccessKeyId( User user ) throws AuthException {
     for ( AccessKey k : user.getKeys( ) ) {
       if ( k.isActive( ) ) {
@@ -268,32 +287,32 @@ public class Accounts {
   }
 
   public static String getUserFullName( User user ) {
-    if ( "/".equals( user.getPath( ) ) ) {
-      return "/" + user.getName( );
+    if ( user.getPath( ).endsWith( "/" ) ) {
+      return user.getPath( ) + user.getName( );
     } else {
       return user.getPath( ) + "/" + user.getName( );
     }
   }
   
   public static String getGroupFullName( Group group ) {
-    if ( "/".equals( group.getPath( ) ) ) {
-      return "/" + group.getName( );
+    if ( group.getPath( ).endsWith( "/" ) ) {
+      return group.getPath( ) + group.getName( );
     } else {
       return group.getPath( ) + "/" + group.getName( );
     }
   }
 
   public static String getRoleFullName( Role role ) {
-    if ( "/".equals( role.getPath( ) ) ) {
-      return "/" + role.getName( );
+    if ( role.getPath( ).endsWith( "/" ) ) {
+      return role.getPath( ) + role.getName( );
     } else {
       return role.getPath( ) + "/" + role.getName( );
     }
   }
 
   public static String getInstanceProfileFullName( InstanceProfile instanceProfile ) {
-    if ( "/".equals( instanceProfile.getPath( ) ) ) {
-      return "/" + instanceProfile.getName( );
+    if ( instanceProfile.getPath( ).endsWith( "/" ) ) {
+      return instanceProfile.getPath( ) + instanceProfile.getName( );
     } else {
       return instanceProfile.getPath( ) + "/" + instanceProfile.getName( );
     }

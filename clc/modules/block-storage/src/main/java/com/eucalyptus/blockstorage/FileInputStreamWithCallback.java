@@ -67,7 +67,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import com.eucalyptus.blockstorage.exceptions.UnknownFileSizeException;
+import com.eucalyptus.blockstorage.exceptions.UnknownSizeException;
 
 /**
  * File stream with update callbacks to update on progress. Will call callback on each operation, callback must be selective on when to do update and should do
@@ -78,7 +78,7 @@ public class FileInputStreamWithCallback extends FileInputStream {
 
 	private SnapshotProgressCallback callback;
 
-	public FileInputStreamWithCallback(File file, SnapshotProgressCallback callback) throws FileNotFoundException, UnknownFileSizeException {
+	public FileInputStreamWithCallback(File file, SnapshotProgressCallback callback) throws FileNotFoundException, UnknownSizeException {
 		super(file);
 		this.callback = callback;
 	}

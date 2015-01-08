@@ -66,11 +66,12 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.lang.reflect.Modifier;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.PersistenceException;
@@ -80,6 +81,7 @@ import com.eucalyptus.auth.AuthEvaluationContext;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.PolicyResourceContext;
 import com.eucalyptus.auth.policy.PolicyAction;
 import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -104,11 +106,14 @@ import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
+import com.google.common.collect.Interner;
+import com.google.common.collect.Interners;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import com.eucalyptus.auth.AuthContextSupplier;
+import static com.eucalyptus.auth.PolicyResourceContext.PolicyResourceInfo;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static com.eucalyptus.util.RestrictedType.AccountRestrictedType;
 import static com.eucalyptus.util.RestrictedType.PolicyRestrictedType;
@@ -117,6 +122,8 @@ import static org.hamcrest.Matchers.notNullValue;
 
 public class RestrictedTypes {
   static Logger LOG = Logger.getLogger( RestrictedTypes.class );
+
+  private static final Interner<AllocationScope> allocationInterner = Interners.newWeakInterner( );
   
   /**
    * Annotation for use on a Class implementing Function<String,T extends RestrictedType>,
@@ -142,9 +149,8 @@ public class RestrictedTypes {
     Class<?> value( );
   }
   
-  private static final Map<Class, Function<?, ?>> resourceResolvers = Maps.newHashMap( );
-  private static final List<PolicyResourceInterceptor> resourceInterceptors = Lists.newCopyOnWriteArrayList( );
-  
+  private static final Map<Class, Function<?, ?>> resourceResolvers = Maps.newHashMap();
+
   public static <T extends RestrictedType> Function<String, T> resolver( Class<T> type ) {
     return ( Function<String, T> ) checkMapByType( type, resourceResolvers );
   }
@@ -232,11 +238,11 @@ public class RestrictedTypes {
   public static <T extends RestrictedType> T allocateUnitlessResource( Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     return allocateUnitlessResources( 1, allocator ).get( 0 );
   }
-  
+
   /**
    * Allocation of a dimension-less type; i.e. only the quantity matters and the characteristics of
    * the allocated resource cannot be parameterized in any way.
-   * 
+   *
    * @param <T> type to be allocated
    * @param quantity quantity to be allocated
    * @param allocator Supplier which performs allocation of a single unit.
@@ -244,9 +250,62 @@ public class RestrictedTypes {
    */
   @SuppressWarnings( { "cast", "unchecked" } )
   public static <T extends RestrictedType> List<T> allocateUnitlessResources( Integer quantity, Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    return allocateUnitlessResources( findResourceClass( allocator ), quantity, allocator );
+  }
+
+  /**
+   * Allocation of a dimension-less type; i.e. only the quantity matters and the characteristics of
+   * the allocated resource cannot be parameterized in any way.
+   *
+   * @param <T> type to be allocated
+   * @param rscType class for type to be allocated
+   * @param quantity quantity to be allocated
+   * @param allocator Supplier which performs allocation of a single unit.
+   * @return List<T> of size {@code quantity} of new allocations of {@code <T>}
+   */
+  @SuppressWarnings( { "cast", "unchecked" } )
+  public static <T extends RestrictedType> List<T> allocateUnitlessResources(
+          final Class<?> rscType,
+          final Integer quantity,
+          final Supplier<T> allocator
+  ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+      return doAllocate( rscType, quantity, new Supplier<List<T>>() {
+          @Override
+          public List<T> get( ) {
+              return runAllocator( quantity, allocator, ( Predicate ) Predicates.alwaysTrue( ) );
+          }
+      } );
+  }
+
+  /**
+   * Allocation of a dimension-less type; i.e. only the quantity matters and the characteristics of
+   * the allocated resource cannot be parameterized in any way.
+   *
+   * @param <T> type to be allocated
+   * @param rscType class for type to be allocated
+   * @param min minimum quantity to be allocated
+   * @param max maximum quantity to be allocated
+   * @param allocator Supplier which performs allocation of a single unit.
+   * @return List<T> of size {@code quantity} of new allocations of {@code <T>}
+   */
+  @SuppressWarnings( { "cast", "unchecked" } )
+  public static <T extends RestrictedType> List<T> allocateUnitlessResources(
+      final Class<?> rscType,
+      final int min,
+      final int max,
+      final BatchAllocator<T> allocator
+  ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    return doAllocate( rscType, max, new Supplier<List<T>>( ){
+      @Override
+      public List<T> get() {
+        return allocator.allocate( min, max );
+      }
+    });
+  }
+
+  private static <A> A doAllocate( final Class<?> rscType, final Integer quantity, final Supplier<A> allocator ) throws AuthException, IllegalContextAccessException {
     String identifier = "";
     Context ctx = Contexts.lookup( );
-    Class<?> rscType = findResourceClass( allocator );
     if ( !ctx.hasAdministrativePrivileges( ) ) {
       Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass();
       Ats ats = findPolicyAnnotations( rscType, msgType );
@@ -256,13 +315,21 @@ public class RestrictedTypes {
       AuthContextSupplier userContext = ctx.getAuthContext( );
       if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, userContext ) ) {
         throw new AuthException( "Not authorized to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
-      } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, ctx.getUser( ), ( long ) quantity ) ) {
-        throw new AuthQuotaException( type.value( ), "Quota exceeded while trying to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
       }
+      final Lock lock = allocationInterner.intern( new AllocationScope( vendor.value( ), type.value( ), userContext.get().getAccountNumber() ) ).lock( );
+      lock.lock();
+      try {
+        if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, ctx.getUser( ), ( long ) quantity ) ) {
+          throw new AuthQuotaException( type.value( ), "Quota exceeded while trying to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
+        }
+        return allocator.get( );
+      } finally {
+        lock.unlock( );
+      }
+    } else {
+      return allocator.get( );
     }
-    return runAllocator( quantity, allocator, ( Predicate ) Predicates.alwaysTrue( ) );
   }
-  
   /**
    * Allocate a resource and subsequently verify naming restrictions.
    * 
@@ -444,27 +511,15 @@ public class RestrictedTypes {
       }
 
       final String qualifiedAction = PolicySpec.qualifiedName( actionVendor, action );
-      notifyResourceInterceptors( requestedObject, qualifiedAction );
-      try {
+      try ( final PolicyResourceContext policyResourceContext = PolicyResourceContext.of( requestedObject, qualifiedAction ) ) {
         if ( !Permissions.isAuthorized( principalType, principalName, findPolicy( requestedObject, actionVendor, action ),
                                         PolicySpec.qualifiedName( vendor.value( ), type.value( ) ), identifier, owningAccount,
                                         qualifiedAction, requestUser, evaluatedKeys ) ) {
           throw new AuthException( "Not authorized to use " + type.value( ) + " identified by " + identifier + " as the user "
                                    + UserFullName.getInstance( requestUser ) );
         }
-      } finally {
-        notifyResourceInterceptors( null, null );
       }
       return requestedObject;
-    }
-  }
-
-  private static <T extends RestrictedType> void notifyResourceInterceptors(
-      final T requestedObject,
-      final String action
-  ) {
-    for ( final PolicyResourceInterceptor interceptor : resourceInterceptors ) {
-      interceptor.onResource( requestedObject, action );
     }
   }
 
@@ -545,12 +600,12 @@ public class RestrictedTypes {
                 : arg0.getOwner( ).getAccountNumber( );
             }
             final AuthEvaluationContext evaluationContext = contextFunction.apply( arg0.getClass( ) );
-            notifyResourceInterceptors( arg0, evaluationContext.getAction( ) );
-            return Permissions.isAuthorized( evaluationContext, owningAccountNumber, arg0.getDisplayName( ) );
+            try  ( final PolicyResourceContext policyResourceContext =
+                       PolicyResourceContext.of( arg0, evaluationContext.getAction( ) ) ) {
+              return Permissions.isAuthorized( evaluationContext, owningAccountNumber, arg0.getDisplayName() );
+            }
           } catch ( Exception ex ) {
             return false;
-          } finally {
-            notifyResourceInterceptors( null, null );
           }
         }
         return true;
@@ -629,8 +684,23 @@ public class RestrictedTypes {
     };
   }
 
-  public interface PolicyResourceInterceptor {
-    void onResource( RestrictedType resource, String action );
+  @TypeMapper
+  public enum RestrictedTypeToPolicyResourceInfo implements Function<RestrictedType,PolicyResourceInfo> {
+    INSTANCE;
+
+    @Nullable
+    @Override
+    public PolicyResourceInfo apply( final RestrictedType restrictedType ) {
+      final String accountNumber;
+      if ( restrictedType instanceof UserRestrictedType ) {
+        accountNumber = ( (UserRestrictedType) restrictedType ).getOwnerAccountNumber( );
+      } else if ( restrictedType instanceof AccountRestrictedType ) {
+        accountNumber = ( (AccountRestrictedType) restrictedType ).getOwnerAccountNumber( );
+      } else {
+        accountNumber = null;
+      }
+      return PolicyResourceContext.resourceInfo( accountNumber, restrictedType );
+    }
   }
 
   public static class FilterBuilder<T extends RestrictedType> {
@@ -686,6 +756,10 @@ public class RestrictedTypes {
     }
   }
 
+  public interface BatchAllocator<T> {
+    List<T> allocate( int min, int max );
+  }
+
   public static class ResourceMetricFunctionDiscovery extends ServiceJarDiscovery {
     
     public ResourceMetricFunctionDiscovery( ) {
@@ -723,31 +797,6 @@ public class RestrictedTypes {
       return 0.3d;
     }
     
-  }
-
-  public static class PolicyResourceInterceptorDiscovery extends ServiceJarDiscovery {
-
-    public PolicyResourceInterceptorDiscovery( ) {
-      super( );
-    }
-
-    @SuppressWarnings( "unchecked" )
-    @Override
-    public boolean processClass( final Class candidate ) throws Exception {
-      if ( PolicyResourceInterceptor.class.isAssignableFrom( candidate ) &&
-          !Modifier.isAbstract( candidate.getModifiers( ) ) ) {
-        LOG.info( "Registered PolicyResourceInterceptor:    " + candidate );
-        RestrictedTypes.resourceInterceptors.add( (PolicyResourceInterceptor) Classes.newInstance( candidate ) );
-        return true;
-      }
-
-      return false;
-    }
-
-    @Override
-    public Double getPriority( ) {
-      return 0.3d;
-    }
   }
 
   public static String getIamActionByMessageType( ) {
@@ -848,5 +897,61 @@ public class RestrictedTypes {
       }
     }
     return policy;
+  }
+
+  private static final class AllocationScope {
+    private final String resourceVendor;
+    private final String resourceType;
+    private final String accountNumber;
+    private final Lock lock = new ReentrantLock( );
+
+    private AllocationScope( final String resourceVendor,
+                             final String resourceType,
+                             final String accountNumber ) {
+      Parameters.checkParam( "resourceVendor", resourceVendor, notNullValue( ) );
+      Parameters.checkParam( "resourceType", resourceType, notNullValue( ) );
+      Parameters.checkParam( "accountNumber", accountNumber, notNullValue( ) );
+      this.resourceVendor = resourceVendor;
+      this.resourceType = resourceType;
+      this.accountNumber = accountNumber;
+    }
+
+    public Lock lock( ) {
+      return lock;
+    }
+
+    @Override
+    public boolean equals( final Object o ) {
+      if ( this == o ) return true;
+      if ( o == null || getClass() != o.getClass() ) return false;
+
+      final AllocationScope that = (AllocationScope) o;
+
+      if ( !accountNumber.equals( that.accountNumber ) ) return false;
+      if ( !resourceType.equals( that.resourceType ) ) return false;
+      if ( !resourceVendor.equals( that.resourceVendor ) ) return false;
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      int result = resourceVendor.hashCode();
+      result = 31 * result + resourceType.hashCode();
+      result = 31 * result + accountNumber.hashCode();
+      return result;
+    }
+
+    public String getResourceVendor( ) {
+      return resourceVendor;
+    }
+
+    public String getResourceType( ) {
+      return resourceType;
+    }
+
+    public String getAccountNumber( ) {
+      return accountNumber;
+    }
   }
 }

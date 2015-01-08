@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.nio.channels.Channel;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
@@ -50,23 +51,26 @@ public interface ObjectFactory {
     /**
      * Logically delete the object. This is the preferred method invocation as a result of a user request.
      * Marks the object delete, may also insert a deleteMarker or other metadata operation to indicate the object
-     * is logically deleted upon return
+     * is logically deleted upon return. It may return the deleteMarker if it was created. If no delete marker was inserted, 
+     * nothing is returned 
      *
      * @param entity
      * @param requestUser
+     * @return objectEntity
      * @throws S3Exception
      */
-    public void logicallyDeleteObject(ObjectStorageProviderClient provider, ObjectEntity entity, User requestUser) throws S3Exception;
+    public ObjectEntity logicallyDeleteObject(ObjectStorageProviderClient provider, ObjectEntity entity, User requestUser) throws S3Exception;
 
     /**
      * Delete a specific version. Differs from logicallyDeleteObject in that it will never generate a delete marker,
      * but will operate on that specific version directly and either remove it if a deletemarker, or transition it
-     * to 'deleting'
+     * to 'deleting'. It will return the object entity version that was removed.
      * @param entity
      * @param requestUser
+     * @return objectEntity
      * @throws S3Exception
      */
-    public void logicallyDeleteVersion(ObjectStorageProviderClient provider, ObjectEntity entity, User requestUser) throws S3Exception;
+    public ObjectEntity logicallyDeleteVersion(ObjectStorageProviderClient provider, ObjectEntity entity, User requestUser) throws S3Exception;
 
         /**
          * Delete the named bucket in metadata and on the backend.

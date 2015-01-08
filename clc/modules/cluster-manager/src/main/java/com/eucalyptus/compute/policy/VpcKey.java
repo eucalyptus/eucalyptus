@@ -37,9 +37,14 @@ public class VpcKey implements ComputeKey {
   private static final Set<String> actions = ImmutableSet.<String>builder()
       .add( qualifiedName( VENDOR_EC2, EC2_AUTHORIZESECURITYGROUPEGRESS ) )
       .add( qualifiedName( VENDOR_EC2, EC2_AUTHORIZESECURITYGROUPINGRESS ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_DELETENETWORKACL ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_DELETENETWORKACLENTRY ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_DELETEROUTE ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_DELETEROUTETABLE ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DELETESECURITYGROUP ) )
       .add( qualifiedName( VENDOR_EC2, EC2_REVOKESECURITYGROUPEGRESS ) )
       .add( qualifiedName( VENDOR_EC2, EC2_REVOKESECURITYGROUPINGRESS ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_RUNINSTANCES ) )
       .build( );
 
   @Override

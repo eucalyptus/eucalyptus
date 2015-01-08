@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,23 +16,46 @@
  * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
+ *
+ * This file may incorporate work covered under the following copyright
+ * and permission notice:
+ *
+ *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
+ *   Reserved.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License").
+ *   You may not use this file except in compliance with the License.
+ *   A copy of the License is located at
+ *
+ *   http://aws.amazon.com/apache2.0
+ *
+ *   or in the "license" file accompanying this file. This file is
+ *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
+ *   ANY KIND, either express or implied. See the License for the specific
+ *   language governing permissions and limitations under the License.
  ************************************************************************/
+
 package com.eucalyptus.cloudwatch.domain.alarms;
 
 import java.util.Date;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
+import com.eucalyptus.component.annotation.RemotablePersistence;
 import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity
-@PersistenceContext(name="eucalyptus_cloudwatch")
+@PersistenceContext(name="eucalyptus_cloudwatch_backend")
+@RemotablePersistence
 @Table(name="alarm_history")
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class AlarmHistory extends AbstractPersistent {

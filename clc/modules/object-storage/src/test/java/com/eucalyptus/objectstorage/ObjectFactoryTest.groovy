@@ -425,7 +425,7 @@ public class ObjectFactoryTest {
 
         assert (resultEntity != null)
         assert (resultEntity.getState().equals(ObjectState.mpu_pending))
-        ObjectEntity fetched = ObjectMetadataManagers.getInstance().lookupUpload(bucket, resultEntity.getUploadId());
+        ObjectEntity fetched = ObjectMetadataManagers.getInstance().lookupUpload(bucket, key, resultEntity.getUploadId());
         assert (fetched.getState() == ObjectState.mpu_pending)
         assert (fetched.getSize() == 0)
         assert (fetched.getUploadId() == resultEntity.getUploadId())
@@ -437,7 +437,7 @@ public class ObjectFactoryTest {
             PartEntity tmp = PartEntity.newInitializedForCreate(bucket, key, resultEntity.getUploadId(), i, content.length, user)
             partEntities.add(OsgObjectFactory.getFactory().createObjectPart(provider, fetched, tmp, new ByteArrayInputStream(content), user))
 
-            PaginatedResult<PartEntity> partsList1 = MpuPartMetadataManagers.getInstance().listPartsForUpload(bucket, key, resultEntity.getUploadId(), null, 1000)
+            PaginatedResult<PartEntity> partsList1 = MpuPartMetadataManagers.getInstance().listPartsForUpload(bucket, key, resultEntity.getUploadId(), 0, 1000)
             assert (partsList1.getEntityList().size() == i)
             for (int j = 0; j < i; j++) {
                 assert (partsList1.getEntityList().get(j).geteTag() == partEntities[j].geteTag())
@@ -507,7 +507,7 @@ public class ObjectFactoryTest {
 
         assert(resultEntity != null)
         assert(resultEntity.getState().equals(ObjectState.mpu_pending))
-        ObjectEntity fetched = ObjectMetadataManagers.getInstance().lookupUpload(bucket, resultEntity.getUploadId());
+        ObjectEntity fetched = ObjectMetadataManagers.getInstance().lookupUpload(bucket, key, resultEntity.getUploadId());
         assert(fetched.getState() == ObjectState.mpu_pending)
         assert(fetched.getSize() == 0)
         assert(fetched.getUploadId() == resultEntity.getUploadId())
@@ -524,7 +524,7 @@ public class ObjectFactoryTest {
             PartEntity tmp = PartEntity.newInitializedForCreate(bucket, key, resultEntity.getUploadId(), partNumber, content.length, user)
             partEntities.add(partNumber - 1, OsgObjectFactory.getFactory().createObjectPart(provider, fetched, tmp, new ByteArrayInputStream(content), user))
 
-            PaginatedResult<PartEntity> partsList1 = MpuPartMetadataManagers.getInstance().listPartsForUpload(bucket, key, resultEntity.getUploadId(), null, 1000)
+            PaginatedResult<PartEntity> partsList1 = MpuPartMetadataManagers.getInstance().listPartsForUpload(bucket, key, resultEntity.getUploadId(), 0, 1000)
             assert(partsList1.getEntityList().size() == 1)
             assert(partsList1.getEntityList().first().geteTag() == partEntities.get(partNumber - 1).geteTag())
             partList.add(partNumber - 1, new Part(partNumber, partEntities.last().geteTag()))
@@ -536,7 +536,7 @@ public class ObjectFactoryTest {
             PartEntity tmp = PartEntity.newInitializedForCreate(bucket, key, resultEntity.getUploadId(), i, content.length, user)
             partEntities.add(OsgObjectFactory.getFactory().createObjectPart(provider, fetched, tmp, new ByteArrayInputStream(content), user))
 
-            PaginatedResult<PartEntity> partsList1 = MpuPartMetadataManagers.getInstance().listPartsForUpload(bucket, key, resultEntity.getUploadId(), null, 1000)
+            PaginatedResult<PartEntity> partsList1 = MpuPartMetadataManagers.getInstance().listPartsForUpload(bucket, key, resultEntity.getUploadId(), 0, 1000)
             assert(partsList1.getEntityList().size() == i)
             for(int j = 0 ; j < i; j++) {
                 assert(partsList1.getEntityList().get(j).geteTag() == partEntities[j].geteTag())
@@ -580,6 +580,71 @@ public class ObjectFactoryTest {
             assert(buffer[i] == content[i])
         }
     }
+	
+	@Test
+	public void testListParts() throws Exception {
+		//Set the min part size to 1 to allow small tests
+		ObjectStorageProperties.MPU_PART_MIN_SIZE = 1;
+
+		User user = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
+		String canonicalId = user.getAccount().getCanonicalId()
+		AccessControlPolicy acp = new AccessControlPolicy()
+		acp.setAccessControlList(new AccessControlList())
+		acp = AclUtils.processNewResourcePolicy(user, acp, canonicalId)
+
+		Bucket bucket = Bucket.getInitializedBucket("testbucket", user.getUserId(), acp, null)
+		bucket = OsgBucketFactory.getFactory().createBucket(provider, bucket, UUID.randomUUID().toString(), user)
+
+		assert (bucket != null)
+		assert (bucket.getState().equals(BucketState.extant))
+		byte[] content = 'fakecontent123'.getBytes()
+		def key = 'testkey'
+
+		ObjectEntity objectEntity = ObjectEntity.newInitializedForCreate(bucket, key, 0, user)
+		objectEntity.setAcl(acp)
+		ObjectEntity resultEntity = OsgObjectFactory.getFactory().createMultipartUpload(provider, objectEntity, user)
+
+		assert (resultEntity != null)
+		assert (resultEntity.getState().equals(ObjectState.mpu_pending))
+		ObjectEntity fetched = ObjectMetadataManagers.getInstance().lookupUpload(bucket, key, resultEntity.getUploadId());
+		assert (fetched.getState() == ObjectState.mpu_pending)
+		assert (fetched.getSize() == 0)
+		assert (fetched.getUploadId() == resultEntity.getUploadId())
+
+		List<Part> partList = new ArrayList<Part>()
+		List<PartEntity> partEntities = new ArrayList<PartEntity>();
+		
+		for (int i = 1; i <= 10; i++) {
+			PartEntity tmp = PartEntity.newInitializedForCreate(bucket, key, resultEntity.getUploadId(), i, content.length, user)
+			partEntities.add(OsgObjectFactory.getFactory().createObjectPart(provider, fetched, tmp, new ByteArrayInputStream(content), user))
+			partList.add(new Part(i, partEntities.last().geteTag()))
+		}
+		
+		PaginatedResult<PartEntity> partsList1 = MpuPartMetadataManagers.getInstance().listPartsForUpload(bucket, key, resultEntity.getUploadId(), 0, 1000)
+		assert (partsList1.getEntityList().size() == 10)
+		assert (!partsList1.getIsTruncated())
+		for (int j = 0; j < 10; j++) {
+			assert (partsList1.getEntityList().get(j).geteTag() == partEntities[j].geteTag())
+		}
+		
+		PaginatedResult<PartEntity> partsList2 = MpuPartMetadataManagers.getInstance().listPartsForUpload(bucket, key, resultEntity.getUploadId(), 1, 5)
+		assert (partsList2.getEntityList().size() == 5)
+		assert (partsList2.getIsTruncated())
+		for (int j = 0; j < 5 ; j++) {
+			assert (partsList2.getEntityList().get(j).geteTag() == partEntities[1 + j].geteTag())
+		}
+		
+		PaginatedResult<PartEntity> partsList3 = MpuPartMetadataManagers.getInstance().listPartsForUpload(bucket, key, resultEntity.getUploadId(), 3, 20)
+		assert (partsList3.getEntityList().size() == 7)
+		assert (!partsList3.getIsTruncated())
+		for (int j = 0; j < 7; j++) {
+			assert (partsList3.getEntityList().get(j).geteTag() == partEntities[3 + j].geteTag())
+		}
+		
+		//Complete the upload
+		ObjectEntity finalObject = OsgObjectFactory.getFactory().completeMultipartUpload(provider, resultEntity, partList, user)
+	}
+	
 
     /**
      * Expect copy to complete and result in 'extant' object
@@ -635,5 +700,81 @@ public class ObjectFactoryTest {
             assert (buffer[i] == content[i])
         }
     }
+	
+	/**
+	 * 
+	 * @throws Exception
+	 */
+	@Test
+	public void testDeleteMarker() throws Exception {
+		User user = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
+		String canonicalId = user.getAccount().getCanonicalId()
+		AccessControlPolicy acp = new AccessControlPolicy()
+		acp.setAccessControlList(new AccessControlList())
+		acp = AclUtils.processNewResourcePolicy(user, acp, canonicalId)
+
+		// Create bucket
+		Bucket bucket = Bucket.getInitializedBucket("testbucket", user.getUserId(), acp, null)
+		bucket = OsgBucketFactory.getFactory().createBucket(provider, bucket, UUID.randomUUID().toString(), user)
+		
+		assert (bucket != null)
+		assert (bucket.getState().equals(BucketState.extant))
+		
+		// Enable versioning
+		ObjectStorageProperties.VersioningStatus versionStatus = ObjectStorageProperties.VersioningStatus.Enabled
+		BucketMetadataManagers.getInstance().setVersioning(bucket, versionStatus)
+		
+		bucket = BucketMetadataManagers.getInstance().lookupExtantBucket("testbucket")
+		
+		assert (bucket != null)
+		assert (bucket.getVersioning().equals(ObjectStorageProperties.VersioningStatus.Enabled))
+		
+		byte[] content = 'fakecontent123'.getBytes()
+
+		ObjectEntity objectEntity = ObjectEntity.newInitializedForCreate(bucket, "testkey", content.length, user)
+		objectEntity.setAcl(acp)
+		ObjectEntity resultEntity = OsgObjectFactory.getFactory().createObject(provider, objectEntity, new ByteArrayInputStream(content), null, user)
+
+		assert (resultEntity != null)
+		assert (resultEntity.getState().equals(ObjectState.extant))
+
+		//Do the delete logically
+		ObjectEntity deleteMarker1 = OsgObjectFactory.getFactory().logicallyDeleteObject(provider, resultEntity, user)
+		
+		assert (deleteMarker1 != null)
+		assert (deleteMarker1.getVersionId() != null)
+		
+		//Do the delete logically
+		ObjectEntity deleteMarker2 = OsgObjectFactory.getFactory().logicallyDeleteObject(provider, resultEntity, user)
+
+		assert (deleteMarker2 != null)
+		assert (deleteMarker2.getVersionId() != null)
+		assert (!deleteMarker1.getVersionId().equals(deleteMarker2.getVersionId()))
+		
+		// Suspend versioning
+		versionStatus = ObjectStorageProperties.VersioningStatus.Suspended
+		BucketMetadataManagers.getInstance().setVersioning(bucket, versionStatus)
+		
+		bucket = BucketMetadataManagers.getInstance().lookupExtantBucket("testbucket")
+		
+		assert (bucket != null)
+		assert (bucket.getVersioning().equals(ObjectStorageProperties.VersioningStatus.Suspended))
+		
+		resultEntity = ObjectMetadataManagers.getInstance().lookupObject(bucket, "testkey", null)
+		assert (resultEntity != null)
+		
+		//Do the delete logically
+		deleteMarker1 = OsgObjectFactory.getFactory().logicallyDeleteObject(provider, resultEntity, user)
+		
+		assert (deleteMarker1 != null)
+		assert (ObjectStorageProperties.NULL_VERSION_ID.equals(deleteMarker1.getVersionId()))
+		
+		//Do the delete logically
+		deleteMarker2 = OsgObjectFactory.getFactory().logicallyDeleteObject(provider, resultEntity, user)
+		
+		assert (deleteMarker2 != null)
+		assert (ObjectStorageProperties.NULL_VERSION_ID.equals(deleteMarker2.getVersionId()))
+		assert (!deleteMarker1.getObjectModifiedTimestamp().equals(deleteMarker2.getObjectModifiedTimestamp()))
+	}
 
 }

@@ -136,6 +136,7 @@ const char *euca_client_component_name = "nc";  //!< The client component name
 \*----------------------------------------------------------------------------*/
 
 static sem *vol_sem = NULL;            //!< Semaphore to protect volume operations
+static int request_timeout_sec = DEFAULT_SC_REQUEST_TIMEOUT;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -172,9 +173,10 @@ static int re_encrypt_token(char *in_token, char **out_token);  //! Decrypts tok
 //!
 //! @note
 //!
-int init_ebs_utils(void)
+int init_ebs_utils(int sc_request_timeout_sec)
 {
     LOGDEBUG("Initializing EBS utils\n");
+    request_timeout_sec = sc_request_timeout_sec;
     if (vol_sem == NULL) {
         vol_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
     }
@@ -330,13 +332,12 @@ int serialize_volume(ebs_volume_data * vol_data, char **dest)
 //!
 //! @note
 //!
-int connect_ebs_volume(char *sc_url, char *attachment_token, int use_ws_sec, char *ws_sec_policy_file, char *local_ip, char *local_iqn, char **result_device,
-                       ebs_volume_data ** vol_data)
+int connect_ebs_volume(const char *target_dev, const char *target_serial, const char *target_bus, char *sc_url, char *attachment_token, int use_ws_sec, char *ws_sec_policy_file, char *local_ip, char *local_iqn, char **result_xml, ebs_volume_data ** vol_data)
 {
     int ret = EUCA_OK;
     char *reencrypted_token = NULL;
     char *connect_string = NULL;
-    char *dev = NULL;
+    char *xml = NULL;
     int do_rescan = 1;
 
     if (sc_url == NULL || strlen(sc_url) == 0 || attachment_token == NULL || local_ip == NULL || local_iqn == NULL) {
@@ -370,8 +371,10 @@ int connect_ebs_volume(char *sc_url, char *attachment_token, int use_ws_sec, cha
     LOGTRACE("Got volume lock\n");
 
     LOGTRACE("Calling ExportVolume on SC at %s\n", sc_url);
-    if (scClientCall(NULL, NULL, use_ws_sec, ws_sec_policy_file, DEFAULT_SC_CALL_TIMEOUT, sc_url, "ExportVolume", (*vol_data)->volumeId, reencrypted_token, local_ip, local_iqn,
-                     &connect_string) != EUCA_OK) {
+    threadCorrelationId *corr_id = get_corrid();
+    if (scClientCall
+        (corr_id != NULL ? corr_id->correlation_id : NULL, NULL, use_ws_sec, ws_sec_policy_file, request_timeout_sec, sc_url, "ExportVolume", (*vol_data)->volumeId,
+         reencrypted_token, local_ip, local_iqn, &connect_string) != EUCA_OK) {
         LOGERROR("Failed to get connection information for volume %s from storage controller at: %s\n", (*vol_data)->volumeId, sc_url);
         ret = EUCA_ERROR;
         goto release;
@@ -384,9 +387,13 @@ int connect_ebs_volume(char *sc_url, char *attachment_token, int use_ws_sec, cha
     }
 
     //copy the connection info from the SC return to the resourceLocation.
-    dev = connect_iscsi_target((*vol_data)->connect_string);
-    if (!dev || !strstr(dev, "/dev")) {
-        LOGERROR("Failed to connect to iSCSI target: %s\n", (*vol_data)->connect_string);
+    xml = connect_iscsi_target((*vol_data)->volumeId,
+                               target_dev,
+                               target_serial,
+                               target_bus,
+                               (*vol_data)->connect_string);
+    if (!xml) {
+        LOGERROR("Failed to connect to EBS target: %s\n", (*vol_data)->connect_string);
         //disconnect the volume
         if (cleanup_volume_attachment(sc_url, use_ws_sec, ws_sec_policy_file, (*vol_data), (*vol_data)->connect_string, local_ip, local_iqn, do_rescan) != EUCA_OK) {
             LOGTRACE("cleanup_volume_attachment returned failure on cleanup from connection failure\n");
@@ -395,7 +402,7 @@ int connect_ebs_volume(char *sc_url, char *attachment_token, int use_ws_sec, cha
         goto release;
     }
 
-    *result_device = dev;
+    *result_xml = xml;
 
 release:
     LOGTRACE("Releasing volume lock\n");
@@ -564,9 +571,11 @@ static int cleanup_volume_attachment(char *sc_url, int use_ws_sec, char *ws_sec_
         LOGTRACE("Re-encrypted token for %s is %s\n", vol_data->volumeId, reencrypted_token);
     }
 
+    threadCorrelationId *corr_id = get_corrid();
     LOGTRACE("Calling scClientCall with url: %s and token %s\n", sc_url, vol_data->token);
-    if (scClientCall(NULL, NULL, use_ws_sec, ws_sec_policy_file, DEFAULT_SC_CALL_TIMEOUT, sc_url, "UnexportVolume", vol_data->volumeId, reencrypted_token, local_ip, local_iqn) !=
-        EUCA_OK) {
+    if (scClientCall
+        (corr_id == NULL ? NULL : corr_id->correlation_id, NULL, use_ws_sec, ws_sec_policy_file, request_timeout_sec, sc_url, "UnexportVolume", vol_data->volumeId,
+         reencrypted_token, local_ip, local_iqn) != EUCA_OK) {
         EUCA_FREE(reencrypted_token);
         LOGERROR("ERROR unexporting volume %s\n", vol_data->volumeId);
         return EUCA_ERROR;
@@ -576,8 +585,13 @@ static int cleanup_volume_attachment(char *sc_url, int use_ws_sec, char *ws_sec_
         //Should return error of not found.
         refreshedDev = get_iscsi_target(connect_string);
         if (refreshedDev) {
-            //Failure, should have NULL.
-            return EUCA_ERROR;
+        	if (strstr(refreshedDev, "no-op")) { // Some providers (ceph) may always return no-op, account for it and return success
+        		EUCA_FREE(refreshedDev);
+        		return EUCA_OK;
+        	} else {
+				EUCA_FREE(refreshedDev);
+				return EUCA_ERROR;
+        	}
         } else {
             //We're good
             return EUCA_OK;

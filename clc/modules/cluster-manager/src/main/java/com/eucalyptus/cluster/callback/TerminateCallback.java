@@ -63,32 +63,34 @@
 package com.eucalyptus.cluster.callback;
 
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Expendable;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.MessageCallback;
-import edu.ucsb.eucalyptus.msgs.TerminateInstancesClusterResponseType;
-import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 
-public class TerminateCallback extends MessageCallback<TerminateInstancesType,TerminateInstancesClusterResponseType> implements Expendable<TerminateCallback> {
+import edu.ucsb.eucalyptus.msgs.ClusterTerminateInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.ClusterTerminateInstancesType;
+
+public class TerminateCallback extends MessageCallback<ClusterTerminateInstancesType,ClusterTerminateInstancesResponseType> implements Expendable<TerminateCallback> {
   
   private static Logger LOG = Logger.getLogger( TerminateCallback.class );
   private String        instanceId;
   
   public TerminateCallback( String instanceId ) {
-    super( new TerminateInstancesType( instanceId ) );
+    super( new ClusterTerminateInstancesType( instanceId ) );
     this.instanceId = instanceId;
   }
   
   @Override
-  public void initialize( TerminateInstancesType msg ) {
-    EventRecord.here( TerminateInstancesType.class, EventType.VM_TERMINATING, LogUtil.dumpObject( msg ) ).info( );
+  public void initialize( ClusterTerminateInstancesType msg ) {
+    EventRecord.here( ClusterTerminateInstancesType.class, EventType.VM_TERMINATING, LogUtil.dumpObject( msg ) ).info( );
   }
   
   @Override
-  public void fire( TerminateInstancesClusterResponseType reply ) {
-    EventRecord.here( TerminateInstancesType.class, EventType.VM_TERMINATED, LogUtil.dumpObject( reply  ) ).info( );
+  public void fire( ClusterTerminateInstancesResponseType reply ) {
+    EventRecord.here( ClusterTerminateInstancesType.class, EventType.VM_TERMINATED, LogUtil.dumpObject( reply  ) ).info( );
   }
   
   @Override

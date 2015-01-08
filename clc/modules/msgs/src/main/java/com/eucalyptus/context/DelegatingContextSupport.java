@@ -23,6 +23,8 @@ import java.net.InetAddress;
 import java.util.Map;
 import javax.security.auth.Subject;
 import org.jboss.netty.channel.Channel;
+import com.eucalyptus.auth.AuthContextSupplier;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Contract;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
@@ -87,13 +89,13 @@ abstract class DelegatingContextSupport extends Context implements Wrapper<Conte
   }
 
   @Override
-  public Long getCreationTime( ) {
-    return this.delegate.getCreationTime( );
+  public void setCorrelationId( final String corrId ) {
+    this.delegate.setCorrelationId( corrId );
   }
 
   @Override
-  public void setRequest( BaseMessage msg ) {
-    this.delegate.setRequest( msg );
+  public Long getCreationTime( ) {
+    return this.delegate.getCreationTime( );
   }
 
   @Override
@@ -138,5 +140,25 @@ abstract class DelegatingContextSupport extends Context implements Wrapper<Conte
   @Override
   public Context unwrap() {
     return delegate;
+  }
+
+  @Override
+  public boolean isPrivileged( ) {
+    return this.delegate.isPrivileged();
+  }
+
+  @Override
+  public boolean isImpersonated( ) {
+    return this.delegate.isImpersonated();
+  }
+
+  @Override
+  public Map<String, String> evaluateKeys( ) throws AuthException {
+    return this.delegate.evaluateKeys(); 
+ }
+
+  @Override
+  public AuthContextSupplier getAuthContext( ) {
+    return this.delegate.getAuthContext();
   }
 }

@@ -28,6 +28,8 @@ import com.eucalyptus.objectstorage.msgs.CreateBucketType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketResponseType;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingResponseType;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketType;
 import com.eucalyptus.objectstorage.msgs.DeleteObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteObjectType;
@@ -41,6 +43,8 @@ import com.eucalyptus.objectstorage.msgs.GetBucketLocationResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLocationType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLoggingStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLoggingStatusType;
+import com.eucalyptus.objectstorage.msgs.GetBucketTaggingResponseType;
+import com.eucalyptus.objectstorage.msgs.GetBucketTaggingType;
 import com.eucalyptus.objectstorage.msgs.GetBucketVersioningStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketVersioningStatusType;
 import com.eucalyptus.objectstorage.msgs.GetObjectAccessControlPolicyResponseType;
@@ -70,6 +74,8 @@ import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLoggingStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLoggingStatusType;
+import com.eucalyptus.objectstorage.msgs.SetBucketTaggingResponseType;
+import com.eucalyptus.objectstorage.msgs.SetBucketTaggingType;
 import com.eucalyptus.objectstorage.msgs.SetBucketVersioningStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketVersioningStatusType;
 import com.eucalyptus.objectstorage.msgs.SetBucketAccessControlPolicyResponseType;
@@ -197,5 +203,14 @@ public interface ObjectStorageService {
 
     public abstract DeleteBucketLifecycleResponseType deleteBucketLifecycle(
             DeleteBucketLifecycleType request) throws S3Exception;
+
+    public abstract GetBucketTaggingResponseType getBucketTagging(
+          GetBucketTaggingType request) throws S3Exception;
+
+    public abstract SetBucketTaggingResponseType setBucketTagging(
+            SetBucketTaggingType request) throws S3Exception;
+
+    public abstract DeleteBucketTaggingResponseType deleteBucketTagging(
+            DeleteBucketTaggingType request) throws S3Exception;
 
 }

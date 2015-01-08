@@ -20,6 +20,7 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
@@ -29,6 +30,12 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.ElasticLoa
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.ElasticLoadBalancingPolicyType;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.ElasticLoadBalancingPolicyTypeAttribute;
 import com.eucalyptus.cloudformation.template.JsonHelper;
+import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.StackActivity;
+import com.eucalyptus.cloudformation.workflow.steps.CreateMultiStepPromise;
+import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
+import com.eucalyptus.cloudformation.workflow.steps.Step;
+import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
@@ -66,8 +73,11 @@ import com.eucalyptus.loadbalancing.common.msgs.Subnets;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
+import com.netflix.glisten.WorkflowOperations;
 
 import java.util.ArrayList;
+import java.util.List;
+import javax.annotation.Nullable;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -76,6 +86,281 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends ResourceA
 
   private AWSElasticLoadBalancingLoadBalancerProperties properties = new AWSElasticLoadBalancingLoadBalancerProperties();
   private AWSElasticLoadBalancingLoadBalancerResourceInfo info = new AWSElasticLoadBalancingLoadBalancerResourceInfo();
+
+  public AWSElasticLoadBalancingLoadBalancerResourceAction() {
+    for (CreateSteps createStep: CreateSteps.values()) {
+      createSteps.put(createStep.name(), createStep);
+    }
+    for (DeleteSteps deleteStep: DeleteSteps.values()) {
+      deleteSteps.put(deleteStep.name(), deleteStep);
+    }
+
+  }
+  private enum CreateSteps implements Step {
+    CREATE_LOAD_BALANCER {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSElasticLoadBalancingLoadBalancerResourceAction action = (AWSElasticLoadBalancingLoadBalancerResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
+        CreateLoadBalancerType createLoadBalancerType = MessageHelper.createMessage(CreateLoadBalancerType.class, action.info.getEffectiveUserId());
+        if (action.properties.getLoadBalancerName() == null) {
+
+          // The name here is a little weird.  It needs to be no more than 32 characters
+          createLoadBalancerType.setLoadBalancerName(action.getDefaultPhysicalResourceId(32));
+        } else {
+          createLoadBalancerType.setLoadBalancerName(action.properties.getLoadBalancerName());
+        }
+        if (action.properties.getAvailabilityZones() != null) {
+          AvailabilityZones availabilityZones = new AvailabilityZones();
+          ArrayList<String> member = Lists.newArrayList(action.properties.getAvailabilityZones());
+          availabilityZones.setMember(member);
+          createLoadBalancerType.setAvailabilityZones(availabilityZones);
+        }
+        if (action.properties.getListeners() != null) {
+          Listeners listeners = new Listeners();
+          ArrayList<Listener> member = Lists.newArrayList();
+          for (ElasticLoadBalancingListener elasticLoadBalancingListener: action.properties.getListeners()) {
+            Listener listener = new Listener();
+            listener.setInstancePort(elasticLoadBalancingListener.getInstancePort());
+            listener.setInstanceProtocol(elasticLoadBalancingListener.getInstanceProtocol());
+            listener.setLoadBalancerPort(elasticLoadBalancingListener.getLoadBalancerPort());
+            listener.setProtocol(elasticLoadBalancingListener.getProtocol());
+            listener.setSSLCertificateId(elasticLoadBalancingListener.getSslCertificateId());
+            // TO set the policies, look at the next step
+            member.add(listener);
+          }
+          listeners.setMember(member);
+          createLoadBalancerType.setListeners(listeners);
+        }
+        createLoadBalancerType.setScheme(action.properties.getScheme());
+        if (action.properties.getSecurityGroups() != null) {
+          SecurityGroups securityGroups = new SecurityGroups();
+          ArrayList<String> member = Lists.newArrayList(action.properties.getSecurityGroups());
+          securityGroups.setMember(member);
+          createLoadBalancerType.setSecurityGroups(securityGroups);
+        }
+        if (action.properties.getSubnets() != null) {
+          Subnets subnets = new Subnets();
+          ArrayList<String> member = Lists.newArrayList(action.properties.getSubnets());
+          subnets.setMember(member);
+          createLoadBalancerType.setSubnets(subnets);
+        }
+        CreateLoadBalancerResponseType createLoadBalancerResponseType = AsyncRequests.<CreateLoadBalancerType,CreateLoadBalancerResponseType> sendSync(configuration, createLoadBalancerType);
+        action.info.setPhysicalResourceId(createLoadBalancerType.getLoadBalancerName());
+        action.info.setDnsName(JsonHelper.getStringFromJsonNode(new TextNode(createLoadBalancerResponseType.getCreateLoadBalancerResult().getDnsName())));
+        action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+        return action;
+      }
+    },
+    ADD_INSTANCES_TO_LOAD_BALANCER {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSElasticLoadBalancingLoadBalancerResourceAction action = (AWSElasticLoadBalancingLoadBalancerResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
+        if (action.properties.getInstances()!= null) {
+          RegisterInstancesWithLoadBalancerType registerInstancesWithLoadBalancerType = MessageHelper.createMessage(RegisterInstancesWithLoadBalancerType.class, action.info.getEffectiveUserId());
+          registerInstancesWithLoadBalancerType.setLoadBalancerName(action.info.getPhysicalResourceId());
+          Instances instances = new Instances();
+          ArrayList<Instance> member = Lists.newArrayList();
+          for (String instanceId: action.properties.getInstances()) {
+            Instance instance = new Instance();
+            instance.setInstanceId(instanceId);
+            member.add(instance);
+          }
+          instances.setMember(member);
+          registerInstancesWithLoadBalancerType.setInstances(instances);
+          AsyncRequests.<RegisterInstancesWithLoadBalancerType,RegisterInstancesWithLoadBalancerResponseType> sendSync(configuration, registerInstancesWithLoadBalancerType);
+        }
+        return action;
+      }
+    },
+    ADD_HEALTH_CHECK_TO_LOAD_BALANCER {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSElasticLoadBalancingLoadBalancerResourceAction action = (AWSElasticLoadBalancingLoadBalancerResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
+        if (action.properties.getHealthCheck() != null) {
+          ConfigureHealthCheckType configureHealthCheckType = MessageHelper.createMessage(ConfigureHealthCheckType.class, action.info.getEffectiveUserId());
+          configureHealthCheckType.setLoadBalancerName(action.info.getPhysicalResourceId());
+          HealthCheck healthCheck = new HealthCheck();
+          healthCheck.setHealthyThreshold(action.properties.getHealthCheck().getHealthyThreshold());
+          healthCheck.setInterval(action.properties.getHealthCheck().getInterval());
+          healthCheck.setTarget(action.properties.getHealthCheck().getTarget());
+          healthCheck.setTimeout(action.properties.getHealthCheck().getTimeout());
+          healthCheck.setUnhealthyThreshold(action.properties.getHealthCheck().getUnhealthyThreshold());
+          configureHealthCheckType.setHealthCheck(healthCheck);
+          AsyncRequests.<ConfigureHealthCheckType,ConfigureHealthCheckResponseType> sendSync(configuration, configureHealthCheckType);
+        }
+        return action;
+      }
+    },
+    ADD_POLICIES_TO_LOAD_BALANCER {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSElasticLoadBalancingLoadBalancerResourceAction action = (AWSElasticLoadBalancingLoadBalancerResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
+        if (action.properties.getPolicies() != null) {
+          for (ElasticLoadBalancingPolicyType elasticLoadBalancingPropertyType: action.properties.getPolicies()) {
+            CreateLoadBalancerPolicyType createLoadBalancerPolicyType = MessageHelper.createMessage(CreateLoadBalancerPolicyType.class, action.info.getEffectiveUserId());
+            createLoadBalancerPolicyType.setLoadBalancerName(action.info.getPhysicalResourceId());
+            if (elasticLoadBalancingPropertyType.getAttributes() != null) {
+              PolicyAttributes policyAttributes = new PolicyAttributes();
+              ArrayList<PolicyAttribute> member = Lists.newArrayList();
+              for (ElasticLoadBalancingPolicyTypeAttribute elasticLoadBalancingPolicyTypeAttribute: elasticLoadBalancingPropertyType.getAttributes()) {
+                PolicyAttribute policyAttribute = new PolicyAttribute();
+                policyAttribute.setAttributeName(elasticLoadBalancingPolicyTypeAttribute.getName());
+                policyAttribute.setAttributeValue(elasticLoadBalancingPolicyTypeAttribute.getValue());
+                member.add(policyAttribute);
+              }
+              policyAttributes.setMember(member);
+              createLoadBalancerPolicyType.setPolicyAttributes(policyAttributes);
+            }
+            createLoadBalancerPolicyType.setPolicyName(elasticLoadBalancingPropertyType.getPolicyName());
+            createLoadBalancerPolicyType.setPolicyTypeName(elasticLoadBalancingPropertyType.getPolicyType());
+            // NOTE: Cloudformation says that policies have two more fields, "InstanceIds" (which bind to the back end, but which we don't currently support), and
+            // "LoadBalancerPorts" which seems redundant since Listeners have PolicyNames associated with them (the docs say load balancer ports are only associated with
+            // some policy types).  The first one we don't support and the second we don't know what it means in a non-circular way (TODO: figure that out) so we don't
+            // support either currently
+            AsyncRequests.<CreateLoadBalancerPolicyType,CreateLoadBalancerPolicyResponseType> sendSync(configuration, createLoadBalancerPolicyType);
+          }
+        }
+        return action;
+      }
+    },
+    ADD_LOAD_BALANCER_POLICIES_TO_LISTENERS {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSElasticLoadBalancingLoadBalancerResourceAction action = (AWSElasticLoadBalancingLoadBalancerResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
+        if (action.properties.getListeners() != null) {
+          for (ElasticLoadBalancingListener elasticLoadBalancingListener: action.properties.getListeners()) {
+            if (elasticLoadBalancingListener.getPolicyNames() != null) {
+              SetLoadBalancerPoliciesOfListenerType setLoadBalancerPoliciesOfListenerType = MessageHelper.createMessage(SetLoadBalancerPoliciesOfListenerType.class, action.info.getEffectiveUserId());
+              setLoadBalancerPoliciesOfListenerType.setLoadBalancerName(action.info.getPhysicalResourceId());
+              setLoadBalancerPoliciesOfListenerType.setLoadBalancerPort(elasticLoadBalancingListener.getLoadBalancerPort());
+              PolicyNames policyNames = new PolicyNames();
+              ArrayList<String> member = Lists.newArrayList(elasticLoadBalancingListener.getPolicyNames());
+              policyNames.setMember(member);
+              setLoadBalancerPoliciesOfListenerType.setPolicyNames(policyNames);
+              AsyncRequests.<SetLoadBalancerPoliciesOfListenerType,SetLoadBalancerPoliciesOfListenerResponseType> sendSync(configuration, setLoadBalancerPoliciesOfListenerType);
+            }
+          }
+        }
+        return action;
+      }
+    },
+    ADD_APP_STICKINESS_POLICY_TO_LOAD_BALANCER {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSElasticLoadBalancingLoadBalancerResourceAction action = (AWSElasticLoadBalancingLoadBalancerResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
+        if (action.properties.getAppCookieStickinessPolicy() != null) {
+          CreateAppCookieStickinessPolicyType createAppCookieStickinessPolicyType = MessageHelper.createMessage(CreateAppCookieStickinessPolicyType.class, action.info.getEffectiveUserId());
+          createAppCookieStickinessPolicyType.setPolicyName(action.properties.getAppCookieStickinessPolicy().getPolicyName());
+          createAppCookieStickinessPolicyType.setLoadBalancerName(action.info.getPhysicalResourceId());
+          createAppCookieStickinessPolicyType.setCookieName(action.properties.getAppCookieStickinessPolicy().getCookieName());
+          AsyncRequests.<CreateAppCookieStickinessPolicyType,CreateAppCookieStickinessPolicyResponseType> sendSync(configuration, createAppCookieStickinessPolicyType);
+        }
+        return action;
+      }
+    },
+    ADD_LB_STICKINESS_POLICY_TO_LOAD_BALANCER {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSElasticLoadBalancingLoadBalancerResourceAction action = (AWSElasticLoadBalancingLoadBalancerResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
+        if (action.properties.getLbCookieStickinessPolicy() != null) {
+          CreateLBCookieStickinessPolicyType createLBCookieStickinessPolicyType = MessageHelper.createMessage(CreateLBCookieStickinessPolicyType.class, action.info.getEffectiveUserId());
+          createLBCookieStickinessPolicyType.setPolicyName(action.properties.getLbCookieStickinessPolicy().getPolicyName());
+          createLBCookieStickinessPolicyType.setLoadBalancerName(action.info.getPhysicalResourceId());
+          createLBCookieStickinessPolicyType.setCookieExpirationPeriod(action.properties.getLbCookieStickinessPolicy().getCookieExpirationPeriod());
+          AsyncRequests.<CreateLBCookieStickinessPolicyType,CreateLBCookieStickinessPolicyResponseType> sendSync(configuration, createLBCookieStickinessPolicyType);
+        }
+        return action;
+      }
+    },
+    PLACEHOLDER_FOR_OTHER_FIELDS { //// placeholder for "AccessLoggingPolicy", "ConnectionDrainingPolicy", "CrossZone" : Boolean
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSElasticLoadBalancingLoadBalancerResourceAction action = (AWSElasticLoadBalancingLoadBalancerResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
+        // not currently supported
+        return action;
+      }
+    },
+    DESCRIBE_LOAD_BALANCER_TO_GET_ATTRIBUTES {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSElasticLoadBalancingLoadBalancerResourceAction action = (AWSElasticLoadBalancingLoadBalancerResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
+        DescribeLoadBalancersType describeLoadBalancersType = MessageHelper.createMessage(DescribeLoadBalancersType.class, action.info.getEffectiveUserId());
+        LoadBalancerNames loadBalancerNames = new LoadBalancerNames();
+        ArrayList<String> member = Lists.newArrayList(action.info.getPhysicalResourceId());
+        loadBalancerNames.setMember(member);
+        describeLoadBalancersType.setLoadBalancerNames(loadBalancerNames);
+        DescribeLoadBalancersResponseType describeLoadBalancersResponseType = AsyncRequests.<DescribeLoadBalancersType,DescribeLoadBalancersResponseType> sendSync(configuration, describeLoadBalancersType);
+        if (describeLoadBalancersResponseType != null && describeLoadBalancersResponseType.getDescribeLoadBalancersResult() != null
+          && describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions() != null &&
+          describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions().getMember() != null &&
+          describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions().getMember().size() > 0) {
+          LoadBalancerDescription loadBalancerDescription = describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions().getMember().get(0);
+          String canonicalHostedZoneName = loadBalancerDescription.getCanonicalHostedZoneName();
+          String canonicalHostedZoneNameId = loadBalancerDescription.getCanonicalHostedZoneNameID();
+          String sourceSecurityGroupGroupName = loadBalancerDescription.getSourceSecurityGroup().getGroupName();
+          String sourceSecurityGroupGroupOwnerAlias = loadBalancerDescription.getSourceSecurityGroup().getOwnerAlias();
+          if ("internal".equals(loadBalancerDescription.getScheme())) {
+            canonicalHostedZoneName = loadBalancerDescription.getDnsName();
+          }
+          action.info.setSourceSecurityGroupGroupName(JsonHelper.getStringFromJsonNode(new TextNode(sourceSecurityGroupGroupName)));
+          action.info.setSourceSecurityGroupOwnerAlias(JsonHelper.getStringFromJsonNode(new TextNode(sourceSecurityGroupGroupOwnerAlias)));
+          action.info.setCanonicalHostedZoneNameID(JsonHelper.getStringFromJsonNode(new TextNode(canonicalHostedZoneNameId)));
+          action.info.setCanonicalHostedZoneName(JsonHelper.getStringFromJsonNode(new TextNode(canonicalHostedZoneName)));
+        }
+        return action;
+      }
+    };
+
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
+
+  private enum DeleteSteps implements Step {
+    DELETE_LOAD_BALANCER {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSElasticLoadBalancingLoadBalancerResourceAction action = (AWSElasticLoadBalancingLoadBalancerResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
+        if (action.info.getPhysicalResourceId() == null) return action;
+        DescribeLoadBalancersType describeLoadBalancersType = MessageHelper.createMessage(DescribeLoadBalancersType.class, action.info.getEffectiveUserId());
+        LoadBalancerNames loadBalancerNames = new LoadBalancerNames();
+        ArrayList<String> member = Lists.newArrayList(action.info.getPhysicalResourceId());
+        loadBalancerNames.setMember(member);
+        describeLoadBalancersType.setLoadBalancerNames(loadBalancerNames);
+        DescribeLoadBalancersResponseType describeLoadBalancersResponseType = AsyncRequests.<DescribeLoadBalancersType,DescribeLoadBalancersResponseType> sendSync(configuration, describeLoadBalancersType);
+        if (describeLoadBalancersResponseType != null && describeLoadBalancersResponseType.getDescribeLoadBalancersResult() != null
+          && describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions() != null &&
+          describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions().getMember() != null &&
+          describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions().getMember().size() > 0) {
+          return action;
+        }
+        DeleteLoadBalancerType deleteLoadBalancerType = MessageHelper.createMessage(DeleteLoadBalancerType.class, action.info.getEffectiveUserId());
+        deleteLoadBalancerType.setLoadBalancerName(action.info.getPhysicalResourceId());
+        AsyncRequests.<DeleteLoadBalancerType,DeleteLoadBalancerResponseType> sendSync(configuration, deleteLoadBalancerType);
+        return action;
+      }
+    };
+
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
+
+
   @Override
   public ResourceProperties getResourceProperties() {
     return properties;
@@ -97,230 +382,14 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends ResourceA
   }
 
   @Override
-  public int getNumCreateSteps() {
-    return 9; //lots of steps!!!
+  public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
+    return new CreateMultiStepPromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
   @Override
-  public void create(int stepNum) throws Exception {
-    ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
-    switch (stepNum) {
-      case 0: // create load balancer
-        CreateLoadBalancerType createLoadBalancerType = new CreateLoadBalancerType();
-        createLoadBalancerType.setEffectiveUserId(info.getEffectiveUserId());
-        if (properties.getLoadBalancerName() == null) {
-
-          // The name here is a little weird.  It needs to be no more than 32 characters
-          createLoadBalancerType.setLoadBalancerName(getDefaultPhysicalResourceId(32));
-        } else {
-          createLoadBalancerType.setLoadBalancerName(properties.getLoadBalancerName());
-        }
-        if (properties.getAvailabilityZones() != null) {
-          AvailabilityZones availabilityZones = new AvailabilityZones();
-          ArrayList<String> member = Lists.newArrayList(properties.getAvailabilityZones());
-          availabilityZones.setMember(member);
-          createLoadBalancerType.setAvailabilityZones(availabilityZones);
-        }
-        if (properties.getListeners() != null) {
-          Listeners listeners = new Listeners();
-          ArrayList<Listener> member = Lists.newArrayList();
-          for (ElasticLoadBalancingListener elasticLoadBalancingListener: properties.getListeners()) {
-            Listener listener = new Listener();
-            listener.setInstancePort(elasticLoadBalancingListener.getInstancePort());
-            listener.setInstanceProtocol(elasticLoadBalancingListener.getInstanceProtocol());
-            listener.setLoadBalancerPort(elasticLoadBalancingListener.getLoadBalancerPort());
-            listener.setProtocol(elasticLoadBalancingListener.getProtocol());
-            listener.setSSLCertificateId(elasticLoadBalancingListener.getSslCertificateId());
-            // TO set the policies, look at the next step
-            member.add(listener);
-          }
-          listeners.setMember(member);
-          createLoadBalancerType.setListeners(listeners);
-        }
-        createLoadBalancerType.setScheme(properties.getScheme());
-        if (properties.getSecurityGroups() != null) {
-          SecurityGroups securityGroups = new SecurityGroups();
-          ArrayList<String> member = Lists.newArrayList(properties.getSecurityGroups());
-          securityGroups.setMember(member);
-          createLoadBalancerType.setSecurityGroups(securityGroups);
-        }
-        if (properties.getSubnets() != null) {
-          Subnets subnets = new Subnets();
-          ArrayList<String> member = Lists.newArrayList(properties.getSubnets());
-          subnets.setMember(member);
-          createLoadBalancerType.setSubnets(subnets);
-        }
-        CreateLoadBalancerResponseType createLoadBalancerResponseType = AsyncRequests.<CreateLoadBalancerType,CreateLoadBalancerResponseType> sendSync(configuration, createLoadBalancerType);
-        info.setPhysicalResourceId(createLoadBalancerType.getLoadBalancerName());
-        info.setDnsName(JsonHelper.getStringFromJsonNode(new TextNode(createLoadBalancerResponseType.getCreateLoadBalancerResult().getDnsName())));
-        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
-        break;
-      case 1: // add instances to load balancer
-        if (properties.getInstances()!= null) {
-          RegisterInstancesWithLoadBalancerType registerInstancesWithLoadBalancerType = new RegisterInstancesWithLoadBalancerType();
-          registerInstancesWithLoadBalancerType.setLoadBalancerName(info.getPhysicalResourceId());
-          Instances instances = new Instances();
-          ArrayList<Instance> member = Lists.newArrayList();
-          for (String instanceId: properties.getInstances()) {
-            Instance instance = new Instance();
-            instance.setInstanceId(instanceId);
-            member.add(instance);
-          }
-          instances.setMember(member);
-          registerInstancesWithLoadBalancerType.setInstances(instances);
-          registerInstancesWithLoadBalancerType.setEffectiveUserId(info.getEffectiveUserId());
-          AsyncRequests.<RegisterInstancesWithLoadBalancerType,RegisterInstancesWithLoadBalancerResponseType> sendSync(configuration, registerInstancesWithLoadBalancerType);
-        }
-        break;
-      case 2: // add health check to load balancer
-        if (properties.getHealthCheck() != null) {
-          ConfigureHealthCheckType configureHealthCheckType = new ConfigureHealthCheckType();
-          configureHealthCheckType.setLoadBalancerName(info.getPhysicalResourceId());
-          HealthCheck healthCheck = new HealthCheck();
-          healthCheck.setHealthyThreshold(properties.getHealthCheck().getHealthyThreshold());
-          healthCheck.setInterval(properties.getHealthCheck().getInterval());
-          healthCheck.setTarget(properties.getHealthCheck().getTarget());
-          healthCheck.setTimeout(properties.getHealthCheck().getTimeout());
-          healthCheck.setUnhealthyThreshold(properties.getHealthCheck().getUnhealthyThreshold());
-          configureHealthCheckType.setHealthCheck(healthCheck);
-          configureHealthCheckType.setEffectiveUserId(info.getEffectiveUserId());
-          AsyncRequests.<ConfigureHealthCheckType,ConfigureHealthCheckResponseType> sendSync(configuration, configureHealthCheckType);
-        }
-        break;
-      case 3: // add policies to load balancer
-        if (properties.getPolicies() != null) {
-          for (ElasticLoadBalancingPolicyType elasticLoadBalancingPropertyType: properties.getPolicies()) {
-            CreateLoadBalancerPolicyType createLoadBalancerPolicyType = new CreateLoadBalancerPolicyType();
-            createLoadBalancerPolicyType.setLoadBalancerName(info.getPhysicalResourceId());
-            if (elasticLoadBalancingPropertyType.getAttributes() != null) {
-              PolicyAttributes policyAttributes = new PolicyAttributes();
-              ArrayList<PolicyAttribute> member = Lists.newArrayList();
-              for (ElasticLoadBalancingPolicyTypeAttribute elasticLoadBalancingPolicyTypeAttribute: elasticLoadBalancingPropertyType.getAttributes()) {
-                PolicyAttribute policyAttribute = new PolicyAttribute();
-                policyAttribute.setAttributeName(elasticLoadBalancingPolicyTypeAttribute.getName());
-                policyAttribute.setAttributeValue(elasticLoadBalancingPolicyTypeAttribute.getValue());
-                member.add(policyAttribute);
-              }
-              policyAttributes.setMember(member);
-              createLoadBalancerPolicyType.setPolicyAttributes(policyAttributes);
-            }
-            createLoadBalancerPolicyType.setPolicyName(elasticLoadBalancingPropertyType.getPolicyName());
-            createLoadBalancerPolicyType.setPolicyTypeName(elasticLoadBalancingPropertyType.getPolicyType());
-            createLoadBalancerPolicyType.setEffectiveUserId(info.getEffectiveUserId());
-            // NOTE: Cloudformation says that policies have two more fields, "InstanceIds" (which bind to the back end, but which we don't currently support), and
-            // "LoadBalancerPorts" which seems redundant since Listeners have PolicyNames associated with them (the docs say load balancer ports are only associated with
-            // some policy types).  The first one we don't support and the second we don't know what it means in a non-circular way (TODO: figure that out) so we don't
-            // support either currently
-            AsyncRequests.<CreateLoadBalancerPolicyType,CreateLoadBalancerPolicyResponseType> sendSync(configuration, createLoadBalancerPolicyType);
-          }
-        }
-        break;
-      case 4: // add load balancer policies to listeners
-        if (properties.getListeners() != null) {
-          for (ElasticLoadBalancingListener elasticLoadBalancingListener: properties.getListeners()) {
-            if (elasticLoadBalancingListener.getPolicyNames() != null) {
-              SetLoadBalancerPoliciesOfListenerType setLoadBalancerPoliciesOfListenerType = new SetLoadBalancerPoliciesOfListenerType();
-              setLoadBalancerPoliciesOfListenerType.setLoadBalancerName(info.getPhysicalResourceId());
-              setLoadBalancerPoliciesOfListenerType.setLoadBalancerPort(elasticLoadBalancingListener.getLoadBalancerPort());
-              PolicyNames policyNames = new PolicyNames();
-              ArrayList<String> member = Lists.newArrayList(elasticLoadBalancingListener.getPolicyNames());
-              policyNames.setMember(member);
-              setLoadBalancerPoliciesOfListenerType.setPolicyNames(policyNames);
-              setLoadBalancerPoliciesOfListenerType.setEffectiveUserId(info.getEffectiveUserId());
-              AsyncRequests.<SetLoadBalancerPoliciesOfListenerType,SetLoadBalancerPoliciesOfListenerResponseType> sendSync(configuration, setLoadBalancerPoliciesOfListenerType);
-            }
-          }
-        }
-        break;
-      case 5: // add app stickiness policy load balancer
-        if (properties.getAppCookieStickinessPolicy() != null) {
-          CreateAppCookieStickinessPolicyType createAppCookieStickinessPolicyType = new CreateAppCookieStickinessPolicyType();
-          createAppCookieStickinessPolicyType.setPolicyName(properties.getAppCookieStickinessPolicy().getPolicyName());
-          createAppCookieStickinessPolicyType.setLoadBalancerName(info.getPhysicalResourceId());
-          createAppCookieStickinessPolicyType.setCookieName(properties.getAppCookieStickinessPolicy().getCookieName());
-          createAppCookieStickinessPolicyType.setEffectiveUserId(info.getEffectiveUserId());
-          AsyncRequests.<CreateAppCookieStickinessPolicyType,CreateAppCookieStickinessPolicyResponseType> sendSync(configuration, createAppCookieStickinessPolicyType);
-        }
-        break;
-      case 6: // add lb stickiness policy load balancer
-        if (properties.getLbCookieStickinessPolicy() != null) {
-          CreateLBCookieStickinessPolicyType createLBCookieStickinessPolicyType = new CreateLBCookieStickinessPolicyType();
-          createLBCookieStickinessPolicyType.setPolicyName(properties.getLbCookieStickinessPolicy().getPolicyName());
-          createLBCookieStickinessPolicyType.setLoadBalancerName(info.getPhysicalResourceId());
-          createLBCookieStickinessPolicyType.setCookieExpirationPeriod(properties.getLbCookieStickinessPolicy().getCookieExpirationPeriod());
-          createLBCookieStickinessPolicyType.setEffectiveUserId(info.getEffectiveUserId());
-          AsyncRequests.<CreateLBCookieStickinessPolicyType,CreateLBCookieStickinessPolicyResponseType> sendSync(configuration, createLBCookieStickinessPolicyType);
-        }
-        break;
-      case 7: // placeholder for "AccessLoggingPolicy", "ConnectionDrainingPolicy", "CrossZone" : Boolean,
-        break;
-      case 8: // describe load balancer to get attributes
-        DescribeLoadBalancersType describeLoadBalancersType = new DescribeLoadBalancersType();
-        LoadBalancerNames loadBalancerNames = new LoadBalancerNames();
-        ArrayList<String> member = Lists.newArrayList(info.getPhysicalResourceId());
-        loadBalancerNames.setMember(member);
-        describeLoadBalancersType.setLoadBalancerNames(loadBalancerNames);
-        describeLoadBalancersType.setEffectiveUserId(info.getEffectiveUserId());
-        DescribeLoadBalancersResponseType describeLoadBalancersResponseType = AsyncRequests.<DescribeLoadBalancersType,DescribeLoadBalancersResponseType> sendSync(configuration, describeLoadBalancersType);
-        if (describeLoadBalancersResponseType != null && describeLoadBalancersResponseType.getDescribeLoadBalancersResult() != null
-          && describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions() != null &&
-          describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions().getMember() != null &&
-          describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions().getMember().size() > 0) {
-          LoadBalancerDescription loadBalancerDescription = describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions().getMember().get(0);
-          String canonicalHostedZoneName = loadBalancerDescription.getCanonicalHostedZoneName();
-          String canonicalHostedZoneNameId = loadBalancerDescription.getCanonicalHostedZoneNameID();
-          String sourceSecurityGroupGroupName = loadBalancerDescription.getSourceSecurityGroup().getGroupName();
-          String sourceSecurityGroupGroupOwnerAlias = loadBalancerDescription.getSourceSecurityGroup().getOwnerAlias();
-          if ("internal".equals(loadBalancerDescription.getScheme())) {
-            canonicalHostedZoneName = loadBalancerDescription.getDnsName();
-          }
-          info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
-          info.setSourceSecurityGroupGroupName(JsonHelper.getStringFromJsonNode(new TextNode(sourceSecurityGroupGroupName)));
-          info.setSourceSecurityGroupOwnerAlias(JsonHelper.getStringFromJsonNode(new TextNode(sourceSecurityGroupGroupOwnerAlias)));
-          info.setCanonicalHostedZoneNameID(JsonHelper.getStringFromJsonNode(new TextNode(canonicalHostedZoneNameId)));
-          info.setCanonicalHostedZoneName(JsonHelper.getStringFromJsonNode(new TextNode(canonicalHostedZoneName)));
-        }
-        break;
-      default:
-        throw new IllegalStateException("Invalid step " + stepNum);
-    }
-  }
-
-  @Override
-  public void update(int stepNum) throws Exception {
-    throw new UnsupportedOperationException();
-  }
-
-  public void rollbackUpdate() throws Exception {
-    // can't update so rollbackUpdate should be a NOOP
-  }
-
-  @Override
-  public void delete() throws Exception {
-    if (info.getPhysicalResourceId() == null) return;
-    ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
-    // if lb gone, done
-    DescribeLoadBalancersType describeLoadBalancersType = new DescribeLoadBalancersType();
-    LoadBalancerNames loadBalancerNames = new LoadBalancerNames();
-    ArrayList<String> member = Lists.newArrayList(info.getPhysicalResourceId());
-    loadBalancerNames.setMember(member);
-    describeLoadBalancersType.setLoadBalancerNames(loadBalancerNames);
-    describeLoadBalancersType.setEffectiveUserId(info.getEffectiveUserId());
-    DescribeLoadBalancersResponseType describeLoadBalancersResponseType = AsyncRequests.<DescribeLoadBalancersType,DescribeLoadBalancersResponseType> sendSync(configuration, describeLoadBalancersType);
-    if (describeLoadBalancersResponseType != null && describeLoadBalancersResponseType.getDescribeLoadBalancersResult() != null
-      && describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions() != null &&
-      describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions().getMember() != null &&
-      describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions().getMember().size() > 0) {
-      return;
-    }
-    DeleteLoadBalancerType deleteLoadBalancerType = new DeleteLoadBalancerType();
-    deleteLoadBalancerType.setLoadBalancerName(info.getPhysicalResourceId());
-    deleteLoadBalancerType.setEffectiveUserId(info.getEffectiveUserId());
-    AsyncRequests.<DeleteLoadBalancerType,DeleteLoadBalancerResponseType> sendSync(configuration, deleteLoadBalancerType);
-  }
-
-  @Override
-  public void rollbackCreate() throws Exception {
-    delete();
+  public Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
+    return new DeleteMultiStepPromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 }

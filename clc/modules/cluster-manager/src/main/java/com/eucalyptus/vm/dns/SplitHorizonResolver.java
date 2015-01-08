@@ -167,8 +167,7 @@ public abstract class SplitHorizonResolver implements DnsResolver {
           VmInstances.lookupByPublicIp( hostAddress );//existence check
           final Name dnsName = InstanceDomainNames.fromInetAddress( InstanceDomainNames.EXTERNAL, ip );
           return DnsResponse.forName( query.getName( ) ).answer( DomainNameRecords.ptrRecord( dnsName, ip ) );
-        } else {
-          VmInstances.lookupByPrivateIp( hostAddress );//existence check
+        } else if ( VmInstances.privateIpInUse( hostAddress ) ) {
           final Name dnsName = InstanceDomainNames.fromInetAddress( InstanceDomainNames.INTERNAL, ip );
           return DnsResponse.forName( query.getName( ) ).answer( DomainNameRecords.ptrRecord( dnsName, ip ) );
         }
@@ -187,9 +186,10 @@ public abstract class SplitHorizonResolver implements DnsResolver {
           final Name name = query.getName( );
           final Name instanceDomain = InstanceDomainNames.lookupInstanceDomain( name );
           final InetAddress ip = InstanceDomainNames.toInetAddress( name.relativize( instanceDomain ) );
-          VmInstances.lookupByPrivateIp( ip.getHostAddress( ) );//GRZE: existence check
-          final Record aRecord = DomainNameRecords.addressRecord( name, ip );
-          return DnsResponse.forName( name ).answer( aRecord );
+          if ( VmInstances.privateIpInUse( ip.getHostAddress( ) ) ) {
+            final Record aRecord = DomainNameRecords.addressRecord( name, ip );
+            return DnsResponse.forName( name ).answer( aRecord );
+          }
         } catch ( Exception ex ) {
           LOG.debug( ex );
         }

@@ -62,18 +62,27 @@
 
 package com.eucalyptus.vm;
 
+import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
+import javax.persistence.OneToMany;
+import javax.persistence.OrderColumn;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Parent;
+import org.xbill.DNS.Name;
+import com.eucalyptus.compute.vpc.NetworkInterface;
 import com.google.common.base.Objects;
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 
 @Embeddable
 public class VmNetworkConfig {
   
   @Parent
   private VmInstance   parent;
+  @OneToMany( mappedBy = "instance" )
+  @OrderColumn( name = "metadata_att_device_index", nullable = false, insertable = false, updatable = false )
+  private List<NetworkInterface> networkInterfaces = Lists.newArrayList( );
   @Column( name = "metadata_vm_private_addressing" )
   private Boolean      usePrivateAddressing;
   @Column( name = "metadata_vm_mac_address" )
@@ -89,13 +98,14 @@ public class VmNetworkConfig {
   @Transient
   public static String DEFAULT_IP = "0.0.0.0";
   
-  VmNetworkConfig( VmInstance parent, String ipAddress, String ignoredPublicIp ) {
+  VmNetworkConfig( VmInstance parent ) {
     super( );
     this.usePrivateAddressing = false;
     this.parent = parent;
-    this.privateAddress = ipAddress;
-    this.publicAddress = ignoredPublicIp;
-    this.updateDns( );
+    this.privateAddress = DEFAULT_IP;
+    this.publicAddress = DEFAULT_IP;
+    this.privateDnsName = "";
+    this.publicDnsName = "";
   }
   
   VmNetworkConfig( String ipAddress, String ignoredPublicIp ) {
@@ -107,13 +117,7 @@ public class VmNetworkConfig {
   VmNetworkConfig( ) {
     super( );
   }
-  
-  /**
-   * @param vmInstance
-   */
-  VmNetworkConfig( VmInstance vmInstance ) {
-    this( vmInstance, DEFAULT_IP, DEFAULT_IP );
-  }
+
 
   /**
    *
@@ -123,31 +127,25 @@ public class VmNetworkConfig {
     this.usePrivateAddressing = usePrivateAddressing;
   }
 
-  void updateDns( ) {
-    String dnsDomain = null;
-    try {
-      dnsDomain = edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getDnsDomain( );
-    } catch ( final Exception e ) {}
-    dnsDomain = dnsDomain == null
-      ? "dns-disabled"
-      : dnsDomain;
-
-    this.publicAddress = ipOrDefault( this.publicAddress );
-    this.publicDnsName =  DEFAULT_IP.equals( publicAddress ) ?
+  public static String generateDnsName( String ip, Name domain ) {
+    return DEFAULT_IP.equals( ip ) ?
         "" :
-        "euca-" + this.publicAddress.replace( '.', '-' ) + VmInstances.INSTANCE_SUBDOMAIN + "." + dnsDomain;
-    this.privateAddress = ipOrDefault( this.privateAddress );
-    this.privateDnsName = DEFAULT_IP.equals( privateAddress ) ?
-        "" :
-        "euca-" + this.privateAddress.replace( '.', '-' ) + VmInstances.INSTANCE_SUBDOMAIN + ".internal";
+        VmInstances.dnsName( ip, domain );
   }
-  
+
   private VmInstance getParent( ) {
     return this.parent;
   }
   
   void setParent( VmInstance parent ) {
     this.parent = parent;
+  }
+
+  /**
+   * Get the attached network interfaces, default first.
+   */
+  List<NetworkInterface> getNetworkInterfaces( ) {
+    return networkInterfaces;
   }
 
   Boolean getUsePrivateAddressing( ) {

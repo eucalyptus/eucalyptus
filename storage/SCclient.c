@@ -263,7 +263,7 @@ int main(int argc, char **argv)
         euca_home = "";
     }
     snprintf(configFile, 1024, EUCALYPTUS_CONF_LOCATION, euca_home);
-    snprintf(policyFile, 1024, EUCALYPTUS_KEYS_DIR "/sc-client-policy.xml", euca_home);
+    snprintf(policyFile, 1024, EUCALYPTUS_POLICIES_DIR "/sc-client-policy.xml", euca_home);
     rc = get_conf_var(configFile, "ENABLE_WS_SECURITY", &tmpstr);
     if (rc != 1) {
         /* Default to enabled */
@@ -294,7 +294,7 @@ int main(int argc, char **argv)
         CHECK_PARAM(iqn, "iqn");
         char *connection_string = NULL;
 
-        rc = scClientCall(correlationId, userId, use_wssec, policyFile, DEFAULT_SC_CALL_TIMEOUT, sc_url, "ExportVolume", volume_id, token, ip, iqn, &connection_string);
+        rc = scClientCall(correlationId, userId, use_wssec, policyFile, DEFAULT_SC_REQUEST_TIMEOUT, sc_url, "ExportVolume", volume_id, token, ip, iqn, &connection_string);
         if (rc != 0) {
             printf("scExportVolume() failed: error=%d\n", rc);
             exit(1);
@@ -309,7 +309,7 @@ int main(int argc, char **argv)
         CHECK_PARAM(ip, "ip");
         CHECK_PARAM(iqn, "iqn");
 
-        rc = scClientCall(correlationId, userId, use_wssec, policyFile, DEFAULT_SC_CALL_TIMEOUT, sc_url, "ExportVolume", volume_id, token, ip, iqn);
+        rc = scClientCall(correlationId, userId, use_wssec, policyFile, DEFAULT_SC_REQUEST_TIMEOUT, sc_url, "ExportVolume", volume_id, token, ip, iqn);
         if (rc != 0) {
             printf("scUnexportVolume() failed: error=%d\n", rc);
             exit(1);

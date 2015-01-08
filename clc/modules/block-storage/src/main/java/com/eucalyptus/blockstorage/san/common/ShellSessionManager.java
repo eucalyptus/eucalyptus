@@ -65,6 +65,7 @@
 
 package com.eucalyptus.blockstorage.san.common;
 
+import static com.eucalyptus.blockstorage.san.common.SessionManager.TaskRunner;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -72,28 +73,46 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
-import java.io.UnsupportedEncodingException;
+import java.util.List;
+import java.util.Map;
 
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.blockstorage.san.common.entities.SANInfo;
-import com.eucalyptus.blockstorage.san.common.AbstractSANTask;
-import com.eucalyptus.blockstorage.san.common.SessionManager;
-import com.eucalyptus.blockstorage.san.common.ShellSessionManager;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.io.Closeables;
 import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 
-public class ShellSessionManager implements SessionManager {
+public class ShellSessionManager implements SessionManager, TaskRunner {
 	private BufferedWriter writer;
 	private BufferedReader reader;
 	private Channel channel;
-
-	private static Logger LOG = Logger.getLogger(ShellSessionManager.class);
+	private static Logger LOG = Logger.getLogger( ShellSessionManager.class );
+	private static long promptTimeout = Long.parseLong( System.getProperty( "com.eucalyptus.blockstorage.shell.promptTimeout", "15000" ) );
+	private static boolean logTiming = Boolean.valueOf( System.getProperty( "com.eucalyptus.blockstorage.shell.logTiming" ) );
 
 	public ShellSessionManager() {
+	}
+
+	private void readToPrompt( long timeout ) throws IOException, InterruptedException {
+		String text = "";
+		char[] buffer = new char[512];
+		long until = System.currentTimeMillis( ) + timeout;
+		while ( System.currentTimeMillis( ) < until ) {
+			while ( reader.ready( ) ) {
+				int read = reader.read( buffer );
+				text += new String( buffer, 0, read );
+			}
+			if ( !text.isEmpty() && !text.endsWith( "\r" ) && !text.endsWith( "\n" ) ) return;
+			Thread.sleep( 50 );
+		}
+		LOG.warn( "Timed out reading prompt" );
 	}
 
 	public synchronized void connect() throws EucalyptusCloudException {
@@ -113,49 +132,99 @@ public class ShellSessionManager implements SessionManager {
 			channel.connect();
 			writer = new BufferedWriter(new OutputStreamWriter(outStream, "utf-8"));
 			reader = new BufferedReader(new InputStreamReader(inStream, "utf-8"));
-			//This is required because EQL takes a little while or we get nothing back
-			Thread.sleep(3000);
-		} catch (JSchException e) {
-			throw new EucalyptusCloudException(e);
-		} catch (UnsupportedEncodingException e) {
-			throw new EucalyptusCloudException(e);
-		} catch (IOException e) {
-			throw new EucalyptusCloudException(e);
-		} catch (InterruptedException e) {
-			throw new EucalyptusCloudException(e);
+			readToPrompt( promptTimeout );
+		} catch ( JSchException | IOException | InterruptedException e ) {
+			throw new EucalyptusCloudException( e );
 		}
 	}
 
-	public String runTask(final AbstractSANTask task) throws InterruptedException {
-		String returnValue = "";
-		synchronized(this) {
-			try {
+	/**
+	 *
+	 * Caller must be synchronized:
+	 *
+	 * ShellSessionManager manager = ...
+	 * synchronized( manager ) {
+	 *   try ( final TaskRunner runner = manager.getTaskRunner( ) ) {
+	 *     ...
+	 *   }
+	 * }
+	 *
+	 */
+	public TaskRunner getTaskRunner( String description ) {
+		return getTaskRunner( description, null );
+	}
+
+	/**
+	 *
+	 * Caller must be synchronized
+	 */
+	private TaskRunner getTaskRunner(
+			final String description,
+			@Nullable final Map<String,Long> timings
+	) {
+		return new TaskRunner() {
+			private boolean connected = false;
+			private int taskNumber = 1;
+			private Map<String,Long> timingMap = timings==null ? Maps.<String,Long>newLinkedHashMap( ) : timings;
+
+			private void init( ) {
 				try {
-					connect();
+					connect( );
+					connected = true;
 				} catch (EucalyptusCloudException e) {
 					LOG.error(e);
-					return "";
 				}
-				writer.write("" + task.getCommand() + task.getEOFCommand());
-				writer.flush();
-				for (String line = null; (line = reader.readLine()) != null;) {
-					line = line + "\r";
-					if(line.contains("" + task.getEOFCommand()))
-						break;
-					returnValue += line;
+			}
+
+			@Override
+			public String runTask( final AbstractSANTask task ) throws InterruptedException {
+				String returnValue = "";
+				if ( !connected ) {
+					timingMap.put( "begin", System.currentTimeMillis( ) );
+					init( );
+					timingMap.put( "connect", System.currentTimeMillis() );
 				}
-			} catch (IOException e) {
-				LOG.error(e, e);
-			} finally {
+				if ( !connected ) return returnValue;
+				timingMap.put( "pre-task-" + taskNumber, System.currentTimeMillis( ) );
 				try {
-					if(reader != null) {
-						reader.close();
-					  reader = null;
+					writer.write("" + task.getCommand() + task.getEOFCommand());
+					writer.flush();
+					for (String line = null; (line = reader.readLine()) != null;) {
+						line = line + "\r";
+						if(line.contains("" + task.getEOFCommand()))
+							break;
+						returnValue += line;
 					}
-					if(writer != null) {
-						writer.close();
+				} catch (IOException e) {
+					LOG.error(e, e);
+				} finally {
+					timingMap.put( "task-" + taskNumber, System.currentTimeMillis( ) );
+					taskNumber++;
+				}
+				return returnValue;
+			}
+
+			@Override
+			public void close( ) {
+				timingMap.put( "pre-close", System.currentTimeMillis( ) );
+				try {
+					if ( writer != null ) try {
+						writer.write( "logout\r" );
+						writer.flush( );
+					} catch ( Exception e ) {
+						LOG.warn( "Error logging out of session", e );
+					}
+
+					if (reader != null) {
+						Closeables.close( reader, true );
+						reader = null;
+					}
+
+					if (writer != null) {
+						Closeables.close( writer, true );
 						writer = null;
 					}
+
 					//Tear it down. Do not persist session.
 					//Doing so causes more issues than it is worth.
 					//EQL serializes anyway and the overhead is
@@ -165,16 +234,50 @@ public class ShellSessionManager implements SessionManager {
 						channel.disconnect();
 						channel = null;
 					}
+
 				} catch (JSchException | IOException e) {
 					LOG.error(e, e);
+				} finally {
+					timingMap.put( "close", System.currentTimeMillis( ) );
+					if ( logTiming ) dumpTiming( timingMap, description );
 				}
+			}
+		};
+	}
+
+	public String runTask( final AbstractSANTask task ) throws InterruptedException {
+		String returnValue = "";
+		final Map<String,Long> timingMap = Maps.newLinkedHashMap( );
+		timingMap.put( "start", System.currentTimeMillis( ) );
+		synchronized( this ) {
+			try ( final TaskRunner runner = getTaskRunner( String.valueOf( task.getCommand( ) ) ) ) {
+				returnValue = runner.runTask( task );
 			}
 		}
 		return returnValue;
 	}
 
+	private void dumpTiming( final Map<String,Long> timings, final String command ) {
+		final List<String> timingInfo = Lists.newArrayList( );
+		Long firstTime = 0l;
+		Long lastTime = 0l;
+		for ( final Map.Entry<String,Long> timingEntry : timings.entrySet( ) ) {
+			if ( lastTime != 0 ) {
+				timingInfo.add( timingEntry.getKey( ) + ": " + ( timingEntry.getValue( ) - lastTime ) + "ms" );
+			} else {
+				firstTime = timingEntry.getValue( );
+			}
+			lastTime = timingEntry.getValue( );
+		}
+		LOG.debug( "Command '" + (command.replace( '\r', ';' )) + "', took " + ( lastTime-firstTime ) + "ms " + timingInfo );
+	}
+
 	public void stop() throws EucalyptusCloudException {
 		//Do not disconnect the channel while operations are in flight
+	}
+
+	@Override
+	public void close() {
 	}
 }
 

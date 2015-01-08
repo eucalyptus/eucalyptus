@@ -120,6 +120,7 @@ public class ObjectStateTransitions {
                         updatingEntity.setIsLatest(true);
                         updatingEntity.seteTag(entity.geteTag());
                         updatingEntity.setSize(entity.getSize());
+                        updatingEntity.setStoredHeaders(entity.getStoredHeaders());
 
                         if(ObjectState.mpu_pending.equals(updatingEntity.getLastState())) {
                             //Remove the parts, this will remove the sizes for the parts.

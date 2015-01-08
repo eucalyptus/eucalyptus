@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -88,6 +88,7 @@ import com.eucalyptus.util.fsm.TransitionException;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ArrayListMultimap;
@@ -97,6 +98,9 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
+
+import javax.annotation.Nullable;
+
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -388,7 +392,13 @@ public class Component implements HasName<Component> {
       if ( ret == null ) {
         throw new NoSuchElementException( "Failed to lookup service corresponding to full-name: " + config );
       } else if ( config.isVmLocal( ) ) {
-        this.localService.compareAndSet( ret, null );
+        final Optional<ServiceConfiguration> newLocal =
+            Iterables.tryFind( this.services.keySet( ), ServiceConfigurations.filterVmLocal( ) );
+        if ( newLocal.isPresent( ) ) {
+          this.localService.compareAndSet( ret, this.services.get( newLocal.get( ) ) );
+        } else {
+          this.localService.compareAndSet( ret, null );
+        }
       }
       return ret;
     }
@@ -535,6 +545,20 @@ public class Component implements HasName<Component> {
   
   public List<Bootstrapper> getBootstrappers( ) {
     return this.bootstrapper.getBootstrappers( );
+  }
+
+  enum BootstrapChecks implements Predicate<Bootstrapper> {
+    CHECK_NO_TRANSITION {
+      @Override
+      public boolean apply(@Nullable Bootstrapper bootstrapper) {
+        try {
+          return bootstrapper.check();
+        } catch(Throwable f) {
+          LOG.debug("Bootstrap check failed", f);
+          return false;
+        }
+      }
+    }
   }
   
   static class ComponentBootstrapper implements CanBootstrap {
@@ -748,7 +772,7 @@ public class Component implements HasName<Component> {
     public boolean check( ) {
       return this.doTransition( EventType.BOOTSTRAPPER_ENABLE, BootstrapperTransition.CHECK );
     }
-    
+
     public List<Bootstrapper> getBootstrappers( ) {
       return Lists.newArrayList( this.bootstrappers.values( ) );
     }

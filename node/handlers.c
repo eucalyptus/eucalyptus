@@ -116,6 +116,7 @@
 #include <fault.h>
 #include <log.h>
 #include <euca_string.h>
+#include <euca_system.h>
 
 #define HANDLERS_FANOUT
 #include "handlers.h"
@@ -123,6 +124,10 @@
 #include "hooks.h"
 #include <ebs_utils.h>
 #include "objectstorage.h"
+#include "stats.h"
+#include "message_sensor.h"
+#include "message_stats.h"
+#include "service_sensor.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -193,6 +198,7 @@ sem *addkey_sem = NULL;                //!< guarding access to global instance s
 sem *loop_sem = NULL;                  //!< created in diskutils.c for serializing 'losetup' invocations
 sem *log_sem = NULL;                   //!< used by log.c
 sem *service_state_sem = NULL;         //!< Used to guard service state updates (i.e. topology updates)
+sem *stats_sem = NULL;                 //!< Used to guard the internal message stats data on updates
 
 bunchOfInstances *global_instances = NULL;  //!< pointer to the instance list
 bunchOfInstances *global_instances_copy = NULL; //!< pointer to the copied instance list
@@ -220,6 +226,10 @@ configEntry configKeysNoRestartNC[] = {
     {"LOGMAXSIZE", "104857600"},
     {"LOGPREFIX", ""},
     {"LOGFACILITY", ""},
+    {CONFIG_NC_CEPH_USER, DEFAULT_CEPH_USER},
+    {CONFIG_NC_CEPH_KEYS, DEFAULT_CEPH_KEYRING},
+    {CONFIG_NC_CEPH_CONF, DEFAULT_CEPH_CONF},
+    {SENSOR_LIST_CONF_PARAM_NAME, SENSOR_LIST_CONF_PARAM_DEFAULT},
     {NULL, NULL},
 };
 
@@ -246,6 +256,9 @@ static struct handlers *available_handlers[] = {
     NULL,
 };
 
+static json_object *stats_json = NULL; //!< The json object that holds all of the internal message counters
+static int stats_sensor_interval_sec; //!< Keeps the current value for sensor interval. Set during init
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                              STATIC PROTOTYPES                             |
@@ -255,11 +268,20 @@ static struct handlers *available_handlers[] = {
 static void *libvirt_thread(void *ptr);
 static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance);
 static void update_log_params(void);
+static void update_ebs_params(void);
 static void nc_signal_handler(int sig);
 static int init(void);
 static void updateServiceStateInfo(ncMetadata * pMeta, boolean authoritative);
 static void printNCServiceStateInfo(void);
 static void printMsgServiceStateInfo(ncMetadata * pMeta);
+
+//! Helpers for internal stats handling in the NC
+static json_object **message_stats_getter();
+static void message_stats_setter();
+static int initialize_stats_system(int interval_sec);
+static void *nc_run_stats(void *ignored_arg);
+
+
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -287,6 +309,128 @@ static void printMsgServiceStateInfo(ncMetadata * pMeta);
  |                               IMPLEMENTATION                               |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
+static void *nc_run_stats(void *ignored_arg)
+{
+    LOGDEBUG("Starting stats subsystem execution. Will not terminate until service halts\n");
+    if(run_stats(FALSE, stats_sensor_interval_sec, NULL) != EUCA_OK) {
+        LOGERROR("Stats run call returned with error. Unexepcted. Should not have returned\n");
+    }
+    return NULL;
+}
+
+//! Runs a check on service and returns result in string form
+//! for the stats sensor
+static char *stats_service_check_call() 
+{
+    LOGTRACE("Invoking NC check function for internal stats\n");
+    if(nc_state.is_enabled) {
+        return SERVICE_CHECK_OK_MSG;
+    }
+    return SERVICE_CHECK_FAILED_MSG;
+}
+
+//! Gets the CC state as a string for use by the stats system
+static char *stats_service_state_call()
+{
+    LOGTRACE("Getting NC service state for internal stats\n");    
+    if(nc_state.is_enabled) {
+        return "ENABLED";
+    } else {
+        return "DISABLED";
+    }
+}
+
+//! Gets the reference to the stats json object, basically a no-op for the NC
+static json_object **message_stats_getter()
+{
+    LOGTRACE("Fetching latest message stats from shared memory\n");
+    return &stats_json;
+}
+
+//! Updates the stats json data, literally a No-op for the NC (as opposed to the CC)
+static void message_stats_setter()
+{
+    LOGTRACE("Updating latest message stats from shared memory\n");
+    //No-op
+    return;
+}
+
+void nc_lock_stats()
+{
+    sem_p(stats_sem);
+}
+
+void nc_unlock_stats()
+{
+    sem_v(stats_sem);
+}
+
+
+//! Update the message stat structure
+//! Wraps the message stats update with the necessary caching copies and locking
+int nc_update_message_stats(const char *message_name, long call_time, int msg_failed)
+{
+    LOGTRACE("Updating message stats for message %s\n", message_name);
+
+    nc_lock_stats();    
+    json_object **stats_state = message_stats_getter();
+
+    //Update the counters
+    update_message_stats(*stats_state, message_name, call_time, msg_failed);
+    message_stats_setter();    
+
+    nc_unlock_stats();
+    LOGTRACE("Message stats update complete\n");
+    return EUCA_OK;
+}
+
+//! Provides NC-specific initializations for the stats system of
+//! internal service sensors (state sensors, message statistics, etc)
+//! @returns EUCA_OK on success, or error code on failure
+static int initialize_stats_system(int interval_sec) {
+    LOGDEBUG("Initializing stats subsystem for NC\n");
+    int ret = EUCA_OK;
+    int stats_ttl = interval_sec + 1;
+    stats_sensor_interval_sec = interval_sec;
+    nc_lock_stats();
+    {
+        //Init the message sensor with component-specific data
+        ret = initialize_message_sensor(euca_this_component_name, interval_sec, stats_ttl, message_stats_getter, message_stats_setter);
+        if(ret != EUCA_OK) {
+            LOGERROR("Error initializing internal message sensor: %d\n", ret);
+            goto cleanup;
+        } else {
+            json_object **tmp = message_stats_getter();
+            const char *tmp_out = json_object_to_json_string(*tmp);
+            LOGINFO("Initialized internal message stats: %s\n", tmp_out);
+            
+        }
+        
+        //Init the service state sensor with component-specific data
+        ret = initialize_service_state_sensor(euca_this_component_name, interval_sec, stats_ttl, stats_service_state_call, stats_service_check_call);
+        if(ret != EUCA_OK) {
+            LOGERROR("Error initializing internal service state sensor: %d\n", ret);
+            goto cleanup;
+        }
+        
+        ret = init_stats(nc_state.home, euca_this_component_name, nc_lock_stats, nc_unlock_stats);
+        if(ret != EUCA_OK) {
+            LOGERROR("Could not initialize CC stats system: %d\n", ret);
+            goto cleanup;
+        }
+    }
+
+    if(!ret) {
+        LOGINFO("Stats subsystem initialized\n");
+    } else {
+        LOGERROR("Stat subsystem init failed: %d\n", ret);
+    }
+ cleanup:
+    nc_unlock_stats();
+    return ret;
+}
+
 
 //!
 //! Authorize (or deauthorize) migration keys on destination host.
@@ -456,7 +600,7 @@ static void updateServiceStateInfo(ncMetadata * pMeta, boolean authoritative)
     int i = 0;
     char scURL[512];
     if ((pMeta != NULL) && (pMeta->servicesLen > 0)) {
-        LOGTRACE("Updating NC's topology/service state info: pMeta: userId=%s correlationId=%s\n", pMeta->userId, pMeta->correlationId);
+        LOGTRACE("Updating NC's topology/service state info: pMeta: userId=%s\n", pMeta->userId);
 
         // store information from CLC that needs to be kept up-to-date in the NC
         sem_p(service_state_sem);
@@ -539,77 +683,54 @@ void libvirt_err_handler(void *userData, virErrorPtr error)
     }
 
     if (error->code == VIR_ERR_NO_DOMAIN) {
-        char * instanceId = euca_strestr(error->message, "'", "'"); // try to find instance ID in the message
+        char *instanceId = euca_strestr(error->message, "'", "'");  // try to find instance ID in the message
         if (instanceId) {
             // NOTE: sem_p/v(inst_sem) cannot be used as this err_handler can be called in refresh_instance_info's context
             ncInstance *instance = find_instance(&global_instances, instanceId);
-            if (instance
-                && (instance->terminationRequestedTime // termination of this instance was requested
-                    || (instance->state == BOOTING) // it is booting or rebooting
-                    || (instance->state == BUNDLING_SHUTDOWN || instance->state == BUNDLING_SHUTOFF)
-                    || (instance->state == CREATEIMAGE_SHUTDOWN || instance->state == CREATEIMAGE_SHUTOFF))) {
+            if (instance && (instance->terminationRequestedTime // termination of this instance was requested
+                             || (instance->state == BOOTING)    // it is booting or rebooting
+                             || (instance->state == BUNDLING_SHUTDOWN || instance->state == BUNDLING_SHUTOFF)
+                             || (instance->state == CREATEIMAGE_SHUTDOWN || instance->state == CREATEIMAGE_SHUTOFF))) {
                 ignore_error = TRUE;
             }
             free(instanceId);
         }
     }
 
-    if (! ignore_error) {
+    if (!ignore_error) {
         EUCALOG(EUCA_LOG_ERROR, "libvirt: %s (code=%d)\n", error->message, error->code);
     }
 }
 
 //!
-//! sets localDevReal (assummed to be at least 32 bytes long) to the filename portion
-//! of the device path (e.g., "sda" of "/dev/sda") also, if non-NULL, sets localDevTag
-//! to (e.g., "unknown,requested:/dev/sda")
+//! converts 'dev' into canonical form (e.g., "sda" of "/dev/sda") unless
+//! it is already in canonical form
 //!
-//! @param[in]  localDev the local device path string (e.g. /dev/sda)
-//! @param[out] localDevReal the device file name portion of the device path (e.g. sda)
-//! @param[out] localDevTag the full device tag string (e.g. unknown,requested:/dev/sda)
+//! @param[in]  dev the device name string (e.g. /dev/sda or sda)
+//! @param[out] cdev the device name in canonical form (without /dev/)
+//! @param[in]  cdev_len length of the cdev buffer in bytes
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure
 //!
-//! @todo chuck make sure localDevTag passed is at least 256 char
-//!
-int convert_dev_names(char *localDev, char *localDevReal, char *localDevTag)
+int canonicalize_dev(const char *dev, char *cdev, int cdev_len)
 {
-    printf("Got: %s, %s, %s\n", localDev, localDevReal, localDevTag);
-    bzero(localDevReal, 32);
-    if (strchr(localDev, '/') != NULL) {
-        //Path-style device.../dev/xxx
-        if (strncmp(localDev, "unknown,requested:/dev/", sizeof("unknown,requested:/dev/") - 1) == 0) {
-            //The case on migration, where attachment on source was done
-            sscanf(localDev, "unknown,requested:/dev/%s", localDevReal);
-            snprintf(localDev, strlen(localDev), "/dev/%s", localDevReal);
-        } else {
-            sscanf(localDev, "/dev/%s", localDevReal);
-        }
-    } else {
-        //No /dev/' prefix, just xxx
-        if (strncmp(localDev, "unknown,requested:", sizeof("unknown,requested:") - 1) == 0) {
-            //The case on migration, where attachment on source was done
-            sscanf(localDev, "unknown,requested:%s", localDevReal);
-            snprintf(localDev, strlen(localDev), "%s", localDevReal);
-        }
-        snprintf(localDevReal, 32, "%s", localDev);
-    }
+    char cdev_local[128];
+    euca_strncpy(cdev_local, dev, sizeof(cdev_local));
 
-    if (localDevReal[0] == 0) {
-        printf("bad input parameter for localDev (should be /dev/XXX): '%s'\n", localDev);
-        return (EUCA_ERROR);
+    const char * s = cdev_local;
+    if (strstr(dev, "/dev/") == dev) {
+        s = s + strlen("/dev/");
     }
+    if (strchr(s, '/')) {
+        LOGERROR("device name string of unexpected format (must be /dev/XXX)\n");
+        return EUCA_ERROR;
+    }
+    if (strlen(s) > (cdev_len - 1)) {
+        LOGERROR("buffer size (%d) exceeded for device name string\n", cdev_len);
+        return EUCA_ERROR;
+    }
+    euca_strncpy(cdev, s, cdev_len);
 
-    if (localDevTag) {
-        //If localDev already has the unknown,requested...just copy it
-        if (strncmp(localDev, "unknown,requested:", sizeof("unknown,requested:") - 1) == 0) {
-            bzero(localDevTag, 256);
-            snprintf(localDevTag, 256, "%s", localDev);
-        } else {
-            bzero(localDevTag, 256);
-            snprintf(localDevTag, 256, "unknown,requested:%s", localDev);
-        }
-    }
     return EUCA_OK;
 }
 
@@ -1252,6 +1373,23 @@ static void update_log_params(void)
 }
 
 //!
+//! helper that is used during initialization and by monitornig thread
+//!
+static void update_ebs_params(void)
+{
+    char * ceph_user = getConfString(nc_state.configFiles, 2, CONFIG_NC_CEPH_USER);
+    char * ceph_keys = getConfString(nc_state.configFiles, 2, CONFIG_NC_CEPH_KEYS);
+    char * ceph_conf = getConfString(nc_state.configFiles, 2, CONFIG_NC_CEPH_CONF);
+    init_iscsi(nc_state.home,
+               (ceph_user==NULL)?(DEFAULT_CEPH_USER):(ceph_user),
+               (ceph_keys==NULL)?(DEFAULT_CEPH_KEYRING):(ceph_keys),
+               (ceph_conf==NULL)?(DEFAULT_CEPH_CONF):(ceph_conf));
+    EUCA_FREE(ceph_user);
+    EUCA_FREE(ceph_keys);
+    EUCA_FREE(ceph_conf);
+}
+
+//!
 //! This defines the NC monitoring thread
 //!
 //! @param[in] arg a transparent pointer to the global NC state structure
@@ -1260,13 +1398,17 @@ static void update_log_params(void)
 //!
 void *monitoring_thread(void *arg)
 {
+#define EUCANETD_PID_FILE         "%s/var/run/eucalyptus/eucanetd.pid"
+#define EUCANETD_SERVICE_NAME     "eucanetd"
+
     int i = 0;
     int tmpint = 0;
     int left = 0;
     int cleaned_up = 0;
     int destroy_files = 0;
     u32 ipHex = 0;
-    FILE *FP = NULL;
+    char *psPid = NULL;
+    char sPidFile[EUCA_MAX_PATH] = "";
     char nfile[EUCA_MAX_PATH] = "";
     char nfilefinal[EUCA_MAX_PATH] = "";
     char URL[EUCA_MAX_PATH] = "";
@@ -1278,6 +1420,7 @@ void *monitoring_thread(void *arg)
     long long work_fs_avail_mb = 0;
     long long cache_fs_size_mb = 0;
     long long cache_fs_avail_mb = 0;
+    FILE *FP = NULL;
     time_t now = 0;
     struct nc_state_t *nc = NULL;
     bunchOfInstances *head = NULL;
@@ -1295,6 +1438,30 @@ void *monitoring_thread(void *arg)
 
     for (iteration = 0; TRUE; iteration++) {
         now = time(NULL);
+
+        // EUCA-10056 we need to check if EUCANETD is running when in EDGE of VPC mode
+        if (!strcmp(nc_state.vnetconfig->mode, NETMODE_EDGE)) {
+            snprintf(sPidFile, EUCA_MAX_PATH, EUCANETD_PID_FILE, nc_state.home);
+            if ((psPid = file2str(sPidFile)) != NULL) {
+                // Is the
+                if (euca_is_running(atoi(psPid), EUCANETD_SERVICE_NAME)) {
+                    if (nc_state.isEucanetdEnabled == FALSE)
+                        LOGDEBUG("Service %s detected and running.\n", EUCANETD_SERVICE_NAME);
+                    nc_state.isEucanetdEnabled = TRUE;
+                } else if (nc_state.isEucanetdEnabled) {
+                    // EUCANETD isn't running... Throw a fault for the user to correct
+                    LOGERROR("Service %s not running (even if PID file is detected).\n", EUCANETD_SERVICE_NAME);
+                    nc_state.isEucanetdEnabled = FALSE;
+                    log_eucafault("1008", "daemon", EUCANETD_SERVICE_NAME, NULL);
+                }
+                EUCA_FREE(psPid);
+            } else if (nc_state.isEucanetdEnabled) {
+                // EUCANETD isn't running... Throw a fault for the user to correct
+                LOGERROR("Service %s not running.\n", EUCANETD_SERVICE_NAME);
+                nc_state.isEucanetdEnabled = FALSE;
+                log_eucafault("1008", "daemon", EUCANETD_SERVICE_NAME, NULL);
+            }
+        }
 
         sem_p(inst_sem);
 
@@ -1539,6 +1706,9 @@ void *monitoring_thread(void *arg)
                     // log-related options
                     update_log_params();
 
+                    // EBS-related options
+                    update_ebs_params();
+
                     //! @todo pick up other NC options dynamically?
                 }
             }
@@ -1568,6 +1738,9 @@ void *monitoring_thread(void *arg)
     }
 
     return NULL;
+
+#undef EUCANETD_PID_FILE
+#undef EUCANETD_SERVICE_NAME
 }
 
 //!
@@ -1717,6 +1890,17 @@ void *startup_thread(void *arg)
             } else if (cpid == 0) {    // child process - creates the domain
                 if ((dom = virDomainCreateLinux(conn, xml, 0)) != NULL) {
                     virDomainFree(dom); // To be safe. Docs are not clear on whether the handle exists outside the process.
+
+                    if (!strcmp(nc_state.vnetconfig->mode, NETMODE_VPCMIDO)) {
+                        char iface[16], cmd[EUCA_MAX_PATH], obuf[256], ebuf[256];
+                        snprintf(iface, 16, "vn_%s", instance->instanceId);
+                        snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc_state.rootwrap_cmd_path, instance->params.guestNicDeviceName, iface);
+                        rc = timeshell(cmd, obuf, ebuf, 256, 10);
+                        if (rc) {
+                            LOGERROR("unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n");
+                        }
+                    }
+
                     exit(0);
                 } else {
                     exit(1);
@@ -1780,6 +1964,7 @@ shutoff:                              // escape point for error conditions
 free:
     EUCA_FREE(xml);
     EUCA_FREE(brname);
+    unset_corrid(get_corrid());
     return NULL;
 }
 
@@ -1798,8 +1983,7 @@ void *terminating_thread(void *arg)
 
     int err = find_and_terminate_instance(instanceId);
     if (err != EUCA_OK) {
-        EUCA_FREE(arg);
-        return NULL;
+        goto free;
     }
 
     {
@@ -1807,8 +1991,7 @@ void *terminating_thread(void *arg)
         ncInstance *instance = find_instance(&global_instances, instanceId);
         if (instance == NULL) {
             sem_v(inst_sem);
-            EUCA_FREE(arg);
-            return NULL;
+            goto free;
         }
         // change the state and let the monitoring_thread clean up state
         if (instance->state != TEARDOWN && instance->state != CANCELED) {
@@ -1822,8 +2005,9 @@ void *terminating_thread(void *arg)
         copy_instances();
         sem_v(inst_sem);
     }
-
+free:
     EUCA_FREE(arg);
+    unset_corrid(get_corrid());
     return NULL;
 }
 
@@ -1965,6 +2149,7 @@ static int init(void)
     static int initialized = 0;
     int do_warn = 0, i;
     char logFile[EUCA_MAX_PATH] = "";
+    char logFileReqTrack[EUCA_MAX_PATH] = "";
     char *bridge = NULL;
     char *s = NULL;
     char *tmp = NULL;
@@ -2016,12 +2201,13 @@ static int init(void)
     //Set the SC client policy file path
     char policyFile[EUCA_MAX_PATH];
     bzero(policyFile, EUCA_MAX_PATH);
-    snprintf(policyFile, EUCA_MAX_PATH, EUCALYPTUS_KEYS_DIR "/sc-client-policy.xml", nc_state.home);
+    snprintf(policyFile, EUCA_MAX_PATH, EUCALYPTUS_POLICIES_DIR "/sc-client-policy.xml", nc_state.home);
     euca_strncpy(nc_state.config_sc_policy_file, policyFile, EUCA_MAX_PATH);
 
     // set the minimum log for now
     snprintf(logFile, EUCA_MAX_PATH, EUCALYPTUS_LOG_DIR "/nc.log", nc_state.home);
-    log_file_set(logFile);
+    snprintf(logFileReqTrack, EUCA_MAX_PATH, EUCALYPTUS_LOG_DIR "/nc-tracking.log", nc_state.home);
+    log_file_set(logFile, logFileReqTrack);
     LOGINFO("spawning Eucalyptus node controller v%s %s\n", nc_state.version, compile_timestamp_str);
     if (do_warn)
         LOGWARN("env variable %s not set, using /\n", EUCALYPTUS_ENV_VAR_NAME);
@@ -2189,6 +2375,7 @@ static int init(void)
     GET_VAR_INT(nc_state.config_max_cores, CONFIG_MAX_CORES, 0);
     GET_VAR_INT(nc_state.save_instance_files, CONFIG_SAVE_INSTANCES, 0);
     GET_VAR_INT(nc_state.concurrent_disk_ops, CONFIG_CONCURRENT_DISK_OPS, 4);
+    GET_VAR_INT(nc_state.sc_request_timeout_sec, CONFIG_SC_REQUEST_TIMEOUT, 45);
     GET_VAR_INT(nc_state.concurrent_cleanup_ops, CONFIG_CONCURRENT_CLEANUP_OPS, 30);
     GET_VAR_INT(nc_state.disable_snapshots, CONFIG_DISABLE_SNAPSHOTS, 0);
     GET_VAR_INT(nc_state.shutdown_grace_period_sec, CONFIG_SHUTDOWN_GRACE_PERIOD_SEC, 60);
@@ -2210,8 +2397,8 @@ static int init(void)
 
     // read in .pem files
     if (euca_init_cert()) {
-        LOGERROR("failed to find cryptographic certificates\n");
-        return (EUCA_FATAL_ERROR);
+        LOGWARN("no cryptographic certificates found: waiting for node to be registered...\n");
+        //        return (EUCA_FATAL_ERROR);
     }
     // check on dependencies (3rd-party programs that NC invokes)
     if (diskutil_init(FALSE)) {        // NC does not need GRUB for now
@@ -2241,6 +2428,7 @@ static int init(void)
     addkey_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
     log_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
     service_state_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
+    stats_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
 
     if (!hyp_sem || !inst_sem || !inst_copy_sem || !addkey_sem || !log_sem || !service_state_sem) {
         LOGFATAL("failed to create and initialize semaphores\n");
@@ -2264,12 +2452,13 @@ static int init(void)
         return (EUCA_FATAL_ERROR);
     }
 
-    if (init_ebs_utils() != 0) {
+    if (init_ebs_utils(nc_state.sc_request_timeout_sec) != 0) {
         LOGFATAL("Failed to initialize ebs utils\n");
         return (EUCA_FATAL_ERROR);
     }
 
-    init_iscsi(nc_state.home);
+    // initialize the EBS subsystem
+    update_ebs_params();
 
     // NOTE: this is the only call which needs to be called on both
     // the default and the specific handler! All the others will be
@@ -2520,7 +2709,7 @@ static int init(void)
     tmp = getConfString(nc_state.configFiles, 2, "VNET_MODE");
     if (!tmp) {
         LOGWARN("VNET_MODE is not defined, defaulting to 'SYSTEM'\n");
-        tmp = strdup("SYSTEM");
+        tmp = strdup(NETMODE_MANAGED_NOVLAN);
         if (!tmp) {
             LOGFATAL("Out of memory\n");
             return (EUCA_FATAL_ERROR);
@@ -2529,8 +2718,8 @@ static int init(void)
 
     int initFail = 0;
 
-    if (tmp
-        && !(!strcmp(tmp, NETMODE_SYSTEM) || !strcmp(tmp, NETMODE_STATIC) || !strcmp(tmp, NETMODE_MANAGED_NOVLAN) || !strcmp(tmp, NETMODE_MANAGED) || !strcmp(tmp, NETMODE_EDGE))) {
+    if (tmp && !(!strcmp(tmp, NETMODE_SYSTEM) || !strcmp(tmp, NETMODE_STATIC) || !strcmp(tmp, NETMODE_MANAGED_NOVLAN) || !strcmp(tmp, NETMODE_MANAGED) || !strcmp(tmp, NETMODE_EDGE)
+                 || !strcmp(tmp, NETMODE_VPCMIDO))) {
         char errorm[256];
         memset(errorm, 0, 256);
         sprintf(errorm, "Invalid VNET_MODE setting: %s", tmp);
@@ -2539,7 +2728,8 @@ static int init(void)
         initFail = 1;
     }
 
-    if (tmp && (!strcmp(tmp, NETMODE_SYSTEM) || !strcmp(tmp, NETMODE_STATIC) || !strcmp(tmp, NETMODE_MANAGED_NOVLAN) || !strcmp(tmp, NETMODE_EDGE))) {
+    if (tmp
+        && (!strcmp(tmp, NETMODE_SYSTEM) || !strcmp(tmp, NETMODE_STATIC) || !strcmp(tmp, NETMODE_MANAGED_NOVLAN) || !strcmp(tmp, NETMODE_EDGE) || !strcmp(tmp, NETMODE_VPCMIDO))) {
         bridge = getConfString(nc_state.configFiles, 2, "VNET_BRIDGE");
         if (!bridge) {
             LOGFATAL("in 'SYSTEM', 'STATIC', 'EDGE', or 'MANAGED-NOVLAN' network mode, you must specify a value for VNET_BRIDGE\n");
@@ -2573,6 +2763,19 @@ static int init(void)
 
     if (initFail)
         return (EUCA_FATAL_ERROR);
+
+    //
+    // Fix EUCA-9807. Only in SYSTEM mode, we unset and reset the CLC IP for
+    // metadata redirect rule to handle NC reboot case
+    //
+    if (!strcmp(nc_state.vnetconfig->mode, NETMODE_SYSTEM)) {
+        if (nc_state.vnetconfig->cloudIp != 0) {
+            if (vnetUnsetMetadataRedirect(nc_state.vnetconfig) != EUCA_OK) {
+                LOGDEBUG("Failed to unset metadata redirect on NC startup. Ignore if this wan't set previously.");
+            }
+            vnetSetMetadataRedirect(nc_state.vnetconfig);
+        }
+    }
 
     // set NC helper path
     tmp = getConfString(nc_state.configFiles, 2, CONFIG_NC_BUNDLE_UPLOAD);
@@ -2662,7 +2865,7 @@ static int init(void)
         LOGINFO("using IP %s\n", nc_state.ip);
 
         LOGINFO("Initializing localhost info for vbr processing\n");
-        if (vbr_init_hostconfig(nc_state.iqn, nc_state.ip, nc_state.config_sc_policy_file, nc_state.config_use_ws_sec) != 0) {
+        if (vbr_init_hostconfig(nc_state.iqn, nc_state.ip, nc_state.config_sc_policy_file, nc_state.config_use_ws_sec, nc_state.config_use_virtio_root, nc_state.config_use_virtio_disk) != 0) {
             LOGFATAL("Error initializing vbr localhost configuration\n");
             return (EUCA_FATAL_ERROR);
         }
@@ -2707,6 +2910,28 @@ static int init(void)
         }
     }
 
+    {
+
+        if(initialize_stats_system(DEFAULT_SENSOR_INTERVAL_SEC) != EUCA_OK) {
+            //        if (init_stats(nc_state.home, euca_this_component_name, nc_stats_lock, nc_stats_unlock) != EUCA_OK) {
+            LOGERROR("Could not initialize NC stats system\n");
+            return EUCA_ERROR;
+        }
+        LOGDEBUG("Stats system initialized for NC\n");
+
+        //Stats thread. Independent of the monitoring thread because the monitoring thread fires irregularly
+        pthread_t stats_thread;
+        if (pthread_create(&stats_thread, NULL, nc_run_stats, &nc_state)) {
+            LOGFATAL("Failed to spawn the internal stats thread\n");
+            return (EUCA_FATAL_ERROR);
+        }
+        if(pthread_detach(stats_thread)) {
+            LOGFATAL("Failed to detach the internal stats thread\n");
+            return (EUCA_FATAL_ERROR);
+        }
+
+    }
+
     // post-init hook
     if (call_hooks(NC_EVENT_POST_INIT, nc_state.home)) {
         LOGFATAL("hooks prevented initialization\n");
@@ -2717,6 +2942,19 @@ static int init(void)
     return (EUCA_OK);
 
 #undef GET_VAR_INT
+}
+
+//!
+//!
+//!
+//! @note this routine runs immediately when the process is started
+//!
+void doInitNC(void)
+{
+    if (init()) {
+        LOGWARN("could not initialize\n");
+    }
+    LOGINFO("component started\n");
 }
 
 //!
@@ -2817,7 +3055,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
             strncpy(status_str, "creating image", sizeof(status_str));
         } else if (instance->bootTime == 0) {
             strncpy(status_str, "staging", sizeof(status_str));
-        } // else it is "running"
+        }                              // else it is "running"
 
         LOGDEBUG("[%s] %s (%s) pub=%s vols=%s\n", instance->instanceId, instance->stateName, status_str, instance->ncnet.publicIp, vols_str);
     }
@@ -2923,6 +3161,7 @@ int doAssignAddress(ncMetadata * pMeta, char *instanceId, char *publicIp)
     if (init())
         return (EUCA_ERROR);
 
+    LOGINFO("[%s] assigning address: [%s]\n", SP(instanceId), SP(publicIp));
     LOGDEBUG("[%s] invoked (publicIp=%s)\n", instanceId, publicIp);
 
     if (nc_state.H->doAssignAddress)
@@ -2947,6 +3186,7 @@ int doPowerDown(ncMetadata * pMeta)
     if (init())
         return (EUCA_ERROR);
 
+    LOGINFO("powering down\n");
     LOGDEBUG("invoked\n");
 
     if (nc_state.H->doPowerDown)
@@ -2988,7 +3228,7 @@ int doPowerDown(ncMetadata * pMeta)
 int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId, char *imageURL,
                   char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId, char *keyName,
                   netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize,
-                  ncInstance ** outInst)
+                  char *rootDirective, ncInstance ** outInst)
 {
     int ret = EUCA_OK;
 
@@ -3025,11 +3265,11 @@ int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reserv
     if (nc_state.H->doRunInstance) {
         ret = nc_state.H->doRunInstance(&nc_state, pMeta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId,
                                         ramdiskURL, ownerId, accountId, keyName, netparams, userData, credential, launchIndex, platform, expiryTime, groupNames, groupNamesSize,
-                                        outInst);
+                                        rootDirective, outInst);
     } else {
         ret = nc_state.D->doRunInstance(&nc_state, pMeta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId,
                                         ramdiskURL, ownerId, accountId, keyName, netparams, userData, credential, launchIndex, platform, expiryTime, groupNames, groupNamesSize,
-                                        outInst);
+                                        rootDirective, outInst);
     }
 
     return ret;
@@ -3080,6 +3320,7 @@ int doRebootInstance(ncMetadata * pMeta, char *instanceId)
         return (EUCA_ERROR);
     DISABLED_CHECK;
 
+    LOGINFO("[%s] rebooting requested\n", SP(instanceId));
     LOGDEBUG("[%s] invoked\n", instanceId);
 
     if (nc_state.H->doRebootInstance)
@@ -3161,6 +3402,7 @@ int doStartNetwork(ncMetadata * pMeta, char *uuid, char **remoteHosts, int remot
     if (init())
         return (EUCA_ERROR);
 
+    LOGINFO("starting network (remoteHostsLen=%d port=%d vlan=%d)\n", remoteHostsLen, port, vlan);
     LOGDEBUG("invoked (remoteHostsLen=%d port=%d vlan=%d)\n", remoteHostsLen, port, vlan);
 
     if (nc_state.H->doStartNetwork)
@@ -3190,7 +3432,8 @@ int doAttachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *r
         return (EUCA_ERROR);
     DISABLED_CHECK;
 
-    LOGDEBUG("[%s][%s] volume attaching (localDev=%s)\n", instanceId, volumeId, localDev);
+    LOGINFO("[%s][%s] attaching volume\n", instanceId, volumeId);
+    LOGDEBUG("[%s][%s] volume attaching (remoteDev=%s localDev=%s)\n", instanceId, volumeId, remoteDev, localDev);
 
     if (nc_state.H->doAttachVolume)
         ret = nc_state.H->doAttachVolume(&nc_state, pMeta, instanceId, volumeId, remoteDev, localDev);
@@ -3213,7 +3456,7 @@ int doAttachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *r
 //!
 //! @return EUCA_ERROR on failure or the result of the proper doDetachVolume() handler call.
 //!
-int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force, int grab_inst_sem)
+int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force)
 {
     int ret = EUCA_OK;
 
@@ -3221,12 +3464,13 @@ int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *a
         return (EUCA_ERROR);
     DISABLED_CHECK;
 
-    LOGDEBUG("[%s][%s] volume detaching (localDev=%s force=%d grab_inst_sem=%d)\n", instanceId, volumeId, localDev, force, grab_inst_sem);
+    LOGINFO("[%s][%s] detaching volume\n", instanceId, volumeId);
+    LOGDEBUG("[%s][%s] volume detaching (localDev=%s force=%d)\n", instanceId, volumeId, localDev, force);
 
     if (nc_state.H->doDetachVolume)
-        ret = nc_state.H->doDetachVolume(&nc_state, pMeta, instanceId, volumeId, attachmentToken, localDev, force, grab_inst_sem);
+        ret = nc_state.H->doDetachVolume(&nc_state, pMeta, instanceId, volumeId, attachmentToken, localDev, force);
     else
-        ret = nc_state.D->doDetachVolume(&nc_state, pMeta, instanceId, volumeId, attachmentToken, localDev, force, grab_inst_sem);
+        ret = nc_state.D->doDetachVolume(&nc_state, pMeta, instanceId, volumeId, attachmentToken, localDev, force);
 
     return ret;
 }
@@ -3242,10 +3486,12 @@ int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *a
 //! @param[in] userPublicKey the public key string
 //! @param[in] S3Policy the S3 engine policy
 //! @param[in] S3PolicySig the S3 engine policy signature
+//! @param[in] architecture image/instance architecture
 //!
 //! @return EUCA_ERROR on failure or the result of the proper doBundleInstance() handler call.
 //!
-int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, char *S3Policy, char *S3PolicySig)
+int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, char *S3Policy, char *S3PolicySig,
+                     char *architecture)
 {
     int ret = EUCA_OK;
 
@@ -3254,13 +3500,13 @@ int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, cha
     DISABLED_CHECK;
 
     LOGINFO("[%s] starting instance bundling into bucket %s\n", instanceId, bucketName);
-    LOGDEBUG("[%s] bundling parameters: bucketName=%s filePrefix=%s objectStorageURL=%s userPublicKey=%s S3Policy=%s, S3PolicySig=%s\n",
-             instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig);
+    LOGDEBUG("[%s] bundling parameters: bucketName=%s filePrefix=%s objectStorageURL=%s userPublicKey=%s S3Policy=%s, S3PolicySig=%s, architecture=%s\n",
+             instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig, architecture);
 
     if (nc_state.H->doBundleInstance)
-        ret = nc_state.H->doBundleInstance(&nc_state, pMeta, instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig);
+        ret = nc_state.H->doBundleInstance(&nc_state, pMeta, instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig, architecture);
     else
-        ret = nc_state.D->doBundleInstance(&nc_state, pMeta, instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig);
+        ret = nc_state.D->doBundleInstance(&nc_state, pMeta, instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig, architecture);
 
     return ret;
 }
@@ -3418,6 +3664,7 @@ int doModifyNode(ncMetadata * pMeta, char *stateName)
     if (init())
         return (EUCA_ERROR);
 
+    LOGINFO("modifying node\n");
     LOGDEBUG("invoked (stateName=%s)\n", stateName);
 
     if (nc_state.H->doModifyNode) {
@@ -3449,6 +3696,7 @@ int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instance
     if (init())
         return (EUCA_ERROR);
 
+    LOGINFO("migrating %d instances\n", instancesLen);
     LOGTRACE("invoked\n");
 
     LOGDEBUG("verifying %d instance[s] for migration...\n", instancesLen);

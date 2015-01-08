@@ -20,6 +20,7 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupNames;
 import com.eucalyptus.autoscaling.common.msgs.DeletePolicyResponseType;
@@ -34,13 +35,22 @@ import com.eucalyptus.cloudformation.resources.ResourceProperties;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSAutoScalingScalingPolicyResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSAutoScalingScalingPolicyProperties;
 import com.eucalyptus.cloudformation.template.JsonHelper;
+import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.StackActivity;
+import com.eucalyptus.cloudformation.workflow.steps.CreateMultiStepPromise;
+import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
+import com.eucalyptus.cloudformation.workflow.steps.Step;
+import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
+import com.netflix.glisten.WorkflowOperations;
 
 import java.util.ArrayList;
+import java.util.List;
+import javax.annotation.Nullable;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -49,6 +59,86 @@ public class AWSAutoScalingScalingPolicyResourceAction extends ResourceAction {
 
   private AWSAutoScalingScalingPolicyProperties properties = new AWSAutoScalingScalingPolicyProperties();
   private AWSAutoScalingScalingPolicyResourceInfo info = new AWSAutoScalingScalingPolicyResourceInfo();
+
+  public AWSAutoScalingScalingPolicyResourceAction() {
+    for (CreateSteps createStep: CreateSteps.values()) {
+      createSteps.put(createStep.name(), createStep);
+    }
+    for (DeleteSteps deleteStep: DeleteSteps.values()) {
+      deleteSteps.put(deleteStep.name(), deleteStep);
+    }
+
+  }
+
+  private enum CreateSteps implements Step {
+    CREATE_SCALING_POLICY {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSAutoScalingScalingPolicyResourceAction action = (AWSAutoScalingScalingPolicyResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
+        DescribeAutoScalingGroupsType describeAutoScalingGroupsType = MessageHelper.createMessage(DescribeAutoScalingGroupsType.class, action.info.getEffectiveUserId());
+        AutoScalingGroupNames autoScalingGroupNames = new AutoScalingGroupNames();
+        ArrayList<String> member = Lists.newArrayList(action.properties.getAutoScalingGroupName());
+        autoScalingGroupNames.setMember(member);
+        describeAutoScalingGroupsType.setAutoScalingGroupNames(autoScalingGroupNames);
+        DescribeAutoScalingGroupsResponseType describeAutoScalingGroupsResponseType = AsyncRequests.<DescribeAutoScalingGroupsType,DescribeAutoScalingGroupsResponseType> sendSync(configuration, describeAutoScalingGroupsType);
+        if (action.doesGroupNotExist(describeAutoScalingGroupsResponseType)) {
+          throw new Exception("Autoscaling group " + action.properties.getAutoScalingGroupName() + " does not exist");
+        }
+        String scalingPolicyName = action.getDefaultPhysicalResourceId();
+        PutScalingPolicyType putScalingPolicyType = MessageHelper.createMessage(PutScalingPolicyType.class, action.info.getEffectiveUserId());
+        putScalingPolicyType.setAutoScalingGroupName(action.properties.getAutoScalingGroupName());
+        putScalingPolicyType.setAdjustmentType(action.properties.getAdjustmentType());
+        putScalingPolicyType.setCooldown(action.properties.getCooldown());
+        putScalingPolicyType.setPolicyName(scalingPolicyName);
+        putScalingPolicyType.setScalingAdjustment(action.properties.getScalingAdjustment());
+        PutScalingPolicyResponseType putScalingPolicyResponseType = AsyncRequests.<PutScalingPolicyType,PutScalingPolicyResponseType> sendSync(configuration, putScalingPolicyType);
+        action.info.setPhysicalResourceId(putScalingPolicyResponseType.getPutScalingPolicyResult().getPolicyARN()); // Docs are wrong, need ARN for alarms (and it is what AWS does
+        action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+        return action;
+      }
+    };
+
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
+
+  private enum DeleteSteps implements Step {
+    DELETE_SCALING_POLICY {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSAutoScalingScalingPolicyResourceAction action = (AWSAutoScalingScalingPolicyResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
+        if (action.info.getPhysicalResourceId() == null) return action;
+        // no group, bye...
+        DescribeAutoScalingGroupsType describeAutoScalingGroupsType = MessageHelper.createMessage(DescribeAutoScalingGroupsType.class, action.info.getEffectiveUserId());
+        AutoScalingGroupNames autoScalingGroupNames = new AutoScalingGroupNames();
+        ArrayList<String> member = Lists.newArrayList(action.properties.getAutoScalingGroupName());
+        autoScalingGroupNames.setMember(member);
+        describeAutoScalingGroupsType.setAutoScalingGroupNames(autoScalingGroupNames);
+        DescribeAutoScalingGroupsResponseType describeAutoScalingGroupsResponseType = AsyncRequests.<DescribeAutoScalingGroupsType,DescribeAutoScalingGroupsResponseType> sendSync(configuration, describeAutoScalingGroupsType);
+        if (action.doesGroupNotExist(describeAutoScalingGroupsResponseType)) {
+          return action;
+        }
+        // Can delete with no consequence if not gone
+        DeletePolicyType deletePolicyType = MessageHelper.createMessage(DeletePolicyType.class, action.info.getEffectiveUserId());
+        deletePolicyType.setPolicyName(action.info.getPhysicalResourceId());
+        deletePolicyType.setAutoScalingGroupName(action.properties.getAutoScalingGroupName());
+        AsyncRequests.<DeletePolicyType,DeletePolicyResponseType> sendSync(configuration, deletePolicyType);
+        return action;
+      }
+    };
+
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
+
   @Override
   public ResourceProperties getResourceProperties() {
     return properties;
@@ -76,73 +166,15 @@ public class AWSAutoScalingScalingPolicyResourceAction extends ResourceAction {
   }
 
   @Override
-  public void create(int stepNum) throws Exception {
-    switch (stepNum) {
-      case 0:
-        ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
-        DescribeAutoScalingGroupsType describeAutoScalingGroupsType = new DescribeAutoScalingGroupsType();
-        AutoScalingGroupNames autoScalingGroupNames = new AutoScalingGroupNames();
-        ArrayList<String> member = Lists.newArrayList(properties.getAutoScalingGroupName());
-        autoScalingGroupNames.setMember(member);
-        describeAutoScalingGroupsType.setAutoScalingGroupNames(autoScalingGroupNames);
-        describeAutoScalingGroupsType.setEffectiveUserId(info.getEffectiveUserId());
-        DescribeAutoScalingGroupsResponseType describeAutoScalingGroupsResponseType2 = AsyncRequests.<DescribeAutoScalingGroupsType,DescribeAutoScalingGroupsResponseType> sendSync(configuration, describeAutoScalingGroupsType);
-        if (doesGroupNotExist(describeAutoScalingGroupsResponseType2)) {
-          throw new Exception("Autoscaling group " + properties.getAutoScalingGroupName() + " does not exist");
-        }
-        String scalingPolicyName = getDefaultPhysicalResourceId();
-        PutScalingPolicyType putScalingPolicyType = new PutScalingPolicyType();
-        putScalingPolicyType.setAutoScalingGroupName(properties.getAutoScalingGroupName());
-        putScalingPolicyType.setAdjustmentType(properties.getAdjustmentType());
-        putScalingPolicyType.setCooldown(properties.getCooldown());
-        putScalingPolicyType.setPolicyName(scalingPolicyName);
-        putScalingPolicyType.setScalingAdjustment(properties.getScalingAdjustment());
-        putScalingPolicyType.setEffectiveUserId(info.getEffectiveUserId());
-        PutScalingPolicyResponseType putScalingPolicyResponseType = AsyncRequests.<PutScalingPolicyType,PutScalingPolicyResponseType> sendSync(configuration, putScalingPolicyType);
-        info.setPhysicalResourceId(putScalingPolicyResponseType.getPutScalingPolicyResult().getPolicyARN()); // Docs are wrong, need ARN for alarms (and it is what AWS does
-        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
-        break;
-      default:
-        throw new IllegalStateException("Invalid step " + stepNum);
-    }
+  public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
+    return new CreateMultiStepPromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
   }
-
 
   @Override
-  public void update(int stepNum) throws Exception {
-    throw new UnsupportedOperationException();
-  }
-  @Override
-  public void delete() throws Exception {
-    if (info.getPhysicalResourceId() == null) return;
-    ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
-    // no group, bye...
-    DescribeAutoScalingGroupsType describeAutoScalingGroupsType = new DescribeAutoScalingGroupsType();
-    AutoScalingGroupNames autoScalingGroupNames = new AutoScalingGroupNames();
-    ArrayList<String> member = Lists.newArrayList(properties.getAutoScalingGroupName());
-    autoScalingGroupNames.setMember(member);
-    describeAutoScalingGroupsType.setAutoScalingGroupNames(autoScalingGroupNames);
-    describeAutoScalingGroupsType.setEffectiveUserId(info.getEffectiveUserId());
-    DescribeAutoScalingGroupsResponseType describeAutoScalingGroupsResponseType2 = AsyncRequests.<DescribeAutoScalingGroupsType,DescribeAutoScalingGroupsResponseType> sendSync(configuration, describeAutoScalingGroupsType);
-    if (doesGroupNotExist(describeAutoScalingGroupsResponseType2)) {
-      return;
-    }
-    // Can delete with no consequence if not gone
-    DeletePolicyType deletePolicyType = new DeletePolicyType();
-    deletePolicyType.setPolicyName(info.getPhysicalResourceId());
-    deletePolicyType.setAutoScalingGroupName(properties.getAutoScalingGroupName());
-    deletePolicyType.setEffectiveUserId(info.getEffectiveUserId());
-    AsyncRequests.<DeletePolicyType,DeletePolicyResponseType> sendSync(configuration, deletePolicyType);
-  }
-
-  public void rollbackUpdate() throws Exception {
-    // can't update so rollbackUpdate should be a NOOP
-  }
-
-
-  @Override
-  public void rollbackCreate() throws Exception {
-    delete();
+  public Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
+    return new DeleteMultiStepPromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
 }

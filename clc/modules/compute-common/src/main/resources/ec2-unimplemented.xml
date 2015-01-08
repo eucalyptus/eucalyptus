@@ -32,7 +32,6 @@
   </mapping>
   <mapping name="DescribeReservedInstancesOfferingsResponse" class="com.eucalyptus.compute.common.DescribeReservedInstancesOfferingsResponseType"
     extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
-        <!--<structure map-as="com.eucalyptus.compute.common.ReservedInstanceMessage"/>-->
     <structure name="reservedInstancesOfferingsSet">
       <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="reservedInstancesOfferingsSet"
         item-type="java.lang.String">
@@ -45,9 +44,8 @@
 
   <mapping name="DescribeReservedInstancesOfferings" class="com.eucalyptus.compute.common.DescribeReservedInstancesOfferingsType"
     extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
-    <!-- <structure map-as="com.eucalyptus.compute.common.ReservedInstanceMessage" /> -->
     <structure name="reservedInstancesOfferingsSet">
-      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="instanceIds" item-type="java.lang.String">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="reservedInstancesOfferingId" item-type="java.lang.String">
         <structure name="item">
           <value name="reservedInstancesOfferingId" />
         </structure>
@@ -60,7 +58,6 @@
 
   <mapping name="DescribeReservedInstancesResponse" class="com.eucalyptus.compute.common.DescribeReservedInstancesResponseType"
     extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
-        <!--<structure map-as="com.eucalyptus.compute.common.ReservedInstanceMessage"/>-->
     <structure name="reservedInstancesSet">
       <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="reservedInstancesSet" item-type="java.lang.String">
         <structure name="item">
@@ -72,9 +69,8 @@
 
   <mapping name="DescribeReservedInstances" class="com.eucalyptus.compute.common.DescribeReservedInstancesType"
     extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
-    <!-- <structure map-as="com.eucalyptus.compute.common.ReservedInstanceMessage" /> -->
     <structure name="reservedInstancesSet">
-      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="instanceIds" item-type="java.lang.String">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="reservedInstancesId" item-type="java.lang.String">
         <structure name="item">
           <value name="reservedInstancesId" />
         </structure>
@@ -117,12 +113,56 @@
            class="com.eucalyptus.compute.common.DescribeReservedInstancesModificationsType"
            extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
     <structure name="reservedInstancesModificationIds" usage="optional">
-      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="reservedInstancesModificationIds" item-type="java.lang.String">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="reservedInstancesModificationId" item-type="java.lang.String">
         <structure name="item">
           <value name="reservedInstancesModificationId" />
         </structure>
       </collection>
     </structure>
+  </mapping>
+
+  <mapping name="CreateReservedInstancesListing"
+           class="com.eucalyptus.compute.common.CreateReservedInstancesListingType"
+           extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
+  </mapping>
+
+  <mapping name="CreateReservedInstancesListingResponse"
+           class="com.eucalyptus.compute.common.CreateReservedInstancesListingResponseType"
+           extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
+    <structure map-as="com.eucalyptus.compute.common.ReservedInstanceMessage" />
+  </mapping>
+
+  <mapping name="CancelReservedInstancesListing"
+           class="com.eucalyptus.compute.common.CancelReservedInstancesListingType"
+           extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
+  </mapping>
+
+  <mapping name="CancelReservedInstancesListingResponse"
+           class="com.eucalyptus.compute.common.CancelReservedInstancesListingResponseType"
+           extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
+    <structure map-as="com.eucalyptus.compute.common.ReservedInstanceMessage" />
+  </mapping>
+
+  <mapping name="ModifyReservedInstances"
+           class="com.eucalyptus.compute.common.ModifyReservedInstancesType"
+           extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
+  </mapping>
+
+  <mapping name="ModifyReservedInstancesResponse"
+           class="com.eucalyptus.compute.common.ModifyReservedInstancesResponseType"
+           extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
+    <structure map-as="com.eucalyptus.compute.common.ReservedInstanceMessage" />
+  </mapping>
+
+  <mapping name="PurchaseReservedInstancesOffering"
+           class="com.eucalyptus.compute.common.PurchaseReservedInstancesOfferingType"
+           extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
+  </mapping>
+
+  <mapping name="PurchaseReservedInstancesOfferingResponse"
+           class="com.eucalyptus.compute.common.PurchaseReservedInstancesOfferingResponseType"
+           extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
+    <structure map-as="com.eucalyptus.compute.common.ReservedInstanceMessage" />
   </mapping>
 
   <mapping class="com.eucalyptus.compute.common.SpotInstanceMessage" extends="com.eucalyptus.compute.common.ComputeMessage"
@@ -148,4 +188,58 @@
     <structure map-as="com.eucalyptus.compute.common.SpotInstanceMessage" />
   </mapping>
 
+  <mapping name="CancelSpotInstanceRequests"
+           class="com.eucalyptus.compute.common.CancelSpotInstanceRequestsType"
+           extends="com.eucalyptus.compute.common.SpotInstanceMessage">
+  </mapping>
+
+  <mapping name="CancelSpotInstanceRequestsResponse"
+           class="com.eucalyptus.compute.common.CancelSpotInstanceRequestsResponseType"
+           extends="com.eucalyptus.compute.common.SpotInstanceMessage">
+    <structure map-as="com.eucalyptus.compute.common.SpotInstanceMessage" />
+  </mapping>
+
+  <mapping name="CreateSpotDatafeedSubscription"
+           class="com.eucalyptus.compute.common.CreateSpotDatafeedSubscriptionType"
+           extends="com.eucalyptus.compute.common.SpotInstanceMessage">
+  </mapping>
+
+  <mapping name="CreateSpotDatafeedSubscriptionResponse"
+           class="com.eucalyptus.compute.common.CreateSpotDatafeedSubscriptionResponseType"
+           extends="com.eucalyptus.compute.common.SpotInstanceMessage">
+    <structure map-as="com.eucalyptus.compute.common.SpotInstanceMessage" />
+  </mapping>
+
+  <mapping name="DeleteSpotDatafeedSubscription"
+           class="com.eucalyptus.compute.common.DeleteSpotDatafeedSubscriptionType"
+           extends="com.eucalyptus.compute.common.SpotInstanceMessage">
+  </mapping>
+
+  <mapping name="DeleteSpotDatafeedSubscriptionResponse"
+           class="com.eucalyptus.compute.common.DeleteSpotDatafeedSubscriptionResponseType"
+           extends="com.eucalyptus.compute.common.SpotInstanceMessage">
+    <structure map-as="com.eucalyptus.compute.common.SpotInstanceMessage" />
+  </mapping>
+
+  <mapping name="DescribeSpotDatafeedSubscription"
+           class="com.eucalyptus.compute.common.DescribeSpotDatafeedSubscriptionType"
+           extends="com.eucalyptus.compute.common.SpotInstanceMessage">
+  </mapping>
+
+  <mapping name="DescribeSpotDatafeedSubscriptionResponse"
+           class="com.eucalyptus.compute.common.DescribeSpotDatafeedSubscriptionResponseType"
+           extends="com.eucalyptus.compute.common.SpotInstanceMessage">
+    <structure map-as="com.eucalyptus.compute.common.SpotInstanceMessage" />
+  </mapping>
+
+  <mapping name="RequestSpotInstances"
+           class="com.eucalyptus.compute.common.RequestSpotInstancesType"
+           extends="com.eucalyptus.compute.common.SpotInstanceMessage">
+  </mapping>
+
+  <mapping name="RequestSpotInstancesResponse"
+           class="com.eucalyptus.compute.common.RequestSpotInstancesResponseType"
+           extends="com.eucalyptus.compute.common.SpotInstanceMessage">
+    <structure map-as="com.eucalyptus.compute.common.SpotInstanceMessage" />
+  </mapping>
 </binding>

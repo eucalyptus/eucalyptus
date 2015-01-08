@@ -82,6 +82,8 @@ AXIOM_LIBS = -lrampart -laxis2_http_sender -laxis2_http_receiver -laxis2_http_co
 OPENSSL_LIBS = -lssl -lcrypto
 NC_HANDLERS=handlers_xen.o handlers_kvm.o handlers_default.o xml.o hooks.o
 STORAGE_OBJS=../storage/backing.o ../storage/diskutil.o ../storage/blobstore.o ../storage/objectstorage.o ../storage/vbr.o ../storage/iscsi.o ../storage/ebs_utils.o ../storage/sc-client-marshal-adb.o ../storage/storage-controller.o
+STATS_OBJS = ../util/stats/stats.o ../util/stats/sensor_common.o ../util/stats/message_sensor.o ../util/stats/service_sensor.o ../util/stats/fs_emitter.o ../util/stats/message_stats.o
+STATS_LIBS = -ljson -lm
 
 BUILD_ID=-DEUCA_COMPILE_TIMESTAMP=\""[built `date --rfc-3339='sec'`]"\"
 #EFENCE=-lefence
@@ -100,8 +102,8 @@ generated/stubs: $(NCWSDL) $(SCWSDL)
 	mkdir -p generated
 	sh $(WSDL2C) -uri $(NCWSDL) -sd -ss -d adb -u -uw -f -o generated | grep -v 'the classpath'
 	@echo Adding marshalling calls to server stubs
-#	../tools/add_marshalling.pl generated/axis2_skel_*.c generated/axis2_svc_skel_*.c
-	../tools/add_marshalling.pl generated/axis2_skel_*.c
+	../tools/add_marshalling.pl generated/axis2_skel_*.c generated/axis2_svc_skel_*.c
+#	../tools/add_marshalling.pl generated/axis2_skel_*.c 
 	@echo Generating SCclient stubs
 	sh $(WSDL2C) -uri $(SCWSDL) -g -d adb -u -uw -f -o generated | grep -v 'the classpath'
 	@echo Generating client stubs
@@ -161,6 +163,9 @@ server: $(SCLIBS) $(SERVICE_SO)
 ../util/euca_auth.o: ../util/euca_auth.c ../util/data.h ../util/eucalyptus.h
 	make -C ../util
 
+../util/euca_system.o: ../util/euca_system.c ../util/euca_system.h ../util/eucalyptus.h
+	make -C ../util
+
 ../util/sensor.o: ../util/sensor.c
 	make -C ../util
 
@@ -173,8 +178,11 @@ server: $(SCLIBS) $(SERVICE_SO)
 ../storage/storage-controller.o: ../storage/storage-controller.c ../storage/sc-client-marshal-adb.o
 	make -C ../storage
 
-$(SERVICE_SO): generated/stubs $(STORAGE_OBJS) ../net/vnetwork.o ../util/log.o ../util/misc.o ../util/euca_file.o ../util/euca_file.o ../util/sensor.o ../util/hash.o ../util/data.o server-marshal.o handlers.o $(NC_HANDLERS) ../util/eucalyptus.h ../util/euca_auth.o ../storage/http.o
-	$(CC) -shared generated/*.o server-marshal.o handlers.o $(NC_HANDLERS) $(STORAGE_OBJS) ../net/vnetwork.o ../util/*.o ../storage/http.o ../storage/storage-windows.o $(SCLIBS) $(NC_LIBS) $(EFENCE) -o $(SERVICE_SO)
+$(SERVICE_SO): generated/stubs $(STORAGE_OBJS) ../net/vnetwork.o ../util/log.o ../util/misc.o ../util/euca_system.o ../util/euca_file.o ../util/euca_file.o ../util/sensor.o ../util/hash.o ../util/data.o server-marshal.o handlers.o $(NC_HANDLERS) ../util/eucalyptus.h ../util/euca_auth.o ../storage/http.o $(STATS_OBJS)
+	$(CC) -shared generated/*.o server-marshal.o handlers.o $(NC_HANDLERS) $(STORAGE_OBJS) ../net/vnetwork.o $(STATS_OBJS) ../util/*.o ../storage/http.o ../storage/storage-windows.o $(SCLIBS) $(NC_LIBS) $(STATS_LIBS) $(EFENCE) -o $(SERVICE_SO)
+
+../util/stats/%.o:
+	make -C ../util/stats
 
 clientlib: generated/stubs ../util/data.o $(SCLIBS) client-marshal-adb.o
 
@@ -182,28 +190,28 @@ client: $(CLIENT) $(CLIENT)_local
 
 fake: $(CLIENT)_fake
 
-$(CLIENT): generated/stubs $(CLIENT).c $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o $(CLIENT).c ../storage/vbr.o
-	$(CC) -o $(CLIENT) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(CLIENT).c client-marshal-adb.c generated/adb_*.o generated/axis2_stub_*.o ../util/*.o ../storage/diskutil.o ../net/vnetwork.o ../storage/http.o -lcurl ../storage/storage-windows.o -lm $(AXIOM_LIBS) $(OPENSSL_LIBS) $(NC_LIBS)
+$(CLIENT): generated/stubs $(CLIENT).c $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o $(CLIENT).c ../storage/vbr.o $(STATS_OBJS)
+	$(CC) -o $(CLIENT) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(CLIENT).c client-marshal-adb.c generated/adb_*.o generated/axis2_stub_*.o ../util/*.o ../storage/diskutil.o ../net/vnetwork.o ../storage/http.o -lcurl ../storage/storage-windows.o $(STATS_OBJS) $(STATS_LIBS) -lm $(AXIOM_LIBS) $(OPENSSL_LIBS) $(NC_LIBS)
 
-$(CLIENT)_fake: generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o client-marshal-fake.o $(CLIENT).c ../storage/vbr.o
+$(CLIENT)_fake: generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o client-marshal-fake.o $(CLIENT).c ../storage/vbr.o $(STATS_OBJS)
 
-$(CLIENT)_local: generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o handlers.o $(NC_HANDLERS) $(CLIENT).c ../util/euca_auth.o ../storage/vbr.o
-	$(CC) -o $(CLIENT)_local -DNO_COMP $(INCLUDES) $(CPPFLAGS) $(CFLAGS) -shared client-marshal-local.o ../util/*.o $(STORAGE_OBJS) ../net/vnetwork.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS) ../storage/http.o ../storage/storage-windows.o $(SCLIBS)
+$(CLIENT)_local: generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o handlers.o $(NC_HANDLERS) $(CLIENT).c ../util/euca_auth.o ../storage/vbr.o $(STATS_OBJS)
+	$(CC) -o $(CLIENT)_local -DNO_COMP $(INCLUDES) $(CPPFLAGS) $(CFLAGS) -shared client-marshal-local.o ../util/*.o $(STORAGE_OBJS) ../net/vnetwork.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS) ../storage/http.o ../storage/storage-windows.o $(SCLIBS) $(STATS_OBJS) $(STATS_LIBS)
 
-test_misc: test.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../util/data.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_misc test.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../storage/diskutil.o ../util/data.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
+test_misc: test.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../util/data.o $(STATS_OBJS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o test_misc test.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../storage/diskutil.o ../util/data.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o $(NC_LIBS) $(STATS_OBJS) $(STATS_LIBS) ../util/config.o
 
-test_nc: test_nc.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../storage/diskutil.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_nc -lvirt test_nc.c -lvirt ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
+test_nc: test_nc.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../storage/diskutil.o $(STATS_OBJS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o test_nc -lvirt test_nc.c -lvirt ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o $(NC_LIBS) $(STATS_OBJS) $(STATS_LIBS) ../util/config.o
 
 test_hooks: hooks.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../storage/diskutil.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_hooks -D__STANDALONE hooks.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o test_hooks -D__STANDALONE hooks.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o $(NC_LIBS) $(STATS_OBJS) $(STATS_LIBS) ../util/config.o
 
 test_xml: xml.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o ../util/data.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(NC_LIBS) `xslt-config --cflags` -o test_xml -D__STANDALONE xml.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o ../util/data.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) `xslt-config --cflags` -o test_xml -D__STANDALONE xml.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o ../util/data.o $(NC_LIBS)
 
 test_xml2: xml.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o ../util/data.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(NC_LIBS) `xslt-config --cflags` -o test_xml2 -D__STANDALONE2 xml.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o ../util/data.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) `xslt-config --cflags` -o test_xml2 -D__STANDALONE2 xml.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o ../util/data.o $(NC_LIBS)
 
 libvirt_tortura: libvirt_tortura.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o libvirt_tortura libvirt_tortura.c -lvirt
@@ -241,10 +249,11 @@ distclean:
 	rm -rf generated $(SERVICE_SO) *.o $(CLIENT) $(CLIENT)_local nc-client-policy.xml test test_nc test_hooks *~* *#*
 
 install: deploy
-	$(INSTALL) nc-client-policy.xml $(DESTDIR)$(vardir)/lib/eucalyptus/keys/
+	$(INSTALL) -d $(DESTDIR)$(policiesdir)
+	$(INSTALL) nc-client-policy.xml $(DESTDIR)$(policiesdir)
 	$(INSTALL) -m 0755 test_nc $(DESTDIR)$(sbindir)/euca_test_nc
 
 uninstall:
-	$(RM) -f $(DESTDIR)$(vardir)/lib/eucalyptus/keys/nc-client-policy.xml
+	$(RM) -f $(DESTDIR)$(policiesdir)/nc-client-policy.xml
 	$(RM) -f $(DESTDIR)$(sbindir)/euca_test_nc
 	$(RM) -rf $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)

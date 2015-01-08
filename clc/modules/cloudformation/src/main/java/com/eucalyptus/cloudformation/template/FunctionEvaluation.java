@@ -23,6 +23,7 @@ package com.eucalyptus.cloudformation.template;
 import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.entity.StackEntity;
+import com.eucalyptus.cloudformation.entity.StackEntityHelper;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -61,11 +62,11 @@ public class FunctionEvaluation {
   }
 
   public static boolean evaluateBoolean(JsonNode jsonNode) throws CloudFormationException {
-    if (jsonNode == null || !jsonNode.isTextual() ||
-      !("true".equalsIgnoreCase(jsonNode.textValue()) || "false".equalsIgnoreCase(jsonNode.textValue()))) {
+    if (jsonNode == null || !jsonNode.isValueNode() ||
+      !("true".equalsIgnoreCase(jsonNode.asText()) || "false".equalsIgnoreCase(jsonNode.asText()))) {
       throw new ValidationErrorException("Template error: Invalid boolean value " + jsonNode);
     }
-    return "true".equalsIgnoreCase(jsonNode.textValue());
+    return "true".equalsIgnoreCase(jsonNode.asText());
   }
   public static void validateConditionSectionArgTypesWherePossible(JsonNode jsonNode) throws CloudFormationException {
     validateArgTypesWherePossible(jsonNode, true);
@@ -104,15 +105,14 @@ public class FunctionEvaluation {
     }
     // If not an object or array, nothing to validate
   }
-
-  public static JsonNode evaluateFunctions(JsonNode jsonNode, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap) throws CloudFormationException {
+  public static JsonNode evaluateFunctions(JsonNode jsonNode, Template template) throws CloudFormationException {
     if (jsonNode == null) return jsonNode;
     if (!jsonNode.isArray() && !jsonNode.isObject()) return jsonNode;
     ObjectMapper objectMapper = new ObjectMapper();
     if (jsonNode.isArray()) {
       ArrayNode arrayCopy = objectMapper.createArrayNode();
       for (int i = 0;i < jsonNode.size(); i++) {
-        JsonNode arrayElement = evaluateFunctions(jsonNode.get(i), stackEntity, resourceInfoMap);
+        JsonNode arrayElement = evaluateFunctions(jsonNode.get(i), template);
         arrayCopy.add(arrayElement);
       }
       return arrayCopy;
@@ -125,19 +125,28 @@ public class FunctionEvaluation {
       IntrinsicFunction.MatchResult matchResult = intrinsicFunction.evaluateMatch(jsonNode);
       if (matchResult.isMatch()) {
         IntrinsicFunction.ValidateResult validateResult = intrinsicFunction.validateArgTypesWherePossible(matchResult);
-        return intrinsicFunction.evaluateFunction(validateResult, stackEntity, resourceInfoMap);
+        return intrinsicFunction.evaluateFunction(validateResult, template);
       }
     }
     // Otherwise, not a function, so evaluate functions of values
     ObjectNode objectCopy = objectMapper.createObjectNode();
     List<String> fieldNames = Lists.newArrayList(jsonNode.fieldNames());
     for (String key: fieldNames) {
-      JsonNode objectElement = evaluateFunctions(jsonNode.get(key), stackEntity, resourceInfoMap);
+      JsonNode objectElement = evaluateFunctions(jsonNode.get(key), template);
       objectCopy.put(key, objectElement);
     }
     return objectCopy;
   }
 
+  public static JsonNode evaluateFunctions(JsonNode jsonNode, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap) throws CloudFormationException {
+    Template template = new Template();
+    template.setResourceInfoMap(resourceInfoMap);
+    StackEntityHelper.populateTemplateWithStackEntity(template, stackEntity);
+    JsonNode result = evaluateFunctions(jsonNode, template);
+    // just in case the above function changes the template, put the results back into the stack entity
+    StackEntityHelper.populateStackEntityWithTemplate(stackEntity, template);
+    return result;
+  }
 }
 
 

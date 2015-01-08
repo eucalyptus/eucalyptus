@@ -81,6 +81,8 @@ SCLIBS=../storage/storage-windows.o ../storage/objectstorage.o ../storage/http.o
 VNLIBS=../net/vnetwork.o ../util/log.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/hash.o ../net/globalnetwork.o
 WSSECLIBS=../util/euca_axis.o ../util/euca_auth.o
 CC_LIBS = ../util/config.o ${LIBS} ${LDFLAGS} -lcurl -lssl -lcrypto -lrampart
+STATS_OBJS= ../util/stats/stats.o ../util/stats/sensor_common.o ../util/stats/message_sensor.o ../util/stats/service_sensor.o ../util/stats/fs_emitter.o ../util/stats/message_stats.o
+STATS_LIBS=-ljson -lm
 
 all: generated/stubs
 	@for subdir in $(SUBDIRS); do \
@@ -100,7 +102,7 @@ generated/stubs: $(CCWSDL) $(NCWSDL)
 	@echo Generating server stubs
 	sh $(WSDL2C) -uri $(CCWSDL) -sd -ss -d adb -u -uw -f -o generated | grep -v 'the classpath'
 	@echo Adding marshalling calls to server stubs
-	../tools/add_marshalling.pl generated/axis2_skel_*.c
+	../tools/add_marshalling.pl generated/axis2_skel_*.c generated/axis2_svc_skel_*.c
 	@echo Compiling the stubs
 	patch --directory=generated -p1 <axis2_svc_generated.patch
 	@cp ../tools/Makefile.gen generated/Makefile
@@ -126,29 +128,32 @@ $(NCLIBS): %.o: %.c
 $(SCLIBS): %.o: %.c
 	make -C ../storage
 
+$(STATS_OBJS): %.o: %.c
+	make -C ../util
+
 $(WSSECLIBS): %.o: %.c
 	make -C ../util
 
-server: $(NCLIBS) $(VNLIBS) $(SERVICE_SO)
+server: $(STATS_OBJS) $(NCLIBS) $(VNLIBS) $(SERVICE_SO)
 
-fake: all $(NC_FAKE_LIBS) $(VLIBS) $(SERVICE_SO_FAKE)
+fake: all $(NC_FAKE_LIBS) $(VLIBS) $(STATS_OBJS) $(SERVICE_SO_FAKE)
 
-$(SERVICE_SO): generated/stubs server-marshal.o handlers.o handlers-state.o server-marshal-state.o $(SCLIBS) $(NCLIBS) $(VNLIBS) $(WSSECLIBS)
-	$(CC) -shared generated/*.o server-marshal.o handlers.o handlers-state.o server-marshal-state.o $(SCLIBS) $(NCLIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO)
+$(SERVICE_SO): generated/stubs server-marshal.o handlers.o handlers-state.o server-marshal-state.o $(SCLIBS) $(NCLIBS) $(VNLIBS) $(WSSECLIBS) $(STATS_OBJS)
+	$(CC) -shared generated/*.o server-marshal.o handlers.o handlers-state.o server-marshal-state.o $(SCLIBS) $(STATS_OBJS) $(STATS_LIBS) $(NCLIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO)
 
-$(SERVICE_SO_FAKE): generated/stubs server-marshal.o handlers.o handlers-state.o server-marshal-state.o $(SCLIBS) $(NC_FAKE_LIBS) $(VNLIBS) $(WSSECLIBS)
-	$(CC) -shared generated/*.o server-marshal.o handlers.o handlers-state.o server-marshal-state.o $(SCLIBS) $(NC_FAKE_LIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO_FAKE)
+$(SERVICE_SO_FAKE): generated/stubs server-marshal.o handlers.o handlers-state.o server-marshal-state.o $(SCLIBS) $(STATS_OBJS) $(NC_FAKE_LIBS) $(VNLIBS) $(WSSECLIBS)
+	$(CC) -shared generated/*.o server-marshal.o handlers.o handlers-state.o server-marshal-state.o $(SCLIBS) $(STATS_OBJS) $(STATS_LIBS) $(NC_FAKE_LIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO_FAKE)
 
 client: $(CLIENT)_full $(CLIENTKILLALL) $(SHUTDOWNCC)
 
-$(SHUTDOWNCC): generated/stubs $(SHUTDOWNCC).c cc-client-marshal-adb.c handlers.o handlers-state.o $(WSSECLIBS)
-	$(CC) -o $(SHUTDOWNCC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(SHUTDOWNCC).c cc-client-marshal-adb.c -DMODE=1 generated/adb_*.o generated/axis2_stub_*.o ../util/log.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/ipc.o ../util/sensor.o $(WSSECLIBS) $(CC_LIBS)
+$(SHUTDOWNCC): generated/stubs $(SHUTDOWNCC).c cc-client-marshal-adb.c handlers.o handlers-state.o $(WSSECLIBS) $(STATS_OBJS)
+	$(CC) -o $(SHUTDOWNCC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(SHUTDOWNCC).c cc-client-marshal-adb.c -DMODE=1 generated/adb_*.o generated/axis2_stub_*.o ../util/log.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/ipc.o $(STATS_OBJS) $(STATS_LIBS) ../util/sensor.o $(WSSECLIBS) $(CC_LIBS)
 
-$(CLIENT)_full: generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o handlers-state.o $(WSSECLIBS)
-	$(CC) -o $(CLIENT)_full $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(CLIENT).c cc-client-marshal-adb.c -DMODE=1 generated/adb_*.o generated/axis2_stub_*.o ../util/log.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/ipc.o ../util/sensor.o $(WSSECLIBS) $(CC_LIBS)
+$(CLIENT)_full: generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o handlers-state.o $(WSSECLIBS) $(STATS_OBJS)
+	$(CC) -o $(CLIENT)_full $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(CLIENT).c cc-client-marshal-adb.c -DMODE=1 generated/adb_*.o generated/axis2_stub_*.o ../util/log.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/ipc.o $(STATS_OBJS) $(STATS_LIBS) ../util/sensor.o $(WSSECLIBS) $(CC_LIBS)
 
-$(CLIENTKILLALL): generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o handlers-state.o $(WSSECLIBS)
-	$(CC) -o $(CLIENTKILLALL) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(CLIENT).c cc-client-marshal-adb.c -DMODE=0 generated/adb_*.o generated/axis2_stub_*.o ../util/log.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/ipc.o ../util/sensor.o $(WSSECLIBS) $(CC_LIBS)
+$(CLIENTKILLALL): generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o handlers-state.o $(WSSECLIBS) $(STATS_OBJS)
+	$(CC) -o $(CLIENTKILLALL) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(CLIENT).c cc-client-marshal-adb.c -DMODE=0 generated/adb_*.o generated/axis2_stub_*.o ../util/log.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/ipc.o $(STATS_OBJS) $(STATS_LIBS) ../util/sensor.o $(WSSECLIBS) $(CC_LIBS)
 
 fakedeploy:
 	$(INSTALL) $(SERVICE_SO_FAKE) $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/$(SERVICE_SO)
@@ -185,9 +190,10 @@ distclean: clean
 
 install: deploy
 	@$(INSTALL) -m 0555 $(SHUTDOWNCC) $(DESTDIR)$(usrdir)/lib/eucalyptus
-	@$(INSTALL) cc-client-policy.xml $(DESTDIR)$(vardir)/lib/eucalyptus/keys/
+	@$(INSTALL) -d $(DESTDIR)$(policiesdir)
+	@$(INSTALL) cc-client-policy.xml $(DESTDIR)$(policiesdir)
 
 uninstall:
 #	@$(RM) -f $(DESTDIR)$(sbindir)/$(SHUTDOWNCC)
-	@$(RM) -f $(DESTDIR)$(vardir)/lib/eucalyptus/keys/cc-client-policy.xml
+	@$(RM) -f $(DESTDIR)$(policiesdir)/cc-client-policy.xml
 	@$(RM) -rf $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)

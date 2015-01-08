@@ -107,7 +107,8 @@ static int debug = 0;
 
 #define __die_jni(condition,format,...) do { \
 	if(condition) {\
-		fprintf(stderr,"[error:%04d] ", __LINE__);\
+		get_timestamp(ts_buff, sizeof(ts_buff)); \
+		fprintf(stderr,"%s ERROR %04d ", ts_buff, __LINE__);\
 		fprintf(stderr, format "\n", ##__VA_ARGS__ ); \
 		if((*env)->ExceptionCheck(env) != 0){ \
 			(*env)->ExceptionDescribe(env); \
@@ -115,11 +116,11 @@ static int debug = 0;
 		}\
 		exit(1);} \
 	} while(0)
-#define __die(condition,format,...) do { if(condition) {fprintf(stderr,"[error:%04d] ", __LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ ); exit(1);} } while(0)
+#define __die(condition,format,...) do { if(condition) {get_timestamp(ts_buff,sizeof(ts_buff));fprintf(stderr,"%s ERROR %04d ", ts_buff, __LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ ); exit(1);} } while(0)
 #define __fail(format,...) __die(1,format,##__VA_ARGS__)
-#define __abort(r,condition,format,...) do { if(condition) {fprintf(stderr,"[error:%04d] ", __LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ ); fflush(stderr); return r;} } while(0)
-#define __debug(format,...) do { if(debug){fprintf(stdout,"[debug:%04d] ", __LINE__);fprintf(stdout, format "\n", ##__VA_ARGS__ );fflush(stdout); } } while(0)
-#define __error(format,...) do { fprintf(stderr,"[error:%04d] ", __LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ );fflush(stderr); } while(0)
+#define __abort(r,condition,format,...) do { if(condition) {get_timestamp(ts_buff,sizeof(ts_buff));fprintf(stderr,"%s ERROR %04d ",ts_buff, __LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ ); fflush(stderr); return r;} } while(0)
+#define __debug(format,...) do { if(debug){get_timestamp(ts_buff,sizeof(ts_buff));fprintf(stdout,"%s DEBUG %04d ",ts_buff,__LINE__);fprintf(stdout, format "\n", ##__VA_ARGS__ );fflush(stdout); } } while(0)
+#define __error(format,...) do { get_timestamp(ts_buff,sizeof(ts_buff));fprintf(stderr,"%s ERROR %04d ",ts_buff,__LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ );fflush(stderr); } while(0)
 #define EUCA_MAIN "com/eucalyptus/bootstrap/SystemBootstrapper"
 #define EUCA_RET_RELOAD 123
 
@@ -226,6 +227,12 @@ static char *libjvm_paths[] = {
 static struct stat home;
 static int stopping = 0;
 static int doreload = 0;
+
+#define TS_BUFF_MAX 24 
+char ts_buff[TS_BUFF_MAX]; // Time stamp string buffer
+
+static int get_timestamp(char *buff, int buff_len); // copies the current timestamp into the buffer
+
 typedef void (*sig_handler_t) (int);
 typedef struct {
     sig_handler_t *_int;

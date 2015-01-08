@@ -277,10 +277,11 @@
 	        <xs:element minOccurs="0" maxOccurs="1" name="bucketName" type="xs:string"/>
 	        <xs:element minOccurs="0" maxOccurs="1" name="filePrefix" type="xs:string"/>
 	        <xs:element minOccurs="0" maxOccurs="1" name="objectStorageURL" type="xs:string"/>
-		<xs:element minOccurs="0" maxOccurs="1" name="userPublicKey" type="xs:string"/>
-		<xs:element minOccurs="0" maxOccurs="1" name="cloudPublicKey" type="xs:string"/>
-		<xs:element minOccurs="0" maxOccurs="1" name="S3Policy" type="xs:string"/>
-		<xs:element minOccurs="0" maxOccurs="1" name="S3PolicySig" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="userPublicKey" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="cloudPublicKey" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="S3Policy" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="S3PolicySig" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="architecture" type="xs:string"/>
 	      </xs:sequence>
 	    </xs:extension>
 	  </xs:complexContent>
@@ -345,9 +346,10 @@
 
     <xs:complexType name="bundleTaskType">
       <xs:sequence>
-	<xs:element minOccurs="0" name="instanceId" type="xs:string"/>
-	<xs:element minOccurs="0" name="state" type="xs:string"/>
-	<xs:element minOccurs="0" name="manifest" type="xs:string"/>
+        <xs:element minOccurs="0" name="instanceId" type="xs:string"/>
+        <xs:element minOccurs="0" name="state" type="xs:string"/>
+        <xs:element minOccurs="0" name="manifest" type="xs:string"/>
+        <xs:element minOccurs="0" name="progress" type="xs:int"/>
       </xs:sequence>
     </xs:complexType>
     
@@ -446,6 +448,7 @@
 	    <xs:element name="numberOfCoresMax" type="xs:int"/>
 	    <xs:element name="numberOfCoresAvailable" type="xs:int"/>
 	    <xs:element name="publicSubnets" type="xs:string"/>
+	    <xs:element name="hypervisor" type="xs:string"/>
 	  </xs:sequence>
 	</xs:extension>
       </xs:complexContent>
@@ -480,6 +483,7 @@
 	    <xs:element minOccurs="0" name="platform" type="xs:string"/>
 	    <xs:element minOccurs="0" name="expiryTime" type="xs:dateTime"/>
 	    <xs:element minOccurs="0" maxOccurs="64" name="groupNames" type="xs:string"/>
+	    <xs:element minOccurs="0" name="rootDirective" type="xs:string"/>
 	  </xs:sequence>
 	</xs:extension>
       </xs:complexContent>
@@ -514,6 +518,7 @@
         <!-- reported by NC -->
 	    <xs:element minOccurs="1" name="stateName" type="xs:string"/>
 	    <xs:element minOccurs="0" name="bundleTaskStateName" type="xs:string" />
+	    <xs:element minOccurs="0" name="bundleTaskProgress" type="xs:double" nullable="true" />
 	    <xs:element minOccurs="0" name="createImageStateName" type="xs:string" />
 	    <xs:element minOccurs="0" name="launchTime" type="xs:dateTime" />
 	    <xs:element minOccurs="0" name="expiryTime" type="xs:dateTime" />

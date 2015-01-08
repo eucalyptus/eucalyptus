@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -58,6 +58,23 @@
  *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
+ *
+ * This file may incorporate work covered under the following copyright
+ * and permission notice:
+ *
+ *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
+ *   Reserved.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License").
+ *   You may not use this file except in compliance with the License.
+ *   A copy of the License is located at
+ *
+ *   http://aws.amazon.com/apache2.0
+ *
+ *   or in the "license" file accompanying this file. This file is
+ *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
+ *   ANY KIND, either express or implied. See the License for the specific
+ *   language governing permissions and limitations under the License.
  ************************************************************************/
 
 package com.eucalyptus.objectstorage.util;
@@ -65,10 +82,14 @@ package com.eucalyptus.objectstorage.util;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.system.BaseDirectory;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
+import java.util.Map;
 import java.util.Set;
 
 public class ObjectStorageProperties {
@@ -82,6 +103,8 @@ public class ObjectStorageProperties {
     public static boolean enableTorrents = false;
     public static final String NAMESPACE_VERSION = "2006-03-01";
     public static int MAX_KEYS = 1000;
+    public static int MIN_PART_NUMBER = 1;
+    public static int MAX_PART_NUMBER = 10000;
 
     public static final String AMZ_META_HEADER_PREFIX = "x-amz-meta-";
 
@@ -130,7 +153,7 @@ public class ObjectStorageProperties {
 
     public static final String X_AMZ_VERSION_ID = "x-amz-version-id";
     public static final String NULL_VERSION_ID = "null";
-
+    public static final String X_AMZ_DELETE_MARKER = "x-amz-delete-marker";
     public static final String X_AMZ_SECURITY_TOKEN = "x-amz-security-token";
 
     public static final String TRACKER_BINARY = "bttrack";
@@ -205,6 +228,32 @@ public class ObjectStorageProperties {
     public enum Permission {
         READ, WRITE, READ_ACP, WRITE_ACP, FULL_CONTROL
     }
+    
+    public enum X_AMZ_GRANT {
+      READ("x-amz-grant-read"),
+      WRITE("x-amz-grant-write"),
+      READ_ACP("x-amz-grant-read-acp"),
+      WRITE_ACP("x-amz-grant-write-acp"),
+      FULL_CONTROL("x-amz-grant-full-control");
+      
+      private final String header;
+      
+      private X_AMZ_GRANT(String header) {
+        this.header = header;
+      }
+      
+      @Override
+      public String toString() {
+        return this.header;
+      }
+    }
+    
+    public static final Map<X_AMZ_GRANT, Permission> HEADER_PERMISSION_MAP = ImmutableMap.<X_AMZ_GRANT, Permission>builder()
+      .put(X_AMZ_GRANT.READ, Permission.READ)
+      .put(X_AMZ_GRANT.WRITE, Permission.WRITE)
+      .put(X_AMZ_GRANT.READ_ACP, Permission.READ_ACP)
+      .put(X_AMZ_GRANT.WRITE_ACP, Permission.WRITE_ACP)
+      .put(X_AMZ_GRANT.FULL_CONTROL, Permission.FULL_CONTROL).build();
 
     public enum VersioningStatus {
         Enabled, Disabled, Suspended
@@ -281,11 +330,62 @@ public class ObjectStorageProperties {
     public enum CopyHeaders {
         CopySourceIfMatch, CopySourceIfNoneMatch, CopySourceIfUnmodifiedSince, CopySourceIfModifiedSince
     }
+    
+    public enum MetadataDirective {
+    	COPY, REPLACE
+    }
 
     public enum SubResource {
         //Per the S3 Dev guide, these must be included in the canonicalized resource:
         acl, lifecycle, location, logging, notification, partNumber, policy, requestPayment, torrent, uploadId, uploads, versionId, versioning, versions, website, cors, tagging
     }
+
+    public enum ResponseHeaderOverrides {
+        response_content_type        { public String toString() { return "response-content-type"; }},
+        response_content_language    { public String toString() { return "response-content-language"; }},
+        response_expires             { public String toString() { return "response-expires"; }},
+        response_cache_control       { public String toString() { return "response-cache-control"; }},
+        response_content_disposition { public String toString() { return "response-content-disposition"; }},
+        response_content_encoding    { public String toString() { return "response-content-encoding"; }};
+
+        public static ResponseHeaderOverrides fromString(String value) {
+            if (value != null && "response-content-type".equals(value)) {
+                return response_content_type;
+            }
+            if (value != null && "response-content-language".equals(value)) {
+                return response_content_language;
+            }
+            if (value != null && "response-expires".equals(value)) {
+                return response_expires;
+            }
+            if (value != null && "response-cache-control".equals(value)) {
+                return response_cache_control;
+            }
+            if (value != null && "response-content-disposition".equals(value)) {
+                return response_content_disposition;
+            }
+            if (value != null && "response-content-encoding".equals(value)) {
+                return response_content_encoding;
+            }
+
+            return null;
+        }
+    }
+
+    public static final Map<String,String> RESPONSE_OVERRIDE_HTTP_HEADER_MAP = ImmutableMap.<String,String> builder()
+            .put( ObjectStorageProperties.ResponseHeaderOverrides.response_content_type.toString(),
+                    HttpHeaders.Names.CONTENT_TYPE)
+            .put( ObjectStorageProperties.ResponseHeaderOverrides.response_content_language.toString(),
+                    HttpHeaders.Names.CONTENT_LANGUAGE)
+            .put( ObjectStorageProperties.ResponseHeaderOverrides.response_expires.toString(),
+                    HttpHeaders.Names.EXPIRES)
+            .put( ObjectStorageProperties.ResponseHeaderOverrides.response_cache_control.toString(),
+                    HttpHeaders.Names.CACHE_CONTROL)
+            .put(ObjectStorageProperties.ResponseHeaderOverrides.response_content_disposition.toString(),
+                    "Content-Disposition")
+            .put(ObjectStorageProperties.ResponseHeaderOverrides.response_content_encoding.toString(),
+                    HttpHeaders.Names.CONTENT_ENCODING)
+            .build();
 
     public enum HTTPVerb {
         GET, PUT, DELETE, POST, HEAD, OPTIONS;
@@ -295,11 +395,11 @@ public class ObjectStorageProperties {
     }
 
     public enum BucketParameter {
-        acl, location, prefix, maxkeys, delimiter, marker, torrent, logging, versioning, versions, versionidmarker, keymarker, cors, lifecycle, policy, notification, tagging, requestPayment, website, uploads;
+        acl, location, prefix, maxkeys, delimiter, marker, torrent, logging, versioning, versions, versionidmarker, keymarker, cors, lifecycle, policy, notification, tagging, requestPayment, website, uploads, maxUploads, uploadIdMarker;
     }
 
     public enum ObjectParameter {
-        acl, torrent, versionId, uploads, partNumber, uploadId;
+        acl, torrent, versionId, uploads, partNumber, uploadId, maxParts, partNumberMarker;
     }
 
     public enum RequiredQueryParams {

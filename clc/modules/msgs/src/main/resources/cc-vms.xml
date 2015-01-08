@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2009-2012 Eucalyptus Systems, Inc.
+  Copyright 2009-2014 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -105,6 +105,7 @@
     <value name="launchIndex" field="launchIndex" usage="optional" />
     <value name="platform" field="platform" usage="optional" />
     <value name="bundleTaskStateName" field="bundleTaskStateName" usage="optional" />
+    <value name="bundleTaskProgress" field="bundleTaskProgress" usage="optional" />
     <value name="createImageStateName" field="createImageStateName" usage="optional" />
     <value name="blkbytes" field="blockBytes" usage="optional" />
     <value name="netbytes" field="networkBytes" usage="optional" />
@@ -123,13 +124,6 @@
       </collection>
     </structure>
   </mapping>
-  <mapping class="edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType" abstract="true">
-    <value name="instanceId" field="instanceId" usage="required" />
-    <value name="shutdownStateCode" field="shutdownStateCode" usage="optional" />
-    <value name="shutdownStateName" field="shutdownStateName" usage="optional" />
-    <value name="previousStateCode" field="previousStateCode" usage="optional" />
-    <value name="previousStateName" field="previousStateName" usage="optional" />
-  </mapping>
   <mapping name="RunInstances" class="com.eucalyptus.cloud.VmRunType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <structure name="instanceType" field="vmTypeInfo" map-as="edu.ucsb.eucalyptus.msgs.VmTypeInfo" />
@@ -143,7 +137,7 @@
     <collection field="networkNames" factory="org.jibx.runtime.Utility.arrayListFactory">
       <value name="netNames" type="java.lang.String" />
     </collection>
-    <value name="macAddresses" constant=""/> <!-- TODO remove -->
+    <value name="macAddresses" field="macAddress"/>
     <value name="networkIndexList" field="networkIndex" usage="optional"/>
     <value name="privateIps" field="privateAddress" usage="optional"/>
     <value name="uuids" field="uuid" />
@@ -154,6 +148,7 @@
     <value name="platform" field="platform" usage="required" />
     <value name="ownerId" field="ownerId" />
     <value name="accountId" field="accountId" />
+    <value name="rootDirective" field="rootDirective" usage="optional" />
   </mapping>
   <mapping name="RunInstancesResponse" class="edu.ucsb.eucalyptus.cloud.VmRunResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
@@ -179,24 +174,24 @@
       </collection>
     </structure>
   </mapping>
-  <mapping name="TerminateInstances" class="edu.ucsb.eucalyptus.msgs.TerminateInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="TerminateInstances" class="edu.ucsb.eucalyptus.msgs.ClusterTerminateInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <collection field="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory">
       <value name="instanceIds" type="java.lang.String" />
     </collection>
   </mapping>
-  <mapping name="TerminateInstancesResponse" class="edu.ucsb.eucalyptus.msgs.TerminateInstancesClusterResponseType"
+  <mapping name="TerminateInstancesResponse" class="edu.ucsb.eucalyptus.msgs.ClusterTerminateInstancesResponseType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="isTerminated" field="terminated" type="boolean" />
   </mapping>
-  <mapping name="RebootInstances" class="edu.ucsb.eucalyptus.msgs.RebootInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="RebootInstances" class="edu.ucsb.eucalyptus.msgs.ClusterRebootInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <collection field="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory">
       <value name="instanceIds" type="java.lang.String" />
     </collection>
   </mapping>
-  <mapping name="RebootInstancesResponse" class="edu.ucsb.eucalyptus.msgs.RebootInstancesResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="RebootInstancesResponse" class="edu.ucsb.eucalyptus.msgs.ClusterRebootInstancesResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
   </mapping>
   <mapping name="DescribeBundleTasks" class="com.eucalyptus.vm.DescribeBundleTasksType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
@@ -220,6 +215,7 @@
     <value name="state" field="state" usage="required" />
   </mapping>
   <mapping name="BundleInstance" class="com.eucalyptus.vm.BundleInstanceType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="instanceId" field="instanceId" usage="required" />
     <value name="bucketName" field="bucket" usage="required" />
     <value name="filePrefix" field="prefix" usage="required" />
@@ -227,6 +223,7 @@
     <value name="userPublicKey" field="awsAccessKeyId" usage="required" />
     <value name="S3Policy" field="uploadPolicy" usage="required" />
     <value name="S3PolicySig" field="uploadPolicySignature" usage="required" />
+    <value name="architecture" field="architecture" usage="required" />
   </mapping>
   <mapping name="BundleInstanceResponse" class="com.eucalyptus.vm.BundleInstanceResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
@@ -238,28 +235,29 @@
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
   </mapping>
   <mapping name="CancelBundleTask" class="com.eucalyptus.vm.CancelBundleTaskType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="instanceId" field="instanceId" usage="required" />
   </mapping>
   <mapping name="CancelBundleTaskResponse" class="com.eucalyptus.vm.CancelBundleTaskResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
   </mapping>
-  <mapping name="StartInstance" class="com.eucalyptus.vm.StartInstanceType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="StartInstance" class="edu.ucsb.eucalyptus.msgs.StartInstanceType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <value name="instanceId" field="instanceId" usage="required" />
   </mapping>
-  <mapping name="StartInstanceResponse" class="com.eucalyptus.vm.StartInstanceResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="StartInstanceResponse" class="edu.ucsb.eucalyptus.msgs.StartInstanceResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
   </mapping>
-  <mapping name="StopInstance" class="com.eucalyptus.vm.StopInstanceType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="StopInstance" class="edu.ucsb.eucalyptus.msgs.StopInstanceType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <value name="instanceId" field="instanceId" usage="required" />
   </mapping>
-  <mapping name="StopInstanceResponse" class="com.eucalyptus.vm.StopInstanceResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="StopInstanceResponse" class="edu.ucsb.eucalyptus.msgs.StopInstanceResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
   </mapping>
-  <mapping name="GetConsoleOutput" class="edu.ucsb.eucalyptus.msgs.GetConsoleOutputType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="GetConsoleOutput" class="edu.ucsb.eucalyptus.msgs.ClusterGetConsoleOutputType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="instanceId" field="instanceId" />
   </mapping>
-  <mapping name="GetConsoleOutputResponse" class="edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType"
+  <mapping name="GetConsoleOutputResponse" class="edu.ucsb.eucalyptus.msgs.ClusterGetConsoleOutputResponseType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="consoleOutput" field="output" usage="optional" />

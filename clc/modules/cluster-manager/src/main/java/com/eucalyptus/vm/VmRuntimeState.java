@@ -66,6 +66,7 @@ import java.net.URI;
 import java.util.Date;
 import java.util.Set;
 import java.util.concurrent.Callable;
+
 import javax.annotation.Nullable;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
@@ -75,13 +76,17 @@ import javax.persistence.Embedded;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Lob;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
 import javax.transaction.Status;
 import javax.transaction.Synchronization;
+
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 import org.hibernate.annotations.Type;
+
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.msgs.GetVolumeTokenResponseType;
@@ -95,6 +100,11 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.DeleteResourceTag;
+import com.eucalyptus.compute.common.ResourceTag;
+import com.eucalyptus.compute.common.ResourceTagMessage;
+import com.eucalyptus.compute.common.backend.StopInstancesType;
+import com.eucalyptus.compute.common.backend.TerminateInstancesType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -108,15 +118,22 @@ import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
+import com.eucalyptus.system.Threads.EucaCallable;
+import com.eucalyptus.system.tracking.MessageContexts;
+import com.google.common.base.CaseFormat;
+import com.google.common.base.Enums;
+import com.google.common.base.Function;
+import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
-import edu.ucsb.eucalyptus.msgs.CreateTagsType;
-import edu.ucsb.eucalyptus.msgs.DeleteResourceTag;
-import edu.ucsb.eucalyptus.msgs.DeleteTagsType;
-import edu.ucsb.eucalyptus.msgs.ResourceTag;
-import edu.ucsb.eucalyptus.msgs.ResourceTagMessage;
+
+import edu.ucsb.eucalyptus.msgs.ClusterAttachVolumeType;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.StartInstanceType;
+import edu.ucsb.eucalyptus.msgs.StopInstanceType;
+import com.eucalyptus.compute.common.backend.CreateTagsType;
+import com.eucalyptus.compute.common.backend.DeleteTagsType;
 
 @Embeddable
 public class VmRuntimeState {
@@ -126,6 +143,60 @@ public class VmRuntimeState {
   private static final String VM_NC_HOST_TAG      = "euca:node";
 
   private static final Logger LOG                 = Logger.getLogger( VmRuntimeState.class );
+
+  public enum InstanceStatus implements Predicate<VmInstance> {
+    Ok,
+    Impaired,
+    InsufficientData,
+    NotApplicable,
+    ;
+
+    public String toString( ) {
+      return CaseFormat.UPPER_CAMEL.to( CaseFormat.LOWER_HYPHEN, name( ) );
+    }
+
+    public static Function<String,InstanceStatus> fromString( ) {
+      return new Function<String,InstanceStatus>( ){
+        @Nullable
+        @Override
+        public InstanceStatus apply( final String value ) {
+          return Enums.getIfPresent(
+              InstanceStatus.class,
+              CaseFormat.LOWER_HYPHEN.to( CaseFormat.UPPER_CAMEL, value )
+          ).orNull( );
+        }
+      };
+    }
+
+    @Override
+    public boolean apply( @Nullable final VmInstance instance ) {
+      return instance != null && instance.getRuntimeState( ).getInstanceStatus( ) == this;
+    }
+  }
+
+  public enum ReachabilityStatus {
+    Passed,
+    Failed,
+    Insufficient_Data,
+    ;
+
+    public String toString( ) {
+      return CaseFormat.UPPER_CAMEL.to( CaseFormat.LOWER_HYPHEN, name( ) );
+    }
+
+    public static Function<String,ReachabilityStatus> fromString( ) {
+      return new Function<String,ReachabilityStatus>( ){
+        @Nullable
+        @Override
+        public ReachabilityStatus apply( final String value ) {
+          return Enums.getIfPresent(
+              ReachabilityStatus.class,
+              CaseFormat.LOWER_HYPHEN.to( CaseFormat.UPPER_CAMEL, value )
+          ).orNull( );
+        }
+      };
+    }
+  }
 
   @Parent
   private VmInstance          vmInstance;
@@ -148,15 +219,31 @@ public class VmRuntimeState {
   private String              passwordData;
   @Column( name = "metadata_vm_pending" )
   private Boolean             pending;
+  @Column( name = "metadata_vm_zombie" )
+  private Boolean             zombie;
   @Column( name = "metadata_vm_guest_state" )
   private String              guestState;
   
   @Embedded
   private VmMigrationTask     migrationTask;
-  
+
+  @Enumerated( EnumType.STRING )
+  @Column( name = "metadata_instance_status" )
+  private InstanceStatus instanceStatus;
+
+  @Enumerated( EnumType.STRING )
+  @Column( name = "metadata_reachability_status" )
+  private ReachabilityStatus reachabilityStatus;
+
+  @Temporal(TemporalType.TIMESTAMP)
+  @Column(name = "metadata_instance_unreachable_timestamp")
+  private Date unreachableTimestamp;
+
   VmRuntimeState( final VmInstance vmInstance ) {
     super( );
     this.vmInstance = vmInstance;
+    this.instanceStatus = InstanceStatus.Ok;
+    this.reachabilityStatus = ReachabilityStatus.Passed;
   }
   
   VmRuntimeState( ) {
@@ -204,7 +291,58 @@ public class VmRuntimeState {
       } );
     }
   }
-  
+
+  public void reachable( ) {
+    // zombie instances cannot be reachable
+    if ( !Objects.firstNonNull( getZombie( ), Boolean.FALSE ) ) {
+      setUnreachableTimestamp( null );
+      setInstanceStatus( VmRuntimeState.InstanceStatus.Ok );
+      setReachabilityStatus( VmRuntimeState.ReachabilityStatus.Passed );
+    }
+  }
+
+  public void zombie( ) {
+    setZombie( true );
+    setUnreachableTimestamp( new Date( ) );
+    setInstanceStatus( InstanceStatus.Impaired );
+    setReachabilityStatus( ReachabilityStatus.Failed );
+  }
+
+  public Boolean getZombie( ) {
+    return zombie;
+  }
+
+  public void setZombie( final Boolean zombie ) {
+    this.zombie = zombie;
+  }
+
+  @Nullable
+  public InstanceStatus getInstanceStatus( ) {
+    return instanceStatus;
+  }
+
+  public void setInstanceStatus( final InstanceStatus instanceStatus ) {
+    this.instanceStatus = instanceStatus;
+  }
+
+  @Nullable
+  public ReachabilityStatus getReachabilityStatus( ) {
+    return reachabilityStatus;
+  }
+
+  public void setReachabilityStatus( final ReachabilityStatus reachabilityStatus ) {
+    this.reachabilityStatus = reachabilityStatus;
+  }
+
+  @Nullable
+  public Date getUnreachableTimestamp() {
+    return unreachableTimestamp;
+  }
+
+  public void setUnreachableTimestamp( final Date unreachableTimestamp ) {
+    this.unreachableTimestamp = unreachableTimestamp;
+  }
+
   private Callable<Boolean> handleStateTransition( final VmState newState, final VmState oldState, final VmState olderState ) {
     Callable<Boolean> action = null;
     LOG.info( String.format( "%s state change: %s -> %s (previously %s)", this.getVmInstance( ).getInstanceId( ), oldState, newState, olderState ) );
@@ -276,7 +414,7 @@ public class VmRuntimeState {
                   GetVolumeTokenResponseType scReply = scGetTokenReplyFuture.get();
                   String token = StorageProperties.formatVolumeAttachmentTokenForTransfer(scReply.getToken(), volumeId);
                   LOG.debug( vmId + ": " + volumeId + " => " + scGetTokenReplyFuture.get( ) );
-                  AsyncRequests.dispatch( ccConfig, new AttachVolumeType( volumeId, vmId, vmDevice, token));
+                  AsyncRequests.dispatch( ccConfig, new ClusterAttachVolumeType( volumeId, vmId, vmDevice, token));
 //                  final EntityTransaction db = Entities.get( VmInstance.class );
 //                  try {
 //                    final VmInstance entity = Entities.merge( vm );
@@ -339,7 +477,8 @@ public class VmRuntimeState {
                                              final Predicate<VmInstance> cleaner ) {
     Logs.extreme( ).info( "Preparing to clean-up instance: " + this.getVmInstance( ).getInstanceId( ),
       Exceptions.filterStackTrace( new RuntimeException( ) ) );
-    return new Callable<Boolean>( ) {
+    final String instanceId = this.getVmInstance( ).getInstanceId( );
+    return new EucaCallable<Boolean>( ) {
       @Override
       public Boolean call( ) {
         cleaner.apply( VmRuntimeState.this.getVmInstance( ) );
@@ -347,6 +486,16 @@ public class VmRuntimeState {
           VmRuntimeState.this.addReasonDetail( reason );
         }
         return Boolean.TRUE;
+      }
+
+      @Override
+      public String getCorrelationId() {
+        final BaseMessage req = MessageContexts.lookupLast(instanceId , 
+            Sets.<Class>newHashSet(
+                TerminateInstancesType.class,
+                StopInstancesType.class
+                ));
+        return req == null ? null : req.getCorrelationId();
       }
     };
   }
@@ -593,6 +742,9 @@ public class VmRuntimeState {
     if ( Entities.isReadable( this.reasonDetails ) ) builder.append( "reasonDetails=" ).append( this.reasonDetails ).append( ":" );
     if ( this.passwordData != null ) builder.append( "passwordData=" ).append( this.passwordData ).append( ":" );
     if ( this.pending != null ) builder.append( "pending=" ).append( this.pending );
+    if ( this.zombie != null ) builder.append( "zombie=" ).append( this.zombie );
+    if ( this.instanceStatus != null ) builder.append( "instanceStatus=" ).append( this.instanceStatus );
+    if ( this.reachabilityStatus != null ) builder.append( "reachabilityStatus=" ).append( this.reachabilityStatus );
     return builder.toString( );
   }
   
@@ -627,7 +779,7 @@ public class VmRuntimeState {
   
   public void updateBundleTaskState( String state ) {
     BundleState next = BundleState.mapper.apply( state );
-    updateBundleTaskState( next );
+    updateBundleTaskState( next, 0.0d );
   }
   
   public void bundleRestartInstance( VmBundleTask bundleTask ) {
@@ -680,39 +832,49 @@ public class VmRuntimeState {
 	  }
   }
   
-  public void updateBundleTaskState( BundleState state ) {
+  public void updateBundleTaskState( BundleState state, Double progress ) {
     if ( this.getBundleTask( ) != null ) {
       final BundleState current = this.getBundleTask( ).getState( );
+      VmBundleTask currentTask = this.getBundleTask();
+      currentTask.setProgress((int) Math.round(progress * 100D));
       if ( BundleState.complete.equals( state ) && !BundleState.complete.equals( current ) && !BundleState.none.equals( current ) ) {
-        this.getBundleTask( ).setState( state );
-        bundleRestartInstance( this.getBundleTask( ) );
+        currentTask.setState( state );
+        // set progress to 100% if complete is reached
+        currentTask.setProgress( 100 );
+        bundleRestartInstance( currentTask );
       } else if ( BundleState.failed.equals( state ) && !BundleState.failed.equals( current ) && !BundleState.none.equals( current ) ) {
         try{
-          Bundles.deleteBucket(Accounts.lookupUserById(this.getVmInstance().getOwnerUserId()), 
-              this.getBundleTask().getBucket(), true);
+          Bundles.deleteBucketContent(
+              Accounts.lookupAccountById( this.getVmInstance( ).getOwnerAccountNumber( ) ).lookupAdmin( ),
+              currentTask.getBucket( ),
+              currentTask.getPrefix( ),
+              true );
         }catch(final Exception ex){
           LOG.error("After bundle failure, failed to delete the bucket", ex);
         }
-        this.getBundleTask( ).setState( state );
-        bundleRestartInstance( this.getBundleTask( ) );
+        currentTask.setState( state );
+        bundleRestartInstance( currentTask );
       } else if ( BundleState.cancelled.equals( state ) && !BundleState.cancelled.equals( current ) && !BundleState.none.equals( current ) ) {
         try{
-          Bundles.deleteBucket(Accounts.lookupUserById(this.getVmInstance().getOwnerUserId()), 
-              this.getBundleTask().getBucket(), true);
+          Bundles.deleteBucketContent(
+              Accounts.lookupAccountById( this.getVmInstance( ).getOwnerAccountNumber( ) ).lookupAdmin( ),
+              this.getBundleTask( ).getBucket( ),
+              this.getBundleTask( ).getPrefix( ),
+              true );
         }catch(final Exception ex){
           LOG.error("After bundle cancellation, failed to delete the bucket", ex);
         }
-        this.getBundleTask( ).setState( state );
-        bundleRestartInstance( this.getBundleTask( ) );
+        currentTask.setState( state );
+        bundleRestartInstance( currentTask );
       } else if ( BundleState.canceling.equals( state ) || BundleState.canceling.equals( current ) ) {
         //
       } else if ( BundleState.pending.equals( current ) && !BundleState.none.equals( state ) ) {
-        this.getBundleTask( ).setState( state );
-        this.getBundleTask( ).setUpdateTime( new Date( ) );
+        currentTask.setState( state );
+        currentTask.setUpdateTime( new Date( ) );
         EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_TRANSITION, this.vmInstance.getOwner( ).toString( ), "" + this.getBundleTask( ) ).info( );
       } else if ( BundleState.storing.equals( state ) ) {
-        this.getBundleTask( ).setState( state );
-        this.getBundleTask( ).setUpdateTime( new Date( ) );
+        currentTask.setState( state );
+        currentTask.setUpdateTime( new Date( ) );
         EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_TRANSITION, this.vmInstance.getOwner( ).toString( ), "" + this.getBundleTask( ) ).info( );
       }
     } else {

@@ -62,6 +62,13 @@
 
 package com.eucalyptus.blockstorage.entities;
 
+import static com.eucalyptus.upgrade.Upgrades.Version.v4_1_0;
+import groovy.sql.GroovyRowResult;
+import groovy.sql.Sql;
+
+import java.util.List;
+import java.util.concurrent.Callable;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
@@ -74,6 +81,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
+import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -83,8 +91,9 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.upgrade.Upgrades.DatabaseFilters;
+import com.eucalyptus.upgrade.Upgrades.PreUpgrade;
 
 @Entity
 @PersistenceContext(name = "eucalyptus_storage")
@@ -96,8 +105,10 @@ public class StorageInfo extends AbstractPersistent {
 	private static final Integer DEFAULT_MAX_SNAP_TRANSFER_RETRIES = 50;
 	private static final Integer DEFAULT_SNAPSHOT_PART_SIZE_IN_MB = 100;
 	private static final Integer DEFAULT_MAX_SNAPSHOT_PARTS_QUEUE_SIZE = 5;
-	private static final Integer DEFAULT_MAX_SNAPSHOT_CONCURRENT_UPLOADS = 3;
-	private static final Integer DEFAULT_SNAPSHOT_UPLOAD_TIMEOUT = 48;
+	private static final Integer DEFAULT_MAX_SNAPSHOT_CONCURRENT_TRANSFERS = 3;
+	private static final Integer DEFAULT_SNAPSHOT_TRANSFER_TIMEOUT = 48;
+	private static final Integer DEFAULT_READ_BUFFER_SIZE_IN_MB = 1;
+	private static final Integer DEFAULT_WRITE_BUFFER_SIZE_IN_MB = 100;
 
 	@Transient
 	private static Logger LOG = Logger.getLogger(StorageInfo.class);
@@ -135,12 +146,20 @@ public class StorageInfo extends AbstractPersistent {
 	private Integer maxSnapshotPartsQueueSize;
 
 	@ConfigurableField(description = "Maximum number of snapshots that can be uploaded concurrently", displayName = "Maximum Concurrent Snapshot Uploads", initial = "3", changeListener = PositiveIntegerChangeListener.class)
-	@Column(name = "max_concurrent_snapshot_Uploads")
-	private Integer maxConcurrentSnapshotUploads;
+	@Column(name = "max_concurrent_snapshot_transfers")
+	private Integer maxConcurrentSnapshotTransfers;
 
 	@ConfigurableField(description = "Snapshot upload wait time in hours after which the upload will be cancelled", displayName = "Snapshot Upload Timeout", initial = "48", changeListener = PositiveIntegerChangeListener.class)
-	@Column(name = "snapshot_upload_timeout_hours")
-	private Integer snapshotUploadTimeoutInHours;
+	@Column(name = "snapshot_transfer_timeout_hours")
+	private Integer snapshotTransferTimeoutInHours;
+
+	@ConfigurableField(description = "Buffer size in MB for reading data from snapshot when uploading snapshot to objectstorage gateway", displayName = "Read Buffer Size", initial = "1", changeListener = PositiveIntegerChangeListener.class)
+	@Column(name = "read_buffer_size_mb")
+	private Integer readBuffferSizeInMB;
+
+	@ConfigurableField(description = "Buffer size in MB for writing data to snapshot when downloading snapshot from objectstorage gateway", displayName = "Write Buffer Size", initial = "100", changeListener = PositiveIntegerChangeListener.class)
+	@Column(name = "write_buffer_size_mb")
+	private Integer writeBufferSizeInMB;
 
 	public StorageInfo() {
 		this.name = StorageProperties.NAME;
@@ -222,20 +241,36 @@ public class StorageInfo extends AbstractPersistent {
 		this.maxSnapshotPartsQueueSize = maxSnapshotPartsQueueSize;
 	}
 
-	public Integer getMaxConcurrentSnapshotUploads() {
-		return maxConcurrentSnapshotUploads;
+	public Integer getMaxConcurrentSnapshotTransfers() {
+		return maxConcurrentSnapshotTransfers;
 	}
 
-	public void setMaxConcurrentSnapshotUploads(Integer maxConcurrentSnapshotUploads) {
-		this.maxConcurrentSnapshotUploads = maxConcurrentSnapshotUploads;
+	public void setMaxConcurrentSnapshotTransfers(Integer maxConcurrentSnapshotTransfers) {
+		this.maxConcurrentSnapshotTransfers = maxConcurrentSnapshotTransfers;
 	}
 
-	public Integer getSnapshotUploadTimeoutInHours() {
-		return snapshotUploadTimeoutInHours;
+	public Integer getSnapshotTransferTimeoutInHours() {
+		return snapshotTransferTimeoutInHours;
 	}
 
-	public void setSnapshotUploadTimeoutInHours(Integer snapshotUploadTimeoutInHours) {
-		this.snapshotUploadTimeoutInHours = snapshotUploadTimeoutInHours;
+	public void setSnapshotTransferTimeoutInHours(Integer snapshotTransferTimeoutInHours) {
+		this.snapshotTransferTimeoutInHours = snapshotTransferTimeoutInHours;
+	}
+
+	public Integer getReadBuffferSizeInMB() {
+		return readBuffferSizeInMB;
+	}
+
+	public void setReadBuffferSizeInMB(Integer readBuffferSizeInMB) {
+		this.readBuffferSizeInMB = readBuffferSizeInMB;
+	}
+
+	public Integer getWriteBufferSizeInMB() {
+		return writeBufferSizeInMB;
+	}
+
+	public void setWriteBufferSizeInMB(Integer writeBufferSizeInMB) {
+		this.writeBufferSizeInMB = writeBufferSizeInMB;
 	}
 
 	@Override
@@ -292,13 +327,18 @@ public class StorageInfo extends AbstractPersistent {
 		if (maxSnapshotPartsQueueSize == null) {
 			maxSnapshotPartsQueueSize = DEFAULT_MAX_SNAPSHOT_PARTS_QUEUE_SIZE;
 		}
-		if (maxConcurrentSnapshotUploads == null) {
-			maxConcurrentSnapshotUploads = DEFAULT_MAX_SNAPSHOT_CONCURRENT_UPLOADS;
+		if (maxConcurrentSnapshotTransfers == null) {
+			maxConcurrentSnapshotTransfers = DEFAULT_MAX_SNAPSHOT_CONCURRENT_TRANSFERS;
 		}
-		if (snapshotUploadTimeoutInHours == null) {
-			snapshotUploadTimeoutInHours = DEFAULT_SNAPSHOT_UPLOAD_TIMEOUT;
+		if (snapshotTransferTimeoutInHours == null) {
+			snapshotTransferTimeoutInHours = DEFAULT_SNAPSHOT_TRANSFER_TIMEOUT;
 		}
-
+		if (readBuffferSizeInMB == null) {
+			readBuffferSizeInMB = DEFAULT_READ_BUFFER_SIZE_IN_MB;
+		}
+		if (writeBufferSizeInMB == null) {
+			writeBufferSizeInMB = DEFAULT_WRITE_BUFFER_SIZE_IN_MB;
+		}
 	}
 
 	private static StorageInfo getDefaultInstance() {
@@ -310,27 +350,35 @@ public class StorageInfo extends AbstractPersistent {
 		info.setMaxSnapTransferRetries(DEFAULT_MAX_SNAP_TRANSFER_RETRIES);
 		info.setSnapshotPartSizeInMB(DEFAULT_SNAPSHOT_PART_SIZE_IN_MB);
 		info.setMaxSnapshotPartsQueueSize(DEFAULT_MAX_SNAPSHOT_PARTS_QUEUE_SIZE);
-		info.setMaxConcurrentSnapshotUploads(DEFAULT_MAX_SNAPSHOT_CONCURRENT_UPLOADS);
-		info.setSnapshotUploadTimeoutInHours(DEFAULT_SNAPSHOT_UPLOAD_TIMEOUT);
+		info.setMaxConcurrentSnapshotTransfers(DEFAULT_MAX_SNAPSHOT_CONCURRENT_TRANSFERS);
+		info.setSnapshotTransferTimeoutInHours(DEFAULT_SNAPSHOT_TRANSFER_TIMEOUT);
+		info.setReadBuffferSizeInMB(DEFAULT_READ_BUFFER_SIZE_IN_MB);
+		info.setWriteBufferSizeInMB(DEFAULT_WRITE_BUFFER_SIZE_IN_MB);
 		return info;
 	}
 
 	public static StorageInfo getStorageInfo() {
-		EntityWrapper<StorageInfo> storageDb = EntityWrapper.get(StorageInfo.class);
 		StorageInfo conf = null;
+
 		try {
-			conf = storageDb.getUnique(new StorageInfo(StorageProperties.NAME));
-			storageDb.commit();
-		} catch (EucalyptusCloudException e) {
-			LOG.warn("Failed to get storage info for: " + StorageProperties.NAME + ". Loading defaults.");
-			conf = getDefaultInstance();
-			storageDb.add(conf);
-			storageDb.commit();
-		} catch (Exception t) {
-			LOG.error("Unable to get storage info for: " + StorageProperties.NAME);
-			storageDb.rollback();
-			return getDefaultInstance();
+			conf = Transactions.find(new StorageInfo());
+		} catch (Exception e) {
+			LOG.warn("Storage controller properties for " + StorageProperties.NAME + " not found. Loading defaults.");
+			try {
+				conf = Transactions.saveDirect(getDefaultInstance());
+			} catch (Exception e1) {
+				try {
+					conf = Transactions.find(new StorageInfo());
+				} catch (Exception e2) {
+					LOG.warn("Failed to persist and retrieve StorageInfo entity");
+				}
+			}
 		}
+
+		if (conf == null) {
+			conf = getDefaultInstance();
+		}
+
 		return conf;
 	}
 
@@ -366,4 +414,65 @@ public class StorageInfo extends AbstractPersistent {
 			}
 		}
 	}
+
+    @PreUpgrade(since = v4_1_0, value = Storage.class)
+    public static class RenameColumns implements Callable<Boolean> {
+  
+      private static final Logger LOG = Logger.getLogger(RenameColumns.class);
+  
+      @Override
+      public Boolean call() throws Exception {
+  
+        LOG.info("Renaming columns in table storage_info");
+        Sql sql = null;
+  
+        try {
+  
+          sql = DatabaseFilters.NEWVERSION.getConnection("eucalyptus_storage");
+  
+          String table = "storage_info";
+  
+          // check if the old column exists before renaming it
+          String oldName = "max_concurrent_snapshot_uploads";
+          String newName = "max_concurrent_snapshot_transfers";
+          List<GroovyRowResult> result =
+              sql.rows(String.format("select column_name from information_schema.columns where table_name='%s' and column_name='%s'", table, oldName));
+          if (result != null && !result.isEmpty()) {
+            // drop new column if it exists
+            LOG.info("Dropping column if it exists " + newName);
+            sql.execute(String.format("alter table %s drop column if exists %s", table, newName));
+            // rename the new column
+            LOG.info("Renaming column " + oldName + " to " + newName);
+            sql.execute(String.format("alter table %s rename column %s to %s", table, oldName, newName));
+          } else {
+            LOG.debug("Column " + oldName + " not found, nothing to rename");
+          }
+  
+          // check if the old column exists before renaming it
+          oldName = "snapshot_upload_timeout_hours";
+          newName = "snapshot_transfer_timeout_hours";
+          result =
+              sql.rows(String.format("select column_name from information_schema.columns where table_name='%s' and column_name='%s'", table, oldName));
+          if (result != null && !result.isEmpty()) {
+            // drop new column if it exists
+            LOG.info("Dropping column if it exists " + newName);
+            sql.execute(String.format("alter table %s drop column if exists %s", table, newName));
+            // rename the new column
+            LOG.info("Renaming column " + oldName + " to " + newName);
+            sql.execute(String.format("alter table %s rename column %s to %s", table, oldName, newName));
+          } else {
+            LOG.debug("Column " + oldName + " not found, nothing to rename");
+          }
+  
+          return Boolean.TRUE;
+        } catch (Exception e) {
+          LOG.warn("Failed to rename columns in table storage_info", e);
+          return Boolean.TRUE;
+        } finally {
+          if (sql != null) {
+            sql.close();
+          }
+        }
+      }
+    }
 }

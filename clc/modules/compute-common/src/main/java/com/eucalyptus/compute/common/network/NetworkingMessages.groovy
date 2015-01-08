@@ -63,12 +63,23 @@ abstract class NetworkResource extends EucalyptusData {
   @Override String getType( ){ "public-ip" }
 }
 
+@Canonical class VpcNetworkInterfaceResource extends NetworkResource {
+  @Override String getType( ){ "network-interface" }
+  String mac
+  String privateIp
+  String description
+  Boolean deleteOnTerminate
+  ArrayList<String> networkGroupIds
+}
+
 abstract class NetworkFeature extends EucalyptusData {}
 
 class DnsHostNamesFeature extends NetworkFeature { }
 
 class PrepareNetworkResourcesType extends NetworkingMessage {
   String availabilityZone
+  String vpc
+  String subnet
   ArrayList<NetworkResource> resources = Lists.newArrayList( )
   ArrayList<NetworkFeature> features = Lists.newArrayList( )
 }
@@ -82,6 +93,7 @@ class PrepareNetworkResourcesResponseType extends NetworkingMessage {
 }
 
 class ReleaseNetworkResourcesType extends NetworkingMessage {
+  String vpc
   ArrayList<NetworkResource> resources = Lists.newArrayList( )
 }
 

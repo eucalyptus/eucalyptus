@@ -77,8 +77,6 @@ import org.hibernate.annotations.Type;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 
-import edu.ucsb.eucalyptus.msgs.AttachedVolume;
-
 @Embeddable
 public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
   public enum AttachmentState {
@@ -174,6 +172,8 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
   private String	remoteDevice;
   @Column( name = "metadata_vm_volume_status" )
   private String	status;
+  @Column( name = "metadata_vm_volume_at_startup", columnDefinition = "boolean default false" )
+  private Boolean	attachedAtStartup;
   @Column( name = "metadata_vm_volume_attach_time" )
   private Date		attachTime;
   @Column( name = "metadata_vm_vol_delete_on_terminate" )
@@ -191,16 +191,12 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
   }
   
   VmVolumeAttachment( VmInstance vmInstance, String volumeId, String device, String remoteDevice, String status, Date attachTime,
-                              Boolean deleteOnTerminate ) {
-    this( vmInstance, volumeId, device, remoteDevice, status, attachTime, deleteOnTerminate, Boolean.FALSE );
+                              Boolean deleteOnTerminate, Boolean attachedAtStartup ) {
+    this( vmInstance, volumeId, device, remoteDevice, status, attachTime, deleteOnTerminate, Boolean.FALSE, attachedAtStartup );
   }
-  
-  public VmVolumeAttachment( VmInstance vmInstance, String volumeId, String device, String remoteDevice, String status, Date attachTime ) {
-    this( vmInstance, volumeId, device, remoteDevice, status, attachTime, Boolean.TRUE );
-  }
-  
+
   public VmVolumeAttachment(VmInstance vmInstance, String volumeId, String device, String remoteDevice, String status, Date attachTime,
-			Boolean deleteOnTerminate, Boolean rootDevice) {
+			Boolean deleteOnTerminate, Boolean rootDevice, Boolean attachedAtStartup) {
     super();
 	this.vmInstance = vmInstance;
 	this.volumeId = volumeId;
@@ -210,37 +206,29 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
 	this.attachTime = attachTime;
 	this.deleteOnTerminate = deleteOnTerminate;
 	this.isRootDevice = rootDevice;
+	this.attachedAtStartup = attachedAtStartup;
   }
   
-  public static Function<AttachedVolume, VmVolumeAttachment> fromAttachedVolume( final VmInstance vm ) {
-    return new Function<AttachedVolume, VmVolumeAttachment>( ) {
+  public static Function<edu.ucsb.eucalyptus.msgs.AttachedVolume, VmVolumeAttachment> fromAttachedVolume( final VmInstance vm ) {
+    return new Function<edu.ucsb.eucalyptus.msgs.AttachedVolume, VmVolumeAttachment>( ) {
       @Override
-      public VmVolumeAttachment apply( AttachedVolume vol ) {
-        return new VmVolumeAttachment( vm, vol.getVolumeId( ), vol.getDevice( ), vol.getRemoteDevice( ), vol.getStatus( ), vol.getAttachTime( ), false );
+      public VmVolumeAttachment apply( edu.ucsb.eucalyptus.msgs.AttachedVolume vol ) {
+        return new VmVolumeAttachment( vm, vol.getVolumeId( ), vol.getDevice( ), vol.getRemoteDevice( ), vol.getStatus( ), vol.getAttachTime( ), false, Boolean.FALSE );
       }
     };
   }
   
-  public static Function<AttachedVolume, VmVolumeAttachment> fromTransientAttachedVolume( final VmInstance vm ) {
-    return new Function<AttachedVolume, VmVolumeAttachment>( ) {
+  public static Function<VmVolumeAttachment, com.eucalyptus.compute.common.AttachedVolume> asAttachedVolume( final VmInstance vm ) {
+    return new Function<VmVolumeAttachment, com.eucalyptus.compute.common.AttachedVolume>( ) {
       @Override
-      public VmVolumeAttachment apply( AttachedVolume vol ) {
-        return new VmVolumeAttachment( vm, vol.getVolumeId( ), vol.getDevice( ), vol.getRemoteDevice( ), vol.getStatus( ), vol.getAttachTime( ), false );
-      }
-    };
-  }
-  
-  public static Function<VmVolumeAttachment, AttachedVolume> asAttachedVolume( final VmInstance vm ) {
-    return new Function<VmVolumeAttachment, AttachedVolume>( ) {
-      @Override
-      public AttachedVolume apply( VmVolumeAttachment vol ) {
-        AttachedVolume attachment = null;
+      public com.eucalyptus.compute.common.AttachedVolume apply( VmVolumeAttachment vol ) {
+        com.eucalyptus.compute.common.AttachedVolume attachment = null;
         if ( vm == null && vol.getVmInstance( ) == null ) {
           throw new NoSuchElementException( "Failed to transform volume attachment because it no longer exists: " + vol );
         } else if ( vm == null ) {
-          attachment = new AttachedVolume( vol.getVolumeId( ), vol.getVmInstance( ).getInstanceId( ), vol.getDevice( ), vol.getRemoteDevice( ) );
+          attachment = new com.eucalyptus.compute.common.AttachedVolume( vol.getVolumeId( ), vol.getVmInstance( ).getInstanceId( ), vol.getDevice( ) );
         } else {
-          attachment = new AttachedVolume( vol.getVolumeId( ), vm.getInstanceId( ), vol.getDevice( ), vol.getRemoteDevice( ) );
+          attachment = new com.eucalyptus.compute.common.AttachedVolume( vol.getVolumeId( ), vm.getInstanceId( ), vol.getDevice( ) );
         }
         attachment.setAttachTime( vol.getAttachTime( ) );
         attachment.setStatus( vol.getStatus( ) );
@@ -275,7 +263,11 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
   void setDevice( String device ) {
     this.device = device;
   }
-  
+
+  public String getShortDeviceName() {
+	return device.startsWith("/dev/") ? device.substring(5) : device;
+  }
+
   public String getRemoteDevice( ) {
     return this.remoteDevice;
   }
@@ -331,6 +323,14 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
 	
   public void setIsRootDevice(Boolean isRootDevice) {
 	this.isRootDevice = isRootDevice;
+  }
+
+  public Boolean getAttachedAtStartup() {
+	return attachedAtStartup;
+  }
+
+  public void setAttachedAtStartup(Boolean attachedAtStartup) {
+	this.attachedAtStartup = attachedAtStartup;
   }
 
 @Override

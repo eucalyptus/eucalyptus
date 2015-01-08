@@ -111,8 +111,6 @@ class QueryBindingTestSupport {
         assertTrue( "Only simple types or extensions of EucalyptusData / EucalyptusMessage are supported: " + target.getName() + "." + field.getName(), 
             EucalyptusData.class.isAssignableFrom( classToAssert) ||
             EucalyptusMessage.class.isAssignableFrom( classToAssert ))
-        assertTrue( "Field must be annotated as HttpEmbedded: " + target.getName() + "." + field.getName(),
-            Ats.from( field ).has( HttpEmbedded.class ) || Ats.from( field ).has( HttpEmbeddeds.class ) )
         assertAnnotationsRecursively( classToAssert )
       } else {
         assertFalse( "Field does not need HttpEmbedded annotation" + target.getName() + "." + field.getName(),

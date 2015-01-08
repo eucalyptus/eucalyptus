@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -72,8 +72,30 @@ import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.compute.ComputeException;
+import com.eucalyptus.compute.common.AttachedVolume;
+import com.eucalyptus.compute.common.ResourceTag;
+import com.eucalyptus.compute.common.backend.AttachVolumeResponseType;
+import com.eucalyptus.compute.common.backend.AttachVolumeType;
+import com.eucalyptus.compute.common.backend.CreateVolumeResponseType;
+import com.eucalyptus.compute.common.backend.CreateVolumeType;
+import com.eucalyptus.compute.common.backend.DeleteVolumeResponseType;
+import com.eucalyptus.compute.common.backend.DeleteVolumeType;
+import com.eucalyptus.compute.common.backend.DescribeVolumeAttributeResponseType;
+import com.eucalyptus.compute.common.backend.DescribeVolumeAttributeType;
+import com.eucalyptus.compute.common.backend.DescribeVolumeStatusResponseType;
+import com.eucalyptus.compute.common.backend.DescribeVolumeStatusType;
+import com.eucalyptus.compute.common.backend.DescribeVolumesResponseType;
+import com.eucalyptus.compute.common.backend.DescribeVolumesType;
+import com.eucalyptus.compute.common.backend.DetachVolumeResponseType;
+import com.eucalyptus.compute.common.backend.DetachVolumeType;
+import com.eucalyptus.compute.common.backend.EnableVolumeIOResponseType;
+import com.eucalyptus.compute.common.backend.EnableVolumeIOType;
+import com.eucalyptus.compute.common.backend.ModifyVolumeAttributeResponseType;
+import com.eucalyptus.compute.common.backend.ModifyVolumeAttributeType;
 import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.compute.ClientComputeException;
+import com.google.common.base.Predicates;
+
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.AuthException;
@@ -116,6 +138,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.vm.MigrationState;
+import com.eucalyptus.vm.VmEphemeralAttachment;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
@@ -130,24 +153,14 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 
 import edu.ucsb.eucalyptus.cloud.VolumeSizeExceededException;
-import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
-import edu.ucsb.eucalyptus.msgs.AttachedVolume;
-import edu.ucsb.eucalyptus.msgs.CreateVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.CreateVolumeType;
-import edu.ucsb.eucalyptus.msgs.DeleteVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.DeleteVolumeType;
-import edu.ucsb.eucalyptus.msgs.DescribeVolumesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeVolumesType;
-import edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.DetachVolumeType;
-import edu.ucsb.eucalyptus.msgs.ResourceTag;
+import edu.ucsb.eucalyptus.msgs.ClusterAttachVolumeType;
+import edu.ucsb.eucalyptus.msgs.ClusterDetachVolumeType;
 
 public class VolumeManager {
   private static final int VOL_CREATE_RETRIES = 10;
   
   private static Logger    LOG                = Logger.getLogger( VolumeManager.class );
-  
+
   public CreateVolumeResponseType CreateVolume( final CreateVolumeType request ) throws EucalyptusCloudException, AuthException {
     Context ctx = Contexts.lookup( );
     Long volSize = request.getSize( ) != null
@@ -165,7 +178,7 @@ public class VolumeManager {
       try {
         Snapshot snap = Transactions.find( Snapshot.named( null, normalizeOptionalSnapshotIdentifier( snapId ) ) );
         snapSize = snap.getVolumeSize( );
-        if ( !RestrictedTypes.filterPrivileged( ).apply( snap ) ) {
+        if ( !Predicates.and(Snapshots.FilterPermissions.INSTANCE, RestrictedTypes.filterPrivilegedWithoutOwner()).apply(snap)) {
           throw new EucalyptusCloudException( "Not authorized to use snapshot " + snapId + " by " + ctx.getUser( ).getName( ) );
         }
         // Volume created from a snapshot cannot be smaller than the size of the snapshot
@@ -204,7 +217,7 @@ public class VolumeManager {
         };
         Volume newVol = RestrictedTypes.allocateMeasurableResource( newSize.longValue( ), allocator );
         CreateVolumeResponseType reply = request.getReply( );
-        reply.setVolume( newVol.morph( new edu.ucsb.eucalyptus.msgs.Volume( ) ) );
+        reply.setVolume( newVol.morph( new com.eucalyptus.compute.common.Volume( ) ) );
         return reply;
       } catch ( RuntimeException ex ) {
         LOG.error( ex, ex );
@@ -248,7 +261,7 @@ public class VolumeManager {
           }
           try {
             VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( input );
-            throw new IllegalStateException( "Volume is currently attached: " + attachment );
+            throw Exceptions.toUndeclared( new ClientComputeException( "VolumeInUse", "Volume is currently attached to: " + attachment.getVmInstance( ).getDisplayName( ) ) );
           } catch ( NoSuchElementException ex ) {
             /** no such volume attached, move along... **/
           }
@@ -287,7 +300,15 @@ public class VolumeManager {
       throw ex;
     }
   }
-  
+
+  public DescribeVolumeAttributeResponseType DescribeVolumeAttribute( DescribeVolumeAttributeType request ) {
+    return request.getReply( );
+  }
+
+  public DescribeVolumeStatusResponseType DescribeVolumeStatus( DescribeVolumeStatusType request ) {
+    return request.getReply( );
+  }
+
   public DescribeVolumesResponseType DescribeVolumes( DescribeVolumesType request ) throws Exception {
     final DescribeVolumesResponseType reply = ( DescribeVolumesResponseType ) request.getReply( );
     final Context ctx = Contexts.lookup( );
@@ -325,19 +346,19 @@ public class VolumeManager {
           Volume foundVol = Entities.uniqueResult( Volume.named( ownerFullName, input ) );
           if ( State.ANNIHILATED.equals( foundVol.getState( ) ) ) {
             Entities.delete( foundVol );
-            reply.getVolumeSet( ).add( foundVol.morph( new edu.ucsb.eucalyptus.msgs.Volume( ) ) );
+            reply.getVolumeSet( ).add( foundVol.morph( new com.eucalyptus.compute.common.Volume( ) ) );
             return foundVol;
           } else {
             AttachedVolume attachedVolume = null;
             try {
-                VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( input , vms );
-              attachedVolume  = VmVolumeAttachment.asAttachedVolume( attachment.getVmInstance( ) ).apply( attachment );
+              VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( input , vms );
+              attachedVolume = VmVolumeAttachment.asAttachedVolume( attachment.getVmInstance( ) ).apply( attachment );
             } catch ( NoSuchElementException ex ) {
               if ( State.BUSY.equals( foundVol.getState( ) ) ) {
                 foundVol.setState( State.EXTANT );
               }
             }
-            edu.ucsb.eucalyptus.msgs.Volume msgTypeVolume = foundVol.morph( new edu.ucsb.eucalyptus.msgs.Volume( ) );
+            com.eucalyptus.compute.common.Volume msgTypeVolume = foundVol.morph( new com.eucalyptus.compute.common.Volume( ) );
             if ( attachedVolume != null ) {
               msgTypeVolume.setStatus( "in-use" );
               msgTypeVolume.getAttachmentSet( ).add( attachedVolume );
@@ -363,7 +384,7 @@ public class VolumeManager {
 
     final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( Volume.class )
         .getResourceTagMap( AccountFullName.getInstance( ctx.getAccount( ) ), allowedVolumeIds );
-    for ( final edu.ucsb.eucalyptus.msgs.Volume volume : reply.getVolumeSet() ) {
+    for ( final com.eucalyptus.compute.common.Volume volume : reply.getVolumeSet() ) {
       Tags.addFromTags( volume.getTagSet(), ResourceTag.class, tagsMap.get( volume.getVolumeId() ) );
     }
     db.commit( );
@@ -375,7 +396,11 @@ public class VolumeManager {
   }
     return reply;
   }
-  
+
+  public EnableVolumeIOResponseType EnableVolumeIO( EnableVolumeIOType request ) {
+    return request.getReply( );
+  }
+
   public AttachVolumeResponseType AttachVolume( AttachVolumeType request ) throws EucalyptusCloudException {
     AttachVolumeResponseType reply = ( AttachVolumeResponseType ) request.getReply( );
     final String deviceName = request.getDevice( );
@@ -383,9 +408,10 @@ public class VolumeManager {
     final String instanceId = normalizeInstanceIdentifier( request.getInstanceId() );
     final Context ctx = Contexts.lookup( );
     
-    if (  deviceName == null || deviceName.endsWith( "sda" ) || !validateDeviceName( deviceName ) ) {
+    if (  deviceName == null || !validateDeviceName( deviceName ) ) {
       throw new ClientComputeException( "InvalidParameterValue", "Value (" + deviceName + ") for parameter device is invalid." );
     }
+    
     VmInstance vm = null;
     try {
       vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
@@ -417,12 +443,23 @@ public class VolumeManager {
     if ( !RestrictedTypes.filterPrivileged( ).apply( volume ) ) {
       throw new EucalyptusCloudException( "Not authorized to attach volume " + volumeId + " by " + ctx.getUser( ).getName( ) );
     }
+    // check volumes
     try {
       vm.lookupVolumeAttachmentByDevice( deviceName );
       throw new ClientComputeException( "InvalidParameterValue", "Already have a device attached to: " + request.getDevice( ) );
     } catch ( NoSuchElementException ex1 ) {
       /** no attachment **/
     }
+    // check ephemeral devices
+    if ( Iterables.any(VmInstances.lookupEphemeralDevices(instanceId),
+          new Predicate<VmEphemeralAttachment>() {
+            @Override
+            public boolean apply(VmEphemeralAttachment device) {
+             return deviceName.endsWith(device.getShortDeviceName());
+           }
+      }) )
+        throw new ClientComputeException( "InvalidParameterValue", "Already have an ephemeral device attached to: " + request.getDevice( ) );
+
     try {
       VmInstances.lookupVolumeAttachment( volumeId );
       throw new ClientComputeException( "VolumeInUse", "Volume already attached: " + volumeId );
@@ -436,28 +473,55 @@ public class VolumeManager {
     if ( !sc.equals( scVm ) ) {
       throw new EucalyptusCloudException( "Can only attach volumes in the same zone: " + volumeId );
     }
-    ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
-    GetVolumeTokenResponseType scGetTokenResponse;
-    try {
-    	GetVolumeTokenType req = new GetVolumeTokenType(volume.getDisplayName());
-    	scGetTokenResponse = AsyncRequests.sendSync(sc, req);
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
-      throw new EucalyptusCloudException( e.getMessage( ), e );
+    
+    // check if instance is stopped
+    if (VmState.STOPPED.equals(vm.getState())) {
+      // Volume attachment to an EBS backed instance in stopped state. Don't get attachment token from SC since its a part of instance start up
+      // process. Just add the persistent attachment record to the VM
+
+      String rootDevice = vm.getBootRecord().getMachine().getRootDeviceName();
+      
+      // swathi - assuming delete on terminate flag to always be false. Its better to err on the safe side and not delete volumes
+      if (rootDevice.equals(deviceName)) {
+        // add root attachment
+        vm.addPermanentVolume(deviceName, volume, Boolean.TRUE);
+      } else {
+        // add non-root attachment
+        vm.addPermanentVolume(deviceName, volume, Boolean.FALSE);
+      }
+    } else { // swathi: should there be a check for other instance states before attaching volume?
+      // A normal volume attachment. Get attachment token from SC and fire attachment request to NC/CC
+      
+      ServiceConfiguration ccConfig = Topology.lookup(ClusterController.class, vm.lookupPartition());
+      GetVolumeTokenResponseType scGetTokenResponse;
+      try {
+        GetVolumeTokenType req = new GetVolumeTokenType(volume.getDisplayName());
+        scGetTokenResponse = AsyncRequests.sendSync(sc, req);
+      } catch (Exception e) {
+        LOG.warn("Failed to attach volume " + volume.getDisplayName(), e);
+        throw new EucalyptusCloudException(e.getMessage(), e);
+      }
+
+      // The SC should not know the format, so the CLC must construct the special format
+      String token = StorageProperties.formatVolumeAttachmentTokenForTransfer(scGetTokenResponse.getToken(), volume.getDisplayName());
+      final ClusterAttachVolumeType attachVolume = new ClusterAttachVolumeType();
+      attachVolume.setInstanceId(request.getInstanceId());
+      attachVolume.setVolumeId(request.getVolumeId());
+      attachVolume.setDevice(request.getDevice());
+      attachVolume.setRemoteDevice(token);
+
+      // Add volume attachment record to VM
+      vm.addTransientVolume(deviceName, token, volume);
+      
+      // Fire attach volume request to NC/CC
+      final VolumeAttachCallback cb = new VolumeAttachCallback(attachVolume);
+      AsyncRequests.newRequest(cb).dispatch(ccConfig);
     }
-    
-    //The SC should not know the format, so the CLC must construct the special format
-    String token = StorageProperties.formatVolumeAttachmentTokenForTransfer(scGetTokenResponse.getToken(), volume.getDisplayName());    
-    request.setRemoteDevice(token);
-    
-    AttachedVolume attachVol = new AttachedVolume( volume.getDisplayName( ), vm.getInstanceId( ), request.getDevice( ), request.getRemoteDevice( ) );
-    vm.addTransientVolume( deviceName, token, volume );
-    AsyncRequests.newRequest( new VolumeAttachCallback( request ) ).dispatch( ccConfig );
     
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_ATTACH )
                .withDetails( volume.getOwner( ).toString( ), volume.getDisplayName( ), "instance", vm.getInstanceId( ) )
                .withDetails( "partition", vm.getPartition( ).toString( ) ).info( );
-    reply.setAttachedVolume( attachVol );
+    reply.setAttachedVolume( new AttachedVolume(volume.getDisplayName(), vm.getInstanceId(), request.getDevice()) );
     
     Volumes.fireUsageEvent(volume, VolumeEvent.forVolumeAttach(vm.getInstanceUuid(), volume.getDisplayName()));
     return reply;
@@ -484,18 +548,26 @@ public class VolumeManager {
     }
     
     VmInstance vm = null;
+    String remoteDevice = null;
     AttachedVolume volume = null;
+    VmVolumeAttachment vmVolAttach = null;
+    
     try {
-      VmVolumeAttachment vmVolAttach = VmInstances.lookupTransientVolumeAttachment( volumeId );
+      // Lookup both persistent and transient volumes
+      vmVolAttach = VmInstances.lookupVolumeAttachment( volumeId );
+      remoteDevice = vmVolAttach.getRemoteDevice( );
       volume = VmVolumeAttachment.asAttachedVolume( vmVolAttach.getVmInstance( ) ).apply( vmVolAttach );
       vm = vmVolAttach.getVmInstance( );
     } catch ( NoSuchElementException ex ) {
-      if(ex instanceof NonTransientVolumeException){
-    	throw new EucalyptusCloudException(ex.getMessage() + " Cannot be detached");
-      } else {
-        throw new ClientComputeException( "IncorrectState", "Volume is not attached: " + volumeId );
-      }
+      throw new ClientComputeException( "IncorrectState", "Volume is not attached: " + volumeId );
     }
+    
+    // Cannot detach root volume of EBS backed instance when the instance is not stopped
+    if (vmVolAttach.getIsRootDevice() && !VmState.STOPPED.equals(vm.getState())) {
+      throw new ClientComputeException("IncorrectState", "Cannot detach root volume " + volumeId + " from EBS backed instance " + vm.getInstanceId()
+          + " when instance state is " + vm.getState().toString().toLowerCase());
+    }
+    
     // Dropping the validation check for device string retrieved from database - EUCA-8330
     if ( vm != null && MigrationState.isMigrating( vm ) ) {
       throw Exceptions.toUndeclared( "Cannot detach a volume from an instance which is currently migrating: "
@@ -525,7 +597,8 @@ public class VolumeManager {
     if ( VmState.STOPPED.equals( vm.getState( ) ) ) {
     	//Ensure that the volume is not attached
     	try {
-    		AsyncRequests.sendSync( scVm, new DetachStorageVolumeType( volume.getVolumeId( ) ) );
+    	  final DetachStorageVolumeType detach = new DetachStorageVolumeType( volume.getVolumeId( ));
+    		AsyncRequests.sendSync( scVm, detach);
     	} catch ( Exception e ) {
     		LOG.debug( e );
     		Logs.extreme( ).debug( e, e );
@@ -542,11 +615,13 @@ public class VolumeManager {
     		LOG.debug( e, e );
     		throw new EucalyptusCloudException( "Cluster does not exist in partition: " + vm.getPartition( ) );
     	}
-    	request.setVolumeId( volume.getVolumeId( ) );
-    	request.setRemoteDevice( volume.getRemoteDevice( ) );
-    	request.setDevice( volume.getDevice( ).replaceAll( "unknown,requested:", "" ) );
-    	request.setInstanceId( vm.getInstanceId( ) );
-    	VolumeDetachCallback ncDetach = new VolumeDetachCallback( request );
+      final ClusterDetachVolumeType detachVolume = new ClusterDetachVolumeType( );
+      detachVolume.setVolumeId( volume.getVolumeId( ) );
+      detachVolume.setRemoteDevice( remoteDevice );
+      detachVolume.setDevice( volume.getDevice( ).replaceAll( "unknown,requested:", "" ) );
+      detachVolume.setInstanceId( vm.getInstanceId( ) );
+      detachVolume.setForce( request.getForce( ) );
+    	VolumeDetachCallback ncDetach = new VolumeDetachCallback( detachVolume );
     	/* No SC action required, send directly to NC
     	 * try {
     		AsyncRequests.sendSync( scVm, new DetachStorageVolumeType( volume.getVolumeId( ) ) );
@@ -556,15 +631,19 @@ public class VolumeManager {
     		//GRZE: attach is idempotent, failure here is ok, throw new EucalyptusCloudException( e.getMessage( ) );
     	}*/
     	AsyncRequests.newRequest( ncDetach ).dispatch( cluster.getConfiguration( ) );
+    	
+    	//Update the state of the attachment to 'detaching'
+        vm.updateVolumeAttachment(volumeId, AttachmentState.detaching);
+        volume.setStatus( "detaching" );
     }
     
-    //Update the state of the attachment to 'detaching'
-    vm.updateVolumeAttachment(volumeId, AttachmentState.detaching);
-    
-    volume.setStatus( "detaching" );    
     reply.setDetachedVolume( volume );
     Volumes.fireUsageEvent(vol, VolumeEvent.forVolumeDetach(vm.getInstanceUuid(), vm.getInstanceId()));
     return reply;
+  }
+
+  public ModifyVolumeAttributeResponseType modifyVolumeAttribute( ModifyVolumeAttributeType request ) {
+    return request.getReply( );
   }
 
   private boolean validateDeviceName(String DeviceName){

@@ -328,6 +328,8 @@
     <value name="SpotPrice" field="spotPrice" usage="optional"/>
     <value name="IamInstanceProfile" field="iamInstanceProfile" usage="optional"/>
     <value name="EbsOptimized" field="ebsOptimized" usage="optional"/>
+    <value name="AssociatePublicIpAddress" field="associatePublicIpAddress" usage="optional"/>
+    <value name="PlacementTenancy" field="placementTenancy" usage="optional"/>
   </mapping>
   <mapping name="CreateLaunchConfigurationResponse" class="com.eucalyptus.autoscaling.common.msgs.CreateLaunchConfigurationResponseType">
     <structure map-as="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage"/>
@@ -771,6 +773,7 @@
     <value name="SpotPrice" field="spotPrice" usage="optional"/>
     <value name="IamInstanceProfile" field="iamInstanceProfile" usage="optional"/>
     <value name="CreatedTime" field="createdTime" usage="required"/>
+    <value name="AssociatePublicIpAddress" field="associatePublicIpAddress" usage="optional"/>
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.msgs.EnabledMetric" abstract="true">
     <value name="Metric" field="metric" usage="optional"/>

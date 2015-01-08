@@ -80,11 +80,14 @@
 #include <libvirt/libvirt.h>
 #include <libvirt/virterror.h>
 
-#include <misc.h>
-#include <vnetwork.h>
-#include <data.h>
-#include <config.h>
-#include <sensor.h>
+#include "misc.h"
+#include "vnetwork.h"
+#include "data.h"
+#include "config.h"
+#include "sensor.h"
+#include "ebs_utils.h"
+#include "stats.h"
+#include "message_stats.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -118,6 +121,7 @@
 //! NC State structure
 struct nc_state_t {
     boolean is_enabled;                //!< flag determining if the node controller is enabled
+    boolean isEucanetdEnabled;         //!< Flag indicating whether or not EUCANETD is running on this component
     char version[CHAR_BUFFER_SIZE];    //!< version of the node controller
 
     struct handlers *H;                //!< selected handler
@@ -136,6 +140,7 @@ struct nc_state_t {
     boolean convert_to_disk;
     boolean do_inject_key;
     int concurrent_disk_ops, concurrent_cleanup_ops;
+    int sc_request_timeout_sec;
     int disable_snapshots;
     int staging_cleanup_threshold;
     int booting_cleanup_threshold;
@@ -195,7 +200,7 @@ struct nc_state_t {
 
     //! @name SC Client config fields
     int config_use_ws_sec;             //!< use WS security in SOAP
-    char config_sc_policy_file[EUCA_MAX_PATH];  //!< policy config file to use for sc client ($EUCALYPTUS/var/lib/eucalyptus/keys/sc-client-policy.xml
+    char config_sc_policy_file[EUCA_MAX_PATH];  //!< policy config file to use for sc client ($EUCALYPTUS/$(policiesdir)/sc-client-policy.xml)
     //! @}
 
     //! @name Service info state for the NC
@@ -212,6 +217,7 @@ struct nc_state_t {
 //! Hypervisor specific operation handlers
 struct handlers {
     char name[CHAR_BUFFER_SIZE];
+    void (*doInitNC) (void);
     int (*doInitialize) (struct nc_state_t * nc);
     int (*doBroadcastNetworkInfo) (struct nc_state_t * nc, ncMetadata * pMeta, char *networkInfo);
     int (*doAssignAddress) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *publicIp);
@@ -220,17 +226,17 @@ struct handlers {
     int (*doRunInstance) (struct nc_state_t * nc, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params,
                           char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId,
                           char *accountId, char *keyName, netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime,
-                          char **groupNames, int groupNamesSize, ncInstance ** outInstPtr);
+                          char **groupNames, int groupNamesSize, char *rootDirective, ncInstance ** outInstPtr);
     int (*doTerminateInstance) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, int force, int *shutdownState, int *previousState);
     int (*doRebootInstance) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId);
     int (*doGetConsoleOutput) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char **consoleOutput);
     int (*doDescribeResource) (struct nc_state_t * nc, ncMetadata * pMeta, char *resourceType, ncResource ** outRes);
     int (*doStartNetwork) (struct nc_state_t * nc, ncMetadata * pMeta, char *uuid, char **remoteHosts, int remoteHostsLen, int port, int vlan);
     int (*doAttachVolume) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev);
-    int (*doDetachVolume) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force, int grab_inst_sem);
+    int (*doDetachVolume) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force);
     int (*doCreateImage) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev);
     int (*doBundleInstance) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL,
-                             char *userPublicKey, char *S3Policy, char *S3PolicySig);
+                             char *userPublicKey, char *S3Policy, char *S3PolicySig, char *architecture);
     int (*doBundleRestartInstance) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId);
     int (*doCancelBundleTask) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId);
     int (*doDescribeBundleTasks) (struct nc_state_t * nc, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen);
@@ -252,6 +258,7 @@ struct bundling_params_t {
     char *userPublicKey;
     char *S3Policy;
     char *S3PolicySig;
+    char *architecture;
     char *workPath;                    //!< work directory path
     char *diskPath;                    //!< disk file path
     char *kernelId;
@@ -291,6 +298,13 @@ extern configEntry configKeysNoRestartNC[];
 
 #ifdef HANDLERS_FANOUT
 // only declare for the fanout code, not the actual handlers
+void doInitNC(void);
+
+//Functions for internal stats tracking
+void nc_lock_stats();
+void nc_unlock_stats();
+int nc_update_message_stats(const char* message_name, long call_time, int msg_failed);
+
 int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo);
 int doAssignAddress(ncMetadata * pMeta, char *instanceId, char *publicIp);
 int doPowerDown(ncMetadata * pMeta);
@@ -298,15 +312,16 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
 int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId, char *imageURL,
                   char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId, char *keyName,
                   netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize,
-                  ncInstance ** outInst);
+                  char *rootDirective, ncInstance ** outInst);
 int doTerminateInstance(ncMetadata * pMeta, char *instanceId, int force, int *shutdownState, int *previousState);
 int doRebootInstance(ncMetadata * pMeta, char *instanceId);
 int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutput);
 int doDescribeResource(ncMetadata * pMeta, char *resourceType, ncResource ** outRes);
 int doStartNetwork(ncMetadata * pMeta, char *uuid, char **remoteHosts, int remoteHostsLen, int port, int vlan);
 int doAttachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev);
-int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force, int grab_inst_sem);
-int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
+int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force);
+int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, char *S3Policy, char *S3PolicySig,
+                     char *architecture);
 int doBundleRestartInstance(ncMetadata * pMeta, char *instanceId);
 int doCancelBundleTask(ncMetadata * pMeta, char *instanceId);
 int doDescribeBundleTasks(ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen);
@@ -324,7 +339,7 @@ int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *buck
 
 // helper functions used by the low level handlers
 int get_value(char *s, const char *name, long long *valp);
-int convert_dev_names(char *localDev, char *localDevReal, char *localDevTag);
+int canonicalize_dev(const char *dev, char *cdev, int cdev_len);
 void print_running_domains(void);
 virConnectPtr lock_hypervisor_conn(void);
 void unlock_hypervisor_conn(void);
@@ -350,6 +365,9 @@ int is_migration_src(const ncInstance * instance);
 int migration_rollback(ncInstance * instance);
 int get_service_url(const char *service_type, struct nc_state_t *nc, char *dest_buffer);
 int authorize_migration_keys(char *options, char *host, char *credentials, ncInstance * instance, boolean lock_hyp_sem);
+int connect_ebs(const char *dev_name, const char *dev_serial, const char *dev_bus, struct nc_state_t *nc, char *instanceId, char *volumeId, char *attachmentToken, char **libvirt_xml, ebs_volume_data ** vol_data);
+int disconnect_ebs(struct nc_state_t *nc, char *instanceId, char *volumeId, char *attachmentToken, char *connect_string);
+void set_serial_and_bus(const char *vol, const char *dev, char *serial, int serial_len, char *bus, int bus_len);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,7 +64,6 @@ package com.eucalyptus.crypto.util;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -72,7 +71,9 @@ import java.io.OutputStreamWriter;
 import java.security.KeyPair;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+
 import org.apache.log4j.Logger;
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -81,9 +82,9 @@ import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.PEMWriter;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.bouncycastle.util.io.pem.PemObject;
+
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.EventRecord;
-import com.google.common.io.Files;
 
 public class PEMFiles {
   private static Logger LOG = Logger.getLogger( PEMFiles.class );
@@ -132,6 +133,7 @@ public class PEMFiles {
   public static byte[] getBytes( final String type, final byte[] bytes ) {
     return getBytes( new PemObject( type, bytes ) );
   }
+  
 
   public static X509Certificate getCert( final byte[] o ) {
     X509Certificate x509 = null;
@@ -155,9 +157,5 @@ public class PEMFiles {
       LOG.error( e, e );//this can never happen
     }
     return keyPair;
-  }
-
-  public static void main( String[] args ) throws IOException {
-    System.out.println( getCert( Files.toByteArray( new File( "/home/steve/Work/ec2/cloud-cert.pem" ) ) ).getSubjectX500Principal() );
   }
 }

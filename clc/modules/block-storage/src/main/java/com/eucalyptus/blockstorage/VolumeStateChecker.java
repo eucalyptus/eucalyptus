@@ -64,14 +64,14 @@ package com.eucalyptus.blockstorage;
 
 import java.util.List;
 
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.blockstorage.entities.VolumeInfo;
 import com.eucalyptus.blockstorage.util.StorageProperties;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.storage.common.CheckerTask;
 import com.eucalyptus.util.EucalyptusCloudException;
-
 
 
 public class VolumeStateChecker extends CheckerTask {
@@ -85,23 +85,21 @@ public class VolumeStateChecker extends CheckerTask {
 
 	@Override
 	public void run() {
-		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
-		VolumeInfo volumeInfo = new VolumeInfo();
-		volumeInfo.setStatus(StorageProperties.Status.available.toString());
-		List<VolumeInfo> volumes = db.query(volumeInfo);
-		for(VolumeInfo volume : volumes) {
-			try {
-				blockManager.checkVolume(volume.getVolumeId());
-			} catch (EucalyptusCloudException ex) {
-				//volume.setStatus(StorageProperties.Status.error.toString());
-				LOG.error(ex);
-			}
-		}
-		try {
-			db.commit();
+        try ( TransactionResource tran = Entities.transactionFor(VolumeInfo.class) ) {
+            VolumeInfo volumeInfo = new VolumeInfo();
+            volumeInfo.setStatus(StorageProperties.Status.available.toString());
+            List<VolumeInfo> volumes = Entities.query(volumeInfo);
+            for(VolumeInfo volume : volumes) {
+                try {
+                    blockManager.checkVolume(volume.getVolumeId());
+                } catch (EucalyptusCloudException ex) {
+                    //volume.setStatus(StorageProperties.Status.error.toString());
+                    LOG.error(ex);
+                }
+            }
+            tran.commit();
 		} catch(Exception ex) {
 			LOG.error(ex, ex);
-			db.rollback();
 		}
 	}
 }

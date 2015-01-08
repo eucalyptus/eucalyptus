@@ -88,6 +88,7 @@ import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Ciphers;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 public class BlockStorageUtil {
@@ -115,7 +116,7 @@ public class BlockStorageUtil {
       } else {        
         PublicKey ncPublicKey = partition.getNodeCertificate( ).getPublicKey();
         Cipher cipher = Ciphers.RSA_PKCS1.get();
-        cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey);
+        cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey, Crypto.getSecureRandomSupplier( ).get( ));
         return new String(Base64.encode(cipher.doFinal(password.getBytes())));
       }
     } catch ( Exception e ) {
@@ -129,7 +130,7 @@ public class BlockStorageUtil {
 		Cipher cipher;
 		try {
 			cipher = Ciphers.RSA_PKCS1.get();
-			cipher.init(Cipher.ENCRYPT_MODE, scPublicKey);
+			cipher.init(Cipher.ENCRYPT_MODE, scPublicKey, Crypto.getSecureRandomSupplier( ).get( ));
 			return new String(Base64.encode(cipher.doFinal(password.getBytes())));	      
 		} catch (Exception e) {
 			LOG.error("Unable to encrypted storage target password");
@@ -141,7 +142,7 @@ public class BlockStorageUtil {
 		PrivateKey scPrivateKey = SystemCredentials.lookup(Storage.class).getPrivateKey();
 		try {
 			Cipher cipher = Ciphers.RSA_PKCS1.get();
-			cipher.init(Cipher.DECRYPT_MODE, scPrivateKey);
+			cipher.init(Cipher.DECRYPT_MODE, scPrivateKey, Crypto.getSecureRandomSupplier( ).get( ));
 			return new String(cipher.doFinal(Base64.decode(encryptedPassword)));
 		} catch(Exception ex) {
 			LOG.error(ex);
@@ -157,7 +158,7 @@ public class BlockStorageUtil {
 			} else {
 				PublicKey ncPublicKey = partition.getNodeCertificate( ).getPublicKey();
 				Cipher cipher = Ciphers.RSA_PKCS1.get();
-				cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey);
+				cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey, Crypto.getSecureRandomSupplier( ).get( ));
 				return new String(Base64.encode(cipher.doFinal(data.getBytes())));
 			}
 		} catch ( Exception e ) {
@@ -174,7 +175,7 @@ public class BlockStorageUtil {
 			} else {
 				PrivateKey ncPrivateKey = partition.getNodePrivateKey();
 				Cipher cipher = Ciphers.RSA_PKCS1.get();
-				cipher.init(Cipher.DECRYPT_MODE, ncPrivateKey);
+				cipher.init(Cipher.DECRYPT_MODE, ncPrivateKey, Crypto.getSecureRandomSupplier( ).get( ));
 				return new String(cipher.doFinal(Base64.decode(data)));
 			}
 		} catch ( Exception e ) {
@@ -188,7 +189,7 @@ public class BlockStorageUtil {
 		try {
 			PublicKey clcPublicKey = SystemCredentials.lookup(Eucalyptus.class).getCertificate().getPublicKey();
 			Cipher cipher = Ciphers.RSA_PKCS1.get();
-			cipher.init(Cipher.ENCRYPT_MODE, clcPublicKey);
+			cipher.init(Cipher.ENCRYPT_MODE, clcPublicKey, Crypto.getSecureRandomSupplier( ).get( ));
 			return new String(Base64.encode(cipher.doFinal(data.getBytes())));	      
 		} catch ( Exception e ) {
 			LOG.error( "Unable to encrypt data: " + e.getMessage( ), e );
@@ -201,7 +202,7 @@ public class BlockStorageUtil {
 		PrivateKey clcPrivateKey = SystemCredentials.lookup(Eucalyptus.class).getPrivateKey();
 		try {
 			Cipher cipher = Ciphers.RSA_PKCS1.get();
-			cipher.init(Cipher.DECRYPT_MODE, clcPrivateKey);
+			cipher.init(Cipher.DECRYPT_MODE, clcPrivateKey, Crypto.getSecureRandomSupplier( ).get( ));
 			return new String(cipher.doFinal(Base64.decode(data)));
 		} catch(Exception ex) {
 			LOG.error(ex);

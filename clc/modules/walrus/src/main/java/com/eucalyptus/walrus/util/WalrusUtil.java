@@ -68,6 +68,7 @@ import java.net.URLDecoder;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.walrus.exceptions.WalrusException;
 import com.eucalyptus.walrus.msgs.WalrusErrorMessageType;
+import com.google.common.base.Strings;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
@@ -110,9 +111,18 @@ public class WalrusUtil {
 	}
 
 	public static String[] getTarget(String operationPath) {
-		operationPath = operationPath.replaceAll("/{2,}", "/");
-		if(operationPath.startsWith("/"))
+		operationPath = operationPath.replaceAll("^/{2,}", "/"); // If its in the form "/////bucket/key", change it to "/bucket/key"
+		if (operationPath.startsWith("/")) { // If its in the form "/bucket/key", change it to "bucket/key"
 			operationPath = operationPath.substring(1);
-		return operationPath.split("/");
+		}
+		String[] parts = operationPath.split("/", 2); // Split into a maximum of two parts [bucket, key]
+		if (parts != null) {
+			if(parts.length == 1 && Strings.isNullOrEmpty(parts[0])) { // Splitting empty string will lead one part, check if the part is empty
+				return null;
+			} else if (parts.length == 2 && Strings.isNullOrEmpty(parts[1])) { // Splitting "bucket/" will lead to two parts where the second one is empty, send only bucket
+				return new String [] {parts[0]};
+			}
+		}
+		return parts;
 	}
 }

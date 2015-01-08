@@ -69,9 +69,11 @@ import java.util.concurrent.locks.ReentrantLock;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.bootstrap.Databases;
+import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
@@ -124,7 +126,9 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
               ruleGroup = Entities.merge( ruleGroup );
               networks.put( ruleGroup.getClusterNetworkName( ), vm.getPrivateAddress( ) );
               if ( !rules.containsKey( ruleGroup.getNaturalId( ) ) ) {
-                for ( NetworkRule netRule : ruleGroup.getNetworkRules( ) ) {
+                for ( NetworkRule netRule : ruleGroup.getIngressNetworkRules( ) ) {
+                  // Only EC2-Classic rules supported by this format
+                  if ( netRule.isVpcOnly( ) ) continue;
                   try {
                     String rule = String.format(
                       "-P %s -%s %d%s%d ",
@@ -137,12 +141,18 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
                                                                                   ? ":"
                                                                                   : "-" ),
                       netRule.getHighPort( ) );
-                    for ( NetworkPeer peer : netRule.getNetworkPeers( ) ) {
+                    for ( NetworkPeer peer : netRule.getNetworkPeers( ) ) try {
                       Account groupAccount = Accounts.lookupAccountById( peer.getUserQueryKey( ) ); 
                       String groupId = NetworkGroups.lookup( AccountFullName.getInstance( groupAccount ), peer.getGroupName( ) ).getNaturalId( );
                       String ruleString = String.format( "%s -o %s -u %s", rule, groupId, groupAccount.getAccountNumber( ) ); 
                       if ( !rules.get( ruleGroup.getClusterNetworkName( ) ).contains( ruleString ) ) {
                         rules.put( ruleGroup.getClusterNetworkName( ), ruleString );
+                      }
+                    } catch ( AuthException | NoSuchMetadataException e ) {
+                      // missing account or missing group, ignore peer
+                      if ( LOG.isTraceEnabled( ) ) {
+                        LOG.trace( "Peer ("+peer.getUserQueryKey( )+"/"+peer.getGroupName( )+
+                            ") not found for network group ("+ruleGroup.getGroupId( )+")" );
                       }
                     }
                     for ( String cidr : netRule.getIpRanges( ) ) {

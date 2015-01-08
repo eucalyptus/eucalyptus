@@ -84,6 +84,8 @@ import org.hibernate.annotations.Type;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.vpc.Subnet;
+import com.eucalyptus.compute.vpc.Vpc;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.BootableImageInfo;
@@ -158,6 +160,18 @@ public class VmBootRecord {
   @JoinColumn(name="metadata_vm_type_id")
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private VmType                  vmType;
+  @ManyToOne( fetch = FetchType.LAZY )
+  @JoinColumn( name = "metadata_vpc" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  private Vpc                     vpc;
+  @Column( name = "metadata_vpc_id", updatable = false )
+  private String                  vpcId;
+  @ManyToOne( fetch = FetchType.LAZY )
+  @JoinColumn( name = "metadata_vpc_subnet" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  private Subnet                  subnet;
+  @Column( name = "metadata_vpc_subnet_id", updatable = false )
+  private String                  subnetId;
 
   VmBootRecord( ) {
     super( );
@@ -167,6 +181,7 @@ public class VmBootRecord {
                 byte[] userData,
                 SshKeyPair sshKeyPair,
                 VmType vmType,
+                Subnet subnet,
                 boolean monitoring,
                 @Nullable String iamInstanceProfileArn,
                 @Nullable String iamInstanceProfileId,
@@ -187,6 +202,10 @@ public class VmBootRecord {
     this.userData = userData;
     this.sshKeyString = sshKeyPair.getPublicKey( );
     this.vmType = vmType;
+    this.vpc = subnet == null ? null : subnet.getVpc( );
+    this.vpcId = CloudMetadatas.toDisplayName( ).apply( vpc );
+    this.subnet = subnet;
+    this.subnetId = CloudMetadatas.toDisplayName( ).apply( subnet );
     this.monitoring = monitoring;
     this.iamInstanceProfileArn = iamInstanceProfileArn;
     this.iamInstanceProfileId = iamInstanceProfileId;
@@ -373,7 +392,39 @@ public class VmBootRecord {
   void setVmType( VmType vmType ) {
     this.vmType = vmType;
   }
-  
+
+  public Vpc getVpc( ) {
+    return vpc;
+  }
+
+  void setVpc( final Vpc vpc ) {
+    this.vpc = vpc;
+  }
+
+  public String getVpcId( ) {
+    return vpcId;
+  }
+
+  void setVpcId( final String vpcId ) {
+    this.vpcId = vpcId;
+  }
+
+  public Subnet getSubnet( ) {
+    return subnet;
+  }
+
+  void setSubnet( final Subnet subnet ) {
+    this.subnet = subnet;
+  }
+
+  public String getSubnetId( ) {
+    return subnetId;
+  }
+
+  void setSubnetId( final String subnetId ) {
+    this.subnetId = subnetId;
+  }
+
   void setPlatform( Platform platform ) {
     this.platform = platform;
   }

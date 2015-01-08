@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -99,7 +99,6 @@ try {
   Databases.initialize( );
   try {
     props = [
-          "hibernate.archive.autodetection": "jar, class, hbm",
           "hibernate.show_sql": "false",
           "hibernate.format_sql": "false",
           "hibernate.connection.autocommit": "true",
@@ -113,21 +112,18 @@ try {
           "hibernate.dialect": Databases.getHibernateDialect( ),
           "hibernate.transaction.auto_close_session":"false",
           "hibernate.transaction.flush_before_completion":"false",
-          "hibernate.transaction.jta.platform": "org.hibernate.service.jta.platform.internal.BitronixJtaPlatform",
-          "hibernate.cache.use_second_level_cache": "true",
+          "hibernate.cache.use_second_level_cache": "false",
           "hibernate.cache.use_query_cache": "false",
-          "hibernate.cache.default_cache_concurrency_strategy": "transactional",
-          "hibernate.cache.region.factory_class": "com.eucalyptus.bootstrap.CacheRegionFactory",
-          "hibernate.cache.infinispan.cfg": "eucalyptus_cache_infinispan.xml",
-          "hibernate.cache.use_minimal_puts": "true",
-          "hibernate.cache.use_structured_entries": "true",
     ]
     for ( String ctx : PersistenceContexts.list( ) ) {
       Properties p = new Properties( );
       p.putAll( props );
-      String ctxUrl = "jdbc:${ServiceUris.remote(Database.class,Internets.localHostInetAddress( ),ctx)}";
-      p.put( "hibernate.connection.url", ctxUrl );
-      p.put("hibernate.cache.region_prefix", "eucalyptus_" + ctx + "_cache" );
+      final String databaseName = PersistenceContexts.toDatabaseName( ).apply( ctx )
+      final String schemaName = PersistenceContexts.toSchemaName( ).apply( ctx )
+      String ctxUrl = "jdbc:${ServiceUris.remote(Database.class, InetAddress.getByName('127.0.0.1'), databaseName)}";
+      p.setProperty( "hibernate.connection.url", ctxUrl );
+      p.setProperty( 'hibernate.cache.region_prefix', ctx + '_cache' );
+      if ( schemaName != null ) p.setProperty( 'hibernate.default_schema', schemaName )
       Ejb3Configuration config = new Ejb3Configuration( );
       config.setProperties( p );
       for ( Class c : PersistenceContexts.listEntities( ctx ) ) {

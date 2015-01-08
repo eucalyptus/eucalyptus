@@ -50,7 +50,9 @@ public class StackEventEntity extends AbstractPersistent {
   String eventId;
   @Column(name = "logical_resource_id", nullable = false )
   String logicalResourceId;
-  @Column(name = "physical_resource_id")
+  @Column(name = "physical_resource_id" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   String physicalResourceId;
   @Column(name = "resource_properties" )
   @Lob
@@ -74,7 +76,7 @@ public class StackEventEntity extends AbstractPersistent {
     this.recordDeleted = recordDeleted;
   }
 
-  @Column(name = "stack_id", nullable = false )
+  @Column(name = "stack_id", nullable = false, length = 400 )
   String stackId;
   @Column(name = "stack_name", nullable = false )
   String stackName;

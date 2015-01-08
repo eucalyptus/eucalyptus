@@ -128,6 +128,11 @@
  |                                 STRUCTURES                                 |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+typedef struct rebooting_thread_params_t {
+    ncInstance instance;
+    struct nc_state_t nc;
+} rebooting_thread_params;
+
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -332,20 +337,27 @@ static void *rebooting_thread(void *arg)
     char *xml = NULL;
     char resourceName[1][MAX_SENSOR_NAME_LEN] = { "" };
     char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { "" };
-    ncInstance *instance = ((ncInstance *) arg);
+    //    ncInstance *instance = ((ncInstance *) arg);
+    ncInstance *instance = NULL;
+    struct nc_state_t *nc = NULL;
     virDomainPtr dom = NULL;
     virConnectPtr conn = NULL;
+    rebooting_thread_params *params = ((rebooting_thread_params *) arg);
+    instance = &(params->instance);
+    nc = &(params->nc);
 
     LOGDEBUG("[%s] spawning rebooting thread\n", instance->instanceId);
 
     if ((conn = lock_hypervisor_conn()) == NULL) {
         LOGERROR("[%s] cannot connect to hypervisor to restart instance, giving up\n", instance->instanceId);
+        EUCA_FREE(params);
         return NULL;
     }
     dom = virDomainLookupByName(conn, instance->instanceId);
     if (dom == NULL) {
         LOGERROR("[%s] cannot locate instance to reboot, giving up\n", instance->instanceId);
         unlock_hypervisor_conn();
+        EUCA_FREE(params);
         return NULL;
     }
     // obtain the most up-to-date XML for domain from libvirt
@@ -354,6 +366,7 @@ static void *rebooting_thread(void *arg)
         LOGERROR("[%s] cannot obtain metadata for instance to reboot, giving up\n", instance->instanceId);
         virDomainFree(dom);            // release libvirt resource
         unlock_hypervisor_conn();
+        EUCA_FREE(params);
         return NULL;
     }
     virDomainFree(dom);                // release libvirt resource
@@ -362,6 +375,7 @@ static void *rebooting_thread(void *arg)
     // try shutdown first, then kill it if uncooperative
     if (shutdown_then_destroy_domain(instance->instanceId, TRUE) != EUCA_OK) {
         LOGERROR("[%s] failed to shutdown and destroy the instance to reboot, giving up\n", instance->instanceId);
+        EUCA_FREE(params);
         return NULL;
     }
     // Add a shift to values of three of the metrics: ones that
@@ -374,10 +388,15 @@ static void *rebooting_thread(void *arg)
 
     if ((conn = lock_hypervisor_conn()) == NULL) {
         LOGERROR("[%s] cannot connect to hypervisor to restart instance, giving up\n", instance->instanceId);
+        EUCA_FREE(params);
         return NULL;
     }
     // domain is now shut down, create a new one with the same XML
     LOGINFO("[%s] rebooting\n", instance->instanceId);
+    if (!strcmp(nc->vnetconfig->mode, NETMODE_VPCMIDO)) {
+            // need to sleep to allow midolman to update the VM interface
+            sleep (10);
+    }
     dom = virDomainCreateLinux(conn, xml, 0);
     if (dom == NULL) {
         LOGERROR("[%s] failed to restart instance\n", instance->instanceId);
@@ -386,12 +405,28 @@ static void *rebooting_thread(void *arg)
         euca_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
         sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so we set base value accurately
         virDomainFree(dom);
+
+
+        if (!strcmp(nc->vnetconfig->mode, NETMODE_VPCMIDO)) {
+            char iface[16], cmd[EUCA_MAX_PATH], obuf[256], ebuf[256];
+            int rc;
+            snprintf(iface, 16, "vn_%s", instance->instanceId);
+            snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc->rootwrap_cmd_path, instance->params.guestNicDeviceName, iface);
+            rc = timeshell(cmd, obuf, ebuf, 256, 10);
+            if (rc) {
+                LOGERROR("unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n");
+            }
+        }
+
     }
     EUCA_FREE(xml);
 
     unlock_hypervisor_conn();
+    unset_corrid(get_corrid());
+    EUCA_FREE(params);
     return NULL;
 }
+
 
 //!
 //! Handles the reboot request of an instance.
@@ -407,6 +442,8 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
 {
     pthread_t tcb = { 0 };
     ncInstance *instance = NULL;
+    rebooting_thread_params *params = NULL;
+
 
     sem_p(inst_sem);
     {
@@ -418,12 +455,16 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
         LOGERROR("[%s] cannot find instance\n", instanceId);
         return (EUCA_NOT_FOUND_ERROR);
     }
+
+    params = EUCA_ZALLOC(1, sizeof(rebooting_thread_params));
+    memcpy(&(params->instance), instance, sizeof(ncInstance));
+    memcpy(&(params->nc), nc, sizeof(struct nc_state_t));
     // since shutdown/restart may take a while, we do them in a thread
-    if (pthread_create(&tcb, NULL, rebooting_thread, (void *)instance)) {
+    if (pthread_create(&tcb, NULL, rebooting_thread, params)) {
         LOGERROR("[%s] failed to spawn a reboot thread\n", instanceId);
         return (EUCA_FATAL_ERROR);
     }
-
+    set_corrid_pthread(get_corrid() != NULL ? get_corrid()->correlation_id : NULL, tcb);
     if (pthread_detach(tcb)) {
         LOGERROR("[%s] failed to detach the rebooting thread\n", instanceId);
         return (EUCA_FATAL_ERROR);
@@ -634,7 +675,7 @@ out:
     sem_v(inst_sem);
 
     LOGDEBUG("done\n");
-
+    unset_corrid(get_corrid());
     return NULL;
 }
 
@@ -758,7 +799,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                     LOGERROR("[%s] failed to spawn a migration thread\n", instance->instanceId);
                     return (EUCA_THREAD_ERROR);
                 }
-
+                set_corrid_pthread(get_corrid() != NULL ? get_corrid()->correlation_id : NULL, tcb);
                 if (pthread_detach(tcb)) {
                     LOGERROR("[%s] failed to detach the migration thread\n", instance->instanceId);
                     return (EUCA_THREAD_ERROR);
@@ -815,7 +856,6 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             euca_strncpy(instance->migration_src, sourceNodeName, HOSTNAME_SIZE);
             euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
             euca_strncpy(instance->migration_credentials, credentials, CREDENTIAL_SIZE);
-            save_instance_struct(instance);
             sem_v(inst_sem);
 
             // Establish migration-credential keys.
@@ -862,88 +902,26 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                     continue;          // skip the entry unless attached or attaching
                 LOGDEBUG("[%s] volumes [%d] = '%s'\n", instance->instanceId, v, volume->stateName);
 
-                // TODO: factor what the following out of here and doAttachVolume() in handlers_default.c
-
-                int have_remote_device = 0;
-                char *xml = NULL;
-                char *remoteDevStr = NULL;
-                char scUrl[512];
-                char localDevReal[32], localDevTag[256], remoteDevReal[132];
-                char *tagBuf = localDevTag;
                 ebs_volume_data *vol_data = NULL;
-                ret = convert_dev_names(volume->localDev, localDevReal, tagBuf);
-                if (ret)
-                    goto unroll;
+                char *libvirt_xml = NULL;
+                char serial[128];
+                char bus[16];
+                set_serial_and_bus(volume->volumeId, volume->devName, serial, sizeof(serial), bus, sizeof(bus));
 
-                //Do the ebs connect.
-                LOGTRACE("[%s][%s] Connecting EBS volume to local host\n", instance->instanceId, volume->volumeId);
-                get_service_url("storage", nc, scUrl);
-
-                if (strlen(scUrl) == 0) {
-                    LOGERROR("[%s][%s] Failed to lookup enabled Storage Controller. Cannot attach volume %s\n", instance->instanceId, volume->volumeId, scUrl);
-                    have_remote_device = 0;
-                    goto unroll;
-                } else {
-                    LOGTRACE("[%s][%s] Using SC URL: %s\n", instance->instanceId, volume->volumeId, scUrl);
-                }
-
-                //Do the ebs connect.
-                LOGTRACE("[%s][%s] Connecting EBS volume to local host\n", instance->instanceId, volume->volumeId);
-                int rc = connect_ebs_volume(scUrl, volume->attachmentToken, nc->config_use_ws_sec, nc->config_sc_policy_file, nc->ip, nc->iqn, &remoteDevStr, &vol_data);
-                if (rc) {
-                    LOGERROR("Error connecting ebs volume %s\n", volume->attachmentToken);
-                    have_remote_device = 0;
-                    ret = EUCA_ERROR;
+                if ((ret = connect_ebs(volume->devName, serial, bus, nc, instance->instanceId, volume->volumeId, volume->attachmentToken, &libvirt_xml, &vol_data)) != EUCA_OK) {
                     goto unroll;
                 }
                 // update the volume struct with connection string obtained from SC
                 euca_strncpy(volume->connectionString, vol_data->connect_string, sizeof(volume->connectionString));
 
-                if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
-                    LOGERROR("[%s][%s] failed to connect to iscsi target\n", instance->instanceId, volume->volumeId);
-                    remoteDevReal[0] = '\0';
-                } else {
-                    LOGDEBUG("[%s][%s] attached iSCSI target of host device '%s'\n", instance->instanceId, volume->volumeId, remoteDevStr);
-                    snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", remoteDevStr);
-                    have_remote_device = 1;
-                }
-                EUCA_FREE(remoteDevStr);
-
-                // something went wrong above, abort
-                if (!have_remote_device) {
-                    goto unroll;
-                }
-                // make sure there is a block device
-                if (check_block(remoteDevReal)) {
-                    LOGERROR("[%s][%s] cannot verify that host device '%s' is available for hypervisor attach\n", instance->instanceId, volume->volumeId, remoteDevReal);
-                    goto unroll;
-                }
-                // generate XML for libvirt attachment request
-                if (gen_volume_xml(volume->volumeId, instance, localDevReal, remoteDevReal) // creates vol-XXX.xml
-                    || gen_libvirt_volume_xml(volume->volumeId, instance)) {    // creates vol-XXX-libvirt.xml via XSLT transform
-                    LOGERROR("[%s][%s] could not produce attach device xml\n", instance->instanceId, volume->volumeId);
-                    goto unroll;
-                }
-                // invoke hooks
-                char path[EUCA_MAX_PATH];
-                char lpath[EUCA_MAX_PATH];
-                snprintf(path, sizeof(path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volume->volumeId);  // vol-XXX.xml
-                snprintf(lpath, sizeof(lpath), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volume->volumeId);    // vol-XXX-libvirt.xml
-                if (call_hooks(NC_EVENT_PRE_ATTACH, lpath)) {
-                    LOGERROR("[%s][%s] cancelled volume attachment via hooks\n", instance->instanceId, volume->volumeId);
-                    goto unroll;
-                }
-                // read in libvirt XML, which may have been modified by the hook above
-                if ((xml = file2str(lpath)) == NULL) {
-                    LOGERROR("[%s][%s] failed to read volume XML from %s\n", instance->instanceId, volume->volumeId, lpath);
-                    goto unroll;
-                }
-
                 continue;
 unroll:
                 ret = EUCA_ERROR;
 
-                // TODO: unroll all volume attachments
+                // @TODO: unroll all previous ones
+                //  for (int uv = v - 1; uv >= 0; uv--) {
+                //    disconnect_ebs(nc, instance->instanceId, volume->volumeId, )
+                //  }
 
                 goto failed_dest;
             }

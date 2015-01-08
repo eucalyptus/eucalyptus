@@ -73,6 +73,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
+/**
+ * NOTE: Please do not add service specific IAM policy details here.
+ */
 public class PolicySpec {
   
   public static final String VERSION = "Version";
@@ -97,16 +100,16 @@ public class PolicySpec {
   }) );
   
   // Vendor (AWS products)
+	// Do not add vendors here (use modules)
   public static final String VENDOR_IAM = "iam";
   public static final String VENDOR_EC2 = "ec2";
   public static final String VENDOR_S3 = "s3";
   public static final String VENDOR_STS = "sts";
   public static final String VENDOR_AUTOSCALING = "autoscaling";
   public static final String VENDOR_CLOUDWATCH = "cloudwatch";
-  public static final String VENDOR_CLOUDFORMATION = "cloudformation";
-  public static final String VENDOR_LOADBALANCING = "elasticloadbalancing";
   public static final String VENDOR_IMAGINGSERVICE = "eucaimaging";
-  
+	// Do not add vendors here (use modules)
+
   public static final String ALL_ACTION = "*";
   
   // IAM actions, based on API version 2010-05-08
@@ -367,6 +370,7 @@ public class PolicySpec {
   public static final String S3_GETBUCKETREQUESTPAYMENT = "getbucketrequestpayment";
   public static final String S3_GETBUCKETVERSIONING = "getbucketversioning";
   public static final String S3_GETBUCKETWEBSITE = "getbucketwebsite";
+  public static final String S3_GETBUCKETTAGGING = "getbuckettagging";
   public static final String S3_GETLIFECYCLECONFIGURATION = "getlifecycleconfiguration";
   public static final String S3_GETOBJECT = "getobject";
   public static final String S3_GETOBJECTACL = "getobjectacl";
@@ -388,6 +392,7 @@ public class PolicySpec {
   public static final String S3_PUTBUCKETREQUESTPAYMENT = "putbucketrequestpayment";
   public static final String S3_PUTBUCKETVERSIONING = "putbucketversioning";
   public static final String S3_PUTBUCKETWEBSITE = "putbucketwebsite";
+  public static final String S3_PUTBUCKETTAGGING = "putbuckettagging";
   public static final String S3_PUTLIFECYCLECONFIGURATION = "putlifecycleconfiguration";
   public static final String S3_PUTOBJECT = "putobject";
   public static final String S3_PUTOBJECTACL = "putobjectacl";
@@ -454,53 +459,7 @@ public class PolicySpec {
   public static final String CLOUDWATCH_PUTMETRICALARM = "putmetricalarm";
   public static final String CLOUDWATCH_PUTMETRICDATA = "putmetricdata";
   public static final String CLOUDWATCH_SETALARMSTATE = "setalarmstate";
-  
-  //Cloud Formation actions, based on API Reference (API Version 2010-05-15)
-  public static final String CLOUDFORMATION_CANCELUPDATESTACK = "cancelupdatestack";
-  public static final String CLOUDFORMATION_CREATESTACK = "createstack";
-  public static final String CLOUDFORMATION_DELETESTACK = "deletestack";
-  public static final String CLOUDFORMATION_DESCRIBESTACKEVENTS = "describestackevents";
-  public static final String CLOUDFORMATION_DESCRIBESTACKRESOURCE = "describestackresource";
-  public static final String CLOUDFORMATION_DESCRIBESTACKRESOURCES = "describestackresources";
-  public static final String CLOUDFORMATION_DESCRIBESTACKS = "describestacks";
-  public static final String CLOUDFORMATION_ESTIMATETEMPLATECOST = "estimatetemplatecost";
-  public static final String CLOUDFORMATION_GETSTACKPOLICY = "getstackpolicy";
-  public static final String CLOUDFORMATION_GETTEMPLATE = "gettemplate";
-  public static final String CLOUDFORMATION_LISTSTACKRESOURCES = "liststackresources";
-  public static final String CLOUDFORMATION_LISTSTACKS = "liststacks";
-  public static final String CLOUDFORMATION_SETSTACKPOLICY = "setstackpolicy";
-  public static final String CLOUDFORMATION_UPDATESTACK = "updatestack";
-  public static final String CLOUDFORMATION_VALIDATETEMPLATE = "validatetemplate";
 
-  //Load Balancing actions, based on API Reference (API Version 2012-06-01)
-  public static final String LOADBALANCING_APPLYSECURITYGROUPSTOLOADBALANCER = "applysecuritygroupstoloadbalancer";
-  public static final String LOADBALANCING_ATTACHLOADBALANCERTOSUBNETS = "attachLoadbalancertosubnets";
-  public static final String LOADBALANCING_CONFIGUREHEALTHCHECK = "configurehealthcheck";
-  public static final String LOADBALANCING_CREATEAPPCOOKIESTICKINESSPOLICY = "createappcookiestickinesspolicy";
-  public static final String LOADBALANCING_CREATELBCOOKIESTICKINESSPOLICY = "createlbcookiestickinesspolicy";
-  public static final String LOADBALANCING_CREATELOADBALANCER = "createloadbalancer";
-  public static final String LOADBALANCING_CREATELOADBALANCERLISTENERS = "createloadbalancerlisteners";
-  public static final String LOADBALANCING_CREATELOADBALANCERPOLICY = "createloadbalancerpolicy";
-  public static final String LOADBALANCING_DELETELOADBALANCER = "deleteloadbalancer";
-  public static final String LOADBALANCING_DELETELOADBALANCERLISTENERS = "deleteloadbalancerlisteners";
-  public static final String LOADBALANCING_DELETELOADBALANCERPOLICY = "deleteloadbalancerpolicy";
-  public static final String LOADBALANCING_DEREGISTERINSTANCESFROMLOADBALANCER = "deregisterinstancesfromloadbalancer";
-  public static final String LOADBALANCING_DESCRIBEINSTANCEHEALTH = "describeinstancehealth";
-  public static final String LOADBALANCING_DESCRIBELOADBALANCERPOLICIES = "describeloadbalancerpolicies";
-  public static final String LOADBALANCING_DESCRIBELOADBALANCERPOLICYTYPES = "describeloadbalancerpolicytypes";
-  public static final String LOADBALANCING_DESCRIBELOADBALANCERS = "describeloadbalancers";
-  public static final String LOADBALANCING_DETACHLOABBALANCERFROMSUBNETS = "detachloadbalancerfromsubnets";
-  public static final String LOADBALANCING_DISABLEAVAILABILITYZONESFORLOADBALANCER = "disableavailabilityzonesforloadbalancer";
-  public static final String LOADBALANCING_ENABLEAVAILABILITYZONESFORLOADBALANCER = "enableavailabilityzonesforloadbalancer";
-  public static final String LOADBALANCING_REGISTERINSTANCESWITHLOADBALANCER = "registerinstanceswithloadbalancer";
-  public static final String LOADBALANCING_SETLOADBALANCERLISTENERSSLCERTIFICATE = "setloadbalancerlistenersslcertificate";
-  public static final String LOADBALANCING_SETLOADBALANCERPOLICIESFORBACKENDSERVER = "setloadbalancerpoliciesforbackendserver";
-  public static final String LOADBALANCING_SETLOADBALANCERPOLICIESOFLISTENER = "setloadbalancerpoliciesoflistener";
-
-  // Non-AWS, Euca-specific ELB operations
-  public static final String LOADBALANCING_DESCRIBELOADBALANCERSBYSERVO = "describeloadbalancersbyservo";
-  public static final String LOADBALANCING_PUTSERVOSTATES = "putservostates";
-  
   // Euca-specific Imaging Service operations
   public static final String IMAGINGSERVICE_PUTINSTANCEIMPORTTASKSTATUS = "putinstanceimporttaskstatus";
   public static final String IMAGINGSERVICE_GETINSTANCEIMPORTTASK = "getinstanceimporttask";
@@ -510,9 +469,10 @@ public class PolicySpec {
       .put( VENDOR_STS, ImmutableSet.of( VENDOR_IAM ) )
       .build();
 
-  // Set of vendors with case sensitive resource names
-  public static final Set<String> VENDORS_CASE_SENSITIVE_RESOURCES = new ImmutableSet.Builder<String>()
-      .add( VENDOR_IAM )
+  // Set of vendors with case insensitive resource names
+  public static final Set<String> VENDORS_CASE_INSENSITIVE_RESOURCES = new ImmutableSet.Builder<String>()
+      .add( VENDOR_EC2 )
+      .add( VENDOR_S3 )
       .build();
 
   // Action syntax
@@ -528,30 +488,55 @@ public class PolicySpec {
   public static final String IAM_RESOURCE_ROLE = "role";
   public static final String IAM_RESOURCE_INSTANCE_PROFILE = "instance-profile";
   public static final String IAM_RESOURCE_SERVER_CERTIFICATE = "server-certificate";
+  public static final String IAM_RESOURCE_ACCESS_KEY = "access-key";
+  public static final String IAM_RESOURCE_SIGNING_CERTIFICATE = "signing-certificate";
 
   // EC2 resource types, extension to AWS IAM
   public static final String EC2_RESOURCE_IMAGE = "image";
-  public static final String EC2_RESOURCE_SECURITYGROUP = "securitygroup";
+  public static final String EC2_RESOURCE_SECURITYGROUP = "security-group";
   public static final String EC2_RESOURCE_ADDRESS = "address";
   public static final String EC2_RESOURCE_AVAILABILITYZONE = "availabilityzone";
   public static final String EC2_RESOURCE_INSTANCE = "instance";
-  public static final String EC2_RESOURCE_KEYPAIR = "keypair";
+  public static final String EC2_RESOURCE_KEYPAIR = "key-pair";
   public static final String EC2_RESOURCE_VOLUME = "volume";
   public static final String EC2_RESOURCE_SNAPSHOT = "snapshot";
   public static final String EC2_RESOURCE_VMTYPE = "vmtype";
   public static final String EC2_RESOURCE_TAG = "tag";
-  
+  public static final String EC2_RESOURCE_PLACEMENTGROUP = "placement-group";
+  public static final String EC2_RESOURCE_CUSTOMERGATEWAY = "customer-gateway";
+  public static final String EC2_RESOURCE_DHCPOPTIONS = "dhcp-options";
+  public static final String EC2_RESOURCE_INTERNETGATEWAY = "internet-gateway";
+  public static final String EC2_RESOURCE_NETWORKACL = "network-acl";
+  public static final String EC2_RESOURCE_NETWORKINTERFACE = "network-interface";
+  public static final String EC2_RESOURCE_ROUTETABLE = "route-table";
+  public static final String EC2_RESOURCE_SUBNET = "subnet";
+  public static final String EC2_RESOURCE_VPCPEERINGCONNECTION = "vpc-peering-connection";
+  public static final String EC2_RESOURCE_VPC = "vpc";
+
+
   public static final Set<String> EC2_RESOURCES = new ImmutableSet.Builder<String>()
     .add( EC2_RESOURCE_IMAGE )
     .add( EC2_RESOURCE_SECURITYGROUP )
+    .add( EC2_RESOURCE_SECURITYGROUP.replace( "-", "" ) ) // no '-' until v4.1
     .add( EC2_RESOURCE_ADDRESS )
     .add( EC2_RESOURCE_AVAILABILITYZONE )
     .add( EC2_RESOURCE_INSTANCE )
     .add( EC2_RESOURCE_KEYPAIR )
+    .add( EC2_RESOURCE_KEYPAIR.replace( "-", "" ) ) // no '-' until v4.1
     .add( EC2_RESOURCE_VOLUME )
     .add( EC2_RESOURCE_SNAPSHOT )
     .add( EC2_RESOURCE_VMTYPE )
     .add( EC2_RESOURCE_TAG )
+    .add( EC2_RESOURCE_PLACEMENTGROUP )
+    .add( EC2_RESOURCE_CUSTOMERGATEWAY )
+    .add( EC2_RESOURCE_DHCPOPTIONS )
+    .add( EC2_RESOURCE_INTERNETGATEWAY )
+    .add( EC2_RESOURCE_NETWORKACL )
+    .add( EC2_RESOURCE_NETWORKINTERFACE )
+    .add( EC2_RESOURCE_ROUTETABLE )
+    .add( EC2_RESOURCE_SUBNET )
+    .add( EC2_RESOURCE_VPCPEERINGCONNECTION )
+    .add( EC2_RESOURCE_VPC )
     .build();
 
   public static final Pattern IPV4_ADDRESS_RANGE_PATTERN = Pattern.compile( "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})(?:-(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3}))?" );
@@ -598,21 +583,13 @@ public class PolicySpec {
     return null;
   }
   
-  public static String objectFullName( String bucketName, String objectKey ) {
-    if ( objectKey.startsWith( "/" ) ) {
-      return bucketName + objectKey;
-    } else {
-      return bucketName + "/" + objectKey;
-    }
-  }
-  
   public static String describeAction( final String vendor, final String resource ) {
     return "describe" + resource + "s";
   }
 
   public static String canonicalizeResourceName( final String type,
                                                  final String name ) {
-    return type == null || VENDORS_CASE_SENSITIVE_RESOURCES.contains( vendor( type ) ) ?
+    return type == null || !VENDORS_CASE_INSENSITIVE_RESOURCES.contains( vendor( type ) ) ?
         name :
         name.toLowerCase();
   }

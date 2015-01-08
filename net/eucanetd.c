@@ -100,6 +100,7 @@
 #include "eucanetd.h"
 #include "config-eucanetd.h"
 #include "globalnetwork.h"
+#include "euca-to-mido.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -142,6 +143,7 @@
 //vnetConfig *vnetconfig = NULL;
 eucanetdConfig *config = NULL;
 globalNetworkInfo *globalnetworkinfo = NULL;
+mido_config *mido = NULL;
 
 configEntry configKeysRestartEUCANETD[] = {
     {"EUCALYPTUS", "/"}
@@ -158,7 +160,7 @@ configEntry configKeysRestartEUCANETD[] = {
     ,
     {"VNET_DOMAINNAME", "eucalyptus.internal"}
     ,
-    {"VNET_MODE", "EDGE"}
+    {"VNET_MODE", NETMODE_MANAGED_NOVLAN}
     ,
     {"VNET_NETMASK", NULL}
     ,
@@ -177,6 +179,20 @@ configEntry configKeysRestartEUCANETD[] = {
     {"VNET_MACPREFIX", "d0:0d"}
     ,
     {"EUCA_USER", "eucalyptus"}
+    ,
+    {"MIDOSETUPCORE", "Y"}
+    ,
+    {"MIDOEUCANETDHOST", NULL}
+    ,
+    {"MIDOGWHOST", NULL}
+    ,
+    {"MIDOGWIP", NULL}
+    ,
+    {"MIDOGWIFACE", NULL}
+    ,
+    {"MIDOPUBNW", NULL}
+    ,
+    {"MIDOPUBGWIP", NULL}
     ,
     {NULL, NULL}
     ,
@@ -262,6 +278,22 @@ int main(int argc, char **argv)
     int update_globalnet = 0;
     time_t epoch_timer = 0;
 
+    /*
+    {
+        char *corrid=NULL, meh[75];
+        int i;
+        for (i=0; i<10000; i++) {
+            //            corrid = create_corrid("89bd527c-9a72-4373-95b5-87cc1300c74b::6f585b45-9a75-4dcd-9e9e-c75664c63029");
+            snprintf(meh, 75, "89bd527c-9a72-4373-95b5-87cc1300c74b::6f585b45-9a75-4dcd-9e9e-c75664c63029");
+            corrid = create_corrid(meh);
+            //            corrid = create_corrid("::");
+            //            corrid = create_corrid(NULL);
+            printf("MEH: %s\n", SP(corrid));
+        }
+        exit(0);
+    }
+    */
+
     // initialize
     eucanetdInit();
 
@@ -301,14 +333,6 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    if (config->flushmode) {
-        if (flush_all()) {
-            LOGERROR("manual flushing of all euca networking artifacts (iptables, ebtables, ipset) failed: check above log errors for details\n");
-            exit(1);
-        }
-        exit(0);
-    }
-
     /* for testing XML validation
        {
        globalNetworkInfo *mygni;
@@ -320,6 +344,9 @@ int main(int argc, char **argv)
 
     LOGINFO("eucanetd started\n");
 
+    // temporary
+    //    system("cp /opt/eucalyptus/var/run/eucalyptus/global_network_info.xml /opt/eucalyptus/var/lib/eucalyptus/global_network_info.xml");
+
     // spin here until we get the latest config from active CC
     rc = 1;
     while (rc) {
@@ -330,8 +357,15 @@ int main(int argc, char **argv)
         }
     }
 
+    if (config->flushmode) {
+        if (flush_all()) {
+            LOGERROR("manual flushing of all euca networking artifacts (iptables, ebtables, ipset) failed: check above log errors for details\n");
+            exit(1);
+        }
+        exit(0);
+    }
     // got all config, enter main loop
-    //    while(counter<25) {
+    //    while(counter<3) {
     while (1) {
         update_globalnet = 0;
 
@@ -361,53 +395,76 @@ int main(int argc, char **argv)
             // if the local read failed for some reason, skip any attempt to update (leave current state in place)
             update_globalnet = 0;
         }
+        // for testing
+        //        update_globalnet = 1;
 
         // now, perform any updates that are required
-
-        // if information on sec. group rules/membership has changed, apply
-        if (update_globalnet) {
-            LOGINFO("new networking state (VM security groups): updating system\n");
-            // install iptables FW rules, using IPsets for sec. group
-            rc = update_sec_groups();
-            if (rc) {
-                LOGERROR("could not complete update of security groups: check above log errors for details\n");
-                update_globalnet_failed = 1;
-            } else {
-                LOGINFO("new networking state (VM security groups): updated successfully\n");
-            }
-        }
-        // if information about local VM network config has changed, apply
-        if (update_globalnet) {
-            LOGINFO("new networking state (VM public/private network addresses, VM network isolation): updating system\n");
-            // update list of private IPs, handle DHCP daemon re-configure and restart
-            rc = update_private_ips();
-            if (rc) {
-                LOGERROR("could not complete update of private IPs: check above log errors for details\n");
-                update_globalnet_failed = 1;
-            } else {
-                LOGINFO("new networking state (VM private network addresses): updated successfully\n");
-            }
-
-            // update public IP assignment and NAT table entries
-            rc = update_public_ips();
-            if (rc) {
-                LOGERROR("could not complete update of public IPs: check above log errors for details\n");
-                update_globalnet_failed = 1;
-            } else {
-                LOGINFO("new networking state (VM public network addresses): updated successfully\n");
-            }
-
-            // install ebtables rules for isolation
-            rc = update_isolation_rules();
-            if (rc) {
-                if (epoch_failed_updates >= 60) {
-                    LOGERROR("could not complete update of VM network isolation rules after 60 retries: check above log errors for details\n");
+        if (!strcmp(config->vnetMode, "VPCMIDO")) {
+            LOGTRACE("IN VPCMIDO MODE\n");
+            if (update_globalnet) {
+                free_mido_config(mido);
+                bzero(mido, sizeof(mido_config));
+                rc = initialize_mido(mido, config->eucahome, config->midosetupcore, config->midoeucanetdhost, config->midogwhost, config->midogwip, config->midogwiface, config->midopubnw,
+                                     config->midopubgwip, "169.254.0.0", "17");
+                if (rc) {
+                    LOGERROR("could not initialize mido config\n");
+                    update_globalnet_failed = 1;
                 } else {
-                    LOGWARN("retry (%d): could not complete update of VM network isolation rules: retrying\n", epoch_failed_updates);
+                    rc = do_midonet_update(globalnetworkinfo, mido);
+                    if (rc) {
+                        LOGERROR("could not update midonet: check log for details\n");
+                        update_globalnet_failed = 1;
+                    } else {
+                        LOGINFO("new Eucalyptus/Midonet networking state sync: updated successfully\n");
+                    }
                 }
-                update_globalnet_failed = 1;
-            } else {
-                LOGINFO("new networking state (VM network isolation): updated successfully\n");
+            }
+        } else if (!strcmp(config->vnetMode, "EDGE")) {
+            // if information on sec. group rules/membership has changed, apply
+            if (update_globalnet) {
+                LOGINFO("new networking state (VM security groups): updating system\n");
+                // install iptables FW rules, using IPsets for sec. group
+                rc = update_sec_groups();
+                if (rc) {
+                    LOGERROR("could not complete update of security groups: check above log errors for details\n");
+                    update_globalnet_failed = 1;
+                } else {
+                    LOGINFO("new networking state (VM security groups): updated successfully\n");
+                }
+            }
+            // if information about local VM network config has changed, apply
+            if (update_globalnet) {
+                LOGINFO("new networking state (VM public/private network addresses, VM network isolation): updating system\n");
+                // update list of private IPs, handle DHCP daemon re-configure and restart
+                rc = update_private_ips();
+                if (rc) {
+                    LOGERROR("could not complete update of private IPs: check above log errors for details\n");
+                    update_globalnet_failed = 1;
+                } else {
+                    LOGINFO("new networking state (VM private network addresses): updated successfully\n");
+                }
+
+                // update public IP assignment and NAT table entries
+                rc = update_public_ips();
+                if (rc) {
+                    LOGERROR("could not complete update of public IPs: check above log errors for details\n");
+                    update_globalnet_failed = 1;
+                } else {
+                    LOGINFO("new networking state (VM public network addresses): updated successfully\n");
+                }
+
+                // install ebtables rules for isolation
+                rc = update_isolation_rules();
+                if (rc) {
+                    if (epoch_failed_updates >= 60) {
+                        LOGERROR("could not complete update of VM network isolation rules after 60 retries: check above log errors for details\n");
+                    } else {
+                        LOGWARN("retry (%d): could not complete update of VM network isolation rules: retrying\n", epoch_failed_updates);
+                    }
+                    update_globalnet_failed = 1;
+                } else {
+                    LOGINFO("new networking state (VM network isolation): updated successfully\n");
+                }
             }
         }
 
@@ -657,7 +714,9 @@ int update_isolation_rules(void)
                     rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
 
                     // RARP
-                    snprintf(cmd, EUCA_MAX_PATH, "-i %s -p 0x8035 -s %s -d Broadcast --arp-op Request_Reverse --arp-ip-src 0.0.0.0 --arp-ip-dst 0.0.0.0 --arp-mac-src %s --arp-mac-dst %s -j ACCEPT", vnetinterface, strptrb, strptrb, strptrb);
+                    snprintf(cmd, EUCA_MAX_PATH,
+                             "-i %s -p 0x8035 -s %s -d Broadcast --arp-op Request_Reverse --arp-ip-src 0.0.0.0 --arp-ip-dst 0.0.0.0 --arp-mac-src %s --arp-mac-dst %s -j ACCEPT",
+                             vnetinterface, strptrb, strptrb, strptrb);
                     rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
 
                     snprintf(cmd, EUCA_MAX_PATH, "-i %s -p 0x8035 -j DROP", vnetinterface);
@@ -700,7 +759,9 @@ int update_isolation_rules(void)
                     rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
 
                     // RARP
-                    snprintf(cmd, EUCA_MAX_PATH, "-p 0x8035 -o %s -d Broadcast --arp-op Request_Reverse --arp-ip-src 0.0.0.0 --arp-ip-dst 0.0.0.0 --arp-mac-src %s --arp-mac-dst %s -j ACCEPT", vnetinterface, strptrb, strptrb);
+                    snprintf(cmd, EUCA_MAX_PATH,
+                             "-p 0x8035 -o %s -d Broadcast --arp-op Request_Reverse --arp-ip-src 0.0.0.0 --arp-ip-dst 0.0.0.0 --arp-mac-src %s --arp-mac-dst %s -j ACCEPT",
+                             vnetinterface, strptrb, strptrb);
                     rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
 
                     snprintf(cmd, EUCA_MAX_PATH, "-p 0x8035 -o %s -j DROP", vnetinterface);
@@ -709,7 +770,6 @@ int update_isolation_rules(void)
                     // DROP everything else
                     snprintf(cmd, EUCA_MAX_PATH, "-o %s -j DROP", vnetinterface);
                     rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-                    
 
                 } else {
                     if (config->nc_router && !config->nc_router_ip) {
@@ -774,6 +834,10 @@ int eucanetdInit(void)
             LOGFATAL("out of memory\n");
             exit(1);
         }
+    }
+
+    if (!mido) {
+        mido = calloc(1, sizeof(mido_config));
     }
 
     return (0);
@@ -926,14 +990,30 @@ int update_sec_groups(void)
             // then put all the group specific IPT rules (temporary one here)
             if (secgroup->max_grouprules) {
                 for (j = 0; j < secgroup->max_grouprules; j++) {
+
+                    // workaround for EUCA-9627 - should be re-done to use proper ref_counts from ipset itself
+                    {
+                        char *rulecopy = NULL, *tok = NULL, *term = NULL;
+                        rulecopy = strdup(secgroup->grouprules[j].name);
+                        if (rulecopy) {
+                            tok = strstr(rulecopy, "--set EU");
+                            if (tok && strlen(tok) > strlen("--set") + 1) {
+                                tok = tok + strlen("--set") + 1;
+                                term = strchr(tok, ' ');
+                                if (term) {
+                                    *term = '\0';
+                                }
+                                LOGTRACE("found rule (%s) that references empty or non-existant set (%s): adding placeholder\n", secgroup->grouprules[j].name, SP(tok));
+                                ips_handler_add_set(config->ips, tok);
+                                ips_set_add_ip(config->ips, tok, "127.0.0.1");
+                            }
+                            EUCA_FREE(rulecopy);
+                        }
+                    }
                     snprintf(rule, 1024, "-A %s %s -j ACCEPT", chainname, secgroup->grouprules[j].name);
                     ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
                 }
             }
-            // this ones needs to be last: DAN removed in lieu of new method (DROP after all FWD chains have been tried)
-            //            snprintf(rule, 1024, "-A %s -j DROP", chainname);
-            //            ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
-
             EUCA_FREE(chainname);
         }
     }
@@ -986,7 +1066,7 @@ int update_sec_groups(void)
 //!
 int update_public_ips(void)
 {
-    int slashnet = 0, ret = 0, rc = 0, i = 0, j = 0, foundidx = 0;
+    int slashnet = 0, ret = 0, rc = 0, i = 0, j = 0;
     char cmd[EUCA_MAX_PATH], rule[1024];
     char *strptra = NULL, *strptrb = NULL;
     sequence_executor cmds;
@@ -1040,7 +1120,6 @@ int update_public_ips(void)
     }
 
     rc = ipt_handler_repopulate(config->ipt);
-    rc = se_init(&cmds, config->cmdprefix, 2, 1);
 
     ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_PRE");
     ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_POST");
@@ -1079,11 +1158,23 @@ int update_public_ips(void)
         strptrb = hex2dot(instances[i].privateIp);
         LOGTRACE("instance pub/priv: %s: %s/%s\n", instances[i].name, strptra, strptrb);
         if ((instances[i].publicIp && instances[i].privateIp) && (instances[i].publicIp != instances[i].privateIp)) {
+
+            // run some commands
+            rc = se_init(&cmds, config->cmdprefix, 2, 1);
+
             snprintf(cmd, EUCA_MAX_PATH, "ip addr add %s/%d dev %s >/dev/null 2>&1", strptra, 32, config->pubInterface);
             rc = se_add(&cmds, cmd, NULL, ignore_exit2);
-
+            
             snprintf(cmd, EUCA_MAX_PATH, "arping -c 5 -w 1 -U -I %s %s >/dev/null 2>&1 &", config->pubInterface, strptra);
             rc = se_add(&cmds, cmd, NULL, ignore_exit);
+            
+            se_print(&cmds);
+            rc = se_execute(&cmds);
+            if (rc) {
+                LOGERROR("could not execute command sequence (check above log errors for details): adding ips, sending arpings\n");
+                ret = 1;
+            }
+            se_free(&cmds);
 
             snprintf(rule, 1024, "-A EUCA_NAT_PRE -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
             rc = ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
@@ -1107,7 +1198,6 @@ int update_public_ips(void)
         EUCA_FREE(strptra);
         EUCA_FREE(strptrb);
     }
-    EUCA_FREE(instances);
 
     // lastly, install metadata redirect rule
     if (config->metadata_ip) {
@@ -1118,14 +1208,6 @@ int update_public_ips(void)
     snprintf(rule, 1024, "-A EUCA_NAT_PRE -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", strptra);
     rc = ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
     EUCA_FREE(strptra);
-    
-    se_print(&cmds);
-    rc = se_execute(&cmds);
-    if (rc) {
-        LOGERROR("could not execute command sequence (check above log errors for details): adding ips, sending arpings\n");
-        ret = 1;
-    }
-    se_free(&cmds);
 
     //  rc = ipt_handler_print(config->ipt);
     rc = ipt_handler_deploy(config->ipt);
@@ -1135,34 +1217,41 @@ int update_public_ips(void)
     }
     // if all has gone well, now clear any public IPs that have not been mapped to private IPs
     if (!ret) {
-        se_init(&cmds, config->cmdprefix, 2, 1);
+        
         for (i = 0; i < globalnetworkinfo->max_public_ips; i++) {
             int found = 0;
-
-            foundidx = 0;
-            for (j = 0; j < globalnetworkinfo->max_instances && !found; j++) {
-                if (globalnetworkinfo->instances[j].publicIp == globalnetworkinfo->public_ips[i]) {
-                    found = 1;
-                    foundidx = i;
+            
+            if (max_instances > 0) {
+                // only clear IPs that are not assigned to instances running on this node
+                for (j = 0; j < max_instances && !found; j++) {
+                    if (instances[j].publicIp == globalnetworkinfo->public_ips[i]) {
+                        found = 1;
+                    }
                 }
             }
-
+            
             if (!found) {
+                se_init(&cmds, config->cmdprefix, 2, 1);
+                
                 strptra = hex2dot(globalnetworkinfo->public_ips[i]);
                 snprintf(cmd, EUCA_MAX_PATH, "ip addr del %s/%d dev %s >/dev/null 2>&1", strptra, 32, config->pubInterface);
-                rc = se_add(&cmds, cmd, NULL, ignore_exit2);
                 EUCA_FREE(strptra);
-            }
+                
+                rc = se_add(&cmds, cmd, NULL, ignore_exit2);
+                se_print(&cmds);
+                rc = se_execute(&cmds);
+                if (rc) {
+                    LOGERROR("could not execute command sequence (check above log errors for details): revoking no longer in use ips\n");
+                    ret = 1;
+                }
+                se_free(&cmds);
+                
+                }
         }
-
-        se_print(&cmds);
-        rc = se_execute(&cmds);
-        if (rc) {
-            LOGERROR("could not execute command sequence (check above log errors for details): revoking no longer in use ips\n");
-            ret = 1;
-        }
-        se_free(&cmds);
     }
+
+    EUCA_FREE(instances);
+
     return (ret);
 }
 
@@ -1400,7 +1489,7 @@ int read_config_bootstrap(void)
 
     if (!config->debug) {
         snprintf(logfile, EUCA_MAX_PATH, "%s/var/log/eucalyptus/eucanetd.log", config->eucahome);
-        log_file_set(logfile);
+        log_file_set(logfile, NULL);
         log_params_set(EUCA_LOG_INFO, 0, 100000);
 
         pwent = getpwnam(config->eucauser);
@@ -1473,29 +1562,25 @@ int read_config(void)
 
     snprintf(netPath, EUCA_MAX_PATH, CC_NET_PATH_DEFAULT, home);
 
-    // setup and read local NC eucalyptus.conf file
-    snprintf(config->configFiles[0], EUCA_MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
-    configInitValues(configKeysRestartEUCANETD, configKeysNoRestartEUCANETD);   // initialize config subsystem
-    readConfigFile(config->configFiles, 1);
+    // search for the global state file from eucalyptue
+    snprintf(sourceuri, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/global_network_info.xml", home);
+    if (check_file(sourceuri)) {
+        snprintf(sourceuri, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/global_network_info.xml", home);
+        if (check_file(sourceuri)) {
+            LOGWARN("cannot find global_network_info.xml state file in $EUCALYPTUS/var/lib/eucalyptus or $EUCALYPTUS/var/run/eucalyptus yet.\n");
+            return (1);
+        } else {
+            snprintf(sourceuri, EUCA_MAX_PATH, "file://" EUCALYPTUS_STATE_DIR "/global_network_info.xml", home);
+            snprintf(destfile, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/eucanetd_global_network_info.xml", home);
+            LOGDEBUG("found global_network_info.xml state file: setting source URI to '%s'\n", sourceuri);
+        }
+    } else {
+        snprintf(sourceuri, EUCA_MAX_PATH, "file://" EUCALYPTUS_RUN_DIR "/global_network_info.xml", home);
+        snprintf(destfile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/eucanetd_global_network_info.xml", home);
+        LOGDEBUG("found global_network_info.xml state file: setting source URI to '%s'\n", sourceuri);
+    }
 
-    cvals[EUCANETD_CVAL_PUBINTERFACE] = configFileValue("VNET_PUBINTERFACE");
-    cvals[EUCANETD_CVAL_PRIVINTERFACE] = configFileValue("VNET_PRIVINTERFACE");
-    cvals[EUCANETD_CVAL_BRIDGE] = configFileValue("VNET_BRIDGE");
-    cvals[EUCANETD_CVAL_EUCAHOME] = configFileValue("EUCALYPTUS");
-    cvals[EUCANETD_CVAL_MODE] = configFileValue("VNET_MODE");
-    cvals[EUCANETD_CVAL_EUCA_USER] = configFileValue("EUCA_USER");
-    cvals[EUCANETD_CVAL_DHCPDAEMON] = configFileValue("VNET_DHCPDAEMON");
-    cvals[EUCANETD_CVAL_DHCPUSER] = configFileValue("VNET_DHCPUSER");
-    cvals[EUCANETD_CVAL_POLLING_FREQUENCY] = configFileValue("POLLING_FREQUENCY");
-    cvals[EUCANETD_CVAL_DISABLE_L2_ISOLATION] = configFileValue("DISABLE_L2_ISOLATION");
-    cvals[EUCANETD_CVAL_NC_ROUTER] = configFileValue("NC_ROUTER");
-    cvals[EUCANETD_CVAL_NC_ROUTER_IP] = configFileValue("NC_ROUTER_IP");
-    cvals[EUCANETD_CVAL_METADATA_USE_VM_PRIVATE] = configFileValue("METADATA_USE_VM_PRIVATE");
-    cvals[EUCANETD_CVAL_METADATA_IP] = configFileValue("METADATA_IP");
-    
     // initialize and populate data from global_network_info.xml file
-    snprintf(destfile, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/eucanetd_global_network_info.xml", home);
-    snprintf(sourceuri, EUCA_MAX_PATH, "file://" EUCALYPTUS_STATE_DIR "/global_network_info.xml", home);
     atomic_file_init(&(config->global_network_info_file), sourceuri, destfile, 0);
 
     rc = atomic_file_get(&(config->global_network_info_file), &to_update);
@@ -1517,14 +1602,58 @@ int read_config(void)
     }
     rc = gni_print(globalnetworkinfo);
 
-    rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
-    if (rc) {
-        LOGERROR("cannot locate cluster to which local node belongs in global network view: check network config settings\n");
-        for (i = 0; i < EUCANETD_CVAL_LAST; i++) {
-            EUCA_FREE(cvals[i]);
-        }
-        return (1);
+    // setup and read local NC eucalyptus.conf file
+    snprintf(config->configFiles[0], EUCA_MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
+    configInitValues(configKeysRestartEUCANETD, configKeysNoRestartEUCANETD);   // initialize config subsystem
+    readConfigFile(config->configFiles, 1);
+
+    cvals[EUCANETD_CVAL_PUBINTERFACE] = configFileValue("VNET_PUBINTERFACE");
+    cvals[EUCANETD_CVAL_PRIVINTERFACE] = configFileValue("VNET_PRIVINTERFACE");
+    cvals[EUCANETD_CVAL_BRIDGE] = configFileValue("VNET_BRIDGE");
+    cvals[EUCANETD_CVAL_EUCAHOME] = configFileValue("EUCALYPTUS");
+    cvals[EUCANETD_CVAL_MODE] = configFileValue("VNET_MODE");
+    cvals[EUCANETD_CVAL_EUCA_USER] = configFileValue("EUCA_USER");
+    cvals[EUCANETD_CVAL_DHCPDAEMON] = configFileValue("VNET_DHCPDAEMON");
+    cvals[EUCANETD_CVAL_DHCPUSER] = configFileValue("VNET_DHCPUSER");
+    cvals[EUCANETD_CVAL_POLLING_FREQUENCY] = configFileValue("POLLING_FREQUENCY");
+    cvals[EUCANETD_CVAL_DISABLE_L2_ISOLATION] = configFileValue("DISABLE_L2_ISOLATION");
+    cvals[EUCANETD_CVAL_NC_ROUTER] = configFileValue("NC_ROUTER");
+    cvals[EUCANETD_CVAL_NC_ROUTER_IP] = configFileValue("NC_ROUTER_IP");
+    cvals[EUCANETD_CVAL_METADATA_USE_VM_PRIVATE] = configFileValue("METADATA_USE_VM_PRIVATE");
+    cvals[EUCANETD_CVAL_METADATA_IP] = configFileValue("METADATA_IP");
+    cvals[EUCANETD_CVAL_MIDOSETUPCORE] = configFileValue("MIDOSETUPCORE");
+
+    cvals[EUCANETD_CVAL_MIDOEUCANETDHOST] = configFileValue("MIDOEUCANETDHOST");
+    if (!cvals[EUCANETD_CVAL_MIDOEUCANETDHOST]) {
+        cvals[EUCANETD_CVAL_MIDOEUCANETDHOST] = strdup(globalnetworkinfo->EucanetdHost);
     }
+
+    cvals[EUCANETD_CVAL_MIDOGWHOST] = configFileValue("MIDOGWHOST");
+    if (!cvals[EUCANETD_CVAL_MIDOGWHOST]) {
+        cvals[EUCANETD_CVAL_MIDOGWHOST] = strdup(globalnetworkinfo->GatewayHost);
+    }
+
+    cvals[EUCANETD_CVAL_MIDOGWIP] = configFileValue("MIDOGWIP");
+    if (!cvals[EUCANETD_CVAL_MIDOGWIP]) {
+        cvals[EUCANETD_CVAL_MIDOGWIP] = strdup(globalnetworkinfo->GatewayIP);
+    }
+
+    cvals[EUCANETD_CVAL_MIDOGWIFACE] = configFileValue("MIDOGWIFACE");
+    if (!cvals[EUCANETD_CVAL_MIDOGWIFACE]) {
+        cvals[EUCANETD_CVAL_MIDOGWIFACE] = strdup(globalnetworkinfo->GatewayInterface);
+    }
+
+    cvals[EUCANETD_CVAL_MIDOPUBNW] = configFileValue("MIDOPUBNW");
+    if (!cvals[EUCANETD_CVAL_MIDOPUBNW]) {
+        cvals[EUCANETD_CVAL_MIDOPUBNW] = strdup(globalnetworkinfo->PublicNetworkCidr);
+    }
+
+    cvals[EUCANETD_CVAL_MIDOPUBGWIP] = configFileValue("MIDOPUBGWIP");
+    if (!cvals[EUCANETD_CVAL_MIDOPUBGWIP]) {
+        cvals[EUCANETD_CVAL_MIDOPUBGWIP] = strdup(globalnetworkinfo->PublicGatewayIP);
+    }
+
+    // now, set up the config datastructure from read in config values (file and global network view)
 
     EUCA_FREE(config->eucahome);
     config->eucahome = strdup(cvals[EUCANETD_CVAL_EUCAHOME]);
@@ -1547,7 +1676,7 @@ int read_config(void)
 
     if (strlen(cvals[EUCANETD_CVAL_METADATA_IP])) {
         u32 test_ip, test_localhost;
-                   
+
         test_localhost = dot2hex("127.0.0.1");
         test_ip = dot2hex(cvals[EUCANETD_CVAL_METADATA_IP]);
         if (test_ip == test_localhost) {
@@ -1567,7 +1696,7 @@ int read_config(void)
             u32 test_ip, test_localhost;
             test_localhost = dot2hex("127.0.0.1");
             test_ip = dot2hex(cvals[EUCANETD_CVAL_NC_ROUTER_IP]);
-            if ( strcmp(cvals[EUCANETD_CVAL_NC_ROUTER_IP], "AUTO") && (test_ip == test_localhost) ) {
+            if (strcmp(cvals[EUCANETD_CVAL_NC_ROUTER_IP], "AUTO") && (test_ip == test_localhost)) {
                 LOGERROR("value specified for NC_ROUTER_IP is not a valid IP or the string 'AUTO': defaulting to 'AUTO'\n");
                 snprintf(config->ncRouterIP, 32, "AUTO");
             } else {
@@ -1588,6 +1717,24 @@ int read_config(void)
     snprintf(config->privInterface, 32, "%s", cvals[EUCANETD_CVAL_PRIVINTERFACE]);
     snprintf(config->bridgeDev, 32, "%s", cvals[EUCANETD_CVAL_BRIDGE]);
     snprintf(config->dhcpDaemon, EUCA_MAX_PATH, "%s", cvals[EUCANETD_CVAL_DHCPDAEMON]);
+    snprintf(config->vnetMode, sizeof(config->vnetMode), "%s", cvals[EUCANETD_CVAL_MODE]);
+
+    // mido config opts
+    
+    if (cvals[EUCANETD_CVAL_MIDOSETUPCORE])
+        snprintf(config->midosetupcore, sizeof(config->midosetupcore), "%s", cvals[EUCANETD_CVAL_MIDOSETUPCORE]);
+    if (cvals[EUCANETD_CVAL_MIDOEUCANETDHOST])
+        snprintf(config->midoeucanetdhost, sizeof(config->midoeucanetdhost), "%s", cvals[EUCANETD_CVAL_MIDOEUCANETDHOST]);
+    if (cvals[EUCANETD_CVAL_MIDOGWHOST])
+        snprintf(config->midogwhost, sizeof(config->midogwhost), "%s", cvals[EUCANETD_CVAL_MIDOGWHOST]);
+    if (cvals[EUCANETD_CVAL_MIDOGWIP])
+        snprintf(config->midogwip, sizeof(config->midogwip), "%s", cvals[EUCANETD_CVAL_MIDOGWIP]);
+    if (cvals[EUCANETD_CVAL_MIDOGWIFACE])
+        snprintf(config->midogwiface, sizeof(config->midogwiface), "%s", cvals[EUCANETD_CVAL_MIDOGWIFACE]);
+    if (cvals[EUCANETD_CVAL_MIDOPUBNW])
+        snprintf(config->midopubnw, sizeof(config->midopubnw), "%s", cvals[EUCANETD_CVAL_MIDOPUBNW]);
+    if (cvals[EUCANETD_CVAL_MIDOPUBGWIP])
+        snprintf(config->midopubgwip, sizeof(config->midopubgwip), "%s", cvals[EUCANETD_CVAL_MIDOPUBGWIP]);
 
     LOGDEBUG
         ("required variables read from local config file: EUCALYPTUS=%s EUCA_USER=%s VNET_MODE=%s VNET_PUBINTERFACE=%s VNET_PRIVINTERFACE=%s VNET_BRIDGE=%s VNET_DHCPDAEMON=%s\n",
@@ -1600,37 +1747,53 @@ int read_config(void)
         ret = 1;
     }
 
-    config->ipt = malloc(sizeof(ipt_handler));
-    if (!config->ipt) {
-        LOGFATAL("out of memory!\n");
-        exit(1);
-    }
-    rc = ipt_handler_init(config->ipt, config->cmdprefix);
-    if (rc) {
-        LOGERROR("could not initialize ipt_handler: check above log errors for details\n");
-        ret = 1;
-    }
+    if (!strcmp(config->vnetMode, "EDGE")) {
+        // EDGE only
+        rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
+        if (rc) {
+            LOGERROR("cannot locate cluster to which local node belongs in global network view: check network config settings\n");
+            ret = 1;
+        }
 
-    config->ips = malloc(sizeof(ips_handler));
-    if (!config->ips) {
-        LOGFATAL("out of memory!\n");
-        exit(1);
-    }
-    rc = ips_handler_init(config->ips, config->cmdprefix);
-    if (rc) {
-        LOGERROR("could not initialize ips_handler: check above log errors for details\n");
-        ret = 1;
-    }
+        config->ipt = malloc(sizeof(ipt_handler));
+        if (!config->ipt) {
+            LOGFATAL("out of memory!\n");
+            exit(1);
+        }
+        rc = ipt_handler_init(config->ipt, config->cmdprefix);
+        if (rc) {
+            LOGERROR("could not initialize ipt_handler: check above log errors for details\n");
+            ret = 1;
+        }
 
-    config->ebt = malloc(sizeof(ebt_handler));
-    if (!config->ebt) {
-        LOGFATAL("out of memory!\n");
-        exit(1);
-    }
-    rc = ebt_handler_init(config->ebt, config->cmdprefix);
-    if (rc) {
-        LOGERROR("could not initialize ebt_handler: check above log errors for details\n");
-        ret = 1;
+        config->ips = malloc(sizeof(ips_handler));
+        if (!config->ips) {
+            LOGFATAL("out of memory!\n");
+            exit(1);
+        }
+        rc = ips_handler_init(config->ips, config->cmdprefix);
+        if (rc) {
+            LOGERROR("could not initialize ips_handler: check above log errors for details\n");
+            ret = 1;
+        }
+
+        config->ebt = malloc(sizeof(ebt_handler));
+        if (!config->ebt) {
+            LOGFATAL("out of memory!\n");
+            exit(1);
+        }
+        rc = ebt_handler_init(config->ebt, config->cmdprefix);
+        if (rc) {
+            LOGERROR("could not initialize ebt_handler: check above log errors for details\n");
+            ret = 1;
+        }
+    } else if (!strcmp(config->vnetMode, "VPCMIDO")) {
+        // VPCMIDO mode init
+        rc = initialize_mido(mido, config->eucahome, config->midosetupcore, config->midoeucanetdhost, config->midogwhost, config->midogwip, config->midogwiface, config->midopubnw, config->midopubgwip, "169.254.0.0", "17");
+        if (rc) {
+            LOGERROR("could not initialize mido: please ensure that all required config options for MIDOVPC mode are set in eucalyptus.conf or the global cloud network configuration JSON\n");
+            ret = 1;
+        }
     }
 
     for (i = 0; i < EUCANETD_CVAL_LAST; i++) {
@@ -1665,7 +1828,7 @@ int logInit(void)
 
     if (!config->debug) {
         snprintf(logfile, EUCA_MAX_PATH, "%s/var/log/eucalyptus/eucanetd.log", config->eucahome);
-        log_file_set(logfile);
+        log_file_set(logfile, NULL);
 
         configReadLogParams(&log_level, &log_roll_number, &log_max_size_bytes, &log_prefix);
 
@@ -1754,7 +1917,7 @@ int read_latest_network(void)
     int brdev_len = 0, i = 0, found_ip = 0;
     char *strptra = NULL, *strptrb = NULL, *strptrc = NULL, *strptrd = NULL;
     gni_cluster *mycluster = NULL;
-
+    
     LOGDEBUG("reading latest network view into eucanetd\n");
 
     rc = gni_populate(globalnetworkinfo, config->global_network_info_file.dest);
@@ -1762,69 +1925,77 @@ int read_latest_network(void)
         LOGERROR("failed to initialize global network info data structures from XML file: check network config settings\n");
         ret = 1;
     } else {
-        rc = gni_print(globalnetworkinfo);
-        
-        rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
-        if (rc) {
-            LOGERROR("cannot retrieve cluster to which this NC belongs: check global network configuration\n");
-            ret = 1;
+        gni_print(globalnetworkinfo);
+
+        if (!strcmp(config->vnetMode, "VPCMIDO")) {
+            // skip for VPCMIDO
+            ret = 0;
         } else {
-            if (!config->nc_router) {
-                // user has not specified NC router, use the default cluster private subnet gateway
-                config->vmGatewayIP = mycluster->private_subnet.gateway;
-                strptra = hex2dot(config->vmGatewayIP);
-                LOGDEBUG("using default cluster private subnet GW as VM default GW: %s\n", strptra);
-                EUCA_FREE(strptra);
+            rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
+            if (rc) {
+                LOGERROR("cannot retrieve cluster to which this NC belongs: check global network configuration\n");
+                ret = 1;
             } else {
-                // user has specified use of NC as router
-                if (!config->nc_router_ip) {
-                    // user has not specified a router IP, use 'fake_router' mode
+                if (!config->nc_router) {
+                    // user has not specified NC router, use the default cluster private subnet gateway
                     config->vmGatewayIP = mycluster->private_subnet.gateway;
                     strptra = hex2dot(config->vmGatewayIP);
-                    LOGDEBUG("using default cluster private subnet GW, with ARP spoofing, as VM default GW: %s\n", strptra);
+                    LOGDEBUG("using default cluster private subnet GW as VM default GW: %s\n", strptra);
                     EUCA_FREE(strptra);
-                } else if (config->nc_router_ip && strcmp(config->ncRouterIP, "AUTO")) {
-                    // user has specified an explicit IP to use as NC router IP
-                    config->vmGatewayIP = dot2hex(config->ncRouterIP);
-                    LOGDEBUG("using user specified NC IP as VM default GW: %s\n", config->ncRouterIP);
-                } else if (config->nc_router_ip && !strcmp(config->ncRouterIP, "AUTO")) {
-                    // user has specified 'AUTO', so detect the IP on the bridge Device that falls within this node's cluster's private subnet
-                    rc = getdevinfo(config->bridgeDev, &brdev_ips, &brdev_nms, &brdev_len);
-                    if (rc) {
-                        LOGERROR("cannot retrieve IP information from specified bridge device '%s': check your configuration\n", config->bridgeDev);
-                        ret = 1;
-                    } else {
-                        LOGTRACE("specified bridgeDev '%s': found %d assigned IPs\n", config->bridgeDev, brdev_len);
-                        for (i=0; i<brdev_len && !found_ip; i++) {
-                            strptra = hex2dot(brdev_ips[i]);
-                            strptrb = hex2dot(brdev_nms[i]);
-                            if ( (brdev_nms[i] == mycluster->private_subnet.netmask) && ( (brdev_ips[i] & mycluster->private_subnet.netmask) == mycluster->private_subnet.subnet) ) {
-                                strptrc = hex2dot(mycluster->private_subnet.subnet);
-                                strptrd = hex2dot(mycluster->private_subnet.netmask);
-                                LOGTRACE("auto-detected IP '%s' on specified bridge interface '%s' that matches cluster's specified subnet '%s/%s'\n", strptra, config->bridgeDev, strptrc, strptrd);
-                                config->vmGatewayIP = brdev_ips[i];
-                                LOGDEBUG("using auto-detected NC IP as VM default GW: %s\n", strptra);
-                                found_ip = 1;
-                                EUCA_FREE(strptrc);
-                                EUCA_FREE(strptrd);
-                            }
-                            EUCA_FREE(strptra);
-                            EUCA_FREE(strptrb);
-                        }
-                        if (!found_ip) {
-                            strptra = hex2dot(mycluster->private_subnet.subnet);
-                            strptrb = hex2dot(mycluster->private_subnet.netmask);
-                            LOGERROR("cannot find an IP assigned to specified bridge device '%s' that falls within this cluster's specified subnet '%s/%s': check your configuration\n", config->bridgeDev, strptra, strptrb);
-                            EUCA_FREE(strptra);
-                            EUCA_FREE(strptrb);
+                } else {
+                    // user has specified use of NC as router
+                    if (!config->nc_router_ip) {
+                        // user has not specified a router IP, use 'fake_router' mode
+                        config->vmGatewayIP = mycluster->private_subnet.gateway;
+                        strptra = hex2dot(config->vmGatewayIP);
+                        LOGDEBUG("using default cluster private subnet GW, with ARP spoofing, as VM default GW: %s\n", strptra);
+                        EUCA_FREE(strptra);
+                    } else if (config->nc_router_ip && strcmp(config->ncRouterIP, "AUTO")) {
+                        // user has specified an explicit IP to use as NC router IP
+                        config->vmGatewayIP = dot2hex(config->ncRouterIP);
+                        LOGDEBUG("using user specified NC IP as VM default GW: %s\n", config->ncRouterIP);
+                    } else if (config->nc_router_ip && !strcmp(config->ncRouterIP, "AUTO")) {
+                        // user has specified 'AUTO', so detect the IP on the bridge Device that falls within this node's cluster's private subnet
+                        rc = getdevinfo(config->bridgeDev, &brdev_ips, &brdev_nms, &brdev_len);
+                        if (rc) {
+                            LOGERROR("cannot retrieve IP information from specified bridge device '%s': check your configuration\n", config->bridgeDev);
                             ret = 1;
+                        } else {
+                            LOGTRACE("specified bridgeDev '%s': found %d assigned IPs\n", config->bridgeDev, brdev_len);
+                            for (i = 0; i < brdev_len && !found_ip; i++) {
+                                strptra = hex2dot(brdev_ips[i]);
+                                strptrb = hex2dot(brdev_nms[i]);
+                                if ((brdev_nms[i] == mycluster->private_subnet.netmask) && ((brdev_ips[i] & mycluster->private_subnet.netmask) == mycluster->private_subnet.subnet)) {
+                                    strptrc = hex2dot(mycluster->private_subnet.subnet);
+                                    strptrd = hex2dot(mycluster->private_subnet.netmask);
+                                    LOGTRACE("auto-detected IP '%s' on specified bridge interface '%s' that matches cluster's specified subnet '%s/%s'\n", strptra, config->bridgeDev,
+                                             strptrc, strptrd);
+                                    config->vmGatewayIP = brdev_ips[i];
+                                    LOGDEBUG("using auto-detected NC IP as VM default GW: %s\n", strptra);
+                                    found_ip = 1;
+                                    EUCA_FREE(strptrc);
+                                    EUCA_FREE(strptrd);
+                                }
+                                EUCA_FREE(strptra);
+                                EUCA_FREE(strptrb);
+                            }
+                            if (!found_ip) {
+                                strptra = hex2dot(mycluster->private_subnet.subnet);
+                                strptrb = hex2dot(mycluster->private_subnet.netmask);
+                                LOGERROR
+                                    ("cannot find an IP assigned to specified bridge device '%s' that falls within this cluster's specified subnet '%s/%s': check your configuration\n",
+                                     config->bridgeDev, strptra, strptrb);
+                                EUCA_FREE(strptra);
+                                EUCA_FREE(strptrb);
+                                ret = 1;
+                            }
                         }
+                        EUCA_FREE(brdev_ips);
+                        EUCA_FREE(brdev_nms);
                     }
-                    EUCA_FREE(brdev_ips);
-                    EUCA_FREE(brdev_nms);
                 }
             }
-        }        
+        }
     }
     return (ret);
 }
@@ -1971,46 +2142,55 @@ int flush_all(void)
     ebt_handler *ebt = NULL;
     ips_handler *ips = NULL;
 
-    ipt = EUCA_ZALLOC(sizeof(ipt_handler), 1);
-    ebt = EUCA_ZALLOC(sizeof(ebt_handler), 1);
-    ips = EUCA_ZALLOC(sizeof(ips_handler), 1);
+    if (!strcmp(config->vnetMode, "EDGE")) {
+        ipt = EUCA_ZALLOC(sizeof(ipt_handler), 1);
+        ebt = EUCA_ZALLOC(sizeof(ebt_handler), 1);
+        ips = EUCA_ZALLOC(sizeof(ips_handler), 1);
 
-    if (!ipt || !ebt || !ips) {
-        LOGFATAL("out of memory!\n");
-        exit(1);
+        if (!ipt || !ebt || !ips) {
+            LOGFATAL("out of memory!\n");
+            exit(1);
+        }
+        // iptables
+        rc = ipt_handler_init(ipt, config->cmdprefix);
+        rc = ipt_handler_repopulate(ipt);
+        rc = ipt_chain_flush(ipt, "filter", "EUCA_FILTER_FWD");
+        rc = ipt_chain_flush(ipt, "filter", "EUCA_COUNTERS_IN");
+        rc = ipt_chain_flush(ipt, "filter", "EUCA_COUNTERS_OUT");
+        rc = ipt_chain_flush(ipt, "nat", "EUCA_NAT_PRE");
+        rc = ipt_chain_flush(ipt, "nat", "EUCA_NAT_POST");
+        rc = ipt_chain_flush(ipt, "nat", "EUCA_NAT_OUT");
+        rc = ipt_table_deletechainmatch(ipt, "filter", "EU_");
+        rc = ipt_handler_print(ipt);
+        rc = ipt_handler_deploy(ipt);
+
+        // ipsets
+        rc = ips_handler_init(ips, config->cmdprefix);
+        rc = ips_handler_repopulate(ips);
+        rc = ips_handler_deletesetmatch(ips, "EU_");
+        rc = ips_handler_deletesetmatch(ips, "EUCA_");
+        rc = ips_handler_print(ips);
+        rc = ips_handler_deploy(ips, 1);
+
+        // ebtables
+        rc = ebt_handler_init(ebt, config->cmdprefix);
+        rc = ebt_handler_repopulate(ebt);
+        rc = ebt_chain_flush(ebt, "filter", "EUCA_EBT_FWD");
+        rc = ebt_chain_flush(ebt, "nat", "EUCA_EBT_NAT_PRE");
+        rc = ebt_chain_flush(ebt, "nat", "EUCA_EBT_NAT_POST");
+        rc = ebt_handler_deploy(ebt);
+
+        EUCA_FREE(ipt);
+        EUCA_FREE(ebt);
+        EUCA_FREE(ips);
+    } else if (!strcmp(config->vnetMode, "VPCMIDO")) {
+        if (mido) {
+            rc = do_midonet_teardown(mido);
+            if (rc) {
+                ret = 1;
+            }
+        }
     }
-    // iptables
-    rc = ipt_handler_init(ipt, config->cmdprefix);
-    rc = ipt_handler_repopulate(ipt);
-    rc = ipt_chain_flush(ipt, "filter", "EUCA_FILTER_FWD");
-    rc = ipt_chain_flush(ipt, "filter", "EUCA_COUNTERS_IN");
-    rc = ipt_chain_flush(ipt, "filter", "EUCA_COUNTERS_OUT");
-    rc = ipt_chain_flush(ipt, "nat", "EUCA_NAT_PRE");
-    rc = ipt_chain_flush(ipt, "nat", "EUCA_NAT_POST");
-    rc = ipt_chain_flush(ipt, "nat", "EUCA_NAT_OUT");
-    rc = ipt_table_deletechainmatch(ipt, "filter", "EU_");
-    rc = ipt_handler_print(ipt);
-    rc = ipt_handler_deploy(ipt);
-
-    // ipsets
-    rc = ips_handler_init(ips, config->cmdprefix);
-    rc = ips_handler_repopulate(ips);
-    rc = ips_handler_deletesetmatch(ips, "EU_");
-    rc = ips_handler_deletesetmatch(ips, "EUCA_");
-    rc = ips_handler_print(ips);
-    rc = ips_handler_deploy(ips, 1);
-
-    // ebtables
-    rc = ebt_handler_init(ebt, config->cmdprefix);
-    rc = ebt_handler_repopulate(ebt);
-    rc = ebt_chain_flush(ebt, "filter", "EUCA_EBT_FWD");
-    rc = ebt_chain_flush(ebt, "nat", "EUCA_EBT_NAT_PRE");
-    rc = ebt_chain_flush(ebt, "nat", "EUCA_EBT_NAT_POST");
-    rc = ebt_handler_deploy(ebt);
-
-    EUCA_FREE(ipt);
-    EUCA_FREE(ebt);
-    EUCA_FREE(ips);
 
     return (ret);
 }

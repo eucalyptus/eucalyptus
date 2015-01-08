@@ -63,20 +63,23 @@
 package com.eucalyptus.cloud.run;
 
 import com.eucalyptus.auth.AuthContextSupplier;
+
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
+
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
+
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
@@ -85,12 +88,16 @@ import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.component.Partition;
+import com.eucalyptus.compute.common.backend.RunInstancesType;
+import com.eucalyptus.compute.vpc.Subnet;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.images.Emis;
+import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.images.Emis.BootableSet;
+import com.eucalyptus.images.Emis.LookupMachine;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.ExtantNetwork;
@@ -108,9 +115,9 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.msgs.HasRequest;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class Allocations {
@@ -124,9 +131,10 @@ public class Allocations {
     private final UserFullName ownerFullName;
     private byte[] userData;
     private String credential;
+    private String rootDirective;
     private final int minCount;
     private final int maxCount;
-    private final boolean usePrivateAddressing;
+    private boolean usePrivateAddressing;
     private final boolean monitoring;
     @Nullable
     private final String clientToken;
@@ -136,6 +144,7 @@ public class Allocations {
     private SshKeyPair sshKeyPair;
     private BootableSet bootSet;
     private VmType vmType;
+    private Subnet subnet;
     private NetworkGroup primaryNetwork;
     private Map<String, NetworkGroup> networkGroups = Maps.newHashMap( );
     private String iamInstanceProfileArn;
@@ -152,6 +161,7 @@ public class Allocations {
 
     /** */
     private final TypedContext allocationContext = TypedContext.newTypedContext( );
+    private final AtomicBoolean committed = new AtomicBoolean( false );
 
     private Allocation(final RunInstancesType request) {
       this.context = Contexts.lookup();
@@ -218,9 +228,9 @@ public class Allocations {
       this.reservationId = reservationId;
       this.reservationIndex = -1l;
       this.instanceIds = Maps.newHashMap();
-      this.instanceIds.put(0, instanceId);
+      this.instanceIds.put(launchIndex, instanceId);
       this.instanceUuids = Maps.newHashMap();
-      this.instanceUuids.put(0, instanceUuid);
+      this.instanceUuids.put(launchIndex, instanceUuid);
       this.allocationTokens.add( new ResourceToken( this, launchIndex ) );
       this.context = null;
       this.monitoring = false;
@@ -317,14 +327,19 @@ public class Allocations {
     }
 
     public void commit() throws Exception {
-      try {
+      if ( !committed.get( ) ) try {
         for (final ResourceToken t : this.getAllocationTokens()) {
           VmInstance.Create.INSTANCE.apply(t);
         }
+        committed.set( true );
       } catch (final Exception ex) {
         this.abort();
         throw ex;
       }
+    }
+
+    public boolean isCommitted() {
+      return committed.get( );
     }
 
     public void abort() {
@@ -363,30 +378,20 @@ public class Allocations {
       this.vmType = vmType;
     }
 
+    public Subnet getSubnet() {
+      return subnet;
+    }
+
+    public void setSubnet( final Subnet subnet ) {
+      this.subnet = subnet;
+    }
+
     public UserFullName getOwnerFullName() {
       return this.ownerFullName;
     }
 
     public List<ResourceToken> getAllocationTokens() {
       return this.allocationTokens;
-    }
-
-    public void setUserDataAsString( final String userData ){
-      if(userData == null || userData.length()<=0){
-        try {
-          this.userData = new byte[0];
-          this.request.setUserData(new String(Base64.encode(new byte[0])));
-        } catch (Exception ex) {
-          LOG.error(ex, ex);
-        }
-      }else{
-        try {
-          this.userData = userData.getBytes();
-          this.request.setUserData(new String(Base64.encode(this.userData)));
-        } catch (Exception ex) {
-          LOG.error(ex, ex);
-        }
-      }
     }
 
     public void setUserData( final byte[] userData ) {
@@ -404,7 +409,20 @@ public class Allocations {
     public String getCredential(){
       return this.credential;
     }
-    
+
+    public void setRootDirective() {
+      if ( ! bootSet.isBlockStorage( ) ) {
+        try {
+          final MachineImageInfo emi = LookupMachine.INSTANCE.apply( this.getRequest( ).getImageId());
+          rootDirective = emi.getRootDirective();
+        } catch (Exception ex) {}
+      }
+    }
+
+    public String getRootDirective(){
+      return this.rootDirective;
+    }
+
     public Long getReservationIndex() {
       return this.reservationIndex;
     }
@@ -483,6 +501,10 @@ public class Allocations {
       return usePrivateAddressing;
     }
 
+    public void setUsePrivateAddressing( final boolean usePrivateAddressing ) {
+      this.usePrivateAddressing = usePrivateAddressing;
+    }
+
     public final boolean isMonitoring() {
       return monitoring;
     }
@@ -504,16 +526,15 @@ public class Allocations {
     }
 
     public String getInstanceId(int index) {
-      while (this.instanceIds.size() <= index) {
-        this.instanceIds.put(index,
-            VmInstances.getId((long) this.getReservationIndex(), index));
+      if ( !this.instanceIds.containsKey( index ) ) {
+        this.instanceIds.put( index, VmInstances.getId( this.getReservationIndex( ), index ) );
       }
       return this.instanceIds.get(index);
     }
 
     public String getInstanceUuid(int index) {
-      while (this.instanceUuids.size() <= index) {
-        this.instanceUuids.put(index, UUID.randomUUID().toString());
+      if ( !this.instanceUuids.containsKey( index ) ) {
+        this.instanceUuids.put( index, UUID.randomUUID().toString() );
       }
       return this.instanceUuids.get(index);
     }

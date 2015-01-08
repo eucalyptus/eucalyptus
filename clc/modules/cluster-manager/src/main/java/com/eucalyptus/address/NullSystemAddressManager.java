@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,17 +64,13 @@ package com.eucalyptus.address;
 
 import java.util.List;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
-import com.eucalyptus.component.Partition;
 import com.eucalyptus.vm.VmInstance;
 import com.google.common.collect.Lists;
 
 public class NullSystemAddressManager extends AbstractSystemAddressManager {
   
   @Override
-  protected List<Address> doAllocateSystemAddresses(
-      final Partition partition,
-      final int count
-  ) throws NotEnoughResourcesException {
+  protected List<Address> doAllocateSystemAddresses( final int count ) throws NotEnoughResourcesException {
     throw new RuntimeException( "The system is not configured to support public addresses." );
     //TODO: add some output to help figure out why.
   }

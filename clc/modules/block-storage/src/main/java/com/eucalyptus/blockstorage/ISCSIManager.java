@@ -63,36 +63,45 @@
 package com.eucalyptus.blockstorage;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 
-import javax.persistence.EntityTransaction;
-
+import com.eucalyptus.blockstorage.util.BlockStorageUtilSvc;
+import com.eucalyptus.blockstorage.util.BlockStorageUtilSvcImpl;
+import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.TransactionResource;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.blockstorage.Storage;
-import com.eucalyptus.blockstorage.TGTWrapper.CallTimeoutException;
-import com.eucalyptus.blockstorage.TGTWrapper.OperationFailedException;
-import com.eucalyptus.blockstorage.TGTWrapper.ResourceNotFoundException;
 import com.eucalyptus.blockstorage.entities.CHAPUserInfo;
 import com.eucalyptus.blockstorage.entities.DirectStorageInfo;
 import com.eucalyptus.blockstorage.entities.ISCSIMetaInfo;
 import com.eucalyptus.blockstorage.entities.ISCSIVolumeInfo;
 import com.eucalyptus.blockstorage.entities.LVMVolumeInfo;
-import com.eucalyptus.blockstorage.util.BlockStorageUtil;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 
 public class ISCSIManager implements StorageExportManager {
 	private static Logger LOG = Logger.getLogger(ISCSIManager.class);
-	public ISCSIManager()  {}
-	
-	@Override
+
+    protected TGTService tgtService;
+    protected BlockStorageUtilSvc blockStorageUtilSvc;
+
+    public ISCSIManager()  {
+        this.tgtService = new TGTServiceUsingTGTWrapper();
+        this.blockStorageUtilSvc = new BlockStorageUtilSvcImpl();
+    }
+
+    public ISCSIManager(TGTService tgtService, BlockStorageUtilSvc blockStorageUtilSvc) {
+        this.tgtService = tgtService;
+        this.blockStorageUtilSvc = blockStorageUtilSvc;
+    }
+
+    @Override
 	public void checkPreconditions() throws EucalyptusCloudException {		
 		Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
-		TGTWrapper.precheckService(timeout);
+        tgtService.precheckService(timeout);
 	}
 
 	@Override
@@ -103,12 +112,12 @@ public class ISCSIManager implements StorageExportManager {
 
 	public void addUser(String username, String password) throws EucalyptusCloudException {
 		Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
-		TGTWrapper.addUser(username, password, timeout);
+        tgtService.addUser(username, password, timeout);
 	}
 
 	public void deleteUser(String username) throws EucalyptusCloudException {
 		Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
-		TGTWrapper.deleteUser(username, timeout);
+        tgtService.deleteUser(username, timeout);
 	}
 
 	// Modified logic for implementing EUCA-3597
@@ -118,23 +127,23 @@ public class ISCSIManager implements StorageExportManager {
 
 		Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
 		
-		if(TGTWrapper.targetExists(volumeId, tid, path, timeout)) {
+		if(tgtService.targetExists(volumeId, tid, path, timeout)) {
 			LOG.debug("Target " + tid + " already exists for "+ volumeId + " with path " + path + " no need to export again");
 			return;
 		}
 
 		try {
 			LOG.debug("Creating target " + tid + " for " + volumeId);
-			TGTWrapper.createTarget(volumeId, tid, name, timeout);							
+            tgtService.createTarget(volumeId, tid, name, timeout);
 			
 			LOG.debug("Creating lun " + lun + " for " + volumeId);
-			TGTWrapper.createLun(volumeId, tid, lun, path, timeout);
+            tgtService.createLun(volumeId, tid, lun, path, timeout);
 			
 			LOG.debug("Binding user " + user + " for " + volumeId);
-			TGTWrapper.bindUser(volumeId, user, tid, timeout);
+            tgtService.bindUser(volumeId, user, tid, timeout);
 			
 			LOG.debug("Binding target " + tid + " for " + volumeId);
-			TGTWrapper.bindTarget(volumeId, tid, timeout);
+            tgtService.bindTarget(volumeId, tid, timeout);
 		} catch(Exception e) {
 			LOG.error("Failed creating target " + tid + " for " + volumeId);
 			throw new EucalyptusCloudException(e);
@@ -157,7 +166,7 @@ public class ISCSIManager implements StorageExportManager {
 			Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
 			
 			LOG.debug("Unexport target: tid=" + tid + ",lun=" + lun + " for " + volumeId);
-			if(TGTWrapper.targetExists(volumeId, tid, path, timeout)) {
+			if(tgtService.targetExists(volumeId, tid, path, timeout)) {
 				LOG.info("Attempting to unexport target: " + tid);
 			} else {
 				LOG.info("Volume: " + volumeId + " Target: " + tid + " not found, cannot unexport it.");
@@ -165,15 +174,15 @@ public class ISCSIManager implements StorageExportManager {
 			}
 
 			LOG.debug("Unbinding target " + tid + " for " + volumeId);
-			TGTWrapper.unbindTarget(volumeId, tid, timeout);
+            tgtService.unbindTarget(volumeId, tid, timeout);
 
 			int retryCount = 0;
 			do {
 				try {
 					LOG.debug("Deleting lun " + lun + " on target " + tid + " for " + volumeId);
-					TGTWrapper.deleteLun(volumeId, tid, lun, timeout);
+                    tgtService.deleteLun(volumeId, tid, lun, timeout);
 					break;
-				} catch(ResourceNotFoundException e) {
+				} catch(TGTWrapper.ResourceNotFoundException e) {
 					LOG.warn("Resource not found when deleting lun for " + volumeId + ". Continuing unexport",e);
 					break;
 				} catch(EucalyptusCloudException e) {
@@ -191,8 +200,8 @@ public class ISCSIManager implements StorageExportManager {
 			do {
 				try {
 					LOG.debug("Deleting target " + tid + " for " + volumeId);
-					TGTWrapper.deleteTarget(volumeId, tid, timeout, false);
-				} catch(ResourceNotFoundException e) {
+                    tgtService.deleteTarget(volumeId, tid, timeout, false);
+				} catch(TGTWrapper.ResourceNotFoundException e) {
 					//no-op
 					LOG.warn("Resource not found when deleting target for volume " + volumeId + " Continuing.",e);
 				} catch(EucalyptusCloudException e) {
@@ -201,7 +210,7 @@ public class ISCSIManager implements StorageExportManager {
 					continue;
 				}
 
-				if(TGTWrapper.targetExists(volumeId, tid, null, timeout)) {
+				if(tgtService.targetExists(volumeId, tid, null, timeout)) {
 					LOG.warn("Volume: " + volumeId + " Target: " + tid + " still exists...");
 					Thread.sleep(1000);
 				} else {
@@ -210,10 +219,10 @@ public class ISCSIManager implements StorageExportManager {
 			} while (retryCount++ < opMaxRetry);
 			
 			//Do a forcible delete of the target
-			if (retryCount>=opMaxRetry && !TGTWrapper.targetHasLun(volumeId, tid, lun, timeout)){
+			if (retryCount>=opMaxRetry && !tgtService.targetHasLun(volumeId, tid, lun, timeout)){
 				LOG.info("Forcibly deleting volume " + volumeId + " iscsi target " + tid);
-				TGTWrapper.deleteTarget(volumeId, tid, timeout, true);
-				if(TGTWrapper.targetExists(volumeId, tid, null, timeout)) {
+                tgtService.deleteTarget(volumeId, tid, timeout, true);
+				if(tgtService.targetExists(volumeId, tid, null, timeout)) {
 					LOG.error("Volume: " + volumeId + " Target: " + tid + " still exists after forcible deletion");
 					throw new Exception("Failed to delete iscsi target " + tid + " for volume " + volumeId);
 				}
@@ -225,87 +234,85 @@ public class ISCSIManager implements StorageExportManager {
 
 	@Override
 	public void configure() {
-		EntityWrapper<ISCSIMetaInfo> db = StorageProperties.getEntityWrapper();
 		ISCSIMetaInfo metaInfo = new ISCSIMetaInfo(StorageProperties.NAME);
-		try {
-			List<ISCSIMetaInfo> metaInfoList = db.query(metaInfo);
+		try (TransactionResource tran = Entities.transactionFor(ISCSIMetaInfo.class)) {
+			List<ISCSIMetaInfo> metaInfoList = Entities.query(metaInfo);
 			if(metaInfoList.size() <= 0) {
 				metaInfo.setStorePrefix(StorageProperties.STORE_PREFIX);
 				metaInfo.setStoreNumber(0);
 				metaInfo.setStoreUser("eucalyptus");
 				metaInfo.setTid(1);
-				db.add(metaInfo);
-				db.commit();		
+				Entities.persist(metaInfo);
+				tran.commit();
 			}
 		} catch(Exception e) {
-			db.rollback();
 			LOG.error(e);
 		}
 		checkAndAddUser();
 	}
 
 	private void checkAndAddUser() {
-		EntityWrapper<CHAPUserInfo> dbUser = StorageProperties.getEntityWrapper();
-		try {
-			CHAPUserInfo userInfo = dbUser.getUnique(new CHAPUserInfo("eucalyptus"));
-			//check if account actually exists, if not create it.			
+		try (TransactionResource outter = Entities.transactionFor(CHAPUserInfo.class)) {
+			CHAPUserInfo userInfo = Entities.uniqueResult(new CHAPUserInfo("eucalyptus"));
+            outter.commit();
+			//check if account actually exists, if not create it.
 			if(!checkUser("eucalyptus")) {
 				try {
-					addUser("eucalyptus", BlockStorageUtil.decryptSCTargetPassword(userInfo.getEncryptedPassword()));
+					addUser("eucalyptus", blockStorageUtilSvc.decryptSCTargetPassword(userInfo.getEncryptedPassword()));
 				} catch (EucalyptusCloudException e1) {
 					LOG.error(e1);					
 					return;
 				}
 			}
-		} catch(EucalyptusCloudException ex) {
+		} catch(NoSuchElementException ex) {
 			boolean addUser = true;
 			String encryptedPassword = null; 
+            try (TransactionResource inner = Entities.transactionFor(CHAPUserInfo.class)) {
+                if (checkUser("eucalyptus")) {
+                    try {
+                        LOG.debug("No DB record found for chapuser although a eucalyptus account exists on SC. Looking for all records with chapuser eucalyptus");
+                        CHAPUserInfo userInfo = new CHAPUserInfo("eucalyptus");
+                        userInfo.setScName(null);
+                        CHAPUserInfo currentUserInfo = Entities.uniqueResult(userInfo);
+                        if (null != currentUserInfo && null != currentUserInfo.getEncryptedPassword()) {
+                            LOG.debug("Found a DB record, copying the password to the new record");
+                            addUser = false;
+                            encryptedPassword = currentUserInfo.getEncryptedPassword();
+                        }
+                    } catch (Exception e1) {
+                        LOG.debug("No old DB records found. The only way is to delete the chapuser and create a fresh account");
+                        try {
+                            deleteUser("eucalyptus");
+                        } catch (Exception e) {
+                            LOG.error("Failed to delete chapuser", e);
+                        }
+                    }
+                }
 
-			if (checkUser("eucalyptus"))
-			{
-				try {
-					LOG.debug("No DB record found for chapuser although a eucalyptus account exists on SC. Looking for all records with chapuser eucalyptus");
-					CHAPUserInfo uesrInfo = new CHAPUserInfo("eucalyptus");
-					uesrInfo.setScName(null);
-					CHAPUserInfo currentUserInfo = dbUser.getUnique(uesrInfo);
-					if (null != currentUserInfo && null != currentUserInfo.getEncryptedPassword()) {
-						LOG.debug("Found a DB record, copying the password to the new record");
-						addUser = false;
-						encryptedPassword = currentUserInfo.getEncryptedPassword();
-					}
-				} catch (Exception e1) {
-					LOG.debug("No old DB records found. The only way is to delete the chapuser and create a fresh account");
-					try {
-						deleteUser("eucalyptus");
-					} catch (Exception e) {
-						LOG.error("Failed to delete chapuser", e);
-					}
-				}
-			} 
+                if (addUser) {
+                    // Windows iscsi initiator requires the password length to be 12-16 bytes
+                    String password = Hashes.getRandom(16);
+                    password = password.substring(0, 16);
+                    try {
+                        addUser("eucalyptus", password);
+                        encryptedPassword = blockStorageUtilSvc.encryptSCTargetPassword(password);
+                    } catch (Exception e) {
+                        LOG.error("Failed to add chapuser to SC", e);
+                        return;
+                    }
+                }
 
-			if (addUser) {
-				// Windows iscsi initiator requires the password length to be 12-16 bytes
-				String password = Hashes.getRandom(16);
-				password = password.substring(0,16);
-				try {
-					addUser("eucalyptus", password);
-					encryptedPassword = BlockStorageUtil.encryptSCTargetPassword(password);
-				} catch (Exception e) {
-					LOG.error("Failed to add chapuser to SC", e);
-					return;
-				}
-			}
-
-			try{
-				dbUser.add(new CHAPUserInfo("eucalyptus", encryptedPassword));
-			} catch (Exception e) {
-				dbUser.rollback();
-				LOG.error(e);
-			}
-		} finally {
-			dbUser.commit();
-		}
-	}
+                try {
+                    Entities.persist(new CHAPUserInfo("eucalyptus", encryptedPassword));
+                } catch (Exception e) {
+                    LOG.error(e);
+                }
+                inner.commit();
+            }
+		} catch (TransactionException e) {
+            LOG.error(e);
+        }
+    }
 
 	@Override
 	public synchronized void allocateTarget(LVMVolumeInfo volumeInfo) throws EucalyptusCloudException {
@@ -316,22 +323,26 @@ public class ISCSIManager implements StorageExportManager {
 				LOG.info("Volume already associated with a tid: " + iscsiVolumeInfo.getTid());
 				return;
 			}
-			EntityWrapper<ISCSIMetaInfo> db = StorageProperties.getEntityWrapper();
-			List<ISCSIMetaInfo> metaInfoList = db.query(new ISCSIMetaInfo(StorageProperties.NAME));
 			int tid = -1, storeNumber = -1;
-			if(metaInfoList.size() > 0) {
-				ISCSIMetaInfo foundMetaInfo = metaInfoList.get(0);
-				storeNumber = foundMetaInfo.getStoreNumber();
-				tid = foundMetaInfo.getTid();
-			}
-			db.commit();
+            List<ISCSIMetaInfo> metaInfoList;
+            try (TransactionResource tran = Entities.transactionFor(ISCSIMetaInfo.class)) {
+                metaInfoList = Entities.query(new ISCSIMetaInfo(StorageProperties.NAME));
+
+                if(metaInfoList.size() > 0) {
+                    ISCSIMetaInfo foundMetaInfo = metaInfoList.get(0);
+                    storeNumber = foundMetaInfo.getStoreNumber();
+                    tid = foundMetaInfo.getTid();
+                }
+                tran.commit();
+            }
+
 			//check if tid is in use
 			int i = tid;
 
 			Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
 			do {
 				//CommandOutput output = execute(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid", String.valueOf(i) }, timeout);
-				if(!TGTWrapper.targetExists(volumeInfo.getVolumeId(), i, null, timeout)){
+				if(!tgtService.targetExists(volumeInfo.getVolumeId(), i, null, timeout)){
 				//if(StringUtils.isNotBlank(output.error)) {
 					tid = i;
 					break;
@@ -341,19 +352,20 @@ public class ISCSIManager implements StorageExportManager {
 			
 			LOG.debug("Volume " + iscsiVolumeInfo.getVolumeId() + " Target allocation found tid: " + tid);
 			if(tid > 0) {
-				db = StorageProperties.getEntityWrapper();
-				metaInfoList = db.query(new ISCSIMetaInfo(StorageProperties.NAME));
-				if(metaInfoList.size() > 0) {
-					ISCSIMetaInfo foundMetaInfo = metaInfoList.get(0);
-					foundMetaInfo.setStoreNumber(++storeNumber);
-					foundMetaInfo.setTid(tid + 1);
-					iscsiVolumeInfo.setStoreName(foundMetaInfo.getStorePrefix() + StorageProperties.NAME + ":store" + storeNumber);
-					iscsiVolumeInfo.setStoreUser(foundMetaInfo.getStoreUser());
-					iscsiVolumeInfo.setTid(tid);
-					//LUN cannot be 0 (some clients don't like that).
-					iscsiVolumeInfo.setLun(1);
-				}
-				db.commit();
+                try (TransactionResource tran = Entities.transactionFor(ISCSIMetaInfo.class)) {
+                    metaInfoList = Entities.query(new ISCSIMetaInfo(StorageProperties.NAME));
+                    if(metaInfoList.size() > 0) {
+                        ISCSIMetaInfo foundMetaInfo = metaInfoList.get(0);
+                        foundMetaInfo.setStoreNumber(++storeNumber);
+                        foundMetaInfo.setTid(tid + 1);
+                        iscsiVolumeInfo.setStoreName(foundMetaInfo.getStorePrefix() + StorageProperties.NAME + ":store" + storeNumber);
+                        iscsiVolumeInfo.setStoreUser(foundMetaInfo.getStoreUser());
+                        iscsiVolumeInfo.setTid(tid);
+                        //LUN cannot be 0 (some clients don't like that).
+                        iscsiVolumeInfo.setLun(1);
+                    }
+                    tran.commit();
+                }
 			} else {
 				iscsiVolumeInfo.setTid(-1);
 				LOG.fatal("Unable to allocate ISCSI target id for volume " + iscsiVolumeInfo.getVolumeId());
@@ -364,7 +376,7 @@ public class ISCSIManager implements StorageExportManager {
 	private boolean checkUser(String username) {
 		try {
 			Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
-			return TGTWrapper.userExists(username, timeout);			
+			return tgtService.userExists(username, timeout);
 		} catch (EucalyptusCloudException e) {
 			LOG.error(e);
 			return false;
@@ -372,15 +384,13 @@ public class ISCSIManager implements StorageExportManager {
 	}
 
 	public String getEncryptedPassword() throws EucalyptusCloudException {
-		EntityWrapper<CHAPUserInfo> db = StorageProperties.getEntityWrapper();
-		try {
-			CHAPUserInfo userInfo = db.getUnique(new CHAPUserInfo("eucalyptus"));
+		try (TransactionResource tran = Entities.transactionFor(CHAPUserInfo.class)) {
+			CHAPUserInfo userInfo = Entities.uniqueResult(new CHAPUserInfo("eucalyptus"));
 			String encryptedPassword = userInfo.getEncryptedPassword();
-			return BlockStorageUtil.encryptNodeTargetPassword(BlockStorageUtil.decryptSCTargetPassword(encryptedPassword), BlockStorageUtil.getPartitionForLocalService(Storage.class));
-		} catch(EucalyptusCloudException ex) {
+            tran.commit();
+			return blockStorageUtilSvc.encryptNodeTargetPassword(blockStorageUtilSvc.decryptSCTargetPassword(encryptedPassword), blockStorageUtilSvc.getPartitionForLocalService(Storage.class));
+		} catch(TransactionException | NoSuchElementException ex) {
 			throw new EucalyptusCloudException("Unable to get CHAP password for: " + "eucalyptus");
-		} finally {
-			db.commit();
 		}
 	}
 
@@ -390,9 +400,8 @@ public class ISCSIManager implements StorageExportManager {
 	public void cleanup(LVMVolumeInfo volumeInfo) throws EucalyptusCloudException {
 		if(volumeInfo instanceof ISCSIVolumeInfo) {			
 			ISCSIVolumeInfo volInfo = (ISCSIVolumeInfo)volumeInfo;
-			EntityWrapper<ISCSIVolumeInfo> db = StorageProperties.getEntityWrapper();
-			try {
-				ISCSIVolumeInfo volEntity = db.merge(volInfo);
+			try (TransactionResource tran = Entities.transactionFor(ISCSIVolumeInfo.class)) {
+				ISCSIVolumeInfo volEntity = Entities.merge(volInfo);
 				
 				if(isExported(volEntity)) {
 					unexportTarget(volEntity.getVolumeId(), volEntity.getTid(), volEntity.getLun(), volEntity.getAbsoluteLVPath());
@@ -411,15 +420,10 @@ public class ISCSIManager implements StorageExportManager {
 					volEntity.setStoreName(null);
 					volEntity.setStoreUser(null);
 				}
-			} catch(Exception e){ 
+                tran.commit();
+			}
+            catch(Exception e){
 				LOG.error("Something went wrong, exiting iscsi cleanup for volume " + volumeInfo.getVolumeId());
-			} finally {
-				try {
-					db.commit();
-				} catch(Exception e) {
-					LOG.error("Commit failed. Rolling back");
-					db.rollback();
-				}			
 			}
 		} else {
 			LOG.error("Unknown volume type for volume " + volumeInfo.getVolumeId() + " - cannot cleanpup");
@@ -429,7 +433,7 @@ public class ISCSIManager implements StorageExportManager {
 
 	@Override
 	public void stop() {
-		TGTWrapper.stop();
+        tgtService.stop();
 	}
 
 	@Override
@@ -438,7 +442,7 @@ public class ISCSIManager implements StorageExportManager {
 			if(((ISCSIVolumeInfo) volumeInfo).getTid() > -1) {
 				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) volumeInfo;
 				Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();				
-				return TGTWrapper.targetExists(iscsiVolumeInfo.getVolumeId(), iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getAbsoluteLVPath(), timeout);
+				return tgtService.targetExists(iscsiVolumeInfo.getVolumeId(), iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getAbsoluteLVPath(), timeout);
 								
 				//CommandOutput output = execute(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid", String.valueOf(iscsiVolumeInfo.getTid()) }, timeout);
 				//if (StringUtils.isBlank(output.error)) {

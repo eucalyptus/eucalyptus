@@ -95,7 +95,6 @@ import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Condition;
-import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.Principal;
 import com.eucalyptus.auth.principal.User;
@@ -120,6 +119,8 @@ public class PolicyEngineImpl implements PolicyEngine {
 
   @Nonnull
   private final Function<String,String> accountResolver;
+  @Nonnull
+  private final Supplier<Boolean> enableSystemQuotas;
 
   private enum Decision {
     DEFAULT, // no match
@@ -173,12 +174,16 @@ public class PolicyEngineImpl implements PolicyEngine {
     }
   };
   
-  public PolicyEngineImpl( ) {
-    this( DefaultAccountResolver.INSTANCE );
+  public PolicyEngineImpl( @Nonnull final Supplier<Boolean> enableSystemQuotas ) {
+    this( DefaultAccountResolver.INSTANCE, enableSystemQuotas );
   }
 
-  public PolicyEngineImpl( @Nonnull final Function<String,String> accountResolver ) {
+  public PolicyEngineImpl(
+      @Nonnull final Function<String,String> accountResolver,
+      @Nonnull final Supplier<Boolean> enableSystemQuotas
+  ) {
     this.accountResolver = checkParam( "accountResolver", accountResolver, notNullValue( ) );
+    this.enableSystemQuotas = checkParam( "enableSystemQuotas", enableSystemQuotas, notNullValue( ) );
   }
 
   /*
@@ -289,9 +294,9 @@ public class PolicyEngineImpl implements PolicyEngine {
       resourceName = PolicySpec.canonicalizeResourceName( resourceType, resourceName );
       String action = context.getAction().toLowerCase();
 
-      // System users are not restricted by quota limits.
-      if ( !evaluationContext.isSystemUser() ) {
-        List<Authorization> quotas = lookupQuotas( resourceType, requestUser, evaluationContext.getRequestAccount(), requestUser.isAccountAdmin( ) );
+      // Quotas can be disabled for system users
+      if ( !evaluationContext.isSystemUser( ) || enableSystemQuotas.get( ) ) {
+        List<Authorization> quotas = lookupQuotas( resourceType, requestUser, evaluationContext.getRequestAccount( ) );
         processQuotas( quotas, action, resourceType, resourceName, quantity );
       }
     } catch ( AuthException e ) {
@@ -551,23 +556,11 @@ public class PolicyEngineImpl implements PolicyEngine {
    * @param resourceType The resource type to allocate.
    * @param user The request user.
    * @param account The request user account.
-   * @param isAccountAdmin If the request user is account admin.
    * @return The list of authorizations (quotas) that match.
    * @throws AuthException for any error.
    */
-  private static List<Authorization> lookupQuotas( String resourceType, User user, Account account, boolean isAccountAdmin ) throws AuthException {
-    List<Authorization> results = Lists.newArrayList( );
-    results.addAll( account.lookupAccountGlobalQuotas( resourceType ) );
-    if ( !PolicySpec.ALL_RESOURCE.equals( resourceType ) ) {
-      results.addAll( account.lookupAccountGlobalQuotas( PolicySpec.ALL_RESOURCE ) );
-    }
-    if ( !isAccountAdmin ) {
-      results.addAll( user.lookupQuotas( resourceType ) );
-      if ( !PolicySpec.ALL_RESOURCE.equals( resourceType ) ) {
-        results.addAll( user.lookupQuotas( PolicySpec.ALL_RESOURCE ) );
-      }
-    }
-    return results;    
+  private static List<Authorization> lookupQuotas( String resourceType, User user, Account account ) throws AuthException {
+    return AuthorizationProviders.lookupQuotas( account, user, resourceType );
   }
   
   /**
@@ -591,8 +584,8 @@ public class PolicyEngineImpl implements PolicyEngine {
         LOG.debug( "Resource " + resourceName + " not matching" );
         continue;
       }
-      QuotaKey.Scope scope = getAuthorizationScope( auth );
-      String principalId = getAuthorizationPrincipalId( auth, scope );
+      Authorization.Scope scope = getAuthorizationScope( auth );
+      String principalId = getAuthorizationPrincipalId( auth );
       for ( Condition cond : auth.getConditions( ) ) {
         Key key = Keys.getKeyInstance( Keys.getKeyClass( cond.getKey( ) ) );
         if ( !( key instanceof QuotaKey ) ) {
@@ -622,21 +615,11 @@ public class PolicyEngineImpl implements PolicyEngine {
    * Get the principal ID for an authorization based on scope.
    * 
    * @param auth The authorization
-   * @param scope The scope of the authorization
    * @return The principal ID (account, group or user)
    * @throws AuthException for any error
    */
-  private String getAuthorizationPrincipalId( Authorization auth, QuotaKey.Scope scope ) throws AuthException {
-    Group group = auth.getGroup( );
-    switch ( scope ) {
-      case ACCOUNT:
-        return group.getAccount( ).getAccountNumber( );
-      case GROUP:
-        return group.getGroupId( );
-      case USER:
-        return group.getUsers( ).get( 0 ).getUserId( );
-    }
-    throw new RuntimeException( "Should not reach here: unrecognized scope." );
+  private String getAuthorizationPrincipalId( Authorization auth ) throws AuthException {
+    return auth.getScopeId( );
   }
   
   /**
@@ -646,19 +629,8 @@ public class PolicyEngineImpl implements PolicyEngine {
    * @return The scope of the authorization, ACCOUNT, GROUP or USER.
    * @throws AuthException for any error.
    */
-  private QuotaKey.Scope getAuthorizationScope( Authorization auth ) throws AuthException {
-    Group group = auth.getGroup( );
-    if ( !group.isUserGroup( ) ) {
-      return QuotaKey.Scope.GROUP;
-    }
-    User user = group.getUsers( ).get( 0 );
-    if ( user == null ) {
-      throw new RuntimeException( "Empty user group " + group.getName( ) );
-    }
-    if ( user.isAccountAdmin( ) ) {
-      return QuotaKey.Scope.ACCOUNT;
-    }
-    return QuotaKey.Scope.USER;
+  private Authorization.Scope getAuthorizationScope( Authorization auth ) throws AuthException {
+    return auth.getScope( );
   }
   
   static class AuthEvaluationContextImpl implements AuthEvaluationContext {
@@ -856,8 +828,13 @@ public class PolicyEngineImpl implements PolicyEngine {
     }
 
     @Override
-    public Group getGroup() throws AuthException {
-      return delegate.getGroup();
+    public Scope getScope() throws AuthException {
+      return delegate.getScope( );
+    }
+
+    @Override
+    public String getScopeId() throws AuthException {
+      return delegate.getScopeId( );
     }
 
     @Override

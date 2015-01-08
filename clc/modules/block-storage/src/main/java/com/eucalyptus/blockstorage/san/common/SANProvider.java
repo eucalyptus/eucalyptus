@@ -67,6 +67,7 @@ package com.eucalyptus.blockstorage.san.common;
 
 import java.util.ArrayList;
 
+import com.eucalyptus.blockstorage.StorageResource;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
@@ -78,6 +79,11 @@ import edu.ucsb.eucalyptus.msgs.ComponentProperty;
  */
 public interface SANProvider {
 
+	/**
+	 * Initialize database entities that might be used by/required for configuring the storage provider
+	 */
+	public void initialize();
+	
 	/**
 	 * Configure the provider. This is typically called during initialization of the system but may be called repeatedly, so it should be idempotent.
 	 * @throws EucalyptusCloudException
@@ -122,7 +128,7 @@ public interface SANProvider {
 	 * @return
 	 * @throws EucalyptusCloudException
 	 */
-	public String connectTarget(String iqn) throws EucalyptusCloudException;
+	public StorageResource connectTarget(String iqn) throws EucalyptusCloudException;
 
 	/**
 	 * Returns a string that contains a list of volume metadata concatanated together. The returned string has the format:
@@ -207,7 +213,7 @@ public interface SANProvider {
 	 * @return Integer id of the lun exported
 	 * @throws EucalyptusCloudException
 	 */
-	public Integer addInitiatorRule(String volumeId, String nodeIqn) throws EucalyptusCloudException;
+	public String addInitiatorRule(String volumeId, String nodeIqn) throws EucalyptusCloudException;
 
 	/**
 	 * Removes the node permission for the volume for the specified iqn. After this operation a node should not be able to connect to the volume
@@ -244,8 +250,6 @@ public interface SANProvider {
 	 */
 	public String getOptionalChapUser();
 	
-	public void checkVolume(String volumeId) throws EucalyptusCloudException;
-
 	/**
 	 * Creates a volume for holding a snapshot that does not exist on the SAN. Snapshot is probably downloaded (from ObjectStorage) and written to the newly created
 	 * volume there by making it available to the SAN
@@ -277,10 +281,11 @@ public interface SANProvider {
 	
 	/**
 	 * Delete the created snapshot point, not the entire snapshot lun
-	 * @param snapshotId
+	 * @param parentVolumeId
+	 * @param snapshotPointId
 	 * @throws EucalyptusCloudException
 	 */
-	public void deleteSnapshotPoint(String snapshotPointId) throws EucalyptusCloudException;
+	public void deleteSnapshotPoint(String parentVolumeId, String snapshotPointId) throws EucalyptusCloudException;
 
 	public boolean checkSANCredentialsExist();
 
@@ -292,6 +297,9 @@ public interface SANProvider {
 	 * @throws EucalyptusCloudException
 	 */
 	public boolean volumeExists(String volumeId) throws EucalyptusCloudException;
-		
+	
+	public String getProtocol();
+	
+	public String getProviderName();
 }
 

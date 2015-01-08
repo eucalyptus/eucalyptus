@@ -99,6 +99,7 @@ package com.eucalyptus.auth.crypto;
 
 import java.security.MessageDigest;
 
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Digest;
 
 
@@ -202,7 +203,7 @@ public final class MD5Crypt {
 
   static public final String crypt(String password) {
     StringBuffer salt = new StringBuffer( );
-    java.security.SecureRandom randgen = new java.security.SecureRandom( );
+    java.security.SecureRandom randgen = Crypto.getSecureRandomSupplier( ).get( );
 
     /* -- */
 
@@ -259,7 +260,7 @@ public final class MD5Crypt {
 
   static public final String apacheCrypt(String password) {
     StringBuffer salt = new StringBuffer( );
-    java.security.SecureRandom randgen = new java.security.SecureRandom( );
+    java.security.SecureRandom randgen = Crypto.getSecureRandomSupplier( ).get( );
 
     /* -- */
 

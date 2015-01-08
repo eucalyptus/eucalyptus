@@ -411,26 +411,27 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
 
 
     @Override
-    public ObjectEntity lookupUpload(Bucket bucket, String uploadId) throws Exception {
-        EntityTransaction db = Entities.get(ObjectEntity.class);
-        try {
-            Criteria search = Entities.createCriteria(ObjectEntity.class);
-            ObjectEntity searchExample = new ObjectEntity().withBucket(bucket).withState(ObjectState.mpu_pending);
-            searchExample.setUploadId(uploadId);
-            search.add(Example.create(searchExample));
-            search = getSearchByBucket(search, bucket);
-            List<ObjectEntity> results = search.list();
-            db.commit();
-            if (results.size() > 0) {
-                return results.get(0);
-            } else {
-                throw new NoSuchUploadException(uploadId);
-            }
-        } finally {
-            if (db != null && db.isActive()) {
-                db.rollback();
-            }
-        }
+    public ObjectEntity lookupUpload(Bucket bucket, String objectKey, String uploadId) throws NoSuchElementException, MetadataOperationFailureException {
+		try {
+			try (TransactionResource trans = Entities.transactionFor(ObjectEntity.class)) {
+				ObjectEntity searchExample = new ObjectEntity().withBucket(bucket).withKey(objectKey).withUploadId(uploadId).withState(ObjectState.mpu_pending);
+				Criteria searchUploadId = Entities.createCriteria(ObjectEntity.class).add(Example.create(searchExample));
+				searchUploadId = getSearchByBucket(searchUploadId, bucket);
+				List<ObjectEntity> results = searchUploadId.list();
+				trans.commit();
+
+				if (results == null || results.isEmpty()) {
+					throw new NoSuchElementException();
+				} else {
+					return results.get(0);
+				}
+			}
+		} catch (NoSuchElementException e) {
+			throw e;
+		} catch (Exception e) {
+			LOG.error("Error getting object entity for " + bucket.getBucketName() + "/" + objectKey + "?uploadId=" + uploadId, e);
+			throw new MetadataOperationFailureException(e);
+		}
     }
 
     @Override
@@ -452,17 +453,20 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
                 objCriteria.setFetchSize(queryStrideSize);
                 objCriteria.add(Example.create(searchObj));
                 objCriteria.addOrder(Order.asc("objectKey"));
+                objCriteria.addOrder(Order.asc("uploadId"));
                 objCriteria.setMaxResults(queryStrideSize);
 
                 if (!Strings.isNullOrEmpty(keyMarker)) {
-                    objCriteria.add(Restrictions.gt("objectKey", keyMarker));
+                    if (!Strings.isNullOrEmpty(uploadIdMarker)) {
+                    	// The result set should be exclusive of the pair that matches the key-marker upload-id-marker
+						objCriteria.add(Restrictions.or(Restrictions.and(Restrictions.eq("objectKey", keyMarker), Restrictions.gt("uploadId", uploadIdMarker)),
+								Restrictions.gt("objectKey", keyMarker)));
+                    } else {
+                    	objCriteria.add(Restrictions.gt("objectKey", keyMarker));
+                        uploadIdMarker = "";
+                    }
                 } else {
                     keyMarker = "";
-                }
-
-                if (!Strings.isNullOrEmpty(uploadIdMarker)) {
-                    objCriteria.add(Restrictions.gt("uploadId", uploadIdMarker));
-                } else {
                     uploadIdMarker = "";
                 }
 
@@ -506,7 +510,11 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
                     for (ObjectEntity objectRecord : objectInfos) {
                         if (useDelimiter) {
                             // Check if it will get aggregated as a commonprefix
-                            parts = objectRecord.getObjectKey().substring(prefix.length()).split(delimiter);
+                        	// Split the substring with at least 2 matches as we need a result containing trailing strings. For instance 
+							// if "x" is delimiter and key string is also "x", then this key should be included in common prefixes. 
+							// "x".split("x") gives 0 strings which causes the subsequent logic to skip the key where as 
+							// "x".split("x", 2) gives 2 empty strings which is what the logic expects
+                            parts = objectRecord.getObjectKey().substring(prefix.length()).split(delimiter, 2);
                             if (parts.length > 1) {
                                 prefixString = prefix + parts[0] + delimiter;
                                 if (!prefixString.equals(keyMarker) && !commonPrefixes.contains(prefixString)) {
@@ -733,7 +741,11 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
 					for (ObjectEntity objectRecord : objectInfos) {
 						if (useDelimiter) {
 							// Check if it will get aggregated as a commonprefix
-							parts = objectRecord.getObjectKey().substring(prefix.length()).split(delimiter);
+							// Split the substring with at least 2 matches as we need a result containing trailing strings. For instance 
+							// if "x" is delimiter and key string is also "x", then this key should be included in common prefixes. 
+							// "x".split("x") gives 0 strings which causes the subsequent logic to skip the key where as 
+							// "x".split("x", 2) gives 2 empty strings which is what the logic expects
+							parts = objectRecord.getObjectKey().substring(prefix.length()).split(delimiter, 2);
 							if (parts.length > 1) {
 								prefixString = prefix + parts[0] + delimiter;
 								if (!prefixString.equals(fromKeyMarker) && !commonPrefixes.contains(prefixString)) {

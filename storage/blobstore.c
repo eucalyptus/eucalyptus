@@ -738,9 +738,6 @@ void blobstore_set_error_function(void (*fn) (const char *msg))
 //!
 static void gen_id(char *str, unsigned int size)
 {
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    srandom((unsigned int)((unsigned long long)str * (unsigned long long)tv.tv_usec));
     snprintf(str, size, "%08lx%08lx%08lx", (unsigned long)random(), (unsigned long)random(), (unsigned long)random());
 }
 
@@ -1462,6 +1459,7 @@ int blobstore_init(void)
                 initialized = 1;
             }
         }
+        euca_srand();                  // seed the random number generator
     }
 
     return ret;
@@ -4443,6 +4441,8 @@ int blockblob_clone(blockblob * bb, const blockmap * map, unsigned int map_size)
                 goto cleanup;          // ditto
             }
         }
+    } else {
+        EUCA_FREE(main_dm_table);
     }
 
     goto free;
@@ -6065,17 +6065,15 @@ static int do_delete(const char *bs_path, const char *bb_id)
         return 1;
     }
 
-    blockblob * bb = blockblob_open(bs, bb_id, 0, BLOBSTORE_FLAG_EXCL, NULL, 100000);
+    blockblob *bb = blockblob_open(bs, bb_id, 0, BLOBSTORE_FLAG_EXCL, NULL, 100000);
     if (bb == NULL) {
-        fprintf(stderr, "error: failed to open blob '%s': %s\n", bb_id,
-                blobstore_get_error_str(_blobstore_errno));
+        fprintf(stderr, "error: failed to open blob '%s': %s\n", bb_id, blobstore_get_error_str(_blobstore_errno));
         return 1;
     }
 
     int ret = blockblob_delete(bb, 1000000, 0);
     if (ret != 0) {
-        fprintf(stderr, "error: failed to delete blob '%s': %s\n", bb_id,
-                blobstore_get_error_str(_blobstore_errno));
+        fprintf(stderr, "error: failed to delete blob '%s': %s\n", bb_id, blobstore_get_error_str(_blobstore_errno));
         blockblob_close(bb);
     }
 

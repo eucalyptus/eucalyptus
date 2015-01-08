@@ -64,10 +64,12 @@ package com.eucalyptus.cloud.run;
 
 import static com.eucalyptus.images.Images.DeviceMappingValidationOption.AllowEbsMapping;
 import static com.eucalyptus.images.Images.DeviceMappingValidationOption.AllowSuppressMapping;
+import static com.eucalyptus.images.Images.DeviceMappingValidationOption.SkipExtraEphemeral;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
@@ -83,18 +85,23 @@ import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.util.InvalidInstanceProfileMetadataException;
+import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.ImageMetadata.Platform;
-import com.eucalyptus.compute.common.backend.VmTypeDetails;
+import com.eucalyptus.compute.common.backend.RunInstancesType;
+import com.eucalyptus.compute.common.VmTypeDetails;
 import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.VerificationException;
+import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.BootableImageInfo;
 import com.eucalyptus.images.DeviceMapping;
@@ -119,27 +126,31 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
+import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import net.sf.json.JSONException;
 
 public class VerifyMetadata {
   private static Logger LOG = Logger.getLogger( VerifyMetadata.class );
   private static final long BYTES_PER_GB = ( 1024L * 1024L * 1024L );
   
-  public static Predicate<Allocation> get( ) {
+  public static Predicate<Allocation> getVerifiers( ) {
     return Predicates.and( Lists.transform( verifiers, AsPredicate.INSTANCE ) );
   }
 
+  public static Predicate<Allocation> getPostVerifiers( ) {
+	return Predicates.and( Lists.transform( postVerifiers, AsPredicate.INSTANCE ) );
+  }
 
   private interface MetadataVerifier {
-    public abstract boolean apply( Allocation allocInfo ) throws MetadataException, AuthException;
+    public abstract boolean apply( Allocation allocInfo ) throws MetadataException, AuthException, VerificationException;
   }
   
   private static final ArrayList<? extends MetadataVerifier> verifiers = Lists.newArrayList( VmTypeVerifier.INSTANCE, PartitionVerifier.INSTANCE,
                                                                                                 ImageVerifier.INSTANCE, KeyPairVerifier.INSTANCE,
                                                                                                 NetworkResourceVerifier.INSTANCE, RoleVerifier.INSTANCE,
                                                                                                 BlockDeviceMapVerifier.INSTANCE, UserDataVerifier.INSTANCE );
+  
+  private static final ArrayList<? extends MetadataVerifier> postVerifiers = Lists.newArrayList( EkiEriSupportVerifier.INSTANCE );
   
   private enum AsPredicate implements Function<MetadataVerifier, Predicate<Allocation>> {
     INSTANCE;
@@ -156,6 +167,24 @@ public class VerifyMetadata {
           }
         }
       };
+    }
+  }
+  
+  enum EkiEriSupportVerifier implements MetadataVerifier {
+    INSTANCE;
+    
+    @Override
+    public boolean apply( Allocation allocInfo ) throws VerificationException {
+      if (allocInfo.getRunInstancesRequest().getKernelId() != null || allocInfo.getRunInstancesRequest().getRamdiskId() != null) {
+        Cluster c = Clusters.lookup( Topology.lookup( ClusterController.class, allocInfo.getPartition( ) ) );
+        if (!c.getNodeHostMap().values().isEmpty()) {
+          NodeInfo.Hypervisor h = c.getNodeHostMap().values().iterator().next().getHypervisor();
+          LOG.warn("Hypervisor is" + h);
+          if ( !h.supportEkiEri() )
+            throw new VerificationException("EKI/ERI options are not supported by installation on " + h.name());
+        }
+      }
+      return true;
     }
   }
   
@@ -248,15 +277,15 @@ public class VerifyMetadata {
     private static long MB = 1048576l;
     // check if image can be converted
     private static boolean verifyImagerCapacity(MachineImageInfo img) throws MetadataException{
-      String workerType = com.eucalyptus.imaging.ImagingServiceProperties.IMAGING_WORKER_INSTANCE_TYPE;
-      String emiName = com.eucalyptus.imaging.ImagingServiceProperties.IMAGING_WORKER_EMI;
+      String workerType = com.eucalyptus.imaging.ImagingServiceProperties.INSTANCE_TYPE;
+      String emiName = com.eucalyptus.imaging.ImagingServiceProperties.IMAGE;
       if (workerType == null )
         return false;
       if (emiName == null || "NULL".equals(emiName))
         throw new MetadataException("Partition image cannot be deployed without an enabled Imaging Service."
             + " Please contact your cloud administrator.");
       
-      List<VmTypeDetails> allTypes = com.eucalyptus.imaging.EucalyptusActivityTasks.getInstance().describeVMTypes();
+      List<VmTypeDetails> allTypes = com.eucalyptus.imaging.common.EucalyptusActivityTasks.getInstance().describeVMTypes();
       long diskSizeBytes = 0;
       for(VmTypeDetails type:allTypes){
         if (type.getName().equalsIgnoreCase(workerType)){
@@ -264,7 +293,14 @@ public class VerifyMetadata {
           break;
         }
       }
-      MachineImageInfo emi = LookupMachine.INSTANCE.apply(emiName);
+      // there is a chance that emi is de-registered
+      MachineImageInfo emi;
+      try {
+        emi = LookupMachine.INSTANCE.apply(emiName);
+      } catch (NoSuchElementException ex) {
+          throw new MetadataException("Partition image cannot be deployed without an enabled Imaging Service."
+                  + " Please contact your cloud administrator.");
+      }
       long spaceLeft = diskSizeBytes - emi.getImageSizeBytes() - img.getImageSizeBytes() - 100*2*MB;
       if (spaceLeft > 0)
         return true;
@@ -396,7 +432,7 @@ public class VerifyMetadata {
     public boolean apply( Allocation allocInfo ) throws MetadataException {
       
       BootableImageInfo imageInfo = allocInfo.getBootSet().getMachine();   
-      final ArrayList<BlockDeviceMappingItemType> instanceMappings = allocInfo.getRequest().getBlockDeviceMapping() != null 
+      final List<BlockDeviceMappingItemType> instanceMappings = allocInfo.getRequest().getBlockDeviceMapping() != null
     		  													? allocInfo.getRequest().getBlockDeviceMapping() 
     		  													: new ArrayList<BlockDeviceMappingItemType>()  ;
       List<DeviceMapping> imageMappings = new ArrayList<DeviceMapping>(((ImageInfo) imageInfo).getDeviceMappings());
@@ -409,19 +445,19 @@ public class VerifyMetadata {
     	  }
       })), Images.DeviceMappingDetails.INSTANCE));
 
+      ArrayList<BlockDeviceMappingItemType> resultedInstanceMappings = new ArrayList<>();
       if ( imageInfo instanceof BlockStorageImageInfo ) { //bfebs image   
      
         if ( !instanceMappings.isEmpty() ) {
-        
-          //Verify all block device mappings. Dont fuss if both snapshot id and volume size are left blank
-          Images.validateBlockDeviceMappings( instanceMappings, EnumSet.of( AllowSuppressMapping, AllowEbsMapping ) );
+          //Verify all block device mappings. Don't fuss if both snapshot id and volume size are left blank
+          //Ignore (remove) extra ephemerals EUCA-9148
+          resultedInstanceMappings = Images.validateBlockDeviceMappings( instanceMappings, EnumSet.of( AllowSuppressMapping, AllowEbsMapping, SkipExtraEphemeral ) );
           
           BlockStorageImageInfo bfebsImage = (BlockStorageImageInfo) imageInfo;
           Integer imageSizeGB = (int) ( bfebsImage.getImageSizeBytes( ) / BYTES_PER_GB );
           Integer userRequestedSizeGB = null;
-           
           // Find the root block device mapping in the run instance request. Validate it
-          BlockDeviceMappingItemType rootBlockDevice = Iterables.find( instanceMappings, Images.findEbsRootOptionalSnapshot( bfebsImage.getRootDeviceName() ), null );
+          BlockDeviceMappingItemType rootBlockDevice = Iterables.find( resultedInstanceMappings, Images.findEbsRootOptionalSnapshot( bfebsImage.getRootDeviceName() ), null );
           if( rootBlockDevice != null) {
             // Ensure that root device is not mapped to a different snapshot, logical device or suppressed.
             // Verify that the root device size is not smaller than the image size
@@ -456,11 +492,11 @@ public class VerifyMetadata {
         }
       } else { // Instance store image
         //Verify all block device mappings. EBS mappings must be considered invalid since AWS doesn't support it
-        Images.validateBlockDeviceMappings( instanceMappings, EnumSet.of( AllowSuppressMapping ) );
+        resultedInstanceMappings = Images.validateBlockDeviceMappings( instanceMappings, EnumSet.of( AllowSuppressMapping, SkipExtraEphemeral ) );
       }
       
       // Set the final list of block device mappings in the run instance request (necessary if the instance mappings were null). Checked with grze that its okay
-      allocInfo.getRequest().setBlockDeviceMapping(instanceMappings);
+      allocInfo.getRequest().setBlockDeviceMapping(resultedInstanceMappings);
       return true;
     }
   }

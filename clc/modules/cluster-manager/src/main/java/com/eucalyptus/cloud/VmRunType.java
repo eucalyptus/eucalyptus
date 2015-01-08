@@ -135,6 +135,11 @@ public class VmRunType extends CloudClusterMessage {
       return this;
     }
     
+    public VmRunType.Builder rootDirective( final String rootDirective ){
+      this.buildit.setRootDirective( rootDirective );
+      return this;
+    }
+
     public VmRunType.Builder networkNames( List<NetworkGroup> list ) {
       for ( NetworkGroup g : list ) {
         this.buildit.getNetworkNames( ).add( g.getClusterNetworkName( ) );
@@ -151,11 +156,17 @@ public class VmRunType extends CloudClusterMessage {
       this.buildit.setInstanceId( instanceId );
       return this;
     }
-    
+
+    public VmRunType.Builder macAddress( final String mac ) {
+      this.buildit.setMacAddress( mac );
+      return this;
+    }
+
     public VmRunType create( ) {
       /** GRZE:NOTE: Nullables: userData, keyInfo **/
       checkParam( this.buildit.getInstanceId(), notNullValue() );
       checkParam( this.buildit.getLaunchIndex(), notNullValue() );
+      checkParam( this.buildit.getMacAddress(), notNullValue() );
       checkParam( this.buildit.getNetworkNames().isEmpty(), is( false ) );
       checkParam( this.buildit.getNetworkIndex(), notNullValue() );
       checkParam( this.buildit.getPlatform(), notNullValue() );
@@ -186,6 +197,8 @@ public class VmRunType extends CloudClusterMessage {
   private String       userData;
   @Nullable
   private String       credential;
+  @Nullable
+  private String       rootDirective;
   private String       platform;
   private Integer      maxCount     = 1;
   private Integer      minCount     = 1;
@@ -198,6 +211,7 @@ public class VmRunType extends CloudClusterMessage {
   private String       ownerId;
   private String       accountId;
   private String       uuid;
+  private String       macAddress = "";
   private List<String> networkNames = new ArrayList<String>( );
   private Long         networkIndex = -1l;
   private String       privateAddress;
@@ -220,10 +234,11 @@ public class VmRunType extends CloudClusterMessage {
   @Override
   public String toString( ) {
     return String.format(
-                          "VmRunType [instanceIds=%s, keyInfo=%s, launchIndex=%s, amount=%s, networkIndexList=%s, privateAddr=%s, networkNames=%s, reservationId=%s, userData=%s, vlan=%s, vmTypeInfo=%s]",
+                          "VmRunType [instanceIds=%s, keyInfo=%s, launchIndex=%s, amount=%s, networkIndexList=%s, privateAddr=%s,"
+                          + "networkNames=%s, reservationId=%s, userData=%s, vlan=%s, vmTypeInfo=%s, rootDirective=%s]",
                           this.instanceId, this.keyInfo, this.launchIndex,
                           this.minCount, this.networkIndex, this.privateAddress, this.networkNames, this.reservationId,
-                          this.userData, this.vlan, this.vmTypeInfo );
+                          this.userData, this.vlan, this.vmTypeInfo, this.rootDirective );
   }
   
   @Override
@@ -289,11 +304,22 @@ public class VmRunType extends CloudClusterMessage {
     else
       this.credential = credential;
   } 
-  
+
   public String getCredential(){
     return this.credential;
   }
-  
+
+  public void setRootDirective(final String rootDirective){
+    if(rootDirective==null)
+      this.rootDirective = "";
+    else
+      this.rootDirective = rootDirective;
+  }
+
+  public String getRootDirective(){
+    return this.rootDirective;
+  }
+
   public String getPlatform( ) {
     return this.platform;
   }
@@ -344,10 +370,18 @@ public class VmRunType extends CloudClusterMessage {
     this.uuid = uuid;
   }
   
+  void setMacAddress( final String macAddress ) {
+    this.macAddress = macAddress;
+  }
+
   public String getUuid( ) {
     return this.uuid;
   }
   
+  public String getMacAddress( ) {
+    return this.macAddress;
+  }
+
   void setNetworkIndex( final Long networkIndex ) {
     this.networkIndex = networkIndex;
   }

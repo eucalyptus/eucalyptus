@@ -152,6 +152,7 @@
 //! @}
 
 #define EUCALYPTUS_FAULT_DIR                     EUCALYPTUS_DATA_DIR "/faults"
+#define EUCALYPTUS_POLICIES_DIR                  EUCALYPTUS_DATA_DIR "/policies"
 #define EUCALYPTUS_CUSTOM_FAULT_DIR              EUCALYPTUS_CONF_DIR "/faults"
 #define EUCALYPTUS_KEYS_DIR                      EUCALYPTUS_STATE_DIR "/keys"
 #define EUCALYPTUS_NC_STATE_FILE                 EUCALYPTUS_STATE_DIR "/nc_state.xml"
@@ -181,6 +182,10 @@
 
 #define NC_NET_PATH_DEFAULT                      EUCALYPTUS_RUN_DIR "/net"
 #define CC_NET_PATH_DEFAULT                      EUCALYPTUS_RUN_DIR "/net"
+
+#define EUCALYPTUS_STATS_OUTPUT_DIR              EUCALYPTUS_RUN_DIR "/status"
+#define EUCALYPTUS_STATS_CONF_PATH               EUCALYPTUS_CONF_DIR "/stats.conf"
+
 
 #define EUCALYPTUS_XM                            "sudo xm"
 
@@ -213,6 +218,7 @@
 #define CONFIG_NC_SWAP_SIZE                     "SWAP_SIZE"
 #define CONFIG_SAVE_INSTANCES                   "MANUAL_INSTANCES_CLEANUP"
 #define CONFIG_CONCURRENT_DISK_OPS              "CONCURRENT_DISK_OPS"
+#define CONFIG_SC_REQUEST_TIMEOUT               "SC_REQUEST_TIMEOUT"
 #define CONFIG_CONCURRENT_CLEANUP_OPS           "CONCURRENT_CLEANUP_OPS"
 #define CONFIG_DISABLE_SNAPSHOTS                "DISABLE_CACHE_SNAPSHOTS"
 #define CONFIG_USE_VIRTIO_NET                   "USE_VIRTIO_NET"
@@ -230,6 +236,9 @@
 #define CONFIG_SHUTDOWN_GRACE_PERIOD_SEC        "NC_SHUTDOWN_GRACE_PERIOD_SEC"
 #define CONFIG_ENABLE_WS_SECURITY				"ENABLE_WS_SECURITY"
 #define CONFIG_WALRUS_DOWNLOAD_MAX_ATTEMPTS     "WALRUS_DOWNLOAD_MAX_ATTEMPTS"
+#define CONFIG_NC_CEPH_USER                     "CEPH_USER_NAME"
+#define CONFIG_NC_CEPH_KEYS                     "CEPH_KEYRING_PATH"
+#define CONFIG_NC_CEPH_CONF                     "CEPH_CONFIG_PATH"
 
 //! @}
 

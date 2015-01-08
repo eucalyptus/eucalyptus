@@ -24,6 +24,7 @@ import java.util.List;
 import com.eucalyptus.autoscaling.common.AutoScalingResourceName;
 import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistentsWithResourceNameSupport;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -31,6 +32,7 @@ import com.google.common.base.Predicate;
 /**
  *
  */
+@ComponentNamed
 public class PersistenceLaunchConfigurations extends LaunchConfigurations {
 
   private PersistenceSupport persistenceSupport = new PersistenceSupport();

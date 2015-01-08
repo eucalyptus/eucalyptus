@@ -81,10 +81,10 @@ public interface CloudMetadata extends RestrictedType {
   @PolicyResourceType( "availabilityzone" )
   public interface AvailabilityZoneMetadata extends CloudMetadata {}
   
-  @PolicyResourceType( "keypair" )
+  @PolicyResourceType( "key-pair" )
   public interface KeyPairMetadata extends CloudMetadata {}
   
-  @PolicyResourceType( "securitygroup" )
+  @PolicyResourceType( "security-group" )
   public interface NetworkGroupMetadata extends CloudMetadata {}
   
   @PolicyResourceType( "address" )
@@ -111,4 +111,25 @@ public interface CloudMetadata extends RestrictedType {
 
   @PolicyResourceType( "tag" )
   public interface TagMetadata extends CloudMetadata {}
+
+  @PolicyResourceType( "dhcp-options" )
+  public interface DhcpOptionSetMetadata extends CloudMetadata {}
+
+  @PolicyResourceType( "internet-gateway" )
+  public interface InternetGatewayMetadata extends CloudMetadata {}
+
+  @PolicyResourceType( "network-acl" )
+  public interface NetworkAclMetadata extends CloudMetadata {}
+
+  @PolicyResourceType( "network-interface" )
+  public interface NetworkInterfaceMetadata extends CloudMetadata {}
+
+  @PolicyResourceType( "route-table" )
+  public interface RouteTableMetadata extends CloudMetadata {}
+
+  @PolicyResourceType( "subnet" )
+  public interface SubnetMetadata extends CloudMetadata {}
+
+  @PolicyResourceType( "vpc" )
+  public interface VpcMetadata extends CloudMetadata {}
 }

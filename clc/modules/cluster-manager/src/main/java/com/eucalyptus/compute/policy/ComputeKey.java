@@ -19,7 +19,9 @@
  ************************************************************************/
 package com.eucalyptus.compute.policy;
 
+import java.text.ParseException;
 import java.util.regex.Pattern;
+import com.eucalyptus.auth.policy.key.Iso8601DateParser;
 import com.eucalyptus.auth.policy.key.Key;
 import net.sf.json.JSONException;
 
@@ -33,6 +35,14 @@ public interface ComputeKey extends Key {
     static void assertArnValue( final String value ) throws JSONException {
       if ( !arnPattern.matcher( value ).matches( ) ) {
         throw new JSONException( "Invalid ARN: " + value );
+      }
+    }
+
+    static void assertDateValue( final String value ) throws JSONException {
+      try {
+        Iso8601DateParser.parse( value );
+      } catch ( ParseException e ) {
+        throw new JSONException( "Invalid date: " + value );
       }
     }
   }

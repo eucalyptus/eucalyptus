@@ -43,15 +43,18 @@ public class VmAddressMessage extends ComputeMessage{
 /** *******************************************************************************/
 
 public class AllocateAddressType extends VmAddressMessage {
-  
+  String domain
 } //** added 2008-02-01  **/
 public class AllocateAddressResponseType extends VmAddressMessage { //** added 2008-02-01  **/
   String publicIp;
+  String domain;
+  String allocationId;
 }
 /** *******************************************************************************/
 
 public class ReleaseAddressType extends VmAddressMessage { //** added 2008-02-01  **/
   String publicIp;
+  String allocationId;
   
   def ReleaseAddressType(final publicIp) {
     this.publicIp = publicIp;
@@ -81,6 +84,9 @@ public class DescribeAddressesResponseType extends VmAddressMessage { //** added
 public class AssociateAddressType extends VmAddressMessage { //** added 2008-02-01  **/
   String publicIp;
   String instanceId;
+  String allocationId
+  String networkInterfaceId
+  String privateIpAddress
   Boolean allowReassociation = Boolean.FALSE
   
   def AssociateAddressType(final publicIp, final instanceId) {
@@ -92,23 +98,32 @@ public class AssociateAddressType extends VmAddressMessage { //** added 2008-02-
   }
 }
 public class AssociateAddressResponseType extends VmAddressMessage { //** added 2008-02-01  **/
+  String associationId
 }
 /** *******************************************************************************/
 
 public class DisassociateAddressType extends VmAddressMessage {  //** added 2008-02-01  **/
   String publicIp;
+  String associationId;
 }
 public class DisassociateAddressResponseType extends VmAddressMessage { //** added 2008-02-01  **/
 }
 /** *******************************************************************************/
 public class AddressInfoType extends EucalyptusData {  //** added 2008-02-01  **/
   String publicIp;
+  String allocationId
+  String domain
   String instanceId;
-  
-  def AddressInfoType(final publicIp, final instanceId)
+  String associationId
+  String networkInterfaceId
+  String networkInterfaceOwnerId
+  String privateIpAddress
+
+  def AddressInfoType( final String publicIp, final String domain, final String instanceId )
   {
-    this.publicIp = publicIp;
-    this.instanceId = instanceId;
+    this.publicIp = publicIp
+    this.domain = domain
+    this.instanceId = instanceId
   }
   
   def AddressInfoType()

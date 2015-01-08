@@ -393,7 +393,7 @@ static int ncClientRunInstance(ncStub * pStub, ncMetadata * pMeta, u32 nbInstanc
 
     psPrivateMac = strdup(psMacAddr);
     psPrivateIP = strdup("10.0.0.202");
-    srand(time(NULL));
+    euca_srand();                      // seed the random number generator
     while (nbInstances--) {
         if ((psInstanceId == NULL) || (nbInstances > 1)) {
             snprintf(sTempBuffer, sizeof(sTempBuffer), "i-%c%c%c%c%c", NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM());
@@ -427,7 +427,7 @@ static int ncClientRunInstance(ncStub * pStub, ncMetadata * pMeta, u32 nbInstanc
 
         rc = ncRunInstanceStub(pStub, pMeta, psLocalUUID, psLocalInstanceId, psLocalReservationId, pVirtMachine, psImageId, psImageURL, psKernelId, psKernelURL, psRamdiskId,
                                psRamdiskURL, "eucalyptusUser", "eucalyptusAccount", "", &netParams, psUserData, psCredential, psLaunchIndex, psPlatform, 0, ppsGroupNames,
-                               groupNameSize, &pOutInst);
+                               groupNameSize, "", &pOutInst);
         if (rc != EUCA_OK) {
             printf("ncRunInstanceStub = %d : instanceId=%s\n", rc, psInstanceId);
             exit(1);
@@ -533,7 +533,7 @@ static int ncClientDescribeInstances(ncStub * pStub, ncMetadata * pMeta)
                 if (strlen(pInstance->volumes[j].volumeId) > 0) {
                     if (volCount > 0)
                         printf("\t\t                  ");
-                    printf("%s %s %s\n", pInstance->volumes[j].volumeId, pInstance->volumes[j].attachmentToken, pInstance->volumes[j].localDev);
+                    printf("%s %s %s\n", pInstance->volumes[j].volumeId, pInstance->volumes[j].attachmentToken, pInstance->volumes[j].devName);
                     volCount++;
                 }
             }
@@ -569,7 +569,7 @@ static int ncClientDescribeInstances(ncStub * pStub, ncMetadata * pMeta)
 static int ncClientBundleInstance(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId)
 {
     int rc = EUCA_OK;
-    rc = ncBundleInstanceStub(pStub, pMeta, psInstanceId, "bucket-foo", "prefix-foo", "s3-url-foo", "user-key-foo", "s3policy-foo", "s3policy-sig");
+    rc = ncBundleInstanceStub(pStub, pMeta, psInstanceId, "bucket-foo", "prefix-foo", "s3-url-foo", "user-key-foo", "s3policy-foo", "s3policy-sig", "x86_64");
     printf("ncBundleInstanceStub = %d\n", rc);
     return (rc);
 }
@@ -1215,7 +1215,7 @@ int main(int argc, char *argv[])
     }
 
     snprintf(sConfigFile, sizeof(sConfigFile), EUCALYPTUS_CONF_LOCATION, psEucaHomePath);
-    snprintf(sPolicyFile, sizeof(sPolicyFile), EUCALYPTUS_KEYS_DIR "/nc-client-policy.xml", psEucaHomePath);
+    snprintf(sPolicyFile, sizeof(sPolicyFile), EUCALYPTUS_POLICIES_DIR "/nc-client-policy.xml", psEucaHomePath);
     if ((rc = get_conf_var(sConfigFile, "ENABLE_WS_SECURITY", &psTmpBuffer)) != 1) {
         // Default to enabled
         useWSSEC = 1;

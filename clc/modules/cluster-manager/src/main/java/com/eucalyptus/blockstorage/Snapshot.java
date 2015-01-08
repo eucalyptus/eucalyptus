@@ -63,16 +63,33 @@
 package com.eucalyptus.blockstorage;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
+import javax.persistence.CollectionTable;
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+import javax.persistence.Transient;
+
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Callback;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -94,7 +111,10 @@ import com.google.common.base.Predicate;
 @Table( name = "metadata_snapshots" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
-  @Column( name = "metadata_snapshot_vol_size" )
+    @Transient
+    private static Logger LOG = Logger.getLogger( Snapshot.class );
+
+    @Column( name = "metadata_snapshot_vol_size" )
   private Integer  volumeSize;
   @Column( name = "metadata_snapshot_parentvolume", updatable = false )
   private String   parentVolume;
@@ -113,7 +133,21 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "snapshot" )
   private Collection<SnapshotTag> tags;
 
-  protected Snapshot( ) {
+    @ElementCollection
+    @CollectionTable( name = "metadata_snapshot_permissions" )
+    @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+    private Set<String> permissions = new HashSet<String>( );
+
+    @ElementCollection
+    @CollectionTable( name = "metadata_snapshot_pcodes" )
+    @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+    private Set<String> productCodes = new HashSet<String>( );
+
+    @Column( name = "metadata_snapshot_is_public", columnDefinition = "boolean default false" )
+    private Boolean snapshotPublic;
+
+
+    protected Snapshot( ) {
     super( );
   }
   
@@ -135,6 +169,7 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     this.volumePartition = volumePartition;
     this.volumeSize = volumeSize;
     this.progress = "0%";
+    this.snapshotPublic = false;
     super.setState( State.NIHIL );
   }
 
@@ -173,7 +208,7 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     else if ( StorageProperties.Status.failed.toString( ).equals( state ) ) this.setState( State.FAIL );
   }
   
-  public edu.ucsb.eucalyptus.msgs.Snapshot morph( final edu.ucsb.eucalyptus.msgs.Snapshot snap ) {
+  public com.eucalyptus.compute.common.Snapshot morph( final com.eucalyptus.compute.common.Snapshot snap ) {
     snap.setSnapshotId( this.getDisplayName( ) );
     snap.setDescription( this.getDescription() );
     snap.setStatus( this.mapState( ) );
@@ -187,6 +222,14 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     }
     return snap;
   }
+
+    public Boolean getSnapshotPublic( ) {
+        return this.snapshotPublic;
+    }
+
+    public void setSnapshotPublic( final Boolean aPublic ) {
+        this.snapshotPublic = aPublic;
+    }
 
   public String getDescription() {
     return description;
@@ -256,6 +299,168 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
   protected void setProgress( String progress ) {
     this.progress = progress;
   }
+
+
+    static Snapshot self( final Snapshot snap ) {
+        return new Snapshot(snap.getOwner(), snap.getDisplayName( ) );
+    }
+
+    public boolean addProductCode( final String prodCode ) {
+
+        EntityTransaction db = Entities.get( Snapshot.class );
+        try {
+            Snapshot entity = Entities.merge( this );
+            entity.getProductCodes( ).add( prodCode );
+            db.commit( );
+            return true;
+        } catch ( Exception ex ) {
+            Logs.exhaust( ).error( ex, ex );
+            db.rollback( );
+            return false;
+        }
+    }
+
+    @SuppressWarnings( "unchecked" )
+    public Snapshot revokePermission( final Account account ) {
+        EntityTransaction db = Entities.get( Snapshot.class );
+        try {
+            Snapshot entity = Entities.merge( this );
+            entity.getPermissions( ).remove( account.getAccountNumber( ) );
+            db.commit( );
+        } catch ( Exception ex ) {
+            Logs.exhaust( ).error( ex, ex );
+            db.rollback( );
+        }
+        return this;
+    }
+
+    @SuppressWarnings( "unchecked" )
+    public Snapshot grantPermission( final Account account ) {
+        EntityTransaction db = Entities.get( Snapshot.class );
+        try {
+            Snapshot entity = Entities.merge( this );
+            entity.getPermissions( ).add( account.getAccountNumber( ) );
+            db.commit( );
+        } catch ( Exception ex ) {
+            Logs.exhaust( ).error( ex, ex );
+            db.rollback( );
+        }
+        return this;
+    }
+
+    public Snapshot resetPermission( ) {
+        try {
+            Transactions.one(new Snapshot(this.getOwner(), this.displayName), new Callback<Snapshot>() {
+                @Override
+                public void fire(final Snapshot t) {
+                    t.getPermissions().clear();
+                    t.getPermissions().add(t.getOwnerAccountNumber());
+                }
+            });
+        } catch ( final ExecutionException e ) {
+            LOG.debug( e, e );
+        }
+        return this;
+    }
+
+    public Snapshot resetProductCodes( ) {
+        try {
+            Transactions.one( Snapshot.self( this ), new Callback<Snapshot>( ) {
+                @Override
+                public void fire( final Snapshot t ) {
+                    t.getProductCodes( ).clear( );
+                }
+            } );
+        } catch ( final ExecutionException e ) {
+            LOG.debug( e, e );
+        }
+        return this;
+    }
+
+    public Set<String> getProductCodes( ) {
+        return this.productCodes;
+    }
+
+
+    public Set<String> getPermissions() {
+        return this.permissions;
+    }
+
+    public void setPermissions(Set<String> permissions) {
+        this.permissions = permissions;
+    }
+
+
+    /**
+     * @param accountId
+     * @return true if the accountId has an explicit launch permission.
+     */
+    public boolean hasPermission( final String... accountIds ) {
+        try (TransactionResource db = Entities.transactionFor(Snapshot.class)) {
+            Snapshot entity = Entities.merge(this);
+            return !Sets.intersection(entity.getPermissions(), Sets.newHashSet(accountIds)).isEmpty();
+        }
+    }
+
+    /**
+     * Add createvolume permissions.
+     *
+     * @param accountIds
+     */
+    public void addPermissions( final List<String> accountIds ) {
+        try(TransactionResource db = Entities.transactionFor(Snapshot.class)) {
+            final Snapshot entity = Entities.merge( this );
+            Iterables.all(accountIds, new Predicate<String>() {
+
+                @Override
+                public boolean apply(final String input) {
+                    try {
+                        final Account account = Accounts.lookupAccountById(input);
+                        Snapshot.this.getPermissions().add(input);
+                    } catch (final Exception e) {
+                        try {
+                            final User user = Accounts.lookupUserById(input);
+                            Snapshot.this.getPermissions().add(user.getAccount().getAccountNumber());
+                        } catch (AuthException ex) {
+                            try {
+                                final User user = Accounts.lookupUserByAccessKeyId(input);
+                                Snapshot.this.getPermissions().add(user.getAccount().getAccountNumber());
+                            } catch (AuthException ex1) {
+                                LOG.error(ex1, ex1);
+                            }
+                        }
+                    }
+                    return true;
+                }
+            });
+            db.commit();
+        } catch ( final Exception ex ) {
+            Logs.exhaust().error( ex, ex );
+        }
+    }
+
+    /**
+     * Remove createvolume permissions.
+     *
+     * @param accountIds
+     */
+    public void removePermissions( final List<String> accountIds ) {
+        try(TransactionResource db = Entities.transactionFor(Snapshot.class)) {
+            final Snapshot entity = Entities.merge( this );
+            Iterables.all( accountIds, new Predicate<String>( ) {
+
+                @Override
+                public boolean apply( final String input ) {
+                    Snapshot.this.getPermissions( ).remove( input );
+                    return true;
+                }
+            } );
+
+            db.commit( );
+        } catch ( final Exception ex ) {
+            Logs.exhaust( ).error( ex, ex );
+        }
+    }
   
   @EntityUpgrade( entities = { Snapshot.class }, since = Version.v3_2_0, value = Storage.class )
   public enum SnapshotUpgrade implements Predicate<Class> {

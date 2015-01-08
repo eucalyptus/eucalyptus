@@ -19,6 +19,10 @@
  ************************************************************************/
 package com.eucalyptus.tags
 
+import com.eucalyptus.util.Strings
+import com.google.common.collect.Iterables
+import com.google.common.collect.Sets
+
 import static org.junit.Assert.*
 import org.junit.Test
 import org.springframework.util.ReflectionUtils
@@ -93,7 +97,12 @@ class FilterSupportTest {
     }
 
     void assertValidAliases( final FilterSupport<RT> filterSupport ) {
-      assertValidAliases( filterSupport.aliases.keySet(), filterSupport.resourceClass )
+      final Set<String> directAliases = Sets.newTreeSet( filterSupport.aliases.keySet( ) )
+      for ( final String aliased : filterSupport.aliases.values( ) ) {
+        // can't currently check for nested alias validity
+        Iterables.removeIf( directAliases, Strings.startsWith( "${aliased}." ) )
+      }
+      assertValidAliases( directAliases, filterSupport.resourceClass )
     }
     
     void assertValidAliases( final Set<String> aliasProperties,
@@ -128,7 +137,8 @@ class FilterSupportTest {
                              final Map<Class,List<Class>> searchableSubclasses ) {
       filterSupport.getPersistenceFilters().values().each { property ->
         List<String> propPath = property.property.split( "\\." ) as List
-        if ( filterSupport.aliases.values().contains( propPath.first() ) ) {
+        while ( filterSupport.aliases.values( ).contains( propPath.first( ) ) &&
+            !filterSupport.aliases.containsKey( propPath.first( ) ) ) {
           // expand alias
           BiMap<String,String> aliases = HashBiMap.create( filterSupport.aliases ).inverse()
           aliases.get( propPath.remove( 0 ) ).split( "\\." ).reverse().each { propName ->

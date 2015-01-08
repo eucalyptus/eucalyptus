@@ -1,5 +1,3 @@
-package com.eucalyptus.component;
-
 /*************************************************************************
  * Copyright 2009-2013 Eucalyptus Systems, Inc.
  * 
@@ -61,6 +59,7 @@ package com.eucalyptus.component;
  * IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  * NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
+package com.eucalyptus.component;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Ordering;

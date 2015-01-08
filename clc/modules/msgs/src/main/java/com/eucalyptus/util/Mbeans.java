@@ -120,7 +120,12 @@ public class Mbeans {
   public static void init( ) {////TODO:GRZE: make it a bootstrapper
     System.setProperty( "euca.jmx.uri", URI );
     mbeanServer = ManagementFactory.getPlatformMBeanServer( ); //MBeanServerFactory.createMBeanServer( "com.eucalyptus" );
-    
+
+    //Always have the builder available, regardless of remote connectivity
+    jmxBuilder = new JmxBuilder( /*mbeanServer*/);
+    jmxBuilder.setDefaultJmxNameDomain( "com.eucalyptus" );
+    //      jmxBuilder.setMBeanServer( mbeanServer );
+
     if ( System.getProperty( "com.sun.management.jmxremote" ) != null ) {
       try {
         try {
@@ -136,9 +141,6 @@ public class Mbeans {
       try {
         jmxServer = JMXConnectorServerFactory.newJMXConnectorServer( new JMXServiceURL( URI ), jmxProps, mbeanServer );
         jmxServer.start( );
-        jmxBuilder = new JmxBuilder( /*mbeanServer*/);
-        jmxBuilder.setDefaultJmxNameDomain( "com.eucalyptus" );
-//      jmxBuilder.setMBeanServer( mbeanServer );
       } catch ( MalformedURLException ex ) {
         LOG.error( ex, ex );
       } catch ( IOException ex ) {
@@ -190,6 +192,7 @@ public class Mbeans {
   
   public static void register( final Object obj ) {
     if ( jmxBuilder == null ) {
+      //Do internal stuff here.
       return;
     } else {
       Class targetType = obj.getClass( );

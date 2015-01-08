@@ -955,7 +955,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
         ListMultipartUploadsResponseType response = request.getReply();
         response.setBucket(request.getBucket());
         response.setDelimiter(request.getDelimiter());
-        response.setMaxUploads(request.getMaxUploads() != null ? request.getMaxUploads() : 1000);
+        response.setMaxUploads(request.getMaxUploads() != null ? Integer.parseInt(request.getMaxUploads()) : 1000);
         response.setPrefix(request.getPrefix());
 
         //Does not support prefix and delims

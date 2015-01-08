@@ -96,6 +96,13 @@
 #define OP_TIMEOUT_MIN                            5
 #define LOG_INTERVAL_SUMMARY_SEC                 60
 #define SCHED_TIMEOUT_SEC                         8 //! timeout for user scheduler
+#define MESSAGE_STATS_MEMORY_REGION_SIZE         10485760 //! 10 MB
+
+/*
+{
+"DoRunInstance-100.100.100.100":{"min":100000,"max":100000,"mean":100000,"failed_count":100000,"count":100000,"success_count":100000},
+}
+*/
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -124,6 +131,7 @@ enum {
     REFRESHLOCK,
     BUNDLECACHE,
     SENSORCACHE,
+    STATSCACHE,
     GLOBALNETWORKINFO,
     NCCALL0,
     NCCALL1,
@@ -185,13 +193,15 @@ enum {
 };
 
 enum {
-    RESINVALID,
-    RESVALID,
+    RES_UNCONFIGURED = 0,
+    RES_CONFIGURED,
+    RES_UNKNOWN
 };
 
 enum {
     MONITOR = 0,
     SENSOR,
+    STATS,
     NUM_THREADS,
 };
 
@@ -252,6 +262,7 @@ typedef struct instance_t {
     char platform[64];
     char guestStateName[64];
     char bundleTaskStateName[64];
+    double bundleTaskProgress;
     char createImageTaskStateName[64];
 
     int expiryTime;
@@ -288,6 +299,7 @@ typedef struct resource_t {
     char nodeMessage[1024];
     char nodeStatus[24];
     boolean migrationCapable;
+    char hypervisor[16];
 } ccResource;
 
 typedef struct ccResourceCache_t {
@@ -368,7 +380,8 @@ extern char *SCHEDPOLICIES[SCHEDLAST];
 \*----------------------------------------------------------------------------*/
 
 void doInitCC(void);
-int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
+int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, char *S3Policy, char *S3PolicySig,
+                     char *architecture);
 int doBundleRestartInstance(ncMetadata * pMeta, char *instanceId);
 int doCancelBundleTask(ncMetadata * pMeta, char *instanceId);
 int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char *ncOp, ...);
@@ -406,7 +419,7 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                    int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen,
                    char **uuids, int uuidsLen, char **privateIps, int privateIpsLen, int minCount, int maxCount, char *accountId, char *ownerId,
                    char *reservationId, virtualMachine * ccvm, char *keyName, int vlan, char *userData, char *credential, char *launchIndex,
-                   char *platform, int expiryTime, char *targetNode, ccInstance ** outInsts, int *outInstsLen);
+                   char *platform, int expiryTime, char *targetNode, char *rootDirective, ccInstance ** outInsts, int *outInstsLen);
 int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutput);
 int doRebootInstances(ncMetadata * pMeta, char **instIds, int instIdsLen);
 int doTerminateInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, int force, int **outStatus);
@@ -442,9 +455,9 @@ int allocate_ccResource(ccResource * out, char *ncURL, char *ncService, int ncPo
                         int availMemory, int maxDisk, int availDisk, int maxCores, int availCores, int state, int laststate, time_t stateChange, time_t idleStart);
 int free_instanceNetwork(char *mac, int vlan, int force, int dolock);
 int allocate_ccInstance(ccInstance * out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL,
-                        char *ownerId, char *accountId, char *state, char *ccState, time_t ts, char *reservationId, netConfig * ccnet,
-                        netConfig * ncnet, virtualMachine * ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex,
-                        char *platform, char *guestStateName, char *bundleTaskStateName, char groupNames[][64], ncVolume * volumes, int volumesSize);
+                        char *ownerId, char *accountId, char *state, char *ccState, time_t ts, char *reservationId, netConfig * ccnet, netConfig * ncnet,
+                        virtualMachine * ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char *platform,
+                        char *guestStateName, char *bundleTaskStateName, char groupNames[][64], ncVolume * volumes, int volumesSize, double bundleTaskProgress);
 int pubIpCmp(ccInstance * inst, void *ip);
 int privIpCmp(ccInstance * inst, void *ip);
 int privIpSet(ccInstance * inst, void *ip);
@@ -461,12 +474,6 @@ int add_instanceCache(char *instanceId, ccInstance * in);
 int del_instanceCacheId(char *instanceId);
 int find_instanceCacheId(char *instanceId, ccInstance ** out);
 int find_instanceCacheIP(char *ip, ccInstance ** out);
-void print_resourceCache(void);
-void invalidate_resourceCache(void);
-int refresh_resourceCache(char *host, ccResource * in);
-int add_resourceCache(char *host, ccResource * in);
-int del_resourceCacheId(char *host);
-int find_resourceCacheId(char *host, ccResource ** out);
 void unlock_exit(int code);
 int sem_mywait(int lockno);
 int sem_mypost(int lockno);
@@ -478,6 +485,9 @@ int writePubPrivIPMap(ccInstance * inst, void *in);
 
 //! For filtering service infos in the meta passed to the NC
 void filter_services(ncMetadata * meta, char *filter_partition);
+
+//Update message stats counters
+int cached_message_stats_update(const char *message_name, long call_time, int msg_failed);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

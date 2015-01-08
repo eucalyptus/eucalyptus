@@ -64,6 +64,8 @@ package com.eucalyptus.auth.euare;
 
 import com.eucalyptus.auth.AuthContext;
 
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.text.DateFormat;
@@ -78,14 +80,17 @@ import java.util.TimeZone;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.springframework.web.util.UriUtils;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.Privileged;
 import com.eucalyptus.auth.ServerCertificate;
 import com.eucalyptus.auth.ServerCertificates;
 import com.eucalyptus.auth.entities.ServerCertificateEntity;
+import com.eucalyptus.auth.euare.events.AccountEventUtils;
 import com.eucalyptus.auth.ldap.LdapSync;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
@@ -100,14 +105,13 @@ import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.eucalyptus.auth.util.X509CertHelper;
-import com.eucalyptus.component.auth.SystemCredentials;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
@@ -115,9 +119,13 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 
+@SuppressWarnings( "UnusedDeclaration" )
 public class EuareService {
   
   private static final Logger LOG = Logger.getLogger( EuareService.class );
+
+  private static final boolean ENCODE_POLICIES =
+      Boolean.valueOf( System.getProperty( "com.eucalyptus.auth.euare.encodePolicies", "true" ) );
   
   public CreateAccountResponseType createAccount(CreateAccountType request) throws EucalyptusCloudException {
     CreateAccountResponseType reply = request.getReply( );
@@ -129,6 +137,7 @@ public class EuareService {
       AccountType account = reply.getCreateAccountResult( ).getAccount( );
       account.setAccountName( newAccount.getName( ) );
       account.setAccountId( newAccount.getAccountNumber( ) );
+      AccountEventUtils.fireCreated( newAccount.getAccountNumber( ) );
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
@@ -154,6 +163,7 @@ public class EuareService {
     try {
       boolean recursive = ( request.getRecursive( ) != null && request.getRecursive( ) );
       Privileged.deleteAccount( requestUser, accountFound, recursive );
+      AccountEventUtils.fireDeleted( accountFound.getAccountNumber( ) );
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
@@ -175,6 +185,10 @@ public class EuareService {
   public ListAccountsResponseType listAccounts(ListAccountsType request) throws EucalyptusCloudException {
     ListAccountsResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    Context ctx = Contexts.lookup( );
+    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_LISTACCOUNTS, ctx.getAuthContext( ) ) ) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list accounts" );
+    }
     ArrayList<AccountType> accounts = reply.getListAccountsResult( ).getAccounts( ).getMemberList( );
     try {
       for ( final Account account : Iterables.filter( Accounts.listAllAccounts( ), RestrictedTypes.filterPrivileged( ) ) ) {
@@ -200,7 +214,9 @@ public class EuareService {
     if ( !Strings.isNullOrEmpty( request.getPathPrefix( ) ) ) {
       path = request.getPathPrefix( );
     }
-    // TODO(Ye Wen, 01/16/2011): support pagination
+    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_LISTGROUPS, ctx.getAuthContext( ) ) ) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list groups" );
+    }
     reply.getListGroupsResult( ).setIsTruncated( false );
     ArrayList<GroupType> groups = reply.getListGroupsResult( ).getGroups( ).getMemberList( );
     try {
@@ -256,7 +272,6 @@ public class EuareService {
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
     }
-    // TODO(Ye Wen, 01/26/2011): support pagination
     ListSigningCertificatesResultType result = reply.getListSigningCertificatesResult( );
     result.setIsTruncated( false );
     ArrayList<SigningCertificateType> certs = result.getCertificates( ).getMemberList( );
@@ -304,6 +319,8 @@ public class EuareService {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to upload signing certificate of " + request.getUserName( ) + "by " + ctx.getUser( ).getName( ) );
+        } else if ( AuthException.QUOTA_EXCEEDED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Signing certificate limit exceeded" );
         } else if ( AuthException.CONFLICT.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.DUPLICATE_CERTIFICATE, "Trying to upload duplicate certificate" );          
         } else if ( AuthException.INVALID_CERT.equals( e.getMessage( ) ) ) {
@@ -352,7 +369,7 @@ public class EuareService {
       Privileged.putUserPolicy( requestUser, account, userFound, request.getPolicyName( ), request.getPolicyDocument( ) );
     } catch ( PolicyParseException e ) {
       LOG.error( e, e );
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + request.getPolicyDocument( ), e );
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + e.getMessage(), e );
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
@@ -373,7 +390,6 @@ public class EuareService {
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    //TODO: pagination support
     String pathPrefix = request.getPathPrefix();
     if(pathPrefix == null || pathPrefix.isEmpty())
       pathPrefix = "/";
@@ -382,7 +398,7 @@ public class EuareService {
       final List<ServerCertificate> certs = Privileged.listServerCertificate( requestUser, account, pathPrefix );
       final ListServerCertificatesResultType result = new ListServerCertificatesResultType();
       final ServerCertificateMetadataListTypeType lists = new ServerCertificateMetadataListTypeType();
-      lists.setMemberList(new ArrayList<ServerCertificateMetadataType>(Collections2.transform(certs, new Function<ServerCertificate, ServerCertificateMetadataType>(){
+      lists.setMemberList(new ArrayList<>(Collections2.transform(certs, new Function<ServerCertificate, ServerCertificateMetadataType>(){
         @Override
         public ServerCertificateMetadataType apply(ServerCertificate cert) {
           return getServerCertificateMetadata(cert);
@@ -418,7 +434,7 @@ public class EuareService {
         GetUserPolicyResultType result = reply.getGetUserPolicyResult( );
         result.setUserName( request.getUserName( ) );
         result.setPolicyName( request.getPolicyName( ) );
-        result.setPolicyDocument( policy.getText( ) );
+        result.setPolicyDocument( encodePolicy( policy.getText( ) ) );
       } else {
         throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find policy " + request.getPolicyName( ) );
       }
@@ -618,7 +634,9 @@ public class EuareService {
     if ( !Strings.isNullOrEmpty( request.getPathPrefix( ) ) ) {
       path = request.getPathPrefix( );
     }
-    // TODO(Ye Wen, 01/16/2011): support pagination
+    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_LISTUSERS, ctx.getAuthContext( ) ) ) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list users" );
+    }
     ListUsersResultType result = reply.getListUsersResult( );
     result.setIsTruncated( false );
     ArrayList<UserType> users = reply.getListUsersResult( ).getUsers( ).getMemberList( );
@@ -713,7 +731,7 @@ public class EuareService {
       Privileged.putGroupPolicy( requestUser, account, groupFound, request.getPolicyName( ), request.getPolicyDocument( ) );
     } catch ( PolicyParseException e ) {
       LOG.error( e, e );
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + request.getPolicyDocument( ), e );
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + e.getMessage(), e );
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
@@ -797,7 +815,6 @@ public class EuareService {
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = lookupUserByName( account, request.getUserName( ) );
-    // TODO(Ye Wen, 01/26/2011): support pagination
     ListUserPoliciesResultType result = reply.getListUserPoliciesResult( );
     result.setIsTruncated( false );
     ArrayList<String> policies = result.getPolicyNames( ).getMemberList( );
@@ -827,7 +844,6 @@ public class EuareService {
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
     }
-    // TODO(Ye Wen, 01/26/2011): add pagination support
     ListAccessKeysResultType result = reply.getListAccessKeysResult( );
     try {
       result.setIsTruncated( false );
@@ -883,7 +899,6 @@ public class EuareService {
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = lookupUserByName( account, request.getUserName( ) );
-    // TODO(Ye Wen, 01/16/2011): support pagination
     reply.getListGroupsForUserResult( ).setIsTruncated( false );
     ArrayList<GroupType> groups = reply.getListGroupsForUserResult( ).getGroups( ).getMemberList( );
     try {
@@ -995,7 +1010,7 @@ public class EuareService {
         GetGroupPolicyResultType result = reply.getGetGroupPolicyResult( );
         result.setGroupName( request.getGroupName( ) );
         result.setPolicyName( request.getPolicyName( ) );
-        result.setPolicyDocument( policy.getText( ) );
+        result.setPolicyDocument( encodePolicy( policy.getText( ) ) );
       } else {
         throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find policy " + request.getPolicyName( ) );
       }
@@ -1108,7 +1123,6 @@ public class EuareService {
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
-    // TODO(Ye Wen, 01/26/2011): support pagination
     ListGroupPoliciesResultType result = reply.getListGroupPoliciesResult( );
     result.setIsTruncated( false );
     ArrayList<String> policies = result.getPolicyNames( ).getMemberList( );
@@ -1177,6 +1191,8 @@ public class EuareService {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create access key for user " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
+        } else if ( AuthException.QUOTA_EXCEEDED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Access key limit exceeded" );
         }
       }
       LOG.error( e, e );
@@ -1285,7 +1301,6 @@ public class EuareService {
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
-    // TODO(Ye Wen, 01/26/2011): Consider pagination
     try {
       if ( !Privileged.allowReadGroup( requestUser, account, groupFound ) ) {
         throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get group " + request.getGroupName( ) + " by " + ctx.getUser( ).getName( ) );
@@ -1450,6 +1465,8 @@ public class EuareService {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create signing certificate of " + request.getUserName( ) + "by " + ctx.getUser( ).getName( ) );
+        } else if ( AuthException.QUOTA_EXCEEDED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Signing certificate limit exceeded" );
         }
       }
       LOG.error( e, e );
@@ -1532,7 +1549,7 @@ public class EuareService {
       Privileged.putAccountPolicy( requestUser, accountFound, request.getPolicyName( ), request.getPolicyDocument( ) );
     } catch ( PolicyParseException e ) {
       LOG.error( e, e );
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + request.getPolicyDocument( ) + " due to " + e, e );
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + e.getMessage(), e );
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
@@ -1553,7 +1570,6 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
     Account accountFound = lookupAccountByName( request.getAccountName( ) );
-    // TODO(Ye Wen, 04/02/2011): support pagination
     ListAccountPoliciesResultType result = reply.getListAccountPoliciesResult( );
     result.setIsTruncated( false );
     ArrayList<String> policies = result.getPolicyNames( ).getMemberList( );
@@ -1585,7 +1601,7 @@ public class EuareService {
         GetAccountPolicyResultType result = reply.getGetAccountPolicyResult( );
         result.setAccountName( request.getAccountName( ) );
         result.setPolicyName( request.getPolicyName( ) );
-        result.setPolicyDocument( policy.getText( ) );
+        result.setPolicyDocument( encodePolicy( policy.getText( ) ) );
       } else {
         throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find policy " + request.getPolicyName( ) );
       }
@@ -1638,7 +1654,7 @@ public class EuareService {
       reply.getCreateRoleResult( ).setRole( fillRoleResult( new RoleType(), newRole ) );
     } catch ( PolicyParseException e ) {
       LOG.error( e, e );
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + request.getAssumeRolePolicyDocument( ), e );
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + e.getMessage(), e );
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
@@ -1670,7 +1686,7 @@ public class EuareService {
       Privileged.updateAssumeRolePolicy( requestUser, account, roleFound, request.getPolicyDocument() );
     } catch ( PolicyParseException e ) {
       LOG.error( e, e );
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + request.getPolicyDocument( ), e );
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + e.getMessage(), e );
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
@@ -1738,7 +1754,9 @@ public class EuareService {
     if ( !Strings.isNullOrEmpty( request.getPathPrefix( ) ) ) {
       path = request.getPathPrefix( );
     }
-    // TODO support pagination
+    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_LISTROLES, ctx.getAuthContext( ) ) ) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list roles" );
+    }
     reply.getListRolesResult( ).setIsTruncated( false );
     final ArrayList<RoleType> roles = reply.getListRolesResult( ).getRoles().getMember();
     try {
@@ -1767,7 +1785,7 @@ public class EuareService {
       Privileged.putRolePolicy( requestUser, account, roleFound, request.getPolicyName( ), request.getPolicyDocument( ) );
     } catch ( PolicyParseException e ) {
       LOG.error( e, e );
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + request.getPolicyDocument( ), e );
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + e.getMessage(), e );
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
@@ -1795,7 +1813,7 @@ public class EuareService {
         GetRolePolicyResult result = reply.getGetRolePolicyResult( );
         result.setRoleName( request.getRoleName( ) );
         result.setPolicyName( request.getPolicyName( ) );
-        result.setPolicyDocument( policy.getText( ) );
+        result.setPolicyDocument( encodePolicy( policy.getText( ) ) );
       } else {
         throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find policy " + request.getPolicyName( ) );
       }
@@ -1845,7 +1863,6 @@ public class EuareService {
     final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     final Role roleFound = lookupRoleByName( account, request.getRoleName() );
-    // TODO support pagination
     final ListRolePoliciesResult result = reply.getListRolePoliciesResult( );
     result.setIsTruncated( false );
     final ArrayList<String> policies = result.getPolicyNames().getMemberList( );
@@ -1969,7 +1986,6 @@ public class EuareService {
     final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     final Role roleFound = lookupRoleByName( account, request.getRoleName() );
-    // TODO support pagination
     reply.getListInstanceProfilesForRoleResult().setIsTruncated( false );
     final ArrayList<InstanceProfileType> instanceProfiles = reply.getListInstanceProfilesForRoleResult().getInstanceProfiles().getMember();
     try {
@@ -2016,7 +2032,9 @@ public class EuareService {
     if ( !Strings.isNullOrEmpty( request.getPathPrefix( ) ) ) {
       path = request.getPathPrefix( );
     }
-    // TODO support pagination
+    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_LISTINSTANCEPROFILES, ctx.getAuthContext( ) ) ) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list instance profiles" );
+    }
     reply.getListInstanceProfilesResult().setIsTruncated( false );
     final ArrayList<InstanceProfileType> instanceProfiles = reply.getListInstanceProfilesResult( ).getInstanceProfiles().getMember();
     try {
@@ -2049,28 +2067,36 @@ public class EuareService {
   
   /* Euca-only API for ELB SSL termination */
   public SignCertificateResponseType signCertificate(SignCertificateType request) throws EucalyptusCloudException {
-    SignCertificateResponseType reply = request.getReply();
+    final SignCertificateResponseType reply = request.getReply();
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
-    final String certPem = request.getCertificate();
-    if(certPem == null || certPem.length()<=0)
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "No certificate to sign is provided");
+    final String pubkey = request.getKey();
+    final String instanceId = request.getInstance();
+    Integer expirationDays = request.getExpirationDays();
    
-    // currently, the only use-case is for ELB ssl termination
+    if(pubkey == null || pubkey.length()<=0)
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "No public key is provided");
+    if(instanceId == null || instanceId.length()<=0)
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "No instance ID is provided");
+    if (expirationDays == null)
+      expirationDays = 180;
     if (! requestUser.isSystemAdmin()){
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "SignCertificate can be called by only system admin");
     }
+   
+    final X509Certificate vmCert;
     try{
-      final String cert = B64.standard.decString(certPem);
-      final String signature = EuareServerCertificateUtil.generateSignatureWithEuare(cert);
-      final SignCertificateResultType result = new SignCertificateResultType();
-      result.setCertificate(certPem);
-      result.setSignature(signature);
-      reply.setSignCertificateResult(result);
-    }catch(final Exception ex){
-      LOG.error("failed to sign certificate", ex);
+      vmCert = EuareServerCertificateUtil.generateVMCertificate(pubkey, instanceId, expirationDays);
+    }catch(final EuareException ex) {
+      throw ex;
+    }catch(final Exception ex) {
       throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
     }
+    final String certPem = B64.standard.encString( PEMFiles.getBytes( vmCert ) );
+    final SignCertificateResultType result = new SignCertificateResultType();
+    result.setCertificate(certPem);
+    reply.setSignCertificateResult(result);
+    
     reply.set_return(true);
     return reply;
   }
@@ -2091,6 +2117,19 @@ public class EuareService {
     final String certPem = request.getDelegationCertificate();
     final String authSigB64 = request.getAuthSignature();
     final String certArn = request.getCertificateArn();
+    boolean oldCertType = false;
+    try{
+      if(!EuareServerCertificateUtil.verifyCertificate(certPem, true)) {       
+        // must be certificate type prior 4.1
+        oldCertType = true;
+        if( !EuareServerCertificateUtil.verifyCertificate(certPem, false))
+          throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,"Invalid VM certificate (certificate may have been expired)");
+      }
+    }catch(final EuareException ex) {
+      throw ex;
+    }catch(final Exception ex) {
+      throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,"Invalid VM certificate (certificate may have been expired)");
+    }
     
     if(sigB64 == null || ts == null)
       throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Signature and timestamp are required");
@@ -2116,19 +2155,21 @@ public class EuareService {
       LOG.error("failed to verify signature", ex);
       throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
     }
-    
-    final String certStr = B64.standard.decString(certPem);
-    // verify signature issued by EUARE
-    try{
-      if(!EuareServerCertificateUtil.verifySignatureWithEuare(certStr, authSigB64))
-        throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Invalid signature");
-    }catch(final EuareException ex){
-      throw ex;
-    }catch(final Exception ex){
-      LOG.error("failed to verify auth signature", ex);
-      throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
+   
+    // No longer the case after EUCA-8651. verifyCertificate() will validate the cert. Left here for backward-compatibility
+    if (oldCertType) {
+      // verify signature issued by EUARE
+      try{
+        final String certStr = B64.standard.decString(certPem);
+        if(!EuareServerCertificateUtil.verifySignatureWithEuare(certStr, authSigB64))
+          throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Invalid signature");
+      }catch(final EuareException ex){
+        throw ex;
+      }catch(final Exception ex){
+        LOG.error("failed to verify auth signature", ex);
+        throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
+      }
     }
-    
     try{
       // access control based on iam policy
       final ServerCertificateEntity cert = RestrictedTypes.doPrivileged(certArn, ServerCertificates.Lookup.INSTANCE);
@@ -2152,9 +2193,6 @@ public class EuareService {
       final String sig = EuareServerCertificateUtil.generateSignatureWithEuare(msg);
       result.setSignature(sig);
       reply.setDownloadServerCertificateResult(result);
-    }catch(final AuthException ex){
-      LOG.error("failed to prepare server certificate", ex);
-      throw new EuareException(HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
     }catch(final Exception ex){
       LOG.error("failed to prepare server certificate", ex);
       throw new EuareException(HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
@@ -2199,7 +2237,7 @@ public class EuareService {
     roleType.setRoleName( roleFound.getName( ) );
     roleType.setRoleId( roleFound.getRoleId() );
     roleType.setPath( roleFound.getPath() );
-    roleType.setAssumeRolePolicyDocument( roleFound.getAssumeRolePolicy().getText() );
+    roleType.setAssumeRolePolicyDocument( encodePolicy( roleFound.getAssumeRolePolicy().getText() ) );
     roleType.setArn( Accounts.getRoleArn( roleFound ) );
     roleType.setCreateDate( roleFound.getCreationTimestamp() );
     return roleType;
@@ -2229,6 +2267,10 @@ public class EuareService {
       } else {
         throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Non-sysadmin can not have delegation access to " + delegateAccount );
       }
+    } else if ( ctx.isAdministrator( ) ) {
+      if ( !RestrictedTypes.filterPrivileged().apply( requestAccount ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Access not authorized for " + requestAccount );
+      }
     }
     return requestAccount;
   }
@@ -2236,6 +2278,8 @@ public class EuareService {
   private static String sanitizePath( String path ) {
     if ( path == null || "".equals( path ) ) {
       return "/";
+    } else if ( path.length( ) > 1 && !path.endsWith( "/" ) ) {
+      return path.concat( "/" );
     }
     return path;
   }
@@ -2346,5 +2390,13 @@ public class EuareService {
     return metadata;
   }
  
-
+  private String encodePolicy( final String policy ) {
+    try {
+      return ENCODE_POLICIES && policy != null ?
+          UriUtils.encodeScheme( policy, StandardCharsets.UTF_8.name( ) ) :
+          policy;
+    } catch ( final UnsupportedEncodingException e ) {
+      throw Exceptions.toUndeclared( e );
+    }
+  }
 }

@@ -45,7 +45,7 @@ class ObjectStorageAuthenticationHandlerTests {
 
         String addrString;
         try {
-            addrString = ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true)
+            addrString = S3Authentication.getS3AddressString(request, true)
             fail("Should have thrown exception trying to parse invalid request")
         } catch (S3Exception e) {
             //expected
@@ -59,18 +59,18 @@ class ObjectStorageAuthenticationHandlerTests {
         request.setHeader(HttpHeaders.Names.HOST, "objectstorage.mydomain.com")
         request.setMethod(HttpMethod.GET)
 
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/"))
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/"))
+        assert (S3Authentication.getS3AddressString(request, true).equals("/"))
+        assert (S3Authentication.getS3AddressString(request, false).equals("/"))
 
 
         request.setUri("/services/objectstorage")
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/"))
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/services/objectstorage"))
+        assert (S3Authentication.getS3AddressString(request, true).equals("/"))
+        assert (S3Authentication.getS3AddressString(request, false).equals("/services/objectstorage"))
 
         request.setHeader(HttpHeaders.Names.HOST, "mydomain.com")
         request.setUri("/services/objectstorage")
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/"))
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/services/objectstorage"))
+        assert (S3Authentication.getS3AddressString(request, true).equals("/"))
+        assert (S3Authentication.getS3AddressString(request, false).equals("/services/objectstorage"))
     }
 
 
@@ -78,66 +78,66 @@ class ObjectStorageAuthenticationHandlerTests {
     public void testUrlEncodingParsing() {
         MappingHttpRequest request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage/bucket/object?uploadId=a%20b")
         request.setHeader(HttpHeaders.Names.HOST, "domain.com")
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/services/objectstorage/bucket/object?uploadId=a%20b"))
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/object?uploadId=a%20b"))
+        assert (S3Authentication.getS3AddressString(request, false).equals("/services/objectstorage/bucket/object?uploadId=a%20b"))
+        assert (S3Authentication.getS3AddressString(request, true).equals("/bucket/object?uploadId=a%20b"))
 
         request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/object?uploadId=a%20b")
         request.setHeader(HttpHeaders.Names.HOST, "bucket.objectstorage.domain.com")
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/bucket/object?uploadId=a%20b"))
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/object?uploadId=a%20b"))
+        assert (S3Authentication.getS3AddressString(request, false).equals("/bucket/object?uploadId=a%20b"))
+        assert (S3Authentication.getS3AddressString(request, true).equals("/bucket/object?uploadId=a%20b"))
     }
 
     @Test
     public void testPathStyleAddressParsing() {
         MappingHttpRequest request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage/bucket/object")
         request.setHeader(HttpHeaders.Names.HOST, "mydomain.com")
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/services/objectstorage/bucket/object"))
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/object"))
+        assert (S3Authentication.getS3AddressString(request, false).equals("/services/objectstorage/bucket/object"))
+        assert (S3Authentication.getS3AddressString(request, true).equals("/bucket/object"))
 
         request.setUri("/bucket/")
         request.setHeader(HttpHeaders.Names.HOST, "objectstorage.mydomain.com")
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/"))
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/bucket/"))
+        assert (S3Authentication.getS3AddressString(request, true).equals("/bucket/"))
+        assert (S3Authentication.getS3AddressString(request, false).equals("/bucket/"))
 
         request.setUri("/bucket/object")
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/object"))
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/bucket/object"))
+        assert (S3Authentication.getS3AddressString(request, true).equals("/bucket/object"))
+        assert (S3Authentication.getS3AddressString(request, false).equals("/bucket/object"))
 
         request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage/bucket/object?" + ObjectStorageProperties.SubResource.versionId.toString() + "=xy")
         request.setHeader(HttpHeaders.Names.HOST, "mydomain.com")
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/object?" + ObjectStorageProperties.SubResource.versionId.toString() + "=xy"))
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/services/objectstorage/bucket/object?" + ObjectStorageProperties.SubResource.versionId.toString() + "=xy"))
+        assert (S3Authentication.getS3AddressString(request, true).equals("/bucket/object?" + ObjectStorageProperties.SubResource.versionId.toString() + "=xy"))
+        assert (S3Authentication.getS3AddressString(request, false).equals("/services/objectstorage/bucket/object?" + ObjectStorageProperties.SubResource.versionId.toString() + "=xy"))
 
         request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/bucket/object?" + ObjectStorageProperties.SubResource.versionId.toString() + "=xy")
         request.setHeader(HttpHeaders.Names.HOST, "objectstorage.mydomain.com")
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/object?" + ObjectStorageProperties.SubResource.versionId.toString() + "=xy"))
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/bucket/object?" + ObjectStorageProperties.SubResource.versionId.toString() + "=xy"))
+        assert (S3Authentication.getS3AddressString(request, true).equals("/bucket/object?" + ObjectStorageProperties.SubResource.versionId.toString() + "=xy"))
+        assert (S3Authentication.getS3AddressString(request, false).equals("/bucket/object?" + ObjectStorageProperties.SubResource.versionId.toString() + "=xy"))
 
 
         request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage/bucket/object?" + ObjectStorageProperties.SubResource.versionId.toString() + "=xy&acl")
         request.setHeader(HttpHeaders.Names.HOST, "mydomain.com")
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/object?acl&" + ObjectStorageProperties.SubResource.versionId.toString() + "=xy"))
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/services/objectstorage/bucket/object?acl&" + ObjectStorageProperties.SubResource.versionId.toString() + "=xy"))
+        assert (S3Authentication.getS3AddressString(request, true).equals("/bucket/object?acl&" + ObjectStorageProperties.SubResource.versionId.toString() + "=xy"))
+        assert (S3Authentication.getS3AddressString(request, false).equals("/services/objectstorage/bucket/object?acl&" + ObjectStorageProperties.SubResource.versionId.toString() + "=xy"))
 
         request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/bucket/object?" + ObjectStorageProperties.SubResource.versionId.toString() + "=xy&acl")
         request.setHeader(HttpHeaders.Names.HOST, "objectstorage.mydomain.com")
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/object?acl&" + ObjectStorageProperties.SubResource.versionId.toString() + "=xy"))
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/bucket/object?acl&" + ObjectStorageProperties.SubResource.versionId.toString() + "=xy"))
+        assert (S3Authentication.getS3AddressString(request, true).equals("/bucket/object?acl&" + ObjectStorageProperties.SubResource.versionId.toString() + "=xy"))
+        assert (S3Authentication.getS3AddressString(request, false).equals("/bucket/object?acl&" + ObjectStorageProperties.SubResource.versionId.toString() + "=xy"))
 
         for (ObjectStorageProperties.SubResource resource : ObjectStorageProperties.SubResource.values()) {
             request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage/bucket/key?" + resource.toString())
             request.setHeader(HttpHeaders.Names.HOST, "mydomain.com")
 
-            assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/key?" + resource.toString()))
-            assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/services/objecttorage/bucket/key?" + resource.toString()))
+            assert (S3Authentication.getS3AddressString(request, true).equals("/bucket/key?" + resource.toString()))
+            assert (S3Authentication.getS3AddressString(request, false).equals("/services/objecttorage/bucket/key?" + resource.toString()))
         }
 
         for (ObjectStorageProperties.SubResource resource : ObjectStorageProperties.SubResource.values()) {
             request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/bucket/key?" + resource.toString())
             request.setHeader(HttpHeaders.Names.HOST, "objectstorage.mydomain.com")
 
-            assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/key?" + resource.toString()))
-            assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/bucket/key?" + resource.toString()))
+            assert (S3Authentication.getS3AddressString(request, true).equals("/bucket/key?" + resource.toString()))
+            assert (S3Authentication.getS3AddressString(request, false).equals("/bucket/key?" + resource.toString()))
         }
 
     }
@@ -146,17 +146,17 @@ class ObjectStorageAuthenticationHandlerTests {
 	public void testPathStyleAddressParsingLegacyWalrus() {
 		MappingHttpRequest request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/Walrus/bucket/object")
 		request.setHeader(HttpHeaders.Names.HOST, "mydomain.com")
-		assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/services/Walrus/bucket/object"))
-		assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/object"))
+		assert (S3Authentication.getS3AddressString(request, false).equals("/services/Walrus/bucket/object"))
+		assert (S3Authentication.getS3AddressString(request, true).equals("/bucket/object"))
 
 		request.setUri("/bucket/")
 		request.setHeader(HttpHeaders.Names.HOST, "walrus.mydomain.com")
-		assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/"))
-		assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/bucket/"))
+		assert (S3Authentication.getS3AddressString(request, true).equals("/bucket/"))
+		assert (S3Authentication.getS3AddressString(request, false).equals("/bucket/"))
 
 		request.setUri("/bucket/object")
-		assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/object"))
-		assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/bucket/object"))
+		assert (S3Authentication.getS3AddressString(request, true).equals("/bucket/object"))
+		assert (S3Authentication.getS3AddressString(request, false).equals("/bucket/object"))
 	}
 
     @Test
@@ -164,60 +164,82 @@ class ObjectStorageAuthenticationHandlerTests {
         MappingHttpRequest request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage/object")
         request.setHeader(HttpHeaders.Names.HOST, "bucket.objectstorage.mydomain.com")
 
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/services/objectstorage/object"))
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/bucket/services/objectstorage/object"))
+        assert (S3Authentication.getS3AddressString(request, true).equals("/bucket/services/objectstorage/object"))
+        assert (S3Authentication.getS3AddressString(request, false).equals("/bucket/services/objectstorage/object"))
 
         request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/object%20for%20me+letsgo")
         request.setHeader(HttpHeaders.Names.HOST, "bucket.objectstorage.mydomain.com")
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/object%20for%20me+letsgo"))
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/bucket/object%20for%20me+letsgo"))
+        assert (S3Authentication.getS3AddressString(request, true).equals("/bucket/object%20for%20me+letsgo"))
+        assert (S3Authentication.getS3AddressString(request, false).equals("/bucket/object%20for%20me+letsgo"))
 
         for (ObjectStorageProperties.SubResource resource : ObjectStorageProperties.SubResource.values()) {
             request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/key?" + resource.toString())
             request.setHeader(HttpHeaders.Names.HOST, "bucket.objectstorage.mydomain.com")
 
-            assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/key?" + resource.toString()))
-            assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/bucket/key?" + resource.toString()))
+            assert (S3Authentication.getS3AddressString(request, true).equals("/bucket/key?" + resource.toString()))
+            assert (S3Authentication.getS3AddressString(request, false).equals("/bucket/key?" + resource.toString()))
         }
 
         request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage/object")
         request.setHeader(HttpHeaders.Names.HOST, "bucket.objectstorage.mydomain.com")
 
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/services/objectstorage/object"))
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/bucket/services/objectstorage/object"))
+        assert (S3Authentication.getS3AddressString(request, true).equals("/bucket/services/objectstorage/object"))
+        assert (S3Authentication.getS3AddressString(request, false).equals("/bucket/services/objectstorage/object"))
     }
 	
 	@Test
 	public void testDnsStyleAddressParsingLegacyWalrus() {
 		MappingHttpRequest request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage/object")
 		request.setHeader(HttpHeaders.Names.HOST, "bucket.walrus.mydomain.com")
-		assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/services/objectstorage/object"))
-		assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/bucket/services/objectstorage/object"))
+		assert (S3Authentication.getS3AddressString(request, true).equals("/bucket/services/objectstorage/object"))
+		assert (S3Authentication.getS3AddressString(request, false).equals("/bucket/services/objectstorage/object"))
 		
 		request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/object%20for%20me+letsgo")
 		request.setHeader(HttpHeaders.Names.HOST, "bucket.walrus.mydomain.com")
-		assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/object%20for%20me+letsgo"))
-		assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/bucket/object%20for%20me+letsgo"))
+		assert (S3Authentication.getS3AddressString(request, true).equals("/bucket/object%20for%20me+letsgo"))
+		assert (S3Authentication.getS3AddressString(request, false).equals("/bucket/object%20for%20me+letsgo"))
 		
 		for (ObjectStorageProperties.SubResource resource : ObjectStorageProperties.SubResource.values()) {
 			request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/key?" + resource.toString())
 			request.setHeader(HttpHeaders.Names.HOST, "bucket.walrus.mydomain.com")
 
-			assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true).equals("/bucket/key?" + resource.toString()))
-			assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false).equals("/bucket/key?" + resource.toString()))
+			assert (S3Authentication.getS3AddressString(request, true).equals("/bucket/key?" + resource.toString()))
+			assert (S3Authentication.getS3AddressString(request, false).equals("/bucket/key?" + resource.toString()))
 		}
 	}
 
     @Test
     public void testQueryParameterHandling() {
-        MappingHttpRequest request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage/bucket/?AccessKeyId=123&Signature=xxxyyyyzzz&expires=date123&acl")
+        MappingHttpRequest request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage/bucket/?AWSAccessKeyId=123&Signature=xxxyyyyzzz&expires=date123&acl&x-amz-security-token=tokenvalue123")
         request.setHeader(HttpHeaders.Names.HOST, "objectstorage.mydomain.com:8773")
         assert (request.getParameters().get("acl") == null && request.getParameters().containsKey("acl"))
-        assert (request.getParameters().get("AccessKeyId") == "123")
+        assert (request.getParameters().get("AWSAccessKeyId") == "123")
         assert (request.getParameters().get("Signature") == "xxxyyyyzzz")
         assert (request.getParameters().get("expires") == "date123")
+        assert (request.getParameters().get("x-amz-security-token") == "tokenvalue123")
 
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, false) == "/services/objectstorage/bucket/?acl")
-        assert (ObjectStorageAuthenticationHandler.S3Authentication.getS3AddressString(request, true) == "/bucket/?acl")
+        assert (S3Authentication.getS3AddressString(request, false) == "/services/objectstorage/bucket/?acl")
+        assert (S3Authentication.getS3AddressString(request, true) == "/bucket/?acl")
     }
+
+    @Test
+    public void testQueryStringAuthCanonicalization() {
+        //TODO: zhill - test string-to-sign for query auth
+
+        MappingHttpRequest request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage/bucket/?AWSAccessKeyId=123&Signature=xxxyyyyzzz&expires=date123&acl&x-amz-security-token=tokenvalue123")
+        request.setHeader(HttpHeaders.Names.HOST, "objectstorage.mydomain.com:8773")
+        assert (request.getParameters().get("acl") == null && request.getParameters().containsKey("acl"))
+        assert (request.getParameters().get("AWSAccessKeyId") == "123")
+        assert (request.getParameters().get("Signature") == "xxxyyyyzzz")
+        assert (request.getParameters().get("expires") == "date123")
+        assert (request.getParameters().get("x-amz-security-token") == "tokenvalue123")
+
+    }
+
+    @Test
+    public void testV2SigningCanonicalization() {
+        //TODO: zhill - test string-to-sign for regular REST v2 auth
+
+    }
+
 }

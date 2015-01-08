@@ -85,6 +85,7 @@ import org.hibernate.Criteria;
 import org.hibernate.Hibernate;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
+import org.hibernate.StaleObjectStateException;
 import org.hibernate.Transaction;
 import org.hibernate.collection.internal.AbstractPersistentCollection;
 import org.hibernate.criterion.Criterion;
@@ -92,6 +93,7 @@ import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
+import org.hibernate.ejb.EntityManagerFactoryImpl;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.exception.LockAcquisitionException;
@@ -110,6 +112,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
@@ -216,6 +220,11 @@ public class Entities {
     }
   }
   
+  /**
+   * @deprecated Use #transactionFor(Object) instead (try-with-resources)
+   * @see #transactionFor(Object)
+   */
+  @Deprecated
   public static EntityTransaction get( final Object obj ) {
     if ( hasTransaction( obj ) ) {
       final CascadingTx tx = getTransaction( obj );
@@ -310,7 +319,6 @@ public class Entities {
   }
 
   /**
-   * WARNING: This method uses wildcard matching
    * @see #query(T,QueryOptions)
    */
   public static <T> List<T> query( final T example ) {
@@ -318,12 +326,11 @@ public class Entities {
   }
 
   /**
-   * WARNING: This method uses wildcard matching
    * @see #query(T,QueryOptions)
    */
   @SuppressWarnings( { "unchecked", "cast" } )
   public static <T> List<T> query( final T example, final boolean readOnly ) {
-    final Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
+    final Example qbe = Example.create( example );
     final List<T> resultList = ( List<T> ) getTransaction( example ).getTxState( ).getSession( )
                                                                     .createCriteria( example.getClass( ) )
                                                                     .setReadOnly( readOnly )
@@ -339,8 +346,6 @@ public class Entities {
    *
    * <P>The caller must have an active transaction for the entity.</P>
    *
-   * <P>WARNING: This method uses wildcard matching</P>
-   * 
    * @param example The example object
    * @param readOnly Use True if the results will not be modified
    * @param criterion Additional restrictions for the query
@@ -353,7 +358,7 @@ public class Entities {
                                    final boolean readOnly, 
                                    final Criterion criterion,
                                    final Map<String,String> aliases ) {
-    final Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
+    final Example qbe = Example.create( example );
     final Criteria criteria = getTransaction( example ).getTxState( ).getSession( )
         .createCriteria( example.getClass( ) )
         .setReadOnly( readOnly )
@@ -369,12 +374,11 @@ public class Entities {
   }
 
   /**
-   * WARNING: This method uses wildcard matching
    * @see #query(T,QueryOptions)
    */
   @SuppressWarnings( { "unchecked", "cast" } )
   public static <T> List<T> query( final T example, final boolean readOnly, final int maxResults ) {
-    final Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
+    final Example qbe = Example.create( example );
     final List<T> resultList = ( List<T> ) getTransaction( example ).getTxState( ).getSession( )
                                                                     .createCriteria( example.getClass( ) )
                                                                     .setReadOnly( readOnly )
@@ -539,6 +543,17 @@ public class Entities {
     getTransaction( obj ).getTxState( ).getSession( ).evict( obj );
   }
 
+  public static void evictCache( final Object obj ) {
+    final String ctx = lookatPersistenceContext( obj );
+    final EntityManagerFactoryImpl emf = PersistenceContexts.getEntityManagerFactory( ctx );
+    final org.hibernate.Cache cache = emf.getSessionFactory( ).getCache( );
+    cache.evictQueryRegions( );
+    cache.evictDefaultQueryRegion( );
+    cache.evictCollectionRegions( );
+    cache.evictEntityRegions( );
+    LOG.debug( "Evicted cache for " + obj );
+  }
+
   private static <T> String resolveNaturalId( final T example ) {
     if ( ( example instanceof HasNaturalId ) && ( ( ( HasNaturalId ) example ).getNaturalId( ) != null ) ) {
       return ( ( HasNaturalId ) example ).getNaturalId( );
@@ -553,7 +568,7 @@ public class Entities {
                                 .getTxState( )
                                 .getSession( )
                                 .createCriteria( example.getClass( ) )
-                                .add( Example.create( example ).enableLike( MatchMode.EXACT ) )
+                                .add( Example.create( example ) )
                                 .setCacheable( true )
                                 .setMaxResults( 1 )
                                 .setFetchSize( 1 )
@@ -1239,13 +1254,11 @@ public class Entities {
     public R apply( final D input ) {
       RuntimeException rootCause = null;
       for ( int i = 0; i < retries; i++ ) {
-        EntityTransaction db = Entities.get( this.entityType );
-        try {
+        try ( final TransactionResource tx = Entities.transactionFor( this.entityType ) ) {
           R ret = this.function.apply( input );
-          db.commit( );
+          tx.commit( );
           return ret;
         } catch ( RuntimeException ex ) {
-          db.rollback( );
           if ( Exceptions.isCausedBy( ex, OptimisticLockException.class ) ) {
             rootCause = Exceptions.findCause( ex, OptimisticLockException.class );
           } else if ( Exceptions.isCausedBy( ex, LockAcquisitionException.class ) ) {
@@ -1255,6 +1268,10 @@ public class Entities {
             Logs.extreme( ).error( ex, ex );
             throw ex;
           }
+          final StaleObjectStateException stale = Exceptions.findCause( ex, StaleObjectStateException.class );
+          if ( stale != null ) try {
+            Entities.evictCache( Class.forName( stale.getEntityName( ) ) );
+          } catch ( ClassNotFoundException e ) { /* eviction failure */ }
           try {
             TimeUnit.MILLISECONDS.sleep( 20 );
           } catch ( InterruptedException ex1 ) {
@@ -1269,7 +1286,26 @@ public class Entities {
     }
     
   }
-  
+  public static <T> Supplier<T> asTransaction( final Supplier<T> supplier ) {
+    final List<Class> generics = Classes.genericsToClasses( supplier );
+    for ( final Class<?> type : generics ) {
+      if ( PersistenceContexts.isPersistentClass( type ) ) {
+        return asTransaction( type, supplier );
+      }
+    }
+    throw new IllegalArgumentException( "Failed to find generics for provided supplier, cannot make into transaction: " + Threads.currentStackString( ) );
+  }
+
+  public static <E, T> Supplier<T> asTransaction( final Class<E> type, final Supplier<T> supplier ) {
+    return asTransaction( type, supplier, CONCURRENT_UPDATE_RETRIES );
+  }
+
+  public static <E, T> Supplier<T> asTransaction( final Class<E> type, final Supplier<T> supplier, final Integer retries ) {
+    final Function<Object, T> functionalized = Functions.forSupplier( supplier );
+    final Function<Object, T> transactionalized = Entities.asTransaction( type, functionalized, retries );
+    return Suppliers.compose( transactionalized, Suppliers.ofInstance( Void.class ) );
+  }
+
   public static <E, T> Predicate<T> asTransaction( final Predicate<T> predicate ) {
     final List<Class> generics = Classes.genericsToClasses( predicate );
     for ( final Class<?> type : generics ) {
@@ -1337,14 +1373,23 @@ public class Entities {
     }
   }
   
-  public static void commit( EntityTransaction tx ) {
+  /**
+   * Commit the transaction if possible, else rollback.
+   *
+   * @param tx The transaction
+   * @return True if committed
+   */
+  public static boolean commit( EntityTransaction tx ) {
+    boolean committed = false;
     if ( tx.getRollbackOnly( ) ) {
       tx.rollback( );
     } else if ( Databases.isVolatile( ) ) {
       tx.rollback( );
     } else {
       tx.commit( );
+      committed = true;
     }
+    return committed;
   }
 
   private static void ensureDistinct( final Object type ) {

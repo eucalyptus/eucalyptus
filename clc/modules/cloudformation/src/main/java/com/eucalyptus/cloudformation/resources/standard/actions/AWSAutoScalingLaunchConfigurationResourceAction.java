@@ -20,14 +20,14 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.common.msgs.BlockDeviceMappingType;
 import com.eucalyptus.autoscaling.common.msgs.BlockDeviceMappings;
-import com.eucalyptus.autoscaling.common.msgs.DeleteLaunchConfigurationResponseType;
-import com.eucalyptus.autoscaling.common.msgs.DeleteLaunchConfigurationType;
 import com.eucalyptus.autoscaling.common.msgs.CreateLaunchConfigurationResponseType;
 import com.eucalyptus.autoscaling.common.msgs.CreateLaunchConfigurationType;
-import com.eucalyptus.autoscaling.common.msgs.Ebs;
+import com.eucalyptus.autoscaling.common.msgs.DeleteLaunchConfigurationResponseType;
+import com.eucalyptus.autoscaling.common.msgs.DeleteLaunchConfigurationType;
 import com.eucalyptus.autoscaling.common.msgs.InstanceMonitoring;
 import com.eucalyptus.autoscaling.common.msgs.SecurityGroups;
 import com.eucalyptus.cloudformation.ValidationErrorException;
@@ -37,16 +37,23 @@ import com.eucalyptus.cloudformation.resources.ResourceProperties;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSAutoScalingLaunchConfigurationResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSAutoScalingLaunchConfigurationProperties;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AutoScalingBlockDeviceMapping;
-import com.eucalyptus.cloudformation.resources.standard.propertytypes.AutoScalingEBSBlockDevice;
 import com.eucalyptus.cloudformation.template.JsonHelper;
+import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.StackActivity;
+import com.eucalyptus.cloudformation.workflow.steps.CreateMultiStepPromise;
+import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
+import com.eucalyptus.cloudformation.workflow.steps.Step;
+import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
+import com.netflix.glisten.WorkflowOperations;
 
 import java.util.ArrayList;
 import java.util.List;
+import javax.annotation.Nullable;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -55,6 +62,84 @@ public class AWSAutoScalingLaunchConfigurationResourceAction extends ResourceAct
 
   private AWSAutoScalingLaunchConfigurationProperties properties = new AWSAutoScalingLaunchConfigurationProperties();
   private AWSAutoScalingLaunchConfigurationResourceInfo info = new AWSAutoScalingLaunchConfigurationResourceInfo();
+
+  public AWSAutoScalingLaunchConfigurationResourceAction() {
+    for (CreateSteps createStep: CreateSteps.values()) {
+      createSteps.put(createStep.name(), createStep);
+    }
+    for (DeleteSteps deleteStep: DeleteSteps.values()) {
+      deleteSteps.put(deleteStep.name(), deleteStep);
+    }
+
+  }
+
+  private enum CreateSteps implements Step {
+    CREATE_LAUNCH_CONFIG {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSAutoScalingLaunchConfigurationResourceAction action = (AWSAutoScalingLaunchConfigurationResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
+        CreateLaunchConfigurationType createLaunchConfigurationType = MessageHelper.createMessage(CreateLaunchConfigurationType.class, action.info.getEffectiveUserId());
+        if (action.properties.getInstanceId() != null) {
+          throw new ValidationErrorException("InstanceId not supported");
+        }
+        if (action.properties.getBlockDeviceMappings() != null) {
+          createLaunchConfigurationType.setBlockDeviceMappings(action.convertBlockDeviceMappings(action.properties.getBlockDeviceMappings()));
+        }
+        // Ignore AssociatePublicIpAddress for now (VPC)
+        createLaunchConfigurationType.setEbsOptimized(action.properties.getEbsOptimized() != null ? action.properties.getEbsOptimized() : Boolean.FALSE);
+        createLaunchConfigurationType.setIamInstanceProfile(action.properties.getIamInstanceProfile());
+        createLaunchConfigurationType.setImageId(action.properties.getImageId());
+        InstanceMonitoring instanceMonitoring = new InstanceMonitoring();
+        instanceMonitoring.setEnabled(action.properties.getInstanceMonitoring() != null ? action.properties.getInstanceMonitoring() : Boolean.TRUE);
+        createLaunchConfigurationType.setInstanceMonitoring(instanceMonitoring);
+        createLaunchConfigurationType.setInstanceType(action.properties.getInstanceType());
+        createLaunchConfigurationType.setKernelId(action.properties.getKernelId());
+        createLaunchConfigurationType.setKeyName(action.properties.getKeyName());
+        createLaunchConfigurationType.setRamdiskId(action.properties.getRamDiskId());
+        if (action.properties.getSecurityGroups() != null) {
+          createLaunchConfigurationType.setSecurityGroups(new SecurityGroups(action.properties.getSecurityGroups()));
+        }
+        createLaunchConfigurationType.setSpotPrice(action.properties.getSpotPrice());
+        createLaunchConfigurationType.setUserData(action.properties.getUserData());
+        String launchConfigurationName = action.getDefaultPhysicalResourceId();
+        createLaunchConfigurationType.setLaunchConfigurationName(launchConfigurationName);
+        AsyncRequests.<CreateLaunchConfigurationType,CreateLaunchConfigurationResponseType> sendSync(configuration, createLaunchConfigurationType);
+        action.info.setPhysicalResourceId(launchConfigurationName);
+        action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+        return action;
+      }
+    };
+
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
+
+  private enum DeleteSteps implements Step {
+    DELETE_LAUNCH_CONFIG {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSAutoScalingLaunchConfigurationResourceAction action = (AWSAutoScalingLaunchConfigurationResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
+        if (action.info.getPhysicalResourceId() == null) return action;
+        DeleteLaunchConfigurationType deleteLaunchConfigurationType = MessageHelper.createMessage(DeleteLaunchConfigurationType.class, action.info.getEffectiveUserId());
+        deleteLaunchConfigurationType.setLaunchConfigurationName(action.info.getPhysicalResourceId());
+        AsyncRequests.<DeleteLaunchConfigurationType,DeleteLaunchConfigurationResponseType> sendSync(configuration, deleteLaunchConfigurationType);
+        return action;
+      }
+    };
+
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
+
+
   @Override
   public ResourceProperties getResourceProperties() {
     return properties;
@@ -75,46 +160,6 @@ public class AWSAutoScalingLaunchConfigurationResourceAction extends ResourceAct
     info = (AWSAutoScalingLaunchConfigurationResourceInfo) resourceInfo;
   }
 
-  @Override
-  public void create(int stepNum) throws Exception {
-    ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
-    switch (stepNum) {
-      case 0:
-        CreateLaunchConfigurationType createLaunchConfigurationType = new CreateLaunchConfigurationType();
-        if (properties.getInstanceId() != null) {
-          throw new ValidationErrorException("InstanceId not supported");
-        }
-        if (properties.getBlockDeviceMappings() != null) {
-          createLaunchConfigurationType.setBlockDeviceMappings(convertBlockDeviceMappings(properties.getBlockDeviceMappings()));
-        }
-        // Ignore AssociatePublicIpAddress for now (VPC)
-        createLaunchConfigurationType.setEbsOptimized(properties.getEbsOptimized() != null ? properties.getEbsOptimized() : Boolean.FALSE);
-        createLaunchConfigurationType.setIamInstanceProfile(properties.getIamInstanceProfile());
-        createLaunchConfigurationType.setImageId(properties.getImageId());
-        InstanceMonitoring instanceMonitoring = new InstanceMonitoring();
-        instanceMonitoring.setEnabled(properties.getInstanceMonitoring() != null ? properties.getInstanceMonitoring() : Boolean.TRUE);
-        createLaunchConfigurationType.setInstanceMonitoring(instanceMonitoring);
-        createLaunchConfigurationType.setInstanceType(properties.getInstanceType());
-        createLaunchConfigurationType.setKernelId(properties.getKernelId());
-        createLaunchConfigurationType.setKeyName(properties.getKeyName());
-        createLaunchConfigurationType.setRamdiskId(properties.getRamDiskId());
-        if (properties.getSecurityGroups() != null) {
-          createLaunchConfigurationType.setSecurityGroups(new SecurityGroups(properties.getSecurityGroups()));
-        }
-        createLaunchConfigurationType.setSpotPrice(properties.getSpotPrice());
-        createLaunchConfigurationType.setUserData(properties.getUserData());
-        String launchConfigurationName = getDefaultPhysicalResourceId();
-        createLaunchConfigurationType.setLaunchConfigurationName(launchConfigurationName);
-        createLaunchConfigurationType.setEffectiveUserId(info.getEffectiveUserId());
-        AsyncRequests.<CreateLaunchConfigurationType,CreateLaunchConfigurationResponseType> sendSync(configuration, createLaunchConfigurationType);
-        info.setPhysicalResourceId(launchConfigurationName);
-        info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
-        break;
-      default:
-        throw new IllegalStateException("Invalid step " + stepNum);
-    }
-  }
-
   private BlockDeviceMappings convertBlockDeviceMappings(List<AutoScalingBlockDeviceMapping> autoScalingBlockDeviceMappings) {
     ArrayList<BlockDeviceMappingType> blockDeviceMappingsList = Lists.newArrayList();
     for (AutoScalingBlockDeviceMapping autoScalingBlockDeviceMapping: autoScalingBlockDeviceMappings) {
@@ -128,28 +173,17 @@ public class AWSAutoScalingLaunchConfigurationResourceAction extends ResourceAct
   }
 
   @Override
-  public void update(int stepNum) throws Exception {
-    throw new UnsupportedOperationException();
-  }
-
-  public void rollbackUpdate() throws Exception {
-    // can't update so rollbackUpdate should be a NOOP
+  public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
+    return new CreateMultiStepPromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
   @Override
-  public void delete() throws Exception {
-    if (info.getPhysicalResourceId() == null) return;
-    ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
-    DeleteLaunchConfigurationType deleteLaunchConfigurationType = new DeleteLaunchConfigurationType();
-    deleteLaunchConfigurationType.setEffectiveUserId(info.getEffectiveUserId());
-    deleteLaunchConfigurationType.setLaunchConfigurationName(info.getPhysicalResourceId());
-    AsyncRequests.<DeleteLaunchConfigurationType,DeleteLaunchConfigurationResponseType> sendSync(configuration, deleteLaunchConfigurationType);
+  public Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
+    return new DeleteMultiStepPromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
-  @Override
-  public void rollbackCreate() throws Exception {
-    delete();
-  }
 }
 
 

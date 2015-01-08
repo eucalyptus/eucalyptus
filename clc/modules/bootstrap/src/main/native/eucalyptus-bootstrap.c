@@ -306,7 +306,8 @@ static int wait_child(euca_opts * args, int pid)
 {
     time_t timer = 0;
     int rc = 0, status;
-    fprintf(stderr, "Waiting for process to respond to signal.");
+    get_timestamp(ts_buff,sizeof(ts_buff));
+    fprintf(stderr, "%s INFO Waiting for process to respond to signal.",ts_buff);
     while (rc <= 0 && timer < 5) {
         usleep(1000000), fprintf(stderr, "."), fflush(stderr);
         if ((rc = waitpid(pid, &status, WNOHANG)) == -1) {
@@ -342,7 +343,8 @@ static int stop_child(euca_opts * args)
     int pid = __get_pid(GETARG(args, pidfile)), rc = 0, i;
     if (pid <= 0)
         return -1;
-    fprintf(stderr, "Waiting for process to terminate: pid=%d .", pid);
+    get_timestamp(ts_buff,sizeof(ts_buff));
+    fprintf(stderr, "%s INFO Waiting for process to terminate: pid=%d .",ts_buff, pid);
     for (i = 0; i < 60 && (rc = kill(pid, SIGTERM)) != -1; i++) {
         usleep(1000 * 1000), fprintf(stderr, "."), fflush(stderr);
     }
@@ -354,22 +356,34 @@ static int stop_child(euca_opts * args)
         __debug("Forcefully terminating hung process.");
         kill(pid, SIGKILL);
     } else {
-        fprintf(stderr, "\nTerminated process with pid=%d\n", pid);
+        get_timestamp(ts_buff,sizeof(ts_buff));
+        fprintf(stderr, "\n%s INFO Terminated process with pid=%d\n",ts_buff, pid);
     }
     return 0;
+}
+
+static int get_timestamp(char *buff, int buff_len)
+{
+    time_t t = time(NULL);
+    struct tm tm = { 0 };
+    localtime_r(&t,&tm);
+    return (strftime(buff, buff_len, "%F %T", &tm));
 }
 
 static int __update_limit(int resource, long long value)
 {
     struct rlimit r;
     __abort(1, getrlimit(resource, &r) == -1, "Failed to get rlimit for resource=%d", resource);
-    printf("ulimit: resource=%d soft=%lld hard=%lld\n", resource, (long long)r.rlim_cur, (long long)r.rlim_max);
+    get_timestamp(ts_buff,sizeof(ts_buff));
+    printf("%s INFO ulimit: resource=%d soft=%lld hard=%lld\n",ts_buff,resource, (long long)r.rlim_cur, (long long)r.rlim_max);
+    fflush(stdout);
     if (r.rlim_cur == RLIM_INFINITY || r.rlim_cur < value) {
         r.rlim_cur = value;
         r.rlim_max = value;
         __abort(1, setrlimit(resource, &r) == -1, "Failed to set rlimit for resource=%d", resource);
         __abort(1, getrlimit(resource, &r) == -1, "Failed to set rlimit for resource=%d", resource);
-        printf("ulimit: resource=%d soft=%lld hard=%lld\n", resource, (long long)r.rlim_cur, (long long)r.rlim_max);
+        printf("%s INFO ulimit: resource=%d soft=%lld hard=%lld\n",ts_buff, resource, (long long)r.rlim_cur, (long long)r.rlim_max);
+        fflush(stdout);
     }
     return 0;
 }
@@ -838,7 +852,7 @@ int java_init(euca_opts * args, java_home_t * data)
                 GETARG(args, debug_port),
                 (args->debug_suspend_flag ? "y" : "n"));
     }
-    if (args->jmx_flag || args->debug_flag) {
+    if (args->jmx_flag) {
         JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote");    //TODO:GRZE:wrapup jmx stuff here.
         JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.port=8772");
         JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.authenticate=false"); //TODO:GRZE:RELEASE FIXME to use ssl

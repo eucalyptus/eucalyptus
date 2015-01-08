@@ -23,10 +23,7 @@ package com.eucalyptus.compute.common
 
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID;
 
-import java.util.ArrayList;
-import java.util.Date;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
-import edu.ucsb.eucalyptus.msgs.Filter;
 import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.binding.HttpEmbedded;
 

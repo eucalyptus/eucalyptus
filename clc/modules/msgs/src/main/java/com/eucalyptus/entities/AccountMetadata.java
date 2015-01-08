@@ -62,10 +62,11 @@
 
 package com.eucalyptus.entities;
 
+import java.sql.SQLException;
 import java.util.List;
 import javax.persistence.Column;
-import javax.persistence.EntityManager;
 import javax.persistence.MappedSuperclass;
+import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -74,11 +75,12 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.upgrade.Upgrades;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedType.AccountRestrictedType;
-import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
+import groovy.sql.Sql;
 
 @MappedSuperclass
 public abstract class AccountMetadata<STATE extends Enum<STATE>> extends AbstractStatefulPersistent<STATE> implements AccountRestrictedType, HasFullName<AccountMetadata> {
@@ -216,18 +218,30 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
     public Boolean call( ) throws Exception {
       final List<Class<? extends AccountMetadata>> accountMetadataClasses = getAccountMetadataClasses( );
       final Class<? extends AccountMetadata> contextClass = Iterables.get( accountMetadataClasses, 0 );
-      return Upgrades.transactionalForEntity(contextClass, new Function<EntityManager, Boolean>() {
-        @Override
-        public Boolean apply( final EntityManager entityManager ) {
-          for ( final Class<? extends AccountMetadata> accountMetadataClass : accountMetadataClasses ) {
-            final int updated = entityManager.createNativeQuery(
-                String.format( SQL_DROP_NAME_COLUMN, Ats.from( accountMetadataClass ).get( Table.class ).name() )
-            ).executeUpdate();
+      final String context = Ats.inClassHierarchy( contextClass ).get( PersistenceContext.class ).name( );
+      Sql sql = null;
+      try {
+        sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection( context );
+        for ( final Class<? extends AccountMetadata> accountMetadataClass : accountMetadataClasses ) {
+          final int updated;
+          try {
+            updated = sql.executeUpdate(
+                String.format( SQL_DROP_NAME_COLUMN, Ats.from( accountMetadataClass ).get( Table.class ).name( ) )
+            );
             logger.info( "Cleared account alias for " + updated + " " + accountMetadataClass.getSimpleName( ) + "(s)" );
+          } catch ( final SQLException e ) {
+            throw Exceptions.toUndeclared( "Error clearing account alias for " + accountMetadataClass.getSimpleName( ), e );
           }
-          return true;
         }
-      } );
+        return true;
+      } catch ( final Exception e ) {
+        logger.error( e, e );
+        return false;
+      } finally {
+        if ( sql != null ) {
+          sql.close( );
+        }
+      }
     }
   }
 }

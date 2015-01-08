@@ -44,8 +44,10 @@ import com.eucalyptus.storage.msgs.s3.ListEntry
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry
 import com.eucalyptus.storage.msgs.s3.Part
+import com.eucalyptus.storage.msgs.s3.TaggingConfiguration
 import com.eucalyptus.storage.msgs.s3.Upload
 import com.eucalyptus.util.ChannelBufferStreamingInputStream
+import com.google.common.collect.Maps
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.ComponentMessageResponseType
 import edu.ucsb.eucalyptus.msgs.ComponentMessageType
@@ -144,10 +146,15 @@ public class ObjectStorageDataResponseType extends ObjectStorageStreamingRespons
     String contentType;
     String contentDisposition;
     String versionId;
+    Map<String,String> responseHeaderOverrides;
+    String cacheControl;
+    String contentEncoding;
+    String expires;
 }
 
 public class ObjectStorageDataGetRequestType extends ObjectStorageDataRequestType {
     protected Channel channel;
+    Map<String,String> responseHeaderOverrides;
 
     public Channel getChannel() {
         return channel;
@@ -370,6 +377,7 @@ public class PutObjectType extends ObjectStorageDataRequestType {
     String contentType;
     String contentDisposition;
     String contentMD5;
+    Map<String,String> copiedHeaders = Maps.newHashMap();
 
     def PutObjectType() {}
 }
@@ -469,6 +477,34 @@ public class CopyObjectType extends ObjectStorageRequestType {
     String copySourceIfNoneMatch;
     Date copySourceIfModifiedSince;
     Date copySourceIfUnmodifiedSince;
+    Map<String,String> copiedHeaders = Maps.newHashMap();
+    
+    def GetObjectType getGetObjectRequest() {
+      GetObjectType request = new GetObjectType()
+      request.setBucket(this.sourceBucket);
+      request.setKey(this.sourceObject);
+      request.setVersionId(this.sourceVersionId);
+      
+      // common elements
+      request.setCorrelationId(this.correlationId);
+      request.setEffectiveUserId(this.getEffectiveUserId());
+      
+      return request;
+    }
+    
+    def PutObjectType getPutObjectRequest() {
+      PutObjectType request = new PutObjectType();
+      request.setBucket(this.destinationBucket);
+      request.setKey(this.destinationObject);
+      request.setAccessControlList(this.accessControlList);
+      request.setCopiedHeaders(this.copiedHeaders);
+      
+      // common elements
+      request.setCorrelationId(this.correlationId);
+      request.setEffectiveUserId(this.getEffectiveUserId());
+      
+      return request;
+    }
 }
 
 /* HEAD /bucket/object */
@@ -525,7 +561,7 @@ public class PutObjectInlineResponseType extends ObjectStorageDataResponseType {
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.WRITE])
 public class DeleteObjectType extends ObjectStorageRequestType {}
 
-public class DeleteObjectResponseType extends ObjectStorageResponseType {}
+public class DeleteObjectResponseType extends DeleteResponseType {}
 
 /* DELETE /bucket/object?versionid=x */
 
@@ -537,7 +573,12 @@ public class DeleteVersionType extends ObjectStorageRequestType {
     String versionId;
 }
 
-public class DeleteVersionResponseType extends ObjectStorageResponseType {}
+public class DeleteVersionResponseType extends DeleteResponseType {}
+
+public class DeleteResponseType extends ObjectStorageResponseType {
+	String versionId;
+	Boolean isDeleteMarker;
+}
 
 /* GET /bucket */
 
@@ -625,7 +666,9 @@ public class SetObjectAccessControlPolicyType extends ObjectStorageRequestType {
     String versionId;
 }
 
-public class SetObjectAccessControlPolicyResponseType extends ObjectStorageResponseType {}
+public class SetObjectAccessControlPolicyResponseType extends ObjectStorageResponseType {
+	String versionId;
+}
 
 /* GET /bucket?location */
 
@@ -726,6 +769,39 @@ public class DeleteBucketLifecycleType extends ObjectStorageRequestType {}
 
 public class DeleteBucketLifecycleResponseType extends ObjectStorageResponseType {}
 
+// Bucket Tagging //
+
+/* PUT /bucket/?tagging */
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_PUTBUCKETTAGGING])
+@ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
+@RequiresACLPermission(object = [], bucket = [], ownerOnly = true)
+public class SetBucketTaggingType extends ObjectStorageRequestType {
+  TaggingConfiguration taggingConfiguration;
+}
+
+public class SetBucketTaggingResponseType extends ObjectStorageResponseType {}
+
+/* GET /bucket/?tagging */
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_GETBUCKETTAGGING])
+@ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
+@RequiresACLPermission(object = [], bucket = [], ownerOnly = true)
+public class GetBucketTaggingType extends ObjectStorageRequestType {}
+
+public class GetBucketTaggingResponseType extends ObjectStorageResponseType {
+  TaggingConfiguration taggingConfiguration;
+}
+
+/* DELETE /bucket/?tagging */
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_PUTBUCKETTAGGING])
+@ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
+@RequiresACLPermission(object = [], bucket = [], ownerOnly = true)
+public class DeleteBucketTaggingType extends ObjectStorageRequestType {}
+
+public class DeleteBucketTaggingResponseType extends ObjectStorageResponseType {}
+
 public class AddObjectResponseType extends ObjectStorageDataResponseType {}
 
 public class AddObjectType extends ObjectStorageDataRequestType {
@@ -803,6 +879,7 @@ public class UploadPartType extends ObjectStorageDataRequestType {
     String expect;
     String uploadId;
     String partNumber;
+    Map<String,String> copiedHeaders = Maps.newHashMap();
 }
 
 public class UploadPartResponseType extends ObjectStorageDataResponseType {
@@ -844,8 +921,8 @@ public class AbortMultipartUploadResponseType extends ObjectStorageDataResponseT
 //Account must have read access to the bucket
 public class ListPartsType extends ObjectStorageDataRequestType {
     String uploadId;
-    Integer maxParts;
-    Integer partNumberMarker;
+    String maxParts;
+    String partNumberMarker;
 }
 
 public class ListPartsResponseType extends ObjectStorageDataResponseType {
@@ -855,9 +932,9 @@ public class ListPartsResponseType extends ObjectStorageDataResponseType {
     Initiator initiator;
     CanonicalUser owner;
     String storageClass;
-    Integer partNumberMarker;
-    Integer nextPartNumberMarker;
-    Integer maxParts;
+    int partNumberMarker;
+    int nextPartNumberMarker;
+    int maxParts;
     Boolean isTruncated;
     ArrayList<Part> parts = new ArrayList<Part>();
 }
@@ -869,7 +946,7 @@ public class ListPartsResponseType extends ObjectStorageDataResponseType {
 //Account must have read access to the bucket
 public class ListMultipartUploadsType extends ObjectStorageDataRequestType {
     String delimiter;
-    Integer maxUploads;
+    String maxUploads;
     String keyMarker;
     String prefix;
     String uploadIdMarker;
@@ -881,10 +958,10 @@ public class ListMultipartUploadsResponseType extends ObjectStorageDataResponseT
     String uploadIdMarker;
     String nextKeyMarker;
     String nextUploadIdMarker;
+	String delimiter;
+	String prefix;
     Integer maxUploads;
     Boolean isTruncated;
     List<Upload> uploads = new ArrayList<Upload>();
-    String prefix;
-    String delimiter;
     ArrayList<CommonPrefixesEntry> commonPrefixes = new ArrayList<CommonPrefixesEntry>();
 }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -86,7 +86,7 @@ public class PasswordAuthentication {
     }
     String newEncrypted = Crypto.generateEncryptedPassword( newPassword );
     user.setPassword( newEncrypted );
-    user.setPasswordExpires( System.currentTimeMillis( ) + User.PASSWORD_LIFETIME );
+    user.setPasswordExpires( System.currentTimeMillis( ) + AuthenticationLimitProvider.Values.getDefaultPasswordExpiry( ) );
   }
 
   private static void checkPasswordExpiration( final User user ) throws CredentialExpiredException {

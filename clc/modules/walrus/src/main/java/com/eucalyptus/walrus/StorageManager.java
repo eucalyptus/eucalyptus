@@ -108,6 +108,8 @@ public interface StorageManager {
     public void deleteAbsoluteObject(String object) throws IOException;
 
     public void copyObject(String sourceBucket, String sourceObject, String destinationBucket, String destinationObject) throws IOException;
+    
+    public void copyMultipartObject(List<PartInfo> parts, String destinationBucket, String destinationObject) throws Exception;
 
     public void renameObject(String bucket, String oldName, String newName) throws IOException;
 
@@ -118,6 +120,8 @@ public interface StorageManager {
     public void getObject(String bucketName, String objectName, WalrusDataGetResponseType reply, Long byteRangeStart, Long byteRangeEnd, Boolean isCompressed) throws WalrusException;
 
     public void getMultipartObject(WalrusDataGetResponseType reply, List<PartInfo> parts, Boolean isCompressed) throws WalrusException;
+    
+    public void getMultipartObject(WalrusDataGetResponseType reply, List<PartInfo> parts, Boolean isCompressed, Long byteRangeStart, Long byteRangeEnd) throws WalrusException;
 
     public void disable() throws EucalyptusCloudException ;
 

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -86,6 +86,7 @@ import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.upgrade.Upgrades.Version;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 
 @Entity
@@ -94,7 +95,7 @@ import com.google.common.collect.Lists;
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class StaticDatabasePropertyEntry extends AbstractPersistent {
   @Column( name = "config_static_field_name", nullable = false, unique = true )
-  private final String fieldName;
+  private String fieldName;
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
   @Column( name = "config_static_field_value" )
@@ -115,30 +116,24 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     this.value = value;
   }
   
-  static StaticDatabasePropertyEntry update( String fieldName, String propName, String newFieldValue ) throws Exception {
-    final EntityTransaction db = Entities.get(StaticDatabasePropertyEntry.class);
+  public static StaticDatabasePropertyEntry update(
+      final String fieldName,
+      final String propName,
+      final String newFieldValue ) throws Exception {
+    final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class );
     try {
-      final StaticDatabasePropertyEntry dbEntry = Entities.uniqueResult(new StaticDatabasePropertyEntry( fieldName, propName, null ) );
+      final StaticDatabasePropertyEntry dbEntry =
+          Entities.uniqueResult( new StaticDatabasePropertyEntry( fieldName, propName, null ) );
       dbEntry.setValue( newFieldValue );
-      Entities.persist(dbEntry);
       db.commit( );
       return dbEntry;
     } catch ( final NoSuchElementException ex ) {
-      final StaticDatabasePropertyEntry dbEntry =  
-          new StaticDatabasePropertyEntry( fieldName, propName, newFieldValue );
-      try {
-        Entities.persist( dbEntry );
-        db.commit( );
-      } catch ( final Exception ex1 ) {
-        db.rollback();
-        throw ex1;
-      }
+      final StaticDatabasePropertyEntry dbEntry = new StaticDatabasePropertyEntry( fieldName, propName, newFieldValue );
+      Entities.persist( dbEntry );
+      db.commit( );
       return dbEntry;
-    } catch(final Exception ex){
-      throw ex;
-    } finally{
-      if(db.isActive())
-        db.rollback();
+    } finally {
+      db.close( );
     }
   }
   
@@ -161,19 +156,23 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       }
     }
   }
-  
+
   private void setValue( String value ) {
     this.value = value;
   }
   
-  public String getFieldName( ) {
+  private String getFieldName( ) {
     return this.fieldName;
   }
-  
+
+  public void setFieldName(String fieldName) {
+    this.fieldName = fieldName;
+  }
+
   public String getValue( ) {
     return this.value;
   }
-  
+
   public String getPropName( ) {
     return this.propName;
   }
@@ -293,6 +292,33 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     }
   }
 
+  @EntityUpgrade( entities = { StaticPropertyEntry.class }, since = Version.v4_0_1, value = Empyrean.class )
+  public enum StaticPropertyEntryRenamePropertyCloudWatchUpgrade implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( StaticPropertyEntryRenamePropertyUpgrade.class );
+    @Override
+    public boolean apply( Class arg0 ) {
+      final String CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_OLD_FIELD_NAME = "com.eucalyptus.cloudwatch.CloudWatchService.disable_cloudwatch_service";
+      final String CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_NEW_FIELD_NAME = "com.eucalyptus.cloudwatch.backend.CloudWatchBackendService.disable_cloudwatch_service";
+      final String CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_PROP_NAME = "cloudwatch.disable_cloudwatch_service";
+      EntityTransaction db = Entities.get( StaticDatabasePropertyEntry.class );
+      try {
+        List<StaticDatabasePropertyEntry> entities = Entities.query( new StaticDatabasePropertyEntry( ) );
+        for ( StaticDatabasePropertyEntry entry : entities ) {
+          if (CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_OLD_FIELD_NAME.equals(entry.getFieldName()) &&
+            CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_PROP_NAME.equals(entry.getPropName())) {
+            entry.setFieldName(CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_NEW_FIELD_NAME);
+            LOG.debug( "Upgrading: Changing property " + CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_PROP_NAME + " field name'"+CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_OLD_FIELD_NAME+"' to '"+CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_NEW_FIELD_NAME+"'");
+          }
+        }
+        db.commit( );
+        return true;
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+  }
+
   @EntityUpgrade( entities = StaticPropertyEntry.class, since = Version.v4_0_0, value = Empyrean.class )
   public enum StaticPropertyEntryUpgrade40 implements Predicate<Class> {
     INSTANCE;
@@ -340,4 +366,66 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       return true;
     }
   }
+
+  @EntityUpgrade( entities = { StaticPropertyEntry.class }, since = Version.v4_1_0, value = Empyrean.class )
+  public enum StaticPropertyEntryRenameServiceVMPropertyUpgrade implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( StaticPropertyEntryRenameServiceVMPropertyUpgrade.class );
+    @Override
+    public boolean apply( Class arg0 ) {
+      ImmutableMap<String, String> changes = ImmutableMap.<String, String>builder()
+          .put("imaging.imaging_worker_availability_zones", "services.imaging.worker.availability_zones")
+          .put("imaging.imaging_worker_emi", "services.imaging.worker.image")
+          .put("imaging.imaging_worker_enabled", "services.imaging.worker.configured")
+          .put("imaging.imaging_worker_healthcheck", "services.imaging.worker.healthcheck")
+          .put("imaging.imaging_worker_instance_type", "services.imaging.worker.instance_type")
+          .put("imaging.imaging_worker_keyname", "services.imaging.worker.keyname")
+          .put("imaging.imaging_worker_log_server", "services.imaging.worker.log_server")
+          .put("imaging.imaging_worker_log_server_port", "services.imaging.worker.log_server_port")
+          .put("imaging.imaging_worker_ntp_server", "services.imaging.worker.ntp_server")
+          .put("imaging.import_task_expiration_hours", "services.imaging.import_task_expiration_hours")
+          .put("imaging.import_task_timeout_minutes", "services.imaging.import_task_timeout_minutes")
+          .put("loadbalancing.loadbalancer_app_cookie_duration", "services.loadbalancing.worker.app_cookie_duration")
+          .put("loadbalancing.loadbalancer_dns_subdomain", "services.loadbalancing.dns_subdomain")
+          .put("loadbalancing.loadbalancer_dns_ttl", "services.loadbalancing.dns_ttl")
+          .put("loadbalancing.loadbalancer_emi", "services.loadbalancing.worker.image")
+          .put("loadbalancing.loadbalancer_instance_type", "services.loadbalancing.worker.instance_type")
+          .put("loadbalancing.loadbalancer_num_vm", "services.loadbalancing.vm_per_zone")
+          .put("loadbalancing.loadbalancer_restricted_ports", "services.loadbalancing.restricted_ports")
+          .put("loadbalancing.loadbalancer_vm_keyname", "services.loadbalancing.worker.keyname")
+          .put("loadbalancing.loadbalancer_vm_ntp_server", "services.loadbalancing.worker.ntp_server")
+          .build();
+      EntityTransaction db = Entities.get( StaticDatabasePropertyEntry.class );
+      LOG.info("Updating service VM properties");
+      try {
+        List<StaticDatabasePropertyEntry> entities = Entities.query( new StaticDatabasePropertyEntry( ) );
+        for ( StaticDatabasePropertyEntry entry : entities ) {
+          if (entry.getPropName() != null && changes.containsKey(entry.getPropName())) {
+            String newPropertyName = changes.get(entry.getPropName());
+            LOG.debug( "Upgrading: Copying property value of'" + entry.getPropName() + "' to '" + newPropertyName + "'");
+            StaticDatabasePropertyEntry newEntry = findNewEntity(entities, newPropertyName);
+            if (newEntry != null) {
+              newEntry.setValue(entry.getValue());
+            }
+          }
+        }
+        db.commit( );
+        return true;
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      } finally {
+        if (db.isActive())
+          db.rollback();
+      }
+    }
+
+    private StaticDatabasePropertyEntry findNewEntity(List<StaticDatabasePropertyEntry> entities, String name) {
+      for ( StaticDatabasePropertyEntry entry : entities ) {
+        if (name.equals( entry.getPropName() ))
+          return entry;
+      }
+      return null;
+    }
+  }
 }
+

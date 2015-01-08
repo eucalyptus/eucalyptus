@@ -28,7 +28,7 @@ import groovy.transform.CompileStatic
 @CompileStatic
 interface PrivateAddressPersistence {
 
-  Optional<PrivateAddress> tryCreate( String address )
+  Optional<PrivateAddress> tryCreate( String scope, final String tag, String address )
 
   void teardown( PrivateAddress address )
 

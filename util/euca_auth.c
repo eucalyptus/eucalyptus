@@ -217,7 +217,7 @@ static void init_url_regex(void);
 //!
 int euca_init_cert(void)
 {
-#define ERR_MSG "Error: required file %s not found by euca_init_cert(). Is $EUCALYPTUS set?\n"
+#define ERR_MSG "Error: required file %s not found by euca_init_cert(). Is component registered and $EUCALYPTUS set?\n"
 #define OK_MSG  "using file %s\n"
 #define CHK_FILE(_n)                           \
 {                                              \
@@ -522,7 +522,6 @@ int decrypt_string_symmetric(char *in_buffer, char *key_buffer, char *iv_buffer,
             goto cleanup;
         }
     }
-
     //Base64 decode the string inbuffer, null terminator deducted from buffer size
     dec64_in = base64_dec2((unsigned char *)in_buffer, strlen(in_buffer), &in_len);
     if (dec64_in == NULL) {

@@ -295,14 +295,35 @@ public class CollectionUtils {
    *
    * @return The min function.
    */
-  public static Function<Integer,Function<Integer,Integer>> min() {
-    return new Function<Integer,Function<Integer,Integer>>() {
+  public static NonNullFunction<Integer,Function<Integer,Integer>> min() {
+    return new NonNullFunction<Integer,Function<Integer,Integer>>() {
+      @Nonnull
       @Override
       public Function<Integer, Integer> apply( final Integer integer1 ) {
         return new Function<Integer, Integer>(){
           @Override
           public Integer apply( final Integer integer2 ) {
             return Math.min( integer1, integer2 );
+          }
+        };
+      }
+    };
+  }
+
+  /**
+   * Min function suitable for use with reduce.
+   *
+   * @return The long min function.
+   */
+  public static NonNullFunction<Long,Function<Long,Long>> lmin() {
+    return new NonNullFunction<Long,Function<Long,Long>>() {
+      @Nonnull
+      @Override
+      public Function<Long, Long> apply( final Long long1 ) {
+        return new Function<Long, Long>(){
+          @Override
+          public Long apply( final Long long2 ) {
+            return Math.min( long1, long2 );
           }
         };
       }
@@ -355,8 +376,9 @@ public class CollectionUtils {
    * @param <T> The result type
    * @return The flipped function
    */
-  public static <F1,F2,T> Function<F2,Function<F1,T>> flipCurried( final Function<F1,Function<F2,T>> curried )  {
-    return new Function<F2,Function<F1,T>>( ){
+  public static <F1,F2,T> NonNullFunction<F2,Function<F1,T>> flipCurried( final Function<F1,Function<F2,T>> curried )  {
+    return new NonNullFunction<F2,Function<F1,T>>( ){
+      @Nonnull
       @Override
       public Function<F1, T> apply( @Nullable final F2 f2 ) {
         return new Function<F1, T>( ){

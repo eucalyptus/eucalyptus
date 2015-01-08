@@ -112,39 +112,32 @@ public class AWSAutoScalingScalingPolicyProperties implements ResourceProperties
 }
 
 @ToString(includeNames=true)
-public class AWSAutoScalingScheduledActionProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSAutoScalingTriggerProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSCloudFormationAuthenticationProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSCloudFormationCustomResourceProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSCloudFormationInitProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
 public class AWSCloudFormationStackProperties implements ResourceProperties {
+  @Property
+  List<String> notificationARNs = Lists.newArrayList();
+  @Property
+  JsonNode parameters;
+  @Required
+  @Property
+  String templateURL;
+  @Property
+  Integer timeoutInMinutes;
 }
 
 @ToString(includeNames=true)
 public class AWSCloudFormationWaitConditionProperties implements ResourceProperties {
+  @Property
+  Integer count;
+  @Required
+  @Property
+  String handle;
+  @Required
+  @Property
+  Integer timeout;
 }
 
 @ToString(includeNames=true)
 public class AWSCloudFormationWaitConditionHandleProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSCloudFrontDistributionProperties implements ResourceProperties {
 }
 
 @ToString(includeNames=true)
@@ -189,15 +182,19 @@ public class AWSCloudWatchAlarmProperties implements ResourceProperties {
 }
 
 @ToString(includeNames=true)
-public class AWSDynamoDBTableProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSEC2CustomerGatewayProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
 public class AWSEC2DHCPOptionsProperties implements ResourceProperties {
+  @Property
+  String domainName;
+  @Property
+  List<String> domainNameServers = Lists.newArrayList();
+  @Property
+  List<String> netbiosNameServers = Lists.newArrayList();
+  @Property
+  Integer netbiosNodeType;
+  @Property
+  List<String> ntpServers = Lists.newArrayList();
+  @Property
+  List<EC2Tag> tags = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
@@ -238,6 +235,8 @@ public class AWSEC2InstanceProperties implements ResourceProperties {
   @Required
   String imageId;
   @Property
+  String instanceInitiatedShutdownBehavior;
+  @Property
   String instanceType;
   @Property
   String kernelId;
@@ -273,30 +272,106 @@ public class AWSEC2InstanceProperties implements ResourceProperties {
 
 @ToString(includeNames=true)
 public class AWSEC2InternetGatewayProperties implements ResourceProperties {
+  @Property
+  List<EC2Tag> tags = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
 public class AWSEC2NetworkAclProperties implements ResourceProperties {
+  @Required
+  @Property
+  String vpcId;
+  @Property
+  List<EC2Tag> tags = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
 public class AWSEC2NetworkAclEntryProperties implements ResourceProperties {
+  @Required
+  @Property
+  String cidrBlock;
+  // @Required -- documentation lies, claims required but experimentation shows otherwise.
+  @Property
+  Boolean egress;
+  @Property
+  EC2ICMP icmp;
+  @Required
+  @Property
+  String networkAclId;
+  @Property
+  EC2PortRange portRange;
+  @Required
+  @Property
+  Integer protocol;
+  @Required
+  @Property
+  String ruleAction;
+  @Required
+  @Property
+  Integer ruleNumber;
 }
 
 @ToString(includeNames=true)
 public class AWSEC2NetworkInterfaceProperties implements ResourceProperties {
+  @Property
+  String description;
+  @Property
+  List<String> groupSet = Lists.newArrayList();
+  @Property
+  String privateIpAddress;
+  @Property
+  List<PrivateIpAddressSpecification> privateIpAddresses = Lists.newArrayList();
+  @Property
+  Integer secondaryPrivateIpAddressCount;
+  @Property
+  Boolean sourceDestCheck;
+  @Required
+  @Property
+  String subnetId;
+  @Property
+  List<EC2Tag> tags = Lists.newArrayList();
 }
-
-@ToString(includeNames=true)
-public class AWSEC2NetworkInterfaceAttachmentProperties implements ResourceProperties {
-}
+// Can't do this one until we allow more than one network interface on an instance
+//@ToString(includeNames=true)
+//public class AWSEC2NetworkInterfaceAttachmentProperties implements ResourceProperties {
+//  @Property
+//  Boolean deleteOnTermination;
+//  @Required
+//  @Property
+//  Integer deviceIndex;
+//  @Required
+//  @Property
+//  String instanceId;
+//  @Required
+//  @Property
+//  String networkInterfaceId;
+//}
 
 @ToString(includeNames=true)
 public class AWSEC2RouteProperties implements ResourceProperties {
+  @Required
+  @Property
+  String destinationCidrBlock;
+  @Property
+  String gatewayId;
+  @Property
+  String instanceId;
+  @Property
+  String networkInterfaceId;
+  @Required
+  @Property
+  String routeTableId;
+  @Property
+  String vpcPeeringConnectionId;
 }
 
 @ToString(includeNames=true)
 public class AWSEC2RouteTableProperties implements ResourceProperties {
+  @Required
+  @Property
+  String vpcId;
+  @Property
+  List<EC2Tag> tags = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
@@ -331,28 +406,62 @@ public class AWSEC2SecurityGroupIngressProperties implements ResourceProperties 
   String sourceSecurityGroupId;
   @Property
   String sourceSecurityGroupOwnerId;
-  @Required
   @Property
-  String fromPort;
-  @Required // not required for ip protocol other than ICMP, TCP, UDP but we don't support VPC currently
+  Integer fromPort;
   @Property
-  String toPort;
+  Integer toPort;
 }
 
 @ToString(includeNames=true)
 public class AWSEC2SecurityGroupEgressProperties implements ResourceProperties {
+  @Property
+  String cidrIp;
+  @Property
+  String destinationSecurityGroupId;
+  @Property
+  Integer fromPort;
+  @Required
+  @Property
+  String groupId;
+  @Required
+  @Property
+  String ipProtocol;
+  @Property
+  Integer toPort;
 }
 
 @ToString(includeNames=true)
 public class AWSEC2SubnetProperties implements ResourceProperties {
+  @Property
+  String availabilityZone;
+  @Required
+  @Property
+  String cidrBlock;
+  @Property
+  List<EC2Tag> tags = Lists.newArrayList();
+  @Required
+  @Property
+  String vpcId;
 }
 
 @ToString(includeNames=true)
 public class AWSEC2SubnetNetworkAclAssociationProperties implements ResourceProperties {
+  @Required
+  @Property
+  String subnetId;
+  @Required
+  @Property
+  String networkAclId;
 }
 
 @ToString(includeNames=true)
 public class AWSEC2SubnetRouteTableAssociationProperties implements ResourceProperties {
+  @Required
+  @Property
+  String routeTableId;
+  @Required
+  @Property
+  String subnetId;
 }
 
 @ToString(includeNames=true)
@@ -387,66 +496,38 @@ public class AWSEC2VolumeAttachmentProperties implements ResourceProperties {
 
 @ToString(includeNames=true)
 public class AWSEC2VPCProperties implements ResourceProperties {
+  @Required
+  @Property
+  String cidrBlock;
+  @Property
+  Boolean enableDnsSupport;
+  @Property
+  Boolean enableDnsHostnames;
+  @Property
+  String instanceTenancy;
+  @Property
+  List<EC2Tag> tags = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
 public class AWSEC2VPCDHCPOptionsAssociationProperties implements ResourceProperties {
+  @Required
+  @Property
+  String dhcpOptionsId;
+  @Required
+  @Property
+  String vpcId;
 }
 
 @ToString(includeNames=true)
 public class AWSEC2VPCGatewayAttachmentProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSEC2VPNConnectionProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSEC2VPNConnectionRouteProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSEC2VPNGatewayProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSEC2VPNGatewayRoutePropagationProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSElastiCacheCacheClusterProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSElastiCacheParameterGroupProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSElastiCacheSecurityGroupProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSElastiCacheSecurityGroupIngressProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSElastiCacheSubnetGroupProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSElasticBeanstalkApplicationProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSElasticBeanstalkApplicationVersionProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSElasticBeanstalkConfigurationTemplateProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSElasticBeanstalkEnvironmentProperties implements ResourceProperties {
+  @Required
+  @Property
+  String internetGatewayId;
+  @Property
+  String vpcId;
+  @Property
+  String VpnGatewayId;
 }
 
 @ToString(includeNames=true)
@@ -561,78 +642,23 @@ public class AWSIAMUserToGroupAdditionProperties implements ResourceProperties {
 }
 
 @ToString(includeNames=true)
-public class AWSRedshiftClusterProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSRedshiftClusterParameterGroupProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSRedshiftClusterSecurityGroupProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSRedshiftClusterSecurityGroupIngressProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSRedshiftClusterSubnetGroupProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSRDSDBInstanceProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSRDSDBParameterGroupProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSRDSDBSubnetGroupProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSRDSDBSecurityGroupProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSRDSDBSecurityGroupIngressProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSRoute53RecordSetProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSRoute53RecordSetGroupProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
 public class AWSS3BucketProperties implements ResourceProperties {
+  @Property
+  String accessControl;
+  @Property
+  String bucketName;
+  @Property
+  S3CorsConfiguration corsConfiguration;
+  @Property
+  S3LifecycleConfiguration lifecycleConfiguration;
+  @Property
+  S3LoggingConfiguration loggingConfiguration;
+  @Property
+  S3NotificationConfiguration notificationConfiguration;
+  @Property
+  List<CloudFormationResourceTag> tags = Lists.newArrayList();
+  @Property
+  S3VersioningConfiguration versioningConfiguration;
+  @Property
+  S3WebsiteConfiguration websiteConfiguration;
 }
-
-@ToString(includeNames=true)
-public class AWSS3BucketPolicyProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSSDBDomainProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSSNSTopicPolicyProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSSNSTopicProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSSQSQueueProperties implements ResourceProperties {
-}
-
-@ToString(includeNames=true)
-public class AWSSQSQueuePolicyProperties implements ResourceProperties {
-}
-

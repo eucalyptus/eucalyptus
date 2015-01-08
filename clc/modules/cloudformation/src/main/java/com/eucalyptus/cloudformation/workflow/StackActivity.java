@@ -20,13 +20,34 @@
 
 package com.eucalyptus.cloudformation.workflow;
 
+import com.amazonaws.services.simpleworkflow.flow.annotations.Activities;
+import com.amazonaws.services.simpleworkflow.flow.annotations.ActivityRegistrationOptions;
+
+@ActivityRegistrationOptions(
+  defaultTaskScheduleToStartTimeoutSeconds = 900,
+  defaultTaskStartToCloseTimeoutSeconds = 450,
+  defaultTaskHeartbeatTimeoutSeconds = 450,
+  defaultTaskScheduleToCloseTimeoutSeconds = 1350
+)
+@Activities(version="1.0")
 public interface StackActivity {
-  public String createResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson);
-  public String rollbackCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId);
-  public String deleteResource(String resourceId, String stackId, String accountId, String effectiveUserId);
+  public String initCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson);
+  public Boolean performCreateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId);
+  public Boolean performDeleteStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId);
+  public String determineCreateResourceFailures(String stackId, String accountId);
+  public String determineDeleteResourceFailures(String stackId, String accountId);
+  public String initDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId);
   public String createGlobalStackEvent(String stackId, String accountId, String resourceStatus, String resourceStatusReason);
   public String finalizeCreateStack(String stackId, String accountId);
-  public String logException(Throwable t);
-  public String logInfo(String message);
   public String deleteAllStackRecords(String stackId, String accountId);
+  public String getResourceType(String stackId, String accountId, String resourceId);
+  public String finalizeCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId);
+  public String finalizeDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId);
+  public String failDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId, String errorMessage);
+  public String getWorkflowExecutionCloseStatus( String stackId );
+  public String getStackStatus(String stackId, String accountId);
+  public String setStackStatus(String stackId, String accountId, String status, String statusReason);
+  public String cancelCreateAndMonitorWorkflows(String stackId);
+  public String verifyCreateAndMonitorWorkflowsClosed(String stackId);
+  public Integer getAWSCloudFormationWaitConditionTimeout(String resourceId, String stackId, String accountId, String effectiveUserId);
 }

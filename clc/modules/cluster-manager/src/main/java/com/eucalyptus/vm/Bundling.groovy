@@ -63,13 +63,11 @@
 @GroovyAddClassUUID
 package com.eucalyptus.vm
 
+import com.eucalyptus.compute.common.Filter
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
-import java.util.ArrayList;
-import java.util.Date;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.Filter;
 import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.vm.VmBundleTask.BundleState
 import com.eucalyptus.binding.HttpEmbedded;
@@ -103,6 +101,7 @@ public class BundleInstanceType extends VmBundleMessage {
   String uploadPolicySignature;
   String url;
   String userKey;
+  String architecture;
 }
 public class BundleInstanceResponseType extends VmBundleMessage {
   BundleTask task;

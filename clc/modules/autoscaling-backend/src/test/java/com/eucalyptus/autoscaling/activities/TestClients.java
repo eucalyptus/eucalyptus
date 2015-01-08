@@ -21,10 +21,10 @@ package com.eucalyptus.autoscaling.activities;
 
 import javax.annotation.Nullable;
 import com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage;
+import com.eucalyptus.compute.common.ComputeMessage;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage;
 import com.eucalyptus.util.Callback;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 /**
  * Groovy can't handle the generics so using Java + Callback
@@ -44,7 +44,7 @@ public class TestClients {
 
     @SuppressWarnings( "unchecked" )
     @Override
-    public <REQ extends EucalyptusMessage, RES extends EucalyptusMessage> void dispatch( REQ request,
+    public <REQ extends ComputeMessage, RES extends ComputeMessage> void dispatch( REQ request,
                                                                                   Callback.Checked<RES> callback,
                                                                                   @Nullable Runnable then ) {
       try {

@@ -62,13 +62,13 @@
 
 package com.eucalyptus.blockstorage;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.eucalyptus.storage.common.CheckerTask;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * This is the interface that ALL backend block storage managers must implement.
@@ -98,10 +98,10 @@ public interface LogicalStorageManager {
 	 * @param snapshotId
 	 * @param snapshotPointId - The opaque id used to identify a snap point on the given backend. This is backend-specific and not universal.
 	 * @param shouldTransferSnapshots
-	 * @return
+	 * @return A subclass of StorageResource - Wrapper around, file, block or other types of storage resources
 	 * @throws EucalyptusCloudException
 	 */
-	public List<String> createSnapshot(String volumeId, String snapshotId, String snapshotPointId, Boolean shouldTransferSnapshots) throws EucalyptusCloudException;
+	public StorageResource createSnapshot(String volumeId, String snapshotId, String snapshotPointId, Boolean shouldTransferSnapshots) throws EucalyptusCloudException;
 
 	public List<String> prepareForTransfer(String snapshotId) throws EucalyptusCloudException;
 
@@ -132,7 +132,7 @@ public interface LogicalStorageManager {
 
 	public void finishVolume(String snapshotId) throws EucalyptusCloudException;
 
-	public String prepareSnapshot(String snapshotId, int sizeExpected, long actualSizeInMB) throws EucalyptusCloudException;
+	public StorageResource prepareSnapshot(String snapshotId, int sizeExpected, long actualSizeInMB) throws EucalyptusCloudException;
 
 	public ArrayList<ComponentProperty> getStorageProps();
 

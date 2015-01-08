@@ -21,6 +21,7 @@ package com.eucalyptus.autoscaling.service.ws;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.autoscaling.common.msgs.ErrorResponse;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.util.ErrorHandlerSupport;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -28,6 +29,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 /**
  *
  */
+@ComponentNamed
 public class AutoScalingErrorHandler extends ErrorHandlerSupport {
   private static final Logger LOG = Logger.getLogger( AutoScalingErrorHandler.class );
   private static final String INTERNAL_FAILURE = "InternalFailure";

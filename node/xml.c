@@ -218,7 +218,7 @@ extern struct nc_state_t nc_state;
 
 #define XGET_ENUM(_XPATH, _dest, _converter)                                           \
 {                                                                                      \
-	char __sBuf[32];                                                                   \
+	char __sBuf[32] = "";                                                              \
 	if (get_xpath_content_at(xml_path, (_XPATH), 0, __sBuf, sizeof(__sBuf)) == NULL) { \
 		LOGERROR("failed to read %s from %s\n", (_XPATH), xml_path);                   \
 		return (EUCA_ERROR);                                                           \
@@ -228,7 +228,7 @@ extern struct nc_state_t nc_state;
 
 #define XGET_BOOL(_XPATH, _dest)                                                       \
 {                                                                                      \
-	char __sBuf[32];                                                                   \
+	char __sBuf[32] = "";                                                              \
 	if (get_xpath_content_at(xml_path, (_XPATH), 0, __sBuf, sizeof(__sBuf)) == NULL) { \
 		LOGERROR("failed to read %s from %s\n", (_XPATH), xml_path);                   \
 		return (EUCA_ERROR);                                                           \
@@ -243,9 +243,25 @@ extern struct nc_state_t nc_state;
 	}                                                                                  \
 }
 
+#define XGET_DOUBLE(_XPATH, _dest)                                                     \
+{                                                                                      \
+	char __sBuf[32] = "";                                                              \
+	if (get_xpath_content_at(xml_path, (_XPATH), 0, __sBuf, sizeof(__sBuf)) == NULL) { \
+		LOGWARN("failed to read %s from %s\n", (_XPATH), xml_path);                    \
+	} else {                                                                           \
+        double __v = atof(__sBuf);                                                     \
+        if (errno == 0) {                                                              \
+            (_dest) = __v;                                                             \
+        } else {                                                                       \
+            LOGDEBUG("failed to parse %s as a double in %s\n", (_XPATH), xml_path);    \
+            return (EUCA_ERROR);                                                       \
+        }                                                                              \
+    }                                                                                  \
+}
+
 #define XGET_INT(_XPATH, _dest)                                                        \
 {                                                                                      \
-	char __sBuf[32];                                                                   \
+	char __sBuf[32] = "";                                                              \
 	if (get_xpath_content_at(xml_path, (_XPATH), 0, __sBuf, sizeof(__sBuf)) == NULL) { \
 		LOGWARN("failed to read %s from %s\n", (_XPATH), xml_path);                    \
 	} else {                                                                           \
@@ -277,6 +293,8 @@ static void init_xml(struct nc_state_t *nc_state)
     pthread_mutex_lock(&xml_mutex);
     {
         if (!initialized) {
+            xmlIndentTreeOutput = 1;
+            xmlKeepBlanksDefault(0);
             xmlInitParser();
             LIBXML_TEST_VERSION;       // verifies that loaded library matches the compiled library
             xmlSubstituteEntitiesDefault(1);    // substitute entities while parsing
@@ -565,6 +583,7 @@ int gen_instance_xml(const ncInstance * instance)
         _ELEMENT(instanceNode, "VmType", instance->params.name);
         _ELEMENT(instanceNode, "NicType", libvirtNicTypeNames[instance->params.nicType]);
         _ELEMENT(instanceNode, "NicDevice", instance->params.guestNicDeviceName);
+        _ELEMENT(instanceNode, "rootDirective", instance->rootDirective);
 
         // SSH-key related
         key = _NODE(instanceNode, "key");
@@ -626,6 +645,10 @@ int gen_instance_xml(const ncInstance * instance)
                     }
                 }
 
+                if (vbr->locationType == NC_LOCATION_SC) { // for EBS volumes, libvirt XML will be available under /instance/volumes
+                    continue;
+                }
+
                 disk = _ELEMENT(disks, "diskPath", vbr->backingPath);
                 _ATTRIBUTE(disk, "targetDeviceType", libvirtDevTypeNames[vbr->guestDeviceType]);
                 _ATTRIBUTE(disk, "targetDeviceName", vbr->guestDeviceName);
@@ -659,15 +682,22 @@ int gen_instance_xml(const ncInstance * instance)
                 xmlNodePtr vol = _NODE(vols, "volume");
                 _ELEMENT(vol, "id", v->volumeId);
                 _ELEMENT(vol, "attachmentToken", v->attachmentToken);
-                _ELEMENT(vol, "localDev", v->localDev);
-                _ELEMENT(vol, "localDevReal", v->localDevReal);
+                _ELEMENT(vol, "devName", v->devName);
                 _ELEMENT(vol, "stateName", v->stateName);
                 _ELEMENT(vol, "connectionString", v->connectionString);
+                xmlNodePtr libvirt = _NODE(vol, "libvirt");
+                if (strlen(v->volLibvirtXml)) {
+                    xmlNodePtr vol_xml = NULL;
+                    xmlParseInNodeContext(libvirt, v->volLibvirtXml, strlen(v->volLibvirtXml), 0, &vol_xml);
+                    if (vol_xml) {
+                        xmlAddChild(libvirt, vol_xml);
+                    }
+                }
             }
         }
 
         if (instance->params.nicType != NIC_TYPE_NONE) {    // NIC specification
-            char str[10];
+            char str[16];
 
             nics = _NODE(instanceNode, "nics");
             nic = _NODE(nics, "nic");
@@ -679,6 +709,8 @@ int gen_instance_xml(const ncInstance * instance)
             _ATTRIBUTE(nic, "publicIp", instance->ncnet.publicIp);
             _ATTRIBUTE(nic, "privateIp", instance->ncnet.privateIp);
             _ATTRIBUTE(nic, "bridgeDeviceName", instance->params.guestNicDeviceName);
+            snprintf(str, sizeof(str), "vn_%s", instance->instanceId);
+            _ATTRIBUTE(nic, "guestDeviceName", str);
         }
 
         {                              // set /instance/states
@@ -689,13 +721,13 @@ int gen_instance_xml(const ncInstance * instance)
             _ELEMENT(states, "retries", str);
             _ELEMENT(states, "stateName", instance->stateName);
             _ELEMENT(states, "bundleTaskStateName", instance->bundleTaskStateName);
+            snprintf(str, sizeof(str), "%0.4f", instance->bundleTaskProgress);
+            _ELEMENT(states, "bundleTaskProgress", str);
             _ELEMENT(states, "createImageTaskStateName", instance->createImageTaskStateName);
             snprintf(str, sizeof(str), "%d", instance->stateCode);
             _ELEMENT(states, "stateCode", str);
             _ELEMENT(states, "state", instance_state_names[instance->state]);
             _ELEMENT(states, "bundleTaskState", bundling_progress_names[instance->bundleTaskState]);
-            snprintf(str, sizeof(str), "%d", instance->bundlePid);
-            _ELEMENT(states, "bundlePid", str);
             _ELEMENT(states, "bundleBucketExists", (instance->bundleBucketExists) ? ("true") : ("false"));
             _ELEMENT(states, "bundleCanceled", (instance->bundleCanceled) ? ("true") : ("false"));
             _ELEMENT(states, "guestStateName", instance->guestStateName);
@@ -751,7 +783,61 @@ free:
 //!
 int read_instance_xml(const char *xml_path, ncInstance * instance)
 {
+#define MKVBRPATH(_suffix)   snprintf(vbrxpath, sizeof(vbrxpath), "/instance/vbrs/vbr[%d]/%s", (i + 1), _suffix);
+#define MKVOLPATH(_suffix)   snprintf(volxpath, sizeof(volxpath), "/instance/volumes/volume[%d]/%s", (i + 1), _suffix);
+
+#define XGET_STR_FREE(_XPATH, _dest)                                                 \
+{                                                                                    \
+    LOGTRACE("reading up to %lu of " #_dest " from %s\n", sizeof(_dest), xml_path);  \
+    if (get_xpath_content_at(xml_path, (_XPATH), 0, _dest, sizeof(_dest)) == NULL) { \
+        LOGERROR("failed to read %s from %s\n", (_XPATH), xml_path);                 \
+        for (int z = 0; res_array[z] != NULL; z++)                                   \
+            EUCA_FREE(res_array[z]);                                                 \
+        EUCA_FREE(res_array);                                                        \
+        return (EUCA_ERROR);                                                         \
+    }                                                                                \
+}
+
+#define XGET_INT_FREE(_XPATH, _dest)                                                   \
+{                                                                                      \
+    char __sBuf[32] = "";                                                              \
+    if (get_xpath_content_at(xml_path, (_XPATH), 0, __sBuf, sizeof(__sBuf)) == NULL) { \
+        LOGWARN("failed to read %s from %s\n", (_XPATH), xml_path);                    \
+    } else {                                                                           \
+        errno = 0;                                                                     \
+        char *__psEnd = NULL;                                                          \
+        long long __v = strtoll(__sBuf, &__psEnd, 10);                                 \
+        if ((errno == 0) && ((*__psEnd) == '\0')) {                                    \
+            (_dest) = __v;                                                             \
+        } else {                                                                       \
+            LOGDEBUG("failed to parse %s as an integer in %s\n", (_XPATH), xml_path);  \
+            for (int z = 0; res_array[z] != NULL; z++)                                 \
+                EUCA_FREE(res_array[z]);                                               \
+            EUCA_FREE(res_array);                                                      \
+            return (EUCA_ERROR);                                                       \
+        }                                                                              \
+    }                                                                                  \
+}
+
+#define XGET_ENUM_FREE(_XPATH, _dest, _converter)                                      \
+{                                                                                      \
+    char __sBuf[32] = "";                                                              \
+    if (get_xpath_content_at(xml_path, (_XPATH), 0, __sBuf, sizeof(__sBuf)) == NULL) { \
+        LOGERROR("failed to read %s from %s\n", (_XPATH), xml_path);                   \
+        for (int z = 0; res_array[z] != NULL; z++)                                     \
+            EUCA_FREE(res_array[z]);                                                   \
+        EUCA_FREE(res_array);                                                          \
+        return (EUCA_ERROR);                                                           \
+    }                                                                                  \
+    (_dest) = _converter(__sBuf);                                                      \
+}
+
     int ret = EUCA_OK;
+    char *groupName = NULL;
+    char vbrxpath[128] = "";
+    char volxpath[128] = "";
+    char **res_array = NULL;
+    virtualBootRecord *vbr = NULL;
 
     euca_strncpy(instance->xmlFilePath, xml_path, sizeof(instance->xmlFilePath));
 
@@ -783,11 +869,14 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
 
         if ((res_array = get_xpath_content(xml_path, "/instance/groupNames/name")) != NULL) {
             for (int i = 0; (res_array[i] != NULL) && (i < EUCA_MAX_GROUPS); i++) {
-                char *groupName = instance->groupNames[i];
+                groupName = instance->groupNames[i];
                 euca_strncpy(groupName, res_array[i], CHAR_BUFFER_SIZE);
                 instance->groupNamesSize++;
-                EUCA_FREE(res_array[i]);
             }
+
+            // Free our allocated memory
+            for (int i = 0; res_array[i] != NULL; i++)
+                EUCA_FREE(res_array[i]);
             EUCA_FREE(res_array);
         }
     }
@@ -800,6 +889,7 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
     XGET_STR("/instance/VmType", instance->params.name);
     XGET_ENUM("/instance/NicType", instance->params.nicType, libvirtNicType_from_string);
     XGET_STR("/instance/NicDevice", instance->params.guestNicDeviceName);
+    XGET_STR("/instance/rootDirective", instance->rootDirective);
     XGET_BOOL("/instance/key/@doInjectKey", instance->do_inject_key);
     XGET_STR("/instance/key/@sshKey", instance->keyName);
     XGET_STR("/instance/os/@platform", instance->platform);
@@ -809,11 +899,11 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
     XGET_INT("/instance/states/retries", instance->retries);
     XGET_STR("/instance/states/stateName", instance->stateName);
     XGET_STR("/instance/states/bundleTaskStateName", instance->bundleTaskStateName);
+    XGET_DOUBLE("/instance/states/bundleTaskProgress", instance->bundleTaskProgress);
     XGET_STR("/instance/states/createImageTaskStateName", instance->createImageTaskStateName);
     XGET_INT("/instance/states/stateCode", instance->stateCode);
     XGET_ENUM("/instance/states/state", instance->state, instance_state_from_string);
     XGET_ENUM("/instance/states/bundleTaskState", instance->bundleTaskState, bundling_progress_from_string);
-    XGET_INT("/instance/states/bundlePid", instance->bundlePid);
     XGET_BOOL("/instance/states/bundleBucketExists", instance->bundleBucketExists);
     XGET_BOOL("/instance/states/bundleCanceled", instance->bundleCanceled);
     XGET_STR("/instance/states/guestStateName", instance->guestStateName);
@@ -836,95 +926,99 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
     XGET_INT("/instance/timestamps/terminationTime", instance->terminationTime);
     XGET_INT("/instance/timestamps/migrationTime", instance->migrationTime);
 
-    {                                  // loop through VBRs
-        char **res_array = NULL;
-        virtualBootRecord *vbr = NULL;
+    // loop through VBRs
+    if ((res_array = get_xpath_content(xml_path, "/instance/vbrs/vbr")) != NULL) {
+        for (int i = 0; (res_array[i] != NULL) && (i < EUCA_MAX_VBRS); i++) {
+            vbr = &(instance->params.virtualBootRecord[i]);
 
-        if ((res_array = get_xpath_content(xml_path, "/instance/vbrs/vbr")) != NULL) {
-            for (int i = 0; (res_array[i] != NULL) && (i < EUCA_MAX_VBRS); i++) {
-                vbr = &(instance->params.virtualBootRecord[i]);
-                char vbrxpath[128];
-#define MKVBRPATH(SUFFIX) snprintf(vbrxpath, sizeof(vbrxpath), "/instance/vbrs/vbr[%d]/%s\n", (i + 1), SUFFIX);
+            MKVBRPATH("resourceLocation");
+            XGET_STR_FREE(vbrxpath, vbr->resourceLocation);
+            MKVBRPATH("guestDeviceName");
+            XGET_STR_FREE(vbrxpath, vbr->guestDeviceName);
+            MKVBRPATH("sizeBytes");
+            XGET_INT_FREE(vbrxpath, vbr->sizeBytes);
+            MKVBRPATH("formatName");
+            XGET_STR_FREE(vbrxpath, vbr->formatName);
+            MKVBRPATH("id");
+            XGET_STR_FREE(vbrxpath, vbr->id);
+            MKVBRPATH("typeName");
+            XGET_STR_FREE(vbrxpath, vbr->typeName);
 
-                MKVBRPATH("resourceLocation");
-                XGET_STR(vbrxpath, vbr->resourceLocation);
-                MKVBRPATH("guestDeviceName");
-                XGET_STR(vbrxpath, vbr->guestDeviceName);
-                MKVBRPATH("sizeBytes");
-                XGET_INT(vbrxpath, vbr->sizeBytes);
-                MKVBRPATH("formatName");
-                XGET_STR(vbrxpath, vbr->formatName);
-                MKVBRPATH("id");
-                XGET_STR(vbrxpath, vbr->id);
-                MKVBRPATH("typeName");
-                XGET_STR(vbrxpath, vbr->typeName);
+            MKVBRPATH("type");
+            XGET_ENUM_FREE(vbrxpath, vbr->type, ncResourceType_from_string);
+            MKVBRPATH("locationType");
+            XGET_ENUM_FREE(vbrxpath, vbr->locationType, ncResourceLocationType_from_string);
+            MKVBRPATH("format");
+            XGET_ENUM_FREE(vbrxpath, vbr->format, ncResourceFormatType_from_string);
+            MKVBRPATH("diskNumber");
+            XGET_INT_FREE(vbrxpath, vbr->diskNumber);
+            MKVBRPATH("partitionNumber");
+            XGET_INT_FREE(vbrxpath, vbr->partitionNumber);
+            MKVBRPATH("guestDeviceType");
+            XGET_ENUM_FREE(vbrxpath, vbr->guestDeviceType, libvirtDevType_from_string);
+            MKVBRPATH("guestDeviceBus");
+            XGET_ENUM_FREE(vbrxpath, vbr->guestDeviceBus, libvirtBusType_from_string);
+            MKVBRPATH("backingType");
+            XGET_ENUM_FREE(vbrxpath, vbr->backingType, libvirtSourceType_from_string);
+            MKVBRPATH("backingPath");
+            XGET_STR_FREE(vbrxpath, vbr->backingPath);
+            MKVBRPATH("preparedResourceLocation");
+            XGET_STR_FREE(vbrxpath, vbr->preparedResourceLocation);
 
-                MKVBRPATH("type");
-                XGET_ENUM(vbrxpath, vbr->type, ncResourceType_from_string);
-                MKVBRPATH("locationType");
-                XGET_ENUM(vbrxpath, vbr->locationType, ncResourceLocationType_from_string);
-                MKVBRPATH("format");
-                XGET_ENUM(vbrxpath, vbr->format, ncResourceFormatType_from_string);
-                MKVBRPATH("diskNumber");
-                XGET_INT(vbrxpath, vbr->diskNumber);
-                MKVBRPATH("partitionNumber");
-                XGET_INT(vbrxpath, vbr->partitionNumber);
-                MKVBRPATH("guestDeviceType");
-                XGET_ENUM(vbrxpath, vbr->guestDeviceType, libvirtDevType_from_string);
-                MKVBRPATH("guestDeviceBus");
-                XGET_ENUM(vbrxpath, vbr->guestDeviceBus, libvirtBusType_from_string);
-                MKVBRPATH("backingType");
-                XGET_ENUM(vbrxpath, vbr->backingType, libvirtSourceType_from_string);
-                MKVBRPATH("backingPath");
-                XGET_STR(vbrxpath, vbr->backingPath);
-                MKVBRPATH("preparedResourceLocation");
-                XGET_STR(vbrxpath, vbr->preparedResourceLocation);
-
-                // set pointers in the VBR
-                if (strcmp(vbr->typeName, "machine") == 0 || (strcmp(vbr->typeName, "ebs") == 0 && vbr->diskNumber == 0 && vbr->partitionNumber == 0)) {
-                    instance->params.root = vbr;
-                }
-                if (strcmp(vbr->typeName, "kernel") == 0) {
-                    instance->params.kernel = vbr;
-                }
-                if (strcmp(vbr->typeName, "ramdisk") == 0) {
-                    instance->params.ramdisk = vbr;
-                }
-                instance->params.virtualBootRecordLen++;
-
-                LOGTRACE("found vbr '%s' typeName='%s' instance->params.virtualBootRecordLen\n", vbr->resourceLocation, vbr->typeName);
-                EUCA_FREE(res_array[i]);
+            // set pointers in the VBR
+            if (strcmp(vbr->typeName, "machine") == 0 || (strcmp(vbr->typeName, "ebs") == 0 && vbr->diskNumber == 0 && vbr->partitionNumber == 0)) {
+                instance->params.root = vbr;
             }
-            EUCA_FREE(res_array);
+            if (strcmp(vbr->typeName, "kernel") == 0) {
+                instance->params.kernel = vbr;
+            }
+            if (strcmp(vbr->typeName, "ramdisk") == 0) {
+                instance->params.ramdisk = vbr;
+            }
+            instance->params.virtualBootRecordLen++;
+
+            LOGTRACE("found vbr '%s' typeName='%s' instance->params.virtualBootRecordLen\n", vbr->resourceLocation, vbr->typeName);
         }
+
+        // Free our allocated memory
+        for (int i = 0; res_array[i] != NULL; i++)
+            EUCA_FREE(res_array[i]);
+        EUCA_FREE(res_array);
     }
+    // pull out volumes
+    if ((res_array = get_xpath_content(xml_path, "/instance/volumes/volume")) != NULL) {
+        for (int i = 0; (res_array[i] != NULL) && (i < EUCA_MAX_VOLUMES); i++) {
+            ncVolume *v = instance->volumes + i;
 
-    {                                  // pull out volumes
-        char **res_array = NULL;
-
-        if ((res_array = get_xpath_content(xml_path, "/instance/volumes/volume")) != NULL) {
-            for (int i = 0; (res_array[i] != NULL) && (i < EUCA_MAX_VOLUMES); i++) {
-                ncVolume *v = instance->volumes + i;
-                char volxpath[128];
-#define MKVOLPATH(SUFFIX) snprintf(volxpath, sizeof(volxpath), "/instance/volumes/volume[%d]/%s\n", (i + 1), SUFFIX);
-                MKVOLPATH("id");
-                XGET_STR(volxpath, v->volumeId);
-                MKVOLPATH("attachmentToken");
-                XGET_STR(volxpath, v->attachmentToken);
-                MKVOLPATH("localDev");
-                XGET_STR(volxpath, v->localDev);
+            MKVOLPATH("id");
+            XGET_STR_FREE(volxpath, v->volumeId);
+            MKVOLPATH("attachmentToken");
+            XGET_STR_FREE(volxpath, v->attachmentToken);
+            MKVOLPATH("stateName");
+            XGET_STR_FREE(volxpath, v->stateName);
+            MKVOLPATH("connectionString");
+            XGET_STR_FREE(volxpath, v->connectionString);
+            MKVOLPATH("devName");
+            if (get_xpath_content_at(xml_path, volxpath, 0, v->devName, sizeof(v->devName)) == NULL) {
+                // code for upgrade to 4.1
                 MKVOLPATH("localDevReal");
-                XGET_STR(volxpath, v->localDevReal);
-                MKVOLPATH("stateName");
-                XGET_STR(volxpath, v->stateName);
-                MKVOLPATH("connectionString");
-                XGET_STR(volxpath, v->connectionString);
-                EUCA_FREE(res_array[i]);
+                XGET_STR_FREE(volxpath, v->devName);
             }
-            EUCA_FREE(res_array);
+            MKVOLPATH("libvirt");
+            if (get_xpath_xml(xml_path, volxpath, v->volLibvirtXml, sizeof(v->volLibvirtXml)) != EUCA_OK) {
+                LOGERROR("failed to read '%s' from '%s'\n", volxpath, xml_path);
+                for (int z = 0; res_array[z] != NULL; z++)
+                    EUCA_FREE(res_array[z]);
+                EUCA_FREE(res_array);
+                return (EUCA_ERROR);
+            }
         }
-    }
 
+        // Free our allocated memory
+        for (int i = 0; res_array[i] != NULL; i++)
+            EUCA_FREE(res_array[i]);
+        EUCA_FREE(res_array);
+    }
     // get NIC information
     XGET_INT("/instance/nics/nic/@vlan", instance->ncnet.vlan);
     XGET_INT("/instance/nics/nic/@networkIndex", instance->ncnet.networkIndex);
@@ -955,6 +1049,12 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
      */
 
     return (ret);
+
+#undef MKVBRPATH
+#undef MKVOLPATH
+#undef XGET_STR_FREE
+#undef XGET_INT_FREE
+#undef XGET_ENUM_FREE
 }
 
 //!
@@ -1115,14 +1215,13 @@ static int apply_xslt_stylesheet(const char *xsltStylesheetPath, const char *inp
 //!
 //! @param[in] volumeId the volume identifier string (vol-XXXXXXXX)
 //! @param[in] instance a pointer to our instance structure
-//! @param[in] localDevReal a string containing the target device name
-//! @param[in] remoteDev a string containing the disk path.
+//! @param[in] devName a string containing the target device name
 //!
 //! @return The results of calling write_xml_file()
 //!
 //! @see write_xml_file()
 //!
-int gen_volume_xml(const char *volumeId, const ncInstance * instance, const char *localDevReal, const char *remoteDev)
+int gen_volume_xml(const char *volumeId, const ncInstance * instance, const char *devName, const char *remoteDev)
 {
     int ret = EUCA_ERROR;
     char bitness[4] = "";
@@ -1170,11 +1269,11 @@ int gen_volume_xml(const char *volumeId, const ncInstance * instance, const char
         // volume information
         disk = _ELEMENT(volumeNode, "diskPath", remoteDev);
         _ATTRIBUTE(disk, "targetDeviceType", "disk");
-        _ATTRIBUTE(disk, "targetDeviceName", localDevReal);
+        _ATTRIBUTE(disk, "targetDeviceName", devName);
         _ATTRIBUTE(disk, "targetDeviceBus", "scsi");
         _ATTRIBUTE(disk, "sourceType", "block");
         char serial[64];
-        snprintf(serial, sizeof(serial), "%s-dev-%s", volumeId, localDevReal);
+        snprintf(serial, sizeof(serial), "%s-dev-%s", volumeId, devName);
         _ATTRIBUTE(disk, "serial", serial);
 
         snprintf(path, sizeof(path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);
@@ -1216,6 +1315,75 @@ int gen_libvirt_volume_xml(const char *volumeId, const ncInstance * instance)
 }
 
 //!
+//! Places raw XML result of an xpath query into buf. The query must return
+//! only one element.
+//!
+//! @param[in] xml_path a string containing the path to the XML file to parse
+//! @param[in] xpath a string contianing the XPATH expression to evaluate
+//! @param[out] buf for the XML string
+//! @param[in] buf_len size of the buf
+//!
+//! @return EUCA_OK or EUCA_ERROR
+//!
+int get_xpath_xml(const char *xml_path, const char *xpath, char *buf, int buf_len)
+{
+    int ret = EUCA_ERROR;
+    xmlDocPtr doc = NULL;
+    xmlXPathContextPtr context = NULL;
+    xmlXPathObjectPtr result = NULL;
+    xmlNodeSetPtr nodeset = NULL;
+
+    INIT();
+
+    LOGTRACE("searching for '%s' in '%s'\n", xpath, xml_path);
+    pthread_mutex_lock(&xml_mutex);
+    {
+        if ((doc = xmlParseFile(xml_path)) != NULL) {
+            if ((context = xmlXPathNewContext(doc)) != NULL) {
+                if ((result = xmlXPathEvalExpression(((const xmlChar *)xpath), context)) != NULL) {
+                    if (!xmlXPathNodeSetIsEmpty(result->nodesetval)) {
+                        nodeset = result->nodesetval;
+                        if (nodeset->nodeNr > 1) {
+                            LOGERROR("multiple matches for '%s' in '%s'\n", xpath, xml_path);
+                        } else {
+                            xmlNodePtr node = nodeset->nodeTab[0]->xmlChildrenNode;
+                            xmlBufferPtr xbuf = xmlBufferCreate();
+                            if (xbuf) {
+                                int len = xmlNodeDump(xbuf, doc, node, 0, 1);
+                                if (len < 0) {
+                                    LOGERROR("failed to extract XML from %s\n", xpath);
+                                } else if (len > buf_len) {
+                                    LOGERROR("insufficient buffer for %s\n", xpath);
+                                } else {
+                                    char * str = (char*)xmlBufferContent(xbuf);
+                                    euca_strncpy(buf, str, buf_len);
+                                    ret = EUCA_OK;
+                                }
+                                xmlBufferFree(xbuf);
+                            } else {
+                                LOGERROR("failed to allocate XML buffer\n");
+                            }
+                        }
+                    }
+                    xmlXPathFreeObject(result);
+                } else {
+                    LOGERROR("no results for '%s' in '%s'\n", xpath, xml_path);
+                }
+                xmlXPathFreeContext(context);
+            } else {
+                LOGERROR("failed to set xpath '%s' context for '%s'\n", xpath, xml_path);
+            }
+            xmlFreeDoc(doc);
+        } else {
+            LOGDEBUG("failed to parse XML in '%s'\n", xml_path);
+        }
+    }
+    pthread_mutex_unlock(&xml_mutex);
+
+    return ret;
+}
+
+//!
 //! Returns text content of results of an xpath query as a NULL-terminated array of string pointers, which
 //! the caller must free. (To be useful, the query should point to an element that does not have any children.)
 //!
@@ -1244,6 +1412,7 @@ char **get_xpath_content(const char *xml_path, const char *xpath)
                 if ((result = xmlXPathEvalExpression(((const xmlChar *)xpath), context)) != NULL) {
                     if (!xmlXPathNodeSetIsEmpty(result->nodesetval)) {
                         nodeset = result->nodesetval;
+                        // We will add one more to have a NULL entry at the end
                         res = EUCA_ZALLOC(nodeset->nodeNr + 1, sizeof(char *));
                         for (i = 0; ((i < nodeset->nodeNr) && (res != NULL)); i++) {
                             if ((nodeset->nodeTab[i]->children != NULL) && (nodeset->nodeTab[i]->children->content != NULL)) {
@@ -1398,6 +1567,7 @@ static void create_dummy_instance(const char *file)
     _ELEMENT(instance, "VmType", "c1.medium");
     _ELEMENT(instance, "NicType", "linux");
     _ELEMENT(instance, "NicDevice", "eth0");
+    _ELEMENT(instance, "rootDirective", "");
 
     xmlNodePtr key = _NODE(instance, "key");
     _ATTRIBUTE(key, "doInjectKey", "true");
@@ -1447,17 +1617,20 @@ static void create_dummy_instance(const char *file)
     xmlNodePtr vol = _NODE(vols, "volume");
     _ELEMENT(vol, "id", "vol-123ABC");
     _ELEMENT(vol, "attachmentToken", "alskhfnoacsniusacgnoiausgnoiuascnoiaudfh");
-    _ELEMENT(vol, "localDev", "/dev/sde");
-    _ELEMENT(vol, "localDevReal", "/dev/sde");
+    _ELEMENT(vol, "devName", "sde");
     _ELEMENT(vol, "stateName", "attached");
     _ELEMENT(vol, "connectionString", "kajalksqwuyreoiquwyeroiquwyeroiqwureyroqiweuryoqwiueryioqwry");
+    xmlNodePtr libvirt = _NODE(vol, "libvirt");
+    _ELEMENT(libvirt, "disk", "");
+
     vol = _NODE(vols, "volume");
     _ELEMENT(vol, "id", "vol-ABC123");
     _ELEMENT(vol, "attachmentToken", "allaksjdlfkjiusacgnoiausgnoiuascnoiaudfh");
-    _ELEMENT(vol, "localDev", "/dev/sdf");
-    _ELEMENT(vol, "localDevReal", "/dev/sdf");
+    _ELEMENT(vol, "devName", "sdf");
     _ELEMENT(vol, "stateName", "attaching");
     _ELEMENT(vol, "connectionString", "kakjhkjhkjhkjhkjhkyeroiquwyeroiqwureyroqiweuryoqwiueryioqwry");
+    libvirt = _NODE(vol, "libvirt");
+    _ELEMENT(libvirt, "disk", "");
 
     xmlNodePtr nics = _NODE(instance, "nics");
     xmlNodePtr nic = _NODE(nics, "nic");
@@ -1473,11 +1646,11 @@ static void create_dummy_instance(const char *file)
     _ELEMENT(states, "retries", "3");
     _ELEMENT(states, "stateName", "Extant");
     _ELEMENT(states, "bundleTaskStateName", "None");
+    _ELEMENT(states, "bundleTaskProgress", "0.0");
     _ELEMENT(states, "createImageTaskStateName", "None");
     _ELEMENT(states, "stateCode", "4");
     _ELEMENT(states, "state", "Extant");
     _ELEMENT(states, "bundleTaskState", "none");
-    _ELEMENT(states, "bundlePid", "9876");
     _ELEMENT(states, "bundleBucketExists", "true");
     _ELEMENT(states, "bundleCanceled", "false");
     _ELEMENT(states, "guestStateName", "poweredOn");
@@ -1535,6 +1708,7 @@ int main(int argc, char **argv)
 
     create_dummy_instance(in_path);
     LOGINFO("wrote dummy XML to %s\n", in_path);
+    //cat (in_path);
 
     ncInstance instance;
     ncInstance instance2;
@@ -1586,11 +1760,32 @@ int main(int argc, char **argv)
         LOGERROR("failed to see XML in buffer\n");
         goto out;
     }
-    cat(out_path);
+    //cat(out_path);
+
+    LOGINFO("trying out get_xpath_* functions\n");
+    char buf[1024];
+    char * xpath1 = "/domain/devices/disk[1]/source/@file";
+    if (get_xpath_content_at(out_path, xpath1, 0, buf, sizeof(buf)) == NULL) {
+        err = EUCA_ERROR;
+        LOGERROR("failed to read xpath '%s' from '%s'\n", xpath1, out_path);
+        goto out;
+    }
+    LOGINFO("extracted %s as {%s}\n", xpath1, buf);
+    char * xpath2 = "/domain/devices/disk[1]";
+    if (get_xpath_xml(out_path, xpath2, buf, sizeof(buf)) != EUCA_OK) {
+        err = EUCA_ERROR;
+        LOGERROR("failed to read xpath '%s' XML from '%s'\n", xpath2, out_path);
+        goto out;
+    }
+    LOGINFO("extracted %s as {%s}\n", xpath2, buf);
 
 out:
-    remove(out_path);
-    remove(in_path);
+    if (err) {
+        LOGINFO("leaving around files %s and %s\n", out_path, in_path);
+    } else {
+        remove(out_path);
+        remove(in_path);
+    }
     EUCA_FREE(in_path);
     EUCA_FREE(out_path);
     return (err);

@@ -20,13 +20,14 @@
 
 package com.eucalyptus.util
 
-import com.google.common.base.Function
 import com.google.common.base.Optional
 import com.google.common.base.Predicate
 import com.google.common.base.Splitter
+import com.google.common.collect.Lists
 import com.google.common.net.InetAddresses
 import com.google.common.primitives.Ints
 import com.google.common.primitives.Longs
+import com.google.common.primitives.UnsignedInteger
 import groovy.transform.CompileStatic
 import groovy.transform.Immutable
 
@@ -114,7 +115,30 @@ class Cidr implements Predicate<InetAddress> {
     ( ip & prefixMask( prefix ) ) == this.ip
   }
 
-  private static int prefixMask( int prefix ) {
+  boolean contains( Cidr cidr ) {
+    ( cidr.ip & prefixMask( prefix ) ) == this.ip && cidr.prefix >= this.prefix
+  }
+
+  Predicate<Cidr> contains( ) {
+    { Cidr cidr -> contains( cidr ) } as Predicate<Cidr>
+  }
+
+  Predicate<Cidr> containedBy( ) {
+    { Cidr cidr -> cidr.contains( this ) } as Predicate<Cidr>
+  }
+
+  Iterable<Cidr> split( final int parts ) {
+    final List<Cidr> cidrs = Lists.newArrayList( )
+    final int bits = parts==1 ? 0 : Numbers.log2( parts - 1 ) + 1
+    final int maxParts = (int) Math.pow( 2, bits )
+    final UnsignedInteger size = UnsignedInteger.fromIntBits( (int) Math.pow( 2, ( 32 - prefix ) ) ).dividedBy( UnsignedInteger.fromIntBits( maxParts ) )
+    for ( int i=0; i < parts; i++ ) {
+      cidrs.add( of( UnsignedInteger.fromIntBits( getIp( ) ).plus( size.times( UnsignedInteger.fromIntBits( i ) ) ).intValue( ), prefix + bits ) )
+    }
+    cidrs
+  }
+
+  static int prefixMask( int prefix ) {
     if ( prefix == 0 ) return 0
     BitSet bitSet = new BitSet( 32 )
     bitSet.flip( 32 - prefix, 32 )
@@ -122,14 +146,18 @@ class Cidr implements Predicate<InetAddress> {
     Ints.fromBytes( bytes[4], bytes[5], bytes[6], bytes[7] )
   }
 
-  static Function<String, Optional<Cidr>> parse( ) {
+  static NonNullFunction<String, Optional<Cidr>> parse( ) {
     CidrParse.INSTANCE
+  }
+
+  static NonNullFunction<Cidr, Integer> prefix( ) {
+    CidrPrefix.INSTANCE
   }
 
   /**
    * @return A function that can throw IllegalArgumentException on parsing
    */
-  static Function<String, Cidr> parseUnsafe( ) {
+  static NonNullFunction<String, Cidr> parseUnsafe( ) {
     CidrParseUnsafe.INSTANCE
   }
 
@@ -169,7 +197,7 @@ class Cidr implements Predicate<InetAddress> {
         contains( InetAddresses.coerceToInteger( inetAddress ) )
   }
 
-  private static enum CidrParse implements Function<String,Optional<Cidr>> {
+  private static enum CidrParse implements NonNullFunction<String,Optional<Cidr>> {
     INSTANCE;
 
     @Override
@@ -182,12 +210,21 @@ class Cidr implements Predicate<InetAddress> {
     }
   }
 
-  private static enum CidrParseUnsafe implements Function<String,Cidr> {
+  private static enum CidrParseUnsafe implements NonNullFunction<String,Cidr> {
     INSTANCE;
 
     @Override
     Cidr apply( @Nullable final String cidr ) {
       parse( cidr )
+    }
+  }
+
+  private static enum CidrPrefix implements NonNullFunction<Cidr,Integer> {
+    INSTANCE;
+
+    @Override
+    Integer apply( @Nullable final Cidr cidr ) {
+      cidr?.prefix
     }
   }
 }

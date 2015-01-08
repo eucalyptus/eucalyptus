@@ -65,7 +65,9 @@ package edu.ucsb.eucalyptus.msgs;
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.UUID;
+
 import javax.persistence.Transient;
+
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -73,11 +75,14 @@ import org.jibx.runtime.BindingDirectory;
 import org.jibx.runtime.IBindingFactory;
 import org.jibx.runtime.IMarshallingContext;
 import org.jibx.runtime.JiBXException;
+
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.http.MappingHttpMessage;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
@@ -85,7 +90,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-public class BaseMessage {
+public class BaseMessage implements BaseMessageMarker {
   @Transient
   private static Logger        LOG       = Logger.getLogger( BaseMessage.class );
   private String               correlationId;
@@ -207,38 +212,69 @@ public class BaseMessage {
    * @return
    */
   public <TYPE extends BaseMessage> TYPE regarding( ) {
-    regarding( null, null );
+    regarding( null );
     return ( TYPE ) this;
   }
   
   public <TYPE extends BaseMessage> TYPE regarding( BaseMessage msg ) {
-    return ( TYPE ) regarding( msg, String.format( "%f", Math.random( ) ).substring( 2 ) );
+    this.correlationId = UUID.randomUUID( ).toString( );
+    this.userId = Principals.systemFullName( ).getUserName( );
+    this.effectiveUserId = Principals.systemFullName( ).getUserName( );
+    
+    return ( TYPE ) this;
   }
   
   public <TYPE extends BaseMessage> TYPE regardingUserRequest( BaseMessage msg ) {
-    return ( TYPE ) regardingUserRequest( msg, String.format( "%f", Math.random( ) ).substring( 2 ) );
-  }
-  
-  public <TYPE extends BaseMessage> TYPE regarding( BaseMessage msg, String subCorrelationId ) {
-    String corrId = null;
-    if ( msg == null ) {
-      this.correlationId = UUID.randomUUID( ).toString( );
-    } else {
-      corrId = msg.correlationId;
-    }
-    if ( subCorrelationId == null ) {
-      subCorrelationId = String.format( "%f", Math.random( ) ).substring( 2 );
-    }
-    this.userId = Principals.systemFullName( ).getUserName( );
-    this.effectiveUserId = Principals.systemFullName( ).getUserName( );
-    this.correlationId = corrId + "-" + subCorrelationId;
-    return ( TYPE ) this;
-  }
-  
-  public <TYPE extends BaseMessage> TYPE regardingUserRequest( BaseMessage msg, String subCorrelationId ) {
-    this.correlationId = msg.getCorrelationId( ) + "-" + subCorrelationId;
     this.userId = msg.userId;
+    return ( TYPE ) this;  
+  }
+  
+  public <TYPE extends BaseMessage> TYPE lookupAndSetCorrelationId(){
+    String corrId = null;
+    try{
+      corrId = Contexts.lookup().getCorrelationId();
+    }catch(final Exception ex){
+      corrId = Threads.getCorrelationId();
+    }
+    if(corrId != null && corrId.length()>=36){
+      return this.regardingRequestId(corrId);
+    }else
+      return ( TYPE ) this;
+  }
+  
+  public <TYPE extends BaseMessage> TYPE regardingRequestId(final String msgId){
+    if(msgId!=null){
+      String requestId = null;
+      String postfix = null;
+      if (! msgId.contains("::")){
+        requestId = msgId;
+        postfix = requestId;
+      }
+      else {
+        requestId = msgId.substring(0, msgId.indexOf("::"));
+        postfix = msgId.substring(msgId.indexOf("::")+2);
+      }
+      String uuid = null;
+      try{
+        String baseHex = postfix.substring(9,13);
+        Integer baseHexInt = Integer.parseInt(baseHex, 16);
+        Integer newHexInt = (baseHexInt+1) % 65536;
+        String newHex = Integer.toHexString(newHexInt);
+        while(newHex.length()<4) {
+          newHex = "0"+newHex;
+        }
+        uuid = UUID.randomUUID( ).toString( );
+        uuid = uuid.substring(0, 9) + newHex + uuid.substring(13);
+      }catch(final Exception ex){
+        uuid = UUID.randomUUID( ).toString( );  
+      }
+      this.correlationId = String.format("%s::%s", requestId, uuid);
+    }
     return ( TYPE ) this;
+  }
+  
+  public boolean hasRequestId(){
+    return this.correlationId!=null && this.correlationId.indexOf("::") > 0;
   }
     
   public String toString( ) {

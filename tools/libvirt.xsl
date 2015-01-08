@@ -110,12 +110,20 @@ that describes a Eucalyptus instance to be launched.
                         <xsl:if test="/instance/kernel!='' and /instance/ramdisk!=''">
                             <xsl:choose>
                                 <xsl:when test="(/instance/hypervisor/@type = 'kvm' or /instance/hypervisor/@type = 'qemu') and /instance/os/@virtioRoot = 'true'">
-                                     <cmdline>root=/dev/vda1 console=ttyS0</cmdline>
-                                     <root>/dev/vda1</root>
+                                  <cmdline>
+                                    <xsl:choose>
+                                      <xsl:when test="/instance/rootDirective!=''">root=<xsl:value-of select="/instance/rootDirective"/> console=ttyS0</xsl:when>
+                                      <xsl:otherwise>root=/dev/vda1 console=ttyS0</xsl:otherwise>
+                                    </xsl:choose>
+                                  </cmdline>
                                 </xsl:when>
                                 <xsl:otherwise>
-			             <cmdline>root=/dev/sda1 console=ttyS0</cmdline>
-                                     <root>/dev/sda1</root>
+                                  <cmdline>
+                                    <xsl:choose>
+                                      <xsl:when test="/instance/rootDirective!=''">root=<xsl:value-of select="/instance/rootDirective"/> console=ttyS0</xsl:when>
+                                      <xsl:otherwise>root=/dev/sda1 console=ttyS0</xsl:otherwise>
+                                    </xsl:choose>
+                                  </cmdline>
                                 </xsl:otherwise>
                             </xsl:choose>
                         </xsl:if>
@@ -146,6 +154,19 @@ that describes a Eucalyptus instance to be launched.
             <vcpu>
                 <xsl:value-of select="/instance/cores"/>
             </vcpu>
+            <cpu>
+              <topology>
+                <xsl:attribute name="sockets">
+		  <xsl:value-of select="/instance/cores"/>
+		</xsl:attribute>
+                <xsl:attribute name="cores">
+		  <xsl:value-of select="/instance/cores"/>
+		</xsl:attribute>
+                <xsl:attribute name="threads">
+		  <xsl:value-of select="/instance/cores"/>
+		</xsl:attribute>
+	      </topology>
+            </cpu>
             <memory>
                 <xsl:value-of select="/instance/memoryKB"/>
             </memory>
@@ -161,7 +182,7 @@ that describes a Eucalyptus instance to be launched.
                     </xsl:choose>
                 </xsl:if>
 
-                <!-- disks or partitions (Xen) -->
+                <!-- disks or partitions (on Xen) from VBR -->
 
                 <xsl:for-each select="/instance/disks/diskPath">
                     <disk>
@@ -235,6 +256,12 @@ that describes a Eucalyptus instance to be launched.
                     </disk>
                 </xsl:if>
 
+		<!-- disks backed by EBS -->
+
+                <xsl:for-each select="/instance/volumes/volume/libvirt">
+		    <xsl:copy-of select="node()"/>
+		</xsl:for-each>
+
                 <!-- network cards -->
 
                 <xsl:for-each select="/instance/nics/nic">
@@ -249,6 +276,11 @@ that describes a Eucalyptus instance to be launched.
                                 <xsl:value-of select="@mac"/>
                             </xsl:attribute>
                         </mac>
+			<target>
+                          <xsl:attribute name="dev">
+                            <xsl:value-of select="@guestDeviceName"/>
+                          </xsl:attribute>
+                        </target>
                         <xsl:choose>
                             <xsl:when test="(/instance/hypervisor/@type='kvm' or /instance/hypervisor/@type = 'qemu') and /instance/os/@platform = 'windows'">
                                 <model type="virtio"/>

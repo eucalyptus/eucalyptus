@@ -62,7 +62,9 @@
             <inbound>
                 <inbound-endpoint ref="AutoScalingWS" />
             </inbound>
-            <component class="com.eucalyptus.autoscaling.service.AutoScalingService" />
+            <component>
+                <spring-object bean="autoScalingService"/>
+            </component>
             <outbound>
                 <filtering-router>
                     <outbound-endpoint ref="ReplyQueueEndpoint" />
@@ -75,7 +77,9 @@
             <inbound>
                 <inbound-endpoint ref="AutoScalingErrorQueueWS" />
             </inbound>
-            <component class="com.eucalyptus.autoscaling.service.ws.AutoScalingErrorHandler" />
+            <component>
+                <spring-object bean="autoScalingErrorHandler"/>
+            </component>
         </service>
 
     </model>
@@ -85,7 +89,9 @@
                 <inbound-endpoint ref="AutoScalingInternalWS" />
                 <inbound-endpoint ref="AutoScalingInternalVM" />
             </inbound>
-            <component class="com.eucalyptus.autoscaling.service.AutoScalingService" />
+            <component>
+                <spring-object bean="autoScalingService"/>
+            </component>
         </service>
     </model>
 

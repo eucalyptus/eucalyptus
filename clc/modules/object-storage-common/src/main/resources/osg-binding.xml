@@ -232,6 +232,7 @@
 
     <mapping name="SetObjectAccessControlPolicyTypeResponse"
              class="com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyResponseType">
+        <value name="VersionId" field="versionId" usage="optional"/>
     </mapping>
 
     <mapping name="CreateBucket"
@@ -460,6 +461,12 @@
                 map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType"/>
     </mapping>
 
+    <mapping class="com.eucalyptus.objectstorage.msgs.DeleteResponseType"
+             abstract="true">
+        <value name="VersionId" field="versionId" usage="optional"/>
+        <value name="IsDeleteMarker" field="isDeleteMarker" usage="optional"/>
+    </mapping>
+    
     <mapping name="DeleteObject"
              class="com.eucalyptus.objectstorage.msgs.DeleteObjectType"
              extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
@@ -469,7 +476,11 @@
     </mapping>
 
     <mapping name="DeleteObjectResponse"
-             class="com.eucalyptus.objectstorage.msgs.DeleteObjectResponseType">
+             class="com.eucalyptus.objectstorage.msgs.DeleteObjectResponseType"
+             extends="com.eucalyptus.objectstorage.msgs.DeleteResponseType">
+        <structure
+                map-as="com.eucalyptus.objectstorage.msgs.DeleteResponseType"
+                usage="optional"/>
     </mapping>
 
     <mapping name="DeleteVersion"
@@ -482,9 +493,13 @@
     </mapping>
 
     <mapping name="DeleteVersionResponse"
-             class="com.eucalyptus.objectstorage.msgs.DeleteVersionResponseType">
+             class="com.eucalyptus.objectstorage.msgs.DeleteVersionResponseType"
+             extends="com.eucalyptus.objectstorage.msgs.DeleteResponseType">
+        <structure
+                map-as="com.eucalyptus.objectstorage.msgs.DeleteResponseType"
+                usage="optional"/>
     </mapping>
-
+    
     <mapping name="GetBucketLocation"
              class="com.eucalyptus.objectstorage.msgs.GetBucketLocationType"
              extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
@@ -636,9 +651,9 @@
         <structure name="Owner" field="owner"
                    map-as="com.eucalyptus.storage.msgs.s3.CanonicalUser"/>
         <value name="StorageClass" field="storageClass"/>
-        <value name="PartNumberMarker" field="partNumberMarker" usage="optional"/>
-        <value name="NextPartNumberMarker" field="nextPartNumberMarker" usage="optional"/>
-        <value name="MaxParts" field="maxParts" usage="optional"/>
+        <value name="PartNumberMarker" field="partNumberMarker"/>
+        <value name="NextPartNumberMarker" field="nextPartNumberMarker"/>
+        <value name="MaxParts" field="maxParts"/>
         <value name="IsTruncated" field="isTruncated"/>
         <collection factory="org.jibx.runtime.Utility.arrayListFactory"
                     field="parts">
@@ -660,18 +675,18 @@
              class="com.eucalyptus.objectstorage.msgs.ListMultipartUploadsResponseType">
         <structure map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType"/>
         <value name="Bucket" field="bucket"/>
-        <value name="KeyMarker" field="keyMarker" usage="optional"/>
-        <value name="UploadIdMarker" field="uploadIdMarker" usage="optional"/>
-        <value name="NextKeyMarker" field="nextKeyMarker" usage="optional"/>
-        <value name="NextUploadIdMarker" field="nextUploadIdMarker" usage="optional"/>
-        <value name="MaxUploads" field="maxUploads" usage="optional"/>
-        <value name="IsTruncated" field="isTruncated" usage="optional"/>
+        <value name="KeyMarker" field="keyMarker"/>
+        <value name="UploadIdMarker" field="uploadIdMarker"/>
+        <value name="NextKeyMarker" field="nextKeyMarker"/>
+        <value name="NextUploadIdMarker" field="nextUploadIdMarker"/>
+		<value name="Delimiter" field="delimiter" usage="optional"/>
+        <value name="Prefix" field="prefix" usage="optional"/>
+        <value name="MaxUploads" field="maxUploads"/>
+        <value name="IsTruncated" field="isTruncated"/>
         <collection factory="org.jibx.runtime.Utility.arrayListFactory"
                     field="uploads">
             <structure name="Upload" map-as="com.eucalyptus.storage.msgs.s3.Upload"/>
         </collection>
-        <value name="Prefix" field="prefix" usage="optional"/>
-        <value name="Delimiter" field="delimiter" usage="optional"/>
         <collection field="commonPrefixes"
                     factory="org.jibx.runtime.Utility.arrayListFactory">
             <structure map-as="com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry"/>
@@ -715,6 +730,46 @@
     <mapping name="DeleteBucketLifecycleResponse"
              class="com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleResponseType">
     </mapping>
+
+    <!-- BUCKET TAGGING -->
+    <mapping name="SetBucketTagging"
+             class="com.eucalyptus.objectstorage.msgs.SetBucketTaggingType"
+             extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
+        <structure field="taggingConfiguration" usage="optional"
+                   map-as="com.eucalyptus.storage.msgs.s3.TaggingConfiguration"/>
+    </mapping>
+
+    <mapping name="SetBucketTaggingResponse"
+             class="com.eucalyptus.objectstorage.msgs.SetBucketTaggingResponseType">
+    </mapping>
+
+    <mapping name="GetBucketTagging"
+             class="com.eucalyptus.objectstorage.msgs.GetBucketTaggingType"
+             extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
+        <structure
+                map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
+                usage="optional"/>
+    </mapping>
+
+    <mapping
+            class="com.eucalyptus.objectstorage.msgs.GetBucketTaggingResponseType"
+            abstract="true">
+        <structure field="taggingConfiguration" usage="optional"
+                   map-as="com.eucalyptus.storage.msgs.s3.TaggingConfiguration"/>
+    </mapping>
+
+    <mapping name="DeleteBucketTagging"
+             class="com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingType"
+             extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
+        <structure
+                map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
+                usage="optional"/>
+    </mapping>
+
+    <mapping name="DeleteBucketTaggingResponse"
+             class="com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingResponseType">
+    </mapping>
+
 
 </binding>
         

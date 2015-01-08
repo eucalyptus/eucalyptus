@@ -133,4 +133,7 @@
     </service>
   </model>
 
+  <spring:beans>
+    <spring:import resource="classpath:eucalyptus-context.xml"/>
+  </spring:beans>
 </mule>

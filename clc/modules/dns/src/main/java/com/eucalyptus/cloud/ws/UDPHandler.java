@@ -99,6 +99,8 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.util.concurrent.Callable;
 
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Message;
 import org.xbill.DNS.Rcode;
@@ -107,7 +109,12 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.system.Threads;
 
+@ConfigurableClass( root = "dns.udp",
+		description = "Handles udp listeners." )
+
 public class UDPHandler extends Thread {
+	@ConfigurableField( description = "Parameter controlling the number of UDP worker threads." )
+	public static Integer num_worker_threads = 128;
 	private static Logger LOG = Logger.getLogger( UDPHandler.class );
 
 	DatagramSocket socket;
@@ -132,7 +139,7 @@ public class UDPHandler extends Thread {
 					continue;
 				}
 				try{
-				  Threads.enqueue(Dns.class, UDPHandler.class, new UDPWorker(this.socket, indp, in));
+				  Threads.enqueue(Dns.class, UDPHandler.class, num_worker_threads, new UDPWorker(this.socket, indp, in));
 				}catch(Exception ex){
 				  LOG.error("failed to run dns UDP worker");
 				}

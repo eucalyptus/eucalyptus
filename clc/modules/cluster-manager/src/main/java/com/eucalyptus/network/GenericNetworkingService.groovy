@@ -44,8 +44,10 @@ import com.eucalyptus.compute.common.network.UpdateNetworkResourcesResponseType
 import com.eucalyptus.compute.common.network.UpdateNetworkResourcesType
 import com.eucalyptus.entities.Entities
 import com.eucalyptus.util.EucalyptusCloudException
+import com.eucalyptus.util.Exceptions
 import groovy.transform.CompileStatic
 import org.apache.log4j.Logger
+import org.hibernate.exception.ConstraintViolationException
 
 import javax.persistence.EntityTransaction
 
@@ -132,8 +134,8 @@ class GenericNetworkingService extends NetworkingServiceSupport {
     DescribeNetworkingFeaturesResponseType.cast( request.reply(new DescribeNetworkingFeaturesResponseType(
         describeNetworkingFeaturesResult : new DescribeNetworkingFeaturesResult(
             networkingFeatures: NetworkGroups.networkingConfiguration( ).hasNetworking( ) ?
-                [ ElasticIPs ] as ArrayList<NetworkingFeature>:
-                [ ] as ArrayList<NetworkingFeature>
+                [ Classic, ElasticIPs ] as ArrayList<NetworkingFeature>:
+                [ Classic ] as ArrayList<NetworkingFeature>
         )
     ) ) )
   }
@@ -160,51 +162,70 @@ class GenericNetworkingService extends NetworkingServiceSupport {
 
   private Collection<NetworkResource> prepareSecurityGroup( final PrepareNetworkResourcesType request,
                                                             final SecurityGroupResource securityGroupResource ) {
-    final List<NetworkResource> resources = [ ]
-    Entities.transaction( NetworkGroup ) { EntityTransaction db ->
-      final NetworkGroup networkGroup =
-          Entities.uniqueResult( NetworkGroup.withGroupId( null, securityGroupResource.value ) );
-      final Set<String> identifiers = []
-      // specific values requested, restore case
-      request.getResources( ).findAll{ it instanceof PrivateNetworkIndexResource }.each {
-        PrivateNetworkIndexResource privateNetworkIndexResource ->
-          if ( identifiers.add( privateNetworkIndexResource.ownerId ) ) {
-            Integer restoreVlan = Integer.valueOf( privateNetworkIndexResource.tag )
-            Long restoreNetworkIndex = Long.valueOf( privateNetworkIndexResource.value )
-            if ( networkGroup.hasExtantNetwork( ) && networkGroup.extantNetwork( ).getTag( ) == restoreVlan ) {
-              logger.info( "Found matching extant network for ${privateNetworkIndexResource.ownerId}: ${networkGroup.extantNetwork( )}" );
-              networkGroup.extantNetwork( ).reclaimNetworkIndex( restoreNetworkIndex );
-            } else if ( networkGroup.hasExtantNetwork( ) && networkGroup.extantNetwork( ).getTag( ) != restoreVlan ) {
-              throw new EucalyptusCloudException( "Found conflicting extant network for ${privateNetworkIndexResource.ownerId}: ${networkGroup.extantNetwork( )}" )
-            } else {
-              logger.info( "Restoring extant network for ${privateNetworkIndexResource.ownerId}: ${restoreVlan}" );
-              ExtantNetwork exNet = networkGroup.reclaim( restoreVlan );
-              logger.debug( "Restored extant network for ${privateNetworkIndexResource.ownerId}: ${networkGroup.extantNetwork( )}" );
-              logger.info( "Restoring private network index for ${privateNetworkIndexResource.ownerId}: ${restoreNetworkIndex}" );
-              exNet.reclaimNetworkIndex( restoreNetworkIndex );
+    int retries = 5;
+    while ( true ) {
+      retries--;
+      try {
+        return Entities.transaction(NetworkGroup) { EntityTransaction db ->
+          final List<NetworkResource> resources = [ ]
+          final NetworkGroup networkGroup =
+              Entities.uniqueResult( NetworkGroup.withGroupId( null, securityGroupResource.value ) );
+          if ( !networkGroup.hasExtantNetwork( ) ) {
+            networkGroup.extantNetwork( )
+            try {
+              Entities.flush( NetworkGroup ) // will fail on conflict
+            } catch ( Exception e ) {
+              if ( retries > 0 && Exceptions.isCausedBy( e, ConstraintViolationException ) ) {
+                throw new RetryTransactionException( )
+              }
+              throw e;
             }
-            resources.add( new PrivateNetworkIndexResource(
-                tag: String.valueOf( restoreVlan ),
-                value: String.valueOf( restoreNetworkIndex ),
-                ownerId: privateNetworkIndexResource.ownerId
-            ) )
           }
-      }
+          final Set<String> identifiers = []
+          // specific values requested, restore case
+          request.getResources( ).findAll{ it instanceof PrivateNetworkIndexResource }.each {
+            PrivateNetworkIndexResource privateNetworkIndexResource ->
+              if ( identifiers.add( privateNetworkIndexResource.ownerId ) ) {
+                Integer restoreVlan = Integer.valueOf( privateNetworkIndexResource.tag )
+                Long restoreNetworkIndex = Long.valueOf( privateNetworkIndexResource.value )
+                if ( networkGroup.hasExtantNetwork( ) && networkGroup.extantNetwork( ).getTag( ) == restoreVlan ) {
+                  logger.info( "Found matching extant network for ${privateNetworkIndexResource.ownerId}: ${networkGroup.extantNetwork( )}" );
+                  networkGroup.extantNetwork( ).reclaimNetworkIndex( restoreNetworkIndex );
+                } else if ( networkGroup.hasExtantNetwork( ) && networkGroup.extantNetwork( ).getTag( ) != restoreVlan ) {
+                  throw new EucalyptusCloudException( "Found conflicting extant network for ${privateNetworkIndexResource.ownerId}: ${networkGroup.extantNetwork( )}" )
+                } else {
+                  logger.info( "Restoring extant network for ${privateNetworkIndexResource.ownerId}: ${restoreVlan}" );
+                  ExtantNetwork exNet = networkGroup.reclaim( restoreVlan );
+                  logger.debug( "Restored extant network for ${privateNetworkIndexResource.ownerId}: ${networkGroup.extantNetwork( )}" );
+                  logger.info( "Restoring private network index for ${privateNetworkIndexResource.ownerId}: ${restoreNetworkIndex}" );
+                  exNet.reclaimNetworkIndex( restoreNetworkIndex );
+                }
+                resources.add( new PrivateNetworkIndexResource(
+                    tag: String.valueOf( restoreVlan ),
+                    value: String.valueOf( restoreNetworkIndex ),
+                    ownerId: privateNetworkIndexResource.ownerId
+                ) )
+              }
+          }
 
-      // regular prepare case
-      request.getResources( ).findAll{ it instanceof PrivateIPResource }.each { PrivateIPResource privateIPResource ->
-        if ( identifiers.add( privateIPResource.ownerId ) ) {
-          resources.add( new PrivateNetworkIndexResource(
-              tag: String.valueOf( networkGroup.extantNetwork( ).getTag( ) ),
-              value: String.valueOf( networkGroup.extantNetwork( ).allocateNetworkIndex( ).index ),
-              ownerId: privateIPResource.ownerId
-          ) )
+          // regular prepare case
+          request.getResources( ).findAll{ it instanceof PrivateIPResource }.each { PrivateIPResource privateIPResource ->
+            if ( identifiers.add( privateIPResource.ownerId ) ) {
+              resources.add( new PrivateNetworkIndexResource(
+                  tag: String.valueOf( networkGroup.extantNetwork( ).getTag( ) ),
+                  value: String.valueOf( networkGroup.extantNetwork( ).allocateNetworkIndex( ).index ),
+                  ownerId: privateIPResource.ownerId
+              ) )
+            }
+          }
+
+          db.commit( )
+          resources
         }
+      } catch ( RetryTransactionException retry ) {
+        //
       }
-
-      db.commit( );
     }
-    resources
   }
 
   private void updateClusterConfiguration( final Cluster cluster,
@@ -222,5 +243,8 @@ class GenericNetworkingService extends NetworkingServiceSupport {
       config.setVnetSubnet( reply.getVnetSubnet( ) );
       db.commit( );
     }
+  }
+
+  private static class RetryTransactionException extends RuntimeException {
   }
 }

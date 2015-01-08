@@ -403,64 +403,23 @@ public abstract class S3AccessControlledEntity<STATE extends Enum<STATE>> extend
         @Override
         public Map<String, Integer> apply(AccessControlList srcList) {
             HashMap<String, Integer> aclMap = new HashMap<String, Integer>();
-            String canonicalId = null;
+
             if (srcList == null) {
                 //Nothing to do
                 return aclMap;
             }
-            Grantee grantee;
-            CanonicalUser canonicalUser;
-            Group group;
-            String email;
 
-            try {
-                for (Grant g : srcList.getGrants()) {
-                    grantee = g.getGrantee();
-                    if (grantee == null) {
-                        continue; //skip, no grantee
-                    } else {
-                        canonicalUser = grantee.getCanonicalUser();
-                        group = grantee.getGroup();
-                        email = grantee.getEmailAddress();
-                    }
+            AclUtils.scrubAcl(srcList);
 
-                    if (canonicalUser != null && !Strings.isNullOrEmpty(canonicalUser.getID())) {
-                        //CanonicalId
-                        try {
-                            //Check validity of the canonicalId
-                            canonicalId = Accounts.lookupAccountByCanonicalId(canonicalUser.getID()).getCanonicalId();
-                        } catch (AuthException e) {
-                            //For legacy support, also check the account Id. Euca used to use AccountId instead of canoncialId.
-                            canonicalId = Accounts.lookupAccountById(canonicalUser.getID()).getCanonicalId();
-                        }
-                    } else if (!Strings.isNullOrEmpty(email)) {
-                        //Email
-                        canonicalId = Accounts.lookupUserByEmailAddress(email).getAccount().getCanonicalId();
-                    } else if (group != null && !Strings.isNullOrEmpty(group.getUri())) {
-                        ObjectStorageProperties.S3_GROUP foundGroup = AclUtils.getGroupFromUri(group.getUri());
-                        if (foundGroup == null) {
-                            throw new NoSuchElementException("URI: " + group.getUri() + " not found in group map");
-                        }
-                        //Group URI, use as canonicalId for now.
-                        canonicalId = group.getUri();
-                    }
-
-                    if (canonicalId == null) {
-                        throw new NoSuchElementException("No canonicalId found for grant: " + g.toString());
-                    } else {
-                        //Add permission to existing grant if exists, or create a new one
-                        int oldGrant = (aclMap.containsKey(canonicalId) ? aclMap.get(canonicalId) : 0);
-                        int newGrant = BitmapGrant.add(ObjectStorageProperties.Permission.valueOf(g.getPermission().toUpperCase()), oldGrant);
-                        if (newGrant != 0) {
-                            aclMap.put(canonicalId, newGrant);
-                        } else {
-                            //skip no-op grants
-                        }
-                    }
+            for (Grant g : srcList.getGrants()) {
+                String canonicalId = g.getGrantee().getCanonicalUser().getID();
+                int oldGrant = (aclMap.containsKey(canonicalId) ? aclMap.get(canonicalId) : 0);
+                int newGrant = BitmapGrant.add(ObjectStorageProperties.Permission.valueOf(g.getPermission().toUpperCase()), oldGrant);
+                if (newGrant != 0) {
+                    aclMap.put(canonicalId, newGrant);
+                } else {
+                    //skip no-op grants
                 }
-            } catch (Exception e) {
-                LOG.warn("Error turning AccessControlList into kv map", e);
-                throw new RuntimeException(e);
             }
 
             return aclMap;

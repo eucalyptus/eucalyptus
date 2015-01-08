@@ -85,11 +85,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import javax.annotation.Nullable;
 
 import com.eucalyptus.component.*;
-import com.eucalyptus.node.NodeController;
+
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
@@ -166,9 +168,10 @@ import com.google.common.collect.ForwardingMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.ObjectArrays;
+
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.MigrateInstancesType;
+import edu.ucsb.eucalyptus.msgs.ClusterMigrateInstancesType;
 import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
 import edu.ucsb.eucalyptus.msgs.NodeLogInfo;
 
@@ -359,7 +362,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       } else {
         ServiceConfiguration config = parent.getConfiguration( );
         for ( ServiceStatusType status : serviceStatuses ) {
-          if ( "self".equals( status.getServiceId( ).getName( ) ) ) {
+          if ( "self".equals( status.getServiceId( ).getName( ) ) || !config.getName( ).equals( status.getServiceId( ).getName( ) ) ) {
             status.setServiceId( TypeMappers.transform( parent.getConfiguration( ), ServiceId.class ) );
           }
           if ( status.getServiceId() == null || status.getServiceId().getName() == null || status.getServiceId().getType() == null ) {
@@ -1425,7 +1428,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         this.prepareInstanceEvacuations( sourceHost );
         //#5 Send the MigrateInstances operation.
         try {
-          AsyncRequests.sendSync( this.getConfiguration( ), new MigrateInstancesType( ) {
+          AsyncRequests.sendSync( this.getConfiguration( ), new ClusterMigrateInstancesType( ) {
             {
               this.setCorrelationId( Contexts.lookup( ).getCorrelationId( ) );
               this.setSourceHost( sourceHost );
@@ -1461,7 +1464,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
    * <li> Update node and resource information; describe resources.
    * <li> Unmark this cluster as gated.
    * </ol>
-   * @param sourceHost
    * @param destHostsWhiteList -- the destination host list is a white list when true and a black list when false
    * @param destHosts -- list of hosts which are either a white list or black list based on {@code destHostsWhiteList}
    * @throws EucalyptusCloudException 
@@ -1483,7 +1485,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         this.prepareInstanceMigrations( instanceId );
         //#5 Send the MigrateInstances operation.
         try {
-          AsyncRequests.sendSync( this.getConfiguration( ), new MigrateInstancesType( ) {
+          AsyncRequests.sendSync( this.getConfiguration( ), new ClusterMigrateInstancesType( ) {
             {
               this.setCorrelationId( Contexts.lookup( ).getCorrelationId( ) );
               this.setInstanceId( instanceId );

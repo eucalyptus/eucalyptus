@@ -38,7 +38,9 @@ public class NetworkGroupComputePolicyContextTransform implements Function<Netwo
       @Nullable
       @Override
       public String getVpcArn() {
-        return null;
+        return input.getVpcId( ) == null ?
+            null :
+            "arn:aws:ec2::" + input.getOwnerAccountNumber( ) + ":vpc/" + input.getVpcId();
       }
     };
   }

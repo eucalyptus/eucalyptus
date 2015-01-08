@@ -64,7 +64,6 @@ package com.eucalyptus.auth.principal;
 
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.*;
-import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
@@ -256,6 +255,6 @@ public class UserFullName implements OwnerFullName {
   }
   
   public AccountFullName asAccountFullName( ) {
-    return AccountFullName.getInstance( this.getAccountNumber( ) );
+    return new AccountFullName( this );
   }
 }

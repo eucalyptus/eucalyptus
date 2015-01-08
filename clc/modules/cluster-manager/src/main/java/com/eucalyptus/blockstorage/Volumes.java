@@ -261,15 +261,15 @@ public class Volumes {
           if ( !State.ANNIHILATING.equals( initialState ) && !State.ANNIHILATED.equals( initialState ) && maybeBusy ) {
             initialState = State.BUSY;
           }
-          buf.append( "VolumeStateUpdate: " )
-             .append( v.getPartition( ) ).append( " " )
-             .append( v.getDisplayName( ) ).append( " " )
-             .append( v.getState( ) ).append( " " )
-             .append( v.getCreationTimestamp( ) );
+          buf.append( "VolumeStateUpdate: Current Volume Info: [" )
+             .append( "Partition: ").append(v.getPartition( ) ).append( " " )
+             .append( "Name: ").append(v.getDisplayName( ) ).append( " " )
+             .append( "CurrentState: ").append(v.getState( ) ).append( " " )
+             .append( "Created: ").append(v.getCreationTimestamp( ) ).append(" ]");
           if ( vmAttachedVol != null ) {
-            buf.append( " attachment " )
-               .append( vmId ).append( " " )
-               .append( vmAttachedVol.getAttachmentState( ) );
+            buf.append( " Attachment: [ " )
+               .append( "InstanceId: ").append( vmId ).append( " " )
+               .append( "AttachmentState: ").append(vmAttachedVol.getAttachmentState( ) ).append(" ]");
           }
 
           String status = null;
@@ -292,16 +292,21 @@ public class Volumes {
             } else {
               volumeState = Volumes.transformStorageState( v.getState( ), status );
             }
-            buf.append( " storage-volume " )
-                 .append( storageVolume.getStatus( ) ).append( "=>" ).append( volumeState ).append( " " )
-                 .append( storageVolume.getSize( ) ).append( "GB " )
-                 .append( storageVolume.getSnapshotId( ) ).append( " " )
-                 .append( storageVolume.getCreateTime( ) ).append( " " )
-                 .append( storageVolume.getActualDeviceName( ) );
+            buf.append( " Incoming state update: [" )
+                 .append("State: ").append( storageVolume.getStatus( ) ).append( "=>" ).append( volumeState ).append( " " )
+                 .append("Size: ").append( storageVolume.getSize( ) ).append( "GB " )
+                 .append("SourceSnapshotId: ").append( storageVolume.getSnapshotId( ) ).append( " " )
+                 .append("CreationTime: ").append( storageVolume.getCreateTime( ) ).append( " " )
+                 .append("DeviceName: ").append( storageVolume.getActualDeviceName( ) ).append(" ] ");
           } else if ( State.ANNIHILATING.equals( v.getState( ) ) ) {
             volumeState = State.ANNIHILATED;
           } else if ( State.GENERATING.equals( v.getState( ) ) && v.lastUpdateMillis( ) > VOLUME_STATE_TIMEOUT ) {
             volumeState = State.FAIL;
+          } else if ( State.EXTANT.equals( v.getState( ) ) && v.lastUpdateMillis( ) > VOLUME_STATE_TIMEOUT ) {
+              //volume is available but the SC does not know about it.
+              //This is based on a guarantee that the SC will never send partial information
+              //If the SC subsequently reports it as available, it will be recovered
+              volumeState = State.ERROR;
           }
           v.setState( volumeState );
           try {
@@ -319,7 +324,7 @@ public class Volumes {
           //            if ( State.ANNIHILATED.equals( v.getState( ) ) && State.ANNIHILATED.equals( v.getState( ) ) && v.lastUpdateMillis( ) > VOLUME_DELETE_TIMEOUT ) {
           //              Entities.delete( v );
           //            }
-          buf.append( " end-state " ).append( v.getState( ) );
+          buf.append( " Resulting new-state: [" ).append( v.getState( ) ).append("]");
           LOG.debug( buf.toString( ) );
           return v;
         } catch ( final TransactionException ex ) {
@@ -414,7 +419,7 @@ public class Volumes {
       public void fire( final Volume t ) {
         t.setState( State.GENERATING );
         try {
-          final CreateStorageVolumeType req = new CreateStorageVolumeType( t.getDisplayName( ), t.getSize( ), snapId, null ).regarding( request );
+          final CreateStorageVolumeType req = new CreateStorageVolumeType( t.getDisplayName( ), t.getSize( ), snapId, null );
           final CreateStorageVolumeResponseType ret = AsyncRequests.sendSync( sc, req );
           LOG.debug("Volume created");
 
@@ -534,7 +539,12 @@ public class Volumes {
 	  ATTACHMENT_DEVICE {
 		  @Override
 		  public String apply(final Volume vol){
-			return vol.getLocalDevice();
+				try{
+					VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( vol.getDisplayName( ) );
+					return attachment.getDevice( );
+				}catch (final Throwable e) {
+					return null;
+				}
 		  }
 	  },
 	  ATTACHMENT_INSTANCE_ID {

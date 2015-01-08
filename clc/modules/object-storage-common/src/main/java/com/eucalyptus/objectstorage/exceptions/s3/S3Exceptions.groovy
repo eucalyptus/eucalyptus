@@ -62,6 +62,7 @@ class S3ErrorCodeStrings {
     public static final String InvalidSecurity = "InvalidSecurity"
     public static final String InvalidSOAPRequest = "InvalidSOAPRequest"
     public static final String InvalidStorageClass = "InvalidStorageClass"
+    public static final String InvalidTagError = "InvalidTagError"
     public static final String InvalidTargetBucketForLogging = "InvalidTargetBucketForLogging"
     public static final String InvalidToken = "InvalidToken"
     public static final String InvalidURI = "InvalidURI"
@@ -87,6 +88,7 @@ class S3ErrorCodeStrings {
     public static final String NotImplemented = "NotImplemented"
     public static final String NotSignedUp = "NotSignedUp"
     public static final String NotSuchBucketPolicy = "NotSuchBucketPolicy"
+    public static final String NoSuchTagSet = "NoSuchTagSet"
     public static final String OperationAborted = "OperationAborted"
     public static final String PermanentRedirect = "PermanentRedirect"
     public static final String PreconditionFailed = "PreconditionFailed"
@@ -347,6 +349,12 @@ class InvalidArgumentException extends S3Exception {
         this();
         this.resource = resource;
     }
+	
+	def InvalidArgumentException(String resource, String message) {
+		this();
+		this.resource = resource;
+		this.message = message;
+	}
 }
 
 class InvalidBucketNameException extends S3Exception {
@@ -474,6 +482,12 @@ class InvalidRequestException extends S3Exception {
         this();
         this.resource = resource;
     }
+
+	def InvalidRequestException(String resource, String message) {
+		this();
+		this.resource = resource;
+		this.message = message;
+	}
 }
 
 class InvalidSecurityException extends S3Exception {
@@ -784,6 +798,28 @@ class NotSuchBucketPolicyException extends S3Exception {
     }
 }
 
+class NoSuchTagSetException extends S3Exception {
+  def NoSuchTagSetException( ) {
+    super( S3ErrorCodeStrings.NoSuchTagSet, "The TagSet does not exist", HttpResponseStatus.NOT_FOUND )
+  }
+
+  def NoSuchTagSetException( String resource ) {
+    this( );
+    this.resource = resource;
+  }
+}
+
+class InvalidTagErrorException extends S3Exception {
+  def InvalidTagErrorException( ) {
+    super( S3ErrorCodeStrings.InvalidTagError, "The tag provided was not a valid tag", HttpResponseStatus.BAD_REQUEST )
+  }
+
+  def InvalidTagErrorException( String resource ) {
+    this( );
+    this.resource = resource;
+  }
+}
+
 class OperationAbortedException extends S3Exception {
     def OperationAbortedException() {
         super(S3ErrorCodeStrings.OperationAborted, "A conflicting conditional operation is currently in progress against this resource. Please try again.", HttpResponseStatus.CONFLICT);
@@ -1020,6 +1056,7 @@ public enum S3Exceptions {
         exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidSecurity, InvalidSecurityException.class)
         exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidSOAPRequest, InvalidSOAPRequestException.class)
         exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidStorageClass, InvalidStorageClassException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidTagError, InvalidTagErrorException.class)
         exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidTargetBucketForLogging, InvalidTargetBucketForLoggingException.class)
         exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidToken, InvalidTokenException.class)
         exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidURI, InvalidURIException.class)
@@ -1044,6 +1081,7 @@ public enum S3Exceptions {
         exceptionCodeToClassMap.put(S3ErrorCodeStrings.NotImplemented, NotImplementedException.class)
         exceptionCodeToClassMap.put(S3ErrorCodeStrings.NotSignedUp, NotSignedUpException.class)
         exceptionCodeToClassMap.put(S3ErrorCodeStrings.NotSuchBucketPolicy, NotSuchBucketPolicyException.class)
+        exceptionCodeToClassMap.put(S3ErrorCodeStrings.NoSuchTagSet, NoSuchTagSetException.class)
         exceptionCodeToClassMap.put(S3ErrorCodeStrings.OperationAborted, OperationAbortedException.class)
         exceptionCodeToClassMap.put(S3ErrorCodeStrings.PermanentRedirect, PermanentRedirectException.class)
         exceptionCodeToClassMap.put(S3ErrorCodeStrings.PreconditionFailed, PreconditionFailedException.class)

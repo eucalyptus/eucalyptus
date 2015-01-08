@@ -80,17 +80,14 @@ import java.util.regex.Pattern;
 import javax.crypto.Cipher;
 import javax.persistence.EntityNotFoundException;
 
+import com.eucalyptus.blockstorage.entities.*;
+import com.eucalyptus.entities.TransactionResource;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.blockstorage.StorageManagers.StorageManagerProperty;
-import com.eucalyptus.blockstorage.entities.DASInfo;
-import com.eucalyptus.blockstorage.entities.DirectStorageInfo;
-import com.eucalyptus.blockstorage.entities.ISCSIVolumeInfo;
-import com.eucalyptus.blockstorage.entities.LVMVolumeInfo;
-import com.eucalyptus.blockstorage.entities.StorageInfo;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -101,14 +98,12 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.crypto.Ciphers;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.common.CheckerTask;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.google.common.base.Function;
-
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 import edu.ucsb.eucalyptus.util.SystemUtil.CommandOutput;
@@ -276,7 +271,7 @@ public class DASManager implements LogicalStorageManager {
 	public void cleanVolume(String volumeId) {
 		try {
 			updateVolumeGroup();
-			VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+			VolumeMetadataManager volumeManager = new VolumeMetadataManager();
 			LVMVolumeInfo lvmVolInfo = volumeManager.getVolumeInfo(volumeId);
 			if(lvmVolInfo != null) {
 				volumeManager.unexportVolume(lvmVolInfo);
@@ -301,7 +296,7 @@ public class DASManager implements LogicalStorageManager {
 	public void cleanSnapshot(String snapshotId) {
 		try {
 			updateVolumeGroup();
-			VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+			VolumeMetadataManager volumeManager = new VolumeMetadataManager();
 			LVMVolumeInfo lvmVolInfo = volumeManager.getVolumeInfo(snapshotId);
 			if(lvmVolInfo != null) {
 				volumeManager.remove(lvmVolInfo);
@@ -364,7 +359,7 @@ public class DASManager implements LogicalStorageManager {
 		updateVolumeGroup();
 		File volumeDir = new File(DirectStorageInfo.getStorageInfo().getVolumesDir());
 		volumeDir.mkdirs();
-		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		VolumeMetadataManager volumeManager = new VolumeMetadataManager();
 
 		String lvName = generateLVName(volumeId);//"lv-" + Hashes.getRandom(4);
 		LVMVolumeInfo lvmVolumeInfo = null;
@@ -380,7 +375,7 @@ public class DASManager implements LogicalStorageManager {
 			lvmVolumeInfo.setLvName(lvName);
 			lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
 			lvmVolumeInfo.setSize(size);
-			volumeManager = new VolumeEntityWrapperManager();
+			volumeManager = new VolumeMetadataManager();
 			volumeManager.add(lvmVolumeInfo);
 			volumeManager.finish();
 		} catch(EucalyptusCloudException ex) {
@@ -393,7 +388,7 @@ public class DASManager implements LogicalStorageManager {
 
 	public int createVolume(String volumeId, String snapshotId, int size) throws EucalyptusCloudException {
 		updateVolumeGroup();
-		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		VolumeMetadataManager volumeManager = new VolumeMetadataManager();
 		LVMVolumeInfo foundSnapshotInfo = volumeManager.getVolumeInfo(snapshotId);
 		if(foundSnapshotInfo != null) {
 			String status = foundSnapshotInfo.getStatus();
@@ -424,7 +419,7 @@ public class DASManager implements LogicalStorageManager {
 					lvmVolumeInfo.setLvName(lvName);
 					lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
 					lvmVolumeInfo.setSize(size);
-					volumeManager = new VolumeEntityWrapperManager();
+					volumeManager = new VolumeMetadataManager();
 					volumeManager.add(lvmVolumeInfo);
 					volumeManager.finish();
 				}  catch(EucalyptusCloudException ex) {
@@ -444,7 +439,7 @@ public class DASManager implements LogicalStorageManager {
 	public void cloneVolume(String volumeId, String parentVolumeId)
 			throws EucalyptusCloudException {
 		updateVolumeGroup();
-		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		VolumeMetadataManager volumeManager = new VolumeMetadataManager();
 		LVMVolumeInfo foundVolumeInfo = volumeManager.getVolumeInfo(parentVolumeId);
 		if(foundVolumeInfo != null) {
 			String status = foundVolumeInfo.getStatus();
@@ -475,7 +470,7 @@ public class DASManager implements LogicalStorageManager {
 				lvmVolumeInfo.setLvName(lvName);
 				lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
 				lvmVolumeInfo.setSize(size);
-				volumeManager = new VolumeEntityWrapperManager();
+				volumeManager = new VolumeMetadataManager();
 				volumeManager.add(lvmVolumeInfo);
 				volumeManager.finish();
 			}  catch(EucalyptusCloudException ex) {
@@ -494,7 +489,7 @@ public class DASManager implements LogicalStorageManager {
 		String snapshotRawFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + snapshotId;
 		File snapshotFile = new File(snapshotRawFileName);
 		if(snapshotFile.exists()) {
-			VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+			VolumeMetadataManager volumeManager = new VolumeMetadataManager();
 			LVMVolumeInfo lvmVolumeInfo = volumeManager.getVolumeInfo();
 			lvmVolumeInfo.setVolumeId(snapshotId);
 			lvmVolumeInfo.setLoFileName(snapshotRawFileName);
@@ -511,7 +506,7 @@ public class DASManager implements LogicalStorageManager {
 		updateVolumeGroup();
 		LVMVolumeInfo foundLVMVolumeInfo = null;
 		{
-			final VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+			final VolumeMetadataManager volumeManager = new VolumeMetadataManager();
 			try {
 				foundLVMVolumeInfo = volumeManager.getVolumeInfo(volumeId);
 			} finally {
@@ -526,11 +521,11 @@ public class DASManager implements LogicalStorageManager {
 			
 			// Obtain a lock on the volume
 			VolumeOpMonitor monitor = getMonitor(foundLVMVolumeInfo.getVolumeId());
-			VolumeEntityWrapperManager outerVolumeManager = null;
+			VolumeMetadataManager outerVolumeManager = null;
 			do {
 				LOG.debug("Trying to lock volume for export detection" + volumeId);
 				synchronized (monitor) {
-					final VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+					final VolumeMetadataManager volumeManager = new VolumeMetadataManager();
 					try {
 						foundLVMVolumeInfo = volumeManager.getVolumeInfo(volumeId);
 						if(exportManager.isExported(foundLVMVolumeInfo)) {
@@ -618,15 +613,15 @@ public class DASManager implements LogicalStorageManager {
 		return "euca-ebs-storage-vg-" + baseName;
 	}
 
-	public List<String> createSnapshot(String volumeId, String snapshotId, String snapshotPointId, Boolean shouldTransferSnapshot) throws EucalyptusCloudException {
+	public StorageResource createSnapshot(String volumeId, String snapshotId, String snapshotPointId, Boolean shouldTransferSnapshot) throws EucalyptusCloudException {
 		if(snapshotPointId != null) {
 			throw new EucalyptusCloudException("Synchronous snapshot points not supported in DAS storage manager");			
 		}
 
 		updateVolumeGroup();
-		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		VolumeMetadataManager volumeManager = new VolumeMetadataManager();
 		LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(volumeId);
-		ArrayList<String> returnValues = new ArrayList<String>();
+		StorageResource snapInfo = null;
 		if(foundLVMVolumeInfo != null) {
 			LVMVolumeInfo snapshotInfo = volumeManager.getVolumeInfo();
 			snapshotInfo.setVolumeId(snapshotId);
@@ -671,10 +666,9 @@ public class DASManager implements LogicalStorageManager {
 				snapshotInfo.setLoFileName(snapRawFileName);
 				// snapshotInfo.setStatus(StorageProperties.Status.available.toString());
 				snapshotInfo.setSize(size);
-				volumeManager = new VolumeEntityWrapperManager();
+				volumeManager = new VolumeMetadataManager();
 				volumeManager.add(snapshotInfo);
-				returnValues.add(snapRawFileName);
-				returnValues.add(String.valueOf(size * ObjectStorageProperties.G));
+				snapInfo = new FileResource(snapshotId, snapRawFileName);
 				// } catch(EucalyptusCloudException ex) {
 			} catch(Exception ex) {
 				if(volumeManager != null)
@@ -686,11 +680,11 @@ public class DASManager implements LogicalStorageManager {
 
 		}
 		volumeManager.finish();
-		return returnValues;
+		return snapInfo;
 	}
 
 	public List<String> prepareForTransfer(String snapshotId) throws EucalyptusCloudException {
-		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		VolumeMetadataManager volumeManager = new VolumeMetadataManager();
 		LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(snapshotId);
 		ArrayList<String> returnValues = new ArrayList<String>();
 
@@ -706,7 +700,7 @@ public class DASManager implements LogicalStorageManager {
 
 	public void deleteSnapshot(String snapshotId) throws EucalyptusCloudException {
 		updateVolumeGroup();
-		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		VolumeMetadataManager volumeManager = new VolumeMetadataManager();
 		LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(snapshotId);
 
 		if(foundLVMVolumeInfo != null) {
@@ -725,7 +719,7 @@ public class DASManager implements LogicalStorageManager {
 	}
 
 	public String getVolumeConnectionString(String volumeId) throws EucalyptusCloudException {
-		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		VolumeMetadataManager volumeManager = new VolumeMetadataManager();
 		String returnValue = volumeManager.getConnectionString(volumeId);
 		volumeManager.finish();
 		return returnValue;
@@ -733,7 +727,7 @@ public class DASManager implements LogicalStorageManager {
 
 	public void reload() {
 		LOG.info("Reload: starting reload process to re-export volumes if necessary");
-		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		VolumeMetadataManager volumeManager = new VolumeMetadataManager();
 		List<LVMVolumeInfo> volumeInfos = volumeManager.getAllVolumeInfos();
 		//now enable them
 		for(LVMVolumeInfo foundVolumeInfo : volumeInfos) {
@@ -753,7 +747,7 @@ public class DASManager implements LogicalStorageManager {
 	}
 
 	public int getSnapshotSize(String snapshotId) throws EucalyptusCloudException {
-		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		VolumeMetadataManager volumeManager = new VolumeMetadataManager();
 		LVMVolumeInfo lvmVolumeInfo = volumeManager.getVolumeInfo(snapshotId);
 		if(lvmVolumeInfo != null) {
 			int snapSize = lvmVolumeInfo.getSize();
@@ -765,11 +759,11 @@ public class DASManager implements LogicalStorageManager {
 		}
 	}
 
-	protected class VolumeEntityWrapperManager {
-		private EntityWrapper entityWrapper;
+	protected static class VolumeMetadataManager {
+		private TransactionResource transaction;
 
-		protected VolumeEntityWrapperManager() {
-			entityWrapper = StorageProperties.getEntityWrapper();
+		protected VolumeMetadataManager() {
+			transaction = Entities.transactionFor(VolumeInfo.class);
 		}
 
 		/**
@@ -828,7 +822,7 @@ public class DASManager implements LogicalStorageManager {
 					LOG.error(e);
 					return null;
 				}
-				return ",,," + encryptedPassword + ",," + StorageProperties.STORAGE_HOST + "," + storeName;
+				return "iscsi,tgt,,,," + encryptedPassword + ",," + StorageProperties.STORAGE_HOST + "," + storeName;
 			}
 			return null;
 		}
@@ -855,20 +849,20 @@ public class DASManager implements LogicalStorageManager {
 
 		protected void finish() {
 			try {
-				entityWrapper.commit();
+				transaction.commit();
 			} catch (Exception ex) {
 				LOG.error(ex, ex);
-				entityWrapper.rollback();
+				transaction.rollback();
 			}
 		}
 
 		protected void abort() {
-			entityWrapper.rollback();
+			transaction.rollback();
 		}
 
 		protected LVMVolumeInfo getVolumeInfo(String volumeId) {
 			ISCSIVolumeInfo ISCSIVolumeInfo = new ISCSIVolumeInfo(volumeId);
-			List<ISCSIVolumeInfo> ISCSIVolumeInfos = entityWrapper.query(ISCSIVolumeInfo);
+			List<ISCSIVolumeInfo> ISCSIVolumeInfos = Entities.query(ISCSIVolumeInfo);
 			if(ISCSIVolumeInfos.size() > 0) {
 				return ISCSIVolumeInfos.get(0);
 			}
@@ -879,7 +873,7 @@ public class DASManager implements LogicalStorageManager {
 			ISCSIVolumeInfo ISCSIVolumeInfo = new ISCSIVolumeInfo();
 			ISCSIVolumeInfo.setSnapshotOf(volumeId);
 			ISCSIVolumeInfo.setStatus(StorageProperties.Status.pending.toString());
-			List<ISCSIVolumeInfo> ISCSIVolumeInfos = entityWrapper.query(ISCSIVolumeInfo);
+			List<ISCSIVolumeInfo> ISCSIVolumeInfos = Entities.query(ISCSIVolumeInfo);
 			if(ISCSIVolumeInfos.size() > 0) {
 				return true;
 			}
@@ -892,16 +886,16 @@ public class DASManager implements LogicalStorageManager {
 
 		protected List<LVMVolumeInfo> getAllVolumeInfos() {
 			List<LVMVolumeInfo> volumeInfos = new ArrayList<LVMVolumeInfo>();
-			volumeInfos.addAll(entityWrapper.query(new ISCSIVolumeInfo()));	
+			volumeInfos.addAll(Entities.query(new ISCSIVolumeInfo()));
 			return volumeInfos;
 		}
 
 		protected void add(LVMVolumeInfo volumeInfo) {
-			entityWrapper.add(volumeInfo);
+			Entities.persist(volumeInfo);
 		}
 
 		protected void remove(LVMVolumeInfo volumeInfo) {
-			entityWrapper.delete(volumeInfo);
+			Entities.delete(volumeInfo);
 		}
 
 		protected String encryptTargetPassword(String password) throws EucalyptusCloudException {
@@ -910,7 +904,7 @@ public class DASManager implements LogicalStorageManager {
 				ServiceConfiguration clusterConfig = partitionConfigs.get( 0 );
 				PublicKey ncPublicKey = Partitions.lookup( clusterConfig ).getNodeCertificate( ).getPublicKey();
 				Cipher cipher = Ciphers.RSA_PKCS1.get();
-				cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey);
+				cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey, Crypto.getSecureRandomSupplier( ).get( ));
 				return new String(Base64.encode(cipher.doFinal(password.getBytes())));	      
 			} catch ( Exception e ) {
 				LOG.error( "Unable to encrypt storage target password" );
@@ -953,10 +947,10 @@ public class DASManager implements LogicalStorageManager {
 
 	}
 	@Override
-	public String prepareSnapshot(String snapshotId, int sizeExpected, long actualSizeInMB)
+	public StorageResource prepareSnapshot(String snapshotId, int sizeExpected, long actualSizeInMB)
 			throws EucalyptusCloudException {
 		String deviceName = null;
-		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		VolumeMetadataManager volumeManager = new VolumeMetadataManager();
 		LVMVolumeInfo foundSnapshotInfo = volumeManager.getVolumeInfo(snapshotId);
 		if (null  == foundSnapshotInfo) {
 			LVMVolumeInfo snapshotInfo = volumeManager.getVolumeInfo();
@@ -968,7 +962,7 @@ public class DASManager implements LogicalStorageManager {
 		}
 
 		volumeManager.finish();		
-		return deviceName;
+		return new FileResource(snapshotId, deviceName);
 		// return DirectStorageInfo.getStorageInfo().getVolumesDir() + File.separator + snapshotId;
 	}
 
@@ -1022,7 +1016,7 @@ public class DASManager implements LogicalStorageManager {
 
 	@Override
 	public void finishVolume(String snapshotId) throws EucalyptusCloudException {
-		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		VolumeMetadataManager volumeManager = new VolumeMetadataManager();
 		LVMVolumeInfo foundSnapshotInfo = volumeManager.getVolumeInfo(snapshotId);
 		if (null != foundSnapshotInfo) {
 			foundSnapshotInfo.setStatus(StorageProperties.Status.available.toString());
@@ -1033,7 +1027,7 @@ public class DASManager implements LogicalStorageManager {
 	@Override
 	public String getSnapshotPath(String snapshotId)
 			throws EucalyptusCloudException {
-		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		VolumeMetadataManager volumeManager = new VolumeMetadataManager();
 		LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(snapshotId);
 		if(volInfo != null) {
 			String snapPath = volInfo.getLoFileName();
@@ -1048,7 +1042,7 @@ public class DASManager implements LogicalStorageManager {
 	@Override
 	public String getVolumePath(String volumeId)
 			throws EucalyptusCloudException {
-		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		VolumeMetadataManager volumeManager = new VolumeMetadataManager();
 		LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(volumeId);
 		if(volInfo != null) {
 			String volumePath = lvmRootDirectory + File.separator + volInfo.getVgName() + File.separator + volInfo.getLvName();
@@ -1063,7 +1057,7 @@ public class DASManager implements LogicalStorageManager {
 	@Override
 	public void importSnapshot(String snapshotId, String snapPath,
 			String volumeId, int size) throws EucalyptusCloudException {
-		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		VolumeMetadataManager volumeManager = new VolumeMetadataManager();
 		LVMVolumeInfo snapInfo = volumeManager.getVolumeInfo(snapshotId);
 		if(snapInfo != null) {
 			volumeManager.finish();
@@ -1074,7 +1068,7 @@ public class DASManager implements LogicalStorageManager {
 		SystemUtil.run(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, 
 				"dd", "if=" + snapPath, 
 				"of=" + snapFileName, "bs=" + StorageProperties.blockSize});
-		volumeManager = new VolumeEntityWrapperManager();
+		volumeManager = new VolumeMetadataManager();
 		LVMVolumeInfo snapshotInfo = volumeManager.getVolumeInfo();
 		snapshotInfo.setVolumeId(snapshotId);
 		snapshotInfo.setLoFileName(snapFileName);
@@ -1087,7 +1081,7 @@ public class DASManager implements LogicalStorageManager {
 	@Override
 	public void importVolume(String volumeId, String volumePath, int size)
 			throws EucalyptusCloudException {
-		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		VolumeMetadataManager volumeManager = new VolumeMetadataManager();
 		LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(volumeId);
 		if(volInfo != null) {
 			volumeManager.finish();
@@ -1095,7 +1089,7 @@ public class DASManager implements LogicalStorageManager {
 		}
 		volumeManager.finish();
 		createVolume(volumeId, size);
-		volumeManager = new VolumeEntityWrapperManager();
+		volumeManager = new VolumeMetadataManager();
 		LVMVolumeInfo volumeInfo = volumeManager.getVolumeInfo(volumeId);
 		if(volumeInfo != null) {
 			SystemUtil.run(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, 
@@ -1122,7 +1116,7 @@ public class DASManager implements LogicalStorageManager {
                 }
 		LVMVolumeInfo lvmVolumeInfo = null;
 		{
-			final VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+			final VolumeMetadataManager volumeManager = new VolumeMetadataManager();
 			try {
 				lvmVolumeInfo = volumeManager.getVolumeInfo(volumeId);
 			} finally {
@@ -1133,7 +1127,7 @@ public class DASManager implements LogicalStorageManager {
 		if (lvmVolumeInfo != null) {
 			VolumeOpMonitor monitor = getMonitor(volumeId);
 			synchronized (monitor) {
-				final VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+				final VolumeMetadataManager volumeManager = new VolumeMetadataManager();
 				try {
 					lvmVolumeInfo = volumeManager.getVolumeInfo(volumeId);
 					String lvName = lvmVolumeInfo.getLvName();
@@ -1171,22 +1165,11 @@ public class DASManager implements LogicalStorageManager {
 	public void unexportVolume(String volumeId, String nodeIqn)
 			throws EucalyptusCloudException, UnsupportedOperationException {
 		throw new UnsupportedOperationException("DASManager does not support node-specific export/unexport");
-
-		/*VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
-		LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(volumeId);
-		if(foundLVMVolumeInfo != null) {
-			LOG.info("Marking volume: " + volumeId + " for cleanup");
-			foundLVMVolumeInfo.setCleanup(true);
-			volumeManager.finish();
-		}  else {
-			volumeManager.abort();
-			throw new EucalyptusCloudException("Unable to find volume: " + volumeId);
-		}*/
 	}
 
 	@Override
 	public void unexportVolumeFromAll(String volumeId) throws EucalyptusCloudException {
-		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		VolumeMetadataManager volumeManager = new VolumeMetadataManager();
 		try {
 			LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(volumeId);
 			if(foundLVMVolumeInfo != null) {

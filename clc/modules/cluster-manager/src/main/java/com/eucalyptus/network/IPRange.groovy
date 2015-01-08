@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.network
 
+import com.eucalyptus.util.Cidr
 import com.eucalyptus.util.Parameters
 import com.google.common.base.Function
 import com.google.common.base.Optional
@@ -85,6 +86,16 @@ class IPRange implements Iterable<Integer> {
     }
     final int snet = PrivateAddresses.asInteger( subnet )
     final int mask = PrivateAddresses.asInteger( netmask )
+    new IPRange( snet & mask, snet | ( -1 ^ mask ) ).perhapsShrink( )
+  }
+
+  /**
+   * Create an ip range for the given cidr
+   */
+  static IPRange fromCidr( Cidr cidr ) {
+    Parameters.checkParam( "cidr", cidr, notNullValue( ) )
+    final int snet = cidr.ip
+    final int mask = cidr.prefixMask( cidr.prefix )
     new IPRange( snet & mask, snet | ( -1 ^ mask ) ).perhapsShrink( )
   }
 

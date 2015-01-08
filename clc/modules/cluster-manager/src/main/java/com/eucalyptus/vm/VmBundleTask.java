@@ -63,13 +63,22 @@
 package com.eucalyptus.vm;
 
 import java.util.Date;
+import java.util.concurrent.Callable;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.Lob;
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Parent;
+import org.hibernate.annotations.Type;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.upgrade.Upgrades;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import groovy.sql.Sql;
+import groovy.transform.CompileStatic;
+import groovy.transform.TypeCheckingMode;
 
 @Embeddable
 public class VmBundleTask {
@@ -115,6 +124,8 @@ public class VmBundleTask {
   @Column( name = "metadata_vm_bundle_prefix" )
   private String      prefix;
   @Column( name = "metadata_vm_bundle_policy" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   private String      policy;
   @Column( name = "metadata_vm_bundle_error_msg" )
   private String      errorMessage;
@@ -341,6 +352,29 @@ public class VmBundleTask {
       public boolean apply( final VmBundleTask arg0 ) {
         return (arg0 != null) && (!BundleState.none.equals(arg0.getState()));
       }
+    }
+  }
+
+  @Upgrades.PostUpgrade( value = Eucalyptus.class, since = Upgrades.Version.v4_1_0 )
+  @CompileStatic( TypeCheckingMode.SKIP )
+  public static class VmBundleTaskPostUpgrade410 implements Callable<Boolean> {
+    private static Logger LOG = Logger.getLogger( VmBundleTaskPostUpgrade410.class );
+
+    @Override
+    public Boolean call( ) throws Exception {
+     Sql sql = null;
+     try {
+       sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection( "eucalyptus_cloud" );
+       sql.execute( "ALTER TABLE metadata_instances ALTER COLUMN metadata_vm_bundle_policy TYPE text" );
+       return true;
+     } catch ( Exception ex ) {
+       LOG.error( ex, ex );
+       return false;
+     } finally {
+       if ( sql != null ) {
+         sql.close( );
+       }
+     }
     }
   }
 }

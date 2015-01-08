@@ -43,7 +43,14 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.ComputeMessage;
+import com.eucalyptus.compute.common.DeleteResourceTag;
 import com.eucalyptus.compute.common.ImageMetadata;
+import com.eucalyptus.compute.common.ResourceTag;
+import com.eucalyptus.compute.common.backend.CreateTagsResponseType;
+import com.eucalyptus.compute.common.backend.CreateTagsType;
+import com.eucalyptus.compute.common.backend.DeleteTagsResponseType;
+import com.eucalyptus.compute.common.backend.DeleteTagsType;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.Entities;
@@ -52,16 +59,16 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.images.Emis.LookupMachine;
-import com.eucalyptus.imaging.ConvertedImageDetail;
-import com.eucalyptus.imaging.DescribeConversionTasksResponseType;
-import com.eucalyptus.imaging.DescribeConversionTasksType;
-import com.eucalyptus.imaging.DiskImageConversionTask;
-import com.eucalyptus.imaging.Imaging;
-import com.eucalyptus.imaging.ImagingMessage;
-import com.eucalyptus.imaging.ImportDiskImage;
-import com.eucalyptus.imaging.ImportDiskImageDetail;
-import com.eucalyptus.imaging.ImportImageResponseType;
-import com.eucalyptus.imaging.ImportImageType;
+import com.eucalyptus.imaging.common.ConvertedImageDetail;
+import com.eucalyptus.imaging.common.DescribeConversionTasksResponseType;
+import com.eucalyptus.imaging.common.DescribeConversionTasksType;
+import com.eucalyptus.imaging.common.DiskImageConversionTask;
+import com.eucalyptus.imaging.common.ImagingMessage;
+import com.eucalyptus.imaging.common.ImportDiskImage;
+import com.eucalyptus.imaging.common.ImportDiskImageDetail;
+import com.eucalyptus.imaging.common.ImportImageResponseType;
+import com.eucalyptus.imaging.common.ImportImageType;
+import com.eucalyptus.imaging.common.Imaging;
 import com.eucalyptus.imaging.manifest.BundleImageManifest;
 import com.eucalyptus.imaging.manifest.DownloadManifestFactory;
 import com.eucalyptus.imaging.manifest.ImageManifestFile;
@@ -100,13 +107,6 @@ import com.google.common.collect.Sets;
 import com.google.common.collect.Maps;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.CreateTagsResponseType;
-import edu.ucsb.eucalyptus.msgs.CreateTagsType;
-import edu.ucsb.eucalyptus.msgs.DeleteResourceTag;
-import edu.ucsb.eucalyptus.msgs.DeleteTagsResponseType;
-import edu.ucsb.eucalyptus.msgs.DeleteTagsType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.ResourceTag;
 
 /**
  * @author Sang-Min Park
@@ -220,7 +220,8 @@ public class ImageConversionManager implements EventListener<ClockTick> {
         throw new Exception("Failed to check the existing buckets", ex);
       }
     }
-    
+
+    String newBucket = null;
     for(final ImageInfo image: images){
       try{
         if(!(image instanceof MachineImageInfo))
@@ -231,8 +232,6 @@ public class ImageConversionManager implements EventListener<ClockTick> {
         final String[] tokens = manifestLocation.split("/");
         final String bucketName = tokens[0];
         final String prefix = tokens[1].replace(".manifest.xml", "");
-
-        String newBucket = null;
         do{
           newBucket = String.format("%s-%s-%s", 
               BUCKET_PREFIX, Crypto.generateAlphanumericId(5, ""), bucketName);
@@ -261,11 +260,8 @@ public class ImageConversionManager implements EventListener<ClockTick> {
           throw new Exception("Failed to update run manifest location");
         }
       }catch(final Exception ex){
-        try{
-          Images.setImageState(image.getDisplayName(), ImageMetadata.State.failed);
-        }catch(final Exception ex2){
-          ;
-        }
+        LOG.error(String.format("Unable to create the bucket %s for image %s", newBucket, image.getDisplayName()));
+        resetImagePendingAvailable(image.getDisplayName(), "Failed to create bucket");
         throw ex;
       }
     }
@@ -346,8 +342,10 @@ public class ImageConversionManager implements EventListener<ClockTick> {
        final MachineImageInfo machineImage = (MachineImageInfo) image;
        final String kernelId = machineImage.getKernelId();
        final String ramdiskId = machineImage.getRamdiskId();
-       if(kernelId==null || ramdiskId ==null)
-         throw new Exception("Kernel and ramdisk are not found for the image");
+       if(kernelId==null || ramdiskId ==null){
+         LOG.warn(String.format("Kernel and ramdisk are not found for the image %s", image.getDisplayName()));
+         continue;
+       }
        
        final KernelImageInfo kernel = Images.lookupKernel(kernelId);
        final RamdiskImageInfo ramdisk = Images.lookupRamdisk(ramdiskId);
@@ -385,16 +383,17 @@ public class ImageConversionManager implements EventListener<ClockTick> {
          throw new Exception("ImportImage Task id is null");
        Images.setConversionTaskId(machineImage.getDisplayName(), taskId);
      }catch(final Exception ex) {
-       LOG.error("Failed to convert the image "+image.getDisplayName(), ex);
+       LOG.error("Failed to convert the image: "+image.getDisplayName(), ex);
        try{
          this.cleanupBuckets(Lists.newArrayList(image), false);
+         resetImagePendingAvailable(image.getDisplayName(), "Failed to request conversion");
        }catch(final Exception ex2){
-         ;
-       }
-       try{
-         Images.setImageState(image.getDisplayName(), ImageMetadata.State.failed);
-       }catch(final Exception ex2){
-         ;
+         LOG.error("Failed to cleanup the image's system bucket; setting image state failed: "+image.getDisplayName());
+         try{
+           Images.setImageState(image.getDisplayName(), ImageMetadata.State.failed);
+         }catch(final Exception ex3){
+           ;
+         }
        }
      }
    }
@@ -453,25 +452,27 @@ public class ImageConversionManager implements EventListener<ClockTick> {
            }
           }
        }else{
-         Images.setImageState(machineImage.getDisplayName(), ImageMetadata.State.failed);
+         LOG.warn("Conversion task for image " + image.getDisplayName()+ " has failed: "+ errorMessage);
          try{
            this.cleanupBuckets(Lists.newArrayList(image), false);
+           this.resetImagePendingAvailable(image.getDisplayName(), null);
          }catch(final Exception ex){
-           ;
+           LOG.error("Failed to cleanup the image's system bucket; setting image state failed: "+image.getDisplayName());
+           Images.setImageState(machineImage.getDisplayName(), ImageMetadata.State.failed);
          }
-         LOG.error("Failed to convert partitioned image: "+errorMessage);
        }
       }catch(final Exception ex){
+        LOG.warn("Conversion task for image " + image.getDisplayName()+ " has failed: ", ex);
         try{
-          Images.setImageState(image.getDisplayName(), ImageMetadata.State.failed);
+          this.cleanupBuckets(Lists.newArrayList(image), false);
+          this.resetImagePendingAvailable(image.getDisplayName(), "Failed to check conversion status");
+        }catch(final Exception ex2){
+          LOG.error("Failed to cleanup the image's system bucket; setting image state failed: "+image.getDisplayName());
           try{
-            this.cleanupBuckets(Lists.newArrayList(image), false);
-          }catch(final Exception ex2){
+            Images.setImageState(image.getDisplayName(), ImageMetadata.State.failed);
+          }catch(final Exception ex3){
             ;
           }
-          LOG.error("Failed to convert partitioned image", ex);
-        }catch(final Exception ex1){
-          ;
         }
       }
     }
@@ -492,9 +493,12 @@ public class ImageConversionManager implements EventListener<ClockTick> {
       final Partition partition = Partitions.lookupByName(partitionName);
       final MachineImageInfo machineImage = LookupMachine.INSTANCE.apply(imageId);
       try{
-        final String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
-            new ImageManifestFile(machineImage.getRunManifestLocation(), BundleImageManifest.INSTANCE ), 
-            partition.getNodeCertificate().getPublicKey(), reservationId);
+        DownloadManifestFactory.generateDownloadManifest(
+            new ImageManifestFile(
+                machineImage.getRunManifestLocation( ),
+                BundleImageManifest.INSTANCE,
+                ImageConfiguration.getInstance( ).getMaxManifestSizeBytes( )  ),
+            partition.getNodeCertificate().getPublicKey(), reservationId, false);
         LOG.debug(String.format("Generated download manifest for instance %s", instance.getDisplayName()));
       }catch(final Exception ex){
         LOG.error(String.format("Failed to generate download manifest for instance %s", instance.getDisplayName()), ex);
@@ -584,36 +588,45 @@ public class ImageConversionManager implements EventListener<ClockTick> {
           }finally{
             taggedImages.remove(imageId);
           }
-        }else if (ImageMetadata.State.failed.equals(imgState) && taggedImages.contains(imageId)){
-          String message = "";
-          try{
-            conversionTaskCache.invalidate(taskId);
-            Optional<DiskImageConversionTask> task = 
-               conversionTaskCache.get(taskId);
-            if(task.isPresent())
-              message = task.get().getStatusMessage();
-          }catch(final Exception ex){
-            ;
-          }finally{
-            taggedImages.remove(imageId);
-          }
-          this.tagResources(imageId, "failed", message);
-          try ( final TransactionResource db =
-              Entities.transactionFor( ImageInfo.class ) ) {
-            try{
-              final ImageInfo entity = Entities.uniqueResult(Images.exampleWithImageId(imageId));
-              entity.setState(ImageMetadata.State.pending_available);
-              entity.setImageFormat(ImageMetadata.ImageFormat.partitioned.name());
-              ((MachineImageInfo)entity).setImageConversionId(null);
-              Entities.persist(entity);
-              db.commit();
-            }catch(final Exception ex){
-              LOG.error("Failed to mark the image state available for conversion", ex);
-            }
-          }
         }
       }catch(final Exception ex){
         LOG.error("Failed to update tags for resources in conversion", ex);
+      }
+    }
+  }
+  
+  private void resetImagePendingAvailable(final String imageId, final String reason){
+    String taskMessage = "";
+    /// tag image and instances with proper message
+    try{
+      final ImageInfo image = Images.lookupImage(imageId);
+      final String taskId = ((MachineImageInfo) image).getImageConversionId();
+      if(taskId!=null){
+        conversionTaskCache.invalidate(taskId);
+        Optional<DiskImageConversionTask> task = 
+           conversionTaskCache.get(taskId);
+        if(task.isPresent())
+          taskMessage = task.get().getStatusMessage();
+      }
+      final String tagMessage = reason !=null ? reason : taskMessage;
+      this.tagResources(imageId, "failed", tagMessage);
+    }catch(final Exception ex){
+      ;
+    }finally{
+      taggedImages.remove(imageId);
+    }
+    
+    try ( final TransactionResource db =
+        Entities.transactionFor( ImageInfo.class ) ) {
+      try{
+        final ImageInfo entity = Entities.uniqueResult(Images.exampleWithImageId(imageId));
+        entity.setState(ImageMetadata.State.pending_available);
+        entity.setImageFormat(ImageMetadata.ImageFormat.partitioned.name());
+        ((MachineImageInfo)entity).setImageConversionId(null);
+        Entities.persist(entity);
+        db.commit();
+      }catch(final Exception ex){
+        LOG.error("Failed to mark the image state available for conversion: "+imageId, ex);
       }
     }
   }
@@ -1041,13 +1054,13 @@ public class ImageConversionManager implements EventListener<ClockTick> {
     }
     
     @Override
-    void dispatchInternal(Checked<EucalyptusMessage> callback) {
-      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = this.getClient();
+    void dispatchInternal(Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Eucalyptus> client = this.getClient();
       client.dispatch(createTag(), callback);             
     }
 
     @Override
-    void dispatchSuccess(EucalyptusMessage response) {
+    void dispatchSuccess(ComputeMessage response) {
       final CreateTagsResponseType resp = (CreateTagsResponseType) response;
     }
   }
@@ -1074,13 +1087,13 @@ public class ImageConversionManager implements EventListener<ClockTick> {
       return req;
     }
     @Override
-    void dispatchInternal(Checked<EucalyptusMessage> callback) {
-      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = this.getClient();
+    void dispatchInternal(Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Eucalyptus> client = this.getClient();
       client.dispatch(deleteTag(), callback);      
     }
 
     @Override
-    void dispatchSuccess(EucalyptusMessage response) {
+    void dispatchSuccess(ComputeMessage response) {
       final DeleteTagsResponseType resp = (DeleteTagsResponseType) response;
     }
   }
@@ -1113,15 +1126,15 @@ public class ImageConversionManager implements EventListener<ClockTick> {
     }
   }
   
-  private static abstract class EucalyptusUserActivityTask extends ActivityTask<EucalyptusMessage, Eucalyptus> {
+  private static abstract class EucalyptusUserActivityTask extends ActivityTask<ComputeMessage, Eucalyptus> {
     private String userId = null;
     private EucalyptusUserActivityTask(final String userId){
       this.userId = userId;
     }
     @Override
-    protected DispatchingClient<EucalyptusMessage, Eucalyptus> getClient() {
+    protected DispatchingClient<ComputeMessage, Eucalyptus> getClient() {
       try{
-        final DispatchingClient<EucalyptusMessage, Eucalyptus> client =
+        final DispatchingClient<ComputeMessage, Eucalyptus> client =
             new DispatchingClient<>( userId, Eucalyptus.class );
             client.init();
             return client;
@@ -1131,11 +1144,11 @@ public class ImageConversionManager implements EventListener<ClockTick> {
     }
   }
   
-  private static abstract class EucalyptusActivityTask extends ActivityTask<EucalyptusMessage, Eucalyptus> {
+  private static abstract class EucalyptusActivityTask extends ActivityTask<ComputeMessage, Eucalyptus> {
     @Override
-    protected DispatchingClient<EucalyptusMessage, Eucalyptus> getClient() {
+    protected DispatchingClient<ComputeMessage, Eucalyptus> getClient() {
       try{
-        final DispatchingClient<EucalyptusMessage, Eucalyptus> client =
+        final DispatchingClient<ComputeMessage, Eucalyptus> client =
             new DispatchingClient<>( Accounts.lookupSystemAdmin().getUserId() , Eucalyptus.class );
             client.init();
             return client;

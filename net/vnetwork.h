@@ -109,6 +109,7 @@
 #define NETMODE_SYSTEM                           "SYSTEM"
 #define NETMODE_MANAGED                          "MANAGED"
 #define NETMODE_MANAGED_NOVLAN                   "MANAGED-NOVLAN"
+#define NETMODE_VPCMIDO                          "VPCMIDO"
 
 //! @}
 
@@ -285,12 +286,12 @@ int vnetGetPublicIP(vnetConfig * vnetconfig, char *ip, char **dstip, int *alloca
 int vnetCheckPublicIP(vnetConfig * vnetconfig, char *ip);
 int vnetAddPublicIP(vnetConfig * vnetconfig, char *inip);
 int vnetAddPrivateIP(vnetConfig * vnetconfig, char *inip);
-int vnetAssignAddress(vnetConfig * vnetconfig, char *src, char *dst);
+int vnetAssignAddress(vnetConfig * vnetconfig, char *src, char *dst, int vlan);
 int vnetAllocatePublicIP(vnetConfig * vnetconfig, char *uuid, char *ip, char *dstip);
 int vnetDeallocatePublicIP(vnetConfig * vnetconfig, char *uuid, char *ip, char *dstip);
 int vnetSetPublicIP(vnetConfig * vnetconfig, char *uuid, char *ip, char *dstip, int setval);
-int vnetReassignAddress(vnetConfig * vnetconfig, char *uuid, char *src, char *dst);
-int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst);
+int vnetReassignAddress(vnetConfig * vnetconfig, char *uuid, char *src, char *dst, int vlan);
+int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst, int vlan);
 
 int vnetStopNetwork(vnetConfig * vnetconfig, int vlan, char *userName, char *netName);
 

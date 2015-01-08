@@ -71,137 +71,259 @@ $NOT_REQUIRED = "not_required";
 
 $DEFAULT = "default";
 
-$ISCSIADM = untaint(`which iscsiadm`);
-$MULTIPATH = untaint(`which multipath`);
-
 $CONF_IFACES_KEY = "STORAGE_INTERFACES";
 $LOGIN_TIMEOUT = 12;
 $LOGOUT_TIMEOUT = 5;
 $LOGIN_RETRY_COUNT = 1;
 
-# check binaries
-if (!-x $ISCSIADM) {
-  print STDERR "Unable to find iscsiadm\n";
-  do_exit(1);
-}
-
 # check input params
 $dev_string = untaint(shift @ARGV);
-($euca_home, $user, $auth_mode, $lun, $encrypted_password, @paths) = parse_devstring($dev_string);
+($euca_home, $volume_id, $target_device, $target_serial, $target_bus, $ceph_user, $ceph_keyring, $ceph_conf, $protocol, $provider, $user, $auth_mode, $lun, $encrypted_password, @paths) = parse_devstring($dev_string);
 
 if (is_null_or_empty($euca_home)) {
   print STDERR "EUCALYPTUS path is not defined:$dev_string\n";
   do_exit(1);
 }
 
-$EUCALYPTUS_CONF = $euca_home."/etc/eucalyptus/eucalyptus.conf";
-%conf_iface_map = get_conf_iface_map();
+if (!is_null_or_empty($protocol) && $protocol eq $PROTOCOL_RBD) {
+	
+  print STDERR "Found rbd as protocol in connection string\n";
 
-if (is_null_or_empty($user)) {
-  $user = "eucalyptus";
-}
-
-# prepare target paths:
-# <netdev0>,<ip0>,<store0>,<netdev1>,<ip1>,<store1>,...
-if ((@paths < 1) || ((@paths % 3) != 0)) {
-  print STDERR "Target paths are not complete:$dev_string\n";
-  do_exit(1);
-}
-
-$multipath = 0;
-$multipath = 1 if @paths > 3;
-if (($multipath == 1) && (!-x $MULTIPATH)) {
-  print STDERR "Unable to find multipath\n";
-  do_exit(1);
-}
-sanitize_path(\@paths);
-
-if (is_null_or_empty($lun)) {
-  $lun = -1;
-}
-
-if (!is_null_or_empty($auth_mode)) {
-  $password = $NOT_REQUIRED;
-}
-
-# debugging
-use Data::Dumper;
-print STDERR "Before connecting:\n";
-for $session (lookup_session()) {
-  print STDERR Dumper($session);
-}
-
-@devices = ();
-# iterate through each path, login/refresh for the new lun
-while (@paths > 0) {
-  $conf_iface = shift(@paths);
-  $ip = shift(@paths);
-  $store = shift(@paths);
-  # get netdev from iface name using eucalyptus.conf
-  $netdev = get_netdev_by_conf($conf_iface);
-  # lun based, check if session exists and refresh session
-  if (($lun > -1) && (retry_until_true(\&check_session_exists, [$netdev, $ip, $store], 5) == 1)) {
-    # rescan session
-    run_cmd(1, 1, "$ISCSIADM -m session -R");
-  } else {
-    # prepare password for login target 
-    if ($password ne $NOT_REQUIRED) {
-      $password = decrypt_password($encrypted_password, get_private_key());
-    }
-    if (is_null_or_empty($password)) {
-      print STDERR "Unable to decrypt target password.\n";
-      do_exit(1);
-    }
-    # get/create iface for the path if network device is specified
-    if (!is_null_or_empty($netdev)) {
-      $iface = retry_until_exists(\&ensure_and_get_iface, [$netdev], 5);
-      if (is_null_or_empty($iface)) {
-        print STDERR "Failed to get iface.\n";
-        do_exit(1);
+  if (is_null_or_empty($ceph_user)) {
+    $ceph_user = "eucalyptus";
+  }
+  if (is_null_or_empty($ceph_keyring)) {
+    $ceph_keyring = "/etc/ceph/ceph.client.eucalyptus.keyring";
+  }
+  if (is_null_or_empty($ceph_conf)) {
+    $ceph_conf = "/etc/ceph/ceph.conf";
+  }
+	
+  # Setup the virsh secret
+  # Fetch the ceph key from keyring file
+  if (open KEYRING_FH, "$ceph_keyring") {
+    $founduser = "0";
+	while (<KEYRING_FH>) {
+      chomp;
+      if (/^\[client\.(.*)\]$/) {
+        $founduser = "1" if ($1 eq $ceph_user);  
+      } elsif ($founduser and /^\s*key\s*=\s*(.*)$/) {
+        $ceph_key = $1;
+        last;
       }
     }
-    login_target($iface, $ip, $store, $user, $password);
+    close KEYRING_FH;
+  } else {
+    print STDERR "Unable to open ceph keyring file $ceph_keyring.\n";
+    do_exit(1);
+  }
+  
+  # Verify if the virsh secret is defined and set
+  $command = "virsh secret-get-value $encrypted_password";
+  @output = qx($command 2>&1);
+
+  if ($? != 0) {
+    # If the above command returns error, define a new secret and associate it with ceph key
+    print STDERR "Failed to run $command: @output\n";
+    setup_virsh_secret($encrypted_password, $ceph_key);
+  } else { 
+    # If the above command returns success, check whether the value in the virsh secret maps to the configured user
+    $virsh_secret_value = shift(@output);
+    chomp($virsh_secret_value);
+
+    if ($virsh_secret_value ne $ceph_key) {
+      print STDERR "Virsh secret is not associated with the configured user. Resetting the virsh secret\n";
+      setup_virsh_secret($encrypted_password, $ceph_key);			
+    } else {
+      print STDERR "Virsh secret already configured. Moving on\n";
+    }
+  }
+
+  # Get the monitoring hosts
+  # All monitors may be listed on one line in ceph.conf: 
+  # [mon]
+  #       mon host = hostname1,hostname2,hostname3
+  #       mon addr = a.b.c.d:xyz,a.b.c.d:xyz,a.b.c.d:xyz
+  # 
+  # ceph.conf may also have specific entries for each monitor:
+  # [mon.a]
+  #      host = hostname1
+  #      mon addr = a.b.c.d:xyz
+  # [mon.b]
+  #      host = hostname2
+  #      mon addr = a.b.c.d:xyz
+  
+  $ceph_host_line = "";       
+  if (open CONF_FH, "$ceph_conf") {
+    while (<CONF_FH>) {
+      chomp;
+      if (/^\s*mon addr\s*=\s*(.*)$/) {
+        @addrs = split(/,/, $1);
+        foreach (@addrs) {
+          $monip = "";
+          $monport = "";
+          ($monip, $monport) = split(/:/, $_);
+          if (!is_null_or_empty($monip) and !is_null_or_empty($monport)) {
+            $ceph_host_line .= "    <host name='$monip' port='$monport'/>\n";
+          } else {
+            close CONF_FH;
+            print STDERR "Either monitor address or port information not found. Looking for 'mon addr = a.b.c.d:xyz' like configuration in the $ceph_conf\n";
+            do_exit(1);
+          }
+        }
+      } 
+    }
+    close CONF_FH;
+    
+    if (is_null_or_empty($ceph_host_line)) {
+      print STDERR "Monitor address and port information not found. Looking for 'mon addr = a.b.c.d:xyz' like configuration in the $ceph_conf\n";
+      do_exit(1);            
+    }
+    
+  } else {
+    print STDERR "Unable to open $ceph_conf.\n";
+    do_exit(1);
+  }
+
+  # Generate the libvirt.xml
+  $libvirtxml = "<disk type='network' device='disk'>\n";
+  $libvirtxml .= "  <source protocol='rbd' name='$lun'>\n";
+  $libvirtxml .= $ceph_host_line;
+  $libvirtxml .= "  </source>\n";
+  $libvirtxml .= "  <auth username='$ceph_user'>\n";
+  $libvirtxml .= "    <secret type='$SECRET_TYPE_CEPH' uuid='$encrypted_password'/>\n";
+  $libvirtxml .= "  </auth>\n";
+  $libvirtxml .= "  <target bus='$target_bus' dev='$target_device'/>\n";
+  $libvirtxml .= "  <serial>$target_serial</serial>\n";
+  $libvirtxml .= "</disk>\n";
+
+  print "$libvirtxml";
+} else {
+  $ISCSIADM = untaint(`which iscsiadm`);
+  $MULTIPATH = untaint(`which multipath`);
+
+  # check binaries
+  if (!-x $ISCSIADM) {
+    print STDERR "Unable to find iscsiadm\n";
+    do_exit(1);
+  }
+  
+  $EUCALYPTUS_CONF = $euca_home."/etc/eucalyptus/eucalyptus.conf";
+  %conf_iface_map = get_conf_iface_map();
+
+  if (is_null_or_empty($user)) {
+    $user = "eucalyptus";
+  }
+
+  # prepare target paths:
+  # <netdev0>,<ip0>,<store0>,<netdev1>,<ip1>,<store1>,...
+  if ((@paths < 1) || ((@paths % 3) != 0)) {
+    print STDERR "Target paths are not complete:$dev_string\n";
+    do_exit(1);
+  }
+
+  $multipath = 0;
+  $multipath = 1 if @paths > 3;
+  if (($multipath == 1) && (!-x $MULTIPATH)) {
+    print STDERR "Unable to find multipath\n";
+    do_exit(1);
+  }
+  sanitize_path(\@paths);
+
+  if (is_null_or_empty($lun)) {
+    $lun = -1;
+  }
+
+  if (!is_null_or_empty($auth_mode)) {
+    $password = $NOT_REQUIRED;
+  }
+
+  # debugging
+  use Data::Dumper;
+  print STDERR "Before connecting:\n";
+  for $session (lookup_session()) {
+    print STDERR Dumper($session);
+  }
+	
+  @devices = ();
+  # iterate through each path, login/refresh for the new lun
+  while (@paths > 0) {
+    $conf_iface = shift(@paths);
+    $ip = shift(@paths);
+    $store = shift(@paths);
+    # get netdev from iface name using eucalyptus.conf
+    $netdev = get_netdev_by_conf($conf_iface);
+    # lun based, check if session exists and refresh session
+    if (($lun > -1) && (retry_until_true(\&check_session_exists, [$netdev, $ip, $store], 5) == 1)) {
+      # rescan session
+      run_cmd(1, 1, "$ISCSIADM -m session -R");
+    } else {
+      # prepare password for login target 
+      if ($password ne $NOT_REQUIRED) {
+        $password = decrypt_password($encrypted_password, get_private_key());
+      }
+      if (is_null_or_empty($password)) {
+        print STDERR "Unable to decrypt target password.\n";
+        do_exit(1);
+      }
+      # get/create iface for the path if network device is specified
+      if (!is_null_or_empty($netdev)) {
+        $iface = retry_until_exists(\&ensure_and_get_iface, [$netdev], 5);
+        if (is_null_or_empty($iface)) {
+          print STDERR "Failed to get iface.\n";
+          do_exit(1);
+        }
+      }
+      login_target($iface, $ip, $store, $user, $password);
+      sleep(1);
+    }
+    # get dev from lun
+    push @devices, retry_until_exists(\&get_iscsi_device, [$netdev, $ip, $store, $lun], 5);
+  }
+  # debugging
+  use Data::Dumper;
+  print STDERR "After connecting:\n";
+  for $session (lookup_session()) {
+    print STDERR Dumper($session);
+  }
+  # get the actual device
+  # Non-multipathing: the iSCSI device
+  # Multipathing: the mpath device
+  if ($multipath == 0) {
+    $localdev = $devices[0];
+  } else {
+    $localdev = retry_until_exists(\&get_mpath_device, \@devices, 5);
+  }
+  if (is_null_or_empty($localdev)) {
+    print STDERR "Unable to get attached target device.\n";
+    do_exit(1);
+  }
+  if ($multipath == 0) {
+    $localdev = "/dev/$localdev";
+  } else {
+    $localdev = "/dev/mapper/$localdev";
+  }
+  # get the /dev/disk/by-id path
+  $localdev = retry_until_exists(\&get_disk_by_id_path, [$localdev], 5);
+  if (is_null_or_empty($localdev)) {
+    print STDERR "Unable to get /dev/disk/by-id path for attached target device.\n";
+    do_exit(1);
+  }
+  # make sure device exists on the filesystem
+  for ($i = 0; $i < 12; $i++) { 
+    last if (-e "$localdev");
     sleep(1);
   }
-  # get dev from lun
-  push @devices, retry_until_exists(\&get_iscsi_device, [$netdev, $ip, $store, $lun], 5);
-}
-# debugging
-use Data::Dumper;
-print STDERR "After connecting:\n";
-for $session (lookup_session()) {
-  print STDERR Dumper($session);
-}
-# get the actual device
-# Non-multipathing: the iSCSI device
-# Multipathing: the mpath device
-if ($multipath == 0) {
-  $localdev = $devices[0];
-} else {
-  $localdev = retry_until_exists(\&get_mpath_device, \@devices, 5);
-}
-if (is_null_or_empty($localdev)) {
-  print STDERR "Unable to get attached target device.\n";
-  do_exit(1);
-}
-if ($multipath == 0) {
-  $localdev = "/dev/$localdev";
-} else {
-  $localdev = "/dev/mapper/$localdev";
-}
-# get the /dev/disk/by-id path
-$localdev = retry_until_exists(\&get_disk_by_id_path, [$localdev], 5);
-if (is_null_or_empty($localdev)) {
-  print STDERR "Unable to get /dev/disk/by-id path for attached target device.\n";
-  do_exit(1);
-}
-# make sure device exists on the filesystem
-for ($i = 0; $i < 12; $i++) { 
-  last if (-e "$localdev");
-  sleep(1);
-}
+	
+  $libvirtxml = "<disk type='block'>\n";
+  $libvirtxml .= "  <driver cache='none' name='qemu'/>\n";
+  $libvirtxml .= "  <source dev='$localdev'/>\n";
+  $libvirtxml .= "  <target bus='$target_bus' dev='$target_device'/>\n";
+  $libvirtxml .= "  <serial>$target_serial</serial>\n";
+  $libvirtxml .= "</disk>\n";
 
-print "$localdev";
+  print "$libvirtxml";
+}
 
 ##################################################################
 sub login_target {
@@ -288,6 +410,34 @@ sub check_session_exists {
     }
   }
   return 0;
+}
+
+sub setup_virsh_secret {
+	my ($uuid, $ceph_key) = @_;
+	
+	# First undefine the secret if one exists
+	run_cmd(1, 0, "virsh secret-undefine $uuid");
+		  
+	$secret = "<secret ephemeral='no' private='no'>\n";
+	$secret .= "  <uuid>$uuid</uuid>\n"; 
+ 	$secret .= "  <usage type='$SECRET_TYPE_CEPH'>\n";
+  $secret .= "    <name>$uuid</name>\n";
+  $secret .= "  </usage>\n";
+	$secret .= "</secret>\n";
+
+	$secret_path =  $euca_home."/var/lib/eucalyptus/virsh_ceph_secret.xml";
+		  
+	if (open SECRET_FH, ">$secret_path") {
+		print SECRET_FH "$secret";
+		close SECRET_FH;
+	} else {
+		print STDERR "Unable to create $secret_path.\n";
+		do_exit(1);
+	}
+			
+	run_cmd(1, 1, "virsh secret-define --file $secret_path");
+	run_cmd(1, 1, "virsh secret-set-value $uuid --base64 $ceph_key");
+	run_cmd(1, 0, "rm -f $secret_path");
 }
 
 ##############################################

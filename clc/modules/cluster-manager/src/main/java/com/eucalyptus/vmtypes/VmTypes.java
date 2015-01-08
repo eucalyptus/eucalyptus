@@ -68,6 +68,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 
 import javax.annotation.Nonnull;
@@ -77,7 +78,6 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.compute.common.CloudMetadata.VmTypeMetadata;
 import com.eucalyptus.compute.common.ImageMetadata;
-import com.eucalyptus.compute.common.ImageMetadata.StaticDiskImage;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
@@ -86,14 +86,17 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.compute.common.backend.VmTypeDetails;
+import com.eucalyptus.compute.common.VmTypeDetails;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.BootableImageInfo;
+import com.eucalyptus.images.ImageManager;
+import com.eucalyptus.images.Images;
 import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.util.Classes;
+import com.eucalyptus.util.LockResource;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
@@ -127,8 +130,13 @@ public class VmTypes {
     @Override
     public boolean apply( ServiceConfiguration input ) {
       try {
-        Cluster cluster = Clusters.lookup( input );
-        cluster.check( );
+        final Cluster cluster = Clusters.lookup( input );
+        try ( final LockResource lock =
+                  LockResource.tryLock( cluster.getGateLock( ).readLock( ), 20, TimeUnit.SECONDS ) ) {
+          if ( lock.isLocked( ) ) {
+            cluster.refreshResources( );
+          }
+        }
       } catch ( Exception ex ) {
         LOG.error( "Failed to reset availability for cluster: " + input + " because of " + ex.getMessage( ) );
         LOG.debug( "Failed to reset availability for cluster: " + input + " because of " + ex.getMessage( ), ex );
@@ -413,26 +421,26 @@ public class VmTypes {
             VirtualDevice.ephemeral1.create( "/dev/sda3", 1, Format.swap ) ),
     M1MEDIUM( "m1.medium",
              1, ROOTFS, GB / 2,
-             VirtualDevice.ephemeral0.create( "/dev/sdb", 20, Format.ext3 ) ),
+             VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ) ),
     C1MEDIUM( "c1.medium",
              2, ROOTFS, GB / 2,
-             VirtualDevice.ephemeral0.create( "/dev/sdb", 20, Format.ext3 ) ),
+             VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ) ),
     M1LARGE( "m1.large",
             2, ROOTFS, GB / 2,
-            VirtualDevice.ephemeral0.create( "/dev/sdb", 20, Format.ext3 ),
+            VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ),
             VirtualDevice.ephemeral1.create( "/dev/sdc", 20, Format.ext3 ) ),
     M1XLARGE( "m1.xlarge",
              2, ROOTFS, GB,
-             VirtualDevice.ephemeral0.create( "/dev/sdb", 20, Format.ext3 ),
+             VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ),
              VirtualDevice.ephemeral1.create( "/dev/sdc", 20, Format.ext3 ),
              VirtualDevice.ephemeral2.create( "/dev/sdd", 20, Format.ext3 ),
              VirtualDevice.ephemeral3.create( "/dev/sde", 20, Format.ext3 ) ),
     M2XLARGE( "m2.xlarge",
              2, ROOTFS, 2 * GB,
-             VirtualDevice.ephemeral0.create( "/dev/sdb", 20, Format.ext3 ) ),
+             VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ) ),
     C1XLARGE( "c1.xlarge",
              2, ROOTFS, 2 * GB,
-             VirtualDevice.ephemeral0.create( "/dev/sdb", 20, Format.ext3 ),
+             VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ),
              VirtualDevice.ephemeral1.create( "/dev/sdc", 20, Format.ext3 ),
              VirtualDevice.ephemeral2.create( "/dev/sdd", 20, Format.ext3 ),
              VirtualDevice.ephemeral3.create( "/dev/sde", 20, Format.ext3 ) ),
@@ -441,44 +449,44 @@ public class VmTypes {
              Attribute.ebsonly ),
     M22XLARGE( "m2.2xlarge",
               2, 3 * ROOTFS, 4 * GB,
-              VirtualDevice.ephemeral0.create( "/dev/sdb", 20, Format.ext3 ) ),
+              VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ) ),
     M32XLARGE( "m3.2xlarge",
               4, 3 * ROOTFS, 4 * GB,
               Attribute.ebsonly ),
     CC14XLARGE( "cc1.4xlarge",
                8, 6 * ROOTFS, 3 * GB,
-               VirtualDevice.ephemeral0.create( "/dev/sdb", 20, Format.ext3 ),
+               VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ),
                VirtualDevice.ephemeral1.create( "/dev/sdc", 20, Format.ext3 ) ),
     M24XLARGE( "m2.4xlarge",
               8, 6 * ROOTFS, 4 * GB,
-              VirtualDevice.ephemeral0.create( "/dev/sdb", 20, Format.ext3 ),
+              VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ),
               VirtualDevice.ephemeral1.create( "/dev/sdc", 20, Format.ext3 ) ),
     HI14XLARGE( "hi1.4xlarge",
                8, 12 * ROOTFS, 6 * GB,
                Attribute.ssd,
-               VirtualDevice.ephemeral0.create( "/dev/sdb", 20, Format.ext3 ),
+               VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ),
                VirtualDevice.ephemeral1.create( "/dev/sdc", 20, Format.ext3 ) ),
     CC28XLARGE( "cc2.8xlarge",
                16, 12 * ROOTFS, 6 * GB,
-               VirtualDevice.ephemeral0.create( "/dev/sdb", 20, Format.ext3 ),
+               VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ),
                VirtualDevice.ephemeral1.create( "/dev/sdc", 20, Format.ext3 ),
                VirtualDevice.ephemeral2.create( "/dev/sdd", 20, Format.ext3 ),
                VirtualDevice.ephemeral3.create( "/dev/sde", 20, Format.ext3 ) ),
     CG14XLARGE( "cg1.4xlarge",
                16, 20 * ROOTFS, 12 * GB,
                Attribute.gpu,
-               VirtualDevice.ephemeral0.create( "/dev/sdb", 20, Format.ext3 ),
+               VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ),
                VirtualDevice.ephemeral1.create( "/dev/sdc", 20, Format.ext3 ) ),
     CR18XLARGE( "cr1.8xlarge",
                16, 24 * ROOTFS, 16 * GB,
                Attribute.ssd,
-               VirtualDevice.ephemeral0.create( "/dev/sdb", 20, Format.ext3 ),
+               VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ),
                VirtualDevice.ephemeral1.create( "/dev/sdc", 20, Format.ext3 ) ),
     HS18XLARGE( "hs1.8xlarge",
                48, 24 * 100 * ROOTFS, 117 * GB ) {
       {
         for ( int i = 0; i < 24; i++ ) {
-          this.getEphemeralDisks( ).add( VirtualDevice.create( i, "/dev/sdb", 20, Format.ext3 ) );
+          this.getEphemeralDisks( ).add( VirtualDevice.create( i, Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ) );
         }
       }
     };
@@ -547,15 +555,14 @@ public class VmTypes {
                                           + vmType.getDisk( ) * 1024l + "MB]" );
     }
     VmTypeInfo vmTypeInfo = null;
-    if ( img instanceof StaticDiskImage ) {
+    if ( img instanceof MachineImageInfo ) { // instance-store image
       if ( ImageMetadata.Platform.windows.equals( img.getPlatform( ) ) ) {
         vmTypeInfo = VmTypes.InstanceStoreWindowsVmTypeInfoMapper.INSTANCE.apply( vmType );
         vmTypeInfo.setEphemeral( 0, "sdb", diskSize - imgSize, "none" );
-      } else if(ImageMetadata.VirtualizationType.hvm.equals(img.getVirtualizationType())){
+      } else if( !ImageManager.isPathAPartition( img.getRootDeviceName() ) ){
         vmTypeInfo = VmTypes.InstanceStoreLinuxHvmVmTypeInfoMapper.INSTANCE.apply(vmType);
         vmTypeInfo.setEphemeral( 0, "sdb", diskSize - imgSize, "ext3" );
-      } else
-      {
+      } else {
         vmTypeInfo = VmTypes.InstanceStoreVmTypeInfoMapper.INSTANCE.apply( vmType );
         long ephemeralSize = diskSize - imgSize - SWAP_SIZE_BYTES;
         if ( ephemeralSize < MIN_EPHEMERAL_SIZE_BYTES ) {
@@ -571,12 +578,10 @@ public class VmTypes {
         }
         vmTypeInfo.setEphemeral( 0, "sda2", ephemeralSize, "ext3" );
       }
-    } else if ( img instanceof BlockStorageImageInfo ) {
+    } else if ( img instanceof BlockStorageImageInfo ) { // bfEBS
       vmTypeInfo = VmTypes.BlockStorageVmTypeInfoMapper.INSTANCE.apply( vmType );
       vmTypeInfo.setRootDeviceName(img.getRootDeviceName());
       vmTypeInfo.setEbsRoot( img.getDisplayName( ), null, imgSize );
-      // Getting rid of default ephemeral partition for bfebs instances to match AWS behavior. Fixes EUCA-3461, EUCA-3271  
-      // vmTypeInfo.setEphemeral( 0, "sdb", diskSize, "none" );
     } else {
       throw new InvalidMetadataException( "Failed to identify the root machine image type: " + img );
     }

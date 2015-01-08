@@ -82,7 +82,9 @@ import org.xbill.DNS.Address;
 import org.xbill.DNS.CNAMERecord;
 import org.xbill.DNS.DClass;
 import org.xbill.DNS.Name;
+import org.xbill.DNS.ResolverConfig;
 
+import com.google.common.base.Strings;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Dns;
@@ -160,6 +162,64 @@ public class DNSControl {
 			readonly = false,
 			changeListener = DnsAddressChangeListener.class)
 	public static volatile String dns_listener_address_match = "";
+
+	@ConfigurableField( displayName = "server",
+			description = "Comma separated list of nameservers, OS settings used if none specified (change requires restart)",
+			initial = "",
+			readonly = false,
+			changeListener = DnsServerChangeListener.class)
+	public static volatile String server = "";
+
+	@ConfigurableField( displayName = "search",
+			description = "Comma separated list of domains to search, OS settings used if none specified (change requires restart)",
+			initial = "",
+			readonly = false,
+			changeListener = DnsSearchChangeListener.class)
+	public static volatile String search = "";
+
+	public static class DnsServerChangeListener implements PropertyChangeListener {
+		@Override
+		public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+			if (newValue == null || (newValue instanceof String)) {
+				try {
+					String newValueStr = (String) newValue;
+					if (Strings.isNullOrEmpty(newValueStr)) {
+						LOG.debug("Setting dns.server property to null (by clearing it)");
+						System.clearProperty("dns.server");
+					} else {
+						LOG.debug("Setting dns.server property to " + newValueStr);
+						System.setProperty("dns.server", newValueStr);
+					}
+					ResolverConfig.refresh();
+				} catch ( final Exception e ) {
+					throw new ConfigurablePropertyException( e.getMessage( ) );
+				}
+			}
+		}
+	}
+
+	public static class DnsSearchChangeListener implements PropertyChangeListener {
+		@Override
+		public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+			if (newValue == null || (newValue instanceof String)) {
+				try {
+					String newValueStr = (String) newValue;
+					if (Strings.isNullOrEmpty(newValueStr)) {
+						LOG.debug("Setting dns.search property to null (by clearing it)");
+						System.clearProperty("dns.search");
+					} else {
+						LOG.debug("Setting dns.search property to " + newValueStr);
+						System.setProperty("dns.search", newValueStr);
+					}
+					ResolverConfig.refresh();
+				} catch ( final Exception e ) {
+					throw new ConfigurablePropertyException( e.getMessage( ) );
+				}
+			}
+		}
+	}
+
+
 
 	public static class DnsAddressChangeListener implements PropertyChangeListener {
 		@Override

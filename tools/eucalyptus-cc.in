@@ -106,6 +106,7 @@ fi
 # eucalyptus manually, it may have binaries in a non-standard position:
 # hence we need to keep the PATH we receive.
 export PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
+export EUCALYPTUS_CC="Y"
 DESC="Eucalyptus cluster controller"
 NAME=eucalyptus-cc
 EUCA_USER="eucalyptus"
@@ -118,27 +119,19 @@ if [ -z "$EUCALYPTUS" ] ; then
        fi
 fi
 export EUCALYPTUS
+RUNDIR=$EUCALYPTUS/var/run/eucalyptus
 
 create_httpd_config() {
 	IPS="all"
 
-	# let's configure the common parts for both CC and NC
+	# let's configure the CC
         sed -e "s|EUCALYPTUS|$EUCALYPTUS|" \
             -e "s|APACHE2_MODULE_DIR|$APACHE2_MODULE_DIR|" \
             -e "s|AXIS2C_HOME|$AXIS2C_HOME|" \
             -e "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|" \
             -e "s|EUCA_USER|$EUCA_USER|" \
-            $EUCALYPTUS/etc/eucalyptus/httpd.conf \
-            > $EUCALYPTUS/var/run/eucalyptus/httpd-tmp.conf
-
-	# if we find authz load it (needed by ubuntu)
-	if [ -e $HTTPD_HOME/usr/lib/apache2/modules/mod_authz_host.so ]; then
-		echo "LoadModule authz_host_module /usr/lib/apache2/modules/mod_authz_host.so" >> $EUCALYPTUS/var/run/eucalyptus/httpd-tmp.conf
-	fi
-
-	# let's configure the CC
-        sed -e "s|\(Listen\).*|\1 $CC_PORT|" \
-            -e "s|\(PidFile\).*|\1 $EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid|" \
+            -e "s|\(Listen\).*|\1 $CC_PORT|" \
+            -e "s|\(PidFile\).*|\1 $RUNDIR/eucalyptus-cc.pid|" \
             -e "s|\(Allow from\).*|\1 $IPS|" \
             -e "s|\(ErrorLog\).*|\1 $EUCALYPTUS/var/log/eucalyptus/httpd-cc_error_log|" \
             -e "s|\(StartServers\).*|\1 5|" \
@@ -149,9 +142,13 @@ create_httpd_config() {
             -e "s|\(MaxSpareThreads\).*|\1 75|" \
             -e "s|\(ThreadsPerChild\).*|\1 1|" \
             -e "s|\(ThreadLimit\).*|\1 64|" \
-            $EUCALYPTUS/var/run/eucalyptus/httpd-tmp.conf \
-            > $EUCALYPTUS/etc/eucalyptus/httpd-cc.conf
+            $EUCALYPTUS/etc/eucalyptus/httpd.conf \
+            > $RUNDIR/httpd-cc.conf
 
+	# if we find authz load it (needed by ubuntu)
+	if [ -e $HTTPD_HOME/usr/lib/apache2/modules/mod_authz_host.so ]; then
+		echo "LoadModule authz_host_module /usr/lib/apache2/modules/mod_authz_host.so" >> $RUNDIR/httpd-cc.conf
+	fi
 }
 
 # crude way to start the axis2c services
@@ -246,7 +243,7 @@ do_start() {
 	ulimit -u 100000
 	ulimit -n 10000
 	# now we start the services
-	if  ! $HTTPD -f $EUCALYPTUS/etc/eucalyptus/httpd-cc.conf ; then
+	if  ! $HTTPD -f $RUNDIR/httpd-cc.conf ; then
 		echo
 		echo "Failed to start the CC!"
 		exit 1
@@ -256,7 +253,7 @@ do_start() {
 }
 
 do_status() {
-	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid
+	pidfile=$RUNDIR/eucalyptus-cc.pid
 	if [ -s $pidfile ]; then
 		pid=`cat $pidfile 2> /dev/null`
 		if ps axww|grep $pid|grep httpd-cc.conf > /dev/null ; then
@@ -269,7 +266,7 @@ do_status() {
 
 # fully clean up all local CC state
 do_fullclean() {
-	pidfiles="`ls -1 $EUCALYPTUS/var/run/eucalyptus/vtund*.pid 2>/dev/null`"
+	pidfiles="`ls -1 $RUNDIR/vtund*.pid 2>/dev/null`"
         pids=""
         sids=""
         for pidfile in $pidfiles ; do
@@ -315,7 +312,7 @@ do_fullclean() {
 }
 
 do_stop() {
-        pidfile="$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid"
+        pidfile="$RUNDIR/eucalyptus-cc.pid"
 
         # let's be sure we are killing the right process
         if ! do_status ; then
@@ -323,7 +320,7 @@ do_stop() {
                 return
         fi
         # now kill the services
-        pidfiles="$EUCALYPTUS/var/run/eucalyptus/net/euca-dhcp.pid $EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid $EUCALYPTUS/var/run/eucalyptus/httpd-dynserv.pid"
+        pidfiles="$RUNDIR/net/euca-dhcp.pid $RUNDIR/eucalyptus-cc.pid $RUNDIR/httpd-dynserv.pid"
         pids=""
         sids=""
         for pidfile in $pidfiles ; do
