@@ -336,7 +336,7 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
     // identifier before the entity is stored
     event.setEventOrder( (long) workflowHistory.size( ) );
     workflowHistory.add( event );
-    if ( workflowHistory.size( ) > SimpleWorkflowConfiguration.getWorkflowExecutionHistorySize( ) ) {
+    if ( workflowHistory.size( ) > SimpleWorkflowProperties.getWorkflowExecutionHistorySize() ) {
       throw new WorkflowHistorySizeLimitException( this );
     }
     updateTimeStamps( ); // ensure workflow version incremented

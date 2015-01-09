@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
 package com.eucalyptus.simpleworkflow.stateful;
 
 import static com.eucalyptus.simpleworkflow.NotifyClient.NotifyTaskList;
-import static com.eucalyptus.simpleworkflow.SimpleWorkflowConfiguration.getWorkflowExecutionDurationMillis;
+import static com.eucalyptus.simpleworkflow.SimpleWorkflowProperties.getWorkflowExecutionDurationMillis;
 import static com.eucalyptus.simpleworkflow.WorkflowExecution.DecisionStatus.Idle;
 import static com.eucalyptus.simpleworkflow.WorkflowExecution.DecisionStatus.Pending;
 import java.util.Collection;
