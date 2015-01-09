@@ -198,7 +198,7 @@ public class StackActivityImpl implements StackActivity {
 
   @Override
   public String initDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId) {
-    LOG.debug("Deleting resource " + resourceId);
+    LOG.info("Deleting resource " + resourceId);
     StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
     String stackName = stackEntity.getStackName();
     StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId);
@@ -210,6 +210,7 @@ public class StackActivityImpl implements StackActivity {
       resourceAction.setStackEntity(stackEntity);
       resourceAction.setResourceInfo(resourceInfo);
       if ("Retain".equals(resourceInfo.getDeletionPolicy())) {
+        LOG.info("Resource " + resourceId + " has a 'Retain' DeletionPolicy, skipping.");
         StackEvent stackEvent = new StackEvent();
         stackEvent.setStackId(stackId);
         stackEvent.setStackName(stackName);
@@ -492,7 +493,7 @@ public class StackActivityImpl implements StackActivity {
 
   @Override
   public String failDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId, String errorMessage) {
-    LOG.debug("Error deleting resource " + resourceId);
+    LOG.info("Error deleting resource " + resourceId);
     LOG.error(errorMessage);
     StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
     StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId);
