@@ -848,8 +848,6 @@ public class EventHandlerChainCreateDbInstance extends
           DatabaseServerProperties.getCredentialsString(),
           DatabaseServerProperties.getServerUserData(DatabaseServerProperties.VOLUME, 
               DatabaseServerProperties.NTP_SERVER,
-              DatabaseServerProperties.LOG_SERVER,
-              DatabaseServerProperties.LOG_SERVER_PORT,
               DatabaseServerProperties.INIT_SCRIPT,
               this.encryptedPassword,
               this.serverCertArn)));
