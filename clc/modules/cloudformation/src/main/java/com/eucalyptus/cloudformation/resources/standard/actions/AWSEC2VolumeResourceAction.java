@@ -21,6 +21,7 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -141,16 +142,24 @@ public class AWSEC2VolumeResourceAction extends ResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2VolumeResourceAction action = (AWSEC2VolumeResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        List<EC2Tag> tags = TagHelper.getEC2StackTags(action.info, action.getStackEntity());
+        // Create 'system' tags as admin user
+        String effectiveAdminUserId = Accounts.lookupUserById(action.info.getEffectiveUserId()).getAccount().lookupAdmin().getUserId();
+        CreateTagsType createSystemTagsType = MessageHelper.createPrivilegedMessage(CreateTagsType.class, effectiveAdminUserId);
+        createSystemTagsType.setResourcesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
+        createSystemTagsType.setTagSet(EC2Helper.createTagSet(TagHelper.getEC2SystemTags(action.info, action.getStackEntity())));
+        AsyncRequests.<CreateTagsType, CreateTagsResponseType>sendSync(configuration, createSystemTagsType);
+        // Create non-system tags as regular user
+        List<EC2Tag> tags = TagHelper.getEC2StackTags(action.getStackEntity());
         if (action.properties.getTags() != null && !action.properties.getTags().isEmpty()) {
           TagHelper.checkReservedEC2TemplateTags(action.properties.getTags());
           tags.addAll(action.properties.getTags());
         }
-        // due to stack aws: tags
-        CreateTagsType createTagsType = MessageHelper.createPrivilegedMessage(CreateTagsType.class, action.info.getEffectiveUserId());
-        createTagsType.setResourcesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
-        createTagsType.setTagSet(EC2Helper.createTagSet(tags));
-        AsyncRequests.<CreateTagsType, CreateTagsResponseType>sendSync(configuration, createTagsType);
+        if (!tags.isEmpty()) {
+          CreateTagsType createTagsType = MessageHelper.createMessage(CreateTagsType.class, action.info.getEffectiveUserId());
+          createTagsType.setResourcesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
+          createTagsType.setTagSet(EC2Helper.createTagSet(tags));
+          AsyncRequests.<CreateTagsType, CreateTagsResponseType>sendSync(configuration, createTagsType);
+        }
         return action;
       }
     };

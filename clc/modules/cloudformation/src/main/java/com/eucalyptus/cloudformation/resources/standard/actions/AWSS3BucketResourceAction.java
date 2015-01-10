@@ -136,12 +136,28 @@ public class AWSS3BucketResourceAction extends ResourceAction {
           if ( action.properties.getNotificationConfiguration() != null ) {
             s3c.setBucketNotificationConfiguration( bucketName, action.convertNotificationConfiguration( action.properties.getNotificationConfiguration() ) );
           }
-          List<CloudFormationResourceTag> tags = TagHelper.getCloudFormationResourceStackTags( action.info, action.getStackEntity() );
+          // Dealing with tags has to be done differently than with other resources.
+          // 1) there is only the s3c.setBucketTaggingConfiguration(), tags can not be "added", they can only be replaced wholesale.
+          //    This means that the user must have the ability to add tags even to use system tags.
+          // 2) There is no (current) verification of aws: or euca: prefixes
+          // Given the above, and given that we have a few system tags that must be added, we will add tags all at once either as the admin
+          // (if no non-system tags exist) or as the user (if non system-tags exist).  If the user version fails due to IAM, it would have done so anyway.
+          List<CloudFormationResourceTag> systemTags = TagHelper.getCloudFormationResourceSystemTags( action.info, action.getStackEntity() );
+          List<CloudFormationResourceTag> nonSystemTags = TagHelper.getCloudFormationResourceStackTags( action.getStackEntity() );
           if ( action.properties.getTags() != null && !action.properties.getTags().isEmpty() ) {
             TagHelper.checkReservedCloudFormationResourceTemplateTags( action.properties.getTags() );
-            tags.addAll( action.properties.getTags() ); // TODO: can we do aws: tags?
+            nonSystemTags.addAll(action.properties.getTags()); // TODO: can we do aws: tags?
           }
-          s3c.setBucketTaggingConfiguration( bucketName, action.convertTags( tags ) );
+          if (!nonSystemTags.isEmpty()) { // add as user
+            List<CloudFormationResourceTag> allTags = Lists.newArrayList();
+            allTags.addAll(systemTags);
+            allTags.addAll(nonSystemTags);
+            s3c.setBucketTaggingConfiguration( bucketName, action.convertTags( allTags ) );
+
+          } else { // add as admin
+            EucaS3Client s3cAdmin = EucaS3ClientFactory.getEucaS3Client(new SecurityTokenAWSCredentialsProvider(user.getAccount().lookupAdmin()));
+            s3cAdmin.setBucketTaggingConfiguration( bucketName, action.convertTags( systemTags ));
+          }
 
           if ( action.properties.getVersioningConfiguration() != null ) {
             s3c.setBucketVersioningConfiguration( action.convertVersioningConfiguration( bucketName, action.properties.getVersioningConfiguration() ) );
