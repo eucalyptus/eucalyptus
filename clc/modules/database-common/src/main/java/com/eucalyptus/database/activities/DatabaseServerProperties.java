@@ -165,20 +165,6 @@ public class DatabaseServerProperties {
        type = ConfigurableFieldType.KEYVALUE, changeListener = InitScriptChangeListener.class)
    public static String INIT_SCRIPT = null;
 
-   @ConfigurableField(displayName = "log_server",
-       description = "address/ip of the server that collects logs from database server",
-       readonly = false,
-       type = ConfigurableFieldType.KEYVALUE,
-       changeListener = LogServerAddressChangeListener.class)
-   public static String LOG_SERVER = null;
-
-   @ConfigurableField(displayName = "log_server_port",
-       description = "UDP port that log server is listerning to",
-       readonly = false, initial = "514",
-       type = ConfigurableFieldType.KEYVALUE,
-       changeListener = LogServerPortChangeListener.class)
-   public static String LOG_SERVER_PORT = "514";
-
    @Provides(Reporting.class)
    @RunDuring(Bootstrap.Stage.Final)
    @DependsLocal(Reporting.class)
@@ -700,30 +686,27 @@ public class DatabaseServerProperties {
              newUserdata = B64.standard.encString(String.format("%s\n%s",
                  getCredentialsString(),
                  getServerUserData(volumeId, DatabaseServerProperties.NTP_SERVER,
-                     DatabaseServerProperties.LOG_SERVER,
-                     DatabaseServerProperties.LOG_SERVER_PORT,
                      DatabaseServerProperties.INIT_SCRIPT,
-                     encryptedPasword, serverCertArn)));
+                     encryptedPasword,
+                     serverCertArn)));
            }
 
            if(initScript != null) {
              newUserdata = B64.standard.encString(String.format("%s\n%s",
                  getCredentialsString(),
                  getServerUserData(DatabaseServerProperties.VOLUME, NTP_SERVER,
-                     DatabaseServerProperties.LOG_SERVER,
-                     DatabaseServerProperties.LOG_SERVER_PORT,
                      DatabaseServerProperties.INIT_SCRIPT,
-                     encryptedPasword, serverCertArn)));
+                     encryptedPasword,
+                     serverCertArn)));
            }
            
            if(ntpServers!=null ){
              newUserdata = B64.standard.encString(String.format("%s\n%s",
                  getCredentialsString(),
                  getServerUserData(DatabaseServerProperties.VOLUME, ntpServers,
-                     DatabaseServerProperties.LOG_SERVER,
-                     DatabaseServerProperties.LOG_SERVER_PORT,
                      DatabaseServerProperties.INIT_SCRIPT,
-                     encryptedPasword, serverCertArn)));
+                     encryptedPasword,
+                     serverCertArn)));
            }
            
            if(logServer!=null ){
@@ -731,10 +714,9 @@ public class DatabaseServerProperties {
                  getCredentialsString(),
                  getServerUserData(DatabaseServerProperties.VOLUME,
                      DatabaseServerProperties.NTP_SERVER,
-                     logServer,
-                     DatabaseServerProperties.LOG_SERVER_PORT,
                      DatabaseServerProperties.INIT_SCRIPT,
-                     encryptedPasword, serverCertArn)));
+                     encryptedPasword,
+                     serverCertArn)));
            }
            
            if(logServerPort!=null ){
@@ -742,10 +724,9 @@ public class DatabaseServerProperties {
                  getCredentialsString(),
                  getServerUserData(DatabaseServerProperties.VOLUME, 
                      DatabaseServerProperties.NTP_SERVER,
-                     DatabaseServerProperties.LOG_SERVER,
-                     logServerPort,
                      DatabaseServerProperties.INIT_SCRIPT,
-                     encryptedPasword, serverCertArn)));
+                     encryptedPasword,
+                     serverCertArn)));
            }
            
            try{
@@ -814,17 +795,13 @@ public class DatabaseServerProperties {
    static final private String PASSWORD_PROPERTY = "master_password_encrypted";
    static final private String CERT_PROPERTY = "server_cert_arn";
 
-   static String getServerUserData(final String volumeId, final String ntpServer, final String logServer,
-       final String logServerPort, String initScript, String masterPasswordEnc, String serverCertArn) {
+   static String getServerUserData(final String volumeId, final String ntpServer, String initScript,
+       String masterPasswordEnc, String serverCertArn) {
      Map<String,String> kvMap = new HashMap<String,String>();
      if(volumeId != null)
        kvMap.put("volume_id", volumeId);
      if(ntpServer != null)
        kvMap.put("ntp_server", ntpServer);
-     if(logServer != null)
-       kvMap.put("log_server", logServer);
-     if(logServerPort != null)
-       kvMap.put("log_server_port", logServerPort);
 
      kvMap.put(PASSWORD_PROPERTY, masterPasswordEnc);
      kvMap.put(CERT_PROPERTY, serverCertArn);

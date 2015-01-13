@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,6 +37,7 @@ import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
+import javax.persistence.OrderBy;
 import javax.persistence.OrderColumn;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
@@ -183,7 +184,7 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
   private Date timeoutTimestamp;
 
   @OneToMany( fetch = FetchType.LAZY, cascade = { CascadeType.PERSIST, CascadeType.REMOVE }, orphanRemoval = true, mappedBy = "workflowExecution" )
-  @OrderColumn( name = "event_id" )
+  @OrderBy( "eventOrder" )
   private List<WorkflowHistoryEvent> workflowHistory;
 
   @OneToMany( fetch = FetchType.LAZY, cascade = { CascadeType.REMOVE }, orphanRemoval = true, mappedBy = "workflowExecution" )
@@ -336,7 +337,7 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
     // identifier before the entity is stored
     event.setEventOrder( (long) workflowHistory.size( ) );
     workflowHistory.add( event );
-    if ( workflowHistory.size( ) > SimpleWorkflowConfiguration.getWorkflowExecutionHistorySize( ) ) {
+    if ( workflowHistory.size( ) > SimpleWorkflowProperties.getWorkflowExecutionHistorySize() ) {
       throw new WorkflowHistorySizeLimitException( this );
     }
     updateTimeStamps( ); // ensure workflow version incremented

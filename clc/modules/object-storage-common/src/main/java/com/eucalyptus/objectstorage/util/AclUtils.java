@@ -26,6 +26,8 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.objectstorage.entities.S3AccessControlledEntity;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidArgumentException;
+import com.eucalyptus.objectstorage.exceptions.s3.UnresolvableGrantByEmailAddressException;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
@@ -534,8 +536,22 @@ public class AclUtils {
                 canonicalId = group.getUri();
             }
 
-            if (canonicalId == null) {
-                throw new NoSuchElementException("No canonicalId found for grant: " + g.toString());
+            // the following exception handling looks strange, but this method gets called inside of an enum that
+            // implements Function<> (guava) and since the targets are checked exceptions it is not easy to pass them
+            // all the way up the stack where they become significant.
+            if (email != null && !"".equals(email)) {
+                // build up and throw InvalidArgumentException for the email
+                UnresolvableGrantByEmailAddressException ugbeae = new UnresolvableGrantByEmailAddressException();
+                ugbeae.setEmailAddress(email);
+                throw new RuntimeException( ugbeae );
+            }
+            else if (canonicalId == null) {
+                // throw new NoSuchElementException("No canonicalId found for grant: " + g.toString());
+                InvalidArgumentException iae = new InvalidArgumentException();
+                iae.setMessage("Invalid id");
+                iae.setArgumentName("CanonicalUser/ID");
+                iae.setArgumentValue(canonicalUser.getID());
+                throw new RuntimeException( iae );
             }
             else {
                 if (grantee.getCanonicalUser() == null ) {

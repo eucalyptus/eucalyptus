@@ -891,7 +891,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
                         Grant grant = new Grant();
                         Grantee grantee = new Grantee();
                         String email = xmlParser.getValue(grantees.item(i), "EmailAddress");
-                        grantee.setCanonicalUser(new CanonicalUser(email, canonicalUserName));
+                        grantee.setEmailAddress(email);
                         grant.setGrantee(grantee);
                         grant.setPermission(permissions.get(i));
                         grants.add(grant);

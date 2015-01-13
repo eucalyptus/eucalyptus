@@ -21,6 +21,7 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -31,6 +32,7 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2Volu
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.ResourceFailureException;
 import com.eucalyptus.cloudformation.workflow.StackActivity;
 import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
 import com.eucalyptus.cloudformation.workflow.steps.CreateMultiStepPromise;
@@ -40,12 +42,16 @@ import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.Compute;
+import com.eucalyptus.compute.common.CreateSnapshotResponseType;
+import com.eucalyptus.compute.common.CreateSnapshotType;
 import com.eucalyptus.compute.common.CreateTagsResponseType;
 import com.eucalyptus.compute.common.CreateTagsType;
 import com.eucalyptus.compute.common.CreateVolumeResponseType;
 import com.eucalyptus.compute.common.CreateVolumeType;
 import com.eucalyptus.compute.common.DeleteVolumeResponseType;
 import com.eucalyptus.compute.common.DeleteVolumeType;
+import com.eucalyptus.compute.common.DescribeSnapshotsResponseType;
+import com.eucalyptus.compute.common.DescribeSnapshotsType;
 import com.eucalyptus.compute.common.DescribeVolumesResponseType;
 import com.eucalyptus.compute.common.DescribeVolumesType;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -69,6 +75,11 @@ public class AWSEC2VolumeResourceAction extends ResourceAction {
 
   @ConfigurableField(initial = "300", description = "The amount of time (in seconds) to wait for a volume to be available after create)")
   public static volatile Integer VOLUME_AVAILABLE_MAX_CREATE_RETRY_SECS = 300;
+
+  @ConfigurableField(initial = "300", description = "The amount of time (in seconds) to wait for a snapshot to be complete (if specified as the deletion policy) before a volume is deleted)")
+  public static volatile Integer VOLUME_SNAPSHOT_COMPLETE_MAX_DELETE_RETRY_SECS = 300;
+
+
 
   @ConfigurableField(initial = "300", description = "The amount of time (in seconds) to wait for a volume to be deleted)")
   public static volatile Integer VOLUME_DELETED_MAX_DELETE_RETRY_SECS = 300;
@@ -141,16 +152,24 @@ public class AWSEC2VolumeResourceAction extends ResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2VolumeResourceAction action = (AWSEC2VolumeResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        List<EC2Tag> tags = TagHelper.getEC2StackTags(action.info, action.getStackEntity());
+        // Create 'system' tags as admin user
+        String effectiveAdminUserId = Accounts.lookupUserById(action.info.getEffectiveUserId()).getAccount().lookupAdmin().getUserId();
+        CreateTagsType createSystemTagsType = MessageHelper.createPrivilegedMessage(CreateTagsType.class, effectiveAdminUserId);
+        createSystemTagsType.setResourcesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
+        createSystemTagsType.setTagSet(EC2Helper.createTagSet(TagHelper.getEC2SystemTags(action.info, action.getStackEntity())));
+        AsyncRequests.<CreateTagsType, CreateTagsResponseType>sendSync(configuration, createSystemTagsType);
+        // Create non-system tags as regular user
+        List<EC2Tag> tags = TagHelper.getEC2StackTags(action.getStackEntity());
         if (action.properties.getTags() != null && !action.properties.getTags().isEmpty()) {
           TagHelper.checkReservedEC2TemplateTags(action.properties.getTags());
           tags.addAll(action.properties.getTags());
         }
-        // due to stack aws: tags
-        CreateTagsType createTagsType = MessageHelper.createPrivilegedMessage(CreateTagsType.class, action.info.getEffectiveUserId());
-        createTagsType.setResourcesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
-        createTagsType.setTagSet(EC2Helper.createTagSet(tags));
-        AsyncRequests.<CreateTagsType, CreateTagsResponseType>sendSync(configuration, createTagsType);
+        if (!tags.isEmpty()) {
+          CreateTagsType createTagsType = MessageHelper.createMessage(CreateTagsType.class, action.info.getEffectiveUserId());
+          createTagsType.setResourcesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
+          createTagsType.setTagSet(EC2Helper.createTagSet(tags));
+          AsyncRequests.<CreateTagsType, CreateTagsResponseType>sendSync(configuration, createTagsType);
+        }
         return action;
       }
     };
@@ -163,6 +182,83 @@ public class AWSEC2VolumeResourceAction extends ResourceAction {
   }
 
   private enum DeleteSteps implements Step {
+    CREATE_SNAPSHOT {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2VolumeResourceAction action = (AWSEC2VolumeResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        if (volumeDeleted(action, configuration)) return action;
+        if (!("Snapshot".equals(action.info.getDeletionPolicy()))) return action;
+        CreateSnapshotType createSnapshotType = MessageHelper.createMessage(CreateSnapshotType.class, action.info.getEffectiveUserId());
+        createSnapshotType.setVolumeId(action.info.getPhysicalResourceId());
+        CreateSnapshotResponseType createSnapshotResponseType = AsyncRequests.<CreateSnapshotType, CreateSnapshotResponseType>sendSync(configuration, createSnapshotType);
+        if (createSnapshotResponseType.getSnapshot() == null || createSnapshotResponseType.getSnapshot().getSnapshotId() == null) {
+          throw new ResourceFailureException("Unable to create snapshot on delete for volume " + action.info.getPhysicalResourceId());
+        } else {
+          action.info.setSnapshotIdForDelete(JsonHelper.getStringFromJsonNode(new TextNode(createSnapshotResponseType.getSnapshot().getSnapshotId())));
+        }
+        return action;
+      }
+    },
+
+    VERIFY_SNAPSHOT_COMPLETE {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2VolumeResourceAction action = (AWSEC2VolumeResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        if (volumeDeleted(action, configuration)) return action;
+        if (!("Snapshot".equals(action.info.getDeletionPolicy()))) return action;
+        DescribeSnapshotsType describeSnapshotsType = MessageHelper.createMessage(DescribeSnapshotsType.class, action.info.getEffectiveUserId());
+        String snapshotId = JsonHelper.getJsonNodeFromString(action.info.getSnapshotIdForDelete()).asText();
+        describeSnapshotsType.setSnapshotSet(Lists.newArrayList(snapshotId));
+        DescribeSnapshotsResponseType describeSnapshotsResponseType = AsyncRequests.<DescribeSnapshotsType, DescribeSnapshotsResponseType>sendSync(configuration, describeSnapshotsType);
+        if (describeSnapshotsResponseType.getSnapshotSet() == null || describeSnapshotsResponseType.getSnapshotSet().isEmpty()) {
+          throw new ValidationFailedException("Snapshot " + snapshotId + " not yet complete");
+        }
+        if ("error".equals(describeSnapshotsResponseType.getSnapshotSet().get(0).getStatus())) {
+          throw new ResourceFailureException("Error creating snapshot " + snapshotId + ", while deleting volume " + action.info.getPhysicalResourceId());
+        } else if (!"completed".equals(describeSnapshotsResponseType.getSnapshotSet().get(0).getStatus())) {
+          throw new ValidationFailedException("Snapshot " + snapshotId + " not yet complete");
+        }
+        return action;
+      }
+
+      @Override
+      public Integer getTimeout() {
+        return VOLUME_SNAPSHOT_COMPLETE_MAX_DELETE_RETRY_SECS;
+      }
+    },
+
+    CREATE_SNAPSHOT_TAGS {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2VolumeResourceAction action = (AWSEC2VolumeResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        if (volumeDeleted(action, configuration)) return action;
+        if (!("Snapshot".equals(action.info.getDeletionPolicy()))) return action;
+        String snapshotId = JsonHelper.getJsonNodeFromString(action.info.getSnapshotIdForDelete()).asText();
+        // Create 'system' tags as admin user
+        String effectiveAdminUserId = Accounts.lookupUserById(action.info.getEffectiveUserId()).getAccount().lookupAdmin().getUserId();
+        CreateTagsType createSystemTagsType = MessageHelper.createPrivilegedMessage(CreateTagsType.class, effectiveAdminUserId);
+        createSystemTagsType.setResourcesSet(Lists.newArrayList(snapshotId));
+        createSystemTagsType.setTagSet(EC2Helper.createTagSet(TagHelper.getEC2SystemTags(action.info, action.getStackEntity())));
+        AsyncRequests.<CreateTagsType, CreateTagsResponseType>sendSync(configuration, createSystemTagsType);
+        // Create non-system tags as regular user
+        List<EC2Tag> tags = TagHelper.getEC2StackTags(action.getStackEntity());
+        if (action.properties.getTags() != null && !action.properties.getTags().isEmpty()) {
+          TagHelper.checkReservedEC2TemplateTags(action.properties.getTags());
+          tags.addAll(action.properties.getTags());
+        }
+        if (!tags.isEmpty()) {
+          CreateTagsType createTagsType = MessageHelper.createMessage(CreateTagsType.class, action.info.getEffectiveUserId());
+          createTagsType.setResourcesSet(Lists.newArrayList(snapshotId));
+          createTagsType.setTagSet(EC2Helper.createTagSet(tags));
+          AsyncRequests.<CreateTagsType, CreateTagsResponseType>sendSync(configuration, createTagsType);
+        }
+        return action;
+      }
+    },
+
     DELETE_VOLUME {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {

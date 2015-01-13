@@ -44,7 +44,7 @@ import java.util.List;
  */
 public class TagHelper {
 
-  public static List<CloudFormationResourceTag> getCloudFormationResourceStackTags(ResourceInfo resourceInfo, StackEntity stackEntity) throws CloudFormationException {
+  public static List<CloudFormationResourceTag> getCloudFormationResourceSystemTags(ResourceInfo resourceInfo, StackEntity stackEntity) throws CloudFormationException {
     List<CloudFormationResourceTag> tags = Lists.newArrayList();
 
     CloudFormationResourceTag logicalIdTag = new CloudFormationResourceTag();
@@ -61,7 +61,11 @@ public class TagHelper {
     stackNameTag.setKey("aws:cloudformation:stack-name");
     stackNameTag.setValue(stackEntity.getStackName());
     tags.add(stackNameTag);
+    return tags;
+  }
 
+  public static List<CloudFormationResourceTag> getCloudFormationResourceStackTags(StackEntity stackEntity) throws CloudFormationException {
+    List<CloudFormationResourceTag> tags = Lists.newArrayList();
     if (stackEntity.getTagsJson() != null) {
       List<Tag> stackTags = StackEntityHelper.jsonToTags(stackEntity.getTagsJson());
       for (Tag stackTag : stackTags) {
@@ -74,10 +78,10 @@ public class TagHelper {
     return tags;
   }
 
-  public static List<EC2Tag> getEC2StackTags(ResourceInfo info, StackEntity stackEntity) throws CloudFormationException {
+  public static List<EC2Tag> getEC2StackTags(StackEntity stackEntity) throws CloudFormationException {
     // TOO many tags
     List<EC2Tag> tags = Lists.newArrayList();
-    for (CloudFormationResourceTag otherTag : getCloudFormationResourceStackTags(info, stackEntity)) {
+    for (CloudFormationResourceTag otherTag : getCloudFormationResourceStackTags(stackEntity)) {
       EC2Tag tag = new EC2Tag();
       tag.setKey(otherTag.getKey());
       tag.setValue(otherTag.getValue());
@@ -86,10 +90,35 @@ public class TagHelper {
     return tags;
   }
 
-  public static List<AutoScalingTag> getAutoScalingStackTags(AWSAutoScalingAutoScalingGroupResourceInfo info, StackEntity stackEntity) throws CloudFormationException {
+  public static List<EC2Tag> getEC2SystemTags(ResourceInfo info, StackEntity stackEntity) throws CloudFormationException {
+    // TOO many tags
+    List<EC2Tag> tags = Lists.newArrayList();
+    for (CloudFormationResourceTag otherTag : getCloudFormationResourceSystemTags(info, stackEntity)) {
+      EC2Tag tag = new EC2Tag();
+      tag.setKey(otherTag.getKey());
+      tag.setValue(otherTag.getValue());
+      tags.add(tag);
+    }
+    return tags;
+  }
+
+  public static List<AutoScalingTag> getAutoScalingStackTags(StackEntity stackEntity) throws CloudFormationException {
     // TOO many tags
     List<AutoScalingTag> tags = Lists.newArrayList();
-    for (CloudFormationResourceTag otherTag : getCloudFormationResourceStackTags(info, stackEntity)) {
+    for (CloudFormationResourceTag otherTag : getCloudFormationResourceStackTags(stackEntity)) {
+      AutoScalingTag tag = new AutoScalingTag();
+      tag.setKey(otherTag.getKey());
+      tag.setValue(otherTag.getValue());
+      tag.setPropagateAtLaunch(true); // TODO: verify this
+      tags.add(tag);
+    }
+    return tags;
+  }
+
+  public static List<AutoScalingTag> getAutoScalingSystemTags(AWSAutoScalingAutoScalingGroupResourceInfo info, StackEntity stackEntity) throws CloudFormationException {
+    // TOO many tags
+    List<AutoScalingTag> tags = Lists.newArrayList();
+    for (CloudFormationResourceTag otherTag : getCloudFormationResourceSystemTags(info, stackEntity)) {
       AutoScalingTag tag = new AutoScalingTag();
       tag.setKey(otherTag.getKey());
       tag.setValue(otherTag.getValue());

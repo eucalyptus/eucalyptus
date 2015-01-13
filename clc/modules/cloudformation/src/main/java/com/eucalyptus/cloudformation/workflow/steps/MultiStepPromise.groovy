@@ -80,7 +80,11 @@ abstract class MultiStepPromise {
     if ( timeout ) {
       workflowUtils.exponentialPollWithTimeout( timeout, 10, 1.15, (int)TimeUnit.MINUTES.toSeconds( 2 ), activity )
     } else {
-      activity.call( )
+      invoke( activity )
     }
+  }
+
+  def <T> Promise<T> invoke( Closure<Promise<T>> activity ) {
+    activity.call( )
   }
 }

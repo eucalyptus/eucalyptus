@@ -41,6 +41,7 @@ import com.eucalyptus.objectstorage.bittorrent.Tracker;
 import com.eucalyptus.objectstorage.entities.BucketTags;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidTagErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.NoSuchTagSetException;
+import com.eucalyptus.objectstorage.exceptions.s3.UnresolvableGrantByEmailAddressException;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingType;
 import com.eucalyptus.objectstorage.msgs.GetBucketTaggingResponseType;
@@ -976,7 +977,18 @@ public class ObjectStorageGateway implements ObjectStorageService {
 				if (Strings.isNullOrEmpty(aclString)) {
 					throw new MalformedACLErrorException(request.getBucket() + "?acl");
 				}
-			} catch (Exception e) {
+			}
+			catch (Exception e) {
+				// check to see if either a canonical ID or an email address was not resolvable
+				Throwable cause = e.getCause();
+				if (cause != null) {
+					if ( cause instanceof UnresolvableGrantByEmailAddressException ) {
+						throw (UnresolvableGrantByEmailAddressException) cause;
+					}
+					if ( cause instanceof InvalidArgumentException ) {
+						throw (InvalidArgumentException) cause;
+					}
+				}
 				LOG.error("Invalid ACL policy");
 				throw new MalformedACLErrorException(request.getBucket() + "?acl");
 			}

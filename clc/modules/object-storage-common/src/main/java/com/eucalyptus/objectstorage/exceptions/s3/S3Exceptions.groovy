@@ -355,6 +355,9 @@ class InvalidArgumentException extends S3Exception {
 		this.resource = resource;
 		this.message = message;
 	}
+
+    String argumentValue;
+    String argumentName;
 }
 
 class InvalidBucketNameException extends S3Exception {
@@ -1005,6 +1008,8 @@ class UnresolvableGrantByEmailAddressException extends S3Exception {
         this();
         this.resource = resource;
     }
+
+    String emailAddress;
 }
 
 class UserKeyMustBeSpecifiedException extends S3Exception {

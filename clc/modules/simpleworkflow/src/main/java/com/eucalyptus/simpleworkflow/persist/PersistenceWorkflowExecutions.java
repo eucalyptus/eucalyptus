@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,15 +19,14 @@
  ************************************************************************/
 package com.eucalyptus.simpleworkflow.persist;
 
-import static com.eucalyptus.simpleworkflow.SimpleWorkflowConfiguration.getWorkflowExecutionDurationMillis;
-import static com.eucalyptus.simpleworkflow.SimpleWorkflowConfiguration.getWorkflowExecutionRetentionDurationMillis;
+import static com.eucalyptus.simpleworkflow.SimpleWorkflowProperties.getWorkflowExecutionDurationMillis;
+import static com.eucalyptus.simpleworkflow.SimpleWorkflowProperties.getWorkflowExecutionRetentionDurationMillis;
 import static com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata.WorkflowExecutionMetadata;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.component.annotation.ComponentNamed;
-import com.eucalyptus.simpleworkflow.SimpleWorkflowConfiguration;
 import com.eucalyptus.simpleworkflow.SwfMetadataException;
 import com.eucalyptus.simpleworkflow.WorkflowExecution;
 import com.eucalyptus.simpleworkflow.WorkflowExecutions;

@@ -282,6 +282,9 @@ public class AWSEC2SubnetRouteTableAssociationResourceInfo extends ResourceInfo 
 
 @ToString(includeNames=true)
 public class AWSEC2VolumeResourceInfo extends ResourceInfo {
+
+  @AttributeJson
+  String snapshotIdForDelete;
   public AWSEC2VolumeResourceInfo() {
     setType("AWS::EC2::Volume");
   }

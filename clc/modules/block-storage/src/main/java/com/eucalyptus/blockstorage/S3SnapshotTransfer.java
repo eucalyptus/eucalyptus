@@ -136,6 +136,7 @@ import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
 
 /**
@@ -791,10 +792,9 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 		}
 	}
 
-	private PutObjectResult uploadSnapshotAsSingleObject(String compressedSnapFileName, Long actualSize, Long uncompressedSize,
-			SnapshotProgressCallback callback) throws Exception {
+	private PutObjectResult uploadSnapshotAsSingleObject(final String compressedSnapFileName, Long actualSize, Long uncompressedSize,
+			final SnapshotProgressCallback callback) throws Exception {
 		callback.setUploadSize(actualSize);
-		FileInputStreamWithCallback snapInputStream = new FileInputStreamWithCallback(new File(compressedSnapFileName), callback);
 		ObjectMetadata objectMetadata = new ObjectMetadata();
 		Map<String, String> userMetadataMap = new HashMap<String, String>();
 		userMetadataMap.put(UNCOMPRESSED_SIZE_KEY, String.valueOf(uncompressedSize)); // Send the uncompressed length as the metadata
@@ -807,10 +807,18 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 			@Nullable
 			public PutObjectResult apply(@Nullable PutObjectRequest arg0) {
 				eucaS3Client.refreshEndpoint();
+                // EUCA-10311 Set the input stream in put request. Doing it here to ensure that input stream is set before every attempt to put object
+                try {
+                    arg0.setInputStream(new FileInputStreamWithCallback(new File(compressedSnapFileName), callback));
+                } catch (Exception e) {
+                    LOG.warn("Failed to upload snapshot to objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName
+                        + ", reason: unable to initialize FileInputStreamWithCallback for file " + compressedSnapFileName, e);
+                    Exceptions.toUndeclared(e);
+                }
 				return eucaS3Client.putObject(arg0);
 			}
 
-		}, new PutObjectRequest(bucketName, keyName, snapInputStream, objectMetadata), REFRESH_TOKEN_RETRIES);
+		}, new PutObjectRequest(bucketName, keyName, null, objectMetadata), REFRESH_TOKEN_RETRIES);
 	}
 
 	private String initiateMulitpartUpload(Long uncompressedSize) throws SnapshotInitializeMpuException {

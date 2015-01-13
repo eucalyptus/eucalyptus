@@ -230,7 +230,7 @@ public class SimpleWorkflowService {
           final Domain domain =
               domains.lookupByName( accountFullName, request.getDomain( ),  Registered, Functions.<Domain>identity( ) );
           if ( activityTypes.countByDomain( accountFullName, domain.getDisplayName( ) ) >=
-              SimpleWorkflowConfiguration.getActivityTypesPerDomain( ) ) {
+              SimpleWorkflowProperties.getActivityTypesPerDomain() ) {
             throw upClient( "LimitExceededFault", "Request would exceed limit for type: activity-type" );
           }
           final ActivityType activityType = ActivityType.create(
@@ -354,7 +354,7 @@ public class SimpleWorkflowService {
           final Domain domain =
               domains.lookupByName( accountFullName, request.getDomain(), Registered, Functions.<Domain>identity() );
           if ( workflowTypes.countByDomain( accountFullName, domain.getDisplayName() ) >=
-              SimpleWorkflowConfiguration.getWorkflowTypesPerDomain() ) {
+              SimpleWorkflowProperties.getWorkflowTypesPerDomain() ) {
             throw upClient( "LimitExceededFault", "Request would exceed limit for type: workflow-type" );
           }
           final WorkflowType workflowType = WorkflowType.create(
@@ -759,7 +759,7 @@ public class SimpleWorkflowService {
             throw upClient( "UnknownResourceFault", "Unknown domain: " + request.getDomain() );
           }
           if ( workflowExecutions.countOpenByDomain( accountFullName, domain.getDisplayName( ) ) >=
-              SimpleWorkflowConfiguration.getOpenWorkflowExecutionsPerDomain( ) ) {
+              SimpleWorkflowProperties.getOpenWorkflowExecutionsPerDomain() ) {
             throw upClient( "LimitExceededFault", "Request would exceed limit for open workflow executions" );
           }
           final WorkflowType workflowType;
@@ -1583,7 +1583,7 @@ public class SimpleWorkflowService {
                         }
 
                         if ( activityTaskCounter.get( ) + activityTaskScheduledCount >=
-                            SimpleWorkflowConfiguration.getOpenActivityTasksPerWorkflowExecution( ) ) {
+                            SimpleWorkflowProperties.getOpenActivityTasksPerWorkflowExecution() ) {
                           throw new ScheduleActivityTaskException( OPEN_ACTIVITIES_LIMIT_EXCEEDED );
                         }
 
@@ -1686,7 +1686,7 @@ public class SimpleWorkflowService {
                             accountFullName,
                             domain.getDisplayName(),
                             workflowExecution.getDisplayName() ) >=
-                            SimpleWorkflowConfiguration.getOpenTimersPerWorkflowExecution() ) {
+                            SimpleWorkflowProperties.getOpenTimersPerWorkflowExecution() ) {
                           throw new StartTimerException( StartTimerFailedCause.OPEN_TIMERS_LIMIT_EXCEEDED );
                         }
                         timers.save( Timer.create(

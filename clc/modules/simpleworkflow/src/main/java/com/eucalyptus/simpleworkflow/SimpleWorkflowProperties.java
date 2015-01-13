@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,10 +34,10 @@ import com.eucalyptus.util.Intervals;
 /**
  *
  */
-@ConfigurableClass(root = "simpleworkflow", description = "Parameters controlling Simple Workflow")
-public class SimpleWorkflowConfiguration {
+@ConfigurableClass(root = "services.simpleworkflow", description = "Parameters controlling Simple Workflow")
+public class SimpleWorkflowProperties {
 
-  private static final Logger logger = Logger.getLogger( SimpleWorkflowConfiguration.class );
+  private static final Logger logger = Logger.getLogger( SimpleWorkflowProperties.class );
 
   @ConfigurableField( initial = "true", description = "Service available for internal/administrator use only." )
   public static volatile boolean systemOnly = true;
@@ -159,7 +159,7 @@ public class SimpleWorkflowConfiguration {
                             final Object newValue ) throws ConfigurablePropertyException {
       try {
         final String fieldName = configurableProperty.getField().getName() + "Millis";
-        final Field field = SimpleWorkflowConfiguration.class.getDeclaredField( fieldName );
+        final Field field = SimpleWorkflowProperties.class.getDeclaredField( fieldName );
         final long defaultValue = Intervals.parse( configurableProperty.getDefaultValue() );
         final long value = Intervals.parse( String.valueOf( newValue ), defaultValue );
         field.setAccessible( true );
