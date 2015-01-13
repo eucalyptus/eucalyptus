@@ -74,4 +74,8 @@ public abstract class ResourceAction {
 
   public abstract Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId);
 
+  public void refreshAttributes() throws Exception {
+    return; // Most resources will not support this action
+  }
+
 }

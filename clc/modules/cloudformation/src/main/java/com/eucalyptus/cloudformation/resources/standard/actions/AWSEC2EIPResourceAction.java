@@ -22,9 +22,13 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.cloudformation.ValidationErrorException;
+import com.eucalyptus.cloudformation.entity.StackResourceEntity;
+import com.eucalyptus.cloudformation.entity.StackResourceEntityManager;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
+import com.eucalyptus.cloudformation.resources.ResourcePropertyResolver;
+import com.eucalyptus.cloudformation.resources.ResourceResolverManager;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2EIPResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2EIPProperties;
 import com.eucalyptus.cloudformation.template.JsonHelper;
@@ -117,6 +121,25 @@ public class AWSEC2EIPResourceAction extends ResourceAction {
           }
           associateAddressType.setInstanceId(action.properties.getInstanceId());
           AsyncRequests.<AssociateAddressType, AssociateAddressResponseType> sendSync(configuration, associateAddressType);
+
+          // Update the instance info
+          if (action.properties.getInstanceId() != null) {
+            String stackId = action.getStackEntity().getStackId();
+            String accountId = action.getStackEntity().getAccountId();
+            StackResourceEntity instanceStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, action.properties.getInstanceId());
+            if (instanceStackResourceEntity != null) {
+              ResourceInfo instanceResourceInfo = StackResourceEntityManager.getResourceInfo(instanceStackResourceEntity);
+              ResourceAction instanceResourceAction = new ResourceResolverManager().resolveResourceAction(instanceResourceInfo.getType());
+              instanceResourceAction.setStackEntity(action.getStackEntity());
+              instanceResourceInfo.setEffectiveUserId(action.info.getEffectiveUserId());
+              instanceResourceAction.setResourceInfo(instanceResourceInfo);
+              ResourcePropertyResolver.populateResourceProperties(instanceResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(instanceResourceInfo.getPropertiesJson()));
+              instanceResourceAction.refreshAttributes();
+              instanceStackResourceEntity = StackResourceEntityManager.updateResourceInfo(instanceStackResourceEntity, instanceResourceInfo);
+              StackResourceEntityManager.updateStackResource(instanceStackResourceEntity);
+            }
+          }
+
         }
         return action;
       }
@@ -152,6 +175,25 @@ public class AWSEC2EIPResourceAction extends ResourceAction {
           }
           AsyncRequests.<ReleaseAddressType, ReleaseAddressResponseType> sendSync(configuration, releaseAddressType);
         }
+
+        // Update the instance info
+        if (action.properties.getInstanceId() != null) {
+          String stackId = action.getStackEntity().getStackId();
+          String accountId = action.getStackEntity().getAccountId();
+          StackResourceEntity instanceStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, action.properties.getInstanceId());
+          if (instanceStackResourceEntity != null) {
+            ResourceInfo instanceResourceInfo = StackResourceEntityManager.getResourceInfo(instanceStackResourceEntity);
+            ResourceAction instanceResourceAction = new ResourceResolverManager().resolveResourceAction(instanceResourceInfo.getType());
+            instanceResourceAction.setStackEntity(action.getStackEntity());
+            instanceResourceInfo.setEffectiveUserId(action.info.getEffectiveUserId());
+            instanceResourceAction.setResourceInfo(instanceResourceInfo);
+            ResourcePropertyResolver.populateResourceProperties(instanceResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(instanceResourceInfo.getPropertiesJson()));
+            instanceResourceAction.refreshAttributes();
+            instanceStackResourceEntity = StackResourceEntityManager.updateResourceInfo(instanceStackResourceEntity, instanceResourceInfo);
+            StackResourceEntityManager.updateStackResource(instanceStackResourceEntity);
+          }
+        }
+
         return action;
       }
     };
