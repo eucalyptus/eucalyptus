@@ -586,6 +586,12 @@ class NetworkInfoBroadcaster {
     }
   }
 
+  private static boolean validInstanceMetadata( final VmInstance instance) {
+    !Strings.isNullOrEmpty( instance.privateAddress ) && 
+        !VmNetworkConfig.DEFAULT_IP.equals( instance.privateAddress ) &&
+        !instance.networkGroups.isEmpty( )
+  }
+  
   @Immutable
   static class VmInstanceNetworkView implements Comparable<VmInstanceNetworkView> {
     String instanceId
@@ -611,11 +617,11 @@ class NetworkInfoBroadcaster {
     INSTANCE;
 
     @Override
-    VmInstanceNetworkView apply( final VmInstance instance) {
+    VmInstanceNetworkView apply( final VmInstance instance ) {
       new VmInstanceNetworkView(
           instance.instanceId,
           instance.state,
-          GObjects.firstNonNull( instance.runtimeState.zombie, false ),
+          GObjects.firstNonNull( instance.runtimeState.zombie, false ) || !validInstanceMetadata( instance ),
           instance.ownerAccountNumber,
           instance.bootRecord.vpcId,
           instance.bootRecord.subnetId,
