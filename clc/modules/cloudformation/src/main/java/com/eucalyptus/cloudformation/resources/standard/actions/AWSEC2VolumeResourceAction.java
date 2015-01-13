@@ -74,10 +74,10 @@ public class AWSEC2VolumeResourceAction extends ResourceAction {
   private AWSEC2VolumeResourceInfo info = new AWSEC2VolumeResourceInfo();
 
   @ConfigurableField(initial = "300", description = "The amount of time (in seconds) to wait for a volume to be available after create)")
-  public static volatile Integer SNAPSHOT_COMPLETE_MAX_DELETE_RETRY_SECS = 300;
-
-  @ConfigurableField(initial = "300", description = "The amount of time (in seconds) to wait for a snapshot to be complete before a volume is deleted)")
   public static volatile Integer VOLUME_AVAILABLE_MAX_CREATE_RETRY_SECS = 300;
+
+  @ConfigurableField(initial = "300", description = "The amount of time (in seconds) to wait for a snapshot to be complete (if specified as the deletion policy) before a volume is deleted)")
+  public static volatile Integer VOLUME_SNAPSHOT_COMPLETE_MAX_DELETE_RETRY_SECS = 300;
 
 
 
@@ -225,7 +225,7 @@ public class AWSEC2VolumeResourceAction extends ResourceAction {
 
       @Override
       public Integer getTimeout() {
-        return SNAPSHOT_COMPLETE_MAX_DELETE_RETRY_SECS;
+        return VOLUME_SNAPSHOT_COMPLETE_MAX_DELETE_RETRY_SECS;
       }
     },
 
