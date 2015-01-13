@@ -73,6 +73,8 @@ import javax.annotation.Nullable;
 
 import com.eucalyptus.compute.common.AddressInfoType;
 import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.util.RestrictedTypes;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -233,13 +235,12 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     @SuppressWarnings( "unchecked" )
     @Override
     public Long apply( final OwnerFullName input ) {
-      int i = 0;
-      for ( final Address addr : Addresses.getInstance( ).listValues( ) ) {
-        if ( addr.isAllocated( ) && addr.getOwnerAccountNumber( ).equals( input.getAccountNumber( ) ) ) {
-          i++;
-        }
-      }
-      return ( long ) i;
+      return (long) Iterables.size( Iterables.filter( 
+          Addresses.getInstance( ).listValues( ), 
+          Predicates.and(
+              RestrictedTypes.filterByOwner( input ),
+              Predicates.compose( Predicates.equalTo( Boolean.TRUE ), BooleanFilterFunctions.IS_ALLOCATED )
+      ) ) );
     }
     
   }
@@ -475,6 +476,16 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
           .withStringProperty( "private-ip-address", FilterFunctions.PRIVATE_IP_ADDRESS )
           .withStringProperty( "public-ip", FilterFunctions.PUBLIC_IP )
       );
+    }
+  }
+  
+  private enum BooleanFilterFunctions implements Function<Address,Boolean> {
+    IS_ALLOCATED {
+      @Nullable
+      @Override
+      public Boolean apply( @Nullable final Address address ) {
+        return address != null && address.isAllocated( );
+      }
     }
   }
   
