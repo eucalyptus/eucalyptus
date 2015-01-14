@@ -1508,6 +1508,7 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     char *libvirt_xml = NULL;
     char canonicalDev[32];
     char *connect_string = NULL;
+    char *final_attachment_token = NULL;
 
     ret = canonicalize_dev(localDev, canonicalDev, sizeof(canonicalDev));
     if (ret)
@@ -1551,11 +1552,18 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
             if (volume) {
                 connect_string = strdup(volume->connectionString);
             }
+            // check if input attachmentToken is valid
+            if (attachmentToken == NULL || strlen(attachmentToken) == 0) {
+                // If not, get it from volume struct
+                final_attachment_token = strdup(volume->attachmentToken);
+            } else {
+                final_attachment_token = strdup(attachmentToken);
+            }
         }
     }
     sem_v(inst_sem);
 
-    ret = disconnect_ebs(nc, instanceId, volumeId, attachmentToken, connect_string);
+    ret = disconnect_ebs(nc, instanceId, volumeId, final_attachment_token, connect_string);
     if (ret == EUCA_OK)
         LOGINFO("[%s][%s] detached EBS guest device '%s'\n", instanceId, volumeId, canonicalDev);
     // remoteDev can be a long string, so to keep log readable, we log it at TRACE level unless there was a problem
@@ -1564,6 +1572,7 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         log_level_for_devstring = EUCA_LOG_DEBUG;
     EUCALOG(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instanceId, volumeId, connect_string);
     EUCA_FREE(connect_string);
+    EUCA_FREE(final_attachment_token);
     EUCA_FREE(libvirt_xml);
 
     if (force) {

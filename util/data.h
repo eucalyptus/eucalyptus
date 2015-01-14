@@ -291,7 +291,7 @@ typedef struct virtualBootRecord_t {
     libvirtDevType guestDeviceType;    //!< DEV_TYPE_{DISK|FLOPPY|CDROM}
     libvirtBusType guestDeviceBus;     //!< BUS_TYPE_{IDE|SCSI|VIRTIO|XEN}
     libvirtSourceType backingType;     //!< SOURCE_TYPE_{FILE|BLOCK}
-    char backingPath[CHAR_BUFFER_SIZE]; //!< path to file or block device that backs the resource
+    char backingPath[VERY_BIG_CHAR_BUFFER_SIZE]; //!< XML for describing the disk to libvirt
     char preparedResourceLocation[VERY_BIG_CHAR_BUFFER_SIZE];   //!< e.g., URL + resourceLocation for Walrus downloads, sc url for ebs volumes prior to SC call, then connection string for ebs volumes returned from SC
     //! @}
     char guestDeviceSerialId[128];     //!< Serial ID to assign to the device

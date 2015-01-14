@@ -828,7 +828,7 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
                             vbr->preparedResourceLocation, // connect_string
                             vbr->guestDeviceName,
                             VOL_STATE_ATTACHED,
-                            vbr->backingPath)) { // the XML
+                            vbr->backingPath) == NULL) { // the XML
                 LOGERROR("[%s] failed to add record for volume %s\n", instance->instanceId, volumeId);
             }
             EUCA_FREE(vol_data);

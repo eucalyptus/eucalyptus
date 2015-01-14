@@ -1639,6 +1639,7 @@ static int iqn_creator(artifact * a)
 {
     int rc = EUCA_OK;
     char *libvirt_xml = NULL;
+    char *libvirt_xml_modified = NULL;
     ebs_volume_data *vol_data = NULL;
     virtualBootRecord *vbr = NULL;
 
@@ -1660,12 +1661,20 @@ static int iqn_creator(artifact * a)
     } else {
         //Update the vbr preparedResourceLocation with the connection_string returned from token resolution
         euca_strncpy(vbr->preparedResourceLocation, vol_data->connect_string, sizeof(vbr->preparedResourceLocation));
+        // update VBR with libvirt xml
+        euca_strncpy(vbr->backingPath, libvirt_xml, sizeof(vbr->backingPath));
+        vbr->backingType = SOURCE_TYPE_BLOCK;
     }
 
-    // update VBR with device location
-    euca_strncpy(vbr->backingPath, libvirt_xml, sizeof(vbr->backingPath));
-    vbr->backingType = SOURCE_TYPE_BLOCK;
+    if (create_vol_xml(a->instanceId, vol_data->volumeId, libvirt_xml, &libvirt_xml_modified) != EUCA_OK) {
+        EUCA_FREE(vol_data);
+        EUCA_FREE(libvirt_xml);
+        return (EUCA_ERROR);
+    }
+
     EUCA_FREE(vol_data);
+    EUCA_FREE(libvirt_xml);
+    EUCA_FREE(libvirt_xml_modified);
     return (EUCA_OK);
 }
 #endif // ! _NO_EBS
