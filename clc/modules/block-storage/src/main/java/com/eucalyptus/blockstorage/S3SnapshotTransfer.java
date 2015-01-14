@@ -697,7 +697,7 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 		this.transferTimeout = info.getSnapshotTransferTimeoutInHours();
 		this.serviceConfig = Components.lookup(Storage.class).getLocalServiceConfiguration();
 		this.poolSize = info.getMaxConcurrentSnapshotTransfers();
-		this.readBufferSize = info.getReadBuffferSizeInMB() * 1024 * 1024;
+		this.readBufferSize = info.getReadBufferSizeInMB() * 1024 * 1024;
 		this.writeBufferSize = info.getWriteBufferSizeInMB() * 1024 * 1024;
 	}
 

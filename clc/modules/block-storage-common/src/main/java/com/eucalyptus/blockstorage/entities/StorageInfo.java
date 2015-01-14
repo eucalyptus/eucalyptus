@@ -257,12 +257,12 @@ public class StorageInfo extends AbstractPersistent {
 		this.snapshotTransferTimeoutInHours = snapshotTransferTimeoutInHours;
 	}
 
-	public Integer getReadBuffferSizeInMB() {
-		return readBuffferSizeInMB;
+	public Integer getReadBufferSizeInMB() {
+		return readBufferSizeInMB;
 	}
 
-	public void setReadBuffferSizeInMB(Integer readBuffferSizeInMB) {
-		this.readBuffferSizeInMB = readBuffferSizeInMB;
+	public void setReadBufferSizeInMB(Integer readBufferSizeInMB) {
+		this.readBufferSizeInMB = readBufferSizeInMB;
 	}
 
 	public Integer getWriteBufferSizeInMB() {
@@ -333,8 +333,8 @@ public class StorageInfo extends AbstractPersistent {
 		if (snapshotTransferTimeoutInHours == null) {
 			snapshotTransferTimeoutInHours = DEFAULT_SNAPSHOT_TRANSFER_TIMEOUT;
 		}
-		if (readBuffferSizeInMB == null) {
-			readBuffferSizeInMB = DEFAULT_READ_BUFFER_SIZE_IN_MB;
+		if (readBufferSizeInMB == null) {
+			readBufferSizeInMB = DEFAULT_READ_BUFFER_SIZE_IN_MB;
 		}
 		if (writeBufferSizeInMB == null) {
 			writeBufferSizeInMB = DEFAULT_WRITE_BUFFER_SIZE_IN_MB;
@@ -352,7 +352,7 @@ public class StorageInfo extends AbstractPersistent {
 		info.setMaxSnapshotPartsQueueSize(DEFAULT_MAX_SNAPSHOT_PARTS_QUEUE_SIZE);
 		info.setMaxConcurrentSnapshotTransfers(DEFAULT_MAX_SNAPSHOT_CONCURRENT_TRANSFERS);
 		info.setSnapshotTransferTimeoutInHours(DEFAULT_SNAPSHOT_TRANSFER_TIMEOUT);
-		info.setReadBuffferSizeInMB(DEFAULT_READ_BUFFER_SIZE_IN_MB);
+		info.setReadBufferSizeInMB(DEFAULT_READ_BUFFER_SIZE_IN_MB);
 		info.setWriteBufferSizeInMB(DEFAULT_WRITE_BUFFER_SIZE_IN_MB);
 		return info;
 	}
