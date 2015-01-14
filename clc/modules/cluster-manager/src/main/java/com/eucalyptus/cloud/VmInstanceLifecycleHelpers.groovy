@@ -872,7 +872,7 @@ class VmInstanceLifecycleHelpers {
                   new VpcNetworkInterfaceResource(
                       ownerId: token.instanceId,
                       value: instanceNetworkInterface.networkInterfaceId,
-                      deleteOnTerminate: firstNonNull( instanceNetworkInterface.deleteOnTermination, true )
+                      deleteOnTerminate: firstNonNull( instanceNetworkInterface.deleteOnTermination, false )
                   )
               ] as Collection<NetworkResource>
             } else {
@@ -964,6 +964,9 @@ class VmInstanceLifecycleHelpers {
           if ( address != null ) {
             NetworkInterfaceHelper.associate( address, networkInterface, Optional.of( instance ) )
           } else {
+            if ( networkInterface.associated ) {
+              instance.updatePublicAddress( networkInterface.association.publicIp )
+            }
             NetworkInterfaceHelper.start( networkInterface, instance )
           }
           // Add so eni information is available from instance, not for
