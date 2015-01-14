@@ -44,8 +44,11 @@ public class ChannelBufferStreamingInputStream extends ChannelBufferInputStream 
 	//A smaller queue will limit the number of concurrent requests that can be handled
 	//but will be more suitable when memory is constrained.
 	@ConfigurableField( description = "Channel buffer queue size for uploads", displayName = "objectstorage.uploadqueuesize")
-	public static int QUEUE_SIZE = 100;
-	
+	public static int QUEUE_SIZE = 24;
+
+	@ConfigurableField( description = "Channel buffer queue timeout (in seconds)", displayName = "objectstorage.uploadqueuetimeout")
+	public static int QUEUE_TIMEOUT = 1;
+
 	@Override
 	public boolean markSupported() {
 		return super.markSupported();
@@ -171,7 +174,7 @@ public class ChannelBufferStreamingInputStream extends ChannelBufferInputStream 
 		try {
 			boolean success = false;
 			int retries = 0;
-			while ((!success) && (retries++ < 20)) {
+			while ((!success) && (retries++ < QUEUE_TIMEOUT)) {
 				success = buffers.offer(buffer, 1, TimeUnit.SECONDS);
 			}
 			if (!success) {
@@ -185,7 +188,7 @@ public class ChannelBufferStreamingInputStream extends ChannelBufferInputStream 
 	public void putChunk(ChannelBuffer input) throws InterruptedException, EucalyptusCloudException {
 		boolean success = false;
 		int retries = 0;
-		while ((!success) && (retries++ < 20)) {
+		while ((!success) && (retries++ < QUEUE_TIMEOUT)) {
 			success = buffers.offer(input, 1, TimeUnit.SECONDS);
 		}
 		if (!success) {
