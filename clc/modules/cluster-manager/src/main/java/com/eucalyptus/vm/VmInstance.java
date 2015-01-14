@@ -1948,6 +1948,34 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     Entities.asTransaction( VmInstance.class, attachmentFunction, VmInstances.TX_RETRIES ).apply( vol );
   }
   
+  public void updateAttachmentToken(Map<String, String> volumeAttachmentTokenMap) {
+    final Function<Map<String, String>, String> updateFunction = new Function<Map<String, String>, String>() {
+
+      @Override
+      public String apply(@Nonnull Map<String, String> arg0) {
+        final VmInstance entity = Entities.merge(VmInstance.this);
+        for (VmVolumeAttachment attachment : entity.getBootRecord().getPersistentVolumes()) {
+          if (arg0.containsKey(attachment.getVolumeId())) {
+            attachment.setRemoteDevice(arg0.get(attachment.getVolumeId()));
+          } else {
+            LOG.debug("No attachment token found for " + attachment.getVolumeId() + " and " + entity.getInstanceId());
+          }
+        }
+        return null;
+      }
+    };
+
+    if (volumeAttachmentTokenMap != null && !volumeAttachmentTokenMap.isEmpty()) {
+      try {
+        Entities.asTransaction(VmInstance.class, updateFunction, VmInstances.TX_RETRIES).apply(volumeAttachmentTokenMap);
+      } catch (Exception e) {
+        LOG.warn("Failed to update attachment tokens for run time EBS volumes of " + this.getInstanceId(), e);
+      }
+    } else {
+      // no attachment tokens to save
+    }
+  }
+
   // Creates a DB entity associated with ephemeral devices for boot from ebs instances and stores it in the boot record
   public void addEphemeralAttachment( final String deviceName, final String ephemeralId ) {
     final Function<String, String> attachmentFunction = new Function<String, String>( ) {

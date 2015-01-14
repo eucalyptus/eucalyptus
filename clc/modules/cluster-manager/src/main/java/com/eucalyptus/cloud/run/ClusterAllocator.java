@@ -69,6 +69,7 @@ import java.security.MessageDigest;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -161,6 +162,7 @@ import com.eucalyptus.vm.VmVolumeAttachment;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import java.util.concurrent.TimeUnit;
 
@@ -560,6 +562,8 @@ public class ClusterAllocator implements Runnable {
     
     if ( this.allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo ) {        
     	String instanceId = token.getInstanceId();
+    	final VmInstance vm = VmInstances.lookup(instanceId);
+        Map<String, String> volumeAttachmentTokenMap = Maps.newHashMap();
     	
     	// Deal with the root volume first
     	VirtualBootRecord rootVbr = childVmInfo.lookupRoot();
@@ -593,7 +597,7 @@ public class ClusterAllocator implements Runnable {
     		}
     		rootVbr.setResourceLocation(volumeToken);
     		rootVbr.setSize(rootVolume.getSize() * BYTES_PER_GB);
-    		//vm.updatePersistantVolume(remoteDeviceString, rootVolume); Skipping this step for now as no one seems to be using it
+    		volumeAttachmentTokenMap.put(volumeId, volumeToken);
     	} catch (final Exception ex) {
     		LOG.error(ex);
     		Logs.extreme().error(ex, ex);
@@ -631,7 +635,7 @@ public class ClusterAllocator implements Runnable {
     				volumeToken = StorageProperties.formatVolumeAttachmentTokenForTransfer(volumeToken, volumeId);
     				VirtualBootRecord vbr = new VirtualBootRecord(volumeId, volumeToken, "ebs", mapping.getKey(), (volume.getSize() * BYTES_PER_GB), "none");
     				childVmInfo.getVirtualBootRecord().add(vbr);
-    				//vm.updatePersistantVolume(remoteDeviceString, volume); Skipping this step for now as no one seems to be using it
+    				volumeAttachmentTokenMap.put(volumeId, volumeToken);
     			}
     		} catch (final Exception ex) {
     			LOG.error(ex);
@@ -639,6 +643,12 @@ public class ClusterAllocator implements Runnable {
     			throw ex;
     		}
     	}
+    	
+    	// update volume attachment tokens in database
+        if (!volumeAttachmentTokenMap.isEmpty()) {
+          vm.updateAttachmentToken(volumeAttachmentTokenMap);
+        }
+    	
     	// FIXME: multiple ephemerals will result in wrong disk sizes
     	for( String deviceName : token.getEphemeralDisks().keySet()  ) {
     		childVmInfo.setEphemeral( 0, deviceName, (this.allocInfo.getVmType().getDisk( ) * BYTES_PER_GB), "none" );
