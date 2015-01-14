@@ -439,7 +439,7 @@ int init_stats(const char *euca_home, const char *current_component_name, void (
 static int get_new_config_status(const char *sensor_name, const char **enabled_sensors) 
 {
     if(enabled_sensors == NULL) {
-        LOGERROR("Cannot determine config status of sensor %s due to null list of sensors to enable\n", sensor_name);
+        LOGTRACE("Cannot determine config status of sensor %s due to null list of sensors to enable\n", sensor_name);
         return FALSE;
     }
 
