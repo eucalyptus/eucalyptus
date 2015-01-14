@@ -132,7 +132,10 @@ class EucaS3Client implements AmazonS3, AutoCloseable {
     }
 
     public void refreshEndpoint(boolean usePublicDns) throws NoSuchElementException {
-        this.s3Client.setEndpoint(GenericS3ClientFactory.getRandomOSGUri(usePublicDns).toASCIIString());
+      String path = GenericS3ClientFactory.getRandomOSGUri(usePublicDns).toASCIIString();
+      if (path.endsWith("/"))
+        path = path.substring(0, path.length()-1);
+      this.s3Client.setEndpoint(path);
     }
 
     public String getObjectContent( String bucket, String key, int maximumSize ) {
