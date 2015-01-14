@@ -121,6 +121,24 @@ public class StackResourceEntityManager {
     return stackResourceEntity;
   }
 
+  public static StackResourceEntity getStackResourceByPhysicalResourceId(String stackId, String accountId, String physicalResourceId) {
+    StackResourceEntity stackResourceEntity = null;
+    try ( TransactionResource db =
+            Entities.transactionFor( StackResourceEntity.class ) ) {
+      Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
+        .add(Restrictions.eq("accountId" , accountId))
+        .add(Restrictions.eq("stackId" , stackId))
+        .add(Restrictions.eq("physicalResourceId" , physicalResourceId))
+        .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
+      List<StackResourceEntity> stackResourceEntityList = criteria.list();
+      if (stackResourceEntityList != null && !stackResourceEntityList.isEmpty()) {
+        stackResourceEntity = stackResourceEntityList.get(0);
+      }
+      db.commit( );
+    }
+    return stackResourceEntity;
+  }
+
   public static List<StackResourceEntity> getStackResources(String stackId, String accountId) {
     List<StackResourceEntity> stackResourceEntityList = Lists.newArrayList();
     try ( TransactionResource db =

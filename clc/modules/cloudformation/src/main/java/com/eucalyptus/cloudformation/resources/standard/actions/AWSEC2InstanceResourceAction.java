@@ -22,6 +22,7 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
@@ -558,6 +559,25 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
       blockDeviceMappingItemTypes.add(itemType);
     }
     return blockDeviceMappingItemTypes;
+  }
+
+  @Override
+  public void refreshAttributes() throws Exception {
+    // This assumes everything is set, propertywise and attributewise
+    ServiceConfiguration configuration = Topology.lookup(Compute.class);
+    DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, info.getEffectiveUserId());
+    describeInstancesType.setInstancesSet(Lists.newArrayList(info.getPhysicalResourceId()));
+    DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType, DescribeInstancesResponseType>sendSync(configuration, describeInstancesType);
+    if (describeInstancesResponseType.getReservationSet().size() == 0) {
+      return;
+    }
+    RunningInstancesItemType runningInstancesItemType = describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0);
+    info.setPrivateIp(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getPrivateIpAddress())));
+    info.setPublicIp(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getIpAddress())));
+    info.setAvailabilityZone(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getPlacement())));
+    info.setPrivateDnsName(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getPrivateDnsName())));
+    info.setPublicDnsName(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getDnsName())));
+    info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(info.getPhysicalResourceId())));
   }
 }
 
