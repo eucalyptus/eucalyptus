@@ -155,7 +155,7 @@ public class StorageInfo extends AbstractPersistent {
 
 	@ConfigurableField(description = "Buffer size in MB for reading data from snapshot when uploading snapshot to objectstorage gateway", displayName = "Read Buffer Size", initial = "1", changeListener = PositiveIntegerChangeListener.class)
 	@Column(name = "read_buffer_size_mb")
-	private Integer readBuffferSizeInMB;
+	private Integer readBufferSizeInMB;
 
 	@ConfigurableField(description = "Buffer size in MB for writing data to snapshot when downloading snapshot from objectstorage gateway", displayName = "Write Buffer Size", initial = "100", changeListener = PositiveIntegerChangeListener.class)
 	@Column(name = "write_buffer_size_mb")
