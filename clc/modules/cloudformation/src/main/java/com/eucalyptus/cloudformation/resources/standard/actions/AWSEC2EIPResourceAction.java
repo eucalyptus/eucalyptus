@@ -126,7 +126,7 @@ public class AWSEC2EIPResourceAction extends ResourceAction {
           if (action.properties.getInstanceId() != null) {
             String stackId = action.getStackEntity().getStackId();
             String accountId = action.getStackEntity().getAccountId();
-            StackResourceEntity instanceStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, action.properties.getInstanceId());
+            StackResourceEntity instanceStackResourceEntity = StackResourceEntityManager.getStackResourceByPhysicalResourceId(stackId, accountId, action.properties.getInstanceId());
             if (instanceStackResourceEntity != null) {
               ResourceInfo instanceResourceInfo = StackResourceEntityManager.getResourceInfo(instanceStackResourceEntity);
               ResourceAction instanceResourceAction = new ResourceResolverManager().resolveResourceAction(instanceResourceInfo.getType());
@@ -180,7 +180,7 @@ public class AWSEC2EIPResourceAction extends ResourceAction {
         if (action.properties.getInstanceId() != null) {
           String stackId = action.getStackEntity().getStackId();
           String accountId = action.getStackEntity().getAccountId();
-          StackResourceEntity instanceStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, action.properties.getInstanceId());
+          StackResourceEntity instanceStackResourceEntity = StackResourceEntityManager.getStackResourceByPhysicalResourceId(stackId, accountId, action.properties.getInstanceId());
           if (instanceStackResourceEntity != null) {
             ResourceInfo instanceResourceInfo = StackResourceEntityManager.getResourceInfo(instanceStackResourceEntity);
             ResourceAction instanceResourceAction = new ResourceResolverManager().resolveResourceAction(instanceResourceInfo.getType());
