@@ -755,6 +755,9 @@ class VmInstanceLifecycleHelpers {
         if (!networkingFeatures.contains(NetworkingFeature.Vpc)) {
           throw new InvalidMetadataException("EC2-VPC not supported, for EC2-Classic do not specify subnet or network interface")
         }
+        if ( runInstances.addressingType ) {
+          throw new InvalidMetadataException("Addressing scheme not supported in EC2-VPC")
+        }
 
         if (instanceNetworkInterface != null) {
           if ( !runInstances.securityGroupNames( ).isEmpty( ) ||
@@ -843,6 +846,8 @@ class VmInstanceLifecycleHelpers {
           throw new InvalidMetadataException( "EC2-VPC not supported, delete default VPC to run in EC2-Classic" )
         } else if ( defaultVpcId == null && !networkingFeatures.contains( NetworkingFeature.Classic ) ) {
           throw new VpcRequiredMetadataException( );
+        } else if ( runInstances.addressingType && !networkingFeatures.contains( NetworkingFeature.Classic ) ) {
+          throw new InvalidMetadataException("Addressing scheme not supported in EC2-VPC")
         }
       }
     }
