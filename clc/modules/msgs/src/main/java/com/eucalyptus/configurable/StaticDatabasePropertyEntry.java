@@ -373,27 +373,47 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     private static Logger LOG = Logger.getLogger( StaticPropertyEntryRenameServiceVMPropertyUpgrade.class );
     @Override
     public boolean apply( Class arg0 ) {
-      ImmutableMap<String, String> changes = ImmutableMap.<String, String>builder()
-          .put("imaging.imaging_worker_availability_zones", "services.imaging.worker.availability_zones")
-          .put("imaging.imaging_worker_emi", "services.imaging.worker.image")
-          .put("imaging.imaging_worker_enabled", "services.imaging.worker.configured")
-          .put("imaging.imaging_worker_healthcheck", "services.imaging.worker.healthcheck")
-          .put("imaging.imaging_worker_instance_type", "services.imaging.worker.instance_type")
-          .put("imaging.imaging_worker_keyname", "services.imaging.worker.keyname")
-          .put("imaging.imaging_worker_log_server", "services.imaging.worker.log_server")
-          .put("imaging.imaging_worker_log_server_port", "services.imaging.worker.log_server_port")
-          .put("imaging.imaging_worker_ntp_server", "services.imaging.worker.ntp_server")
-          .put("imaging.import_task_expiration_hours", "services.imaging.import_task_expiration_hours")
-          .put("imaging.import_task_timeout_minutes", "services.imaging.import_task_timeout_minutes")
-          .put("loadbalancing.loadbalancer_app_cookie_duration", "services.loadbalancing.worker.app_cookie_duration")
-          .put("loadbalancing.loadbalancer_dns_subdomain", "services.loadbalancing.dns_subdomain")
-          .put("loadbalancing.loadbalancer_dns_ttl", "services.loadbalancing.dns_ttl")
-          .put("loadbalancing.loadbalancer_emi", "services.loadbalancing.worker.image")
-          .put("loadbalancing.loadbalancer_instance_type", "services.loadbalancing.worker.instance_type")
-          .put("loadbalancing.loadbalancer_num_vm", "services.loadbalancing.vm_per_zone")
-          .put("loadbalancing.loadbalancer_restricted_ports", "services.loadbalancing.restricted_ports")
-          .put("loadbalancing.loadbalancer_vm_keyname", "services.loadbalancing.worker.keyname")
-          .put("loadbalancing.loadbalancer_vm_ntp_server", "services.loadbalancing.worker.ntp_server")
+      ImmutableMap<String, String[]> changes = ImmutableMap.<String, String[]>builder()
+          .put("imaging.imaging_worker_availability_zones", new String[] {"services.imaging.worker.availability_zones",
+              "com.eucalyptus.imaging.ImagingServiceProperties.availability_zones"})
+          .put("imaging.imaging_worker_emi", new String[] {"services.imaging.worker.image",
+              "com.eucalyptus.imaging.ImagingServiceProperties.image"})
+          .put("imaging.imaging_worker_enabled", new String[] {"services.imaging.worker.configured",
+              "com.eucalyptus.imaging.worker.ImagingServiceLaunchers.configured"})
+          .put("imaging.imaging_worker_healthcheck", new String[] {"services.imaging.worker.healthcheck",
+              "com.eucalyptus.imaging.ImagingServiceProperties.healthcheck"})
+          .put("imaging.imaging_worker_instance_type", new String[] {"services.imaging.worker.instance_type",
+              "com.eucalyptus.imaging.ImagingServiceProperties.instance_type"})
+          .put("imaging.imaging_worker_keyname", new String[] {"services.imaging.worker.keyname",
+              "com.eucalyptus.imaging.ImagingServiceProperties.keyname"})
+          .put("imaging.imaging_worker_log_server", new String[] {"services.imaging.worker.log_server",
+              "com.eucalyptus.imaging.ImagingServiceProperties.log_server"})
+          .put("imaging.imaging_worker_log_server_port", new String[] {"services.imaging.worker.log_server_port",
+              "com.eucalyptus.imaging.ImagingServiceProperties.log_server_port"})
+          .put("imaging.imaging_worker_ntp_server", new String[] {"services.imaging.worker.ntp_server",
+              "com.eucalyptus.imaging.ImagingServiceProperties.ntp_server"})
+          .put("imaging.import_task_expiration_hours", new String[] {"services.imaging.import_task_expiration_hours",
+              "com.eucalyptus.imaging.ImportTaskProperties.import_task_expiration_hours"})
+          .put("imaging.import_task_timeout_minutes", new String[] {"services.imaging.import_task_timeout_minutes",
+              "com.eucalyptus.imaging.ImportTaskProperties.import_task_timeout_minutes"})
+          .put("loadbalancing.loadbalancer_app_cookie_duration", new String[] {"services.loadbalancing.worker.app_cookie_duration",
+              "com.eucalyptus.loadbalancing.activities.LoadBalancerASGroupCreator.app_cookie_duration"})
+          .put("loadbalancing.loadbalancer_dns_subdomain", new String[] {"services.loadbalancing.dns_subdomain",
+              "com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.dns_subdomain"})
+          .put("loadbalancing.loadbalancer_dns_ttl", new String[] {"services.loadbalancing.dns_ttl",
+              "com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.dns_ttl"})
+          .put("loadbalancing.loadbalancer_emi", new String[] {"services.loadbalancing.worker.image",
+              "com.eucalyptus.loadbalancing.activities.LoadBalancerASGroupCreator.image"})
+          .put("loadbalancing.loadbalancer_instance_type", new String[] {"services.loadbalancing.worker.instance_type",
+              "com.eucalyptus.loadbalancing.activities.LoadBalancerASGroupCreator.instance_type"})
+          .put("loadbalancing.loadbalancer_num_vm", new String[] {"services.loadbalancing.vm_per_zone",
+              "com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.vm_per_zone"})
+          .put("loadbalancing.loadbalancer_restricted_ports", new String[] {"services.loadbalancing.restricted_ports",
+              "com.eucalyptus.loadbalancing.LoadBalancerListener.restricted_ports"})
+          .put("loadbalancing.loadbalancer_vm_keyname", new String[] {"services.loadbalancing.worker.keyname",
+              "com.eucalyptus.loadbalancing.activities.LoadBalancerASGroupCreator.keyname"})
+          .put("loadbalancing.loadbalancer_vm_ntp_server", new String[] {"services.loadbalancing.worker.ntp_server",
+              "com.eucalyptus.loadbalancing.activities.LoadBalancerASGroupCreator.ntp_server"})
           .build();
       EntityTransaction db = Entities.get( StaticDatabasePropertyEntry.class );
       LOG.info("Updating service VM properties");
@@ -401,12 +421,11 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
         List<StaticDatabasePropertyEntry> entities = Entities.query( new StaticDatabasePropertyEntry( ) );
         for ( StaticDatabasePropertyEntry entry : entities ) {
           if (entry.getPropName() != null && changes.containsKey(entry.getPropName())) {
-            String newPropertyName = changes.get(entry.getPropName());
-            LOG.debug( "Upgrading: Copying property value of'" + entry.getPropName() + "' to '" + newPropertyName + "'");
-            StaticDatabasePropertyEntry newEntry = findNewEntity(entities, newPropertyName);
-            if (newEntry != null) {
-              newEntry.setValue(entry.getValue());
-            }
+            String[] newProperty = changes.get(entry.getPropName());
+            LOG.info( "Upgrading: Copying property value of'" + entry.getPropName() + "' to '" + newProperty[0] + "'" );
+            StaticDatabasePropertyEntry.update(newProperty[1], newProperty[0], entry.getValue());
+            LOG.info( "Deleting old property from DB'" + entry.getPropName() + "'" );
+            Entities.delete(entry);
           }
         }
         db.commit( );
@@ -417,14 +436,6 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
         if (db.isActive())
           db.rollback();
       }
-    }
-
-    private StaticDatabasePropertyEntry findNewEntity(List<StaticDatabasePropertyEntry> entities, String name) {
-      for ( StaticDatabasePropertyEntry entry : entities ) {
-        if (name.equals( entry.getPropName() ))
-          return entry;
-      }
-      return null;
     }
   }
 }
