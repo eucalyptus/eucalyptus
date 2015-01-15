@@ -154,7 +154,7 @@ that describes a Eucalyptus instance to be launched.
             <vcpu>
                 <xsl:value-of select="/instance/cores"/>
             </vcpu>
-            <cpu>
+            <cpu mode="host-passthrough">
               <topology>
                 <xsl:attribute name="sockets">
 		  <xsl:value-of select="/instance/cores"/>
