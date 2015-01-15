@@ -635,7 +635,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       if (!resourceInfo.getReady()) {
         throw new ValidationErrorException("Template error: reference " + resourceName + " not ready");
       }
-      String attributeName = Introspector.decapitalize(key.get(1).asText());
+      String attributeName = key.get(1).asText();
       try {
         return JsonHelper.getJsonNodeFromString(resourceInfo.getResourceAttributeJson(attributeName));
       } catch (Exception ex) {

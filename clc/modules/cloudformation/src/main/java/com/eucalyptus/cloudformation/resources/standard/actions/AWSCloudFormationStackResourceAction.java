@@ -181,8 +181,7 @@ public class AWSCloudFormationStackResourceAction extends ResourceAction {
         Outputs outputs = describeStacksResponseType.getDescribeStacksResult().getStacks().getMember().get(0).getOutputs();
         if (outputs != null && outputs.getMember() != null && !outputs.getMember().isEmpty()) {
           for (Output output: outputs.getMember()) {
-            // lower case for outputs as other attribute field names start lower case...
-            action.info.getOutputAttributes().put("outputs." + output.getOutputKey(), JsonHelper.getStringFromJsonNode(new TextNode(output.getOutputValue())));
+            action.info.getOutputAttributes().put("Outputs." + output.getOutputKey(), JsonHelper.getStringFromJsonNode(new TextNode(output.getOutputValue())));
           }
         }
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
