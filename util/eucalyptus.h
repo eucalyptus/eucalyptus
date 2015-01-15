@@ -224,6 +224,7 @@
 #define CONFIG_USE_VIRTIO_NET                   "USE_VIRTIO_NET"
 #define CONFIG_USE_VIRTIO_DISK                  "USE_VIRTIO_DISK"
 #define CONFIG_USE_VIRTIO_ROOT                  "USE_VIRTIO_ROOT"
+#define CONFIG_CPU_PASSTHROUGH                  "USE_CPU_PASSTHROUGH"
 #define CONFIG_NC_BUNDLE_UPLOAD                 "NC_BUNDLE_UPLOAD_PATH"
 #define CONFIG_NC_CHECK_BUCKET                  "NC_CHECK_BUCKET_PATH"
 #define CONFIG_NC_DELETE_BUNDLE                 "NC_DELETE_BUNDLE_PATH"

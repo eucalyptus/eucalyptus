@@ -155,6 +155,7 @@ static char nc_home[EUCA_MAX_PATH] = "";    //!< Base of the NC installation ("/
 static boolean config_use_virtio_root = 0;  //!< Set to TRUE if we are using VIRTIO root
 static boolean config_use_virtio_disk = 0;  //!< Set to TRUE if we are using VIRTIO disks
 static boolean config_use_virtio_net = 0;   //!< Set to TRUE if we are using VIRTIO network
+static boolean config_cpu_passthrough = 0;  //!< Set to TRUE if host CPU should be passed through to the instance
 static char xslt_path[EUCA_MAX_PATH] = "";  //!< Destination path for the XSLT files
 static pthread_mutex_t xml_mutex = PTHREAD_MUTEX_INITIALIZER;   //!< process-global mutex
 
@@ -305,6 +306,7 @@ static void init_xml(struct nc_state_t *nc_state)
                 config_use_virtio_root = nc_state->config_use_virtio_root;
                 config_use_virtio_disk = nc_state->config_use_virtio_disk;
                 config_use_virtio_net = nc_state->config_use_virtio_net;
+                config_cpu_passthrough = nc_state->config_cpu_passthrough;
                 euca_strncpy(xslt_path, nc_state->libvirt_xslt_path, sizeof(xslt_path));
             }
             initialized = TRUE;
@@ -575,6 +577,7 @@ int gen_instance_xml(const ncInstance * instance)
         _ELEMENT(instanceNode, "userData", instance->userData);
         _ELEMENT(instanceNode, "launchIndex", instance->launchIndex);
 
+        _ELEMENT(instanceNode, "cpuPassthrough", _BOOL(config_cpu_passthrough));
         snprintf(cores_s, sizeof(cores_s), "%d", instance->params.cores);
         _ELEMENT(instanceNode, "cores", cores_s);
         snprintf(memory_s, sizeof(memory_s), "%d", instance->params.mem * 1024);

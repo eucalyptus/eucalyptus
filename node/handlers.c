@@ -2268,6 +2268,9 @@ static int init(void)
         EUCA_FREE(hypervisor);
     }
 
+    GET_VAR_INT(nc_state.config_cpu_passthrough, CONFIG_CPU_PASSTHROUGH, 0);
+    LOGINFO("CPU passthrough to instance: %s\n", (nc_state.config_cpu_passthrough)?("enabled"):("disabled"));
+
     {
         // load NC's state from disk, if any
         char *psCloudIp = NULL;

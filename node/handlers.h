@@ -212,6 +212,8 @@ struct nc_state_t {
     int disabledServicesLen;
     int notreadyServicesLen;
     //! @}
+
+    boolean config_cpu_passthrough;
 };
 
 //! Hypervisor specific operation handlers
