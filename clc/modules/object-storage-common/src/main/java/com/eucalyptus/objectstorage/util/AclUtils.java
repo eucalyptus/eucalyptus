@@ -539,7 +539,7 @@ public class AclUtils {
             // the following exception handling looks strange, but this method gets called inside of an enum that
             // implements Function<> (guava) and since the targets are checked exceptions it is not easy to pass them
             // all the way up the stack where they become significant.
-            if (email != null && !"".equals(email)) {
+            if (email != null && !"".equals(email) && canonicalId == null) {
                 // build up and throw InvalidArgumentException for the email
                 UnresolvableGrantByEmailAddressException ugbeae = new UnresolvableGrantByEmailAddressException();
                 ugbeae.setEmailAddress(email);
