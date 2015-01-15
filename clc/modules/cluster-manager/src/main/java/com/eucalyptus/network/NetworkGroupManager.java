@@ -321,114 +321,135 @@ public class NetworkGroupManager {
   public AuthorizeSecurityGroupIngressResponseType authorizeSecurityGroupIngress( final AuthorizeSecurityGroupIngressType request ) throws Exception {
     final AuthorizeSecurityGroupIngressResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
-    try ( final TransactionResource tx = Entities.transactionFor( NetworkGroup.class ) ) {
-      final NetworkGroup ruleGroup = lookupGroup( request.getGroupId(), request.getGroupName() );
-      if ( !RestrictedTypes.filterPrivileged( ).apply( ruleGroup ) ) {
-        throw new ClientUnauthorizedComputeException( "Not authorized to authorize network group " + ruleGroup.getDisplayName() + " for " + ctx.getUser( ).getName() );
-      }
-      final List<NetworkRule> ruleList = Lists.newArrayList( );
-      final List<IpPermissionType> ipPermissions = handleOldAndNewIpPermissions(
-          ruleGroup.getVpcId( ) != null,
-          request.getCidrIp(), request.getIpProtocol(), request.getFromPort(), request.getToPort(), 
-          request.getSourceSecurityGroupName(), request.getSourceSecurityGroupOwnerId(), 
-          request.getIpPermissions());
-      try {
-        NetworkGroups.resolvePermissions( ipPermissions, ctx.getUser().getAccountNumber(), ruleGroup.getVpcId(), false );
-      } catch ( final NoSuchMetadataException e ) {
-        throw new ClientComputeException( "InvalidGroup.NotFound", e.getMessage( ) );
-      }
-      for ( final IpPermissionType ipPerm : ipPermissions ) {
-        if ( ipPerm.getCidrIpRanges().isEmpty() && ipPerm.getGroups().isEmpty() ) {
-          continue; // see EUCA-5934
-        }
-        if ( ipPerm.getIpProtocol( ) != null && !NetworkRule.PROTOCOL_PATTERN.matcher( ipPerm.getIpProtocol( ) ).matches( ) ) {
-          throw new ClientComputeException("InvalidPermission.Malformed", "Invalid protocol ("+ipPerm.getIpProtocol( )+")" );
-        }
+    final Predicate<Void> updateFunction = new Predicate<Void>( ) {
+      @Override
+      public boolean apply( @Nullable final Void aVoid ) {
         try {
-          final List<NetworkRule> rules = NetworkGroups.ipPermissionAsNetworkRules( ipPerm, ruleGroup.getVpcId( ) != null );
-          ruleList.addAll( rules );
-        } catch ( final IllegalArgumentException ex ) {
-          throw new ClientComputeException("InvalidPermission.Malformed", ex.getMessage( ) );
+          final NetworkGroup ruleGroup = lookupGroup( request.getGroupId(), request.getGroupName() );
+          if ( !RestrictedTypes.filterPrivileged( ).apply( ruleGroup ) ) {
+            throw new ClientUnauthorizedComputeException( "Not authorized to authorize network group " + ruleGroup.getDisplayName() + " for " + ctx.getUser( ).getName() );
+          }
+          final List<NetworkRule> ruleList = Lists.newArrayList( );
+          final List<IpPermissionType> ipPermissions = handleOldAndNewIpPermissions(
+              ruleGroup.getVpcId( ) != null,
+              request.getCidrIp(), request.getIpProtocol(), request.getFromPort(), request.getToPort(),
+              request.getSourceSecurityGroupName(), request.getSourceSecurityGroupOwnerId(),
+              request.getIpPermissions());
+          try {
+            NetworkGroups.resolvePermissions( ipPermissions, ctx.getUser().getAccountNumber(), ruleGroup.getVpcId(), false );
+          } catch ( final NoSuchMetadataException e ) {
+            throw new ClientComputeException( "InvalidGroup.NotFound", e.getMessage( ) );
+          }
+          for ( final IpPermissionType ipPerm : ipPermissions ) {
+            if ( ipPerm.getCidrIpRanges().isEmpty() && ipPerm.getGroups().isEmpty() ) {
+              continue; // see EUCA-5934
+            }
+            if ( ipPerm.getIpProtocol( ) != null && !NetworkRule.PROTOCOL_PATTERN.matcher( ipPerm.getIpProtocol( ) ).matches( ) ) {
+              throw new ClientComputeException("InvalidPermission.Malformed", "Invalid protocol ("+ipPerm.getIpProtocol( )+")" );
+            }
+            try {
+              final List<NetworkRule> rules = NetworkGroups.ipPermissionAsNetworkRules( ipPerm, ruleGroup.getVpcId( ) != null );
+              ruleList.addAll( rules );
+            } catch ( final IllegalArgumentException ex ) {
+              throw new ClientComputeException("InvalidPermission.Malformed", ex.getMessage( ) );
+            }
+          }
+          if ( Iterables.any( ruleGroup.getNetworkRules( ), new Predicate<NetworkRule>( ) {
+            @Override
+            public boolean apply( final NetworkRule rule ) {
+              return Iterables.any( ruleList, Predicates.equalTo( rule ) );
+            }
+          } ) ) {
+            return false;
+          } else {
+            ruleGroup.getNetworkRules().addAll( ruleList );
+            if ( ruleGroup.getVpcId() != null && ruleGroup.getNetworkRules().size() > VpcConfiguration.getRulesPerSecurityGroup() ) {
+              throw new ClientComputeException( "RulesPerSecurityGroupLimitExceeded", "Rules limit exceeded for " + request.getGroupId() );
+            }
+          }
+        } catch ( final Exception e ) {
+          throw Exceptions.toUndeclared( e );
         }
+        return true;
       }
-      if ( Iterables.any( ruleGroup.getNetworkRules( ), new Predicate<NetworkRule>( ) {
-        @Override
-        public boolean apply( final NetworkRule rule ) {
-          return Iterables.any( ruleList, Predicates.equalTo( rule ) );
-        }
-      } ) ) {
-        reply.set_return( false );
-        return reply;
-      } else {
-        ruleGroup.getNetworkRules( ).addAll( ruleList );
-        if ( ruleGroup.getVpcId( ) != null && ruleGroup.getNetworkRules( ).size( ) > VpcConfiguration.getRulesPerSecurityGroup( ) ) {
-          throw new ClientComputeException(" RulesPerSecurityGroupLimitExceeded", "Rules limit exceeded for " + request.getGroupId( ) );
-        }
-        reply.set_return( true );
-      }
-      tx.commit( );
-      NetworkGroups.flushRules();
-      return reply;
+    };
+
+    try {
+      reply.set_return( Entities.asDistinctTransaction( NetworkGroup.class, updateFunction ).apply( null ) );
+      NetworkGroups.flushRules( );
     } catch ( Exception ex ) {
+      Exceptions.findAndRethrow( ex, EucalyptusCloudException.class, EucalyptusWebServiceException.class );
       Logs.exhaust( ).error( ex, ex );
       throw ex;
-    }
+    }    
+    return reply;
   }
 
   public AuthorizeSecurityGroupEgressResponseType authorizeSecurityGroupEgress(final AuthorizeSecurityGroupEgressType request) throws Exception {
-    final AuthorizeSecurityGroupEgressResponseType reply = request.getReply().markFailed();
+    final AuthorizeSecurityGroupEgressResponseType reply = request.getReply();
     final Context ctx = Contexts.lookup( );
-    try ( final TransactionResource tx = Entities.transactionFor( NetworkGroup.class ) ) {
-      final NetworkGroup ruleGroup = lookupGroup( request.getGroupId(), null );
-      if ( !RestrictedTypes.filterPrivileged( ).apply( ruleGroup ) ) {
-        throw new ClientUnauthorizedComputeException( "Not authorized to authorize network group " + ruleGroup.getDisplayName() + " for " + ctx.getUser( ).getName() );
-      }
-      if ( ruleGroup.getVpcId( ) == null ) {
-        throw new ClientComputeException( "InvalidGroup.NotFound", "VPC security group ("+request.getGroupId()+") not found" );
-      }
-      final List<NetworkRule> ruleList = Lists.newArrayList( );
-      final List<IpPermissionType> ipPermissions = request.getIpPermissions( );
-      try {
-        NetworkGroups.resolvePermissions( ipPermissions, ctx.getUser().getAccountNumber(), ruleGroup.getVpcId(), false );
-      } catch ( final NoSuchMetadataException e ) {
-        throw new ClientComputeException( "InvalidGroup.NotFound", e.getMessage( ) );
-      }
-      for ( final IpPermissionType ipPerm : ipPermissions ) {
-        if ( ipPerm.getCidrIpRanges().isEmpty() && ipPerm.getGroups().isEmpty() ) {
-          continue; // see EUCA-5934
-        }
-        if ( ipPerm.getIpProtocol( ) == null || !NetworkRule.PROTOCOL_PATTERN.matcher( ipPerm.getIpProtocol( ) ).matches( ) ) {
-          throw new ClientComputeException("InvalidPermission.Malformed", "Invalid protocol ("+ipPerm.getIpProtocol( )+")" );
-        }
+    final Predicate<Void> updateFunction = new Predicate<Void>( ) {
+      @Override
+      public boolean apply( @Nullable final Void aVoid ) {
         try {
-          final List<NetworkRule> rules = NetworkGroups.ipPermissionAsNetworkRules( ipPerm, ruleGroup.getVpcId( ) != null );
-          for ( final NetworkRule rule : rules ) rule.setEgress( true );
-          ruleList.addAll( rules );
-        } catch ( final IllegalArgumentException ex ) {
-          throw new ClientComputeException("InvalidPermission.Malformed", ex.getMessage( ) );
+          final NetworkGroup ruleGroup = lookupGroup( request.getGroupId(), null );
+          if ( !RestrictedTypes.filterPrivileged( ).apply( ruleGroup ) ) {
+            throw new ClientUnauthorizedComputeException( "Not authorized to authorize network group " + ruleGroup.getDisplayName() + " for " + ctx.getUser( ).getName() );
+          }
+          if ( ruleGroup.getVpcId( ) == null ) {
+            throw new ClientComputeException( "InvalidGroup.NotFound", "VPC security group ("+request.getGroupId()+") not found" );
+          }
+          final List<NetworkRule> ruleList = Lists.newArrayList( );
+          final List<IpPermissionType> ipPermissions = request.getIpPermissions( );
+          try {
+            NetworkGroups.resolvePermissions( ipPermissions, ctx.getUser().getAccountNumber(), ruleGroup.getVpcId(), false );
+          } catch ( final NoSuchMetadataException e ) {
+            throw new ClientComputeException( "InvalidGroup.NotFound", e.getMessage( ) );
+          }
+          for ( final IpPermissionType ipPerm : ipPermissions ) {
+            if ( ipPerm.getCidrIpRanges().isEmpty() && ipPerm.getGroups().isEmpty() ) {
+              continue; // see EUCA-5934
+            }
+            if ( ipPerm.getIpProtocol( ) == null || !NetworkRule.PROTOCOL_PATTERN.matcher( ipPerm.getIpProtocol( ) ).matches( ) ) {
+              throw new ClientComputeException("InvalidPermission.Malformed", "Invalid protocol ("+ipPerm.getIpProtocol( )+")" );
+            }
+            try {
+              final List<NetworkRule> rules = NetworkGroups.ipPermissionAsNetworkRules( ipPerm, ruleGroup.getVpcId( ) != null );
+              for ( final NetworkRule rule : rules ) rule.setEgress( true );
+              ruleList.addAll( rules );
+            } catch ( final IllegalArgumentException ex ) {
+              throw new ClientComputeException("InvalidPermission.Malformed", ex.getMessage( ) );
+            }
+          }
+          if ( Iterables.any( ruleGroup.getNetworkRules( ), new Predicate<NetworkRule>( ) {
+            @Override
+            public boolean apply( final NetworkRule rule ) {
+              return Iterables.any( ruleList, Predicates.equalTo( rule ) );
+            }
+          } ) ) {
+            return false;
+          } else {
+            ruleGroup.getNetworkRules( ).addAll( ruleList );
+            if ( ruleGroup.getVpcId( ) != null && ruleGroup.getNetworkRules( ).size( ) > VpcConfiguration.getRulesPerSecurityGroup( ) ) {
+              throw new ClientComputeException("RulesPerSecurityGroupLimitExceeded", "Rules limit exceeded for " + request.getGroupId( ) );
+            }
+          }
+        } catch ( final Exception e ) {
+          throw Exceptions.toUndeclared( e );
         }
+        return true;
       }
-      if ( Iterables.any( ruleGroup.getNetworkRules( ), new Predicate<NetworkRule>( ) {
-        @Override
-        public boolean apply( final NetworkRule rule ) {
-          return Iterables.any( ruleList, Predicates.equalTo( rule ) );
-        }
-      } ) ) {
-        return reply;
-      } else {
-        ruleGroup.getNetworkRules( ).addAll( ruleList );
-        if ( ruleGroup.getVpcId( ) != null && ruleGroup.getNetworkRules( ).size( ) > VpcConfiguration.getRulesPerSecurityGroup( ) ) {
-          throw new ClientComputeException(" RulesPerSecurityGroupLimitExceeded", "Rules limit exceeded for " + request.getGroupId( ) );
-        }
-        reply.set_return( true );
-      }
-      tx.commit( );
+    };
+    
+    try {
+      reply.set_return( Entities.asDistinctTransaction( NetworkGroup.class, updateFunction ).apply( null ) );
       NetworkGroups.flushRules();
-      return reply;
     } catch ( Exception ex ) {
+      Exceptions.findAndRethrow( ex, EucalyptusCloudException.class, EucalyptusWebServiceException.class );
       Logs.exhaust( ).error( ex, ex );
       throw ex;
     }
+    return reply;
   }
 
   public RevokeSecurityGroupEgressResponseType revokeSecurityGroupEgress(final RevokeSecurityGroupEgressType request) throws EucalyptusCloudException {
