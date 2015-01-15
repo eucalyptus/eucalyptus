@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,6 +29,7 @@ import java.lang.reflect.Proxy;
 import java.net.ConnectException;
 import java.util.UUID;
 import javax.annotation.Nonnull;
+import org.apache.http.NoHttpResponseException;
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -114,6 +115,8 @@ public class Config {
             ( errorMessage.contains( "Response Code: 404" ) || errorMessage.contains( "Response Code: 503" ) ) ) {
           resetEndpoint = true;
         } else if ( Exceptions.isCausedBy( e, ConnectException.class ) ) {
+          resetEndpoint = true;
+        } else if ( Exceptions.isCausedBy( e, NoHttpResponseException.class ) ) {
           resetEndpoint = true;
         }
         if ( resetEndpoint ) {
