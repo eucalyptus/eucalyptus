@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -94,10 +94,11 @@ import com.eucalyptus.compute.common.backend.ModifySnapshotAttributeType;
 import com.eucalyptus.compute.common.backend.ResetSnapshotAttributeResponseType;
 import com.eucalyptus.compute.common.backend.ResetSnapshotAttributeType;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.msgs.*;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.AuthException;
@@ -325,9 +326,51 @@ public class SnapshotManager {
     return reply;
   }
   
-    public ResetSnapshotAttributeResponseType resetSnapshotAttribute( ResetSnapshotAttributeType request ) throws EucalyptusCloudException {
-        ResetSnapshotAttributeResponseType reply = request.getReply( );
-        return reply;
+    public ResetSnapshotAttributeResponseType resetSnapshotAttribute( 
+        final ResetSnapshotAttributeType request 
+    ) throws EucalyptusCloudException {
+      final ResetSnapshotAttributeResponseType reply = request.getReply( );
+      final Context ctx = Contexts.lookup( );
+      final String snapshotId = normalizeSnapshotIdentifier( request.getSnapshotId( ) );
+      final Function<String, Boolean> resetSnapshotAttribute = new Function<String,Boolean>( ) {
+        @Override
+        public Boolean apply( final String snapshotId ) {
+          try {
+            final Snapshot snap = Entities.uniqueResult( Snapshot.named( 
+                ctx.isAdministrator( ) ? null : ctx.getUserFullName( ).asAccountFullName( ), 
+                snapshotId ) );
+            //Can only reset attributes of snapshots in 'creating' or 'available' state
+            if ( !State.EXTANT.equals( snap.getState() ) && !State.GENERATING.equals( snap.getState() ) ) {
+              return false;
+            } else if ( !canModifySnapshot( snap ) ) {
+              throw Exceptions.toUndeclared( new ClientComputeException( 
+                  "AuthFailure", 
+                  "Not authorized to reset attribute for snapshot " + request.getSnapshotId( ) ) );
+            } else if ( request.getCreateVolumePermission() != null && 
+                ( "".equals( request.getCreateVolumePermission() ) || 
+                    "createVolumePermission".equals( request.getCreateVolumePermission() ) ) ) {
+              snap.setSnapshotPublic( false );
+              snap.setPermissions( Sets.<String>newHashSet() );
+            }
+            return true;
+          } catch ( TransactionException e ) {
+            throw Exceptions.toUndeclared( e );
+          }
+        }
+      };
+
+      try {
+        reply.set_return( Entities.asDistinctTransaction( Snapshot.class, resetSnapshotAttribute ).apply( snapshotId ) );
+      } catch ( NoSuchElementException e ) {
+        throw new ClientComputeException( 
+            "InvalidSnapshot.NotFound", 
+            "The snapshot '"+request.getSnapshotId( )+"' does not exist." );
+      } catch ( Exception e ) {
+        Exceptions.findAndRethrow( e, EucalyptusCloudException.class, EucalyptusWebServiceException.class );
+        throw new EucalyptusCloudException( Objects.firstNonNull( e.getCause( ), e ) );
+      }
+
+      return reply;
     }
 
     private boolean validateGroup(String groupName) {
