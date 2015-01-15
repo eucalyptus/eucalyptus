@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -76,6 +76,9 @@ public class SecurityTokenManager {
   private static final Logger log = Logger.getLogger( SecurityTokenManager.class );
   private static final Supplier<SecureRandom> randomSupplier = Crypto.getSecureRandomSupplier();
   private static final SecurityTokenManager instance = new SecurityTokenManager( );
+  private static final long creationSkewMillis = Objects.firstNonNull(
+      Longs.tryParse( System.getProperty( "com.eucalyptus.auth.tokens.creationSkewMillis", "5000" ) ),
+      5000l );
   private static final int tokenCacheSize = Objects.firstNonNull(
       Ints.tryParse( System.getProperty( "com.eucalyptus.auth.tokens.cache.maximumSize", "500" ) ),
       500 );
@@ -513,7 +516,7 @@ public class SecurityTokenManager {
      */
     private boolean isValid() {
       final long now = System.currentTimeMillis();
-      return now >= created && now < expires;
+      return ( now + creationSkewMillis ) >= created && now < expires;
     }
 
     private String getSecretKey( final String secret ) {
