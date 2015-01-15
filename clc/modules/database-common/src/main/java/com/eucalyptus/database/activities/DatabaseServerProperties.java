@@ -291,7 +291,7 @@ public class DatabaseServerProperties {
        DatabaseEventListeners.getInstance().fire(evt);
      }catch(final Exception e) {
        LOG.error("failed to disable remote database", e);
-       final ConfigurableProperty prop = PropertyDirectory.getPropertyEntry("cloud.db.db_server_enabled");
+       final ConfigurableProperty prop = PropertyDirectory.getPropertyEntry("services.database.worker.configured");
        if (prop!=null)
          prop.setValue("true");
        return false;
@@ -888,7 +888,7 @@ public class DatabaseServerProperties {
        
        try{
          final ConfigurableProperty hostProp = 
-             PropertyDirectory.getPropertyEntry("cloud.db.appendonlyhost");
+             PropertyDirectory.getPropertyEntry("services.database.appendonlyhost");
          if("localhost".equals(hostProp.getValue()))
            return;
        }catch(final Exception ex){
@@ -964,16 +964,16 @@ public class DatabaseServerProperties {
        // if not update the property
        try{
          final ConfigurableProperty hostProp = 
-             PropertyDirectory.getPropertyEntry("cloud.db.appendonlyhost");
+             PropertyDirectory.getPropertyEntry("services.database.appendonlyhost");
          final String curHost = hostProp.getValue();
          if("localhost".equals(curHost))
            return;
          else if ( ! instanceIp.equals(curHost)) {
            hostProp.setValue(instanceIp);
-           LOG.info("Updated the property cloud.db.appendonlyhost to " + instanceIp);
+           LOG.info("Updated the property services.database.appendonlyhost to " + instanceIp);
          }
        }catch(final Exception ex) {
-         LOG.error("Failed to update the property: cloud.db.appendonlyhost", ex);
+         LOG.error("Failed to update the property: services.database.appendonlyhost", ex);
        }
      }
    }

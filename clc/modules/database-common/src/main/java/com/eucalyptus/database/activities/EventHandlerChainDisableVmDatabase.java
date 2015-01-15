@@ -49,12 +49,12 @@ public class EventHandlerChainDisableVmDatabase extends EventHandlerChain<Disabl
     public void apply(DisableDBInstanceEvent evt) throws EventHandlerException {
       try{
         final ConfigurableProperty hostProp = 
-            PropertyDirectory.getPropertyEntry("cloud.db.appendonlyhost");
+            PropertyDirectory.getPropertyEntry("services.database.appendonlyhost");
         hostProp.setValue("localhost");
       }catch(final Exception ex) {
         throw new EventHandlerException("Failed to set hostname property", ex);
       }
-      LOG.info("cloud.db.appendonly* properties are updated");
+      LOG.info("services.database.appendonlyhost is updated");
     }
 
     @Override

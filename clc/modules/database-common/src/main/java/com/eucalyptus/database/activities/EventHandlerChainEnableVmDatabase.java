@@ -295,7 +295,7 @@ public class EventHandlerChainEnableVmDatabase extends EventHandlerChain<EnableD
         final String bodyPem = certBody;
 
         final ConfigurableProperty certProp = 
-            PropertyDirectory.getPropertyEntry("cloud.db.appendonlysslcert");
+            PropertyDirectory.getPropertyEntry("services.database.appendonlysslcert");
         certProp.setValue(bodyPem);
         LOG.debug("Certificate body is updated for postgresql ssl connection");
       }catch(final Exception ex){
@@ -305,7 +305,7 @@ public class EventHandlerChainEnableVmDatabase extends EventHandlerChain<EnableD
       
       try{
         final ConfigurableProperty portProp = 
-            PropertyDirectory.getPropertyEntry("cloud.db.appendonlyport");
+            PropertyDirectory.getPropertyEntry("services.database.appendonlyport");
         portProp.setValue(String.format("%d", evt.getPort()));
       }catch(final Exception ex) {
         throw new EventHandlerException("Failed to set port property", ex);
@@ -313,7 +313,7 @@ public class EventHandlerChainEnableVmDatabase extends EventHandlerChain<EnableD
       
       try{
         final ConfigurableProperty userNameProp = 
-            PropertyDirectory.getPropertyEntry("cloud.db.appendonlyuser");
+            PropertyDirectory.getPropertyEntry("services.database.appendonlyuser");
         userNameProp.setValue(evt.getMasterUserName());
       }catch(final Exception ex) {
         throw new EventHandlerException("Failed to set username property", ex);
@@ -321,7 +321,7 @@ public class EventHandlerChainEnableVmDatabase extends EventHandlerChain<EnableD
       
       try{
         final ConfigurableProperty passwordProp = 
-            PropertyDirectory.getPropertyEntry("cloud.db.appendonlypassword");
+            PropertyDirectory.getPropertyEntry("services.database.appendonlypassword");
         passwordProp.setValue(evt.getMasterUserPassword());
       }catch(final Exception ex) {
         throw new EventHandlerException("Failed to set password property", ex);
@@ -330,13 +330,13 @@ public class EventHandlerChainEnableVmDatabase extends EventHandlerChain<EnableD
       /// this will trigger db pool init to the designated host
       try{
         final ConfigurableProperty hostProp = 
-            PropertyDirectory.getPropertyEntry("cloud.db.appendonlyhost");
+            PropertyDirectory.getPropertyEntry("services.database.appendonlyhost");
         hostProp.setValue(dbHost);
       }catch(final Exception ex) {
         throw new EventHandlerException("Failed to set hostname property", ex);
       }
       
-      LOG.info("cloud.db.appendonly* properties are updated");
+      LOG.info("services.database.appendonly* properties are updated");
     }
 
     @Override
