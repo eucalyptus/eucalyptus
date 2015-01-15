@@ -1286,6 +1286,7 @@ public class VpcManager {
             }
           } );
       if ( RestrictedTypes.filterPrivileged( ).apply( networkInterface ) ) {
+        reply.setNetworkInterfaceId( networkInterface.getDisplayName( ) );
         switch ( request.getAttribute() ) {
           case "attachment":
             if ( networkInterface.isAttached( ) )
