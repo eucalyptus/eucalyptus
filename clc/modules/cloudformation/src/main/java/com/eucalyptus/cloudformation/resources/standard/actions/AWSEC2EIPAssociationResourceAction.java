@@ -150,7 +150,7 @@ public class AWSEC2EIPAssociationResourceAction extends ResourceAction {
           DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.<DescribeNetworkInterfacesType, DescribeNetworkInterfacesResponseType> sendSync(configuration, describeNetworkInterfacesType);
           if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet() != null &&
             describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem() != null &&
-            describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().isEmpty()) {
+            !describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().isEmpty()) {
             for (NetworkInterfaceType networkInterfaceType: describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem()) {
               if (networkInterfaceType != null && networkInterfaceType.getAttachment() != null &&
                 networkInterfaceType.getAttachment().getDeviceIndex() == 0 &&
@@ -218,7 +218,7 @@ public class AWSEC2EIPAssociationResourceAction extends ResourceAction {
           DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.<DescribeNetworkInterfacesType, DescribeNetworkInterfacesResponseType> sendSync(configuration, describeNetworkInterfacesType);
           if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet() != null &&
             describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem() != null &&
-            describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().isEmpty()) {
+            !describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().isEmpty()) {
             for (NetworkInterfaceType networkInterfaceType: describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem()) {
               if (networkInterfaceType != null && networkInterfaceType.getAttachment() != null &&
                 networkInterfaceType.getAttachment().getDeviceIndex() == 0 &&
