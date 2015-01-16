@@ -19,7 +19,11 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.resources;
 
+import com.eucalyptus.cloudformation.entity.StackEntity;
+import com.eucalyptus.cloudformation.entity.StackResourceEntity;
+import com.eucalyptus.cloudformation.entity.StackResourceEntityManager;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
+import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.compute.common.ResourceTag;
 import com.google.common.collect.Lists;
 
@@ -42,5 +46,23 @@ public class EC2Helper {
     return resourceTags;
   }
 
+  public static void refreshInstanceAttributes(StackEntity stackEntity, String instanceId, String effectiveUserId) throws Exception {
+    if (instanceId != null) {
+      String stackId = stackEntity.getStackId();
+      String accountId = stackEntity.getAccountId();
+      StackResourceEntity instanceStackResourceEntity = StackResourceEntityManager.getStackResourceByPhysicalResourceId(stackId, accountId, instanceId);
+      if (instanceStackResourceEntity != null) {
+        ResourceInfo instanceResourceInfo = StackResourceEntityManager.getResourceInfo(instanceStackResourceEntity);
+        ResourceAction instanceResourceAction = new ResourceResolverManager().resolveResourceAction(instanceResourceInfo.getType());
+        instanceResourceAction.setStackEntity(stackEntity);
+        instanceResourceInfo.setEffectiveUserId(effectiveUserId);
+        instanceResourceAction.setResourceInfo(instanceResourceInfo);
+        ResourcePropertyResolver.populateResourceProperties(instanceResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(instanceResourceInfo.getPropertiesJson()));
+        instanceResourceAction.refreshAttributes();
+        instanceStackResourceEntity = StackResourceEntityManager.updateResourceInfo(instanceStackResourceEntity, instanceResourceInfo);
+        StackResourceEntityManager.updateStackResource(instanceStackResourceEntity);
+      }
+    }
+  }
 
 }
