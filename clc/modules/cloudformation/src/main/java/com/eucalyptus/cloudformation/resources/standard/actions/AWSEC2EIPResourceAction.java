@@ -24,6 +24,7 @@ import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.entity.StackResourceEntity;
 import com.eucalyptus.cloudformation.entity.StackResourceEntityManager;
+import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
@@ -124,20 +125,7 @@ public class AWSEC2EIPResourceAction extends ResourceAction {
 
           // Update the instance info
           if (action.properties.getInstanceId() != null) {
-            String stackId = action.getStackEntity().getStackId();
-            String accountId = action.getStackEntity().getAccountId();
-            StackResourceEntity instanceStackResourceEntity = StackResourceEntityManager.getStackResourceByPhysicalResourceId(stackId, accountId, action.properties.getInstanceId());
-            if (instanceStackResourceEntity != null) {
-              ResourceInfo instanceResourceInfo = StackResourceEntityManager.getResourceInfo(instanceStackResourceEntity);
-              ResourceAction instanceResourceAction = new ResourceResolverManager().resolveResourceAction(instanceResourceInfo.getType());
-              instanceResourceAction.setStackEntity(action.getStackEntity());
-              instanceResourceInfo.setEffectiveUserId(action.info.getEffectiveUserId());
-              instanceResourceAction.setResourceInfo(instanceResourceInfo);
-              ResourcePropertyResolver.populateResourceProperties(instanceResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(instanceResourceInfo.getPropertiesJson()));
-              instanceResourceAction.refreshAttributes();
-              instanceStackResourceEntity = StackResourceEntityManager.updateResourceInfo(instanceStackResourceEntity, instanceResourceInfo);
-              StackResourceEntityManager.updateStackResource(instanceStackResourceEntity);
-            }
+            EC2Helper.refreshInstanceAttributes(action.getStackEntity(), action.properties.getInstanceId(), action.info.getEffectiveUserId());
           }
 
         }
@@ -178,20 +166,7 @@ public class AWSEC2EIPResourceAction extends ResourceAction {
 
         // Update the instance info
         if (action.properties.getInstanceId() != null) {
-          String stackId = action.getStackEntity().getStackId();
-          String accountId = action.getStackEntity().getAccountId();
-          StackResourceEntity instanceStackResourceEntity = StackResourceEntityManager.getStackResourceByPhysicalResourceId(stackId, accountId, action.properties.getInstanceId());
-          if (instanceStackResourceEntity != null) {
-            ResourceInfo instanceResourceInfo = StackResourceEntityManager.getResourceInfo(instanceStackResourceEntity);
-            ResourceAction instanceResourceAction = new ResourceResolverManager().resolveResourceAction(instanceResourceInfo.getType());
-            instanceResourceAction.setStackEntity(action.getStackEntity());
-            instanceResourceInfo.setEffectiveUserId(action.info.getEffectiveUserId());
-            instanceResourceAction.setResourceInfo(instanceResourceInfo);
-            ResourcePropertyResolver.populateResourceProperties(instanceResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(instanceResourceInfo.getPropertiesJson()));
-            instanceResourceAction.refreshAttributes();
-            instanceStackResourceEntity = StackResourceEntityManager.updateResourceInfo(instanceStackResourceEntity, instanceResourceInfo);
-            StackResourceEntityManager.updateStackResource(instanceStackResourceEntity);
-          }
+          EC2Helper.refreshInstanceAttributes(action.getStackEntity(), action.properties.getInstanceId(), action.info.getEffectiveUserId());
         }
 
         return action;
