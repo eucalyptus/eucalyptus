@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -104,9 +104,12 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Templates;
+import com.google.common.base.Functions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
 import static com.eucalyptus.util.Parameters.checkParam;
@@ -266,7 +269,13 @@ public class ServiceContextManager {
                                             "</mule>\n";
   
   private MuleContext createContext( ) {
-    List<ComponentId> currentComponentIds = ComponentIds.list( );
+    // Many-to-one services must be ordered last so they do not receive messages
+    // for backend components that use sub-classes of the frontend components.
+    final List<ComponentId> currentComponentIds = Lists.newArrayList( Ordering.natural( )
+        .onResultOf( Functions.forPredicate( ComponentIds.manyToOne( ) ) )
+        .compound( Ordering.natural( ).onResultOf( 
+            Functions.compose( Classes.canonicalNameFunction( ), Functions.<ComponentId>identity( ) ) ) )
+        .sortedCopy( ComponentIds.list( ) ) );
     LOG.error( "Restarting service context with these enabled services: " + currentComponentIds );
     final Set<ConfigResource> configs = Sets.newHashSet( );
     MuleContext muleCtx = null;
