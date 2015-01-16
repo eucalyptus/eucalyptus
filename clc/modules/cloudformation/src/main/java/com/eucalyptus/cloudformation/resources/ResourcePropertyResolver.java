@@ -38,7 +38,6 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import groovy.transform.ToString;
 import org.apache.log4j.Logger;
 
@@ -51,7 +50,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class ResourcePropertyResolver {
   private static final Logger LOG = Logger.getLogger(ResourcePropertyResolver.class);
@@ -143,7 +141,6 @@ public class ResourcePropertyResolver {
       propertyDescriptorMap.put(propertyDescriptor.getName(), propertyDescriptor);
     }
 
-    Set<String> resourcePropertyNames = Sets.newHashSet(jsonNode.fieldNames());
     for (Field field: object.getClass().getDeclaredFields()) {
       Property property = field.getAnnotation(Property.class);
       if (property == null) continue;
@@ -154,7 +151,6 @@ public class ResourcePropertyResolver {
         throw new ValidationErrorException("Template error: " + name + " is a required field");
       }
       if (!jsonNode.has(name)) continue; // no value to populate...
-      resourcePropertyNames.remove(name);
       JsonNode valueNode = jsonNode.get(name);
       LOG.debug("Populating property with: " + name + "=" + valueNode + " " + valueNode.getClass());
       if (field.getType().equals(String.class)) {
@@ -225,9 +221,6 @@ public class ResourcePropertyResolver {
         }
         populateResourceProperties(getField(propertyDescriptorMap, field, object), valueNode);
       }
-    }
-    if (!resourcePropertyNames.isEmpty()) {
-      throw new ValidationErrorException("Encountered unsupported properties: " + resourcePropertyNames);
     }
   }
 
