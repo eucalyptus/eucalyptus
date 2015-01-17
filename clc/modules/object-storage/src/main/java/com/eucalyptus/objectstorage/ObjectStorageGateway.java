@@ -185,6 +185,7 @@ import com.google.common.net.HttpHeaders;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
+import org.apache.commons.lang.ObjectUtils;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
@@ -1153,25 +1154,25 @@ public class ObjectStorageGateway implements ObjectStorageService {
     
         if (byteRangeStart != null && byteRangeEnd != null) { // both start and end represent some value
           if (byteRangeEnd < byteRangeStart) { // check if end is greater than start
-            // invalid byte range. ignore byte range by setting start to 0 and end to lastIndex
-            byteRangeStart = 0L;
-            byteRangeEnd = lastIndex;
+            // invalid byte range. ignore byte range by setting start and end to null
+            byteRangeStart = null;
+            byteRangeEnd = null;
           }
         } else if (byteRangeStart == null && byteRangeEnd == null) { // both start and end dont represent any value
-          // set start to 0 and end to lastIndex
-          byteRangeStart = 0L;
-          byteRangeEnd = lastIndex;
+          // ignore byte range
         } else if (byteRangeStart != null) { // meaning from byteRangeStart to end. example: bytes=400-
           if (objectSize == 0) {
             // S3 throws invalid range error for bytes=x-y when size is 0
-            throw new InvalidRangeException("bytes=" + request.getByteRangeStart() + "-" + request.getByteRangeEnd());
+            throw new InvalidRangeException("bytes=" + ObjectUtils.toString(request.getByteRangeStart()) + "-"
+                + ObjectUtils.toString(request.getByteRangeEnd()));
           } else {
             byteRangeEnd = lastIndex;
           }
         } else { // implies byteRangeEnd != null. meaning last byteRangeEnd number of bytes. example bytes=-400
           if (byteRangeEnd == 0) {
             // S3 throws invalid range error for bytes=-0
-            throw new InvalidRangeException("bytes=" + request.getByteRangeStart() + "-" + request.getByteRangeEnd());
+            throw new InvalidRangeException("bytes=" + ObjectUtils.toString(request.getByteRangeStart()) + "-"
+                + ObjectUtils.toString(request.getByteRangeEnd()));
           } else {
             byteRangeStart = (objectSize - byteRangeEnd) > 0 ? (objectSize - byteRangeEnd) : 0;
           }
@@ -1180,18 +1181,19 @@ public class ObjectStorageGateway implements ObjectStorageService {
         }
     
         // Final checks
-        if (byteRangeStart > lastIndex) { // check if start byte position is out of range
-          throw new InvalidRangeException("bytes=" + request.getByteRangeStart() + "-" + request.getByteRangeEnd()); // Throw error if it is out of range
+        if (byteRangeStart != null && byteRangeStart > lastIndex) { // check if start byte position is out of range
+          throw new InvalidRangeException("bytes=" + ObjectUtils.toString(request.getByteRangeStart()) + "-"
+              + ObjectUtils.toString(request.getByteRangeEnd())); // Throw error if it is out of range
         }
     
-        if (byteRangeEnd > lastIndex) { // check if start byte position is out of range
+        if (byteRangeEnd != null && byteRangeEnd > lastIndex) { // check if start byte position is out of range
           byteRangeEnd = lastIndex; // Set the end byte position to object-size-1
         }
         
         request.setKey(objectEntity.getObjectUuid());
         request.setBucket(objectEntity.getBucket().getBucketUuid());
-        request.setByteRangeStart(byteRangeStart);
-        request.setByteRangeEnd(byteRangeEnd);
+        request.setByteRangeStart(byteRangeStart); // Populate the computed byte range before firing request to backend
+        request.setByteRangeEnd(byteRangeEnd); // Populate the computed byte range before firing request to backend
         try {
             GetObjectExtendedResponseType response = ospClient.getObjectExtended(request);
 
