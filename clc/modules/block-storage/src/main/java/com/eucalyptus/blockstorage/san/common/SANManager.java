@@ -261,14 +261,14 @@ public class SANManager implements LogicalStorageManager {
 
 	public void configure() throws EucalyptusCloudException {
 		// dummy init
-		LOG.info("" + StorageInfo.getStorageInfo().getName());
+		LOG.info("Configuring block storage backend for partition: " + StorageInfo.getStorageInfo().getName());
 
 		// configure provider
 		if (connectionManager != null && connectionManager.checkSANCredentialsExist()) {
 			connectionManager.configure();
 		} else {
-			LOG.warn("Cannot fully configure SAN Provider because of missing fileds. Please configure the sanuser, sanhost, sanpassword and chapuser");
-			throw new EucalyptusCloudException("SAN Provider not fully configured.");
+			LOG.warn("Cannot configure blockstorage backend because of missing properties");
+			throw new EucalyptusCloudException("Blockstorage backend not configured.");
 		}
 	}
 

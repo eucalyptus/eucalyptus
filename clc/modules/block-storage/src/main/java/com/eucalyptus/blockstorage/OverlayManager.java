@@ -118,7 +118,7 @@ public class OverlayManager extends DASManager {
 			if(returnValue.length() == 0) {
 				throw new EucalyptusCloudException("Is lvm installed?");
 			} else {
-				LOG.info(returnValue);
+			    LOG.debug("lvm version: " + returnValue);
 			}
 			//exportManager = new ISCSIManager();
 			exportManager.checkPreconditions();
