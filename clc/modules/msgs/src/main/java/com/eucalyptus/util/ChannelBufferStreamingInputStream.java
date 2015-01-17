@@ -44,7 +44,7 @@ public class ChannelBufferStreamingInputStream extends ChannelBufferInputStream 
 	//A smaller queue will limit the number of concurrent requests that can be handled
 	//but will be more suitable when memory is constrained.
 	@ConfigurableField( description = "Channel buffer queue size for uploads", displayName = "objectstorage.uploadqueuesize")
-	public static int QUEUE_SIZE = 24;
+	public static int QUEUE_SIZE = 128;
 
 	@ConfigurableField( description = "Channel buffer queue timeout (in seconds)", displayName = "objectstorage.uploadqueuetimeout")
 	public static int QUEUE_TIMEOUT = 1;
@@ -69,7 +69,7 @@ public class ChannelBufferStreamingInputStream extends ChannelBufferInputStream 
 			int retries = 0;
 			do {
 				try {
-					b = buffers.poll(1, TimeUnit.SECONDS);
+					b = buffers.poll(QUEUE_TIMEOUT, TimeUnit.SECONDS);
 					currentlyAvailable += b.readableBytes();
 				} catch (InterruptedException e) {
 					LOG.error(e, e);
@@ -117,7 +117,7 @@ public class ChannelBufferStreamingInputStream extends ChannelBufferInputStream 
 					try {
 						int retries = 0;
 						do {
-							b = buffers.poll(1, TimeUnit.SECONDS);
+							b = buffers.poll(QUEUE_TIMEOUT, TimeUnit.SECONDS);
 						} while ((b == null) && retries++ < 60);
 						if (b == null) {
 							LOG.error("No more data in this stream");
@@ -175,7 +175,7 @@ public class ChannelBufferStreamingInputStream extends ChannelBufferInputStream 
 			boolean success = false;
 			int retries = 0;
 			while ((!success) && (retries++ < QUEUE_TIMEOUT)) {
-				success = buffers.offer(buffer, 1, TimeUnit.SECONDS);
+				success = buffers.offer(buffer, QUEUE_TIMEOUT, TimeUnit.SECONDS);
 			}
 			if (!success) {
 				LOG.error("Timed out writing data to stream.");
@@ -189,7 +189,7 @@ public class ChannelBufferStreamingInputStream extends ChannelBufferInputStream 
 		boolean success = false;
 		int retries = 0;
 		while ((!success) && (retries++ < QUEUE_TIMEOUT)) {
-			success = buffers.offer(input, 1, TimeUnit.SECONDS);
+			success = buffers.offer(input, QUEUE_TIMEOUT, TimeUnit.SECONDS);
 		}
 		if (!success) {
 			LOG.error("Timed out writing data to stream.");
