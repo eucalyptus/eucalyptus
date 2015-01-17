@@ -81,10 +81,12 @@ public class AsyncRequests {
   
   private static Logger LOG = Logger.getLogger( AsyncRequests.class );
   
+  private static final int LOCAL_THREADS = 64;
+  
   public static <A extends BaseMessage, B extends BaseMessage> CheckedListenableFuture<B> dispatch( final ServiceConfiguration config, final A msg ) throws Exception {
     if ( config.isVmLocal( ) ) {
       final CheckedListenableFuture<B> future = Futures.newGenericeFuture( );
-      Threads.enqueue( Empyrean.class, AsyncRequests.class, new Callable<B>( ) {
+      Threads.enqueue( Empyrean.class, AsyncRequests.class, LOCAL_THREADS, new Callable<B>( ) {
         public B call( ) {
           try {
             B ret = ServiceContext.send( config.getComponentId( ), msg );
