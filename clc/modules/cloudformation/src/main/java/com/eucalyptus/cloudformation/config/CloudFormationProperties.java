@@ -57,7 +57,7 @@ public class CloudFormationProperties {
       initial = "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 8 }",
       description = "JSON configuration for the cloudformation simple workflow decision worker",
       changeListener = Config.WorkflowWorkerConfigurationValidatingChangeListener.class )
-  public static volatile String SWF_WORKFLOW_WORKER_CONFIG = "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 8 }";
+  public static volatile String SWF_WORKFLOW_WORKER_CONFIG = "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 4 }";
 
   // In case we are using AWS SWF
   public static boolean USE_AWS_SWF = "true".equalsIgnoreCase(System.getProperty("cloudformation.use_aws_swf"));
