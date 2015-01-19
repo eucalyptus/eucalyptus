@@ -83,7 +83,6 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.system.BaseDirectory;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 import org.apache.log4j.Logger;
@@ -91,6 +90,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 public class ObjectStorageProperties {
     private static Logger LOG = Logger.getLogger(ObjectStorageProperties.class);
@@ -171,6 +171,8 @@ public class ObjectStorageProperties {
 
     //15 minutes
     public final static long EXPIRATION_LIMIT = 900000;
+    
+    public static final Pattern RANGE_HEADER_PATTERN = Pattern.compile("^bytes=(\\d*)-(\\d*)$");
 
     public enum CannedACL {
         private_only {

@@ -798,10 +798,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
         String ifNoneMatch = request.getIfNoneMatch();
 
         GetObjectRequest getRequest = new GetObjectRequest(request.getBucket(), request.getKey());
-        if(byteRangeStart == null) {
-            byteRangeStart = 0L;
-        }
-        if(byteRangeEnd != null) {
+        if(byteRangeStart != null && byteRangeEnd != null) {
             getRequest.setRange(byteRangeStart, byteRangeEnd);
         }
         if(getMetaData != null) {

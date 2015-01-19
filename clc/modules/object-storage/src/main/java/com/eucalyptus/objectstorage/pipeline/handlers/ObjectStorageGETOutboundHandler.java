@@ -223,7 +223,7 @@ public class ObjectStorageGETOutboundHandler extends ObjectStorageBasicOutboundH
 
         //write extra headers
         if (reply.getByteRangeEnd() != null) {
-            httpResponse.addHeader("Content-Range", reply.getByteRangeStart() + "-" + reply.getByteRangeEnd() + "/" + reply.getSize());
+            httpResponse.addHeader(HttpHeaders.Names.CONTENT_RANGE, reply.getByteRangeStart() + "-" + reply.getByteRangeEnd() + "/" + reply.getSize());
         }
         overrideHeaders(reply, httpResponse);
         return httpResponse;

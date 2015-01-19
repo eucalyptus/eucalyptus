@@ -467,7 +467,7 @@ class InvalidPolicyDocumentException extends S3Exception {
 
 class InvalidRangeException extends S3Exception {
     def InvalidRangeException() {
-        super(S3ErrorCodeStrings.InvalidRange, "The requested range cannot be satisfied.", HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE);
+        super(S3ErrorCodeStrings.InvalidRange, "The requested range is not satisfiable.", HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE);
     }
 
     def InvalidRangeException(String resource) {

@@ -69,6 +69,7 @@ import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidArgumentException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidBucketNameException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidBucketStateException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidRangeException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidRequestException;
 import com.eucalyptus.objectstorage.exceptions.s3.MalformedACLErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.MalformedXMLException;
@@ -184,6 +185,7 @@ import com.google.common.net.HttpHeaders;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
+import org.apache.commons.lang.ObjectUtils;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
@@ -1137,12 +1139,62 @@ public class ObjectStorageGateway implements ObjectStorageService {
 	@Override
 	public GetObjectExtendedResponseType getObjectExtended(GetObjectExtendedType request) throws S3Exception {
         ObjectEntity objectEntity = getObjectEntityAndCheckPermissions(request, null);
+        
+        // Byte range computation
+        // Why do it here instead of delegating it to backends?
+        // 1. AWS SDK is used for GET requests to backends. SDK does not let you specify ranges like bytes=-400 or bytes=400-
+        // 2. Backends might not be compatible with S3/RFC behavior. Computing the simplified range unifies OSG behavior across backends while staying
+        // compatible with S3
+    
+        // Its safe to assume here that range will either be null or positive because of regex used for marshaling the header
+        Long objectSize = objectEntity.getSize();
+        Long lastIndex = (objectSize - 1) < 0 ? 0 : (objectSize - 1);
+        Long byteRangeStart = request.getByteRangeStart();
+        Long byteRangeEnd = request.getByteRangeEnd();
+    
+        if (byteRangeStart != null && byteRangeEnd != null) { // both start and end represent some value
+          if (byteRangeEnd < byteRangeStart) { // check if end is greater than start
+            // invalid byte range. ignore byte range by setting start and end to null
+            byteRangeStart = null;
+            byteRangeEnd = null;
+          }
+        } else if (byteRangeStart == null && byteRangeEnd == null) { // both start and end dont represent any value
+          // ignore byte range
+        } else if (byteRangeStart != null) { // meaning from byteRangeStart to end. example: bytes=400-
+          if (objectSize == 0) {
+            // S3 throws invalid range error for bytes=x-y when size is 0
+            throw new InvalidRangeException("bytes=" + ObjectUtils.toString(request.getByteRangeStart()) + "-"
+                + ObjectUtils.toString(request.getByteRangeEnd()));
+          } else {
+            byteRangeEnd = lastIndex;
+          }
+        } else { // implies byteRangeEnd != null. meaning last byteRangeEnd number of bytes. example bytes=-400
+          if (byteRangeEnd == 0) {
+            // S3 throws invalid range error for bytes=-0
+            throw new InvalidRangeException("bytes=" + ObjectUtils.toString(request.getByteRangeStart()) + "-"
+                + ObjectUtils.toString(request.getByteRangeEnd()));
+          } else {
+            byteRangeStart = (objectSize - byteRangeEnd) > 0 ? (objectSize - byteRangeEnd) : 0;
+          }
+          // end is always object-size-1 as the start is null
+          byteRangeEnd = lastIndex;
+        }
+    
+        // Final checks
+        if (byteRangeStart != null && byteRangeStart > lastIndex) { // check if start byte position is out of range
+          throw new InvalidRangeException("bytes=" + ObjectUtils.toString(request.getByteRangeStart()) + "-"
+              + ObjectUtils.toString(request.getByteRangeEnd())); // Throw error if it is out of range
+        }
+    
+        if (byteRangeEnd != null && byteRangeEnd > lastIndex) { // check if start byte position is out of range
+          byteRangeEnd = lastIndex; // Set the end byte position to object-size-1
+        }
+        
         request.setKey(objectEntity.getObjectUuid());
         request.setBucket(objectEntity.getBucket().getBucketUuid());
+        request.setByteRangeStart(byteRangeStart); // Populate the computed byte range before firing request to backend
+        request.setByteRangeEnd(byteRangeEnd); // Populate the computed byte range before firing request to backend
         try {
-            request.setBucket(objectEntity.getBucket().getBucketUuid());
-            request.setKey(objectEntity.getObjectUuid());
-
             GetObjectExtendedResponseType response = ospClient.getObjectExtended(request);
 
             response.setVersionId(objectEntity.getVersionId());
@@ -1150,6 +1202,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
             populateStoredHeaders(response, objectEntity.getStoredHeaders());
             response.setResponseHeaderOverrides(request.getResponseHeaderOverrides());
             return response;
+        } catch(S3Exception e) {
+            LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with: ", e);
+            throw e;
         } catch(Exception e) {
         	// Wrap the error from back-end with a 500 error
             LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", e);

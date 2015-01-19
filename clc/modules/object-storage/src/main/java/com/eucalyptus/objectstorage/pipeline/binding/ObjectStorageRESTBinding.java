@@ -157,6 +157,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
@@ -821,20 +822,46 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
 
     protected void parseExtendedHeaders(Map operationParams, String headerString, String value) throws BindingException {
         if(headerString.equals(ObjectStorageProperties.ExtendedGetHeaders.Range.toString())) {
-            String prefix = "bytes=";
-            assert(value.startsWith(prefix));
-            value = value.substring(prefix.length());
-            String[]values = value.split("-");
-            if(values[0].equals("")) {
-                operationParams.put(ObjectStorageProperties.ExtendedHeaderRangeTypes.ByteRangeStart.toString(), new Long(0));
+            // Examples: bytes=0-499, bytes=-500, bytes=500-, bytes=1000-500, bytes=5--1, bytes=-5-1, bytes=-5--1
+            Matcher matcher = ObjectStorageProperties.RANGE_HEADER_PATTERN.matcher(value);
+            if (matcher.matches()) {
+              if (matcher.groupCount() > 0) {
+                Long start = null;
+                Long end = null;
+                boolean parseError = false;
+                for (int i = 1; i <= matcher.groupCount(); i++) {
+                  String position = matcher.group(i);
+                  if (StringUtils.isNotBlank(position)) {
+                    try {
+                      if (i == 1) { // begin position
+                        start = Long.parseLong(position);
+                      } else { // end position
+                        end = Long.parseLong(position);
+                      }
+                    } catch (NumberFormatException e) {
+                      LOG.debug("Cannot parse string \"" + position + "\" to long ");
+                      parseError = true;
+                      break;
+                    }
+                  }
+                }
+                if (!parseError) { // if there was an error parsing, don't populate headers
+                  if (start != null) {
+                    operationParams.put(ObjectStorageProperties.ExtendedHeaderRangeTypes.ByteRangeStart.toString(), start);
+                  }
+                  if (end != null) {
+                    operationParams.put(ObjectStorageProperties.ExtendedHeaderRangeTypes.ByteRangeEnd.toString(), end);
+                  }
+                } else {
+                  LOG.debug("Dropping the Range header since its value: " + value + " cannot be parsed");
+                }
+              } else {
+                LOG.debug("Dropping the Range header since its value: " + value + " does not contain any matching groups against the pattern: "
+                    + ObjectStorageProperties.RANGE_HEADER_PATTERN.toString());
+              }
             } else {
-                operationParams.put(ObjectStorageProperties.ExtendedHeaderRangeTypes.ByteRangeStart.toString(), Long.parseLong(values[0]));
-            }
-            if((values.length < 2) || (values[1].equals(""))) {
-                //-1 is treated by the back end as end of object
-                operationParams.put(ObjectStorageProperties.ExtendedHeaderRangeTypes.ByteRangeEnd.toString(), new Long(-1));
-            } else {
-                operationParams.put(ObjectStorageProperties.ExtendedHeaderRangeTypes.ByteRangeEnd.toString(), Long.parseLong(values[1]));
+              LOG.debug("Dropping the Range header since its value: " + value + " does not match pattern: "
+                  + ObjectStorageProperties.RANGE_HEADER_PATTERN.toString());
             }
         } else if(ObjectStorageProperties.ExtendedHeaderDateTypes.contains(headerString)) {
             try {

@@ -136,7 +136,7 @@ public class DASManager implements LogicalStorageManager {
 			if(returnValue.length() == 0) {
 				throw new EucalyptusCloudException("Is lvm installed?");
 			} else {
-				LOG.info(returnValue);
+				LOG.debug("lvm version: " + returnValue);
 			}
 
 			//exportManager = new ISCSIManager();
@@ -259,9 +259,6 @@ public class DASManager implements LogicalStorageManager {
 		exportManager.configure();
 		//dummy init
 		//this is retarded. wtf?
-		LOG.info(StorageInfo.getStorageInfo().getName());
-		LOG.info(DirectStorageInfo.getStorageInfo().getName());
-		LOG.info(DASInfo.getStorageInfo().getName());
 	}
 
 	public void startupChecks() {
