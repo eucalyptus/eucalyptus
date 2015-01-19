@@ -951,7 +951,7 @@ public class EucalyptusActivityTasks {
       if (result.get()) {
         return task.getResult();
       } else
-        throw new EucalyptusActivityException("failed to describe keypairs");
+        throw new EucalyptusActivityException("failed to describe images");
     } catch (Exception ex) {
       throw Exceptions.toUndeclared(ex);
     }
