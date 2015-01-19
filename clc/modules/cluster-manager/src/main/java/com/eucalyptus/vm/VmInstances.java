@@ -150,7 +150,6 @@ import com.eucalyptus.system.tracking.MessageContexts;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.CollectionUtils;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.Intervals;
@@ -179,6 +178,7 @@ import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.cache.CacheBuilderSpec;
@@ -304,8 +304,10 @@ public class VmInstances {
       if (i < EUCAKEY_CRED_SETUP.length())
         return;
       final String[] firstLine = userData.substring(0, i).split(":");
-      if (firstLine.length != 2)
-        throw new EucalyptusCloudException("Invalid credentials format");
+      if (firstLine.length != 2){
+        LOG.error("Invalid credentials format");
+        return;
+      }
       this.key = firstLine[0];
       this.expirationDays = firstLine[1];
       this.payload = userData.substring(i+1);
