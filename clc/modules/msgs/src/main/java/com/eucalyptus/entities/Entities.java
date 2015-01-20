@@ -1239,6 +1239,31 @@ public class Entities {
     
   }
   
+  public static class RetryTransactionException extends RuntimeException {
+    private static final long serialVersionUID = 1L;
+
+    private final Iterable<Class<?>> entitiesToEvict;
+    
+    /**
+     * @param cause Throwable that occurred requiring a retry
+     */
+    public RetryTransactionException( final Throwable cause ) {
+      this( cause, Collections.<Class<?>>emptyList( ) );
+    }
+
+    public RetryTransactionException( final Throwable cause, final Class<?> entityToEvict ) {
+      this( cause, Collections.<Class<?>>singleton( entityToEvict ) );
+    }
+    public RetryTransactionException( final Throwable cause, final Iterable<Class<?>> entitiesToEvict ) {
+      super( cause );
+      this.entitiesToEvict = entitiesToEvict;
+    }
+
+    public Iterable<Class<?>> getEntitiesToEvict( ) {
+      return entitiesToEvict;
+    }
+  }
+  
   private static class TransactionalFunction<E, D, R> implements Function<D, R> {
     private Class<E>       entityType;
     private Function<D, R> function;
@@ -1263,6 +1288,11 @@ public class Entities {
             rootCause = Exceptions.findCause( ex, OptimisticLockException.class );
           } else if ( Exceptions.isCausedBy( ex, LockAcquisitionException.class ) ) {
             rootCause = Exceptions.findCause( ex, LockAcquisitionException.class );
+          } else if ( Exceptions.isCausedBy( ex, RetryTransactionException.class ) ) {
+            rootCause = Exceptions.findCause( ex, RetryTransactionException.class );
+            for ( final Class<?> entityClass : ((RetryTransactionException)rootCause).getEntitiesToEvict( ) ) {
+              Entities.evictCache( entityClass );
+            }
           } else {
             rootCause = ex;
             Logs.extreme( ).error( ex, ex );

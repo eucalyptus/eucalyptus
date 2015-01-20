@@ -62,6 +62,7 @@
 
 package com.eucalyptus.network;
 
+import static com.eucalyptus.tags.Filters.FiltersBuilder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -70,6 +71,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 import javax.annotation.Nullable;
+import javax.persistence.EntityNotFoundException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.ClientUnauthorizedComputeException;
@@ -230,7 +232,13 @@ public class NetworkGroupManager {
 
       NetworkGroups.createDefault( ctx.getUserFullName() ); //ensure the default group exists to cover some old broken installs
 
-      final Filter filter = Filters.generate( request.getFilterSet(), NetworkGroup.class );
+      final FiltersBuilder builder = Filters.generateFor( request.getFilterSet( ), NetworkGroup.class );
+      if ( ( request.getSecurityGroupSet( ).isEmpty( ) && !request.getSecurityGroupIdSet( ).isEmpty( ) ) ||
+          ( !request.getSecurityGroupSet( ).isEmpty( ) && request.getSecurityGroupIdSet( ).isEmpty( ) )) {
+        builder.withOptionalInternalFilter( "group-name", request.getSecurityGroupSet( ) );
+        builder.withOptionalInternalFilter( "group-id", normalizeGroupIdentifiers( request.getSecurityGroupIdSet( ) ) );
+      }
+      final Filter filter = builder.generate( );
       final Predicate<? super NetworkGroup> requestedAndAccessible =
           CloudMetadatas.filteringFor( NetworkGroup.class )
               .byPredicate( Predicates.or(
@@ -251,12 +259,27 @@ public class NetworkGroupManager {
           null :
           AccountFullName.getInstance( ctx.getAccount( ) );
 
-      final Iterable<SecurityGroupItemType> securityGroupItems = Transactions.filteredTransform(
-          NetworkGroup.withOwner( ownerFn ),
-          filter.asCriterion(),
-          filter.getAliases(),
-          requestedAndAccessible,
-          TypeMappers.lookup( NetworkGroup.class, SecurityGroupItemType.class ) );
+      final Iterable<SecurityGroupItemType> securityGroupItems = 
+          Entities.asDistinctTransaction( NetworkGroup.class, new Function<Void, Iterable<SecurityGroupItemType>>() {
+        @Nullable
+        @Override
+        public Iterable<SecurityGroupItemType> apply( @Nullable final Void aVoid ) {
+          try {
+            return Transactions.filteredTransform(
+                NetworkGroup.withOwner( ownerFn ),
+                filter.asCriterion(),
+                filter.getAliases(),
+                requestedAndAccessible,
+                TypeMappers.lookup( NetworkGroup.class, SecurityGroupItemType.class ) );
+          } catch ( TransactionException e ) {
+            if ( Exceptions.isCausedBy( e, EntityNotFoundException.class ) ) {
+              // A rule may have been deleted, retry
+              throw new Entities.RetryTransactionException( e, NetworkGroup.class );
+            }
+            throw Exceptions.toUndeclared( e );
+          }
+        }
+      } ).apply( null );
 
       final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( NetworkGroup.class )
           .getResourceTagMap( AccountFullName.getInstance( ctx.getAccount( ) ),
@@ -300,6 +323,9 @@ public class NetworkGroupManager {
                       + request.getGroupName() + " for "
                       + ctx.getUser().getName());
             }
+          } catch ( final EntityNotFoundException e ) {
+            // Another rule may have been deleted, retry
+            throw new Entities.RetryTransactionException( e );
           } catch ( final Exception e ) {
             throw Exceptions.toUndeclared( e );
           }
@@ -483,6 +509,9 @@ public class NetworkGroupManager {
                     + request.getGroupId() + " for "
                     + ctx.getUser().getName());
           }
+        } catch ( final EntityNotFoundException e ) {
+          // Another rule may have been deleted, retry
+          throw new Entities.RetryTransactionException( e );
         } catch ( final Exception e ) {
           throw Exceptions.toUndeclared( e );
         }
