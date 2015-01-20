@@ -234,7 +234,7 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
   public Date calculateNextTimeout( ) {
     final Long timeout = CollectionUtils.reduce( Iterables.filter( Lists.newArrayList(
         toTimeout( getCreationTimestamp( ), getExecutionStartToCloseTimeout( ) ),
-        toTimeout( getDecisionTimestamp( ), getDecisionStatus( ) != DecisionStatus.Idle ? getTaskStartToCloseTimeout( ) : null )
+        toTimeout( getDecisionTimestamp( ), getDecisionStatus( ) == DecisionStatus.Active ? getTaskStartToCloseTimeout( ) : null )
     ), Predicates.notNull( ) ), Long.MAX_VALUE, CollectionUtils.lmin( ) );
     return timeout == Long.MAX_VALUE ? null : new Date( timeout );
   }
