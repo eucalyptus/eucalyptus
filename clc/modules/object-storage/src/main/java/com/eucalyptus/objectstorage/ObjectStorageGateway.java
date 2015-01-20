@@ -1727,10 +1727,10 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
         BucketTaggingManagers.getInstance( ).addBucketTagging( bucketTagList, bucket.getBucketUuid( ) );
       } catch (S3Exception ex) {
-        LOG.error("Error while setting TagSet for bucket '" + bucket.getBucketName() + "' ", ex);
+        LOG.warn("Failed to put TagSet for bucket '" + bucket.getBucketName() + "' due to: " + ex.getMessage());
         throw ex;
       } catch ( Exception ex ) {
-        LOG.error( "Error while setting TagSet for bucket '" + bucket.getBucketName( ) + "' ", ex );
+        LOG.warn( "Failed to put TagSet for bucket '" + bucket.getBucketName( ) + "' ", ex );
         InternalErrorException e = new InternalErrorException(bucket.getBucketName( ) + "?tagging", ex);
         e.setMessage("An exception was caught while setting TagSets for bucket - " + bucket.getBucketName( ) );
         throw e;
@@ -1747,16 +1747,16 @@ public class ObjectStorageGateway implements ObjectStorageService {
       Bucket bucket = getBucketAndCheckAuthorization( request );
 
       try {
-        TaggingConfiguration tagging = new TaggingConfiguration( );
-        List<BucketTag> bucketTagList = new ArrayList<>( );
-        List<BucketTags> bucketTagsList =
+        List<BucketTags> bucketTagsLookup =
                 BucketTaggingManagers.getInstance( ).getBucketTagging( bucket.getBucketUuid( ) );
 
-        if ( bucketTagList.isEmpty( ) ) {
+        if ( bucketTagsLookup == null || bucketTagsLookup.isEmpty( ) ) {
           throw new NoSuchTagSetException(bucket.getBucketName());
         }
-
-        for ( BucketTags bucketTags : bucketTagsList ) {
+        
+        TaggingConfiguration tagging = new TaggingConfiguration( );
+        List<BucketTag> bucketTagList = new ArrayList<BucketTag>( );
+        for ( BucketTags bucketTags : bucketTagsLookup ) {
           BucketTag bucketTag = new BucketTag( );
           bucketTag.setKey( bucketTags.getKey() );
           bucketTag.setValue( bucketTags.getValue() );
@@ -1769,10 +1769,10 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
         reply.setTaggingConfiguration( tagging );
       } catch (S3Exception ex) {
-        LOG.error("Error while getting TagSet for bucket '" + bucket.getBucketName() + "' ", ex);
+        LOG.warn("Failed to get TagSet for bucket '" + bucket.getBucketName() + "' due to: " +  ex.getMessage());
         throw ex;
       } catch ( Exception ex ) {
-        LOG.error( "Error while getting TagSet for bucket '" + bucket.getBucketName( ) + "' ", ex );
+        LOG.warn( "Failed to get TagSet for bucket '" + bucket.getBucketName( ) + "' ", ex );
         InternalErrorException e = new InternalErrorException(bucket.getBucketName( ) + "?tagging", ex);
         e.setMessage("An exception was caught while getting TagSets for bucket - " + bucket.getBucketName( ) );
         throw e;
@@ -1789,7 +1789,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       try {
         BucketTaggingManagers.getInstance( ).deleteBucketTagging( bucket.getBucketUuid( ) );
       } catch ( Exception ex ) {
-        LOG.error( "Error while deleting TagSet for bucket '" + bucket.getBucketName( ) + "' ", ex );
+        LOG.warn( "Failed to delete TagSet for bucket '" + bucket.getBucketName( ) + "' ", ex );
         InternalErrorException e = new InternalErrorException(bucket.getBucketName( ) + "?tagging");
         e.setMessage("An exception was caught while deleting TagSets for bucket - " + bucket.getBucketName( ) );
         throw e;
