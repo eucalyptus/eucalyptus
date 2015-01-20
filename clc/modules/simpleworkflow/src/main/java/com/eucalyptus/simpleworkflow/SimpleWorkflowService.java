@@ -908,6 +908,8 @@ public class SimpleWorkflowService {
                       }
                     });
 
+              } catch ( SwfMetadataException e ) {
+                logger.info( "Activity task for domain " + domain + ", list " + taskList + " not found" );
               } catch ( Exception e ) {
                 final StaleObjectStateException stale = Exceptions.findCause( e, StaleObjectStateException.class );
                 if ( stale != null ) try {
@@ -1189,7 +1191,7 @@ public class SimpleWorkflowService {
       throw handleException( e );
     }
 
-    return request.reply( new SimpleWorkflowMessage( ) );
+    return request.reply( new SimpleWorkflowMessage() );
   }
 
   public DecisionTask pollForDecisionTask( final PollForDecisionTaskRequest request ) throws SimpleWorkflowException {
