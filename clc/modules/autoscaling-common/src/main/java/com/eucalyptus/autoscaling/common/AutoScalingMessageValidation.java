@@ -89,7 +89,7 @@ public class AutoScalingMessageValidation {
     TAG_FILTER( "auto-scaling-group|key|value|propagate-at-launch" ),
     TAG_RESOURCE( "auto-scaling-group" ),
     TERMINATION_POLICY( "OldestInstance|NewestInstance|OldestLaunchConfiguration|ClosestToNextInstanceHour|Default" ),
-    VPC_ZONE_IDENTIFIER( "subnet-[0-9a-fA-F]{8}(?: +, +subnet-[0-9a-fA-F]{8})*" ),
+    VPC_ZONE_IDENTIFIER( "subnet-[0-9a-fA-F]{8}(?: *, *subnet-[0-9a-fA-F]{8})*" ),
 
     // EC2
     EC2_NAME( "(?s).{1,255}" ),
