@@ -257,8 +257,10 @@ public class DASManager implements LogicalStorageManager {
 
 	public void configure() throws EucalyptusCloudException {
 		exportManager.configure();
-		//dummy init
-		//this is retarded. wtf?
+	    // Initialize StorageInfo, DirectStorageInfo and DASInfo entities
+	    StorageInfo.getStorageInfo();
+	    DirectStorageInfo.getStorageInfo();
+	    DASInfo.getStorageInfo();
 	}
 
 	public void startupChecks() {
