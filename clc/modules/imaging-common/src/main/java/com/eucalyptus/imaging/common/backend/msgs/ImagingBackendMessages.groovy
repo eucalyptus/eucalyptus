@@ -21,12 +21,13 @@
 package com.eucalyptus.imaging.common.backend.msgs;
 import com.eucalyptus.component.annotation.ComponentMessage
 
+import edu.ucsb.eucalyptus.msgs.BaseMessageMarker;
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
 import com.eucalyptus.imaging.common.ImagingBackend
 
 @ComponentMessage(ImagingBackend.class)
-interface ImagingBackendMessage { 
+interface ImagingBackendMessage  extends BaseMessageMarker{ 
 }
 
 /** *******************************************************************************/
