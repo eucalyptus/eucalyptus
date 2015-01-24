@@ -273,7 +273,7 @@ typedef struct ncMetadata_t {
 typedef struct virtualBootRecord_t {
     //! @{
     //! @name first six fields arrive in requests (RunInstance, {Attach|Detach} Volume)
-    char resourceLocation[CHAR_BUFFER_SIZE];    //!< http|objectstorage|cloud|sc|iqn|aoe://... or none
+    char resourceLocation[BIG_CHAR_BUFFER_SIZE];    //!< http|objectstorage|cloud|sc|iqn|aoe://... or none
     char guestDeviceName[SMALL_CHAR_BUFFER_SIZE];   //!< x?[vhsf]d[a-z]?[1-9]*
     long long sizeBytes;               //!< Size of the boot record in bytes
     char formatName[SMALL_CHAR_BUFFER_SIZE];    //!< ext2|ext3|swap|none
