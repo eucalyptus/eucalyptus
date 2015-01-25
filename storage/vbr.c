@@ -751,7 +751,7 @@ int vbr_parse(virtualMachine * vm, ncMetadata * pMeta)
             }
         }
         
-        if (vbr->guestDeviceType == DEV_TYPE_DISK) {
+        if ((vbr->guestDeviceType == DEV_TYPE_DISK) && (vbr->type != NC_RESOURCE_KERNEL && vbr->type != NC_RESOURCE_RAMDISK)) {
 
             // force use of Virtio, based on node config
             if ((vm->root == vbr && virtio_root)
