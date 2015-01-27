@@ -162,7 +162,7 @@ public class ImportDiskImageDetail extends EucalyptusData {
   }
 }
 
-public class DiskImageConversionTask {
+public class DiskImageConversionTask extends EucalyptusData {
   String conversionTaskId;
   String expirationTime;
   String state;
