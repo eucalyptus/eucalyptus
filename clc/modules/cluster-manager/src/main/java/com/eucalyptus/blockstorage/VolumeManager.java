@@ -220,7 +220,6 @@ public class VolumeManager {
         reply.setVolume( newVol.morph( new com.eucalyptus.compute.common.Volume( ) ) );
         return reply;
       } catch ( RuntimeException ex ) {
-        LOG.error( ex, ex );
         final VolumeSizeExceededException volumeSizeException =
             Exceptions.findCause( ex, VolumeSizeExceededException.class );
         if ( volumeSizeException != null ) {
@@ -228,8 +227,10 @@ public class VolumeManager {
               "VolumeLimitExceeded",
               "Failed to create volume because of: " + volumeSizeException.getMessage( ) );
         } else if ( !( ex.getCause( ) instanceof ExecutionException ) ) {
+          LOG.error( ex, ex );
           throw ex;
         } else {
+          LOG.error( ex, ex );
           lastEx = ex;
         }
       }

@@ -121,6 +121,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 
+import edu.ucsb.eucalyptus.cloud.VolumeSizeExceededException;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Volumes {
@@ -427,7 +428,13 @@ public class Volumes {
             fireUsageEvent( t, VolumeEvent.forVolumeCreate());
           }
         } catch ( final Exception ex ) {
-          LOG.error( "Failed to create volume: " + t, ex );
+          final VolumeSizeExceededException volumeSizeException =
+              Exceptions.findCause( ex, VolumeSizeExceededException.class );
+          if ( volumeSizeException != null ) {
+            LOG.debug( "Failed to create volume: " + t.getDisplayName() + " due to " + volumeSizeException.getLocalizedMessage() );
+          } else {
+            LOG.error( "Failed to create volume: " + t.getDisplayName(), ex );
+          }
           t.setState( State.FAIL );
           throw Exceptions.toUndeclared( ex );
         }
