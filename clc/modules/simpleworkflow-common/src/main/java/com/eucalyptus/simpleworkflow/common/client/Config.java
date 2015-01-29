@@ -34,9 +34,11 @@ import org.apache.log4j.Logger;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.mule.api.MessagingException;
+import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Request;
 import com.amazonaws.Response;
+import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.handlers.RequestHandler2;
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow;
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflowClient;
@@ -92,8 +94,9 @@ public class Config {
   }
 
   public static AmazonSimpleWorkflow buildClient( final Supplier<User> user, final String text ) throws AuthException {
+    final AWSCredentialsProvider credentialsProvider = new SecurityTokenAWSCredentialsProvider( user );
     final AmazonSimpleWorkflowClient client = new AmazonSimpleWorkflowClient(
-        new SecurityTokenAWSCredentialsProvider( user ),
+        credentialsProvider,
         buildConfiguration( text )
     );
     client.setEndpoint( ServiceUris.remote( Topology.lookup( SimpleWorkflow.class ) ).toString( ) );
@@ -124,6 +127,13 @@ public class Config {
             client.setEndpoint( ServiceUris.remote( Topology.lookup( SimpleWorkflow.class ) ).toString( ) );
           } catch ( final Exception e2 ) {
             // retry on next failure
+          }
+        }
+
+        if ( e instanceof AmazonServiceException ) {
+          final int status = ( (AmazonServiceException) e ).getStatusCode( );
+          if ( status == 403 ) {
+            credentialsProvider.refresh( );
           }
         }
       }
@@ -203,7 +213,14 @@ public class Config {
       worker.setUncaughtExceptionHandler( new Thread.UncaughtExceptionHandler() {
         @Override
         public void uncaughtException( final Thread t, final Throwable e ) {
-          logger.error( "Uncaught exception in " + type + " worker " + t.getName( ) + "/" + t.getId( ), e );
+          if ( Exceptions.isCausedBy( e, ConnectException.class ) ) {
+            logger.warn( "Connection error (retrying) for " + type + " worker " + t.getName() + "/" + t.getId() );
+          } else if ( Exceptions.isCausedBy( e, AmazonServiceException.class ) &&
+              403 == (Exceptions.findCause( e, AmazonServiceException.class )).getStatusCode( ) ) {
+            logger.warn( "Authentication failure (retrying) for " + type + " worker " + t.getName() + "/" + t.getId() );
+          } else {
+            logger.error( "Error in " + type + " worker " + t.getName() + "/" + t.getId(), e );
+          }
         }
       } );
     }
