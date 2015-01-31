@@ -651,6 +651,9 @@ class VmInstanceLifecycleHelpers {
           groups.add( NetworkGroups.lookupByGroupId( authContext.isSystemUser( ) ? null : accountFullName, groupId ) )
         }
       }
+      if ( !Collections.singleton( vpcId ).equals( Sets.newHashSet( Iterables.transform( groups, NetworkGroups.vpcId( ) ) ) ) ) {
+        throw new InvalidMetadataException( "Invalid security groups (inconsistent VPC)" );
+      }
 
       final Map<String, NetworkGroup> networkRuleGroups = Maps.newHashMap( )
       for ( final NetworkGroup group : groups ) {
@@ -822,6 +825,9 @@ class VmInstanceLifecycleHelpers {
           } catch ( Exception e ) {
             throw new InvalidMetadataException( "Security group (${groupId}) not found", e )
           }
+        }
+        if ( !groups.empty && !Collections.singleton( subnet.vpc.displayName ).equals( Sets.newHashSet( Iterables.transform( groups, NetworkGroups.vpcId( ) ) ) ) ) {
+          throw new InvalidMetadataException( "Invalid security groups (inconsistent VPC)" );
         }
         if ( groups.size( ) > VpcConfiguration.getSecurityGroupsPerNetworkInterface( ) ) {
           throw new SecurityGroupLimitMetadataException( );

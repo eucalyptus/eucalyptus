@@ -67,6 +67,7 @@ import static com.eucalyptus.cloud.run.VerifyMetadata.ImageInstanceTypeVerificat
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -933,6 +934,9 @@ public class VmControl {
           groups.add( networkGroup );
         } catch ( NoSuchMetadataException e ) {
           throw new ClientComputeException( "InvalidGroup.NotFound", "Security group ("+groupIdItemType.getGroupId( )+") not found" );
+        }
+        if ( !Collections.singleton( vm.getVpcId( ) ).equals( Sets.newHashSet( Iterables.transform( groups, NetworkGroups.vpcId( ) ) ) ) ) {
+          throw Exceptions.toUndeclared( new ClientComputeException( "InvalidParameterValue", "Invalid security groups (inconsistent VPC)" ) );
         }
         vm.getNetworkGroups( ).clear( );
         vm.getNetworkGroups( ).addAll( groups );

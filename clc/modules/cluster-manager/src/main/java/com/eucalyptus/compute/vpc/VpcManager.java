@@ -1537,6 +1537,10 @@ public class VpcManager {
                     networkInterface.setNetworkGroups( Sets.newHashSet( Iterables.transform(
                         request.getGroupSet( ).groupIds( ),
                         RestrictedTypes.resolver( NetworkGroup.class ) ) ) );
+                    if ( !Collections.singleton( networkInterface.getVpc( ).getDisplayName( ) ).equals(
+                        Sets.newHashSet( Iterables.transform( networkInterface.getNetworkGroups( ), NetworkGroups.vpcId( ) ) ) ) ) {
+                      throw Exceptions.toUndeclared( new ClientComputeException( "InvalidParameterValue", "Invalid security groups (inconsistent VPC)" ) );
+                    }
                     if ( networkInterface.getNetworkGroups( ).size( ) > VpcConfiguration.getSecurityGroupsPerNetworkInterface( ) ) {
                       throw Exceptions.toUndeclared( new ClientComputeException( "SecurityGroupsPerInterfaceLimitExceeded", "Security group limit exceeded" ) );
                     }
