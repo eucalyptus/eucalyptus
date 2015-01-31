@@ -288,6 +288,8 @@ public class SnapshotManager {
     final DescribeSnapshotsResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
+    // verbose does not have any special functionality for snapshots, but is ignored when passed as an identifier
+    request.getSnapshotSet().remove( "verbose" );
     final Set<String> snapshotIds = Sets.newHashSet( normalizeSnapshotIdentifiers( request.getSnapshotSet( ) ) );
     final List<String> ownersSet = request.getOwnersSet( );
     if ( ownersSet.remove( Snapshots.SELF ) ) {
