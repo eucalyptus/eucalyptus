@@ -67,25 +67,25 @@ import com.eucalyptus.util.EucalyptusCloudException;
 public class EntityAlreadyExistsException extends EucalyptusCloudException {
 
   String entityName;
-  public EntityAlreadyExistsException()
-  {
-    super( "Entity Already Exists" );
+
+  public EntityAlreadyExistsException() {
+    super("Entity Already Exists");
   }
-  public EntityAlreadyExistsException(String entityName)
-  {
+
+  public EntityAlreadyExistsException(String entityName) {
     super(entityName);
     this.entityName = entityName;
   }
+
   public String getBucketName() {
-      return entityName;
+    return entityName;
   }
 
-  public EntityAlreadyExistsException(Throwable ex)
-  {
+  public EntityAlreadyExistsException(Throwable ex) {
     super("Entity Already Exists", ex);
   }
-  public EntityAlreadyExistsException(String message, Throwable ex)
-  {
-    super(message,ex);
+
+  public EntityAlreadyExistsException(String message, Throwable ex) {
+    super(message, ex);
   }
 }

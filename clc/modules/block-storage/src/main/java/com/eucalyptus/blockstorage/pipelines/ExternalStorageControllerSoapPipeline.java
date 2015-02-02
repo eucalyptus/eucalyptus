@@ -64,6 +64,7 @@ package com.eucalyptus.blockstorage.pipelines;
 
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.component.annotation.ComponentPart;
@@ -73,32 +74,32 @@ import com.eucalyptus.ws.server.FilteredPipeline;
 import com.eucalyptus.ws.stages.ExternalSCAuthenticationStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
-
-@ComponentPart( Storage.class )
+@ComponentPart(Storage.class)
 public class ExternalStorageControllerSoapPipeline extends FilteredPipeline {
-	private static final String SC_EXTERNAL_SOAP_NAMESPACE = "storagecontroller_eucalyptus_ucsb_edu";
+  private static final String SC_EXTERNAL_SOAP_NAMESPACE = "storagecontroller_eucalyptus_ucsb_edu";
 
-	private final UnrollableStage auth = new ExternalSCAuthenticationStage( );
+  private final UnrollableStage auth = new ExternalSCAuthenticationStage();
 
-	@Override
-  public boolean checkAccepts( final HttpRequest message ) {
-    return (message.getUri( ).endsWith( "/services/Storage" ) || message.getUri( ).endsWith( "/services/Storage/" )) && message.getHeaderNames().contains( "SOAPAction" ) && message.getHeader("SOAPAction").trim().startsWith("\"EucalyptusSC#");
+  @Override
+  public boolean checkAccepts(final HttpRequest message) {
+    return (message.getUri().endsWith("/services/Storage") || message.getUri().endsWith("/services/Storage/"))
+        && message.getHeaderNames().contains("SOAPAction") && message.getHeader("SOAPAction").trim().startsWith("\"EucalyptusSC#");
   }
 
   @Override
-  public String getName( ) {
+  public String getName() {
     return "storage-controller-external-soap";
   }
 
   @Override
-  public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {  	
-  	pipeline.addLast( "deserialize", Handlers.soapMarshalling( ) );
-    //pipeline.addLast( "ws-security", Handlers.internalWsSecHandler() );
-    auth.unrollStage(pipeline);    
-    pipeline.addLast( "ws-addressing", Handlers.newAddressingHandler( "EucalyptusSC#" ) );
-    pipeline.addLast( "build-soap-envelope", Handlers.soapHandler( ) );
-    //pipeline.addLast( "binding", Handlers.bindingHandler( ) );        //
-    pipeline.addLast( "binding", new BindingHandler( BindingManager.getBinding(SC_EXTERNAL_SOAP_NAMESPACE)));    
+  public ChannelPipeline addHandlers(ChannelPipeline pipeline) {
+    pipeline.addLast("deserialize", Handlers.soapMarshalling());
+    // pipeline.addLast( "ws-security", Handlers.internalWsSecHandler() );
+    auth.unrollStage(pipeline);
+    pipeline.addLast("ws-addressing", Handlers.newAddressingHandler("EucalyptusSC#"));
+    pipeline.addLast("build-soap-envelope", Handlers.soapHandler());
+    // pipeline.addLast( "binding", Handlers.bindingHandler( ) ); //
+    pipeline.addLast("binding", new BindingHandler(BindingManager.getBinding(SC_EXTERNAL_SOAP_NAMESPACE)));
     return pipeline;
   }
 

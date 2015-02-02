@@ -26,19 +26,19 @@ package com.eucalyptus.walrus.exceptions;
 @SuppressWarnings("serial")
 public class HeadNoSuchBucketException extends NoSuchBucketException implements HeadExceptionInterface {
 
-	public HeadNoSuchBucketException() {
-		super();
-	}
+  public HeadNoSuchBucketException() {
+    super();
+  }
 
-	public HeadNoSuchBucketException(String message, Throwable ex) {
-		super(message, ex);
-	}
+  public HeadNoSuchBucketException(String message, Throwable ex) {
+    super(message, ex);
+  }
 
-	public HeadNoSuchBucketException(String bucket) {
-		super(bucket);
-	}
+  public HeadNoSuchBucketException(String bucket) {
+    super(bucket);
+  }
 
-	public HeadNoSuchBucketException(Throwable ex) {
-		super(ex);
-	}
+  public HeadNoSuchBucketException(Throwable ex) {
+    super(ex);
+  }
 }

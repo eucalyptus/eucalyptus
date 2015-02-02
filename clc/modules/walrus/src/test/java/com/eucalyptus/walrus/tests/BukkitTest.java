@@ -68,51 +68,57 @@ import org.junit.Test;
 
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
-import com.eucalyptus.walrus.msgs.*;
 import com.eucalyptus.walrus.WalrusControl;
+import com.eucalyptus.walrus.msgs.CreateBucketResponseType;
+import com.eucalyptus.walrus.msgs.CreateBucketType;
+import com.eucalyptus.walrus.msgs.DeleteBucketResponseType;
+import com.eucalyptus.walrus.msgs.DeleteBucketType;
+import com.eucalyptus.walrus.msgs.GetBucketAccessControlPolicyResponseType;
+import com.eucalyptus.walrus.msgs.GetBucketAccessControlPolicyType;
+import com.eucalyptus.walrus.msgs.ListAllMyBucketsResponseType;
+import com.eucalyptus.walrus.msgs.ListAllMyBucketsType;
 
 @Ignore("Manual development test")
 public class BukkitTest {
 
-	static WalrusControl bukkit;
+  static WalrusControl bukkit;
 
-	@Test
-	public void testWalrusControl() throws Exception {
+  @Test
+  public void testWalrusControl() throws Exception {
 
-		String bucketName = "halo" + Hashes.getRandom(6);
-		String userId = "admin";
+    String bucketName = "halo" + Hashes.getRandom(6);
+    String userId = "admin";
 
+    CreateBucketType createBucketRequest = new CreateBucketType(bucketName);
+    createBucketRequest.setBucket(bucketName);
+    createBucketRequest.setUserId(userId);
+    createBucketRequest.setEffectiveUserId("eucalyptus");
+    AccessControlList acl = new AccessControlList();
+    createBucketRequest.setAccessControlList(acl);
+    CreateBucketResponseType reply = bukkit.CreateBucket(createBucketRequest);
+    System.out.println(reply);
 
-		CreateBucketType createBucketRequest = new CreateBucketType(bucketName);
-		createBucketRequest.setBucket(bucketName);
-		createBucketRequest.setUserId(userId);
-        createBucketRequest.setEffectiveUserId("eucalyptus");
-		AccessControlList acl = new AccessControlList();
-		createBucketRequest.setAccessControlList(acl);
-		CreateBucketResponseType reply = bukkit.CreateBucket(createBucketRequest);
-		System.out.println(reply);
+    ListAllMyBucketsType listBucketsRequest = new ListAllMyBucketsType();
 
-		ListAllMyBucketsType listBucketsRequest = new ListAllMyBucketsType();
+    listBucketsRequest.setUserId(userId);
+    ListAllMyBucketsResponseType response = bukkit.ListAllMyBuckets(listBucketsRequest);
+    System.out.println(response);
 
-		listBucketsRequest.setUserId(userId);
-		ListAllMyBucketsResponseType response =  bukkit.ListAllMyBuckets(listBucketsRequest);
-		System.out.println(response);
+    GetBucketAccessControlPolicyType acpRequest = new GetBucketAccessControlPolicyType();
+    acpRequest.setBucket(bucketName);
+    acpRequest.setUserId(userId);
+    GetBucketAccessControlPolicyResponseType acpResponse = bukkit.GetBucketAccessControlPolicy(acpRequest);
+    System.out.println(acpResponse);
 
-		GetBucketAccessControlPolicyType acpRequest = new GetBucketAccessControlPolicyType();
-		acpRequest.setBucket(bucketName);
-		acpRequest.setUserId(userId);
-		GetBucketAccessControlPolicyResponseType acpResponse = bukkit.GetBucketAccessControlPolicy(acpRequest);
-		System.out.println(acpResponse);
+    DeleteBucketType deleteRequest = new DeleteBucketType();
+    deleteRequest.setUserId(userId);
+    deleteRequest.setBucket(bucketName);
+    DeleteBucketResponseType deleteResponse = bukkit.DeleteBucket(deleteRequest);
+    System.out.println(deleteResponse);
+  }
 
-		DeleteBucketType deleteRequest = new DeleteBucketType();
-		deleteRequest.setUserId(userId);
-		deleteRequest.setBucket(bucketName);
-		DeleteBucketResponseType deleteResponse = bukkit.DeleteBucket(deleteRequest);
-		System.out.println(deleteResponse);
-	}
-
-    @BeforeClass
-    public static void setUp() {
-        bukkit = new WalrusControl();
-    }
+  @BeforeClass
+  public static void setUp() {
+    bukkit = new WalrusControl();
+  }
 }

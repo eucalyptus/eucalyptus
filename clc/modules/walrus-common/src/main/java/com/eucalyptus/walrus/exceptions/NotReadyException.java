@@ -64,26 +64,22 @@ package com.eucalyptus.walrus.exceptions;
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-
-
 @SuppressWarnings("serial")
 public class NotReadyException extends WalrusException {
 
-  public NotReadyException()
-  {
-    super( "NotReady" );
+  public NotReadyException() {
+    super("NotReady");
   }
-  public NotReadyException(String service)
-  {
-	  super("NotReady", "The service is not ready to accept your request", "Service", service, HttpResponseStatus.NOT_ACCEPTABLE);
+
+  public NotReadyException(String service) {
+    super("NotReady", "The service is not ready to accept your request", "Service", service, HttpResponseStatus.NOT_ACCEPTABLE);
   }
-  
-  public NotReadyException(Throwable ex)
-  {
+
+  public NotReadyException(Throwable ex) {
     super("NotReady", ex);
   }
-  public NotReadyException(String message, Throwable ex)
-  {
-    super(message,ex);
+
+  public NotReadyException(String message, Throwable ex) {
+    super(message, ex);
   }
 }

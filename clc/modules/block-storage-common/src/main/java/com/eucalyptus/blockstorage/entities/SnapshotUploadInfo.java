@@ -84,207 +84,211 @@ import com.eucalyptus.util.EucalyptusCloudException;
 @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class SnapshotUploadInfo extends AbstractPersistent {
 
-	public static final Long PURGE_INTERVAL = (long) (60 * 60 * 1000); // one hour
+  public static final Long PURGE_INTERVAL = (long) (60 * 60 * 1000); // one hour
 
-	public static enum SnapshotUploadState {
-		creatingparts, createdparts, uploaded, aborted, cleaned
-	}
+  public static enum SnapshotUploadState {
+    creatingparts, createdparts, uploaded, aborted, cleaned
+  }
 
-	@Column(name = "sc_name")
-	private String scName;
+  @Column(name = "sc_name")
+  private String scName;
 
-	@Column(name = "snapshot_id")
-	private String snapshotId;
+  @Column(name = "snapshot_id")
+  private String snapshotId;
 
-	@Column(name = "bucket_name")
-	private String bucketName;
+  @Column(name = "bucket_name")
+  private String bucketName;
 
-	@Column(name = "key_name")
-	private String keyName;
+  @Column(name = "key_name")
+  private String keyName;
 
-	@Column(name = "upload_id")
-	private String uploadId;
+  @Column(name = "upload_id")
+  private String uploadId;
 
-	@Column(name = "state")
-	@Enumerated(EnumType.STRING)
-	private SnapshotUploadState state;
+  @Column(name = "state")
+  @Enumerated(EnumType.STRING)
+  private SnapshotUploadState state;
 
-	@Column(name = "total_parts")
-	private Integer totalParts;
+  @Column(name = "total_parts")
+  private Integer totalParts;
 
-	@Column(name = "etag")
-	private String etag;
+  @Column(name = "etag")
+  private String etag;
 
-	@Column(name = "purge_time")
-	private Long purgeTime;
+  @Column(name = "purge_time")
+  private Long purgeTime;
 
-	public SnapshotUploadInfo() {
-		this.scName = StorageProperties.NAME;
-	}
+  public SnapshotUploadInfo() {
+    this.scName = StorageProperties.NAME;
+  }
 
-	public SnapshotUploadInfo(String snapshotId, String bucketName, String keyName) {
-		this();
-		this.snapshotId = snapshotId;
-		this.bucketName = bucketName;
-		this.keyName = keyName;
-	}
+  public SnapshotUploadInfo(String snapshotId, String bucketName, String keyName) {
+    this();
+    this.snapshotId = snapshotId;
+    this.bucketName = bucketName;
+    this.keyName = keyName;
+  }
 
-	public SnapshotUploadInfo(String snapshotId, String bucketName, String keyName, String uploadId) {
-		this();
-		this.snapshotId = snapshotId;
-		this.bucketName = bucketName;
-		this.keyName = keyName;
-		this.uploadId = uploadId;
-	}
+  public SnapshotUploadInfo(String snapshotId, String bucketName, String keyName, String uploadId) {
+    this();
+    this.snapshotId = snapshotId;
+    this.bucketName = bucketName;
+    this.keyName = keyName;
+    this.uploadId = uploadId;
+  }
 
-	public SnapshotUploadInfo(String snapshotId, String bucketName, String keyName, SnapshotUploadState state) {
-		this();
-		this.snapshotId = snapshotId;
-		this.bucketName = bucketName;
-		this.keyName = keyName;
-		this.state = state;
-	}
+  public SnapshotUploadInfo(String snapshotId, String bucketName, String keyName, SnapshotUploadState state) {
+    this();
+    this.snapshotId = snapshotId;
+    this.bucketName = bucketName;
+    this.keyName = keyName;
+    this.state = state;
+  }
 
-	public String getScName() {
-		return scName;
-	}
+  public String getScName() {
+    return scName;
+  }
 
-	public void setScName(String scName) {
-		this.scName = scName;
-	}
+  public void setScName(String scName) {
+    this.scName = scName;
+  }
 
-	public String getSnapshotId() {
-		return snapshotId;
-	}
+  public String getSnapshotId() {
+    return snapshotId;
+  }
 
-	public void setSnapshotId(String snapshotId) {
-		this.snapshotId = snapshotId;
-	}
+  public void setSnapshotId(String snapshotId) {
+    this.snapshotId = snapshotId;
+  }
 
-	public String getBucketName() {
-		return bucketName;
-	}
+  public String getBucketName() {
+    return bucketName;
+  }
 
-	public void setBucketName(String bucketName) {
-		this.bucketName = bucketName;
-	}
+  public void setBucketName(String bucketName) {
+    this.bucketName = bucketName;
+  }
 
-	public String getKeyName() {
-		return keyName;
-	}
+  public String getKeyName() {
+    return keyName;
+  }
 
-	public void setKeyName(String keyName) {
-		this.keyName = keyName;
-	}
+  public void setKeyName(String keyName) {
+    this.keyName = keyName;
+  }
 
-	public String getUploadId() {
-		return uploadId;
-	}
+  public String getUploadId() {
+    return uploadId;
+  }
 
-	public void setUploadId(String uploadId) {
-		this.uploadId = uploadId;
-	}
+  public void setUploadId(String uploadId) {
+    this.uploadId = uploadId;
+  }
 
-	public SnapshotUploadState getState() {
-		return state;
-	}
+  public SnapshotUploadState getState() {
+    return state;
+  }
 
-	public void setState(SnapshotUploadState state) {
-		this.state = state;
-	}
+  public void setState(SnapshotUploadState state) {
+    this.state = state;
+  }
 
-	public SnapshotUploadInfo withState(SnapshotUploadState state) {
-		this.state = state;
-		return this;
-	}
+  public SnapshotUploadInfo withState(SnapshotUploadState state) {
+    this.state = state;
+    return this;
+  }
 
-	public Integer getTotalParts() {
-		return totalParts;
-	}
+  public Integer getTotalParts() {
+    return totalParts;
+  }
 
-	public void setTotalParts(Integer totalParts) {
-		this.totalParts = totalParts;
-	}
+  public void setTotalParts(Integer totalParts) {
+    this.totalParts = totalParts;
+  }
 
-	public String getEtag() {
-		return etag;
-	}
+  public String getEtag() {
+    return etag;
+  }
 
-	public void setEtag(String etag) {
-		this.etag = etag;
-	}
+  public void setEtag(String etag) {
+    this.etag = etag;
+  }
 
-	public Long getPurgeTime() {
-		return purgeTime;
-	}
+  public Long getPurgeTime() {
+    return purgeTime;
+  }
 
-	public void setPurgeTime(Long purgeTime) {
-		this.purgeTime = purgeTime;
-	}
+  public void setPurgeTime(Long purgeTime) {
+    this.purgeTime = purgeTime;
+  }
 
-	@Override
-	public String toString() {
-		return "SnapshotMpuInfo [snapshotId=" + snapshotId + ", bucketName=" + bucketName + ", keyName=" + keyName + ", uploadId=" + uploadId + "]";
-	}
+  @Override
+  public String toString() {
+    return "SnapshotMpuInfo [snapshotId=" + snapshotId + ", bucketName=" + bucketName + ", keyName=" + keyName + ", uploadId=" + uploadId + "]";
+  }
 
-	public static SnapshotUploadInfo create(String snapshotId, String bucketName, String keyName) throws EucalyptusCloudException {
-		try (TransactionResource transaction = Entities.transactionFor(SnapshotUploadInfo.class)) {
-			SnapshotUploadInfo snapUploadInfo = Entities.persist(new SnapshotUploadInfo(snapshotId, bucketName, keyName, SnapshotUploadState.creatingparts));
-			transaction.commit();
-			return snapUploadInfo;
-		} catch (Exception ex) {
-			throw new EucalyptusCloudException("Failed to create snapshot upload info enity. snapshot Id=" + snapshotId + ", bucket=" + bucketName + ", key="
-					+ keyName, ex);
-		}
-	}
+  public static SnapshotUploadInfo create(String snapshotId, String bucketName, String keyName) throws EucalyptusCloudException {
+    try (TransactionResource transaction = Entities.transactionFor(SnapshotUploadInfo.class)) {
+      SnapshotUploadInfo snapUploadInfo =
+          Entities.persist(new SnapshotUploadInfo(snapshotId, bucketName, keyName, SnapshotUploadState.creatingparts));
+      transaction.commit();
+      return snapUploadInfo;
+    } catch (Exception ex) {
+      throw new EucalyptusCloudException("Failed to create snapshot upload info enity. snapshot Id=" + snapshotId + ", bucket=" + bucketName
+          + ", key=" + keyName, ex);
+    }
+  }
 
-	public SnapshotUploadInfo updateUploadId(String uploadId) throws EucalyptusCloudException {
-		try (TransactionResource transaction = Entities.transactionFor(SnapshotUploadInfo.class)) {
-			SnapshotUploadInfo snapUploadInfo = Entities.uniqueResult(new SnapshotUploadInfo(this.snapshotId, this.bucketName, this.keyName));
-			snapUploadInfo.setUploadId(uploadId);
-			transaction.commit();
-			return snapUploadInfo;
-		} catch (Exception ex) {
-			throw new EucalyptusCloudException("Failed to update upload ID for snapshot upload info enity " + this, ex);
-		}
-	}
+  public SnapshotUploadInfo updateUploadId(String uploadId) throws EucalyptusCloudException {
+    try (TransactionResource transaction = Entities.transactionFor(SnapshotUploadInfo.class)) {
+      SnapshotUploadInfo snapUploadInfo = Entities.uniqueResult(new SnapshotUploadInfo(this.snapshotId, this.bucketName, this.keyName));
+      snapUploadInfo.setUploadId(uploadId);
+      transaction.commit();
+      return snapUploadInfo;
+    } catch (Exception ex) {
+      throw new EucalyptusCloudException("Failed to update upload ID for snapshot upload info enity " + this, ex);
+    }
+  }
 
-	public SnapshotUploadInfo updateStateCreatedParts(Integer totalParts) throws EucalyptusCloudException {
-		try (TransactionResource transaction = Entities.transactionFor(SnapshotUploadInfo.class)) {
-			SnapshotUploadInfo snapUploadInfo = Entities.uniqueResult(new SnapshotUploadInfo(this.snapshotId, this.bucketName, this.keyName, this.uploadId));
-			snapUploadInfo.setTotalParts(totalParts);
-			snapUploadInfo.setState(SnapshotUploadState.createdparts);
-			transaction.commit();
-			return snapUploadInfo;
-		} catch (Exception ex) {
-			throw new EucalyptusCloudException("Failed to update state for snapshot upload info enity " + this + " to "
-					+ SnapshotUploadState.createdparts.toString() + this, ex);
-		}
-	}
+  public SnapshotUploadInfo updateStateCreatedParts(Integer totalParts) throws EucalyptusCloudException {
+    try (TransactionResource transaction = Entities.transactionFor(SnapshotUploadInfo.class)) {
+      SnapshotUploadInfo snapUploadInfo =
+          Entities.uniqueResult(new SnapshotUploadInfo(this.snapshotId, this.bucketName, this.keyName, this.uploadId));
+      snapUploadInfo.setTotalParts(totalParts);
+      snapUploadInfo.setState(SnapshotUploadState.createdparts);
+      transaction.commit();
+      return snapUploadInfo;
+    } catch (Exception ex) {
+      throw new EucalyptusCloudException("Failed to update state for snapshot upload info enity " + this + " to "
+          + SnapshotUploadState.createdparts.toString() + this, ex);
+    }
+  }
 
-	public SnapshotUploadInfo updateStateUploaded(String etag) throws EucalyptusCloudException {
-		try (TransactionResource transaction = Entities.transactionFor(SnapshotUploadInfo.class)) {
-			SnapshotUploadInfo snapUploadInfo = Entities.uniqueResult(new SnapshotUploadInfo(this.snapshotId, this.bucketName, this.keyName, this.uploadId));
-			snapUploadInfo.setState(SnapshotUploadState.uploaded);
-			snapUploadInfo.setEtag(etag);
-			snapUploadInfo.setPurgeTime(System.currentTimeMillis() + PURGE_INTERVAL);
-			transaction.commit();
-			return snapUploadInfo;
-		} catch (Exception ex) {
-			throw new EucalyptusCloudException("Failed to update state for snapshot upload info enity " + this + " to "
-					+ SnapshotUploadState.uploaded.toString() + this, ex);
-		}
-	}
+  public SnapshotUploadInfo updateStateUploaded(String etag) throws EucalyptusCloudException {
+    try (TransactionResource transaction = Entities.transactionFor(SnapshotUploadInfo.class)) {
+      SnapshotUploadInfo snapUploadInfo =
+          Entities.uniqueResult(new SnapshotUploadInfo(this.snapshotId, this.bucketName, this.keyName, this.uploadId));
+      snapUploadInfo.setState(SnapshotUploadState.uploaded);
+      snapUploadInfo.setEtag(etag);
+      snapUploadInfo.setPurgeTime(System.currentTimeMillis() + PURGE_INTERVAL);
+      transaction.commit();
+      return snapUploadInfo;
+    } catch (Exception ex) {
+      throw new EucalyptusCloudException("Failed to update state for snapshot upload info enity " + this + " to "
+          + SnapshotUploadState.uploaded.toString() + this, ex);
+    }
+  }
 
-	public SnapshotUploadInfo updateStateAborted() throws EucalyptusCloudException {
-		try (TransactionResource transaction = Entities.transactionFor(SnapshotUploadInfo.class)) {
-			SnapshotUploadInfo snapUploadInfo = Entities.uniqueResult(new SnapshotUploadInfo(this.snapshotId, this.bucketName, this.keyName, this.uploadId));
-			snapUploadInfo.setState(SnapshotUploadState.aborted);
-			transaction.commit();
-			return snapUploadInfo;
-		} catch (Exception ex) {
-			throw new EucalyptusCloudException("Failed to update state for snapshot upload info enity " + this + " to "
-					+ SnapshotUploadState.aborted.toString() + this, ex);
-		}
-	}
+  public SnapshotUploadInfo updateStateAborted() throws EucalyptusCloudException {
+    try (TransactionResource transaction = Entities.transactionFor(SnapshotUploadInfo.class)) {
+      SnapshotUploadInfo snapUploadInfo =
+          Entities.uniqueResult(new SnapshotUploadInfo(this.snapshotId, this.bucketName, this.keyName, this.uploadId));
+      snapUploadInfo.setState(SnapshotUploadState.aborted);
+      transaction.commit();
+      return snapUploadInfo;
+    } catch (Exception ex) {
+      throw new EucalyptusCloudException("Failed to update state for snapshot upload info enity " + this + " to "
+          + SnapshotUploadState.aborted.toString() + this, ex);
+    }
+  }
 }

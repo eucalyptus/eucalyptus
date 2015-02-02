@@ -62,6 +62,8 @@
 
 package com.eucalyptus.objectstorage.policy;
 
+import net.sf.json.JSONException;
+
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.key.KeyUtils;
@@ -69,37 +71,36 @@ import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.PolicyKey;
 import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.Authorization;
-import net.sf.json.JSONException;
 
 @PolicyKey(Keys.S3_QUOTA_BUCKET_NUMBER)
 public class BucketNumberQuotaKey extends QuotaKey {
 
-    private static final String KEY = Keys.S3_QUOTA_BUCKET_NUMBER;
+  private static final String KEY = Keys.S3_QUOTA_BUCKET_NUMBER;
 
-    @Override
-    public void validateValueType(String value) throws JSONException {
-        KeyUtils.validateIntegerValue(value, KEY);
-    }
+  @Override
+  public void validateValueType(String value) throws JSONException {
+    KeyUtils.validateIntegerValue(value, KEY);
+  }
 
-    @Override
-    public boolean canApply(String action, String resourceType) {
-        if (PolicySpec.qualifiedName(PolicySpec.VENDOR_S3, PolicySpec.S3_CREATEBUCKET).equals(action)) {
-            return true;
-        }
-        return false;
+  @Override
+  public boolean canApply(String action, String resourceType) {
+    if (PolicySpec.qualifiedName(PolicySpec.VENDOR_S3, PolicySpec.S3_CREATEBUCKET).equals(action)) {
+      return true;
     }
+    return false;
+  }
 
-    @Override
-    public String value(Authorization.Scope scope, String id, String resource, Long quantity) throws AuthException {
-        switch (scope) {
-            case ACCOUNT:
-                return Long.toString(ObjectStorageQuotaUtil.countBucketsByAccount(id) + 1);
-            case GROUP:
-                return NOT_SUPPORTED;
-            case USER:
-                return Long.toString(ObjectStorageQuotaUtil.countBucketsByUser(id) + 1);
-        }
-        throw new AuthException("Invalid scope");
+  @Override
+  public String value(Authorization.Scope scope, String id, String resource, Long quantity) throws AuthException {
+    switch (scope) {
+      case ACCOUNT:
+        return Long.toString(ObjectStorageQuotaUtil.countBucketsByAccount(id) + 1);
+      case GROUP:
+        return NOT_SUPPORTED;
+      case USER:
+        return Long.toString(ObjectStorageQuotaUtil.countBucketsByUser(id) + 1);
     }
+    throw new AuthException("Invalid scope");
+  }
 
 }

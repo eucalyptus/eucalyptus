@@ -67,24 +67,19 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 @SuppressWarnings("serial")
 public class NoSuchBucketException extends WalrusException {
 
-  public NoSuchBucketException()
-  {
-    super( "Not Found" );
+  public NoSuchBucketException() {
+    super("Not Found");
   }
-  
-  public NoSuchBucketException(String bucket)
-  {
-    super("NoSuchBucket", "The specified bucket was not found", "Bucket", bucket, HttpResponseStatus.NOT_FOUND);    
+
+  public NoSuchBucketException(String bucket) {
+    super("NoSuchBucket", "The specified bucket was not found", "Bucket", bucket, HttpResponseStatus.NOT_FOUND);
   }
-  
-    
-  public NoSuchBucketException(Throwable ex)
-  {
+
+  public NoSuchBucketException(Throwable ex) {
     super("Not Found", ex);
   }
-  
-  public NoSuchBucketException(String message, Throwable ex)
-  {
+
+  public NoSuchBucketException(String message, Throwable ex) {
     super(message, ex);
   }
 }

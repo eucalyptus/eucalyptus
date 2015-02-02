@@ -70,20 +70,20 @@ import com.eucalyptus.ws.stages.UnrollableStage;
 public class ObjectStorageGETBindingStage implements UnrollableStage {
 
   @Override
-  public int compareTo( UnrollableStage o ) {
-    return this.getName( ).compareTo( o.getName( ) );
+  public int compareTo(UnrollableStage o) {
+    return this.getName().compareTo(o.getName());
   }
 
   @Override
-  public String getName( ) {
-		return "objectstorage-get-binding";
-	}
+  public String getName() {
+    return "objectstorage-get-binding";
+  }
 
-	@Override
-	public void unrollStage( ChannelPipeline pipeline ) {
-		//pipeline.addLast( "objectstorage-rest-logger-outbound", new ObjectStorageRESTLoggerOutbound( ) );
-		pipeline.addLast( "objectstorage-get-binding", new ObjectStorageGETBinding( ) );
-		//pipeline.addLast( "objectstorage-rest-logger-inbound", new ObjectStorageRESTLoggerInbound( ) );
-	}
+  @Override
+  public void unrollStage(ChannelPipeline pipeline) {
+    // pipeline.addLast( "objectstorage-rest-logger-outbound", new ObjectStorageRESTLoggerOutbound( ) );
+    pipeline.addLast("objectstorage-get-binding", new ObjectStorageGETBinding());
+    // pipeline.addLast( "objectstorage-rest-logger-inbound", new ObjectStorageRESTLoggerInbound( ) );
+  }
 
 }

@@ -69,22 +69,21 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.blockstorage.BlockStorageController.SnapshotTask;
 
-
 public class SnapshotService {
-	private Logger LOG = Logger.getLogger( SnapshotService.class );
+  private Logger LOG = Logger.getLogger(SnapshotService.class);
 
-	private final ExecutorService pool;
-	private final int NUM_THREADS = 3;
+  private final ExecutorService pool;
+  private final int NUM_THREADS = 3;
 
-	public SnapshotService() {
-		pool = Executors.newFixedThreadPool(NUM_THREADS);
-	}
+  public SnapshotService() {
+    pool = Executors.newFixedThreadPool(NUM_THREADS);
+  }
 
-	public void add(SnapshotTask creator) {
-		pool.execute(creator);
-	}
+  public void add(SnapshotTask creator) {
+    pool.execute(creator);
+  }
 
-	public void shutdown() {
-		pool.shutdownNow();
-	}
+  public void shutdown() {
+    pool.shutdownNow();
+  }
 }

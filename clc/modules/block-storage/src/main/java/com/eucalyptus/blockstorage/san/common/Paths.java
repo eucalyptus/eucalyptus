@@ -70,60 +70,58 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.blockstorage.san.common.entities.SANInfo;
-import com.eucalyptus.blockstorage.san.common.Paths;
 import com.google.common.collect.Lists;
 
-
 public class Paths {
-	private static final Logger LOG = Logger.getLogger(Paths.class);
+  private static final Logger LOG = Logger.getLogger(Paths.class);
 
-	protected String currentPathsProperty = null;
-	protected List<SANInfo.Path> paths = Lists.newArrayList();
+  protected String currentPathsProperty = null;
+  protected List<SANInfo.Path> paths = Lists.newArrayList();
 
-	public synchronized int size() {
-		return paths.size();
-	}
+  public synchronized int size() {
+    return paths.size();
+  }
 
-	public synchronized Paths update(String value) {
-		if (value != null && !value.equals(this.currentPathsProperty)) {
-			try {
-				List<SANInfo.Path> newPaths = SANInfo.parsePaths(value);
-				this.paths.clear();
-				this.paths.addAll(newPaths);
-				this.currentPathsProperty = value;
-			} catch (Exception e) {
-				LOG.error(e, e);
-			}
-		}
-		return this;
-	}
+  public synchronized Paths update(String value) {
+    if (value != null && !value.equals(this.currentPathsProperty)) {
+      try {
+        List<SANInfo.Path> newPaths = SANInfo.parsePaths(value);
+        this.paths.clear();
+        this.paths.addAll(newPaths);
+        this.currentPathsProperty = value;
+      } catch (Exception e) {
+        LOG.error(e, e);
+      }
+    }
+    return this;
+  }
 
-	public synchronized String getPathsForVolumeProperty() {
-		StringBuilder sb = new StringBuilder();
-		for (SANInfo.Path path : this.paths) {
-			if (sb.length() > 0) {
-				sb.append(',');
-			}
-			sb.append(path.iface).append(',').append(path.ip).append(',').append(path.iqn);
-		}
-		return sb.toString();
-	}
+  public synchronized String getPathsForVolumeProperty() {
+    StringBuilder sb = new StringBuilder();
+    for (SANInfo.Path path : this.paths) {
+      if (sb.length() > 0) {
+        sb.append(',');
+      }
+      sb.append(path.iface).append(',').append(path.ip).append(',').append(path.iqn);
+    }
+    return sb.toString();
+  }
 
-	public synchronized String getPathsForVolumeProperty(String iqn) {
-		StringBuilder sb = new StringBuilder();
-		for (SANInfo.Path path : this.paths) {
-			if (sb.length() > 0) {
-				sb.append(',');
-			}
-			sb.append(path.iface).append(',').append(path.ip).append(',').append(iqn);
-		}
-		return sb.toString();
-	}
+  public synchronized String getPathsForVolumeProperty(String iqn) {
+    StringBuilder sb = new StringBuilder();
+    for (SANInfo.Path path : this.paths) {
+      if (sb.length() > 0) {
+        sb.append(',');
+      }
+      sb.append(path.iface).append(',').append(path.ip).append(',').append(iqn);
+    }
+    return sb.toString();
+  }
 
-	public synchronized String getFirstTargetIqn() {
-		if (this.paths.size() > 0) {
-			return this.paths.get(0).iqn;
-		}
-		return null;
-	}
+  public synchronized String getFirstTargetIqn() {
+    if (this.paths.size() > 0) {
+      return this.paths.get(0).iqn;
+    }
+    return null;
+  }
 }

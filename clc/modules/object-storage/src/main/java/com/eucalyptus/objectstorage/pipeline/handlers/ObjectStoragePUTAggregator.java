@@ -37,10 +37,8 @@
 
 package com.eucalyptus.objectstorage.pipeline.handlers;
 
-import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
-import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.ChannelBufferStreamingInputStream;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
@@ -52,124 +50,128 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpMessage;
 
-import java.util.concurrent.ConcurrentHashMap;
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
+import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.ChannelBufferStreamingInputStream;
 
 /**
  * Very heavily modified version of the HttpChunkAggregator from netty.
  * <p/>
- * Aggregates chunks into a single channelbuffer, but that buffer is expected to be drained
- * at the end of the pipeline by the service operation that is reading the data and pushing it
- * out somewhere.
+ * Aggregates chunks into a single channelbuffer, but that buffer is expected to be drained at the end of the pipeline by the service operation that
+ * is reading the data and pushing it out somewhere.
  */
 public class ObjectStoragePUTAggregator extends SimpleChannelUpstreamHandler implements LifeCycleAwareChannelHandler {
-    private static final Logger LOG = Logger.getLogger(ObjectStoragePUTAggregator.class);
+  private static final Logger LOG = Logger.getLogger(ObjectStoragePUTAggregator.class);
 
-    //TODO: should be able to remove this since each pipeline instance is for the duration of
-    // the request-response cycle. Only ever one channel per instance.
+  // TODO: should be able to remove this since each pipeline instance is for the duration of
+  // the request-response cycle. Only ever one channel per instance.
 
-    //Map of correlationId to channel to write to
-    protected static final ConcurrentHashMap<Channel, ChannelBufferStreamingInputStream> dataMap = new ConcurrentHashMap<Channel, ChannelBufferStreamingInputStream>();
+  // Map of correlationId to channel to write to
+  protected static final ConcurrentHashMap<Channel, ChannelBufferStreamingInputStream> dataMap =
+      new ConcurrentHashMap<Channel, ChannelBufferStreamingInputStream>();
 
-    @Override
-    public void channelDisconnected(ChannelHandlerContext ctx, ChannelStateEvent evt) throws Exception {
-        //Clear the map for this context
-        try {
-            Logs.extreme().debug("Removing data map on channel disconnected event for channel: " + ctx.getChannel().getId());
-            dataMap.remove(ctx.getChannel());
-        } catch (final Throwable f) {
-            //Nothing to lookup.
-        } finally {
-            //Call through
-            super.channelDisconnected(ctx, evt);
+  @Override
+  public void channelDisconnected(ChannelHandlerContext ctx, ChannelStateEvent evt) throws Exception {
+    // Clear the map for this context
+    try {
+      Logs.extreme().debug("Removing data map on channel disconnected event for channel: " + ctx.getChannel().getId());
+      dataMap.remove(ctx.getChannel());
+    } catch (final Throwable f) {
+      // Nothing to lookup.
+    } finally {
+      // Call through
+      super.channelDisconnected(ctx, evt);
+    }
+  }
+
+  @Override
+  public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent evt) throws Exception {
+    // Clear the map for this context
+    try {
+      Logs.extreme().debug("Removing data map on channel closed event for channel: " + ctx.getChannel().getId());
+      dataMap.remove(ctx.getChannel());
+    } catch (final Throwable f) {
+      // Nothing to lookup.
+    } finally {
+      super.channelClosed(ctx, evt);
+    }
+  }
+
+  @Override
+  public void messageReceived(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
+    if (event.getMessage() instanceof MappingHttpRequest) {
+      MappingHttpRequest httpRequest = (MappingHttpRequest) event.getMessage();
+
+      if (httpRequest.getMessage() instanceof ObjectStorageDataRequestType) {
+        if (httpRequest.isChunked()) {
+          // Chunked request, and beginning, setup map etc.
+          initializeNewPut(ctx, (ObjectStorageDataRequestType) httpRequest.getMessage());
         }
+      }
+    } else if (event.getMessage() instanceof HttpChunk) {
+      // Add the chunk to the current streams channel buffer.
+      HttpChunk chunk = (HttpChunk) event.getMessage();
+      appendChunk(chunk.getContent(), ctx.getChannel());
+
+      if (chunk.isLast()) {
+        // Remove from the map
+        Logs.extreme().debug("Removing data map due to last chunk processed event for channel: " + ctx.getChannel().getId());
+        dataMap.remove(ctx.getChannel());
+      }
     }
+    // Always pass it on
+    ctx.sendUpstream(event);
+  }
 
-    @Override
-    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent evt) throws Exception {
-        //Clear the map for this context
-        try {
-            Logs.extreme().debug("Removing data map on channel closed event for channel: " + ctx.getChannel().getId());
-            dataMap.remove(ctx.getChannel());
-        } catch (final Throwable f) {
-            //Nothing to lookup.
-        } finally {
-            super.channelClosed(ctx, evt);
-        }
+  protected void initializeNewPut(ChannelHandlerContext ctx, ObjectStorageDataRequestType request) throws IllegalStateException {
+    Logs.extreme().debug("Adding entry to data map in PUT aggregator for channel: " + ctx.getChannel().getId());
+    ChannelBufferStreamingInputStream stream = request.getData();
+    ChannelBufferStreamingInputStream foundStream = dataMap.putIfAbsent(ctx.getChannel(), stream);
+    if (foundStream != null) {
+      Logs.extreme()
+          .debug(
+              "Found existing entry in map for this channel. Streams should never cross. Throwing illegal state for channel: "
+                  + ctx.getChannel().getId());
+      throw new IllegalStateException("Duplicate messages for same PUT, cannot overwrite data buffer. Channel:" + ctx.getChannel().getId());
     }
+  }
 
-    @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
-        if (event.getMessage() instanceof MappingHttpRequest) {
-            MappingHttpRequest httpRequest = (MappingHttpRequest) event.getMessage();
-
-            if (httpRequest.getMessage() instanceof ObjectStorageDataRequestType) {
-                if (httpRequest.isChunked()) {
-                    //Chunked request, and beginning, setup map etc.
-                    initializeNewPut(ctx, (ObjectStorageDataRequestType) httpRequest.getMessage());
-                }
-            }
-        } else if (event.getMessage() instanceof HttpChunk) {
-            //Add the chunk to the current streams channel buffer.
-            HttpChunk chunk = (HttpChunk) event.getMessage();
-            appendChunk(chunk.getContent(), ctx.getChannel());
-
-            if (chunk.isLast()) {
-                //Remove from the map
-                Logs.extreme().debug("Removing data map due to last chunk processed event for channel: " + ctx.getChannel().getId());
-                dataMap.remove(ctx.getChannel());
-            }
-        }
-        //Always pass it on
-        ctx.sendUpstream(event);
+  protected void appendChunk(ChannelBuffer input, Channel channel) throws Exception {
+    Logs.extreme().debug("Writing content data to stream for channel: " + channel.getId() + " Content length: " + input.readableBytes());
+    ChannelBufferStreamingInputStream stream = dataMap.get(channel);
+    if (stream == null) {
+      throw new IllegalStateException("received " + HttpChunk.class.getSimpleName() + " without " + HttpMessage.class.getSimpleName());
     }
-
-    protected void initializeNewPut(ChannelHandlerContext ctx, ObjectStorageDataRequestType request) throws IllegalStateException {
-        Logs.extreme().debug("Adding entry to data map in PUT aggregator for channel: " + ctx.getChannel().getId());
-        ChannelBufferStreamingInputStream stream = request.getData();
-        ChannelBufferStreamingInputStream foundStream = dataMap.putIfAbsent(ctx.getChannel(), stream);
-        if (foundStream != null) {
-            Logs.extreme().debug("Found existing entry in map for this channel. Streams should never cross. Throwing illegal state for channel: " + ctx.getChannel().getId());
-            throw new IllegalStateException("Duplicate messages for same PUT, cannot overwrite data buffer. Channel:" + ctx.getChannel().getId());
-        }
+    // Write the content into the buffer.
+    try {
+      stream.putChunk(input);
+    } catch (Exception ex) {
+      throw new IllegalStateException(ex);
     }
+  }
 
-    protected void appendChunk(ChannelBuffer input, Channel channel) throws Exception {
-        Logs.extreme().debug("Writing content data to stream for channel: " + channel.getId() + " Content length: " + input.readableBytes());
-        ChannelBufferStreamingInputStream stream = dataMap.get(channel);
-        if (stream == null) {
-            throw new IllegalStateException(
-                    "received " + HttpChunk.class.getSimpleName() +
-                            " without " + HttpMessage.class.getSimpleName());
-        }
-        //Write the content into the buffer.
-        try {
-            stream.putChunk(input);
-        } catch (Exception ex) {
-            throw new IllegalStateException(ex);
-        }
-    }
+  @Override
+  public void afterAdd(ChannelHandlerContext arg0) throws Exception {
+    // TODO Auto-generated method stub
 
-    @Override
-    public void afterAdd(ChannelHandlerContext arg0) throws Exception {
-        // TODO Auto-generated method stub
+  }
 
-    }
+  @Override
+  public void afterRemove(ChannelHandlerContext arg0) throws Exception {
+    // TODO Auto-generated method stub
 
-    @Override
-    public void afterRemove(ChannelHandlerContext arg0) throws Exception {
-        // TODO Auto-generated method stub
+  }
 
-    }
+  @Override
+  public void beforeAdd(ChannelHandlerContext arg0) throws Exception {
+    // TODO Auto-generated method stub
 
-    @Override
-    public void beforeAdd(ChannelHandlerContext arg0) throws Exception {
-        // TODO Auto-generated method stub
+  }
 
-    }
+  @Override
+  public void beforeRemove(ChannelHandlerContext arg0) throws Exception {
+    // TODO Auto-generated method stub
 
-    @Override
-    public void beforeRemove(ChannelHandlerContext arg0) throws Exception {
-        // TODO Auto-generated method stub
-
-    }
+  }
 }

@@ -72,89 +72,89 @@ import com.eucalyptus.blockstorage.ceph.entities.CephRbdInfo;
 
 public class CephRbdInputStream extends InputStream {
 
-	private static final Logger LOG = Logger.getLogger(CephRbdInputStream.class);
+  private static final Logger LOG = Logger.getLogger(CephRbdInputStream.class);
 
-	private CephRbdConnectionManager conn;
-	private RbdImage rbdImage;
-	private long position;
-	private boolean isOpen;
+  private CephRbdConnectionManager conn;
+  private RbdImage rbdImage;
+  private long position;
+  private boolean isOpen;
 
-	public CephRbdInputStream(String imageName, String poolName, CephRbdInfo info) throws IOException {
-		try {
-			conn = CephRbdConnectionManager.getConnection(info, poolName);
-			rbdImage = conn.getRbd().open(imageName);
-			isOpen = true;
-			position = 0;
-		} catch (Exception e) {
-			throw new IOException("Failed to open CephInputStream for image " + imageName + " in pool " + poolName, e);
-		}
-	}
+  public CephRbdInputStream(String imageName, String poolName, CephRbdInfo info) throws IOException {
+    try {
+      conn = CephRbdConnectionManager.getConnection(info, poolName);
+      rbdImage = conn.getRbd().open(imageName);
+      isOpen = true;
+      position = 0;
+    } catch (Exception e) {
+      throw new IOException("Failed to open CephInputStream for image " + imageName + " in pool " + poolName, e);
+    }
+  }
 
-	@Override
-	public int read() throws IOException {
-		if (isOpen) {
-			byte[] buffer = new byte[1];
-			int bytesRead = 0;
-			if ((bytesRead = rbdImage.read(position, buffer, buffer.length)) > 0) { // something was read
-				position += bytesRead;
-				return buffer[0];
-			} else { // nothing was read
-				return -1;
-			}
-		} else {
-			throw new IOException("Stream is not open/initialized");
-		}
-	}
+  @Override
+  public int read() throws IOException {
+    if (isOpen) {
+      byte[] buffer = new byte[1];
+      int bytesRead = 0;
+      if ((bytesRead = rbdImage.read(position, buffer, buffer.length)) > 0) { // something was read
+        position += bytesRead;
+        return buffer[0];
+      } else { // nothing was read
+        return -1;
+      }
+    } else {
+      throw new IOException("Stream is not open/initialized");
+    }
+  }
 
-	@Override
-	public int read(byte[] b, int off, int len) throws NullPointerException, IndexOutOfBoundsException, IOException {
-		if (null == b) {
-			throw new NullPointerException("Input byte buffer cannot be null");
-		}
-		if (off < 0 || len < 0 || len > (b.length - off)) {
-			throw new IndexOutOfBoundsException("Offset or length cannot be negative. Length cannot be smaller than available size in buffer");
-		}
+  @Override
+  public int read(byte[] b, int off, int len) throws NullPointerException, IndexOutOfBoundsException, IOException {
+    if (null == b) {
+      throw new NullPointerException("Input byte buffer cannot be null");
+    }
+    if (off < 0 || len < 0 || len > (b.length - off)) {
+      throw new IndexOutOfBoundsException("Offset or length cannot be negative. Length cannot be smaller than available size in buffer");
+    }
 
-		if (isOpen) {
-			byte[] buffer = new byte[len];
-			int bytesRead = 0;
-			if ((bytesRead = rbdImage.read(position, buffer, buffer.length)) > 0) { // something was read
-				position += bytesRead;
-				for (int i = 0; i < bytesRead; i++) {
-					b[off + i] = buffer[i];
-				}
-				return bytesRead;
-			} else { // nothing was read
-				return -1;
-			}
-		} else {
-			throw new IOException("Stream is not open/initialized");
-		}
-	}
+    if (isOpen) {
+      byte[] buffer = new byte[len];
+      int bytesRead = 0;
+      if ((bytesRead = rbdImage.read(position, buffer, buffer.length)) > 0) { // something was read
+        position += bytesRead;
+        for (int i = 0; i < bytesRead; i++) {
+          b[off + i] = buffer[i];
+        }
+        return bytesRead;
+      } else { // nothing was read
+        return -1;
+      }
+    } else {
+      throw new IOException("Stream is not open/initialized");
+    }
+  }
 
-	@Override
-	public int read(byte[] b) throws NullPointerException, IOException {
-		if (null == b) {
-			throw new NullPointerException("Input byte buffer cannot be null");
-		}
-		return read(b, 0, b.length);
-	}
+  @Override
+  public int read(byte[] b) throws NullPointerException, IOException {
+    if (null == b) {
+      throw new NullPointerException("Input byte buffer cannot be null");
+    }
+    return read(b, 0, b.length);
+  }
 
-	@Override
-	public void close() {
-		if (isOpen) {
-			try {
-				conn.getRbd().close(rbdImage);
-			} catch (Exception e) {
+  @Override
+  public void close() {
+    if (isOpen) {
+      try {
+        conn.getRbd().close(rbdImage);
+      } catch (Exception e) {
 
-			} finally {
-				isOpen = false;
-				conn.disconnect();
-				conn = null;
-				rbdImage = null;
-			}
-		} else {
-			// nothing to do here, stream is not open/already closed
-		}
-	}
+      } finally {
+        isOpen = false;
+        conn.disconnect();
+        conn = null;
+        rbdImage = null;
+      }
+    } else {
+      // nothing to do here, stream is not open/already closed
+    }
+  }
 }

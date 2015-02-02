@@ -34,68 +34,68 @@ import org.junit.Test
  */
 @CompileStatic
 class ObjectStorageRESTPipelineTest extends GroovyTestCase {
-    static final ObjectStorageRESTPipeline pipeline = new ObjectStorageRESTPipeline(){
+  static final ObjectStorageRESTPipeline pipeline = new ObjectStorageRESTPipeline(){
 
-        @Override
-        String getName() {
-            return "test pipeline"
-        }
-
-        @Override
-        ChannelPipeline addHandlers(ChannelPipeline pipeline) {
-            return null
-        }
+    @Override
+    String getName() {
+      return "test pipeline"
     }
 
-    @Test
-    public void testCheckAccepts() {
-        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/objectstorage')
-        assert(pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/Walrus')
-        assert(pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/WalrusBackend')
-        assert(!pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/WalrusBucket/Object/')
-        assert(!pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/objectstorage/')
-        assert(pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/Walrus/bucket/object')
-        assert(pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/Walrus/bucket')
-        assert(pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/Walrus')
-        assert(pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/Walrus')
-        assert(pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/objectstorage/bucket/object')
-        assert(pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, '/services/Walrus.bucket/object')
-        assert(!pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.HEAD, '/services/objectstorage/bucket')
-        assert(pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.DELETE, '/services/objectstorage/bucket')
-        assert(pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, '/services/objectstorage')
-        assert(pipeline.checkAccepts(request))
-
-        //This is expected to be accepted since the class being tested is a base class. All HTTP verbs are accepted for this OSG class.
-        //Specific extensions filter further on HTTP verb.
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, '/services/objectstorage')
-        request.setHeader(HttpHeaders.Names.CONTENT_TYPE, "multipart/form-data")
-        assert(pipeline.checkAccepts(request))
-
+    @Override
+    ChannelPipeline addHandlers(ChannelPipeline pipeline) {
+      return null
     }
+  }
+
+  @Test
+  public void testCheckAccepts() {
+    HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/objectstorage')
+    assert(pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/Walrus')
+    assert(pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/WalrusBackend')
+    assert(!pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/WalrusBucket/Object/')
+    assert(!pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/objectstorage/')
+    assert(pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/Walrus/bucket/object')
+    assert(pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/Walrus/bucket')
+    assert(pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/Walrus')
+    assert(pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/Walrus')
+    assert(pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/objectstorage/bucket/object')
+    assert(pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, '/services/Walrus.bucket/object')
+    assert(!pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.HEAD, '/services/objectstorage/bucket')
+    assert(pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.DELETE, '/services/objectstorage/bucket')
+    assert(pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, '/services/objectstorage')
+    assert(pipeline.checkAccepts(request))
+
+    //This is expected to be accepted since the class being tested is a base class. All HTTP verbs are accepted for this OSG class.
+    //Specific extensions filter further on HTTP verb.
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, '/services/objectstorage')
+    request.setHeader(HttpHeaders.Names.CONTENT_TYPE, "multipart/form-data")
+    assert(pipeline.checkAccepts(request))
+
+  }
 }

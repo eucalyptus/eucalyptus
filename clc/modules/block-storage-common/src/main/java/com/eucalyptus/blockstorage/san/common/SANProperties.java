@@ -65,15 +65,15 @@
 
 package com.eucalyptus.blockstorage.san.common;
 
-
 public class SANProperties {
 
-	public static final String DUMMY_SAN_HOST = "sanHost";
-	
-	public static final String SAN_HOST = "sanHost";
-	public static final String SAN_USERNAME = "sanUser";
-	public static final String SAN_PASSWORD = "sanPassword";
-	public static enum IscsiAuthType {
-		HBA
-	}
+  public static final String DUMMY_SAN_HOST = "sanHost";
+
+  public static final String SAN_HOST = "sanHost";
+  public static final String SAN_USERNAME = "sanUser";
+  public static final String SAN_PASSWORD = "sanPassword";
+
+  public static enum IscsiAuthType {
+    HBA
+  }
 }

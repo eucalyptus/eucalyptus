@@ -96,529 +96,528 @@ import edu.ucsb.eucalyptus.util.SystemUtil;
 
 public class FileSystemStorageManager implements StorageManager {
 
-    public static final String FILE_SEPARATOR = "/";
-    public static final String lvmRootDirectory = "/dev";
-    private static boolean initialized = false;
-    public static final String EUCA_ROOT_WRAPPER = BaseDirectory.LIBEXEC.toString() + "/euca_rootwrap";
-    public static final int MAX_LOOP_DEVICES = 256;
-    private static Logger LOG = Logger.getLogger(FileSystemStorageManager.class);
+  public static final String FILE_SEPARATOR = "/";
+  public static final String lvmRootDirectory = "/dev";
+  private static boolean initialized = false;
+  public static final String EUCA_ROOT_WRAPPER = BaseDirectory.LIBEXEC.toString() + "/euca_rootwrap";
+  public static final int MAX_LOOP_DEVICES = 256;
+  private static Logger LOG = Logger.getLogger(FileSystemStorageManager.class);
 
-    public FileSystemStorageManager() {
+  public FileSystemStorageManager() {}
+
+  public void checkPreconditions() throws EucalyptusCloudException {
+    try {
+      if (!new File(EUCA_ROOT_WRAPPER).exists()) {
+        throw new EucalyptusCloudException("root wrapper (euca_rootwrap) does not exist");
+      }
+      String returnValue = getLvmVersion();
+      if (returnValue.length() == 0) {
+        throw new EucalyptusCloudException("Is lvm installed?");
+      } else {
+        LOG.info(returnValue);
+      }
+    } catch (EucalyptusCloudException ex) {
+      String error = "Unable to run command: " + ex.getMessage();
+      LOG.error(error);
+      throw new EucalyptusCloudException(error);
     }
+  }
 
-    public void checkPreconditions() throws EucalyptusCloudException {
+  public boolean bucketExists(String bucket) {
+    return new File(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket).exists();
+  }
+
+  public boolean objectExists(String bucket, String object) {
+    return new File(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object).exists();
+  }
+
+  public void createBucket(String bucket) throws IOException {
+    File bukkit = new File(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket);
+    if (!bukkit.exists()) {
+      if (!bukkit.mkdirs()) {
+        throw new IOException("Unable to create bucket: " + bucket);
+      }
+    }
+  }
+
+  public long getSize(String bucket, String object) {
+    File objectFile = new File(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
+    if (objectFile.exists())
+      return objectFile.length();
+    return -1;
+  }
+
+  public void deleteBucket(String bucket) throws IOException {
+    File bukkit = new File(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket);
+    if (bukkit.exists() && !bukkit.delete()) {
+      throw new IOException("Unable to delete bucket: " + bucket);
+    }
+  }
+
+  public void createObject(String bucket, String object) throws IOException {
+    File objectFile = new File(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
+    if (!objectFile.exists()) {
+      if (!objectFile.createNewFile()) {
+        throw new IOException("Unable to create: " + objectFile.getAbsolutePath());
+      }
+    }
+  }
+
+  public FileIO prepareForRead(String bucket, String object) throws Exception {
+    return new FileReader(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
+  }
+
+  public FileIO prepareForWrite(String bucket, String object) throws Exception {
+    return new FileWriter(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
+  }
+
+  public int readObject(String bucket, String object, byte[] bytes, long offset) throws IOException {
+    return readObject(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object, bytes, offset);
+  }
+
+  public int readObject(String path, byte[] bytes, long offset) throws IOException {
+    File objectFile = new File(path);
+    if (!objectFile.exists()) {
+      throw new IOException("Unable to read: " + path);
+    }
+    BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(objectFile));
+    int bytesRead = 0;
+    try {
+      if (offset > 0) {
+        inputStream.skip(offset);
+      }
+      bytesRead = inputStream.read(bytes);
+    } catch (IOException ex) {
+      LOG.error(ex);
+      Logs.extreme().error(ex, ex);
+      throw ex;
+    } finally {
+      try {
+        inputStream.close();
+      } catch (IOException ex) {
+        LOG.error(ex);
+      }
+    }
+    return bytesRead;
+  }
+
+  public void deleteObject(String bucket, String object) throws IOException {
+    File objectFile = new File(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
+    if (objectFile.exists()) {
+      if (!objectFile.delete()) {
+        throw new IOException("Unable to delete: " + objectFile.getAbsolutePath());
+      }
+    }
+  }
+
+  public void deleteAbsoluteObject(String object) throws IOException {
+    File objectFile = new File(object);
+    if (objectFile.exists()) {
+      if (!objectFile.delete()) {
+        throw new IOException("Unable to delete: " + object);
+      }
+    }
+  }
+
+  public void putObject(String bucket, String object, byte[] base64Data, boolean append) throws IOException {
+    File objectFile = new File(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
+    if (!objectFile.exists()) {
+      objectFile.createNewFile();
+    }
+    BufferedOutputStream outputStream = new BufferedOutputStream(new FileOutputStream(objectFile, append));
+    try {
+      outputStream.write(base64Data);
+    } catch (IOException ex) {
+      LOG.error(ex);
+      Logs.extreme().error(ex, ex);
+      throw ex;
+    } finally {
+      try {
+        outputStream.close();
+      } catch (IOException ex) {
+        LOG.error(ex);
+      }
+    }
+  }
+
+  public void renameObject(String bucket, String oldName, String newName) throws IOException {
+    File oldObjectFile = new File(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + oldName);
+    File newObjectFile = new File(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + newName);
+    if (oldObjectFile.exists()) {
+      if (!oldObjectFile.renameTo(newObjectFile)) {
+        throw new IOException("Unable to rename " + oldObjectFile.getAbsolutePath() + " to " + newObjectFile.getAbsolutePath());
+      }
+    }
+  }
+
+  public void copyObject(String sourceBucket, String sourceObject, String destinationBucket, String destinationObject) throws IOException {
+    File oldObjectFile = new File(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + sourceBucket + FILE_SEPARATOR + sourceObject);
+    File newObjectFile =
+        new File(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + destinationBucket + FILE_SEPARATOR + destinationObject);
+    if (!oldObjectFile.equals(newObjectFile)) {
+      FileInputStream fileInputStream = null;
+      FileChannel fileIn = null;
+      FileOutputStream fileOutputStream = null;
+      FileChannel fileOut = null;
+      try {
+        fileInputStream = new FileInputStream(oldObjectFile);
+        fileIn = fileInputStream.getChannel();
+        fileOutputStream = new FileOutputStream(newObjectFile);
+        fileOut = fileOutputStream.getChannel();
+        fileIn.transferTo(0, fileIn.size(), fileOut);
+      } catch (IOException ex) {
+        LOG.error(ex);
+        Logs.extreme().error(ex, ex);
+        throw ex;
+      } finally {
         try {
-            if(!new File(EUCA_ROOT_WRAPPER).exists()) {
-                throw new EucalyptusCloudException("root wrapper (euca_rootwrap) does not exist");
-            }
-            String returnValue = getLvmVersion();
-            if(returnValue.length() == 0) {
-                throw new EucalyptusCloudException("Is lvm installed?");
-            } else {
-                LOG.info(returnValue);
-            }
-        } catch(EucalyptusCloudException ex) {
-            String error = "Unable to run command: " + ex.getMessage();
-            LOG.error(error);
-            throw new EucalyptusCloudException(error);
+          if (fileIn != null)
+            fileIn.close();
+        } catch (IOException e) {
+          LOG.error(e);
         }
-    }
-
-    public boolean bucketExists(String bucket) {
-        return new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket).exists();
-    }
-
-    public boolean objectExists(String bucket, String object) {
-        return new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object).exists();
-    }
-
-    public void createBucket(String bucket) throws IOException {
-        File bukkit = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket);
-        if(!bukkit.exists()) {
-            if(!bukkit.mkdirs()) {
-                throw new IOException("Unable to create bucket: " + bucket);
-            }
-        }
-    }
-
-    public long getSize(String bucket, String object) {
-        File objectFile = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
-        if(objectFile.exists())
-            return objectFile.length();
-        return -1;
-    }
-
-    public void deleteBucket(String bucket) throws IOException {
-        File bukkit = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket);
-        if(bukkit.exists() && !bukkit.delete()) {
-            throw new IOException("Unable to delete bucket: " + bucket);
-        }
-    }
-
-    public void createObject(String bucket, String object) throws IOException {
-        File objectFile = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
-        if (!objectFile.exists()) {
-            if (!objectFile.createNewFile()) {
-                throw new IOException("Unable to create: " + objectFile.getAbsolutePath());
-            }
-        }
-    }
-
-    public FileIO prepareForRead(String bucket, String object) throws Exception {
-        return new FileReader(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
-    }
-
-    public FileIO prepareForWrite(String bucket, String object) throws Exception {
-        return new FileWriter(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
-    }
-
-    public int readObject(String bucket, String object, byte[] bytes, long offset) throws IOException {
-        return readObject(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object, bytes, offset);
-    }
-
-    public int readObject(String path, byte[] bytes, long offset) throws IOException {
-        File objectFile = new File (path);
-        if (!objectFile.exists()) {
-            throw new IOException("Unable to read: " + path);
-        }
-        BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(objectFile));
-        int bytesRead = 0;
         try {
-            if (offset > 0) {
-                inputStream.skip(offset);
+          if (fileInputStream != null)
+            fileInputStream.close();
+        } catch (IOException e) {
+          LOG.error(e);
+        }
+        try {
+          if (fileOut != null)
+            fileOut.close();
+        } catch (IOException e) {
+          LOG.error(e);
+        }
+        try {
+          if (fileOutputStream != null)
+            fileOutputStream.close();
+        } catch (IOException e) {
+          LOG.error(e);
+        }
+      }
+    }
+  }
+
+  @Override
+  public void copyMultipartObject(List<PartInfo> parts, String destinationBucket, String destinationObject) throws Exception {
+    Iterator<PartInfo> partIterator = null;
+
+    if (parts != null && (partIterator = parts.iterator()) != null && partIterator.hasNext()) {
+      try {
+        File newObjectFile =
+            new File(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + destinationBucket + FILE_SEPARATOR + destinationObject);
+        FileInputStream fileInputStream = null;
+        FileChannel fileIn = null;
+        FileOutputStream fileOutputStream = null;
+        FileChannel fileOut = null;
+        try {
+          fileOutputStream = new FileOutputStream(newObjectFile);
+          fileOut = fileOutputStream.getChannel();
+          PartInfo part = null;
+          File partFile = null;
+
+          do {
+            part = partIterator.next();
+            partFile =
+                new File(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + part.getBucketName() + FILE_SEPARATOR + part.getObjectName());
+            fileInputStream = new FileInputStream(partFile);
+            fileIn = fileInputStream.getChannel();
+            fileIn.transferTo(0, fileIn.size(), fileOut);
+
+            // Get ready for next iteration
+            try {
+              fileIn.close();
+              fileIn = null;
+            } catch (IOException e) {
+              LOG.warn("Failed to close channel", e);
             }
-            bytesRead = inputStream.read(bytes);
-        } catch (IOException ex) {
-            LOG.error( ex );
-            Logs.extreme( ).error( ex, ex );
-            throw ex;
+            try {
+              fileInputStream.close();
+              fileInputStream = null;
+            } catch (IOException e) {
+              LOG.warn("Failed to close stream", e);
+            }
+            partFile = null;
+            part = null;
+          } while (partIterator.hasNext());
         } finally {
+          if (fileIn != null) {
             try {
-                inputStream.close();
-            } catch (IOException ex) {
-                LOG.error( ex );
+              fileIn.close();
+            } catch (IOException e) {
+              LOG.warn("Failed to close channel", e);
             }
-        }
-        return bytesRead;
-    }
-
-    public void deleteObject(String bucket, String object) throws IOException {
-        File objectFile = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
-        if (objectFile.exists()) {
-            if(!objectFile.delete()) {
-                throw new IOException("Unable to delete: " + objectFile.getAbsolutePath());
-            }
-        }
-    }
-
-    public void deleteAbsoluteObject(String object) throws IOException {
-        File objectFile = new File (object);
-        if (objectFile.exists()) {
-            if(!objectFile.delete()) {
-                throw new IOException("Unable to delete: " + object);
-            }
-        }
-    }
-
-    public void putObject(String bucket, String object, byte[] base64Data, boolean append) throws IOException {
-        File objectFile = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
-        if (!objectFile.exists()) {
-            objectFile.createNewFile();
-        }
-        BufferedOutputStream outputStream = new BufferedOutputStream(new FileOutputStream(objectFile, append));
-        try {
-            outputStream.write(base64Data);
-        } catch (IOException ex) {
-            LOG.error( ex );
-            Logs.extreme( ).error( ex, ex );
-            throw ex;
-        } finally {
+          }
+          if (fileInputStream != null) {
             try {
-                outputStream.close();
-            } catch (IOException ex) {
-                LOG.error( ex );
+              fileInputStream.close();
+            } catch (IOException e) {
+              LOG.warn("Failed to close stream", e);
             }
-        }
-    }
-
-    public void renameObject(String bucket, String oldName, String newName) throws IOException {
-        File oldObjectFile = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + oldName);
-        File newObjectFile = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + newName);
-        if(oldObjectFile.exists()) {
-            if (!oldObjectFile.renameTo(newObjectFile)) {
-                throw new IOException("Unable to rename " + oldObjectFile.getAbsolutePath() + " to " + newObjectFile.getAbsolutePath());
-            }
-        }
-    }
-
-    public void copyObject(String sourceBucket, String sourceObject, String destinationBucket, String destinationObject) throws IOException {
-        File oldObjectFile = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + sourceBucket + FILE_SEPARATOR + sourceObject);
-        File newObjectFile = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + destinationBucket + FILE_SEPARATOR + destinationObject);
-        if(!oldObjectFile.equals(newObjectFile)) {
-            FileInputStream fileInputStream = null;
-            FileChannel fileIn = null;
-            FileOutputStream fileOutputStream = null;
-            FileChannel fileOut = null;
+          }
+          if (fileOut != null) {
             try {
-                fileInputStream = new FileInputStream(oldObjectFile);
-                fileIn = fileInputStream.getChannel();
-                fileOutputStream = new FileOutputStream(newObjectFile);
-                fileOut = fileOutputStream.getChannel();
-                fileIn.transferTo(0, fileIn.size(), fileOut);
-            } catch (IOException ex) {
-                LOG.error( ex );
-                Logs.extreme( ).error( ex, ex );
-                throw ex;
-            }  finally {
-                try {
-                    if(fileIn != null)
-                        fileIn.close();
-                } catch(IOException e) {
-                    LOG.error( e );
-                }
-                try {
-                    if( fileInputStream != null)
-                        fileInputStream.close();
-                } catch(IOException e) {
-                    LOG.error( e );
-                }
-                try {
-                    if(fileOut != null)
-                        fileOut.close();
-                } catch(IOException e) {
-                    LOG.error( e );
-                }
-                try {
-                    if(fileOutputStream != null)
-                        fileOutputStream.close();
-                } catch(IOException e) {
-                    LOG.error( e );
-                }
+              fileOut.close();
+            } catch (IOException e) {
+              LOG.warn("Failed to close channel", e);
             }
-        }
-    }
-    
-	@Override
-	public void copyMultipartObject(List<PartInfo> parts, String destinationBucket, String destinationObject) throws Exception {
-		Iterator<PartInfo> partIterator = null;
-
-		if (parts != null && (partIterator = parts.iterator()) != null && partIterator.hasNext()) {
-			try {
-				File newObjectFile = new File(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + destinationBucket + FILE_SEPARATOR
-						+ destinationObject);
-				FileInputStream fileInputStream = null;
-				FileChannel fileIn = null;
-				FileOutputStream fileOutputStream = null;
-				FileChannel fileOut = null;
-				try {
-					fileOutputStream = new FileOutputStream(newObjectFile);
-					fileOut = fileOutputStream.getChannel();
-					PartInfo part = null;
-					File partFile = null;
-
-					do {
-						part = partIterator.next();
-						partFile = new File(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + part.getBucketName() + FILE_SEPARATOR
-								+ part.getObjectName());
-						fileInputStream = new FileInputStream(partFile);
-						fileIn = fileInputStream.getChannel();
-						fileIn.transferTo(0, fileIn.size(), fileOut);
-
-						// Get ready for next iteration
-						try {
-							fileIn.close();
-							fileIn = null;
-						} catch (IOException e) {
-							LOG.warn("Failed to close channel", e);
-						}
-						try {
-							fileInputStream.close();
-							fileInputStream = null;
-						} catch (IOException e) {
-							LOG.warn("Failed to close stream", e);
-						}
-						partFile = null;
-						part = null;
-					} while (partIterator.hasNext());
-				} finally {
-					if (fileIn != null) {
-						try {
-							fileIn.close();
-						} catch (IOException e) {
-							LOG.warn("Failed to close channel", e);
-						}
-					}
-					if (fileInputStream != null) {
-						try {
-							fileInputStream.close();
-						} catch (IOException e) {
-							LOG.warn("Failed to close stream", e);
-						}
-					}
-					if (fileOut != null) {
-						try {
-							fileOut.close();
-						} catch (IOException e) {
-							LOG.warn("Failed to close channel", e);
-						}
-					}
-					if (fileOutputStream != null) {
-						try {
-							fileOutputStream.close();
-						} catch (IOException e) {
-							LOG.warn("Failed to close stream", e);
-						}
-					}
-				}
-			} catch (Exception e) {
-				LOG.error("Failed to copy multipart source object to " + destinationObject, e);
-				throw e;
-			}
-		} else {
-			LOG.warn("No parts to copy content from and create " + destinationObject);
-		}
-	}
-
-    public String getObjectPath(String bucket, String object) {
-        return WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object;
-    }
-
-    public long getObjectSize(String bucket, String object) {
-        String absoluteObjectPath = WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object;
-
-        File objectFile = new File(absoluteObjectPath);
-        if(objectFile.exists())
-            return objectFile.length();
-        return -1;
-    }
-
-    private String removeLoopback(String loDevName) throws EucalyptusCloudException {
-        return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "losetup", "-d", loDevName});
-    }
-
-    private int losetup(String absoluteFileName, String loDevName) {
-        try
-        {
-            Runtime rt = Runtime.getRuntime();
-            Process proc = rt.exec(new String[]{EUCA_ROOT_WRAPPER, "losetup", loDevName, absoluteFileName});
-            StreamConsumer error = new StreamConsumer(proc.getErrorStream());
-            StreamConsumer output = new StreamConsumer(proc.getInputStream());
-            error.start();
-            output.start();
-            int errorCode = proc.waitFor();
-            output.join();
-            LOG.info("losetup " + loDevName + " " + absoluteFileName);
-            LOG.info(output.getReturnValue());
-            LOG.info(error.getReturnValue());
-            return errorCode;
-        } catch (Exception t) {
-            LOG.error(t);
-        }
-        return -1;
-    }
-
-    private String findFreeLoopback() throws EucalyptusCloudException {
-        return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "losetup", "-f"}).replaceAll("\n", "");
-    }
-
-    private String removeLogicalVolume(String lvName) throws EucalyptusCloudException {
-        return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "lvremove", "-f", lvName});
-    }
-
-    private String reduceVolumeGroup(String vgName, String pvName) throws EucalyptusCloudException {
-        return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "vgreduce", vgName, pvName});
-    }
-
-    private String removePhysicalVolume(String loDevName) throws EucalyptusCloudException {
-        return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "pvremove", loDevName});
-    }
-
-    private String createVolumeFromLv(String lvName, String volumeKey) throws EucalyptusCloudException {
-        return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "dd", "if=" + lvName, "of=" + volumeKey, "bs=1M"});
-    }
-
-    private String enableLogicalVolume(String lvName) throws EucalyptusCloudException {
-        return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "lvchange", "-ay", lvName});
-    }
-
-    private String disableLogicalVolume(String lvName) throws EucalyptusCloudException {
-        return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "lvchange", "-an", lvName});
-    }
-
-    private String removeVolumeGroup(String vgName) throws EucalyptusCloudException {
-        return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "vgremove", vgName});
-    }
-
-    private String getLvmVersion() throws EucalyptusCloudException {
-        return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "lvm", "version"});
-    }
-
-
-
-    public String createLoopback(String fileName) throws EucalyptusCloudException {
-        int number_of_retries = 0;
-        int status = -1;
-        String loDevName;
-        do {
-            loDevName = findFreeLoopback();
-            if(loDevName.length() > 0) {
-                status = losetup(fileName, loDevName);
+          }
+          if (fileOutputStream != null) {
+            try {
+              fileOutputStream.close();
+            } catch (IOException e) {
+              LOG.warn("Failed to close stream", e);
             }
-            if(number_of_retries++ >= MAX_LOOP_DEVICES)
-                break;
-        } while(status != 0);
-
-        if(status != 0) {
-            throw new EucalyptusCloudException("Could not create loopback device for " + fileName +
-                    ". Please check the max loop value and permissions");
+          }
         }
-        return loDevName;
+      } catch (Exception e) {
+        LOG.error("Failed to copy multipart source object to " + destinationObject, e);
+        throw e;
+      }
+    } else {
+      LOG.warn("No parts to copy content from and create " + destinationObject);
     }
+  }
 
-    @Override
-    public void enable() throws EucalyptusCloudException {
-        //Nothing to do yet.
+  public String getObjectPath(String bucket, String object) {
+    return WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object;
+  }
+
+  public long getObjectSize(String bucket, String object) {
+    String absoluteObjectPath = WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object;
+
+    File objectFile = new File(absoluteObjectPath);
+    if (objectFile.exists())
+      return objectFile.length();
+    return -1;
+  }
+
+  private String removeLoopback(String loDevName) throws EucalyptusCloudException {
+    return SystemUtil.run(new String[] {EUCA_ROOT_WRAPPER, "losetup", "-d", loDevName});
+  }
+
+  private int losetup(String absoluteFileName, String loDevName) {
+    try {
+      Runtime rt = Runtime.getRuntime();
+      Process proc = rt.exec(new String[] {EUCA_ROOT_WRAPPER, "losetup", loDevName, absoluteFileName});
+      StreamConsumer error = new StreamConsumer(proc.getErrorStream());
+      StreamConsumer output = new StreamConsumer(proc.getInputStream());
+      error.start();
+      output.start();
+      int errorCode = proc.waitFor();
+      output.join();
+      LOG.info("losetup " + loDevName + " " + absoluteFileName);
+      LOG.info(output.getReturnValue());
+      LOG.info(error.getReturnValue());
+      return errorCode;
+    } catch (Exception t) {
+      LOG.error(t);
     }
+    return -1;
+  }
 
-    @Override
-    public void disable() throws EucalyptusCloudException {
-        //Nothing to do yet.
+  private String findFreeLoopback() throws EucalyptusCloudException {
+    return SystemUtil.run(new String[] {EUCA_ROOT_WRAPPER, "losetup", "-f"}).replaceAll("\n", "");
+  }
+
+  private String removeLogicalVolume(String lvName) throws EucalyptusCloudException {
+    return SystemUtil.run(new String[] {EUCA_ROOT_WRAPPER, "lvremove", "-f", lvName});
+  }
+
+  private String reduceVolumeGroup(String vgName, String pvName) throws EucalyptusCloudException {
+    return SystemUtil.run(new String[] {EUCA_ROOT_WRAPPER, "vgreduce", vgName, pvName});
+  }
+
+  private String removePhysicalVolume(String loDevName) throws EucalyptusCloudException {
+    return SystemUtil.run(new String[] {EUCA_ROOT_WRAPPER, "pvremove", loDevName});
+  }
+
+  private String createVolumeFromLv(String lvName, String volumeKey) throws EucalyptusCloudException {
+    return SystemUtil.run(new String[] {EUCA_ROOT_WRAPPER, "dd", "if=" + lvName, "of=" + volumeKey, "bs=1M"});
+  }
+
+  private String enableLogicalVolume(String lvName) throws EucalyptusCloudException {
+    return SystemUtil.run(new String[] {EUCA_ROOT_WRAPPER, "lvchange", "-ay", lvName});
+  }
+
+  private String disableLogicalVolume(String lvName) throws EucalyptusCloudException {
+    return SystemUtil.run(new String[] {EUCA_ROOT_WRAPPER, "lvchange", "-an", lvName});
+  }
+
+  private String removeVolumeGroup(String vgName) throws EucalyptusCloudException {
+    return SystemUtil.run(new String[] {EUCA_ROOT_WRAPPER, "vgremove", vgName});
+  }
+
+  private String getLvmVersion() throws EucalyptusCloudException {
+    return SystemUtil.run(new String[] {EUCA_ROOT_WRAPPER, "lvm", "version"});
+  }
+
+  public String createLoopback(String fileName) throws EucalyptusCloudException {
+    int number_of_retries = 0;
+    int status = -1;
+    String loDevName;
+    do {
+      loDevName = findFreeLoopback();
+      if (loDevName.length() > 0) {
+        status = losetup(fileName, loDevName);
+      }
+      if (number_of_retries++ >= MAX_LOOP_DEVICES)
+        break;
+    } while (status != 0);
+
+    if (status != 0) {
+      throw new EucalyptusCloudException("Could not create loopback device for " + fileName + ". Please check the max loop value and permissions");
     }
+    return loDevName;
+  }
 
-    @Override
-    public void stop() throws EucalyptusCloudException {
-        // TODO Auto-generated method stub
+  @Override
+  public void enable() throws EucalyptusCloudException {
+    // Nothing to do yet.
+  }
 
+  @Override
+  public void disable() throws EucalyptusCloudException {
+    // Nothing to do yet.
+  }
+
+  @Override
+  public void stop() throws EucalyptusCloudException {
+    // TODO Auto-generated method stub
+
+  }
+
+  @Override
+  public void check() throws EucalyptusCloudException {
+    // TODO Auto-generated method stub
+
+  }
+
+  @Override
+  public void start() throws EucalyptusCloudException {
+    // TODO Auto-generated method stub
+
+  }
+
+  @Override
+  public void getObject(String bucketName, String objectName, final WalrusDataGetResponseType response, Long size, Boolean isCompressed)
+      throws WalrusException {
+    try {
+      RandomAccessFile raf = new RandomAccessFile(new File(getObjectPath(bucketName, objectName)), "r");
+      final ChunkedInput file;
+      isCompressed = isCompressed == null ? false : isCompressed;
+      if (isCompressed) {
+        file = new CompressedChunkedFile(raf, size);
+      } else {
+        file = new ChunkedDataFile(raf, 0, size, 8192);
+      }
+      List<ChunkedInput> dataStreams = new ArrayList<ChunkedInput>();
+      dataStreams.add(file);
+      response.setDataInputStream(dataStreams);
+    } catch (IOException ex) {
+      throw new WalrusException(ex.getMessage());
     }
+  }
 
-    @Override
-    public void check() throws EucalyptusCloudException {
-        // TODO Auto-generated method stub
-
+  @Override
+  public void getObject(String bucketName, String objectName, final WalrusDataGetResponseType response, Long byteRangeStart, Long byteRangeEnd,
+      Boolean isCompressed) throws WalrusException {
+    try {
+      RandomAccessFile raf = new RandomAccessFile(new File(getObjectPath(bucketName, objectName)), "r");
+      final ChunkedInput file;
+      isCompressed = isCompressed == null ? false : isCompressed;
+      if (isCompressed) {
+        file = new CompressedChunkedFile(raf, byteRangeStart, byteRangeEnd, (int) Math.min((byteRangeEnd - byteRangeStart), 8192));
+      } else {
+        file = new ChunkedDataFile(raf, byteRangeStart, (int) (byteRangeEnd - byteRangeStart), (int) Math.min((byteRangeEnd - byteRangeStart), 8192));
+      }
+      List<ChunkedInput> dataStreams = new ArrayList<>();
+      dataStreams.add(file);
+      response.setDataInputStream(dataStreams);
+    } catch (IOException ex) {
+      throw new WalrusException(ex.getMessage());
     }
+  }
 
-    @Override
-    public void start() throws EucalyptusCloudException {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public void getObject(String bucketName, String objectName, final WalrusDataGetResponseType response, Long size, Boolean isCompressed) throws WalrusException {
-        try {
-            RandomAccessFile raf = new RandomAccessFile(new File(getObjectPath(bucketName, objectName)), "r");
-            final ChunkedInput file;
-            isCompressed = isCompressed == null ? false : isCompressed;
-            if(isCompressed) {
-                file = new CompressedChunkedFile(raf, size);
-            } else {
-                file = new ChunkedDataFile(raf, 0, size, 8192);
-            }
-            List<ChunkedInput> dataStreams = new ArrayList<ChunkedInput>();
-            dataStreams.add(file);
-            response.setDataInputStream(dataStreams);
-        } catch (IOException ex) {
-            throw new WalrusException(ex.getMessage());
+  @Override
+  public void getMultipartObject(WalrusDataGetResponseType reply, List<PartInfo> parts, Boolean isCompressed) throws WalrusException {
+    try {
+      List<ChunkedInput> dataStreams = new ArrayList<>();
+      for (PartInfo part : parts) {
+        isCompressed = isCompressed == null ? false : isCompressed;
+        final ChunkedInput file;
+        RandomAccessFile raf = new RandomAccessFile(new File(getObjectPath(part.getBucketName(), part.getObjectName())), "r");
+        if (isCompressed) {
+          file = new CompressedChunkedFile(raf, part.getSize());
+        } else {
+          file = new ChunkedDataFile(raf, 0, part.getSize(), 8192);
         }
+        dataStreams.add(file);
+      }
+      reply.setDataInputStream(dataStreams);
+    } catch (IOException ex) {
+      throw new WalrusException(ex.getMessage());
     }
+  }
 
-    @Override
-    public void getObject(String bucketName, String objectName, final WalrusDataGetResponseType response, Long byteRangeStart, Long byteRangeEnd, Boolean isCompressed) throws WalrusException {
-        try {
-            RandomAccessFile raf = new RandomAccessFile(new File(getObjectPath(bucketName, objectName)), "r");
-            final ChunkedInput file;
-            isCompressed = isCompressed == null ? false : isCompressed;
-            if(isCompressed) {
-                file = new CompressedChunkedFile(raf, byteRangeStart, byteRangeEnd, (int)Math.min((byteRangeEnd - byteRangeStart), 8192));
-            } else {
-                file = new ChunkedDataFile(raf, byteRangeStart, (int)(byteRangeEnd - byteRangeStart), (int)Math.min((byteRangeEnd - byteRangeStart), 8192));
-            }
-            List<ChunkedInput> dataStreams = new ArrayList<>();
-            dataStreams.add(file);
-            response.setDataInputStream(dataStreams);
-        } catch (IOException ex) {
-            throw new WalrusException(ex.getMessage());
+  @Override
+  public void getMultipartObject(WalrusDataGetResponseType reply, List<PartInfo> parts, Boolean isCompressed, Long byteRangeStart, Long byteRangeEnd)
+      throws WalrusException {
+    try {
+      List<ChunkedInput> dataStreams = new ArrayList<>();
+      isCompressed = isCompressed == null ? false : isCompressed;
+
+      Long requestedSize = byteRangeEnd - byteRangeStart + 1; // Assuming byteRangeEnd is inclusive
+      Iterator<PartInfo> partIterator = parts.iterator();
+      PartInfo part = null;
+
+      // Compute the part to begin reading from and the starting offset in that part
+      Long rangeElapsed = -1L;
+      Long startMarker = 0L;
+      while (partIterator.hasNext()) {
+        part = partIterator.next();
+        rangeElapsed += part.getSize();
+        if (byteRangeStart <= rangeElapsed) {
+          startMarker = part.getSize() - (rangeElapsed - byteRangeStart + 1);
+          break;
         }
-    }
+      }
 
-    @Override
-    public void getMultipartObject(WalrusDataGetResponseType reply, List<PartInfo> parts, Boolean isCompressed) throws WalrusException {
-        try {
-            List<ChunkedInput> dataStreams = new ArrayList<>();
-            for (PartInfo part : parts) {
-                isCompressed = isCompressed == null ? false : isCompressed;
-                final ChunkedInput file;
-                RandomAccessFile raf = new RandomAccessFile(new File(getObjectPath(part.getBucketName(), part.getObjectName())), "r");
-                if(isCompressed) {
-                    file = new CompressedChunkedFile(raf, part.getSize());
-                } else {
-                    file = new ChunkedDataFile(raf, 0, part.getSize(), 8192);
-                }
-                dataStreams.add(file);
-            }
-            reply.setDataInputStream(dataStreams);
-        } catch (IOException ex) {
-            throw new WalrusException(ex.getMessage());
+      // Keep adding bytes from parts till the requested length is met
+      Long bytesRead = 0L;
+      Long tempLength = 0L;
+      do {
+        if (part == null && partIterator.hasNext()) {
+          part = partIterator.next();
         }
+
+        final ChunkedInput file;
+        RandomAccessFile raf = new RandomAccessFile(new File(getObjectPath(part.getBucketName(), part.getObjectName())), "r");
+
+        if (requestedSize > ((part.getSize() - startMarker) + bytesRead)) { // if the part is smaller than what is required, add the part from the
+                                                                            // startMarker to end
+          tempLength = part.getSize() - startMarker;
+        } else { // if the part is larger than what is required, add the part from the startMarker to how much is necessary
+          tempLength = requestedSize - bytesRead;
+        }
+
+        if (isCompressed) {
+          file = new CompressedChunkedFile(raf, startMarker, tempLength, (int) Math.min(tempLength, 8192));
+        } else {
+          file = new ChunkedDataFile(raf, startMarker, tempLength, (int) Math.min(tempLength, 8192));
+        }
+
+        dataStreams.add(file);
+        bytesRead = bytesRead + tempLength;
+        startMarker = 0L;
+        tempLength = 0L;
+        part = null;
+      } while (bytesRead < requestedSize && partIterator.hasNext());
+
+      reply.setDataInputStream(dataStreams);
+    } catch (IOException ex) {
+      throw new WalrusException(ex.getMessage());
     }
-
-	@Override
-	public void getMultipartObject(WalrusDataGetResponseType reply, List<PartInfo> parts, Boolean isCompressed, Long byteRangeStart, Long byteRangeEnd)
-			throws WalrusException {
-		try {
-			List<ChunkedInput> dataStreams = new ArrayList<>();
-			isCompressed = isCompressed == null ? false : isCompressed;
-
-			Long requestedSize = byteRangeEnd - byteRangeStart + 1; // Assuming byteRangeEnd is inclusive
-			Iterator<PartInfo> partIterator = parts.iterator();
-			PartInfo part = null;
-
-			// Compute the part to begin reading from and the starting offset in that part
-			Long rangeElapsed = -1L;
-			Long startMarker = 0L;
-			while (partIterator.hasNext()) {
-				part = partIterator.next();
-				rangeElapsed += part.getSize();
-				if (byteRangeStart <= rangeElapsed) {
-					startMarker = part.getSize() - (rangeElapsed - byteRangeStart + 1);
-					break;
-				}
-			}
-
-			// Keep adding bytes from parts till the requested length is met
-			Long bytesRead = 0L;
-			Long tempLength = 0L;
-			do {
-				if (part == null && partIterator.hasNext()) {
-					part = partIterator.next();
-				}
-
-				final ChunkedInput file;
-				RandomAccessFile raf = new RandomAccessFile(new File(getObjectPath(part.getBucketName(), part.getObjectName())), "r");
-
-				if (requestedSize > ((part.getSize() - startMarker) + bytesRead)) { // if the part is smaller than what is required, add the part from the startMarker to end
-					tempLength = part.getSize() - startMarker;
-				} else { // if the part is larger than what is required, add the part from the startMarker to how much is necessary
-					tempLength = requestedSize - bytesRead;
-				}
-
-				if (isCompressed) {
-					file = new CompressedChunkedFile(raf, startMarker, tempLength, (int) Math.min(tempLength, 8192));
-				} else {
-					file = new ChunkedDataFile(raf, startMarker, tempLength, (int) Math.min(tempLength, 8192));
-				}
-
-				dataStreams.add(file);
-				bytesRead = bytesRead + tempLength;
-				startMarker = 0L;
-				tempLength = 0L;
-				part = null;
-			} while (bytesRead < requestedSize && partIterator.hasNext());
-
-			reply.setDataInputStream(dataStreams);
-		} catch (IOException ex) {
-			throw new WalrusException(ex.getMessage());
-		}
-	}
+  }
 
 }

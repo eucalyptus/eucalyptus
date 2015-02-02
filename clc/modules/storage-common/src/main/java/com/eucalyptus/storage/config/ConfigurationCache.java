@@ -20,12 +20,12 @@
 
 package com.eucalyptus.storage.config;
 
+import java.util.concurrent.TimeUnit;
+
 import com.eucalyptus.util.Exceptions;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-
-import java.util.concurrent.TimeUnit;
 
 /**
  * Created by zhill on 5/5/14.
@@ -33,22 +33,22 @@ import java.util.concurrent.TimeUnit;
  * A repository of configuration entities to be updated periodically and to get the current cached value
  */
 public class ConfigurationCache {
-    private static final long ENTRY_EXPIRATION_TIME_SEC = 5l; //5 seconds for each entry's valid period
+  private static final long ENTRY_EXPIRATION_TIME_SEC = 5l; // 5 seconds for each entry's valid period
 
-    protected static final LoadingCache<Class<? extends CacheableConfiguration>, CacheableConfiguration> configCache = CacheBuilder.newBuilder()
-            .refreshAfterWrite(ENTRY_EXPIRATION_TIME_SEC, TimeUnit.SECONDS)
-            .build(new CacheLoader<Class<? extends CacheableConfiguration>, CacheableConfiguration>() {
-                @Override
-                public CacheableConfiguration load(Class<? extends CacheableConfiguration> aClass) throws Exception {
-                    return (CacheableConfiguration) (aClass.newInstance()).getLatest();
-                }
-            });
-
-    public static <T extends CacheableConfiguration> T getConfiguration(Class<T> configType) {
-        try {
-            return (T)configCache.get(configType);
-        } catch(Throwable f) {
-            throw Exceptions.toUndeclared("No configuration entry found for type " + configType.getName(), f);
+  protected static final LoadingCache<Class<? extends CacheableConfiguration>, CacheableConfiguration> configCache = CacheBuilder.newBuilder()
+      .refreshAfterWrite(ENTRY_EXPIRATION_TIME_SEC, TimeUnit.SECONDS)
+      .build(new CacheLoader<Class<? extends CacheableConfiguration>, CacheableConfiguration>() {
+        @Override
+        public CacheableConfiguration load(Class<? extends CacheableConfiguration> aClass) throws Exception {
+          return (CacheableConfiguration) (aClass.newInstance()).getLatest();
         }
+      });
+
+  public static <T extends CacheableConfiguration> T getConfiguration(Class<T> configType) {
+    try {
+      return (T) configCache.get(configType);
+    } catch (Throwable f) {
+      throw Exceptions.toUndeclared("No configuration entry found for type " + configType.getName(), f);
     }
+  }
 }

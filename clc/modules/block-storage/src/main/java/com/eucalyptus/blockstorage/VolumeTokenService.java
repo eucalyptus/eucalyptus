@@ -65,39 +65,42 @@ package com.eucalyptus.blockstorage;
 import com.eucalyptus.blockstorage.entities.VolumeToken;
 import com.eucalyptus.util.EucalyptusCloudException;
 
-
 /**
  * A token issuing and resolving service.
+ * 
  * @author zhill
  *
  */
 public interface VolumeTokenService {
-	
-	/**
-	 * Generate a new token for the specified resource
-	 * @param resource
-	 * @return
-	 */
-	public VolumeToken issueToken(String resource) throws EucalyptusCloudException;
 
-	/**
-	 * Check the token but do not invalidate
-	 * @param token
-	 * @return
-	 */
-	public boolean checkToken(String resource, String token) throws EucalyptusCloudException;
-	
-	/**
-	 * If the token is invalid will return false, if was valid returns true.
-	 * Sets the token to invalid. Subsequent checks/invalidations will return false
-	 * @param token
-	 * @return
-	 */
-	public boolean invalidateToken(String resource, String token) throws EucalyptusCloudException;
+  /**
+   * Generate a new token for the specified resource
+   * 
+   * @param resource
+   * @return
+   */
+  public VolumeToken issueToken(String resource) throws EucalyptusCloudException;
 
-	/**
-	 * Invalidates all tokens and removes them.
-	 */
-	public void flushTokens() throws EucalyptusCloudException;
-	
+  /**
+   * Check the token but do not invalidate
+   * 
+   * @param token
+   * @return
+   */
+  public boolean checkToken(String resource, String token) throws EucalyptusCloudException;
+
+  /**
+   * If the token is invalid will return false, if was valid returns true. Sets the token to invalid. Subsequent checks/invalidations will return
+   * false
+   * 
+   * @param token
+   * @return
+   */
+  public boolean invalidateToken(String resource, String token) throws EucalyptusCloudException;
+
+  /**
+   * Invalidates all tokens and removes them.
+   */
+  public void flushTokens() throws EucalyptusCloudException;
+
 }

@@ -73,32 +73,32 @@ import com.eucalyptus.storage.common.CheckerTask;
 import com.eucalyptus.system.Threads;
 
 public class StorageCheckerService {
-	private Logger LOG = Logger.getLogger( StorageCheckerService.class );
+  private Logger LOG = Logger.getLogger(StorageCheckerService.class);
 
-	private final ScheduledExecutorService exec;
-	
-	private ConcurrentHashMap<String, CheckerTask> checkers;
+  private final ScheduledExecutorService exec;
 
-	public StorageCheckerService() {
-		checkers = new ConcurrentHashMap<String, CheckerTask>();
-		exec = Executors.newSingleThreadScheduledExecutor();
-		exec.scheduleAtFixedRate(new Runnable () {
-			@Override
-			public void run() {
-				for (CheckerTask checker : checkers.values()) {
-					Threads.lookup(Storage.class).submit(checker);
-				}
-			}
-		}, 1, 1, TimeUnit.MINUTES);
+  private ConcurrentHashMap<String, CheckerTask> checkers;
 
-	}
+  public StorageCheckerService() {
+    checkers = new ConcurrentHashMap<String, CheckerTask>();
+    exec = Executors.newSingleThreadScheduledExecutor();
+    exec.scheduleAtFixedRate(new Runnable() {
+      @Override
+      public void run() {
+        for (CheckerTask checker : checkers.values()) {
+          Threads.lookup(Storage.class).submit(checker);
+        }
+      }
+    }, 1, 1, TimeUnit.MINUTES);
 
-	public void add(CheckerTask checker) {
-		checkers.putIfAbsent(checker.getName(), checker);
-	}
+  }
 
-	public void shutdown() {
-		exec.shutdownNow();
-		checkers.clear();
-	}
+  public void add(CheckerTask checker) {
+    checkers.putIfAbsent(checker.getName(), checker);
+  }
+
+  public void shutdown() {
+    exec.shutdownNow();
+    checkers.clear();
+  }
 }

@@ -64,26 +64,23 @@ package com.eucalyptus.walrus.exceptions;
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-
 @SuppressWarnings("serial")
-public class BucketAlreadyOwnedByYouException extends WalrusException{
+public class BucketAlreadyOwnedByYouException extends WalrusException {
 
-  public BucketAlreadyOwnedByYouException()
-  {
-    super( "BucketAlreadyOwnedByYou" );
+  public BucketAlreadyOwnedByYouException() {
+    super("BucketAlreadyOwnedByYou");
   }
-  
-  public BucketAlreadyOwnedByYouException(String bucket)
-  {
-	  super("BucketAlreadyOwnedByYou", "Your previous request to create the named bucket succeeded and you already own it.", "Bucket", bucket, HttpResponseStatus.CONFLICT);
+
+  public BucketAlreadyOwnedByYouException(String bucket) {
+    super("BucketAlreadyOwnedByYou", "Your previous request to create the named bucket succeeded and you already own it.", "Bucket", bucket,
+        HttpResponseStatus.CONFLICT);
   }
-  
-  public BucketAlreadyOwnedByYouException(Throwable ex)
-  {
+
+  public BucketAlreadyOwnedByYouException(Throwable ex) {
     super("BucketAlreadyOwnedByYou", ex);
   }
-  public BucketAlreadyOwnedByYouException(String message, Throwable ex)
-  {
-    super(message,ex);
+
+  public BucketAlreadyOwnedByYouException(String message, Throwable ex) {
+    super(message, ex);
   }
 }

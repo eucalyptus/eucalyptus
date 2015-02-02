@@ -62,15 +62,13 @@
 
 package com.eucalyptus.blockstorage;
 
-import edu.ucsb.eucalyptus.msgs.*;
-
 import java.util.ArrayList;
 
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.blockstorage.BlockStorageController;
 import com.eucalyptus.blockstorage.msgs.CreateStorageVolumeResponseType;
 import com.eucalyptus.blockstorage.msgs.CreateStorageVolumeType;
 import com.eucalyptus.blockstorage.msgs.DescribeStorageVolumesResponseType;
@@ -81,42 +79,41 @@ import com.eucalyptus.util.EucalyptusCloudException;
 @Ignore("Manual development test")
 public class VolumeTest {
 
-    static BlockStorageController blockStorage;
+  static BlockStorageController blockStorage;
 
-    @Test
-    public void testVolume() throws Exception {
+  @Test
+  public void testVolume() throws Exception {
 
+    String userId = "admin";
+    String volumeId = "vol-" + Hashes.getRandom(10);
+    volumeId = volumeId.replaceAll("\\.", "x");
 
-        String userId = "admin";
-        String volumeId = "vol-" + Hashes.getRandom(10);
-        volumeId = volumeId.replaceAll("\\.", "x");
+    CreateStorageVolumeType createVolumeRequest = new CreateStorageVolumeType();
+    createVolumeRequest.setUserId(userId);
+    createVolumeRequest.setVolumeId(volumeId);
+    createVolumeRequest.setSize("1");
+    CreateStorageVolumeResponseType createVolumeResponse = blockStorage.CreateStorageVolume(createVolumeRequest);
+    System.out.println(createVolumeResponse);
+    Thread.sleep(1000);
+    DescribeStorageVolumesType describeVolumesRequest = new DescribeStorageVolumesType();
 
-        CreateStorageVolumeType createVolumeRequest = new CreateStorageVolumeType();
-        createVolumeRequest.setUserId(userId);
-        createVolumeRequest.setVolumeId(volumeId);
-        createVolumeRequest.setSize("1");
-        CreateStorageVolumeResponseType createVolumeResponse = blockStorage.CreateStorageVolume(createVolumeRequest);
-        System.out.println(createVolumeResponse); 
-        Thread.sleep(1000);
-        DescribeStorageVolumesType describeVolumesRequest = new DescribeStorageVolumesType();
+    describeVolumesRequest.setUserId(userId);
+    ArrayList<String> volumeSet = new ArrayList<String>();
+    volumeSet.add(volumeId);
+    describeVolumesRequest.setVolumeSet(volumeSet);
+    DescribeStorageVolumesResponseType describeVolumesResponse = blockStorage.DescribeStorageVolumes(describeVolumesRequest);
+    StorageVolume vol = describeVolumesResponse.getVolumeSet().get(0);
+    System.out.println(vol);
+    while (true);
+  }
 
-        describeVolumesRequest.setUserId(userId);
-        ArrayList<String> volumeSet = new ArrayList<String>();
-        volumeSet.add(volumeId);
-        describeVolumesRequest.setVolumeSet(volumeSet);
-        DescribeStorageVolumesResponseType describeVolumesResponse = blockStorage.DescribeStorageVolumes(describeVolumesRequest);
-        StorageVolume vol = describeVolumesResponse.getVolumeSet().get(0);
-        System.out.println(vol);
-        while(true);
+  @BeforeClass
+  public static void setUp() {
+    blockStorage = new BlockStorageController();
+    try {
+      BlockStorageController.configure();
+    } catch (EucalyptusCloudException e) {
+      e.printStackTrace();
     }
-
-    @BeforeClass
-    public static void setUp() {
-        blockStorage = new BlockStorageController();
-        try {
-			BlockStorageController.configure();
-		} catch (EucalyptusCloudException e) {
-			e.printStackTrace();
-		}
-    }
+  }
 }

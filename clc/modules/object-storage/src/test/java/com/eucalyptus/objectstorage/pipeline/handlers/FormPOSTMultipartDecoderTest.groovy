@@ -30,9 +30,9 @@ import org.junit.Test
 @CompileStatic
 class FormPOSTMultipartDecoderTest {
 
-    @Test
-    public void testGetBucketName() {
-        MappingHttpRequest request = POSTRequestGenerator.getPOSTRequest("testbucket", "testkey", "private")
-        assert(FormPOSTMultipartDecoder.getBucketName(request) == "testbucket")
-    }
+  @Test
+  public void testGetBucketName() {
+    MappingHttpRequest request = POSTRequestGenerator.getPOSTRequest("testbucket", "testkey", "private")
+    assert(FormPOSTMultipartDecoder.getBucketName(request) == "testbucket")
+  }
 }

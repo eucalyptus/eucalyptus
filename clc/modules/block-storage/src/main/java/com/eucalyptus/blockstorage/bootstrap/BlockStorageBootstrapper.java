@@ -62,7 +62,6 @@
 
 package com.eucalyptus.blockstorage.bootstrap;
 
-
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.blockstorage.BlockStorageController;
@@ -72,85 +71,83 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
-
 
 @Provides(Storage.class)
 @RunDuring(Bootstrap.Stage.RemoteServicesInit)
 @DependsLocal(Storage.class)
 public class BlockStorageBootstrapper extends Bootstrapper {
-	private static Logger LOG = Logger.getLogger( BlockStorageBootstrapper.class );
+  private static Logger LOG = Logger.getLogger(BlockStorageBootstrapper.class);
 
-	private static BlockStorageBootstrapper singleton;
+  private static BlockStorageBootstrapper singleton;
 
-	public static Bootstrapper getInstance( ) {
-		synchronized ( BlockStorageBootstrapper.class ) {
-			if ( singleton == null ) {
-				singleton = new BlockStorageBootstrapper( );
-				LOG.info( "Creating Block Storage Bootstrapper instance." );
-			} else {
-				LOG.info( "Returning Block Storage Bootstrapper instance." );
-			}
-		}
-		return singleton;
-	}
+  public static Bootstrapper getInstance() {
+    synchronized (BlockStorageBootstrapper.class) {
+      if (singleton == null) {
+        singleton = new BlockStorageBootstrapper();
+        LOG.info("Creating Block Storage Bootstrapper instance.");
+      } else {
+        LOG.info("Returning Block Storage Bootstrapper instance.");
+      }
+    }
+    return singleton;
+  }
 
-	@Override
-	public boolean load() throws Exception {
-		//privileged context (loads modules if necessary, etc).
-		return true;
-	}
+  @Override
+  public boolean load() throws Exception {
+    // privileged context (loads modules if necessary, etc).
+    return true;
+  }
 
-	@Override
-	public boolean start( ) throws Exception {
-		LOG.debug("Starting BlockStorageController");
-		BlockStorageController.configure();
-		return true;
-	}
+  @Override
+  public boolean start() throws Exception {
+    LOG.debug("Starting BlockStorageController");
+    BlockStorageController.configure();
+    return true;
+  }
 
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-	 */
-	@Override
-	public boolean enable( ) throws Exception {
-		BlockStorageController.enable();
-		return true;
-	}
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
+   */
+  @Override
+  public boolean enable() throws Exception {
+    BlockStorageController.enable();
+    return true;
+  }
 
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-	 */
-	@Override
-	public boolean stop( ) throws Exception {
-		LOG.debug("Stopping BlockStorageController");
-		BlockStorageController.stop();
-		return true;
-	}
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
+   */
+  @Override
+  public boolean stop() throws Exception {
+    LOG.debug("Stopping BlockStorageController");
+    BlockStorageController.stop();
+    return true;
+  }
 
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-	 */
-	@Override
-	public void destroy( ) throws Exception {
-		LOG.debug("Destroying BlockStorageController service");
-		BlockStorageController.stop();
-	}
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
+   */
+  @Override
+  public void destroy() throws Exception {
+    LOG.debug("Destroying BlockStorageController service");
+    BlockStorageController.stop();
+  }
 
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-	 */
-	@Override
-	public boolean disable( ) throws Exception {
-		BlockStorageController.disable();
-		return true;
-	}
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
+   */
+  @Override
+  public boolean disable() throws Exception {
+    BlockStorageController.disable();
+    return true;
+  }
 
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-	 */
-	@Override
-	public boolean check( ) throws Exception {
-		BlockStorageController.check();
-		return true;
-	}
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
+   */
+  @Override
+  public boolean check() throws Exception {
+    BlockStorageController.check();
+    return true;
+  }
 }

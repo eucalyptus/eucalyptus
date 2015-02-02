@@ -64,28 +64,22 @@ package com.eucalyptus.walrus.exceptions;
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-
-
-
 @SuppressWarnings("serial")
 public class TooManyBucketsException extends WalrusException {
 
-  public TooManyBucketsException()
-  {
-    super( "TooManyBuckets" );
+  public TooManyBucketsException() {
+    super("TooManyBuckets");
   }
-  
-  public TooManyBucketsException(String bucket)
-  {
+
+  public TooManyBucketsException(String bucket) {
     super("TooManyBuckets", "You have attempted to create more buckets than allowed.", "Bucket", bucket, HttpResponseStatus.BAD_REQUEST);
   }
 
-  public TooManyBucketsException(Throwable ex)
-  {
+  public TooManyBucketsException(Throwable ex) {
     super("TooManyBuckets", ex);
   }
-  public TooManyBucketsException(String message, Throwable ex)
-  {
-    super(message,ex);
+
+  public TooManyBucketsException(String message, Throwable ex) {
+    super(message, ex);
   }
 }

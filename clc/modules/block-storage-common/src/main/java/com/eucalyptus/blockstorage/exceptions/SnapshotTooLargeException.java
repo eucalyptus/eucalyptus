@@ -67,22 +67,19 @@ import com.eucalyptus.util.EucalyptusCloudException;
 @SuppressWarnings("serial")
 public class SnapshotTooLargeException extends EucalyptusCloudException {
 
-	public SnapshotTooLargeException()
-	{
-		super( "SnapshotTooLarge" );
-	}
-	
-	public SnapshotTooLargeException(String snapshotId, int maxSizeInGB)
-	{
-		super("Snapshot " + snapshotId + " exceeds the maximum allowed snapshot size of " + maxSizeInGB + "GB");
-	}
+  public SnapshotTooLargeException() {
+    super("SnapshotTooLarge");
+  }
 
-	public SnapshotTooLargeException(Throwable ex)
-	{
-		super("SnapshotTooLarge", ex);
-	}
-	public SnapshotTooLargeException(String message, Throwable ex)
-	{
-		super(message,ex);
-	}
+  public SnapshotTooLargeException(String snapshotId, int maxSizeInGB) {
+    super("Snapshot " + snapshotId + " exceeds the maximum allowed snapshot size of " + maxSizeInGB + "GB");
+  }
+
+  public SnapshotTooLargeException(Throwable ex) {
+    super("SnapshotTooLarge", ex);
+  }
+
+  public SnapshotTooLargeException(String message, Throwable ex) {
+    super(message, ex);
+  }
 }

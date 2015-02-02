@@ -63,27 +63,28 @@
 package com.eucalyptus.blockstorage;
 
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
 
 public class BlockStorageEventListener implements EventListener {
-	private static Logger LOG  = Logger.getLogger( BlockStorageEventListener.class );
+  private static Logger LOG = Logger.getLogger(BlockStorageEventListener.class);
 
-	public static void register() {
-		ListenerRegistry.getInstance( ).register( Storage.class, new BlockStorageEventListener() );
-	}
+  public static void register() {
+    ListenerRegistry.getInstance().register(Storage.class, new BlockStorageEventListener());
+  }
 
-	@Override
-	public void fireEvent(Event event) {
-//		if(event instanceof LifecycleEvents.Start) {			
-			//TODO: This needs to be moved to a Bootstrapper
-//			if(((StartComponentEvent) event).isLocal())
-//				try {
-//					BlockStorageController.configure();
-//				} catch (EucalyptusCloudException e) {
-//					LOG.error(e);
-//				}
-//		} 
-	}
+  @Override
+  public void fireEvent(Event event) {
+    // if(event instanceof LifecycleEvents.Start) {
+    // TODO: This needs to be moved to a Bootstrapper
+    // if(((StartComponentEvent) event).isLocal())
+    // try {
+    // BlockStorageController.configure();
+    // } catch (EucalyptusCloudException e) {
+    // LOG.error(e);
+    // }
+    // }
+  }
 }

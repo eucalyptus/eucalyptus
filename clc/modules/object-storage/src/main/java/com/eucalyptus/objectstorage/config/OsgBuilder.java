@@ -86,67 +86,67 @@ import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Joiner;
 
 @ComponentPart(ObjectStorage.class)
-@Handles( { RegisterObjectStorageGatewayType.class, DeregisterObjectStorageGatewayType.class, DescribeObjectStorageGatewaysType.class, ModifyObjectStorageAttributeType.class } )
+@Handles({RegisterObjectStorageGatewayType.class, DeregisterObjectStorageGatewayType.class, DescribeObjectStorageGatewaysType.class,
+    ModifyObjectStorageAttributeType.class})
 public class OsgBuilder extends AbstractServiceBuilder<ObjectStorageConfiguration> {
-	private static final Logger LOG = Logger.getLogger(OsgBuilder.class);
-	
-	@Override
-	public ObjectStorageConfiguration newInstance( ) {
-		return new ObjectStorageConfiguration( );
-	}
-	
-	@Override
-	public ObjectStorageConfiguration newInstance( String partition, String name, String host, Integer port ) {
-		return new ObjectStorageConfiguration( partition, name, host, port );
-	}
-	
-	@Override
-	public ComponentId getComponentId( ) {
-		return ComponentIds.lookup( ObjectStorage.class );
-	}
-	
-	@Override
-	public void fireLoad( ServiceConfiguration parent ) throws ServiceRegistrationException {
-		try {
-			if ( parent.isVmLocal( ) ) {
-				EntityTransaction tx = Entities.get( parent ); 
-				try {
-					parent = Entities.merge( parent );
-					//Load the available backends from this SC into the DB entry
-					((ObjectStorageConfiguration)parent).setAvailableClients(Joiner.on(",").join(ObjectStorageProviders.list()));        	
-					tx.commit( );
-				} catch ( Exception ex ) {
-					LOG.debug("Error merging parent transaction. Rolling back.");
-					tx.rollback( );
-				}       
-				
-				ObjectStorageProviders.getInstance( );
-			}
-		} catch ( Exception ex ) {
-			throw Exceptions.toUndeclared( ex );
-		}	
-	}
-	
-	@Override
-	public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {}
-	
-	@Override
-	public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
-		try {
-			ObjectStorageProviders.flushClientInstances();
-		} catch(EucalyptusCloudException e) {
-			LOG.error("Error flushing client instances. Non-fatal", e);
-		}
-	}
-	
-	@Override
-	public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException {}
-	
-	@Override
-	public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {}
-	
-	@Override
-	public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {}
-	
-	
+  private static final Logger LOG = Logger.getLogger(OsgBuilder.class);
+
+  @Override
+  public ObjectStorageConfiguration newInstance() {
+    return new ObjectStorageConfiguration();
+  }
+
+  @Override
+  public ObjectStorageConfiguration newInstance(String partition, String name, String host, Integer port) {
+    return new ObjectStorageConfiguration(partition, name, host, port);
+  }
+
+  @Override
+  public ComponentId getComponentId() {
+    return ComponentIds.lookup(ObjectStorage.class);
+  }
+
+  @Override
+  public void fireLoad(ServiceConfiguration parent) throws ServiceRegistrationException {
+    try {
+      if (parent.isVmLocal()) {
+        EntityTransaction tx = Entities.get(parent);
+        try {
+          parent = Entities.merge(parent);
+          // Load the available backends from this SC into the DB entry
+          ((ObjectStorageConfiguration) parent).setAvailableClients(Joiner.on(",").join(ObjectStorageProviders.list()));
+          tx.commit();
+        } catch (Exception ex) {
+          LOG.debug("Error merging parent transaction. Rolling back.");
+          tx.rollback();
+        }
+
+        ObjectStorageProviders.getInstance();
+      }
+    } catch (Exception ex) {
+      throw Exceptions.toUndeclared(ex);
+    }
+  }
+
+  @Override
+  public void fireStart(ServiceConfiguration config) throws ServiceRegistrationException {}
+
+  @Override
+  public void fireStop(ServiceConfiguration config) throws ServiceRegistrationException {
+    try {
+      ObjectStorageProviders.flushClientInstances();
+    } catch (EucalyptusCloudException e) {
+      LOG.error("Error flushing client instances. Non-fatal", e);
+    }
+  }
+
+  @Override
+  public void fireEnable(ServiceConfiguration config) throws ServiceRegistrationException {}
+
+  @Override
+  public void fireDisable(ServiceConfiguration config) throws ServiceRegistrationException {}
+
+  @Override
+  public void fireCheck(ServiceConfiguration config) throws ServiceRegistrationException {}
+
 }

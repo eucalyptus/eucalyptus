@@ -24,25 +24,24 @@ import com.eucalyptus.objectstorage.metadata.DbObjectMetadataManagerImpl;
 import com.eucalyptus.objectstorage.metadata.ObjectMetadataManager;
 
 /**
- * Factory for object metadata manager. Returns instance
- * for configured manager.
+ * Factory for object metadata manager. Returns instance for configured manager.
  *
  */
 public class ObjectMetadataManagers {
-	private static ObjectMetadataManager manager = new DbObjectMetadataManagerImpl();
-    private static ObjectMetadataManager mocked = null;
+  private static ObjectMetadataManager manager = new DbObjectMetadataManagerImpl();
+  private static ObjectMetadataManager mocked = null;
 
-    public static ObjectMetadataManager getInstance() {
-        if (mocked != null) {
-            return mocked;
-        }
-        return manager;
+  public static ObjectMetadataManager getInstance() {
+    if (mocked != null) {
+      return mocked;
     }
+    return manager;
+  }
 
-	/**
-	 * Access method for testing only.
-	 */
-	static void setInstance(ObjectMetadataManager testManager) {
-		mocked = testManager;
-	}
+  /**
+   * Access method for testing only.
+   */
+  static void setInstance(ObjectMetadataManager testManager) {
+    mocked = testManager;
+  }
 }

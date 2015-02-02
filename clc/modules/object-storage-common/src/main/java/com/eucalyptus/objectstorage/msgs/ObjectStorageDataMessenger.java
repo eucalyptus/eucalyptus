@@ -62,81 +62,83 @@
 
 package com.eucalyptus.objectstorage.msgs;
 
-import org.apache.log4j.Logger;
-
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.apache.log4j.Logger;
 
 // A concurrent hash map that holds a map of queues, which can be used for passing data
 // Currently, the queues are a ObjectStorageDataQueue and producers/consumers do not timeout.
 
 public class ObjectStorageDataMessenger {
-    private static Logger LOG = Logger.getLogger(ObjectStorageDataMessenger.class);
-    private static final int DATA_QUEUE_SIZE = 3;
+  private static Logger LOG = Logger.getLogger(ObjectStorageDataMessenger.class);
+  private static final int DATA_QUEUE_SIZE = 3;
 
-    private ConcurrentHashMap<String, ConcurrentHashMap<String, ObjectStorageDataQueue<ObjectStorageDataMessage>>> queueMap;
-    private ConcurrentHashMap<String, ObjectStorageMonitor> monitorMap;
+  private ConcurrentHashMap<String, ConcurrentHashMap<String, ObjectStorageDataQueue<ObjectStorageDataMessage>>> queueMap;
+  private ConcurrentHashMap<String, ObjectStorageMonitor> monitorMap;
 
-    public ObjectStorageDataMessenger() {
-        queueMap = new ConcurrentHashMap<String, ConcurrentHashMap<String, ObjectStorageDataQueue<ObjectStorageDataMessage>>>();
-        monitorMap = new ConcurrentHashMap<String, ObjectStorageMonitor>();
+  public ObjectStorageDataMessenger() {
+    queueMap = new ConcurrentHashMap<String, ConcurrentHashMap<String, ObjectStorageDataQueue<ObjectStorageDataMessage>>>();
+    monitorMap = new ConcurrentHashMap<String, ObjectStorageMonitor>();
+  }
+
+  public ObjectStorageDataQueue<ObjectStorageDataMessage> getQueue(String key1, String key2) {
+    ConcurrentHashMap<String, ObjectStorageDataQueue<ObjectStorageDataMessage>> queues =
+        queueMap.putIfAbsent(key1, new ConcurrentHashMap<String, ObjectStorageDataQueue<ObjectStorageDataMessage>>());
+    if (queues == null) {
+      queues = queueMap.get(key1);
     }
-
-    public ObjectStorageDataQueue<ObjectStorageDataMessage> getQueue(String key1, String key2) {
-        ConcurrentHashMap<String, ObjectStorageDataQueue<ObjectStorageDataMessage>> queues = queueMap.putIfAbsent(key1, new ConcurrentHashMap<String, ObjectStorageDataQueue<ObjectStorageDataMessage>>());
-        if (queues == null) {
-            queues = queueMap.get(key1);
-        }
-        ObjectStorageDataQueue<ObjectStorageDataMessage> queue = queues.putIfAbsent(key2, new ObjectStorageDataQueue<ObjectStorageDataMessage>(DATA_QUEUE_SIZE));
-        if (queue == null) {
-            queue = queues.get(key2);
-        }
-        return queue;
+    ObjectStorageDataQueue<ObjectStorageDataMessage> queue =
+        queues.putIfAbsent(key2, new ObjectStorageDataQueue<ObjectStorageDataMessage>(DATA_QUEUE_SIZE));
+    if (queue == null) {
+      queue = queues.get(key2);
     }
+    return queue;
+  }
 
-    public ObjectStorageDataQueue<ObjectStorageDataMessage> interruptAllAndGetQueue(String key1, String key2) {
-        ConcurrentHashMap<String, ObjectStorageDataQueue<ObjectStorageDataMessage>> queues = queueMap.get(key1);
-        if (queues != null) {
-            for (ObjectStorageDataQueue<ObjectStorageDataMessage> queue : queues.values()) {
-                queue.setInterrupted(true);
-            }
-        }
-        return getQueue(key1, key2);
+  public ObjectStorageDataQueue<ObjectStorageDataMessage> interruptAllAndGetQueue(String key1, String key2) {
+    ConcurrentHashMap<String, ObjectStorageDataQueue<ObjectStorageDataMessage>> queues = queueMap.get(key1);
+    if (queues != null) {
+      for (ObjectStorageDataQueue<ObjectStorageDataMessage> queue : queues.values()) {
+        queue.setInterrupted(true);
+      }
     }
+    return getQueue(key1, key2);
+  }
 
-    public void clearQueues(String key1) {
-        ConcurrentHashMap<String, ObjectStorageDataQueue<ObjectStorageDataMessage>> queues = queueMap.get(key1);
-        if (queues != null) {
-            for (ObjectStorageDataQueue<ObjectStorageDataMessage> queue : queues.values()) {
-                queue.setInterrupted(false);
-            }
-        }
+  public void clearQueues(String key1) {
+    ConcurrentHashMap<String, ObjectStorageDataQueue<ObjectStorageDataMessage>> queues = queueMap.get(key1);
+    if (queues != null) {
+      for (ObjectStorageDataQueue<ObjectStorageDataMessage> queue : queues.values()) {
+        queue.setInterrupted(false);
+      }
     }
+  }
 
-    public void removeQueue(String key1, String key2) {
-        if (queueMap.containsKey(key1)) {
-            ConcurrentHashMap<String, ObjectStorageDataQueue<ObjectStorageDataMessage>> queues = queueMap.get(key1);
-            if (queues.containsKey(key2)) {
-                queues.remove(key2);
-                synchronized (queues) {
-                    if (queues.size() == 0) {
-                        queueMap.remove(key1);
-                    }
-                }
-            }
+  public void removeQueue(String key1, String key2) {
+    if (queueMap.containsKey(key1)) {
+      ConcurrentHashMap<String, ObjectStorageDataQueue<ObjectStorageDataMessage>> queues = queueMap.get(key1);
+      if (queues.containsKey(key2)) {
+        queues.remove(key2);
+        synchronized (queues) {
+          if (queues.size() == 0) {
+            queueMap.remove(key1);
+          }
         }
+      }
     }
+  }
 
-    public ObjectStorageMonitor getMonitor(String key) {
-        ObjectStorageMonitor monitor = monitorMap.putIfAbsent(key, new ObjectStorageMonitor());
-        if (monitor == null) {
-            monitor = monitorMap.get(key);
-        }
-        return monitor;
+  public ObjectStorageMonitor getMonitor(String key) {
+    ObjectStorageMonitor monitor = monitorMap.putIfAbsent(key, new ObjectStorageMonitor());
+    if (monitor == null) {
+      monitor = monitorMap.get(key);
     }
+    return monitor;
+  }
 
-    public void removeMonitor(String key) {
-        if (monitorMap.containsKey(key)) {
-            monitorMap.remove(key);
-        }
+  public void removeMonitor(String key) {
+    if (monitorMap.containsKey(key)) {
+      monitorMap.remove(key);
     }
+  }
 }

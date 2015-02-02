@@ -68,76 +68,75 @@ import java.util.Set;
 
 import org.apache.commons.httpclient.Header;
 import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpMethodBase;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.storage.common.CallBack;
 import com.eucalyptus.util.EucalyptusCloudException;
 
-
 @Deprecated
 public class HttpWriter extends HttpTransfer {
-	private static Logger LOG = Logger.getLogger(HttpWriter.class);
+  private static Logger LOG = Logger.getLogger(HttpWriter.class);
 
-	public HttpWriter(String httpVerb, String bucket, String key, String eucaOperation, String eucaHeader) {
-		httpClient = new HttpClient();
-		String walrusAddr = StorageProperties.WALRUS_URL;
-		if(walrusAddr != null) {
-			String addr = walrusAddr + "/" + bucket + "/" + key;
-			method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader, true);
-		}
-	}
+  public HttpWriter(String httpVerb, String bucket, String key, String eucaOperation, String eucaHeader) {
+    httpClient = new HttpClient();
+    String walrusAddr = StorageProperties.WALRUS_URL;
+    if (walrusAddr != null) {
+      String addr = walrusAddr + "/" + bucket + "/" + key;
+      method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader, true);
+    }
+  }
 
-	public HttpWriter(String httpVerb, File file, String size, CallBack callback, String bucket, String key, String eucaOperation, String eucaHeader, Map<String, String> httpParameters) {
+  public HttpWriter(String httpVerb, File file, String size, CallBack callback, String bucket, String key, String eucaOperation, String eucaHeader,
+      Map<String, String> httpParameters) {
 
-		httpClient = new HttpClient();
-		String walrusAddr = StorageProperties.WALRUS_URL;
-		if(walrusAddr != null) {
-			String addr = walrusAddr + "/" + bucket + "/" + key;
-			Set<String> paramKeySet = httpParameters.keySet();
-			boolean first = true;
-			for(String paramKey : paramKeySet) {
-				if(!first) {
-					addr += "&";
-				} else {
-					addr += "?";
-				}
-				first = false;
-				addr += paramKey;
-				String value = httpParameters.get(paramKey);
-				if(value != null)
-					addr += "=" + value;
-			}
-			method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader, false);
-			if(method != null) {				
-				method.addRequestHeader(StorageProperties.StorageParameters.EucaSnapSize.toString(), size);				
-				method.setRequestHeader("Transfer-Encoding", "chunked");
-				
-				//Sign the request
-				signEucaInternal(method);
-				
-				((PutMethodWithProgress)method).setOutFile(file);
-				((PutMethodWithProgress)method).setCallBack(callback);
-			}	
-		}
-	}
+    httpClient = new HttpClient();
+    String walrusAddr = StorageProperties.WALRUS_URL;
+    if (walrusAddr != null) {
+      String addr = walrusAddr + "/" + bucket + "/" + key;
+      Set<String> paramKeySet = httpParameters.keySet();
+      boolean first = true;
+      for (String paramKey : paramKeySet) {
+        if (!first) {
+          addr += "&";
+        } else {
+          addr += "?";
+        }
+        first = false;
+        addr += paramKey;
+        String value = httpParameters.get(paramKey);
+        if (value != null)
+          addr += "=" + value;
+      }
+      method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader, false);
+      if (method != null) {
+        method.addRequestHeader(StorageProperties.StorageParameters.EucaSnapSize.toString(), size);
+        method.setRequestHeader("Transfer-Encoding", "chunked");
 
-	private String print() {
-		StringBuilder requestString = new StringBuilder();
-		for(Header h : method.getRequestHeaders()) {
-			requestString.append("Header name: " + h.getName() + " = " + h.getValue() + "\n");
-		}		
-		
-		return requestString.toString();
-	}
-	
-	public void run() throws EucalyptusCloudException {
-		try {
-			httpClient.executeMethod(method);
-			method.releaseConnection();
-		} catch (Exception ex) {
-			throw new EucalyptusCloudException("error transferring", ex);
-		}
-	}
+        // Sign the request
+        signEucaInternal(method);
+
+        ((PutMethodWithProgress) method).setOutFile(file);
+        ((PutMethodWithProgress) method).setCallBack(callback);
+      }
+    }
+  }
+
+  private String print() {
+    StringBuilder requestString = new StringBuilder();
+    for (Header h : method.getRequestHeaders()) {
+      requestString.append("Header name: " + h.getName() + " = " + h.getValue() + "\n");
+    }
+
+    return requestString.toString();
+  }
+
+  public void run() throws EucalyptusCloudException {
+    try {
+      httpClient.executeMethod(method);
+      method.releaseConnection();
+    } catch (Exception ex) {
+      throw new EucalyptusCloudException("error transferring", ex);
+    }
+  }
 }

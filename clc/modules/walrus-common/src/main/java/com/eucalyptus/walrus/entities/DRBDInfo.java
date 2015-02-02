@@ -83,71 +83,70 @@ import com.eucalyptus.walrus.util.WalrusProperties;
 @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 @ConfigurableClass(root = "walrusbackend", alias = "drbd", description = "DRBD configuration.", deferred = true)
 public class DRBDInfo extends AbstractPersistent {
-	private static Logger LOG = Logger.getLogger(DRBDInfo.class);
+  private static Logger LOG = Logger.getLogger(DRBDInfo.class);
 
-	@Column(name = "walrus_name", unique = true)
-	private String name;
-	@ConfigurableField(description = "DRBD block device", displayName = "Block Device")
-	@Column(name = "block_device")
-	private String blockDevice;
-	@ConfigurableField(description = "DRBD resource name", displayName = "DRBD Resource")
-	@Column(name = "resource_name")
-	private String resource;
+  @Column(name = "walrus_name", unique = true)
+  private String name;
+  @ConfigurableField(description = "DRBD block device", displayName = "Block Device")
+  @Column(name = "block_device")
+  private String blockDevice;
+  @ConfigurableField(description = "DRBD resource name", displayName = "DRBD Resource")
+  @Column(name = "resource_name")
+  private String resource;
 
-	public DRBDInfo() {
-	}
+  public DRBDInfo() {}
 
-	public DRBDInfo(final String name, final String blockDevice) {
-		this.name = name;
-		this.blockDevice = blockDevice;
-	}
+  public DRBDInfo(final String name, final String blockDevice) {
+    this.name = name;
+    this.blockDevice = blockDevice;
+  }
 
-	public String getName() {
-		return name;
-	}
+  public String getName() {
+    return name;
+  }
 
-	public void setName(String name) {
-		this.name = name;
-	}
+  public void setName(String name) {
+    this.name = name;
+  }
 
-	public String getBlockDevice() {
-		return blockDevice;
-	}
+  public String getBlockDevice() {
+    return blockDevice;
+  }
 
-	public void setBlockDevice(String blockDevice) {
-		this.blockDevice = blockDevice;
-	}
+  public void setBlockDevice(String blockDevice) {
+    this.blockDevice = blockDevice;
+  }
 
-	public String getResource() {
-		return resource;
-	}
+  public String getResource() {
+    return resource;
+  }
 
-	public void setResource(String resource) {
-		this.resource = resource;
-	}
+  public void setResource(String resource) {
+    this.resource = resource;
+  }
 
-	public static DRBDInfo getDRBDInfo() {
-		DRBDInfo drbdInfo = null;
+  public static DRBDInfo getDRBDInfo() {
+    DRBDInfo drbdInfo = null;
 
-		try {
-			drbdInfo = Transactions.find(new DRBDInfo());
-		} catch (Exception e) {
-			LOG.warn("DRBD information not found. Loading defaults.");
-			try {
-				drbdInfo = Transactions.saveDirect(new DRBDInfo(WalrusProperties.NAME, "/dev/unknown"));
-			} catch (Exception e1) {
-				try {
-					drbdInfo = Transactions.find(new DRBDInfo());
-				} catch (Exception e2) {
-					LOG.warn("Failed to persist and retrieve DRBDInfo entity");
-				}
-			}
-		}
+    try {
+      drbdInfo = Transactions.find(new DRBDInfo());
+    } catch (Exception e) {
+      LOG.warn("DRBD information not found. Loading defaults.");
+      try {
+        drbdInfo = Transactions.saveDirect(new DRBDInfo(WalrusProperties.NAME, "/dev/unknown"));
+      } catch (Exception e1) {
+        try {
+          drbdInfo = Transactions.find(new DRBDInfo());
+        } catch (Exception e2) {
+          LOG.warn("Failed to persist and retrieve DRBDInfo entity");
+        }
+      }
+    }
 
-		if (drbdInfo == null) {
-			drbdInfo = new DRBDInfo(WalrusProperties.NAME, "/dev/unknown");
-		}
+    if (drbdInfo == null) {
+      drbdInfo = new DRBDInfo(WalrusProperties.NAME, "/dev/unknown");
+    }
 
-		return drbdInfo;
-	}
+    return drbdInfo;
+  }
 }

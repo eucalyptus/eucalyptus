@@ -62,44 +62,44 @@
 
 package com.eucalyptus.storage.common.fs;
 
-import org.apache.log4j.Logger;
-
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-public  class FileWriter extends FileIO {
+import org.apache.log4j.Logger;
 
-    private static Logger LOG = Logger.getLogger(FileWriter.class);
+public class FileWriter extends FileIO {
 
-    public FileWriter(String filename) throws Exception {
-        try {
-            channel = new FileOutputStream(filename).getChannel();
-        } catch( FileNotFoundException ex) {
-            LOG.error(ex);
-            throw ex;
-        }
+  private static Logger LOG = Logger.getLogger(FileWriter.class);
+
+  public FileWriter(String filename) throws Exception {
+    try {
+      channel = new FileOutputStream(filename).getChannel();
+    } catch (FileNotFoundException ex) {
+      LOG.error(ex);
+      throw ex;
     }
+  }
 
-    public  int read(long offset) throws IOException {
-        return -1;
-    }
+  public int read(long offset) throws IOException {
+    return -1;
+  }
 
-    public void write(byte[] bytes) throws IOException {
-        ByteBuffer buffer = ByteBuffer.wrap(bytes);
-        channel.write(buffer);
-    }
+  public void write(byte[] bytes) throws IOException {
+    ByteBuffer buffer = ByteBuffer.wrap(bytes);
+    channel.write(buffer);
+  }
 
-    public ByteBuffer getBuffer() {
-        return null;
-    }
+  public ByteBuffer getBuffer() {
+    return null;
+  }
 
-    public void finish() {
-        try {
-            channel.close();
-        } catch(IOException ex) {
-            LOG.error(ex);
-        }
+  public void finish() {
+    try {
+      channel.close();
+    } catch (IOException ex) {
+      LOG.error(ex);
     }
+  }
 }

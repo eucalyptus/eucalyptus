@@ -70,18 +70,18 @@ import com.eucalyptus.ws.stages.UnrollableStage;
 public class WalrusOutboundStage implements UnrollableStage {
 
   @Override
-  public int compareTo( UnrollableStage o ) {
-    return this.getName( ).compareTo( o.getName( ) );
+  public int compareTo(UnrollableStage o) {
+    return this.getName().compareTo(o.getName());
   }
 
   @Override
-  public String getName( ) {
+  public String getName() {
     return "walrus-outbound";
   }
 
   @Override
-  public void unrollStage( ChannelPipeline pipeline ) {
-    pipeline.addLast( "walrus-outbound", new WalrusOutboundHandler( ) );
+  public void unrollStage(ChannelPipeline pipeline) {
+    pipeline.addLast("walrus-outbound", new WalrusOutboundHandler());
   }
 
 }

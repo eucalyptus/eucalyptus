@@ -67,24 +67,22 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 @SuppressWarnings("serial")
 public class NoSuchUploadException extends WalrusException {
 
-  public NoSuchUploadException()
-  {
-    super( "NoSuchUpload" );
+  public NoSuchUploadException() {
+    super("NoSuchUpload");
   }
 
-  public NoSuchUploadException(String resource)
-  {
-      super("NoSuchUpload", "The specified multipart upload does not exist. The upload ID might be invalid, or the multipart upload might have been aborted or completed.", "upload id: ", resource, HttpResponseStatus.NOT_FOUND);
+  public NoSuchUploadException(String resource) {
+    super(
+        "NoSuchUpload",
+        "The specified multipart upload does not exist. The upload ID might be invalid, or the multipart upload might have been aborted or completed.",
+        "upload id: ", resource, HttpResponseStatus.NOT_FOUND);
   }
 
-
-  public NoSuchUploadException(Throwable ex)
-  {
+  public NoSuchUploadException(Throwable ex) {
     super("NoSuchUpload", ex);
   }
 
-  public NoSuchUploadException(String message, Throwable ex)
-  {
+  public NoSuchUploadException(String message, Throwable ex) {
     super(message, ex);
   }
 }

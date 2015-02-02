@@ -65,11 +65,11 @@ package com.eucalyptus.blockstorage.exceptions;
 @SuppressWarnings("serial")
 public class SnapshotFinalizeMpuException extends SnapshotTransferException {
 
-	public SnapshotFinalizeMpuException(String message) {
-		super(message);
-	}
+  public SnapshotFinalizeMpuException(String message) {
+    super(message);
+  }
 
-	public SnapshotFinalizeMpuException(String message, Throwable ex) {
-		super(message, ex);
-	}
+  public SnapshotFinalizeMpuException(String message, Throwable ex) {
+    super(message, ex);
+  }
 }

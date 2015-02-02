@@ -63,9 +63,9 @@
 package com.eucalyptus.storage.common;
 
 public abstract class CheckerTask implements Runnable {
-	protected String name;
-	
-	public String getName() {
-		return name;
-	}
+  protected String name;
+
+  public String getName() {
+    return name;
+  }
 }

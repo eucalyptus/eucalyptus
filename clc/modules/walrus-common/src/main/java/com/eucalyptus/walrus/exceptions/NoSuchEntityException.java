@@ -69,24 +69,23 @@ import com.eucalyptus.storage.msgs.BucketLogData;
 @SuppressWarnings("serial")
 public class NoSuchEntityException extends WalrusException {
 
-  public NoSuchEntityException()
-  {
-    super( "No Such Entity" );
+  public NoSuchEntityException() {
+    super("No Such Entity");
   }
-  public NoSuchEntityException(String entityName)
-  {
+
+  public NoSuchEntityException(String entityName) {
     super("NoSuchEntity", "The specified entity was not found", "Entity", entityName, HttpResponseStatus.NOT_FOUND);
   }
-  public NoSuchEntityException(String entityName, BucketLogData logData)
-  {
+
+  public NoSuchEntityException(String entityName, BucketLogData logData) {
     super("NoSuchEntity", "The specified entity was not found", "Entity", entityName, HttpResponseStatus.NOT_FOUND, logData);
   }
-  public NoSuchEntityException(Throwable ex)
-  {
+
+  public NoSuchEntityException(Throwable ex) {
     super("No Such Entity", ex);
   }
-  public NoSuchEntityException(String message, Throwable ex)
-  {
-    super(message,ex);
+
+  public NoSuchEntityException(String message, Throwable ex) {
+    super(message, ex);
   }
 }

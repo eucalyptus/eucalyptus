@@ -64,19 +64,19 @@ package com.eucalyptus.blockstorage.ceph.exceptions;
 
 public class CannotDeleteCephImageException extends EucalyptusCephException {
 
-	public CannotDeleteCephImageException(String message, Throwable cause) {
-		super(message, cause);
-	}
+  public CannotDeleteCephImageException(String message, Throwable cause) {
+    super(message, cause);
+  }
 
-	public CannotDeleteCephImageException() {
-		super();
-	}
+  public CannotDeleteCephImageException() {
+    super();
+  }
 
-	public CannotDeleteCephImageException(String message) {
-		super(message);
-	}
+  public CannotDeleteCephImageException(String message) {
+    super(message);
+  }
 
-	public CannotDeleteCephImageException(Throwable cause) {
-		super(cause);
-	}
+  public CannotDeleteCephImageException(Throwable cause) {
+    super(cause);
+  }
 }

@@ -79,341 +79,374 @@
 
 package com.eucalyptus.objectstorage.util;
 
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Pattern;
+
+import org.apache.log4j.Logger;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.system.BaseDirectory;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 
-import org.apache.log4j.Logger;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-
-import java.util.Map;
-import java.util.Set;
-import java.util.regex.Pattern;
-
 public class ObjectStorageProperties {
-    private static Logger LOG = Logger.getLogger(ObjectStorageProperties.class);
+  private static Logger LOG = Logger.getLogger(ObjectStorageProperties.class);
 
-    public static final long G = 1024 * 1024 * 1024;
-    public static final long M = 1024 * 1024;
-    public static final long K = 1024;
+  public static final long G = 1024 * 1024 * 1024;
+  public static final long M = 1024 * 1024;
+  public static final long K = 1024;
 
-    public static int IO_CHUNK_SIZE = 4096;
-    public static boolean enableTorrents = false;
-    public static final String NAMESPACE_VERSION = "2006-03-01";
-    public static int MAX_KEYS = 1000;
-    public static int MIN_PART_NUMBER = 1;
-    public static int MAX_PART_NUMBER = 10000;
+  public static int IO_CHUNK_SIZE = 4096;
+  public static boolean enableTorrents = false;
+  public static final String NAMESPACE_VERSION = "2006-03-01";
+  public static int MAX_KEYS = 1000;
+  public static int MIN_PART_NUMBER = 1;
+  public static int MAX_PART_NUMBER = 10000;
 
-    public static final String AMZ_META_HEADER_PREFIX = "x-amz-meta-";
+  public static final String AMZ_META_HEADER_PREFIX = "x-amz-meta-";
 
-    public static final String AMZ_ACL = "x-amz-acl";
-    public static final String AMZ_REQUEST_ID = "x-amz-request-id";
-    public static final String LEGACY_WALRUS_SERVICE_PATH = "/services/Walrus";
-    public static final long OBJECT_CREATION_EXPIRATION_INTERVAL_SEC = 30;
+  public static final String AMZ_ACL = "x-amz-acl";
+  public static final String AMZ_REQUEST_ID = "x-amz-request-id";
+  public static final String LEGACY_WALRUS_SERVICE_PATH = "/services/Walrus";
+  public static final long OBJECT_CREATION_EXPIRATION_INTERVAL_SEC = 30;
 
-    //TODO: zhill - these should be replaced by references to the actual Accounts lookup. May need to add these as valid groups/accounts
-    public static enum S3_GROUP {
-        ALL_USERS_GROUP {
-            public String toString() {
-                return "http://acs.amazonaws.com/groups/global/AllUsers";
-            }
-        },
-        AUTHENTICATED_USERS_GROUP {
-            public String toString() {
-                return "http://acs.amazonaws.com/groups/global/AuthenticatedUsers";
-            }
-        },
-        LOGGING_GROUP {
-            public String toString() {
-                return "http://acs.amazonaws.com/groups/s3/LogDelivery";
-            }
-        },
-
-        //TODO: this is wrong. za-team is a user, not a group. Should use canonicalId: 6aa5a366c34c1cbe25dc49211496e913e0351eb0e8c37aa3477e40942ec6b97c
-        AWS_EXEC_READ {
-            public String toString() {
-                return "http://acs.amazonaws.com/groups/s3/zateam";
-            }
-        }, //Used for the system for vm images
-
-        //This is a made-up group in place of the ec2-bundled-image
-        EC2_BUNDLE_READ {
-            public String toString() {
-                return "http://acs.amazonaws.com/groups/s3/ec2-bundle";
-            }
-        } //Used for the system for vm images
-
-    }
-
-    public static final String IGNORE_PREFIX = "x-ignore-";
-    public static final String COPY_SOURCE = "x-amz-copy-source";
-    public static final String METADATA_DIRECTIVE = "x-amz-metadata-directive";
-
-    public static final String X_AMZ_VERSION_ID = "x-amz-version-id";
-    public static final String NULL_VERSION_ID = "null";
-    public static final String X_AMZ_DELETE_MARKER = "x-amz-delete-marker";
-    public static final String X_AMZ_SECURITY_TOKEN = "x-amz-security-token";
-
-    public static final String TRACKER_BINARY = "bttrack";
-    public static final String TORRENT_CREATOR_BINARY = "btmakemetafile";
-    public static final String TORRENT_CLIENT_BINARY = "btdownloadheadless";
-    public static String TRACKER_DIR = BaseDirectory.VAR.toString() + "/bt";
-    public static String TRACKER_URL = "http://localhost:6969/announce";
-    public static String TRACKER_PORT = "6969";
-
-    public static long MAX_INLINE_DATA_SIZE = 10 * M;
-    //public static String FORM_BOUNDARY_FIELD = IGNORE_PREFIX + "euca-form-boundary"; //internal header value for passing info
-    //public static String FIRST_CHUNK_FIELD = IGNORE_PREFIX + "FirstDataChunk";
-    //public static String UPLOAD_LENGTH_FIELD = IGNORE_PREFIX + "FileContentLength";
-    public static long MPU_PART_MIN_SIZE = 5 * 1024 * 1024; //5MB
-
-    //15 minutes
-    public final static long EXPIRATION_LIMIT = 900000;
-    
-    public static final Pattern RANGE_HEADER_PATTERN = Pattern.compile("^bytes=(\\d*)-(\\d*)$");
-
-    public enum CannedACL {
-        private_only {
-            public String toString() {
-                return "private";
-            }
-        },
-        public_read {
-            public String toString() {
-                return "public-read";
-            }
-        },
-        public_read_write {
-            public String toString() {
-                return "public-read-write";
-            }
-        },
-        authenticated_read {
-            public String toString() {
-                return "authenticated-read";
-            }
-        },
-        bucket_owner_read {
-            public String toString() {
-                return "bucket-owner-read";
-            }
-        },
-        bucket_owner_full_control {
-            public String toString() {
-                return "bucket-owner-full-control";
-            }
-        },
-        log_delivery_write {
-            public String toString() {
-                return "log-delivery-write";
-            }
-        },
-        aws_exec_read {
-            public String toString() {
-                return "aws-exec-read";
-            }
-        },
-        ec2_bundle_read {
-            public String toString() {
-                return "ec2-bundle-read";
-            }
-        }
-    }
-
-    public enum STORAGE_CLASS {
-        STANDARD,
-        REDUCED_REDUNDANCY;
-    }
-
-    public enum Permission {
-        READ, WRITE, READ_ACP, WRITE_ACP, FULL_CONTROL
-    }
-    
-    public enum X_AMZ_GRANT {
-      READ("x-amz-grant-read"),
-      WRITE("x-amz-grant-write"),
-      READ_ACP("x-amz-grant-read-acp"),
-      WRITE_ACP("x-amz-grant-write-acp"),
-      FULL_CONTROL("x-amz-grant-full-control");
-      
-      private final String header;
-      
-      private X_AMZ_GRANT(String header) {
-        this.header = header;
-      }
-      
-      @Override
+  // TODO: zhill - these should be replaced by references to the actual Accounts lookup. May need to add these as valid groups/accounts
+  public static enum S3_GROUP {
+    ALL_USERS_GROUP {
       public String toString() {
-        return this.header;
+        return "http://acs.amazonaws.com/groups/global/AllUsers";
+      }
+    },
+    AUTHENTICATED_USERS_GROUP {
+      public String toString() {
+        return "http://acs.amazonaws.com/groups/global/AuthenticatedUsers";
+      }
+    },
+    LOGGING_GROUP {
+      public String toString() {
+        return "http://acs.amazonaws.com/groups/s3/LogDelivery";
+      }
+    },
+
+    // TODO: this is wrong. za-team is a user, not a group. Should use canonicalId: 6aa5a366c34c1cbe25dc49211496e913e0351eb0e8c37aa3477e40942ec6b97c
+    AWS_EXEC_READ {
+      public String toString() {
+        return "http://acs.amazonaws.com/groups/s3/zateam";
+      }
+    }, // Used for the system for vm images
+
+    // This is a made-up group in place of the ec2-bundled-image
+    EC2_BUNDLE_READ {
+      public String toString() {
+        return "http://acs.amazonaws.com/groups/s3/ec2-bundle";
+      }
+    } // Used for the system for vm images
+
+  }
+
+  public static final String IGNORE_PREFIX = "x-ignore-";
+  public static final String COPY_SOURCE = "x-amz-copy-source";
+  public static final String METADATA_DIRECTIVE = "x-amz-metadata-directive";
+
+  public static final String X_AMZ_VERSION_ID = "x-amz-version-id";
+  public static final String NULL_VERSION_ID = "null";
+  public static final String X_AMZ_DELETE_MARKER = "x-amz-delete-marker";
+  public static final String X_AMZ_SECURITY_TOKEN = "x-amz-security-token";
+
+  public static final String TRACKER_BINARY = "bttrack";
+  public static final String TORRENT_CREATOR_BINARY = "btmakemetafile";
+  public static final String TORRENT_CLIENT_BINARY = "btdownloadheadless";
+  public static String TRACKER_DIR = BaseDirectory.VAR.toString() + "/bt";
+  public static String TRACKER_URL = "http://localhost:6969/announce";
+  public static String TRACKER_PORT = "6969";
+
+  public static long MAX_INLINE_DATA_SIZE = 10 * M;
+  // public static String FORM_BOUNDARY_FIELD = IGNORE_PREFIX + "euca-form-boundary"; //internal header value for passing info
+  // public static String FIRST_CHUNK_FIELD = IGNORE_PREFIX + "FirstDataChunk";
+  // public static String UPLOAD_LENGTH_FIELD = IGNORE_PREFIX + "FileContentLength";
+  public static long MPU_PART_MIN_SIZE = 5 * 1024 * 1024; // 5MB
+
+  // 15 minutes
+  public final static long EXPIRATION_LIMIT = 900000;
+
+  public static final Pattern RANGE_HEADER_PATTERN = Pattern.compile("^bytes=(\\d*)-(\\d*)$");
+
+  public enum CannedACL {
+    private_only {
+      public String toString() {
+        return "private";
+      }
+    },
+    public_read {
+      public String toString() {
+        return "public-read";
+      }
+    },
+    public_read_write {
+      public String toString() {
+        return "public-read-write";
+      }
+    },
+    authenticated_read {
+      public String toString() {
+        return "authenticated-read";
+      }
+    },
+    bucket_owner_read {
+      public String toString() {
+        return "bucket-owner-read";
+      }
+    },
+    bucket_owner_full_control {
+      public String toString() {
+        return "bucket-owner-full-control";
+      }
+    },
+    log_delivery_write {
+      public String toString() {
+        return "log-delivery-write";
+      }
+    },
+    aws_exec_read {
+      public String toString() {
+        return "aws-exec-read";
+      }
+    },
+    ec2_bundle_read {
+      public String toString() {
+        return "ec2-bundle-read";
       }
     }
-    
-    public static final Map<X_AMZ_GRANT, Permission> HEADER_PERMISSION_MAP = ImmutableMap.<X_AMZ_GRANT, Permission>builder()
-      .put(X_AMZ_GRANT.READ, Permission.READ)
-      .put(X_AMZ_GRANT.WRITE, Permission.WRITE)
-      .put(X_AMZ_GRANT.READ_ACP, Permission.READ_ACP)
-      .put(X_AMZ_GRANT.WRITE_ACP, Permission.WRITE_ACP)
-      .put(X_AMZ_GRANT.FULL_CONTROL, Permission.FULL_CONTROL).build();
+  }
 
-    public enum VersioningStatus {
-        Enabled, Disabled, Suspended
+  public enum STORAGE_CLASS {
+    STANDARD, REDUCED_REDUNDANCY;
+  }
+
+  public enum Permission {
+    READ, WRITE, READ_ACP, WRITE_ACP, FULL_CONTROL
+  }
+
+  public enum X_AMZ_GRANT {
+    READ("x-amz-grant-read"), WRITE("x-amz-grant-write"), READ_ACP("x-amz-grant-read-acp"), WRITE_ACP("x-amz-grant-write-acp"), FULL_CONTROL(
+        "x-amz-grant-full-control");
+
+    private final String header;
+
+    private X_AMZ_GRANT(String header) {
+      this.header = header;
     }
 
-    public enum Headers {
-        Bucket, Key, RandomKey, VolumeId, S3UploadPolicy, S3UploadPolicySignature
+    @Override
+    public String toString() {
+      return this.header;
     }
+  }
 
-    public enum ExtendedGetHeaders {
-        IfModifiedSince, IfUnmodifiedSince, IfMatch, IfNoneMatch, Range
-    }
+  public static final Map<X_AMZ_GRANT, Permission> HEADER_PERMISSION_MAP = ImmutableMap.<X_AMZ_GRANT, Permission>builder()
+      .put(X_AMZ_GRANT.READ, Permission.READ).put(X_AMZ_GRANT.WRITE, Permission.WRITE).put(X_AMZ_GRANT.READ_ACP, Permission.READ_ACP)
+      .put(X_AMZ_GRANT.WRITE_ACP, Permission.WRITE_ACP).put(X_AMZ_GRANT.FULL_CONTROL, Permission.FULL_CONTROL).build();
 
-    public enum ExtendedHeaderDateTypes {
-        IfModifiedSince, IfUnmodifiedSince, CopySourceIfModifiedSince, CopySourceIfUnmodifiedSince;
+  public enum VersioningStatus {
+    Enabled, Disabled, Suspended
+  }
 
-        public static boolean contains(String value) {
-            for (ExtendedHeaderDateTypes type : values()) {
-                if (type.toString().equals(value)) {
-                    return true;
-                }
-            }
-            return false;
+  public enum Headers {
+    Bucket, Key, RandomKey, VolumeId, S3UploadPolicy, S3UploadPolicySignature
+  }
+
+  public enum ExtendedGetHeaders {
+    IfModifiedSince, IfUnmodifiedSince, IfMatch, IfNoneMatch, Range
+  }
+
+  public enum ExtendedHeaderDateTypes {
+    IfModifiedSince, IfUnmodifiedSince, CopySourceIfModifiedSince, CopySourceIfUnmodifiedSince;
+
+    public static boolean contains(String value) {
+      for (ExtendedHeaderDateTypes type : values()) {
+        if (type.toString().equals(value)) {
+          return true;
         }
+      }
+      return false;
     }
+  }
 
-    public enum ExtendedHeaderRangeTypes {
-        ByteRangeStart, ByteRangeEnd
+  public enum ExtendedHeaderRangeTypes {
+    ByteRangeStart, ByteRangeEnd
+  }
+
+  public enum GetOptionalParameters {
+    IsCompressed
+  }
+
+  public enum FormField {
+    AWSAccessKeyId, key, bucket, acl, Policy, redirect, success_action_redirect, success_action_status, x_amz_security_token {
+      public String toString() {
+        return "x-amz-security-token";
+      }
+    },
+    Signature, file, Cache_Control {
+      public String toString() {
+        return HttpHeaders.Names.CACHE_CONTROL;
+      }
+    },
+    Content_Type {
+      public String toString() {
+        return HttpHeaders.Names.CONTENT_TYPE;
+      }
+    },
+    Content_Disposition {
+      public String toString() {
+        return "Content-Disposition";
+      }
+    },
+    Content_Encoding {
+      public String toString() {
+        return HttpHeaders.Names.CONTENT_ENCODING;
+      }
+    },
+    Expires, x_ignore_firstdatachunk {
+      public String toString() {
+        return "x-ignore-firstdatachunk";
+      }
+    },
+    x_ignore_filecontentlength {
+      public String toString() {
+        return "x-ignore-filecontentlength";
+      }
+    },
+    x_ignore_formboundary {
+      public String toString() {
+        return "x-ignore-formboundary";
+      }
+    };
+
+    private static Set<FormField> HTTPHeaderFields = Sets.newHashSet(FormField.Content_Type, FormField.Cache_Control, FormField.Content_Disposition,
+        FormField.Content_Encoding, FormField.Expires);
+
+    public static boolean isHttpField(String value) {
+      try {
+        return HTTPHeaderFields.contains(FormField.valueOf(value.replace('-', '_')));
+      } catch (IllegalArgumentException e) {
+        return false;
+      }
     }
+  }
 
-    public enum GetOptionalParameters {
-        IsCompressed
+  public enum IgnoredFields {
+    AWSAccessKeyId, Signature, file, Policy, submit
+  }
+
+  public enum PolicyHeaders {
+    expiration, conditions
+  }
+
+  public enum CopyHeaders {
+    CopySourceIfMatch, CopySourceIfNoneMatch, CopySourceIfUnmodifiedSince, CopySourceIfModifiedSince
+  }
+
+  public enum MetadataDirective {
+    COPY, REPLACE
+  }
+
+  public enum SubResource {
+    // Per the S3 Dev guide, these must be included in the canonicalized resource:
+    acl, lifecycle, location, logging, notification, partNumber, policy, requestPayment, torrent, uploadId, uploads, versionId, versioning, versions, website, cors, tagging
+  }
+
+  public enum ResponseHeaderOverrides {
+    response_content_type {
+      public String toString() {
+        return "response-content-type";
+      }
+    },
+    response_content_language {
+      public String toString() {
+        return "response-content-language";
+      }
+    },
+    response_expires {
+      public String toString() {
+        return "response-expires";
+      }
+    },
+    response_cache_control {
+      public String toString() {
+        return "response-cache-control";
+      }
+    },
+    response_content_disposition {
+      public String toString() {
+        return "response-content-disposition";
+      }
+    },
+    response_content_encoding {
+      public String toString() {
+        return "response-content-encoding";
+      }
+    };
+
+    public static ResponseHeaderOverrides fromString(String value) {
+      if (value != null && "response-content-type".equals(value)) {
+        return response_content_type;
+      }
+      if (value != null && "response-content-language".equals(value)) {
+        return response_content_language;
+      }
+      if (value != null && "response-expires".equals(value)) {
+        return response_expires;
+      }
+      if (value != null && "response-cache-control".equals(value)) {
+        return response_cache_control;
+      }
+      if (value != null && "response-content-disposition".equals(value)) {
+        return response_content_disposition;
+      }
+      if (value != null && "response-content-encoding".equals(value)) {
+        return response_content_encoding;
+      }
+
+      return null;
     }
+  }
 
-    public enum FormField {
-        AWSAccessKeyId,
-        key,
-        bucket,
-        acl,
-        Policy,
-        redirect,
-        success_action_redirect,
-        success_action_status,
-        x_amz_security_token { public String toString() { return "x-amz-security-token"; }},
-        Signature,
-        file,
-        Cache_Control  { public String toString() { return HttpHeaders.Names.CACHE_CONTROL; }},
-        Content_Type  { public String toString() { return HttpHeaders.Names.CONTENT_TYPE; }},
-        Content_Disposition { public String toString() { return "Content-Disposition"; }},
-        Content_Encoding { public String toString() { return HttpHeaders.Names.CONTENT_ENCODING; }},
-        Expires,
-        x_ignore_firstdatachunk { public String toString() { return "x-ignore-firstdatachunk"; }},
-        x_ignore_filecontentlength { public String toString() { return "x-ignore-filecontentlength"; }},
-        x_ignore_formboundary{ public String toString() { return "x-ignore-formboundary"; }};
+  public static final Map<String, String> RESPONSE_OVERRIDE_HTTP_HEADER_MAP = ImmutableMap.<String, String>builder()
+      .put(ObjectStorageProperties.ResponseHeaderOverrides.response_content_type.toString(), HttpHeaders.Names.CONTENT_TYPE)
+      .put(ObjectStorageProperties.ResponseHeaderOverrides.response_content_language.toString(), HttpHeaders.Names.CONTENT_LANGUAGE)
+      .put(ObjectStorageProperties.ResponseHeaderOverrides.response_expires.toString(), HttpHeaders.Names.EXPIRES)
+      .put(ObjectStorageProperties.ResponseHeaderOverrides.response_cache_control.toString(), HttpHeaders.Names.CACHE_CONTROL)
+      .put(ObjectStorageProperties.ResponseHeaderOverrides.response_content_disposition.toString(), "Content-Disposition")
+      .put(ObjectStorageProperties.ResponseHeaderOverrides.response_content_encoding.toString(), HttpHeaders.Names.CONTENT_ENCODING).build();
 
-        private static Set<FormField> HTTPHeaderFields = Sets.newHashSet(FormField.Content_Type, FormField.Cache_Control, FormField.Content_Disposition, FormField.Content_Encoding, FormField.Expires);
-        public static boolean isHttpField(String value) {
-            try {
-                return HTTPHeaderFields.contains(FormField.valueOf(value.replace('-','_')));
-            } catch(IllegalArgumentException e) {
-                return false;
-            }
-        }
+  public enum HTTPVerb {
+    GET, PUT, DELETE, POST, HEAD, OPTIONS;
+  }
+
+  public enum ServiceParameter {
+  }
+
+  public enum BucketParameter {
+    acl, location, prefix, maxkeys, delimiter, marker, torrent, logging, versioning, versions, versionidmarker, keymarker, cors, lifecycle, policy, notification, tagging, requestPayment, website, uploads, maxUploads, uploadIdMarker;
+  }
+
+  public enum ObjectParameter {
+    acl, torrent, versionId, uploads, partNumber, uploadId, maxParts, partNumberMarker;
+  }
+
+  public enum RequiredQueryParams {
+    Date
+  }
+
+  public static String getTrackerUrl() {
+    try {
+      TRACKER_URL = "http://" + Topology.lookup(ObjectStorage.class).getUri().getHost() + ":" + TRACKER_PORT + "/announce";
+    } catch (Exception e) {
+      LOG.error(e);
     }
-
-    public enum IgnoredFields {
-        AWSAccessKeyId, Signature, file, Policy, submit
-    }
-
-    public enum PolicyHeaders {
-        expiration, conditions
-    }
-
-    public enum CopyHeaders {
-        CopySourceIfMatch, CopySourceIfNoneMatch, CopySourceIfUnmodifiedSince, CopySourceIfModifiedSince
-    }
-    
-    public enum MetadataDirective {
-    	COPY, REPLACE
-    }
-
-    public enum SubResource {
-        //Per the S3 Dev guide, these must be included in the canonicalized resource:
-        acl, lifecycle, location, logging, notification, partNumber, policy, requestPayment, torrent, uploadId, uploads, versionId, versioning, versions, website, cors, tagging
-    }
-
-    public enum ResponseHeaderOverrides {
-        response_content_type        { public String toString() { return "response-content-type"; }},
-        response_content_language    { public String toString() { return "response-content-language"; }},
-        response_expires             { public String toString() { return "response-expires"; }},
-        response_cache_control       { public String toString() { return "response-cache-control"; }},
-        response_content_disposition { public String toString() { return "response-content-disposition"; }},
-        response_content_encoding    { public String toString() { return "response-content-encoding"; }};
-
-        public static ResponseHeaderOverrides fromString(String value) {
-            if (value != null && "response-content-type".equals(value)) {
-                return response_content_type;
-            }
-            if (value != null && "response-content-language".equals(value)) {
-                return response_content_language;
-            }
-            if (value != null && "response-expires".equals(value)) {
-                return response_expires;
-            }
-            if (value != null && "response-cache-control".equals(value)) {
-                return response_cache_control;
-            }
-            if (value != null && "response-content-disposition".equals(value)) {
-                return response_content_disposition;
-            }
-            if (value != null && "response-content-encoding".equals(value)) {
-                return response_content_encoding;
-            }
-
-            return null;
-        }
-    }
-
-    public static final Map<String,String> RESPONSE_OVERRIDE_HTTP_HEADER_MAP = ImmutableMap.<String,String> builder()
-            .put( ObjectStorageProperties.ResponseHeaderOverrides.response_content_type.toString(),
-                    HttpHeaders.Names.CONTENT_TYPE)
-            .put( ObjectStorageProperties.ResponseHeaderOverrides.response_content_language.toString(),
-                    HttpHeaders.Names.CONTENT_LANGUAGE)
-            .put( ObjectStorageProperties.ResponseHeaderOverrides.response_expires.toString(),
-                    HttpHeaders.Names.EXPIRES)
-            .put( ObjectStorageProperties.ResponseHeaderOverrides.response_cache_control.toString(),
-                    HttpHeaders.Names.CACHE_CONTROL)
-            .put(ObjectStorageProperties.ResponseHeaderOverrides.response_content_disposition.toString(),
-                    "Content-Disposition")
-            .put(ObjectStorageProperties.ResponseHeaderOverrides.response_content_encoding.toString(),
-                    HttpHeaders.Names.CONTENT_ENCODING)
-            .build();
-
-    public enum HTTPVerb {
-        GET, PUT, DELETE, POST, HEAD, OPTIONS;
-    }
-
-    public enum ServiceParameter {
-    }
-
-    public enum BucketParameter {
-        acl, location, prefix, maxkeys, delimiter, marker, torrent, logging, versioning, versions, versionidmarker, keymarker, cors, lifecycle, policy, notification, tagging, requestPayment, website, uploads, maxUploads, uploadIdMarker;
-    }
-
-    public enum ObjectParameter {
-        acl, torrent, versionId, uploads, partNumber, uploadId, maxParts, partNumberMarker;
-    }
-
-    public enum RequiredQueryParams {
-        Date
-    }
-
-    public static String getTrackerUrl() {
-        try {
-            TRACKER_URL = "http://" + Topology.lookup(ObjectStorage.class).getUri().getHost() + ":" + TRACKER_PORT + "/announce";
-        } catch (Exception e) {
-            LOG.error(e);
-        }
-        return TRACKER_URL;
-    }
+    return TRACKER_URL;
+  }
 }

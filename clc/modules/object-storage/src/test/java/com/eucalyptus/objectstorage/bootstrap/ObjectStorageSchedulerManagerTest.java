@@ -62,72 +62,73 @@
 
 package com.eucalyptus.objectstorage.bootstrap;
 
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.objectstorage.UnitTestSupport;
-import com.eucalyptus.objectstorage.entities.ScheduledJob;
+import static org.junit.Assert.assertTrue;
+
+import java.util.List;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.util.List;
-
-import static org.junit.Assert.assertTrue;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.objectstorage.UnitTestSupport;
+import com.eucalyptus.objectstorage.entities.ScheduledJob;
 
 /*
  *
  */
 public class ObjectStorageSchedulerManagerTest {
 
-    @BeforeClass
-    public static void beforeClass() throws Exception {
-        UnitTestSupport.setupOsgPersistenceContext();
+  @BeforeClass
+  public static void beforeClass() throws Exception {
+    UnitTestSupport.setupOsgPersistenceContext();
+  }
+
+  @AfterClass
+  public static void afterClass() throws Exception {
+    UnitTestSupport.tearDownOsgPersistenceContext();
+  }
+
+  @Test
+  public void testPopulateJobs() throws Exception {
+    ObjectStorageSchedulerManager.start();
+
+    // need to make sure that jobs made it to the database
+    boolean foundObjReaper = false;
+    boolean foundBktReaper = false;
+    boolean foundLifecycleProcessor = false;
+    List<ScheduledJob> results = null;
+    ScheduledJob example = new ScheduledJob();
+    try (TransactionResource tran = Entities.transactionFor(ScheduledJob.class)) {
+      results = Entities.query(example);
+      tran.commit();
     }
-
-    @AfterClass
-    public static void afterClass() throws Exception {
-        UnitTestSupport.tearDownOsgPersistenceContext();
-    }
-
-    @Test
-    public void testPopulateJobs() throws Exception {
-        ObjectStorageSchedulerManager.start();
-
-        // need to make sure that jobs made it to the database
-        boolean foundObjReaper = false;
-        boolean foundBktReaper = false;
-        boolean foundLifecycleProcessor = false;
-        List<ScheduledJob> results = null;
-        ScheduledJob example = new ScheduledJob();
-        try (TransactionResource tran = Entities.transactionFor(ScheduledJob.class)) {
-            results = Entities.query(example);
-            tran.commit();
+    for (ScheduledJob job : results) {
+      if (!foundBktReaper) {
+        if (job.getJobClassName().equals(ObjectStorageSchedulerManager.BUCKET_REAPER_CLASSNAME)) {
+          foundBktReaper = true;
         }
-        for (ScheduledJob job : results) {
-            if (!foundBktReaper) {
-                if (job.getJobClassName().equals(ObjectStorageSchedulerManager.BUCKET_REAPER_CLASSNAME)) {
-                    foundBktReaper = true;
-                }
-            }
-            if (!foundObjReaper) {
-                if (job.getJobClassName().equals(ObjectStorageSchedulerManager.OBJECT_REAPER_CLASSNAME)) {
-                    foundObjReaper = true;
-                }
-            }
-            if (!foundLifecycleProcessor) {
-                if (job.getJobClassName().equals(ObjectStorageSchedulerManager.LIFECYCLE_CLEANUP_CLASSNAME)) {
-                    foundLifecycleProcessor = true;
-                }
-            }
+      }
+      if (!foundObjReaper) {
+        if (job.getJobClassName().equals(ObjectStorageSchedulerManager.OBJECT_REAPER_CLASSNAME)) {
+          foundObjReaper = true;
         }
-
-        assertTrue("expected to find bucket reaper", foundBktReaper);
-        assertTrue("expected to find object reaper", foundObjReaper);
-        assertTrue("expected to find lifecycle processor", foundLifecycleProcessor);
-
-        ObjectStorageSchedulerManager.dumpInfo();
-        ObjectStorageSchedulerManager.stop();
-
+      }
+      if (!foundLifecycleProcessor) {
+        if (job.getJobClassName().equals(ObjectStorageSchedulerManager.LIFECYCLE_CLEANUP_CLASSNAME)) {
+          foundLifecycleProcessor = true;
+        }
+      }
     }
+
+    assertTrue("expected to find bucket reaper", foundBktReaper);
+    assertTrue("expected to find object reaper", foundObjReaper);
+    assertTrue("expected to find lifecycle processor", foundLifecycleProcessor);
+
+    ObjectStorageSchedulerManager.dumpInfo();
+    ObjectStorageSchedulerManager.stop();
+
+  }
 
 }

@@ -66,21 +66,21 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 @SuppressWarnings("serial")
 public class WalrusDataQueue<T> extends LinkedBlockingQueue<T> {
-	public boolean interrupted;
-	
-	public WalrusDataQueue() {
-		super();
-	}
+  public boolean interrupted;
 
-	public WalrusDataQueue(int dataQueueSize) {
-		super(dataQueueSize);
-	}
-	
-	public void setInterrupted(boolean value) {
-		this.interrupted = value;
-	}
-	
-	public boolean getInterrupted() {
-		return this.interrupted;
-	}
+  public WalrusDataQueue() {
+    super();
+  }
+
+  public WalrusDataQueue(int dataQueueSize) {
+    super(dataQueueSize);
+  }
+
+  public void setInterrupted(boolean value) {
+    this.interrupted = value;
+  }
+
+  public boolean getInterrupted() {
+    return this.interrupted;
+  }
 }

@@ -67,12 +67,12 @@ import com.eucalyptus.util.EucalyptusCloudException;
 @SuppressWarnings("serial")
 public class SnapshotTransferException extends EucalyptusCloudException {
 
-	public SnapshotTransferException(String message, Throwable ex) {
-		super(message, ex);
-	}
+  public SnapshotTransferException(String message, Throwable ex) {
+    super(message, ex);
+  }
 
-	public SnapshotTransferException(String message) {
-		super(message);
-	}
+  public SnapshotTransferException(String message) {
+    super(message);
+  }
 
 }

@@ -62,34 +62,35 @@
 
 package com.eucalyptus.objectstorage.metadata;
 
+import java.util.List;
+
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
 import com.eucalyptus.storage.msgs.s3.LifecycleRule;
-
-import javax.persistence.EntityTransaction;
-import java.util.List;
 
 /*
  *
  */
 public interface BucketLifecycleManager {
 
-    public static final String RULE_STATUS_ENABLED = "Enabled";
-    public static final long MAX_WAIT_TIME_FOR_PROCESSING = 60l * 1000l; // 60 seconds (for now)
+  public static final String RULE_STATUS_ENABLED = "Enabled";
+  public static final long MAX_WAIT_TIME_FOR_PROCESSING = 60l * 1000l; // 60 seconds (for now)
 
-    public void start() throws Exception;
-    public void stop() throws Exception;
+  public void start() throws Exception;
 
-    public void deleteLifecycleRules(String bucketUuid) throws ObjectStorageException ;
+  public void stop() throws Exception;
 
-    public void deleteLifecycleRules(String bucketUuid, TransactionResource tran);
+  public void deleteLifecycleRules(String bucketUuid) throws ObjectStorageException;
 
-    public void addLifecycleRules(List<com.eucalyptus.storage.msgs.s3.LifecycleRule> rules, String bucketUuid) throws ObjectStorageException;
+  public void deleteLifecycleRules(String bucketUuid, TransactionResource tran);
 
-    public List<LifecycleRule> getLifecycleRules(String bucketUuid) throws Exception;
+  public void addLifecycleRules(List<com.eucalyptus.storage.msgs.s3.LifecycleRule> rules, String bucketUuid) throws ObjectStorageException;
 
-    public List<com.eucalyptus.objectstorage.entities.LifecycleRule> getLifecycleRules() throws Exception;
+  public List<LifecycleRule> getLifecycleRules(String bucketUuid) throws Exception;
 
-    public com.eucalyptus.objectstorage.entities.LifecycleRule getLifecycleRuleForReaping(String ruleId, String bucketUuid) throws ObjectStorageException;
+  public List<com.eucalyptus.objectstorage.entities.LifecycleRule> getLifecycleRules() throws Exception;
+
+  public com.eucalyptus.objectstorage.entities.LifecycleRule getLifecycleRuleForReaping(String ruleId, String bucketUuid)
+      throws ObjectStorageException;
 
 }

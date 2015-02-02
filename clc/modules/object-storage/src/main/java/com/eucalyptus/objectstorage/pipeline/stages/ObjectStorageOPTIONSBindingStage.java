@@ -64,27 +64,26 @@ package com.eucalyptus.objectstorage.pipeline.stages;
 
 import org.jboss.netty.channel.ChannelPipeline;
 
-import com.eucalyptus.objectstorage.pipeline.binding.ObjectStorageGETBinding;
 import com.eucalyptus.objectstorage.pipeline.binding.ObjectStorageOPTIONSBinding;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
 public class ObjectStorageOPTIONSBindingStage implements UnrollableStage {
 
   @Override
-  public int compareTo( UnrollableStage o ) {
-    return this.getName( ).compareTo( o.getName( ) );
+  public int compareTo(UnrollableStage o) {
+    return this.getName().compareTo(o.getName());
   }
 
   @Override
-  public String getName( ) {
-		return "objectstorage-options-binding";
-	}
+  public String getName() {
+    return "objectstorage-options-binding";
+  }
 
-	@Override
-	public void unrollStage( ChannelPipeline pipeline ) {
-		//pipeline.addLast( "objectstorage-rest-logger-outbound", new ObjectStorageRESTLoggerOutbound( ) );
-		pipeline.addLast( "objectstorage-options-binding", new ObjectStorageOPTIONSBinding( ) );
-		//pipeline.addLast( "objectstorage-rest-logger-inbound", new ObjectStorageRESTLoggerInbound( ) );
-	}
+  @Override
+  public void unrollStage(ChannelPipeline pipeline) {
+    // pipeline.addLast( "objectstorage-rest-logger-outbound", new ObjectStorageRESTLoggerOutbound( ) );
+    pipeline.addLast("objectstorage-options-binding", new ObjectStorageOPTIONSBinding());
+    // pipeline.addLast( "objectstorage-rest-logger-inbound", new ObjectStorageRESTLoggerInbound( ) );
+  }
 
 }

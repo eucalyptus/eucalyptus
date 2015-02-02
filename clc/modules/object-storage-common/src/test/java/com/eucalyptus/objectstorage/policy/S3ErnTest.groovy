@@ -49,9 +49,9 @@ class S3ErnTest {
   @Test
   void testParseValid( ) {
     List<String> arns = [
-        'arn:aws:s3:::my_corporate_bucket',
-        'arn:aws:s3:::my_corporate_bucket/*',
-        'arn:aws:s3:::my_corporate_bucket/Development/*',
+      'arn:aws:s3:::my_corporate_bucket',
+      'arn:aws:s3:::my_corporate_bucket/*',
+      'arn:aws:s3:::my_corporate_bucket/Development/*',
     ]
     for ( String arn : arns ) {
       Ern.parse( arn )

@@ -29,22 +29,21 @@ import org.junit.Test
  */
 @CompileStatic
 class ByteMatcherIndexFinderTest {
-    @Test
-    public void testByteMatcher() {
-        byte[] boundaryBytes = "\r\n--boundary\r\n".getBytes("UTF-8")
-        OSGUtil.ByteMatcherBeginningIndexFinder finder = new OSGUtil.ByteMatcherBeginningIndexFinder(boundaryBytes)
+  @Test
+  public void testByteMatcher() {
+    byte[] boundaryBytes = "\r\n--boundary\r\n".getBytes("UTF-8")
+    OSGUtil.ByteMatcherBeginningIndexFinder finder = new OSGUtil.ByteMatcherBeginningIndexFinder(boundaryBytes)
 
-        byte[] content = "blablahblah\r\n--boundary\r\n".getBytes("UTF-8")
-        int index = ChannelBuffers.wrappedBuffer(content).bytesBefore(finder)
-        assert(index == 11)
+    byte[] content = "blablahblah\r\n--boundary\r\n".getBytes("UTF-8")
+    int index = ChannelBuffers.wrappedBuffer(content).bytesBefore(finder)
+    assert(index == 11)
 
-        content = "\r\n--boundary\r\nblahblach".getBytes("UTF-8")
-        index = ChannelBuffers.wrappedBuffer(content).bytesBefore(finder)
-        assert(index == 0)
+    content = "\r\n--boundary\r\nblahblach".getBytes("UTF-8")
+    index = ChannelBuffers.wrappedBuffer(content).bytesBefore(finder)
+    assert(index == 0)
 
-        content = "blablahblah--boundary\r\n".getBytes("UTF-8")
-        index = ChannelBuffers.wrappedBuffer(content).bytesBefore(finder)
-        assert(index == -1)
-
-    }
+    content = "blablahblah--boundary\r\n".getBytes("UTF-8")
+    index = ChannelBuffers.wrappedBuffer(content).bytesBefore(finder)
+    assert(index == -1)
+  }
 }

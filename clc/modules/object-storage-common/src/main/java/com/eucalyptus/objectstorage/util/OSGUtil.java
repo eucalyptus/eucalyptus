@@ -62,13 +62,25 @@
 
 package com.eucalyptus.objectstorage.util;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+
+import javax.crypto.Cipher;
+
+import org.bouncycastle.util.encoders.Base64;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBufferIndexFinder;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpResponse;
+
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
 import com.eucalyptus.objectstorage.msgs.HeadObjectResponseType;
-import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -78,156 +90,146 @@ import com.google.common.base.Strings;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
-import org.bouncycastle.util.encoders.Base64;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferIndexFinder;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-
-import javax.crypto.Cipher;
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-
 
 public class OSGUtil {
 
-    public static BaseMessage convertErrorMessage(ExceptionResponseType errorMessage) {
-        Throwable ex = errorMessage.getException();
-        String correlationId = errorMessage.getCorrelationId();
-        BaseMessage errMsg = null;
-        if ((errMsg = convertException(correlationId, ex)) == null) {
-            errMsg = errorMessage;
-        }
-        return errMsg;
+  public static BaseMessage convertErrorMessage(ExceptionResponseType errorMessage) {
+    Throwable ex = errorMessage.getException();
+    String correlationId = errorMessage.getCorrelationId();
+    BaseMessage errMsg = null;
+    if ((errMsg = convertException(correlationId, ex)) == null) {
+      errMsg = errorMessage;
+    }
+    return errMsg;
+  }
+
+  public static BaseMessage convertErrorMessage(EucalyptusErrorMessageType errorMessage) {
+    Throwable ex = errorMessage.getException();
+    String correlationId = errorMessage.getCorrelationId();
+    BaseMessage errMsg = null;
+    if ((errMsg = convertException(correlationId, ex)) == null) {
+      errMsg = errorMessage;
+    }
+    return errMsg;
+  }
+
+  private static BaseMessage convertException(String correlationId, Throwable ex) {
+    BaseMessage errMsg;
+    if (ex instanceof ObjectStorageException) {
+      ObjectStorageException e = (ObjectStorageException) ex;
+      errMsg =
+          new ObjectStorageErrorMessageType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), correlationId,
+              Internets.localHostAddress(), e.getLogData());
+      errMsg.setCorrelationId(correlationId);
+      return errMsg;
+    } else {
+      return null;
+    }
+  }
+
+  public static String URLdecode(String objectKey) throws UnsupportedEncodingException {
+    return URLDecoder.decode(objectKey, "UTF-8");
+  }
+
+  public static String[] getTarget(String operationPath) {
+    operationPath = operationPath.replaceAll("^/{2,}", "/"); // If its in the form "/////bucket/key", change it to "/bucket/key"
+    if (operationPath.startsWith("/")) { // If its in the form "/bucket/key", change it to "bucket/key"
+      operationPath = operationPath.substring(1);
+    }
+    String[] parts = operationPath.split("/", 2); // Split into a maximum of two parts [bucket, key]
+    if (parts != null) {
+      if (parts.length == 1 && Strings.isNullOrEmpty(parts[0])) { // Splitting empty string will lead one part, check if the part is empty
+        return null;
+      } else if (parts.length == 2 && Strings.isNullOrEmpty(parts[1])) { // Splitting "bucket/" will lead to two parts where the second one is empty,
+                                                                         // send only bucket
+        return new String[] {parts[0]};
+      }
+    }
+    return parts;
+  }
+
+  /**
+   * Returns index where bytesToFind begins in the buffer
+   */
+  public static class ByteMatcherBeginningIndexFinder implements ChannelBufferIndexFinder {
+    private byte[] toMatch;
+
+    public ByteMatcherBeginningIndexFinder(byte[] bytesToFind) {
+      this.toMatch = bytesToFind;
     }
 
-    public static BaseMessage convertErrorMessage(EucalyptusErrorMessageType errorMessage) {
-        Throwable ex = errorMessage.getException();
-        String correlationId = errorMessage.getCorrelationId();
-        BaseMessage errMsg = null;
-        if ((errMsg = convertException(correlationId, ex)) == null) {
-            errMsg = errorMessage;
-        }
-        return errMsg;
-    }
-
-    private static BaseMessage convertException(String correlationId, Throwable ex) {
-        BaseMessage errMsg;
-        if (ex instanceof ObjectStorageException) {
-            ObjectStorageException e = (ObjectStorageException) ex;
-            errMsg = new ObjectStorageErrorMessageType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), correlationId, Internets.localHostAddress(), e.getLogData());
-            errMsg.setCorrelationId(correlationId);
-            return errMsg;
-        } else {
-            return null;
-        }
-    }
-
-    public static String URLdecode(String objectKey) throws UnsupportedEncodingException {
-        return URLDecoder.decode(objectKey, "UTF-8");
-    }
-
-    public static String[] getTarget(String operationPath) {
-    	operationPath = operationPath.replaceAll("^/{2,}", "/"); // If its in the form "/////bucket/key", change it to "/bucket/key"
-		if (operationPath.startsWith("/")) { // If its in the form "/bucket/key", change it to "bucket/key"
-			operationPath = operationPath.substring(1);
-		}
-		String[] parts = operationPath.split("/", 2); // Split into a maximum of two parts [bucket, key]
-		if (parts != null) {
-			if(parts.length == 1 && Strings.isNullOrEmpty(parts[0])) { // Splitting empty string will lead one part, check if the part is empty
-				return null;
-			} else if (parts.length == 2 && Strings.isNullOrEmpty(parts[1])) { // Splitting "bucket/" will lead to two parts where the second one is empty, send only bucket
-				return new String [] {parts[0]};
-			}
-		}
-		return parts;
-    }
-
-    /**
-     * Returns index where bytesToFind begins in the buffer
-     */
-    public static class ByteMatcherBeginningIndexFinder implements ChannelBufferIndexFinder {
-        private byte[] toMatch;
-
-        public ByteMatcherBeginningIndexFinder(byte[] bytesToFind) {
-            this.toMatch = bytesToFind;
+    @Override
+    public boolean find(ChannelBuffer channelBuffer, int i) {
+      channelBuffer.markReaderIndex();
+      try {
+        int matchedCount = 0;
+        // Check basic params, like length
+        if (i + this.toMatch.length > channelBuffer.readableBytes()) {
+          return false;
         }
 
-        @Override
-        public boolean find(ChannelBuffer channelBuffer, int i) {
-            channelBuffer.markReaderIndex();
-            try {
-                int matchedCount = 0;
-                //Check basic params, like length
-                if(i  + this.toMatch.length > channelBuffer.readableBytes()) {
-                    return false;
-                }
-
-                //Match byte for byte
-                for(int j = i ; j - i < this.toMatch.length; j++) {
-                    if(channelBuffer.getByte(j) != this.toMatch[j - i]) {
-                        return false;
-                    }
-                    matchedCount++;
-                }
-                return matchedCount == toMatch.length;
-            } catch(IndexOutOfBoundsException e) {
-                return false;
-            } finally {
-                channelBuffer.resetReaderIndex();
-            }
+        // Match byte for byte
+        for (int j = i; j - i < this.toMatch.length; j++) {
+          if (channelBuffer.getByte(j) != this.toMatch[j - i]) {
+            return false;
+          }
+          matchedCount++;
         }
+        return matchedCount == toMatch.length;
+      } catch (IndexOutOfBoundsException e) {
+        return false;
+      } finally {
+        channelBuffer.resetReaderIndex();
+      }
     }
+  }
 
-    public static int findFirstMatchInBuffer(ChannelBuffer buffer, int start, byte[] bytesToFind) {
-        return buffer.indexOf(start, buffer.readableBytes(), new ByteMatcherBeginningIndexFinder(bytesToFind));
-    }
+  public static int findFirstMatchInBuffer(ChannelBuffer buffer, int start, byte[] bytesToFind) {
+    return buffer.indexOf(start, buffer.readableBytes(), new ByteMatcherBeginningIndexFinder(bytesToFind));
+  }
 
-    public static int findLastMatchInBuffer(ChannelBuffer buffer, int start, byte[] bytesToFind) {
-        return buffer.indexOf(buffer.readableBytes(), start, new ByteMatcherBeginningIndexFinder(bytesToFind));
-    }
+  public static int findLastMatchInBuffer(ChannelBuffer buffer, int start, byte[] bytesToFind) {
+    return buffer.indexOf(buffer.readableBytes(), start, new ByteMatcherBeginningIndexFinder(bytesToFind));
+  }
 
-    //Encrypt data using the cloud public key
-    public static String encryptWithComponentPublicKey(Class<? extends ComponentId> componentClass, String data) throws EucalyptusCloudException {
-        try {
-            PublicKey clcPublicKey = SystemCredentials.lookup(componentClass).getCertificate().getPublicKey();
-            Cipher cipher = Ciphers.RSA_PKCS1.get();
-            cipher.init(Cipher.ENCRYPT_MODE, clcPublicKey, Crypto.getSecureRandomSupplier( ).get( ));
-            return new String(Base64.encode(cipher.doFinal(data.getBytes("UTF-8"))));
-        } catch ( Exception e ) {
-            throw new EucalyptusCloudException("Unable to encrypt data: " + e.getMessage(), e);
-        }
+  // Encrypt data using the cloud public key
+  public static String encryptWithComponentPublicKey(Class<? extends ComponentId> componentClass, String data) throws EucalyptusCloudException {
+    try {
+      PublicKey clcPublicKey = SystemCredentials.lookup(componentClass).getCertificate().getPublicKey();
+      Cipher cipher = Ciphers.RSA_PKCS1.get();
+      cipher.init(Cipher.ENCRYPT_MODE, clcPublicKey, Crypto.getSecureRandomSupplier().get());
+      return new String(Base64.encode(cipher.doFinal(data.getBytes("UTF-8"))));
+    } catch (Exception e) {
+      throw new EucalyptusCloudException("Unable to encrypt data: " + e.getMessage(), e);
     }
+  }
 
-    //Decrypt data encrypted with the Cloud public key
-    public static String decryptWithComponentPrivateKey(Class<? extends ComponentId> componentClass, String data) throws EucalyptusCloudException {
-        PrivateKey clcPrivateKey = SystemCredentials.lookup(componentClass).getPrivateKey();
-        try {
-            Cipher cipher = Ciphers.RSA_PKCS1.get();
-            cipher.init(Cipher.DECRYPT_MODE, clcPrivateKey, Crypto.getSecureRandomSupplier( ).get( ));
-            return new String(cipher.doFinal(Base64.decode(data)));
-        } catch(Exception ex) {
-            throw new EucalyptusCloudException("Unable to decrypt data with cloud private key", ex);
-        }
+  // Decrypt data encrypted with the Cloud public key
+  public static String decryptWithComponentPrivateKey(Class<? extends ComponentId> componentClass, String data) throws EucalyptusCloudException {
+    PrivateKey clcPrivateKey = SystemCredentials.lookup(componentClass).getPrivateKey();
+    try {
+      Cipher cipher = Ciphers.RSA_PKCS1.get();
+      cipher.init(Cipher.DECRYPT_MODE, clcPrivateKey, Crypto.getSecureRandomSupplier().get());
+      return new String(cipher.doFinal(Base64.decode(data)));
+    } catch (Exception ex) {
+      throw new EucalyptusCloudException("Unable to decrypt data with cloud private key", ex);
     }
+  }
 
-    public static void addCopiedHeadersToResponse(HttpResponse httpResponse, ObjectStorageDataResponseType osgResponse) {
-        if (osgResponse instanceof HeadObjectResponseType
-                && osgResponse.getContentDisposition() != null
-                && !"".equals( osgResponse.getContentDisposition() )) {
-            httpResponse.addHeader( "Content-Disposition", osgResponse.getContentDisposition() );
-        }
-        if (osgResponse.getContentEncoding() != null && !"".equals( osgResponse.getContentEncoding() )) {
-            httpResponse.addHeader( HttpHeaders.Names.CONTENT_ENCODING, osgResponse.getContentEncoding() );
-        }
-        if (osgResponse.getCacheControl() != null && !"".equals( osgResponse.getCacheControl() )) {
-            httpResponse.addHeader( HttpHeaders.Names.CACHE_CONTROL, osgResponse.getCacheControl() );
-        }
-        if (osgResponse.getExpires() != null && !"".equals( osgResponse.getExpires() )) {
-            httpResponse.addHeader( HttpHeaders.Names.EXPIRES, osgResponse.getExpires() );
-        }
+  public static void addCopiedHeadersToResponse(HttpResponse httpResponse, ObjectStorageDataResponseType osgResponse) {
+    if (osgResponse instanceof HeadObjectResponseType && osgResponse.getContentDisposition() != null
+        && !"".equals(osgResponse.getContentDisposition())) {
+      httpResponse.addHeader("Content-Disposition", osgResponse.getContentDisposition());
     }
+    if (osgResponse.getContentEncoding() != null && !"".equals(osgResponse.getContentEncoding())) {
+      httpResponse.addHeader(HttpHeaders.Names.CONTENT_ENCODING, osgResponse.getContentEncoding());
+    }
+    if (osgResponse.getCacheControl() != null && !"".equals(osgResponse.getCacheControl())) {
+      httpResponse.addHeader(HttpHeaders.Names.CACHE_CONTROL, osgResponse.getCacheControl());
+    }
+    if (osgResponse.getExpires() != null && !"".equals(osgResponse.getExpires())) {
+      httpResponse.addHeader(HttpHeaders.Names.EXPIRES, osgResponse.getExpires());
+    }
+  }
 
 }

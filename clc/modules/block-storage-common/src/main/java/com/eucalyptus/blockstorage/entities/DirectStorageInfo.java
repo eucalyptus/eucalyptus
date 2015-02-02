@@ -95,152 +95,154 @@ import com.google.common.base.Predicate;
 @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 @ConfigurableClass(root = "storage", alias = "direct", description = "Basic storage controller configuration.", singleton = false, deferred = true)
 public class DirectStorageInfo extends AbstractPersistent {
-	private static Logger LOG = Logger.getLogger(DirectStorageInfo.class);
+  private static Logger LOG = Logger.getLogger(DirectStorageInfo.class);
 
-	@ConfigurableIdentifier
-	@Column(name = "storage_name", unique = true)
-	private String name;
-	@ConfigurableField(description = "Storage volumes directory.", displayName = "Volumes path")
-	@Column(name = "system_storage_volumes_dir")
-	private String volumesDir;
-	@ConfigurableField(description = "Should volumes be zero filled.", displayName = "Zero-fill volumes", type = ConfigurableFieldType.BOOLEAN)
-	@Column(name = "zero_fill_volumes")
-	private Boolean zeroFillVolumes;
-	@ConfigurableField(description = "Timeout value in milli seconds for storage operations", displayName = "Timeout in milli seconds")
-	@Column(name = "timeout_in_millis")
-	private Long timeoutInMillis;
+  @ConfigurableIdentifier
+  @Column(name = "storage_name", unique = true)
+  private String name;
+  @ConfigurableField(description = "Storage volumes directory.", displayName = "Volumes path")
+  @Column(name = "system_storage_volumes_dir")
+  private String volumesDir;
+  @ConfigurableField(description = "Should volumes be zero filled.", displayName = "Zero-fill volumes", type = ConfigurableFieldType.BOOLEAN)
+  @Column(name = "zero_fill_volumes")
+  private Boolean zeroFillVolumes;
+  @ConfigurableField(description = "Timeout value in milli seconds for storage operations", displayName = "Timeout in milli seconds")
+  @Column(name = "timeout_in_millis")
+  private Long timeoutInMillis;
 
-	public DirectStorageInfo() {
-		this.name = StorageProperties.NAME;
-	}
+  public DirectStorageInfo() {
+    this.name = StorageProperties.NAME;
+  }
 
-	public DirectStorageInfo(final String name) {
-		this.name = name;
-	}
+  public DirectStorageInfo(final String name) {
+    this.name = name;
+  }
 
-	public DirectStorageInfo(final String name, final String storageInterface, final String volumesDir, final Boolean zeroFillVolumes,
-			final Long timeoutInMillis) {
-		this.name = name;
-		this.volumesDir = volumesDir;
-		this.zeroFillVolumes = zeroFillVolumes;
-		this.timeoutInMillis = timeoutInMillis;
-	}
+  public DirectStorageInfo(final String name, final String storageInterface, final String volumesDir, final Boolean zeroFillVolumes,
+      final Long timeoutInMillis) {
+    this.name = name;
+    this.volumesDir = volumesDir;
+    this.zeroFillVolumes = zeroFillVolumes;
+    this.timeoutInMillis = timeoutInMillis;
+  }
 
-	public String getName() {
-		return name;
-	}
+  public String getName() {
+    return name;
+  }
 
-	public void setName(String name) {
-		this.name = name;
-	}
+  public void setName(String name) {
+    this.name = name;
+  }
 
-	public String getVolumesDir() {
-		return volumesDir;
-	}
+  public String getVolumesDir() {
+    return volumesDir;
+  }
 
-	public void setVolumesDir(String volumesDir) {
-		this.volumesDir = volumesDir;
-	}
+  public void setVolumesDir(String volumesDir) {
+    this.volumesDir = volumesDir;
+  }
 
-	public Boolean getZeroFillVolumes() {
-		return zeroFillVolumes;
-	}
+  public Boolean getZeroFillVolumes() {
+    return zeroFillVolumes;
+  }
 
-	public void setZeroFillVolumes(Boolean zeroFillVolumes) {
-		this.zeroFillVolumes = zeroFillVolumes;
-	}
+  public void setZeroFillVolumes(Boolean zeroFillVolumes) {
+    this.zeroFillVolumes = zeroFillVolumes;
+  }
 
-	public Long getTimeoutInMillis() {
-		return timeoutInMillis;
-	}
+  public Long getTimeoutInMillis() {
+    return timeoutInMillis;
+  }
 
-	public void setTimeoutInMillis(Long timeoutInMillis) {
-		this.timeoutInMillis = timeoutInMillis;
-	}
+  public void setTimeoutInMillis(Long timeoutInMillis) {
+    this.timeoutInMillis = timeoutInMillis;
+  }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		DirectStorageInfo other = (DirectStorageInfo) obj;
-		if (name == null) {
-			if (other.name != null)
-				return false;
-		} else if (!name.equals(other.name))
-			return false;
-		return true;
-	}
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    DirectStorageInfo other = (DirectStorageInfo) obj;
+    if (name == null) {
+      if (other.name != null)
+        return false;
+    } else if (!name.equals(other.name))
+      return false;
+    return true;
+  }
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((name == null) ? 0 : name.hashCode());
-		return result;
-	}
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((name == null) ? 0 : name.hashCode());
+    return result;
+  }
 
-	@Override
-	public String toString() {
-		return this.name;
-	}
+  @Override
+  public String toString() {
+    return this.name;
+  }
 
-	@PreUpdate
-	public void preUpdateChecks() {
-		// EUCA-3597 Introduced a new column for timeout. Ensure that its populated in the DB the first time
-		if (null == this.getTimeoutInMillis()) {
-			this.setTimeoutInMillis(StorageProperties.timeoutInMillis);
-		}
-	}
+  @PreUpdate
+  public void preUpdateChecks() {
+    // EUCA-3597 Introduced a new column for timeout. Ensure that its populated in the DB the first time
+    if (null == this.getTimeoutInMillis()) {
+      this.setTimeoutInMillis(StorageProperties.timeoutInMillis);
+    }
+  }
 
-	public static DirectStorageInfo getStorageInfo() {
-		DirectStorageInfo conf = null;
+  public static DirectStorageInfo getStorageInfo() {
+    DirectStorageInfo conf = null;
 
-		try {
-			conf = Transactions.find(new DirectStorageInfo());
-		} catch (Exception e) {
-			LOG.warn("Direct storage information for " + StorageProperties.NAME + " not found. Loading defaults.");
-			try {
-				conf = Transactions.saveDirect(new DirectStorageInfo(StorageProperties.NAME, StorageProperties.iface, StorageProperties.storageRootDirectory,
-						StorageProperties.zeroFillVolumes, StorageProperties.timeoutInMillis));
-			} catch (Exception e1) {
-				try {
-					conf = Transactions.find(new DirectStorageInfo());
-				} catch (Exception e2) {
-					LOG.warn("Failed to persist and retrieve DirectStorageInfo entity");
-				}
-			}
-		}
+    try {
+      conf = Transactions.find(new DirectStorageInfo());
+    } catch (Exception e) {
+      LOG.warn("Direct storage information for " + StorageProperties.NAME + " not found. Loading defaults.");
+      try {
+        conf =
+            Transactions.saveDirect(new DirectStorageInfo(StorageProperties.NAME, StorageProperties.iface, StorageProperties.storageRootDirectory,
+                StorageProperties.zeroFillVolumes, StorageProperties.timeoutInMillis));
+      } catch (Exception e1) {
+        try {
+          conf = Transactions.find(new DirectStorageInfo());
+        } catch (Exception e2) {
+          LOG.warn("Failed to persist and retrieve DirectStorageInfo entity");
+        }
+      }
+    }
 
-		if (conf == null) {
-			conf = new DirectStorageInfo(StorageProperties.NAME, StorageProperties.iface, StorageProperties.storageRootDirectory,
-					StorageProperties.zeroFillVolumes, StorageProperties.timeoutInMillis);
-		}
+    if (conf == null) {
+      conf =
+          new DirectStorageInfo(StorageProperties.NAME, StorageProperties.iface, StorageProperties.storageRootDirectory,
+              StorageProperties.zeroFillVolumes, StorageProperties.timeoutInMillis);
+    }
 
-		return conf;
-	}
+    return conf;
+  }
 
-	@EntityUpgrade(entities = { DirectStorageInfo.class }, since = Version.v3_2_0, value = Storage.class)
-	public enum DirectStorageInfoUpgrade implements Predicate<Class> {
-		INSTANCE;
-		private static Logger LOG = Logger.getLogger(DirectStorageInfo.DirectStorageInfoUpgrade.class);
+  @EntityUpgrade(entities = {DirectStorageInfo.class}, since = Version.v3_2_0, value = Storage.class)
+  public enum DirectStorageInfoUpgrade implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger(DirectStorageInfo.DirectStorageInfoUpgrade.class);
 
-		@Override
-		public boolean apply(Class arg0) {
-			try (TransactionResource tr = Entities.transactionFor(DirectStorageInfo.class)){
-				List<DirectStorageInfo> entities = Entities.query(new DirectStorageInfo());
-				for (DirectStorageInfo entry : entities) {
-					LOG.debug("Upgrading: " + entry);
-					entry.setTimeoutInMillis(StorageProperties.timeoutInMillis);
-				}
-				tr.commit();
-				return true;
-			} catch (Exception ex) {
-				throw Exceptions.toUndeclared(ex);
-			}
-		}
-	}
+    @Override
+    public boolean apply(Class arg0) {
+      try (TransactionResource tr = Entities.transactionFor(DirectStorageInfo.class)) {
+        List<DirectStorageInfo> entities = Entities.query(new DirectStorageInfo());
+        for (DirectStorageInfo entry : entities) {
+          LOG.debug("Upgrading: " + entry);
+          entry.setTimeoutInMillis(StorageProperties.timeoutInMillis);
+        }
+        tr.commit();
+        return true;
+      } catch (Exception ex) {
+        throw Exceptions.toUndeclared(ex);
+      }
+    }
+  }
 }

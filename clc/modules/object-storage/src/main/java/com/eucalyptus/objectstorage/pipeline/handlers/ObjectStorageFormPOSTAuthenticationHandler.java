@@ -62,13 +62,21 @@
 
 package com.eucalyptus.objectstorage.pipeline.handlers;
 
+import javax.security.auth.login.LoginException;
+
+import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.MessageEvent;
+
 import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
 import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidAccessKeyIdException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidPolicyDocumentException;
@@ -78,92 +86,85 @@ import com.eucalyptus.objectstorage.pipeline.auth.ObjectStorageWrappedCredential
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.google.common.base.Strings;
-import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.MessageEvent;
-
-import javax.security.auth.login.LoginException;
 
 /**
- * Performs POST form authentication using the POST Policy and form fields.
- * Works exclusively off the formFields collection in the httpRequest. That map
- * must be populated prior to this handler's execution
+ * Performs POST form authentication using the POST Policy and form fields. Works exclusively off the formFields collection in the httpRequest. That
+ * map must be populated prior to this handler's execution
  */
 @ChannelPipelineCoverage("one")
 public class ObjectStorageFormPOSTAuthenticationHandler extends MessageStackHandler {
-    private static Logger LOG = Logger.getLogger(ObjectStorageFormPOSTAuthenticationHandler.class);
+  private static Logger LOG = Logger.getLogger(ObjectStorageFormPOSTAuthenticationHandler.class);
 
-    @Override
-    public void handleUpstream(final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent) throws Exception {
-        LOG.trace(this.getClass().getSimpleName() + "[incoming]: " + channelEvent);
+  @Override
+  public void handleUpstream(final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent) throws Exception {
+    LOG.trace(this.getClass().getSimpleName() + "[incoming]: " + channelEvent);
+    try {
+      if (channelEvent instanceof MessageEvent) {
+        final MessageEvent msgEvent = (MessageEvent) channelEvent;
+        this.incomingMessage(channelHandlerContext, msgEvent);
+      }
+      channelHandlerContext.sendUpstream(channelEvent);
+    } catch (S3Exception e) {
+      LOG.trace("Caught exception in POST form authentication.", e);
+      Channels.fireExceptionCaught(channelHandlerContext, e);
+    }
+  }
+
+  @Override
+  public void incomingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
+    if (event.getMessage() instanceof MappingHttpRequest) {
+      MappingHttpRequest httpRequest = (MappingHttpRequest) event.getMessage();
+
+      // Validate the policy as well-formed
+      UploadPolicyChecker.checkPolicy(httpRequest.getFormFields());
+
+      // Authenticate the request
+      handle(httpRequest);
+    }
+  }
+
+  /**
+   * Uses the form fields in the request to validate signature
+   * 
+   * @param httpRequest
+   * @throws S3Exception
+   */
+  public void handle(MappingHttpRequest httpRequest) throws S3Exception {
+    String accessKey = (String) httpRequest.getFormFields().get(ObjectStorageProperties.FormField.AWSAccessKeyId.toString());
+    String signature = (String) httpRequest.getFormFields().get(ObjectStorageProperties.FormField.Signature.toString());
+    String policy = (String) httpRequest.getFormFields().get(ObjectStorageProperties.FormField.Policy.toString());
+    String securityToken = (String) httpRequest.getFormFields().get(ObjectStorageProperties.FormField.x_amz_security_token.toString());
+
+    if (!Strings.isNullOrEmpty(policy)) {
+      if (Strings.isNullOrEmpty(signature)) {
+        throw new InvalidPolicyDocumentException(httpRequest.getUri(), "Policy specified, but no signature field found.");
+      } else if (Strings.isNullOrEmpty(accessKey)) {
+        throw new InvalidPolicyDocumentException(httpRequest.getUri(), "Policy specified, but no AWSAccessKeyId field found");
+      } else {
         try {
-            if (channelEvent instanceof MessageEvent) {
-                final MessageEvent msgEvent = (MessageEvent) channelEvent;
-                this.incomingMessage(channelHandlerContext, msgEvent);
-            }
-            channelHandlerContext.sendUpstream(channelEvent);
-        } catch(S3Exception e) {
-            LOG.trace("Caught exception in POST form authentication.", e);
-            Channels.fireExceptionCaught(channelHandlerContext, e);
+          SecurityContext.getLoginContext(
+              new ObjectStorageWrappedCredentials(httpRequest.getCorrelationId(), policy, accessKey, signature, securityToken)).login();
+        } catch (LoginException ex) {
+          if (ex.getMessage().contains("The AWS Access Key Id you provided does not exist in our records")) {
+            throw new InvalidAccessKeyIdException(accessKey);
+          } else {
+            LOG.debug("CorrelationId: " + httpRequest.getCorrelationId() + " Authentication failed due to signature mismatch:", ex);
+            throw new SignatureDoesNotMatchException(signature);
+          }
+        } catch (Exception e) {
+          LOG.warn("CorrelationId: " + httpRequest.getCorrelationId() + " Unexpected failure trying to authenticate request", e);
+          throw new InternalErrorException(e);
         }
+      }
+    } else {
+      // anonymous request, no policy included
+      try {
+        Context ctx = Contexts.lookup(httpRequest.getCorrelationId());
+        ctx.setUser(Principals.nobodyUser());
+      } catch (NoSuchContextException e) {
+        LOG.error("Could not find context for anonymous request. Returning internal error.", e);
+        throw new InternalErrorException(httpRequest.getUri(), e);
+      }
     }
-
-    @Override
-    public void incomingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
-        if (event.getMessage() instanceof MappingHttpRequest) {
-            MappingHttpRequest httpRequest = (MappingHttpRequest) event.getMessage();
-
-            //Validate the policy as well-formed
-            UploadPolicyChecker.checkPolicy(httpRequest.getFormFields());
-
-            //Authenticate the request
-            handle(httpRequest);
-        }
-    }
-
-    /**
-     * Uses the form fields in the request to validate signature
-     * @param httpRequest
-     * @throws S3Exception
-     */
-    public void handle(MappingHttpRequest httpRequest) throws S3Exception {
-        String accessKey = (String)httpRequest.getFormFields().get(ObjectStorageProperties.FormField.AWSAccessKeyId.toString());
-        String signature = (String)httpRequest.getFormFields().get(ObjectStorageProperties.FormField.Signature.toString());
-        String policy = (String)httpRequest.getFormFields().get(ObjectStorageProperties.FormField.Policy.toString());
-        String securityToken = (String)httpRequest.getFormFields().get(ObjectStorageProperties.FormField.x_amz_security_token.toString());
-
-        if (!Strings.isNullOrEmpty(policy)) {
-            if (Strings.isNullOrEmpty(signature)) {
-                throw new InvalidPolicyDocumentException(httpRequest.getUri(), "Policy specified, but no signature field found.");
-            } else if(Strings.isNullOrEmpty(accessKey)) {
-                throw new InvalidPolicyDocumentException(httpRequest.getUri(), "Policy specified, but no AWSAccessKeyId field found");
-            } else {
-                try {
-                    SecurityContext.getLoginContext(new ObjectStorageWrappedCredentials(httpRequest.getCorrelationId(), policy, accessKey, signature, securityToken)).login();
-                } catch (LoginException ex) {
-                    if (ex.getMessage().contains("The AWS Access Key Id you provided does not exist in our records")) {
-                        throw new InvalidAccessKeyIdException(accessKey);
-                    } else {
-                        LOG.debug("CorrelationId: " + httpRequest.getCorrelationId() + " Authentication failed due to signature mismatch:", ex);
-                        throw new SignatureDoesNotMatchException(signature);
-                    }
-                } catch (Exception e) {
-                    LOG.warn("CorrelationId: " + httpRequest.getCorrelationId() + " Unexpected failure trying to authenticate request", e);
-                    throw new InternalErrorException(e);
-                }
-            }
-        } else {
-            //anonymous request, no policy included
-            try {
-                Context ctx = Contexts.lookup(httpRequest.getCorrelationId());
-                ctx.setUser(Principals.nobodyUser());
-            } catch (NoSuchContextException e) {
-                LOG.error("Could not find context for anonymous request. Returning internal error.", e);
-                throw new InternalErrorException(httpRequest.getUri(), e);
-            }
-        }
-    }
+  }
 }

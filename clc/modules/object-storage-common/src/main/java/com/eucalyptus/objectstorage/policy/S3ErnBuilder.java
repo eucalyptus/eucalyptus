@@ -22,36 +22,34 @@ package com.eucalyptus.objectstorage.policy;
 import java.util.Collections;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import net.sf.json.JSONException;
+
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.ern.ServiceErnBuilder;
-import net.sf.json.JSONException;
 
 /**
  *
  */
 public class S3ErnBuilder extends ServiceErnBuilder {
 
-  public static final Pattern RESOURCE_PATTERN = Pattern.compile( "([^\\s/]+)(?:(/\\S+))?" );
+  public static final Pattern RESOURCE_PATTERN = Pattern.compile("([^\\s/]+)(?:(/\\S+))?");
 
   public static final int ARN_PATTERNGROUP_S3_BUCKET = 1;
   public static final int ARN_PATTERNGROUP_S3_OBJECT = 2;
 
-  public S3ErnBuilder( ) {
-    super( Collections.singleton( "s3" ) );
+  public S3ErnBuilder() {
+    super(Collections.singleton("s3"));
   }
 
   @Override
-  public Ern build( final String ern,
-                    final String service,
-                    final String region,
-                    final String account,
-                    final String resource ) throws JSONException {
-    final Matcher matcher = RESOURCE_PATTERN.matcher( resource );
-    if ( matcher.matches( ) ) {
-      String bucket = matcher.group( ARN_PATTERNGROUP_S3_BUCKET );
-      String object = matcher.group( ARN_PATTERNGROUP_S3_OBJECT );
-      return new S3ResourceName( bucket, object );
+  public Ern build(final String ern, final String service, final String region, final String account, final String resource) throws JSONException {
+    final Matcher matcher = RESOURCE_PATTERN.matcher(resource);
+    if (matcher.matches()) {
+      String bucket = matcher.group(ARN_PATTERNGROUP_S3_BUCKET);
+      String object = matcher.group(ARN_PATTERNGROUP_S3_OBJECT);
+      return new S3ResourceName(bucket, object);
     }
-    throw new JSONException( "'" + ern + "' is not a valid ARN" );
+    throw new JSONException("'" + ern + "' is not a valid ARN");
   }
 }

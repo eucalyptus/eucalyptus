@@ -83,76 +83,76 @@ import com.google.common.base.Functions;
 @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class SnapshotTransferConfiguration extends AbstractPersistent {
 
-	private static final String DEFAULT_SINGLETON_ID = "singleton";
-	public static final int DEFAULT_BUCKET_CREATION_RETRIES = 10;
-	public static final String OSG = "objectstoragegateway";
+  private static final String DEFAULT_SINGLETON_ID = "singleton";
+  public static final int DEFAULT_BUCKET_CREATION_RETRIES = 10;
+  public static final String OSG = "objectstoragegateway";
 
-	@Column(name = "singleton_id")
-	private String singletonId;
+  @Column(name = "singleton_id")
+  private String singletonId;
 
-	@Column(name = "snapshot_bucket")
-	private String snapshotBucket;
+  @Column(name = "snapshot_bucket")
+  private String snapshotBucket;
 
-	public SnapshotTransferConfiguration() {
-		super();
-		this.singletonId = DEFAULT_SINGLETON_ID;
-	}
+  public SnapshotTransferConfiguration() {
+    super();
+    this.singletonId = DEFAULT_SINGLETON_ID;
+  }
 
-	public SnapshotTransferConfiguration(String snapshotBucket) {
-		this();
-		this.snapshotBucket = snapshotBucket;
-	}
+  public SnapshotTransferConfiguration(String snapshotBucket) {
+    this();
+    this.snapshotBucket = snapshotBucket;
+  }
 
-	public String getSnapshotBucket() {
-		return snapshotBucket;
-	}
+  public String getSnapshotBucket() {
+    return snapshotBucket;
+  }
 
-	public void setSnapshotBucket(String snapshotBucket) {
-		this.snapshotBucket = snapshotBucket;
-	}
+  public void setSnapshotBucket(String snapshotBucket) {
+    this.snapshotBucket = snapshotBucket;
+  }
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = super.hashCode();
-		result = prime * result + ((snapshotBucket == null) ? 0 : snapshotBucket.hashCode());
-		return result;
-	}
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = super.hashCode();
+    result = prime * result + ((snapshotBucket == null) ? 0 : snapshotBucket.hashCode());
+    return result;
+  }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (!super.equals(obj))
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		SnapshotTransferConfiguration other = (SnapshotTransferConfiguration) obj;
-		if (snapshotBucket == null) {
-			if (other.snapshotBucket != null)
-				return false;
-		} else if (!snapshotBucket.equals(other.snapshotBucket))
-			return false;
-		return true;
-	}
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (!super.equals(obj))
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    SnapshotTransferConfiguration other = (SnapshotTransferConfiguration) obj;
+    if (snapshotBucket == null) {
+      if (other.snapshotBucket != null)
+        return false;
+    } else if (!snapshotBucket.equals(other.snapshotBucket))
+      return false;
+    return true;
+  }
 
-	synchronized public static SnapshotTransferConfiguration getInstance() throws TransactionException {
-		return Transactions.one(new SnapshotTransferConfiguration(), Functions.<SnapshotTransferConfiguration> identity());
-	}
+  synchronized public static SnapshotTransferConfiguration getInstance() throws TransactionException {
+    return Transactions.one(new SnapshotTransferConfiguration(), Functions.<SnapshotTransferConfiguration>identity());
+  }
 
-	synchronized public static SnapshotTransferConfiguration updateBucketName(String snapshotBucket) {
-		try (TransactionResource db = Entities.transactionFor(SnapshotTransferConfiguration.class)) {
-			SnapshotTransferConfiguration conf = null;
-			try {
-				conf = Entities.uniqueResult(new SnapshotTransferConfiguration());
-				conf.setSnapshotBucket(snapshotBucket);
-			} catch (Exception ex) {
-				conf = new SnapshotTransferConfiguration(snapshotBucket);
-				Entities.persist(conf);
-			} finally {
-				db.commit();
-			}
-			return conf;
-		}
-	}
+  synchronized public static SnapshotTransferConfiguration updateBucketName(String snapshotBucket) {
+    try (TransactionResource db = Entities.transactionFor(SnapshotTransferConfiguration.class)) {
+      SnapshotTransferConfiguration conf = null;
+      try {
+        conf = Entities.uniqueResult(new SnapshotTransferConfiguration());
+        conf.setSnapshotBucket(snapshotBucket);
+      } catch (Exception ex) {
+        conf = new SnapshotTransferConfiguration(snapshotBucket);
+        Entities.persist(conf);
+      } finally {
+        db.commit();
+      }
+      return conf;
+    }
+  }
 }

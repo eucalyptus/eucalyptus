@@ -62,46 +62,46 @@
 
 package com.eucalyptus.storage.common.fs;
 
-import org.apache.log4j.Logger;
-
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-public  class FileReader extends FileIO {
+import org.apache.log4j.Logger;
 
-    private static Logger LOG = Logger.getLogger(FileReader.class);
-    private ByteBuffer buffer;
+public class FileReader extends FileIO {
 
-    public FileReader(String filename) throws Exception {
-        try {
-            channel = new FileInputStream(filename).getChannel();
-            buffer = ByteBuffer.allocate(102400/*TODO: NEIL WalrusQueryDispatcher.DATA_MESSAGE_SIZE */);
-        } catch( FileNotFoundException ex) {
-            LOG.error(ex);
-            throw ex;
-        }
+  private static Logger LOG = Logger.getLogger(FileReader.class);
+  private ByteBuffer buffer;
+
+  public FileReader(String filename) throws Exception {
+    try {
+      channel = new FileInputStream(filename).getChannel();
+      buffer = ByteBuffer.allocate(102400/* TODO: NEIL WalrusQueryDispatcher.DATA_MESSAGE_SIZE */);
+    } catch (FileNotFoundException ex) {
+      LOG.error(ex);
+      throw ex;
     }
+  }
 
-    public  int read(long offset) throws IOException {
-        buffer.clear();
-        int bytesRead = channel.read(buffer, offset);
-        buffer.flip();
-        return bytesRead;
+  public int read(long offset) throws IOException {
+    buffer.clear();
+    int bytesRead = channel.read(buffer, offset);
+    buffer.flip();
+    return bytesRead;
+  }
+
+  public void write(byte[] bytes) throws IOException {}
+
+  public ByteBuffer getBuffer() {
+    return buffer;
+  }
+
+  public void finish() {
+    try {
+      channel.close();
+    } catch (IOException ex) {
+      LOG.error(ex);
     }
-
-    public  void write(byte[] bytes) throws IOException {}
-
-    public ByteBuffer getBuffer() {
-        return buffer;
-    }
-
-    public void finish() {
-        try {
-            channel.close();
-        } catch(IOException ex) {
-            LOG.error(ex);
-        }
-    }
+  }
 }

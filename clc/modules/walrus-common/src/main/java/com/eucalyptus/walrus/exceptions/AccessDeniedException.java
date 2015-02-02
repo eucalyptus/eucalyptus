@@ -69,31 +69,27 @@ import com.eucalyptus.storage.msgs.BucketLogData;
 @SuppressWarnings("serial")
 public class AccessDeniedException extends WalrusException {
 
-  public AccessDeniedException()
-  {
-    super( "AccessDenied", "Access Denied", "",  "", HttpResponseStatus.FORBIDDEN);
-  }
-  public AccessDeniedException(String entity)
-  {
-	  super("AccessDenied", "Access Denied", "Entity", entity, HttpResponseStatus.FORBIDDEN);
-  }
-  
-  public AccessDeniedException(String entityType, String entity)
-  {
-	  super("AccessDenied", "Access Denied", entityType, entity, HttpResponseStatus.FORBIDDEN);
-  }
-  
-  public AccessDeniedException(String entityType, String entity, BucketLogData logData)
-  {
-	  super("AccessDenied", "Access Denied", entityType, entity, HttpResponseStatus.FORBIDDEN, logData);
+  public AccessDeniedException() {
+    super("AccessDenied", "Access Denied", "", "", HttpResponseStatus.FORBIDDEN);
   }
 
-  public AccessDeniedException(Throwable ex)
-  {
+  public AccessDeniedException(String entity) {
+    super("AccessDenied", "Access Denied", "Entity", entity, HttpResponseStatus.FORBIDDEN);
+  }
+
+  public AccessDeniedException(String entityType, String entity) {
+    super("AccessDenied", "Access Denied", entityType, entity, HttpResponseStatus.FORBIDDEN);
+  }
+
+  public AccessDeniedException(String entityType, String entity, BucketLogData logData) {
+    super("AccessDenied", "Access Denied", entityType, entity, HttpResponseStatus.FORBIDDEN, logData);
+  }
+
+  public AccessDeniedException(Throwable ex) {
     super("Access Denied", ex);
   }
-  public AccessDeniedException(String message, Throwable ex)
-  {
-    super(message,ex);
+
+  public AccessDeniedException(String message, Throwable ex) {
+    super(message, ex);
   }
 }

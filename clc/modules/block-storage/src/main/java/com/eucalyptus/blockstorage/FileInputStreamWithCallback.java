@@ -70,30 +70,30 @@ import java.io.IOException;
 import com.eucalyptus.blockstorage.exceptions.UnknownSizeException;
 
 /**
- * File stream with update callbacks to update on progress. Will call callback on each operation, callback must be selective on when to do update and should do
- * so asynchronously for best performance.
+ * File stream with update callbacks to update on progress. Will call callback on each operation, callback must be selective on when to do update and
+ * should do so asynchronously for best performance.
  * 
  */
 public class FileInputStreamWithCallback extends FileInputStream {
 
-	private SnapshotProgressCallback callback;
+  private SnapshotProgressCallback callback;
 
-	public FileInputStreamWithCallback(File file, SnapshotProgressCallback callback) throws FileNotFoundException, UnknownSizeException {
-		super(file);
-		this.callback = callback;
-	}
+  public FileInputStreamWithCallback(File file, SnapshotProgressCallback callback) throws FileNotFoundException, UnknownSizeException {
+    super(file);
+    this.callback = callback;
+  }
 
-	@Override
-	public int read(byte[] b, int off, int len) throws IOException {
-		int bytesRead = super.read(b, off, len);
-		callback.update(bytesRead);
-		return bytesRead;
-	}
+  @Override
+  public int read(byte[] b, int off, int len) throws IOException {
+    int bytesRead = super.read(b, off, len);
+    callback.update(bytesRead);
+    return bytesRead;
+  }
 
-	@Override
-	public int read(byte[] b) throws IOException {
-		int bytesRead = super.read(b);
-		callback.update(bytesRead);
-		return bytesRead;
-	}
+  @Override
+  public int read(byte[] b) throws IOException {
+    int bytesRead = super.read(b);
+    callback.update(bytesRead);
+    return bytesRead;
+  }
 }

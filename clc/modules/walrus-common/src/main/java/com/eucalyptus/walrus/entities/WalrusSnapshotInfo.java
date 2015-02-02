@@ -66,73 +66,74 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
 import com.eucalyptus.entities.AbstractPersistent;
 
-
 @Entity
-@PersistenceContext(name="eucalyptus_walrus")
-@Table( name = "WalrusSnapshots" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@PersistenceContext(name = "eucalyptus_walrus")
+@Table(name = "WalrusSnapshots")
+@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class WalrusSnapshotInfo extends AbstractPersistent {
-    @Column(name ="snapshot_name", unique=true)
-    private String snapshotId;
-    @Column(name = "snapshot_bucket")
-    private String snapshotBucket;
-    @Column(name = "size")
-    private Integer size;
+  @Column(name = "snapshot_name", unique = true)
+  private String snapshotId;
+  @Column(name = "snapshot_bucket")
+  private String snapshotBucket;
+  @Column(name = "size")
+  private Integer size;
 
-    public WalrusSnapshotInfo() {}
+  public WalrusSnapshotInfo() {}
 
-    public WalrusSnapshotInfo(String snapshotId) {
-        this.snapshotId = snapshotId;
-    }
+  public WalrusSnapshotInfo(String snapshotId) {
+    this.snapshotId = snapshotId;
+  }
 
-    public String getSnapshotId() {
-        return snapshotId;
-    }
+  public String getSnapshotId() {
+    return snapshotId;
+  }
 
-    public void setSnapshotId(String snapshotId) {
-        this.snapshotId = snapshotId;
-    }
+  public void setSnapshotId(String snapshotId) {
+    this.snapshotId = snapshotId;
+  }
 
-    public String getSnapshotBucket() {
-        return snapshotBucket;
-    }
+  public String getSnapshotBucket() {
+    return snapshotBucket;
+  }
 
-    public void setSnapshotBucket(String snapshotBucket) {
-        this.snapshotBucket = snapshotBucket;
-    }
+  public void setSnapshotBucket(String snapshotBucket) {
+    this.snapshotBucket = snapshotBucket;
+  }
 
-    public Integer getSize() {
-        return size;
-    }
+  public Integer getSize() {
+    return size;
+  }
 
-    public void setSize(Integer size) {
-        this.size = size;
-    }
+  public void setSize(Integer size) {
+    this.size = size;
+  }
 
-	@Override
-	public int hashCode() {
-		return snapshotId.hashCode();
-	}
+  @Override
+  public int hashCode() {
+    return snapshotId.hashCode();
+  }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		WalrusSnapshotInfo other = (WalrusSnapshotInfo) obj;
-		if (snapshotId == null) {
-			if (other.snapshotId != null)
-				return false;
-		} else if (!snapshotId.equals(other.snapshotId))
-			return false;
-		return true;
-	}
-    
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    WalrusSnapshotInfo other = (WalrusSnapshotInfo) obj;
+    if (snapshotId == null) {
+      if (other.snapshotId != null)
+        return false;
+    } else if (!snapshotId.equals(other.snapshotId))
+      return false;
+    return true;
+  }
+
 }

@@ -90,224 +90,230 @@ import com.google.common.base.Strings;
 @ConfigurableClass(root = "storage", alias = "cephrbd", description = "Configuration for Ceph as an EBS backend", singleton = false, deferred = true)
 public class CephRbdInfo extends AbstractPersistent {
 
-	private static final long serialVersionUID = 1L;
-	private static Logger LOG = Logger.getLogger(CephRbdInfo.class);
+  private static final long serialVersionUID = 1L;
+  private static Logger LOG = Logger.getLogger(CephRbdInfo.class);
 
-	public static final String POOL_IMAGE_DELIMITER = "/";
-	public static final String IMAGE_SNAPSHOT_DELIMITER = "@";
-	public static final String SNAPSHOT_ON_PREFIX = "sp-on-";
-	public static final String SNAPSHOT_FOR_PREFIX = "sp-for-";
+  public static final String POOL_IMAGE_DELIMITER = "/";
+  public static final String IMAGE_SNAPSHOT_DELIMITER = "@";
+  public static final String SNAPSHOT_ON_PREFIX = "sp-on-";
+  public static final String SNAPSHOT_FOR_PREFIX = "sp-for-";
 
-	private static final String DEFAULT_CEPH_USER = "eucalyptus";
-	private static final String DEFAULT_CEPH_KEYRING_FILE = "/etc/ceph/ceph.client.eucalyptus.keyring";
-	private static final String DEFAULT_CEPH_CONFIG_FILE = "/etc/ceph/ceph.conf";
-	private static final String DEFAULT_POOL = "rbd";
-	private static final String DELETED_IMAGE_COMMON_PREFIX = "del";
+  private static final String DEFAULT_CEPH_USER = "eucalyptus";
+  private static final String DEFAULT_CEPH_KEYRING_FILE = "/etc/ceph/ceph.client.eucalyptus.keyring";
+  private static final String DEFAULT_CEPH_CONFIG_FILE = "/etc/ceph/ceph.conf";
+  private static final String DEFAULT_POOL = "rbd";
+  private static final String DELETED_IMAGE_COMMON_PREFIX = "del";
 
-	@ConfigurableIdentifier
-	@Column(name = "cluster_name", unique = true)
-	private String clusterName;
-	@ConfigurableField(description = "Ceph username employed by Eucalyptus operations. Default value is 'eucalyptus'", displayName = "Ceph Username", initial = "eucalyptus")
-	@Column(name = "ceph_user")
-	private String cephUser;
-	@ConfigurableField(description = "Absolute path to Ceph keyring (ceph.client.eucalyptus.keyring) file. Default value is '/etc/ceph/ceph.client.eucalyptus.keyring'", displayName = "Ceph Keyring File", initial = "/etc/ceph/ceph.client.eucalyptus.keyring")
-	@Column(name = "ceph_keyring_file")
-	private String cephKeyringFile;
-	@ConfigurableField(description = "Absolute path to Ceph configuration (ceph.conf) file. Default value is '/etc/ceph/ceph.conf'", displayName = "Ceph Configuration File", initial = "/etc/ceph/ceph.conf")
-	@Column(name = "ceph_config_file")
-	private String cephConfigFile;
-	@ConfigurableField(description = "Ceph storage pool(s) made available to Eucalyptus for EBS volumes. Use a comma separated list for configuring multiple pools. "
-			+ "Default value is 'rbd'", displayName = "Ceph Volume Pools", initial = "rbd")
-	@Column(name = "ceph_volume_pools")
-	private String cephVolumePools;
-	@ConfigurableField(description = "Ceph storage pool(s) made available to Eucalyptus for EBS snapshots. Use a comma separated list for configuring multiple pools. "
-			+ "Default value is 'rbd'", displayName = "Ceph Snapshot Pools", initial = "rbd")
-	@Column(name = "ceph_snapshot_pools")
-	private String cephSnapshotPools;
-	@Column(name = "virsh_secret")
-	private String virshSecret;
-	@Column(name = "deleted_image_prefix")
-	private String deletedImagePrefix;
+  @ConfigurableIdentifier
+  @Column(name = "cluster_name", unique = true)
+  private String clusterName;
+  @ConfigurableField(description = "Ceph username employed by Eucalyptus operations. Default value is 'eucalyptus'", displayName = "Ceph Username",
+      initial = "eucalyptus")
+  @Column(name = "ceph_user")
+  private String cephUser;
+  @ConfigurableField(
+      description = "Absolute path to Ceph keyring (ceph.client.eucalyptus.keyring) file. Default value is '/etc/ceph/ceph.client.eucalyptus.keyring'",
+      displayName = "Ceph Keyring File", initial = "/etc/ceph/ceph.client.eucalyptus.keyring")
+  @Column(name = "ceph_keyring_file")
+  private String cephKeyringFile;
+  @ConfigurableField(description = "Absolute path to Ceph configuration (ceph.conf) file. Default value is '/etc/ceph/ceph.conf'",
+      displayName = "Ceph Configuration File", initial = "/etc/ceph/ceph.conf")
+  @Column(name = "ceph_config_file")
+  private String cephConfigFile;
+  @ConfigurableField(
+      description = "Ceph storage pool(s) made available to Eucalyptus for EBS volumes. Use a comma separated list for configuring multiple pools. "
+          + "Default value is 'rbd'", displayName = "Ceph Volume Pools", initial = "rbd")
+  @Column(name = "ceph_volume_pools")
+  private String cephVolumePools;
+  @ConfigurableField(
+      description = "Ceph storage pool(s) made available to Eucalyptus for EBS snapshots. Use a comma separated list for configuring multiple pools. "
+          + "Default value is 'rbd'", displayName = "Ceph Snapshot Pools", initial = "rbd")
+  @Column(name = "ceph_snapshot_pools")
+  private String cephSnapshotPools;
+  @Column(name = "virsh_secret")
+  private String virshSecret;
+  @Column(name = "deleted_image_prefix")
+  private String deletedImagePrefix;
 
-	public CephRbdInfo() {
-		this.clusterName = StorageProperties.NAME;
-	}
+  public CephRbdInfo() {
+    this.clusterName = StorageProperties.NAME;
+  }
 
-	public String getClusterName() {
-		return clusterName;
-	}
+  public String getClusterName() {
+    return clusterName;
+  }
 
-	public void setClusterName(String clusterName) {
-		this.clusterName = clusterName;
-	}
+  public void setClusterName(String clusterName) {
+    this.clusterName = clusterName;
+  }
 
-	public String getCephUser() {
-		return cephUser;
-	}
+  public String getCephUser() {
+    return cephUser;
+  }
 
-	public void setCephUser(String cephUser) {
-		this.cephUser = cephUser;
-	}
+  public void setCephUser(String cephUser) {
+    this.cephUser = cephUser;
+  }
 
-	public String getCephKeyringFile() {
-		return cephKeyringFile;
-	}
+  public String getCephKeyringFile() {
+    return cephKeyringFile;
+  }
 
-	public void setCephKeyringFile(String cephKeyringFile) {
-		this.cephKeyringFile = cephKeyringFile;
-	}
+  public void setCephKeyringFile(String cephKeyringFile) {
+    this.cephKeyringFile = cephKeyringFile;
+  }
 
-	public String getCephConfigFile() {
-		return cephConfigFile;
-	}
+  public String getCephConfigFile() {
+    return cephConfigFile;
+  }
 
-	public void setCephConfigFile(String cephConfigFile) {
-		this.cephConfigFile = cephConfigFile;
-	}
+  public void setCephConfigFile(String cephConfigFile) {
+    this.cephConfigFile = cephConfigFile;
+  }
 
-	public String getCephVolumePools() {
-		return cephVolumePools;
-	}
+  public String getCephVolumePools() {
+    return cephVolumePools;
+  }
 
-	public void setCephVolumePools(String cephVolumePools) {
-		this.cephVolumePools = cephVolumePools;
-	}
+  public void setCephVolumePools(String cephVolumePools) {
+    this.cephVolumePools = cephVolumePools;
+  }
 
-	public String getCephSnapshotPools() {
-		return cephSnapshotPools;
-	}
+  public String getCephSnapshotPools() {
+    return cephSnapshotPools;
+  }
 
-	public void setCephSnapshotPools(String cephSnapshotPools) {
-		this.cephSnapshotPools = cephSnapshotPools;
-	}
+  public void setCephSnapshotPools(String cephSnapshotPools) {
+    this.cephSnapshotPools = cephSnapshotPools;
+  }
 
-	public String getVirshSecret() {
-		return virshSecret;
-	}
+  public String getVirshSecret() {
+    return virshSecret;
+  }
 
-	public void setVirshSecret(String virshSecret) {
-		this.virshSecret = virshSecret;
-	}
+  public void setVirshSecret(String virshSecret) {
+    this.virshSecret = virshSecret;
+  }
 
-	public String getDeletedImagePrefix() {
-		return deletedImagePrefix;
-	}
+  public String getDeletedImagePrefix() {
+    return deletedImagePrefix;
+  }
 
-	public void setDeletedImagePrefix(String deletedImagePrefix) {
-		this.deletedImagePrefix = deletedImagePrefix;
-	}
+  public void setDeletedImagePrefix(String deletedImagePrefix) {
+    this.deletedImagePrefix = deletedImagePrefix;
+  }
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = super.hashCode();
-		result = prime * result + ((clusterName == null) ? 0 : clusterName.hashCode());
-		return result;
-	}
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = super.hashCode();
+    result = prime * result + ((clusterName == null) ? 0 : clusterName.hashCode());
+    return result;
+  }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (!super.equals(obj))
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		CephRbdInfo other = (CephRbdInfo) obj;
-		if (clusterName == null) {
-			if (other.clusterName != null)
-				return false;
-		} else if (!clusterName.equals(other.clusterName))
-			return false;
-		return true;
-	}
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (!super.equals(obj))
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    CephRbdInfo other = (CephRbdInfo) obj;
+    if (clusterName == null) {
+      if (other.clusterName != null)
+        return false;
+    } else if (!clusterName.equals(other.clusterName))
+      return false;
+    return true;
+  }
 
-	@Override
-	public String toString() {
-		return "[cephuser=" + cephUser + ", cephkeyringfile=" + cephKeyringFile + ", cephconfigfile=" + cephConfigFile + ", cephvolumepools=" + cephVolumePools
-				+ ", cephsnapshotPools=" + cephSnapshotPools + "]";
-	}
+  @Override
+  public String toString() {
+    return "[cephuser=" + cephUser + ", cephkeyringfile=" + cephKeyringFile + ", cephconfigfile=" + cephConfigFile + ", cephvolumepools="
+        + cephVolumePools + ", cephsnapshotPools=" + cephSnapshotPools + "]";
+  }
 
-	@PrePersist
-	public void checkPrePersist() {
-		if (Strings.isNullOrEmpty(virshSecret)) {
-			virshSecret = UUID.randomUUID().toString();
-		}
-		if (Strings.isNullOrEmpty(deletedImagePrefix)) {
-			deletedImagePrefix = DELETED_IMAGE_COMMON_PREFIX + Crypto.generateAlphanumericId(8, "") + '-';
-		}
-	}
+  @PrePersist
+  public void checkPrePersist() {
+    if (Strings.isNullOrEmpty(virshSecret)) {
+      virshSecret = UUID.randomUUID().toString();
+    }
+    if (Strings.isNullOrEmpty(deletedImagePrefix)) {
+      deletedImagePrefix = DELETED_IMAGE_COMMON_PREFIX + Crypto.generateAlphanumericId(8, "") + '-';
+    }
+  }
 
-	public boolean isSame(CephRbdInfo other) {
-		if (other == null)
-			return false;
-		if (this == other)
-			return true;
-		if (clusterName == null) {
-			if (other.clusterName != null)
-				return false;
-		} else if (!clusterName.equals(other.clusterName))
-			return false;
-		if (cephUser == null) {
-			if (other.cephUser != null)
-				return false;
-		} else if (!cephUser.equals(other.cephUser))
-			return false;
-		if (cephKeyringFile == null) {
-			if (other.cephKeyringFile != null)
-				return false;
-		} else if (!cephKeyringFile.equals(other.cephKeyringFile))
-			return false;
-		if (cephConfigFile == null) {
-			if (other.cephConfigFile != null)
-				return false;
-		} else if (!cephConfigFile.equals(other.cephConfigFile))
-			return false;
-		if (cephVolumePools == null) {
-			if (other.cephVolumePools != null)
-				return false;
-		} else if (!cephVolumePools.equals(other.cephVolumePools))
-			return false;
-		if (cephSnapshotPools == null) {
-			if (other.getCephSnapshotPools() != null)
-				return false;
-		} else if (!cephSnapshotPools.equals(other.cephSnapshotPools))
-			return false;
-		return true;
-	}
+  public boolean isSame(CephRbdInfo other) {
+    if (other == null)
+      return false;
+    if (this == other)
+      return true;
+    if (clusterName == null) {
+      if (other.clusterName != null)
+        return false;
+    } else if (!clusterName.equals(other.clusterName))
+      return false;
+    if (cephUser == null) {
+      if (other.cephUser != null)
+        return false;
+    } else if (!cephUser.equals(other.cephUser))
+      return false;
+    if (cephKeyringFile == null) {
+      if (other.cephKeyringFile != null)
+        return false;
+    } else if (!cephKeyringFile.equals(other.cephKeyringFile))
+      return false;
+    if (cephConfigFile == null) {
+      if (other.cephConfigFile != null)
+        return false;
+    } else if (!cephConfigFile.equals(other.cephConfigFile))
+      return false;
+    if (cephVolumePools == null) {
+      if (other.cephVolumePools != null)
+        return false;
+    } else if (!cephVolumePools.equals(other.cephVolumePools))
+      return false;
+    if (cephSnapshotPools == null) {
+      if (other.getCephSnapshotPools() != null)
+        return false;
+    } else if (!cephSnapshotPools.equals(other.cephSnapshotPools))
+      return false;
+    return true;
+  }
 
-	private static CephRbdInfo generateDefault() {
-		CephRbdInfo info = new CephRbdInfo();
-		info.setCephUser(DEFAULT_CEPH_USER);
-		info.setCephKeyringFile(DEFAULT_CEPH_KEYRING_FILE);
-		info.setCephConfigFile(DEFAULT_CEPH_CONFIG_FILE);
-		info.setCephVolumePools(DEFAULT_POOL);
-		info.setCephSnapshotPools(DEFAULT_POOL);
-		return info;
-	}
+  private static CephRbdInfo generateDefault() {
+    CephRbdInfo info = new CephRbdInfo();
+    info.setCephUser(DEFAULT_CEPH_USER);
+    info.setCephKeyringFile(DEFAULT_CEPH_KEYRING_FILE);
+    info.setCephConfigFile(DEFAULT_CEPH_CONFIG_FILE);
+    info.setCephVolumePools(DEFAULT_POOL);
+    info.setCephSnapshotPools(DEFAULT_POOL);
+    return info;
+  }
 
-	public static CephRbdInfo getStorageInfo() {
-		CephRbdInfo info = null;
+  public static CephRbdInfo getStorageInfo() {
+    CephRbdInfo info = null;
 
-		try {
-			info = Transactions.find(new CephRbdInfo());
-		} catch (Exception e) {
-			LOG.warn("Ceph-RBD information for " + StorageProperties.NAME + " not found. Loading defaults.");
-			try {
-				info = Transactions.saveDirect(generateDefault());
-			} catch (Exception e1) {
-				try {
-					info = Transactions.find(new CephRbdInfo());
-				} catch (Exception e2) {
-					LOG.warn("Failed to persist and retrieve CephInfo entity");
-				}
-			}
-		}
+    try {
+      info = Transactions.find(new CephRbdInfo());
+    } catch (Exception e) {
+      LOG.warn("Ceph-RBD information for " + StorageProperties.NAME + " not found. Loading defaults.");
+      try {
+        info = Transactions.saveDirect(generateDefault());
+      } catch (Exception e1) {
+        try {
+          info = Transactions.find(new CephRbdInfo());
+        } catch (Exception e2) {
+          LOG.warn("Failed to persist and retrieve CephInfo entity");
+        }
+      }
+    }
 
-		if (info == null) {
-			info = generateDefault();
-		}
+    if (info == null) {
+      info = generateDefault();
+    }
 
-		return info;
-	}
+    return info;
+  }
 }

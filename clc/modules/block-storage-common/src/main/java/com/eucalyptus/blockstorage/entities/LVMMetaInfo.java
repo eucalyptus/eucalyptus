@@ -64,19 +64,14 @@ package com.eucalyptus.blockstorage.entities;
 
 import java.io.Serializable;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.GenericGenerator;
+import javax.persistence.MappedSuperclass;
 
-import com.eucalyptus.configurable.ConfigurableIdentifier;
 import com.eucalyptus.entities.AbstractPersistent;
-
-import javax.persistence.*;
 
 @MappedSuperclass
 public class LVMMetaInfo extends AbstractPersistent implements Serializable {
 
-	public LVMMetaInfo() {
-		super();
-	}
+  public LVMMetaInfo() {
+    super();
+  }
 }

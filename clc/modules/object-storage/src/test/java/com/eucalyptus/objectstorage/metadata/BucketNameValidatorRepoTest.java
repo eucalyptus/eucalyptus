@@ -62,65 +62,65 @@
 
 package com.eucalyptus.objectstorage.metadata;
 
-import org.junit.Test;
-
 import static org.junit.Assert.assertTrue;
+
+import org.junit.Test;
 
 /*
  *
  */
 public class BucketNameValidatorRepoTest {
 
-    @Test
-    public void extendedBucketNameValidatorTest() throws Exception {
-        String restriction = "extended";
-        String largeName = String.format("%0" + 10 + "d", 0).replace("0", "abcdefghij");
-        assertTrue("expected that a " + largeName.length() + "-character name would be okay",
-                BucketNameValidatorRepo.getBucketNameValidator(restriction).check( largeName ));
-        largeName = String.format("%0" + 30 + "d", 0).replace("0", "abcdefghij");
-        assertTrue("expected that a " + largeName.length() + "-character name would not be okay",
-                ! BucketNameValidatorRepo.getBucketNameValidator(restriction).check( largeName ));
-        String badName = "foo#bar";
-        assertTrue("expected that the name " + badName + " would not be okay",
-                ! BucketNameValidatorRepo.getBucketNameValidator(restriction).check( badName ));
-        badName = "foo bar";
-        assertTrue("expected that the name " + badName + " would not be okay",
-                ! BucketNameValidatorRepo.getBucketNameValidator(restriction).check( badName ));
-        badName = "foo@bar";
-        assertTrue("expected that the name " + badName + " would not be okay",
-                ! BucketNameValidatorRepo.getBucketNameValidator(restriction).check( badName ));
-        badName = "foo,bar";
-        assertTrue("expected that the name " + badName + " would not be okay",
-                ! BucketNameValidatorRepo.getBucketNameValidator(restriction).check( badName ));
-    }
+  @Test
+  public void extendedBucketNameValidatorTest() throws Exception {
+    String restriction = "extended";
+    String largeName = String.format("%0" + 10 + "d", 0).replace("0", "abcdefghij");
+    assertTrue("expected that a " + largeName.length() + "-character name would be okay", BucketNameValidatorRepo.getBucketNameValidator(restriction)
+        .check(largeName));
+    largeName = String.format("%0" + 30 + "d", 0).replace("0", "abcdefghij");
+    assertTrue("expected that a " + largeName.length() + "-character name would not be okay",
+        !BucketNameValidatorRepo.getBucketNameValidator(restriction).check(largeName));
+    String badName = "foo#bar";
+    assertTrue("expected that the name " + badName + " would not be okay", !BucketNameValidatorRepo.getBucketNameValidator(restriction)
+        .check(badName));
+    badName = "foo bar";
+    assertTrue("expected that the name " + badName + " would not be okay", !BucketNameValidatorRepo.getBucketNameValidator(restriction)
+        .check(badName));
+    badName = "foo@bar";
+    assertTrue("expected that the name " + badName + " would not be okay", !BucketNameValidatorRepo.getBucketNameValidator(restriction)
+        .check(badName));
+    badName = "foo,bar";
+    assertTrue("expected that the name " + badName + " would not be okay", !BucketNameValidatorRepo.getBucketNameValidator(restriction)
+        .check(badName));
+  }
 
-    @Test
-    public void dnsCompliantBucketNameValidatorTest() throws Exception {
-        String restriction = "dns-compliant";
-        String largeName = String.format("%0" + 6 + "d", 0).replace("0", "abcdefghij");
-        assertTrue("expected that a " + largeName.length() + "-character name would be okay",
-                BucketNameValidatorRepo.getBucketNameValidator(restriction).check( largeName ));
-        largeName = String.format("%0" + 8 + "d", 0).replace("0", "abcdefgh");
-        assertTrue("expected that a " + largeName.length() + "-character name would not be okay",
-                ! BucketNameValidatorRepo.getBucketNameValidator(restriction).check( largeName ));
-        String badName = "foo..bar";
-        assertTrue("expected that the name " + badName + " would not be okay",
-                ! BucketNameValidatorRepo.getBucketNameValidator(restriction).check( badName ));
-        badName = ".foobar";
-        assertTrue("expected that the name " + badName + " would not be okay",
-                ! BucketNameValidatorRepo.getBucketNameValidator(restriction).check( badName ));
-        badName = "-foobar";
-        assertTrue("expected that the name " + badName + " would not be okay",
-                ! BucketNameValidatorRepo.getBucketNameValidator(restriction).check( badName ));
-        badName = "foobar-";
-        assertTrue("expected that the name " + badName + " would not be okay",
-                ! BucketNameValidatorRepo.getBucketNameValidator(restriction).check( badName ));
-        badName = "foobar.";
-        assertTrue("expected that the name " + badName + " would not be okay",
-                ! BucketNameValidatorRepo.getBucketNameValidator(restriction).check( badName ));
-        badName = "173.205.188.50";
-        assertTrue("expected that the name " + badName + " would not be okay",
-                ! BucketNameValidatorRepo.getBucketNameValidator(restriction).check( badName ));
-    }
+  @Test
+  public void dnsCompliantBucketNameValidatorTest() throws Exception {
+    String restriction = "dns-compliant";
+    String largeName = String.format("%0" + 6 + "d", 0).replace("0", "abcdefghij");
+    assertTrue("expected that a " + largeName.length() + "-character name would be okay", BucketNameValidatorRepo.getBucketNameValidator(restriction)
+        .check(largeName));
+    largeName = String.format("%0" + 8 + "d", 0).replace("0", "abcdefgh");
+    assertTrue("expected that a " + largeName.length() + "-character name would not be okay",
+        !BucketNameValidatorRepo.getBucketNameValidator(restriction).check(largeName));
+    String badName = "foo..bar";
+    assertTrue("expected that the name " + badName + " would not be okay", !BucketNameValidatorRepo.getBucketNameValidator(restriction)
+        .check(badName));
+    badName = ".foobar";
+    assertTrue("expected that the name " + badName + " would not be okay", !BucketNameValidatorRepo.getBucketNameValidator(restriction)
+        .check(badName));
+    badName = "-foobar";
+    assertTrue("expected that the name " + badName + " would not be okay", !BucketNameValidatorRepo.getBucketNameValidator(restriction)
+        .check(badName));
+    badName = "foobar-";
+    assertTrue("expected that the name " + badName + " would not be okay", !BucketNameValidatorRepo.getBucketNameValidator(restriction)
+        .check(badName));
+    badName = "foobar.";
+    assertTrue("expected that the name " + badName + " would not be okay", !BucketNameValidatorRepo.getBucketNameValidator(restriction)
+        .check(badName));
+    badName = "173.205.188.50";
+    assertTrue("expected that the name " + badName + " would not be okay", !BucketNameValidatorRepo.getBucketNameValidator(restriction)
+        .check(badName));
+  }
 
 }

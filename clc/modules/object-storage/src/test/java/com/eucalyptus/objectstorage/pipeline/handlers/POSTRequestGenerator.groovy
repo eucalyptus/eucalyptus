@@ -33,22 +33,22 @@ import org.jboss.netty.handler.codec.http.HttpVersion
  */
 @CompileStatic
 class POSTRequestGenerator {
-    static Random randGen = new Random(System.currentTimeMillis())
-    static String boundary = UUID.randomUUID().toString().replace("-","")
-    static String boundaryField = "--" + boundary
-    static byte[] testContent = getRandomData(512)
-    static String accessKey = "testaccesskey"
-    static String currentB64Policy
-    static String currentSignature
+  static Random randGen = new Random(System.currentTimeMillis())
+  static String boundary = UUID.randomUUID().toString().replace("-","")
+  static String boundaryField = "--" + boundary
+  static byte[] testContent = getRandomData(512)
+  static String accessKey = "testaccesskey"
+  static String currentB64Policy
+  static String currentSignature
 
-    static byte[] getRandomData(int length) {
-        byte[] buffer = new byte[length]
-        randGen.nextBytes(buffer)
-        return buffer
-    }
+  static byte[] getRandomData(int length) {
+    byte[] buffer = new byte[length]
+    randGen.nextBytes(buffer)
+    return buffer
+  }
 
-    static ChannelBuffer getContentBuffer(String accessKey, String keyName, byte[] content, String policy, String signature, String redirectUrl, String acl) {
-        byte[] headers = ('--' + boundary + '\r\n' +
+  static ChannelBuffer getContentBuffer(String accessKey, String keyName, byte[] content, String policy, String signature, String redirectUrl, String acl) {
+    byte[] headers = ('--' + boundary + '\r\n' +
         'Content-Disposition: form-data; name="Policy"\r\n' +
         'Content-Type: text/plain\r\n\r\n' +
         policy + '\r\n' +
@@ -71,22 +71,22 @@ class POSTRequestGenerator {
         '--' + boundary + '\r\n' +
         'Content-Disposition: form-data; name="file"; filename="/tmp/euca-bundle-FnZatV/myinstance0.part.00"\r\n' +
         'Content-Type: application/octet-stream\r\n\r\n').getBytes('UTF-8')
-        byte[] trailer = ('\r\n' + '--' + boundary + '--\r\n').getBytes('UTF-8')
-        ChannelBuffer contentBuffer = ChannelBuffers.buffer(headers.length + content.length + trailer.length)
-        contentBuffer.writeBytes(headers)
-        contentBuffer.writeBytes(content)
-        contentBuffer.writeBytes(trailer)
-        return contentBuffer
-    }
+    byte[] trailer = ('\r\n' + '--' + boundary + '--\r\n').getBytes('UTF-8')
+    ChannelBuffer contentBuffer = ChannelBuffers.buffer(headers.length + content.length + trailer.length)
+    contentBuffer.writeBytes(headers)
+    contentBuffer.writeBytes(content)
+    contentBuffer.writeBytes(trailer)
+    return contentBuffer
+  }
 
-    static MappingHttpRequest getPOSTRequest(String bucket, String keyName, String acl) {
-        ChannelBuffer contentBuffer = getContentBuffer(accessKey, keyName, testContent, "fakepolicy", "fakesignature", "http://localhost", acl)
-        currentB64Policy = "fakepolicy" // not testing actual encoding
-        currentSignature = "fakesignature"
-        MappingHttpRequest request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/services/objectstorage/" + bucket)
-        request.setHeader(HttpHeaders.Names.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary)
-        request.setContent(contentBuffer)
-        request.setHeader(HttpHeaders.Names.CONTENT_LENGTH, contentBuffer.readableBytes())
-        return request
-    }
+  static MappingHttpRequest getPOSTRequest(String bucket, String keyName, String acl) {
+    ChannelBuffer contentBuffer = getContentBuffer(accessKey, keyName, testContent, "fakepolicy", "fakesignature", "http://localhost", acl)
+    currentB64Policy = "fakepolicy" // not testing actual encoding
+    currentSignature = "fakesignature"
+    MappingHttpRequest request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/services/objectstorage/" + bucket)
+    request.setHeader(HttpHeaders.Names.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary)
+    request.setContent(contentBuffer)
+    request.setHeader(HttpHeaders.Names.CONTENT_LENGTH, contentBuffer.readableBytes())
+    return request
+  }
 }

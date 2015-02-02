@@ -62,6 +62,14 @@
 
 package com.eucalyptus.objectstorage.pipeline.handlers;
 
+import java.util.Date;
+
+import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.util.OSGUtil;
@@ -70,62 +78,56 @@ import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.google.common.base.Strings;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
 
-import java.util.Date;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 @ChannelPipelineCoverage("one")
 public class ObjectStorageHEADOutboundHandler extends MessageStackHandler {
-    private static Logger LOG = Logger.getLogger(ObjectStorageHEADOutboundHandler.class);
+  private static Logger LOG = Logger.getLogger(ObjectStorageHEADOutboundHandler.class);
 
-    @Override
-    public void outgoingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
-        if (event.getMessage() instanceof MappingHttpResponse) {
-            MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
-            BaseMessage msg = (BaseMessage) httpResponse.getMessage();
-            httpResponse.setHeader(HttpHeaders.Names.DATE, DateFormatter.dateToHeaderFormattedString(new Date()));
-            httpResponse.setHeader(ObjectStorageProperties.AMZ_REQUEST_ID, msg.getCorrelationId());
-            if (msg instanceof ObjectStorageDataResponseType) {
-            	ObjectStorageDataResponseType headResponse = (ObjectStorageDataResponseType) msg;
-            	
-                httpResponse.setHeader(HttpHeaders.Names.ETAG, "\"" + headResponse.getEtag() + "\""); //etag in quotes, per s3-spec.
+  @Override
+  public void outgoingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
+    if (event.getMessage() instanceof MappingHttpResponse) {
+      MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
+      BaseMessage msg = (BaseMessage) httpResponse.getMessage();
+      httpResponse.setHeader(HttpHeaders.Names.DATE, DateFormatter.dateToHeaderFormattedString(new Date()));
+      httpResponse.setHeader(ObjectStorageProperties.AMZ_REQUEST_ID, msg.getCorrelationId());
+      if (msg instanceof ObjectStorageDataResponseType) {
+        ObjectStorageDataResponseType headResponse = (ObjectStorageDataResponseType) msg;
 
-                //Fix for euca-9081
-                String contentType = headResponse.getContentType();
-                if(!Strings.isNullOrEmpty(contentType)) {
-                    httpResponse.setHeader(HttpHeaders.Names.CONTENT_TYPE, contentType);
-                }
+        httpResponse.setHeader(HttpHeaders.Names.ETAG, "\"" + headResponse.getEtag() + "\""); // etag in quotes, per s3-spec.
 
-                String contentLength = String.valueOf(headResponse.getSize());
-                if(!Strings.isNullOrEmpty(contentLength)) {
-                    httpResponse.setHeader(HttpHeaders.Names.CONTENT_LENGTH, contentLength);
-                }
-
-                if (!Strings.isNullOrEmpty(headResponse.getVersionId()) &&
-                        !ObjectStorageProperties.NULL_VERSION_ID.equals(((ObjectStorageDataResponseType) msg).getVersionId())) {
-                    httpResponse.setHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, ((ObjectStorageDataResponseType) msg).getVersionId());
-                }
-
-                //Add user metadata
-                for (MetaDataEntry m : headResponse.getMetaData()) {
-                    httpResponse.addHeader(ObjectStorageProperties.AMZ_META_HEADER_PREFIX + m.getName(), m.getValue());
-                }
-                
-				Date lastModified = headResponse.getLastModified();
-				if (lastModified != null) {
-					httpResponse.setHeader(HttpHeaders.Names.LAST_MODIFIED, DateFormatter.dateToHeaderFormattedString(lastModified));
-				}
-
-                // add copied headers
-                OSGUtil.addCopiedHeadersToResponse(httpResponse, headResponse);
-            }
-            //Since a HEAD response, never include a body
-            httpResponse.setMessage(null);
+        // Fix for euca-9081
+        String contentType = headResponse.getContentType();
+        if (!Strings.isNullOrEmpty(contentType)) {
+          httpResponse.setHeader(HttpHeaders.Names.CONTENT_TYPE, contentType);
         }
+
+        String contentLength = String.valueOf(headResponse.getSize());
+        if (!Strings.isNullOrEmpty(contentLength)) {
+          httpResponse.setHeader(HttpHeaders.Names.CONTENT_LENGTH, contentLength);
+        }
+
+        if (!Strings.isNullOrEmpty(headResponse.getVersionId())
+            && !ObjectStorageProperties.NULL_VERSION_ID.equals(((ObjectStorageDataResponseType) msg).getVersionId())) {
+          httpResponse.setHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, ((ObjectStorageDataResponseType) msg).getVersionId());
+        }
+
+        // Add user metadata
+        for (MetaDataEntry m : headResponse.getMetaData()) {
+          httpResponse.addHeader(ObjectStorageProperties.AMZ_META_HEADER_PREFIX + m.getName(), m.getValue());
+        }
+
+        Date lastModified = headResponse.getLastModified();
+        if (lastModified != null) {
+          httpResponse.setHeader(HttpHeaders.Names.LAST_MODIFIED, DateFormatter.dateToHeaderFormattedString(lastModified));
+        }
+
+        // add copied headers
+        OSGUtil.addCopiedHeadersToResponse(httpResponse, headResponse);
+      }
+      // Since a HEAD response, never include a body
+      httpResponse.setMessage(null);
     }
+  }
 }

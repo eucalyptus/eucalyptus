@@ -24,9 +24,10 @@ package com.eucalyptus.storage.config;
  * Created by zhill on 5/5/14.
  */
 public interface CacheableConfiguration<T> {
-    /**
-     * Returns the config from the persistence store, the latest known
-     * @return
-     */
-    public T getLatest();
+  /**
+   * Returns the config from the persistence store, the latest known
+   * 
+   * @return
+   */
+  public T getLatest();
 }

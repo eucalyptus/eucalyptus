@@ -68,81 +68,81 @@ import com.eucalyptus.blockstorage.ceph.entities.CephRbdInfo;
 
 public interface CephRbdAdapter {
 
-	/**
-	 * Use this to change the ceph configuration after the class is instantiated
-	 * 
-	 * @param cephInfo
-	 */
-	public void setCephConfig(CephRbdInfo cephInfo);
+  /**
+   * Use this to change the ceph configuration after the class is instantiated
+   * 
+   * @param cephInfo
+   */
+  public void setCephConfig(CephRbdInfo cephInfo);
 
-	/**
-	 * Create a new RBD image
-	 * 
-	 * @param imageName Name of the image to be created
-	 * @param imageSize Size of the image in bytes
-	 * @return Returns a representation of the newly created image
-	 */
-	public String createImage(String imageName, long imageSize);
+  /**
+   * Create a new RBD image
+   * 
+   * @param imageName Name of the image to be created
+   * @param imageSize Size of the image in bytes
+   * @return Returns a representation of the newly created image
+   */
+  public String createImage(String imageName, long imageSize);
 
-	/**
-	 * Delete RBD image
-	 * 
-	 * @param imageName Name of the image to be deleted
-	 * @param poolName Name of the pool
-	 * @param
-	 */
-	public void deleteImage(String imageName, String poolName);
+  /**
+   * Delete RBD image
+   * 
+   * @param imageName Name of the image to be deleted
+   * @param poolName Name of the pool
+   * @param
+   */
+  public void deleteImage(String imageName, String poolName);
 
-	/**
-	 * Rename RBD image
-	 * 
-	 * @param imageName Image to be renamed
-	 * @param newImageName New name of the image
-	 */
-	public void renameImage(String imageName, String newImageName);
+  /**
+   * Rename RBD image
+   * 
+   * @param imageName Image to be renamed
+   * @param newImageName New name of the image
+   */
+  public void renameImage(String imageName, String newImageName);
 
-	/**
-	 * Check if the image exists in any of the configured pools and return the pool name
-	 * 
-	 * @param imageName Name of the image to be checked on
-	 * @return Returns true if the image exists and false otherwise
-	 */
-	public String getImagePool(String imageName);
+  /**
+   * Check if the image exists in any of the configured pools and return the pool name
+   * 
+   * @param imageName Name of the image to be checked on
+   * @return Returns true if the image exists and false otherwise
+   */
+  public String getImagePool(String imageName);
 
-	/**
-	 * Create an RBD snapshot
-	 * 
-	 * @param parentName Name of the parent image
-	 * @param snapName Name of the snapshot
-	 * @return Returns a representation of the newly created snapshot
-	 */
-	public String createSnapshot(String parentName, String snapName);
+  /**
+   * Create an RBD snapshot
+   * 
+   * @param parentName Name of the parent image
+   * @param snapName Name of the snapshot
+   * @return Returns a representation of the newly created snapshot
+   */
+  public String createSnapshot(String parentName, String snapName);
 
-	/**
-	 * Delete the RBD snapshot
-	 * 
-	 * @param parentName Name of the parent image
-	 * @param snapName Name of the snapshot
-	 */
-	public void deleteSnapshot(String parentName, String snapName);
+  /**
+   * Delete the RBD snapshot
+   * 
+   * @param parentName Name of the parent image
+   * @param snapName Name of the snapshot
+   */
+  public void deleteSnapshot(String parentName, String snapName);
 
-	/**
-	 * Clone an image from the parent using the snapshot on the parent. If no snapshot is passed, a new snapshot is created on the parent and used for cloning.
-	 * Resize the cloned image if size is passed in
-	 * 
-	 * @param parentName Name of the parent image
-	 * @param snapName Name of the snapshot on parent image to be used for cloning
-	 * @param cloneName Name of the image to be cloned
-	 * @param size Size of the cloned image if it needs to resized
-	 * @return Returns a representation of the cloned image
-	 */
-	public String cloneAndResizeImage(String parentName, String snapName, String cloneName, Long size);
+  /**
+   * Clone an image from the parent using the snapshot on the parent. If no snapshot is passed, a new snapshot is created on the parent and used for
+   * cloning. Resize the cloned image if size is passed in
+   * 
+   * @param parentName Name of the parent image
+   * @param snapName Name of the snapshot on parent image to be used for cloning
+   * @param cloneName Name of the image to be cloned
+   * @param size Size of the cloned image if it needs to resized
+   * @return Returns a representation of the cloned image
+   */
+  public String cloneAndResizeImage(String parentName, String snapName, String cloneName, Long size);
 
-	/**
-	 * List RBD images in pool
-	 * 
-	 * @param poolName Name of the pool
-	 * @return
-	 */
-	public List<String> listPool(String poolName);
+  /**
+   * List RBD images in pool
+   * 
+   * @param poolName Name of the pool
+   * @return
+   */
+  public List<String> listPool(String poolName);
 }

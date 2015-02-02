@@ -62,14 +62,11 @@
 
 package com.eucalyptus.blockstorage;
 
-import java.io.File;
 import java.util.concurrent.Callable;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.blockstorage.entities.SnapshotInfo;
-import com.eucalyptus.blockstorage.exceptions.UnknownSizeException;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -77,9 +74,6 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.storage.common.CallBack;
 import com.eucalyptus.system.Threads;
-
-import edu.ucsb.eucalyptus.util.SystemUtil;
-import edu.ucsb.eucalyptus.util.SystemUtil.CommandOutput;
 
 /**
  * Callback that updates snapshot upload info in the db after at least N percent upload change. Currently set at 3%
@@ -90,78 +84,78 @@ import edu.ucsb.eucalyptus.util.SystemUtil.CommandOutput;
  * 
  */
 public class SnapshotProgressCallback implements CallBack {
-	private static Logger LOG = Logger.getLogger(SnapshotProgressCallback.class);
-	private static final int PROGRESS_TICK = 3; // Percent between updates
+  private static Logger LOG = Logger.getLogger(SnapshotProgressCallback.class);
+  private static final int PROGRESS_TICK = 3; // Percent between updates
 
-	private String snapshotId;
-	private long uploadSize;
-	private long bytesTransferred;
-	private int lastProgress;
-	private ServiceConfiguration scConfig;
+  private String snapshotId;
+  private long uploadSize;
+  private long bytesTransferred;
+  private int lastProgress;
+  private ServiceConfiguration scConfig;
 
-	public SnapshotProgressCallback(String snapshotId) {
-		this.snapshotId = snapshotId;
-		this.uploadSize = 0L;
-		this.bytesTransferred = 0L;
-		this.scConfig = Components.lookup(Storage.class).getLocalServiceConfiguration();
-		this.lastProgress = 1; // to indicate that some amount of snapshot in in progress
-		Threads.enqueue(scConfig, SnapshotProgressCallback.class, 1, new ProgressSetter(this.snapshotId, this.lastProgress));
-	}
-	
-	// Set the size before calling update()
-	public void setUploadSize(long uploadSize) {
-		this.uploadSize = uploadSize;
-	}
+  public SnapshotProgressCallback(String snapshotId) {
+    this.snapshotId = snapshotId;
+    this.uploadSize = 0L;
+    this.bytesTransferred = 0L;
+    this.scConfig = Components.lookup(Storage.class).getLocalServiceConfiguration();
+    this.lastProgress = 1; // to indicate that some amount of snapshot in in progress
+    Threads.enqueue(scConfig, SnapshotProgressCallback.class, 1, new ProgressSetter(this.snapshotId, this.lastProgress));
+  }
 
-	@Override
-	public void update(final long bytesTransferred) {
-		if (this.uploadSize > 0) {
-			this.bytesTransferred += bytesTransferred;
-			int progress = (int) ((this.bytesTransferred * 100) / uploadSize);
-			if (progress >= 100 || (progress - this.lastProgress < PROGRESS_TICK)) {
-				// Don't update. Either not enough change or snapshot is 100% complete
-				return;
-			} else {
-				this.lastProgress = progress;
-				Threads.enqueue(scConfig, SnapshotProgressCallback.class, 1, new ProgressSetter(this.snapshotId, this.lastProgress));
-			}
-		}
-	}
+  // Set the size before calling update()
+  public void setUploadSize(long uploadSize) {
+    this.uploadSize = uploadSize;
+  }
 
-	@Override
-	public void finish() {
-		// Nothing to do here
-	}
+  @Override
+  public void update(final long bytesTransferred) {
+    if (this.uploadSize > 0) {
+      this.bytesTransferred += bytesTransferred;
+      int progress = (int) ((this.bytesTransferred * 100) / uploadSize);
+      if (progress >= 100 || (progress - this.lastProgress < PROGRESS_TICK)) {
+        // Don't update. Either not enough change or snapshot is 100% complete
+        return;
+      } else {
+        this.lastProgress = progress;
+        Threads.enqueue(scConfig, SnapshotProgressCallback.class, 1, new ProgressSetter(this.snapshotId, this.lastProgress));
+      }
+    }
+  }
 
-	@Override
-	public void failed() {
-		// Nothing to do here
-	}
+  @Override
+  public void finish() {
+    // Nothing to do here
+  }
 
-	class ProgressSetter implements Callable<Boolean> {
-		private String snapshotId;
-		private int progress;
+  @Override
+  public void failed() {
+    // Nothing to do here
+  }
 
-		public ProgressSetter(String snapshotId, int progress) {
-			this.snapshotId = snapshotId;
-			this.progress = progress;
-		}
+  class ProgressSetter implements Callable<Boolean> {
+    private String snapshotId;
+    private int progress;
 
-		@Override
-		public Boolean call() throws Exception {
-			try (TransactionResource db = Entities.transactionFor(SnapshotInfo.class)) {
-				SnapshotInfo snap = Entities.uniqueResult(new SnapshotInfo(this.snapshotId));
-				StorageProperties.Status snapStatus = StorageProperties.Status.valueOf(snap.getStatus());
-				if (StorageProperties.Status.pending.equals(snapStatus) || StorageProperties.Status.creating.equals(snapStatus)) {
-					// Only update in 'pending' or 'creating' state.
-					snap.setProgress(String.valueOf(this.progress));
-				}
-				db.commit();
-				return true;
-			} catch (Exception e) {
-				LOG.debug("Could not update snapshot progress in DB for " + snapshotId + " to " + lastProgress + "% due to " + e.getMessage());
-				return false;
-			}
-		}
-	}
+    public ProgressSetter(String snapshotId, int progress) {
+      this.snapshotId = snapshotId;
+      this.progress = progress;
+    }
+
+    @Override
+    public Boolean call() throws Exception {
+      try (TransactionResource db = Entities.transactionFor(SnapshotInfo.class)) {
+        SnapshotInfo snap = Entities.uniqueResult(new SnapshotInfo(this.snapshotId));
+        StorageProperties.Status snapStatus = StorageProperties.Status.valueOf(snap.getStatus());
+        if (StorageProperties.Status.pending.equals(snapStatus) || StorageProperties.Status.creating.equals(snapStatus)) {
+          // Only update in 'pending' or 'creating' state.
+          snap.setProgress(String.valueOf(this.progress));
+        }
+        db.commit();
+        return true;
+      } catch (Exception e) {
+        LOG.debug("Could not update snapshot progress in DB for " + snapshotId + " to " + lastProgress + "% due to " + e.getMessage());
+        return false;
+      }
+    }
+  }
 }

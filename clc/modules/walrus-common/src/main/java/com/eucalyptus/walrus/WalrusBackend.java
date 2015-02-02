@@ -70,20 +70,20 @@ import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PolicyVendor;
 
 @GenerateKeys
-@PolicyVendor( "s3" )
-@Partition( WalrusBackend.class )
+@PolicyVendor("s3")
+@Partition(WalrusBackend.class)
 @FaultLogPrefix
-@Description( "The legacy Walrus Backend service" )
+@Description("The legacy Walrus Backend service")
 public class WalrusBackend extends ComponentId {
 
-    @Override
-    public String getInternalNamespaceSuffix() {
-        return "/walrus/backend";
-    }
+  @Override
+  public String getInternalNamespaceSuffix() {
+    return "/walrus/backend";
+  }
 
-    @Override
-    public String getLocalEndpointName( ) {
-        return "vm://BukkitInternal";
-    }
-  
+  @Override
+  public String getLocalEndpointName() {
+    return "vm://BukkitInternal";
+  }
+
 }

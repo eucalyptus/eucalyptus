@@ -62,107 +62,112 @@
 
 package com.eucalyptus.walrus.bittorrent;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
+import org.apache.log4j.Logger;
+
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.walrus.util.WalrusProperties;
 
 import edu.ucsb.eucalyptus.util.StreamConsumer;
-import org.apache.log4j.Logger;
-
-
-import java.io.*;
 
 public class TorrentCreator {
-    private static Logger LOG = Logger.getLogger( TorrentCreator.class );
-    private String torrentFilePath;
-    private String filePath;
-    private String trackerUrl;
-    private String objectKey;
-    private String objectName;
-    private final String NAME_TAG = "name";
+  private static Logger LOG = Logger.getLogger(TorrentCreator.class);
+  private String torrentFilePath;
+  private String filePath;
+  private String trackerUrl;
+  private String objectKey;
+  private String objectName;
+  private final String NAME_TAG = "name";
 
-    public TorrentCreator(String filePath, String objectKey, String objectName, String torrentFilePath, String trackerUrl) {
-        this.filePath = filePath;
-        this.torrentFilePath = torrentFilePath;
-        this.trackerUrl = trackerUrl;
-        this.objectKey = objectKey;
-        this.objectName = objectName;
+  public TorrentCreator(String filePath, String objectKey, String objectName, String torrentFilePath, String trackerUrl) {
+    this.filePath = filePath;
+    this.torrentFilePath = torrentFilePath;
+    this.trackerUrl = trackerUrl;
+    this.objectKey = objectKey;
+    this.objectName = objectName;
+  }
+
+  private void makeTorrent() {
+    new File(WalrusProperties.TRACKER_DIR).mkdirs();
+    try {
+      Runtime rt = Runtime.getRuntime();
+      Process proc = rt.exec(new String[] {WalrusProperties.TORRENT_CREATOR_BINARY, filePath, trackerUrl, "--target", torrentFilePath});
+      StreamConsumer error = new StreamConsumer(proc.getErrorStream());
+      StreamConsumer output = new StreamConsumer(proc.getInputStream());
+      error.start();
+      output.start();
+      int pid = proc.waitFor();
+      output.join();
+      String errValue = error.getReturnValue();
+      String outValue = output.getReturnValue();
+      if (errValue.length() > 0)
+        LOG.warn(errValue);
+      if (outValue.length() > 0)
+        LOG.warn(outValue);
+    } catch (Exception t) {
+      LOG.error(t);
+    }
+  }
+
+  private void changeName() throws Exception {
+    File inFile = new File(torrentFilePath);
+    File outFile = new File(torrentFilePath + Hashes.getRandom(6));
+    BufferedInputStream inStream = new BufferedInputStream(new FileInputStream(inFile));
+    BufferedOutputStream outStream = new BufferedOutputStream(new FileOutputStream(outFile));
+
+    int bytesRead;
+    int totalBytesRead = 0;
+    byte[] bytes = new byte[102400];
+    String inString = "";
+
+    try {
+      while ((bytesRead = inStream.read(bytes)) > 0) {
+        inString += new String(bytes, 0, bytesRead);
+        totalBytesRead += bytesRead;
+      }
+    } catch (IOException ex) {
+      LOG.error(ex);
+      Logs.extreme().error(ex, ex);
+      throw ex;
+    } finally {
+      try {
+        inStream.close();
+      } catch (IOException ex) {
+        LOG.error(ex);
+      }
     }
 
-    private void makeTorrent() {
-        new File(WalrusProperties.TRACKER_DIR).mkdirs();
-        try {
-            Runtime rt = Runtime.getRuntime();
-            Process proc = rt.exec(new String[]{WalrusProperties.TORRENT_CREATOR_BINARY, filePath, trackerUrl, "--target", torrentFilePath});
-            StreamConsumer error = new StreamConsumer(proc.getErrorStream());
-            StreamConsumer output = new StreamConsumer(proc.getInputStream());
-            error.start();
-            output.start();
-            int pid = proc.waitFor();
-            output.join();
-            String errValue = error.getReturnValue();
-            String outValue = output.getReturnValue();
-            if(errValue.length() > 0)
-                LOG.warn(errValue);
-            if(outValue.length() > 0)
-                LOG.warn(outValue);
-        } catch (Exception t) {
-            LOG.error(t);
-        }
+    int len = inString.length();
+    int idx = inString.indexOf(NAME_TAG);
+    int lastidx = inString.indexOf(objectName) + objectName.length();
+
+    try {
+      outStream.write(bytes, 0, idx + NAME_TAG.length());
+      outStream.write(new String(objectKey.length() + ":" + objectKey).getBytes());
+      outStream.write(bytes, lastidx, totalBytesRead - lastidx);
+    } catch (IOException ex) {
+      LOG.error(ex);
+      Logs.extreme().error(ex, ex);
+      throw ex;
+    } finally {
+      try {
+        outStream.close();
+      } catch (IOException ex) {
+        LOG.error(ex);
+      }
     }
+    outFile.renameTo(inFile);
+  }
 
-    private void changeName() throws Exception {
-        File inFile = new File(torrentFilePath);
-        File outFile = new File(torrentFilePath + Hashes.getRandom(6));
-        BufferedInputStream inStream = new BufferedInputStream(new FileInputStream(inFile));
-        BufferedOutputStream outStream = new BufferedOutputStream(new FileOutputStream(outFile));
-
-        int bytesRead;
-        int totalBytesRead = 0;
-        byte[] bytes = new byte[102400];
-        String inString = "";
-
-        try {
-        	while((bytesRead = inStream.read(bytes)) > 0) {
-        		inString += new String(bytes, 0, bytesRead);
-        		totalBytesRead += bytesRead;
-        	}
-        } catch (IOException ex) {
-        	LOG.error( ex );
-            Logs.extreme( ).error( ex, ex );
-            throw ex;
-        } finally {
-        	try {
-        		inStream.close();
-        	} catch (IOException ex) {
-        		LOG.error( ex );
-        	}
-        }
-        
-        int len = inString.length();
-        int idx = inString.indexOf(NAME_TAG);
-        int lastidx = inString.indexOf(objectName) + objectName.length();
-
-        try {
-        	outStream.write(bytes, 0, idx + NAME_TAG.length());
-        	outStream.write(new String(objectKey.length() + ":" + objectKey).getBytes());
-        	outStream.write(bytes, lastidx, totalBytesRead - lastidx);
-        } catch (IOException ex) {
-        	LOG.error( ex );
-            Logs.extreme( ).error( ex, ex );
-            throw ex;
-        } finally {
-        	try {
-        		outStream.close();
-        	} catch (IOException ex) {
-        		LOG.error( ex );
-        	}
-        }
-        outFile.renameTo(inFile);
-    }
-
-    public void create() throws Exception {
-        makeTorrent();
-        changeName();
-    }
+  public void create() throws Exception {
+    makeTorrent();
+    changeName();
+  }
 }

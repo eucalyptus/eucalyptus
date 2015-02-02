@@ -62,6 +62,15 @@
 
 package com.eucalyptus.objectstorage;
 
+import static org.junit.Assert.assertTrue;
+
+import java.util.Collections;
+
+import org.jmock.Expectations;
+import org.jmock.integration.junit4.JUnitRuleMockery;
+import org.junit.AfterClass;
+import org.junit.Rule;
+import org.junit.Test;
 
 import com.eucalyptus.objectstorage.auth.OsgAuthorizationHandler;
 import com.eucalyptus.objectstorage.auth.RequestAuthorizationHandler;
@@ -70,78 +79,67 @@ import com.eucalyptus.objectstorage.metadata.BucketLifecycleManager;
 import com.eucalyptus.objectstorage.metadata.BucketMetadataManager;
 import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleType;
-import org.jmock.Expectations;
-import org.jmock.integration.junit4.JUnitRuleMockery;
-import org.junit.AfterClass;
-import org.junit.Rule;
-import org.junit.Test;
-
-import java.util.Collections;
-
-import static org.junit.Assert.assertTrue;
 
 public class ObjectStorageGatewayTest {
 
-    @Rule
-    public JUnitRuleMockery context = new JUnitRuleMockery();
+  @Rule
+  public JUnitRuleMockery context = new JUnitRuleMockery();
 
-    @Test
-    public void getBucketLifecycleTest() throws Exception {
+  @Test
+  public void getBucketLifecycleTest() throws Exception {
 
-        final BucketLifecycleManager bucketLifecycleManagerMock
-                = context.mock(BucketLifecycleManager.class);
-        final BucketMetadataManager bucketManagerMock
-                = context.mock(BucketMetadataManager.class);
-        final RequestAuthorizationHandler requestAuthorizationHandlerMock
-                = context.mock(RequestAuthorizationHandler.class);
+    final BucketLifecycleManager bucketLifecycleManagerMock = context.mock(BucketLifecycleManager.class);
+    final BucketMetadataManager bucketManagerMock = context.mock(BucketMetadataManager.class);
+    final RequestAuthorizationHandler requestAuthorizationHandlerMock = context.mock(RequestAuthorizationHandler.class);
 
-        BucketLifecycleManagers.setInstance(bucketLifecycleManagerMock);
-        BucketMetadataManagers.setInstance(bucketManagerMock);
-        OsgAuthorizationHandler.setInstance(requestAuthorizationHandlerMock);
+    BucketLifecycleManagers.setInstance(bucketLifecycleManagerMock);
+    BucketMetadataManagers.setInstance(bucketManagerMock);
+    OsgAuthorizationHandler.setInstance(requestAuthorizationHandlerMock);
 
-        final String bucketName = "my-test-bucket";
-        final Bucket bucket = new Bucket();
-        bucket.setBucketName(bucketName);
-        bucket.setState(BucketState.extant);
-        final String fakeUuid = "fakeuuid";
-        bucket.withUuid(fakeUuid);
-        final GetBucketLifecycleType request = new GetBucketLifecycleType();
-        request.setBucket(bucketName);
+    final String bucketName = "my-test-bucket";
+    final Bucket bucket = new Bucket();
+    bucket.setBucketName(bucketName);
+    bucket.setState(BucketState.extant);
+    final String fakeUuid = "fakeuuid";
+    bucket.withUuid(fakeUuid);
+    final GetBucketLifecycleType request = new GetBucketLifecycleType();
+    request.setBucket(bucketName);
 
-        context.checking(new Expectations() {{
-            oneOf(bucketManagerMock).lookupExtantBucket(bucketName);
-            will(returnValue(bucket));
-            oneOf(requestAuthorizationHandlerMock).operationAllowed(request, bucket, null, 0);
-            will(returnValue(true));
-            oneOf(bucketLifecycleManagerMock).getLifecycleRules(fakeUuid);
-            will(returnValue(Collections.EMPTY_LIST));
-        }});
+    context.checking(new Expectations() {
+      {
+        oneOf(bucketManagerMock).lookupExtantBucket(bucketName);
+        will(returnValue(bucket));
+        oneOf(requestAuthorizationHandlerMock).operationAllowed(request, bucket, null, 0);
+        will(returnValue(true));
+        oneOf(bucketLifecycleManagerMock).getLifecycleRules(fakeUuid);
+        will(returnValue(Collections.EMPTY_LIST));
+      }
+    });
 
-        ObjectStorageGateway osg = new ObjectStorageGateway();
-        GetBucketLifecycleResponseType response = osg.getBucketLifecycle(request);
-        assertTrue("expected a response", response != null);
-        assertTrue("expected response to contain an empty set of lifecycle rules",
-                response.getLifecycleConfiguration().getRules().size() == 0);
+    ObjectStorageGateway osg = new ObjectStorageGateway();
+    GetBucketLifecycleResponseType response = osg.getBucketLifecycle(request);
+    assertTrue("expected a response", response != null);
+    assertTrue("expected response to contain an empty set of lifecycle rules", response.getLifecycleConfiguration().getRules().size() == 0);
 
-    }
+  }
 
-    @AfterClass
-    public static void tearDown() {
-        BucketLifecycleManagers.setInstance(null);
-        BucketMetadataManagers.setInstance(null);
-        OsgAuthorizationHandler.setInstance(null);
-    }
+  @AfterClass
+  public static void tearDown() {
+    BucketLifecycleManagers.setInstance(null);
+    BucketMetadataManagers.setInstance(null);
+    OsgAuthorizationHandler.setInstance(null);
+  }
 
-    @Test
-    public void testCheckBucketName() {
-        assert (ObjectStorageGateway.checkBucketNameValidity("bucket"));
-        assert (ObjectStorageGateway.checkBucketNameValidity("bucket.bucket.bucket"));
-        assert (!ObjectStorageGateway.checkBucketNameValidity("10.100.1.1"));
-        assert (ObjectStorageGateway.checkBucketNameValidity("bu_ckeS-adsad"));
-        assert (ObjectStorageGateway.checkBucketNameValidity("aou12naofdufan1421_-123oiasd-afasf.asdfas"));
-        assert (!ObjectStorageGateway.checkBucketNameValidity("bucke<t>%12313"));
-        assert (!ObjectStorageGateway.checkBucketNameValidity("b*u&c%k#et"));
-        assert (ObjectStorageGateway.checkBucketNameValidity("bucket_name"));
-    }
+  @Test
+  public void testCheckBucketName() {
+    assert (ObjectStorageGateway.checkBucketNameValidity("bucket"));
+    assert (ObjectStorageGateway.checkBucketNameValidity("bucket.bucket.bucket"));
+    assert (!ObjectStorageGateway.checkBucketNameValidity("10.100.1.1"));
+    assert (ObjectStorageGateway.checkBucketNameValidity("bu_ckeS-adsad"));
+    assert (ObjectStorageGateway.checkBucketNameValidity("aou12naofdufan1421_-123oiasd-afasf.asdfas"));
+    assert (!ObjectStorageGateway.checkBucketNameValidity("bucke<t>%12313"));
+    assert (!ObjectStorageGateway.checkBucketNameValidity("b*u&c%k#et"));
+    assert (ObjectStorageGateway.checkBucketNameValidity("bucket_name"));
+  }
 
 }

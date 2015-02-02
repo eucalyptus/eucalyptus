@@ -64,26 +64,22 @@ package com.eucalyptus.walrus.exceptions;
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-
 @SuppressWarnings("serial")
 public class DecryptionFailedException extends WalrusException {
 
-  public DecryptionFailedException()
-  {
-    super( "Decryption Failed" );
+  public DecryptionFailedException() {
+    super("Decryption Failed");
   }
-  
-  public DecryptionFailedException(String value)
-  {
+
+  public DecryptionFailedException(String value) {
     super("Decryption Failed", "Fail", "Entity", value, HttpResponseStatus.EXPECTATION_FAILED);
   }
 
-  public DecryptionFailedException(Throwable ex)
-  {
+  public DecryptionFailedException(Throwable ex) {
     super("Decryption Failed", ex);
   }
-  public DecryptionFailedException(String message, Throwable ex)
-  {
-    super(message,ex);
+
+  public DecryptionFailedException(String message, Throwable ex) {
+    super(message, ex);
   }
 }

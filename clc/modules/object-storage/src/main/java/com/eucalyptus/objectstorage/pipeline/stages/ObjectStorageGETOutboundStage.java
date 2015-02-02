@@ -66,25 +66,24 @@ import org.jboss.netty.channel.ChannelPipeline;
 
 import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageGETOutboundHandler;
 import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageOutboundExceptionHandler;
-import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageOutboundHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
 public class ObjectStorageGETOutboundStage implements UnrollableStage {
 
   @Override
-  public int compareTo( UnrollableStage o ) {
-    return this.getName( ).compareTo( o.getName( ) );
+  public int compareTo(UnrollableStage o) {
+    return this.getName().compareTo(o.getName());
   }
 
   @Override
-  public String getName( ) {
+  public String getName() {
     return "objectstorage-get-outbound";
   }
 
   @Override
-  public void unrollStage( ChannelPipeline pipeline ) {
-	  pipeline.addLast( "objectstorage-outbound-exception", new ObjectStorageOutboundExceptionHandler( ) );	  
-	  pipeline.addLast( "objectstorage-outbound", new ObjectStorageGETOutboundHandler( ) );	  
+  public void unrollStage(ChannelPipeline pipeline) {
+    pipeline.addLast("objectstorage-outbound-exception", new ObjectStorageOutboundExceptionHandler());
+    pipeline.addLast("objectstorage-outbound", new ObjectStorageGETOutboundHandler());
   }
 
 }

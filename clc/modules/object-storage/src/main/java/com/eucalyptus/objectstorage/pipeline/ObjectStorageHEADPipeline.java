@@ -64,45 +64,40 @@ package com.eucalyptus.objectstorage.pipeline;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageHEADBindingStage;
 import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageHEADOutboundStage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageOutboundStage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageRESTBindingStage;
 import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageRESTExceptionStage;
 import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageUserAuthenticationStage;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
-import com.eucalyptus.ws.server.FilteredPipeline;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
-
-@ComponentPart( ObjectStorage.class )
+@ComponentPart(ObjectStorage.class)
 public class ObjectStorageHEADPipeline extends ObjectStorageRESTPipeline {
-	private static Logger LOG = Logger.getLogger( ObjectStorageHEADPipeline.class );
-  private final UnrollableStage auth = new ObjectStorageUserAuthenticationStage( );
-  private final UnrollableStage bind = new ObjectStorageHEADBindingStage( );
+  private static Logger LOG = Logger.getLogger(ObjectStorageHEADPipeline.class);
+  private final UnrollableStage auth = new ObjectStorageUserAuthenticationStage();
+  private final UnrollableStage bind = new ObjectStorageHEADBindingStage();
   private final UnrollableStage out = new ObjectStorageHEADOutboundStage();
-  private final UnrollableStage exHandler = new ObjectStorageRESTExceptionStage( );
+  private final UnrollableStage exHandler = new ObjectStorageRESTExceptionStage();
 
   @Override
-  public boolean checkAccepts( HttpRequest message ) {
-	  return (super.checkAccepts(message) && message.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.HEAD.toString()));
-  }
-  
-  @Override
-  public String getName( ) {
-	  return "objectstorage-head";
+  public boolean checkAccepts(HttpRequest message) {
+    return (super.checkAccepts(message) && message.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.HEAD.toString()));
   }
 
   @Override
-  public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
-    auth.unrollStage( pipeline );
-    bind.unrollStage( pipeline );
-    out.unrollStage( pipeline );
+  public String getName() {
+    return "objectstorage-head";
+  }
+
+  @Override
+  public ChannelPipeline addHandlers(ChannelPipeline pipeline) {
+    auth.unrollStage(pipeline);
+    bind.unrollStage(pipeline);
+    out.unrollStage(pipeline);
     exHandler.unrollStage(pipeline);
     return pipeline;
   }

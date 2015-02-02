@@ -66,38 +66,36 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import com.eucalyptus.blockstorage.BlockStorageController;
 import com.eucalyptus.blockstorage.msgs.DeleteStorageSnapshotResponseType;
 import com.eucalyptus.blockstorage.msgs.DeleteStorageSnapshotType;
 import com.eucalyptus.util.EucalyptusCloudException;
 
-
 @Ignore("Manual development test")
 public class DeleteSnapshotTest {
 
-    static BlockStorageController blockStorage;
+  static BlockStorageController blockStorage;
 
-    @Test
-    public void testDeleteSnapshot() throws Exception {
+  @Test
+  public void testDeleteSnapshot() throws Exception {
 
-        String snapshotBucket = "snapset";
-        String snapshotId = "snap-C7fyA7Tuj9ecmg..";
+    String snapshotBucket = "snapset";
+    String snapshotId = "snap-C7fyA7Tuj9ecmg..";
 
-        DeleteStorageSnapshotType deleteSnapshot = new DeleteStorageSnapshotType();
-        deleteSnapshot.setUserId("admin");
-        deleteSnapshot.setSnapshotId(snapshotId);
-        DeleteStorageSnapshotResponseType deleteSnapshotResponse = blockStorage.DeleteStorageSnapshot(deleteSnapshot);
-        System.out.println(deleteSnapshotResponse);
-        while(true);
+    DeleteStorageSnapshotType deleteSnapshot = new DeleteStorageSnapshotType();
+    deleteSnapshot.setUserId("admin");
+    deleteSnapshot.setSnapshotId(snapshotId);
+    DeleteStorageSnapshotResponseType deleteSnapshotResponse = blockStorage.DeleteStorageSnapshot(deleteSnapshot);
+    System.out.println(deleteSnapshotResponse);
+    while (true);
+  }
+
+  @BeforeClass
+  public static void setUp() {
+    blockStorage = new BlockStorageController();
+    try {
+      BlockStorageController.configure();
+    } catch (EucalyptusCloudException e) {
+      e.printStackTrace();
     }
-
-    @BeforeClass
-    public static void setUp() {
-        blockStorage = new BlockStorageController();
-        try {
-			BlockStorageController.configure();
-		} catch (EucalyptusCloudException e) {
-			e.printStackTrace();
-		}
-    }    
+  }
 }

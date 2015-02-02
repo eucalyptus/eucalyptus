@@ -64,34 +64,29 @@ package com.eucalyptus.walrus.exceptions;
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-
-
-
 @SuppressWarnings("serial")
 public class PreconditionFailedException extends WalrusException {
 
   String precondition;
-  public PreconditionFailedException()
-  {
-    super( "PreconditionFailed" );
-  }
-  
-  public PreconditionFailedException(String precondition)
-  {
-    super("PreconditionFailed", "At least one of the pre-conditions you specified did not hold.", "Key", precondition, HttpResponseStatus.PRECONDITION_FAILED);
-  }
-  
-  public String getPrecondition() {
-      return precondition;
+
+  public PreconditionFailedException() {
+    super("PreconditionFailed");
   }
 
-  public PreconditionFailedException(Throwable ex)
-  {
+  public PreconditionFailedException(String precondition) {
+    super("PreconditionFailed", "At least one of the pre-conditions you specified did not hold.", "Key", precondition,
+        HttpResponseStatus.PRECONDITION_FAILED);
+  }
+
+  public String getPrecondition() {
+    return precondition;
+  }
+
+  public PreconditionFailedException(Throwable ex) {
     super("PreconditionFailed", ex);
   }
-  
-  public PreconditionFailedException(String message, Throwable ex)
-  {
-    super(message,ex);
+
+  public PreconditionFailedException(String message, Throwable ex) {
+    super(message, ex);
   }
 }

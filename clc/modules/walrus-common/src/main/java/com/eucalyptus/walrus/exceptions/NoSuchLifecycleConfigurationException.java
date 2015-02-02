@@ -69,13 +69,12 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
  */
 public class NoSuchLifecycleConfigurationException extends WalrusException {
 
-    public NoSuchLifecycleConfigurationException() {
-        super("NoSuchLifecycleConfiguration");
-    }
+  public NoSuchLifecycleConfigurationException() {
+    super("NoSuchLifecycleConfiguration");
+  }
 
-    public NoSuchLifecycleConfigurationException(String bucket) {
-        super("NoSuchLifecycleConfiguration", "The lifecycle configuration does not exist", "Bucket", bucket, HttpResponseStatus.NOT_FOUND);
-    }
-
+  public NoSuchLifecycleConfigurationException(String bucket) {
+    super("NoSuchLifecycleConfiguration", "The lifecycle configuration does not exist", "Bucket", bucket, HttpResponseStatus.NOT_FOUND);
+  }
 
 }

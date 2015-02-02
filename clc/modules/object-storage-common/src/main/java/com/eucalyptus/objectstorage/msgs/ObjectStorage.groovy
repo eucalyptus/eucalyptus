@@ -59,201 +59,201 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus
 
 @ComponentMessage(ObjectStorage.class)
 public class ObjectStorageResponseType extends ObjectStorageRequestType {
-    HttpResponseStatus status; //Most should be 200-ok, but for deletes etc it may be 204-No Content
+  HttpResponseStatus status; //Most should be 200-ok, but for deletes etc it may be 204-No Content
 
-    def ObjectStorageResponseType() {}
+  def ObjectStorageResponseType() {}
 }
 
 @ComponentMessage(ObjectStorage.class)
 public class ObjectStorageStreamingResponseType extends StreamedBaseMessage {
-    BucketLogData logData;
+  BucketLogData logData;
 
-    def ObjectStorageStreamingResponseType() {}
+  def ObjectStorageStreamingResponseType() {}
 }
 
 @ComponentMessage(ObjectStorage.class)
 public class ObjectStorageRequestType extends BaseMessage {
-    protected Date timeStamp;
-    BucketLogData logData;
-    protected String bucket;
-    protected String key;
+  protected Date timeStamp;
+  BucketLogData logData;
+  protected String bucket;
+  protected String key;
 
-    public ObjectStorageRequestType() {}
+  public ObjectStorageRequestType() {}
 
-    public ObjectStorageRequestType(String bucket, String key) {
-        this.bucket = bucket;
-        this.key = key;
-    }
+  public ObjectStorageRequestType(String bucket, String key) {
+    this.bucket = bucket;
+    this.key = key;
+  }
 
-    public ObjectStorageRequestType(Date timeStamp) {
-        this.timeStamp = timeStamp;
-    }
+  public ObjectStorageRequestType(Date timeStamp) {
+    this.timeStamp = timeStamp;
+  }
 
-    public String getBucket() {
-        return bucket;
-    }
+  public String getBucket() {
+    return bucket;
+  }
 
-    public void setBucket(String bucket) {
-        this.bucket = bucket;
-    }
+  public void setBucket(String bucket) {
+    this.bucket = bucket;
+  }
 
-    public String getKey() {
-        return key;
-    }
+  public String getKey() {
+    return key;
+  }
 
-    public void setKey(String key) {
-        this.key = key;
-    }
+  public void setKey(String key) {
+    this.key = key;
+  }
 
-    public void setTimestamp(Date stamp) {
-        this.timeStamp = stamp;
-    }
+  public void setTimestamp(Date stamp) {
+    this.timeStamp = stamp;
+  }
 
-    public Date getTimestamp() {
-        return this.timeStamp;
-    }
+  public Date getTimestamp() {
+    return this.timeStamp;
+  }
 
-    public User getUser() {
-        return Principals.nobodyUser();
-    }
+  public User getUser() {
+    return Principals.nobodyUser();
+  }
 
-    public String getFullResource() {
-        return this.bucket + "/" + this.key;
-    }
+  public String getFullResource() {
+    return this.bucket + "/" + this.key;
+  }
 }
 
 public class ObjectStorageDataRequestType extends ObjectStorageRequestType {
-    Boolean isCompressed;
-    ChannelBufferStreamingInputStream data;
-    boolean isChunked;
-    boolean expectHeader; //is 100-continue expected by the client
+  Boolean isCompressed;
+  ChannelBufferStreamingInputStream data;
+  boolean isChunked;
+  boolean expectHeader; //is 100-continue expected by the client
 
-    def ObjectStorageDataRequestType() {
-    }
+  def ObjectStorageDataRequestType() {
+  }
 
-    def ObjectStorageDataRequestType(String bucket, String key) {
-        super(bucket, key);
-    }
+  def ObjectStorageDataRequestType(String bucket, String key) {
+    super(bucket, key);
+  }
 
 }
 
 public class ObjectStorageDataResponseType extends ObjectStorageStreamingResponseType {
-    String etag;
-    Date lastModified;
-    Long size;
-    List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-    Integer errorCode;
-    String contentType;
-    String contentDisposition;
-    String versionId;
-    Map<String,String> responseHeaderOverrides;
-    String cacheControl;
-    String contentEncoding;
-    String expires;
+  String etag;
+  Date lastModified;
+  Long size;
+  List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+  Integer errorCode;
+  String contentType;
+  String contentDisposition;
+  String versionId;
+  Map<String,String> responseHeaderOverrides;
+  String cacheControl;
+  String contentEncoding;
+  String expires;
 }
 
 public class ObjectStorageDataGetRequestType extends ObjectStorageDataRequestType {
-    protected Channel channel;
-    Map<String,String> responseHeaderOverrides;
+  protected Channel channel;
+  Map<String,String> responseHeaderOverrides;
 
-    public Channel getChannel() {
-        return channel;
-    }
+  public Channel getChannel() {
+    return channel;
+  }
 
-    public void setChannel(Channel channel) {
-        this.channel = channel;
-    }
+  public void setChannel(Channel channel) {
+    this.channel = channel;
+  }
 
-    def ObjectStorageDataGetRequestType() {}
+  def ObjectStorageDataGetRequestType() {}
 
-    def ObjectStorageDataGetRequestType(String bucket, String key) {
-        super(bucket, key);
-    }
+  def ObjectStorageDataGetRequestType(String bucket, String key) {
+    super(bucket, key);
+  }
 }
 
 public class ObjectStorageDataGetResponseType extends ObjectStorageDataResponseType {
-    InputStream dataInputStream; //Stream to read data from to then write to wire
-    Long byteRangeStart;
-    Long byteRangeEnd;
+  InputStream dataInputStream; //Stream to read data from to then write to wire
+  Long byteRangeStart;
+  Long byteRangeEnd;
 
-    def ObjectStorageDataGetResponseType() {}
+  def ObjectStorageDataGetResponseType() {}
 }
 
 @ComponentMessage(ObjectStorage.class)
 public class ObjectStorageErrorMessageType extends BaseMessage {
-    protected String message;
-    protected String code;
-    protected HttpResponseStatus status;
-    protected String resourceType;
-    protected String resource;
-    protected String requestId;
-    protected String hostId;
-    BucketLogData logData;
+  protected String message;
+  protected String code;
+  protected HttpResponseStatus status;
+  protected String resourceType;
+  protected String resource;
+  protected String requestId;
+  protected String hostId;
+  BucketLogData logData;
 
-    def ObjectStorageErrorMessageType() {}
+  def ObjectStorageErrorMessageType() {}
 
-    def ObjectStorageErrorMessageType(String message,
-                                      String code,
-                                      HttpResponseStatus status,
-                                      String resourceType,
-                                      String resource,
-                                      String requestId,
-                                      String hostId,
-                                      BucketLogData logData) {
-        this.message = message;
-        this.code = code;
-        this.status = status;
-        this.resourceType = resourceType;
-        this.resource = resource;
-        this.requestId = requestId;
-        this.hostId = hostId;
-        this.logData = logData;
-    }
+  def ObjectStorageErrorMessageType(String message,
+  String code,
+  HttpResponseStatus status,
+  String resourceType,
+  String resource,
+  String requestId,
+  String hostId,
+  BucketLogData logData) {
+    this.message = message;
+    this.code = code;
+    this.status = status;
+    this.resourceType = resourceType;
+    this.resource = resource;
+    this.requestId = requestId;
+    this.hostId = hostId;
+    this.logData = logData;
+  }
 
-    protected void setCode(final String code) {
-        this.code = code
-    }
+  protected void setCode(final String code) {
+    this.code = code
+  }
 
-    public HttpResponseStatus getStatus() {
-        return status;
-    }
+  public HttpResponseStatus getStatus() {
+    return status;
+  }
 
-    public String getCode() {
-        return code;
-    }
+  public String getCode() {
+    return code;
+  }
 
-    public String getMessage() {
-        return message;
-    }
+  public String getMessage() {
+    return message;
+  }
 
-    public String getResourceType() {
-        return resourceType;
-    }
+  public String getResourceType() {
+    return resourceType;
+  }
 
-    public String getResource() {
-        return resource;
-    }
+  public String getResource() {
+    return resource;
+  }
 }
 
 public class ObjectStorageRedirectMessageType extends ObjectStorageErrorMessageType {
-    private String redirectUrl;
+  private String redirectUrl;
 
-    def ObjectStorageRedirectMessageType() {
-        this.code = 301;
-    }
+  def ObjectStorageRedirectMessageType() {
+    this.code = 301;
+  }
 
-    def ObjectStorageRedirectMessageType(String redirectUrl) {
-        this.redirectUrl = redirectUrl;
-        this.code = 301;
-    }
+  def ObjectStorageRedirectMessageType(String redirectUrl) {
+    this.redirectUrl = redirectUrl;
+    this.code = 301;
+  }
 
-    public String toString() {
-        return "WalrusRedirectMessage:" + redirectUrl;
-    }
+  public String toString() {
+    return "WalrusRedirectMessage:" + redirectUrl;
+  }
 
-    public String getRedirectUrl() {
-        return redirectUrl;
-    }
+  public String getRedirectUrl() {
+    return redirectUrl;
+  }
 }
 
 /* GET /bucket?acl */
@@ -265,7 +265,7 @@ public class ObjectStorageRedirectMessageType extends ObjectStorageErrorMessageT
 public class GetBucketAccessControlPolicyType extends ObjectStorageRequestType {}
 
 public class GetBucketAccessControlPolicyResponseType extends ObjectStorageResponseType {
-    AccessControlPolicy accessControlPolicy;
+  AccessControlPolicy accessControlPolicy;
 }
 
 /* GET /bucket/object?acl */
@@ -275,11 +275,11 @@ public class GetBucketAccessControlPolicyResponseType extends ObjectStorageRespo
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object = [ObjectStorageProperties.Permission.READ_ACP], bucket = [])
 public class GetObjectAccessControlPolicyType extends ObjectStorageRequestType {
-    String versionId;
+  String versionId;
 }
 
 public class GetObjectAccessControlPolicyResponseType extends ObjectStorageResponseType {
-    AccessControlPolicy accessControlPolicy;
+  AccessControlPolicy accessControlPolicy;
 }
 
 /* GET / on service. Lists buckets*/
@@ -298,8 +298,8 @@ public class GetObjectAccessControlPolicyResponseType extends ObjectStorageRespo
 public class ListAllMyBucketsType extends ObjectStorageRequestType {}
 
 public class ListAllMyBucketsResponseType extends ObjectStorageResponseType {
-    CanonicalUser owner;
-    ListAllMyBucketsList bucketList;
+  CanonicalUser owner;
+  ListAllMyBucketsList bucketList;
 }
 
 /* HEAD /bucket */
@@ -320,35 +320,35 @@ public class HeadBucketResponseType extends ObjectStorageResponseType {}
 @RequiresACLPermission(object = [], bucket = [], ownerOnly = true)
 //No ACLs for creating a bucket, weird like ListAllMyBuckets.
 public class CreateBucketType extends ObjectStorageRequestType {
-    AccessControlList accessControlList;
-    String locationConstraint;
+  AccessControlList accessControlList;
+  String locationConstraint;
 
-    //For unit testing
-    public CreateBucketType() {}
+  //For unit testing
+  public CreateBucketType() {}
 
-    public CreateBucketType(String bucket) {
-        this.bucket = bucket;
-    }
+  public CreateBucketType(String bucket) {
+    this.bucket = bucket;
+  }
 
-    public AccessControlList getAccessControlList() {
-        return this.accessControlList;
-    }
+  public AccessControlList getAccessControlList() {
+    return this.accessControlList;
+  }
 
-    public void setAccessControlList(AccessControlList accessControlList) {
-        this.accessControlList = accessControlList;
-    }
+  public void setAccessControlList(AccessControlList accessControlList) {
+    this.accessControlList = accessControlList;
+  }
 
-    public String getLocationConstraint() {
-        return this.locationConstraint;
-    }
+  public String getLocationConstraint() {
+    return this.locationConstraint;
+  }
 
-    public void setLocationConstraint(String locationConstraint) {
-        this.locationConstraint = locationConstraint;
-    }
+  public void setLocationConstraint(String locationConstraint) {
+    this.locationConstraint = locationConstraint;
+  }
 }
 
 public class CreateBucketResponseType extends ObjectStorageResponseType {
-    String bucket;
+  String bucket;
 }
 
 /* DELETE /bucket */
@@ -370,16 +370,16 @@ public class DeleteBucketResponseType extends ObjectStorageResponseType {}
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.WRITE])
 //Account must have write access to the bucket
 public class PutObjectType extends ObjectStorageDataRequestType {
-    String contentLength;
-    List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-    AccessControlList accessControlList = new AccessControlList();
-    String storageClass;
-    String contentType;
-    String contentDisposition;
-    String contentMD5;
-    Map<String,String> copiedHeaders = Maps.newHashMap();
+  String contentLength;
+  List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+  AccessControlList accessControlList = new AccessControlList();
+  String storageClass;
+  String contentType;
+  String contentDisposition;
+  String contentMD5;
+  Map<String,String> copiedHeaders = Maps.newHashMap();
 
-    def PutObjectType() {}
+  def PutObjectType() {}
 }
 
 public class PutObjectResponseType extends ObjectStorageDataResponseType {}
@@ -391,21 +391,21 @@ public class PutObjectResponseType extends ObjectStorageDataResponseType {}
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.WRITE])
 public class PostObjectType extends ObjectStorageDataRequestType {
-    String contentLength;
-    List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-    AccessControlList accessControlList = new AccessControlList();
-    String storageClass;
-    String successActionRedirect;
-    Integer successActionStatus;
-    String contentType;
+  String contentLength;
+  List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+  AccessControlList accessControlList = new AccessControlList();
+  String storageClass;
+  String successActionRedirect;
+  Integer successActionStatus;
+  String contentType;
 }
 
 public class PostObjectResponseType extends ObjectStorageDataResponseType {
-    String redirectUrl;
-    Integer successCode;
-    String location;
-    String bucket;
-    String key;
+  String redirectUrl;
+  Integer successCode;
+  String location;
+  String bucket;
+  String key;
 }
 
 /* GET /bucket/object */
@@ -415,24 +415,24 @@ public class PostObjectResponseType extends ObjectStorageDataResponseType {
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object = [ObjectStorageProperties.Permission.READ], bucket = [])
 public class GetObjectType extends ObjectStorageDataGetRequestType {
-    Boolean getMetaData;
-    Boolean inlineData;
-    Boolean deleteAfterGet;
-    Boolean getTorrent;
-    String versionId;
+  Boolean getMetaData;
+  Boolean inlineData;
+  Boolean deleteAfterGet;
+  Boolean getTorrent;
+  String versionId;
 
-    def GetObjectType() {
-    }
+  def GetObjectType() {
+  }
 
-    def GetObjectType(final String bucketName, final String key, final Boolean getMetaData, final Boolean inlineData) {
-        super(bucketName, key);
-        this.getMetaData = getMetaData;
-        this.inlineData = inlineData;
-    }
+  def GetObjectType(final String bucketName, final String key, final Boolean getMetaData, final Boolean inlineData) {
+    super(bucketName, key);
+    this.getMetaData = getMetaData;
+    this.inlineData = inlineData;
+  }
 }
 
 public class GetObjectResponseType extends ObjectStorageDataGetResponseType {
-    String base64Data; //In-line data response if requested
+  String base64Data; //In-line data response if requested
 }
 
 /* GET /bucket/object */
@@ -443,15 +443,15 @@ public class GetObjectResponseType extends ObjectStorageDataGetResponseType {
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object = [ObjectStorageProperties.Permission.READ], bucket = [])
 public class GetObjectExtendedType extends ObjectStorageDataGetRequestType {
-    Boolean getMetaData;
-    Boolean inlineData;
-    Long byteRangeStart;
-    Long byteRangeEnd;
-    Date ifModifiedSince;
-    Date ifUnmodifiedSince;
-    String ifMatch;
-    String ifNoneMatch;
-    Boolean returnCompleteObjectOnConditionFailure;
+  Boolean getMetaData;
+  Boolean inlineData;
+  Long byteRangeStart;
+  Long byteRangeEnd;
+  Date ifModifiedSince;
+  Date ifUnmodifiedSince;
+  String ifMatch;
+  String ifNoneMatch;
+  Boolean returnCompleteObjectOnConditionFailure;
 }
 
 public class GetObjectExtendedResponseType extends ObjectStorageDataGetResponseType {
@@ -465,46 +465,46 @@ public class GetObjectExtendedResponseType extends ObjectStorageDataGetResponseT
 //TODO: need to add support for both, refactor annotation into a set of k,v pairs
 @RequiresACLPermission(object = [ObjectStorageProperties.Permission.READ], bucket = [ObjectStorageProperties.Permission.WRITE])
 public class CopyObjectType extends ObjectStorageRequestType {
-    String sourceBucket;
-    String sourceObject;
-    String sourceVersionId;
-    String destinationBucket;
-    String destinationObject;
-    String metadataDirective;
-    List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-    AccessControlList accessControlList = new AccessControlList();
-    String copySourceIfMatch;
-    String copySourceIfNoneMatch;
-    Date copySourceIfModifiedSince;
-    Date copySourceIfUnmodifiedSince;
-    Map<String,String> copiedHeaders = Maps.newHashMap();
-    
-    def GetObjectType getGetObjectRequest() {
-      GetObjectType request = new GetObjectType()
-      request.setBucket(this.sourceBucket);
-      request.setKey(this.sourceObject);
-      request.setVersionId(this.sourceVersionId);
-      
-      // common elements
-      request.setCorrelationId(this.correlationId);
-      request.setEffectiveUserId(this.getEffectiveUserId());
-      
-      return request;
-    }
-    
-    def PutObjectType getPutObjectRequest() {
-      PutObjectType request = new PutObjectType();
-      request.setBucket(this.destinationBucket);
-      request.setKey(this.destinationObject);
-      request.setAccessControlList(this.accessControlList);
-      request.setCopiedHeaders(this.copiedHeaders);
-      
-      // common elements
-      request.setCorrelationId(this.correlationId);
-      request.setEffectiveUserId(this.getEffectiveUserId());
-      
-      return request;
-    }
+  String sourceBucket;
+  String sourceObject;
+  String sourceVersionId;
+  String destinationBucket;
+  String destinationObject;
+  String metadataDirective;
+  List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+  AccessControlList accessControlList = new AccessControlList();
+  String copySourceIfMatch;
+  String copySourceIfNoneMatch;
+  Date copySourceIfModifiedSince;
+  Date copySourceIfUnmodifiedSince;
+  Map<String,String> copiedHeaders = Maps.newHashMap();
+
+  def GetObjectType getGetObjectRequest() {
+    GetObjectType request = new GetObjectType()
+    request.setBucket(this.sourceBucket);
+    request.setKey(this.sourceObject);
+    request.setVersionId(this.sourceVersionId);
+
+    // common elements
+    request.setCorrelationId(this.correlationId);
+    request.setEffectiveUserId(this.getEffectiveUserId());
+
+    return request;
+  }
+
+  def PutObjectType getPutObjectRequest() {
+    PutObjectType request = new PutObjectType();
+    request.setBucket(this.destinationBucket);
+    request.setKey(this.destinationObject);
+    request.setAccessControlList(this.accessControlList);
+    request.setCopiedHeaders(this.copiedHeaders);
+
+    // common elements
+    request.setCorrelationId(this.correlationId);
+    request.setEffectiveUserId(this.getEffectiveUserId());
+
+    return request;
+  }
 }
 
 /* HEAD /bucket/object */
@@ -514,41 +514,41 @@ public class CopyObjectType extends ObjectStorageRequestType {
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object = [ObjectStorageProperties.Permission.READ], bucket = [])
 public class HeadObjectType extends ObjectStorageDataGetRequestType {
-    String versionId;
+  String versionId;
 
-    def HeadObjectType() {
-    }
+  def HeadObjectType() {
+  }
 
-    def HeadObjectType(final String bucketName, final String key) {
-        super(bucketName, key);
-    }
+  def HeadObjectType(final String bucketName, final String key) {
+    super(bucketName, key);
+  }
 }
 
 public class HeadObjectResponseType extends ObjectStorageDataResponseType {}
 
 public class CopyObjectResponseType extends ObjectStorageResponseType {
-    String etag;
-    String lastModified;
-    Long size;
-    List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-    Integer errorCode;
-    String contentType;
-    String contentDisposition;
-    String versionId;
-    String copySourceVersionId;
+  String etag;
+  String lastModified;
+  Long size;
+  List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+  Integer errorCode;
+  String contentType;
+  String contentDisposition;
+  String versionId;
+  String copySourceVersionId;
 }
 
 //TODO: REMOVE THIS
 /* SOAP put object */
 
 public class PutObjectInlineType extends ObjectStorageDataRequestType {
-    String contentLength;
-    List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-    AccessControlList accessControlList = new AccessControlList();
-    String storageClass;
-    String base64Data;
-    String contentType;
-    String contentDisposition;
+  String contentLength;
+  List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+  AccessControlList accessControlList = new AccessControlList();
+  String storageClass;
+  String base64Data;
+  String contentType;
+  String contentDisposition;
 }
 
 public class PutObjectInlineResponseType extends ObjectStorageDataResponseType {}
@@ -570,14 +570,14 @@ public class DeleteObjectResponseType extends DeleteResponseType {}
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object = [], bucket = [], ownerOnly = true)
 public class DeleteVersionType extends ObjectStorageRequestType {
-    String versionId;
+  String versionId;
 }
 
 public class DeleteVersionResponseType extends DeleteResponseType {}
 
 public class DeleteResponseType extends ObjectStorageResponseType {
-	String versionId;
-	Boolean isDeleteMarker;
+  String versionId;
+  Boolean isDeleteMarker;
 }
 
 /* GET /bucket */
@@ -587,28 +587,28 @@ public class DeleteResponseType extends ObjectStorageResponseType {
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.READ])
 public class ListBucketType extends ObjectStorageRequestType {
-    String prefix;
-    String marker;
-    String maxKeys;
-    String delimiter;
+  String prefix;
+  String marker;
+  String maxKeys;
+  String delimiter;
 
-    def ListBucketType() {
-        prefix = "";
-        marker = "";
-        //delimiter = "";
-    }
+  def ListBucketType() {
+    prefix = "";
+    marker = "";
+    //delimiter = "";
+  }
 }
 
 public class ListBucketResponseType extends ObjectStorageResponseType {
-    String name;
-    String prefix;
-    String marker;
-    String nextMarker;
-    int maxKeys;
-    String delimiter;
-    boolean isTruncated;
-    ArrayList<ListEntry> contents;
-    ArrayList<CommonPrefixesEntry> commonPrefixesList = new ArrayList<CommonPrefixesEntry>();
+  String name;
+  String prefix;
+  String marker;
+  String nextMarker;
+  int maxKeys;
+  String delimiter;
+  boolean isTruncated;
+  ArrayList<ListEntry> contents;
+  ArrayList<CommonPrefixesEntry> commonPrefixesList = new ArrayList<CommonPrefixesEntry>();
 }
 
 /* GET /bucket?versions */
@@ -618,29 +618,29 @@ public class ListBucketResponseType extends ObjectStorageResponseType {
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [], ownerOnly = true)
 public class ListVersionsType extends ObjectStorageRequestType {
-    String prefix;
-    String keyMarker;
-    String versionIdMarker;
-    String maxKeys;
-    String delimiter;
+  String prefix;
+  String keyMarker;
+  String versionIdMarker;
+  String maxKeys;
+  String delimiter;
 
-    def ListVersionsType() {
-        prefix = "";
-    }
+  def ListVersionsType() {
+    prefix = "";
+  }
 }
 
 public class ListVersionsResponseType extends ObjectStorageResponseType {
-    String name;
-    String prefix;
-    String keyMarker;
-    String versionIdMarker;
-    String nextKeyMarker;
-    String nextVersionIdMarker;
-    int maxKeys;
-    String delimiter;
-    boolean isTruncated;
-    ArrayList<KeyEntry> keyEntries = new ArrayList<KeyEntry>();
-    ArrayList<CommonPrefixesEntry> commonPrefixesList = new ArrayList<CommonPrefixesEntry>();
+  String name;
+  String prefix;
+  String keyMarker;
+  String versionIdMarker;
+  String nextKeyMarker;
+  String nextVersionIdMarker;
+  int maxKeys;
+  String delimiter;
+  boolean isTruncated;
+  ArrayList<KeyEntry> keyEntries = new ArrayList<KeyEntry>();
+  ArrayList<CommonPrefixesEntry> commonPrefixesList = new ArrayList<CommonPrefixesEntry>();
 }
 
 /* PUT /bucket?acl */
@@ -650,7 +650,7 @@ public class ListVersionsResponseType extends ObjectStorageResponseType {
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.WRITE_ACP])
 public class SetBucketAccessControlPolicyType extends ObjectStorageRequestType {
-    AccessControlPolicy accessControlPolicy;
+  AccessControlPolicy accessControlPolicy;
 }
 
 public class SetBucketAccessControlPolicyResponseType extends ObjectStorageResponseType {}
@@ -662,12 +662,12 @@ public class SetBucketAccessControlPolicyResponseType extends ObjectStorageRespo
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object = [ObjectStorageProperties.Permission.WRITE_ACP], bucket = [])
 public class SetObjectAccessControlPolicyType extends ObjectStorageRequestType {
-    AccessControlPolicy accessControlPolicy;
-    String versionId;
+  AccessControlPolicy accessControlPolicy;
+  String versionId;
 }
 
 public class SetObjectAccessControlPolicyResponseType extends ObjectStorageResponseType {
-	String versionId;
+  String versionId;
 }
 
 /* GET /bucket?location */
@@ -679,7 +679,7 @@ public class SetObjectAccessControlPolicyResponseType extends ObjectStorageRespo
 public class GetBucketLocationType extends ObjectStorageRequestType {}
 
 public class GetBucketLocationResponseType extends ObjectStorageResponseType {
-    String locationConstraint;
+  String locationConstraint;
 }
 
 /* GET /bucket?logging */
@@ -691,7 +691,7 @@ public class GetBucketLocationResponseType extends ObjectStorageResponseType {
 public class GetBucketLoggingStatusType extends ObjectStorageRequestType {}
 
 public class GetBucketLoggingStatusResponseType extends ObjectStorageResponseType {
-    LoggingEnabled loggingEnabled;
+  LoggingEnabled loggingEnabled;
 }
 
 /* PUT /bucket?logging */
@@ -701,7 +701,7 @@ public class GetBucketLoggingStatusResponseType extends ObjectStorageResponseTyp
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [], ownerOnly = true)
 public class SetBucketLoggingStatusType extends ObjectStorageRequestType {
-    LoggingEnabled loggingEnabled;
+  LoggingEnabled loggingEnabled;
 }
 
 public class SetBucketLoggingStatusResponseType extends ObjectStorageResponseType {}
@@ -715,11 +715,11 @@ public class SetBucketLoggingStatusResponseType extends ObjectStorageResponseTyp
 public class GetBucketVersioningStatusType extends ObjectStorageRequestType {}
 
 public class GetBucketVersioningStatusResponseType extends ObjectStorageResponseType {
-    String versioningStatus;
+  String versioningStatus;
 
-    private boolean isNotDisabled() {
-        return versioningStatus != null && "disabled" != versioningStatus.toLowerCase();
-    }
+  private boolean isNotDisabled() {
+    return versioningStatus != null && "disabled" != versioningStatus.toLowerCase();
+  }
 }
 
 /* PUT /bucket?versioning */
@@ -729,7 +729,7 @@ public class GetBucketVersioningStatusResponseType extends ObjectStorageResponse
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [], ownerOnly = true)
 public class SetBucketVersioningStatusType extends ObjectStorageRequestType {
-    String versioningStatus;
+  String versioningStatus;
 }
 
 public class SetBucketVersioningStatusResponseType extends ObjectStorageResponseType {}
@@ -743,7 +743,7 @@ public class SetBucketVersioningStatusResponseType extends ObjectStorageResponse
 public class GetBucketLifecycleType extends ObjectStorageRequestType {}
 
 public class GetBucketLifecycleResponseType extends ObjectStorageResponseType {
-    LifecycleConfiguration lifecycleConfiguration;
+  LifecycleConfiguration lifecycleConfiguration;
 }
 
 /* PUT /bucket?lifecycle */
@@ -753,7 +753,7 @@ public class GetBucketLifecycleResponseType extends ObjectStorageResponseType {
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [], ownerOnly = true)
 public class SetBucketLifecycleType extends ObjectStorageRequestType {
-    LifecycleConfiguration lifecycleConfiguration;
+  LifecycleConfiguration lifecycleConfiguration;
 }
 
 public class SetBucketLifecycleResponseType extends ObjectStorageResponseType {}
@@ -805,42 +805,42 @@ public class DeleteBucketTaggingResponseType extends ObjectStorageResponseType {
 public class AddObjectResponseType extends ObjectStorageDataResponseType {}
 
 public class AddObjectType extends ObjectStorageDataRequestType {
-    String objectName;
-    String etag;
-    AccessControlList accessControlList = new AccessControlList();
+  String objectName;
+  String etag;
+  AccessControlList accessControlList = new AccessControlList();
 }
 
 public class UpdateObjectStorageConfigurationType extends ObjectStorageRequestType {
-    String name;
-    ArrayList<ComponentProperty> properties;
+  String name;
+  ArrayList<ComponentProperty> properties;
 
-    def UpdateObjectStorageConfigurationType() {}
+  def UpdateObjectStorageConfigurationType() {}
 }
 
 public class UpdateObjectStorageConfigurationResponseType extends ObjectStorageResponseType {}
 
 public class GetObjectStorageConfigurationType extends ObjectStorageRequestType {
-    String name;
+  String name;
 
-    def GetObjectStorageConfigurationType() {}
+  def GetObjectStorageConfigurationType() {}
 
-    def GetObjectStorageConfigurationType(String name) {
-        this.name = name;
-    }
+  def GetObjectStorageConfigurationType(String name) {
+    this.name = name;
+  }
 }
 
 public class GetObjectStorageConfigurationResponseType extends ObjectStorageRequestType {
-    String name;
-    ArrayList<ComponentProperty> properties;
+  String name;
+  ArrayList<ComponentProperty> properties;
 
-    def GetObjectStorageConfigurationResponseType() {}
+  def GetObjectStorageConfigurationResponseType() {}
 }
 
 public class ObjectStorageComponentMessageType extends ComponentMessageType {
-    @Override
-    public String getComponent() {
-        return "objectstorage";
-    }
+  @Override
+  public String getComponent() {
+    return "objectstorage";
+  }
 }
 
 public class ObjectStorageComponentMessageResponseType extends ComponentMessageResponseType {}
@@ -852,19 +852,19 @@ public class ObjectStorageComponentMessageResponseType extends ComponentMessageR
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.WRITE])
 //Account must have write access to the bucket
 public class InitiateMultipartUploadType extends ObjectStorageDataRequestType {
-    String cacheControl;
-    String contentEncoding;
-    String expires;
-    List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-    AccessControlList accessControlList = new AccessControlList();
-    String storageClass;
-    String contentType;
+  String cacheControl;
+  String contentEncoding;
+  String expires;
+  List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+  AccessControlList accessControlList = new AccessControlList();
+  String storageClass;
+  String contentType;
 }
 
 public class InitiateMultipartUploadResponseType extends ObjectStorageDataResponseType {
-    String bucket;
-    String key;
-    String uploadId;
+  String bucket;
+  String key;
+  String uploadId;
 }
 
 @AdminOverrideAllowed
@@ -873,13 +873,13 @@ public class InitiateMultipartUploadResponseType extends ObjectStorageDataRespon
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.WRITE])
 //Account must have write access to the bucket
 public class UploadPartType extends ObjectStorageDataRequestType {
-    String contentLength;
-    String contentMD5
-    String contentType;
-    String expect;
-    String uploadId;
-    String partNumber;
-    Map<String,String> copiedHeaders = Maps.newHashMap();
+  String contentLength;
+  String contentMD5
+  String contentType;
+  String expect;
+  String uploadId;
+  String partNumber;
+  Map<String,String> copiedHeaders = Maps.newHashMap();
 }
 
 public class UploadPartResponseType extends ObjectStorageDataResponseType {
@@ -891,15 +891,15 @@ public class UploadPartResponseType extends ObjectStorageDataResponseType {
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.WRITE])
 //Account must have write access to the bucket
 public class CompleteMultipartUploadType extends ObjectStorageDataRequestType {
-    ArrayList<Part> parts = new ArrayList<Part>();
-    String uploadId;
+  ArrayList<Part> parts = new ArrayList<Part>();
+  String uploadId;
 }
 
 public class CompleteMultipartUploadResponseType extends ObjectStorageDataResponseType {
-    String location;
-    String bucket;
-    String key;
-    String etag;
+  String location;
+  String bucket;
+  String key;
+  String etag;
 }
 
 @AdminOverrideAllowed
@@ -908,7 +908,7 @@ public class CompleteMultipartUploadResponseType extends ObjectStorageDataRespon
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.WRITE])
 //Account must have write access to the bucket
 public class AbortMultipartUploadType extends ObjectStorageDataRequestType {
-    String uploadId;
+  String uploadId;
 }
 
 public class AbortMultipartUploadResponseType extends ObjectStorageDataResponseType {
@@ -920,23 +920,23 @@ public class AbortMultipartUploadResponseType extends ObjectStorageDataResponseT
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.READ])
 //Account must have read access to the bucket
 public class ListPartsType extends ObjectStorageDataRequestType {
-    String uploadId;
-    String maxParts;
-    String partNumberMarker;
+  String uploadId;
+  String maxParts;
+  String partNumberMarker;
 }
 
 public class ListPartsResponseType extends ObjectStorageDataResponseType {
-    String bucket;
-    String key;
-    String uploadId;
-    Initiator initiator;
-    CanonicalUser owner;
-    String storageClass;
-    int partNumberMarker;
-    int nextPartNumberMarker;
-    int maxParts;
-    Boolean isTruncated;
-    ArrayList<Part> parts = new ArrayList<Part>();
+  String bucket;
+  String key;
+  String uploadId;
+  Initiator initiator;
+  CanonicalUser owner;
+  String storageClass;
+  int partNumberMarker;
+  int nextPartNumberMarker;
+  int maxParts;
+  Boolean isTruncated;
+  ArrayList<Part> parts = new ArrayList<Part>();
 }
 
 @AdminOverrideAllowed
@@ -945,23 +945,23 @@ public class ListPartsResponseType extends ObjectStorageDataResponseType {
 @RequiresACLPermission(object = [], bucket = [], ownerOnly = true)
 //Account must have read access to the bucket
 public class ListMultipartUploadsType extends ObjectStorageDataRequestType {
-    String delimiter;
-    String maxUploads;
-    String keyMarker;
-    String prefix;
-    String uploadIdMarker;
+  String delimiter;
+  String maxUploads;
+  String keyMarker;
+  String prefix;
+  String uploadIdMarker;
 }
 
 public class ListMultipartUploadsResponseType extends ObjectStorageDataResponseType {
-    String bucket;
-    String keyMarker;
-    String uploadIdMarker;
-    String nextKeyMarker;
-    String nextUploadIdMarker;
-	String delimiter;
-	String prefix;
-    Integer maxUploads;
-    Boolean isTruncated;
-    List<Upload> uploads = new ArrayList<Upload>();
-    ArrayList<CommonPrefixesEntry> commonPrefixes = new ArrayList<CommonPrefixesEntry>();
+  String bucket;
+  String keyMarker;
+  String uploadIdMarker;
+  String nextKeyMarker;
+  String nextUploadIdMarker;
+  String delimiter;
+  String prefix;
+  Integer maxUploads;
+  Boolean isTruncated;
+  List<Upload> uploads = new ArrayList<Upload>();
+  ArrayList<CommonPrefixesEntry> commonPrefixes = new ArrayList<CommonPrefixesEntry>();
 }

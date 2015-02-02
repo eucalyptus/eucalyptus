@@ -64,25 +64,25 @@ package com.eucalyptus.walrus.exceptions;
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-
 @SuppressWarnings("serial")
 public class BucketAlreadyExistsException extends WalrusException {
 
-  public BucketAlreadyExistsException()
-  {
-    super( "BucketAlreadyExists" );
-  }
-  public BucketAlreadyExistsException(String bucket)
-  {
-    super("BucketAlreadyExists", "The requested bucket name is not available. The bucket namespace is shared by all users of the system. Please select a different name and try again.", "Bucket", bucket, HttpResponseStatus.CONFLICT);
+  public BucketAlreadyExistsException() {
+    super("BucketAlreadyExists");
   }
 
-  public BucketAlreadyExistsException(Throwable ex)
-  {
+  public BucketAlreadyExistsException(String bucket) {
+    super(
+        "BucketAlreadyExists",
+        "The requested bucket name is not available. The bucket namespace is shared by all users of the system. Please select a different name and try again.",
+        "Bucket", bucket, HttpResponseStatus.CONFLICT);
+  }
+
+  public BucketAlreadyExistsException(Throwable ex) {
     super("BucketAlreadyExists", ex);
   }
-  public BucketAlreadyExistsException(String message, Throwable ex)
-  {
-    super(message,ex);
+
+  public BucketAlreadyExistsException(String message, Throwable ex) {
+    super(message, ex);
   }
 }

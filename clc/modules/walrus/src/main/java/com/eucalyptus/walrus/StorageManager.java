@@ -65,71 +65,68 @@ package com.eucalyptus.walrus;
 import java.io.IOException;
 import java.util.List;
 
+import com.eucalyptus.storage.common.fs.FileIO;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.walrus.entities.PartInfo;
 import com.eucalyptus.walrus.exceptions.WalrusException;
-import com.eucalyptus.walrus.msgs.GetObjectType;
 import com.eucalyptus.walrus.msgs.WalrusDataGetResponseType;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-
-import com.eucalyptus.storage.common.fs.FileIO;
-import com.eucalyptus.storage.msgs.BucketLogData;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.walrus.msgs.WalrusDataGetRequestType;
-
 
 public interface StorageManager {
 
-    public void checkPreconditions() throws EucalyptusCloudException;
+  public void checkPreconditions() throws EucalyptusCloudException;
 
-    public boolean bucketExists(String bucket);
+  public boolean bucketExists(String bucket);
 
-    public boolean objectExists(String bucket, String object);
-    
-    public void createBucket(String bucket) throws IOException;
+  public boolean objectExists(String bucket, String object);
 
-    public long getSize(String bucket, String object);
+  public void createBucket(String bucket) throws IOException;
 
-    public void deleteBucket(String bucket) throws IOException;
+  public long getSize(String bucket, String object);
 
-    public void createObject(String bucket, String object) throws IOException;
+  public void deleteBucket(String bucket) throws IOException;
 
-    public void putObject(String bucket, String object, byte[] base64Data, boolean append) throws IOException;
+  public void createObject(String bucket, String object) throws IOException;
 
-    public FileIO prepareForRead(String bucket, String object) throws Exception;
+  public void putObject(String bucket, String object, byte[] base64Data, boolean append) throws IOException;
 
-    public FileIO prepareForWrite(String bucket, String object) throws Exception;
+  public FileIO prepareForRead(String bucket, String object) throws Exception;
 
-    public int readObject(String bucket, String object, byte[] bytes, long offset) throws IOException;
+  public FileIO prepareForWrite(String bucket, String object) throws Exception;
 
-    public int readObject(String objectPath, byte[] bytes, long offset) throws IOException;
+  public int readObject(String bucket, String object, byte[] bytes, long offset) throws IOException;
 
-    public void deleteObject(String bucket, String object) throws IOException;
+  public int readObject(String objectPath, byte[] bytes, long offset) throws IOException;
 
-    public void deleteAbsoluteObject(String object) throws IOException;
+  public void deleteObject(String bucket, String object) throws IOException;
 
-    public void copyObject(String sourceBucket, String sourceObject, String destinationBucket, String destinationObject) throws IOException;
-    
-    public void copyMultipartObject(List<PartInfo> parts, String destinationBucket, String destinationObject) throws Exception;
+  public void deleteAbsoluteObject(String object) throws IOException;
 
-    public void renameObject(String bucket, String oldName, String newName) throws IOException;
+  public void copyObject(String sourceBucket, String sourceObject, String destinationBucket, String destinationObject) throws IOException;
 
-    public String getObjectPath(String bucket, String object);
+  public void copyMultipartObject(List<PartInfo> parts, String destinationBucket, String destinationObject) throws Exception;
 
-    public void getObject(String bucketName, String objectName, WalrusDataGetResponseType reply, Long size, Boolean isCompressed) throws WalrusException;
+  public void renameObject(String bucket, String oldName, String newName) throws IOException;
 
-    public void getObject(String bucketName, String objectName, WalrusDataGetResponseType reply, Long byteRangeStart, Long byteRangeEnd, Boolean isCompressed) throws WalrusException;
+  public String getObjectPath(String bucket, String object);
 
-    public void getMultipartObject(WalrusDataGetResponseType reply, List<PartInfo> parts, Boolean isCompressed) throws WalrusException;
-    
-    public void getMultipartObject(WalrusDataGetResponseType reply, List<PartInfo> parts, Boolean isCompressed, Long byteRangeStart, Long byteRangeEnd) throws WalrusException;
+  public void getObject(String bucketName, String objectName, WalrusDataGetResponseType reply, Long size, Boolean isCompressed)
+      throws WalrusException;
 
-    public void disable() throws EucalyptusCloudException ;
+  public void getObject(String bucketName, String objectName, WalrusDataGetResponseType reply, Long byteRangeStart, Long byteRangeEnd,
+      Boolean isCompressed) throws WalrusException;
 
-	public void enable() throws EucalyptusCloudException;
+  public void getMultipartObject(WalrusDataGetResponseType reply, List<PartInfo> parts, Boolean isCompressed) throws WalrusException;
 
-	public void stop() throws EucalyptusCloudException;
+  public void getMultipartObject(WalrusDataGetResponseType reply, List<PartInfo> parts, Boolean isCompressed, Long byteRangeStart, Long byteRangeEnd)
+      throws WalrusException;
 
-	public void check() throws EucalyptusCloudException;
+  public void disable() throws EucalyptusCloudException;
 
-	public void start() throws EucalyptusCloudException;
+  public void enable() throws EucalyptusCloudException;
+
+  public void stop() throws EucalyptusCloudException;
+
+  public void check() throws EucalyptusCloudException;
+
+  public void start() throws EucalyptusCloudException;
 }

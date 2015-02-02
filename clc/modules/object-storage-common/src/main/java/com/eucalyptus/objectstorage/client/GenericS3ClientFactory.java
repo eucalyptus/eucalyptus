@@ -20,6 +20,15 @@
 
 package com.eucalyptus.objectstorage.client;
 
+import java.net.URI;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Random;
+
+import javax.annotation.Nullable;
+
+import org.apache.log4j.Logger;
+
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
 import com.amazonaws.SDKGlobalConfiguration;
@@ -34,166 +43,148 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.configurable.ConfigurableClass;
-import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.util.DNSProperties;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-import org.apache.log4j.Logger;
-
-import javax.annotation.Nullable;
-import javax.persistence.Entity;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
-
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Random;
-
 /**
- * A convenience wrapper for an AWS Java SDK S3 Client that sets default
- * timeouts etc, options, etc for operating against the ObjectStorage service
- * in Eucalyptus. All internal system uses of ObjectStorage should use this
- * or an extension of it rather than internal dispatch mechanisms.
+ * A convenience wrapper for an AWS Java SDK S3 Client that sets default timeouts etc, options, etc for operating against the ObjectStorage service in
+ * Eucalyptus. All internal system uses of ObjectStorage should use this or an extension of it rather than internal dispatch mechanisms.
  */
 public class GenericS3ClientFactory {
-    private static final Logger LOG = Logger.getLogger(GenericS3ClientFactory.class);
+  private static final Logger LOG = Logger.getLogger(GenericS3ClientFactory.class);
 
-    private static final Random randomizer = new Random(System.currentTimeMillis());
+  private static final Random randomizer = new Random(System.currentTimeMillis());
 
-    static {
-        System.setProperty(SDKGlobalConfiguration.DISABLE_REMOTE_REGIONS_FILE_SYSTEM_PROPERTY, "disable"); //anything non-null disables it
-        System.setProperty(SDKGlobalConfiguration.DEFAULT_S3_STREAM_BUFFER_SIZE,
-                String.valueOf( GenericS3ClientFactoryConfiguration.getInstance().getBuffer_size()) );  //512KB upload buffer, to handle most small objects
-        System.setProperty("com.amazonaws.services.s3.disableGetObjectMD5Validation", "disable"); //disable etag validation on GETs
+  static {
+    System.setProperty(SDKGlobalConfiguration.DISABLE_REMOTE_REGIONS_FILE_SYSTEM_PROPERTY, "disable"); // anything non-null disables it
+    System.setProperty(SDKGlobalConfiguration.DEFAULT_S3_STREAM_BUFFER_SIZE,
+        String.valueOf(GenericS3ClientFactoryConfiguration.getInstance().getBuffer_size())); // 512KB upload buffer, to handle most small objects
+    System.setProperty("com.amazonaws.services.s3.disableGetObjectMD5Validation", "disable"); // disable etag validation on GETs
+  }
+
+  /**
+   * A credentials provider that will get the first active access key for the given user. A refresh may use the same credentials or new ones if the
+   * set of active keys has changed
+   */
+  public static class EucaUserCredentialsProvider implements AWSCredentialsProvider {
+    private User eucaUser;
+    private AWSCredentials currentCredential;
+
+    public EucaUserCredentialsProvider(User user) {
+      this.eucaUser = user;
     }
 
-    /**
-     * A credentials provider that will get the first active access key for the given user.
-     * A refresh may use the same credentials or new ones if the set of active keys has changed
-     */
-    public static class EucaUserCredentialsProvider implements AWSCredentialsProvider {
-        private User eucaUser;
-        private AWSCredentials currentCredential;
-
-        public EucaUserCredentialsProvider(User user) {
-            this.eucaUser = user;
-        }
-
-        @Override
-        public synchronized AWSCredentials getCredentials() {
-            if(currentCredential == null) {
-                updateCreds();
-            }
-            return currentCredential;
-        }
-
-        protected void updateCreds() {
-            try {
-                AccessKey userAccessKey = Iterables.find(eucaUser.getKeys(), new Predicate<AccessKey>() {
-
-                    @Override
-                    public boolean apply(@Nullable AccessKey accessKey) {
-                        return accessKey != null && accessKey.isActive();
-                    }
-                });
-                currentCredential = new BasicAWSCredentials(userAccessKey.getAccessKey(), userAccessKey.getSecretKey());
-            } catch(AuthException e) {
-                throw new RuntimeException("No active credentials for the user");
-            }
-        }
-
-        @Override
-        public synchronized void refresh() {
-            updateCreds();
-        }
+    @Override
+    public synchronized AWSCredentials getCredentials() {
+      if (currentCredential == null) {
+        updateCreds();
+      }
+      return currentCredential;
     }
 
-    public static AWSCredentialsProvider getEucaUserAWSCredentialsProvider(User user) {
-        return new EucaUserCredentialsProvider(user);
+    protected void updateCreds() {
+      try {
+        AccessKey userAccessKey = Iterables.find(eucaUser.getKeys(), new Predicate<AccessKey>() {
+
+          @Override
+          public boolean apply(@Nullable AccessKey accessKey) {
+            return accessKey != null && accessKey.isActive();
+          }
+        });
+        currentCredential = new BasicAWSCredentials(userAccessKey.getAccessKey(), userAccessKey.getSecretKey());
+      } catch (AuthException e) {
+        throw new RuntimeException("No active credentials for the user");
+      }
     }
 
-
-        /**
-         * Uses the first key found for the given user to construct an s3 client
-         * @param clientUser
-         * @param useHttps
-         * @return
-         * @throws AuthException if user has no access keys active
-         * @throws java.util.NoSuchElementException if no OSG found ENABLED
-         */
-    protected static AmazonS3Client getS3ClientForUser(final User clientUser, boolean useHttps) throws AuthException, NoSuchElementException {
-        try {
-            return getS3Client(getEucaUserAWSCredentialsProvider(clientUser), useHttps);
-        } catch(Exception e) {
-            LOG.error("Could not generate s3 client for user " + clientUser.getUserId() + " because no active access keys found.", e);
-            throw new AuthException("No active access keys found for user", e);
-        }
+    @Override
+    public synchronized void refresh() {
+      updateCreds();
     }
+  }
 
-    protected static ClientConfiguration getDefaultConfiguration(boolean withHttps) {
-        ClientConfiguration config = new ClientConfiguration();
-        config.setConnectionTimeout(GenericS3ClientFactoryConfiguration.getInstance().getConnection_timeout_ms());
-        config.setMaxConnections(GenericS3ClientFactoryConfiguration.getInstance().getMax_connections());
-        config.setMaxErrorRetry(GenericS3ClientFactoryConfiguration.getInstance().getMax_error_retries());
-        config.setUseReaper(true);
-        config.setSocketTimeout(GenericS3ClientFactoryConfiguration.getInstance().getSocket_read_timeout_ms());
-        config.setProtocol(withHttps ? Protocol.HTTPS : Protocol.HTTP);
-        return config;
+  public static AWSCredentialsProvider getEucaUserAWSCredentialsProvider(User user) {
+    return new EucaUserCredentialsProvider(user);
+  }
+
+  /**
+   * Uses the first key found for the given user to construct an s3 client
+   * 
+   * @param clientUser
+   * @param useHttps
+   * @return
+   * @throws AuthException if user has no access keys active
+   * @throws java.util.NoSuchElementException if no OSG found ENABLED
+   */
+  protected static AmazonS3Client getS3ClientForUser(final User clientUser, boolean useHttps) throws AuthException, NoSuchElementException {
+    try {
+      return getS3Client(getEucaUserAWSCredentialsProvider(clientUser), useHttps);
+    } catch (Exception e) {
+      LOG.error("Could not generate s3 client for user " + clientUser.getUserId() + " because no active access keys found.", e);
+      throw new AuthException("No active access keys found for user", e);
     }
+  }
 
-    public static S3ClientOptions getDefaultClientOptions() {
-        S3ClientOptions ops = new S3ClientOptions();
-        ops.setPathStyleAccess(true);
-        return ops;
+  protected static ClientConfiguration getDefaultConfiguration(boolean withHttps) {
+    ClientConfiguration config = new ClientConfiguration();
+    config.setConnectionTimeout(GenericS3ClientFactoryConfiguration.getInstance().getConnection_timeout_ms());
+    config.setMaxConnections(GenericS3ClientFactoryConfiguration.getInstance().getMax_connections());
+    config.setMaxErrorRetry(GenericS3ClientFactoryConfiguration.getInstance().getMax_error_retries());
+    config.setUseReaper(true);
+    config.setSocketTimeout(GenericS3ClientFactoryConfiguration.getInstance().getSocket_read_timeout_ms());
+    config.setProtocol(withHttps ? Protocol.HTTPS : Protocol.HTTP);
+    return config;
+  }
+
+  public static S3ClientOptions getDefaultClientOptions() {
+    S3ClientOptions ops = new S3ClientOptions();
+    ops.setPathStyleAccess(true);
+    return ops;
+  }
+
+  public static AmazonS3Client getS3Client(AWSCredentialsProvider provider, boolean https) throws NoSuchElementException {
+    ClientConfiguration config = getDefaultConfiguration(https);
+    AmazonS3Client s3Client = new AmazonS3Client(provider, config);
+    s3Client.setS3ClientOptions(getDefaultClientOptions());
+    s3Client.setEndpoint(getRandomOSGUri().toString());
+    return s3Client;
+  }
+
+  /**
+   * Returns a configured S3 client for the specified set of credentials.
+   * 
+   * @param credentials
+   * @param https
+   * @return
+   * @throws NoSuchElementException if no ENABLED OSG found
+   */
+  public static AmazonS3Client getS3Client(AWSCredentials credentials, boolean https) throws NoSuchElementException {
+    ClientConfiguration config = getDefaultConfiguration(https);
+    AmazonS3Client s3Client = new AmazonS3Client(credentials, config);
+    s3Client.setS3ClientOptions(getDefaultClientOptions());
+    s3Client.setEndpoint(getRandomOSGUri().toString());
+    return s3Client;
+  }
+
+  protected static URI getRandomOSGUri(boolean usePublicDns) throws NoSuchElementException {
+    List<ServiceConfiguration> osgs = Lists.newArrayList(Topology.lookupMany(ObjectStorage.class));
+    if (osgs == null || osgs.size() == 0) {
+      throw new NoSuchElementException("No ENABLED OSGs found. Cannot generate client with no set endpoint");
+    } else {
+      int osgIndex = randomizer.nextInt(osgs.size());
+      LOG.trace("Using osg index " + osgIndex + " from list: " + osgs);
+      ServiceConfiguration conf = osgs.get(osgIndex);
+      if (usePublicDns) {
+        return ServiceUris.remotePublicify(conf);
+      } else {
+        return ServiceUris.remote(conf);
+      }
     }
+  }
 
-
-    public static AmazonS3Client getS3Client(AWSCredentialsProvider provider, boolean https) throws NoSuchElementException {
-        ClientConfiguration config = getDefaultConfiguration(https);
-        AmazonS3Client s3Client = new AmazonS3Client(provider, config);
-        s3Client.setS3ClientOptions(getDefaultClientOptions());
-        s3Client.setEndpoint(getRandomOSGUri().toString());
-        return s3Client;
-    }
-
-    /**
-     * Returns a configured S3 client for the specified set of credentials.
-     * @param credentials
-     * @param https
-     * @return
-     * @throws NoSuchElementException if no ENABLED OSG found
-     */
-    public static AmazonS3Client getS3Client(AWSCredentials credentials, boolean https) throws NoSuchElementException {
-        ClientConfiguration config = getDefaultConfiguration(https);
-        AmazonS3Client s3Client = new AmazonS3Client(credentials, config);
-        s3Client.setS3ClientOptions(getDefaultClientOptions());
-        s3Client.setEndpoint(getRandomOSGUri().toString());
-        return s3Client;
-    }
-
-    protected static URI getRandomOSGUri(boolean usePublicDns) throws NoSuchElementException {
-        List<ServiceConfiguration> osgs = Lists.newArrayList(Topology.lookupMany(ObjectStorage.class));
-        if(osgs == null || osgs.size() == 0) {
-            throw new NoSuchElementException("No ENABLED OSGs found. Cannot generate client with no set endpoint");
-        } else {
-            int osgIndex = randomizer.nextInt(osgs.size());
-            LOG.trace("Using osg index " + osgIndex + " from list: " + osgs);
-            ServiceConfiguration conf = osgs.get(osgIndex);
-            if (usePublicDns) {
-                return ServiceUris.remotePublicify(conf);
-            } else {
-                return ServiceUris.remote(conf);
-            }
-        }
-    }
-
-    protected static URI getRandomOSGUri() throws NoSuchElementException {
-        return getRandomOSGUri(false);
-    }
+  protected static URI getRandomOSGUri() throws NoSuchElementException {
+    return getRandomOSGUri(false);
+  }
 }

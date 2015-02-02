@@ -67,22 +67,19 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 @SuppressWarnings("serial")
 public class InvalidRangeException extends WalrusException {
 
-  public InvalidRangeException()
-  {
-    super( "Invalid Range" );
-  }
-  
-  public InvalidRangeException(String message)
-  {
-    super( "Invalid Range", "The requested range cannot be satisfied.", "Range", message, HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE);
+  public InvalidRangeException() {
+    super("Invalid Range");
   }
 
-  public InvalidRangeException(Throwable ex)
-  {
+  public InvalidRangeException(String message) {
+    super("Invalid Range", "The requested range cannot be satisfied.", "Range", message, HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE);
+  }
+
+  public InvalidRangeException(Throwable ex) {
     super("Invalid Range", ex);
   }
-  public InvalidRangeException(String message, Throwable ex)
-  {
-    super(message,ex);
+
+  public InvalidRangeException(String message, Throwable ex) {
+    super(message, ex);
   }
 }

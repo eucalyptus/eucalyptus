@@ -62,57 +62,58 @@
 
 package com.eucalyptus.objectstorage.pipeline.handlers;
 
-import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.ws.StackConfiguration;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
+
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.ws.StackConfiguration;
 
 /*
  *
  */
 public class ObjectStoragePUTLifecycleAndAclAggregatorHandler extends HttpChunkAggregator {
 
-    private static final int DEFAULT_MAX_CONTENT_LENGTH = StackConfiguration.CLIENT_HTTP_CHUNK_BUFFER_MAX;
-    private static final long MAX_DECHUNKING_SIZE = 2048l * 1024l; // two megabytes
+  private static final int DEFAULT_MAX_CONTENT_LENGTH = StackConfiguration.CLIENT_HTTP_CHUNK_BUFFER_MAX;
+  private static final long MAX_DECHUNKING_SIZE = 2048l * 1024l; // two megabytes
 
-    public ObjectStoragePUTLifecycleAndAclAggregatorHandler() {
-        super(DEFAULT_MAX_CONTENT_LENGTH);
-    }
+  public ObjectStoragePUTLifecycleAndAclAggregatorHandler() {
+    super(DEFAULT_MAX_CONTENT_LENGTH);
+  }
 
-    public ObjectStoragePUTLifecycleAndAclAggregatorHandler(int maxContentLength) {
-        super(maxContentLength);
-    }
+  public ObjectStoragePUTLifecycleAndAclAggregatorHandler(int maxContentLength) {
+    super(maxContentLength);
+  }
 
-    @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
-        Object message = event.getMessage();
-        if (message instanceof MappingHttpRequest) {
-            MappingHttpRequest httpRequest = (MappingHttpRequest) message;
-            String contentLength = httpRequest.getHeader("Content-Length");
-            if (contentLength != null && !"".equals(contentLength)) {
-                Long parsedContentLength = null;
-                try {
-                    parsedContentLength = Long.parseLong(contentLength);
-                } catch (NumberFormatException nfe) {
-                    // just movin' on
-                }
-                if (parsedContentLength != null && parsedContentLength.longValue() <= MAX_DECHUNKING_SIZE) {
-                    super.messageReceived(ctx, event);
-                    return;
-                }
-            }
+  @Override
+  public void messageReceived(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
+    Object message = event.getMessage();
+    if (message instanceof MappingHttpRequest) {
+      MappingHttpRequest httpRequest = (MappingHttpRequest) message;
+      String contentLength = httpRequest.getHeader("Content-Length");
+      if (contentLength != null && !"".equals(contentLength)) {
+        Long parsedContentLength = null;
+        try {
+          parsedContentLength = Long.parseLong(contentLength);
+        } catch (NumberFormatException nfe) {
+          // just movin' on
         }
-        if (message instanceof HttpChunk) {
-            try {
-                super.messageReceived(ctx, event);
-                return;
-            } catch (IllegalStateException ise) {
-                // if this chunk is not associated with the lifecycle, then this exception gets thrown
-                // so this is how we ignore it, but process it if it is a chunk of what we're looking for
-            }
+        if (parsedContentLength != null && parsedContentLength.longValue() <= MAX_DECHUNKING_SIZE) {
+          super.messageReceived(ctx, event);
+          return;
         }
-        ctx.sendUpstream(event);
+      }
     }
+    if (message instanceof HttpChunk) {
+      try {
+        super.messageReceived(ctx, event);
+        return;
+      } catch (IllegalStateException ise) {
+        // if this chunk is not associated with the lifecycle, then this exception gets thrown
+        // so this is how we ignore it, but process it if it is a chunk of what we're looking for
+      }
+    }
+    ctx.sendUpstream(event);
+  }
 }

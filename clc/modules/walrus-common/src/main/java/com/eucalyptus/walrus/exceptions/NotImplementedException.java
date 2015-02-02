@@ -64,31 +64,26 @@ package com.eucalyptus.walrus.exceptions;
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-
-
 @SuppressWarnings("serial")
 public class NotImplementedException extends WalrusException {
 
-  public NotImplementedException()
-  {
-    super( "NotImplemented" );
-  }
-  
-  public NotImplementedException(String value)
-  {
-    super("NotImplemented", "NA", "NA", value, HttpResponseStatus.NOT_IMPLEMENTED);
-  }
-  
-  public NotImplementedException(String message, String resourceType, String resource) {
-	super("NotImplemented", message, resourceType, resource, HttpResponseStatus.NOT_IMPLEMENTED); 
+  public NotImplementedException() {
+    super("NotImplemented");
   }
 
-  public NotImplementedException(Throwable ex)
-  {
+  public NotImplementedException(String value) {
+    super("NotImplemented", "NA", "NA", value, HttpResponseStatus.NOT_IMPLEMENTED);
+  }
+
+  public NotImplementedException(String message, String resourceType, String resource) {
+    super("NotImplemented", message, resourceType, resource, HttpResponseStatus.NOT_IMPLEMENTED);
+  }
+
+  public NotImplementedException(Throwable ex) {
     super("NotImplemented", ex);
   }
-  public NotImplementedException(String message, Throwable ex)
-  {
-    super(message,ex);
+
+  public NotImplementedException(String message, Throwable ex) {
+    super(message, ex);
   }
 }

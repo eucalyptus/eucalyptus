@@ -62,45 +62,46 @@
 
 package com.eucalyptus.objectstorage.bittorrent;
 
-import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
-
-import edu.ucsb.eucalyptus.util.StreamConsumer;
-import edu.ucsb.eucalyptus.util.SystemUtil;
+import java.io.File;
 
 import org.apache.log4j.Logger;
 
-import java.io.File;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+
+import edu.ucsb.eucalyptus.util.StreamConsumer;
 
 public class TorrentClient extends Thread {
-    private String torrentPath;
-    private String absoluteObjectPath;
-    private Process proc;
-    public TorrentClient(String torrentPath, String absoluteObjectPath) {
-        this.torrentPath = torrentPath;
-        this.absoluteObjectPath = absoluteObjectPath;
-    }
-    private static Logger LOG = Logger.getLogger( TorrentClient.class );
+  private String torrentPath;
+  private String absoluteObjectPath;
+  private Process proc;
 
-    public void run() {
-        new File(ObjectStorageProperties.TRACKER_DIR).mkdirs();
-        try {
-            Runtime rt = Runtime.getRuntime();
-            proc = rt.exec(new String[]{ObjectStorageProperties.TORRENT_CLIENT_BINARY, torrentPath, "--saveas", absoluteObjectPath});
-            StreamConsumer error = new StreamConsumer(proc.getErrorStream());
-            StreamConsumer output = new StreamConsumer(proc.getInputStream());
-            error.start();
-            output.start();
-            Thread.sleep(300);
-            String errValue = error.getReturnValue();
-            if(errValue.length() > 0)
-                LOG.warn(errValue);
-        } catch (Exception t) {
-            t.printStackTrace();
-        }
-    }
+  public TorrentClient(String torrentPath, String absoluteObjectPath) {
+    this.torrentPath = torrentPath;
+    this.absoluteObjectPath = absoluteObjectPath;
+  }
 
-    public void bye() {
-        if(proc != null)
-            proc.destroy();
+  private static Logger LOG = Logger.getLogger(TorrentClient.class);
+
+  public void run() {
+    new File(ObjectStorageProperties.TRACKER_DIR).mkdirs();
+    try {
+      Runtime rt = Runtime.getRuntime();
+      proc = rt.exec(new String[] {ObjectStorageProperties.TORRENT_CLIENT_BINARY, torrentPath, "--saveas", absoluteObjectPath});
+      StreamConsumer error = new StreamConsumer(proc.getErrorStream());
+      StreamConsumer output = new StreamConsumer(proc.getInputStream());
+      error.start();
+      output.start();
+      Thread.sleep(300);
+      String errValue = error.getReturnValue();
+      if (errValue.length() > 0)
+        LOG.warn(errValue);
+    } catch (Exception t) {
+      t.printStackTrace();
     }
+  }
+
+  public void bye() {
+    if (proc != null)
+      proc.destroy();
+  }
 }

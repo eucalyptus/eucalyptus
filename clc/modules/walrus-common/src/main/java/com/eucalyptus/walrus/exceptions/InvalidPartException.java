@@ -67,24 +67,22 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 @SuppressWarnings("serial")
 public class InvalidPartException extends WalrusException {
 
-  public InvalidPartException()
-  {
-    super( "InvalidPart" );
+  public InvalidPartException() {
+    super("InvalidPart");
   }
 
-  public InvalidPartException(String resource)
-  {
-      super("InvalidPart", "One or more of the specified parts could not be found. The part might not have been uploaded, or the specified entity tag might not have matched the part's entity tag.", "Resource: ", resource, HttpResponseStatus.BAD_REQUEST);
+  public InvalidPartException(String resource) {
+    super(
+        "InvalidPart",
+        "One or more of the specified parts could not be found. The part might not have been uploaded, or the specified entity tag might not have matched the part's entity tag.",
+        "Resource: ", resource, HttpResponseStatus.BAD_REQUEST);
   }
 
-
-  public InvalidPartException(Throwable ex)
-  {
+  public InvalidPartException(Throwable ex) {
     super("InvalidPart", ex);
   }
 
-  public InvalidPartException(String message, Throwable ex)
-  {
+  public InvalidPartException(String message, Throwable ex) {
     super(message, ex);
   }
 }

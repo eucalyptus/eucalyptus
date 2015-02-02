@@ -67,22 +67,19 @@ import com.eucalyptus.util.EucalyptusCloudException;
 @SuppressWarnings("serial")
 public class VolumeNotFoundException extends EucalyptusCloudException {
 
-	public VolumeNotFoundException()
-	{
-		super( "VolumeNotFound" );
-	}
-	
-	public VolumeNotFoundException(String volumeId)
-	{
-		super("Volume " + volumeId + " not found");
-	}
+  public VolumeNotFoundException() {
+    super("VolumeNotFound");
+  }
 
-	public VolumeNotFoundException(Throwable ex)
-	{
-		super("VolumeNotFound", ex);
-	}
-	public VolumeNotFoundException(String message, Throwable ex)
-	{
-		super(message,ex);
-	}
+  public VolumeNotFoundException(String volumeId) {
+    super("Volume " + volumeId + " not found");
+  }
+
+  public VolumeNotFoundException(Throwable ex) {
+    super("VolumeNotFound", ex);
+  }
+
+  public VolumeNotFoundException(String message, Throwable ex) {
+    super(message, ex);
+  }
 }

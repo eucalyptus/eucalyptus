@@ -64,27 +64,22 @@ package com.eucalyptus.walrus.exceptions;
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-
-
-
 @SuppressWarnings("serial")
 public class NotModifiedException extends WalrusException {
 
-  public NotModifiedException()
-  {
-    super( "NotModified" );
+  public NotModifiedException() {
+    super("NotModified");
   }
-  public NotModifiedException(String error)
-  {
+
+  public NotModifiedException(String error) {
     super("NotModified", "Object Not Modified", "Key", error, HttpResponseStatus.NOT_MODIFIED);
   }
 
-  public NotModifiedException(Throwable ex)
-  {
+  public NotModifiedException(Throwable ex) {
     super("NotModified", ex);
   }
-  public NotModifiedException(String message, Throwable ex)
-  {
-    super(message,ex);
+
+  public NotModifiedException(String message, Throwable ex) {
+    super(message, ex);
   }
 }

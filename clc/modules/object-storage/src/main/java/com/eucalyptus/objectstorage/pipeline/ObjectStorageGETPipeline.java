@@ -75,32 +75,31 @@ import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageUserAuthenticat
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
-
-@ComponentPart( ObjectStorage.class )
+@ComponentPart(ObjectStorage.class)
 public class ObjectStorageGETPipeline extends ObjectStorageRESTPipeline {
-	private static Logger LOG = Logger.getLogger( ObjectStorageGETPipeline.class );
-	private final UnrollableStage auth = new ObjectStorageUserAuthenticationStage( );
-	private final UnrollableStage bind = new ObjectStorageGETBindingStage( );
-	private final UnrollableStage out = new ObjectStorageGETOutboundStage();
-	private final UnrollableStage exHandler = new ObjectStorageRESTExceptionStage( );
-	
-	@Override
-	public boolean checkAccepts( HttpRequest message ) {
-		return super.checkAccepts(message) && message.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.GET.toString());
-	}
-
-	@Override
-	public String getName( ) {
-		return "objectstorage-get";
-	}
+  private static Logger LOG = Logger.getLogger(ObjectStorageGETPipeline.class);
+  private final UnrollableStage auth = new ObjectStorageUserAuthenticationStage();
+  private final UnrollableStage bind = new ObjectStorageGETBindingStage();
+  private final UnrollableStage out = new ObjectStorageGETOutboundStage();
+  private final UnrollableStage exHandler = new ObjectStorageRESTExceptionStage();
 
   @Override
-  public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {	  
-	  auth.unrollStage( pipeline );
-	  bind.unrollStage( pipeline );
-	  out.unrollStage( pipeline );
-	  exHandler.unrollStage(pipeline);
-	  return pipeline;
+  public boolean checkAccepts(HttpRequest message) {
+    return super.checkAccepts(message) && message.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.GET.toString());
+  }
+
+  @Override
+  public String getName() {
+    return "objectstorage-get";
+  }
+
+  @Override
+  public ChannelPipeline addHandlers(ChannelPipeline pipeline) {
+    auth.unrollStage(pipeline);
+    bind.unrollStage(pipeline);
+    out.unrollStage(pipeline);
+    exHandler.unrollStage(pipeline);
+    return pipeline;
   }
 
 }

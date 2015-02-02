@@ -94,7 +94,6 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.Bucket;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
@@ -112,8 +111,6 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import com.eucalyptus.auth.principal.Role;
-import com.eucalyptus.auth.tokens.SecurityToken;
-import com.eucalyptus.auth.tokens.SecurityTokenManager;
 import com.eucalyptus.blockstorage.entities.SnapshotInfo;
 import com.eucalyptus.blockstorage.entities.SnapshotPart;
 import com.eucalyptus.blockstorage.entities.SnapshotPart.SnapshotPartState;
@@ -140,1059 +137,1062 @@ import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
 
 /**
- * S3SnapshotTransfer manages snapshot transfers between SC and S3 API such as objectstorage gateway. An instance of the class must be obtained using one of the
- * constructors before invoking any methods. It is recommended that every snapshot operation instantiate a new object of this class as the AmazonS3Client used
- * is not thread safe
+ * S3SnapshotTransfer manages snapshot transfers between SC and S3 API such as objectstorage gateway. An instance of the class must be obtained using
+ * one of the constructors before invoking any methods. It is recommended that every snapshot operation instantiate a new object of this class as the
+ * AmazonS3Client used is not thread safe
  * 
  * @author Swathi Gangisetty
  */
 public class S3SnapshotTransfer implements SnapshotTransfer {
 
-	private static Logger LOG = Logger.getLogger(S3SnapshotTransfer.class);
-
-	// Constructor parameters
-	private String snapshotId;
-	private String bucketName;
-	private String keyName;
-
-	// For multipart upload
-	private String uploadId;
-
-	// Initiate for every request
-	private EucaS3Client eucaS3Client;
-
-	// Instantiate from database for uploads
-	private Long partSize;
-	private Integer queueSize;
-	private Integer transferRetries;
-	private Integer transferTimeout;
-	private Integer poolSize;
-	private Integer readBufferSize;
-	private Integer writeBufferSize;
-	private ServiceConfiguration serviceConfig;
-
-	// Static parameters
-	private static Role role;
-
-	// Constants
-	private static final Integer TX_RETRIES = 20;
-	private static final Integer REFRESH_TOKEN_RETRIES = 1;
-	private static final String UNCOMPRESSED_SIZE_KEY = "uncompressedsize";
-
-	public S3SnapshotTransfer() throws SnapshotTransferException {
-		initializeEucaS3Client();
-	}
-
-	public S3SnapshotTransfer(String snapshotId, String bucketName, String keyName) throws SnapshotTransferException {
-		this();
-		this.snapshotId = snapshotId;
-		this.bucketName = bucketName;
-		this.keyName = keyName;
-	}
-
-	public S3SnapshotTransfer(String snapshotId, String keyName) throws SnapshotTransferException {
-		this();
-		this.snapshotId = snapshotId;
-		this.keyName = keyName;
-	}
-
-	// for using in unit tests
-	protected S3SnapshotTransfer(boolean mock) {
-		// for mocking, do not initialize s3 client
-	}
-
-	public String getSnapshotId() {
-		return snapshotId;
-	}
-
-	public void setSnapshotId(String snapshotId) {
-		this.snapshotId = snapshotId;
-	}
-
-	public String getBucketName() {
-		return bucketName;
-	}
-
-	public void setBucketName(String bucketName) {
-		this.bucketName = bucketName;
-	}
-
-	public String getKeyName() {
-		return keyName;
-	}
-
-	public void setKeyName(String keyName) {
-		this.keyName = keyName;
-	}
-
-	public String getUploadId() {
-		return uploadId;
-	}
-
-	public void setUploadId(String uploadId) {
-		this.uploadId = uploadId;
-	}
-
-	/**
-	 * Preparation for upload involves looking up the bucket from the database and creating it in objectstorage gateway. If the bucket is already created,
-	 * objectstorage gateway should still respond back with 200 OK. Invoke this method before uploading the snapshot using {@link #upload(String)} or set the
-	 * bucket name explicitly using {@link #setBucketName(String)}
-	 * 
-	 * @return Name of the bucket that holds snapshots in objectstorage gateway
-	 */
-	@Override
-	public String prepareForUpload() throws SnapshotTransferException {
-		bucketName = createAndReturnBucketName();
-		return bucketName;
-	}
-
-	/**
-	 * Compresses the snapshot and uploads it to a bucket in objectstorage gateway as a single or multipart upload based on the configuration in
-	 * {@link StorageInfo}. Bucket name should be configured before invoking this method. It can be looked up and initialized by {@link #prepareForUpload()} or
-	 * explicitly set using {@link #setBucketName(String)}
-	 * 
-	 * @param sourceFileName
-	 *            absolute path to the snapshot on the file system
-	 */
-	@Override
-	public void upload(StorageResource storageResource) throws SnapshotTransferException {
-		validateInput(); // Validate input
-		loadTransferConfig(); // Load the transfer configuration parameters from database
-		SnapshotProgressCallback progressCallback = new SnapshotProgressCallback(snapshotId); // Setup the progress callback
-
-		Boolean error = Boolean.FALSE;
-		ArrayBlockingQueue<SnapshotPart> partQueue = null;
-		SnapshotPart part = null;
-		SnapshotUploadInfo snapUploadInfo = null;
-		Future<List<PartETag>> uploadPartsFuture = null;
-		Future<String> completeUploadFuture = null;
-
-		byte[] buffer = new byte[readBufferSize];
-		Long readOffset = 0L;
-		Long bytesRead = 0L;
-		Long bytesWritten = 0L;
-		int len;
-		int partNumber = 1;
-
-		try {
-			// Get the uncompressed file size for uploading as metadata
-			Long uncompressedSize = storageResource.getSize();
-
-			// Setup the snapshot and part entities.
-			snapUploadInfo = SnapshotUploadInfo.create(snapshotId, bucketName, keyName);
-			Path zipFilePath = Files.createTempFile(keyName + '-', '-' + String.valueOf(partNumber));
-			part = SnapshotPart.createPart(snapUploadInfo, zipFilePath.toString(), partNumber, readOffset);
-
-			InputStream inputStream = storageResource.getInputStream();
-			ByteArrayOutputStream baos = new ByteArrayOutputStream();
-			GZIPOutputStream gzipStream = new GZIPOutputStream(baos);
-			FileOutputStream outputStream = new FileOutputStream(zipFilePath.toString());
-
-			try {
-				LOG.debug("Reading snapshot " + snapshotId + " and compressing it to disk in chunks of size " + partSize + " bytes or greater");
-				while ((len = inputStream.read(buffer)) > 0) {
-					bytesRead += len;
-					gzipStream.write(buffer, 0, len);
-
-					if ((bytesWritten + baos.size()) < partSize) {
-						baos.writeTo(outputStream);
-						bytesWritten += baos.size();
-						baos.reset();
-					} else {
-						gzipStream.close();
-						baos.writeTo(outputStream); // Order is important. Closing the gzip stream flushes stuff
-						bytesWritten += baos.size();
-						baos.reset();
-						outputStream.close();
-
-						if (partNumber > 1) {// Update the part status
-							part = part.updateStateCreated(bytesWritten, bytesRead, Boolean.FALSE);
-						} else {// Initialize multipart upload only once after the first part is created
-							LOG.info("Uploading snapshot " + snapshotId + " to objectstorage using multipart upload");
-							progressCallback.setUploadSize(uncompressedSize);
-							uploadId = initiateMulitpartUpload(uncompressedSize);
-							snapUploadInfo = snapUploadInfo.updateUploadId(uploadId);
-							part = part.updateStateCreated(uploadId, bytesWritten, bytesRead, Boolean.FALSE);
-							partQueue = new ArrayBlockingQueue<SnapshotPart>(queueSize);
-							uploadPartsFuture = Threads.enqueue(serviceConfig, UploadPartTask.class, poolSize, new UploadPartTask(partQueue, progressCallback));
-						}
-
-						// Check for the future task before adding part to the queue.
-						if (uploadPartsFuture != null && uploadPartsFuture.isDone()) {
-							// This task shouldn't be done until the last part is added. If it is done at this point, then something might have gone wrong
-							throw new SnapshotUploadPartException(
-									"Error uploading parts, aborting part creation process. Check previous log messages for the exact error");
-						}
-
-						// Add part to the queue
-						partQueue.put(part);
-
-						// Prep the metadata for the next part
-						readOffset += bytesRead;
-						bytesRead = 0L;
-						bytesWritten = 0L;
-
-						// Setup the part entity for next part
-						zipFilePath = Files.createTempFile(keyName + '-', '-' + String.valueOf((++partNumber)));
-						part = SnapshotPart.createPart(snapUploadInfo, zipFilePath.toString(), partNumber, readOffset);
-
-						gzipStream = new GZIPOutputStream(baos);
-						outputStream = new FileOutputStream(zipFilePath.toString());
-					}
-				}
-
-				gzipStream.close();
-				baos.writeTo(outputStream);
-				bytesWritten += baos.size();
-				baos.reset();
-				outputStream.close();
-				inputStream.close();
-
-				// Update the part status
-				part = part.updateStateCreated(bytesWritten, bytesRead, Boolean.TRUE);
-
-				// Update the snapshot upload info status
-				snapUploadInfo = snapUploadInfo.updateStateCreatedParts(partNumber);
-			} catch (Exception e) {
-				LOG.error("Failed to upload " + snapshotId + " due to: ", e);
-				error = Boolean.TRUE;
-				throw new SnapshotTransferException("Failed to upload " + snapshotId + " due to: ", e);
-			} finally {
-				if (inputStream != null) {
-					try {
-						inputStream.close();
-					} catch (Exception e) {
-
-					}
-				}
-				if (gzipStream != null) {
-					try {
-						gzipStream.close();
-					} catch (Exception e) {
-
-					}
-				}
-				if (outputStream != null) {
-					try {
-						outputStream.close();
-					} catch (Exception e) {
-
-					}
-				}
-				baos.reset();
-			}
-
-			if (partNumber > 1) {
-				// Check for the future task before adding the last part to the queue.
-				if (uploadPartsFuture != null && uploadPartsFuture.isDone()) {
-					// This task shouldn't be done until the last part is added. If it is done at this point, then something might have gone wrong
-					throw new SnapshotUploadPartException(
-							"Error uploading parts, aborting part upload process. Check previous log messages for the exact error");
-				}
-				// Add the last part to the queue
-				partQueue.put(part);
-				// Kick off the completion task
-				completeUploadFuture = Threads.enqueue(serviceConfig, CompleteMpuTask.class, poolSize, new CompleteMpuTask(uploadPartsFuture, snapUploadInfo,
-						partNumber));
-			} else {
-				try {
-					LOG.info("Uploading snapshot " + snapshotId + " to objectstorage as a single object. Compressed size of snapshot (" + bytesWritten
-							+ " bytes) is less than minimum part size (" + partSize + " bytes) for multipart upload");
-					PutObjectResult putResult = uploadSnapshotAsSingleObject(zipFilePath.toString(), bytesWritten, uncompressedSize, progressCallback);
-					markSnapshotAvailable();
-					try {
-						part = part.updateStateUploaded(putResult.getETag());
-						snapUploadInfo = snapUploadInfo.updateStateUploaded(putResult.getETag());
-					} catch (Exception e) {
-						LOG.debug("Failed to update status in DB for " + snapUploadInfo);
-					}
-					LOG.info("Uploaded snapshot " + snapshotId + " to objectstorage");
-				} catch (Exception e) {
-					error = Boolean.TRUE;
-					LOG.error("Failed to upload snapshot " + snapshotId + " due to: ", e);
-					throw new SnapshotTransferException("Failed to upload snapshot " + snapshotId + " due to: ", e);
-				} finally {
-					deleteFile(zipFilePath);
-				}
-			}
-		} catch (SnapshotTransferException e) {
-			error = Boolean.TRUE;
-			throw e;
-		} catch (Exception e) {
-			error = Boolean.TRUE;
-			LOG.error("Failed to upload snapshot " + snapshotId + " due to: ", e);
-			throw new SnapshotTransferException("Failed to upload snapshot " + snapshotId + " due to: ", e);
-		} finally {
-			if (error) {
-				abortUpload(snapUploadInfo);
-				if (uploadPartsFuture != null && !uploadPartsFuture.isDone()) {
-					uploadPartsFuture.cancel(true);
-				}
-				if (completeUploadFuture != null && !completeUploadFuture.isDone()) {
-					completeUploadFuture.cancel(true);
-				}
-			}
-		}
-	}
-
-	/**
-	 * Cancel the snapshot upload. Checks if a multipart upload is in progress and aborts the upload. Marks the upload as aborted for
-	 * {@link SnapshotUploadCheckerTask} to clean up on its duty cycles
-	 */
-	@Override
-	public void cancelUpload() throws SnapshotTransferException {
-		validateInput();
-		try (TransactionResource db = Entities.transactionFor(SnapshotUploadInfo.class)) {
-			SnapshotUploadInfo snapUploadInfo = Entities.uniqueResult(new SnapshotUploadInfo(snapshotId, bucketName, keyName));
-			uploadId = snapUploadInfo.getUploadId();
-			abortMultipartUpload();
-			snapUploadInfo.setState(SnapshotUploadState.aborted);
-			db.commit();
-		} catch (Exception e) {
-			LOG.debug("Failed to cancel upload for snapshot " + snapshotId, e);
-			throw new SnapshotTransferException("Failed to cancel upload for snapshot " + snapshotId, e);
-		}
-	}
-
-	/**
-	 * Not implemented
-	 */
-	@Override
-	public void resumeUpload(StorageResource storageResource) throws SnapshotTransferException {
-		throw new SnapshotTransferException("Not supported yet");
-	}
-
-	/**
-	 * Downloads the compressed snapshot from objectstorage gateway to the filesystem
-	 */
-	public void download(StorageResource storageResource) throws SnapshotTransferException {
-		validateInput();
-		loadTransferConfig();
-
-		S3Object snapObj = download();
-
-		if (snapObj != null && snapObj.getObjectContent() != null) {
-			byte[] buffer = new byte[10 * readBufferSize];
-			int len;
-			GZIPInputStream gzipInputStream = null;
-
-			try {
-				gzipInputStream = new GZIPInputStream(new BufferedInputStream(snapObj.getObjectContent(), buffer.length * 3), buffer.length * 2);
-
-				if (storageResource.isDownloadSynchronous()) { // Download and unzip snapshot to the storage device directly
-					OutputStream outputStream = null;
-					try {
-						outputStream = storageResource.getOutputStream();
-						while ((len = gzipInputStream.read(buffer)) > 0) {
-							// Write to the output stream
-							outputStream.write(buffer, 0, len);
-						}
-
-						// Close the streams and free the resources
-						gzipInputStream.close();
-						outputStream.close();
-						buffer = null;
-					} finally {
-						try {
-							if (outputStream != null)
-								outputStream.close();
-						} catch (Exception e) {
-
-						}
-					}
-				} else { // Download and unzip snpashot to disk in parts and write the parts to storage backend in parallel
-					ArrayBlockingQueue<SnapshotPart> partQueue = new ArrayBlockingQueue<SnapshotPart>(queueSize);
-					Future<String> storageWriterFuture = Threads.enqueue(serviceConfig, StorageWriterTask.class, poolSize, new StorageWriterTask(partQueue,
-							storageResource));
-
-					FileOutputStream fileOutputStream = null;
-					long bytesWritten = 0;
-					int partNumber = 1;
-
-					try {
-						Path filePath = Files.createTempFile(snapshotId + '-', '-' + String.valueOf(partNumber));
-						fileOutputStream = new FileOutputStream(filePath.toString());
-						SnapshotPart part = new SnapshotPart();
-						part.setFileName(filePath.toString());
-						part.setPartNumber(partNumber);
-						part.setIsLast(Boolean.FALSE);
-
-						while ((len = gzipInputStream.read(buffer)) > 0) {
-							if ((bytesWritten + len) < writeBufferSize) {
-								fileOutputStream.write(buffer, 0, len);
-								bytesWritten += len;
-							} else {
-								fileOutputStream.write(buffer, 0, len);
-								bytesWritten += len;
-								fileOutputStream.close();
-
-								// Check if writer is still relevant
-								if (storageWriterFuture.isDone()) {
-									throw new SnapshotTransferException(
-											"Error writing snapshot to backend, check previous log messages for more details. Aborting download and unzip process");
-								}
-
-								// Add the part to the queue
-								part.setSize(bytesWritten);
-								partQueue.put(part);
-
-								// Prep for the next part
-								bytesWritten = 0;
-								filePath = Files.createTempFile(snapshotId + '-', '-' + String.valueOf(++partNumber));
-								fileOutputStream = new FileOutputStream(filePath.toString());
-								part = new SnapshotPart();
-								part.setFileName(filePath.toString());
-								part.setPartNumber(partNumber);
-								part.setIsLast(Boolean.FALSE);
-							}
-						}
-
-						// Close the streams and free the resources
-						gzipInputStream.close();
-						fileOutputStream.close();
-						buffer = null;
-
-						// Add the last part to the queue
-						part.setSize(bytesWritten);
-						part.setIsLast(Boolean.TRUE);
-						partQueue.put(part);
-
-						if (StringUtils.isNotBlank(storageWriterFuture.get(transferTimeout, TimeUnit.HOURS))) {
-							LOG.info("Downloaded snapshot " + snapshotId + " to storage backend");
-						} else {
-							throw new SnapshotTransferException("Failed to download snapshot " + snapshotId + " to storage backend");
-						}
-					} catch (Exception e) {
-						// Clean up the files that were created
-						try {
-							if (!storageWriterFuture.isDone()) {
-								storageWriterFuture.cancel(true);
-							}
-							List<SnapshotPart> remainingParts = new ArrayList<SnapshotPart>();
-							partQueue.drainTo(remainingParts);
-							for (SnapshotPart part : remainingParts) {
-								deleteFile(part.getFileName());
-							}
-						} catch (Exception ex) {
-							LOG.warn("Unable to clean up artifacts left by a failed attempt to download " + snapshotId + " to storage backend", ex);
-						}
-						throw e;
-					} finally {
-						try {
-							if (fileOutputStream != null)
-								fileOutputStream.close();
-						} catch (Exception e) {
-
-						}
-					}
-				}
-			} catch (SnapshotTransferException e) {
-				throw e;
-			} catch (Exception e) {
-				throw new SnapshotTransferException("Failed to download snapshot " + snapshotId + " to storage backend", e);
-			} finally {
-				try {
-					if (gzipInputStream != null)
-						gzipInputStream.close();
-				} catch (Exception e) {
-
-				}
-				try {
-					snapObj.getObjectContent().close();
-				} catch (Exception e) {
-
-				}
-			}
-		} else {
-			LOG.warn("No snapshot content available from objectstorage gateway: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName);
-			throw new SnapshotTransferException("No snapshot content available: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName);
-		}
-	}
-
-	/**
-	 * Delete the snapshot from objectstorage gateway
-	 */
-	@Override
-	public void delete() throws SnapshotTransferException {
-		LOG.debug("Deleting snapshot from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName);
-		validateInput();
-		try {
-			retryAfterRefresh(new Function<DeleteObjectRequest, String>() {
-
-				@Override
-				@Nullable
-				public String apply(@Nullable DeleteObjectRequest arg0) {
-					eucaS3Client.refreshEndpoint();
-					eucaS3Client.deleteObject(arg0);
-					return null;
-				}
-			}, new DeleteObjectRequest(bucketName, keyName), REFRESH_TOKEN_RETRIES);
-		} catch (Exception e) {
-			LOG.warn("Failed to delete snapshot from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName);
-			throw new SnapshotTransferException("Failed to delete snapshot from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key="
-					+ keyName, e);
-		}
-	}
-
-	@Override
-	public Long getSizeInBytes() throws SnapshotTransferException {
-		LOG.debug("Fetching snapshot metadata from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName);
-
-		validateInput();
-		ObjectMetadata metadata = null;
-		Map<String, String> userMetadata = null;
-		try {
-			metadata = retryAfterRefresh(new Function<GetObjectMetadataRequest, ObjectMetadata>() {
-
-				@Override
-				@Nullable
-				public ObjectMetadata apply(@Nullable GetObjectMetadataRequest arg0) {
-					eucaS3Client.refreshEndpoint();
-					return eucaS3Client.getObjectMetadata(arg0);
-				}
-
-			}, new GetObjectMetadataRequest(bucketName, keyName), REFRESH_TOKEN_RETRIES);
-		} catch (Exception e) {
-			LOG.warn("Failed to get snapshot metadata from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName);
-			throw new SnapshotTransferException("Failed to get snapshot metadata from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName
-					+ ", key=" + keyName, e);
-		}
-
-		if (metadata != null && (userMetadata = metadata.getUserMetadata()) != null && userMetadata.containsKey(UNCOMPRESSED_SIZE_KEY)) {
-			try {
-				return Long.parseLong(userMetadata.get(UNCOMPRESSED_SIZE_KEY));
-			} catch (Exception e) {
-				throw new SnapshotTransferException("Unable to parse size from snapshot metadata: snapshotId=" + snapshotId + ", bucket=" + bucketName
-						+ ", key=" + keyName + ", metadata key:value pair=" + UNCOMPRESSED_SIZE_KEY + ":" + userMetadata.get(UNCOMPRESSED_SIZE_KEY), e);
-			}
-		} else {
-			throw new SnapshotTransferException("Snapshot metadata from objectstorage does not contain uncompressed size: snapshotId=" + snapshotId
-					+ ", bucket=" + bucketName + ", key=" + keyName);
-		}
-	}
-
-	private void initializeEucaS3Client() throws SnapshotTransferException {
-		if (role == null) {
-			try {
-				role = BlockStorageUtil.checkAndConfigureBlockStorageAccount();
-			} catch (Exception e) {
-				LOG.error("Failed to initialize account for snapshot transfers due to " + e);
-				throw new SnapshotTransferException("Failed to initialize eucalyptus account for snapshot transfers", e);
-			}
-		}
-
-		try {
-			eucaS3Client = EucaS3ClientFactory.getEucaS3ClientByRole(role, (int)TimeUnit.HOURS.toSeconds(1));
-		} catch (Exception e) {
-			LOG.error("Failed to initialize S3 client for snapshot transfers due to " + e);
-			throw new SnapshotTransferException("Failed to initialize S3 client for snapshot transfers", e);
-		}
-	}
-
-	private void loadTransferConfig() {
-		StorageInfo info = StorageInfo.getStorageInfo();
-		this.partSize = (long) (info.getSnapshotPartSizeInMB() * 1024 * 1024);
-		this.queueSize = info.getMaxSnapshotPartsQueueSize();
-		this.transferRetries = info.getMaxSnapTransferRetries();
-		this.transferTimeout = info.getSnapshotTransferTimeoutInHours();
-		this.serviceConfig = Components.lookup(Storage.class).getLocalServiceConfiguration();
-		this.poolSize = info.getMaxConcurrentSnapshotTransfers();
-		this.readBufferSize = info.getReadBufferSizeInMB() * 1024 * 1024;
-		this.writeBufferSize = info.getWriteBufferSizeInMB() * 1024 * 1024;
-	}
-
-	private void validateInput() throws SnapshotTransferException {
-		if (StringUtils.isBlank(snapshotId)) {
-			throw new SnapshotTransferException("Snapshot ID is invalid. Cannot upload snapshot");
-		}
-		if (StringUtils.isBlank(bucketName)) {
-			throw new SnapshotTransferException("Bucket name is invalid. Cannot upload snapshot " + snapshotId);
-		}
-		if (StringUtils.isBlank(keyName)) {
-			throw new SnapshotTransferException("Key name is invalid. Cannot upload snapshot " + snapshotId);
-		}
-		if (eucaS3Client == null) {
-			throw new SnapshotTransferException("S3 client reference is invalid. Cannot upload snapshot " + snapshotId);
-		}
-	}
-
-	private String createAndReturnBucketName() throws SnapshotTransferException {
-		String bucket = null;
-		int bucketCreationRetries = SnapshotTransferConfiguration.DEFAULT_BUCKET_CREATION_RETRIES;
-		do {
-			bucketCreationRetries--;
-
-			// Get the snapshot bucket name
-			if (StringUtils.isBlank(bucket)) {
-				try {
-					// Get the snapshot configuration
-					bucket = SnapshotTransferConfiguration.getInstance().getSnapshotBucket();
-				} catch (Exception ex1) {
-					try {
-						// It might not exist, create one
-						bucket = SnapshotTransferConfiguration.updateBucketName(
-								StorageProperties.SNAPSHOT_BUCKET_PREFIX + UUID.randomUUID().toString().replaceAll("-", "")).getSnapshotBucket();
-					} catch (Exception ex2) {
-						// Chuck it, just make up a bucket name and go with it. Bucket location gets persisted in the snapshotinfo entity anyways
-						bucket = StorageProperties.SNAPSHOT_BUCKET_PREFIX + UUID.randomUUID().toString().replaceAll("-", "");
-					}
-				}
-			}
-
-			// Try creating the bucket
-			try {
-				retryAfterRefresh(new Function<String, Bucket>() {
-
-					@Override
-					@Nullable
-					public Bucket apply(@Nullable String arg0) {
-						eucaS3Client.refreshEndpoint();
-						return eucaS3Client.createBucket(arg0);
-					}
-				}, bucket, REFRESH_TOKEN_RETRIES);
-				break;
-			} catch (Exception ex) {
-				// If bucket creation fails, try using a different bucket name
-				if (bucketCreationRetries > 0) {
-					LOG.debug("Unable to create snapshot upload bucket " + bucket + ". Will retry with a different bucket name");
-					try {
-						bucket = SnapshotTransferConfiguration.updateBucketName(
-								StorageProperties.SNAPSHOT_BUCKET_PREFIX + UUID.randomUUID().toString().replaceAll("-", "")).getSnapshotBucket();
-					} catch (Exception ex2) {
-						// Chuck it, just make up a bucket name and go with it. Bucket location gets persisted in the snapshotinfo entity anyways
-						bucket = StorageProperties.SNAPSHOT_BUCKET_PREFIX + UUID.randomUUID().toString().replaceAll("-", "");
-					}
-				} else {
-					throw new SnapshotTransferException("Unable to create bucket for snapshot uploads after "
-							+ SnapshotTransferConfiguration.DEFAULT_BUCKET_CREATION_RETRIES + " retries");
-				}
-			}
-		} while (bucketCreationRetries > 0);
-
-		return bucket;
-	}
-
-	private S3Object download() throws SnapshotTransferException {
-		try {
-			LOG.debug("Dowloading snapshot from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName);
-			return retryAfterRefresh(new Function<GetObjectRequest, S3Object>() {
-
-				@Override
-				@Nullable
-				public S3Object apply(@Nullable GetObjectRequest arg0) {
-					eucaS3Client.refreshEndpoint();
-					return eucaS3Client.getObject(arg0);
-				}
-
-			}, new GetObjectRequest(bucketName, keyName), REFRESH_TOKEN_RETRIES);
-		} catch (Exception e) {
-			LOG.warn("Failed to download snapshot from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName);
-			throw new SnapshotTransferException("Failed to download snapshot from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName
-					+ ", key=" + keyName, e);
-		}
-	}
-
-	private PutObjectResult uploadSnapshotAsSingleObject(final String compressedSnapFileName, Long actualSize, Long uncompressedSize,
-			final SnapshotProgressCallback callback) throws Exception {
-		callback.setUploadSize(actualSize);
-		ObjectMetadata objectMetadata = new ObjectMetadata();
-		Map<String, String> userMetadataMap = new HashMap<String, String>();
-		userMetadataMap.put(UNCOMPRESSED_SIZE_KEY, String.valueOf(uncompressedSize)); // Send the uncompressed length as the metadata
-		objectMetadata.setUserMetadata(userMetadataMap);
-		objectMetadata.setContentLength(actualSize);
-
-		return retryAfterRefresh(new Function<PutObjectRequest, PutObjectResult>() {
-
-			@Override
-			@Nullable
-			public PutObjectResult apply(@Nullable PutObjectRequest arg0) {
-				eucaS3Client.refreshEndpoint();
-                // EUCA-10311 Set the input stream in put request. Doing it here to ensure that input stream is set before every attempt to put object
-                try {
-                    arg0.setInputStream(new FileInputStreamWithCallback(new File(compressedSnapFileName), callback));
-                } catch (Exception e) {
-                    LOG.warn("Failed to upload snapshot to objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName
-                        + ", reason: unable to initialize FileInputStreamWithCallback for file " + compressedSnapFileName, e);
-                    Exceptions.toUndeclared(e);
+  private static Logger LOG = Logger.getLogger(S3SnapshotTransfer.class);
+
+  // Constructor parameters
+  private String snapshotId;
+  private String bucketName;
+  private String keyName;
+
+  // For multipart upload
+  private String uploadId;
+
+  // Initiate for every request
+  private EucaS3Client eucaS3Client;
+
+  // Instantiate from database for uploads
+  private Long partSize;
+  private Integer queueSize;
+  private Integer transferRetries;
+  private Integer transferTimeout;
+  private Integer poolSize;
+  private Integer readBufferSize;
+  private Integer writeBufferSize;
+  private ServiceConfiguration serviceConfig;
+
+  // Static parameters
+  private static Role role;
+
+  // Constants
+  private static final Integer TX_RETRIES = 20;
+  private static final Integer REFRESH_TOKEN_RETRIES = 1;
+  private static final String UNCOMPRESSED_SIZE_KEY = "uncompressedsize";
+
+  public S3SnapshotTransfer() throws SnapshotTransferException {
+    initializeEucaS3Client();
+  }
+
+  public S3SnapshotTransfer(String snapshotId, String bucketName, String keyName) throws SnapshotTransferException {
+    this();
+    this.snapshotId = snapshotId;
+    this.bucketName = bucketName;
+    this.keyName = keyName;
+  }
+
+  public S3SnapshotTransfer(String snapshotId, String keyName) throws SnapshotTransferException {
+    this();
+    this.snapshotId = snapshotId;
+    this.keyName = keyName;
+  }
+
+  // for using in unit tests
+  protected S3SnapshotTransfer(boolean mock) {
+    // for mocking, do not initialize s3 client
+  }
+
+  public String getSnapshotId() {
+    return snapshotId;
+  }
+
+  public void setSnapshotId(String snapshotId) {
+    this.snapshotId = snapshotId;
+  }
+
+  public String getBucketName() {
+    return bucketName;
+  }
+
+  public void setBucketName(String bucketName) {
+    this.bucketName = bucketName;
+  }
+
+  public String getKeyName() {
+    return keyName;
+  }
+
+  public void setKeyName(String keyName) {
+    this.keyName = keyName;
+  }
+
+  public String getUploadId() {
+    return uploadId;
+  }
+
+  public void setUploadId(String uploadId) {
+    this.uploadId = uploadId;
+  }
+
+  /**
+   * Preparation for upload involves looking up the bucket from the database and creating it in objectstorage gateway. If the bucket is already
+   * created, objectstorage gateway should still respond back with 200 OK. Invoke this method before uploading the snapshot using
+   * {@link #upload(String)} or set the bucket name explicitly using {@link #setBucketName(String)}
+   * 
+   * @return Name of the bucket that holds snapshots in objectstorage gateway
+   */
+  @Override
+  public String prepareForUpload() throws SnapshotTransferException {
+    bucketName = createAndReturnBucketName();
+    return bucketName;
+  }
+
+  /**
+   * Compresses the snapshot and uploads it to a bucket in objectstorage gateway as a single or multipart upload based on the configuration in
+   * {@link StorageInfo}. Bucket name should be configured before invoking this method. It can be looked up and initialized by
+   * {@link #prepareForUpload()} or explicitly set using {@link #setBucketName(String)}
+   * 
+   * @param sourceFileName absolute path to the snapshot on the file system
+   */
+  @Override
+  public void upload(StorageResource storageResource) throws SnapshotTransferException {
+    validateInput(); // Validate input
+    loadTransferConfig(); // Load the transfer configuration parameters from database
+    SnapshotProgressCallback progressCallback = new SnapshotProgressCallback(snapshotId); // Setup the progress callback
+
+    Boolean error = Boolean.FALSE;
+    ArrayBlockingQueue<SnapshotPart> partQueue = null;
+    SnapshotPart part = null;
+    SnapshotUploadInfo snapUploadInfo = null;
+    Future<List<PartETag>> uploadPartsFuture = null;
+    Future<String> completeUploadFuture = null;
+
+    byte[] buffer = new byte[readBufferSize];
+    Long readOffset = 0L;
+    Long bytesRead = 0L;
+    Long bytesWritten = 0L;
+    int len;
+    int partNumber = 1;
+
+    try {
+      // Get the uncompressed file size for uploading as metadata
+      Long uncompressedSize = storageResource.getSize();
+
+      // Setup the snapshot and part entities.
+      snapUploadInfo = SnapshotUploadInfo.create(snapshotId, bucketName, keyName);
+      Path zipFilePath = Files.createTempFile(keyName + '-', '-' + String.valueOf(partNumber));
+      part = SnapshotPart.createPart(snapUploadInfo, zipFilePath.toString(), partNumber, readOffset);
+
+      InputStream inputStream = storageResource.getInputStream();
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      GZIPOutputStream gzipStream = new GZIPOutputStream(baos);
+      FileOutputStream outputStream = new FileOutputStream(zipFilePath.toString());
+
+      try {
+        LOG.debug("Reading snapshot " + snapshotId + " and compressing it to disk in chunks of size " + partSize + " bytes or greater");
+        while ((len = inputStream.read(buffer)) > 0) {
+          bytesRead += len;
+          gzipStream.write(buffer, 0, len);
+
+          if ((bytesWritten + baos.size()) < partSize) {
+            baos.writeTo(outputStream);
+            bytesWritten += baos.size();
+            baos.reset();
+          } else {
+            gzipStream.close();
+            baos.writeTo(outputStream); // Order is important. Closing the gzip stream flushes stuff
+            bytesWritten += baos.size();
+            baos.reset();
+            outputStream.close();
+
+            if (partNumber > 1) {// Update the part status
+              part = part.updateStateCreated(bytesWritten, bytesRead, Boolean.FALSE);
+            } else {// Initialize multipart upload only once after the first part is created
+              LOG.info("Uploading snapshot " + snapshotId + " to objectstorage using multipart upload");
+              progressCallback.setUploadSize(uncompressedSize);
+              uploadId = initiateMulitpartUpload(uncompressedSize);
+              snapUploadInfo = snapUploadInfo.updateUploadId(uploadId);
+              part = part.updateStateCreated(uploadId, bytesWritten, bytesRead, Boolean.FALSE);
+              partQueue = new ArrayBlockingQueue<SnapshotPart>(queueSize);
+              uploadPartsFuture = Threads.enqueue(serviceConfig, UploadPartTask.class, poolSize, new UploadPartTask(partQueue, progressCallback));
+            }
+
+            // Check for the future task before adding part to the queue.
+            if (uploadPartsFuture != null && uploadPartsFuture.isDone()) {
+              // This task shouldn't be done until the last part is added. If it is done at this point, then something might have gone wrong
+              throw new SnapshotUploadPartException(
+                  "Error uploading parts, aborting part creation process. Check previous log messages for the exact error");
+            }
+
+            // Add part to the queue
+            partQueue.put(part);
+
+            // Prep the metadata for the next part
+            readOffset += bytesRead;
+            bytesRead = 0L;
+            bytesWritten = 0L;
+
+            // Setup the part entity for next part
+            zipFilePath = Files.createTempFile(keyName + '-', '-' + String.valueOf((++partNumber)));
+            part = SnapshotPart.createPart(snapUploadInfo, zipFilePath.toString(), partNumber, readOffset);
+
+            gzipStream = new GZIPOutputStream(baos);
+            outputStream = new FileOutputStream(zipFilePath.toString());
+          }
+        }
+
+        gzipStream.close();
+        baos.writeTo(outputStream);
+        bytesWritten += baos.size();
+        baos.reset();
+        outputStream.close();
+        inputStream.close();
+
+        // Update the part status
+        part = part.updateStateCreated(bytesWritten, bytesRead, Boolean.TRUE);
+
+        // Update the snapshot upload info status
+        snapUploadInfo = snapUploadInfo.updateStateCreatedParts(partNumber);
+      } catch (Exception e) {
+        LOG.error("Failed to upload " + snapshotId + " due to: ", e);
+        error = Boolean.TRUE;
+        throw new SnapshotTransferException("Failed to upload " + snapshotId + " due to: ", e);
+      } finally {
+        if (inputStream != null) {
+          try {
+            inputStream.close();
+          } catch (Exception e) {
+
+          }
+        }
+        if (gzipStream != null) {
+          try {
+            gzipStream.close();
+          } catch (Exception e) {
+
+          }
+        }
+        if (outputStream != null) {
+          try {
+            outputStream.close();
+          } catch (Exception e) {
+
+          }
+        }
+        baos.reset();
+      }
+
+      if (partNumber > 1) {
+        // Check for the future task before adding the last part to the queue.
+        if (uploadPartsFuture != null && uploadPartsFuture.isDone()) {
+          // This task shouldn't be done until the last part is added. If it is done at this point, then something might have gone wrong
+          throw new SnapshotUploadPartException(
+              "Error uploading parts, aborting part upload process. Check previous log messages for the exact error");
+        }
+        // Add the last part to the queue
+        partQueue.put(part);
+        // Kick off the completion task
+        completeUploadFuture =
+            Threads.enqueue(serviceConfig, CompleteMpuTask.class, poolSize, new CompleteMpuTask(uploadPartsFuture, snapUploadInfo, partNumber));
+      } else {
+        try {
+          LOG.info("Uploading snapshot " + snapshotId + " to objectstorage as a single object. Compressed size of snapshot (" + bytesWritten
+              + " bytes) is less than minimum part size (" + partSize + " bytes) for multipart upload");
+          PutObjectResult putResult = uploadSnapshotAsSingleObject(zipFilePath.toString(), bytesWritten, uncompressedSize, progressCallback);
+          markSnapshotAvailable();
+          try {
+            part = part.updateStateUploaded(putResult.getETag());
+            snapUploadInfo = snapUploadInfo.updateStateUploaded(putResult.getETag());
+          } catch (Exception e) {
+            LOG.debug("Failed to update status in DB for " + snapUploadInfo);
+          }
+          LOG.info("Uploaded snapshot " + snapshotId + " to objectstorage");
+        } catch (Exception e) {
+          error = Boolean.TRUE;
+          LOG.error("Failed to upload snapshot " + snapshotId + " due to: ", e);
+          throw new SnapshotTransferException("Failed to upload snapshot " + snapshotId + " due to: ", e);
+        } finally {
+          deleteFile(zipFilePath);
+        }
+      }
+    } catch (SnapshotTransferException e) {
+      error = Boolean.TRUE;
+      throw e;
+    } catch (Exception e) {
+      error = Boolean.TRUE;
+      LOG.error("Failed to upload snapshot " + snapshotId + " due to: ", e);
+      throw new SnapshotTransferException("Failed to upload snapshot " + snapshotId + " due to: ", e);
+    } finally {
+      if (error) {
+        abortUpload(snapUploadInfo);
+        if (uploadPartsFuture != null && !uploadPartsFuture.isDone()) {
+          uploadPartsFuture.cancel(true);
+        }
+        if (completeUploadFuture != null && !completeUploadFuture.isDone()) {
+          completeUploadFuture.cancel(true);
+        }
+      }
+    }
+  }
+
+  /**
+   * Cancel the snapshot upload. Checks if a multipart upload is in progress and aborts the upload. Marks the upload as aborted for
+   * {@link SnapshotUploadCheckerTask} to clean up on its duty cycles
+   */
+  @Override
+  public void cancelUpload() throws SnapshotTransferException {
+    validateInput();
+    try (TransactionResource db = Entities.transactionFor(SnapshotUploadInfo.class)) {
+      SnapshotUploadInfo snapUploadInfo = Entities.uniqueResult(new SnapshotUploadInfo(snapshotId, bucketName, keyName));
+      uploadId = snapUploadInfo.getUploadId();
+      abortMultipartUpload();
+      snapUploadInfo.setState(SnapshotUploadState.aborted);
+      db.commit();
+    } catch (Exception e) {
+      LOG.debug("Failed to cancel upload for snapshot " + snapshotId, e);
+      throw new SnapshotTransferException("Failed to cancel upload for snapshot " + snapshotId, e);
+    }
+  }
+
+  /**
+   * Not implemented
+   */
+  @Override
+  public void resumeUpload(StorageResource storageResource) throws SnapshotTransferException {
+    throw new SnapshotTransferException("Not supported yet");
+  }
+
+  /**
+   * Downloads the compressed snapshot from objectstorage gateway to the filesystem
+   */
+  public void download(StorageResource storageResource) throws SnapshotTransferException {
+    validateInput();
+    loadTransferConfig();
+
+    S3Object snapObj = download();
+
+    if (snapObj != null && snapObj.getObjectContent() != null) {
+      byte[] buffer = new byte[10 * readBufferSize];
+      int len;
+      GZIPInputStream gzipInputStream = null;
+
+      try {
+        gzipInputStream = new GZIPInputStream(new BufferedInputStream(snapObj.getObjectContent(), buffer.length * 3), buffer.length * 2);
+
+        if (storageResource.isDownloadSynchronous()) { // Download and unzip snapshot to the storage device directly
+          OutputStream outputStream = null;
+          try {
+            outputStream = storageResource.getOutputStream();
+            while ((len = gzipInputStream.read(buffer)) > 0) {
+              // Write to the output stream
+              outputStream.write(buffer, 0, len);
+            }
+
+            // Close the streams and free the resources
+            gzipInputStream.close();
+            outputStream.close();
+            buffer = null;
+          } finally {
+            try {
+              if (outputStream != null)
+                outputStream.close();
+            } catch (Exception e) {
+
+            }
+          }
+        } else { // Download and unzip snpashot to disk in parts and write the parts to storage backend in parallel
+          ArrayBlockingQueue<SnapshotPart> partQueue = new ArrayBlockingQueue<SnapshotPart>(queueSize);
+          Future<String> storageWriterFuture =
+              Threads.enqueue(serviceConfig, StorageWriterTask.class, poolSize, new StorageWriterTask(partQueue, storageResource));
+
+          FileOutputStream fileOutputStream = null;
+          long bytesWritten = 0;
+          int partNumber = 1;
+
+          try {
+            Path filePath = Files.createTempFile(snapshotId + '-', '-' + String.valueOf(partNumber));
+            fileOutputStream = new FileOutputStream(filePath.toString());
+            SnapshotPart part = new SnapshotPart();
+            part.setFileName(filePath.toString());
+            part.setPartNumber(partNumber);
+            part.setIsLast(Boolean.FALSE);
+
+            while ((len = gzipInputStream.read(buffer)) > 0) {
+              if ((bytesWritten + len) < writeBufferSize) {
+                fileOutputStream.write(buffer, 0, len);
+                bytesWritten += len;
+              } else {
+                fileOutputStream.write(buffer, 0, len);
+                bytesWritten += len;
+                fileOutputStream.close();
+
+                // Check if writer is still relevant
+                if (storageWriterFuture.isDone()) {
+                  throw new SnapshotTransferException(
+                      "Error writing snapshot to backend, check previous log messages for more details. Aborting download and unzip process");
                 }
-				return eucaS3Client.putObject(arg0);
-			}
 
-		}, new PutObjectRequest(bucketName, keyName, null, objectMetadata), REFRESH_TOKEN_RETRIES);
-	}
+                // Add the part to the queue
+                part.setSize(bytesWritten);
+                partQueue.put(part);
 
-	private String initiateMulitpartUpload(Long uncompressedSize) throws SnapshotInitializeMpuException {
-		InitiateMultipartUploadResult initResponse = null;
-		InitiateMultipartUploadRequest initRequest = new InitiateMultipartUploadRequest(bucketName, keyName);
-		ObjectMetadata objectMetadata = new ObjectMetadata();
-		Map<String, String> userMetadataMap = new HashMap<String, String>();
-		userMetadataMap.put(UNCOMPRESSED_SIZE_KEY, String.valueOf(uncompressedSize)); // Send the uncompressed length as the metadata
-		objectMetadata.setUserMetadata(userMetadataMap);
-		initRequest.setObjectMetadata(objectMetadata);
+                // Prep for the next part
+                bytesWritten = 0;
+                filePath = Files.createTempFile(snapshotId + '-', '-' + String.valueOf(++partNumber));
+                fileOutputStream = new FileOutputStream(filePath.toString());
+                part = new SnapshotPart();
+                part.setFileName(filePath.toString());
+                part.setPartNumber(partNumber);
+                part.setIsLast(Boolean.FALSE);
+              }
+            }
 
-		try {
-			LOG.info("Inititating multipart upload: snapshotId=" + snapshotId + ", bucketName=" + bucketName + ", keyName=" + keyName);
-			initResponse = retryAfterRefresh(new Function<InitiateMultipartUploadRequest, InitiateMultipartUploadResult>() {
+            // Close the streams and free the resources
+            gzipInputStream.close();
+            fileOutputStream.close();
+            buffer = null;
 
-				@Override
-				@Nullable
-				public InitiateMultipartUploadResult apply(@Nullable InitiateMultipartUploadRequest arg0) {
-					eucaS3Client.refreshEndpoint();
-					return eucaS3Client.initiateMultipartUpload(arg0);
-				}
+            // Add the last part to the queue
+            part.setSize(bytesWritten);
+            part.setIsLast(Boolean.TRUE);
+            partQueue.put(part);
 
-			}, initRequest, REFRESH_TOKEN_RETRIES);
-		} catch (Exception ex) {
-			throw new SnapshotInitializeMpuException("Failed to initialize multipart upload part for snapshotId=" + snapshotId + ", bucketName=" + bucketName
-					+ ", keyName=" + keyName, ex);
-		}
+            if (StringUtils.isNotBlank(storageWriterFuture.get(transferTimeout, TimeUnit.HOURS))) {
+              LOG.info("Downloaded snapshot " + snapshotId + " to storage backend");
+            } else {
+              throw new SnapshotTransferException("Failed to download snapshot " + snapshotId + " to storage backend");
+            }
+          } catch (Exception e) {
+            // Clean up the files that were created
+            try {
+              if (!storageWriterFuture.isDone()) {
+                storageWriterFuture.cancel(true);
+              }
+              List<SnapshotPart> remainingParts = new ArrayList<SnapshotPart>();
+              partQueue.drainTo(remainingParts);
+              for (SnapshotPart part : remainingParts) {
+                deleteFile(part.getFileName());
+              }
+            } catch (Exception ex) {
+              LOG.warn("Unable to clean up artifacts left by a failed attempt to download " + snapshotId + " to storage backend", ex);
+            }
+            throw e;
+          } finally {
+            try {
+              if (fileOutputStream != null)
+                fileOutputStream.close();
+            } catch (Exception e) {
 
-		if (StringUtils.isBlank(initResponse.getUploadId())) {
-			throw new SnapshotInitializeMpuException("Invalid upload ID for multipart upload part for snapshotId=" + snapshotId + ", bucketName=" + bucketName
-					+ ", keyName=" + keyName);
-		}
-		return initResponse.getUploadId();
-	}
+            }
+          }
+        }
+      } catch (SnapshotTransferException e) {
+        throw e;
+      } catch (Exception e) {
+        throw new SnapshotTransferException("Failed to download snapshot " + snapshotId + " to storage backend", e);
+      } finally {
+        try {
+          if (gzipInputStream != null)
+            gzipInputStream.close();
+        } catch (Exception e) {
 
-	private PartETag uploadPart(SnapshotPart part, SnapshotProgressCallback progressCallback) throws SnapshotUploadPartException {
-		try {
-			part = part.updateStateUploading();
-		} catch (Exception e) {
-			LOG.debug("Failed to update part status in DB. Moving on. " + part);
-		}
+        }
+        try {
+          snapObj.getObjectContent().close();
+        } catch (Exception e) {
 
-		try {
-			LOG.debug("Uploading " + part);
-			UploadPartResult uploadPartResult = retryAfterRefresh(
-					new Function<UploadPartRequest, UploadPartResult>() {
+        }
+      }
+    } else {
+      LOG.warn("No snapshot content available from objectstorage gateway: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName);
+      throw new SnapshotTransferException("No snapshot content available: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName);
+    }
+  }
 
-						@Override
-						@Nullable
-						public UploadPartResult apply(@Nullable UploadPartRequest arg0) {
-							eucaS3Client.refreshEndpoint();
-							return eucaS3Client.uploadPart(arg0);
-						}
-					},
-					new UploadPartRequest().withBucketName(part.getBucketName()).withKey(part.getKeyName()).withUploadId(part.getUploadId())
-							.withPartNumber(part.getPartNumber()).withPartSize(part.getSize()).withFile(new File(part.getFileName())), REFRESH_TOKEN_RETRIES);
+  /**
+   * Delete the snapshot from objectstorage gateway
+   */
+  @Override
+  public void delete() throws SnapshotTransferException {
+    LOG.debug("Deleting snapshot from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName);
+    validateInput();
+    try {
+      retryAfterRefresh(new Function<DeleteObjectRequest, String>() {
 
-			progressCallback.update(part.getInputFileBytesRead());
+        @Override
+        @Nullable
+        public String apply(@Nullable DeleteObjectRequest arg0) {
+          eucaS3Client.refreshEndpoint();
+          eucaS3Client.deleteObject(arg0);
+          return null;
+        }
+      }, new DeleteObjectRequest(bucketName, keyName), REFRESH_TOKEN_RETRIES);
+    } catch (Exception e) {
+      LOG.warn("Failed to delete snapshot from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName);
+      throw new SnapshotTransferException("Failed to delete snapshot from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName
+          + ", key=" + keyName, e);
+    }
+  }
 
-			try {
-				part = part.updateStateUploaded(uploadPartResult.getPartETag().getETag());
-			} catch (Exception e) {
-				LOG.debug("Failed to update part status in DB. Moving on. " + part);
-			}
-			LOG.debug("Uploaded " + part);
-			return uploadPartResult.getPartETag();
-		} catch (Exception e) {
-			LOG.error("Failed to upload part " + part, e);
-			try {
-				part = part.updateStateFailed();
-			} catch (Exception ie) {
-				LOG.debug("Failed to update part status in DB. Moving on. " + part);
-			}
-			throw new SnapshotUploadPartException("Failed to upload part " + part, e);
-		} finally {
-			deleteFile(part.getFileName());
-		}
-	}
+  @Override
+  public Long getSizeInBytes() throws SnapshotTransferException {
+    LOG.debug("Fetching snapshot metadata from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName);
 
-	private String finalizeMultipartUpload(List<PartETag> partETags) throws SnapshotFinalizeMpuException {
-		CompleteMultipartUploadResult result;
-		try {
-			LOG.info("Finalizing multipart upload: snapshotId=" + snapshotId + ", bucketName=" + bucketName + ", keyName=" + keyName + ", uploadId=" + uploadId);
-			result = retryAfterRefresh(new Function<CompleteMultipartUploadRequest, CompleteMultipartUploadResult>() {
+    validateInput();
+    ObjectMetadata metadata = null;
+    Map<String, String> userMetadata = null;
+    try {
+      metadata = retryAfterRefresh(new Function<GetObjectMetadataRequest, ObjectMetadata>() {
 
-				@Override
-				@Nullable
-				public CompleteMultipartUploadResult apply(@Nullable CompleteMultipartUploadRequest arg0) {
-					eucaS3Client.refreshEndpoint();
-					return eucaS3Client.completeMultipartUpload(arg0);
-				}
-			}, new CompleteMultipartUploadRequest(bucketName, keyName, uploadId, partETags), REFRESH_TOKEN_RETRIES);
-			return result.getETag();
-		} catch (Exception ex) {
-			LOG.debug("Failed to finalize multipart upload for snapshotId=" + snapshotId + ", bucketName=" + ", keyName=" + keyName, ex);
-			throw new SnapshotFinalizeMpuException("Failed to initialize multipart upload part after for snapshotId=" + snapshotId + ", bucketName="
-					+ bucketName + ", keyName=" + keyName);
-		}
-	}
+        @Override
+        @Nullable
+        public ObjectMetadata apply(@Nullable GetObjectMetadataRequest arg0) {
+          eucaS3Client.refreshEndpoint();
+          return eucaS3Client.getObjectMetadata(arg0);
+        }
 
-	private void abortMultipartUpload() {
-		if (uploadId != null) {
-			try {
-				LOG.debug("Aborting multipart upload: snapshotId=" + snapshotId + ", bucketName=" + ", keyName=" + keyName + ", uploadId=" + uploadId);
-				retryAfterRefresh(new Function<AbortMultipartUploadRequest, String>() {
+      }, new GetObjectMetadataRequest(bucketName, keyName), REFRESH_TOKEN_RETRIES);
+    } catch (Exception e) {
+      LOG.warn("Failed to get snapshot metadata from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName);
+      throw new SnapshotTransferException("Failed to get snapshot metadata from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName
+          + ", key=" + keyName, e);
+    }
 
-					@Override
-					@Nullable
-					public String apply(@Nullable AbortMultipartUploadRequest arg0) {
-						eucaS3Client.refreshEndpoint();
-						eucaS3Client.abortMultipartUpload(arg0);
-						return null;
-					}
-				}, new AbortMultipartUploadRequest(bucketName, keyName, uploadId), REFRESH_TOKEN_RETRIES);
-			} catch (Exception e) {
-				LOG.debug("Failed to abort multipart upload for snapshot " + snapshotId);
-			}
-		}
-	}
+    if (metadata != null && (userMetadata = metadata.getUserMetadata()) != null && userMetadata.containsKey(UNCOMPRESSED_SIZE_KEY)) {
+      try {
+        return Long.parseLong(userMetadata.get(UNCOMPRESSED_SIZE_KEY));
+      } catch (Exception e) {
+        throw new SnapshotTransferException("Unable to parse size from snapshot metadata: snapshotId=" + snapshotId + ", bucket=" + bucketName
+            + ", key=" + keyName + ", metadata key:value pair=" + UNCOMPRESSED_SIZE_KEY + ":" + userMetadata.get(UNCOMPRESSED_SIZE_KEY), e);
+      }
+    } else {
+      throw new SnapshotTransferException("Snapshot metadata from objectstorage does not contain uncompressed size: snapshotId=" + snapshotId
+          + ", bucket=" + bucketName + ", key=" + keyName);
+    }
+  }
 
-	private void abortUpload(SnapshotUploadInfo snapUploadInfo) {
-		abortMultipartUpload();
-		if (snapUploadInfo != null) {
-			try {
-				snapUploadInfo.updateStateAborted();
-			} catch (EucalyptusCloudException e) {
-				LOG.debug("Failed to update status in DB for " + snapUploadInfo);
-			}
-		}
-	}
+  private void initializeEucaS3Client() throws SnapshotTransferException {
+    if (role == null) {
+      try {
+        role = BlockStorageUtil.checkAndConfigureBlockStorageAccount();
+      } catch (Exception e) {
+        LOG.error("Failed to initialize account for snapshot transfers due to " + e);
+        throw new SnapshotTransferException("Failed to initialize eucalyptus account for snapshot transfers", e);
+      }
+    }
 
-	private void deleteFile(String fileName) {
-		if (StringUtils.isNotBlank(fileName)) {
-			try {
-				Files.deleteIfExists(Paths.get(fileName));
-			} catch (IOException e) {
-				LOG.debug("Failed to delete file: " + fileName);
-			}
-		}
-	}
+    try {
+      eucaS3Client = EucaS3ClientFactory.getEucaS3ClientByRole(role, (int) TimeUnit.HOURS.toSeconds(1));
+    } catch (Exception e) {
+      LOG.error("Failed to initialize S3 client for snapshot transfers due to " + e);
+      throw new SnapshotTransferException("Failed to initialize S3 client for snapshot transfers", e);
+    }
+  }
 
-	private void deleteFile(Path path) {
-		try {
-			Files.deleteIfExists(path);
-		} catch (IOException e) {
-			LOG.debug("Failed to delete file: " + path.toString());
-		}
-	}
+  private void loadTransferConfig() {
+    StorageInfo info = StorageInfo.getStorageInfo();
+    this.partSize = (long) (info.getSnapshotPartSizeInMB() * 1024 * 1024);
+    this.queueSize = info.getMaxSnapshotPartsQueueSize();
+    this.transferRetries = info.getMaxSnapTransferRetries();
+    this.transferTimeout = info.getSnapshotTransferTimeoutInHours();
+    this.serviceConfig = Components.lookup(Storage.class).getLocalServiceConfiguration();
+    this.poolSize = info.getMaxConcurrentSnapshotTransfers();
+    this.readBufferSize = info.getReadBufferSizeInMB() * 1024 * 1024;
+    this.writeBufferSize = info.getWriteBufferSizeInMB() * 1024 * 1024;
+  }
 
-	private void markSnapshotAvailable() throws TransactionException, NoSuchElementException {
-		Function<String, SnapshotInfo> updateFunction = new Function<String, SnapshotInfo>() {
+  private void validateInput() throws SnapshotTransferException {
+    if (StringUtils.isBlank(snapshotId)) {
+      throw new SnapshotTransferException("Snapshot ID is invalid. Cannot upload snapshot");
+    }
+    if (StringUtils.isBlank(bucketName)) {
+      throw new SnapshotTransferException("Bucket name is invalid. Cannot upload snapshot " + snapshotId);
+    }
+    if (StringUtils.isBlank(keyName)) {
+      throw new SnapshotTransferException("Key name is invalid. Cannot upload snapshot " + snapshotId);
+    }
+    if (eucaS3Client == null) {
+      throw new SnapshotTransferException("S3 client reference is invalid. Cannot upload snapshot " + snapshotId);
+    }
+  }
 
-			@Override
-			public SnapshotInfo apply(String arg0) {
-				SnapshotInfo snap;
-				try {
-					snap = Entities.uniqueResult(new SnapshotInfo(arg0));
-					snap.setStatus(StorageProperties.Status.available.toString());
-					snap.setProgress("100");
-					snap.setSnapPointId(null);
-					return snap;
-				} catch (TransactionException | NoSuchElementException e) {
-					LOG.error("Failed to retrieve snapshot entity from DB for " + arg0, e);
-				}
-				return null;
-			}
-		};
+  private String createAndReturnBucketName() throws SnapshotTransferException {
+    String bucket = null;
+    int bucketCreationRetries = SnapshotTransferConfiguration.DEFAULT_BUCKET_CREATION_RETRIES;
+    do {
+      bucketCreationRetries--;
 
-		Entities.asTransaction(SnapshotInfo.class, updateFunction, TX_RETRIES).apply(snapshotId);
-	}
+      // Get the snapshot bucket name
+      if (StringUtils.isBlank(bucket)) {
+        try {
+          // Get the snapshot configuration
+          bucket = SnapshotTransferConfiguration.getInstance().getSnapshotBucket();
+        } catch (Exception ex1) {
+          try {
+            // It might not exist, create one
+            bucket =
+                SnapshotTransferConfiguration.updateBucketName(
+                    StorageProperties.SNAPSHOT_BUCKET_PREFIX + UUID.randomUUID().toString().replaceAll("-", "")).getSnapshotBucket();
+          } catch (Exception ex2) {
+            // Chuck it, just make up a bucket name and go with it. Bucket location gets persisted in the snapshotinfo entity anyways
+            bucket = StorageProperties.SNAPSHOT_BUCKET_PREFIX + UUID.randomUUID().toString().replaceAll("-", "");
+          }
+        }
+      }
 
-	private void markSnapshotFailed() throws TransactionException, NoSuchElementException {
-		Function<String, SnapshotInfo> updateFunction = new Function<String, SnapshotInfo>() {
+      // Try creating the bucket
+      try {
+        retryAfterRefresh(new Function<String, Bucket>() {
 
-			@Override
-			public SnapshotInfo apply(String arg0) {
-				SnapshotInfo snap;
-				try {
-					snap = Entities.uniqueResult(new SnapshotInfo(arg0));
-					snap.setStatus(StorageProperties.Status.failed.toString());
-					snap.setProgress("0");
-					return snap;
-				} catch (TransactionException | NoSuchElementException e) {
-					LOG.error("Failed to retrieve snapshot entity from DB for " + arg0, e);
-				}
-				return null;
-			}
-		};
+          @Override
+          @Nullable
+          public Bucket apply(@Nullable String arg0) {
+            eucaS3Client.refreshEndpoint();
+            return eucaS3Client.createBucket(arg0);
+          }
+        }, bucket, REFRESH_TOKEN_RETRIES);
+        break;
+      } catch (Exception ex) {
+        // If bucket creation fails, try using a different bucket name
+        if (bucketCreationRetries > 0) {
+          LOG.debug("Unable to create snapshot upload bucket " + bucket + ". Will retry with a different bucket name");
+          try {
+            bucket =
+                SnapshotTransferConfiguration.updateBucketName(
+                    StorageProperties.SNAPSHOT_BUCKET_PREFIX + UUID.randomUUID().toString().replaceAll("-", "")).getSnapshotBucket();
+          } catch (Exception ex2) {
+            // Chuck it, just make up a bucket name and go with it. Bucket location gets persisted in the snapshotinfo entity anyways
+            bucket = StorageProperties.SNAPSHOT_BUCKET_PREFIX + UUID.randomUUID().toString().replaceAll("-", "");
+          }
+        } else {
+          throw new SnapshotTransferException("Unable to create bucket for snapshot uploads after "
+              + SnapshotTransferConfiguration.DEFAULT_BUCKET_CREATION_RETRIES + " retries");
+        }
+      }
+    } while (bucketCreationRetries > 0);
 
-		Entities.asTransaction(SnapshotInfo.class, updateFunction, TX_RETRIES).apply(snapshotId);
-	}
+    return bucket;
+  }
 
-	private <F, T> T retryAfterRefresh(Function<F, T> function, F input, int retries) throws SnapshotTransferException {
-		int failedAttempts = 0;
-		T output = null;
-		do {
-			try {
-				output = function.apply(input);
-				break;
-			} catch (AmazonServiceException e) {
-				if (failedAttempts < retries && e.getStatusCode() == HttpResponseStatus.FORBIDDEN.getCode()) {
-					LOG.debug("Snapshot transfer operation failed because of " + e.getMessage() + ". Will refresh credentials and retry");
-					failedAttempts++;
-					initializeEucaS3Client();
-					continue;
-				} else {
-					throw new SnapshotTransferException("Snapshot transfer operation failed because of", e);
-				}
-			} catch (Exception e) {
-				throw new SnapshotTransferException("Snapshot transfer operation failed because of", e);
-			}
-		} while (failedAttempts <= retries);
+  private S3Object download() throws SnapshotTransferException {
+    try {
+      LOG.debug("Dowloading snapshot from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName);
+      return retryAfterRefresh(new Function<GetObjectRequest, S3Object>() {
 
-		return output;
-	}
+        @Override
+        @Nullable
+        public S3Object apply(@Nullable GetObjectRequest arg0) {
+          eucaS3Client.refreshEndpoint();
+          return eucaS3Client.getObject(arg0);
+        }
 
-	class UploadPartTask implements Callable<List<PartETag>> {
+      }, new GetObjectRequest(bucketName, keyName), REFRESH_TOKEN_RETRIES);
+    } catch (Exception e) {
+      LOG.warn("Failed to download snapshot from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName);
+      throw new SnapshotTransferException("Failed to download snapshot from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName
+          + ", key=" + keyName, e);
+    }
+  }
 
-		private ArrayBlockingQueue<SnapshotPart> partQueue;
-		private SnapshotProgressCallback progressCallback;
-		private List<PartETag> partETags;
+  private PutObjectResult uploadSnapshotAsSingleObject(final String compressedSnapFileName, Long actualSize, Long uncompressedSize,
+      final SnapshotProgressCallback callback) throws Exception {
+    callback.setUploadSize(actualSize);
+    ObjectMetadata objectMetadata = new ObjectMetadata();
+    Map<String, String> userMetadataMap = new HashMap<String, String>();
+    userMetadataMap.put(UNCOMPRESSED_SIZE_KEY, String.valueOf(uncompressedSize)); // Send the uncompressed length as the metadata
+    objectMetadata.setUserMetadata(userMetadataMap);
+    objectMetadata.setContentLength(actualSize);
 
-		public UploadPartTask(ArrayBlockingQueue<SnapshotPart> partQueue, SnapshotProgressCallback progressCallback) throws EucalyptusCloudException {
-			if (partQueue == null || progressCallback == null) {
-				throw new EucalyptusCloudException("Invalid constructor parameters. Cannot proceed without part queue and or snapshot progress callback");
-			}
-			this.partQueue = partQueue;
-			this.progressCallback = progressCallback;
-			this.partETags = new ArrayList<PartETag>();
-		}
+    return retryAfterRefresh(new Function<PutObjectRequest, PutObjectResult>() {
 
-		@Override
-		public List<PartETag> call() throws Exception {
-			Boolean isLast = Boolean.FALSE;
-			do {
-				SnapshotPart part = null;
+      @Override
+      @Nullable
+      public PutObjectResult apply(@Nullable PutObjectRequest arg0) {
+        eucaS3Client.refreshEndpoint();
+        // EUCA-10311 Set the input stream in put request. Doing it here to ensure that input stream is set before every attempt to put object
+        try {
+          arg0.setInputStream(new FileInputStreamWithCallback(new File(compressedSnapFileName), callback));
+        } catch (Exception e) {
+          LOG.warn("Failed to upload snapshot to objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName
+              + ", reason: unable to initialize FileInputStreamWithCallback for file " + compressedSnapFileName, e);
+          Exceptions.toUndeclared(e);
+        }
+        return eucaS3Client.putObject(arg0);
+      }
 
-				try {
-					part = partQueue.take();
-				} catch (InterruptedException ex) { // Should rarely happen
-					LOG.error("Failed to upload snapshot " + snapshotId + " due to an retrieving parts from queue", ex);
-					return null;
-				}
+    }, new PutObjectRequest(bucketName, keyName, null, objectMetadata), REFRESH_TOKEN_RETRIES);
+  }
 
-				isLast = part.getIsLast();
+  private String initiateMulitpartUpload(Long uncompressedSize) throws SnapshotInitializeMpuException {
+    InitiateMultipartUploadResult initResponse = null;
+    InitiateMultipartUploadRequest initRequest = new InitiateMultipartUploadRequest(bucketName, keyName);
+    ObjectMetadata objectMetadata = new ObjectMetadata();
+    Map<String, String> userMetadataMap = new HashMap<String, String>();
+    userMetadataMap.put(UNCOMPRESSED_SIZE_KEY, String.valueOf(uncompressedSize)); // Send the uncompressed length as the metadata
+    objectMetadata.setUserMetadata(userMetadataMap);
+    initRequest.setObjectMetadata(objectMetadata);
 
-				if (part.getState().equals(SnapshotPartState.created) || part.getState().equals(SnapshotPartState.uploading)
-						|| part.getState().equals(SnapshotPartState.failed)) {
-					try {
-						partETags.add(uploadPart(part, progressCallback));
-					} catch (Exception e) {
-						LOG.error("Failed to upload a part for " + snapshotId + ". Aborting the part upload process");
-						return null;
-					}
-				} else {
-					LOG.warn("Not sure what to do with this part, just keep going: " + part);
-				}
-			} while (!isLast);
+    try {
+      LOG.info("Inititating multipart upload: snapshotId=" + snapshotId + ", bucketName=" + bucketName + ", keyName=" + keyName);
+      initResponse = retryAfterRefresh(new Function<InitiateMultipartUploadRequest, InitiateMultipartUploadResult>() {
 
-			return partETags;
-		}
-	}
+        @Override
+        @Nullable
+        public InitiateMultipartUploadResult apply(@Nullable InitiateMultipartUploadRequest arg0) {
+          eucaS3Client.refreshEndpoint();
+          return eucaS3Client.initiateMultipartUpload(arg0);
+        }
 
-	class CompleteMpuTask implements Callable<String> {
+      }, initRequest, REFRESH_TOKEN_RETRIES);
+    } catch (Exception ex) {
+      throw new SnapshotInitializeMpuException("Failed to initialize multipart upload part for snapshotId=" + snapshotId + ", bucketName="
+          + bucketName + ", keyName=" + keyName, ex);
+    }
 
-		private Future<List<PartETag>> uploadTaskFuture;
-		private SnapshotUploadInfo snapUploadInfo;
-		private Integer totalParts;
+    if (StringUtils.isBlank(initResponse.getUploadId())) {
+      throw new SnapshotInitializeMpuException("Invalid upload ID for multipart upload part for snapshotId=" + snapshotId + ", bucketName="
+          + bucketName + ", keyName=" + keyName);
+    }
+    return initResponse.getUploadId();
+  }
 
-		public CompleteMpuTask(Future<List<PartETag>> uploadTaskFuture, SnapshotUploadInfo snapUploadInfo, Integer totalParts) {
-			this.uploadTaskFuture = uploadTaskFuture;
-			this.snapUploadInfo = snapUploadInfo;
-			this.totalParts = totalParts;
-		}
+  private PartETag uploadPart(SnapshotPart part, SnapshotProgressCallback progressCallback) throws SnapshotUploadPartException {
+    try {
+      part = part.updateStateUploading();
+    } catch (Exception e) {
+      LOG.debug("Failed to update part status in DB. Moving on. " + part);
+    }
 
-		@Override
-		public String call() throws Exception {
-			Boolean error = Boolean.FALSE;
-			String etag = null;
-			try {
-				List<PartETag> partETags = uploadTaskFuture.get(transferTimeout, TimeUnit.HOURS);
-				if (partETags != null && partETags.size() == totalParts) {
-					try {
-						etag = finalizeMultipartUpload(partETags);
-						markSnapshotAvailable();
-						try {
-							snapUploadInfo = snapUploadInfo.updateStateUploaded(etag);
-						} catch (Exception e) {
-							LOG.debug("Failed to update status in DB for " + snapUploadInfo);
-						}
-						LOG.info("Uploaded snapshot " + snapUploadInfo.getSnapshotId() + " to objectstorage");
-					} catch (Exception e) {
-						error = Boolean.TRUE;
-						LOG.error("Failed to upload " + snapshotId + " due to an error completing the upload", e);
-					}
-				} else {
-					error = Boolean.TRUE;
-					LOG.error("Failed to upload " + snapshotId + " as the total number of parts does not tally up against the part Etags");
-				}
-			} catch (TimeoutException tex) {
-				error = Boolean.TRUE;
-				LOG.error("Failed to upload " + snapshotId + ". Complete upload task timed out waiting on upload part task after " + transferTimeout + " hours");
-			} catch (Exception ex) {
-				error = Boolean.TRUE;
-				LOG.error("Failed to upload " + snapshotId, ex);
-			} finally {
-				if (error) {
-					markSnapshotFailed();
-					abortUpload(snapUploadInfo);
-				}
-			}
-			return etag;
-		}
-	}
+    try {
+      LOG.debug("Uploading " + part);
+      UploadPartResult uploadPartResult =
+          retryAfterRefresh(new Function<UploadPartRequest, UploadPartResult>() {
 
-	class StorageWriterTask implements Callable<String> {
+            @Override
+            @Nullable
+            public UploadPartResult apply(@Nullable UploadPartRequest arg0) {
+              eucaS3Client.refreshEndpoint();
+              return eucaS3Client.uploadPart(arg0);
+            }
+          },
+              new UploadPartRequest().withBucketName(part.getBucketName()).withKey(part.getKeyName()).withUploadId(part.getUploadId())
+                  .withPartNumber(part.getPartNumber()).withPartSize(part.getSize()).withFile(new File(part.getFileName())), REFRESH_TOKEN_RETRIES);
 
-		private ArrayBlockingQueue<SnapshotPart> partQueue;
-		private StorageResource storageResource;
+      progressCallback.update(part.getInputFileBytesRead());
 
-		public StorageWriterTask(ArrayBlockingQueue<SnapshotPart> partQueue, StorageResource storageResource) {
-			this.partQueue = partQueue;
-			this.storageResource = storageResource;
-		}
+      try {
+        part = part.updateStateUploaded(uploadPartResult.getPartETag().getETag());
+      } catch (Exception e) {
+        LOG.debug("Failed to update part status in DB. Moving on. " + part);
+      }
+      LOG.debug("Uploaded " + part);
+      return uploadPartResult.getPartETag();
+    } catch (Exception e) {
+      LOG.error("Failed to upload part " + part, e);
+      try {
+        part = part.updateStateFailed();
+      } catch (Exception ie) {
+        LOG.debug("Failed to update part status in DB. Moving on. " + part);
+      }
+      throw new SnapshotUploadPartException("Failed to upload part " + part, e);
+    } finally {
+      deleteFile(part.getFileName());
+    }
+  }
 
-		@Override
-		public String call() throws Exception {
-			String returnValue = null;
-			SnapshotPart part = null;
-			OutputStream outStream = null;
-			byte[] buffer = new byte[writeBufferSize];
-			int len;
+  private String finalizeMultipartUpload(List<PartETag> partETags) throws SnapshotFinalizeMpuException {
+    CompleteMultipartUploadResult result;
+    try {
+      LOG.info("Finalizing multipart upload: snapshotId=" + snapshotId + ", bucketName=" + bucketName + ", keyName=" + keyName + ", uploadId="
+          + uploadId);
+      result = retryAfterRefresh(new Function<CompleteMultipartUploadRequest, CompleteMultipartUploadResult>() {
 
-			try {
-				outStream = storageResource.getOutputStream();
-				do {
-					part = partQueue.take();
+        @Override
+        @Nullable
+        public CompleteMultipartUploadResult apply(@Nullable CompleteMultipartUploadRequest arg0) {
+          eucaS3Client.refreshEndpoint();
+          return eucaS3Client.completeMultipartUpload(arg0);
+        }
+      }, new CompleteMultipartUploadRequest(bucketName, keyName, uploadId, partETags), REFRESH_TOKEN_RETRIES);
+      return result.getETag();
+    } catch (Exception ex) {
+      LOG.debug("Failed to finalize multipart upload for snapshotId=" + snapshotId + ", bucketName=" + ", keyName=" + keyName, ex);
+      throw new SnapshotFinalizeMpuException("Failed to initialize multipart upload part after for snapshotId=" + snapshotId + ", bucketName="
+          + bucketName + ", keyName=" + keyName);
+    }
+  }
 
-					FileInputStream inStream = null;
-					try {
-						inStream = new FileInputStream(part.getFileName());
-						while ((len = inStream.read(buffer)) > 0) {
-							outStream.write(buffer, 0, len);
-						}
-						inStream.close();
-					} finally {
-						if (inStream != null) {
-							try {
-								inStream.close();
-							} catch (Exception e) {
+  private void abortMultipartUpload() {
+    if (uploadId != null) {
+      try {
+        LOG.debug("Aborting multipart upload: snapshotId=" + snapshotId + ", bucketName=" + ", keyName=" + keyName + ", uploadId=" + uploadId);
+        retryAfterRefresh(new Function<AbortMultipartUploadRequest, String>() {
 
-							}
-						}
-						deleteFile(part.getFileName());
-					}
-				} while (!part.getIsLast());
+          @Override
+          @Nullable
+          public String apply(@Nullable AbortMultipartUploadRequest arg0) {
+            eucaS3Client.refreshEndpoint();
+            eucaS3Client.abortMultipartUpload(arg0);
+            return null;
+          }
+        }, new AbortMultipartUploadRequest(bucketName, keyName, uploadId), REFRESH_TOKEN_RETRIES);
+      } catch (Exception e) {
+        LOG.debug("Failed to abort multipart upload for snapshot " + snapshotId);
+      }
+    }
+  }
 
-				outStream.close();
-				buffer = null;
+  private void abortUpload(SnapshotUploadInfo snapUploadInfo) {
+    abortMultipartUpload();
+    if (snapUploadInfo != null) {
+      try {
+        snapUploadInfo.updateStateAborted();
+      } catch (EucalyptusCloudException e) {
+        LOG.debug("Failed to update status in DB for " + snapUploadInfo);
+      }
+    }
+  }
 
-				returnValue = storageResource.getId();
-			} catch (Exception e) {
-				LOG.error("Failed to write snapshot " + snapshotId + " to storage backend due to:", e);
-			} finally {
-				if (outStream != null) {
-					try {
-						outStream.close();
-					} catch (Exception e) {
+  private void deleteFile(String fileName) {
+    if (StringUtils.isNotBlank(fileName)) {
+      try {
+        Files.deleteIfExists(Paths.get(fileName));
+      } catch (IOException e) {
+        LOG.debug("Failed to delete file: " + fileName);
+      }
+    }
+  }
 
-					}
-				}
-			}
+  private void deleteFile(Path path) {
+    try {
+      Files.deleteIfExists(path);
+    } catch (IOException e) {
+      LOG.debug("Failed to delete file: " + path.toString());
+    }
+  }
 
-			return returnValue;
-		}
-	}
+  private void markSnapshotAvailable() throws TransactionException, NoSuchElementException {
+    Function<String, SnapshotInfo> updateFunction = new Function<String, SnapshotInfo>() {
+
+      @Override
+      public SnapshotInfo apply(String arg0) {
+        SnapshotInfo snap;
+        try {
+          snap = Entities.uniqueResult(new SnapshotInfo(arg0));
+          snap.setStatus(StorageProperties.Status.available.toString());
+          snap.setProgress("100");
+          snap.setSnapPointId(null);
+          return snap;
+        } catch (TransactionException | NoSuchElementException e) {
+          LOG.error("Failed to retrieve snapshot entity from DB for " + arg0, e);
+        }
+        return null;
+      }
+    };
+
+    Entities.asTransaction(SnapshotInfo.class, updateFunction, TX_RETRIES).apply(snapshotId);
+  }
+
+  private void markSnapshotFailed() throws TransactionException, NoSuchElementException {
+    Function<String, SnapshotInfo> updateFunction = new Function<String, SnapshotInfo>() {
+
+      @Override
+      public SnapshotInfo apply(String arg0) {
+        SnapshotInfo snap;
+        try {
+          snap = Entities.uniqueResult(new SnapshotInfo(arg0));
+          snap.setStatus(StorageProperties.Status.failed.toString());
+          snap.setProgress("0");
+          return snap;
+        } catch (TransactionException | NoSuchElementException e) {
+          LOG.error("Failed to retrieve snapshot entity from DB for " + arg0, e);
+        }
+        return null;
+      }
+    };
+
+    Entities.asTransaction(SnapshotInfo.class, updateFunction, TX_RETRIES).apply(snapshotId);
+  }
+
+  private <F, T> T retryAfterRefresh(Function<F, T> function, F input, int retries) throws SnapshotTransferException {
+    int failedAttempts = 0;
+    T output = null;
+    do {
+      try {
+        output = function.apply(input);
+        break;
+      } catch (AmazonServiceException e) {
+        if (failedAttempts < retries && e.getStatusCode() == HttpResponseStatus.FORBIDDEN.getCode()) {
+          LOG.debug("Snapshot transfer operation failed because of " + e.getMessage() + ". Will refresh credentials and retry");
+          failedAttempts++;
+          initializeEucaS3Client();
+          continue;
+        } else {
+          throw new SnapshotTransferException("Snapshot transfer operation failed because of", e);
+        }
+      } catch (Exception e) {
+        throw new SnapshotTransferException("Snapshot transfer operation failed because of", e);
+      }
+    } while (failedAttempts <= retries);
+
+    return output;
+  }
+
+  class UploadPartTask implements Callable<List<PartETag>> {
+
+    private ArrayBlockingQueue<SnapshotPart> partQueue;
+    private SnapshotProgressCallback progressCallback;
+    private List<PartETag> partETags;
+
+    public UploadPartTask(ArrayBlockingQueue<SnapshotPart> partQueue, SnapshotProgressCallback progressCallback) throws EucalyptusCloudException {
+      if (partQueue == null || progressCallback == null) {
+        throw new EucalyptusCloudException("Invalid constructor parameters. Cannot proceed without part queue and or snapshot progress callback");
+      }
+      this.partQueue = partQueue;
+      this.progressCallback = progressCallback;
+      this.partETags = new ArrayList<PartETag>();
+    }
+
+    @Override
+    public List<PartETag> call() throws Exception {
+      Boolean isLast = Boolean.FALSE;
+      do {
+        SnapshotPart part = null;
+
+        try {
+          part = partQueue.take();
+        } catch (InterruptedException ex) { // Should rarely happen
+          LOG.error("Failed to upload snapshot " + snapshotId + " due to an retrieving parts from queue", ex);
+          return null;
+        }
+
+        isLast = part.getIsLast();
+
+        if (part.getState().equals(SnapshotPartState.created) || part.getState().equals(SnapshotPartState.uploading)
+            || part.getState().equals(SnapshotPartState.failed)) {
+          try {
+            partETags.add(uploadPart(part, progressCallback));
+          } catch (Exception e) {
+            LOG.error("Failed to upload a part for " + snapshotId + ". Aborting the part upload process");
+            return null;
+          }
+        } else {
+          LOG.warn("Not sure what to do with this part, just keep going: " + part);
+        }
+      } while (!isLast);
+
+      return partETags;
+    }
+  }
+
+  class CompleteMpuTask implements Callable<String> {
+
+    private Future<List<PartETag>> uploadTaskFuture;
+    private SnapshotUploadInfo snapUploadInfo;
+    private Integer totalParts;
+
+    public CompleteMpuTask(Future<List<PartETag>> uploadTaskFuture, SnapshotUploadInfo snapUploadInfo, Integer totalParts) {
+      this.uploadTaskFuture = uploadTaskFuture;
+      this.snapUploadInfo = snapUploadInfo;
+      this.totalParts = totalParts;
+    }
+
+    @Override
+    public String call() throws Exception {
+      Boolean error = Boolean.FALSE;
+      String etag = null;
+      try {
+        List<PartETag> partETags = uploadTaskFuture.get(transferTimeout, TimeUnit.HOURS);
+        if (partETags != null && partETags.size() == totalParts) {
+          try {
+            etag = finalizeMultipartUpload(partETags);
+            markSnapshotAvailable();
+            try {
+              snapUploadInfo = snapUploadInfo.updateStateUploaded(etag);
+            } catch (Exception e) {
+              LOG.debug("Failed to update status in DB for " + snapUploadInfo);
+            }
+            LOG.info("Uploaded snapshot " + snapUploadInfo.getSnapshotId() + " to objectstorage");
+          } catch (Exception e) {
+            error = Boolean.TRUE;
+            LOG.error("Failed to upload " + snapshotId + " due to an error completing the upload", e);
+          }
+        } else {
+          error = Boolean.TRUE;
+          LOG.error("Failed to upload " + snapshotId + " as the total number of parts does not tally up against the part Etags");
+        }
+      } catch (TimeoutException tex) {
+        error = Boolean.TRUE;
+        LOG.error("Failed to upload " + snapshotId + ". Complete upload task timed out waiting on upload part task after " + transferTimeout
+            + " hours");
+      } catch (Exception ex) {
+        error = Boolean.TRUE;
+        LOG.error("Failed to upload " + snapshotId, ex);
+      } finally {
+        if (error) {
+          markSnapshotFailed();
+          abortUpload(snapUploadInfo);
+        }
+      }
+      return etag;
+    }
+  }
+
+  class StorageWriterTask implements Callable<String> {
+
+    private ArrayBlockingQueue<SnapshotPart> partQueue;
+    private StorageResource storageResource;
+
+    public StorageWriterTask(ArrayBlockingQueue<SnapshotPart> partQueue, StorageResource storageResource) {
+      this.partQueue = partQueue;
+      this.storageResource = storageResource;
+    }
+
+    @Override
+    public String call() throws Exception {
+      String returnValue = null;
+      SnapshotPart part = null;
+      OutputStream outStream = null;
+      byte[] buffer = new byte[writeBufferSize];
+      int len;
+
+      try {
+        outStream = storageResource.getOutputStream();
+        do {
+          part = partQueue.take();
+
+          FileInputStream inStream = null;
+          try {
+            inStream = new FileInputStream(part.getFileName());
+            while ((len = inStream.read(buffer)) > 0) {
+              outStream.write(buffer, 0, len);
+            }
+            inStream.close();
+          } finally {
+            if (inStream != null) {
+              try {
+                inStream.close();
+              } catch (Exception e) {
+
+              }
+            }
+            deleteFile(part.getFileName());
+          }
+        } while (!part.getIsLast());
+
+        outStream.close();
+        buffer = null;
+
+        returnValue = storageResource.getId();
+      } catch (Exception e) {
+        LOG.error("Failed to write snapshot " + snapshotId + " to storage backend due to:", e);
+      } finally {
+        if (outStream != null) {
+          try {
+            outStream.close();
+          } catch (Exception e) {
+
+          }
+        }
+      }
+
+      return returnValue;
+    }
+  }
 }

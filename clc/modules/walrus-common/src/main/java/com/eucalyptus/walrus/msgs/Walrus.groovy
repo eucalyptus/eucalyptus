@@ -94,88 +94,88 @@ import org.jboss.netty.handler.stream.ChunkedInput;
 
 @ComponentMessage(WalrusBackend.class)
 public class WalrusResponseType extends BaseMessage {
-	BucketLogData logData;
-	HttpResponseStatus status;
-	String statusMessage;
-	
-	def WalrusResponseType() {
-	}
-	
-	public User getUser() {
-	    return Principals.nobodyUser();
-	}
-	
-	public BaseMessage getReply() {
-		return null;
-	}
+  BucketLogData logData;
+  HttpResponseStatus status;
+  String statusMessage;
+
+  def WalrusResponseType() {
+  }
+
+  public User getUser() {
+    return Principals.nobodyUser();
+  }
+
+  public BaseMessage getReply() {
+    return null;
+  }
 }
 
 @ComponentMessage(WalrusBackend.class)
 public class WalrusStreamingResponseType extends StreamedBaseMessage {
-	BucketLogData logData;
-	def WalrusStreamingResponseType() {
-	}
-    public BaseMessage getReply() {
-        return null;
-    }
+  BucketLogData logData;
+  def WalrusStreamingResponseType() {
+  }
+  public BaseMessage getReply() {
+    return null;
+  }
 }
 
 @ComponentMessage(WalrusBackend.class)
 public class WalrusRequestType extends BaseMessage {
-	protected String accessKeyID;
-	protected Date timeStamp;
-	protected String signature;
-	protected String credential;
-	BucketLogData logData;
-	protected String bucket;
-	protected String key;
+  protected String accessKeyID;
+  protected Date timeStamp;
+  protected String signature;
+  protected String credential;
+  BucketLogData logData;
+  protected String bucket;
+  protected String key;
 
-	public WalrusRequestType() {
-	}
+  public WalrusRequestType() {
+  }
 
-	public WalrusRequestType( String bucket, String key ) {
-		this.bucket = bucket;
-		this.key = key;
-	}
+  public WalrusRequestType( String bucket, String key ) {
+    this.bucket = bucket;
+    this.key = key;
+  }
 
-	public WalrusRequestType(String accessKeyID, Date timeStamp, String signature, String credential) {
-		this.accessKeyID = accessKeyID;
-		this.timeStamp = timeStamp;
-		this.signature = signature;
-		this.credential = credential;
-	}
+  public WalrusRequestType(String accessKeyID, Date timeStamp, String signature, String credential) {
+    this.accessKeyID = accessKeyID;
+    this.timeStamp = timeStamp;
+    this.signature = signature;
+    this.credential = credential;
+  }
 
-	public String getAccessKeyID() {
-		return accessKeyID;
-	}
+  public String getAccessKeyID() {
+    return accessKeyID;
+  }
 
-	public void setAccessKeyID(String accessKeyID) {
-		this.accessKeyID = accessKeyID;
-	}
+  public void setAccessKeyID(String accessKeyID) {
+    this.accessKeyID = accessKeyID;
+  }
 
-	public String getCredential() {
-		return credential;
-	}
+  public String getCredential() {
+    return credential;
+  }
 
-	public void setCredential(String credential) {
-		this.credential = credential;
-	}
+  public void setCredential(String credential) {
+    this.credential = credential;
+  }
 
-	public String getBucket() {
-		return bucket;
-	}
+  public String getBucket() {
+    return bucket;
+  }
 
-	public void setBucket(String bucket) {
-		this.bucket = bucket;
-	}
+  public void setBucket(String bucket) {
+    this.bucket = bucket;
+  }
 
-	public String getKey() {
-		return key;
-	}
+  public String getKey() {
+    return key;
+  }
 
-	public void setKey(String key) {
-		this.key = key;
-	}
+  public void setKey(String key) {
+    this.key = key;
+  }
 }
 
 public class WalrusDeleteType extends WalrusRequestType {
@@ -185,86 +185,86 @@ public class WalrusDeleteResponseType extends WalrusResponseType {
 }
 
 public class GetBucketAccessControlPolicyResponseType extends WalrusResponseType {
-	AccessControlPolicy accessControlPolicy;
+  AccessControlPolicy accessControlPolicy;
 }
 
 public class GetBucketAccessControlPolicyType extends WalrusRequestType { }
 
 public class GetObjectAccessControlPolicyResponseType extends WalrusResponseType {
-	AccessControlPolicy accessControlPolicy;
+  AccessControlPolicy accessControlPolicy;
 }
 
 public class GetObjectAccessControlPolicyType extends WalrusRequestType {
-	String versionId;
+  String versionId;
 }
 
 @ComponentMessage(WalrusBackend.class)
 public class WalrusErrorMessageType extends BaseMessage {
-	protected String message;
-	String code;
-	protected HttpResponseStatus status;
-	protected String resourceType;
-	protected String resource;
-	protected String requestId;
-	protected String hostId;
-	BucketLogData logData;
+  protected String message;
+  String code;
+  protected HttpResponseStatus status;
+  protected String resourceType;
+  protected String resource;
+  protected String requestId;
+  protected String hostId;
+  BucketLogData logData;
 
-	def WalrusErrorMessageType() {}
+  def WalrusErrorMessageType() {}
 
-	def WalrusErrorMessageType(String message,
-	String code,
-	HttpResponseStatus status,
-	String resourceType,
-	String resource,
-	String requestId,
-	String hostId,
-	BucketLogData logData) {
-		this.message = message;
-		this.code = code;
-		this.status = status;
-		this.resourceType = resourceType;
-		this.resource = resource;
-		this.requestId = requestId;
-		this.hostId = hostId;
-		this.logData = logData;
-	}
+  def WalrusErrorMessageType(String message,
+  String code,
+  HttpResponseStatus status,
+  String resourceType,
+  String resource,
+  String requestId,
+  String hostId,
+  BucketLogData logData) {
+    this.message = message;
+    this.code = code;
+    this.status = status;
+    this.resourceType = resourceType;
+    this.resource = resource;
+    this.requestId = requestId;
+    this.hostId = hostId;
+    this.logData = logData;
+  }
 
-	public HttpResponseStatus getStatus() {
-		return status;
-	}
+  public HttpResponseStatus getStatus() {
+    return status;
+  }
 
-	public String getMessage() {
-		return message;
-	}
+  public String getMessage() {
+    return message;
+  }
 
-	public String getResourceType() {
-		return resourceType;
-	}
+  public String getResourceType() {
+    return resourceType;
+  }
 
-	public String getResource() {
-		return resource;
-	}
+  public String getResource() {
+    return resource;
+  }
 }
 
 public class WalrusRedirectMessageType extends WalrusErrorMessageType {
-	private String redirectUrl;
+  private String redirectUrl;
 
-	def WalrusRedirectMessageType() {
-		this.code = 301;
-	}
+  def WalrusRedirectMessageType() {
+    this.code = 301;
+  }
 
-	def WalrusRedirectMessageType(String redirectUrl) {
-		this.redirectUrl = redirectUrl;
-		this.code = 301;
-	}
+  def WalrusRedirectMessageType(String redirectUrl) {
+    this.redirectUrl = redirectUrl;
+    this.code = 301;
+  }
 
-	public String toString() {
-		return "WalrusRedirectMessage:" +  redirectUrl;
-	}
+  public String toString() {
+    return "WalrusRedirectMessage:" +  redirectUrl;
+  }
 
-	public String getRedirectUrl() {
-		return redirectUrl;
-	}
+  public String getRedirectUrl() {
+    return redirectUrl;
+  }
 }
 
 public class ListAllMyBucketsType extends WalrusRequestType {
@@ -272,21 +272,21 @@ public class ListAllMyBucketsType extends WalrusRequestType {
 
 
 public class ListAllMyBucketsResponseType extends WalrusResponseType {
-	CanonicalUser owner;
-	ListAllMyBucketsList bucketList;
+  CanonicalUser owner;
+  ListAllMyBucketsList bucketList;
 }
 
 public class BucketListEntry extends EucalyptusData {
-	String name;
-	String creationDate;
+  String name;
+  String creationDate;
 
-	public BucketListEntry() {
-	}
+  public BucketListEntry() {
+  }
 
-	public BucketListEntry(String name, String creationDate) {
-		this.name = name;
-		this.creationDate = creationDate;
-	}
+  public BucketListEntry(String name, String creationDate) {
+    this.name = name;
+    this.creationDate = creationDate;
+  }
 }
 
 public class WalrusHeadRequestType extends WalrusRequestType {}
@@ -296,20 +296,20 @@ public class HeadBucketType extends WalrusHeadRequestType {}
 public class HeadBucketResponseType extends WalrusHeadResponseType{}
 
 public class CreateBucketType extends WalrusRequestType {
-	AccessControlList accessControlList;
-	String locationConstraint;
+  AccessControlList accessControlList;
+  String locationConstraint;
 
-	//For unit testing
-	public CreateBucketType() {
-	}
+  //For unit testing
+  public CreateBucketType() {
+  }
 
-	public CreateBucketType(String bucket) {
-		this.bucket = bucket;
-	}
+  public CreateBucketType(String bucket) {
+    this.bucket = bucket;
+  }
 }
 
 public class CreateBucketResponseType extends WalrusResponseType {
-	String bucket;
+  String bucket;
 }
 
 public class DeleteBucketType extends WalrusDeleteType {}
@@ -317,129 +317,129 @@ public class DeleteBucketType extends WalrusDeleteType {}
 public class DeleteBucketResponseType extends WalrusDeleteResponseType {}
 
 public class WalrusDataRequestType extends WalrusRequestType {
-	String randomKey;
-	Boolean isCompressed;
+  String randomKey;
+  Boolean isCompressed;
 
-	def WalrusDataRequestType() {
-	}
+  def WalrusDataRequestType() {
+  }
 
-	def WalrusDataRequestType( String bucket, String key ) {
-		super( bucket, key );
-	}
+  def WalrusDataRequestType( String bucket, String key ) {
+    super( bucket, key );
+  }
 
 }
 
 public class WalrusDataResponseType extends WalrusStreamingResponseType {
-	String etag;
-	Date lastModified;
-	Long size;
-	ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-	Integer errorCode;
-	String contentType;
-	String contentDisposition;
-	String versionId;
+  String etag;
+  Date lastModified;
+  Long size;
+  ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+  Integer errorCode;
+  String contentType;
+  String contentDisposition;
+  String versionId;
 
-    public User getUser() {
-        return Principals.nobodyUser();
-    }
+  public User getUser() {
+    return Principals.nobodyUser();
+  }
 }
 
 public class WalrusDataGetRequestType extends WalrusDataRequestType {
-	protected Channel channel;
+  protected Channel channel;
 
-	public Channel getChannel() {
-		return channel;
-	}
+  public Channel getChannel() {
+    return channel;
+  }
 
-	public void setChannel(Channel channel) {
-		this.channel = channel;
-	}
+  public void setChannel(Channel channel) {
+    this.channel = channel;
+  }
 
-	def WalrusDataGetRequestType() {}
+  def WalrusDataGetRequestType() {}
 
-	def WalrusDataGetRequestType(String bucket, String key) {
-		super(bucket, key);
-	}
+  def WalrusDataGetRequestType(String bucket, String key) {
+    super(bucket, key);
+  }
 }
 
 public class WalrusDataGetResponseType extends WalrusDataResponseType {
-    List<ChunkedInput> dataInputStream;
-    Long byteRangeStart;
-    Long byteRangeEnd;
+  List<ChunkedInput> dataInputStream;
+  Long byteRangeStart;
+  Long byteRangeEnd;
 
-	def WalrusDataGetResponseType() {}
+  def WalrusDataGetResponseType() {}
 }
 
 public class PutObjectResponseType extends WalrusDataResponseType {
 }
 
 public class PostObjectResponseType extends WalrusDataResponseType {
-	String redirectUrl;
-	Integer successCode;
-	String location;
-	String bucket;
-	String key;
+  String redirectUrl;
+  Integer successCode;
+  String location;
+  String bucket;
+  String key;
 }
 
 public class PutObjectInlineResponseType extends WalrusDataResponseType {
 }
 
 public class PutObjectType extends WalrusDataRequestType {
-	String contentLength;
-	ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-	AccessControlList accessControlList = new AccessControlList();
-	String storageClass;
-	String contentType;
-	String contentDisposition;
-	String contentMD5;
+  String contentLength;
+  ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+  AccessControlList accessControlList = new AccessControlList();
+  String storageClass;
+  String contentType;
+  String contentDisposition;
+  String contentMD5;
 
-	def PutObjectType() {}
+  def PutObjectType() {}
 }
 
 public class PostObjectType extends WalrusDataRequestType {
-	String contentLength;
-	ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-	AccessControlList accessControlList = new AccessControlList();
-	String storageClass;
-	String successActionRedirect;
-	Integer successActionStatus;
-	String contentType;
+  String contentLength;
+  ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+  AccessControlList accessControlList = new AccessControlList();
+  String storageClass;
+  String successActionRedirect;
+  Integer successActionStatus;
+  String contentType;
 }
 public class CopyObjectType extends WalrusRequestType {
-	String sourceBucket;
-	String sourceObject;
-	String sourceVersionId;
-	String destinationBucket;
-	String destinationObject;
-	String metadataDirective;
-	ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-	AccessControlList accessControlList = new AccessControlList();
-	String copySourceIfMatch;
-	String copySourceIfNoneMatch;
-	Date copySourceIfModifiedSince;
-	Date copySourceIfUnmodifiedSince;
+  String sourceBucket;
+  String sourceObject;
+  String sourceVersionId;
+  String destinationBucket;
+  String destinationObject;
+  String metadataDirective;
+  ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+  AccessControlList accessControlList = new AccessControlList();
+  String copySourceIfMatch;
+  String copySourceIfNoneMatch;
+  Date copySourceIfModifiedSince;
+  Date copySourceIfUnmodifiedSince;
 }
 
 public class CopyObjectResponseType extends WalrusResponseType {
-        String etag;
-        String lastModified;
-        Long size;
-        ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-        Integer errorCode;
-        String contentType;
-        String contentDisposition;
-        String versionId;
-        String copySourceVersionId;
+  String etag;
+  String lastModified;
+  Long size;
+  ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+  Integer errorCode;
+  String contentType;
+  String contentDisposition;
+  String versionId;
+  String copySourceVersionId;
 }
 
 public class PutObjectInlineType extends WalrusDataRequestType {
-	String contentLength;
-	ArrayList<MetaDataEntry> metaData  = new ArrayList<MetaDataEntry>();
-	AccessControlList accessControlList = new AccessControlList();
-	String storageClass;
-	String base64Data;
-	String contentType;
-	String contentDisposition;
+  String contentLength;
+  ArrayList<MetaDataEntry> metaData  = new ArrayList<MetaDataEntry>();
+  AccessControlList accessControlList = new AccessControlList();
+  String storageClass;
+  String base64Data;
+  String contentType;
+  String contentDisposition;
 }
 
 public class DeleteObjectType extends WalrusDeleteType {}
@@ -447,159 +447,159 @@ public class DeleteObjectType extends WalrusDeleteType {}
 public class DeleteObjectResponseType extends WalrusDeleteResponseType {}
 
 public class DeleteVersionType extends WalrusDeleteType {
-	String versionid;
+  String versionid;
 }
 
 public class DeleteVersionResponseType extends WalrusDeleteResponseType {}
 
 public class ListBucketType extends WalrusRequestType {
-	String prefix;
-	String marker;
-	String maxKeys;
-	String delimiter;
+  String prefix;
+  String marker;
+  String maxKeys;
+  String delimiter;
 
-	def ListBucketType() {
-		prefix = "";
-		marker = "";
-	}
+  def ListBucketType() {
+    prefix = "";
+    marker = "";
+  }
 }
 
 public class ListBucketResponseType extends WalrusResponseType {
-        String name;
-        String prefix;
-        String marker;
-        String nextMarker;
-        int maxKeys;
-        String delimiter;
-        boolean isTruncated;
-        ArrayList<MetaDataEntry> metaData;
-        ArrayList<ListEntry> contents;
-        ArrayList<CommonPrefixesEntry> commonPrefixesList = new ArrayList<CommonPrefixesEntry>();
+  String name;
+  String prefix;
+  String marker;
+  String nextMarker;
+  int maxKeys;
+  String delimiter;
+  boolean isTruncated;
+  ArrayList<MetaDataEntry> metaData;
+  ArrayList<ListEntry> contents;
+  ArrayList<CommonPrefixesEntry> commonPrefixesList = new ArrayList<CommonPrefixesEntry>();
 }
 
 public class ListVersionsType extends WalrusRequestType {
-	String prefix;
-	String keyMarker;
-	String versionIdMarker;
-	String maxKeys;
-	String delimiter;
+  String prefix;
+  String keyMarker;
+  String versionIdMarker;
+  String maxKeys;
+  String delimiter;
 
-	def ListVersionsType() {
-		prefix = "";
-		keyMarker = "";
-		versionIdMarker = "";
-	}
+  def ListVersionsType() {
+    prefix = "";
+    keyMarker = "";
+    versionIdMarker = "";
+  }
 }
 
 public class ListVersionsResponseType extends WalrusResponseType {
-	String name;
-	String prefix;
-	String keyMarker;
-	String versionIdMarker;
-	String nextKeyMarker;
-	String nextVersionIdMarker;
-	int maxKeys;
-	String delimiter;
-	boolean isTruncated;
-	ArrayList<KeyEntry> keyEntries = new ArrayList<KeyEntry>();
-	ArrayList<CommonPrefixesEntry> commonPrefixesList = new ArrayList<CommonPrefixesEntry>();
+  String name;
+  String prefix;
+  String keyMarker;
+  String versionIdMarker;
+  String nextKeyMarker;
+  String nextVersionIdMarker;
+  int maxKeys;
+  String delimiter;
+  boolean isTruncated;
+  ArrayList<KeyEntry> keyEntries = new ArrayList<KeyEntry>();
+  ArrayList<CommonPrefixesEntry> commonPrefixesList = new ArrayList<CommonPrefixesEntry>();
 }
 
 public class SetBucketAccessControlPolicyType extends WalrusRequestType {
-	AccessControlList accessControlList;
+  AccessControlList accessControlList;
 }
 
 public class SetBucketAccessControlPolicyResponseType extends WalrusResponseType {
-	String code;
-	String description;
+  String code;
+  String description;
 }
 
 public class SetObjectAccessControlPolicyType extends WalrusRequestType {
-	AccessControlList accessControlList;
-	String versionId;
+  AccessControlList accessControlList;
+  String versionId;
 }
 
 public class SetObjectAccessControlPolicyResponseType extends WalrusResponseType {
-	String code;
-	String description;
+  String code;
+  String description;
 }
 
 public class SetRESTBucketAccessControlPolicyType extends WalrusRequestType {
-	AccessControlPolicy accessControlPolicy;
+  AccessControlPolicy accessControlPolicy;
 }
 
 public class SetRESTBucketAccessControlPolicyResponseType extends WalrusResponseType {
-	String code;
-	String description;
+  String code;
+  String description;
 }
 
 public class SetRESTObjectAccessControlPolicyType extends WalrusRequestType {
-	AccessControlPolicy accessControlPolicy;
-	String versionId;
+  AccessControlPolicy accessControlPolicy;
+  String versionId;
 }
 
 public class SetRESTObjectAccessControlPolicyResponseType extends WalrusResponseType {
-	String code;
-	String description;
+  String code;
+  String description;
 }
 
 public class GetObjectType extends WalrusDataGetRequestType {
-	Boolean getMetaData;
-	Boolean getData;
-	Boolean inlineData;
-	Boolean deleteAfterGet;
-	Boolean getTorrent;
-	String versionId;
+  Boolean getMetaData;
+  Boolean getData;
+  Boolean inlineData;
+  Boolean deleteAfterGet;
+  Boolean getTorrent;
+  String versionId;
 
-	def GetObjectType() {
-	}
+  def GetObjectType() {
+  }
 
-	def GetObjectType(final String bucketName, final String key, final Boolean getData, final Boolean getMetaData, final Boolean inlineData) {
-		super( bucketName, key );
-		this.getData = getData;
-		this.getMetaData = getMetaData;
-		this.inlineData = inlineData;
-	}
+  def GetObjectType(final String bucketName, final String key, final Boolean getData, final Boolean getMetaData, final Boolean inlineData) {
+    super( bucketName, key );
+    this.getData = getData;
+    this.getMetaData = getMetaData;
+    this.inlineData = inlineData;
+  }
 }
 
 public class GetObjectResponseType extends WalrusDataGetResponseType {
-	Status status;
-	String base64Data;
+  Status status;
+  String base64Data;
 }
 
 public class GetObjectExtendedType extends WalrusDataGetRequestType {
-	Boolean getData;
-	Boolean getMetaData;
-	Boolean inlineData;
-	Long byteRangeStart;
-	Long byteRangeEnd;
-	Date ifModifiedSince;
-	Date ifUnmodifiedSince;
-	String ifMatch;
-	String ifNoneMatch;
-	Boolean returnCompleteObjectOnConditionFailure;
+  Boolean getData;
+  Boolean getMetaData;
+  Boolean inlineData;
+  Long byteRangeStart;
+  Long byteRangeEnd;
+  Date ifModifiedSince;
+  Date ifUnmodifiedSince;
+  String ifMatch;
+  String ifNoneMatch;
+  Boolean returnCompleteObjectOnConditionFailure;
 }
 
 public class GetObjectExtendedResponseType extends WalrusDataGetResponseType {
-	Status status;
+  Status status;
 }
 
 public class GetBucketLocationType extends WalrusRequestType {
 }
 
 public class GetBucketLocationResponseType extends WalrusResponseType {
-	String locationConstraint;
+  String locationConstraint;
 }
 
 public class GetBucketLoggingStatusType extends WalrusRequestType {
 }
 
 public class GetBucketLoggingStatusResponseType extends WalrusResponseType {
-	LoggingEnabled loggingEnabled;
+  LoggingEnabled loggingEnabled;
 }
 
 public class SetBucketLoggingStatusType extends WalrusRequestType {
-	LoggingEnabled loggingEnabled;
+  LoggingEnabled loggingEnabled;
 }
 
 public class SetBucketLoggingStatusResponseType extends WalrusResponseType {
@@ -609,51 +609,51 @@ public class GetBucketVersioningStatusType extends WalrusRequestType {
 }
 
 public class GetBucketVersioningStatusResponseType extends WalrusResponseType {
-	String versioningStatus;
+  String versioningStatus;
 }
 
 public class SetBucketVersioningStatusType extends WalrusRequestType {
-	String versioningStatus;
+  String versioningStatus;
 }
 
 public class SetBucketVersioningStatusResponseType extends WalrusResponseType {
 }
 
 public class AddObjectResponseType extends WalrusDataResponseType {
-	
+
 }
 
 public class AddObjectType extends WalrusDataRequestType {
-	String objectName;
-	String etag;
-	AccessControlList accessControlList = new AccessControlList();
+  String objectName;
+  String etag;
+  AccessControlList accessControlList = new AccessControlList();
 }
 
 public class UpdateWalrusConfigurationType extends WalrusRequestType {
-	String name;
-	ArrayList<ComponentProperty> properties;
+  String name;
+  ArrayList<ComponentProperty> properties;
 
-	def UpdateWalrusConfigurationType() {}
+  def UpdateWalrusConfigurationType() {}
 }
 
 public class UpdateWalrusConfigurationResponseType extends WalrusResponseType {
 }
 
 public class GetWalrusConfigurationType extends WalrusRequestType {
-	String name;
+  String name;
 
-	def GetWalrusConfigurationType() {}
+  def GetWalrusConfigurationType() {}
 
-	def GetWalrusConfigurationType(String name) {
-		this.name = name;
-	}
+  def GetWalrusConfigurationType(String name) {
+    this.name = name;
+  }
 }
 
 public class GetWalrusConfigurationResponseType extends WalrusRequestType {
-	String name;
-	ArrayList<ComponentProperty> properties;
+  String name;
+  ArrayList<ComponentProperty> properties;
 
-	def GetWalrusConfigurationResponseType() {}
+  def GetWalrusConfigurationResponseType() {}
 }
 
 public class GetDecryptedImageType extends WalrusDataGetRequestType {
@@ -666,23 +666,23 @@ public class CheckImageType extends WalrusDataRequestType {
 }
 
 public class CheckImageResponseType extends WalrusDataResponseType {
-	Boolean success;
+  Boolean success;
 }
 
 public class CacheImageType extends WalrusDataRequestType {
 }
 
 public class CacheImageResponseType extends WalrusDataResponseType {
-	Boolean success;
+  Boolean success;
 }
 
 public class FlushCachedImageType extends WalrusDataRequestType {
 
-	def FlushCachedImageType(final String bucket, final String key) {
-		super(bucket, key);
-	}
+  def FlushCachedImageType(final String bucket, final String key) {
+    super(bucket, key);
+  }
 
-	def FlushCachedImageType() {}
+  def FlushCachedImageType() {}
 }
 
 public class FlushCachedImageResponseType extends WalrusDataResponseType {
@@ -695,7 +695,7 @@ public class ValidateImageResponseType extends WalrusResponseType {
 }
 
 public class StoreSnapshotType extends WalrusDataRequestType {
-	String snapshotSize;
+  String snapshotSize;
 }
 
 public class StoreSnapshotResponseType extends WalrusDataResponseType {
@@ -717,10 +717,10 @@ public class GetWalrusSnapshotSizeType extends WalrusDataGetRequestType {
 }
 
 public class WalrusComponentMessageType extends ComponentMessageType {
-	@Override
-	public String getComponent( ) {
-		return "walrus";
-	}
+  @Override
+  public String getComponent( ) {
+    return "walrus";
+  }
 }
 
 public class GetWalrusSnapshotSizeResponseType extends WalrusDataGetResponseType {
@@ -730,81 +730,81 @@ public class WalrusComponentMessageResponseType extends ComponentMessageResponse
 }
 
 public class WalrusUsageStatsRecord extends StatEventRecord {
-	Long bytesIn;
-	Long bytesOut;
-	Integer numberOfBuckets;
-	Long totalSpaceUsed;
+  Long bytesIn;
+  Long bytesOut;
+  Integer numberOfBuckets;
+  Long totalSpaceUsed;
 
-	def WalrusUsageStatsRecord() {}
+  def WalrusUsageStatsRecord() {}
 
-	def WalrusUsageStatsRecord(Long bytesIn,
-	Long bytesOut,
-	Integer numberOfBuckets,
-	Long totalSpaceUsed) {
-		super("WalrusBackend", System.getProperty("euca.version"));
-		this.bytesIn = bytesIn;
-		this.bytesOut = bytesOut;
-		this.numberOfBuckets = numberOfBuckets;
-		this.totalSpaceUsed = totalSpaceUsed;
-	}
+  def WalrusUsageStatsRecord(Long bytesIn,
+  Long bytesOut,
+  Integer numberOfBuckets,
+  Long totalSpaceUsed) {
+    super("WalrusBackend", System.getProperty("euca.version"));
+    this.bytesIn = bytesIn;
+    this.bytesOut = bytesOut;
+    this.numberOfBuckets = numberOfBuckets;
+    this.totalSpaceUsed = totalSpaceUsed;
+  }
 
-	public String toString() {
-		return String.format("Service: %s Version: %s Bytes In: %s Bytes Out: %s Buckets: %d Space Used: %s",
-		service,
-		version,
-		bytesIn,
-		bytesOut,
-		numberOfBuckets,
-		totalSpaceUsed);
-	}
+  public String toString() {
+    return String.format("Service: %s Version: %s Bytes In: %s Bytes Out: %s Buckets: %d Space Used: %s",
+        service,
+        version,
+        bytesIn,
+        bytesOut,
+        numberOfBuckets,
+        totalSpaceUsed);
+  }
 
-	public static WalrusUsageStatsRecord create(Long bytesIn, Long bytesOut, Integer numberOfBuckets, Long totalSpaceUsed) {
-		return new WalrusUsageStatsRecord(bytesIn, bytesOut, numberOfBuckets, totalSpaceUsed);
-	}
+  public static WalrusUsageStatsRecord create(Long bytesIn, Long bytesOut, Integer numberOfBuckets, Long totalSpaceUsed) {
+    return new WalrusUsageStatsRecord(bytesIn, bytesOut, numberOfBuckets, totalSpaceUsed);
+  }
 }
 
 public class InitiateMultipartUploadType extends WalrusDataRequestType {
-    String cacheControl;
-    String contentEncoding;
-    String expires;
-    ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-    AccessControlList accessControlList = new AccessControlList();
-    String storageClass;
-    String contentType;
+  String cacheControl;
+  String contentEncoding;
+  String expires;
+  ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+  AccessControlList accessControlList = new AccessControlList();
+  String storageClass;
+  String contentType;
 }
 
 public class InitiateMultipartUploadResponseType extends WalrusDataResponseType {
-	String bucket;
-	String key;
-	String uploadId;
+  String bucket;
+  String key;
+  String uploadId;
 }
 
 public class UploadPartType extends WalrusDataRequestType {
-    String contentLength;
-    String contentMD5
-    String contentType;
-    String expect;
-    String uploadId;
-    String partNumber;
+  String contentLength;
+  String contentMD5
+  String contentType;
+  String expect;
+  String uploadId;
+  String partNumber;
 }
 
 public class UploadPartResponseType extends WalrusDataResponseType {
 }
 
 public class CompleteMultipartUploadType extends WalrusDataRequestType {
-	ArrayList<Part> parts = new ArrayList<Part>();
-	String uploadId; //Not in S3
+  ArrayList<Part> parts = new ArrayList<Part>();
+  String uploadId; //Not in S3
 }
 
 public class CompleteMultipartUploadResponseType extends WalrusDataResponseType {
-	String location;
-	String bucket;
-	String key;
-	String etag;
+  String location;
+  String bucket;
+  String key;
+  String etag;
 }
 
 public class AbortMultipartUploadType extends WalrusDataRequestType {
-	String uploadId; //Not in S3
+  String uploadId; //Not in S3
 }
 
 public class AbortMultipartUploadResponseType extends WalrusDataResponseType {

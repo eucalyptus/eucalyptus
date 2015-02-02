@@ -71,13 +71,9 @@ public class ObjectStorageWrappedCredentials extends WrappedCredentials<String> 
   private final String signature;
   private final String securityToken;
 
-  public ObjectStorageWrappedCredentials(
-      final String correlationId,
-      final String data,
-      final String accessKeyId,
-      final String signature,
-      final String securityToken ) {
-    super( correlationId, data );
+  public ObjectStorageWrappedCredentials(final String correlationId, final String data, final String accessKeyId, final String signature,
+      final String securityToken) {
+    super(correlationId, data);
     this.queryId = accessKeyId;
     this.signature = signature;
     this.securityToken = securityToken;

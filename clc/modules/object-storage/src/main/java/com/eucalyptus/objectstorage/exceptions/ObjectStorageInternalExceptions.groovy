@@ -21,19 +21,19 @@
 package com.eucalyptus.objectstorage.exceptions
 
 class ObjectStorageInternalException extends RuntimeException {
-	public ObjectStorageInternalException() {}
-	
-	public ObjectStorageInternalException(String msg) {
-		super(msg);
-	}
-	
-	public ObjectStorageInternalException(Throwable cause) {
-		super(cause);
-	}
-	
-	public ObjectStorageInternalException(String msg, Throwable cause) {
-		super(msg, cause);
-	}
+  public ObjectStorageInternalException() {}
+
+  public ObjectStorageInternalException(String msg) {
+    super(msg);
+  }
+
+  public ObjectStorageInternalException(Throwable cause) {
+    super(cause);
+  }
+
+  public ObjectStorageInternalException(String msg, Throwable cause) {
+    super(msg, cause);
+  }
 }
 
 /**
@@ -42,35 +42,35 @@ class ObjectStorageInternalException extends RuntimeException {
  * state exception
  */
 class MetadataOperationFailureException extends ObjectStorageInternalException {
-	public MetadataOperationFailureException() {}
-	
-	public MetadataOperationFailureException(String msg) {
-		super(msg);
-	}
-	
-	public MetadataOperationFailureException(Throwable cause) {
-		super(cause);
-	}
-	
-	public MetadataOperationFailureException(String msg, Throwable cause) {
-		super(msg, cause);
-	}
+  public MetadataOperationFailureException() {}
+
+  public MetadataOperationFailureException(String msg) {
+    super(msg);
+  }
+
+  public MetadataOperationFailureException(Throwable cause) {
+    super(cause);
+  }
+
+  public MetadataOperationFailureException(String msg, Throwable cause) {
+    super(msg, cause);
+  }
 }
 
 class NoSuchEntityException extends ObjectStorageInternalException {
-    public NoSuchEntityException() {}
+  public NoSuchEntityException() {}
 
-    public NoSuchEntityException(String msg) {
-        super(msg);
-    }
+  public NoSuchEntityException(String msg) {
+    super(msg);
+  }
 
-    public NoSuchEntityException(Throwable cause) {
-        super(cause);
-    }
+  public NoSuchEntityException(Throwable cause) {
+    super(cause);
+  }
 
-    public NoSuchEntityException(String msg, Throwable cause) {
-        super(msg, cause);
-    }
+  public NoSuchEntityException(String msg, Throwable cause) {
+    super(msg, cause);
+  }
 }
 
 /**
@@ -79,22 +79,22 @@ class NoSuchEntityException extends ObjectStorageInternalException {
  * of the entity prohibits an update
  */
 class IllegalResourceStateException extends ObjectStorageInternalException {
-	String expected;
-	String found;
-	
-	public IllegalResourceStateException() {}
-	
-	public IllegalResourceStateException(String msg) {
-		super(msg);
-	}
+  String expected;
+  String found;
 
-    public IllegalResourceStateException(String msg, Throwable cause) {
-        super(msg, cause);
-    }
-	
-	public IllegalResourceStateException(String msg, Throwable cause, String expectedState, String foundState) {
-        super(msg, cause);
-		expected = expectedState;
-		found = foundState;
-	}	
+  public IllegalResourceStateException() {}
+
+  public IllegalResourceStateException(String msg) {
+    super(msg);
+  }
+
+  public IllegalResourceStateException(String msg, Throwable cause) {
+    super(msg, cause);
+  }
+
+  public IllegalResourceStateException(String msg, Throwable cause, String expectedState, String foundState) {
+    super(msg, cause);
+    expected = expectedState;
+    found = foundState;
+  }
 }

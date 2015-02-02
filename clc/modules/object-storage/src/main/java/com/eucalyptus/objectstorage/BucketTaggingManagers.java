@@ -20,23 +20,22 @@
 
 package com.eucalyptus.objectstorage;
 
-
 import com.eucalyptus.objectstorage.metadata.BucketTaggingManager;
 import com.eucalyptus.objectstorage.metadata.DbBucketTaggingManagerImpl;
 
 public class BucketTaggingManagers {
 
-  private static final BucketTaggingManager manager = new DbBucketTaggingManagerImpl( );
+  private static final BucketTaggingManager manager = new DbBucketTaggingManagerImpl();
   private static BucketTaggingManager mocked = null;
 
-  public static BucketTaggingManager getInstance( ) {
-    if ( mocked != null ) {
+  public static BucketTaggingManager getInstance() {
+    if (mocked != null) {
       return mocked;
     }
     return manager;
   }
 
-  static void setInstance( BucketTaggingManager mock ) {
+  static void setInstance(BucketTaggingManager mock) {
     mocked = mock;
   }
 }

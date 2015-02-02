@@ -73,47 +73,48 @@ import com.google.common.base.Strings;
 
 @Deprecated
 public class BlockStorageManagerFactory {
-	private static Logger LOG = Logger.getLogger(BlockStorageManagerFactory.class);	
+  private static Logger LOG = Logger.getLogger(BlockStorageManagerFactory.class);
 
-	public static LogicalStorageManager getBlockStorageManager() throws Exception {		
-		//Get the basic service config, but this is stale, so we must query the db directly
-		StorageControllerConfiguration scServiceConfig = (StorageControllerConfiguration)(Components.lookup(Storage.class).getLocalServiceConfiguration());
-		if(scServiceConfig == null) {
-			throw new ClassNotFoundException("Cannot lookup SC config because partition or service name is not found");
-		}
-		
-		//Get the latest info from the DB directly.
-		StorageControllerConfiguration exampleConfig = new StorageControllerConfiguration();		
-		exampleConfig.setPartition(scServiceConfig.getPartition());
-		exampleConfig.setName(scServiceConfig.getName());
-		exampleConfig.setHostName(scServiceConfig.getHostName());
-		
-		EntityTransaction trans = Entities.get(StorageControllerConfiguration.class);
-		StorageControllerConfiguration scInfo = null;
-		try {
-			scInfo = Entities.uniqueResult(exampleConfig);
-		} catch(Exception e) {
-			throw new ClassNotFoundException("Error retrieving configuration for this SC: " + exampleConfig.getPartition() + " " + exampleConfig.getName(),e);
-		}
-		finally {
-			trans.commit();
-		}
-		
-		String ebsManager = scInfo.getBlockStorageManager();		
-		if(Strings.isNullOrEmpty(ebsManager)) {
-			LOG.error("No block storage backend specified.");
-			throw new ClassNotFoundException("Block Storage Backend not specified");
-		}
-		
-		//Update the in-memory state of the service config
-		scServiceConfig.setBlockStorageManager(scInfo.getBlockStorageManager());
-		
-		try {
-			ebsManager = "com.eucalyptus.storage." + ebsManager;			
-			return (LogicalStorageManager) ClassLoader.getSystemClassLoader().loadClass(ebsManager).newInstance();
-		} catch (ClassNotFoundException e) {
-			LOG.error("No such backend: " + ebsManager + ". Did you spell it correctly? " + e);
-			throw e;
-		}
-	}
+  public static LogicalStorageManager getBlockStorageManager() throws Exception {
+    // Get the basic service config, but this is stale, so we must query the db directly
+    StorageControllerConfiguration scServiceConfig =
+        (StorageControllerConfiguration) (Components.lookup(Storage.class).getLocalServiceConfiguration());
+    if (scServiceConfig == null) {
+      throw new ClassNotFoundException("Cannot lookup SC config because partition or service name is not found");
+    }
+
+    // Get the latest info from the DB directly.
+    StorageControllerConfiguration exampleConfig = new StorageControllerConfiguration();
+    exampleConfig.setPartition(scServiceConfig.getPartition());
+    exampleConfig.setName(scServiceConfig.getName());
+    exampleConfig.setHostName(scServiceConfig.getHostName());
+
+    EntityTransaction trans = Entities.get(StorageControllerConfiguration.class);
+    StorageControllerConfiguration scInfo = null;
+    try {
+      scInfo = Entities.uniqueResult(exampleConfig);
+    } catch (Exception e) {
+      throw new ClassNotFoundException("Error retrieving configuration for this SC: " + exampleConfig.getPartition() + " " + exampleConfig.getName(),
+          e);
+    } finally {
+      trans.commit();
+    }
+
+    String ebsManager = scInfo.getBlockStorageManager();
+    if (Strings.isNullOrEmpty(ebsManager)) {
+      LOG.error("No block storage backend specified.");
+      throw new ClassNotFoundException("Block Storage Backend not specified");
+    }
+
+    // Update the in-memory state of the service config
+    scServiceConfig.setBlockStorageManager(scInfo.getBlockStorageManager());
+
+    try {
+      ebsManager = "com.eucalyptus.storage." + ebsManager;
+      return (LogicalStorageManager) ClassLoader.getSystemClassLoader().loadClass(ebsManager).newInstance();
+    } catch (ClassNotFoundException e) {
+      LOG.error("No such backend: " + ebsManager + ". Did you spell it correctly? " + e);
+      throw e;
+    }
+  }
 }

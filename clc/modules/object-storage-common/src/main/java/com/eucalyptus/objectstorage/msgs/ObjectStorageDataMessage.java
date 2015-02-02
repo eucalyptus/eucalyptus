@@ -64,98 +64,95 @@ package com.eucalyptus.objectstorage.msgs;
 
 import java.nio.ByteBuffer;
 
-
 public class ObjectStorageDataMessage {
-    private Header header;
-    private byte[] payload;
-    private static final String DELIMITER = "/";
+  private Header header;
+  private byte[] payload;
+  private static final String DELIMITER = "/";
 
-    public enum Header {
-        START, DATA, INTERRUPT, EOF
+  public enum Header {
+    START, DATA, INTERRUPT, EOF
+  }
+
+  public Header getHeader() {
+    return header;
+  }
+
+  public void setHeader(Header header) {
+    this.header = header;
+  }
+
+  public byte[] getPayload() {
+    return payload;
+  }
+
+  public void setPayload(byte[] payload) {
+    this.payload = payload;
+  }
+
+  public ObjectStorageDataMessage(Header header, byte[] payload) {
+    this.header = header;
+    this.payload = payload;
+  }
+
+  public ObjectStorageDataMessage() {}
+
+  public static ObjectStorageDataMessage EOF() {
+    return new ObjectStorageDataMessage(Header.EOF, String.valueOf(System.currentTimeMillis()).getBytes());
+  }
+
+  public static ObjectStorageDataMessage InterruptTransaction() {
+    return new ObjectStorageDataMessage(Header.INTERRUPT, new byte[0]);
+  }
+
+  public static ObjectStorageDataMessage StartOfData(long size) {
+    return new ObjectStorageDataMessage(Header.START, String.valueOf(size).getBytes());
+  }
+
+  public static ObjectStorageDataMessage DataMessage(byte[] data) {
+    return new ObjectStorageDataMessage(Header.DATA, data);
+  }
+
+  public static ObjectStorageDataMessage DataMessage(byte[] data, int length) {
+    byte[] bytes = new byte[length];
+    copyBytes(data, bytes, 0, length);
+    return new ObjectStorageDataMessage(Header.DATA, bytes);
+  }
+
+  public static ObjectStorageDataMessage DataMessage(ByteBuffer buffer, int length) {
+    byte[] bytes = new byte[length];
+    buffer.get(bytes, 0, length);
+    return new ObjectStorageDataMessage(Header.DATA, bytes);
+  }
+
+  public static boolean isStart(ObjectStorageDataMessage message) {
+    if (Header.START.equals(message.header)) {
+      return true;
     }
+    return false;
+  }
 
-    public Header getHeader() {
-        return header;
+  public static boolean isEOF(ObjectStorageDataMessage message) {
+    if (Header.EOF.equals(message.header)) {
+      return true;
     }
+    return false;
+  }
 
-    public void setHeader(Header header) {
-        this.header = header;
+  public static boolean isInterrupted(ObjectStorageDataMessage message) {
+    if (Header.INTERRUPT.equals(message.header)) {
+      return true;
     }
+    return false;
+  }
 
-    public byte[] getPayload() {
-        return payload;
+  public static boolean isData(ObjectStorageDataMessage message) {
+    if (Header.DATA.equals(message.header)) {
+      return true;
     }
+    return false;
+  }
 
-    public void setPayload(byte[] payload) {
-        this.payload = payload;
-    }
-
-    public ObjectStorageDataMessage(Header header, byte[] payload) {
-        this.header = header;
-        this.payload = payload;
-    }
-
-    public ObjectStorageDataMessage() {
-    }
-
-    public static ObjectStorageDataMessage EOF() {
-        return new ObjectStorageDataMessage(Header.EOF, String.valueOf(System.currentTimeMillis()).getBytes());
-    }
-
-    public static ObjectStorageDataMessage InterruptTransaction() {
-        return new ObjectStorageDataMessage(Header.INTERRUPT, new byte[0]);
-    }
-
-    public static ObjectStorageDataMessage StartOfData(long size) {
-        return new ObjectStorageDataMessage(Header.START, String.valueOf(size).getBytes());
-    }
-
-    public static ObjectStorageDataMessage DataMessage(byte[] data) {
-        return new ObjectStorageDataMessage(Header.DATA, data);
-    }
-
-    public static ObjectStorageDataMessage DataMessage(byte[] data, int length) {
-        byte[] bytes = new byte[length];
-        copyBytes(data, bytes, 0, length);
-        return new ObjectStorageDataMessage(Header.DATA, bytes);
-    }
-
-    public static ObjectStorageDataMessage DataMessage(ByteBuffer buffer, int length) {
-        byte[] bytes = new byte[length];
-        buffer.get(bytes, 0, length);
-        return new ObjectStorageDataMessage(Header.DATA, bytes);
-    }
-
-
-    public static boolean isStart(ObjectStorageDataMessage message) {
-        if (Header.START.equals(message.header)) {
-            return true;
-        }
-        return false;
-    }
-
-    public static boolean isEOF(ObjectStorageDataMessage message) {
-        if (Header.EOF.equals(message.header)) {
-            return true;
-        }
-        return false;
-    }
-
-    public static boolean isInterrupted(ObjectStorageDataMessage message) {
-        if (Header.INTERRUPT.equals(message.header)) {
-            return true;
-        }
-        return false;
-    }
-
-    public static boolean isData(ObjectStorageDataMessage message) {
-        if (Header.DATA.equals(message.header)) {
-            return true;
-        }
-        return false;
-    }
-
-    public static void copyBytes(byte[] sourceBytes, byte[] destBytes, int offset, int length) {
-        System.arraycopy(sourceBytes, 0, destBytes, offset, length);
-    }
+  public static void copyBytes(byte[] sourceBytes, byte[] destBytes, int offset, int length) {
+    System.arraycopy(sourceBytes, 0, destBytes, offset, length);
+  }
 }

@@ -70,42 +70,41 @@ import org.jboss.netty.handler.stream.ChunkedStream;
 import edu.ucsb.eucalyptus.constants.IsData;
 
 public class ChunkedDataStream extends ChunkedStream implements IsData {
-	private static Logger LOG = Logger.getLogger(ChunkedDataStream.class);
+  private static Logger LOG = Logger.getLogger(ChunkedDataStream.class);
 
-	@Override
-	public boolean hasNextChunk() throws Exception {
-		boolean next = super.hasNextChunk();
-		return next;
-	}
+  @Override
+  public boolean hasNextChunk() throws Exception {
+    boolean next = super.hasNextChunk();
+    return next;
+  }
 
-	@Override
-	public boolean isEndOfInput() throws Exception {
-		try {
-			int b = in.read();
-			if (b < 0) {
-				return true;
-			} else {
-				in.unread(b);
-				return false;
-			}
-		} catch (Exception e) {
-			LOG.error(e, e);
-			throw e;
-		}
-	}
+  @Override
+  public boolean isEndOfInput() throws Exception {
+    try {
+      int b = in.read();
+      if (b < 0) {
+        return true;
+      } else {
+        in.unread(b);
+        return false;
+      }
+    } catch (Exception e) {
+      LOG.error(e, e);
+      throw e;
+    }
+  }
 
-	private PushbackInputStream in;
-	
-	@Override
-	public void close() throws Exception {
-		super.close();
-		in.close();
-	}
+  private PushbackInputStream in;
 
-	public ChunkedDataStream(PushbackInputStream in) {
-		super(in);
-		this.in = in;
-	}
+  @Override
+  public void close() throws Exception {
+    super.close();
+    in.close();
+  }
+
+  public ChunkedDataStream(PushbackInputStream in) {
+    super(in);
+    this.in = in;
+  }
 
 }
-

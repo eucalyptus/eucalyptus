@@ -101,378 +101,385 @@ import com.eucalyptus.upgrade.Upgrades.PreUpgrade;
 @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 @ConfigurableClass(root = "storage", alias = "basic", description = "Basic storage controller configuration.", singleton = false, deferred = true)
 public class StorageInfo extends AbstractPersistent {
-	private static final Boolean DEFAULT_SHOULD_TRANSFER_SNAPSHOTS = Boolean.TRUE;
-	private static final Integer DEFAULT_MAX_SNAP_TRANSFER_RETRIES = 50;
-	private static final Integer DEFAULT_SNAPSHOT_PART_SIZE_IN_MB = 100;
-	private static final Integer DEFAULT_MAX_SNAPSHOT_PARTS_QUEUE_SIZE = 5;
-	private static final Integer DEFAULT_MAX_SNAPSHOT_CONCURRENT_TRANSFERS = 3;
-	private static final Integer DEFAULT_SNAPSHOT_TRANSFER_TIMEOUT = 48;
-	private static final Integer DEFAULT_READ_BUFFER_SIZE_IN_MB = 1;
-	private static final Integer DEFAULT_WRITE_BUFFER_SIZE_IN_MB = 100;
+  private static final Boolean DEFAULT_SHOULD_TRANSFER_SNAPSHOTS = Boolean.TRUE;
+  private static final Integer DEFAULT_MAX_SNAP_TRANSFER_RETRIES = 50;
+  private static final Integer DEFAULT_SNAPSHOT_PART_SIZE_IN_MB = 100;
+  private static final Integer DEFAULT_MAX_SNAPSHOT_PARTS_QUEUE_SIZE = 5;
+  private static final Integer DEFAULT_MAX_SNAPSHOT_CONCURRENT_TRANSFERS = 3;
+  private static final Integer DEFAULT_SNAPSHOT_TRANSFER_TIMEOUT = 48;
+  private static final Integer DEFAULT_READ_BUFFER_SIZE_IN_MB = 1;
+  private static final Integer DEFAULT_WRITE_BUFFER_SIZE_IN_MB = 100;
 
-	@Transient
-	private static Logger LOG = Logger.getLogger(StorageInfo.class);
+  @Transient
+  private static Logger LOG = Logger.getLogger(StorageInfo.class);
 
-	@ConfigurableIdentifier
-	@Column(name = "storage_name", unique = true)
-	private String name;
+  @ConfigurableIdentifier
+  @Column(name = "storage_name", unique = true)
+  private String name;
 
-	@ConfigurableField(description = "Total disk space reserved for volumes", displayName = "Disk space reserved for volumes")
-	@Column(name = "system_storage_volume_size_gb")
-	private Integer maxTotalVolumeSizeInGb;
+  @ConfigurableField(description = "Total disk space reserved for volumes", displayName = "Disk space reserved for volumes")
+  @Column(name = "system_storage_volume_size_gb")
+  private Integer maxTotalVolumeSizeInGb;
 
-	@ConfigurableField(description = "Max volume size", displayName = "Max volume size")
-	@Column(name = "system_storage_max_volume_size_gb")
-	private Integer maxVolumeSizeInGB;
+  @ConfigurableField(description = "Max volume size", displayName = "Max volume size")
+  @Column(name = "system_storage_max_volume_size_gb")
+  private Integer maxVolumeSizeInGB;
 
-	@ConfigurableField(description = "Should transfer snapshots", displayName = "Transfer snapshots to ObjectStorage", type = ConfigurableFieldType.BOOLEAN)
-	@Column(name = "system_storage_transfer_snapshots")
-	private Boolean shouldTransferSnapshots;
+  @ConfigurableField(description = "Should transfer snapshots", displayName = "Transfer snapshots to ObjectStorage",
+      type = ConfigurableFieldType.BOOLEAN)
+  @Column(name = "system_storage_transfer_snapshots")
+  private Boolean shouldTransferSnapshots;
 
-	@ConfigurableField(description = "Maximum retry count for snapshot transfer", displayName = "Max Snaphot Transfer Retries", initial = "50")
-	@Column(name = "max_snap_transfer_retries")
-	private Integer maxSnapTransferRetries;
+  @ConfigurableField(description = "Maximum retry count for snapshot transfer", displayName = "Max Snaphot Transfer Retries", initial = "50")
+  @Column(name = "max_snap_transfer_retries")
+  private Integer maxSnapTransferRetries;
 
-	@ConfigurableField(description = "Expiration time for deleted volumes (hours)", displayName = "Deleted Volumes Expiration Time (Hours)")
-	@Column(name = "deleted_vol_expiration")
-	private Integer deletedVolExpiration;
+  @ConfigurableField(description = "Expiration time for deleted volumes (hours)", displayName = "Deleted Volumes Expiration Time (Hours)")
+  @Column(name = "deleted_vol_expiration")
+  private Integer deletedVolExpiration;
 
-	@ConfigurableField(description = "Snapshot part size in MB for snapshot transfers using multipart upload. Minimum part size is 5MB", displayName = "Snapshot Part Size", initial = "100", changeListener = MinimumPartSizeChangeListener.class)
-	@Column(name = "snapshot_part_size_mb")
-	private Integer snapshotPartSizeInMB;
+  @ConfigurableField(description = "Snapshot part size in MB for snapshot transfers using multipart upload. Minimum part size is 5MB",
+      displayName = "Snapshot Part Size", initial = "100", changeListener = MinimumPartSizeChangeListener.class)
+  @Column(name = "snapshot_part_size_mb")
+  private Integer snapshotPartSizeInMB;
 
-	@ConfigurableField(description = "Maximum number of snapshot parts per snapshot that can be spooled on the disk", displayName = "Maximum Queue Size", initial = "5", changeListener = PositiveIntegerChangeListener.class)
-	@Column(name = "max_snapshot_parts_queue_size")
-	private Integer maxSnapshotPartsQueueSize;
+  @ConfigurableField(description = "Maximum number of snapshot parts per snapshot that can be spooled on the disk",
+      displayName = "Maximum Queue Size", initial = "5", changeListener = PositiveIntegerChangeListener.class)
+  @Column(name = "max_snapshot_parts_queue_size")
+  private Integer maxSnapshotPartsQueueSize;
 
-	@ConfigurableField(description = "Maximum number of snapshots that can be uploaded concurrently", displayName = "Maximum Concurrent Snapshot Uploads", initial = "3", changeListener = PositiveIntegerChangeListener.class)
-	@Column(name = "max_concurrent_snapshot_transfers")
-	private Integer maxConcurrentSnapshotTransfers;
+  @ConfigurableField(description = "Maximum number of snapshots that can be uploaded concurrently",
+      displayName = "Maximum Concurrent Snapshot Uploads", initial = "3", changeListener = PositiveIntegerChangeListener.class)
+  @Column(name = "max_concurrent_snapshot_transfers")
+  private Integer maxConcurrentSnapshotTransfers;
 
-	@ConfigurableField(description = "Snapshot upload wait time in hours after which the upload will be cancelled", displayName = "Snapshot Upload Timeout", initial = "48", changeListener = PositiveIntegerChangeListener.class)
-	@Column(name = "snapshot_transfer_timeout_hours")
-	private Integer snapshotTransferTimeoutInHours;
+  @ConfigurableField(description = "Snapshot upload wait time in hours after which the upload will be cancelled",
+      displayName = "Snapshot Upload Timeout", initial = "48", changeListener = PositiveIntegerChangeListener.class)
+  @Column(name = "snapshot_transfer_timeout_hours")
+  private Integer snapshotTransferTimeoutInHours;
 
-	@ConfigurableField(description = "Buffer size in MB for reading data from snapshot when uploading snapshot to objectstorage gateway", displayName = "Read Buffer Size", initial = "1", changeListener = PositiveIntegerChangeListener.class)
-	@Column(name = "read_buffer_size_mb")
-	private Integer readBufferSizeInMB;
+  @ConfigurableField(description = "Buffer size in MB for reading data from snapshot when uploading snapshot to objectstorage gateway",
+      displayName = "Read Buffer Size", initial = "1", changeListener = PositiveIntegerChangeListener.class)
+  @Column(name = "read_buffer_size_mb")
+  private Integer readBufferSizeInMB;
 
-	@ConfigurableField(description = "Buffer size in MB for writing data to snapshot when downloading snapshot from objectstorage gateway", displayName = "Write Buffer Size", initial = "100", changeListener = PositiveIntegerChangeListener.class)
-	@Column(name = "write_buffer_size_mb")
-	private Integer writeBufferSizeInMB;
+  @ConfigurableField(description = "Buffer size in MB for writing data to snapshot when downloading snapshot from objectstorage gateway",
+      displayName = "Write Buffer Size", initial = "100", changeListener = PositiveIntegerChangeListener.class)
+  @Column(name = "write_buffer_size_mb")
+  private Integer writeBufferSizeInMB;
 
-	public StorageInfo() {
-		this.name = StorageProperties.NAME;
-	}
+  public StorageInfo() {
+    this.name = StorageProperties.NAME;
+  }
 
-	public StorageInfo(final String name) {
-		this.name = name;
-	}
+  public StorageInfo(final String name) {
+    this.name = name;
+  }
 
-	public StorageInfo(final String name, final Integer maxTotalVolumeSizeInGb, final Integer maxVolumeSizeInGB, final Boolean shouldTransferSnapshots) {
-		this.name = name;
-		this.maxTotalVolumeSizeInGb = maxTotalVolumeSizeInGb;
-		this.maxVolumeSizeInGB = maxVolumeSizeInGB;
-		this.shouldTransferSnapshots = shouldTransferSnapshots;
-		this.deletedVolExpiration = StorageProperties.DELETED_VOLUME_EXPIRATION_TIME;
-	}
+  public StorageInfo(final String name, final Integer maxTotalVolumeSizeInGb, final Integer maxVolumeSizeInGB, final Boolean shouldTransferSnapshots) {
+    this.name = name;
+    this.maxTotalVolumeSizeInGb = maxTotalVolumeSizeInGb;
+    this.maxVolumeSizeInGB = maxVolumeSizeInGB;
+    this.shouldTransferSnapshots = shouldTransferSnapshots;
+    this.deletedVolExpiration = StorageProperties.DELETED_VOLUME_EXPIRATION_TIME;
+  }
 
-	public String getName() {
-		return name;
-	}
+  public String getName() {
+    return name;
+  }
 
-	public void setName(String name) {
-		this.name = name;
-	}
+  public void setName(String name) {
+    this.name = name;
+  }
 
-	public Integer getMaxTotalVolumeSizeInGb() {
-		return maxTotalVolumeSizeInGb;
-	}
+  public Integer getMaxTotalVolumeSizeInGb() {
+    return maxTotalVolumeSizeInGb;
+  }
 
-	public void setMaxTotalVolumeSizeInGb(Integer maxTotalVolumeSizeInGb) {
-		this.maxTotalVolumeSizeInGb = maxTotalVolumeSizeInGb;
-	}
+  public void setMaxTotalVolumeSizeInGb(Integer maxTotalVolumeSizeInGb) {
+    this.maxTotalVolumeSizeInGb = maxTotalVolumeSizeInGb;
+  }
 
-	public Integer getMaxVolumeSizeInGB() {
-		return maxVolumeSizeInGB;
-	}
+  public Integer getMaxVolumeSizeInGB() {
+    return maxVolumeSizeInGB;
+  }
 
-	public void setMaxVolumeSizeInGB(Integer maxVolumeSizeInGB) {
-		this.maxVolumeSizeInGB = maxVolumeSizeInGB;
-	}
+  public void setMaxVolumeSizeInGB(Integer maxVolumeSizeInGB) {
+    this.maxVolumeSizeInGB = maxVolumeSizeInGB;
+  }
 
-	public Boolean getShouldTransferSnapshots() {
-		return shouldTransferSnapshots;
-	}
+  public Boolean getShouldTransferSnapshots() {
+    return shouldTransferSnapshots;
+  }
 
-	public void setShouldTransferSnapshots(Boolean shouldTransferSnapshots) {
-		this.shouldTransferSnapshots = shouldTransferSnapshots;
-	}
+  public void setShouldTransferSnapshots(Boolean shouldTransferSnapshots) {
+    this.shouldTransferSnapshots = shouldTransferSnapshots;
+  }
 
-	public Integer getMaxSnapTransferRetries() {
-		return maxSnapTransferRetries;
-	}
+  public Integer getMaxSnapTransferRetries() {
+    return maxSnapTransferRetries;
+  }
 
-	public void setMaxSnapTransferRetries(Integer maxSnapTransferRetries) {
-		this.maxSnapTransferRetries = maxSnapTransferRetries;
-	}
+  public void setMaxSnapTransferRetries(Integer maxSnapTransferRetries) {
+    this.maxSnapTransferRetries = maxSnapTransferRetries;
+  }
 
-	public Integer getDeletedVolExpiration() {
-		return deletedVolExpiration == null ? StorageProperties.DELETED_VOLUME_EXPIRATION_TIME : deletedVolExpiration;
-	}
+  public Integer getDeletedVolExpiration() {
+    return deletedVolExpiration == null ? StorageProperties.DELETED_VOLUME_EXPIRATION_TIME : deletedVolExpiration;
+  }
 
-	public void setDeletedVolExpiration(Integer deletedVolExpiration) {
-		this.deletedVolExpiration = deletedVolExpiration;
-	}
+  public void setDeletedVolExpiration(Integer deletedVolExpiration) {
+    this.deletedVolExpiration = deletedVolExpiration;
+  }
 
-	public Integer getSnapshotPartSizeInMB() {
-		return snapshotPartSizeInMB;
-	}
+  public Integer getSnapshotPartSizeInMB() {
+    return snapshotPartSizeInMB;
+  }
 
-	public void setSnapshotPartSizeInMB(Integer snapshotPartSizeInMB) {
-		this.snapshotPartSizeInMB = snapshotPartSizeInMB;
-	}
+  public void setSnapshotPartSizeInMB(Integer snapshotPartSizeInMB) {
+    this.snapshotPartSizeInMB = snapshotPartSizeInMB;
+  }
 
-	public Integer getMaxSnapshotPartsQueueSize() {
-		return maxSnapshotPartsQueueSize;
-	}
+  public Integer getMaxSnapshotPartsQueueSize() {
+    return maxSnapshotPartsQueueSize;
+  }
 
-	public void setMaxSnapshotPartsQueueSize(Integer maxSnapshotPartsQueueSize) {
-		this.maxSnapshotPartsQueueSize = maxSnapshotPartsQueueSize;
-	}
+  public void setMaxSnapshotPartsQueueSize(Integer maxSnapshotPartsQueueSize) {
+    this.maxSnapshotPartsQueueSize = maxSnapshotPartsQueueSize;
+  }
 
-	public Integer getMaxConcurrentSnapshotTransfers() {
-		return maxConcurrentSnapshotTransfers;
-	}
+  public Integer getMaxConcurrentSnapshotTransfers() {
+    return maxConcurrentSnapshotTransfers;
+  }
 
-	public void setMaxConcurrentSnapshotTransfers(Integer maxConcurrentSnapshotTransfers) {
-		this.maxConcurrentSnapshotTransfers = maxConcurrentSnapshotTransfers;
-	}
+  public void setMaxConcurrentSnapshotTransfers(Integer maxConcurrentSnapshotTransfers) {
+    this.maxConcurrentSnapshotTransfers = maxConcurrentSnapshotTransfers;
+  }
 
-	public Integer getSnapshotTransferTimeoutInHours() {
-		return snapshotTransferTimeoutInHours;
-	}
+  public Integer getSnapshotTransferTimeoutInHours() {
+    return snapshotTransferTimeoutInHours;
+  }
 
-	public void setSnapshotTransferTimeoutInHours(Integer snapshotTransferTimeoutInHours) {
-		this.snapshotTransferTimeoutInHours = snapshotTransferTimeoutInHours;
-	}
+  public void setSnapshotTransferTimeoutInHours(Integer snapshotTransferTimeoutInHours) {
+    this.snapshotTransferTimeoutInHours = snapshotTransferTimeoutInHours;
+  }
 
-	public Integer getReadBufferSizeInMB() {
-		return readBufferSizeInMB;
-	}
+  public Integer getReadBufferSizeInMB() {
+    return readBufferSizeInMB;
+  }
 
-	public void setReadBufferSizeInMB(Integer readBufferSizeInMB) {
-		this.readBufferSizeInMB = readBufferSizeInMB;
-	}
+  public void setReadBufferSizeInMB(Integer readBufferSizeInMB) {
+    this.readBufferSizeInMB = readBufferSizeInMB;
+  }
 
-	public Integer getWriteBufferSizeInMB() {
-		return writeBufferSizeInMB;
-	}
+  public Integer getWriteBufferSizeInMB() {
+    return writeBufferSizeInMB;
+  }
 
-	public void setWriteBufferSizeInMB(Integer writeBufferSizeInMB) {
-		this.writeBufferSizeInMB = writeBufferSizeInMB;
-	}
+  public void setWriteBufferSizeInMB(Integer writeBufferSizeInMB) {
+    this.writeBufferSizeInMB = writeBufferSizeInMB;
+  }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		StorageInfo other = (StorageInfo) obj;
-		if (name == null) {
-			if (other.name != null)
-				return false;
-		} else if (!name.equals(other.name))
-			return false;
-		return true;
-	}
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    StorageInfo other = (StorageInfo) obj;
+    if (name == null) {
+      if (other.name != null)
+        return false;
+    } else if (!name.equals(other.name))
+      return false;
+    return true;
+  }
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((name == null) ? 0 : name.hashCode());
-		return result;
-	}
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((name == null) ? 0 : name.hashCode());
+    return result;
+  }
 
-	@Override
-	public String toString() {
-		return this.name;
-	}
+  @Override
+  public String toString() {
+    return this.name;
+  }
 
-	@PreUpdate
-	@PostLoad
-	public void setDefaults() {
-		if (maxTotalVolumeSizeInGb == null) {
-			maxTotalVolumeSizeInGb = StorageProperties.MAX_TOTAL_VOLUME_SIZE;
-		}
-		if (maxVolumeSizeInGB == null) {
-			maxVolumeSizeInGB = StorageProperties.MAX_TOTAL_VOLUME_SIZE;
-		}
-		if (shouldTransferSnapshots == null) {
-			shouldTransferSnapshots = DEFAULT_SHOULD_TRANSFER_SNAPSHOTS;
-		}
-		if (maxSnapTransferRetries == null) {
-			maxSnapTransferRetries = DEFAULT_MAX_SNAP_TRANSFER_RETRIES;
-		}
-		if (deletedVolExpiration == null) {
-			deletedVolExpiration = StorageProperties.DELETED_VOLUME_EXPIRATION_TIME;
-		}
-		if (snapshotPartSizeInMB == null) {
-			snapshotPartSizeInMB = DEFAULT_SNAPSHOT_PART_SIZE_IN_MB;
-		}
-		if (maxSnapshotPartsQueueSize == null) {
-			maxSnapshotPartsQueueSize = DEFAULT_MAX_SNAPSHOT_PARTS_QUEUE_SIZE;
-		}
-		if (maxConcurrentSnapshotTransfers == null) {
-			maxConcurrentSnapshotTransfers = DEFAULT_MAX_SNAPSHOT_CONCURRENT_TRANSFERS;
-		}
-		if (snapshotTransferTimeoutInHours == null) {
-			snapshotTransferTimeoutInHours = DEFAULT_SNAPSHOT_TRANSFER_TIMEOUT;
-		}
-		if (readBufferSizeInMB == null) {
-			readBufferSizeInMB = DEFAULT_READ_BUFFER_SIZE_IN_MB;
-		}
-		if (writeBufferSizeInMB == null) {
-			writeBufferSizeInMB = DEFAULT_WRITE_BUFFER_SIZE_IN_MB;
-		}
-	}
+  @PreUpdate
+  @PostLoad
+  public void setDefaults() {
+    if (maxTotalVolumeSizeInGb == null) {
+      maxTotalVolumeSizeInGb = StorageProperties.MAX_TOTAL_VOLUME_SIZE;
+    }
+    if (maxVolumeSizeInGB == null) {
+      maxVolumeSizeInGB = StorageProperties.MAX_TOTAL_VOLUME_SIZE;
+    }
+    if (shouldTransferSnapshots == null) {
+      shouldTransferSnapshots = DEFAULT_SHOULD_TRANSFER_SNAPSHOTS;
+    }
+    if (maxSnapTransferRetries == null) {
+      maxSnapTransferRetries = DEFAULT_MAX_SNAP_TRANSFER_RETRIES;
+    }
+    if (deletedVolExpiration == null) {
+      deletedVolExpiration = StorageProperties.DELETED_VOLUME_EXPIRATION_TIME;
+    }
+    if (snapshotPartSizeInMB == null) {
+      snapshotPartSizeInMB = DEFAULT_SNAPSHOT_PART_SIZE_IN_MB;
+    }
+    if (maxSnapshotPartsQueueSize == null) {
+      maxSnapshotPartsQueueSize = DEFAULT_MAX_SNAPSHOT_PARTS_QUEUE_SIZE;
+    }
+    if (maxConcurrentSnapshotTransfers == null) {
+      maxConcurrentSnapshotTransfers = DEFAULT_MAX_SNAPSHOT_CONCURRENT_TRANSFERS;
+    }
+    if (snapshotTransferTimeoutInHours == null) {
+      snapshotTransferTimeoutInHours = DEFAULT_SNAPSHOT_TRANSFER_TIMEOUT;
+    }
+    if (readBufferSizeInMB == null) {
+      readBufferSizeInMB = DEFAULT_READ_BUFFER_SIZE_IN_MB;
+    }
+    if (writeBufferSizeInMB == null) {
+      writeBufferSizeInMB = DEFAULT_WRITE_BUFFER_SIZE_IN_MB;
+    }
+  }
 
-	private static StorageInfo getDefaultInstance() {
-		StorageInfo info = new StorageInfo(StorageProperties.NAME);
-		info.setMaxTotalVolumeSizeInGb(StorageProperties.MAX_TOTAL_VOLUME_SIZE);
-		info.setMaxVolumeSizeInGB(StorageProperties.MAX_VOLUME_SIZE);
-		info.setShouldTransferSnapshots(DEFAULT_SHOULD_TRANSFER_SNAPSHOTS);
-		info.setDeletedVolExpiration(StorageProperties.DELETED_VOLUME_EXPIRATION_TIME);
-		info.setMaxSnapTransferRetries(DEFAULT_MAX_SNAP_TRANSFER_RETRIES);
-		info.setSnapshotPartSizeInMB(DEFAULT_SNAPSHOT_PART_SIZE_IN_MB);
-		info.setMaxSnapshotPartsQueueSize(DEFAULT_MAX_SNAPSHOT_PARTS_QUEUE_SIZE);
-		info.setMaxConcurrentSnapshotTransfers(DEFAULT_MAX_SNAPSHOT_CONCURRENT_TRANSFERS);
-		info.setSnapshotTransferTimeoutInHours(DEFAULT_SNAPSHOT_TRANSFER_TIMEOUT);
-		info.setReadBufferSizeInMB(DEFAULT_READ_BUFFER_SIZE_IN_MB);
-		info.setWriteBufferSizeInMB(DEFAULT_WRITE_BUFFER_SIZE_IN_MB);
-		return info;
-	}
+  private static StorageInfo getDefaultInstance() {
+    StorageInfo info = new StorageInfo(StorageProperties.NAME);
+    info.setMaxTotalVolumeSizeInGb(StorageProperties.MAX_TOTAL_VOLUME_SIZE);
+    info.setMaxVolumeSizeInGB(StorageProperties.MAX_VOLUME_SIZE);
+    info.setShouldTransferSnapshots(DEFAULT_SHOULD_TRANSFER_SNAPSHOTS);
+    info.setDeletedVolExpiration(StorageProperties.DELETED_VOLUME_EXPIRATION_TIME);
+    info.setMaxSnapTransferRetries(DEFAULT_MAX_SNAP_TRANSFER_RETRIES);
+    info.setSnapshotPartSizeInMB(DEFAULT_SNAPSHOT_PART_SIZE_IN_MB);
+    info.setMaxSnapshotPartsQueueSize(DEFAULT_MAX_SNAPSHOT_PARTS_QUEUE_SIZE);
+    info.setMaxConcurrentSnapshotTransfers(DEFAULT_MAX_SNAPSHOT_CONCURRENT_TRANSFERS);
+    info.setSnapshotTransferTimeoutInHours(DEFAULT_SNAPSHOT_TRANSFER_TIMEOUT);
+    info.setReadBufferSizeInMB(DEFAULT_READ_BUFFER_SIZE_IN_MB);
+    info.setWriteBufferSizeInMB(DEFAULT_WRITE_BUFFER_SIZE_IN_MB);
+    return info;
+  }
 
-	public static StorageInfo getStorageInfo() {
-		StorageInfo conf = null;
+  public static StorageInfo getStorageInfo() {
+    StorageInfo conf = null;
 
-		try {
-			conf = Transactions.find(new StorageInfo());
-		} catch (Exception e) {
-			LOG.warn("Storage controller properties for " + StorageProperties.NAME + " not found. Loading defaults.");
-			try {
-				conf = Transactions.saveDirect(getDefaultInstance());
-			} catch (Exception e1) {
-				try {
-					conf = Transactions.find(new StorageInfo());
-				} catch (Exception e2) {
-					LOG.warn("Failed to persist and retrieve StorageInfo entity");
-				}
-			}
-		}
-
-		if (conf == null) {
-			conf = getDefaultInstance();
-		}
-
-		return conf;
-	}
-
-	public static class MinimumPartSizeChangeListener implements PropertyChangeListener<Integer> {
-
-		@Override
-		public void fireChange(ConfigurableProperty t, Integer newValue) throws ConfigurablePropertyException {
-			try {
-				if (newValue == null) {
-					LOG.error("Invalid value for " + t.getFieldName());
-					throw new ConfigurablePropertyException("Invalid value for " + t.getFieldName());
-				} else if (newValue.intValue() < 5) {
-					LOG.error(t.getFieldName() + " cannot be modified to " + newValue + ". It must be greater than or equal to 5");
-					throw new ConfigurablePropertyException(t.getFieldName() + " cannot be modified to " + newValue + ". It must be greater than or equal to 5");
-				}
-			} catch (IllegalArgumentException e) {
-				throw new ConfigurablePropertyException("Invalid paths: " + e, e);
-			}
-
-		}
-	}
-
-	public static class PositiveIntegerChangeListener implements PropertyChangeListener<Integer> {
-
-		@Override
-		public void fireChange(ConfigurableProperty t, Integer newValue) throws ConfigurablePropertyException {
-			if (newValue == null) {
-				LOG.error("Invalid value for " + t.getFieldName());
-				throw new ConfigurablePropertyException("Invalid value for " + t.getFieldName());
-			} else if (newValue.intValue() <= 0) {
-				LOG.error(t.getFieldName() + " cannot be modified to " + newValue + ". It must be an integer greater than 0");
-				throw new ConfigurablePropertyException(t.getFieldName() + " cannot be modified to " + newValue + ". It must be an integer greater than 0");
-			}
-		}
-	}
-
-    @PreUpgrade(since = v4_1_0, value = Storage.class)
-    public static class RenameColumns implements Callable<Boolean> {
-  
-      private static final Logger LOG = Logger.getLogger(RenameColumns.class);
-  
-      @Override
-      public Boolean call() throws Exception {
-  
-        LOG.info("Renaming columns in table storage_info");
-        Sql sql = null;
-  
+    try {
+      conf = Transactions.find(new StorageInfo());
+    } catch (Exception e) {
+      LOG.warn("Storage controller properties for " + StorageProperties.NAME + " not found. Loading defaults.");
+      try {
+        conf = Transactions.saveDirect(getDefaultInstance());
+      } catch (Exception e1) {
         try {
-  
-          sql = DatabaseFilters.NEWVERSION.getConnection("eucalyptus_storage");
-  
-          String table = "storage_info";
-  
-          // check if the old column exists before renaming it
-          String oldName = "max_concurrent_snapshot_uploads";
-          String newName = "max_concurrent_snapshot_transfers";
-          List<GroovyRowResult> result =
-              sql.rows(String.format("select column_name from information_schema.columns where table_name='%s' and column_name='%s'", table, oldName));
-          if (result != null && !result.isEmpty()) {
-            // drop new column if it exists
-            LOG.info("Dropping column if it exists " + newName);
-            sql.execute(String.format("alter table %s drop column if exists %s", table, newName));
-            // rename the new column
-            LOG.info("Renaming column " + oldName + " to " + newName);
-            sql.execute(String.format("alter table %s rename column %s to %s", table, oldName, newName));
-          } else {
-            LOG.debug("Column " + oldName + " not found, nothing to rename");
-          }
-  
-          // check if the old column exists before renaming it
-          oldName = "snapshot_upload_timeout_hours";
-          newName = "snapshot_transfer_timeout_hours";
-          result =
-              sql.rows(String.format("select column_name from information_schema.columns where table_name='%s' and column_name='%s'", table, oldName));
-          if (result != null && !result.isEmpty()) {
-            // drop new column if it exists
-            LOG.info("Dropping column if it exists " + newName);
-            sql.execute(String.format("alter table %s drop column if exists %s", table, newName));
-            // rename the new column
-            LOG.info("Renaming column " + oldName + " to " + newName);
-            sql.execute(String.format("alter table %s rename column %s to %s", table, oldName, newName));
-          } else {
-            LOG.debug("Column " + oldName + " not found, nothing to rename");
-          }
-  
-          return Boolean.TRUE;
-        } catch (Exception e) {
-          LOG.warn("Failed to rename columns in table storage_info", e);
-          return Boolean.TRUE;
-        } finally {
-          if (sql != null) {
-            sql.close();
-          }
+          conf = Transactions.find(new StorageInfo());
+        } catch (Exception e2) {
+          LOG.warn("Failed to persist and retrieve StorageInfo entity");
         }
       }
     }
+
+    if (conf == null) {
+      conf = getDefaultInstance();
+    }
+
+    return conf;
+  }
+
+  public static class MinimumPartSizeChangeListener implements PropertyChangeListener<Integer> {
+
+    @Override
+    public void fireChange(ConfigurableProperty t, Integer newValue) throws ConfigurablePropertyException {
+      try {
+        if (newValue == null) {
+          LOG.error("Invalid value for " + t.getFieldName());
+          throw new ConfigurablePropertyException("Invalid value for " + t.getFieldName());
+        } else if (newValue.intValue() < 5) {
+          LOG.error(t.getFieldName() + " cannot be modified to " + newValue + ". It must be greater than or equal to 5");
+          throw new ConfigurablePropertyException(t.getFieldName() + " cannot be modified to " + newValue + ". It must be greater than or equal to 5");
+        }
+      } catch (IllegalArgumentException e) {
+        throw new ConfigurablePropertyException("Invalid paths: " + e, e);
+      }
+
+    }
+  }
+
+  public static class PositiveIntegerChangeListener implements PropertyChangeListener<Integer> {
+
+    @Override
+    public void fireChange(ConfigurableProperty t, Integer newValue) throws ConfigurablePropertyException {
+      if (newValue == null) {
+        LOG.error("Invalid value for " + t.getFieldName());
+        throw new ConfigurablePropertyException("Invalid value for " + t.getFieldName());
+      } else if (newValue.intValue() <= 0) {
+        LOG.error(t.getFieldName() + " cannot be modified to " + newValue + ". It must be an integer greater than 0");
+        throw new ConfigurablePropertyException(t.getFieldName() + " cannot be modified to " + newValue + ". It must be an integer greater than 0");
+      }
+    }
+  }
+
+  @PreUpgrade(since = v4_1_0, value = Storage.class)
+  public static class RenameColumns implements Callable<Boolean> {
+
+    private static final Logger LOG = Logger.getLogger(RenameColumns.class);
+
+    @Override
+    public Boolean call() throws Exception {
+
+      LOG.info("Renaming columns in table storage_info");
+      Sql sql = null;
+
+      try {
+
+        sql = DatabaseFilters.NEWVERSION.getConnection("eucalyptus_storage");
+
+        String table = "storage_info";
+
+        // check if the old column exists before renaming it
+        String oldName = "max_concurrent_snapshot_uploads";
+        String newName = "max_concurrent_snapshot_transfers";
+        List<GroovyRowResult> result =
+            sql.rows(String.format("select column_name from information_schema.columns where table_name='%s' and column_name='%s'", table, oldName));
+        if (result != null && !result.isEmpty()) {
+          // drop new column if it exists
+          LOG.info("Dropping column if it exists " + newName);
+          sql.execute(String.format("alter table %s drop column if exists %s", table, newName));
+          // rename the new column
+          LOG.info("Renaming column " + oldName + " to " + newName);
+          sql.execute(String.format("alter table %s rename column %s to %s", table, oldName, newName));
+        } else {
+          LOG.debug("Column " + oldName + " not found, nothing to rename");
+        }
+
+        // check if the old column exists before renaming it
+        oldName = "snapshot_upload_timeout_hours";
+        newName = "snapshot_transfer_timeout_hours";
+        result =
+            sql.rows(String.format("select column_name from information_schema.columns where table_name='%s' and column_name='%s'", table, oldName));
+        if (result != null && !result.isEmpty()) {
+          // drop new column if it exists
+          LOG.info("Dropping column if it exists " + newName);
+          sql.execute(String.format("alter table %s drop column if exists %s", table, newName));
+          // rename the new column
+          LOG.info("Renaming column " + oldName + " to " + newName);
+          sql.execute(String.format("alter table %s rename column %s to %s", table, oldName, newName));
+        } else {
+          LOG.debug("Column " + oldName + " not found, nothing to rename");
+        }
+
+        return Boolean.TRUE;
+      } catch (Exception e) {
+        LOG.warn("Failed to rename columns in table storage_info", e);
+        return Boolean.TRUE;
+      } finally {
+        if (sql != null) {
+          sql.close();
+        }
+      }
+    }
+  }
 }

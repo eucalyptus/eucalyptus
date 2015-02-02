@@ -24,30 +24,29 @@ import com.eucalyptus.objectstorage.metadata.BucketLifecycleManager;
 import com.eucalyptus.objectstorage.metadata.DbBucketLifecycleManagerImpl;
 
 /**
- * Manager factory for bucket lifecycle metadata handler. Returns an instance
- * for the configured manager.
+ * Manager factory for bucket lifecycle metadata handler. Returns an instance for the configured manager.
  *
  */
 public class BucketLifecycleManagers {
-	private static BucketLifecycleManager manager = new DbBucketLifecycleManagerImpl();
-    private static BucketLifecycleManager mocked;
+  private static BucketLifecycleManager manager = new DbBucketLifecycleManagerImpl();
+  private static BucketLifecycleManager mocked;
 
-	public static BucketLifecycleManager getInstance() {
-		if(mocked != null) {
-            return mocked;
-        } else {
-            return manager;
-        }
-	}
-
-    /**
-     * this allows a mock BucketLifecycleManager to be injected (for unit testing purposes)
-     * visibility is package, so tests must live in the same package
-     *
-     * @param mock
-     */
-    static void setInstance(BucketLifecycleManager mock) {
-        mocked = mock;
+  public static BucketLifecycleManager getInstance() {
+    if (mocked != null) {
+      return mocked;
+    } else {
+      return manager;
     }
+  }
+
+  /**
+   * this allows a mock BucketLifecycleManager to be injected (for unit testing purposes) visibility is package, so tests must live in the same
+   * package
+   *
+   * @param mock
+   */
+  static void setInstance(BucketLifecycleManager mock) {
+    mocked = mock;
+  }
 
 }

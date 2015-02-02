@@ -25,27 +25,24 @@ import org.junit.Test
 
 class BucketReaperTaskTest {
 
-    @Ignore
-    @Test
-    public void testEmptyBucketReaping() {
+  @Ignore
+  @Test
+  public void testEmptyBucketReaping() {
+  }
 
-    }
+  @Ignore
+  @Test
+  public void testNonEmptyBucketReaping() {
+  }
 
-    @Ignore
-    @Test
-    public void testNonEmptyBucketReaping() {
+  @Ignore
+  @Test
+  public void testFailedBucketReaping() {
+  }
 
-    }
-
-    @Ignore
-    @Test
-    public void testFailedBucketReaping() {
-
-    }
-
-    @Ignore
-    @Test
-    public void testConcurrentBucketReaping() {
-        //Use threads here
-    }
+  @Ignore
+  @Test
+  public void testConcurrentBucketReaping() {
+    //Use threads here
+  }
 }

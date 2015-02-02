@@ -67,22 +67,19 @@ import com.eucalyptus.util.EucalyptusCloudException;
 @SuppressWarnings("serial")
 public class AccessDeniedException extends EucalyptusCloudException {
 
-	public AccessDeniedException()
-	{
-		super( "AccessDenied" );
-	}
-	
-	public AccessDeniedException(String resource)
-	{
-		super("Access to resource " + resource + " denied");
-	}
+  public AccessDeniedException() {
+    super("AccessDenied");
+  }
 
-	public AccessDeniedException(Throwable ex)
-	{
-		super("AccessDenied", ex);
-	}
-	public AccessDeniedException(String message, Throwable ex)
-	{
-		super(message,ex);
-	}
+  public AccessDeniedException(String resource) {
+    super("Access to resource " + resource + " denied");
+  }
+
+  public AccessDeniedException(Throwable ex) {
+    super("AccessDenied", ex);
+  }
+
+  public AccessDeniedException(String message, Throwable ex) {
+    super(message, ex);
+  }
 }

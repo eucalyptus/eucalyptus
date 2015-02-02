@@ -62,59 +62,58 @@
 
 package com.eucalyptus.objectstorage.entities;
 
-import com.eucalyptus.entities.AbstractPersistent;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
 
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+
+import com.eucalyptus.entities.AbstractPersistent;
+
 /*
  *
  */
 @Entity
 @PersistenceContext(name = "eucalyptus_osg")
-@Table(name = "scheduled_jobs",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"job_class_name", "job_schedule"},
-                name = "sched_jobs_composite_key")
-)
+@Table(name = "scheduled_jobs", uniqueConstraints = @UniqueConstraint(columnNames = {"job_class_name", "job_schedule"},
+    name = "sched_jobs_composite_key"))
 @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class ScheduledJob extends AbstractPersistent {
 
-    @Column(name = "job_class_name")
-    private String jobClassName;
+  @Column(name = "job_class_name")
+  private String jobClassName;
 
-    @Column(name = "job_schedule")
-    private String jobSchedule;
+  @Column(name = "job_schedule")
+  private String jobSchedule;
 
-    @Column(name = "job_description")
-    private String jobDescription;
+  @Column(name = "job_description")
+  private String jobDescription;
 
-    public String getJobClassName() {
-        return jobClassName;
-    }
+  public String getJobClassName() {
+    return jobClassName;
+  }
 
-    public void setJobClassName(String jobClassName) {
-        this.jobClassName = jobClassName;
-    }
+  public void setJobClassName(String jobClassName) {
+    this.jobClassName = jobClassName;
+  }
 
-    public String getJobSchedule() {
-        return jobSchedule;
-    }
+  public String getJobSchedule() {
+    return jobSchedule;
+  }
 
-    public void setJobSchedule(String jobSchedule) {
-        this.jobSchedule = jobSchedule;
-    }
+  public void setJobSchedule(String jobSchedule) {
+    this.jobSchedule = jobSchedule;
+  }
 
-    public String getJobDescription() {
-        return jobDescription;
-    }
+  public String getJobDescription() {
+    return jobDescription;
+  }
 
-    public void setJobDescription(String jobDescription) {
-        this.jobDescription = jobDescription;
-    }
+  public void setJobDescription(String jobDescription) {
+    this.jobDescription = jobDescription;
+  }
 
 }

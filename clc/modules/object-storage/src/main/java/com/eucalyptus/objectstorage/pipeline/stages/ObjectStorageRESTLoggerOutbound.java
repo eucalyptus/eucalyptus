@@ -69,48 +69,47 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.objectstorage.ObjectStorageBucketLogger;
-import com.eucalyptus.objectstorage.msgs.ObjectStorageResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageResponseType;
 import com.eucalyptus.storage.msgs.BucketLogData;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
-
 
 @ChannelPipelineCoverage("one")
 public class ObjectStorageRESTLoggerOutbound extends MessageStackHandler {
 
-	@Override
-	public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-		if ( event.getMessage( ) instanceof MappingHttpResponse ) {
-			MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
-			if(httpResponse.getMessage() instanceof ObjectStorageResponseType) {
-				ObjectStorageResponseType response = (ObjectStorageResponseType) httpResponse.getMessage();
-				BucketLogData logData = response.getLogData();
-				if(logData != null) {
-					computeStats(logData, httpResponse);
-					response.setLogData(null);
-				}
-			} else if(httpResponse.getMessage() instanceof ObjectStorageErrorMessageType) {
-				ObjectStorageErrorMessageType errorMessage = (ObjectStorageErrorMessageType) httpResponse.getMessage();
-				BucketLogData logData = errorMessage.getLogData();
-				if(logData != null) {
-					computeStats(logData, httpResponse);
-					logData.setError(errorMessage.getCode());
-					errorMessage.setLogData(null);
-				}
-			}
-		}
-	}
+  @Override
+  public void outgoingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
+    if (event.getMessage() instanceof MappingHttpResponse) {
+      MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
+      if (httpResponse.getMessage() instanceof ObjectStorageResponseType) {
+        ObjectStorageResponseType response = (ObjectStorageResponseType) httpResponse.getMessage();
+        BucketLogData logData = response.getLogData();
+        if (logData != null) {
+          computeStats(logData, httpResponse);
+          response.setLogData(null);
+        }
+      } else if (httpResponse.getMessage() instanceof ObjectStorageErrorMessageType) {
+        ObjectStorageErrorMessageType errorMessage = (ObjectStorageErrorMessageType) httpResponse.getMessage();
+        BucketLogData logData = errorMessage.getLogData();
+        if (logData != null) {
+          computeStats(logData, httpResponse);
+          logData.setError(errorMessage.getCode());
+          errorMessage.setLogData(null);
+        }
+      }
+    }
+  }
 
-	private void computeStats(BucketLogData logData, MappingHttpResponse httpResponse) {
-		logData.setBytesSent(httpResponse.getContent().readableBytes());
-		long startTime = logData.getTotalTime();
-		long currentTime = System.currentTimeMillis();
-		logData.setTotalTime(currentTime - startTime);
-		long startTurnAroundTime = logData.getTurnAroundTime();
-		logData.setTurnAroundTime(Math.min((currentTime - startTurnAroundTime), logData.getTotalTime()));
-		HttpResponseStatus status = httpResponse.getStatus();
-		if(status != null)
-			logData.setStatus(Integer.toString(status.getCode()));
-		ObjectStorageBucketLogger.getInstance().addLogEntry(logData);				
-	}
+  private void computeStats(BucketLogData logData, MappingHttpResponse httpResponse) {
+    logData.setBytesSent(httpResponse.getContent().readableBytes());
+    long startTime = logData.getTotalTime();
+    long currentTime = System.currentTimeMillis();
+    logData.setTotalTime(currentTime - startTime);
+    long startTurnAroundTime = logData.getTurnAroundTime();
+    logData.setTurnAroundTime(Math.min((currentTime - startTurnAroundTime), logData.getTotalTime()));
+    HttpResponseStatus status = httpResponse.getStatus();
+    if (status != null)
+      logData.setStatus(Integer.toString(status.getCode()));
+    ObjectStorageBucketLogger.getInstance().addLogEntry(logData);
+  }
 }
