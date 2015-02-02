@@ -62,6 +62,7 @@
 
 package com.eucalyptus.address;
 
+import static com.eucalyptus.vm.VmInstance.VmStateSet;
 import java.util.Collections;
 import java.util.NoSuchElementException;
 import javax.inject.Inject;
@@ -243,7 +244,10 @@ public class AddressManager {
     final VmInstance vm = instanceId == null ? null : RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
     if ( address.getDomain( ) != Address.Domain.vpc ) { // EC2-Classic
       if ( vm == null ) {
-        throw new ClientComputeException( " InvalidParameterCombination", "InstanceId must be specified when using PublicIp" );
+        throw new ClientComputeException( "InvalidParameterCombination", "InstanceId must be specified when using PublicIp" );
+      }
+      if ( VmStateSet.NOT_RUNNING.apply( vm ) ) {
+        throw new ClientComputeException( "InvalidInstanceID", "The instance '"+vm.getDisplayName( )+"' is not in a valid state for this operation." );
       }
       final VmInstance oldVm = findCurrentAssignedVm( address );
       final Address oldAddr = findVmExistingAddress( vm );
@@ -255,7 +259,8 @@ public class AddressManager {
 
       final UnconditionalCallback<BaseMessage> assignTarget = new UnconditionalCallback<BaseMessage>( ) {
         public void fire( ) {
-          AddressingDispatcher.dispatch(            AsyncRequests.newRequest( address.assign( vm ).getCallback() ).then(
+          AddressingDispatcher.dispatch(
+              AsyncRequests.newRequest( address.assign( vm ).getCallback() ).then(
                   new Callback.Success<BaseMessage>() {
                     @Override
                     public void fire( BaseMessage response ) {
@@ -293,9 +298,20 @@ public class AddressManager {
     } else { // VPC
       final NetworkInterface networkInterface;
       try ( final TransactionResource tx = Entities.transactionFor( VmInstance.class ) ) {
-        networkInterface = vm != null ?
-            Iterables.getOnlyElement( Entities.merge( vm ).getNetworkInterfaces() ) :
-            RestrictedTypes.doPrivileged( networkInterfaceId, NetworkInterface.class );
+        if ( vm != null ) {
+          if ( VmStateSet.EXPECTING_TEARDOWN.apply( vm ) || VmStateSet.DONE.apply( vm ) ) { // STOPPED is OK
+            throw new ClientComputeException( "InvalidInstanceID", "The instance '"+vm.getDisplayName( )+"' is not in a valid state for this operation." );
+          }
+          networkInterface = Iterables.getOnlyElement( Entities.merge( vm ).getNetworkInterfaces( ) );
+        } else {
+          networkInterface = RestrictedTypes.doPrivileged( networkInterfaceId, NetworkInterface.class );
+          if ( networkInterface.isAttached( ) ) {
+            final VmInstance attachedVm = networkInterface.getAttachment( ).getInstance( );
+            if ( VmStateSet.EXPECTING_TEARDOWN.apply( attachedVm ) ) { // STOPPED is OK
+              throw new ClientComputeException( "IncorrectInstanceState", "The instance to which '"+networkInterfaceId+"' is attached is not in a valid state for this operation" );
+            }
+          }
+        }
       }
       reply.set_return( true );
 
