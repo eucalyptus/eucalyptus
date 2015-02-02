@@ -28,6 +28,10 @@ import com.eucalyptus.ws.protocol.QueryBindingInfo;
 public class ClientUnauthorizedComputeException extends ComputeException {
   private static final long serialVersionUID = 1L;
 
+  public ClientUnauthorizedComputeException( ) {
+    this( "You are not authorized to perform this operation." );
+  }
+
   public ClientUnauthorizedComputeException( final String message ) {
     this( "UnauthorizedOperation", message );
   }
