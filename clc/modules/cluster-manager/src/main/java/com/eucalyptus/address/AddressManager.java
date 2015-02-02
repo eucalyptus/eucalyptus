@@ -304,6 +304,9 @@ public class AddressManager {
           }
           networkInterface = Iterables.getOnlyElement( Entities.merge( vm ).getNetworkInterfaces( ) );
         } else {
+          if ( networkInterfaceId == null ) {
+            throw new ClientComputeException( "MissingParameter", "Either instance ID or network interface id must be specified" );
+          }
           networkInterface = RestrictedTypes.doPrivileged( networkInterfaceId, NetworkInterface.class );
           if ( networkInterface.isAttached( ) ) {
             final VmInstance attachedVm = networkInterface.getAttachment( ).getInstance( );
