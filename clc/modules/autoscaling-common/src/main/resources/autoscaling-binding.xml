@@ -779,5 +779,17 @@
     <value name="Metric" field="metric" usage="optional"/>
     <value name="Granularity" field="granularity" usage="optional"/>
   </mapping>
+  <mapping name="DescribeAccountLimits" class="com.eucalyptus.autoscaling.common.msgs.DescribeAccountLimitsType">
+    <structure map-as="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage"/>
+  </mapping>
+  <mapping name="DescribeAccountLimitsResponse" class="com.eucalyptus.autoscaling.common.msgs.DescribeAccountLimitsResponseType">
+    <structure map-as="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage"/>
+    <structure name="DescribeAccountLimitsResult" field="describeAccountLimitsResult" usage="required" type="com.eucalyptus.autoscaling.common.msgs.DescribeAccountLimitsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.common.msgs.DescribeAccountLimitsResult" abstract="true">
+    <structure name="MaxNumberOfLaunchConfigurations"/>
+    <structure name="MaxNumberOfAutoScalingGroups"/>
+  </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage" abstract="true"/>
 </binding>

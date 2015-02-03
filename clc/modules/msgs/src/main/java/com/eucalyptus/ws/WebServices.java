@@ -103,6 +103,8 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.logging.Log4JLoggerFactory;
+import org.jboss.netty.util.ExternalResourceReleasable;
+import org.jboss.netty.util.ExternalResourceUtil;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.OrderedShutdown;
@@ -116,6 +118,8 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.CollectionUtils;
+import com.eucalyptus.util.Consumer;
+import com.eucalyptus.util.Consumers;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.LockResource;
 import com.eucalyptus.util.LogUtil;
@@ -130,6 +134,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 public class WebServices {
@@ -140,26 +145,34 @@ public class WebServices {
     static {
       InternalLoggerFactory.setDefaultFactory( new Log4JLoggerFactory( ) );
     }
+    private static final Consumer<Void> registerShutdownConsumer = Consumers.once( new Consumer<Void>() {
+      @Override
+      public void accept( final Void aVoid ) {
+        OrderedShutdown.registerShutdownHook( Empyrean.class, new Runnable( ){
+          @Override
+          public void run( ) {
+            LOG.debug( "Releasing resources on shutdown" );
+            try {
+              final List<ExternalResourceReleasable> resources = Lists.<ExternalResourceReleasable>newArrayList(
+                  Handlers.pipelineExecutionHandler( ),
+                  Handlers.serviceExecutionHandler( )
+              );
+              resources.addAll( Optional.fromNullable( nioClientSocketChannelFactory ).asSet( ) );
+              ExternalResourceUtil.release( resources.toArray( new ExternalResourceReleasable[ resources.size( ) ] ) );
+            } catch ( Throwable t ) {
+              LOG.error( "Error releasing resources", t );
+            }
+          }
+        } );
+      }
+    } );
 
     @Override
     public boolean load( ) throws Exception {
       WebServices.restart( );
+      registerShutdownConsumer.accept( null );
       return true;
     }
-    
-    @Override
-    public boolean check( ) throws Exception {
-      return super.check( );//TODO:GRZE: you know what...
-    }
-
-    @Override
-    public boolean stop( ) throws Exception {
-      Handlers.pipelineExecutionHandler( ).releaseExternalResources( );
-      Handlers.serviceExecutionHandler( ).releaseExternalResources( );
-      return true;
-    }
-    
-    
   }
 
   @ChannelHandler.Sharable

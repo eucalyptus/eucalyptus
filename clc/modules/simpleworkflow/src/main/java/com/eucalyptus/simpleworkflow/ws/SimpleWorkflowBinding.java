@@ -21,6 +21,7 @@ package com.eucalyptus.simpleworkflow.ws;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Date;
 import java.util.Map;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -39,6 +40,7 @@ import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
+import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.simpleworkflow.SwfJsonUtils;
@@ -119,6 +121,7 @@ public class SimpleWorkflowBinding extends MessageStackHandler implements Except
                                               @Nonnull final Throwable throwable ) throws Exception {
     HttpResponseStatus responseStatus = status;
     final Map<String,String> headers = Maps.newHashMap();
+    headers.put( HttpHeaders.Names.DATE, Timestamps.formatRfc822Timestamp( new Date( ) ) );
     headers.put( HttpHeaders.Names.CONTENT_TYPE, "application/x-amz-json-1.0" );
     final Optional<String> correlationId = getCorrelationId( event );
     if ( correlationId.isPresent( ) ) {

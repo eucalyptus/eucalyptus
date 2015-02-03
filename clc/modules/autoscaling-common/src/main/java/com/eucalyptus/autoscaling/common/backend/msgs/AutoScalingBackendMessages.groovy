@@ -1105,3 +1105,12 @@ public class DescribeAutoScalingNotificationTypesResult extends EucalyptusData {
   AutoScalingNotificationTypes autoScalingNotificationTypes
   public DescribeAutoScalingNotificationTypesResult() {  }
 }
+public class DescribeAccountLimitsType extends AutoScalingBackendMessage {
+}
+public class DescribeAccountLimitsResponseType extends AutoScalingBackendMessage {
+  public DescribeAccountLimitsResponseType() {  }
+  DescribeAccountLimitsResult describeAccountLimitsResult = new DescribeAccountLimitsResult()
+  ResponseMetadata responseMetadata = new ResponseMetadata()
+}
+public class DescribeAccountLimitsResult extends EucalyptusData {
+}
