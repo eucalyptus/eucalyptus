@@ -79,17 +79,24 @@
 
 package com.eucalyptus.objectstorage.util;
 
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.system.BaseDirectory;
+import com.google.common.base.CharMatcher;
+import com.google.common.base.Function;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 public class ObjectStorageProperties {
@@ -173,6 +180,8 @@ public class ObjectStorageProperties {
   public final static long EXPIRATION_LIMIT = 900000;
 
   public static final Pattern RANGE_HEADER_PATTERN = Pattern.compile("^bytes=(\\d*)-(\\d*)$");
+  public static final Pattern GRANT_HEADER_PATTERN = Pattern
+      .compile("^(\\s*(emailAddress|id|uri)=['\"]?[^,'\"]+['\"]?\\s*)(,\\s*(emailAddress|id|uri)=['\"]?[^,'\"]+['\"]?\\s*)*$");
 
   public enum CannedACL {
     private_only {
@@ -249,6 +258,53 @@ public class ObjectStorageProperties {
   public static final Map<X_AMZ_GRANT, Permission> HEADER_PERMISSION_MAP = ImmutableMap.<X_AMZ_GRANT, Permission>builder()
       .put(X_AMZ_GRANT.READ, Permission.READ).put(X_AMZ_GRANT.WRITE, Permission.WRITE).put(X_AMZ_GRANT.READ_ACP, Permission.READ_ACP)
       .put(X_AMZ_GRANT.WRITE_ACP, Permission.WRITE_ACP).put(X_AMZ_GRANT.FULL_CONTROL, Permission.FULL_CONTROL).build();
+
+  /**
+   * Splitting function for parsing x-amz-grant-* headers into a list of [key,value] string arrays</p>
+   * 
+   * Input to the function, header value: <code>x-amz-grant-read: emailAddress="xyz@amazon.com", uri="http://some-uri",id="canonical-id"</code></p>
+   * 
+   * Output from the function, list of string arrays: <code>{[emailAddress, xyz@amazon.com],[uri, http://some-uri],[id, canonical-id]}</code> </p>
+   */
+  // Tried using MapSplitter which does the same thing. However, it does not allow duplicate keys in the key-value output. So if the grant has two or
+  // more of the same identity elements (uri, id, emailAddress), only one of them gets through
+  public static final Function<String, List<String[]>> GRANT_HEADER_PARSER = new Function<String, List<String[]>>() {
+
+    private final Splitter COMMA_SPLITTER = Splitter.on(',').omitEmptyStrings().trimResults();
+    private final Splitter KEY_VALUE_SPLITTER = Splitter.on('=').limit(2).omitEmptyStrings()
+        .trimResults(CharMatcher.anyOf("'\"").or(CharMatcher.WHITESPACE));
+
+    @Override
+    public List<String[]> apply(String arg0) {
+      List<String[]> returnvalue = Lists.newArrayList();
+
+      for (String gpString : COMMA_SPLITTER.split(arg0)) {
+        Iterator<String> gpIterator = KEY_VALUE_SPLITTER.split(gpString).iterator();
+        String idType = null;
+        String idValue = null;
+
+        if (gpIterator != null && gpIterator.hasNext()) {
+          idType = gpIterator.next();
+        } else {
+          continue; // drop the header
+        }
+
+        if (gpIterator.hasNext()) {
+          idValue = gpIterator.next();
+        } else {
+          continue; // drop the header
+        }
+
+        if (StringUtils.isNotBlank(idType) && StringUtils.isNotBlank(idValue)) {
+          returnvalue.add(new String[] {idType, idValue});
+        } else {
+          continue; // drop the header
+        }
+      }
+
+      return returnvalue;
+    }
+  };
 
   public enum VersioningStatus {
     Enabled, Disabled, Suspended

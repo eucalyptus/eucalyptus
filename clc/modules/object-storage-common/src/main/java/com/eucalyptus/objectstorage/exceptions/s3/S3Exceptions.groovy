@@ -342,7 +342,7 @@ class InvalidAddressingHeaderException extends S3Exception {
 
 class InvalidArgumentException extends S3Exception {
   def InvalidArgumentException() {
-    super(S3ErrorCodeStrings.InvalidArgument, "Invalid Argument", HttpResponseStatus.BAD_REQUEST);
+    super(S3ErrorCodeStrings.InvalidArgument, "Argument format not recognized", HttpResponseStatus.BAD_REQUEST);
   }
 
   def InvalidArgumentException(String resource) {
@@ -354,6 +354,16 @@ class InvalidArgumentException extends S3Exception {
     this();
     this.resource = resource;
     this.message = message;
+  }
+
+  def InvalidArgumentException withArgumentName(String argumentName) {
+    this.argumentName = argumentName;
+    return this;
+  }
+
+  def InvalidArgumentException withArgumentValue(String argumentValue) {
+    this.argumentValue = argumentValue;
+    return this;
   }
 
   String argumentValue;

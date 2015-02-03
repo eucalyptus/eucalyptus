@@ -1255,36 +1255,48 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
 
       for (Map.Entry<X_AMZ_GRANT, Permission> mapEntry : ObjectStorageProperties.HEADER_PERMISSION_MAP.entrySet()) {
 
-        String grantsString = httpRequest.getAndRemoveHeader(mapEntry.getKey().toString());
-        String[] grantsArray = null;
+        String headerValue = httpRequest.getAndRemoveHeader(mapEntry.getKey().toString());
 
-        if (StringUtils.isNotBlank(grantsString) && (grantsArray = grantsString.split(",")) != null && grantsArray.length > 0) {
-          for (int i = 0; i < grantsArray.length; i++) {
-            // emailAddress="xyz@amazon.com"
-            String[] grantIdentityArray = grantsArray[0].split("=");
-            if (grantIdentityArray != null && grantIdentityArray.length == 2) {
-              switch (grantIdentityArray[0]) {
-                case "emailAddress":
-                  grants.add(new Grant(new Grantee(StringUtils.strip(grantIdentityArray[1], "'\"")), mapEntry.getValue().toString()));
-                  break;
-                case "id":
-                  grants.add(new Grant(new Grantee(new CanonicalUser(StringUtils.strip(grantIdentityArray[1], "'\""), "")), mapEntry.getValue()
-                      .toString()));
-                  break;
-                case "uri":
-                  grants.add(new Grant(new Grantee(new Group(StringUtils.strip(grantIdentityArray[1], "'\""))), mapEntry.getValue().toString()));
-                  break;
-                default:
-                  throw new InvalidArgumentException(mapEntry.getKey().toString(), "Argument format not recognized: " + grantIdentityArray[0]
-                      + ". Valid types are emailAddress, id or url");
+        if (StringUtils.isNotBlank(headerValue)) {
+
+          if (ObjectStorageProperties.GRANT_HEADER_PATTERN.matcher(headerValue).matches()) {
+
+            List<String[]> gpList = null;
+
+            try {
+              gpList = ObjectStorageProperties.GRANT_HEADER_PARSER.apply(headerValue);
+            } catch (Exception e) {
+              LOG.debug("Ignoring header: " + mapEntry.getKey().toString() + ". Unable to parse value: " + headerValue, e);
+              throw new InvalidArgumentException().withArgumentName(mapEntry.getKey().toString()).withArgumentValue(headerValue);
+            }
+
+            if (gpList != null && !gpList.isEmpty()) {
+              for (String[] gp : gpList) {
+                switch (gp[0]) {
+                  case "emailAddress":
+                    grants.add(new Grant(new Grantee(gp[1]), mapEntry.getValue().toString()));
+                    break;
+                  case "id":
+                    grants.add(new Grant(new Grantee(new CanonicalUser(gp[1], "")), mapEntry.getValue().toString()));
+                    break;
+                  case "uri":
+                    grants.add(new Grant(new Grantee(new Group(gp[1])), mapEntry.getValue().toString()));
+                    break;
+                  default:
+                    throw new InvalidArgumentException().withArgumentName(mapEntry.getKey().toString()).withArgumentValue(headerValue);
+                }
               }
             } else {
-              throw new InvalidArgumentException(mapEntry.getKey().toString(), "Argument format not recognized: " + grantsArray[0]
-                  + ". Valid format for grantee is 'type=value' where type is emailAddress, id or url");
+              LOG.debug("Ignoring header: " + mapEntry.getKey().toString() + ". Value is invalid: " + headerValue);
+              throw new InvalidArgumentException().withArgumentName(mapEntry.getKey().toString()).withArgumentValue(headerValue);
             }
+          } else {
+            LOG.debug("Cannot parse header: " + mapEntry.getKey().toString() + ", value:  " + headerValue + ". Value does not match pattern: "
+                + ObjectStorageProperties.GRANT_HEADER_PATTERN.toString());
+            throw new InvalidArgumentException().withArgumentName(mapEntry.getKey().toString()).withArgumentValue(headerValue);
           }
         } else {
-          // no header, nothing to do
+          // header not included, nothing to do here
         }
       }
 
