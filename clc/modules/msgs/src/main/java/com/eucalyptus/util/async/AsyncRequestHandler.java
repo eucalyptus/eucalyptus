@@ -281,7 +281,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
         final MappingHttpResponse response = ( MappingHttpResponse ) e.getMessage( );
         try {
           final R msg = ( R ) response.getMessage( );
-          if ( !msg.get_return( ) ) {
+          if ( !msg.get_return( true ) ) {
             this.teardown( new FailedRequestException( "Cluster response includes _return=false", msg ) );
           } else {
             this.response.set( msg );
