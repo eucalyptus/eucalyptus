@@ -45,6 +45,10 @@ public class VmSecurityMessage extends ComputeMessage{
 }
 /** *******************************************************************************/
 public class AuthorizeSecurityGroupIngressResponseType extends VmSecurityMessage {
+  @Override
+  Boolean get_return( final boolean ifError ) {
+    ifError || get_return( ) // false return should not be treated as an error, caller should check
+  }
 }
 public class AuthorizeSecurityGroupIngressType extends VmSecurityMessage {
   // Some old fields
@@ -69,6 +73,10 @@ class AuthorizeSecurityGroupEgressType extends VmSecurityMessage {
   ArrayList<IpPermissionType> ipPermissions = new ArrayList<IpPermissionType>();
 }
 class AuthorizeSecurityGroupEgressResponseType extends VmSecurityMessage {
+  @Override
+  Boolean get_return( final boolean ifError ) {
+    ifError || get_return( ) // false return should not be treated as an error, caller should check
+  }
 }
 /** *******************************************************************************/
 public class CreateSecurityGroupResponseType extends VmSecurityMessage {
