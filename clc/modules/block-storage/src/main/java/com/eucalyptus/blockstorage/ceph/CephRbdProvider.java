@@ -336,8 +336,8 @@ public class CephRbdProvider implements SANProvider {
   }
 
   @Override
-  public boolean checkSANCredentialsExist() {
-    return true;
+  public void checkConnectionInfo() {
+    // nothing to do here
   }
 
   @Override

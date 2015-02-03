@@ -81,6 +81,7 @@ import com.eucalyptus.blockstorage.StorageManagers;
 import com.eucalyptus.blockstorage.StorageResource;
 import com.eucalyptus.blockstorage.config.StorageControllerConfiguration;
 import com.eucalyptus.blockstorage.entities.StorageInfo;
+import com.eucalyptus.blockstorage.exceptions.ConnectionInfoNotFoundException;
 import com.eucalyptus.blockstorage.san.common.entities.SANInfo;
 import com.eucalyptus.blockstorage.san.common.entities.SANVolumeInfo;
 import com.eucalyptus.blockstorage.util.StorageProperties;
@@ -264,11 +265,18 @@ public class SANManager implements LogicalStorageManager {
     LOG.info("Configuring block storage backend for partition: " + StorageInfo.getStorageInfo().getName());
 
     // configure provider
-    if (connectionManager != null && connectionManager.checkSANCredentialsExist()) {
+    if (connectionManager != null) {
+      try {
+        connectionManager.checkConnectionInfo();
+      } catch (ConnectionInfoNotFoundException e) {
+        LOG.warn("Cannot configure SC blockstorage backend due to missing properties. " + e.getMessage());
+        throw new EucalyptusCloudException("Cannot configure SC blockstorage backend due to missing properties. " + e.getMessage());
+      }
+
       connectionManager.configure();
     } else {
-      LOG.warn("Cannot configure blockstorage backend because of missing properties");
-      throw new EucalyptusCloudException("Blockstorage backend not configured.");
+      LOG.warn("Reference to blockstorage backend not initalized");
+      throw new EucalyptusCloudException("Reference to blockstorage backend not initalized");
     }
   }
 
@@ -643,12 +651,6 @@ public class SANManager implements LogicalStorageManager {
   public void reload() {}
 
   public void startupChecks() throws EucalyptusCloudException {
-    try {
-      connectionManager.configure();
-    } catch (EucalyptusCloudException e) {
-      LOG.error(e);
-      throw e;
-    }
     connectionManager.checkConnection();
   }
 
@@ -957,7 +959,6 @@ public class SANManager implements LogicalStorageManager {
   }
 
   public void enable() throws EucalyptusCloudException {
-    connectionManager.configure();
     connectionManager.checkConnection();
   }
 
