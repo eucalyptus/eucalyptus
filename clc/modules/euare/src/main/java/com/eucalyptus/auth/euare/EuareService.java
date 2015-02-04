@@ -269,8 +269,10 @@ public class EuareService {
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = ctx.getUser( );
-    if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
-      userFound = lookupUserByName( account, request.getUserName( ) );
+    if ( !Strings.isNullOrEmpty( request.getUserName( ) ) || request.getDelegateAccount( ) != null ) {
+      userFound = lookupUserByName( account, Objects.firstNonNull(
+          Strings.emptyToNull( request.getUserName( ) ),
+          userFound.getName( ) ) );
     }
     ListSigningCertificatesResultType result = reply.getListSigningCertificatesResult( );
     result.setIsTruncated( false );
@@ -841,8 +843,10 @@ public class EuareService {
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = ctx.getUser( );
-    if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
-      userFound = lookupUserByName( account, request.getUserName( ) );
+    if ( !Strings.isNullOrEmpty( request.getUserName( ) ) || request.getDelegateAccount( ) != null ) {
+      userFound = lookupUserByName( account, Objects.firstNonNull(
+          Strings.emptyToNull( request.getUserName( ) ),
+          userFound.getName( ) ) );
     }
     ListAccessKeysResultType result = reply.getListAccessKeysResult( );
     try {
