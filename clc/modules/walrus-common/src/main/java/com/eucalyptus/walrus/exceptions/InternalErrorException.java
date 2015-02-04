@@ -67,24 +67,19 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 @SuppressWarnings("serial")
 public class InternalErrorException extends WalrusException {
 
-  public InternalErrorException()
-  {
-    super( "Internal Error" );
+  public InternalErrorException() {
+    super("Internal Error");
   }
 
-  public InternalErrorException(String resource)
-  {
+  public InternalErrorException(String resource) {
     super("InternalError", "Server reported Internal Error", "Resource", resource, HttpResponseStatus.INTERNAL_SERVER_ERROR);
   }
 
-
-  public InternalErrorException(Throwable ex)
-  {
+  public InternalErrorException(Throwable ex) {
     super("Not Found", ex);
   }
 
-  public InternalErrorException(String message, Throwable ex)
-  {
+  public InternalErrorException(String message, Throwable ex) {
     super(message, ex);
   }
 }

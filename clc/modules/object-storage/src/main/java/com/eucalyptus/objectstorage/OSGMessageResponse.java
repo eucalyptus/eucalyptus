@@ -23,34 +23,35 @@ package com.eucalyptus.objectstorage;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 public class OSGMessageResponse {
-    private HttpResponseStatus httpResponseStatus;
-    private String httpResponseBody;
+  private HttpResponseStatus httpResponseStatus;
+  private String httpResponseBody;
 
-    public String getHttpResponseBody() {
-        return httpResponseBody;
-    }
+  public String getHttpResponseBody() {
+    return httpResponseBody;
+  }
 
-    public void setHttpResponseBody(String httpResponseBody) {
-        this.httpResponseBody = httpResponseBody;
-    }
-    public HttpResponseStatus getHttpResponseStatus() {
-        return httpResponseStatus;
-    }
+  public void setHttpResponseBody(String httpResponseBody) {
+    this.httpResponseBody = httpResponseBody;
+  }
 
-    public void setHttpResponseStatus(HttpResponseStatus httpResponseStatus) {
-        this.httpResponseStatus = httpResponseStatus;
-    }
+  public HttpResponseStatus getHttpResponseStatus() {
+    return httpResponseStatus;
+  }
 
-    public OSGMessageResponse(HttpResponseStatus httpResponseStatus) {
-        this.httpResponseStatus = httpResponseStatus;
-        //no response body
-    }
+  public void setHttpResponseStatus(HttpResponseStatus httpResponseStatus) {
+    this.httpResponseStatus = httpResponseStatus;
+  }
 
-    public OSGMessageResponse(HttpResponseStatus httpResponseStatus, String httpResponseBody) {
-        this.httpResponseStatus = httpResponseStatus;
-        this.httpResponseBody = httpResponseBody;
-    }
+  public OSGMessageResponse(HttpResponseStatus httpResponseStatus) {
+    this.httpResponseStatus = httpResponseStatus;
+    // no response body
+  }
 
-    public static final OSGMessageResponse Continue = new OSGMessageResponse(HttpResponseStatus.CONTINUE);
-    public static final OSGMessageResponse Whitespace = new OSGMessageResponse(null, "");
+  public OSGMessageResponse(HttpResponseStatus httpResponseStatus, String httpResponseBody) {
+    this.httpResponseStatus = httpResponseStatus;
+    this.httpResponseBody = httpResponseBody;
+  }
+
+  public static final OSGMessageResponse Continue = new OSGMessageResponse(HttpResponseStatus.CONTINUE);
+  public static final OSGMessageResponse Whitespace = new OSGMessageResponse(null, "");
 }

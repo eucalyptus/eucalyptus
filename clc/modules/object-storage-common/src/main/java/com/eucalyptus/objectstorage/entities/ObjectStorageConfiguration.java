@@ -64,11 +64,10 @@ package com.eucalyptus.objectstorage.entities;
 
 import java.io.Serializable;
 
-import javax.persistence.Transient;
-
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
+import javax.persistence.Transient;
 
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -78,26 +77,27 @@ import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.objectstorage.ObjectStorage;
 
 @Entity
-@PersistenceContext(name="eucalyptus_config")
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@PersistenceContext(name = "eucalyptus_config")
+@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 @ComponentPart(ObjectStorage.class)
 public class ObjectStorageConfiguration extends ComponentConfiguration implements Serializable {
-	@Transient
-	public static String DEFAULT_SERVICE_PATH = "/services/objectstorage";
-	
-	@Column(name="osp_clients")
-	private String availableClients;
-	
-	public ObjectStorageConfiguration( ) { }
-	
-	public ObjectStorageConfiguration ( String partition, String name, String hostName, Integer port ) {
-		super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
-	}
+  @Transient
+  public static String DEFAULT_SERVICE_PATH = "/services/objectstorage";
 
-	public String getAvailableClients() {
-		return availableClients;
-	}
-	public void setAvailableClients(String availableClients) {
-		this.availableClients = availableClients;
-	}
+  @Column(name = "osp_clients")
+  private String availableClients;
+
+  public ObjectStorageConfiguration() {}
+
+  public ObjectStorageConfiguration(String partition, String name, String hostName, Integer port) {
+    super(partition, name, hostName, port, DEFAULT_SERVICE_PATH);
+  }
+
+  public String getAvailableClients() {
+    return availableClients;
+  }
+
+  public void setAvailableClients(String availableClients) {
+    this.availableClients = availableClients;
+  }
 }

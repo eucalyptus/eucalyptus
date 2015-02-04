@@ -67,24 +67,21 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 @SuppressWarnings("serial")
 public class InvalidTargetBucketForLoggingException extends WalrusException {
 
-  public InvalidTargetBucketForLoggingException()
-  {
-    super( "InvalidTargetBucketForLogging" );
+  public InvalidTargetBucketForLoggingException() {
+    super("InvalidTargetBucketForLogging");
   }
-  
-  public InvalidTargetBucketForLoggingException(String bucket)
-  {    
-    super("InvalidTargetBucketForLogging", "The target bucket for logging does not exist, is not owned by you, or does not have the appropriate grants for the log-delivery group.", "Bucket", bucket, HttpResponseStatus.BAD_REQUEST);    
+
+  public InvalidTargetBucketForLoggingException(String bucket) {
+    super("InvalidTargetBucketForLogging",
+        "The target bucket for logging does not exist, is not owned by you, or does not have the appropriate grants for the log-delivery group.",
+        "Bucket", bucket, HttpResponseStatus.BAD_REQUEST);
   }
-  
-    
-  public InvalidTargetBucketForLoggingException(Throwable ex)
-  {
+
+  public InvalidTargetBucketForLoggingException(Throwable ex) {
     super("InvalidTargetBucketForLogging", ex);
   }
-  
-  public InvalidTargetBucketForLoggingException(String message, Throwable ex)
-  {
+
+  public InvalidTargetBucketForLoggingException(String message, Throwable ex) {
     super(message, ex);
   }
 }

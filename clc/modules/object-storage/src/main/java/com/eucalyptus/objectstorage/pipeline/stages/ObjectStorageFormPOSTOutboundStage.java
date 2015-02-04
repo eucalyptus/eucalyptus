@@ -70,20 +70,20 @@ import com.eucalyptus.ws.stages.UnrollableStage;
 
 public class ObjectStorageFormPOSTOutboundStage implements UnrollableStage {
 
-	@Override
-	public int compareTo( UnrollableStage o ) {
-		return this.getName( ).compareTo( o.getName( ) );
-	}
+  @Override
+  public int compareTo(UnrollableStage o) {
+    return this.getName().compareTo(o.getName());
+  }
 
-	@Override
-	public String getName( ) {
-		return "objectstorage-post-outbound";
-	}
+  @Override
+  public String getName() {
+    return "objectstorage-post-outbound";
+  }
 
-	@Override
-	public void unrollStage( ChannelPipeline pipeline ) {
-		pipeline.addLast( "objectstorage-outbound-exception", new ObjectStorageOutboundExceptionHandler( ) );	  
-		pipeline.addLast( "objectstorage-outbound", new ObjectStorageOutboundHandler( ) );
-	}
+  @Override
+  public void unrollStage(ChannelPipeline pipeline) {
+    pipeline.addLast("objectstorage-outbound-exception", new ObjectStorageOutboundExceptionHandler());
+    pipeline.addLast("objectstorage-outbound", new ObjectStorageOutboundHandler());
+  }
 
 }

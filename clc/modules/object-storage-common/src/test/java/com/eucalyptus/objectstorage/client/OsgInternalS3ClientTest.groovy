@@ -34,41 +34,41 @@ import org.junit.Test
 @Ignore("Manual development test")
 class OsgInternalS3ClientTest {
 
-    @Test
-    void perfTestClientConstruction() {
-        //Ensure logging is off.
-        Logger rootLogger = Logger.getRootLogger()
-        rootLogger.setLevel(Level.FATAL)
+  @Test
+  void perfTestClientConstruction() {
+    //Ensure logging is off.
+    Logger rootLogger = Logger.getRootLogger()
+    rootLogger.setLevel(Level.FATAL)
 
-        int iterations = 100000
-        println("Doing " + iterations + " s3 client instantiations to get latency measurements")
+    int iterations = 100000
+    println("Doing " + iterations + " s3 client instantiations to get latency measurements")
 
-        long[] timing = new long[iterations]
-        OsgInternalS3Client client
-        BasicAWSCredentials fakeCreds = new BasicAWSCredentials("fakeaccesskey", "fakesecretkey")
+    long[] timing = new long[iterations]
+    OsgInternalS3Client client
+    BasicAWSCredentials fakeCreds = new BasicAWSCredentials("fakeaccesskey", "fakesecretkey")
 
-        for (int i = 0; i < iterations ; i++) {
-            timing[i] = System.nanoTime()
-            client = new OsgInternalS3Client(fakeCreds, false)
-            timing[i] = System.nanoTime() - timing[i]
-            client = null
-        }
-
-        Arrays.sort(timing)
-
-        //Show basics on timing.
-        long mean = 0;
-        for (int i = 0; i < iterations ; i++) {
-            mean += timing[i]
-            //println("Value: " + timing[i] + " ns")
-        }
-
-        mean = Math.ceil((double)mean / (double)iterations)
-        println("Mean = " + (mean/1000) + "us")
-        int onePercentileIndex = Math.floor((double)iterations * 0.01)
-        println("Median = " + (timing[iterations / 2]/1000) + "us")
-        println("99th percentile = " + (timing[iterations - onePercentileIndex - 1]/1000)+ "us")
-        println("1st percentile = " + (timing[onePercentileIndex]/1000) + "us")
-
+    for (int i = 0; i < iterations ; i++) {
+      timing[i] = System.nanoTime()
+      client = new OsgInternalS3Client(fakeCreds, false)
+      timing[i] = System.nanoTime() - timing[i]
+      client = null
     }
+
+    Arrays.sort(timing)
+
+    //Show basics on timing.
+    long mean = 0;
+    for (int i = 0; i < iterations ; i++) {
+      mean += timing[i]
+      //println("Value: " + timing[i] + " ns")
+    }
+
+    mean = Math.ceil((double)mean / (double)iterations)
+    println("Mean = " + (mean/1000) + "us")
+    int onePercentileIndex = Math.floor((double)iterations * 0.01)
+    println("Median = " + (timing[iterations / 2]/1000) + "us")
+    println("99th percentile = " + (timing[iterations - onePercentileIndex - 1]/1000)+ "us")
+    println("1st percentile = " + (timing[onePercentileIndex]/1000) + "us")
+
+  }
 }

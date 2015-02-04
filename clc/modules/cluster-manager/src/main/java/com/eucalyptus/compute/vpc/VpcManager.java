@@ -518,13 +518,17 @@ public class VpcManager {
         try {
           final Subnet subnet = subnets.lookupByName( accountFullName, subnetId, Functions.<Subnet>identity() );
           final Vpc vpc = subnet.getVpc( );
-          final Set<NetworkGroup> groups = request.getGroupSet( )==null ?
+          final Set<NetworkGroup> groups = request.getGroupSet( )==null || request.getGroupSet( ).groupIds( ).isEmpty( ) ?
               Sets.newHashSet( securityGroups.lookupDefault( vpc.getDisplayName( ), Functions.<NetworkGroup>identity( ) ) ) :
               Sets.newHashSet( Iterables.transform(
                   request.getGroupSet( ).groupIds( ),
                   RestrictedTypes.resolver( NetworkGroup.class ) ) );
           if ( groups.size( ) > VpcConfiguration.getSecurityGroupsPerNetworkInterface( ) ) {
             throw new ClientComputeException( "SecurityGroupsPerInterfaceLimitExceeded", "Security group limit exceeded" );
+          }
+          if ( !Collections.singleton( vpc.getDisplayName( ) ).equals(
+              Sets.newHashSet( Iterables.transform( groups, NetworkGroups.vpcId( ) ) ) ) ) {
+            throw Exceptions.toUndeclared( new ClientComputeException( "InvalidParameterValue", "Invalid security groups (inconsistent VPC)" ) );
           }
           final String identifier = Identifier.eni.generate();
           if ( privateIp != null ) {
@@ -1537,6 +1541,10 @@ public class VpcManager {
                     networkInterface.setNetworkGroups( Sets.newHashSet( Iterables.transform(
                         request.getGroupSet( ).groupIds( ),
                         RestrictedTypes.resolver( NetworkGroup.class ) ) ) );
+                    if ( !Collections.singleton( networkInterface.getVpc( ).getDisplayName( ) ).equals(
+                        Sets.newHashSet( Iterables.transform( networkInterface.getNetworkGroups( ), NetworkGroups.vpcId( ) ) ) ) ) {
+                      throw Exceptions.toUndeclared( new ClientComputeException( "InvalidParameterValue", "Invalid security groups (inconsistent VPC)" ) );
+                    }
                     if ( networkInterface.getNetworkGroups( ).size( ) > VpcConfiguration.getSecurityGroupsPerNetworkInterface( ) ) {
                       throw Exceptions.toUndeclared( new ClientComputeException( "SecurityGroupsPerInterfaceLimitExceeded", "Security group limit exceeded" ) );
                     }

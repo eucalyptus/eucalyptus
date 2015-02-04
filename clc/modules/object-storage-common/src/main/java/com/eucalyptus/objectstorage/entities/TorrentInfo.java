@@ -62,15 +62,15 @@
 
 package com.eucalyptus.objectstorage.entities;
 
-import com.eucalyptus.entities.AbstractPersistent;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+
+import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity
 @PersistenceContext(name = "eucalyptus_osg")
@@ -78,79 +78,75 @@ import javax.persistence.Table;
 @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class TorrentInfo extends AbstractPersistent {
 
-    @Column(name = "bucket_name")
-    private String bucketName;
+  @Column(name = "bucket_name")
+  private String bucketName;
 
-    @Column(name = "object_key")
-    private String objectKey;
+  @Column(name = "object_key")
+  private String objectKey;
 
-    @Column(name = "torrent_file")
-    private String torrentFile;
+  @Column(name = "torrent_file")
+  private String torrentFile;
 
-    public TorrentInfo(String bucketName, String objectKey) {
-        this.bucketName = bucketName;
-        this.objectKey = objectKey;
-    }
+  public TorrentInfo(String bucketName, String objectKey) {
+    this.bucketName = bucketName;
+    this.objectKey = objectKey;
+  }
 
-    public TorrentInfo() {
-    }
+  public TorrentInfo() {}
 
-    public String getBucketName() {
-        return bucketName;
-    }
+  public String getBucketName() {
+    return bucketName;
+  }
 
-    public void setBucketName(String bucketName) {
-        this.bucketName = bucketName;
-    }
+  public void setBucketName(String bucketName) {
+    this.bucketName = bucketName;
+  }
 
-    public String getObjectKey() {
-        return objectKey;
-    }
+  public String getObjectKey() {
+    return objectKey;
+  }
 
-    public void setObjectKey(String objectKey) {
-        this.objectKey = objectKey;
-    }
+  public void setObjectKey(String objectKey) {
+    this.objectKey = objectKey;
+  }
 
-    public String getTorrentFile() {
-        return torrentFile;
-    }
+  public String getTorrentFile() {
+    return torrentFile;
+  }
 
-    public void setTorrentFile(String torrent) {
-        this.torrentFile = torrent;
-    }
+  public void setTorrentFile(String torrent) {
+    this.torrentFile = torrent;
+  }
 
-    @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result
-                + ((bucketName == null) ? 0 : bucketName.hashCode());
-        result = prime * result
-                + ((objectKey == null) ? 0 : objectKey.hashCode());
-        return result;
-    }
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((bucketName == null) ? 0 : bucketName.hashCode());
+    result = prime * result + ((objectKey == null) ? 0 : objectKey.hashCode());
+    return result;
+  }
 
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        TorrentInfo other = (TorrentInfo) obj;
-        if (bucketName == null) {
-            if (other.bucketName != null)
-                return false;
-        } else if (!bucketName.equals(other.bucketName))
-            return false;
-        if (objectKey == null) {
-            if (other.objectKey != null)
-                return false;
-        } else if (!objectKey.equals(other.objectKey))
-            return false;
-        return true;
-    }
-
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    TorrentInfo other = (TorrentInfo) obj;
+    if (bucketName == null) {
+      if (other.bucketName != null)
+        return false;
+    } else if (!bucketName.equals(other.bucketName))
+      return false;
+    if (objectKey == null) {
+      if (other.objectKey != null)
+        return false;
+    } else if (!objectKey.equals(other.objectKey))
+      return false;
+    return true;
+  }
 
 }

@@ -32,128 +32,128 @@ import org.junit.Test
  * Created by zhill on 4/9/14.
  */
 class WalrusProviderClientTest {
-    @Test
-    public void testExceptionHandler() {
-        EucalyptusRemoteFault testFault
+  @Test
+  public void testExceptionHandler() {
+    EucalyptusRemoteFault testFault
 
-        //NoSuchBucket - 406
-        try {
-            testFault = new EucalyptusRemoteFault('noaction',
-                    'norelates',
-                    'NoSuchBucket',
-                    'NoSuchBucketException',
-                    'Bucket not found',
-                    HttpResponseStatus.NOT_ACCEPTABLE)
-            WalrusProviderClient.handleRemoteFault(testFault)
-        } catch(S3Exception e) {
-            assert(e instanceof NoSuchBucketException)
-            assert(e.getCode() == "NoSuchBucket")
-            assert(e.getStatus() == HttpResponseStatus.NOT_FOUND)
-        }
-
-        //NoSuchBucket - 404
-        try {
-            testFault = new EucalyptusRemoteFault('noaction',
-                    'norelates',
-                    'NoSuchBucket',
-                    'NoSuchBucketException',
-                    'Bucket not found',
-                    HttpResponseStatus.NOT_FOUND)
-            WalrusProviderClient.handleRemoteFault(testFault)
-        } catch(S3Exception e) {
-            assert(e instanceof NoSuchBucketException)
-            assert(e.getCode() == "NoSuchBucket")
-            assert(e.getStatus() == HttpResponseStatus.NOT_FOUND)
-        }
-
-        //NoSuchKey - 406
-        try {
-            testFault = new EucalyptusRemoteFault('noaction',
-                    'norelates',
-                    'NoSuchBucket',
-                    'NoSuchBucketException',
-                    'Bucket not found',
-                    HttpResponseStatus.NOT_ACCEPTABLE)
-            WalrusProviderClient.handleRemoteFault(testFault)
-        } catch(S3Exception e) {
-            assert(e instanceof NoSuchBucketException)
-            assert(e.getCode() == "NoSuchBucket")
-            assert(e.getStatus() == HttpResponseStatus.NOT_FOUND)
-        }
-
-        //NoSuchKey - 404
-        try {
-            testFault = new EucalyptusRemoteFault('noaction',
-                    'norelates',
-                    'NoSuchBucket',
-                    'NoSuchBucketException',
-                    'Bucket not found',
-                    HttpResponseStatus.NOT_FOUND)
-            WalrusProviderClient.handleRemoteFault(testFault)
-        } catch(S3Exception e) {
-            assert(e instanceof NoSuchBucketException)
-            assert(e.getCode() == "NoSuchBucket")
-            assert(e.getStatus() == HttpResponseStatus.NOT_FOUND)
-        }
-
-        //BucketNotEmpty - 406
-        try {
-            testFault = new EucalyptusRemoteFault('noaction',
-                    'norelates',
-                    'BucketNotEmpty',
-                    'BucketNotEmptyException',
-                    'Bucket is not empty',
-                    HttpResponseStatus.NOT_ACCEPTABLE);
-            WalrusProviderClient.handleRemoteFault(testFault)
-        } catch(S3Exception e) {
-            assert(e instanceof BucketNotEmptyException)
-            assert(e.getCode() == "BucketNotEmpty")
-            assert(e.getStatus() == HttpResponseStatus.CONFLICT)
-        }
-
-        //BucketNotEmpty - 405
-        try {
-            testFault = new EucalyptusRemoteFault('noaction',
-                    'norelates',
-                    'BucketNotEmpty',
-                    'BucketNotEmptyException',
-                    'Bucket is not empty',
-                    HttpResponseStatus.CONFLICT)
-            WalrusProviderClient.handleRemoteFault(testFault)
-        } catch(S3Exception e) {
-            assert(e instanceof BucketNotEmptyException)
-            assert(e.getCode() == "BucketNotEmpty")
-            assert(e.getStatus() == HttpResponseStatus.CONFLICT)
-        }
-
-        //AccessDenied - 406
-        try {
-            testFault = new EucalyptusRemoteFault('noaction',
-                    'norelates',
-                    'AccessDenied',
-                    'AccessDeniedException',
-                    'Access to resource is denied',
-                    HttpResponseStatus.NOT_ACCEPTABLE);
-            WalrusProviderClient.handleRemoteFault(testFault)
-        } catch(S3Exception e) {
-            assert(e instanceof AccessDeniedException)
-            assert(e.getCode() == "AccessDenied")
-            assert(e.getStatus() == HttpResponseStatus.FORBIDDEN)
-        }
-
-        //AccessDenied - 403
-        try {
-            testFault = new EucalyptusRemoteFault('noaction',
-                    'norelates',
-                    'AccessDenied',
-                    'AccessDeniedException',
-                    'Access to resource is denied',
-                    HttpResponseStatus.FORBIDDEN);
-            WalrusProviderClient.handleRemoteFault(testFault)
-        } catch(S3Exception e) {
-            assert(e instanceof AccessDeniedException)
-            assert(e.getCode() == "AccessDenied")
-            assert(e.getStatus() == HttpResponseStatus.FORBIDDEN)
-        }
+    //NoSuchBucket - 406
+    try {
+      testFault = new EucalyptusRemoteFault('noaction',
+          'norelates',
+          'NoSuchBucket',
+          'NoSuchBucketException',
+          'Bucket not found',
+          HttpResponseStatus.NOT_ACCEPTABLE)
+      WalrusProviderClient.handleRemoteFault(testFault)
+    } catch(S3Exception e) {
+      assert(e instanceof NoSuchBucketException)
+      assert(e.getCode() == "NoSuchBucket")
+      assert(e.getStatus() == HttpResponseStatus.NOT_FOUND)
     }
+
+    //NoSuchBucket - 404
+    try {
+      testFault = new EucalyptusRemoteFault('noaction',
+          'norelates',
+          'NoSuchBucket',
+          'NoSuchBucketException',
+          'Bucket not found',
+          HttpResponseStatus.NOT_FOUND)
+      WalrusProviderClient.handleRemoteFault(testFault)
+    } catch(S3Exception e) {
+      assert(e instanceof NoSuchBucketException)
+      assert(e.getCode() == "NoSuchBucket")
+      assert(e.getStatus() == HttpResponseStatus.NOT_FOUND)
+    }
+
+    //NoSuchKey - 406
+    try {
+      testFault = new EucalyptusRemoteFault('noaction',
+          'norelates',
+          'NoSuchBucket',
+          'NoSuchBucketException',
+          'Bucket not found',
+          HttpResponseStatus.NOT_ACCEPTABLE)
+      WalrusProviderClient.handleRemoteFault(testFault)
+    } catch(S3Exception e) {
+      assert(e instanceof NoSuchBucketException)
+      assert(e.getCode() == "NoSuchBucket")
+      assert(e.getStatus() == HttpResponseStatus.NOT_FOUND)
+    }
+
+    //NoSuchKey - 404
+    try {
+      testFault = new EucalyptusRemoteFault('noaction',
+          'norelates',
+          'NoSuchBucket',
+          'NoSuchBucketException',
+          'Bucket not found',
+          HttpResponseStatus.NOT_FOUND)
+      WalrusProviderClient.handleRemoteFault(testFault)
+    } catch(S3Exception e) {
+      assert(e instanceof NoSuchBucketException)
+      assert(e.getCode() == "NoSuchBucket")
+      assert(e.getStatus() == HttpResponseStatus.NOT_FOUND)
+    }
+
+    //BucketNotEmpty - 406
+    try {
+      testFault = new EucalyptusRemoteFault('noaction',
+          'norelates',
+          'BucketNotEmpty',
+          'BucketNotEmptyException',
+          'Bucket is not empty',
+          HttpResponseStatus.NOT_ACCEPTABLE);
+      WalrusProviderClient.handleRemoteFault(testFault)
+    } catch(S3Exception e) {
+      assert(e instanceof BucketNotEmptyException)
+      assert(e.getCode() == "BucketNotEmpty")
+      assert(e.getStatus() == HttpResponseStatus.CONFLICT)
+    }
+
+    //BucketNotEmpty - 405
+    try {
+      testFault = new EucalyptusRemoteFault('noaction',
+          'norelates',
+          'BucketNotEmpty',
+          'BucketNotEmptyException',
+          'Bucket is not empty',
+          HttpResponseStatus.CONFLICT)
+      WalrusProviderClient.handleRemoteFault(testFault)
+    } catch(S3Exception e) {
+      assert(e instanceof BucketNotEmptyException)
+      assert(e.getCode() == "BucketNotEmpty")
+      assert(e.getStatus() == HttpResponseStatus.CONFLICT)
+    }
+
+    //AccessDenied - 406
+    try {
+      testFault = new EucalyptusRemoteFault('noaction',
+          'norelates',
+          'AccessDenied',
+          'AccessDeniedException',
+          'Access to resource is denied',
+          HttpResponseStatus.NOT_ACCEPTABLE);
+      WalrusProviderClient.handleRemoteFault(testFault)
+    } catch(S3Exception e) {
+      assert(e instanceof AccessDeniedException)
+      assert(e.getCode() == "AccessDenied")
+      assert(e.getStatus() == HttpResponseStatus.FORBIDDEN)
+    }
+
+    //AccessDenied - 403
+    try {
+      testFault = new EucalyptusRemoteFault('noaction',
+          'norelates',
+          'AccessDenied',
+          'AccessDeniedException',
+          'Access to resource is denied',
+          HttpResponseStatus.FORBIDDEN);
+      WalrusProviderClient.handleRemoteFault(testFault)
+    } catch(S3Exception e) {
+      assert(e instanceof AccessDeniedException)
+      assert(e.getCode() == "AccessDenied")
+      assert(e.getStatus() == HttpResponseStatus.FORBIDDEN)
+    }
+  }
 }

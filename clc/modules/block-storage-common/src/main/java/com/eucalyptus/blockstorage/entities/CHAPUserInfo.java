@@ -67,86 +67,87 @@ import javax.persistence.Entity;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
-import org.hibernate.type.StringClobType;
+
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity
-@PersistenceContext(name="eucalyptus_storage")
-@Table( name = "CHAPUserInfo" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@PersistenceContext(name = "eucalyptus_storage")
+@Table(name = "CHAPUserInfo")
+@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class CHAPUserInfo extends AbstractPersistent {
-	private String scName;
-	
-	@Column( name = "username" )
-    private String user;
-    @Lob
-    @Type(type="org.hibernate.type.StringClobType")
-    private String encryptedPassword;
-    
-    public CHAPUserInfo() {
-    	this.scName = StorageProperties.NAME;
-    }
-    
-    public CHAPUserInfo(String user) {
-    	this();
-    	this.user = user;
-    }
-    
-    public CHAPUserInfo(String userName, String password) {
-    	this(userName);
-    	this.encryptedPassword = password;
-	}
+  private String scName;
 
-	public String getUser() {
-		return user;
-	}
+  @Column(name = "username")
+  private String user;
+  @Lob
+  @Type(type = "org.hibernate.type.StringClobType")
+  private String encryptedPassword;
 
-	public void setUser(String user) {
-		this.user = user;
-	}
+  public CHAPUserInfo() {
+    this.scName = StorageProperties.NAME;
+  }
 
-	public String getEncryptedPassword() {
-		return encryptedPassword;
-	}
+  public CHAPUserInfo(String user) {
+    this();
+    this.user = user;
+  }
 
-	public void setEncryptedPassword(String encryptedPassword) {
-		this.encryptedPassword = encryptedPassword;
-	}
+  public CHAPUserInfo(String userName, String password) {
+    this(userName);
+    this.encryptedPassword = password;
+  }
 
-	public String getScName() {
-		return scName;
-	}
+  public String getUser() {
+    return user;
+  }
 
-	public void setScName(String scName) {
-		this.scName = scName;
-	}
+  public void setUser(String user) {
+    this.user = user;
+  }
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((user == null) ? 0 : user.hashCode());
-		return result;
-	}
+  public String getEncryptedPassword() {
+    return encryptedPassword;
+  }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		CHAPUserInfo other = (CHAPUserInfo) obj;
-		if (user == null) {
-			if (other.user != null)
-				return false;
-		} else if (!user.equals(other.user))
-			return false;
-		return true;
-	}
+  public void setEncryptedPassword(String encryptedPassword) {
+    this.encryptedPassword = encryptedPassword;
+  }
+
+  public String getScName() {
+    return scName;
+  }
+
+  public void setScName(String scName) {
+    this.scName = scName;
+  }
+
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((user == null) ? 0 : user.hashCode());
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    CHAPUserInfo other = (CHAPUserInfo) obj;
+    if (user == null) {
+      if (other.user != null)
+        return false;
+    } else if (!user.equals(other.user))
+      return false;
+    return true;
+  }
 }

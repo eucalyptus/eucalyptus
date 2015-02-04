@@ -323,6 +323,7 @@ public class Threads {
                     + " - Waiting for pool to shutdown." );
           if ( i > 2 ) {
             LOG.warn( Joiner.on( "\n\t\t" ).join( this.creationPoint ) );
+            LOG.warn( this.pool );
           }
         }
       } catch ( final InterruptedException e ) {

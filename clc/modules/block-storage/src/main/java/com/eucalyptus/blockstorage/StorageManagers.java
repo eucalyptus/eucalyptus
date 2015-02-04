@@ -88,122 +88,125 @@ import com.google.common.collect.ComputationException;
 import com.google.common.collect.Maps;
 
 /**
- * Implements a storage manager lookup service with entries populated by class discovery based on annotations.
- * To include a class in this registry it must be annotated with {@link StorageManagerProperty}
+ * Implements a storage manager lookup service with entries populated by class discovery based on annotations. To include a class in this registry it
+ * must be annotated with {@link StorageManagerProperty}
  * 
  * @author grze & zhill
  *
  */
 
 public class StorageManagers extends ServiceJarDiscovery {
-  private static Logger LOG = Logger.getLogger( StorageManagers.class );
+  private static Logger LOG = Logger.getLogger(StorageManagers.class);
   private static final String UNSET = "unset";
-  
-  @Target( { ElementType.TYPE } )
-  @Retention( RetentionPolicy.RUNTIME )
+
+  @Target({ElementType.TYPE})
+  @Retention(RetentionPolicy.RUNTIME)
   public @interface StorageManagerProperty {
-    String value( );
-    
-    Class<? extends LogicalStorageManager> manager( ) default LogicalStorageManager.class;
+    String value();
+
+    Class<? extends LogicalStorageManager> manager() default LogicalStorageManager.class;
   }
-  
-  private static final Map<String, Class> managers  = Maps.newHashMap( );
-  private static final Map<String, Class> providers = Maps.newHashMap( );
+
+  private static final Map<String, Class> managers = Maps.newHashMap();
+  private static final Map<String, Class> providers = Maps.newHashMap();
   public static final Predicate<String> SUPPORTED_PROVIDER_PREDICATE = new Predicate<String>() {
-	  @Override
-	  public boolean apply(String arg0) {
-		  return !(arg0.startsWith("(") && arg0.endsWith(")"));
-	  }
+    @Override
+    public boolean apply(String arg0) {
+      return !(arg0.startsWith("(") && arg0.endsWith(")"));
+    }
   };
-  
+
   @Override
-  public boolean processClass( Class candidate ) throws Exception {
-    if ( Ats.from( candidate ).has( StorageManagerProperty.class )
-         && !Modifier.isAbstract( candidate.getModifiers( ) )
-         && !Modifier.isInterface( candidate.getModifiers( ) ) ) {
-      StorageManagerProperty candidateType = Ats.from( candidate ).get( StorageManagerProperty.class );
-      String propName = candidateType.value( );
-      if ( LogicalStorageManager.class.isAssignableFrom( candidate ) ) {
-        managers.put( propName, candidate );
+  public boolean processClass(Class candidate) throws Exception {
+    if (Ats.from(candidate).has(StorageManagerProperty.class) && !Modifier.isAbstract(candidate.getModifiers())
+        && !Modifier.isInterface(candidate.getModifiers())) {
+      StorageManagerProperty candidateType = Ats.from(candidate).get(StorageManagerProperty.class);
+      String propName = candidateType.value();
+      if (LogicalStorageManager.class.isAssignableFrom(candidate)) {
+        managers.put(propName, candidate);
       } else {
-        managers.put( propName, candidateType.manager( ) );
-        providers.put( propName, candidate );
+        managers.put(propName, candidateType.manager());
+        providers.put(propName, candidate);
       }
       return true;
     } else {
       return false;
     }
   }
-  
+
   @Override
-  public Double getPriority( ) {
+  public Double getPriority() {
     return 0.0d;
   }
-  
+
   private static final LoadingCache<String, LogicalStorageManager> managerInstances = CacheBuilder.newBuilder().build(
-    new CacheLoader<String, LogicalStorageManager>() {
-      @Override
-      public LogicalStorageManager load( String arg0 ) {
-        LogicalStorageManager bsm = Classes.newInstance( lookupManager( arg0 ) );
-        try {
-          bsm.checkPreconditions( );
-          return bsm;
-        } catch ( EucalyptusCloudException ex ) {
-          throw new ComputationException( ex );
+      new CacheLoader<String, LogicalStorageManager>() {
+        @Override
+        public LogicalStorageManager load(String arg0) {
+          LogicalStorageManager bsm = Classes.newInstance(lookupManager(arg0));
+          try {
+            bsm.checkPreconditions();
+            return bsm;
+          } catch (EucalyptusCloudException ex) {
+            throw new ComputationException(ex);
+          }
         }
-      }
-    });
-  
-  private static AtomicReference<String> lastManager = new AtomicReference<String>( );
-  
-  public static LogicalStorageManager getInstance( ) {
-    if ( lastManager.get( ) == null || UNSET.equals(lastManager.get())) {
-      throw new NoSuchElementException( "SC blockstorageamanger not configured. Found empty or unset manager(" + lastManager + ").  Legal values are: " + Joiner.on( "," ).join( Maps.filterKeys(managers, SUPPORTED_PROVIDER_PREDICATE).keySet( ) ) );
+      });
+
+  private static AtomicReference<String> lastManager = new AtomicReference<String>();
+
+  public static LogicalStorageManager getInstance() {
+    if (lastManager.get() == null || UNSET.equals(lastManager.get())) {
+      throw new NoSuchElementException("SC blockstorageamanger not configured. Found empty or unset manager(" + lastManager
+          + ").  Legal values are: " + Joiner.on(",").join(Maps.filterKeys(managers, SUPPORTED_PROVIDER_PREDICATE).keySet()));
     } else {
-      return managerInstances.getUnchecked( lastManager.get( ) );
+      return managerInstances.getUnchecked(lastManager.get());
     }
   }
-  
-  public static LogicalStorageManager getInstance( String propertyBackend ) throws InstantiationException, IllegalAccessException, EucalyptusCloudException {
-    if ( managers.containsKey( propertyBackend ) ) {
-      lastManager.set( propertyBackend );
+
+  public static LogicalStorageManager getInstance(String propertyBackend) throws InstantiationException, IllegalAccessException,
+      EucalyptusCloudException {
+    if (managers.containsKey(propertyBackend)) {
+      lastManager.set(propertyBackend);
     }
-    return getInstance( );
+    return getInstance();
   }
-  
-  public static Set<String> list( ) {
-    return managers.keySet( );
+
+  public static Set<String> list() {
+    return managers.keySet();
   }
-  
-  public static boolean contains( Object key ) {
-    return managers.containsKey( key );
+
+  public static boolean contains(Object key) {
+    return managers.containsKey(key);
   }
-  
+
   public static synchronized void flushManagerInstances() throws EucalyptusCloudException {
-  	LOG.debug("Flushing all block storage manager instances");
-  	managerInstances.invalidateAll();
-  	lastManager.set(UNSET);
+    LOG.debug("Flushing all block storage manager instances");
+    managerInstances.invalidateAll();
+    lastManager.set(UNSET);
   }
-  
+
   public static synchronized void flushManagerInstance(String key) throws EucalyptusCloudException {
-  	LOG.debug("Flusing block storage manager instance: " + key);
-	lastManager.set(UNSET);
-	managerInstances.invalidate(key);
+    LOG.debug("Flusing block storage manager instance: " + key);
+    lastManager.set(UNSET);
+    managerInstances.invalidate(key);
   }
-  
-  public static Class<? extends LogicalStorageManager> lookupManager( String arg0 ) {
-    if ( !managers.containsKey( arg0 ) ) {
-      throw new NoSuchElementException( "Not a valid value:  " + arg0 + ".  Legal values are: " + Joiner.on( "," ).join( Maps.filterKeys(managers, SUPPORTED_PROVIDER_PREDICATE).keySet( ) ) );
+
+  public static Class<? extends LogicalStorageManager> lookupManager(String arg0) {
+    if (!managers.containsKey(arg0)) {
+      throw new NoSuchElementException("Not a valid value:  " + arg0 + ".  Legal values are: "
+          + Joiner.on(",").join(Maps.filterKeys(managers, SUPPORTED_PROVIDER_PREDICATE).keySet()));
     } else {
-      return managers.get( arg0 );
+      return managers.get(arg0);
     }
   }
-  
-  public static Class lookupProvider( String arg0 ) {
-    if ( !providers.containsKey( arg0 ) ) {
-      throw new NoSuchElementException( "Not a valid value:  " + arg0 + ".  Legal values are: " + Joiner.on( "," ).join( Maps.filterKeys(providers, SUPPORTED_PROVIDER_PREDICATE).keySet( ) ) );
+
+  public static Class lookupProvider(String arg0) {
+    if (!providers.containsKey(arg0)) {
+      throw new NoSuchElementException("Not a valid value:  " + arg0 + ".  Legal values are: "
+          + Joiner.on(",").join(Maps.filterKeys(providers, SUPPORTED_PROVIDER_PREDICATE).keySet()));
     } else {
-      return providers.get( arg0 );
+      return providers.get(arg0);
     }
   }
 }

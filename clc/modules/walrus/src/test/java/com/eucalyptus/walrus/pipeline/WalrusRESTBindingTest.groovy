@@ -34,51 +34,49 @@ import org.junit.Test
 @CompileStatic
 public class WalrusRESTBindingTest {
 
-    @Test
-    public void testGetOperation() throws Exception {
-        WalrusRESTBinding binding = new WalrusRESTBinding();
+  @Test
+  public void testGetOperation() throws Exception {
+    WalrusRESTBinding binding = new WalrusRESTBinding();
 
-        MappingHttpRequest request;
+    MappingHttpRequest request;
 
-        request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/WalrusBackend/bucket/object");
-        String path = binding.getOperationPath(request);
-        assert("/bucket/object".equals(path));
+    request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/WalrusBackend/bucket/object");
+    String path = binding.getOperationPath(request);
+    assert("/bucket/object".equals(path));
+  }
 
-    }
+  @Test
+  public void testGetOperationPath() throws Exception {
+    WalrusRESTBinding binding = new WalrusRESTBinding();
 
-    @Test
-    public void testGetOperationPath() throws Exception {
-        WalrusRESTBinding binding = new WalrusRESTBinding();
+    MappingHttpRequest request;
 
-        MappingHttpRequest request;
+    request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/WalrusBackend/bucket/object");
+    String path = binding.getOperationPath(request);
+    assert("/bucket/object".equals(path));
 
-        request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/WalrusBackend/bucket/object");
-        String path = binding.getOperationPath(request);
-        assert("/bucket/object".equals(path));
+    request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/WalrusBackend/bucket");
+    path = binding.getOperationPath(request);
+    assert("/bucket".equals(path));
 
-        request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/WalrusBackend/bucket");
-        path = binding.getOperationPath(request);
-        assert("/bucket".equals(path));
+    request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/WalrusBackend");
+    path = binding.getOperationPath(request);
+    assert("".equals(path));
 
-        request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/WalrusBackend");
-        path = binding.getOperationPath(request);
-        assert("".equals(path));
+    request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/WalrusBackendbucket/object");
+    path = binding.getOperationPath(request);
+    assert("/services/WalrusBackendbucket/object".equals(path));
 
-        request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/WalrusBackendbucket/object");
-        path = binding.getOperationPath(request);
-        assert("/services/WalrusBackendbucket/object".equals(path));
+    request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/bucket/object");
+    path = binding.getOperationPath(request);
+    assert("/bucket/object".equals(path));
 
-        request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/bucket/object");
-        path = binding.getOperationPath(request);
-        assert("/bucket/object".equals(path));
+    request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+    path = binding.getOperationPath(request);
+    assert("/".equals(path));
 
-        request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
-        path = binding.getOperationPath(request);
-        assert("/".equals(path));
-
-        request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/bucket/object/");
-        path = binding.getOperationPath(request);
-        assert("/bucket/object/".equals(path));
-
-    }
+    request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/bucket/object/");
+    path = binding.getOperationPath(request);
+    assert("/bucket/object/".equals(path));
+  }
 }

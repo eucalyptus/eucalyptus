@@ -42,238 +42,236 @@ import org.junit.Test
  */
 @CompileStatic
 class HttpThresholdBufferingAggregatorTest {
-    protected static MappingHttpRequest getInitialRequest(byte[] content, int contentLength, boolean chunked) {
-        MappingHttpRequest msg = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "http://objectstorage")
-        msg.setHeader(HttpHeaders.Names.CONTENT_LENGTH, contentLength)
-        msg.setContent(ChannelBuffers.wrappedBuffer(content))
-        msg.setChunked(chunked)
-        return msg;
+  protected static MappingHttpRequest getInitialRequest(byte[] content, int contentLength, boolean chunked) {
+    MappingHttpRequest msg = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "http://objectstorage")
+    msg.setHeader(HttpHeaders.Names.CONTENT_LENGTH, contentLength)
+    msg.setContent(ChannelBuffers.wrappedBuffer(content))
+    msg.setChunked(chunked)
+    return msg;
+  }
+
+  protected static DefaultHttpChunk getDataChunk(byte[] data) {
+    DefaultHttpChunk msg = new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(data))
+    return msg
+  }
+
+  protected static DefaultHttpChunk getLastChunk() {
+    //Zero length content to make it the 'last'
+    DefaultHttpChunk msg = new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(new byte[0]));
+    return msg
+  }
+
+  static Channel channel = new ServerSocketChannel() {
+    @Override
+    ServerSocketChannelConfig getConfig() {
+      return null
     }
 
-    protected static DefaultHttpChunk getDataChunk(byte[] data) {
-        DefaultHttpChunk msg = new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(data))
-        return msg
+    @Override
+    InetSocketAddress getLocalAddress() {
+      return null
     }
 
-    protected static DefaultHttpChunk getLastChunk() {
-        //Zero length content to make it the 'last'
-        DefaultHttpChunk msg = new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(new byte[0]));
-        return msg
+    @Override
+    InetSocketAddress getRemoteAddress() {
+      return null
     }
 
-    static Channel channel = new ServerSocketChannel() {
-        @Override
-        ServerSocketChannelConfig getConfig() {
-            return null
-        }
-
-        @Override
-        InetSocketAddress getLocalAddress() {
-            return null
-        }
-
-        @Override
-        InetSocketAddress getRemoteAddress() {
-            return null
-        }
-
-        @Override
-        Integer getId() {
-            return null
-        }
-
-        @Override
-        ChannelFactory getFactory() {
-            return null
-        }
-
-        @Override
-        Channel getParent() {
-            return null
-        }
-
-        @Override
-        ChannelPipeline getPipeline() {
-            return null
-        }
-
-        @Override
-        boolean isOpen() {
-            return false
-        }
-
-        @Override
-        boolean isBound() {
-            return false
-        }
-
-        @Override
-        boolean isConnected() {
-            return false
-        }
-
-        @Override
-        ChannelFuture write(Object o) {
-            return null
-        }
-
-        @Override
-        ChannelFuture write(Object o, SocketAddress socketAddress) {
-            return null
-        }
-
-        @Override
-        ChannelFuture bind(SocketAddress socketAddress) {
-            return null
-        }
-
-        @Override
-        ChannelFuture connect(SocketAddress socketAddress) {
-            return null
-        }
-
-        @Override
-        ChannelFuture disconnect() {
-            return null
-        }
-
-        @Override
-        ChannelFuture unbind() {
-            return null
-        }
-
-        @Override
-        ChannelFuture close() {
-            return null
-        }
-
-        @Override
-        ChannelFuture getCloseFuture() {
-            return null
-        }
-
-        @Override
-        int getInterestOps() {
-            return 0
-        }
-
-        @Override
-        boolean isReadable() {
-            return false
-        }
-
-        @Override
-        boolean isWritable() {
-            return false
-        }
-
-        @Override
-        ChannelFuture setInterestOps(int i) {
-            return null
-        }
-
-        @Override
-        ChannelFuture setReadable(boolean b) {
-            return null
-        }
-
-        @Override
-        Object getAttachment() {
-            return null
-        }
-
-        @Override
-        void setAttachment(Object o) {
-
-        }
-
-        @Override
-        int compareTo(Channel channel) {
-            return 0
-        }
+    @Override
+    Integer getId() {
+      return null
     }
 
-    @Test
-    void testAggregationSimple() {
-        int size = 10
-        HttpThresholdBufferingAggregator aggregator = new HttpThresholdBufferingAggregator(size)
-        byte[] content = "".getBytes("UTF-8")
-        byte[] chunkContent = "012345678901234567890".getBytes("UTF-8")
-        MappingHttpRequest request = getInitialRequest(content, content.length + chunkContent.length, true)
-        assert(request.isChunked())
-        UpstreamMessageEvent initialEvent = new UpstreamMessageEvent(channel, request , new InetSocketAddress(8773))
-        assert(aggregator.offer(initialEvent))
-        assert(aggregator.poll() == null)
-
-        UpstreamMessageEvent chunkEvent = new UpstreamMessageEvent(channel, getDataChunk(chunkContent), new InetSocketAddress(8773))
-        assert(aggregator.offer(chunkEvent))
-        assert(aggregator.poll() != null)
-        HttpThresholdBufferingAggregator.AggregatedMessageEvent output = aggregator.poll()
-        assert(output.getAggregationCount() == 2)
-        assert(output.getCurrentAggregatedSize() == content.length + chunkContent.length)
-        ChannelBuffer testbuffer = ChannelBuffers.buffer(content.length + chunkContent.length)
-        testbuffer.writeBytes(content)
-        testbuffer.writeBytes(chunkContent)
-        assert(output.getAggregatedContentBuffer().array() == testbuffer.array())
-        assert(output.getMessageEvent() == initialEvent)
-
+    @Override
+    ChannelFactory getFactory() {
+      return null
     }
 
-    @Test
-    void testAggregationNonChunkedAboveThreshold() {
-        int size = 10
-        HttpThresholdBufferingAggregator aggregator = new HttpThresholdBufferingAggregator(size)
-        byte[] content = "blahblahblahblahblahblahblahblahblahblahblah".getBytes("UTF-8")
-        MappingHttpRequest request = getInitialRequest(content, content.length, false)
-        assert(!request.isChunked())
-        UpstreamMessageEvent initialEvent = new UpstreamMessageEvent(channel, request , new InetSocketAddress(8773))
-        assert(!aggregator.offer(initialEvent))
-        assert(request.getContent().array() == content)
+    @Override
+    Channel getParent() {
+      return null
     }
 
-    @Test
-    void testAggregationNonChunkedBelowThreshold() {
-        int size = 10
-        HttpThresholdBufferingAggregator aggregator = new HttpThresholdBufferingAggregator(size)
-        byte[] content = "blahblah".getBytes("UTF-8") //something < 10 bytes
-        MappingHttpRequest request = getInitialRequest(content, content.length, false)
-        assert(!request.isChunked())
-        UpstreamMessageEvent initialEvent = new UpstreamMessageEvent(channel, request , new InetSocketAddress(8773))
-        assert(!aggregator.offer(initialEvent))
-        assert(request.getContent().array() == content)
-
+    @Override
+    ChannelPipeline getPipeline() {
+      return null
     }
 
-    @Test
-    void testAggregationWithLastChunkBeforeThreshold() {
-        int size = 1000
-        HttpThresholdBufferingAggregator aggregator = new HttpThresholdBufferingAggregator(size)
-        byte[] content = "".getBytes("UTF-8") //no content, to simulate the POST chunking
-        byte[] chunkContent = "012345678901234567890".getBytes("UTF-8")
-        MappingHttpRequest request = getInitialRequest(content, content.length + chunkContent.length, true)
-        assert(request.isChunked())
-        UpstreamMessageEvent initialEvent = new UpstreamMessageEvent(channel, request , new InetSocketAddress(8773))
-        assert(aggregator.offer(initialEvent))
-        assert(aggregator.poll() == null)
-
-        UpstreamMessageEvent chunkEvent = new UpstreamMessageEvent(channel, getDataChunk(chunkContent), new InetSocketAddress(8773))
-        assert(aggregator.offer(chunkEvent))
-        assert(aggregator.poll() == null)
-
-        DefaultHttpChunk chunk = getLastChunk()
-        assert(chunk.isLast())
-        chunkEvent = new UpstreamMessageEvent(channel, chunk, new InetSocketAddress(8773))
-        assert(aggregator.offer(chunkEvent))
-        assert(aggregator.poll() != null)
-        HttpThresholdBufferingAggregator.AggregatedMessageEvent output = aggregator.poll()
-        assert(output.getAggregationCount() == 3)
-        assert(output.getCurrentAggregatedSize() == content.length + chunkContent.length)
-        assert(output.getMessageEvent() == initialEvent)
-        ChannelBuffer testbuffer = ChannelBuffers.buffer(content.length + chunkContent.length)
-        testbuffer.writeBytes(content)
-        testbuffer.writeBytes(chunkContent)
-        assert(output.getAggregatedContentBuffer().array() == testbuffer.array())
-
-
+    @Override
+    boolean isOpen() {
+      return false
     }
+
+    @Override
+    boolean isBound() {
+      return false
+    }
+
+    @Override
+    boolean isConnected() {
+      return false
+    }
+
+    @Override
+    ChannelFuture write(Object o) {
+      return null
+    }
+
+    @Override
+    ChannelFuture write(Object o, SocketAddress socketAddress) {
+      return null
+    }
+
+    @Override
+    ChannelFuture bind(SocketAddress socketAddress) {
+      return null
+    }
+
+    @Override
+    ChannelFuture connect(SocketAddress socketAddress) {
+      return null
+    }
+
+    @Override
+    ChannelFuture disconnect() {
+      return null
+    }
+
+    @Override
+    ChannelFuture unbind() {
+      return null
+    }
+
+    @Override
+    ChannelFuture close() {
+      return null
+    }
+
+    @Override
+    ChannelFuture getCloseFuture() {
+      return null
+    }
+
+    @Override
+    int getInterestOps() {
+      return 0
+    }
+
+    @Override
+    boolean isReadable() {
+      return false
+    }
+
+    @Override
+    boolean isWritable() {
+      return false
+    }
+
+    @Override
+    ChannelFuture setInterestOps(int i) {
+      return null
+    }
+
+    @Override
+    ChannelFuture setReadable(boolean b) {
+      return null
+    }
+
+    @Override
+    Object getAttachment() {
+      return null
+    }
+
+    @Override
+    void setAttachment(Object o) {
+    }
+
+    @Override
+    int compareTo(Channel channel) {
+      return 0
+    }
+  }
+
+  @Test
+  void testAggregationSimple() {
+    int size = 10
+    HttpThresholdBufferingAggregator aggregator = new HttpThresholdBufferingAggregator(size)
+    byte[] content = "".getBytes("UTF-8")
+    byte[] chunkContent = "012345678901234567890".getBytes("UTF-8")
+    MappingHttpRequest request = getInitialRequest(content, content.length + chunkContent.length, true)
+    assert(request.isChunked())
+    UpstreamMessageEvent initialEvent = new UpstreamMessageEvent(channel, request , new InetSocketAddress(8773))
+    assert(aggregator.offer(initialEvent))
+    assert(aggregator.poll() == null)
+
+    UpstreamMessageEvent chunkEvent = new UpstreamMessageEvent(channel, getDataChunk(chunkContent), new InetSocketAddress(8773))
+    assert(aggregator.offer(chunkEvent))
+    assert(aggregator.poll() != null)
+    HttpThresholdBufferingAggregator.AggregatedMessageEvent output = aggregator.poll()
+    assert(output.getAggregationCount() == 2)
+    assert(output.getCurrentAggregatedSize() == content.length + chunkContent.length)
+    ChannelBuffer testbuffer = ChannelBuffers.buffer(content.length + chunkContent.length)
+    testbuffer.writeBytes(content)
+    testbuffer.writeBytes(chunkContent)
+    assert(output.getAggregatedContentBuffer().array() == testbuffer.array())
+    assert(output.getMessageEvent() == initialEvent)
+  }
+
+  @Test
+  void testAggregationNonChunkedAboveThreshold() {
+    int size = 10
+    HttpThresholdBufferingAggregator aggregator = new HttpThresholdBufferingAggregator(size)
+    byte[] content = "blahblahblahblahblahblahblahblahblahblahblah".getBytes("UTF-8")
+    MappingHttpRequest request = getInitialRequest(content, content.length, false)
+    assert(!request.isChunked())
+    UpstreamMessageEvent initialEvent = new UpstreamMessageEvent(channel, request , new InetSocketAddress(8773))
+    assert(!aggregator.offer(initialEvent))
+    assert(request.getContent().array() == content)
+  }
+
+  @Test
+  void testAggregationNonChunkedBelowThreshold() {
+    int size = 10
+    HttpThresholdBufferingAggregator aggregator = new HttpThresholdBufferingAggregator(size)
+    byte[] content = "blahblah".getBytes("UTF-8") //something < 10 bytes
+    MappingHttpRequest request = getInitialRequest(content, content.length, false)
+    assert(!request.isChunked())
+    UpstreamMessageEvent initialEvent = new UpstreamMessageEvent(channel, request , new InetSocketAddress(8773))
+    assert(!aggregator.offer(initialEvent))
+    assert(request.getContent().array() == content)
+
+  }
+
+  @Test
+  void testAggregationWithLastChunkBeforeThreshold() {
+    int size = 1000
+    HttpThresholdBufferingAggregator aggregator = new HttpThresholdBufferingAggregator(size)
+    byte[] content = "".getBytes("UTF-8") //no content, to simulate the POST chunking
+    byte[] chunkContent = "012345678901234567890".getBytes("UTF-8")
+    MappingHttpRequest request = getInitialRequest(content, content.length + chunkContent.length, true)
+    assert(request.isChunked())
+    UpstreamMessageEvent initialEvent = new UpstreamMessageEvent(channel, request , new InetSocketAddress(8773))
+    assert(aggregator.offer(initialEvent))
+    assert(aggregator.poll() == null)
+
+    UpstreamMessageEvent chunkEvent = new UpstreamMessageEvent(channel, getDataChunk(chunkContent), new InetSocketAddress(8773))
+    assert(aggregator.offer(chunkEvent))
+    assert(aggregator.poll() == null)
+
+    DefaultHttpChunk chunk = getLastChunk()
+    assert(chunk.isLast())
+    chunkEvent = new UpstreamMessageEvent(channel, chunk, new InetSocketAddress(8773))
+    assert(aggregator.offer(chunkEvent))
+    assert(aggregator.poll() != null)
+    HttpThresholdBufferingAggregator.AggregatedMessageEvent output = aggregator.poll()
+    assert(output.getAggregationCount() == 3)
+    assert(output.getCurrentAggregatedSize() == content.length + chunkContent.length)
+    assert(output.getMessageEvent() == initialEvent)
+    ChannelBuffer testbuffer = ChannelBuffers.buffer(content.length + chunkContent.length)
+    testbuffer.writeBytes(content)
+    testbuffer.writeBytes(chunkContent)
+    assert(output.getAggregatedContentBuffer().array() == testbuffer.array())
+
+
+  }
 }

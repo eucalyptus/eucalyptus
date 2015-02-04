@@ -62,48 +62,50 @@
 
 package com.eucalyptus.objectstorage.pipeline.binding;
 
-import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
-import org.apache.log4j.Logger;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+
 public class ObjectStorageDELETEBinding extends ObjectStorageRESTBinding {
-	private static Logger LOG = Logger.getLogger( ObjectStorageDELETEBinding.class );
+  private static Logger LOG = Logger.getLogger(ObjectStorageDELETEBinding.class);
 
-    @Override
-    protected Map<String, String> populateOperationMap() {
-        Map<String, String> newMap = new HashMap<>();
+  @Override
+  protected Map<String, String> populateOperationMap() {
+    Map<String, String> newMap = new HashMap<>();
 
-        //Bucket operations
-        newMap.put(BUCKET + HttpMethod.DELETE.toString(), "DeleteBucket");
-        newMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "DeleteBucketLifecycle");
-        newMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "DeleteBucketTagging");
+    // Bucket operations
+    newMap.put(BUCKET + HttpMethod.DELETE.toString(), "DeleteBucket");
+    newMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "DeleteBucketLifecycle");
+    newMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "DeleteBucketTagging");
 
-        //Object operations
-        newMap.put(OBJECT + HttpMethod.DELETE.toString(), "DeleteObject");
-        newMap.put(OBJECT + HttpMethod.DELETE.toString() + ObjectStorageProperties.ObjectParameter.versionId.toString().toLowerCase(), "DeleteVersion");
+    // Object operations
+    newMap.put(OBJECT + HttpMethod.DELETE.toString(), "DeleteObject");
+    newMap.put(OBJECT + HttpMethod.DELETE.toString() + ObjectStorageProperties.ObjectParameter.versionId.toString().toLowerCase(), "DeleteVersion");
 
-        // Multipart Uploads
-        newMap.put(OBJECT + HttpMethod.DELETE.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(), "AbortMultipartUpload");
+    // Multipart Uploads
+    newMap.put(OBJECT + HttpMethod.DELETE.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(),
+        "AbortMultipartUpload");
 
-        return newMap;
-    }
+    return newMap;
+  }
 
-    protected Map<String, String> populateUnsupportedOperationMap() {
-        Map<String, String> opsMap = new HashMap<>();
+  protected Map<String, String> populateUnsupportedOperationMap() {
+    Map<String, String> opsMap = new HashMap<>();
 
-        // Bucket operations
-        // Cross-Origin Resource Sharing (cors)
-        opsMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "DELETE Bucket cors");
-        // Policy
-        opsMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.policy.toString(), "DELETE Bucket policy");
+    // Bucket operations
+    // Cross-Origin Resource Sharing (cors)
+    opsMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "DELETE Bucket cors");
+    // Policy
+    opsMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.policy.toString(), "DELETE Bucket policy");
 
-        // Website
-        opsMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.website.toString(), "DELETE Bucket website");
+    // Website
+    opsMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.website.toString(), "DELETE Bucket website");
 
-        // Object operations
-        return opsMap;
-    }
+    // Object operations
+    return opsMap;
+  }
 }

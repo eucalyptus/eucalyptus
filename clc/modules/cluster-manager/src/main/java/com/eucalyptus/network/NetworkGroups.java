@@ -598,6 +598,10 @@ public class NetworkGroups {
     return FilterFunctions.GROUP_ID;
   }
 
+  public static Function<NetworkGroup,String> vpcId() {
+    return FilterFunctions.VPC_ID;
+  }
+
   static void createDefault( final OwnerFullName ownerFullName ) throws MetadataException {
     try ( final TransactionResource tx = Entities.transactionFor( Vpc.class ) ) {
       if ( Iterables.tryFind(

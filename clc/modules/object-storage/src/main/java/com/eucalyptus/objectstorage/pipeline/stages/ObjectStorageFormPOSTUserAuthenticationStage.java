@@ -62,27 +62,27 @@
 
 package com.eucalyptus.objectstorage.pipeline.stages;
 
-import com.eucalyptus.objectstorage.pipeline.handlers.FormPOSTMultipartDecoder;
 import org.jboss.netty.channel.ChannelPipeline;
 
+import com.eucalyptus.objectstorage.pipeline.handlers.FormPOSTMultipartDecoder;
 import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageFormPOSTAuthenticationHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
 public class ObjectStorageFormPOSTUserAuthenticationStage implements UnrollableStage {
-    @Override
-    public int compareTo( UnrollableStage o ) {
-        return this.getName( ).compareTo( o.getName( ) );
-    }
+  @Override
+  public int compareTo(UnrollableStage o) {
+    return this.getName().compareTo(o.getName());
+  }
 
-    @Override
-    public String getName( ) {
-        return "objectstorage-post-user-authentication";
-    }
+  @Override
+  public String getName() {
+    return "objectstorage-post-user-authentication";
+  }
 
-    @Override
-	public void unrollStage( ChannelPipeline pipeline ) {
-        pipeline.addLast("objectstorage-post-form-processor", new FormPOSTMultipartDecoder());
-		pipeline.addLast("objectstorage-post-authenticator", new ObjectStorageFormPOSTAuthenticationHandler());
-	}
+  @Override
+  public void unrollStage(ChannelPipeline pipeline) {
+    pipeline.addLast("objectstorage-post-form-processor", new FormPOSTMultipartDecoder());
+    pipeline.addLast("objectstorage-post-authenticator", new ObjectStorageFormPOSTAuthenticationHandler());
+  }
 
 }

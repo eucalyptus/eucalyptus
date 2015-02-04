@@ -151,7 +151,11 @@ public class BaseMessage implements BaseMessageMarker {
   public Boolean get_return( ) {
     return this._return;
   }
-  
+
+  public Boolean get_return( boolean ifError ) {
+    return get_return( );
+  }
+
   @SuppressWarnings( "unchecked" )
   public <TYPE extends BaseMessage> TYPE markWinning( ) {
     this._return = true;

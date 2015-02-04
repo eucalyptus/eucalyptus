@@ -62,12 +62,6 @@
 
 package com.eucalyptus.blockstorage;
 
-import edu.ucsb.eucalyptus.cloud.*;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.util.ReplyCoordinator;
-
 import org.apache.commons.httpclient.HttpStatus;
 import org.apache.log4j.Logger;
 import org.mule.message.ExceptionMessage;
@@ -75,77 +69,69 @@ import org.mule.message.ExceptionMessage;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.blockstorage.msgs.StorageErrorMessageType;
 
+import edu.ucsb.eucalyptus.cloud.NoSuchSnapshotException;
+import edu.ucsb.eucalyptus.cloud.NoSuchVolumeException;
+import edu.ucsb.eucalyptus.cloud.SnapshotInUseException;
+import edu.ucsb.eucalyptus.cloud.VolumeAlreadyExistsException;
+import edu.ucsb.eucalyptus.cloud.VolumeInUseException;
+import edu.ucsb.eucalyptus.cloud.VolumeNotReadyException;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.util.ReplyCoordinator;
+
 public class StorageReplyQueue {
 
-    private static Logger LOG = Logger.getLogger( StorageReplyQueue.class );
+  private static Logger LOG = Logger.getLogger(StorageReplyQueue.class);
 
-    private static ReplyCoordinator replies = new ReplyCoordinator( 3600000 );
+  private static ReplyCoordinator replies = new ReplyCoordinator(3600000);
 
-    public void handle( EucalyptusMessage msg )
-    {
-        Logger.getLogger( StorageReplyQueue.class ).warn( "storage queueing reply to " + msg.getCorrelationId() );
-        replies.putMessage( msg );
+  public void handle(EucalyptusMessage msg) {
+    Logger.getLogger(StorageReplyQueue.class).warn("storage queueing reply to " + msg.getCorrelationId());
+    replies.putMessage(msg);
+  }
+
+  public void handle(ExceptionMessage muleMsg) {
+    try {
+      Object requestMsg = muleMsg.getPayload();
+      String requestString = requestMsg.toString();
+      BaseMessage msg = (BaseMessage) BindingManager.getDefaultBinding().fromOM(requestString);
+      Throwable ex = muleMsg.getException().getCause();
+      StorageErrorMessageType errMsg = null;
+
+      if (ex instanceof NoSuchVolumeException) {
+        errMsg = new StorageErrorMessageType("NoSuchVolume", "Volume not found", HttpStatus.SC_NOT_FOUND, msg.getCorrelationId());
+        errMsg.setCorrelationId(msg.getCorrelationId());
+      } else if (ex instanceof VolumeInUseException) {
+        errMsg = new StorageErrorMessageType("VolumeInUse", "Volume in use", HttpStatus.SC_FORBIDDEN, msg.getCorrelationId());
+        errMsg.setCorrelationId(msg.getCorrelationId());
+      } else if (ex instanceof NoSuchSnapshotException) {
+        errMsg = new StorageErrorMessageType("NoSuchSnapshot", "Snapshot not found", HttpStatus.SC_NOT_FOUND, msg.getCorrelationId());
+        errMsg.setCorrelationId(msg.getCorrelationId());
+      } else if (ex instanceof VolumeAlreadyExistsException) {
+        errMsg = new StorageErrorMessageType("VolumeAlreadyExists", "Volume already exists", HttpStatus.SC_CONFLICT, msg.getCorrelationId());
+        errMsg.setCorrelationId(msg.getCorrelationId());
+      } else if (ex instanceof VolumeNotReadyException) {
+        errMsg = new StorageErrorMessageType("VolumeNotReady", "Volume not ready yet", HttpStatus.SC_CONFLICT, msg.getCorrelationId());
+        errMsg.setCorrelationId(msg.getCorrelationId());
+      } else if (ex instanceof SnapshotInUseException) {
+        errMsg = new StorageErrorMessageType("SnapshotInUse", "Snapshot in use", HttpStatus.SC_CONFLICT, msg.getCorrelationId());
+        errMsg.setCorrelationId(msg.getCorrelationId());
+      } else {
+        replies.putMessage(new EucalyptusErrorMessageType(muleMsg.getComponentName(), msg, ex.getMessage()));
+      }
+      if (errMsg != null) {
+        replies.putMessage(errMsg);
+      }
+    } catch (Exception e) {
+      LOG.error(e);
     }
+  }
 
-    public void handle( ExceptionMessage muleMsg )
-    {
-        try
-        {
-            Object requestMsg = muleMsg.getPayload();
-            String requestString = requestMsg.toString();
-            BaseMessage msg = ( BaseMessage ) BindingManager.getDefaultBinding( ).fromOM( requestString );
-            Throwable ex = muleMsg.getException().getCause();
-            StorageErrorMessageType errMsg = null;
-
-            if ( ex instanceof NoSuchVolumeException )
-            {
-                errMsg = new StorageErrorMessageType( "NoSuchVolume", "Volume not found", HttpStatus.SC_NOT_FOUND, msg.getCorrelationId());
-                errMsg.setCorrelationId( msg.getCorrelationId() );
-            }
-            else if ( ex instanceof VolumeInUseException )
-            {
-                errMsg = new StorageErrorMessageType( "VolumeInUse", "Volume in use", HttpStatus.SC_FORBIDDEN, msg.getCorrelationId());
-                errMsg.setCorrelationId( msg.getCorrelationId() );
-            }
-            else if ( ex instanceof NoSuchSnapshotException )
-            {
-                errMsg = new StorageErrorMessageType( "NoSuchSnapshot", "Snapshot not found", HttpStatus.SC_NOT_FOUND, msg.getCorrelationId());
-                errMsg.setCorrelationId( msg.getCorrelationId() );
-            }
-            else if ( ex instanceof VolumeAlreadyExistsException )
-            {
-                errMsg = new StorageErrorMessageType( "VolumeAlreadyExists", "Volume already exists", HttpStatus.SC_CONFLICT, msg.getCorrelationId());
-                errMsg.setCorrelationId( msg.getCorrelationId() );
-            }
-            else if ( ex instanceof VolumeNotReadyException )
-            {
-                errMsg = new StorageErrorMessageType( "VolumeNotReady", "Volume not ready yet", HttpStatus.SC_CONFLICT, msg.getCorrelationId());
-                errMsg.setCorrelationId( msg.getCorrelationId() );
-            }
-            else if ( ex instanceof SnapshotInUseException )
-            {
-                errMsg = new StorageErrorMessageType( "SnapshotInUse", "Snapshot in use", HttpStatus.SC_CONFLICT, msg.getCorrelationId());
-                errMsg.setCorrelationId( msg.getCorrelationId() );
-            }
-            else
-            {
-                replies.putMessage( new EucalyptusErrorMessageType( muleMsg.getComponentName() , msg, ex.getMessage()) );
-            }
-            if( errMsg != null ) {
-              replies.putMessage( errMsg );
-            }
-        }
-        catch ( Exception e )
-        {
-            LOG.error(e);
-        }
-    }
-
-    public static BaseMessage getReply( String msgId )
-    {
-        Logger.getLogger( StorageReplyQueue.class ).warn( "storage request for reply to " + msgId );
-        BaseMessage msg = replies.getMessage( msgId );
-        Logger.getLogger( StorageReplyQueue.class ).warn( "storage obtained reply to " + msgId );
-        return msg;
-    }
+  public static BaseMessage getReply(String msgId) {
+    Logger.getLogger(StorageReplyQueue.class).warn("storage request for reply to " + msgId);
+    BaseMessage msg = replies.getMessage(msgId);
+    Logger.getLogger(StorageReplyQueue.class).warn("storage obtained reply to " + msgId);
+    return msg;
+  }
 }

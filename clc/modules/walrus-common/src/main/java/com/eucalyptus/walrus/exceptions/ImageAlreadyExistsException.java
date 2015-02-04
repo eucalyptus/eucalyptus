@@ -64,26 +64,22 @@ package com.eucalyptus.walrus.exceptions;
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-
 @SuppressWarnings("serial")
 public class ImageAlreadyExistsException extends WalrusException {
 
-  public ImageAlreadyExistsException()
-  {
-    super( "Image Already Exists" );
+  public ImageAlreadyExistsException() {
+    super("Image Already Exists");
   }
-  
-  public ImageAlreadyExistsException(String value)
-  {
+
+  public ImageAlreadyExistsException(String value) {
     super("Image Already Exists", "Fail", "Image", value, HttpResponseStatus.CONFLICT);
   }
 
-  public ImageAlreadyExistsException(Throwable ex)
-  {
+  public ImageAlreadyExistsException(Throwable ex) {
     super("Image Already Exists", ex);
   }
-  public ImageAlreadyExistsException(String message, Throwable ex)
-  {
-    super(message,ex);
+
+  public ImageAlreadyExistsException(String message, Throwable ex) {
+    super(message, ex);
   }
 }

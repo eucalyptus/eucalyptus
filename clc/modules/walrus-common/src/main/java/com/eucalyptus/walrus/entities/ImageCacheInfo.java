@@ -66,128 +66,128 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
 import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity
-@PersistenceContext(name="eucalyptus_walrus")
-@Table( name = "ImageCache" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@PersistenceContext(name = "eucalyptus_walrus")
+@Table(name = "ImageCache")
+@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class ImageCacheInfo extends AbstractPersistent implements Comparable<ImageCacheInfo> {
-    @Column( name = "bucket_name" )
-    private String bucketName;
+  @Column(name = "bucket_name")
+  private String bucketName;
 
-    @Column( name = "manifest_name" )
-    private String manifestName;
+  @Column(name = "manifest_name")
+  private String manifestName;
 
-    @Column( name = "image_name" )
-    private String imageName;
+  @Column(name = "image_name")
+  private String imageName;
 
-    @Column( name = "in_cache" )
-    private Boolean inCache;
+  @Column(name = "in_cache")
+  private Boolean inCache;
 
-    @Column( name = "size" )
-    private Long size;
+  @Column(name = "size")
+  private Long size;
 
-    @Column( name = "use_count")
-    private Integer useCount;
+  @Column(name = "use_count")
+  private Integer useCount;
 
-    public ImageCacheInfo() {}
+  public ImageCacheInfo() {}
 
-    public ImageCacheInfo(String bucketName, String manifestName) {
-        this.bucketName = bucketName;
-        this.manifestName = manifestName;
-    }
+  public ImageCacheInfo(String bucketName, String manifestName) {
+    this.bucketName = bucketName;
+    this.manifestName = manifestName;
+  }
 
-    public String getBucketName() {
-        return bucketName;
-    }
+  public String getBucketName() {
+    return bucketName;
+  }
 
-    public void setBucketName(String bucketName) {
-        this.bucketName = bucketName;
-    }
+  public void setBucketName(String bucketName) {
+    this.bucketName = bucketName;
+  }
 
-    public String getManifestName() {
-        return manifestName;
-    }
+  public String getManifestName() {
+    return manifestName;
+  }
 
-    public void setManifestName(String manifestName) {
-        this.manifestName = manifestName;
-    }
+  public void setManifestName(String manifestName) {
+    this.manifestName = manifestName;
+  }
 
-    public String getImageName() {
-        return imageName;
-    }
+  public String getImageName() {
+    return imageName;
+  }
 
-    public void setImageName(String imageName) {
-        this.imageName = imageName;
-    }
+  public void setImageName(String imageName) {
+    this.imageName = imageName;
+  }
 
-    public Boolean getInCache() {
-        return inCache;
-    }
+  public Boolean getInCache() {
+    return inCache;
+  }
 
-    public void setInCache(Boolean inCache) {
-        this.inCache = inCache;
-    }
+  public void setInCache(Boolean inCache) {
+    this.inCache = inCache;
+  }
 
-    public Long getSize() {
-        return size;
-    }
+  public Long getSize() {
+    return size;
+  }
 
-    public void setSize(Long size) {
-        this.size = size;
-    }
+  public void setSize(Long size) {
+    this.size = size;
+  }
 
-    public Integer getUseCount() {
-        return useCount;
-    }
+  public Integer getUseCount() {
+    return useCount;
+  }
 
-    public void setUseCount(Integer useCount) {
-        this.useCount = useCount;
-    }
+  public void setUseCount(Integer useCount) {
+    this.useCount = useCount;
+  }
 
-    public int compareTo(ImageCacheInfo info) {
-        if(info.getUseCount().equals(useCount))
-            return 0 ;
-        if(info.getUseCount() < useCount)
-            return 1;
-        else
-            return -1;
-    }
+  public int compareTo(ImageCacheInfo info) {
+    if (info.getUseCount().equals(useCount))
+      return 0;
+    if (info.getUseCount() < useCount)
+      return 1;
+    else
+      return -1;
+  }
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result
-				+ ((bucketName == null) ? 0 : bucketName.hashCode());
-		result = prime * result
-				+ ((manifestName == null) ? 0 : manifestName.hashCode());
-		return result;
-	}
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((bucketName == null) ? 0 : bucketName.hashCode());
+    result = prime * result + ((manifestName == null) ? 0 : manifestName.hashCode());
+    return result;
+  }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		ImageCacheInfo other = (ImageCacheInfo) obj;
-		if (bucketName == null) {
-			if (other.bucketName != null)
-				return false;
-		} else if (!bucketName.equals(other.bucketName))
-			return false;
-		if (manifestName == null) {
-			if (other.manifestName != null)
-				return false;
-		} else if (!manifestName.equals(other.manifestName))
-			return false;
-		return true;
-	}
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    ImageCacheInfo other = (ImageCacheInfo) obj;
+    if (bucketName == null) {
+      if (other.bucketName != null)
+        return false;
+    } else if (!bucketName.equals(other.bucketName))
+      return false;
+    if (manifestName == null) {
+      if (other.manifestName != null)
+        return false;
+    } else if (!manifestName.equals(other.manifestName))
+      return false;
+    return true;
+  }
 
 }

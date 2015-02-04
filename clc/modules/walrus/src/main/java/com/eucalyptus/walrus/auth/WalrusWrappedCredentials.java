@@ -71,13 +71,9 @@ public class WalrusWrappedCredentials extends WrappedCredentials<String> {
   private final String signature;
   private final String securityToken;
 
-  public WalrusWrappedCredentials(
-      final String correlationId,
-      final String data,
-      final String accessKeyId,
-      final String signature,
-      final String securityToken ) {
-    super( correlationId, data );
+  public WalrusWrappedCredentials(final String correlationId, final String data, final String accessKeyId, final String signature,
+      final String securityToken) {
+    super(correlationId, data);
     this.queryId = accessKeyId;
     this.signature = signature;
     this.securityToken = securityToken;
@@ -88,7 +84,7 @@ public class WalrusWrappedCredentials extends WrappedCredentials<String> {
   }
 
   public QueryIdCredential getQueryIdCredential() {
-    return new QueryIdCredential( getQueryId() );
+    return new QueryIdCredential(getQueryId());
   }
 
   public String getSignature() {
@@ -103,7 +99,7 @@ public class WalrusWrappedCredentials extends WrappedCredentials<String> {
   public static final class QueryIdCredential {
     private final String queryId;
 
-    private QueryIdCredential( final String queryId ) {
+    private QueryIdCredential(final String queryId) {
       this.queryId = queryId;
     }
 
@@ -118,12 +114,15 @@ public class WalrusWrappedCredentials extends WrappedCredentials<String> {
     @SuppressWarnings("RedundantIfStatement")
     @Override
     public boolean equals(final Object o) {
-      if (this == o) return true;
-      if (o == null || getClass() != o.getClass()) return false;
+      if (this == o)
+        return true;
+      if (o == null || getClass() != o.getClass())
+        return false;
 
       final QueryIdCredential that = (QueryIdCredential) o;
 
-      if (!queryId.equals(that.queryId)) return false;
+      if (!queryId.equals(that.queryId))
+        return false;
 
       return true;
     }

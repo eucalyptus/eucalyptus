@@ -20,20 +20,19 @@
 
 package com.eucalyptus.objectstorage.metadata;
 
+import java.util.List;
 
 import com.eucalyptus.objectstorage.entities.BucketTags;
 import com.eucalyptus.objectstorage.exceptions.NoSuchEntityException;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
 import com.eucalyptus.storage.msgs.s3.BucketTag;
 
-import java.util.List;
-
 public interface BucketTaggingManager {
 
-  public void addBucketTagging( List<BucketTag> bucketTags, String bucketUuid ) throws ObjectStorageException;
+  public void addBucketTagging(List<BucketTag> bucketTags, String bucketUuid) throws ObjectStorageException;
 
-  public void deleteBucketTagging( String bucketUuid ) throws ObjectStorageException;
+  public void deleteBucketTagging(String bucketUuid) throws ObjectStorageException;
 
-  public List<BucketTags> getBucketTagging( String bucketUuid ) throws NoSuchEntityException, ObjectStorageException;
+  public List<BucketTags> getBucketTagging(String bucketUuid) throws NoSuchEntityException, ObjectStorageException;
 
 }

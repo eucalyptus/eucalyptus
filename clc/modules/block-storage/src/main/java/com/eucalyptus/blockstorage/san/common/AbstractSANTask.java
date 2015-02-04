@@ -65,14 +65,12 @@
 
 package com.eucalyptus.blockstorage.san.common;
 
-
 public abstract class AbstractSANTask<T> {
-	public abstract T getCommand();
-	
-	public abstract T getEOFCommand();
-	
-	public abstract T getValue();
+  public abstract T getCommand();
 
-	public abstract void setValue(T value);
+  public abstract T getEOFCommand();
+
+  public abstract T getValue();
+
+  public abstract void setValue(T value);
 }
-

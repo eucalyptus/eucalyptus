@@ -36,69 +36,69 @@ import org.junit.Test
  */
 @CompileStatic
 class WalrusRESTPipelineTest extends GroovyTestCase {
-    static final WalrusRESTPipeline pipeline = new WalrusRESTPipeline() {
-        @Override
-        String getName() {
-            return "test pipeline"
-        }
-
-        //For test don't do a real pipeline.
-        @Override
-        ChannelPipeline addHandlers(ChannelPipeline pipeline) {
-            return null
-        }
+  static final WalrusRESTPipeline pipeline = new WalrusRESTPipeline() {
+    @Override
+    String getName() {
+      return "test pipeline"
     }
 
-    @Test
-    void testCheckAccepts() {
-        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/objectstorage')
-        assert(!pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/Walrus')
-        assert(!pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/WalrusBackend/')
-        assert(pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/WalrusBackends')
-        assert(!pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/WalrusBackendBucket/Object/')
-        assert(!pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/WalrusBackendBuckets/')
-        assert(!pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/WalrusBackends/')
-        assert(!pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/WalrusBackend/')
-        assert(pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/WalrusBackend/bucket/object')
-        assert(pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/WalrusBackend/bucket')
-        assert(pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/WalrusBackend/bucket/object')
-        assert(pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, '/services/WalrusBackend.bucket/object')
-        assert(!pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.HEAD, '/services/WalrusBackend/bucket')
-        assert(pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.DELETE, '/services/WalrusBackend/bucket')
-        assert(pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, '/services/WalrusBackend')
-        assert(pipeline.checkAccepts(request))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, '/services/WalrusBackend')
-        request.setHeader(HttpHeaders.Names.CONTENT_TYPE, "multipart/form-data")
-        assert(!pipeline.checkAccepts(request))
-
+    //For test don't do a real pipeline.
+    @Override
+    ChannelPipeline addHandlers(ChannelPipeline pipeline) {
+      return null
     }
+  }
+
+  @Test
+  void testCheckAccepts() {
+    HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/objectstorage')
+    assert(!pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/Walrus')
+    assert(!pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/WalrusBackend/')
+    assert(pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/WalrusBackends')
+    assert(!pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/WalrusBackendBucket/Object/')
+    assert(!pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/WalrusBackendBuckets/')
+    assert(!pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/WalrusBackends/')
+    assert(!pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/WalrusBackend/')
+    assert(pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/WalrusBackend/bucket/object')
+    assert(pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/WalrusBackend/bucket')
+    assert(pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/WalrusBackend/bucket/object')
+    assert(pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, '/services/WalrusBackend.bucket/object')
+    assert(!pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.HEAD, '/services/WalrusBackend/bucket')
+    assert(pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.DELETE, '/services/WalrusBackend/bucket')
+    assert(pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, '/services/WalrusBackend')
+    assert(pipeline.checkAccepts(request))
+
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, '/services/WalrusBackend')
+    request.setHeader(HttpHeaders.Names.CONTENT_TYPE, "multipart/form-data")
+    assert(!pipeline.checkAccepts(request))
+
+  }
 }

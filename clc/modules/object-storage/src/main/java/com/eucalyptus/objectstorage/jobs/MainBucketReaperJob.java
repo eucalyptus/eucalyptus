@@ -62,25 +62,25 @@
 
 package com.eucalyptus.objectstorage.jobs;
 
-import com.eucalyptus.objectstorage.asynctask.BucketReaperTask;
 import org.quartz.InterruptableJob;
-import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.quartz.UnableToInterruptJobException;
 
+import com.eucalyptus.objectstorage.asynctask.BucketReaperTask;
+
 public class MainBucketReaperJob implements InterruptableJob {
 
-    static final BucketReaperTask reaper = new BucketReaperTask();
+  static final BucketReaperTask reaper = new BucketReaperTask();
 
-    @Override
-    public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
-        reaper.resume();
-        reaper.run();
-    }
+  @Override
+  public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
+    reaper.resume();
+    reaper.run();
+  }
 
-    @Override
-    public void interrupt() throws UnableToInterruptJobException {
-        reaper.interrupt();
-    }
+  @Override
+  public void interrupt() throws UnableToInterruptJobException {
+    reaper.interrupt();
+  }
 }

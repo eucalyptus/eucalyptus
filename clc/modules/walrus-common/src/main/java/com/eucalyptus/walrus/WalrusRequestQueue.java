@@ -62,14 +62,13 @@
 
 package com.eucalyptus.walrus;
 
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import org.apache.log4j.Logger;
 
-public class WalrusRequestQueue
-{
-  public EucalyptusMessage handle( EucalyptusMessage msg )
-  {
-    Logger.getLogger( WalrusRequestQueue.class ).warn( "walrus received request " + msg.getCorrelationId( ) + " type:" + msg.getClass().getSimpleName() );
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+
+public class WalrusRequestQueue {
+  public EucalyptusMessage handle(EucalyptusMessage msg) {
+    Logger.getLogger(WalrusRequestQueue.class).warn("walrus received request " + msg.getCorrelationId() + " type:" + msg.getClass().getSimpleName());
     return msg;
   }
 }

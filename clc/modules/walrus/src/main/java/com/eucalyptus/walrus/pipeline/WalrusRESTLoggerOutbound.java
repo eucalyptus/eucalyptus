@@ -73,42 +73,41 @@ import com.eucalyptus.walrus.msgs.WalrusErrorMessageType;
 import com.eucalyptus.walrus.msgs.WalrusResponseType;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 
-
 public class WalrusRESTLoggerOutbound extends MessageStackHandler {
 
-	@Override
-	public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-		if ( event.getMessage( ) instanceof MappingHttpResponse ) {
-			MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
-			if(httpResponse.getMessage() instanceof WalrusResponseType) {
-				WalrusResponseType response = (WalrusResponseType) httpResponse.getMessage();
-				BucketLogData logData = response.getLogData();
-				if(logData != null) {
-					computeStats(logData, httpResponse);
-					response.setLogData(null);
-				}
-			} else if(httpResponse.getMessage() instanceof WalrusErrorMessageType) {
-				WalrusErrorMessageType errorMessage = (WalrusErrorMessageType) httpResponse.getMessage();
-				BucketLogData logData = errorMessage.getLogData();
-				if(logData != null) {
-					computeStats(logData, httpResponse);
-					logData.setError(errorMessage.getCode());
-					errorMessage.setLogData(null);
-				}
-			}
-		}
-	}
+  @Override
+  public void outgoingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
+    if (event.getMessage() instanceof MappingHttpResponse) {
+      MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
+      if (httpResponse.getMessage() instanceof WalrusResponseType) {
+        WalrusResponseType response = (WalrusResponseType) httpResponse.getMessage();
+        BucketLogData logData = response.getLogData();
+        if (logData != null) {
+          computeStats(logData, httpResponse);
+          response.setLogData(null);
+        }
+      } else if (httpResponse.getMessage() instanceof WalrusErrorMessageType) {
+        WalrusErrorMessageType errorMessage = (WalrusErrorMessageType) httpResponse.getMessage();
+        BucketLogData logData = errorMessage.getLogData();
+        if (logData != null) {
+          computeStats(logData, httpResponse);
+          logData.setError(errorMessage.getCode());
+          errorMessage.setLogData(null);
+        }
+      }
+    }
+  }
 
-	private void computeStats(BucketLogData logData, MappingHttpResponse httpResponse) {
-		logData.setBytesSent(httpResponse.getContent().readableBytes());
-		long startTime = logData.getTotalTime();
-		long currentTime = System.currentTimeMillis();
-		logData.setTotalTime(currentTime - startTime);
-		long startTurnAroundTime = logData.getTurnAroundTime();
-		logData.setTurnAroundTime(Math.min((currentTime - startTurnAroundTime), logData.getTotalTime()));
-		HttpResponseStatus status = httpResponse.getStatus();
-		if(status != null)
-			logData.setStatus(Integer.toString(status.getCode()));
-		WalrusBucketLogger.getInstance().addLogEntry(logData);					
-	}
+  private void computeStats(BucketLogData logData, MappingHttpResponse httpResponse) {
+    logData.setBytesSent(httpResponse.getContent().readableBytes());
+    long startTime = logData.getTotalTime();
+    long currentTime = System.currentTimeMillis();
+    logData.setTotalTime(currentTime - startTime);
+    long startTurnAroundTime = logData.getTurnAroundTime();
+    logData.setTurnAroundTime(Math.min((currentTime - startTurnAroundTime), logData.getTotalTime()));
+    HttpResponseStatus status = httpResponse.getStatus();
+    if (status != null)
+      logData.setStatus(Integer.toString(status.getCode()));
+    WalrusBucketLogger.getInstance().addLogEntry(logData);
+  }
 }

@@ -74,232 +74,255 @@ import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 
 /**
  * SANProvider is the interface that all SAN plugins must extend in order for the Storage Controller to interact with the SAN device.
+ * 
  * @author zhill
  *
  */
 public interface SANProvider {
 
-	/**
-	 * Initialize database entities that might be used by/required for configuring the storage provider
-	 */
-	public void initialize();
-	
-	/**
-	 * Configure the provider. This is typically called during initialization of the system but may be called repeatedly, so it should be idempotent.
-	 * @throws EucalyptusCloudException
-	 */
-	public void configure() throws EucalyptusCloudException;
+  /**
+   * Initialize database entities that might be used by/required for configuring the storage provider
+   */
+  public void initialize();
 
-	/**
-	 * Check the connection from the SC to the SAN device itself. Ensure that the connection is open and valid.
-	 */
-	public void checkConnection() throws EucalyptusCloudException;
-	
-	/**
-	 * Create a volume with the specified volumeId from the source snapshot (snapshotId), which may already exist on the device or not.
-	 * 
-	 * @param volumeId - The volume id that the created volume should have
-	 * @param snapshotId - The id of the source snapshot from which to create the volume
-	 * @param snapSize - The size of the snapshot in gigabytes
-	 * @param size - The size of the volume to be created (may be larger than the snapshot size)
-	 * @return - The string that is the iqn that a client can connect to
-	 * @throws EucalyptusCloudException
-	 */
-	public String createVolume(String volumeId, String snapshotId, int snapSize, int size) throws EucalyptusCloudException;
+  /**
+   * Configure the provider. This is typically called during initialization of the system but may be called repeatedly, so it should be idempotent.
+   * 
+   * @throws EucalyptusCloudException
+   */
+  public void configure() throws EucalyptusCloudException;
 
-	/**
-	 * Clone existing parent volume identified by parentVolumeId into a new volume with name/id volumeId
-	 * @param volumeId
-	 * @param parentVolumeId
-	 * @return - The string that is the iqn/connection string that a client can connect to
-	 * @throws EucalyptusCloudException
-	 */
-	public String cloneVolume(String volumeId, String parentVolumeId) throws EucalyptusCloudException;
+  /**
+   * Check the connection from the SC to the SAN device itself. Ensure that the connection is open and valid.
+   */
+  public void checkConnection() throws EucalyptusCloudException;
 
-	/**
-	 * Connect to the lun specified by the given iqn. 
-	 * 
-	 * <p>This method may invoke connect iSCSI script on SC in which case the call out to the script should be <strong>synchronized</strong>. 
-	 * This is to ensure clean bring up and take down of iSCSI sessions (and avoid session rescans during the process).</p>
-	 *  
-	 * <p>See {@link #disconnectTarget(String, String)}</p>
-	 * 
-	 * @param iqn
-	 * @return
-	 * @throws EucalyptusCloudException
-	 */
-	public StorageResource connectTarget(String iqn) throws EucalyptusCloudException;
+  /**
+   * Create a volume with the specified volumeId from the source snapshot (snapshotId), which may already exist on the device or not.
+   * 
+   * @param volumeId - The volume id that the created volume should have
+   * @param snapshotId - The id of the source snapshot from which to create the volume
+   * @param snapSize - The size of the snapshot in gigabytes
+   * @param size - The size of the volume to be created (may be larger than the snapshot size)
+   * @return - The string that is the iqn that a client can connect to
+   * @throws EucalyptusCloudException
+   */
+  public String createVolume(String volumeId, String snapshotId, int snapSize, int size) throws EucalyptusCloudException;
 
-	/**
-	 * Returns a string that contains a list of volume metadata concatanated together. The returned string has the format:
-	 * <san host>,<volume iqn>,<encrypted, using the NC public credential, volume's target password>
-	 * 
-	 * This should be all required information for the node controller to connect to volume resource on the SAN
-	 * 
-	 * @param volumeId
-	 * @return A string of the format <san host>,<volume iqn>,<volume target password encrypted with NC public key>
-	 */
-	public String getVolumeConnectionString(String volumeId);
+  /**
+   * Clone existing parent volume identified by parentVolumeId into a new volume with name/id volumeId
+   * 
+   * @param volumeId
+   * @param parentVolumeId
+   * @return - The string that is the iqn/connection string that a client can connect to
+   * @throws EucalyptusCloudException
+   */
+  public String cloneVolume(String volumeId, String parentVolumeId) throws EucalyptusCloudException;
 
-	/**
-	 * Creates a volume with the given name and size on the underlying storage device.
-	 * @param volumeName
-	 * @param size
-	 * @return The string target iqn of the created volume
-	 * @throws EucalyptusCloudException
-	 */
-	public String createVolume(String volumeName, int size) throws EucalyptusCloudException;
+  /**
+   * Connect to the lun specified by the given iqn.
+   * 
+   * <p>
+   * This method may invoke connect iSCSI script on SC in which case the call out to the script should be <strong>synchronized</strong>. This is to
+   * ensure clean bring up and take down of iSCSI sessions (and avoid session rescans during the process).
+   * </p>
+   * 
+   * <p>
+   * See {@link #disconnectTarget(String, String)}
+   * </p>
+   * 
+   * @param iqn
+   * @return
+   * @throws EucalyptusCloudException
+   */
+  public StorageResource connectTarget(String iqn) throws EucalyptusCloudException;
 
-	/**
-	 * Delete the specified volume on the underlying device
-	 * @param volumeName
-	 * @return boolean result of the delete attempt
-	 */
-	public boolean deleteVolume(String volumeName);
+  /**
+   * Returns a string that contains a list of volume metadata concatanated together. The returned string has the format: <san host>,<volume
+   * iqn>,<encrypted, using the NC public credential, volume's target password>
+   * 
+   * This should be all required information for the node controller to connect to volume resource on the SAN
+   * 
+   * @param volumeId
+   * @return A string of the format <san host>,<volume iqn>,<volume target password encrypted with NC public key>
+   */
+  public String getVolumeConnectionString(String volumeId);
 
-	/**
-	 * Creates a snapshot of the specified volume and gives it the specified snapshot Id
-	 * @param volumeId - source volumeId to use, the volumeId as assigned by the CLC
-	 * @param snapshotId - the CLC-designated name to give the snapshot.
-	 * @param snapshotPointId - if non-null, this specifies the snap point id to start the operation from rather than the source volume itself. This id is opaque.
-	 * @return A string iqn for the newly created snapshot where the string is of the form: <SAN iqn>,lunid example: iqn-xxxx,1
-	 * @throws EucalyptusCloudException
-	 */
-	public String createSnapshot(String volumeId, String snapshotId, String snapshotPointId) throws EucalyptusCloudException;
+  /**
+   * Creates a volume with the given name and size on the underlying storage device.
+   * 
+   * @param volumeName
+   * @param size
+   * @return The string target iqn of the created volume
+   * @throws EucalyptusCloudException
+   */
+  public String createVolume(String volumeName, int size) throws EucalyptusCloudException;
 
-	/**
-	 * Delete a snapshot -- This is never used in SANManager.
-	 * @param volumeId
-	 * @param snapshotId
-	 * @param locallyCreated
-	 * @return
-	 */
-	public boolean deleteSnapshot(String volumeId, String snapshotId, boolean locallyCreated);
+  /**
+   * Delete the specified volume on the underlying device
+   * 
+   * @param volumeName
+   * @return boolean result of the delete attempt
+   */
+  public boolean deleteVolume(String volumeName);
 
-	/**
-	 * Delete the specified CHAP username from the device
-	 * @param userName
-	 * @throws EucalyptusCloudException
-	 */
-	public void deleteUser(String userName) throws EucalyptusCloudException;
+  /**
+   * Creates a snapshot of the specified volume and gives it the specified snapshot Id
+   * 
+   * @param volumeId - source volumeId to use, the volumeId as assigned by the CLC
+   * @param snapshotId - the CLC-designated name to give the snapshot.
+   * @param snapshotPointId - if non-null, this specifies the snap point id to start the operation from rather than the source volume itself. This id
+   *        is opaque.
+   * @return A string iqn for the newly created snapshot where the string is of the form: <SAN iqn>,lunid example: iqn-xxxx,1
+   * @throws EucalyptusCloudException
+   */
+  public String createSnapshot(String volumeId, String snapshotId, String snapshotPointId) throws EucalyptusCloudException;
 
-	/**
-	 * Add a new CHAP user to the device.
-	 * @param userName
-	 */
-	public void addUser(String userName) throws EucalyptusCloudException;
+  /**
+   * Delete a snapshot -- This is never used in SANManager.
+   * 
+   * @param volumeId
+   * @param snapshotId
+   * @param locallyCreated
+   * @return
+   */
+  public boolean deleteSnapshot(String volumeId, String snapshotId, boolean locallyCreated);
 
-	/**
-	 * Disconnects the SC from the specified snapshot. The iqn is that of the SC itself.
-	 * 
-	 * <p>This method may invoke disconnect iSCSI script on SC in which case the call out to the script should be <strong>synchronized</strong>. 
-	 * This is to ensure clean bring up and take down of iSCSI sessions (and avoid session rescans during the process).</p>
-	 *  
-	 * <p>See {@link #connectTarget(String)}</p>
-	 * 
-	 * @param snapshotId
-	 * @param iqn
-	 * @throws EucalyptusCloudException
-	 */
-	public void disconnectTarget(String snapshotId, String iqn) throws EucalyptusCloudException;
+  /**
+   * Delete the specified CHAP username from the device
+   * 
+   * @param userName
+   * @throws EucalyptusCloudException
+   */
+  public void deleteUser(String userName) throws EucalyptusCloudException;
 
-	public void checkPreconditions() throws EucalyptusCloudException;
+  /**
+   * Add a new CHAP user to the device.
+   * 
+   * @param userName
+   */
+  public void addUser(String userName) throws EucalyptusCloudException;
 
-	/**
-	 * Adds the initiator rule and sets up access so that the listed nodeIqns can attach the specified volume. Returns the LUN of the volume.
-	 * Effectively sets up the target side so that nodes can attach to the iscsi lun
-	 * @param volumeId
-	 * @param nodeIqn
-	 * @return Integer id of the lun exported
-	 * @throws EucalyptusCloudException
-	 */
-	public String addInitiatorRule(String volumeId, String nodeIqn) throws EucalyptusCloudException;
+  /**
+   * Disconnects the SC from the specified snapshot. The iqn is that of the SC itself.
+   * 
+   * <p>
+   * This method may invoke disconnect iSCSI script on SC in which case the call out to the script should be <strong>synchronized</strong>. This is to
+   * ensure clean bring up and take down of iSCSI sessions (and avoid session rescans during the process).
+   * </p>
+   * 
+   * <p>
+   * See {@link #connectTarget(String)}
+   * </p>
+   * 
+   * @param snapshotId
+   * @param iqn
+   * @throws EucalyptusCloudException
+   */
+  public void disconnectTarget(String snapshotId, String iqn) throws EucalyptusCloudException;
 
-	/**
-	 * Removes the node permission for the volume for the specified iqn. After this operation a node should not be able to connect to the volume
-	 * @param volumeId
-	 * @param nodeIqn
-	 * @throws EucalyptusCloudException
-	 */
-	public void removeInitiatorRule(String volumeId, String nodeIqn) throws EucalyptusCloudException;
+  public void checkPreconditions() throws EucalyptusCloudException;
 
-	/**
-	 * Removes permission for the volume for all hosts. After this operation no node should be able to connect to the volume
-	 * @param volumeId
-	 * @param nodeIqn
-	 * @throws EucalyptusCloudException
-	 */
-	public void removeAllInitiatorRules(String volumeId) throws EucalyptusCloudException;
+  /**
+   * Adds the initiator rule and sets up access so that the listed nodeIqns can attach the specified volume. Returns the LUN of the volume.
+   * Effectively sets up the target side so that nodes can attach to the iscsi lun
+   * 
+   * @param volumeId
+   * @param nodeIqn
+   * @return Integer id of the lun exported
+   * @throws EucalyptusCloudException
+   */
+  public String addInitiatorRule(String volumeId, String nodeIqn) throws EucalyptusCloudException;
 
-	
-	public void getStorageProps(ArrayList<ComponentProperty> componentProperties);
+  /**
+   * Removes the node permission for the volume for the specified iqn. After this operation a node should not be able to connect to the volume
+   * 
+   * @param volumeId
+   * @param nodeIqn
+   * @throws EucalyptusCloudException
+   */
+  public void removeInitiatorRule(String volumeId, String nodeIqn) throws EucalyptusCloudException;
 
-	public void setStorageProps(ArrayList<ComponentProperty> storageProps);
+  /**
+   * Removes permission for the volume for all hosts. After this operation no node should be able to connect to the volume
+   * 
+   * @param volumeId
+   * @param nodeIqn
+   * @throws EucalyptusCloudException
+   */
+  public void removeAllInitiatorRules(String volumeId) throws EucalyptusCloudException;
 
-	public void stop() throws EucalyptusCloudException;
-	
-	/**
-	 * Returns the required authentication type to access resources on the underlying device. This is tyepically a mode as specified in SANProperties.IscsiAuthType
-	 * @return
-	 */
-	public String getAuthType();
-	
-	/**
-	 * Not used by NetApp or Equallogic
-	 * @return
-	 */
-	public String getOptionalChapUser();
-	
-	/**
-	 * Creates a volume for holding a snapshot that does not exist on the SAN. Snapshot is probably downloaded (from ObjectStorage) and written to the newly created
-	 * volume there by making it available to the SAN
-	 * 
-	 * @param snapshotId
-	 * @param snapSizeInMB
-	 * @return A string iqn for the newly created volume for holding the snapshot
-	 * @throws EucalyptusCloudException
-	 */
-	public String createSnapshotHolder(String snapshotId, long snapSizeInMB) throws EucalyptusCloudException;
-	
-	/**
-	 * Checks for the snapshot on the SAN backend and returns true or false accordingly
-	 * 
-	 * @param snapshotId
-	 * @return True if the volume exists on the SAN and false if it does not
-	 * @throws EucalyptusCloudException
-	 */
-	public boolean snapshotExists(String snapshotId) throws EucalyptusCloudException;
-	
-	/**
-	 * Creates a snapshot point only. This does not do a transfer or ensure that the snapshot
-	 * is fully independent from the source volume. This method is intended to be very fast
-	 * and can be called synchronously from the CLC request.
-	 * @param snapshotId
-	 * @throws EucalyptusCloudException
-	 */
-	public String createSnapshotPoint(String parentVolumeId, String volumeId) throws EucalyptusCloudException;
-	
-	/**
-	 * Delete the created snapshot point, not the entire snapshot lun
-	 * @param parentVolumeId
-	 * @param snapshotPointId
-	 * @throws EucalyptusCloudException
-	 */
-	public void deleteSnapshotPoint(String parentVolumeId, String snapshotPointId) throws EucalyptusCloudException;
+  public void getStorageProps(ArrayList<ComponentProperty> componentProperties);
 
-	public boolean checkSANCredentialsExist();
+  public void setStorageProps(ArrayList<ComponentProperty> storageProps);
 
-	/**
-	 * Checks for the snapshot on the SAN backend and returns true or false accordingly
-	 * 
-	 * @param snapshotId
-	 * @return True if the volume exists on the SAN and false if it does not
-	 * @throws EucalyptusCloudException
-	 */
-	public boolean volumeExists(String volumeId) throws EucalyptusCloudException;
-	
-	public String getProtocol();
-	
-	public String getProviderName();
+  public void stop() throws EucalyptusCloudException;
+
+  /**
+   * Returns the required authentication type to access resources on the underlying device. This is tyepically a mode as specified in
+   * SANProperties.IscsiAuthType
+   * 
+   * @return
+   */
+  public String getAuthType();
+
+  /**
+   * Not used by NetApp or Equallogic
+   * 
+   * @return
+   */
+  public String getOptionalChapUser();
+
+  /**
+   * Creates a volume for holding a snapshot that does not exist on the SAN. Snapshot is probably downloaded (from ObjectStorage) and written to the
+   * newly created volume there by making it available to the SAN
+   * 
+   * @param snapshotId
+   * @param snapSizeInMB
+   * @return A string iqn for the newly created volume for holding the snapshot
+   * @throws EucalyptusCloudException
+   */
+  public String createSnapshotHolder(String snapshotId, long snapSizeInMB) throws EucalyptusCloudException;
+
+  /**
+   * Checks for the snapshot on the SAN backend and returns true or false accordingly
+   * 
+   * @param snapshotId
+   * @return True if the volume exists on the SAN and false if it does not
+   * @throws EucalyptusCloudException
+   */
+  public boolean snapshotExists(String snapshotId) throws EucalyptusCloudException;
+
+  /**
+   * Creates a snapshot point only. This does not do a transfer or ensure that the snapshot is fully independent from the source volume. This method
+   * is intended to be very fast and can be called synchronously from the CLC request.
+   * 
+   * @param snapshotId
+   * @throws EucalyptusCloudException
+   */
+  public String createSnapshotPoint(String parentVolumeId, String volumeId) throws EucalyptusCloudException;
+
+  /**
+   * Delete the created snapshot point, not the entire snapshot lun
+   * 
+   * @param parentVolumeId
+   * @param snapshotPointId
+   * @throws EucalyptusCloudException
+   */
+  public void deleteSnapshotPoint(String parentVolumeId, String snapshotPointId) throws EucalyptusCloudException;
+
+  public boolean checkSANCredentialsExist();
+
+  /**
+   * Checks for the snapshot on the SAN backend and returns true or false accordingly
+   * 
+   * @param snapshotId
+   * @return True if the volume exists on the SAN and false if it does not
+   * @throws EucalyptusCloudException
+   */
+  public boolean volumeExists(String volumeId) throws EucalyptusCloudException;
+
+  public String getProtocol();
+
+  public String getProviderName();
 }
-

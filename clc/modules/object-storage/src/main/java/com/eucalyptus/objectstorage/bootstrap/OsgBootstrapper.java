@@ -72,80 +72,80 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.ObjectStorageGateway;
 
-@Provides( ObjectStorage.class )
-@RunDuring( Bootstrap.Stage.RemoteServicesInit )
-@DependsLocal( ObjectStorage.class )
+@Provides(ObjectStorage.class)
+@RunDuring(Bootstrap.Stage.RemoteServicesInit)
+@DependsLocal(ObjectStorage.class)
 public class OsgBootstrapper extends Bootstrapper {
-  private static Logger             LOG = Logger.getLogger( OsgBootstrapper.class );
+  private static Logger LOG = Logger.getLogger(OsgBootstrapper.class);
   private static OsgBootstrapper singleton;
-  
-  public static Bootstrapper getInstance( ) {
-    synchronized ( OsgBootstrapper.class ) {
-      if ( singleton == null ) {
-        singleton = new OsgBootstrapper( );
-        LOG.info( "Creating ObjectStorageGateway Bootstrapper instance." );
+
+  public static Bootstrapper getInstance() {
+    synchronized (OsgBootstrapper.class) {
+      if (singleton == null) {
+        singleton = new OsgBootstrapper();
+        LOG.info("Creating ObjectStorageGateway Bootstrapper instance.");
       } else {
-        LOG.info( "Returning ObjectStorageGateway Bootstrapper instance." );
+        LOG.info("Returning ObjectStorageGateway Bootstrapper instance.");
       }
     }
     return singleton;
   }
-  
+
   @Override
-  public boolean load( ) throws Exception {
-    ObjectStorageGateway.checkPreconditions( );
+  public boolean load() throws Exception {
+    ObjectStorageGateway.checkPreconditions();
     return true;
   }
-  
+
   @Override
-  public boolean start( ) throws Exception {
-    ObjectStorageGateway.configure( );
+  public boolean start() throws Exception {
+    ObjectStorageGateway.configure();
     return true;
   }
-  
+
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
    */
   @Override
-  public boolean enable( ) throws Exception {
-      ObjectStorageGateway.enable( );
-      ObjectStorageSchedulerManager.start( );
-      return true;
+  public boolean enable() throws Exception {
+    ObjectStorageGateway.enable();
+    ObjectStorageSchedulerManager.start();
+    return true;
   }
-  
+
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
    */
   @Override
-  public boolean stop( ) throws Exception {
-      ObjectStorageSchedulerManager.stop();
-    ObjectStorageGateway.stop( );
+  public boolean stop() throws Exception {
+    ObjectStorageSchedulerManager.stop();
+    ObjectStorageGateway.stop();
     return true;
   }
-  
+
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
    */
   @Override
-  public void destroy( ) throws Exception {}
-  
+  public void destroy() throws Exception {}
+
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
    */
   @Override
-  public boolean disable( ) throws Exception {
-      ObjectStorageSchedulerManager.stop();
-    ObjectStorageGateway.disable( );
+  public boolean disable() throws Exception {
+    ObjectStorageSchedulerManager.stop();
+    ObjectStorageGateway.disable();
     return true;
   }
-  
+
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#check()
    */
   @Override
-  public boolean check( ) throws Exception {
-    //check local storage
-    ObjectStorageGateway.check( );
+  public boolean check() throws Exception {
+    // check local storage
+    ObjectStorageGateway.check();
     return true;
   }
 }

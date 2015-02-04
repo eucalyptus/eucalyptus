@@ -19,48 +19,45 @@
  ************************************************************************/
 package com.eucalyptus.objectstorage;
 
-import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Availability;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType.StorageWalrus;
 
-import com.eucalyptus.storage.config.ConfigurationCache;
-import com.eucalyptus.objectstorage.entities.ObjectStorageGlobalConfiguration;
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.Listeners;
+import com.eucalyptus.objectstorage.entities.ObjectStorageGlobalConfiguration;
 import com.eucalyptus.objectstorage.policy.ObjectStorageQuotaUtil;
 import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
-
+import com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Availability;
+import com.eucalyptus.storage.config.ConfigurationCache;
 
 /**
- *  Event listener that fires ResourceAvailabilityEvents for the ObjectStorage.
+ * Event listener that fires ResourceAvailabilityEvents for the ObjectStorage.
  */
 public class ObjectStorageAvailabilityEventListener implements EventListener<ClockTick> {
-  private static Logger logger = Logger.getLogger( ObjectStorageAvailabilityEventListener.class );
+  private static Logger logger = Logger.getLogger(ObjectStorageAvailabilityEventListener.class);
 
-  public static void register( ) {
+  public static void register() {
     Listeners.register(ClockTick.class, new ObjectStorageAvailabilityEventListener());
   }
 
   @Override
-  public void fireEvent( final ClockTick event ) {
-    if ( BootstrapArgs.isCloudController() && Bootstrap.isOperational() ) {
+  public void fireEvent(final ClockTick event) {
+    if (BootstrapArgs.isCloudController() && Bootstrap.isOperational()) {
       try {
-      	long capacity = 0;      	
-      	capacity = ConfigurationCache.getConfiguration(ObjectStorageGlobalConfiguration.class).getMax_total_reporting_capacity_gb();
+        long capacity = 0;
+        capacity = ConfigurationCache.getConfiguration(ObjectStorageGlobalConfiguration.class).getMax_total_reporting_capacity_gb();
 
-      	ListenerRegistry.getInstance().fireEvent(
-      			new ResourceAvailabilityEvent( StorageWalrus, new Availability(
-      					capacity,
-      					Math.max( 0, capacity - (long) Math.ceil( (double) ObjectStorageQuotaUtil.getTotalObjectSize() / FileUtils.ONE_GB ) )
-      					) )      			
-      			);
-      } catch ( Exception ex ) {
-        logger.error( ex, ex );
+        ListenerRegistry.getInstance().fireEvent(
+            new ResourceAvailabilityEvent(StorageWalrus, new Availability(capacity, Math.max(0,
+                capacity - (long) Math.ceil((double) ObjectStorageQuotaUtil.getTotalObjectSize() / FileUtils.ONE_GB)))));
+      } catch (Exception ex) {
+        logger.error(ex, ex);
       }
     }
   }

@@ -70,18 +70,18 @@ import com.eucalyptus.ws.stages.UnrollableStage;
 public class WalrusUserAuthenticationStage implements UnrollableStage {
 
   @Override
-  public int compareTo( UnrollableStage o ) {
-    return this.getName( ).compareTo( o.getName( ) );
+  public int compareTo(UnrollableStage o) {
+    return this.getName().compareTo(o.getName());
   }
 
   @Override
-	public String getName( ) {
-		return "walrus-user-authentication";
-	}
+  public String getName() {
+    return "walrus-user-authentication";
+  }
 
-	@Override
-	public void unrollStage( ChannelPipeline pipeline ) {
-		pipeline.addLast( "walrus-verify", new WalrusAuthenticationHandler( ) );
-	}
+  @Override
+  public void unrollStage(ChannelPipeline pipeline) {
+    pipeline.addLast("walrus-verify", new WalrusAuthenticationHandler());
+  }
 
 }

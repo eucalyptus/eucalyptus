@@ -70,18 +70,18 @@ import com.eucalyptus.ws.stages.UnrollableStage;
 public class ObjectStorageUserAuthenticationStage implements UnrollableStage {
 
   @Override
-  public int compareTo( UnrollableStage o ) {
-    return this.getName( ).compareTo( o.getName( ) );
+  public int compareTo(UnrollableStage o) {
+    return this.getName().compareTo(o.getName());
   }
 
   @Override
-	public String getName( ) {
-		return "objectstorage-user-authentication";
-	}
+  public String getName() {
+    return "objectstorage-user-authentication";
+  }
 
-	@Override
-	public void unrollStage( ChannelPipeline pipeline ) {
-		pipeline.addLast( "objectstorage-verify", new ObjectStorageAuthenticationHandler( ) );
-	}
+  @Override
+  public void unrollStage(ChannelPipeline pipeline) {
+    pipeline.addLast("objectstorage-verify", new ObjectStorageAuthenticationHandler());
+  }
 
 }

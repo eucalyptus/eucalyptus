@@ -66,35 +66,31 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.storage.msgs.BucketLogData;
 
-
 @SuppressWarnings("serial")
 public class EntityTooLargeException extends WalrusException {
 
-	public EntityTooLargeException()
-	{
-		super( "EntityTooLarge" );
-	}
-	public EntityTooLargeException(String entity)
-	{
-		super("EntityTooLarge", "Your proposed upload exceeds the maximum allowed object size.", "Entity", entity, HttpResponseStatus.BAD_REQUEST);
-	}
+  public EntityTooLargeException() {
+    super("EntityTooLarge");
+  }
 
-	public EntityTooLargeException(String entityType, String entity)
-	{
-		super("EntityTooLarge", "Your proposed upload exceeds the maximum allowed object size.", entityType, entity, HttpResponseStatus.BAD_REQUEST);
-	}
+  public EntityTooLargeException(String entity) {
+    super("EntityTooLarge", "Your proposed upload exceeds the maximum allowed object size.", "Entity", entity, HttpResponseStatus.BAD_REQUEST);
+  }
 
-	public EntityTooLargeException(String entityType, String entity, BucketLogData logData)
-	{
-		super("EntityTooLarge", "Your proposed upload exceeds the maximum allowed object size.", entityType, entity, HttpResponseStatus.BAD_REQUEST, logData);
-	}
+  public EntityTooLargeException(String entityType, String entity) {
+    super("EntityTooLarge", "Your proposed upload exceeds the maximum allowed object size.", entityType, entity, HttpResponseStatus.BAD_REQUEST);
+  }
 
-	public EntityTooLargeException(Throwable ex)
-	{
-		super("EntityTooLarge", ex);
-	}
-	public EntityTooLargeException(String message, Throwable ex)
-	{
-		super(message,ex);
-	}
+  public EntityTooLargeException(String entityType, String entity, BucketLogData logData) {
+    super("EntityTooLarge", "Your proposed upload exceeds the maximum allowed object size.", entityType, entity, HttpResponseStatus.BAD_REQUEST,
+        logData);
+  }
+
+  public EntityTooLargeException(Throwable ex) {
+    super("EntityTooLarge", ex);
+  }
+
+  public EntityTooLargeException(String message, Throwable ex) {
+    super(message, ex);
+  }
 }

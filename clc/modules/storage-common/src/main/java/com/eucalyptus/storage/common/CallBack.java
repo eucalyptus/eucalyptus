@@ -63,8 +63,9 @@
 package com.eucalyptus.storage.common;
 
 public interface CallBack {
-	void update(long progressBytes);
-	void finish();
-	void failed();
-}
+  void update(long progressBytes);
 
+  void finish();
+
+  void failed();
+}

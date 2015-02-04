@@ -20,16 +20,16 @@
 
 package com.eucalyptus.objectstorage.entities;
 
-
-import com.eucalyptus.entities.AbstractPersistent;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Index;
-
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Index;
+
+import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity
 @PersistenceContext(name = "eucalyptus_osg")
@@ -48,7 +48,7 @@ public class BucketTags extends AbstractPersistent {
   private String value;
 
   public BucketTags withUuid(String bucketUuid) {
-    this.setBucketUuid( bucketUuid );
+    this.setBucketUuid(bucketUuid);
     return this;
   }
 
@@ -56,7 +56,7 @@ public class BucketTags extends AbstractPersistent {
     return bucketUuid;
   }
 
-  public void setBucketUuid( String bucketUuid ) {
+  public void setBucketUuid(String bucketUuid) {
     this.bucketUuid = bucketUuid;
   }
 

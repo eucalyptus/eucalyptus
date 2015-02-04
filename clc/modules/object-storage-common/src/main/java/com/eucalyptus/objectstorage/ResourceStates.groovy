@@ -21,7 +21,7 @@
 package com.eucalyptus.objectstorage
 
 public enum BucketState {
-    creating, extant, deleting
+  creating, extant, deleting
 }
 
 /**
@@ -33,5 +33,5 @@ public enum BucketState {
  * deleting - The object is logically ready for removal. It may be GCd at any time in the future.
  */
 public enum ObjectState {
-    creating, mpu_pending, extant, deleting
+  creating, mpu_pending, extant, deleting
 }

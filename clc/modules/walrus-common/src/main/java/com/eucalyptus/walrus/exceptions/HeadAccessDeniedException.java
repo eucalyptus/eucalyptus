@@ -19,8 +19,8 @@
  ************************************************************************/
 
 package com.eucalyptus.walrus.exceptions;
-import com.eucalyptus.storage.msgs.BucketLogData;
 
+import com.eucalyptus.storage.msgs.BucketLogData;
 
 /**
  * Fix for EUCA-2782. Exception type to be used by HEAD requests when access to the specified entity is forbidden
@@ -28,27 +28,27 @@ import com.eucalyptus.storage.msgs.BucketLogData;
 @SuppressWarnings("serial")
 public class HeadAccessDeniedException extends AccessDeniedException implements HeadExceptionInterface {
 
-	public HeadAccessDeniedException() {
-		super();
-	}
+  public HeadAccessDeniedException() {
+    super();
+  }
 
-	public HeadAccessDeniedException(String entityType, String entity, BucketLogData logData) {
-		super(entityType, entity, logData);
-	}
+  public HeadAccessDeniedException(String entityType, String entity, BucketLogData logData) {
+    super(entityType, entity, logData);
+  }
 
-	public HeadAccessDeniedException(String entityType, String entity) {
-		super(entityType, entity);
-	}
+  public HeadAccessDeniedException(String entityType, String entity) {
+    super(entityType, entity);
+  }
 
-	public HeadAccessDeniedException(String message, Throwable ex) {
-		super(message, ex);
-	}
+  public HeadAccessDeniedException(String message, Throwable ex) {
+    super(message, ex);
+  }
 
-	public HeadAccessDeniedException(String entity) {
-		super(entity);
-	}
+  public HeadAccessDeniedException(String entity) {
+    super(entity);
+  }
 
-	public HeadAccessDeniedException(Throwable ex) {
-		super(ex);
-	}
+  public HeadAccessDeniedException(Throwable ex) {
+    super(ex);
+  }
 }

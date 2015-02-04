@@ -24,28 +24,24 @@ import org.junit.Ignore
 import org.junit.Test
 
 class ObjectReaperTaskTest {
-    @Ignore
-    @Test
-    public void testDeletingObjectReaping() {
+  @Ignore
+  @Test
+  public void testDeletingObjectReaping() {
+  }
 
-    }
+  @Ignore
+  @Test
+  public void testFailedObjectReaping() {
+  }
 
-    @Ignore
-    @Test
-    public void testFailedObjectReaping() {
+  @Ignore
+  @Test
+  public void testReapingWithFailure() {
+    //Fail the deletion operation on backend, ensure idempotency
+  }
 
-    }
-
-    @Ignore
-    @Test
-    public void testReapingWithFailure() {
-        //Fail the deletion operation on backend, ensure idempotency
-    }
-
-    @Ignore
-    @Test
-    public void testConcurrentReaping() {
-
-    }
-
+  @Ignore
+  @Test
+  public void testConcurrentReaping() {
+  }
 }

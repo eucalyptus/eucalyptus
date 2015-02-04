@@ -76,6 +76,8 @@ import com.eucalyptus.autoscaling.common.backend.msgs.DeleteScheduledActionRespo
 import com.eucalyptus.autoscaling.common.backend.msgs.DeleteScheduledActionType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DeleteTagsResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DeleteTagsType;
+import com.eucalyptus.autoscaling.common.backend.msgs.DescribeAccountLimitsResponseType;
+import com.eucalyptus.autoscaling.common.backend.msgs.DescribeAccountLimitsType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DescribeAdjustmentTypesResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DescribeAdjustmentTypesType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DescribeAutoScalingGroupsResponseType;
@@ -238,6 +240,10 @@ public class AutoScalingBackendService {
     this.scalingPolicies = scalingPolicies;
     this.activityManager = activityManager;
     this.scalingActivities = scalingActivities;
+  }
+
+  public DescribeAccountLimitsResponseType describeAccountLimits( final DescribeAccountLimitsType request ) throws EucalyptusCloudException {
+    return request.getReply( );
   }
 
   public DescribeAutoScalingGroupsResponseType describeAutoScalingGroups( final DescribeAutoScalingGroupsType request ) throws EucalyptusCloudException {

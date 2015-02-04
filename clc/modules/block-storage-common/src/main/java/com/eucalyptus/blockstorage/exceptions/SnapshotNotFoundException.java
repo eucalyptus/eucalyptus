@@ -67,22 +67,19 @@ import com.eucalyptus.util.EucalyptusCloudException;
 @SuppressWarnings("serial")
 public class SnapshotNotFoundException extends EucalyptusCloudException {
 
-	public SnapshotNotFoundException()
-	{
-		super( "SnapshotNotFound" );
-	}
-	
-	public SnapshotNotFoundException(String snapshotId)
-	{
-		super("Snapshot " + snapshotId + " not found");
-	}
+  public SnapshotNotFoundException() {
+    super("SnapshotNotFound");
+  }
 
-	public SnapshotNotFoundException(Throwable ex)
-	{
-		super("SnapshotNotFound", ex);
-	}
-	public SnapshotNotFoundException(String message, Throwable ex)
-	{
-		super(message,ex);
-	}
+  public SnapshotNotFoundException(String snapshotId) {
+    super("Snapshot " + snapshotId + " not found");
+  }
+
+  public SnapshotNotFoundException(Throwable ex) {
+    super("SnapshotNotFound", ex);
+  }
+
+  public SnapshotNotFoundException(String message, Throwable ex) {
+    super(message, ex);
+  }
 }

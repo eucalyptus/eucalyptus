@@ -62,25 +62,24 @@
 
 package com.eucalyptus.blockstorage.ceph.exceptions;
 
-
 /**
  * Created by wesw on 7/14/14.
  */
 public class EucalyptusCephException extends RuntimeException {
 
-	public EucalyptusCephException(String message, Throwable cause) {
-		super(message, cause);
-	}
+  public EucalyptusCephException(String message, Throwable cause) {
+    super(message, cause);
+  }
 
-	public EucalyptusCephException() {
-		super();
-	}
+  public EucalyptusCephException() {
+    super();
+  }
 
-	public EucalyptusCephException(String message) {
-		super(message);
-	}
+  public EucalyptusCephException(String message) {
+    super(message);
+  }
 
-	public EucalyptusCephException(Throwable cause) {
-		super(cause);
-	}
+  public EucalyptusCephException(Throwable cause) {
+    super(cause);
+  }
 }

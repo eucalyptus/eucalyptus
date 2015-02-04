@@ -71,6 +71,8 @@ import java.util.concurrent.ExecutionException;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
+import com.eucalyptus.auth.AuthQuotaException;
+import com.eucalyptus.compute.ClientUnauthorizedComputeException;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.common.AttachedVolume;
 import com.eucalyptus.compute.common.ResourceTag;
@@ -179,7 +181,7 @@ public class VolumeManager {
         Snapshot snap = Transactions.find( Snapshot.named( null, normalizeOptionalSnapshotIdentifier( snapId ) ) );
         snapSize = snap.getVolumeSize( );
         if ( !Predicates.and(Snapshots.FilterPermissions.INSTANCE, RestrictedTypes.filterPrivilegedWithoutOwner()).apply(snap)) {
-          throw new EucalyptusCloudException( "Not authorized to use snapshot " + snapId + " by " + ctx.getUser( ).getName( ) );
+          throw new ClientUnauthorizedComputeException( "Not authorized to use snapshot " + snapId + " by " + ctx.getUser( ).getName( ) );
         }
         // Volume created from a snapshot cannot be smaller than the size of the snapshot
         if (volSize != null && snap != null && snap.getVolumeSize() != null && volSize < snap.getVolumeSize()) {
@@ -220,15 +222,8 @@ public class VolumeManager {
         reply.setVolume( newVol.morph( new com.eucalyptus.compute.common.Volume( ) ) );
         return reply;
       } catch ( RuntimeException ex ) {
-        final VolumeSizeExceededException volumeSizeException =
-            Exceptions.findCause( ex, VolumeSizeExceededException.class );
-        if ( volumeSizeException != null ) {
-          throw new ClientComputeException(
-              "VolumeLimitExceeded",
-              "Failed to create volume because of: " + volumeSizeException.getMessage( ) );
-        } else if ( !( ex.getCause( ) instanceof ExecutionException ) ) {
-          LOG.error( ex, ex );
-          throw ex;
+        if ( !( ex.getCause( ) instanceof ExecutionException ) ) {
+          throw handleException( ex );
         } else {
           LOG.error( ex, ex );
           lastEx = ex;
@@ -258,7 +253,7 @@ public class VolumeManager {
             }
           }
           if ( !RestrictedTypes.filterPrivileged( ).apply( vol ) ) {
-            throw Exceptions.toUndeclared( "Not authorized to delete volume by " + ctx.getUser( ).getName( ) );
+            throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to delete volume by " + ctx.getUser( ).getName( ) ) );
           }
           try {
             VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( input );
@@ -418,9 +413,8 @@ public class VolumeManager {
       vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
     } catch ( final NoSuchElementException e ) {
       throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance ID '"+request.getInstanceId()+"' does not exist" );
-    }catch ( Exception ex ) {
-      LOG.debug( ex, ex );
-      throw new EucalyptusCloudException( ex.getMessage( ), ex );
+    } catch ( Exception ex ) {
+      throw handleException( ex );
     }
     if ( MigrationState.isMigrating( vm ) ) {
       throw Exceptions.toUndeclared( "Cannot attach a volume to an instance which is currently migrating: "
@@ -442,7 +436,7 @@ public class VolumeManager {
     }
     
     if ( !RestrictedTypes.filterPrivileged( ).apply( volume ) ) {
-      throw new EucalyptusCloudException( "Not authorized to attach volume " + volumeId + " by " + ctx.getUser( ).getName( ) );
+      throw new ClientUnauthorizedComputeException( "Not authorized to attach volume " + volumeId + " by " + ctx.getUser( ).getName( ) );
     }
     // check volumes
     try {
@@ -545,7 +539,7 @@ public class VolumeManager {
       } 
     }
     if ( !RestrictedTypes.filterPrivileged( ).apply( vol ) ) {
-      throw new EucalyptusCloudException( "Not authorized to detach volume " + volumeId + " by " + ctx.getUser( ).getName( ) );
+      throw new ClientUnauthorizedComputeException( "Not authorized to detach volume " + volumeId + " by " + ctx.getUser( ).getName( ) );
     }
     
     VmInstance vm = null;
@@ -580,7 +574,7 @@ public class VolumeManager {
       throw new ClientComputeException( "IncorrectState", "Volume is not attached: " + volumeId );
     }
     if ( !RestrictedTypes.filterPrivileged( ).apply( vm ) ) {
-      throw new EucalyptusCloudException( "Not authorized to detach volume from instance " + instanceId + " by " + ctx.getUser( ).getName( ) );
+      throw new ClientUnauthorizedComputeException( "Not authorized to detach volume from instance " + instanceId + " by " + ctx.getUser( ).getName( ) );
     }
     if ( instanceId != null && vm != null && !vm.getInstanceId( ).equals( instanceId ) ) {
       throw new ClientComputeException( "InvalidAttachment.NotFound", "Volume is not attached to instance: " + instanceId );
@@ -696,4 +690,36 @@ public class VolumeManager {
     }
   }
 
+  /**
+   * Method always throws, signature allows use of "throw handleException ..."
+   */
+  private static ComputeException handleException( final Exception e ) throws ComputeException {
+    final ComputeException cause = Exceptions.findCause( e, ComputeException.class );
+    if ( cause != null ) {
+      throw cause;
+    }
+
+    final AuthException authException = Exceptions.findCause( e, AuthException.class );
+    if ( authException != null ) {
+      if ( authException instanceof AuthQuotaException ) {
+        throw new ClientComputeException( "VolumeLimitExceeded", authException.getMessage( ) );
+      } else {
+        throw new ClientUnauthorizedComputeException( authException.getMessage( ) );
+      }
+    }
+
+    final VolumeSizeExceededException volumeSizeException = 
+        Exceptions.findCause( e, VolumeSizeExceededException.class );
+    if ( volumeSizeException != null )
+      throw new ClientComputeException(
+          "VolumeLimitExceeded", volumeSizeException.getMessage( ) );
+ 
+    LOG.error( e, e );
+
+    final ComputeException exception = new ComputeException( "InternalError", String.valueOf( e.getMessage( ) ) );
+    if ( Contexts.lookup( ).hasAdministrativePrivileges() ) {
+      exception.initCause( e );
+    }
+    throw exception;
+  }
 }

@@ -79,6 +79,8 @@ import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.compute.ClientUnauthorizedComputeException;
+import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.common.CreateVolumePermissionItemType;
 import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.compute.common.backend.CreateSnapshotResponseType;
@@ -214,9 +216,9 @@ public class SnapshotManager {
         if ( !State.EXTANT.equals( snap.getState( ) ) && !State.FAIL.equals( snap.getState( ) ) ) {
           return false;
         } else if ( !RestrictedTypes.filterPrivileged( ).apply( snap ) ) {
-          throw Exceptions.toUndeclared( new EucalyptusCloudException( "Not authorized to delete snapshot " + request.getSnapshotId( ) + " by " + ctx.getUser( ).getName( ) ) );
+          throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to delete snapshot " + request.getSnapshotId( ) + " by " + ctx.getUser( ).getName( ) ) );
         } else if ( isReservedSnapshot( snapshotId ) ) {
-          throw Exceptions.toUndeclared( new EucalyptusCloudException( "Snapshot " + request.getSnapshotId( ) + " is in use, deletion not permitted" ) );
+          throw Exceptions.toUndeclared( new ClientComputeException( "InvalidSnapshot.InUse", "Snapshot " + request.getSnapshotId( ) + " is in use, deletion not permitted" ) );
         } else {
           fireUsageEvent(snap, SnapShotEvent.forSnapShotDelete());
           final String partition = snap.getPartition();
@@ -273,7 +275,7 @@ public class SnapshotManager {
       try {
         result = Transactions.delete( Snapshot.named( null, snapshotId ), deleteSnapshot );
       } catch ( ExecutionException ex3 ) {
-        throw new EucalyptusCloudException( ex3.getCause( ) );
+        throw handleException( ex3.getCause() );
       } catch ( NoSuchElementException ex4 ) {
         throw new ClientComputeException( "InvalidSnapshot.NotFound", "The snapshot '"+request.getSnapshotId( )+"' does not exist." );
       }
@@ -288,6 +290,8 @@ public class SnapshotManager {
     final DescribeSnapshotsResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
+    // verbose does not have any special functionality for snapshots, but is ignored when passed as an identifier
+    request.getSnapshotSet().remove( "verbose" );
     final Set<String> snapshotIds = Sets.newHashSet( normalizeSnapshotIdentifiers( request.getSnapshotSet( ) ) );
     final List<String> ownersSet = request.getOwnersSet( );
     if ( ownersSet.remove( Snapshots.SELF ) ) {
@@ -558,5 +562,23 @@ public class SnapshotManager {
     } catch (final Throwable e) {
       LOG.error(e, e);
     }
+  }
+
+  /**
+   * Method always throws, signature allows use of "throw handleException ..."
+   */
+  private static ComputeException handleException( final Throwable e ) throws ComputeException {
+    final ComputeException cause = Exceptions.findCause( e, ComputeException.class );
+    if ( cause != null ) {
+      throw cause;
+    }
+
+    LOG.error( e, e );
+
+    final ComputeException exception = new ComputeException( "InternalError", String.valueOf( e.getMessage( ) ) );
+    if ( Contexts.lookup( ).hasAdministrativePrivileges() ) {
+      exception.initCause( e );
+    }
+    throw exception;
   }
 }

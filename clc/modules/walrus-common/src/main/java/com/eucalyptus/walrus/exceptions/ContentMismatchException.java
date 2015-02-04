@@ -64,26 +64,22 @@ package com.eucalyptus.walrus.exceptions;
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-
 @SuppressWarnings("serial")
 public class ContentMismatchException extends WalrusException {
 
-  public ContentMismatchException()
-  {
-    super( "ContentMismatch" );
-  }
-  
-  public ContentMismatchException(String value)
-  {
-    super("ContentMismatch", "The Content-MD5 you specified did not match what was received.", "Object",  value, HttpResponseStatus.BAD_REQUEST);
+  public ContentMismatchException() {
+    super("ContentMismatch");
   }
 
-  public ContentMismatchException(Throwable ex)
-  {
+  public ContentMismatchException(String value) {
+    super("ContentMismatch", "The Content-MD5 you specified did not match what was received.", "Object", value, HttpResponseStatus.BAD_REQUEST);
+  }
+
+  public ContentMismatchException(Throwable ex) {
     super("ContentMismatch", ex);
   }
-  public ContentMismatchException(String message, Throwable ex)
-  {
-    super(message,ex);
+
+  public ContentMismatchException(String message, Throwable ex) {
+    super(message, ex);
   }
 }

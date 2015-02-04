@@ -71,143 +71,147 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 
 /**
- * This is the interface that ALL backend block storage managers must implement.
- * To make a manager configurable by the admin/user the class should be annotated with:
- * @StorageManagerProperty(name) annotation where 'name' is the string value that admins
- * will use to enable that manager for a specific partition.
+ * This is the interface that ALL backend block storage managers must implement. To make a manager configurable by the admin/user the class should be
+ * annotated with:
+ * 
+ * @StorageManagerProperty(name) annotation where 'name' is the string value that admins will use to enable that manager for a specific partition.
  *
  */
 public interface LogicalStorageManager {
-	public void initialize() throws EucalyptusCloudException;
+  public void initialize() throws EucalyptusCloudException;
 
-	public void configure() throws EucalyptusCloudException;
+  public void configure() throws EucalyptusCloudException;
 
-	public void checkPreconditions() throws EucalyptusCloudException;
+  public void checkPreconditions() throws EucalyptusCloudException;
 
-	public void reload();
+  public void reload();
 
-	public void startupChecks() throws EucalyptusCloudException;
+  public void startupChecks() throws EucalyptusCloudException;
 
-	public void cleanVolume(String volumeId);
+  public void cleanVolume(String volumeId);
 
-	public void cleanSnapshot(String snapshotId);
+  public void cleanSnapshot(String snapshotId);
 
-	/**
-	 * If snapshotPointId == null, then create full snapshot, if != null then use snapPointId as starting point and complete snapshot creation
-	 * @param volumeId
-	 * @param snapshotId
-	 * @param snapshotPointId - The opaque id used to identify a snap point on the given backend. This is backend-specific and not universal.
-	 * @param shouldTransferSnapshots
-	 * @return A subclass of StorageResource - Wrapper around, file, block or other types of storage resources
-	 * @throws EucalyptusCloudException
-	 */
-	public StorageResource createSnapshot(String volumeId, String snapshotId, String snapshotPointId, Boolean shouldTransferSnapshots) throws EucalyptusCloudException;
+  /**
+   * If snapshotPointId == null, then create full snapshot, if != null then use snapPointId as starting point and complete snapshot creation
+   * 
+   * @param volumeId
+   * @param snapshotId
+   * @param snapshotPointId - The opaque id used to identify a snap point on the given backend. This is backend-specific and not universal.
+   * @param shouldTransferSnapshots
+   * @return A subclass of StorageResource - Wrapper around, file, block or other types of storage resources
+   * @throws EucalyptusCloudException
+   */
+  public StorageResource createSnapshot(String volumeId, String snapshotId, String snapshotPointId, Boolean shouldTransferSnapshots)
+      throws EucalyptusCloudException;
 
-	public List<String> prepareForTransfer(String snapshotId) throws EucalyptusCloudException;
+  public List<String> prepareForTransfer(String snapshotId) throws EucalyptusCloudException;
 
-	public void createVolume(String volumeId, int size) throws EucalyptusCloudException;
+  public void createVolume(String volumeId, int size) throws EucalyptusCloudException;
 
-	public int createVolume(String volumeId, String snapshotId, int size) throws EucalyptusCloudException;
+  public int createVolume(String volumeId, String snapshotId, int size) throws EucalyptusCloudException;
 
-	public void cloneVolume(String volumeId, String parentVolumeId) throws EucalyptusCloudException;
+  public void cloneVolume(String volumeId, String parentVolumeId) throws EucalyptusCloudException;
 
-	public void addSnapshot(String snapshotId) throws EucalyptusCloudException;
+  public void addSnapshot(String snapshotId) throws EucalyptusCloudException;
 
-	public void deleteVolume(String volumeId) throws EucalyptusCloudException;
+  public void deleteVolume(String volumeId) throws EucalyptusCloudException;
 
-	public void deleteSnapshot(String snapshotId) throws EucalyptusCloudException;
+  public void deleteSnapshot(String snapshotId) throws EucalyptusCloudException;
 
-	/**
-	 * Gets the connection string for the volume. This is no longer used. Connection string should be returned
-	 * on the attach call since it may be specific for a given node iqn.
-	 * @param volumeId
-	 * @return
-	 * @throws EucalyptusCloudException
-	 */
-	public String getVolumeConnectionString(String volumeId) throws EucalyptusCloudException;
+  /**
+   * Gets the connection string for the volume. This is no longer used. Connection string should be returned on the attach call since it may be
+   * specific for a given node iqn.
+   * 
+   * @param volumeId
+   * @return
+   * @throws EucalyptusCloudException
+   */
+  public String getVolumeConnectionString(String volumeId) throws EucalyptusCloudException;
 
-	public void loadSnapshots(List<String> snapshotSet, List<String> snapshotFileNames) throws EucalyptusCloudException;
+  public void loadSnapshots(List<String> snapshotSet, List<String> snapshotFileNames) throws EucalyptusCloudException;
 
-	public int getSnapshotSize(String snapshotId) throws EucalyptusCloudException;
+  public int getSnapshotSize(String snapshotId) throws EucalyptusCloudException;
 
-	public void finishVolume(String snapshotId) throws EucalyptusCloudException;
+  public void finishVolume(String snapshotId) throws EucalyptusCloudException;
 
-	public StorageResource prepareSnapshot(String snapshotId, int sizeExpected, long actualSizeInMB) throws EucalyptusCloudException;
+  public StorageResource prepareSnapshot(String snapshotId, int sizeExpected, long actualSizeInMB) throws EucalyptusCloudException;
 
-	public ArrayList<ComponentProperty> getStorageProps();
+  public ArrayList<ComponentProperty> getStorageProps();
 
-	public void setStorageProps(ArrayList<ComponentProperty> storageParams);
+  public void setStorageProps(ArrayList<ComponentProperty> storageParams);
 
-	public String getStorageRootDirectory();
+  public String getStorageRootDirectory();
 
-	public String getVolumePath(String volumeId) throws EucalyptusCloudException;
+  public String getVolumePath(String volumeId) throws EucalyptusCloudException;
 
-	public void importVolume(String volumeId, String volumePath, int size) throws EucalyptusCloudException;
+  public void importVolume(String volumeId, String volumePath, int size) throws EucalyptusCloudException;
 
-	public String getSnapshotPath(String snapshotId) throws EucalyptusCloudException;
+  public String getSnapshotPath(String snapshotId) throws EucalyptusCloudException;
 
-	public void importSnapshot(String snapshotId, String snapPath, String volumeId, int size) throws EucalyptusCloudException;
+  public void importSnapshot(String snapshotId, String snapPath, String volumeId, int size) throws EucalyptusCloudException;
 
-	/**
-	 * Authorize the specified iqn to access the volume. A client must be able to connect using
-	 * the returned string from this method. The string should be opaque to all but the NC
-	 * This MUST be idempotent and synchronous. Upon return a client should be able to view/connect to the
-	 * volume.
-	 * @param volumeId
-	 * @param nodeIqn
-	 * @return
-	 * @throws EucalyptusCloudException
-	 */
-	public String exportVolume(String volumeId, String nodeIqn) throws EucalyptusCloudException;
+  /**
+   * Authorize the specified iqn to access the volume. A client must be able to connect using the returned string from this method. The string should
+   * be opaque to all but the NC This MUST be idempotent and synchronous. Upon return a client should be able to view/connect to the volume.
+   * 
+   * @param volumeId
+   * @param nodeIqn
+   * @return
+   * @throws EucalyptusCloudException
+   */
+  public String exportVolume(String volumeId, String nodeIqn) throws EucalyptusCloudException;
 
-	/**
-	 * Remove authorization/export status for the specified iqn to the specified volume.
-	 * This MUST be idempotent and synchronous. Upon return the process should be done such that if the client rescans
-	 * or refreshes the view the volume will no longer be visible to it.
-	 * @param volumeId
-	 * @param nodeIqn
-	 * @throws EucalyptusCloudException
-	 */
-	public void unexportVolume(String volumeId, String nodeIqn) throws EucalyptusCloudException, UnsupportedOperationException;
-	
-	/**
-	 * Same as unexportVolume but should remove authorization for all clients. This should be used to enforce
-	 * a final state on the volume.
-	 * This MUST be idempotent and should be synchronous
-	 * @param volumeId
-	 * @throws EucalyptusCloudException
-	 */
-	public void unexportVolumeFromAll(String volumeId) throws EucalyptusCloudException;
+  /**
+   * Remove authorization/export status for the specified iqn to the specified volume. This MUST be idempotent and synchronous. Upon return the
+   * process should be done such that if the client rescans or refreshes the view the volume will no longer be visible to it.
+   * 
+   * @param volumeId
+   * @param nodeIqn
+   * @throws EucalyptusCloudException
+   */
+  public void unexportVolume(String volumeId, String nodeIqn) throws EucalyptusCloudException, UnsupportedOperationException;
 
-	/* Added to allow synchronous snapshot setting */
-	/**
-	 * Should return either the id of the snapshot point created, or null if the point was not created.
-	 * @param parentVolumeId
-	 * @param volumeId
-	 * @return
-	 * @throws EucalyptusCloudException
-	 */
-	public String createSnapshotPoint(String parentVolumeId, String volumeId) throws EucalyptusCloudException;
-	
-	/**
-	 * Deletes the specified snapshot point
-	 * @param parentVolumeId
-	 * @param volumeId
-	 * @throws EucalyptusCloudException
-	 */
-	public void deleteSnapshotPoint(String parentVolumeId, String volumeId, String snapshotPointId) throws EucalyptusCloudException;
-	
-	public void checkReady() throws EucalyptusCloudException;
+  /**
+   * Same as unexportVolume but should remove authorization for all clients. This should be used to enforce a final state on the volume. This MUST be
+   * idempotent and should be synchronous
+   * 
+   * @param volumeId
+   * @throws EucalyptusCloudException
+   */
+  public void unexportVolumeFromAll(String volumeId) throws EucalyptusCloudException;
 
-	public void stop() throws EucalyptusCloudException;
+  /* Added to allow synchronous snapshot setting */
+  /**
+   * Should return either the id of the snapshot point created, or null if the point was not created.
+   * 
+   * @param parentVolumeId
+   * @param volumeId
+   * @return
+   * @throws EucalyptusCloudException
+   */
+  public String createSnapshotPoint(String parentVolumeId, String volumeId) throws EucalyptusCloudException;
 
-	public void enable() throws EucalyptusCloudException;
+  /**
+   * Deletes the specified snapshot point
+   * 
+   * @param parentVolumeId
+   * @param volumeId
+   * @throws EucalyptusCloudException
+   */
+  public void deleteSnapshotPoint(String parentVolumeId, String volumeId, String snapshotPointId) throws EucalyptusCloudException;
 
-	public void disable() throws EucalyptusCloudException;
+  public void checkReady() throws EucalyptusCloudException;
 
-	public boolean getFromBackend(String snapshotId, int size) throws EucalyptusCloudException;
-	
-	public void checkVolume(String volumeId) throws EucalyptusCloudException;
+  public void stop() throws EucalyptusCloudException;
 
-	public List<CheckerTask> getCheckers();
+  public void enable() throws EucalyptusCloudException;
+
+  public void disable() throws EucalyptusCloudException;
+
+  public boolean getFromBackend(String snapshotId, int size) throws EucalyptusCloudException;
+
+  public void checkVolume(String volumeId) throws EucalyptusCloudException;
+
+  public List<CheckerTask> getCheckers();
 }

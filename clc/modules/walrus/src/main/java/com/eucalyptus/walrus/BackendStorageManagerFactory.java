@@ -66,25 +66,25 @@ import org.apache.log4j.Logger;
 
 public class BackendStorageManagerFactory {
 
-	private static Logger LOG = Logger.getLogger( BackendStorageManagerFactory.class );
+  private static Logger LOG = Logger.getLogger(BackendStorageManagerFactory.class);
 
-	public static StorageManager getStorageManager() throws Exception {
-		String storageManager = "FileSystemStorageManager";
-		if(System.getProperty("walrus.storage.manager") != null) {
-			storageManager = System.getProperty("walrus.storage.manager");
-		}
-		try {
-			storageManager = "com.eucalyptus.walrus.storage." + storageManager;
-			return (StorageManager) ClassLoader.getSystemClassLoader().loadClass(storageManager).newInstance();
-		} catch (InstantiationException e) {
-			LOG.error(e, e);
-                        throw e;
-		} catch (IllegalAccessException e) {
-			LOG.error(e, e);
-    			throw e; 
-		} catch (ClassNotFoundException e) {
-			LOG.error(e, e); 
-			throw e;
-		}
-	}
+  public static StorageManager getStorageManager() throws Exception {
+    String storageManager = "FileSystemStorageManager";
+    if (System.getProperty("walrus.storage.manager") != null) {
+      storageManager = System.getProperty("walrus.storage.manager");
+    }
+    try {
+      storageManager = "com.eucalyptus.walrus.storage." + storageManager;
+      return (StorageManager) ClassLoader.getSystemClassLoader().loadClass(storageManager).newInstance();
+    } catch (InstantiationException e) {
+      LOG.error(e, e);
+      throw e;
+    } catch (IllegalAccessException e) {
+      LOG.error(e, e);
+      throw e;
+    } catch (ClassNotFoundException e) {
+      LOG.error(e, e);
+      throw e;
+    }
+  }
 }

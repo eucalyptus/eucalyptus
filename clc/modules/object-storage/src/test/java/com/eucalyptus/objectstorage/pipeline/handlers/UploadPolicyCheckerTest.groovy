@@ -34,49 +34,48 @@ import org.junit.Test
  */
 @CompileStatic
 class UploadPolicyCheckerTest {
-    @Test
-    void testCheckPolicy() {
-        String acl = 'private'
-        String expiration = DateFormatter.dateToListingFormattedString(new Date(System.currentTimeMillis() + 10000));
-        String bucket = 'bucket'
-        String key = 'key'
-        String contentType = "application/octet-stream"
-        String policy = String.format('{"expiration": "%s" , "conditions": [{ "acl": "%s"},{"bucket": "%s"}, ["starts-with","$key", "ke"]]}', expiration, acl, bucket, key)
-        Map<String, String> formFields = Maps.newHashMap()
-        formFields.put(ObjectStorageProperties.FormField.acl.toString(), acl)
-        formFields.put(ObjectStorageProperties.FormField.key.toString(), key)
-        formFields.put(ObjectStorageProperties.FormField.bucket.toString(), bucket)
-        formFields.put(ObjectStorageProperties.FormField.Content_Type.toString(), contentType)
-        formFields.put(ObjectStorageProperties.FormField.Policy.toString(), B64.standard.encString(policy))
+  @Test
+  void testCheckPolicy() {
+    String acl = 'private'
+    String expiration = DateFormatter.dateToListingFormattedString(new Date(System.currentTimeMillis() + 10000));
+    String bucket = 'bucket'
+    String key = 'key'
+    String contentType = "application/octet-stream"
+    String policy = String.format('{"expiration": "%s" , "conditions": [{ "acl": "%s"},{"bucket": "%s"}, ["starts-with","$key", "ke"]]}', expiration, acl, bucket, key)
+    Map<String, String> formFields = Maps.newHashMap()
+    formFields.put(ObjectStorageProperties.FormField.acl.toString(), acl)
+    formFields.put(ObjectStorageProperties.FormField.key.toString(), key)
+    formFields.put(ObjectStorageProperties.FormField.bucket.toString(), bucket)
+    formFields.put(ObjectStorageProperties.FormField.Content_Type.toString(), contentType)
+    formFields.put(ObjectStorageProperties.FormField.Policy.toString(), B64.standard.encString(policy))
 
-        try {
-            UploadPolicyChecker.checkPolicy(formFields)
-        } catch(Exception e) {
-            Assert.fail('Unexpected exception')
-        }
+    try {
+      UploadPolicyChecker.checkPolicy(formFields)
+    } catch(Exception e) {
+      Assert.fail('Unexpected exception')
     }
+  }
 
-    @Test
-    void testCheckPolicyRejection() {
-        String acl = 'private'
-        String expiration = DateFormatter.dateToListingFormattedString(new Date(System.currentTimeMillis() + 10000));
-        String bucket = 'bucket'
-        String key = 'key'
-        String contentType = "application/octet-stream"
-        String policy = String.format('{"expiration": "%s" , "conditions": [{ "acl": "%s"},{"bucket": "%s"}, ["starts-with","$key", "mismatchthiskey"]]}', expiration, acl, bucket, key)
-        Map<String, String> formFields = Maps.newHashMap()
-        formFields.put(ObjectStorageProperties.FormField.acl.toString(), acl)
-        formFields.put(ObjectStorageProperties.FormField.key.toString(), key)
-        formFields.put(ObjectStorageProperties.FormField.bucket.toString(), bucket)
-        formFields.put(ObjectStorageProperties.FormField.Content_Type.toString(), contentType)
-        formFields.put(ObjectStorageProperties.FormField.Policy.toString(), B64.standard.encString(policy))
+  @Test
+  void testCheckPolicyRejection() {
+    String acl = 'private'
+    String expiration = DateFormatter.dateToListingFormattedString(new Date(System.currentTimeMillis() + 10000));
+    String bucket = 'bucket'
+    String key = 'key'
+    String contentType = "application/octet-stream"
+    String policy = String.format('{"expiration": "%s" , "conditions": [{ "acl": "%s"},{"bucket": "%s"}, ["starts-with","$key", "mismatchthiskey"]]}', expiration, acl, bucket, key)
+    Map<String, String> formFields = Maps.newHashMap()
+    formFields.put(ObjectStorageProperties.FormField.acl.toString(), acl)
+    formFields.put(ObjectStorageProperties.FormField.key.toString(), key)
+    formFields.put(ObjectStorageProperties.FormField.bucket.toString(), bucket)
+    formFields.put(ObjectStorageProperties.FormField.Content_Type.toString(), contentType)
+    formFields.put(ObjectStorageProperties.FormField.Policy.toString(), B64.standard.encString(policy))
 
-        try {
-            UploadPolicyChecker.checkPolicy(formFields)
-            Assert.fail('Expected a failure here, should not have passed with the given policy: ' + policy)
-        } catch(Exception e) {
-            //Good.
-        }
+    try {
+      UploadPolicyChecker.checkPolicy(formFields)
+      Assert.fail('Expected a failure here, should not have passed with the given policy: ' + policy)
+    } catch(Exception e) {
+      //Good.
     }
-
+  }
 }

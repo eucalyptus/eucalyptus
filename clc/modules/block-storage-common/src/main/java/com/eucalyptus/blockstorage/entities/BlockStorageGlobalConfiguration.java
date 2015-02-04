@@ -79,7 +79,6 @@ import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.upgrade.Upgrades;
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
@@ -97,77 +96,76 @@ import com.google.common.base.Predicate;
 @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 @ConfigurableClass(root = "storage", description = "Basic storage controller configuration.", singleton = true, deferred = true)
 public class BlockStorageGlobalConfiguration extends AbstractPersistent {
-	private static Logger LOG = Logger.getLogger(BlockStorageGlobalConfiguration.class);
-	private static final int DEFAULT_GLOBAL_TOTAL_SNAPSHOT_SIZE_GB = 50;
+  private static Logger LOG = Logger.getLogger(BlockStorageGlobalConfiguration.class);
+  private static final int DEFAULT_GLOBAL_TOTAL_SNAPSHOT_SIZE_GB = 50;
 
-	@ConfigurableField(description = "Maximum total snapshot capacity (GB)", displayName = "Maximum total size allowed for snapshots", initial = "50")
-	@Column(name = "global_total_snapshot_size_limit_gb")
-	private Integer global_total_snapshot_size_limit_gb;
+  @ConfigurableField(description = "Maximum total snapshot capacity (GB)", displayName = "Maximum total size allowed for snapshots", initial = "50")
+  @Column(name = "global_total_snapshot_size_limit_gb")
+  private Integer global_total_snapshot_size_limit_gb;
 
-	public Integer getGlobal_total_snapshot_size_limit_gb() {
-		return global_total_snapshot_size_limit_gb;
-	}
+  public Integer getGlobal_total_snapshot_size_limit_gb() {
+    return global_total_snapshot_size_limit_gb;
+  }
 
-	public void setGlobal_total_snapshot_size_limit_gb(Integer global_total_snapshot_size_limit_gb) {
-		this.global_total_snapshot_size_limit_gb = global_total_snapshot_size_limit_gb;
-	}
+  public void setGlobal_total_snapshot_size_limit_gb(Integer global_total_snapshot_size_limit_gb) {
+    this.global_total_snapshot_size_limit_gb = global_total_snapshot_size_limit_gb;
+  }
 
-	public BlockStorageGlobalConfiguration() {
-	}
+  public BlockStorageGlobalConfiguration() {}
 
-	@PrePersist
-	private void initalize() {
-		if (this.global_total_snapshot_size_limit_gb == null) {
-			this.global_total_snapshot_size_limit_gb = DEFAULT_GLOBAL_TOTAL_SNAPSHOT_SIZE_GB;
-		}
-	}
+  @PrePersist
+  private void initalize() {
+    if (this.global_total_snapshot_size_limit_gb == null) {
+      this.global_total_snapshot_size_limit_gb = DEFAULT_GLOBAL_TOTAL_SNAPSHOT_SIZE_GB;
+    }
+  }
 
-	public static BlockStorageGlobalConfiguration getInstance() {
-		BlockStorageGlobalConfiguration config = null;
-		try {
-			config = Transactions.find(new BlockStorageGlobalConfiguration());
-		} catch (Exception e) {
-			try {
-				config = Transactions.save(new BlockStorageGlobalConfiguration());
-			} catch (Exception e1) {
-				LOG.warn("Failed to load and save block storage global configuration");
-				config = new BlockStorageGlobalConfiguration();
-				config.initalize();
-			}
-		}
-		return config;
-	}
+  public static BlockStorageGlobalConfiguration getInstance() {
+    BlockStorageGlobalConfiguration config = null;
+    try {
+      config = Transactions.find(new BlockStorageGlobalConfiguration());
+    } catch (Exception e) {
+      try {
+        config = Transactions.save(new BlockStorageGlobalConfiguration());
+      } catch (Exception e1) {
+        LOG.warn("Failed to load and save block storage global configuration");
+        config = new BlockStorageGlobalConfiguration();
+        config.initalize();
+      }
+    }
+    return config;
+  }
 
-	@EntityUpgrade(entities = { BlockStorageGlobalConfiguration.class }, since = Upgrades.Version.v4_0_0, value = Storage.class)
-	public static enum BSGC400Upgrade implements Predicate<Class> { // Set the max snapshot size from Walrus in 3.4.x
-		INSATANCE;
-		private static final Logger LOG = Logger.getLogger(BlockStorageGlobalConfiguration.BSGC400Upgrade.class);
+  @EntityUpgrade(entities = {BlockStorageGlobalConfiguration.class}, since = Upgrades.Version.v4_0_0, value = Storage.class)
+  public static enum BSGC400Upgrade implements Predicate<Class> { // Set the max snapshot size from Walrus in 3.4.x
+    INSATANCE;
+    private static final Logger LOG = Logger.getLogger(BlockStorageGlobalConfiguration.BSGC400Upgrade.class);
 
-		@Override
-		public boolean apply(@Nullable Class arg0) {
-			EntityTransaction tran = Entities.get(BlockStorageGlobalConfiguration.class);
-			try {
-				WalrusInfo walrusConfig = WalrusInfo.getWalrusInfo();
-				BlockStorageGlobalConfiguration config = null;
-				try {
-					config = Entities.uniqueResult(new BlockStorageGlobalConfiguration());
-					config.setGlobal_total_snapshot_size_limit_gb(walrusConfig.getStorageMaxTotalSnapshotSizeInGb());
-				} catch (Exception e) {
-					config = new BlockStorageGlobalConfiguration();
-					config.setGlobal_total_snapshot_size_limit_gb(walrusConfig.getStorageMaxTotalSnapshotSizeInGb());
-					Entities.persist(config);
-				}
-				tran.commit();
-			} catch (Exception e) {
-				LOG.error("Error upgrading blockstorage global configuration", e);
-				tran.rollback();
-				Exceptions.toUndeclared("Error upgrading blockstorage global configuration", e);
-			} finally {
-				if (tran.isActive()) {
-					tran.rollback();
-				}
-			}
-			return true;
-		}
-	}
+    @Override
+    public boolean apply(@Nullable Class arg0) {
+      EntityTransaction tran = Entities.get(BlockStorageGlobalConfiguration.class);
+      try {
+        WalrusInfo walrusConfig = WalrusInfo.getWalrusInfo();
+        BlockStorageGlobalConfiguration config = null;
+        try {
+          config = Entities.uniqueResult(new BlockStorageGlobalConfiguration());
+          config.setGlobal_total_snapshot_size_limit_gb(walrusConfig.getStorageMaxTotalSnapshotSizeInGb());
+        } catch (Exception e) {
+          config = new BlockStorageGlobalConfiguration();
+          config.setGlobal_total_snapshot_size_limit_gb(walrusConfig.getStorageMaxTotalSnapshotSizeInGb());
+          Entities.persist(config);
+        }
+        tran.commit();
+      } catch (Exception e) {
+        LOG.error("Error upgrading blockstorage global configuration", e);
+        tran.rollback();
+        Exceptions.toUndeclared("Error upgrading blockstorage global configuration", e);
+      } finally {
+        if (tran.isActive()) {
+          tran.rollback();
+        }
+      }
+      return true;
+    }
+  }
 }

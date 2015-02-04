@@ -70,72 +70,72 @@ import java.io.OutputStream;
  */
 public abstract class StorageResource {
 
-	public static enum Type {
-		FILE, BLOCK, CEPH;
-	}
+  public static enum Type {
+    FILE, BLOCK, CEPH;
+  }
 
-	private String id;
-	private String path;
-	private Type type;
+  private String id;
+  private String path;
+  private Type type;
 
-	public StorageResource(String id, String path, Type type) {
-		this.id = id;
-		this.path = path;
-		this.type = type;
-	}
+  public StorageResource(String id, String path, Type type) {
+    this.id = id;
+    this.path = path;
+    this.type = type;
+  }
 
-	public String getId() {
-		return id;
-	}
+  public String getId() {
+    return id;
+  }
 
-	public void setId(String id) {
-		this.id = id;
-	}
+  public void setId(String id) {
+    this.id = id;
+  }
 
-	public String getPath() {
-		return path;
-	}
+  public String getPath() {
+    return path;
+  }
 
-	public void setPath(String path) {
-		this.path = path;
-	}
+  public void setPath(String path) {
+    this.path = path;
+  }
 
-	public Type getType() {
-		return type;
-	}
+  public Type getType() {
+    return type;
+  }
 
-	public void setType(Type type) {
-		this.type = type;
-	}
+  public void setType(Type type) {
+    this.type = type;
+  }
 
-	/**
-	 * Compute and return the size of the storage device in bytes
-	 * 
-	 * @return Size in bytes
-	 * @throws Exception
-	 */
-	public abstract Long getSize() throws Exception;
+  /**
+   * Compute and return the size of the storage device in bytes
+   * 
+   * @return Size in bytes
+   * @throws Exception
+   */
+  public abstract Long getSize() throws Exception;
 
-	/**
-	 * Returns an {@link java.io.InputStream} object to the storage device
-	 * 
-	 * @return InputStream
-	 * @throws Exception
-	 */
-	public abstract InputStream getInputStream() throws Exception;
+  /**
+   * Returns an {@link java.io.InputStream} object to the storage device
+   * 
+   * @return InputStream
+   * @throws Exception
+   */
+  public abstract InputStream getInputStream() throws Exception;
 
-	/**
-	 * Returns an {@link java.io.OutputStream} object to the storage device
-	 * 
-	 * @return OuputStream
-	 * @throws Exception
-	 */
-	public abstract OutputStream getOutputStream() throws Exception;
+  /**
+   * Returns an {@link java.io.OutputStream} object to the storage device
+   * 
+   * @return OuputStream
+   * @throws Exception
+   */
+  public abstract OutputStream getOutputStream() throws Exception;
 
-	/**
-	 * If download and write to the storage device can be synchronous, this method returns true. Otherwise it returns false
-	 * 
-	 * @return true or false
-	 */
-	public abstract Boolean isDownloadSynchronous();
+  /**
+   * If download and write to the storage device can be synchronous, this method returns true. Otherwise it returns false
+   * 
+   * @return true or false
+   */
+  public abstract Boolean isDownloadSynchronous();
 }

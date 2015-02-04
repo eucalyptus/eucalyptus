@@ -61,128 +61,127 @@
  ************************************************************************/
 package com.eucalyptus.objectstorage.client;
 
-import com.eucalyptus.configurable.ConfigurableClass;
-import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.Transactions;
-import org.apache.log4j.Logger;
-
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 
+import org.apache.log4j.Logger;
+
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.Transactions;
+
 /**
  * Set of configurable values that are used by GenericS3ClientFactory
  */
 @Entity
-@PersistenceContext(name="eucalyptus_osg")
-@Table(name="s3client_config")
-@ConfigurableClass( root = "objectstorage.s3client", description = "Configuration for internal S3 clients.", singleton = true)
+@PersistenceContext(name = "eucalyptus_osg")
+@Table(name = "s3client_config")
+@ConfigurableClass(root = "objectstorage.s3client", description = "Configuration for internal S3 clients.", singleton = true)
 public class GenericS3ClientFactoryConfiguration extends AbstractPersistent {
 
-    private static final Logger LOG = Logger.getLogger(GenericS3ClientFactoryConfiguration.class);
+  private static final Logger LOG = Logger.getLogger(GenericS3ClientFactoryConfiguration.class);
 
-    @ConfigurableField( description = "Internal S3 client connection timeout in ms", displayName = "connection_timeout", initial = "10000")
-    @Column(name = "connection_timeout")
-    private Integer connection_timeout_ms;
-    private static final Integer DEFAULT_TIMEOUT_MS = new Integer(10 * 1000);
+  @ConfigurableField(description = "Internal S3 client connection timeout in ms", displayName = "connection_timeout", initial = "10000")
+  @Column(name = "connection_timeout")
+  private Integer connection_timeout_ms;
+  private static final Integer DEFAULT_TIMEOUT_MS = new Integer(10 * 1000);
 
-    @ConfigurableField( description = "Internal S3 client maximum connections", displayName = "max_connections", initial = "64")
-    @Column(name = "max_connections")
-    private Integer max_connections;
-    private static final Integer DEFAULT_MAX_CONNECTIONS = new Integer(64);
+  @ConfigurableField(description = "Internal S3 client maximum connections", displayName = "max_connections", initial = "64")
+  @Column(name = "max_connections")
+  private Integer max_connections;
+  private static final Integer DEFAULT_MAX_CONNECTIONS = new Integer(64);
 
-    @ConfigurableField( description = "Internal S3 client socket read timeout in ms", displayName = "socket_read_timeout", initial = "30000")
-    @Column(name = "socket_read_timeout_ms")
-    private Integer socket_read_timeout_ms;
-    private static final Integer DEFAULT_SOCKET_READ_TIMEOUT_MS = new Integer(30 * 1000);
+  @ConfigurableField(description = "Internal S3 client socket read timeout in ms", displayName = "socket_read_timeout", initial = "30000")
+  @Column(name = "socket_read_timeout_ms")
+  private Integer socket_read_timeout_ms;
+  private static final Integer DEFAULT_SOCKET_READ_TIMEOUT_MS = new Integer(30 * 1000);
 
-    @ConfigurableField( description = "Internal S3 client maximum retries on error", displayName = "max_retries", initial = "3")
-    @Column(name = "max_error_retries")
-    private Integer max_error_retries;
-    private static final Integer DEFAULT_MAX_ERROR_RETRIES = new Integer(3);
+  @ConfigurableField(description = "Internal S3 client maximum retries on error", displayName = "max_retries", initial = "3")
+  @Column(name = "max_error_retries")
+  private Integer max_error_retries;
+  private static final Integer DEFAULT_MAX_ERROR_RETRIES = new Integer(3);
 
-    @ConfigurableField( description = "Internal S3 client buffer size", displayName = "buffer_size", initial = "524228")
-    @Column(name = "buffer_size")
-    private Integer buffer_size ;
-    private static final Integer DEFAULT_BUFFER_SIZE = new Integer(512 * 1024);
+  @ConfigurableField(description = "Internal S3 client buffer size", displayName = "buffer_size", initial = "524228")
+  @Column(name = "buffer_size")
+  private Integer buffer_size;
+  private static final Integer DEFAULT_BUFFER_SIZE = new Integer(512 * 1024);
 
-    @PrePersist
-    private void initialize() {
-        if (connection_timeout_ms == null) {
-            connection_timeout_ms = DEFAULT_TIMEOUT_MS;
-        }
-        if (max_connections == null) {
-            max_connections = DEFAULT_MAX_CONNECTIONS;
-        }
-        if (socket_read_timeout_ms == null) {
-            socket_read_timeout_ms = DEFAULT_SOCKET_READ_TIMEOUT_MS;
-        }
-        if (max_error_retries == null) {
-            max_error_retries = DEFAULT_MAX_ERROR_RETRIES;
-        }
-        if (buffer_size == null) {
-            buffer_size = DEFAULT_BUFFER_SIZE;
-        }
+  @PrePersist
+  private void initialize() {
+    if (connection_timeout_ms == null) {
+      connection_timeout_ms = DEFAULT_TIMEOUT_MS;
     }
-
-    public static GenericS3ClientFactoryConfiguration getInstance() {
-        GenericS3ClientFactoryConfiguration config = null;
-        try {
-            config = Transactions.find(new GenericS3ClientFactoryConfiguration());
-        }
-        catch (Exception e) {
-            try {
-                config = Transactions.save(new GenericS3ClientFactoryConfiguration());
-            }
-            catch (Exception ex) {
-                LOG.warn("failed to load and save configuration for internal S3 clients");
-                config = new GenericS3ClientFactoryConfiguration();
-                config.initialize();
-            }
-        }
-        return config;
+    if (max_connections == null) {
+      max_connections = DEFAULT_MAX_CONNECTIONS;
     }
-
-    public Integer getConnection_timeout_ms() {
-        return connection_timeout_ms;
+    if (socket_read_timeout_ms == null) {
+      socket_read_timeout_ms = DEFAULT_SOCKET_READ_TIMEOUT_MS;
     }
-
-    public void setConnection_timeout_ms(Integer connection_timeout_ms) {
-        this.connection_timeout_ms = connection_timeout_ms;
+    if (max_error_retries == null) {
+      max_error_retries = DEFAULT_MAX_ERROR_RETRIES;
     }
-
-    public Integer getMax_connections() {
-        return max_connections;
+    if (buffer_size == null) {
+      buffer_size = DEFAULT_BUFFER_SIZE;
     }
+  }
 
-    public void setMax_connections(Integer max_connections) {
-        this.max_connections = max_connections;
+  public static GenericS3ClientFactoryConfiguration getInstance() {
+    GenericS3ClientFactoryConfiguration config = null;
+    try {
+      config = Transactions.find(new GenericS3ClientFactoryConfiguration());
+    } catch (Exception e) {
+      try {
+        config = Transactions.save(new GenericS3ClientFactoryConfiguration());
+      } catch (Exception ex) {
+        LOG.warn("failed to load and save configuration for internal S3 clients");
+        config = new GenericS3ClientFactoryConfiguration();
+        config.initialize();
+      }
     }
+    return config;
+  }
 
-    public Integer getSocket_read_timeout_ms() {
-        return socket_read_timeout_ms;
-    }
+  public Integer getConnection_timeout_ms() {
+    return connection_timeout_ms;
+  }
 
-    public void setSocket_read_timeout_ms(Integer socket_read_timeout_ms) {
-        this.socket_read_timeout_ms = socket_read_timeout_ms;
-    }
+  public void setConnection_timeout_ms(Integer connection_timeout_ms) {
+    this.connection_timeout_ms = connection_timeout_ms;
+  }
 
-    public Integer getMax_error_retries() {
-        return max_error_retries;
-    }
+  public Integer getMax_connections() {
+    return max_connections;
+  }
 
-    public void setMax_error_retries(Integer max_error_retries) {
-        this.max_error_retries = max_error_retries;
-    }
+  public void setMax_connections(Integer max_connections) {
+    this.max_connections = max_connections;
+  }
 
-    public Integer getBuffer_size() {
-        return buffer_size;
-    }
+  public Integer getSocket_read_timeout_ms() {
+    return socket_read_timeout_ms;
+  }
 
-    public void setBuffer_size(Integer buffer_size) {
-        this.buffer_size = buffer_size;
-    }
+  public void setSocket_read_timeout_ms(Integer socket_read_timeout_ms) {
+    this.socket_read_timeout_ms = socket_read_timeout_ms;
+  }
+
+  public Integer getMax_error_retries() {
+    return max_error_retries;
+  }
+
+  public void setMax_error_retries(Integer max_error_retries) {
+    this.max_error_retries = max_error_retries;
+  }
+
+  public Integer getBuffer_size() {
+    return buffer_size;
+  }
+
+  public void setBuffer_size(Integer buffer_size) {
+    this.buffer_size = buffer_size;
+  }
 }

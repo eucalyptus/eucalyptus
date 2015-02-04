@@ -85,98 +85,99 @@ import com.eucalyptus.entities.Transactions;
 @PersistenceContext(name = "eucalyptus_storage")
 @Table(name = "das_info")
 @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
-@ConfigurableClass(root = "storage", alias = "das", description = "Basic storage controller configuration for DAS.", singleton = false, deferred = true)
+@ConfigurableClass(root = "storage", alias = "das", description = "Basic storage controller configuration for DAS.", singleton = false,
+    deferred = true)
 public class DASInfo extends AbstractPersistent {
-	private static Logger LOG = Logger.getLogger(DASInfo.class);
+  private static Logger LOG = Logger.getLogger(DASInfo.class);
 
-	@ConfigurableIdentifier
-	@Column(name = "storage_name", unique = true)
-	private String name;
-	@ConfigurableField(description = "Direct attached storage device location", displayName = "Direct attached block device or volume group")
-	@Column(name = "das_device")
-	private String DASDevice;
+  @ConfigurableIdentifier
+  @Column(name = "storage_name", unique = true)
+  private String name;
+  @ConfigurableField(description = "Direct attached storage device location", displayName = "Direct attached block device or volume group")
+  @Column(name = "das_device")
+  private String DASDevice;
 
-	public DASInfo() {
-		this.name = StorageProperties.NAME;
-	}
+  public DASInfo() {
+    this.name = StorageProperties.NAME;
+  }
 
-	public DASInfo(final String name) {
-		this.name = name;
-	}
+  public DASInfo(final String name) {
+    this.name = name;
+  }
 
-	public DASInfo(final String name, final String DASDevice) {
-		this.name = name;
-		this.DASDevice = DASDevice;
-	}
+  public DASInfo(final String name, final String DASDevice) {
+    this.name = name;
+    this.DASDevice = DASDevice;
+  }
 
-	public String getName() {
-		return name;
-	}
+  public String getName() {
+    return name;
+  }
 
-	public void setName(String name) {
-		this.name = name;
-	}
+  public void setName(String name) {
+    this.name = name;
+  }
 
-	public String getDASDevice() {
-		return DASDevice;
-	}
+  public String getDASDevice() {
+    return DASDevice;
+  }
 
-	public void setDASDevice(String DASDevice) {
-		this.DASDevice = DASDevice;
-	}
+  public void setDASDevice(String DASDevice) {
+    this.DASDevice = DASDevice;
+  }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		DASInfo other = (DASInfo) obj;
-		if (name == null) {
-			if (other.name != null)
-				return false;
-		} else if (!name.equals(other.name))
-			return false;
-		return true;
-	}
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    DASInfo other = (DASInfo) obj;
+    if (name == null) {
+      if (other.name != null)
+        return false;
+    } else if (!name.equals(other.name))
+      return false;
+    return true;
+  }
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((name == null) ? 0 : name.hashCode());
-		return result;
-	}
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((name == null) ? 0 : name.hashCode());
+    return result;
+  }
 
-	@Override
-	public String toString() {
-		return this.name;
-	}
+  @Override
+  public String toString() {
+    return this.name;
+  }
 
-	public static DASInfo getStorageInfo() {
-		DASInfo conf = null;
+  public static DASInfo getStorageInfo() {
+    DASInfo conf = null;
 
-		try {
-			conf = Transactions.find(new DASInfo());
-		} catch (Exception e) {
-			LOG.warn("DAS information for " + StorageProperties.NAME + " not found. Loading defaults.");
-			try {
-				conf = Transactions.saveDirect(new DASInfo(StorageProperties.NAME, StorageProperties.DAS_DEVICE));
-			} catch (Exception e1) {
-				try {
-					conf = Transactions.find(new DASInfo());
-				} catch (Exception e2) {
-					LOG.warn("Failed to persist and retrieve DASInfo entity");
-				}
-			}
-		}
+    try {
+      conf = Transactions.find(new DASInfo());
+    } catch (Exception e) {
+      LOG.warn("DAS information for " + StorageProperties.NAME + " not found. Loading defaults.");
+      try {
+        conf = Transactions.saveDirect(new DASInfo(StorageProperties.NAME, StorageProperties.DAS_DEVICE));
+      } catch (Exception e1) {
+        try {
+          conf = Transactions.find(new DASInfo());
+        } catch (Exception e2) {
+          LOG.warn("Failed to persist and retrieve DASInfo entity");
+        }
+      }
+    }
 
-		if (conf == null) {
-			conf = new DASInfo(StorageProperties.NAME, StorageProperties.DAS_DEVICE);
-		}
+    if (conf == null) {
+      conf = new DASInfo(StorageProperties.NAME, StorageProperties.DAS_DEVICE);
+    }
 
-		return conf;
-	}
+    return conf;
+  }
 }

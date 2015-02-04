@@ -65,19 +65,18 @@ package com.eucalyptus.blockstorage;
 import com.eucalyptus.blockstorage.entities.LVMVolumeInfo;
 import com.eucalyptus.util.EucalyptusCloudException;
 
-
 public interface StorageExportManager {
-	public void checkPreconditions() throws EucalyptusCloudException;
-	
-	public void configure();
-	
-	public void allocateTarget(LVMVolumeInfo volumeInfo) throws EucalyptusCloudException;
+  public void checkPreconditions() throws EucalyptusCloudException;
 
-	public void cleanup(LVMVolumeInfo volume) throws EucalyptusCloudException;
-	
-	public void stop();
+  public void configure();
 
-	public void check() throws EucalyptusCloudException;
+  public void allocateTarget(LVMVolumeInfo volumeInfo) throws EucalyptusCloudException;
 
-	public boolean isExported(LVMVolumeInfo foundLVMVolumeInfo) throws EucalyptusCloudException;
+  public void cleanup(LVMVolumeInfo volume) throws EucalyptusCloudException;
+
+  public void stop();
+
+  public void check() throws EucalyptusCloudException;
+
+  public boolean isExported(LVMVolumeInfo foundLVMVolumeInfo) throws EucalyptusCloudException;
 }

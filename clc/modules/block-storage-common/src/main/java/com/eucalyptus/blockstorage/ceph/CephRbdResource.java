@@ -75,60 +75,60 @@ import com.eucalyptus.blockstorage.exceptions.UnknownSizeException;
 
 public class CephRbdResource extends StorageResource {
 
-	private static final Logger LOG = Logger.getLogger(CephRbdResource.class);
+  private static final Logger LOG = Logger.getLogger(CephRbdResource.class);
 
-	private String imageName = null;
-	private String poolName = null;
-	private CephRbdInfo info = null;
+  private String imageName = null;
+  private String poolName = null;
+  private CephRbdInfo info = null;
 
-	public CephRbdResource(String id, String path) {
-		super(id, path, StorageResource.Type.CEPH);
-		info = CephRbdInfo.getStorageInfo();
-		String[] poolImage = path.split(CephRbdInfo.POOL_IMAGE_DELIMITER);
-		if (poolImage == null || poolImage.length != 2) {
-			LOG.warn("Invalid format for path CephImageResource, expected pool/image but got " + path);
-			throw new EucalyptusCephException("Invalid format for path CephImageResource, expected pool/image but got " + path);
-		} else {
-			poolName = poolImage[0];
-			imageName = poolImage[1];
-		}
-	}
+  public CephRbdResource(String id, String path) {
+    super(id, path, StorageResource.Type.CEPH);
+    info = CephRbdInfo.getStorageInfo();
+    String[] poolImage = path.split(CephRbdInfo.POOL_IMAGE_DELIMITER);
+    if (poolImage == null || poolImage.length != 2) {
+      LOG.warn("Invalid format for path CephImageResource, expected pool/image but got " + path);
+      throw new EucalyptusCephException("Invalid format for path CephImageResource, expected pool/image but got " + path);
+    } else {
+      poolName = poolImage[0];
+      imageName = poolImage[1];
+    }
+  }
 
-	@Override
-	public Boolean isDownloadSynchronous() {
-		return Boolean.FALSE;
-	}
+  @Override
+  public Boolean isDownloadSynchronous() {
+    return Boolean.FALSE;
+  }
 
-	@Override
-	public Long getSize() throws UnknownSizeException {
-		CephRbdConnectionManager conn = null;
-		try {
-			conn = CephRbdConnectionManager.getConnection(info, poolName);
-			RbdImage rbdImage = null;
-			try {
-				rbdImage = conn.getRbd().open(imageName);
-				return rbdImage.stat().size;
-			} finally {
-				if (rbdImage != null) {
-					conn.getRbd().close(rbdImage);
-				}
-			}
-		} catch (Exception e) {
-			throw new UnknownSizeException("Failed to determine size of ceph image " + imageName + " in pool " + poolName, e);
-		} finally {
-			if (conn != null) {
-				conn.disconnect();
-			}
-		}
-	}
+  @Override
+  public Long getSize() throws UnknownSizeException {
+    CephRbdConnectionManager conn = null;
+    try {
+      conn = CephRbdConnectionManager.getConnection(info, poolName);
+      RbdImage rbdImage = null;
+      try {
+        rbdImage = conn.getRbd().open(imageName);
+        return rbdImage.stat().size;
+      } finally {
+        if (rbdImage != null) {
+          conn.getRbd().close(rbdImage);
+        }
+      }
+    } catch (Exception e) {
+      throw new UnknownSizeException("Failed to determine size of ceph image " + imageName + " in pool " + poolName, e);
+    } finally {
+      if (conn != null) {
+        conn.disconnect();
+      }
+    }
+  }
 
-	@Override
-	public InputStream getInputStream() throws Exception {
-		return new CephRbdInputStream(imageName, poolName, info);
-	}
+  @Override
+  public InputStream getInputStream() throws Exception {
+    return new CephRbdInputStream(imageName, poolName, info);
+  }
 
-	@Override
-	public OutputStream getOutputStream() throws Exception {
-		return new CephRbdOutputStream(imageName, poolName, info);
-	}
+  @Override
+  public OutputStream getOutputStream() throws Exception {
+    return new CephRbdOutputStream(imageName, poolName, info);
+  }
 }

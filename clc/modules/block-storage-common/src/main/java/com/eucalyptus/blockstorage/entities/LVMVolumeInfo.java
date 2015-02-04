@@ -62,13 +62,14 @@
 
 package com.eucalyptus.blockstorage.entities;
 
-import java.io.Serializable;
 import java.util.List;
 
+import javax.persistence.Column;
+import javax.persistence.EntityTransaction;
+import javax.persistence.MappedSuperclass;
+import javax.persistence.PersistenceContext;
+
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.GenericGenerator;
 
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.util.StorageProperties;
@@ -78,200 +79,200 @@ import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.upgrade.Upgrades.Version;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
 
-import javax.persistence.*;
-
-@PersistenceContext(name="eucalyptus_storage")
+@PersistenceContext(name = "eucalyptus_storage")
 @MappedSuperclass
 public class LVMVolumeInfo extends AbstractPersistent {
-	@Column(name = "volume_name")
-	protected String volumeId;
-	@Column(name = "sc_name")
-	private String scName;
-	@Column(name = "lodev_name")
-	private String loDevName;
-	@Column(name = "lofile_name")
-	private String loFileName;
-	@Column(name = "pv_name")
-	private String pvName;
-	@Column(name = "vg_name")
-	private String vgName;
-	@Column(name = "lv_name")
-	private String lvName;
-	@Column(name = "size")
-	protected Integer size;
-	@Column(name = "status")
-	private String status;
-	@Column(name = "snapshot_of")
-	private String snapshotOf;
-	@Column(name = "cleanup")
-	private Boolean cleanup;
+  @Column(name = "volume_name")
+  protected String volumeId;
+  @Column(name = "sc_name")
+  private String scName;
+  @Column(name = "lodev_name")
+  private String loDevName;
+  @Column(name = "lofile_name")
+  private String loFileName;
+  @Column(name = "pv_name")
+  private String pvName;
+  @Column(name = "vg_name")
+  private String vgName;
+  @Column(name = "lv_name")
+  private String lvName;
+  @Column(name = "size")
+  protected Integer size;
+  @Column(name = "status")
+  private String status;
+  @Column(name = "snapshot_of")
+  private String snapshotOf;
+  @Column(name = "cleanup")
+  private Boolean cleanup;
 
-	public static final String LVM_ROOT_DIRECTORY = "/dev";
-	public static final String PATH_SEPARATOR = "/";
-	
-	/**
-	 * Returns a string representation of the path to this resource. Null if not available.
-	 * @return
-	 */
-	public String getAbsoluteLVPath() {
-		if(this.getVgName() != null && this.getLvName() != null)
-			return LVM_ROOT_DIRECTORY + PATH_SEPARATOR + this.getVgName() + PATH_SEPARATOR + this.getLvName();
-		return null;
-	}
-	
-	public String toString() {
-	  return volumeId + "," + scName + "," + loDevName + "," + loFileName + "," + pvName + "," + vgName + "," + lvName + "," + size + "," + status + "," + snapshotOf + "," + cleanup;
-	}
-	
-	public LVMVolumeInfo() {
-		super();
-		this.scName = StorageProperties.NAME;
-	}
+  public static final String LVM_ROOT_DIRECTORY = "/dev";
+  public static final String PATH_SEPARATOR = "/";
 
-	public LVMVolumeInfo(String volumeId) {
-		this();
-		this.volumeId = volumeId;
-	}
-	public String getVolumeId() {
-		return volumeId;
-	}
+  /**
+   * Returns a string representation of the path to this resource. Null if not available.
+   * 
+   * @return
+   */
+  public String getAbsoluteLVPath() {
+    if (this.getVgName() != null && this.getLvName() != null)
+      return LVM_ROOT_DIRECTORY + PATH_SEPARATOR + this.getVgName() + PATH_SEPARATOR + this.getLvName();
+    return null;
+  }
 
-	public void setVolumeId(String volumeId) {
-		this.volumeId = volumeId;
-	}
+  public String toString() {
+    return volumeId + "," + scName + "," + loDevName + "," + loFileName + "," + pvName + "," + vgName + "," + lvName + "," + size + "," + status
+        + "," + snapshotOf + "," + cleanup;
+  }
 
-	public String getScName() {
-		return scName;
-	}
+  public LVMVolumeInfo() {
+    super();
+    this.scName = StorageProperties.NAME;
+  }
 
-	public void setScName(String scName) {
-		this.scName = scName;
-	}
+  public LVMVolumeInfo(String volumeId) {
+    this();
+    this.volumeId = volumeId;
+  }
 
-	public String getLoDevName() {
-		return loDevName;
-	}
+  public String getVolumeId() {
+    return volumeId;
+  }
 
-	public void setLoDevName(String loDevName) {
-		this.loDevName = loDevName;
-	}
+  public void setVolumeId(String volumeId) {
+    this.volumeId = volumeId;
+  }
 
-	public String getLoFileName() {
-		return loFileName;
-	}
+  public String getScName() {
+    return scName;
+  }
 
-	public void setLoFileName(String loFileName) {
-		this.loFileName = loFileName;
-	}
+  public void setScName(String scName) {
+    this.scName = scName;
+  }
 
-	public String getPvName() {
-		return pvName;
-	}
+  public String getLoDevName() {
+    return loDevName;
+  }
 
-	public void setPvName(String pvName) {
-		this.pvName = pvName;
-	}
+  public void setLoDevName(String loDevName) {
+    this.loDevName = loDevName;
+  }
 
-	public String getVgName() {
-		return vgName;
-	}
+  public String getLoFileName() {
+    return loFileName;
+  }
 
-	public void setVgName(String vgName) {
-		this.vgName = vgName;
-	}
+  public void setLoFileName(String loFileName) {
+    this.loFileName = loFileName;
+  }
 
-	public String getLvName() {
-		return lvName;
-	}
+  public String getPvName() {
+    return pvName;
+  }
 
-	public void setLvName(String lvName) {
-		this.lvName = lvName;
-	}
+  public void setPvName(String pvName) {
+    this.pvName = pvName;
+  }
 
-	public Integer getSize() {
-		return size;
-	}
+  public String getVgName() {
+    return vgName;
+  }
 
-	public void setSize(Integer size) {
-		this.size = size;
-	}
+  public void setVgName(String vgName) {
+    this.vgName = vgName;
+  }
 
-	public String getStatus() {
-		return status;
-	}
+  public String getLvName() {
+    return lvName;
+  }
 
-	public void setStatus(String status) {
-		this.status = status;
-	}
+  public void setLvName(String lvName) {
+    this.lvName = lvName;
+  }
 
-	public String getSnapshotOf() {
-		return snapshotOf;
-	}
+  public Integer getSize() {
+    return size;
+  }
 
-	public void setSnapshotOf(String snapshotOf) {
-		this.snapshotOf = snapshotOf;
-	}
+  public void setSize(Integer size) {
+    this.size = size;
+  }
 
-	public Boolean getCleanup() {
-		return cleanup == null ? false : cleanup;
-	}
+  public String getStatus() {
+    return status;
+  }
 
-	public void setCleanup(Boolean cleanup) {
-		this.cleanup = cleanup;
-	}
+  public void setStatus(String status) {
+    this.status = status;
+  }
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((scName == null) ? 0 : scName.hashCode());
-		result = prime * result
-		+ ((volumeId == null) ? 0 : volumeId.hashCode());
-		return result;
-	}
+  public String getSnapshotOf() {
+    return snapshotOf;
+  }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		LVMVolumeInfo other = (LVMVolumeInfo) obj;
-		if (scName == null) {
-			if (other.scName != null)
-				return false;
-		} else if (!scName.equals(other.scName))
-			return false;
-		if (volumeId == null) {
-			if (other.volumeId != null)
-				return false;
-		} else if (!volumeId.equals(other.volumeId))
-			return false;
-		return true;
-	}
+  public void setSnapshotOf(String snapshotOf) {
+    this.snapshotOf = snapshotOf;
+  }
 
-  @EntityUpgrade( entities = { LVMVolumeInfo.class }, since = Version.v3_2_0, value = Storage.class )
+  public Boolean getCleanup() {
+    return cleanup == null ? false : cleanup;
+  }
+
+  public void setCleanup(Boolean cleanup) {
+    this.cleanup = cleanup;
+  }
+
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((scName == null) ? 0 : scName.hashCode());
+    result = prime * result + ((volumeId == null) ? 0 : volumeId.hashCode());
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    LVMVolumeInfo other = (LVMVolumeInfo) obj;
+    if (scName == null) {
+      if (other.scName != null)
+        return false;
+    } else if (!scName.equals(other.scName))
+      return false;
+    if (volumeId == null) {
+      if (other.volumeId != null)
+        return false;
+    } else if (!volumeId.equals(other.volumeId))
+      return false;
+    return true;
+  }
+
+  @EntityUpgrade(entities = {LVMVolumeInfo.class}, since = Version.v3_2_0, value = Storage.class)
   public enum LVMVolumeInfoUpgrade implements Predicate<Class> {
     INSTANCE;
-    private static Logger LOG = Logger.getLogger( LVMVolumeInfo.LVMVolumeInfoUpgrade.class );
+    private static Logger LOG = Logger.getLogger(LVMVolumeInfo.LVMVolumeInfoUpgrade.class);
+
     @Override
-    public boolean apply( Class arg0 ) {
-      EntityTransaction db = Entities.get( LVMVolumeInfo.class );
+    public boolean apply(Class arg0) {
+      EntityTransaction db = Entities.get(LVMVolumeInfo.class);
       try {
-        List<LVMVolumeInfo> entities = Entities.query( new LVMVolumeInfo( ) );
-        for ( LVMVolumeInfo entry : entities ) {
-          LOG.debug( "Upgrading: " + entry.getVolumeId() );
+        List<LVMVolumeInfo> entities = Entities.query(new LVMVolumeInfo());
+        for (LVMVolumeInfo entry : entities) {
+          LOG.debug("Upgrading: " + entry.getVolumeId());
           entry.setCleanup(false);
         }
-        db.commit( );
+        db.commit();
         return true;
-      } catch ( Exception ex ) {
+      } catch (Exception ex) {
         db.rollback();
-        throw Exceptions.toUndeclared( ex );
+        throw Exceptions.toUndeclared(ex);
       }
     }
   }

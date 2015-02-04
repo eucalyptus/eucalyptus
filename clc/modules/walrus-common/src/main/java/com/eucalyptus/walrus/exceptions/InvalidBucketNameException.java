@@ -67,22 +67,19 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 @SuppressWarnings("serial")
 public class InvalidBucketNameException extends WalrusException {
 
-  public InvalidBucketNameException()
-  {
-    super( "InvalidBucketName" );
-  }
-  
-  public InvalidBucketNameException(String value)
-  {
-    super("The specified bucket is not valid: " + value, "InvalidBucketName", "Bucket",  value, HttpResponseStatus.BAD_REQUEST);
+  public InvalidBucketNameException() {
+    super("InvalidBucketName");
   }
 
-  public InvalidBucketNameException(Throwable ex)
-  {
+  public InvalidBucketNameException(String value) {
+    super("The specified bucket is not valid: " + value, "InvalidBucketName", "Bucket", value, HttpResponseStatus.BAD_REQUEST);
+  }
+
+  public InvalidBucketNameException(Throwable ex) {
     super("InvalidBucketName", ex);
   }
-  public InvalidBucketNameException(String message, Throwable ex)
-  {
-    super(message,ex);
+
+  public InvalidBucketNameException(String message, Throwable ex) {
+    super(message, ex);
   }
 }

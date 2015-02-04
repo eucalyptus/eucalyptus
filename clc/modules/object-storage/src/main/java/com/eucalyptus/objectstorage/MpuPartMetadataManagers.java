@@ -21,30 +21,27 @@
 package com.eucalyptus.objectstorage;
 
 import com.eucalyptus.objectstorage.metadata.DbMpuPartMetadataManagerImpl;
-import com.eucalyptus.objectstorage.metadata.DbObjectMetadataManagerImpl;
 import com.eucalyptus.objectstorage.metadata.MpuPartMetadataManager;
-import com.eucalyptus.objectstorage.metadata.ObjectMetadataManager;
 
 /**
- * Factory for object metadata manager. Returns instance
- * for configured manager.
+ * Factory for object metadata manager. Returns instance for configured manager.
  *
  */
 public class MpuPartMetadataManagers {
-	private static MpuPartMetadataManager manager = new DbMpuPartMetadataManagerImpl();
-    private static MpuPartMetadataManager mocked = null;
+  private static MpuPartMetadataManager manager = new DbMpuPartMetadataManagerImpl();
+  private static MpuPartMetadataManager mocked = null;
 
-    public static MpuPartMetadataManager getInstance() {
-        if (mocked != null) {
-            return mocked;
-        }
-        return manager;
+  public static MpuPartMetadataManager getInstance() {
+    if (mocked != null) {
+      return mocked;
     }
+    return manager;
+  }
 
-	/**
-	 * Access method for testing only.
-	 */
-	static void setInstance(MpuPartMetadataManager testManager) {
-		mocked = testManager;
-	}
+  /**
+   * Access method for testing only.
+   */
+  static void setInstance(MpuPartMetadataManager testManager) {
+    mocked = testManager;
+  }
 }

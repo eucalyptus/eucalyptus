@@ -83,126 +83,96 @@ import com.eucalyptus.ws.client.ServiceDispatcher;
  *
  */
 public class ObjectStorageBucketLogger {
-	private Logger LOG = Logger.getLogger( ObjectStorageBucketLogger.class );
-	private static ObjectStorageBucketLogger singleton;
+  private Logger LOG = Logger.getLogger(ObjectStorageBucketLogger.class);
+  private static ObjectStorageBucketLogger singleton;
 
-	private static int LOG_THRESHOLD = 10;
-	private static int LOG_PERIODICITY = 120;
+  private static int LOG_THRESHOLD = 10;
+  private static int LOG_PERIODICITY = 120;
 
-	private LinkedBlockingQueue<BucketLogData> logData;
-	private ConcurrentHashMap<String, LogFileEntry> logFileMap;
-	ScheduledExecutorService logger;
+  private LinkedBlockingQueue<BucketLogData> logData;
+  private ConcurrentHashMap<String, LogFileEntry> logFileMap;
+  ScheduledExecutorService logger;
 
-	public ObjectStorageBucketLogger() {
-		logData = new LinkedBlockingQueue<BucketLogData>();
-		logFileMap = new ConcurrentHashMap<String, LogFileEntry>();
-		logger = Executors.newSingleThreadScheduledExecutor();
-		logger.scheduleAtFixedRate(new Runnable() {
-			@Override
-			public void run() {
-				
-				if(logData.size() > LOG_THRESHOLD) {
-					//dispatch
-					Dispatcher dispatcher = ServiceDispatcher.lookupSingle(Components.lookup(ObjectStorage.class));
-					List<BucketLogData> data = new ArrayList<BucketLogData>();
-					
-					/* TODO: zhill Fix this to issue object put
-					 * For now, just drain the data so we don't bloat memory too much.
-					 * Will fix later to issue object put with log data.
-					 */
-					logData.drainTo(data);
-					data.clear();
-					data = null;
-					/*for(BucketLogData entry : data) {
-						String bucket = entry.getTargetBucket();
-						String uuid = UUID.randomUUID().toString();
-						String key = entry.getTargetPrefix() + String.format("%1$tY-%1$tm-%1$td-%1$tH-%1$tM-%1$tS-", Calendar.getInstance()) 
-						+ uuid;
+  public ObjectStorageBucketLogger() {
+    logData = new LinkedBlockingQueue<BucketLogData>();
+    logFileMap = new ConcurrentHashMap<String, LogFileEntry>();
+    logger = Executors.newSingleThreadScheduledExecutor();
+    logger.scheduleAtFixedRate(new Runnable() {
+      @Override
+      public void run() {
 
-						if(!logFileMap.containsKey(bucket)) {
-							//TODO: Fix this entire class. Must do s3-api operations, not direct logging.
-						}
-						try {
-							LogFileEntry logFileEntry = logFileMap.get(bucket);
-							FileChannel logChannel = logFileEntry.getChannel();
-							String logString = entry.toFormattedString();
-							logChannel.write(ByteBuffer.wrap(logString.getBytes()), logChannel.size());
+        if (logData.size() > LOG_THRESHOLD) {
+          // dispatch
+          Dispatcher dispatcher = ServiceDispatcher.lookupSingle(Components.lookup(ObjectStorage.class));
+          List<BucketLogData> data = new ArrayList<BucketLogData>();
 
-							MessageDigest digest = Digest.MD5.get();
-							digest.update(logString.getBytes());
-							String etag = Hashes.bytesToHex(digest.digest());
+          /*
+           * TODO: zhill Fix this to issue object put For now, just drain the data so we don't bloat memory too much. Will fix later to issue object
+           * put with log data.
+           */
+          logData.drainTo(data);
+          data.clear();
+          data = null;
+          /*
+           * for(BucketLogData entry : data) { String bucket = entry.getTargetBucket(); String uuid = UUID.randomUUID().toString(); String key =
+           * entry.getTargetPrefix() + String.format("%1$tY-%1$tm-%1$td-%1$tH-%1$tM-%1$tS-", Calendar.getInstance()) + uuid;
+           * 
+           * if(!logFileMap.containsKey(bucket)) { //TODO: Fix this entire class. Must do s3-api operations, not direct logging. } try { LogFileEntry
+           * logFileEntry = logFileMap.get(bucket); FileChannel logChannel = logFileEntry.getChannel(); String logString = entry.toFormattedString();
+           * logChannel.write(ByteBuffer.wrap(logString.getBytes()), logChannel.size());
+           * 
+           * MessageDigest digest = Digest.MD5.get(); digest.update(logString.getBytes()); String etag = Hashes.bytesToHex(digest.digest());
+           * 
+           * AddObjectType request = new AddObjectType(); request.regarding( ); request.setBucket(bucket); request.setKey(key);
+           * request.setObjectName(logFileEntry.getLogFileName()); request.setEtag(etag); String ownerId = entry.getOwnerId(); try { ArrayList<Grant>
+           * grants = new ArrayList<Grant>(); grants.add(new Grant(new Grantee(new CanonicalUser(ownerId,
+           * Accounts.lookupAccountById(ownerId).getName())), "FULL_CONTROL")); request.getAccessControlList().setGrants(grants); } catch
+           * (AuthException e1) { LOG.error(e1); } try { AsyncRequests.dispatch(osg, putRequest); //dispatcher.send(request); } catch
+           * (EucalyptusCloudException e) { LOG.error(e); } } catch (IOException e) { LOG.error(e); } }
+           */
+          /*
+           * for(String bucket : logFileMap.keySet()) { try { logFileMap.get(bucket).getChannel().close(); } catch (IOException e) { LOG.error(e); } }
+           */
+          logFileMap.clear();
+        }
+      }
+    }, 1, LOG_PERIODICITY, TimeUnit.SECONDS);
+  }
 
-							AddObjectType request = new AddObjectType();
-							request.regarding( );
-							request.setBucket(bucket);
-							request.setKey(key);
-							request.setObjectName(logFileEntry.getLogFileName());
-							request.setEtag(etag);
-							String ownerId = entry.getOwnerId();
-							try {
-								ArrayList<Grant> grants = new ArrayList<Grant>();
-								grants.add(new Grant(new Grantee(new CanonicalUser(ownerId, Accounts.lookupAccountById(ownerId).getName())), 
-								"FULL_CONTROL"));
-								request.getAccessControlList().setGrants(grants);
-							} catch (AuthException e1) {
-								LOG.error(e1);
-							}
-							try {
-								AsyncRequests.dispatch(osg, putRequest);
-								//dispatcher.send(request);
-							} catch (EucalyptusCloudException e) {
-								LOG.error(e);
-							}
-						} catch (IOException e) {
-							LOG.error(e);
-						}
-					}*/
-					/*for(String bucket : logFileMap.keySet()) {
-						try {
-							logFileMap.get(bucket).getChannel().close();
-						} catch (IOException e) {
-							LOG.error(e);						
-						}
-					}*/
-					logFileMap.clear();
-				}
-			}}, 1, LOG_PERIODICITY, TimeUnit.SECONDS);
-	}
+  public static ObjectStorageBucketLogger getInstance() {
+    if (singleton == null) {
+      singleton = new ObjectStorageBucketLogger();
+    }
+    return singleton;
+  }
 
-	public static ObjectStorageBucketLogger getInstance() {
-		if (singleton == null) {
-			singleton = new ObjectStorageBucketLogger();
-		}		
-		return singleton;
-	}
+  public void addLogEntry(BucketLogData logEntry) {
+    try {
+      logData.offer(logEntry, 500, TimeUnit.MILLISECONDS);
+    } catch (InterruptedException ex) {
+      Thread.currentThread().interrupt();
+    }
+  }
 
-	public void addLogEntry(BucketLogData logEntry) {
-		try {
-			logData.offer(logEntry, 500, TimeUnit.MILLISECONDS);
-		} catch(InterruptedException ex) {
-      Thread.currentThread( ).interrupt( );
-		}
-	}
+  public BucketLogData makeLogEntry(String requestId) {
+    return new BucketLogData(requestId);
+  }
 
-	public BucketLogData makeLogEntry(String requestId) {
-		return new BucketLogData(requestId);
-	}
+  private class LogFileEntry {
+    private String logFileName;
+    private FileChannel channel;
 
-	private class LogFileEntry {
-		private String logFileName;
-		private FileChannel channel;
+    public LogFileEntry(String logFileName, FileChannel channel) {
+      this.logFileName = logFileName;
+      this.channel = channel;
+    }
 
-		public LogFileEntry(String logFileName, FileChannel channel) {
-			this.logFileName = logFileName;
-			this.channel = channel;
-		}
+    public FileChannel getChannel() {
+      return channel;
+    }
 
-		public FileChannel getChannel() {
-			return channel;
-		}
-
-		public String getLogFileName() {
-			return logFileName;
-		}
-	}
+    public String getLogFileName() {
+      return logFileName;
+    }
+  }
 }

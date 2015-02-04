@@ -24,22 +24,21 @@ import com.eucalyptus.objectstorage.metadata.BucketMetadataManager;
 import com.eucalyptus.objectstorage.metadata.DbBucketMetadataManagerImpl;
 
 /**
- * Manager factory for bucket metadata handler. Returns an instance
- * for the configured manager.
+ * Manager factory for bucket metadata handler. Returns an instance for the configured manager.
  *
  */
 public class BucketMetadataManagers {
-	private static final BucketMetadataManager manager = new DbBucketMetadataManagerImpl();
-	private static BucketMetadataManager mocked = null;
+  private static final BucketMetadataManager manager = new DbBucketMetadataManagerImpl();
+  private static BucketMetadataManager mocked = null;
 
-    public static BucketMetadataManager getInstance() {
-        if (mocked != null) {
-            return mocked;
-        }
-        return manager;
+  public static BucketMetadataManager getInstance() {
+    if (mocked != null) {
+      return mocked;
     }
+    return manager;
+  }
 
-    static void setInstance(BucketMetadataManager mock) {
-        mocked = mock;
-    }
+  static void setInstance(BucketMetadataManager mock) {
+    mocked = mock;
+  }
 }

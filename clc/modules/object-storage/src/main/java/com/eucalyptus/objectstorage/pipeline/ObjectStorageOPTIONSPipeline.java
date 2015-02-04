@@ -64,42 +64,38 @@ package com.eucalyptus.objectstorage.pipeline;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageOPTIONSBindingStage;
 import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageOPTIONSOutboundStage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageOutboundStage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageRESTBindingStage;
 import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageUserAuthenticationStage;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
-import com.eucalyptus.ws.server.FilteredPipeline;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
-
-@ComponentPart( ObjectStorage.class )
+@ComponentPart(ObjectStorage.class)
 public class ObjectStorageOPTIONSPipeline extends ObjectStorageRESTPipeline {
-	private static Logger LOG = Logger.getLogger( ObjectStorageOPTIONSPipeline.class );
-	private final UnrollableStage auth = new ObjectStorageUserAuthenticationStage( );
-	private final UnrollableStage bind = new ObjectStorageOPTIONSBindingStage( );
-	private final UnrollableStage out = new ObjectStorageOPTIONSOutboundStage();
-	
-	@Override
-	public boolean checkAccepts( HttpRequest message ) {
-		return (super.checkAccepts(message) && message.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.OPTIONS.toString()));		
-	}
-
-	@Override
-	public String getName( ) {
-		return "objectstorage-options";
-	}
+  private static Logger LOG = Logger.getLogger(ObjectStorageOPTIONSPipeline.class);
+  private final UnrollableStage auth = new ObjectStorageUserAuthenticationStage();
+  private final UnrollableStage bind = new ObjectStorageOPTIONSBindingStage();
+  private final UnrollableStage out = new ObjectStorageOPTIONSOutboundStage();
 
   @Override
-  public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
-    auth.unrollStage( pipeline );
-    bind.unrollStage( pipeline );
-    out.unrollStage( pipeline );
+  public boolean checkAccepts(HttpRequest message) {
+    return (super.checkAccepts(message) && message.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.OPTIONS.toString()));
+  }
+
+  @Override
+  public String getName() {
+    return "objectstorage-options";
+  }
+
+  @Override
+  public ChannelPipeline addHandlers(ChannelPipeline pipeline) {
+    auth.unrollStage(pipeline);
+    bind.unrollStage(pipeline);
+    out.unrollStage(pipeline);
     return pipeline;
   }
 

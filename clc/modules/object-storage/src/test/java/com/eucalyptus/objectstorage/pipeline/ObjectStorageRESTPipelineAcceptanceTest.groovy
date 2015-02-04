@@ -37,71 +37,76 @@ import org.junit.Test
  */
 @CompileStatic
 class ObjectStorageRESTPipelineAcceptanceTest extends GroovyTestCase {
-    static final ObjectStorageDELETEPipeline deletePipeline = new ObjectStorageDELETEPipeline();
-    static final ObjectStorageGETPipeline getPipeline = new ObjectStorageGETPipeline();
-    static final ObjectStoragePUTPipeline putPipeline = new ObjectStoragePUTPipeline();
-    static final ObjectStorageFormPOSTPipeline formPostPipeline = new ObjectStorageFormPOSTPipeline();
-    static final ObjectStorageHEADPipeline headPipeline = new ObjectStorageHEADPipeline();
-    static final ObjectStorageOPTIONSPipeline optionsPipeline = new ObjectStorageOPTIONSPipeline();
+  static final ObjectStorageDELETEPipeline deletePipeline = new ObjectStorageDELETEPipeline();
+  static final ObjectStorageGETPipeline getPipeline = new ObjectStorageGETPipeline();
+  static final ObjectStoragePUTPipeline putPipeline = new ObjectStoragePUTPipeline();
+  static final ObjectStorageFormPOSTPipeline formPostPipeline = new ObjectStorageFormPOSTPipeline();
+  static final ObjectStorageHEADPipeline headPipeline = new ObjectStorageHEADPipeline();
+  static final ObjectStorageOPTIONSPipeline optionsPipeline = new ObjectStorageOPTIONSPipeline();
 
-    static final pipelines = [ deletePipeline, getPipeline, putPipeline, formPostPipeline, headPipeline, optionsPipeline ]
+  static final pipelines = [
+    deletePipeline,
+    getPipeline,
+    putPipeline,
+    formPostPipeline,
+    headPipeline,
+    optionsPipeline
+  ]
 
-    @Test
-    public void testGETRequests() {
-        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/objectstorage/bucket/object')
-        request.addHeader(HttpHeaders.Names.CONTENT_TYPE, 'multipart/form-data; boundary=xxxx')
-        assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(getPipeline))
+  @Test
+  public void testGETRequests() {
+    HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/objectstorage/bucket/object')
+    request.addHeader(HttpHeaders.Names.CONTENT_TYPE, 'multipart/form-data; boundary=xxxx')
+    assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(getPipeline))
 
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/objectstorage/bucket/object')
-        request.addHeader(HttpHeaders.Names.CONTENT_TYPE, 'multipart/form-data; boundary=xxxx')
-        assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(getPipeline))
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, '/services/objectstorage/bucket/object')
+    request.addHeader(HttpHeaders.Names.CONTENT_TYPE, 'multipart/form-data; boundary=xxxx')
+    assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(getPipeline))
+  }
 
-    }
+  @Test
+  public void testPUTRequests() {
+    HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, '/services/objectstorage/bucket/object')
+    assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(putPipeline))
 
-    @Test
-    public void testPUTRequests() {
-        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, '/services/objectstorage/bucket/object')
-        assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(putPipeline))
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, '/services/objectstorage/bucket/object')
+    request.addHeader(HttpHeaders.Names.CONTENT_TYPE, 'multipart/form-data; boundary=xxxx')
+    assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(putPipeline))
+  }
 
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, '/services/objectstorage/bucket/object')
-        request.addHeader(HttpHeaders.Names.CONTENT_TYPE, 'multipart/form-data; boundary=xxxx')
-        assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(putPipeline))
-    }
+  @Test
+  public void testHEADRequests() {
+    HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.HEAD, '/services/objectstorage/bucket/object')
+    assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(headPipeline))
 
-    @Test
-    public void testHEADRequests() {
-        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.HEAD, '/services/objectstorage/bucket/object')
-        assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(headPipeline))
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.HEAD, '/services/objectstorage/bucket/object')
+    request.addHeader(HttpHeaders.Names.CONTENT_TYPE, 'multipart/form-data; boundary=xxxx')
+    assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(headPipeline))
+  }
 
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.HEAD, '/services/objectstorage/bucket/object')
-        request.addHeader(HttpHeaders.Names.CONTENT_TYPE, 'multipart/form-data; boundary=xxxx')
-        assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(headPipeline))
+  @Test
+  public void testPOSTRequests() {
+    HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, '/services/objectstorage/bucket/object')
+    assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(putPipeline))
 
-    }
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, '/services/objectstorage/bucket/object')
+    request.addHeader(HttpHeaders.Names.CONTENT_TYPE, 'multipart/form-data; boundary=xxxx')
+    assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(formPostPipeline))
+  }
 
-    @Test
-    public void testPOSTRequests() {
-        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, '/services/objectstorage/bucket/object')
-        assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(putPipeline))
+  @Test
+  public void testDELETERequests() {
+    HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.DELETE, '/services/objectstorage/bucket/object')
+    assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(deletePipeline))
 
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, '/services/objectstorage/bucket/object')
-        request.addHeader(HttpHeaders.Names.CONTENT_TYPE, 'multipart/form-data; boundary=xxxx')
-        assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(formPostPipeline))
-    }
+    request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.DELETE, '/services/objectstorage/bucket/object')
+    request.addHeader(HttpHeaders.Names.CONTENT_TYPE, 'multipart/form-data; boundary=xxxx')
+    assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(deletePipeline))
+  }
 
-    @Test
-    public void testDELETERequests() {
-        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.DELETE, '/services/objectstorage/bucket/object')
-        assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(deletePipeline))
-
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.DELETE, '/services/objectstorage/bucket/object')
-        request.addHeader(HttpHeaders.Names.CONTENT_TYPE, 'multipart/form-data; boundary=xxxx')
-        assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(deletePipeline))
-    }
-
-    @Test
-    public void testOPTIONSRequests() {
-        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.OPTIONS, '/services/objectstorage/bucket/object')
-        assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(optionsPipeline))
-    }
+  @Test
+  public void testOPTIONSRequests() {
+    HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.OPTIONS, '/services/objectstorage/bucket/object')
+    assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(optionsPipeline))
+  }
 }

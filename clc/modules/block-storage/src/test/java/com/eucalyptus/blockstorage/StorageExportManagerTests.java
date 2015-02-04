@@ -25,36 +25,32 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.eucalyptus.blockstorage.ISCSIManager;
-import com.eucalyptus.blockstorage.StorageExportManager;
-
 /**
- * Test unit for StorageExportManagers.
- * Should discover all implementing classes and test each one.
+ * Test unit for StorageExportManagers. Should discover all implementing classes and test each one.
  * 
  * TODO: NOT FINISHED
  */
 public class StorageExportManagerTests {
-	private static StorageExportManager manager = null;
-	
-	@BeforeClass
-	public static void setUp() {
-		manager = new ISCSIManager();
-	}
-	
-	@AfterClass
-	public static void tearDown() {
-		
-	}
-	
-	@Test
-	public void testConfigure() {
-		try {
-			manager.checkPreconditions();		
-			manager.configure();
-			manager.check();
-		} catch(Exception e) {
-			Assert.fail("Configuratio failed");
-		}
-	}
+  private static StorageExportManager manager = null;
+
+  @BeforeClass
+  public static void setUp() {
+    manager = new ISCSIManager();
+  }
+
+  @AfterClass
+  public static void tearDown() {
+
+  }
+
+  @Test
+  public void testConfigure() {
+    try {
+      manager.checkPreconditions();
+      manager.configure();
+      manager.check();
+    } catch (Exception e) {
+      Assert.fail("Configuratio failed");
+    }
+  }
 }

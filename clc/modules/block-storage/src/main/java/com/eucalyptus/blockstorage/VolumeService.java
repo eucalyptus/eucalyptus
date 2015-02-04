@@ -69,22 +69,21 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.blockstorage.BlockStorageController.VolumeTask;
 
-
 public class VolumeService {
-	private Logger LOG = Logger.getLogger( VolumeService.class );
-	
-	private final ExecutorService pool;
-	private final int NUM_THREADS = 10;
-	
-	public VolumeService() {
-		pool = Executors.newFixedThreadPool(NUM_THREADS);
-	}
-	
-	public void add(VolumeTask creator) {
-		pool.execute(creator);
-	}
-	
-	public void shutdown() {
-		pool.shutdownNow();
-	}
+  private Logger LOG = Logger.getLogger(VolumeService.class);
+
+  private final ExecutorService pool;
+  private final int NUM_THREADS = 10;
+
+  public VolumeService() {
+    pool = Executors.newFixedThreadPool(NUM_THREADS);
+  }
+
+  public void add(VolumeTask creator) {
+    pool.execute(creator);
+  }
+
+  public void shutdown() {
+    pool.shutdownNow();
+  }
 }

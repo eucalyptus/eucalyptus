@@ -75,61 +75,61 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.blockstorage.exceptions.UnknownSizeException;
 import com.eucalyptus.blockstorage.util.StorageProperties;
-import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.util.SystemUtil;
 import edu.ucsb.eucalyptus.util.SystemUtil.CommandOutput;
 
 public class BlockDeviceResource extends StorageResource {
 
-	private static final int ATTEMPTS = 10;
-	private static Logger LOG = Logger.getLogger(BlockDeviceResource.class);
+  private static final int ATTEMPTS = 10;
+  private static Logger LOG = Logger.getLogger(BlockDeviceResource.class);
 
-	public BlockDeviceResource(String id, String name) {
-		super(id, name, StorageResource.Type.BLOCK);
-	}
+  public BlockDeviceResource(String id, String name) {
+    super(id, name, StorageResource.Type.BLOCK);
+  }
 
-	@Override
-	public Long getSize() throws UnknownSizeException {
-		Long size = 0L;
-		try {
-			CommandOutput result = SystemUtil.runWithRawOutput(new String[] { StorageProperties.EUCA_ROOT_WRAPPER, "blockdev", "--getsize64", this.getPath() });
-			size = Long.parseLong(StringUtils.trimToEmpty(result.output));
-			return size;
-		} catch (Exception e) {
-			throw new UnknownSizeException("Failed to determine size for " + this.getId() + " mounted at " + this.getPath(), e);
-		}
-	}
+  @Override
+  public Long getSize() throws UnknownSizeException {
+    Long size = 0L;
+    try {
+      CommandOutput result =
+          SystemUtil.runWithRawOutput(new String[] {StorageProperties.EUCA_ROOT_WRAPPER, "blockdev", "--getsize64", this.getPath()});
+      size = Long.parseLong(StringUtils.trimToEmpty(result.output));
+      return size;
+    } catch (Exception e) {
+      throw new UnknownSizeException("Failed to determine size for " + this.getId() + " mounted at " + this.getPath(), e);
+    }
+  }
 
-	@Override
-	public InputStream getInputStream() throws FileNotFoundException {
-		return new FileInputStream(new File(this.getPath()));
-	}
+  @Override
+  public InputStream getInputStream() throws FileNotFoundException {
+    return new FileInputStream(new File(this.getPath()));
+  }
 
-	@Override
-	public OutputStream getOutputStream() throws IOException {
-		FileOutputStream outStream = null;
-		int failedAttempts = 0;
-		do {
-			try {
-				outStream = new FileOutputStream(new File(this.getPath()));
-				return outStream;
-			} catch (FileNotFoundException e) { // Output stream to block devices may throw permission denied error, retry a few times
-				if ((++failedAttempts) < ATTEMPTS) {
-					LOG.debug("Failed to open FileOutputStream for " + this.getId() + " mounted at " + this.getPath() + ". Will retry");
-				} else {
-					LOG.warn("Failed to open FileOutputStream for " + this.getId() + " mounted at " + this.getPath() + " after " + failedAttempts + " attempts");
-					throw e;
-				}
-			}
-		} while (failedAttempts < ATTEMPTS);
+  @Override
+  public OutputStream getOutputStream() throws IOException {
+    FileOutputStream outStream = null;
+    int failedAttempts = 0;
+    do {
+      try {
+        outStream = new FileOutputStream(new File(this.getPath()));
+        return outStream;
+      } catch (FileNotFoundException e) { // Output stream to block devices may throw permission denied error, retry a few times
+        if ((++failedAttempts) < ATTEMPTS) {
+          LOG.debug("Failed to open FileOutputStream for " + this.getId() + " mounted at " + this.getPath() + ". Will retry");
+        } else {
+          LOG.warn("Failed to open FileOutputStream for " + this.getId() + " mounted at " + this.getPath() + " after " + failedAttempts + " attempts");
+          throw e;
+        }
+      }
+    } while (failedAttempts < ATTEMPTS);
 
-		throw new IOException("Failed to open FileOutputStream for " + this.getId() + " mounted at " + this.getPath());
-	}
+    throw new IOException("Failed to open FileOutputStream for " + this.getId() + " mounted at " + this.getPath());
+  }
 
-	@Override
-	public Boolean isDownloadSynchronous() {
-		return Boolean.TRUE;
-	}
+  @Override
+  public Boolean isDownloadSynchronous() {
+    return Boolean.TRUE;
+  }
 
 }

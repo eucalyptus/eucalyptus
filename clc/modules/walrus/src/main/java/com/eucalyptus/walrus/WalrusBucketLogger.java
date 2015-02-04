@@ -87,139 +87,136 @@ import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.crypto.Digest;
-import com.eucalyptus.scripting.Groovyness;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.walrus.entities.WalrusInfo;
-import com.eucalyptus.walrus.msgs.AddObjectType;
 import com.eucalyptus.storage.msgs.BucketLogData;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
 import com.eucalyptus.storage.msgs.s3.Grant;
 import com.eucalyptus.storage.msgs.s3.Grantee;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.walrus.entities.WalrusInfo;
+import com.eucalyptus.walrus.msgs.AddObjectType;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 
-
 public class WalrusBucketLogger {
-	private Logger LOG = Logger.getLogger( WalrusBucketLogger.class );
-	private static WalrusBucketLogger singleton;
+  private Logger LOG = Logger.getLogger(WalrusBucketLogger.class);
+  private static WalrusBucketLogger singleton;
 
-	private static int LOG_THRESHOLD = 10;
-	private static int LOG_PERIODICITY = 120;
+  private static int LOG_THRESHOLD = 10;
+  private static int LOG_PERIODICITY = 120;
 
-	private LinkedBlockingQueue<BucketLogData> logData;
-	private ConcurrentHashMap<String, LogFileEntry> logFileMap;
-	ScheduledExecutorService logger;
+  private LinkedBlockingQueue<BucketLogData> logData;
+  private ConcurrentHashMap<String, LogFileEntry> logFileMap;
+  ScheduledExecutorService logger;
 
-	//static { Groovyness.loadConfig("walruslogger.groovy"); }
+  // static { Groovyness.loadConfig("walruslogger.groovy"); }
 
-	public WalrusBucketLogger() {
-		logData = new LinkedBlockingQueue<BucketLogData>();
-		logFileMap = new ConcurrentHashMap<String, LogFileEntry>();
-		logger = Executors.newSingleThreadScheduledExecutor();
-		logger.scheduleAtFixedRate(new Runnable() {
-			@Override
-			public void run() {
-				if(logData.size() > LOG_THRESHOLD) {
-					//dispatch
-					Dispatcher dispatcher = ServiceDispatcher.lookupSingle(Components.lookup("walrus"));
-					List<BucketLogData> data = new ArrayList<BucketLogData>();
-					logData.drainTo(data);
-					for(BucketLogData entry : data) {
-						String bucket = entry.getTargetBucket();
-						String uuid = UUID.randomUUID().toString();
-						String key = entry.getTargetPrefix() + String.format("%1$tY-%1$tm-%1$td-%1$tH-%1$tM-%1$tS-", Calendar.getInstance()) 
-						+ uuid;
+  public WalrusBucketLogger() {
+    logData = new LinkedBlockingQueue<BucketLogData>();
+    logFileMap = new ConcurrentHashMap<String, LogFileEntry>();
+    logger = Executors.newSingleThreadScheduledExecutor();
+    logger.scheduleAtFixedRate(new Runnable() {
+      @Override
+      public void run() {
+        if (logData.size() > LOG_THRESHOLD) {
+          // dispatch
+          Dispatcher dispatcher = ServiceDispatcher.lookupSingle(Components.lookup("walrus"));
+          List<BucketLogData> data = new ArrayList<BucketLogData>();
+          logData.drainTo(data);
+          for (BucketLogData entry : data) {
+            String bucket = entry.getTargetBucket();
+            String uuid = UUID.randomUUID().toString();
+            String key = entry.getTargetPrefix() + String.format("%1$tY-%1$tm-%1$td-%1$tH-%1$tM-%1$tS-", Calendar.getInstance()) + uuid;
 
-						if(!logFileMap.containsKey(bucket)) {
-							//check if bucket exists, if not create it.
-							try {
-								String logFileName = "logentry-" + uuid;
-								FileChannel channel = new FileOutputStream(new File(WalrusInfo.getWalrusInfo().getStorageDir() + 
-										"/" + bucket + "/" + logFileName)).getChannel();
-								logFileMap.put(bucket, new LogFileEntry(logFileName, channel));
-							} catch (FileNotFoundException e) {
-								LOG.error(e);
-							}
-						}
-						try {
-							LogFileEntry logFileEntry = logFileMap.get(bucket);
-							FileChannel logChannel = logFileEntry.getChannel();
-							String logString = entry.toFormattedString();
-							logChannel.write(ByteBuffer.wrap(logString.getBytes()), logChannel.size());
+            if (!logFileMap.containsKey(bucket)) {
+              // check if bucket exists, if not create it.
+              try {
+                String logFileName = "logentry-" + uuid;
+                FileChannel channel =
+                    new FileOutputStream(new File(WalrusInfo.getWalrusInfo().getStorageDir() + "/" + bucket + "/" + logFileName)).getChannel();
+                logFileMap.put(bucket, new LogFileEntry(logFileName, channel));
+              } catch (FileNotFoundException e) {
+                LOG.error(e);
+              }
+            }
+            try {
+              LogFileEntry logFileEntry = logFileMap.get(bucket);
+              FileChannel logChannel = logFileEntry.getChannel();
+              String logString = entry.toFormattedString();
+              logChannel.write(ByteBuffer.wrap(logString.getBytes()), logChannel.size());
 
-							MessageDigest digest = Digest.MD5.get();
-							digest.update(logString.getBytes());
-							String etag = Hashes.bytesToHex(digest.digest());
+              MessageDigest digest = Digest.MD5.get();
+              digest.update(logString.getBytes());
+              String etag = Hashes.bytesToHex(digest.digest());
 
-							AddObjectType request = new AddObjectType();
-							request.regarding( );
-							request.setBucket(bucket);
-							request.setKey(key);
-							request.setObjectName(logFileEntry.getLogFileName());
-							request.setEtag(etag);
-							String ownerId = entry.getOwnerId();
-							try {
-								ArrayList<Grant> grants = new ArrayList<Grant>();
-								grants.add(new Grant(new Grantee(new CanonicalUser(ownerId, Accounts.lookupAccountById(ownerId).getName())), 
-								"FULL_CONTROL"));
-								request.getAccessControlList().setGrants(grants);
-							} catch (AuthException e1) {
-								LOG.error(e1);
-							}
-							try {
-								dispatcher.send(request);
-							} catch (EucalyptusCloudException e) {
-								LOG.error(e);
-							}
-						} catch (IOException e) {
-							LOG.error(e);
-						}
-					}
-					for(String bucket : logFileMap.keySet()) {
-						try {
-							logFileMap.get(bucket).getChannel().close();
-						} catch (IOException e) {
-							LOG.error(e);						
-						}
-					}
-					logFileMap.clear();
-				}
-			}}, 1, LOG_PERIODICITY, TimeUnit.SECONDS);
-	}
+              AddObjectType request = new AddObjectType();
+              request.regarding();
+              request.setBucket(bucket);
+              request.setKey(key);
+              request.setObjectName(logFileEntry.getLogFileName());
+              request.setEtag(etag);
+              String ownerId = entry.getOwnerId();
+              try {
+                ArrayList<Grant> grants = new ArrayList<Grant>();
+                grants.add(new Grant(new Grantee(new CanonicalUser(ownerId, Accounts.lookupAccountById(ownerId).getName())), "FULL_CONTROL"));
+                request.getAccessControlList().setGrants(grants);
+              } catch (AuthException e1) {
+                LOG.error(e1);
+              }
+              try {
+                dispatcher.send(request);
+              } catch (EucalyptusCloudException e) {
+                LOG.error(e);
+              }
+            } catch (IOException e) {
+              LOG.error(e);
+            }
+          }
+          for (String bucket : logFileMap.keySet()) {
+            try {
+              logFileMap.get(bucket).getChannel().close();
+            } catch (IOException e) {
+              LOG.error(e);
+            }
+          }
+          logFileMap.clear();
+        }
+      }
+    }, 1, LOG_PERIODICITY, TimeUnit.SECONDS);
+  }
 
-	public static WalrusBucketLogger getInstance() {
-		if (singleton == null) {
-			singleton = new WalrusBucketLogger();
-		}		
-		return singleton;
-	}
+  public static WalrusBucketLogger getInstance() {
+    if (singleton == null) {
+      singleton = new WalrusBucketLogger();
+    }
+    return singleton;
+  }
 
-	public void addLogEntry(BucketLogData logEntry) {
-		try {
-			logData.offer(logEntry, 500, TimeUnit.MILLISECONDS);
-		} catch(InterruptedException ex) {
-      Thread.currentThread( ).interrupt( );
-		}
-	}
+  public void addLogEntry(BucketLogData logEntry) {
+    try {
+      logData.offer(logEntry, 500, TimeUnit.MILLISECONDS);
+    } catch (InterruptedException ex) {
+      Thread.currentThread().interrupt();
+    }
+  }
 
-	public BucketLogData makeLogEntry(String requestId) {
-		return new BucketLogData(requestId);
-	}
+  public BucketLogData makeLogEntry(String requestId) {
+    return new BucketLogData(requestId);
+  }
 
-	private class LogFileEntry {
-		private String logFileName;
-		private FileChannel channel;
+  private class LogFileEntry {
+    private String logFileName;
+    private FileChannel channel;
 
-		public LogFileEntry(String logFileName, FileChannel channel) {
-			this.logFileName = logFileName;
-			this.channel = channel;
-		}
+    public LogFileEntry(String logFileName, FileChannel channel) {
+      this.logFileName = logFileName;
+      this.channel = channel;
+    }
 
-		public FileChannel getChannel() {
-			return channel;
-		}
+    public FileChannel getChannel() {
+      return channel;
+    }
 
-		public String getLogFileName() {
-			return logFileName;
-		}
-	}
+    public String getLogFileName() {
+      return logFileName;
+    }
+  }
 }

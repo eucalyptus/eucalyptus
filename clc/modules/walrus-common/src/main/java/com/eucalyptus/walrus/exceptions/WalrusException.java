@@ -70,74 +70,69 @@ import com.eucalyptus.util.EucalyptusCloudException;
 @SuppressWarnings("serial")
 public class WalrusException extends EucalyptusCloudException {
 
-	String message;
-	String code;
-	HttpResponseStatus errStatus;
-	String resourceType;
-    String resource;
-    BucketLogData logData;
-    
-	public WalrusException()
-	{
-		super("InternalServerError"); // HACK for EUCA-9397
-	}
+  String message;
+  String code;
+  HttpResponseStatus errStatus;
+  String resourceType;
+  String resource;
+  BucketLogData logData;
 
-	public WalrusException(String message)
-	{
-		super("InternalServerError"); // HACK for EUCA-9397
-		this.message = "InternalServerError"; // HACK for EUCA-9397
-		this.code = "InternalServerError";
-		this.errStatus = HttpResponseStatus.INTERNAL_SERVER_ERROR;
-        this.resourceType = "";
-        this.resource = "";
-	}
+  public WalrusException() {
+    super("InternalServerError"); // HACK for EUCA-9397
+  }
 
-	public WalrusException(String code, String message, String resourceType, String resource, HttpResponseStatus status)
-	{
-		super(code.replaceAll(" ", "")); // HACK for EUCA-9397. replaceAll is to remove spaces that some exceptions add to the s3 error code
-		this.code = code;
-		this.message = code.replaceAll(" ", ""); // HACK for EUCA-9397
-		this.resourceType = resourceType;
-		this.resource = resource;
-		this.errStatus = status;
-	}
+  public WalrusException(String message) {
+    super("InternalServerError"); // HACK for EUCA-9397
+    this.message = "InternalServerError"; // HACK for EUCA-9397
+    this.code = "InternalServerError";
+    this.errStatus = HttpResponseStatus.INTERNAL_SERVER_ERROR;
+    this.resourceType = "";
+    this.resource = "";
+  }
 
-	public WalrusException(String code, String message, String resourceType, String resource, HttpResponseStatus status, BucketLogData logData)
-	{
-		this(code, message, resourceType, resource, status);
-		this.logData = logData;
-	}
+  public WalrusException(String code, String message, String resourceType, String resource, HttpResponseStatus status) {
+    super(code.replaceAll(" ", "")); // HACK for EUCA-9397. replaceAll is to remove spaces that some exceptions add to the s3 error code
+    this.code = code;
+    this.message = code.replaceAll(" ", ""); // HACK for EUCA-9397
+    this.resourceType = resourceType;
+    this.resource = resource;
+    this.errStatus = status;
+  }
 
-	public String getMessage() {
-		return message;
-	}
-	
-	public String getCode() {
-		return code;
-	}
+  public WalrusException(String code, String message, String resourceType, String resource, HttpResponseStatus status, BucketLogData logData) {
+    this(code, message, resourceType, resource, status);
+    this.logData = logData;
+  }
 
-	public HttpResponseStatus getStatus() {
-		return errStatus;
-	}
-	
-	public String getResourceType() {
-		return resourceType;
-	}
-	
-	public String getResource() {
-		return resource;		
-	}
-	
-	public WalrusException(String message, Throwable ex)
-	{
-		super(message,ex);
-	}
+  public String getMessage() {
+    return message;
+  }
 
-	public BucketLogData getLogData() {
-		return logData;
-	}
+  public String getCode() {
+    return code;
+  }
 
-	public void setLogData(BucketLogData logData) {
-		this.logData = logData;
-	}	
+  public HttpResponseStatus getStatus() {
+    return errStatus;
+  }
+
+  public String getResourceType() {
+    return resourceType;
+  }
+
+  public String getResource() {
+    return resource;
+  }
+
+  public WalrusException(String message, Throwable ex) {
+    super(message, ex);
+  }
+
+  public BucketLogData getLogData() {
+    return logData;
+  }
+
+  public void setLogData(BucketLogData logData) {
+    this.logData = logData;
+  }
 }

@@ -92,262 +92,261 @@ import com.eucalyptus.walrus.util.WalrusProperties;
 @Table(name = "Buckets")
 @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class BucketInfo extends AbstractPersistent {
-	// Hold the real owner ID. At this point, it is the account ID.
-	@Column(name = "owner_id")
-	private String ownerId;
+  // Hold the real owner ID. At this point, it is the account ID.
+  @Column(name = "owner_id")
+  private String ownerId;
 
-	@Column(name = "user_id")
-	private String userId;
+  @Column(name = "user_id")
+  private String userId;
 
-	@Column(name = "bucket_name", unique = true)
-	private String bucketName;
+  @Column(name = "bucket_name", unique = true)
+  private String bucketName;
 
-	@Column(name = "bucket_creation_date")
-	private Date creationDate;
+  @Column(name = "bucket_creation_date")
+  private Date creationDate;
 
-	@Column(name = "global_read")
-	private Boolean globalRead;
+  @Column(name = "global_read")
+  private Boolean globalRead;
 
-	@Column(name = "global_write")
-	private Boolean globalWrite;
+  @Column(name = "global_write")
+  private Boolean globalWrite;
 
-	@Column(name = "global_read_acp")
-	private Boolean globalReadACP;
+  @Column(name = "global_read_acp")
+  private Boolean globalReadACP;
 
-	@Column(name = "global_write_acp")
-	private Boolean globalWriteACP;
+  @Column(name = "global_write_acp")
+  private Boolean globalWriteACP;
 
-	@Column(name = "bucket_size")
-	private Long bucketSize;
+  @Column(name = "bucket_size")
+  private Long bucketSize;
 
-	@Column(name = "bucket_location")
-	private String location;
+  @Column(name = "bucket_location")
+  private String location;
 
-	@Column(name = "hidden")
-	private Boolean hidden;
+  @Column(name = "hidden")
+  private Boolean hidden;
 
-	@Column(name = "logging_enabled")
-	private Boolean loggingEnabled;
+  @Column(name = "logging_enabled")
+  private Boolean loggingEnabled;
 
-	@Column(name = "target_bucket")
-	private String targetBucket;
+  @Column(name = "target_bucket")
+  private String targetBucket;
 
-	@Column(name = "target_prefix")
-	private String targetPrefix;
+  @Column(name = "target_prefix")
+  private String targetPrefix;
 
-	@Column(name = "versioning")
-	private String versioning;
+  @Column(name = "versioning")
+  private String versioning;
 
-	@OneToMany(cascade = CascadeType.ALL)
-	@JoinTable(name = "bucket_has_grants", joinColumns = { @JoinColumn(name = "bucket_id") }, inverseJoinColumns = @JoinColumn(name = "grant_id"))
-	@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
-	private List<GrantInfo> grants = new ArrayList<GrantInfo>();
+  @OneToMany(cascade = CascadeType.ALL)
+  @JoinTable(name = "bucket_has_grants", joinColumns = {@JoinColumn(name = "bucket_id")}, inverseJoinColumns = @JoinColumn(name = "grant_id"))
+  @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  private List<GrantInfo> grants = new ArrayList<GrantInfo>();
 
-	public String getOwnerId() {
-		return ownerId;
-	}
+  public String getOwnerId() {
+    return ownerId;
+  }
 
-	public void setOwnerId(String ownerId) {
-		this.ownerId = ownerId;
-	}
+  public void setOwnerId(String ownerId) {
+    this.ownerId = ownerId;
+  }
 
-	public String getUserId() {
-		return userId;
-	}
+  public String getUserId() {
+    return userId;
+  }
 
-	public void setUserId(String userId) {
-		this.userId = userId;
-	}
+  public void setUserId(String userId) {
+    this.userId = userId;
+  }
 
-	public String getBucketName() {
-		return this.bucketName;
-	}
+  public String getBucketName() {
+    return this.bucketName;
+  }
 
-	public void setBucketName(String bucketName) {
-		this.bucketName = bucketName;
-	}
+  public void setBucketName(String bucketName) {
+    this.bucketName = bucketName;
+  }
 
-	public Date getCreationDate() {
-		return creationDate;
-	}
+  public Date getCreationDate() {
+    return creationDate;
+  }
 
-	public void setCreationDate(Date date) {
-		this.creationDate = date;
-	}
+  public void setCreationDate(Date date) {
+    this.creationDate = date;
+  }
 
-	public boolean isGlobalRead() {
-		return globalRead;
-	}
+  public boolean isGlobalRead() {
+    return globalRead;
+  }
 
-	public void setGlobalRead(Boolean globalRead) {
-		this.globalRead = globalRead;
-	}
+  public void setGlobalRead(Boolean globalRead) {
+    this.globalRead = globalRead;
+  }
 
-	public boolean isGlobalWrite() {
-		return globalWrite;
-	}
+  public boolean isGlobalWrite() {
+    return globalWrite;
+  }
 
-	public void setGlobalWrite(Boolean globalWrite) {
-		this.globalWrite = globalWrite;
-	}
+  public void setGlobalWrite(Boolean globalWrite) {
+    this.globalWrite = globalWrite;
+  }
 
-	public boolean isGlobalReadACP() {
-		return globalReadACP;
-	}
+  public boolean isGlobalReadACP() {
+    return globalReadACP;
+  }
 
-	public void setGlobalReadACP(Boolean globalReadACP) {
-		this.globalReadACP = globalReadACP;
-	}
+  public void setGlobalReadACP(Boolean globalReadACP) {
+    this.globalReadACP = globalReadACP;
+  }
 
-	public boolean isGlobalWriteACP() {
-		return globalWriteACP;
-	}
+  public boolean isGlobalWriteACP() {
+    return globalWriteACP;
+  }
 
-	public void setGlobalWriteACP(Boolean globalWriteACP) {
-		this.globalWriteACP = globalWriteACP;
-	}
+  public void setGlobalWriteACP(Boolean globalWriteACP) {
+    this.globalWriteACP = globalWriteACP;
+  }
 
-	public Long getBucketSize() {
-		return bucketSize;
-	}
+  public Long getBucketSize() {
+    return bucketSize;
+  }
 
-	public void setBucketSize(Long bucketSize) {
-		this.bucketSize = bucketSize;
-	}
+  public void setBucketSize(Long bucketSize) {
+    this.bucketSize = bucketSize;
+  }
 
-	public String getLocation() {
-		return location;
-	}
+  public String getLocation() {
+    return location;
+  }
 
-	public void setLocation(String location) {
-		this.location = location;
-	}
+  public void setLocation(String location) {
+    this.location = location;
+  }
 
-	public Boolean getHidden() {
-		return hidden;
-	}
+  public Boolean getHidden() {
+    return hidden;
+  }
 
-	public void setHidden(Boolean hidden) {
-		this.hidden = hidden;
-	}
+  public void setHidden(Boolean hidden) {
+    this.hidden = hidden;
+  }
 
-	public Boolean getLoggingEnabled() {
-		return loggingEnabled;
-	}
+  public Boolean getLoggingEnabled() {
+    return loggingEnabled;
+  }
 
-	public void setLoggingEnabled(Boolean loggingEnabled) {
-		this.loggingEnabled = loggingEnabled;
-	}
+  public void setLoggingEnabled(Boolean loggingEnabled) {
+    this.loggingEnabled = loggingEnabled;
+  }
 
-	public String getTargetBucket() {
-		return targetBucket;
-	}
+  public String getTargetBucket() {
+    return targetBucket;
+  }
 
-	public void setTargetBucket(String targetBucket) {
-		this.targetBucket = targetBucket;
-	}
+  public void setTargetBucket(String targetBucket) {
+    this.targetBucket = targetBucket;
+  }
 
-	public String getTargetPrefix() {
-		return targetPrefix;
-	}
+  public String getTargetPrefix() {
+    return targetPrefix;
+  }
 
-	public void setTargetPrefix(String targetPrefix) {
-		this.targetPrefix = targetPrefix;
-	}
+  public void setTargetPrefix(String targetPrefix) {
+    this.targetPrefix = targetPrefix;
+  }
 
-	public String getVersioning() {
-		return versioning;
-	}
+  public String getVersioning() {
+    return versioning;
+  }
 
-	public void setVersioning(String versioning) {
-		this.versioning = versioning;
-	}
+  public void setVersioning(String versioning) {
+    this.versioning = versioning;
+  }
 
-	public List<GrantInfo> getGrants() {
-		return grants;
-	}
+  public List<GrantInfo> getGrants() {
+    return grants;
+  }
 
-	public void setGrants(List<GrantInfo> grants) {
-		this.grants = grants;
-	}
+  public void setGrants(List<GrantInfo> grants) {
+    this.grants = grants;
+  }
 
-	public BucketInfo() {
-	}
+  public BucketInfo() {}
 
-	public BucketInfo(String bucketName) {
-		this.bucketName = bucketName;
-	}
+  public BucketInfo(String bucketName) {
+    this.bucketName = bucketName;
+  }
 
-	public BucketInfo(String ownerId, String userId, String bucketName, Date creationDate) {
-		this.ownerId = ownerId;
-		this.userId = userId;
-		this.bucketName = bucketName;
-		this.creationDate = creationDate;
-	}
+  public BucketInfo(String ownerId, String userId, String bucketName, Date creationDate) {
+    this.ownerId = ownerId;
+    this.userId = userId;
+    this.bucketName = bucketName;
+    this.creationDate = creationDate;
+  }
 
-	public BucketInfo(String bucketName, Date creationDate) {
-		this.bucketName = bucketName;
-		this.creationDate = creationDate;
-	}
+  public BucketInfo(String bucketName, Date creationDate) {
+    this.bucketName = bucketName;
+    this.creationDate = creationDate;
+  }
 
-	public void resetGlobalGrants() {
-		globalRead = globalWrite = globalReadACP = globalWriteACP = false;
-	}
+  public void resetGlobalGrants() {
+    globalRead = globalWrite = globalReadACP = globalWriteACP = false;
+  }
 
-	public void readPermissions(List<Grant> grants) {
-		if (globalRead && globalReadACP && globalWrite && globalWriteACP) {
-			grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.FULL_CONTROL.toString()));
-			return;
-		}
-		if (globalRead) {
-			grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.READ.toString()));
-		}
-		if (globalReadACP) {
-			grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.READ_ACP.toString()));
-		}
-		if (globalWrite) {
-			grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.WRITE.toString()));
-		}
-		if (globalWriteACP) {
-			grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.WRITE_ACP.toString()));
-		}
-	}
+  public void readPermissions(List<Grant> grants) {
+    if (globalRead && globalReadACP && globalWrite && globalWriteACP) {
+      grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.FULL_CONTROL.toString()));
+      return;
+    }
+    if (globalRead) {
+      grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.READ.toString()));
+    }
+    if (globalReadACP) {
+      grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.READ_ACP.toString()));
+    }
+    if (globalWrite) {
+      grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.WRITE.toString()));
+    }
+    if (globalWriteACP) {
+      grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.WRITE_ACP.toString()));
+    }
+  }
 
-	public boolean isVersioningEnabled() {
-		return WalrusProperties.VersioningStatus.Enabled.toString().equals(versioning);
-	}
+  public boolean isVersioningEnabled() {
+    return WalrusProperties.VersioningStatus.Enabled.toString().equals(versioning);
+  }
 
-	public boolean isVersioningDisabled() {
-		return WalrusProperties.VersioningStatus.Disabled.toString().equals(versioning);
-	}
+  public boolean isVersioningDisabled() {
+    return WalrusProperties.VersioningStatus.Disabled.toString().equals(versioning);
+  }
 
-	public boolean isVersioningSuspended() {
-		return WalrusProperties.VersioningStatus.Suspended.toString().equals(versioning);
-	}
+  public boolean isVersioningSuspended() {
+    return WalrusProperties.VersioningStatus.Suspended.toString().equals(versioning);
+  }
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((bucketName == null) ? 0 : bucketName.hashCode());
-		return result;
-	}
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((bucketName == null) ? 0 : bucketName.hashCode());
+    return result;
+  }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		BucketInfo other = (BucketInfo) obj;
-		if (bucketName == null) {
-			if (other.bucketName != null)
-				return false;
-		} else if (!bucketName.equals(other.bucketName))
-			return false;
-		return true;
-	}
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    BucketInfo other = (BucketInfo) obj;
+    if (bucketName == null) {
+      if (other.bucketName != null)
+        return false;
+    } else if (!bucketName.equals(other.bucketName))
+      return false;
+    return true;
+  }
 
 }

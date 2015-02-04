@@ -65,19 +65,17 @@
 
 package com.eucalyptus.blockstorage.san.common;
 
-import com.eucalyptus.blockstorage.san.common.AbstractSANTask;
 import com.eucalyptus.util.EucalyptusCloudException;
-
 
 public interface SessionManager {
 
-	public void connect() throws EucalyptusCloudException;
+  public void connect() throws EucalyptusCloudException;
 
-	public String runTask(final AbstractSANTask task) throws InterruptedException;
+  public String runTask(final AbstractSANTask task) throws InterruptedException;
 
-	public interface TaskRunner extends AutoCloseable {
-		public String runTask(final AbstractSANTask task) throws InterruptedException;
-		public void close( );
-	}
+  public interface TaskRunner extends AutoCloseable {
+    public String runTask(final AbstractSANTask task) throws InterruptedException;
+
+    public void close();
+  }
 }
-

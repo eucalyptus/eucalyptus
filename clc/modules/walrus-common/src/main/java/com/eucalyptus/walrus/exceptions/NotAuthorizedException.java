@@ -64,27 +64,22 @@ package com.eucalyptus.walrus.exceptions;
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-
-
 @SuppressWarnings("serial")
 public class NotAuthorizedException extends WalrusException {
 
-  public NotAuthorizedException()
-  {
-    super( "Unauthorized" );
-  }
-  
-  public NotAuthorizedException(String value)
-  {
-	  super("Unauthorized", "You are not authorized to perform this operation", "Reason", value, HttpResponseStatus.UNAUTHORIZED);
+  public NotAuthorizedException() {
+    super("Unauthorized");
   }
 
-  public NotAuthorizedException(Throwable ex)
-  {
+  public NotAuthorizedException(String value) {
+    super("Unauthorized", "You are not authorized to perform this operation", "Reason", value, HttpResponseStatus.UNAUTHORIZED);
+  }
+
+  public NotAuthorizedException(Throwable ex) {
     super("Unauthorized", ex);
   }
-  public NotAuthorizedException(String message, Throwable ex)
-  {
-    super(message,ex);
+
+  public NotAuthorizedException(String message, Throwable ex) {
+    super(message, ex);
   }
 }

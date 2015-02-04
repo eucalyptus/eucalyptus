@@ -79,152 +79,144 @@ import edu.ucsb.eucalyptus.util.ConfigParser;
 import edu.ucsb.eucalyptus.util.StreamConsumer;
 
 public class StorageProperties {
-	private static Logger LOG = Logger.getLogger( StorageProperties.class );
+  private static Logger LOG = Logger.getLogger(StorageProperties.class);
 
-    /*
-    Threshold after which the SC will cleanup the failed volume record by deleting it.
-    This value ensures that the SC can send the volume state to the CLC possibly multiple times so that
-    a single missed message will not cause the CLC to hit its much longer timeout for volume state (2 hrs).
-     */
-    public static final long FAILED_STATE_CLEANUP_THRESHOLD_MS = 10 * 60 * 1000l; //10 minutes
-	public static final String storageRootDirectory = BaseDirectory.VAR.getChildPath( "volumes" );
-	public static final long GB = 1024*1024*1024;
-	public static final long MB = 1024*1024;
-	public static final long KB = 1024;
-	public static final String iface = "eth0";
-	public static final int MAX_TOTAL_VOLUME_SIZE = 100;
-	public static final int MAX_VOLUME_SIZE = 15;
-	public static int TRANSFER_CHUNK_SIZE = 8192;
-	public static final boolean zeroFillVolumes = false;
-	public static final long timeoutInMillis = 10000;
+  /*
+   * Threshold after which the SC will cleanup the failed volume record by deleting it. This value ensures that the SC can send the volume state to
+   * the CLC possibly multiple times so that a single missed message will not cause the CLC to hit its much longer timeout for volume state (2 hrs).
+   */
+  public static final long FAILED_STATE_CLEANUP_THRESHOLD_MS = 10 * 60 * 1000l; // 10 minutes
+  public static final String storageRootDirectory = BaseDirectory.VAR.getChildPath("volumes");
+  public static final long GB = 1024 * 1024 * 1024;
+  public static final long MB = 1024 * 1024;
+  public static final long KB = 1024;
+  public static final String iface = "eth0";
+  public static final int MAX_TOTAL_VOLUME_SIZE = 100;
+  public static final int MAX_VOLUME_SIZE = 15;
+  public static int TRANSFER_CHUNK_SIZE = 8192;
+  public static final boolean zeroFillVolumes = false;
+  public static final long timeoutInMillis = 10000;
 
-	public static boolean enableSnapshots = false;
-	public static boolean enableStorage = false;
-	public static boolean shouldEnforceUsageLimits = true;
-	public static String STORE_PREFIX = "iqn.2009-06.com.eucalyptus.";
-	public static String WALRUS_URL = "http://localhost:8773/services/objectstorage";
-	public static String NAME = "unregistered";
-	public static String STORAGE_HOST = "127.0.0.1";
-	public static final String ISCSI_INITIATOR_NAME_CONF = "/etc/iscsi/initiatorname.iscsi";
-	public static String SC_INITIATOR_IQN = null;
-	public static final String EUCA_ROOT_WRAPPER = BaseDirectory.LIBEXEC.toString() + "/euca_rootwrap";
-	public static final String blockSize = "1M";
-	public static String DAS_DEVICE = "/dev/blockdev";
-	public static final String TOKEN_PREFIX = "sc://"; //Used to indicate a token should be resolved to an SC
+  public static boolean enableSnapshots = false;
+  public static boolean enableStorage = false;
+  public static boolean shouldEnforceUsageLimits = true;
+  public static String STORE_PREFIX = "iqn.2009-06.com.eucalyptus.";
+  public static String WALRUS_URL = "http://localhost:8773/services/objectstorage";
+  public static String NAME = "unregistered";
+  public static String STORAGE_HOST = "127.0.0.1";
+  public static final String ISCSI_INITIATOR_NAME_CONF = "/etc/iscsi/initiatorname.iscsi";
+  public static String SC_INITIATOR_IQN = null;
+  public static final String EUCA_ROOT_WRAPPER = BaseDirectory.LIBEXEC.toString() + "/euca_rootwrap";
+  public static final String blockSize = "1M";
+  public static String DAS_DEVICE = "/dev/blockdev";
+  public static final String TOKEN_PREFIX = "sc://"; // Used to indicate a token should be resolved to an SC
 
-    public static final String SNAPSHOT_BUCKET_PREFIX = "snapshots-";
-    public static final String EBS_ROLE_NAME = "EBSUpload";
-    public static final String S3_BUCKET_ACCESS_POLICY_NAME = "S3EBSBucketAccess";
-    public static final String S3_OBJECT_ACCESS_POLICY_NAME = "S3EBSObjectAccess";
+  public static final String SNAPSHOT_BUCKET_PREFIX = "snapshots-";
+  public static final String EBS_ROLE_NAME = "EBSUpload";
+  public static final String S3_BUCKET_ACCESS_POLICY_NAME = "S3EBSBucketAccess";
+  public static final String S3_OBJECT_ACCESS_POLICY_NAME = "S3EBSObjectAccess";
 
-    public static final String DEFAULT_ASSUME_ROLE_POLICY =
-            "{\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":[\"s3.amazonaws.com\"]},\"Action\":[\"sts:AssumeRole\"]}]}";
+  public static final String DEFAULT_ASSUME_ROLE_POLICY =
+      "{\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":[\"s3.amazonaws.com\"]},\"Action\":[\"sts:AssumeRole\"]}]}";
 
-    
-    public static final String S3_SNAPSHOT_BUCKET_ACCESS_POLICY =
-            "{\"Statement\":[" +
-                    "{" +
-                    "\"Effect\":\"Allow\"," +
-                    "\"Action\": [\"s3:*\"]," +
-                    "\"Resource\": \"arn:aws:s3:::*\"" +
-                    "}" +
-                    "]}";
-    
-    public static final String S3_SNAPSHOT_OBJECT_ACCESS_POLICY =
-            "{\"Statement\":[" +
-                    "{" +
-                    "\"Effect\":\"Allow\"," +
-                    "\"Action\": [\"s3:*\"]," +
-                    "\"Resource\": \"arn:aws:s3:::*/*\"" +
-                    "}" +
-                    "]}";
+  public static final String S3_SNAPSHOT_BUCKET_ACCESS_POLICY = "{\"Statement\":[" + "{" + "\"Effect\":\"Allow\"," + "\"Action\": [\"s3:*\"],"
+      + "\"Resource\": \"arn:aws:s3:::*\"" + "}" + "]}";
 
-    public static final Integer DELETED_VOLUME_EXPIRATION_TIME =  24;//hours
-    
-	/**
-	 * <p>Perl connection script returns xml output for libvirt usage. Use this pattern for parsing the block device name from the output.</p>
-	 * 
-	 * Example output from perl script: <pre> {@code 
-	 * <disk type='block'> 
-	 * <driver cache='none' name='qemu'/> 
-	 * <source dev='/dev/disk/by-id/dm-uuid-mpath-3600a098037542d68732b447869397146'/> 
-	 * <target bus='virtio' dev='vdb'/> <serial>vol-5062e8f1-dev-sdb</serial> </disk>
-	 * }</pre>
-	 * 
-	 * Use this regex pattern for parsing the block device string /dev/disk/by-id/dm-uuid-mpath-3600a098037542d68732b447869397146
-	 */
-	public static final Pattern PARSE_BLOCK_DEVICE = Pattern.compile("source.* dev='([^']*)'");
-    
-    public static String formatVolumeAttachmentTokenForTransfer(String token, String volumeId) {
-		return TOKEN_PREFIX + volumeId + "," + token;
-	}
+  public static final String S3_SNAPSHOT_OBJECT_ACCESS_POLICY = "{\"Statement\":[" + "{" + "\"Effect\":\"Allow\"," + "\"Action\": [\"s3:*\"],"
+      + "\"Resource\": \"arn:aws:s3:::*/*\"" + "}" + "]}";
 
-	private static String getSCIqn() {
-		try {
-			Runtime rt = Runtime.getRuntime();
-			Process proc = rt.exec(new String[]{ StorageProperties.EUCA_ROOT_WRAPPER, "cat", ISCSI_INITIATOR_NAME_CONF});
-			StreamConsumer error = new StreamConsumer(proc.getErrorStream());
-			ConfigParser output = new ConfigParser(proc.getInputStream());
-			error.start();
-			output.start();
-			output.join();
-			error.join();
-			if(output.getValues() != null && output.getValues().containsKey("InitiatorName")) {
-				return output.getValues().get("InitiatorName");
-			}
-		} catch (Exception t) {
-			LOG.error("Failed to get local SC's initiator iqn from " + ISCSI_INITIATOR_NAME_CONF,t);
-		}
-		return null;		
-	}
+  public static final Integer DELETED_VOLUME_EXPIRATION_TIME = 24;// hours
 
-	public static String getStorageIqn() {
-		if (SC_INITIATOR_IQN == null) {
-			SC_INITIATOR_IQN = getSCIqn();
-		}
-		return SC_INITIATOR_IQN;
-	}
-	
-	public static void updateName() {
-		try {
-			StorageProperties.NAME = Components.lookup( Storage.class ).getLocalServiceConfiguration( ).getPartition( );
-		} catch ( NoSuchElementException ex ) {
-			LOG.error( ex , ex );
-			LOG.error( "Failed to configure Storage Controller NAME." );
-			throw ex;
-		}
-	}
+  /**
+   * <p>
+   * Perl connection script returns xml output for libvirt usage. Use this pattern for parsing the block device name from the output.
+   * </p>
+   * 
+   * Example output from perl script:
+   * 
+   * <pre>
+   * {@code 
+   * <disk type='block'> 
+   * <driver cache='none' name='qemu'/> 
+   * <source dev='/dev/disk/by-id/dm-uuid-mpath-3600a098037542d68732b447869397146'/> 
+   * <target bus='virtio' dev='vdb'/> <serial>vol-5062e8f1-dev-sdb</serial> </disk>
+   * }
+   * </pre>
+   * 
+   * Use this regex pattern for parsing the block device string /dev/disk/by-id/dm-uuid-mpath-3600a098037542d68732b447869397146
+   */
+  public static final Pattern PARSE_BLOCK_DEVICE = Pattern.compile("source.* dev='([^']*)'");
 
-	public static void updateStorageHost() {
-		try {
-			STORAGE_HOST = Components.lookup( Storage.class ).getLocalServiceConfiguration( ).getHostName( );
-		} catch ( NoSuchElementException ex ) {
-			LOG.error( ex , ex );
-			LOG.error( "Failed to configure Storage Controller HOST (given the name " + StorageProperties.NAME + "." );
-		}
-	}
+  public static String formatVolumeAttachmentTokenForTransfer(String token, String volumeId) {
+    return TOKEN_PREFIX + volumeId + "," + token;
+  }
 
-	public static void updateStorageHost(String hostName) {
-		STORAGE_HOST = hostName;
-	}
+  private static String getSCIqn() {
+    try {
+      Runtime rt = Runtime.getRuntime();
+      Process proc = rt.exec(new String[] {StorageProperties.EUCA_ROOT_WRAPPER, "cat", ISCSI_INITIATOR_NAME_CONF});
+      StreamConsumer error = new StreamConsumer(proc.getErrorStream());
+      ConfigParser output = new ConfigParser(proc.getInputStream());
+      error.start();
+      output.start();
+      output.join();
+      error.join();
+      if (output.getValues() != null && output.getValues().containsKey("InitiatorName")) {
+        return output.getValues().get("InitiatorName");
+      }
+    } catch (Exception t) {
+      LOG.error("Failed to get local SC's initiator iqn from " + ISCSI_INITIATOR_NAME_CONF, t);
+    }
+    return null;
+  }
 
-	public static void updateWalrusUrl() {
-		try {
-			ServiceConfiguration walrusConfig = Topology.lookup(ObjectStorage.class);
-			WALRUS_URL = ServiceUris.remote( walrusConfig ).toASCIIString( );
-			StorageProperties.enableSnapshots = true;
-			LOG.info("Setting WALRUS_URL to: " + WALRUS_URL);
-		} catch (Exception e) {
-			LOG.warn("Could not obtain walrus information. Snapshot functionality may be unavailable. Have you registered ObjectStorage?");
-			StorageProperties.enableSnapshots = false;
-		}		
-	}
+  public static String getStorageIqn() {
+    if (SC_INITIATOR_IQN == null) {
+      SC_INITIATOR_IQN = getSCIqn();
+    }
+    return SC_INITIATOR_IQN;
+  }
 
-	public enum Status {
-		creating, available, pending, completed, failed, error, deleting, deleted
-	}
+  public static void updateName() {
+    try {
+      StorageProperties.NAME = Components.lookup(Storage.class).getLocalServiceConfiguration().getPartition();
+    } catch (NoSuchElementException ex) {
+      LOG.error(ex, ex);
+      LOG.error("Failed to configure Storage Controller NAME.");
+      throw ex;
+    }
+  }
 
-	public enum StorageParameters {
-		EucaSignature, EucaSnapSize, EucaCert, EucaEffectiveUserId
-	}
+  public static void updateStorageHost() {
+    try {
+      STORAGE_HOST = Components.lookup(Storage.class).getLocalServiceConfiguration().getHostName();
+    } catch (NoSuchElementException ex) {
+      LOG.error(ex, ex);
+      LOG.error("Failed to configure Storage Controller HOST (given the name " + StorageProperties.NAME + ".");
+    }
+  }
+
+  public static void updateStorageHost(String hostName) {
+    STORAGE_HOST = hostName;
+  }
+
+  public static void updateWalrusUrl() {
+    try {
+      ServiceConfiguration walrusConfig = Topology.lookup(ObjectStorage.class);
+      WALRUS_URL = ServiceUris.remote(walrusConfig).toASCIIString();
+      StorageProperties.enableSnapshots = true;
+      LOG.info("Setting WALRUS_URL to: " + WALRUS_URL);
+    } catch (Exception e) {
+      LOG.warn("Could not obtain walrus information. Snapshot functionality may be unavailable. Have you registered ObjectStorage?");
+      StorageProperties.enableSnapshots = false;
+    }
+  }
+
+  public enum Status {
+    creating, available, pending, completed, failed, error, deleting, deleted
+  }
+
+  public enum StorageParameters {
+    EucaSignature, EucaSnapSize, EucaCert, EucaEffectiveUserId
+  }
 }

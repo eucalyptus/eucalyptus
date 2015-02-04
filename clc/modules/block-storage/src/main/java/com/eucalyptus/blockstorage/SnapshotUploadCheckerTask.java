@@ -83,80 +83,82 @@ import com.eucalyptus.storage.common.CheckerTask;
 import com.google.common.collect.Maps;
 
 /**
- * Checker task for cleaning up aborted uploads and removing the expired uploads from the database. Gets initialized in BlockStorageController and runs
- * periodically
+ * Checker task for cleaning up aborted uploads and removing the expired uploads from the database. Gets initialized in BlockStorageController and
+ * runs periodically
  * 
  * @author Swathi Gangisetty
  */
 public class SnapshotUploadCheckerTask extends CheckerTask {
 
-	private Logger LOG = Logger.getLogger(SnapshotUploadCheckerTask.class);
+  private Logger LOG = Logger.getLogger(SnapshotUploadCheckerTask.class);
 
-	public SnapshotUploadCheckerTask() {
-		this.name = SnapshotUploadCheckerTask.class.getName();
-	}
+  public SnapshotUploadCheckerTask() {
+    this.name = SnapshotUploadCheckerTask.class.getName();
+  }
 
-	@Override
-	public void run() {
-		// Clean up aborted uploads
-		cleanupAbortedUploads();
-		// Remove expired entities
-		deleteExpiredUploads();
-	}
+  @Override
+  public void run() {
+    // Clean up aborted uploads
+    cleanupAbortedUploads();
+    // Remove expired entities
+    deleteExpiredUploads();
+  }
 
-	private void cleanupAbortedUploads() {
-		try (TransactionResource snapTran = Entities.transactionFor(SnapshotUploadInfo.class)) {
-			List<SnapshotUploadInfo> snapUploadInfoList = Entities.query(new SnapshotUploadInfo().withState(SnapshotUploadState.aborted));
-			for (SnapshotUploadInfo snapUploadInfo : snapUploadInfoList) {
-				LOG.debug("Cleaning aborted entity " + snapUploadInfo);
-				try (TransactionResource partTran = Entities.transactionFor(SnapshotPart.class)) {
-					List<SnapshotPart> parts = Entities.query(new SnapshotPart(snapUploadInfo.getSnapshotId(), snapUploadInfo.getBucketName(), snapUploadInfo
-							.getKeyName(), snapUploadInfo.getUploadId()));
-					for (SnapshotPart part : parts) {
-						if (StringUtils.isNotBlank(part.getFileName())) {
-							LOG.debug("Deleting snapshot part from disk: " + part.getFileName());
-							if (!Files.deleteIfExists(Paths.get(part.getFileName()))) {
-								LOG.warn("Could not delete snapshot part from disk: " + part.getFileName());
-							}
-						}
-						part.setState(SnapshotPartState.cleaned);
-					}
-					partTran.commit();
-				}
-				snapUploadInfo.setPurgeTime(System.currentTimeMillis() + SnapshotUploadInfo.PURGE_INTERVAL);
-				snapUploadInfo.setState(SnapshotUploadState.cleaned);
-			}
-			snapTran.commit();
-		} catch (Exception e) {
-			LOG.debug("Error updating snapshot upload state during clean up" + e);
-		}
-	}
+  private void cleanupAbortedUploads() {
+    try (TransactionResource snapTran = Entities.transactionFor(SnapshotUploadInfo.class)) {
+      List<SnapshotUploadInfo> snapUploadInfoList = Entities.query(new SnapshotUploadInfo().withState(SnapshotUploadState.aborted));
+      for (SnapshotUploadInfo snapUploadInfo : snapUploadInfoList) {
+        LOG.debug("Cleaning aborted entity " + snapUploadInfo);
+        try (TransactionResource partTran = Entities.transactionFor(SnapshotPart.class)) {
+          List<SnapshotPart> parts =
+              Entities.query(new SnapshotPart(snapUploadInfo.getSnapshotId(), snapUploadInfo.getBucketName(), snapUploadInfo.getKeyName(),
+                  snapUploadInfo.getUploadId()));
+          for (SnapshotPart part : parts) {
+            if (StringUtils.isNotBlank(part.getFileName())) {
+              LOG.debug("Deleting snapshot part from disk: " + part.getFileName());
+              if (!Files.deleteIfExists(Paths.get(part.getFileName()))) {
+                LOG.warn("Could not delete snapshot part from disk: " + part.getFileName());
+              }
+            }
+            part.setState(SnapshotPartState.cleaned);
+          }
+          partTran.commit();
+        }
+        snapUploadInfo.setPurgeTime(System.currentTimeMillis() + SnapshotUploadInfo.PURGE_INTERVAL);
+        snapUploadInfo.setState(SnapshotUploadState.cleaned);
+      }
+      snapTran.commit();
+    } catch (Exception e) {
+      LOG.debug("Error updating snapshot upload state during clean up" + e);
+    }
+  }
 
-	private void deleteExpiredUploads() {
-		try (TransactionResource snapTran = Entities.transactionFor(SnapshotUploadInfo.class)) {
-			Criterion criterion = Restrictions.and(
-					Restrictions.or(Restrictions.like("state", SnapshotUploadState.cleaned), Restrictions.like("state", SnapshotUploadState.uploaded)),
-					Restrictions.le("purgeTime", System.currentTimeMillis()));
-			List<SnapshotUploadInfo> snapshotUploadInfoList = Entities.query(new SnapshotUploadInfo(), Boolean.FALSE, criterion, Collections.EMPTY_MAP);
-			for (SnapshotUploadInfo snapUploadInfo : snapshotUploadInfoList) {
-				LOG.debug("Deleting expired entity from DB " + snapUploadInfo);
-				Map<String, String> parameters = Maps.newHashMap();
-				parameters.put("snapshotId", snapUploadInfo.getSnapshotId());
-				parameters.put("bucketName", snapUploadInfo.getBucketName());
-				parameters.put("keyName", snapUploadInfo.getKeyName());
-				if (snapUploadInfo.getUploadId() != null) {
-					parameters.put("uploadId", snapUploadInfo.getUploadId());
-					Entities.deleteAllMatching(SnapshotPart.class,
-							"WHERE snapshot_id = :snapshotId AND bucket_name = :bucketName AND key_name = :keyName AND upload_id = :uploadId", parameters);
-				} else {
-					Entities.deleteAllMatching(SnapshotPart.class, "WHERE snapshot_id = :snapshotId AND bucket_name = :bucketName AND key_name = :keyName",
-							parameters);
-				}
-				Entities.delete(snapUploadInfo);
-			}
-			snapTran.commit();
-		} catch (Exception e) {
-			LOG.debug("Error deleting expired snapshot upload info entities" + e);
-		}
-	}
+  private void deleteExpiredUploads() {
+    try (TransactionResource snapTran = Entities.transactionFor(SnapshotUploadInfo.class)) {
+      Criterion criterion =
+          Restrictions.and(
+              Restrictions.or(Restrictions.like("state", SnapshotUploadState.cleaned), Restrictions.like("state", SnapshotUploadState.uploaded)),
+              Restrictions.le("purgeTime", System.currentTimeMillis()));
+      List<SnapshotUploadInfo> snapshotUploadInfoList = Entities.query(new SnapshotUploadInfo(), Boolean.FALSE, criterion, Collections.EMPTY_MAP);
+      for (SnapshotUploadInfo snapUploadInfo : snapshotUploadInfoList) {
+        LOG.debug("Deleting expired entity from DB " + snapUploadInfo);
+        Map<String, String> parameters = Maps.newHashMap();
+        parameters.put("snapshotId", snapUploadInfo.getSnapshotId());
+        parameters.put("bucketName", snapUploadInfo.getBucketName());
+        parameters.put("keyName", snapUploadInfo.getKeyName());
+        if (snapUploadInfo.getUploadId() != null) {
+          parameters.put("uploadId", snapUploadInfo.getUploadId());
+          Entities.deleteAllMatching(SnapshotPart.class,
+              "WHERE snapshot_id = :snapshotId AND bucket_name = :bucketName AND key_name = :keyName AND upload_id = :uploadId", parameters);
+        } else {
+          Entities.deleteAllMatching(SnapshotPart.class, "WHERE snapshot_id = :snapshotId AND bucket_name = :bucketName AND key_name = :keyName",
+              parameters);
+        }
+        Entities.delete(snapUploadInfo);
+      }
+      snapTran.commit();
+    } catch (Exception e) {
+      LOG.debug("Error deleting expired snapshot upload info entities" + e);
+    }
+  }
 }

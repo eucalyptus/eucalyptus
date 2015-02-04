@@ -64,19 +64,19 @@ package com.eucalyptus.blockstorage.ceph.exceptions;
 
 public class CephImageNotFoundException extends EucalyptusCephException {
 
-	public CephImageNotFoundException(String message, Throwable cause) {
-		super(message, cause);
-	}
+  public CephImageNotFoundException(String message, Throwable cause) {
+    super(message, cause);
+  }
 
-	public CephImageNotFoundException() {
-		super();
-	}
+  public CephImageNotFoundException() {
+    super();
+  }
 
-	public CephImageNotFoundException(String message) {
-		super(message);
-	}
+  public CephImageNotFoundException(String message) {
+    super(message);
+  }
 
-	public CephImageNotFoundException(Throwable cause) {
-		super(cause);
-	}
+  public CephImageNotFoundException(Throwable cause) {
+    super(cause);
+  }
 }

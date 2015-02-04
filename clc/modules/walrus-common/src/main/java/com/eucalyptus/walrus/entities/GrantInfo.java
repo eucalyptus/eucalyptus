@@ -80,145 +80,145 @@ import com.eucalyptus.storage.msgs.s3.Grant;
 import com.eucalyptus.storage.msgs.s3.Grantee;
 
 @Entity
-@PersistenceContext(name="eucalyptus_walrus")
-@Table( name = "Grants" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@PersistenceContext(name = "eucalyptus_walrus")
+@Table(name = "Grants")
+@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class GrantInfo extends AbstractPersistent {
-	@Column(name="user_id")
-	private String userId; // Actually refer to the owner account ID
-	@Column(name="grantGroup")
-	private String grantGroup;
-	@Column(name="allow_read")
-	private Boolean canRead;
-	@Column(name="allow_write")
-	private Boolean canWrite;
-	@Column(name="allow_read_acp")
-	private Boolean canReadACP;
-	@Column(name="allow_write_acp")
-	private Boolean canWriteACP;
+  @Column(name = "user_id")
+  private String userId; // Actually refer to the owner account ID
+  @Column(name = "grantGroup")
+  private String grantGroup;
+  @Column(name = "allow_read")
+  private Boolean canRead;
+  @Column(name = "allow_write")
+  private Boolean canWrite;
+  @Column(name = "allow_read_acp")
+  private Boolean canReadACP;
+  @Column(name = "allow_write_acp")
+  private Boolean canWriteACP;
 
-	private static Logger LOG = Logger.getLogger( ObjectInfo.class );
+  private static Logger LOG = Logger.getLogger(ObjectInfo.class);
 
-	public GrantInfo(){
-		canRead = canWrite = canReadACP = canWriteACP = false;
-	}
+  public GrantInfo() {
+    canRead = canWrite = canReadACP = canWriteACP = false;
+  }
 
-    public GrantInfo(String userId, String grantGroup,  Boolean canRead, Boolean canWrite, Boolean canReadACP, Boolean canWriteACP) {
-        this.userId = userId;
-        this.grantGroup = grantGroup;
-        this.canRead = canRead;
-        this.canWrite = canWrite;
-        this.canReadACP = canReadACP;
-        this.canWriteACP = canWriteACP;
+  public GrantInfo(String userId, String grantGroup, Boolean canRead, Boolean canWrite, Boolean canReadACP, Boolean canWriteACP) {
+    this.userId = userId;
+    this.grantGroup = grantGroup;
+    this.canRead = canRead;
+    this.canWrite = canWrite;
+    this.canReadACP = canReadACP;
+    this.canWriteACP = canWriteACP;
+  }
+
+  public boolean canRead() {
+    return canRead;
+  }
+
+  public void setCanRead(Boolean canRead) {
+    this.canRead = canRead;
+  }
+
+  public String getUserId() {
+    return userId;
+  }
+
+  public void setUserId(String userId) {
+    this.userId = userId;
+  }
+
+  public String getGrantGroup() {
+    return grantGroup;
+  }
+
+  public void setGrantGroup(String grantGroup) {
+    this.grantGroup = grantGroup;
+  }
+
+  public boolean canWrite() {
+    return canWrite;
+  }
+
+  public void setCanWrite(Boolean canWrite) {
+    this.canWrite = canWrite;
+  }
+
+  public boolean canReadACP() {
+    return canReadACP;
+  }
+
+  public void setCanReadACP(Boolean canReadACP) {
+    this.canReadACP = canReadACP;
+  }
+
+  public boolean canWriteACP() {
+    return canWriteACP;
+  }
+
+  public void setCanWriteACP(Boolean writeACP) {
+    this.canWriteACP = writeACP;
+  }
+
+  public void setFullControl() {
+    canRead = canWrite = canReadACP = canWriteACP = true;
+  }
+
+  public static void addGrants(String ownerId, List<GrantInfo> grantInfos, AccessControlList accessControlList) {
+    ArrayList<Grant> grants = accessControlList.getGrants();
+    if (grants.size() > 0) {
+      for (Grant grant : grants) {
+        String permission = grant.getPermission();
+        if (permission.equals("private")) {
+          setFullControl(ownerId, grantInfos);
+          continue;
+        }
+        GrantInfo grantInfo = new GrantInfo();
+        Grantee grantee = grant.getGrantee();
+        if (grantee.getCanonicalUser() != null) {
+          String id = grantee.getCanonicalUser().getID();
+          if (id == null || id.length() == 0)
+            continue;
+          grantInfo.setUserId(id);
+        } else {
+          grantInfo.setGrantGroup(grantee.getGroup().getUri());
+        }
+        if (permission.equals("FULL_CONTROL")) {
+          grantInfo.setFullControl();
+        } else if (permission.equals("READ")) {
+          grantInfo.setCanRead(true);
+        } else if (permission.equals("WRITE")) {
+          grantInfo.setCanWrite(true);
+        } else if (permission.equals("READ_ACP")) {
+          grantInfo.setCanReadACP(true);
+        } else if (permission.equals("WRITE_ACP")) {
+          grantInfo.setCanWriteACP(true);
+        }
+        grantInfos.add(grantInfo);
+      }
+    } else {
+      setFullControl(ownerId, grantInfos);
     }
+  }
 
-	public boolean canRead() {
-		return canRead;
-	}
+  public static void setFullControl(String userId, List<GrantInfo> grantInfos) {
+    GrantInfo grantInfo = new GrantInfo();
+    grantInfo.setUserId(userId);
+    grantInfo.setFullControl();
+    grantInfos.add(grantInfo);
+  }
 
-	public void setCanRead(Boolean canRead) {
-		this.canRead = canRead;
-	}
-
-	public String getUserId() {
-		return userId;
-	}
-
-	public void setUserId(String userId) {
-		this.userId = userId;
-	}
-
-	public String getGrantGroup() {
-		return grantGroup;
-	}
-
-	public void setGrantGroup(String grantGroup) {
-		this.grantGroup = grantGroup;
-	}
-
-	public boolean canWrite() {
-		return canWrite;
-	}
-
-	public void setCanWrite(Boolean canWrite) {
-		this.canWrite = canWrite;
-	}
-
-	public boolean canReadACP() {
-		return canReadACP;
-	}
-
-	public void setCanReadACP(Boolean canReadACP) {
-		this.canReadACP = canReadACP;
-	}
-
-	public boolean canWriteACP() {
-		return canWriteACP;
-	}
-
-	public void setCanWriteACP(Boolean writeACP) {
-		this.canWriteACP = writeACP;
-	}
-
-	public void setFullControl() {
-		canRead = canWrite = canReadACP = canWriteACP = true;
-	}
-
-	public static void addGrants(String ownerId, List<GrantInfo>grantInfos, AccessControlList accessControlList) {
-		ArrayList<Grant> grants = accessControlList.getGrants();
-		if (grants.size() > 0) {
-			for (Grant grant: grants) {
-				String permission = grant.getPermission();
-				if(permission.equals("private")) {
-					setFullControl(ownerId, grantInfos);
-					continue;
-				}
-				GrantInfo grantInfo = new GrantInfo();
-				Grantee grantee = grant.getGrantee();
-				if(grantee.getCanonicalUser() != null) {
-					String id = grantee.getCanonicalUser().getID();
-						if(id == null || id.length() == 0)
-							continue;
-					grantInfo.setUserId(id);					
-				} else {
-					grantInfo.setGrantGroup(grantee.getGroup().getUri());
-				}
-				if (permission.equals("FULL_CONTROL")) {
-					grantInfo.setFullControl();
-				}   else if (permission.equals("READ")) {
-					grantInfo.setCanRead(true);
-				}   else if (permission.equals("WRITE")) {
-					grantInfo.setCanWrite(true);
-				}   else if (permission.equals("READ_ACP")) {
-					grantInfo.setCanReadACP(true);
-				}   else if (permission.equals("WRITE_ACP")) {
-					grantInfo.setCanWriteACP(true);
-				}
-				grantInfos.add(grantInfo);
-			}
-		} else {
-			setFullControl(ownerId, grantInfos);
-		}
-	}
-
-	public static void setFullControl(String userId, List<GrantInfo> grantInfos) {
-		GrantInfo grantInfo = new GrantInfo();
-		grantInfo.setUserId(userId);
-		grantInfo.setFullControl();
-		grantInfos.add(grantInfo);
-	}
-
-	public void setPermission(String permission) {
-		if("FULL_CONTROL".equals(permission)) {
-			setFullControl();
-		} else if("READ".equals(permission)) {
-			setCanRead(true);
-		} else if("WRITE".equals(permission)) {
-			setCanWrite(true);
-		} else if("READ_ACP".equals(permission)) {
-			setCanReadACP(true);
-		} else if("WRITE_ACP".equals(permission)) {
-			setCanWriteACP(true);
-		}
-	}
+  public void setPermission(String permission) {
+    if ("FULL_CONTROL".equals(permission)) {
+      setFullControl();
+    } else if ("READ".equals(permission)) {
+      setCanRead(true);
+    } else if ("WRITE".equals(permission)) {
+      setCanWrite(true);
+    } else if ("READ_ACP".equals(permission)) {
+      setCanReadACP(true);
+    } else if ("WRITE_ACP".equals(permission)) {
+      setCanWriteACP(true);
+    }
+  }
 }

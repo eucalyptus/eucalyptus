@@ -64,26 +64,25 @@ package com.eucalyptus.walrus.msgs;
 
 import java.util.Date;
 
-
 public class WalrusMonitor {
-    private Date lastModified;
-    private String md5;
+  private Date lastModified;
+  private String md5;
 
-    public WalrusMonitor() {}
+  public WalrusMonitor() {}
 
-    public Date getLastModified() {
-        return lastModified;
-    }
+  public Date getLastModified() {
+    return lastModified;
+  }
 
-    public void setLastModified(Date lastModified) {
-        this.lastModified = lastModified;
-    }
+  public void setLastModified(Date lastModified) {
+    this.lastModified = lastModified;
+  }
 
-    public String getMd5() {
-        return md5;
-    }
+  public String getMd5() {
+    return md5;
+  }
 
-    public void setMd5(String md5) {
-        this.md5 = md5;
-    }
+  public void setMd5(String md5) {
+    this.md5 = md5;
+  }
 }

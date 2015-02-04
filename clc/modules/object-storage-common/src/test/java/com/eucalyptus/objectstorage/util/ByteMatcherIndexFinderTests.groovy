@@ -31,38 +31,38 @@ import org.junit.Test
 @CompileStatic
 class ByteMatcherIndexFinderTests {
 
-    @Test
-    void testFindBeginning() {
-        ChannelBuffer buffer = ChannelBuffers.wrappedBuffer("helloworld123blahblah123".getBytes())
-        assert(OSGUtil.findFirstMatchInBuffer(buffer, 0, "123".getBytes()) == 10)
-        assert(OSGUtil.findFirstMatchInBuffer(buffer, 11, "123".getBytes()) == 21)
-        Random random = new Random(System.currentTimeMillis())
-        byte[] randomBytes = new byte[1024]
-        random.nextBytes(randomBytes)
-        randomBytes[1020] = 0x0D;
-        randomBytes[1021] = 0x0A;
-        randomBytes[120] = 0x0D;
-        randomBytes[121] = 0x0A;
-        buffer = ChannelBuffers.wrappedBuffer(randomBytes)
-        byte[] crlfBytes = [0x0D , 0x0A]
-        assert(OSGUtil.findFirstMatchInBuffer(buffer, 0, crlfBytes) == 120)
-    }
+  @Test
+  void testFindBeginning() {
+    ChannelBuffer buffer = ChannelBuffers.wrappedBuffer("helloworld123blahblah123".getBytes())
+    assert(OSGUtil.findFirstMatchInBuffer(buffer, 0, "123".getBytes()) == 10)
+    assert(OSGUtil.findFirstMatchInBuffer(buffer, 11, "123".getBytes()) == 21)
+    Random random = new Random(System.currentTimeMillis())
+    byte[] randomBytes = new byte[1024]
+    random.nextBytes(randomBytes)
+    randomBytes[1020] = 0x0D;
+    randomBytes[1021] = 0x0A;
+    randomBytes[120] = 0x0D;
+    randomBytes[121] = 0x0A;
+    buffer = ChannelBuffers.wrappedBuffer(randomBytes)
+    byte[] crlfBytes = [0x0D , 0x0A]
+    assert(OSGUtil.findFirstMatchInBuffer(buffer, 0, crlfBytes) == 120)
+  }
 
-    @Test
-    void testFindEnding() {
-        ChannelBuffer buffer = ChannelBuffers.wrappedBuffer("helloworld123blahblah123".getBytes())
-        assert(OSGUtil.findLastMatchInBuffer(buffer, 0, "123".getBytes()) == 21)
-        assert(OSGUtil.findLastMatchInBuffer(buffer, 11, "123".getBytes()) == 21)
+  @Test
+  void testFindEnding() {
+    ChannelBuffer buffer = ChannelBuffers.wrappedBuffer("helloworld123blahblah123".getBytes())
+    assert(OSGUtil.findLastMatchInBuffer(buffer, 0, "123".getBytes()) == 21)
+    assert(OSGUtil.findLastMatchInBuffer(buffer, 11, "123".getBytes()) == 21)
 
-        Random random = new Random(System.currentTimeMillis())
-        byte[] randomBytes = new byte[1024]
-        random.nextBytes(randomBytes)
-        randomBytes[20] = 0x0D;
-        randomBytes[21] = 0x0A;
-        randomBytes[1020] = 0x0D;
-        randomBytes[1021] = 0x0A;
-        buffer = ChannelBuffers.wrappedBuffer(randomBytes)
-        byte[] crlfBytes = [0x0D , 0x0A]
-        assert(OSGUtil.findLastMatchInBuffer(buffer, 0, crlfBytes) == 1020)
-    }
+    Random random = new Random(System.currentTimeMillis())
+    byte[] randomBytes = new byte[1024]
+    random.nextBytes(randomBytes)
+    randomBytes[20] = 0x0D;
+    randomBytes[21] = 0x0A;
+    randomBytes[1020] = 0x0D;
+    randomBytes[1021] = 0x0A;
+    buffer = ChannelBuffers.wrappedBuffer(randomBytes)
+    byte[] crlfBytes = [0x0D , 0x0A]
+    assert(OSGUtil.findLastMatchInBuffer(buffer, 0, crlfBytes) == 1020)
+  }
 }

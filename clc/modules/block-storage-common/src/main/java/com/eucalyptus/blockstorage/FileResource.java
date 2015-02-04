@@ -70,27 +70,27 @@ import java.io.OutputStream;
 
 public class FileResource extends StorageResource {
 
-	public FileResource(String id, String path) {
-		super(id, path, StorageResource.Type.FILE);
-	}
+  public FileResource(String id, String path) {
+    super(id, path, StorageResource.Type.FILE);
+  }
 
-	@Override
-	public Long getSize() throws Exception {
-		return new File(this.getPath()).length();
-	}
+  @Override
+  public Long getSize() throws Exception {
+    return new File(this.getPath()).length();
+  }
 
-	@Override
-	public InputStream getInputStream() throws Exception {
-		return new FileInputStream(new File(this.getPath()));
-	}
+  @Override
+  public InputStream getInputStream() throws Exception {
+    return new FileInputStream(new File(this.getPath()));
+  }
 
-	@Override
-	public OutputStream getOutputStream() throws Exception {
-		return new FileOutputStream(new File(this.getPath()));
-	}
+  @Override
+  public OutputStream getOutputStream() throws Exception {
+    return new FileOutputStream(new File(this.getPath()));
+  }
 
-	@Override
-	public Boolean isDownloadSynchronous() {
-		return Boolean.TRUE;
-	}
+  @Override
+  public Boolean isDownloadSynchronous() {
+    return Boolean.TRUE;
+  }
 }

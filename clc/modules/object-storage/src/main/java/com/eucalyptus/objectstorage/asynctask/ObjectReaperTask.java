@@ -36,125 +36,122 @@ import com.eucalyptus.objectstorage.providers.ObjectStorageProviders;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 /**
- * Scans metadata for "deleted" objects and removes them from the backend.
- * Many of these may be running concurrently.
+ * Scans metadata for "deleted" objects and removes them from the backend. Many of these may be running concurrently.
  *
  */
 public class ObjectReaperTask implements Runnable {
-	private static final Logger LOG = Logger.getLogger(ObjectReaperTask.class);
+  private static final Logger LOG = Logger.getLogger(ObjectReaperTask.class);
 
-    private boolean interrupted = false;
+  private boolean interrupted = false;
 
-	public ObjectReaperTask() {}
+  public ObjectReaperTask() {}
 
-    public void interrupt() {
-        this.interrupted = true;
+  public void interrupt() {
+    this.interrupted = true;
+  }
+
+  public void resume() {
+    this.interrupted = false;
+  }
+
+  public void reapObject(final ObjectEntity obj) throws Exception {
+    LOG.trace("Reaping object " + obj.getObjectUuid());
+    try {
+      OsgObjectFactory.getFactory().actuallyDeleteObject(ObjectStorageProviders.getInstance(), obj, null);
+    } catch (EucalyptusCloudException ex) {
+      // Failed. Keep record so we can retry later
+      LOG.trace("Reaping failed due to error for object: " + obj.getBucket().getBucketUuid() + "/" + obj.getObjectUuid() + " Will retry", ex);
     }
+  }
 
-    public void resume() {
-        this.interrupted = false;
+  // Does a single scan of the DB and reclaims objects it finds in the 'deleting' state
+  @Override
+  public void run() {
+    long startTime = System.currentTimeMillis();
+    try {
+      LOG.debug("Initiating object-storage object reaper task");
+      cleanDeleting();
+      cleanFailed();
+      cleanParts();
+    } catch (final Throwable f) {
+      LOG.error("Error during object reaper execution. Will retry later", f);
+    } finally {
+      try {
+        long endTime = System.currentTimeMillis();
+        LOG.debug("Object reaper execution task took " + Long.toString(endTime - startTime) + "ms to complete");
+      } catch (final Throwable f) {
+        // Do nothing, but don't allow exceptions out
+      }
     }
+  }
 
-    public void reapObject(final ObjectEntity obj) throws Exception {
-		LOG.trace("Reaping object " + obj.getObjectUuid());
-		try {
-            OsgObjectFactory.getFactory().actuallyDeleteObject(ObjectStorageProviders.getInstance(), obj, null);
-		} catch(EucalyptusCloudException ex) {
-			//Failed. Keep record so we can retry later
-			LOG.trace("Reaping failed due to error for object: " + obj.getBucket().getBucketUuid() + "/" + obj.getObjectUuid() + " Will retry", ex);
-		}
-	}
-	
-	//Does a single scan of the DB and reclaims objects it finds in the 'deleting' state
-	@Override
-	public void run() {
-		long startTime = System.currentTimeMillis();
-		try {
-			LOG.debug("Initiating object-storage object reaper task");
-			cleanDeleting();
-            cleanFailed();
-            cleanParts();
-		} catch(final Throwable f) {
-			LOG.error("Error during object reaper execution. Will retry later", f);
-		} finally {
-			try {
-				long endTime = System.currentTimeMillis();
-				LOG.debug("Object reaper execution task took " + Long.toString(endTime - startTime) + "ms to complete");
-			} catch( final Throwable f) {
-				//Do nothing, but don't allow exceptions out
-			}
-		}
-	}
-
-    private void cleanDeleting() {
+  private void cleanDeleting() {
+    try {
+      List<ObjectEntity> entitiesToClean = ObjectMetadataManagers.getInstance().lookupObjectsInState(null, null, null, ObjectState.deleting);
+      LOG.trace("Reaping " + entitiesToClean.size() + " objects from backend");
+      for (ObjectEntity obj : entitiesToClean) {
         try {
-            List<ObjectEntity> entitiesToClean = ObjectMetadataManagers.getInstance().lookupObjectsInState(null, null, null, ObjectState.deleting);
-            LOG.trace("Reaping " + entitiesToClean.size() + " objects from backend");
-            for(ObjectEntity obj : entitiesToClean) {
-                try {
-                    reapObject(obj);
-                } catch(final Throwable f) {
-                    LOG.error("Error during object reaper cleanup for object: " +
-                            " uuid= " + obj.getObjectUuid(), f);
-                }
-                if (interrupted) {
-                    break;
-                }
-            }
-        } catch(Exception e) {
-            LOG.warn("Error encountered during reaping of deleting-state object. Will retry on next cycle", e);
+          reapObject(obj);
+        } catch (final Throwable f) {
+          LOG.error("Error during object reaper cleanup for object: " + " uuid= " + obj.getObjectUuid(), f);
         }
+        if (interrupted) {
+          break;
+        }
+      }
+    } catch (Exception e) {
+      LOG.warn("Error encountered during reaping of deleting-state object. Will retry on next cycle", e);
     }
+  }
 
-    private void cleanFailed() {
+  private void cleanFailed() {
+    try {
+      List<ObjectEntity> entitiesToClean = ObjectMetadataManagers.getInstance().lookupFailedObjects();
+      LOG.trace("Reaping " + entitiesToClean.size() + " objects with expired creation time from backend");
+      for (ObjectEntity obj : entitiesToClean) {
         try {
-            List<ObjectEntity> entitiesToClean = ObjectMetadataManagers.getInstance().lookupFailedObjects();
-            LOG.trace("Reaping " + entitiesToClean.size() + " objects with expired creation time from backend");
-            for(ObjectEntity obj : entitiesToClean) {
-                try {
-                    reapObject(obj);
-                } catch(final Throwable f) {
-                    LOG.error("Error during object reaper cleanup for object: " +
-                            " uuid= " + obj.getObjectUuid(), f);
-                }
-                if (interrupted) {
-                    break;
-                }
-            }
-        } catch(Exception e) {
-            LOG.warn("Error encountered during reaping of deleting-state object. Will retry on next cycle", e);
+          reapObject(obj);
+        } catch (final Throwable f) {
+          LOG.error("Error during object reaper cleanup for object: " + " uuid= " + obj.getObjectUuid(), f);
         }
+        if (interrupted) {
+          break;
+        }
+      }
+    } catch (Exception e) {
+      LOG.warn("Error encountered during reaping of deleting-state object. Will retry on next cycle", e);
     }
+  }
 
-    private void cleanParts() {
-        //For multipart upload. These are parts that are duplicates or are not the latest according to timestamp and have been marked for deletion.
+  private void cleanParts() {
+    // For multipart upload. These are parts that are duplicates or are not the latest according to timestamp and have been marked for deletion.
+    try {
+      List<PartEntity> partsToClean = MpuPartMetadataManagers.getInstance().lookupPartsInState(null, null, null, ObjectState.deleting);
+      LOG.trace("Reaping " + partsToClean.size() + " parts from backend");
+      for (PartEntity part : partsToClean) {
         try {
-            List<PartEntity> partsToClean = MpuPartMetadataManagers.getInstance().lookupPartsInState(null, null, null, ObjectState.deleting);
-            LOG.trace("Reaping " + partsToClean.size() + " parts from backend");
-            for(PartEntity part : partsToClean) {
-                try {
-                    reapPart(part);
-                } catch(final Throwable f) {
-                    LOG.error("Error during part reaper cleanup for part: " +
-                            part.getBucket().getBucketName() + " uploadId: " + part.getUploadId() + " partNumber: " + part.getPartNumber() +
-                            " uuid= " + part.getPartUuid(), f);
-                }
-                if (interrupted) {
-                    break;
-                }
-            }
-        } catch(Exception e) {
-            LOG.warn("Error cleaning parts. Will retry later.", e);
+          reapPart(part);
+        } catch (final Throwable f) {
+          LOG.error("Error during part reaper cleanup for part: " + part.getBucket().getBucketName() + " uploadId: " + part.getUploadId()
+              + " partNumber: " + part.getPartNumber() + " uuid= " + part.getPartUuid(), f);
         }
+        if (interrupted) {
+          break;
+        }
+      }
+    } catch (Exception e) {
+      LOG.warn("Error cleaning parts. Will retry later.", e);
     }
+  }
 
-    public void reapPart(final PartEntity part) throws Exception {
-        //we don't care about the backend here, because the backend will handle GC'ing parts
-        //on its own.
-        try {
-            Transactions.delete(part);
-        } catch (TransactionException e) {
-            LOG.error("Unable to drop part: " + part.getBucket().getBucketName() + " uploadId: " + part.getUploadId() + " partNumber: " + part.getPartNumber() + " uuid: " + part.getPartUuid());
-        }
+  public void reapPart(final PartEntity part) throws Exception {
+    // we don't care about the backend here, because the backend will handle GC'ing parts
+    // on its own.
+    try {
+      Transactions.delete(part);
+    } catch (TransactionException e) {
+      LOG.error("Unable to drop part: " + part.getBucket().getBucketName() + " uploadId: " + part.getUploadId() + " partNumber: "
+          + part.getPartNumber() + " uuid: " + part.getPartUuid());
     }
+  }
 }

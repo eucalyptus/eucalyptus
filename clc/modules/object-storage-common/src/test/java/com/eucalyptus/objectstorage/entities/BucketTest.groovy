@@ -34,115 +34,115 @@ import org.junit.Test
 @CompileStatic
 class BucketTest  {
 
-    @BeforeClass
-    static void setUp() {
-        UnitTestSupport.setupAuthPersistenceContext();
-        Accounts.addSystemAccount().addUser("admin", "/", true, null);
-    }
+  @BeforeClass
+  static void setUp() {
+    UnitTestSupport.setupAuthPersistenceContext();
+    Accounts.addSystemAccount().addUser("admin", "/", true, null);
+  }
 
-    @AfterClass
-    static void tearDown() {
-        UnitTestSupport.tearDownAuthPersistenceContext();
-    }
-    @Test
-    void testGetInitializedBucket() {
-        Bucket b = Bucket.getInitializedBucket('bucket1', 'canonicalid1', 'displayname1', 'userid1', '{canonicalid1:8}','')
-        assert(b.getBucketName() == 'bucket1')
-        assert(b.getOwnerCanonicalId() == 'canonicalid1')
-        assert(b.getOwnerIamUserId() == 'userid1')
-        assert(b.getAcl() == '{canonicalid1:8}')
-    }
+  @AfterClass
+  static void tearDown() {
+    UnitTestSupport.tearDownAuthPersistenceContext();
+  }
+  @Test
+  void testGetInitializedBucket() {
+    Bucket b = Bucket.getInitializedBucket('bucket1', 'canonicalid1', 'displayname1', 'userid1', '{canonicalid1:8}','')
+    assert(b.getBucketName() == 'bucket1')
+    assert(b.getOwnerCanonicalId() == 'canonicalid1')
+    assert(b.getOwnerIamUserId() == 'userid1')
+    assert(b.getAcl() == '{canonicalid1:8}')
+  }
 
-    static long getBucketCreationWaitIntervalMillis () {
-        return 5 * 1000l; //for testing use 5 seconds
-    }
-    @Test
-    void testStateStillValid() {
-        Bucket b = new Bucket()
-        b.setState(BucketState.creating)
-        int timeoutSec = (int)(getBucketCreationWaitIntervalMillis() / 1000l);
+  static long getBucketCreationWaitIntervalMillis () {
+    return 5 * 1000l; //for testing use 5 seconds
+  }
+  @Test
+  void testStateStillValid() {
+    Bucket b = new Bucket()
+    b.setState(BucketState.creating)
+    int timeoutSec = (int)(getBucketCreationWaitIntervalMillis() / 1000l);
 
-        b.setLastUpdateTimestamp(new Date(System.currentTimeMillis()  - (getBucketCreationWaitIntervalMillis() + 1)))
-        assert(!b.stateStillValid(timeoutSec))
+    b.setLastUpdateTimestamp(new Date(System.currentTimeMillis()  - (getBucketCreationWaitIntervalMillis() + 1)))
+    assert(!b.stateStillValid(timeoutSec))
 
-        b.setLastUpdateTimestamp(new Date())
-        assert(b.stateStillValid(timeoutSec ))
+    b.setLastUpdateTimestamp(new Date())
+    assert(b.stateStillValid(timeoutSec ))
 
-        b.setLastUpdateTimestamp(new Date(System.currentTimeMillis() - (getBucketCreationWaitIntervalMillis() - 100)))
-        assert(b.stateStillValid(timeoutSec))
+    b.setLastUpdateTimestamp(new Date(System.currentTimeMillis() - (getBucketCreationWaitIntervalMillis() - 100)))
+    assert(b.stateStillValid(timeoutSec))
 
-        //Extant state is alwasy valid
-        b.setState(BucketState.extant)
-        assert(b.stateStillValid(timeoutSec))
+    //Extant state is alwasy valid
+    b.setState(BucketState.extant)
+    assert(b.stateStillValid(timeoutSec))
 
-        //Extant state is alwasy valid
-        b.setState(BucketState.extant)
-        b.setLastUpdateTimestamp(new Date())
-        assert(b.stateStillValid(timeoutSec))
+    //Extant state is alwasy valid
+    b.setState(BucketState.extant)
+    b.setLastUpdateTimestamp(new Date())
+    assert(b.stateStillValid(timeoutSec))
 
-        //Deleting state is always valid
-        b.setState(BucketState.deleting)
-        b.setLastUpdateTimestamp(new Date(System.currentTimeMillis() - (getBucketCreationWaitIntervalMillis() + 10000)))
-        assert(b.stateStillValid(timeoutSec))
+    //Deleting state is always valid
+    b.setState(BucketState.deleting)
+    b.setLastUpdateTimestamp(new Date(System.currentTimeMillis() - (getBucketCreationWaitIntervalMillis() + 10000)))
+    assert(b.stateStillValid(timeoutSec))
 
-    }
+  }
 
-    @Test
-    void testSearchBucketExampleWithUuid() {
-        Bucket b = new Bucket().withUuid("fake-uuid");
-        assert(b.getBucketName() == null)
-        assert(b.getBucketUuid() == "fake-uuid")
-    }
+  @Test
+  void testSearchBucketExampleWithUuid() {
+    Bucket b = new Bucket().withUuid("fake-uuid");
+    assert(b.getBucketName() == null)
+    assert(b.getBucketUuid() == "fake-uuid")
+  }
 
-    @Test
-    void testHasLoggingPerms() {
-        int logDeliveryBitmap = S3AccessControlledEntity.BitmapGrant.add(ObjectStorageProperties.Permission.WRITE,S3AccessControlledEntity.BitmapGrant.translateToBitmap(ObjectStorageProperties.Permission.READ_ACP))
-        int fullControlBitmap = S3AccessControlledEntity.BitmapGrant.translateToBitmap(ObjectStorageProperties.Permission.FULL_CONTROL)
-        def aclString = '{"canonicalid1":'+fullControlBitmap+',"http://acs.amazonaws.com/groups/s3/LogDelivery":' + logDeliveryBitmap + '}';
-        Bucket b = Bucket.getInitializedBucket('bucket1', 'canonicalid1', 'displayname1', 'userid1', aclString ,'')
-        assert(b.getBucketName() == 'bucket1')
-        assert(b.getOwnerCanonicalId() == 'canonicalid1')
-        assert(b.getOwnerIamUserId() == 'userid1')
-        assert(b.getAcl() == aclString)
-        assert(b.hasLoggingPerms())
-    }
+  @Test
+  void testHasLoggingPerms() {
+    int logDeliveryBitmap = S3AccessControlledEntity.BitmapGrant.add(ObjectStorageProperties.Permission.WRITE,S3AccessControlledEntity.BitmapGrant.translateToBitmap(ObjectStorageProperties.Permission.READ_ACP))
+    int fullControlBitmap = S3AccessControlledEntity.BitmapGrant.translateToBitmap(ObjectStorageProperties.Permission.FULL_CONTROL)
+    def aclString = '{"canonicalid1":'+fullControlBitmap+',"http://acs.amazonaws.com/groups/s3/LogDelivery":' + logDeliveryBitmap + '}';
+    Bucket b = Bucket.getInitializedBucket('bucket1', 'canonicalid1', 'displayname1', 'userid1', aclString ,'')
+    assert(b.getBucketName() == 'bucket1')
+    assert(b.getOwnerCanonicalId() == 'canonicalid1')
+    assert(b.getOwnerIamUserId() == 'userid1')
+    assert(b.getAcl() == aclString)
+    assert(b.hasLoggingPerms())
+  }
 
-    @Test
-    void testIsOwnedBy() {
-        Bucket b = Bucket.getInitializedBucket('bucket1', 'canonicalid1', 'displayname1', 'userid1', '{canonicalid1:15}','')
-        assert(b.getBucketName() == 'bucket1')
-        assert(b.getOwnerCanonicalId() == 'canonicalid1')
-        assert(b.getOwnerIamUserId() == 'userid1')
-        assert(b.getAcl() == '{canonicalid1:15}')
+  @Test
+  void testIsOwnedBy() {
+    Bucket b = Bucket.getInitializedBucket('bucket1', 'canonicalid1', 'displayname1', 'userid1', '{canonicalid1:15}','')
+    assert(b.getBucketName() == 'bucket1')
+    assert(b.getOwnerCanonicalId() == 'canonicalid1')
+    assert(b.getOwnerIamUserId() == 'userid1')
+    assert(b.getAcl() == '{canonicalid1:15}')
 
-        assert(b.isOwnedBy('canonicalid1'))
-    }
+    assert(b.isOwnedBy('canonicalid1'))
+  }
 
-    @Test
-    void testGenerateVersionId() {
-        Bucket b = new Bucket()
-        b.setVersioning(ObjectStorageProperties.VersioningStatus.Disabled)
-        assert(b.generateObjectVersionId().equals(ObjectStorageProperties.NULL_VERSION_ID))
+  @Test
+  void testGenerateVersionId() {
+    Bucket b = new Bucket()
+    b.setVersioning(ObjectStorageProperties.VersioningStatus.Disabled)
+    assert(b.generateObjectVersionId().equals(ObjectStorageProperties.NULL_VERSION_ID))
 
-        b.setVersioning(ObjectStorageProperties.VersioningStatus.Enabled)
-        assert(!b.generateObjectVersionId().equals(ObjectStorageProperties.NULL_VERSION_ID))
-        assert(b.generateObjectVersionId().size() > 0)
+    b.setVersioning(ObjectStorageProperties.VersioningStatus.Enabled)
+    assert(!b.generateObjectVersionId().equals(ObjectStorageProperties.NULL_VERSION_ID))
+    assert(b.generateObjectVersionId().size() > 0)
 
-        b.setVersioning(ObjectStorageProperties.VersioningStatus.Suspended)
-        assert(b.generateObjectVersionId().equals(ObjectStorageProperties.NULL_VERSION_ID))
-    }
+    b.setVersioning(ObjectStorageProperties.VersioningStatus.Suspended)
+    assert(b.generateObjectVersionId().equals(ObjectStorageProperties.NULL_VERSION_ID))
+  }
 
-    @Test
-    void testToBucketListEntry() {
-        Bucket b = Bucket.getInitializedBucket('bucket1', 'canonicalid1', 'displayname1', 'userid1', '{canonicalid1:8}','')
-        assert(b.getBucketName() == 'bucket1')
-        assert(b.getOwnerCanonicalId() == 'canonicalid1')
-        assert(b.getOwnerIamUserId() == 'userid1')
-        assert(b.getAcl() == '{canonicalid1:8}')
+  @Test
+  void testToBucketListEntry() {
+    Bucket b = Bucket.getInitializedBucket('bucket1', 'canonicalid1', 'displayname1', 'userid1', '{canonicalid1:8}','')
+    assert(b.getBucketName() == 'bucket1')
+    assert(b.getOwnerCanonicalId() == 'canonicalid1')
+    assert(b.getOwnerIamUserId() == 'userid1')
+    assert(b.getAcl() == '{canonicalid1:8}')
 
-        BucketListEntry entry = b.toBucketListEntry()
-        assert(entry != null)
-        assert(entry.getCreationDate() == b.getCreationTimestamp())
-        assert(entry.getName() == b.getBucketName())
-    }
+    BucketListEntry entry = b.toBucketListEntry()
+    assert(entry != null)
+    assert(entry.getCreationDate() == b.getCreationTimestamp())
+    assert(entry.getName() == b.getBucketName())
+  }
 }

@@ -76,55 +76,55 @@ import com.eucalyptus.storage.config.ConfigurationCache;
  */
 public class PoolableProviderClientFactory implements PoolableObjectFactory<OsgInternalS3Client> {
 
-    private AWSCredentials requestUser;
-    private String upstreamEndpoint;
-    private boolean usePathStyle;
+  private AWSCredentials requestUser;
+  private String upstreamEndpoint;
+  private boolean usePathStyle;
 
-    private long checkIntervalInMs = 15l; //use constant for now, if we start using this again should make a config value
+  private long checkIntervalInMs = 15l; // use constant for now, if we start using this again should make a config value
 
-    public PoolableProviderClientFactory(AWSCredentials requestUser, String upstreamEndpoint, boolean usePathStyle) {
-        this.requestUser = requestUser;
-        this.upstreamEndpoint = upstreamEndpoint;
-        this.usePathStyle = usePathStyle;
+  public PoolableProviderClientFactory(AWSCredentials requestUser, String upstreamEndpoint, boolean usePathStyle) {
+    this.requestUser = requestUser;
+    this.upstreamEndpoint = upstreamEndpoint;
+    this.usePathStyle = usePathStyle;
+  }
+
+  @Override
+  public OsgInternalS3Client makeObject() throws Exception {
+    boolean useHttps = false;
+    S3ProviderConfiguration providerConfig = ConfigurationCache.getConfiguration(S3ProviderConfiguration.class);
+    if (providerConfig != null && providerConfig.getS3UseHttps() != null && providerConfig.getS3UseHttps()) {
+      useHttps = true;
     }
 
-    @Override
-    public OsgInternalS3Client makeObject() throws Exception {
-        boolean useHttps = false;
-        S3ProviderConfiguration providerConfig = ConfigurationCache.getConfiguration(S3ProviderConfiguration.class);
-        if(providerConfig != null && providerConfig.getS3UseHttps() != null && providerConfig.getS3UseHttps()) {
-            useHttps = true;
-        }
+    OsgInternalS3Client osgInternalS3Client = new OsgInternalS3Client(requestUser, upstreamEndpoint, useHttps, providerConfig.getS3UseBackendDns());
+    osgInternalS3Client.setUsePathStyle(usePathStyle);
+    return osgInternalS3Client;
+  }
 
-        OsgInternalS3Client osgInternalS3Client = new OsgInternalS3Client(requestUser, upstreamEndpoint, useHttps, providerConfig.getS3UseBackendDns());
-        osgInternalS3Client.setUsePathStyle(usePathStyle);
-        return osgInternalS3Client;
-    }
+  @Override
+  public void destroyObject(OsgInternalS3Client amazonS3Client) throws Exception {
+    amazonS3Client.getS3Client().shutdown();
+  }
 
-    @Override
-    public void destroyObject(OsgInternalS3Client amazonS3Client) throws Exception {
-        amazonS3Client.getS3Client().shutdown();
+  @Override
+  public boolean validateObject(OsgInternalS3Client amazonS3Client) {
+    long now = new Date().getTime();
+    long instantiated = amazonS3Client.getInstantiated().getTime();
+    if (now - instantiated > checkIntervalInMs) {
+      if (ConfigurationCache.getConfiguration(S3ProviderConfiguration.class).getLastUpdateTimestamp().getTime() - instantiated > 0) {
+        return false;
+      }
     }
+    return true;
+  }
 
-    @Override
-    public boolean validateObject(OsgInternalS3Client amazonS3Client) {
-        long now = new Date().getTime();
-        long instantiated = amazonS3Client.getInstantiated().getTime();
-        if (now - instantiated > checkIntervalInMs) {
-            if (ConfigurationCache.getConfiguration(S3ProviderConfiguration.class).getLastUpdateTimestamp().getTime() - instantiated > 0) {
-                return false;
-            }
-        }
-        return true;
-    }
+  @Override
+  public void activateObject(OsgInternalS3Client amazonS3Client) throws Exception {
+    // no-op
+  }
 
-    @Override
-    public void activateObject(OsgInternalS3Client amazonS3Client) throws Exception {
-        // no-op
-    }
-
-    @Override
-    public void passivateObject(OsgInternalS3Client amazonS3Client) throws Exception {
-        // no-op
-    }
+  @Override
+  public void passivateObject(OsgInternalS3Client amazonS3Client) throws Exception {
+    // no-op
+  }
 }

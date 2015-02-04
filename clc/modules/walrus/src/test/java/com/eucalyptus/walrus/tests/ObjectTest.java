@@ -62,96 +62,107 @@
 
 package com.eucalyptus.walrus.tests;
 
-import org.junit.Ignore;
-import org.junit.Test;
-
-import com.eucalyptus.storage.msgs.s3.AccessControlList;
-import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
-import com.eucalyptus.walrus.msgs.*;
-import com.eucalyptus.walrus.WalrusControl;
-
 import java.util.ArrayList;
 
 import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
 
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.storage.msgs.s3.AccessControlList;
+import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
+import com.eucalyptus.walrus.WalrusControl;
+import com.eucalyptus.walrus.msgs.CreateBucketResponseType;
+import com.eucalyptus.walrus.msgs.CreateBucketType;
+import com.eucalyptus.walrus.msgs.DeleteBucketResponseType;
+import com.eucalyptus.walrus.msgs.DeleteBucketType;
+import com.eucalyptus.walrus.msgs.DeleteObjectResponseType;
+import com.eucalyptus.walrus.msgs.DeleteObjectType;
+import com.eucalyptus.walrus.msgs.GetObjectAccessControlPolicyResponseType;
+import com.eucalyptus.walrus.msgs.GetObjectAccessControlPolicyType;
+import com.eucalyptus.walrus.msgs.GetObjectResponseType;
+import com.eucalyptus.walrus.msgs.GetObjectType;
+import com.eucalyptus.walrus.msgs.ListBucketResponseType;
+import com.eucalyptus.walrus.msgs.ListBucketType;
+import com.eucalyptus.walrus.msgs.PutObjectInlineResponseType;
+import com.eucalyptus.walrus.msgs.PutObjectInlineType;
 
 @Ignore("Manual development test")
 public class ObjectTest {
 
-	static WalrusControl bukkit;
+  static WalrusControl bukkit;
 
-	@Test
-	public void testObject() throws Exception {
+  @Test
+  public void testObject() throws Exception {
 
-		String bucketName = "halo" + Hashes.getRandom(6);
-		String objectName = "key" + Hashes.getRandom(6);
-		String userId = "admin";
+    String bucketName = "halo" + Hashes.getRandom(6);
+    String objectName = "key" + Hashes.getRandom(6);
+    String userId = "admin";
 
-		CreateBucketType createBucketRequest = new CreateBucketType(bucketName);
-		createBucketRequest.setBucket(bucketName);
-		createBucketRequest.setUserId(userId);
-        createBucketRequest.setEffectiveUserId("eucalyptus");
-		AccessControlList acl = new AccessControlList();
-		createBucketRequest.setAccessControlList(acl);
-		CreateBucketResponseType reply = bukkit.CreateBucket(createBucketRequest);
-		System.out.println(reply);
+    CreateBucketType createBucketRequest = new CreateBucketType(bucketName);
+    createBucketRequest.setBucket(bucketName);
+    createBucketRequest.setUserId(userId);
+    createBucketRequest.setEffectiveUserId("eucalyptus");
+    AccessControlList acl = new AccessControlList();
+    createBucketRequest.setAccessControlList(acl);
+    CreateBucketResponseType reply = bukkit.CreateBucket(createBucketRequest);
+    System.out.println(reply);
 
-		PutObjectInlineType putObjectRequest = new PutObjectInlineType();
-		putObjectRequest.setBucket(bucketName);
-		putObjectRequest.setKey(objectName);
-        String data = "hi here is some data";
-		putObjectRequest.setContentLength(String.valueOf(data.length()));
-		putObjectRequest.setBase64Data(data);
-		putObjectRequest.setUserId(userId);
-        ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
-        MetaDataEntry metaDataEntry = new MetaDataEntry();
-        metaDataEntry.setName("mammalType");
-        metaDataEntry.setValue("walrus");
-        metaData.add(metaDataEntry);
-        putObjectRequest.setMetaData(metaData);
-        PutObjectInlineResponseType putObjectReply = bukkit.PutObjectInline(putObjectRequest);
-		System.out.println(putObjectReply);
+    PutObjectInlineType putObjectRequest = new PutObjectInlineType();
+    putObjectRequest.setBucket(bucketName);
+    putObjectRequest.setKey(objectName);
+    String data = "hi here is some data";
+    putObjectRequest.setContentLength(String.valueOf(data.length()));
+    putObjectRequest.setBase64Data(data);
+    putObjectRequest.setUserId(userId);
+    ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+    MetaDataEntry metaDataEntry = new MetaDataEntry();
+    metaDataEntry.setName("mammalType");
+    metaDataEntry.setValue("walrus");
+    metaData.add(metaDataEntry);
+    putObjectRequest.setMetaData(metaData);
+    PutObjectInlineResponseType putObjectReply = bukkit.PutObjectInline(putObjectRequest);
+    System.out.println(putObjectReply);
 
-        ListBucketType listBucketRequest = new ListBucketType();
-        listBucketRequest.setBucket(bucketName);
-        listBucketRequest.setUserId(userId);
-        ListBucketResponseType listBucketReply = bukkit.ListBucket(listBucketRequest);
-        System.out.println(listBucketReply);        
+    ListBucketType listBucketRequest = new ListBucketType();
+    listBucketRequest.setBucket(bucketName);
+    listBucketRequest.setUserId(userId);
+    ListBucketResponseType listBucketReply = bukkit.ListBucket(listBucketRequest);
+    System.out.println(listBucketReply);
 
-        GetObjectAccessControlPolicyType acpRequest = new GetObjectAccessControlPolicyType();
-		acpRequest.setBucket(bucketName);
-        acpRequest.setKey(objectName);
-        acpRequest.setUserId(userId);
-		GetObjectAccessControlPolicyResponseType acpResponse = bukkit.GetObjectAccessControlPolicy(acpRequest);
-		System.out.println(acpResponse);
+    GetObjectAccessControlPolicyType acpRequest = new GetObjectAccessControlPolicyType();
+    acpRequest.setBucket(bucketName);
+    acpRequest.setKey(objectName);
+    acpRequest.setUserId(userId);
+    GetObjectAccessControlPolicyResponseType acpResponse = bukkit.GetObjectAccessControlPolicy(acpRequest);
+    System.out.println(acpResponse);
 
-        GetObjectType getObjectRequest = new GetObjectType();
-        getObjectRequest.setUserId(userId);
-        getObjectRequest.setBucket(bucketName);
-        getObjectRequest.setKey(objectName);
-        getObjectRequest.setGetData(true);
-        getObjectRequest.setGetMetaData(true);
-        getObjectRequest.setInlineData(true);
-        GetObjectResponseType getObjectReply = bukkit.GetObject(getObjectRequest);
-        System.out.println(getObjectReply);
+    GetObjectType getObjectRequest = new GetObjectType();
+    getObjectRequest.setUserId(userId);
+    getObjectRequest.setBucket(bucketName);
+    getObjectRequest.setKey(objectName);
+    getObjectRequest.setGetData(true);
+    getObjectRequest.setGetMetaData(true);
+    getObjectRequest.setInlineData(true);
+    GetObjectResponseType getObjectReply = bukkit.GetObject(getObjectRequest);
+    System.out.println(getObjectReply);
 
-        DeleteObjectType deleteObjectRequest = new DeleteObjectType();
-		deleteObjectRequest.setBucket(bucketName);
-		deleteObjectRequest.setKey(objectName);
-		deleteObjectRequest.setUserId(userId);
-		DeleteObjectResponseType deleteObjectReply = bukkit.DeleteObject(deleteObjectRequest);
-		System.out.println(deleteObjectReply);
+    DeleteObjectType deleteObjectRequest = new DeleteObjectType();
+    deleteObjectRequest.setBucket(bucketName);
+    deleteObjectRequest.setKey(objectName);
+    deleteObjectRequest.setUserId(userId);
+    DeleteObjectResponseType deleteObjectReply = bukkit.DeleteObject(deleteObjectRequest);
+    System.out.println(deleteObjectReply);
 
-		DeleteBucketType deleteBucketRequest = new DeleteBucketType();
-		deleteBucketRequest.setUserId(userId);
-		deleteBucketRequest.setBucket(bucketName);
-		DeleteBucketResponseType deleteResponse = bukkit.DeleteBucket(deleteBucketRequest);
-		System.out.println(deleteResponse);
-	}
+    DeleteBucketType deleteBucketRequest = new DeleteBucketType();
+    deleteBucketRequest.setUserId(userId);
+    deleteBucketRequest.setBucket(bucketName);
+    DeleteBucketResponseType deleteResponse = bukkit.DeleteBucket(deleteBucketRequest);
+    System.out.println(deleteResponse);
+  }
 
-    @BeforeClass
-    public static void setUp() {
-        bukkit = new WalrusControl();
-   }        
+  @BeforeClass
+  public static void setUp() {
+    bukkit = new WalrusControl();
+  }
 }

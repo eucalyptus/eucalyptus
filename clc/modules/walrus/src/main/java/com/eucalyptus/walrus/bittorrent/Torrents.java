@@ -62,29 +62,29 @@
 
 package com.eucalyptus.walrus.bittorrent;
 
-import org.apache.log4j.Logger;
-
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.log4j.Logger;
+
 public class Torrents {
-    private static Logger LOG = Logger.getLogger( Torrents.class );
+  private static Logger LOG = Logger.getLogger(Torrents.class);
 
-    private static ConcurrentHashMap btClients = new ConcurrentHashMap<String, TorrentClient>();
+  private static ConcurrentHashMap btClients = new ConcurrentHashMap<String, TorrentClient>();
 
-    public static void addClient(String key, TorrentClient client) {
-        btClients.put(key, client);
-    }
+  public static void addClient(String key, TorrentClient client) {
+    btClients.put(key, client);
+  }
 
-    public static TorrentClient getClient(String key) {
-        return (TorrentClient) btClients.get(key);
-    }
+  public static TorrentClient getClient(String key) {
+    return (TorrentClient) btClients.get(key);
+  }
 
-    public static TorrentClient remove(String key) {
-        return (TorrentClient) btClients.remove(key);
-    }
+  public static TorrentClient remove(String key) {
+    return (TorrentClient) btClients.remove(key);
+  }
 
-    public static Collection<TorrentClient> getClients() {
-        return btClients.values();
-    }
+  public static Collection<TorrentClient> getClients() {
+    return btClients.values();
+  }
 }

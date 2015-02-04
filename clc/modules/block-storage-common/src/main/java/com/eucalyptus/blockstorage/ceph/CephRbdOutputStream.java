@@ -73,87 +73,87 @@ import com.eucalyptus.blockstorage.ceph.entities.CephRbdInfo;
 
 public class CephRbdOutputStream extends OutputStream {
 
-	private static final Logger LOG = Logger.getLogger(CephRbdOutputStream.class);
+  private static final Logger LOG = Logger.getLogger(CephRbdOutputStream.class);
 
-	private CephRbdConnectionManager conn;
-	private RbdImage rbdImage;
-	private long position;
-	private boolean isOpen;
+  private CephRbdConnectionManager conn;
+  private RbdImage rbdImage;
+  private long position;
+  private boolean isOpen;
 
-	public CephRbdOutputStream(String imageName, String poolName, CephRbdInfo info) throws IOException {
-		try {
-			conn = CephRbdConnectionManager.getConnection(info, poolName);
-			rbdImage = conn.getRbd().open(imageName);
-			isOpen = true;
-			position = 0;
-		} catch (Exception e) {
-			throw new IOException("Failed to open CephInputStream for image " + imageName + " in pool " + poolName, e);
-		}
-	}
+  public CephRbdOutputStream(String imageName, String poolName, CephRbdInfo info) throws IOException {
+    try {
+      conn = CephRbdConnectionManager.getConnection(info, poolName);
+      rbdImage = conn.getRbd().open(imageName);
+      isOpen = true;
+      position = 0;
+    } catch (Exception e) {
+      throw new IOException("Failed to open CephInputStream for image " + imageName + " in pool " + poolName, e);
+    }
+  }
 
-	@Override
-	public void write(int arg0) throws IOException {
-		if (isOpen) {
-			byte[] buffer = new byte[] { (byte) arg0 };
-			try {
-				rbdImage.write(buffer, position, buffer.length);
-				position += buffer.length;
-			} catch (RbdException e) {
-				throw new IOException("Failed to write to CephOutputStream", e);
-			}
-		} else {
-			throw new IOException("Stream is not open/initialized");
-		}
-	}
+  @Override
+  public void write(int arg0) throws IOException {
+    if (isOpen) {
+      byte[] buffer = new byte[] {(byte) arg0};
+      try {
+        rbdImage.write(buffer, position, buffer.length);
+        position += buffer.length;
+      } catch (RbdException e) {
+        throw new IOException("Failed to write to CephOutputStream", e);
+      }
+    } else {
+      throw new IOException("Stream is not open/initialized");
+    }
+  }
 
-	@Override
-	public void write(byte[] b, int off, int len) throws NullPointerException, IndexOutOfBoundsException, IOException {
-		if (null == b) {
-			throw new NullPointerException("Input byte buffer cannot be null");
-		}
-		if (off < 0 || len < 0 || len > (b.length - off)) {
-			throw new IndexOutOfBoundsException("Offset or length cannot be negative. Length cannot be smaller than available size in buffer");
-		}
+  @Override
+  public void write(byte[] b, int off, int len) throws NullPointerException, IndexOutOfBoundsException, IOException {
+    if (null == b) {
+      throw new NullPointerException("Input byte buffer cannot be null");
+    }
+    if (off < 0 || len < 0 || len > (b.length - off)) {
+      throw new IndexOutOfBoundsException("Offset or length cannot be negative. Length cannot be smaller than available size in buffer");
+    }
 
-		if (isOpen) {
-			byte buffer[] = new byte[len];
-			for (int i = 0; i < len; i++) { // prepare the buffer to write
-				buffer[i] = b[off + i];
-			}
-			try {
-				rbdImage.write(buffer, position, buffer.length);
-				position += buffer.length;
-			} catch (RbdException e) {
-				throw new IOException("Failed to write to CephOutputStream", e);
-			}
-		} else {
-			throw new IOException("Stream is not open/initialized");
-		}
-	}
+    if (isOpen) {
+      byte buffer[] = new byte[len];
+      for (int i = 0; i < len; i++) { // prepare the buffer to write
+        buffer[i] = b[off + i];
+      }
+      try {
+        rbdImage.write(buffer, position, buffer.length);
+        position += buffer.length;
+      } catch (RbdException e) {
+        throw new IOException("Failed to write to CephOutputStream", e);
+      }
+    } else {
+      throw new IOException("Stream is not open/initialized");
+    }
+  }
 
-	@Override
-	public void write(byte[] b) throws NullPointerException, IOException {
-		if (null == b) {
-			throw new NullPointerException("Input byte buffer cannot be null");
-		}
-		write(b, 0, b.length);
-	}
+  @Override
+  public void write(byte[] b) throws NullPointerException, IOException {
+    if (null == b) {
+      throw new NullPointerException("Input byte buffer cannot be null");
+    }
+    write(b, 0, b.length);
+  }
 
-	@Override
-	public void close() {
-		if (isOpen) {
-			try {
-				conn.getRbd().close(rbdImage);
-			} catch (Exception e) {
+  @Override
+  public void close() {
+    if (isOpen) {
+      try {
+        conn.getRbd().close(rbdImage);
+      } catch (Exception e) {
 
-			} finally {
-				isOpen = false;
-				conn.disconnect();
-				conn = null;
-				rbdImage = null;
-			}
-		} else {
-			// nothing to do here, stream is not open/already closed
-		}
-	}
+      } finally {
+        isOpen = false;
+        conn.disconnect();
+        conn = null;
+        rbdImage = null;
+      }
+    } else {
+      // nothing to do here, stream is not open/already closed
+    }
+  }
 }

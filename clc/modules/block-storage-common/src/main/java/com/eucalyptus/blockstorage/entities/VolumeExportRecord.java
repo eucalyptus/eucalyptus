@@ -68,128 +68,130 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
 import com.eucalyptus.entities.AbstractPersistent;
 
-@Entity 
-@PersistenceContext(name="eucalyptus_storage")
-@Table( name = "volume_exports" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Entity
+@PersistenceContext(name = "eucalyptus_storage")
+@Table(name = "volume_exports")
+@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class VolumeExportRecord extends AbstractPersistent {
-	private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 1L;
 
-	@ManyToOne  
-	@JoinColumn( name = "token", nullable = false )
-	private VolumeToken token;
-	
-	@ManyToOne
-	@JoinColumn( name = "volume", nullable = false )	
-	private VolumeInfo volume;
-		
-	@Column(name="host_ip", updatable = false, nullable = false)
-	private String hostIp;
-	
-	@Column(name="host_iqn", updatable = false, nullable = false)
-	private String hostIqn;
-	
-	@Column(name="is_active")
-	private Boolean isActive;
-		
-	@Column(name="connection_string", length=4096)
-	private String connectionString;
-	
-	public VolumeExportRecord() {
-		token = null;
-		hostIp = null;
-		hostIqn = null;
-		volume = null;
-	}
-	
-	public VolumeExportRecord(VolumeInfo vol, VolumeToken tok, String ip, String iqn) {
-		this.volume = vol;
-		this.token = tok;
-		this.hostIp = ip;
-		this.hostIqn = iqn;
-	}
+  @ManyToOne
+  @JoinColumn(name = "token", nullable = false)
+  private VolumeToken token;
 
-	public Boolean getIsActive() {
-		return isActive;
-	}
+  @ManyToOne
+  @JoinColumn(name = "volume", nullable = false)
+  private VolumeInfo volume;
 
-	public void setIsActive(Boolean isActive) {
-		this.isActive = isActive;
-	}
+  @Column(name = "host_ip", updatable = false, nullable = false)
+  private String hostIp;
 
-	
-	public VolumeToken getToken() {
-		return token;
-	}
+  @Column(name = "host_iqn", updatable = false, nullable = false)
+  private String hostIqn;
 
-	public void setToken(VolumeToken token) {
-		this.token = token;
-	}
+  @Column(name = "is_active")
+  private Boolean isActive;
 
-	public String getHostIp() {
-		return hostIp;
-	}
+  @Column(name = "connection_string", length = 4096)
+  private String connectionString;
 
-	public void setHostIp(String hostIp) {
-		this.hostIp = hostIp;
-	}
+  public VolumeExportRecord() {
+    token = null;
+    hostIp = null;
+    hostIqn = null;
+    volume = null;
+  }
 
-	public String getHostIqn() {
-		return hostIqn;
-	}
+  public VolumeExportRecord(VolumeInfo vol, VolumeToken tok, String ip, String iqn) {
+    this.volume = vol;
+    this.token = tok;
+    this.hostIp = ip;
+    this.hostIqn = iqn;
+  }
 
-	public void setHostIqn(String hostIqn) {
-		this.hostIqn = hostIqn;
-	}
-	
-	@Override
-  public int hashCode( ) {
+  public Boolean getIsActive() {
+    return isActive;
+  }
+
+  public void setIsActive(Boolean isActive) {
+    this.isActive = isActive;
+  }
+
+  public VolumeToken getToken() {
+    return token;
+  }
+
+  public void setToken(VolumeToken token) {
+    this.token = token;
+  }
+
+  public String getHostIp() {
+    return hostIp;
+  }
+
+  public void setHostIp(String hostIp) {
+    this.hostIp = hostIp;
+  }
+
+  public String getHostIqn() {
+    return hostIqn;
+  }
+
+  public void setHostIqn(String hostIqn) {
+    this.hostIqn = hostIqn;
+  }
+
+  @Override
+  public int hashCode() {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( this.getId() == null ) ? 0 : this.getId().hashCode( ) );
+    result = prime * result + ((this.getId() == null) ? 0 : this.getId().hashCode());
     return result;
   }
-  
+
   @Override
-  public boolean equals( Object obj ) {
-    if ( this == obj ) {
+  public boolean equals(Object obj) {
+    if (this == obj) {
       return true;
     }
-    if ( obj == null ) {
+    if (obj == null) {
       return false;
     }
-    if ( getClass( ) != obj.getClass( ) ) {
+    if (getClass() != obj.getClass()) {
       return false;
     }
-    VolumeExportRecord other = ( VolumeExportRecord ) obj;
-    if ( this.volume == null ) {
-      if ( other.volume != null ) {
+    VolumeExportRecord other = (VolumeExportRecord) obj;
+    if (this.volume == null) {
+      if (other.volume != null) {
         return false;
       }
-    } else if ( !this.volume.equals( other.volume ) || !this.hostIqn.equals(other.hostIqn) ||!this.hostIp.equals(other.hostIp)  || !this.isActive == other.isActive) {
+    } else if (!this.volume.equals(other.volume) || !this.hostIqn.equals(other.hostIqn) || !this.hostIp.equals(other.hostIp)
+        || !this.isActive == other.isActive) {
       return false;
     }
     return true;
   }
 
-public String getConnectionString() {
-	return connectionString;
-}
+  public String getConnectionString() {
+    return connectionString;
+  }
 
-public void setConnectionString(String connectionString) {
-	this.connectionString = connectionString;
-}
+  public void setConnectionString(String connectionString) {
+    this.connectionString = connectionString;
+  }
 
-public VolumeInfo getVolume() {
-	return volume;
-}
+  public VolumeInfo getVolume() {
+    return volume;
+  }
 
-public void setVolume(VolumeInfo volume) {
-	this.volume = volume;
-}
+  public void setVolume(VolumeInfo volume) {
+    this.volume = volume;
+  }
 
 }

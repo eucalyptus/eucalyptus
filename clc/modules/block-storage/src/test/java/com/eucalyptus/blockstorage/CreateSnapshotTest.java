@@ -62,13 +62,8 @@
 
 package com.eucalyptus.blockstorage;
 
+import java.util.Date;
 
-import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.blockstorage.BlockStorageController;
-import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotResponseType;
-import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotType;
-import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
-import com.eucalyptus.util.EucalyptusCloudException;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpMethodBase;
 import org.apache.commons.httpclient.methods.GetMethod;
@@ -77,73 +72,75 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
-
-import java.util.Date;
+import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotResponseType;
+import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotType;
+import com.eucalyptus.util.EucalyptusCloudException;
 
 @Ignore("Manual development test")
 public class CreateSnapshotTest {
 
-    static BlockStorageController blockStorage;
+  static BlockStorageController blockStorage;
 
-    @Test
-    public void testCreateSnapshot() throws Exception {
+  @Test
+  public void testCreateSnapshot() throws Exception {
 
-        String userId = "admin";
+    String userId = "admin";
 
-        String volumeId = "vol-Xj-6F2zFUTOAYQxx";
-        String snapshotId = "snap-" + Hashes.getRandom(10);
+    String volumeId = "vol-Xj-6F2zFUTOAYQxx";
+    String snapshotId = "snap-" + Hashes.getRandom(10);
 
-        CreateStorageSnapshotType createSnapshotRequest = new CreateStorageSnapshotType();
+    CreateStorageSnapshotType createSnapshotRequest = new CreateStorageSnapshotType();
 
-        createSnapshotRequest.setUserId(userId);
-        createSnapshotRequest.setVolumeId(volumeId);
-        createSnapshotRequest.setSnapshotId(snapshotId);
-        CreateStorageSnapshotResponseType createSnapshotResponse = blockStorage.CreateStorageSnapshot(createSnapshotRequest);
-        System.out.println(createSnapshotResponse);
+    createSnapshotRequest.setUserId(userId);
+    createSnapshotRequest.setVolumeId(volumeId);
+    createSnapshotRequest.setSnapshotId(snapshotId);
+    CreateStorageSnapshotResponseType createSnapshotResponse = blockStorage.CreateStorageSnapshot(createSnapshotRequest);
+    System.out.println(createSnapshotResponse);
 
-        while(true);
+    while (true);
+  }
+
+  @Test
+  public void testSendDummy() throws Exception {
+    HttpClient httpClient = new HttpClient();
+    String addr = System.getProperty("euca.objectstorage.url") + "/meh/ttt.wsl?gg=vol&hh=snap";
+
+    HttpMethodBase method = new PutMethod(addr);
+    method.setRequestHeader("Authorization", "Euca");
+    method.setRequestHeader("Date", (new Date()).toString());
+    method.setRequestHeader("Expect", "100-continue");
+
+    httpClient.executeMethod(method);
+    String responseString = method.getResponseBodyAsString();
+    System.out.println(responseString);
+    method.releaseConnection();
+  }
+
+  @Test
+  public void testGetSnapshotInfo() throws Exception {
+    HttpClient httpClient = new HttpClient();
+    String addr = System.getProperty("euca.objectstorage.url") + "/snapset-FuXLn1MUHJ66BkK0/snap-zVl2kZJmjhxnEg..";
+
+    HttpMethodBase method = new GetMethod(addr);
+    method.setRequestHeader("Authorization", "Euca");
+    method.setRequestHeader("Date", (new Date()).toString());
+    method.setRequestHeader("Expect", "100-continue");
+    method.setRequestHeader("EucaOperation", "GetSnapshotInfo");
+    httpClient.executeMethod(method);
+    String responseString = method.getResponseBodyAsString();
+    System.out.println(responseString);
+    method.releaseConnection();
+  }
+
+  @BeforeClass
+  public static void setUp() {
+    blockStorage = new BlockStorageController();
+    try {
+      BlockStorageController.configure();
+    } catch (EucalyptusCloudException e) {
+      e.printStackTrace();
     }
-
-    @Test
-    public void testSendDummy() throws Exception {
-        HttpClient httpClient = new HttpClient();
-        String addr = System.getProperty("euca.objectstorage.url") + "/meh/ttt.wsl?gg=vol&hh=snap";
-
-        HttpMethodBase method = new PutMethod(addr);
-        method.setRequestHeader("Authorization", "Euca");
-        method.setRequestHeader("Date", (new Date()).toString());
-        method.setRequestHeader("Expect", "100-continue");
-
-        httpClient.executeMethod(method);
-        String responseString = method.getResponseBodyAsString();
-        System.out.println(responseString);
-        method.releaseConnection();
-    }
-
-    @Test
-    public void testGetSnapshotInfo() throws Exception {
-        HttpClient httpClient = new HttpClient();
-        String addr = System.getProperty("euca.objectstorage.url") + "/snapset-FuXLn1MUHJ66BkK0/snap-zVl2kZJmjhxnEg..";
-
-        HttpMethodBase method = new GetMethod(addr);
-        method.setRequestHeader("Authorization", "Euca");
-        method.setRequestHeader("Date", (new Date()).toString());
-        method.setRequestHeader("Expect", "100-continue");
-        method.setRequestHeader("EucaOperation", "GetSnapshotInfo");
-        httpClient.executeMethod(method);
-        String responseString = method.getResponseBodyAsString();
-        System.out.println(responseString);
-        method.releaseConnection();         
-    }
-
-    @BeforeClass
-    public static void setUp() {
-        blockStorage = new BlockStorageController();
-        try {
-			BlockStorageController.configure();
-		} catch (EucalyptusCloudException e) {
-			e.printStackTrace();
-		}
-    }
+  }
 
 }

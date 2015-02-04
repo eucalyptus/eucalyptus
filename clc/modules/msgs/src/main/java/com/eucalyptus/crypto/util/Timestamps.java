@@ -130,6 +130,10 @@ public class Timestamps {
     throw new AuthenticationException( "Invalid timestamp format: " + timestamp  );
   }
 
+  public static String formatRfc822Timestamp( final Date date ) {
+    return sdf( rfc822Timestamp ).format( date );
+  }
+
   public static String formatIso8601Timestamp( final Date date ) {
     return sdf( iso8601Timestamp ).format( date );
   }
@@ -154,10 +158,14 @@ public class Timestamps {
   }
 
   /**
+   * RFC 822 timestamp format suitable for HTTP headers
+   */
+  private static final String rfc822Timestamp = "EEE, dd MMM yyyy HH:mm:ss z";
+
+  /**
    * ISO 8601 short timestamp format
    */
   private static final String iso8601TimestampWithMillisAndTimezone = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
-
 
   /**
    * ISO 8601 short timestamp format

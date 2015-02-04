@@ -62,12 +62,11 @@
 
 package com.eucalyptus.objectstorage.pipeline.binding;
 
-import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
-import org.apache.log4j.Logger;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-
 import java.util.HashMap;
 import java.util.Map;
+
+import org.apache.log4j.Logger;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 
 /**
  * Does binding for REST HEAD requests in the ObjectStorageGateway for the S3 API.
@@ -75,21 +74,21 @@ import java.util.Map;
  *
  */
 public class ObjectStorageHEADBinding extends ObjectStorageRESTBinding {
-	private static Logger LOG = Logger.getLogger( ObjectStorageHEADBinding.class );
+  private static Logger LOG = Logger.getLogger(ObjectStorageHEADBinding.class);
 
-    @Override
-    protected Map<String, String> populateOperationMap() {
-        Map<String, String> newMap = new HashMap<>();
+  @Override
+  protected Map<String, String> populateOperationMap() {
+    Map<String, String> newMap = new HashMap<>();
 
-        newMap.put(BUCKET + HttpMethod.HEAD.toString(), "HeadBucket");
-        newMap.put(OBJECT + HttpMethod.HEAD.toString(), "HeadObject");
-        return newMap;
-    }
+    newMap.put(BUCKET + HttpMethod.HEAD.toString(), "HeadBucket");
+    newMap.put(OBJECT + HttpMethod.HEAD.toString(), "HeadObject");
+    return newMap;
+  }
 
-    protected Map<String, String> populateUnsupportedOperationMap() {
-        Map<String, String> opsMap = new HashMap<>();
+  protected Map<String, String> populateUnsupportedOperationMap() {
+    Map<String, String> opsMap = new HashMap<>();
 
-        // Object operations
-        return opsMap;
-    }
+    // Object operations
+    return opsMap;
+  }
 }

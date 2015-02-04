@@ -74,108 +74,109 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
 public class LVMWrapper {
-	Logger LOG = Logger.getLogger(LVMWrapper.class);
-	private static final String EUCA_ROOT_WRAPPER = BaseDirectory.LIBEXEC.toString() + "/euca_rootwrap";
-	
-	public static String getLvmVersion() throws EucalyptusCloudException {
-		return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "lvm", "version"});
-	}
+  Logger LOG = Logger.getLogger(LVMWrapper.class);
+  private static final String EUCA_ROOT_WRAPPER = BaseDirectory.LIBEXEC.toString() + "/euca_rootwrap";
 
-	public static String createPhysicalVolume(String loDevName) throws EucalyptusCloudException {
-		return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "pvcreate", loDevName});
-	}
+  public static String getLvmVersion() throws EucalyptusCloudException {
+    return SystemUtil.run(new String[] {EUCA_ROOT_WRAPPER, "lvm", "version"});
+  }
 
-	public static String getPhysicalVolume(String partition) throws EucalyptusCloudException {
-		return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "pvdisplay", partition});
-	}
+  public static String createPhysicalVolume(String loDevName) throws EucalyptusCloudException {
+    return SystemUtil.run(new String[] {EUCA_ROOT_WRAPPER, "pvcreate", loDevName});
+  }
 
-	public static String getVolumeGroup(String volumeGroup) throws EucalyptusCloudException {
-		return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "vgdisplay", volumeGroup});
-	}
+  public static String getPhysicalVolume(String partition) throws EucalyptusCloudException {
+    return SystemUtil.run(new String[] {EUCA_ROOT_WRAPPER, "pvdisplay", partition});
+  }
 
-	public static String createVolumeGroup(String pvName, String vgName) throws EucalyptusCloudException {
-		return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "vgcreate", vgName, pvName});
-	}
+  public static String getVolumeGroup(String volumeGroup) throws EucalyptusCloudException {
+    return SystemUtil.run(new String[] {EUCA_ROOT_WRAPPER, "vgdisplay", volumeGroup});
+  }
 
-	public static String getPhysicalVolumeVerbose(String pvName) throws EucalyptusCloudException {
-		return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "pvdisplay", "-v", pvName});
-	}
+  public static String createVolumeGroup(String pvName, String vgName) throws EucalyptusCloudException {
+    return SystemUtil.run(new String[] {EUCA_ROOT_WRAPPER, "vgcreate", vgName, pvName});
+  }
 
-	/**
-	 * 
-	 * @param volumeId
-	 * @param vgName
-	 * @param lvName
-	 * @param sizeMB - Volume size in MB
-	 * @return
-	 * @throws EucalyptusCloudException
-	 */
-	public static String createLogicalVolume(String volumeId, String vgName, String lvName, long sizeMB) throws EucalyptusCloudException {
-		// return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "lvcreate", "-n", lvName, "-L", String.valueOf(size) + "G", vgName});
-		return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "lvcreate", "--addtag", volumeId, "-n", lvName, "-L", String.valueOf(sizeMB) + "M", vgName});
-	}
+  public static String getPhysicalVolumeVerbose(String pvName) throws EucalyptusCloudException {
+    return SystemUtil.run(new String[] {EUCA_ROOT_WRAPPER, "pvdisplay", "-v", pvName});
+  }
 
-	/**
-	 * 
-	 * @param lvName
-	 * @param snapLvName
-	 * @param sizeMB - Volume size in MB
-	 * @return
-	 * @throws EucalyptusCloudException
-	 */
-	public static String createSnapshotLogicalVolume(String lvName, String snapLvName, long sizeMB) throws EucalyptusCloudException {
-		// return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "lvcreate", "-n", snapLvName, "-s", "-L", String.valueOf(size) + "G", lvName});
-		return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "lvcreate", "-n", snapLvName, "-s", "-L", String.valueOf(sizeMB) + "M", lvName});
-	}
+  /**
+   * 
+   * @param volumeId
+   * @param vgName
+   * @param lvName
+   * @param sizeMB - Volume size in MB
+   * @return
+   * @throws EucalyptusCloudException
+   */
+  public static String createLogicalVolume(String volumeId, String vgName, String lvName, long sizeMB) throws EucalyptusCloudException {
+    // return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "lvcreate", "-n", lvName, "-L", String.valueOf(size) + "G", vgName});
+    return SystemUtil
+        .run(new String[] {EUCA_ROOT_WRAPPER, "lvcreate", "--addtag", volumeId, "-n", lvName, "-L", String.valueOf(sizeMB) + "M", vgName});
+  }
 
-	public static String removeLogicalVolume(String lvName) throws EucalyptusCloudException {
-		return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "lvremove", "-f", lvName});
-	}
+  /**
+   * 
+   * @param lvName
+   * @param snapLvName
+   * @param sizeMB - Volume size in MB
+   * @return
+   * @throws EucalyptusCloudException
+   */
+  public static String createSnapshotLogicalVolume(String lvName, String snapLvName, long sizeMB) throws EucalyptusCloudException {
+    // return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "lvcreate", "-n", snapLvName, "-s", "-L", String.valueOf(size) + "G", lvName});
+    return SystemUtil.run(new String[] {EUCA_ROOT_WRAPPER, "lvcreate", "-n", snapLvName, "-s", "-L", String.valueOf(sizeMB) + "M", lvName});
+  }
 
-	public static String enableLogicalVolume(String lvName) throws EucalyptusCloudException {
-		return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "lvchange", "-ay", lvName});
-	}
-	
-	public static String extendVolumeGroup(String pvName, String vgName) throws EucalyptusCloudException {
-		return SystemUtil.run(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, "vgextend", vgName, pvName});
-	}
+  public static String removeLogicalVolume(String lvName) throws EucalyptusCloudException {
+    return SystemUtil.run(new String[] {EUCA_ROOT_WRAPPER, "lvremove", "-f", lvName});
+  }
 
-	public static String scanVolumeGroups() throws EucalyptusCloudException {
-		return SystemUtil.run(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, "vgscan"});
-	}
+  public static String enableLogicalVolume(String lvName) throws EucalyptusCloudException {
+    return SystemUtil.run(new String[] {EUCA_ROOT_WRAPPER, "lvchange", "-ay", lvName});
+  }
 
-	public static String createLogicalVolume(String volumeId, String vgName, String lvName) throws EucalyptusCloudException {
-		return SystemUtil.run(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, "lvcreate", "--addtag", volumeId, "-n", lvName, "-l", "100%FREE", vgName});
-	}
+  public static String extendVolumeGroup(String pvName, String vgName) throws EucalyptusCloudException {
+    return SystemUtil.run(new String[] {StorageProperties.EUCA_ROOT_WRAPPER, "vgextend", vgName, pvName});
+  }
 
-	public static String createSnapshotLogicalVolume(String lvName, String snapLvName) throws EucalyptusCloudException {
-		return SystemUtil.run(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, "lvcreate", "-n", snapLvName, "-s", "-l", "100%FREE", lvName});
-	}
+  public static String scanVolumeGroups() throws EucalyptusCloudException {
+    return SystemUtil.run(new String[] {StorageProperties.EUCA_ROOT_WRAPPER, "vgscan"});
+  }
 
-	public static String removeVolumeGroup(String vgName) throws EucalyptusCloudException {
-		return SystemUtil.run(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, "vgremove", vgName});
-	}
+  public static String createLogicalVolume(String volumeId, String vgName, String lvName) throws EucalyptusCloudException {
+    return SystemUtil
+        .run(new String[] {StorageProperties.EUCA_ROOT_WRAPPER, "lvcreate", "--addtag", volumeId, "-n", lvName, "-l", "100%FREE", vgName});
+  }
 
-	public static String removePhysicalVolume(String loDevName) throws EucalyptusCloudException {
-		return SystemUtil.run(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, "pvremove", loDevName});
-	}
+  public static String createSnapshotLogicalVolume(String lvName, String snapLvName) throws EucalyptusCloudException {
+    return SystemUtil.run(new String[] {StorageProperties.EUCA_ROOT_WRAPPER, "lvcreate", "-n", snapLvName, "-s", "-l", "100%FREE", lvName});
+  }
 
-	public static String reduceVolumeGroup(String vgName, String pvName) throws EucalyptusCloudException {
-		return SystemUtil.run(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, "vgreduce", vgName, pvName});
-	}
+  public static String removeVolumeGroup(String vgName) throws EucalyptusCloudException {
+    return SystemUtil.run(new String[] {StorageProperties.EUCA_ROOT_WRAPPER, "vgremove", vgName});
+  }
 
-	public static String disableLogicalVolume(String lvName) throws EucalyptusCloudException {
-		return SystemUtil.run(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, "lvchange", "-an", lvName});
-	}
+  public static String removePhysicalVolume(String loDevName) throws EucalyptusCloudException {
+    return SystemUtil.run(new String[] {StorageProperties.EUCA_ROOT_WRAPPER, "pvremove", loDevName});
+  }
 
-	public static boolean logicalVolumeExists(String lvName) {
-		boolean success = false;
-		String returnValue = SystemUtil.run(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, "lvdisplay", lvName}, true);
-		if(returnValue.length() > 0) {
-			success = true;
-		}
-		return success;
-	}
-	
-	
+  public static String reduceVolumeGroup(String vgName, String pvName) throws EucalyptusCloudException {
+    return SystemUtil.run(new String[] {StorageProperties.EUCA_ROOT_WRAPPER, "vgreduce", vgName, pvName});
+  }
+
+  public static String disableLogicalVolume(String lvName) throws EucalyptusCloudException {
+    return SystemUtil.run(new String[] {StorageProperties.EUCA_ROOT_WRAPPER, "lvchange", "-an", lvName});
+  }
+
+  public static boolean logicalVolumeExists(String lvName) {
+    boolean success = false;
+    String returnValue = SystemUtil.run(new String[] {StorageProperties.EUCA_ROOT_WRAPPER, "lvdisplay", lvName}, true);
+    if (returnValue.length() > 0) {
+      success = true;
+    }
+    return success;
+  }
+
 }

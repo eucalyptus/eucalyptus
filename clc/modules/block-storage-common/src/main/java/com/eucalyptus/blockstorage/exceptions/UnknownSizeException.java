@@ -67,11 +67,11 @@ import com.eucalyptus.util.EucalyptusCloudException;
 @SuppressWarnings("serial")
 public class UnknownSizeException extends EucalyptusCloudException {
 
-	public UnknownSizeException(String msg, Throwable ex) {
-		super(msg, ex);
-	}
+  public UnknownSizeException(String msg, Throwable ex) {
+    super(msg, ex);
+  }
 
-	public UnknownSizeException(String msg) {
-		super(msg);
-	}
+  public UnknownSizeException(String msg) {
+    super(msg);
+  }
 }

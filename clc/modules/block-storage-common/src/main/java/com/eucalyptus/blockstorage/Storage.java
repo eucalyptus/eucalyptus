@@ -69,15 +69,15 @@ import com.eucalyptus.component.annotation.GenerateKeys;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.id.Eucalyptus;
 
-@Partition( value = { Eucalyptus.class } )
+@Partition(value = {Eucalyptus.class})
 @GenerateKeys
-@FaultLogPrefix( "sc" )
-@Description( "The Storage Controller service" )
+@FaultLogPrefix("sc")
+@Description("The Storage Controller service")
 public class Storage extends ComponentId {
-	
+
   @Override
-  public Boolean hasCredentials( ) {
+  public Boolean hasCredentials() {
     return true;
   }
-  
+
 }

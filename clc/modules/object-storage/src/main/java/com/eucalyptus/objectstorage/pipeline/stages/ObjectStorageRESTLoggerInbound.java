@@ -77,41 +77,40 @@ import com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType;
 import com.eucalyptus.storage.msgs.BucketLogData;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 
-
 @ChannelPipelineCoverage("one")
 public class ObjectStorageRESTLoggerInbound extends MessageStackHandler {
-	@Override
-	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-		if ( event.getMessage( ) instanceof MappingHttpRequest ) {
-			MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage();
-			if(httpRequest.getMessage() instanceof ObjectStorageRequestType) {
-				ObjectStorageRequestType request = (ObjectStorageRequestType) httpRequest.getMessage();
-				BucketLogData logData = request.getLogData();
-				if(logData != null) {
-					long currentTime = System.currentTimeMillis();
-					logData.setTotalTime(currentTime);
-					logData.setTurnAroundTime(currentTime);
-					logData.setUri(httpRequest.getUri());
-					String referrer = httpRequest.getHeader(HttpHeaders.Names.REFERER);
-					if(referrer != null)
-						logData.setReferrer(referrer);
-					String userAgent = httpRequest.getHeader(HttpHeaders.Names.USER_AGENT);
-					if(userAgent != null)
-						logData.setUserAgent(userAgent);
-					logData.setTimestamp(String.format("[%1$td/%1$tb/%1$tY:%1$tH:%1$tM:%1$tS %1$tz]", Calendar.getInstance()));
-					User user = Contexts.lookup( httpRequest.getCorrelationId( ) ).getUser();
-					if(user != null)
-						logData.setAccessorId(user.getUserId());
-					if(request.getBucket() != null)
-						logData.setBucketName(request.getBucket());
-					if(request.getKey() != null) 
-						logData.setKey(request.getKey());
-					if(ctx.getChannel().getRemoteAddress() instanceof InetSocketAddress) {
-						InetSocketAddress sockAddress = (InetSocketAddress) ctx.getChannel().getRemoteAddress();
-						logData.setSourceAddress(sockAddress.getAddress().getHostAddress());
-					}
-				}
-			}			
-		}
-	}
+  @Override
+  public void incomingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
+    if (event.getMessage() instanceof MappingHttpRequest) {
+      MappingHttpRequest httpRequest = (MappingHttpRequest) event.getMessage();
+      if (httpRequest.getMessage() instanceof ObjectStorageRequestType) {
+        ObjectStorageRequestType request = (ObjectStorageRequestType) httpRequest.getMessage();
+        BucketLogData logData = request.getLogData();
+        if (logData != null) {
+          long currentTime = System.currentTimeMillis();
+          logData.setTotalTime(currentTime);
+          logData.setTurnAroundTime(currentTime);
+          logData.setUri(httpRequest.getUri());
+          String referrer = httpRequest.getHeader(HttpHeaders.Names.REFERER);
+          if (referrer != null)
+            logData.setReferrer(referrer);
+          String userAgent = httpRequest.getHeader(HttpHeaders.Names.USER_AGENT);
+          if (userAgent != null)
+            logData.setUserAgent(userAgent);
+          logData.setTimestamp(String.format("[%1$td/%1$tb/%1$tY:%1$tH:%1$tM:%1$tS %1$tz]", Calendar.getInstance()));
+          User user = Contexts.lookup(httpRequest.getCorrelationId()).getUser();
+          if (user != null)
+            logData.setAccessorId(user.getUserId());
+          if (request.getBucket() != null)
+            logData.setBucketName(request.getBucket());
+          if (request.getKey() != null)
+            logData.setKey(request.getKey());
+          if (ctx.getChannel().getRemoteAddress() instanceof InetSocketAddress) {
+            InetSocketAddress sockAddress = (InetSocketAddress) ctx.getChannel().getRemoteAddress();
+            logData.setSourceAddress(sockAddress.getAddress().getHostAddress());
+          }
+        }
+      }
+    }
+  }
 }

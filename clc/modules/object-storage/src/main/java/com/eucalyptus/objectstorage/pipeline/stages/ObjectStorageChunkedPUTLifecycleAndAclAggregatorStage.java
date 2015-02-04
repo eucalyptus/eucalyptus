@@ -62,27 +62,27 @@
 
 package com.eucalyptus.objectstorage.pipeline.stages;
 
+import org.jboss.netty.channel.ChannelPipeline;
+
 import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStoragePUTLifecycleAndAclAggregatorHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
-import org.jboss.netty.channel.ChannelPipeline;
 
 /*
  *
  */
 public class ObjectStorageChunkedPUTLifecycleAndAclAggregatorStage implements UnrollableStage {
-    @Override
-    public void unrollStage(ChannelPipeline pipeline) {
-        pipeline.addLast( "objectstorage-aggregate-chunked-puts-of-lifecycle-and-acl" ,
-                new ObjectStoragePUTLifecycleAndAclAggregatorHandler());
-    }
+  @Override
+  public void unrollStage(ChannelPipeline pipeline) {
+    pipeline.addLast("objectstorage-aggregate-chunked-puts-of-lifecycle-and-acl", new ObjectStoragePUTLifecycleAndAclAggregatorHandler());
+  }
 
-    @Override
-    public String getName() {
-        return "objectstorage-chunked-put-lifecycle-and-acl-aggregator";
-    }
+  @Override
+  public String getName() {
+    return "objectstorage-chunked-put-lifecycle-and-acl-aggregator";
+  }
 
-    @Override
-    public int compareTo(UnrollableStage o) {
-        return this.getName( ).compareTo( o.getName( ) );
-    }
+  @Override
+  public int compareTo(UnrollableStage o) {
+    return this.getName().compareTo(o.getName());
+  }
 }

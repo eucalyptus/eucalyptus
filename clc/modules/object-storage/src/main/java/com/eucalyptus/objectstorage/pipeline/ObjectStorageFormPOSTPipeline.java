@@ -62,59 +62,52 @@
 
 package com.eucalyptus.objectstorage.pipeline;
 
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageFormPOSTAggregatorStage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStoragePUTAggregatorStage;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
 import com.eucalyptus.component.annotation.ComponentPart;
-import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageOutboundStage;
+import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageFormPOSTAggregatorStage;
 import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageFormPOSTBindingStage;
 import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageFormPOSTOutboundStage;
 import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageFormPOSTUserAuthenticationStage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageRESTBindingStage;
 import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageRESTExceptionStage;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
-import com.eucalyptus.ws.server.FilteredPipeline;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
-
-@ComponentPart( ObjectStorage.class )
+@ComponentPart(ObjectStorage.class)
 public class ObjectStorageFormPOSTPipeline extends ObjectStorageRESTPipeline {
-	private static Logger LOG = Logger.getLogger( ObjectStorageFormPOSTPipeline.class );
-	private final UnrollableStage auth = new ObjectStorageFormPOSTUserAuthenticationStage( );
-	private final UnrollableStage bind = new ObjectStorageFormPOSTBindingStage( );
-    private final UnrollableStage aggr = new ObjectStorageFormPOSTAggregatorStage( );
-	private final UnrollableStage out = new ObjectStorageFormPOSTOutboundStage();
-	private final UnrollableStage exHandler = new ObjectStorageRESTExceptionStage( );
+  private static Logger LOG = Logger.getLogger(ObjectStorageFormPOSTPipeline.class);
+  private final UnrollableStage auth = new ObjectStorageFormPOSTUserAuthenticationStage();
+  private final UnrollableStage bind = new ObjectStorageFormPOSTBindingStage();
+  private final UnrollableStage aggr = new ObjectStorageFormPOSTAggregatorStage();
+  private final UnrollableStage out = new ObjectStorageFormPOSTOutboundStage();
+  private final UnrollableStage exHandler = new ObjectStorageRESTExceptionStage();
 
-	@Override
-	public boolean checkAccepts( HttpRequest message ) {
-		if (super.checkAccepts(message) && 
-				message.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.POST.toString())) {
-            String contentType = message.getHeader(HttpHeaders.Names.CONTENT_TYPE);
-            return contentType != null && contentType.startsWith("multipart/form-data;");
-		}
-		return false;
-	}
+  @Override
+  public boolean checkAccepts(HttpRequest message) {
+    if (super.checkAccepts(message) && message.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.POST.toString())) {
+      String contentType = message.getHeader(HttpHeaders.Names.CONTENT_TYPE);
+      return contentType != null && contentType.startsWith("multipart/form-data;");
+    }
+    return false;
+  }
 
-	@Override
-	public String getName( ) {
-		return "objectstorage-post-multipart-form";
-	}
+  @Override
+  public String getName() {
+    return "objectstorage-post-multipart-form";
+  }
 
-	@Override
-	public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
-		auth.unrollStage( pipeline );
-		bind.unrollStage( pipeline );
-        aggr.unrollStage( pipeline );
-		out.unrollStage( pipeline );
-		exHandler.unrollStage(pipeline);
-		return pipeline;
-	}
+  @Override
+  public ChannelPipeline addHandlers(ChannelPipeline pipeline) {
+    auth.unrollStage(pipeline);
+    bind.unrollStage(pipeline);
+    aggr.unrollStage(pipeline);
+    out.unrollStage(pipeline);
+    exHandler.unrollStage(pipeline);
+    return pipeline;
+  }
 
 }

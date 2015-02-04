@@ -33,133 +33,132 @@ import org.junit.Test;
 @CompileStatic
 public class ObjectStorageRESTBindingTest {
 
-    @Test
-    public void testGetOperation() throws Exception {
-        ObjectStorageRESTBinding binding = new ObjectStorageRESTBinding() {
+  @Test
+  public void testGetOperation() throws Exception {
+    ObjectStorageRESTBinding binding = new ObjectStorageRESTBinding() {
 
-            @Override
-            protected Map<String, String> populateOperationMap() {
-                return null
-            }
+          @Override
+          protected Map<String, String> populateOperationMap() {
+            return null
+          }
 
-            @Override
-            protected Map<String, String> populateUnsupportedOperationMap() {
-                return null
-            }
+          @Override
+          protected Map<String, String> populateUnsupportedOperationMap() {
+            return null
+          }
         };
 
-        MappingHttpRequest request;
+    MappingHttpRequest request;
 
-        request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage/bucket/object");
-        String path = binding.getOperationPath(request);
-        assert("/bucket/object".equals(path));
+    request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage/bucket/object");
+    String path = binding.getOperationPath(request);
+    assert("/bucket/object".equals(path));
+  }
 
-    }
+  @Test
+  public void testGetOperationPath() throws Exception {
+    ObjectStorageRESTBinding binding = new ObjectStorageRESTBinding() {
 
-    @Test
-    public void testGetOperationPath() throws Exception {
-        ObjectStorageRESTBinding binding = new ObjectStorageRESTBinding() {
+          @Override
+          protected Map<String, String> populateOperationMap() {
+            return null
+          }
 
-            @Override
-            protected Map<String, String> populateOperationMap() {
-                return null
-            }
-
-            @Override
-            protected Map<String, String> populateUnsupportedOperationMap() {
-                return null
-            }
+          @Override
+          protected Map<String, String> populateUnsupportedOperationMap() {
+            return null
+          }
         };
 
-        MappingHttpRequest request;
+    MappingHttpRequest request;
 
-        request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage/bucket/object");
-        String path = binding.getOperationPath(request);
-        assert("/bucket/object".equals(path));
+    request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage/bucket/object");
+    String path = binding.getOperationPath(request);
+    assert("/bucket/object".equals(path));
 
-        request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage/bucket");
-        path = binding.getOperationPath(request);
-        assert("/bucket".equals(path));
+    request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage/bucket");
+    path = binding.getOperationPath(request);
+    assert("/bucket".equals(path));
 
-        request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage");
-        path = binding.getOperationPath(request);
-        assert("".equals(path));
+    request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage");
+    path = binding.getOperationPath(request);
+    assert("".equals(path));
 
-        request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage/services/objectstorage/bucket");
-        path = binding.getOperationPath(request);
-        assert("/services/objectstorage/bucket".equals(path));
+    request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage/services/objectstorage/bucket");
+    path = binding.getOperationPath(request);
+    assert("/services/objectstorage/bucket".equals(path));
 
-        request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstoragebucket/object");
-        path = binding.getOperationPath(request);
-        assert("/services/objectstoragebucket/object".equals(path));
+    request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstoragebucket/object");
+    path = binding.getOperationPath(request);
+    assert("/services/objectstoragebucket/object".equals(path));
 
-        request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/bucket/object");
-        path = binding.getOperationPath(request);
-        assert("/bucket/object".equals(path));
+    request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/bucket/object");
+    path = binding.getOperationPath(request);
+    assert("/bucket/object".equals(path));
 
-        request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
-        path = binding.getOperationPath(request);
-        assert("/".equals(path));
+    request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+    path = binding.getOperationPath(request);
+    assert("/".equals(path));
 
-        request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/bucket/object/");
-        path = binding.getOperationPath(request);
-        assert("/bucket/object/".equals(path));
+    request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/bucket/object/");
+    path = binding.getOperationPath(request);
+    assert("/bucket/object/".equals(path));
 
-        //Test with /services/Walrus path for legacy
-        request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/Walrus/bucket/object");
-        path = binding.getOperationPath(request);
-        assert("/bucket/object".equals(path));
+    //Test with /services/Walrus path for legacy
+    request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/Walrus/bucket/object");
+    path = binding.getOperationPath(request);
+    assert("/bucket/object".equals(path));
 
-        request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/Walrus/bucket");
-        path = binding.getOperationPath(request);
-        assert("/bucket".equals(path));
+    request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/Walrus/bucket");
+    path = binding.getOperationPath(request);
+    assert("/bucket".equals(path));
 
-        request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/Walrus");
-        path = binding.getOperationPath(request);
-        assert("".equals(path));
+    request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/Walrus");
+    path = binding.getOperationPath(request);
+    assert("".equals(path));
 
-        request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/Walrusbucket/object");
-        path = binding.getOperationPath(request);
-        assert("/services/Walrusbucket/object".equals(path));
+    request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/Walrusbucket/object");
+    path = binding.getOperationPath(request);
+    assert("/services/Walrusbucket/object".equals(path));
 
 
-    }
-	
-	@Test
-	public void testGetTarget() throws Exception {
-		String [] target = OSGUtil.getTarget("/bucket/object");
-		assert(target.length == 2);
-		assert("bucket".equals(target[0]));
-		assert("object".equals(target[1]));
-		
-		target = OSGUtil.getTarget("///bucket/object");
-		assert(target.length == 2);
-		assert("bucket".equals(target[0]));
-		assert("object".equals(target[1]));
-		
-		target = OSGUtil.getTarget("/bucket//object");
-		assert(target.length == 2);
-		assert("bucket".equals(target[0]));
-		assert("/object".equals(target[1]));
-		
-		target = OSGUtil.getTarget("//bucket/object//");
-		assert(target.length == 2);
-		assert("bucket".equals(target[0]));
-		assert("object//".equals(target[1]));
-		
-		target = OSGUtil.getTarget("///bucket///object//");
-		assert(target.length == 2);
-		assert("bucket".equals(target[0]));
-		assert("//object//".equals(target[1]));
-		
-		target = OSGUtil.getTarget("///bucket/");
-		assert(target.length == 1);
-		assert("bucket".equals(target[0]));
-		
-		target = OSGUtil.getTarget("///");
-		assert(target == null);
-		
-		target = OSGUtil.getTarget("/");
-		assert(target == null);
-	}
+  }
+
+  @Test
+  public void testGetTarget() throws Exception {
+    String[] target = OSGUtil.getTarget("/bucket/object");
+    assert (target.length == 2);
+    assert ("bucket".equals(target[0]));
+    assert ("object".equals(target[1]));
+
+    target = OSGUtil.getTarget("///bucket/object");
+    assert (target.length == 2);
+    assert ("bucket".equals(target[0]));
+    assert ("object".equals(target[1]));
+
+    target = OSGUtil.getTarget("/bucket//object");
+    assert (target.length == 2);
+    assert ("bucket".equals(target[0]));
+    assert ("/object".equals(target[1]));
+
+    target = OSGUtil.getTarget("//bucket/object//");
+    assert (target.length == 2);
+    assert ("bucket".equals(target[0]));
+    assert ("object//".equals(target[1]));
+
+    target = OSGUtil.getTarget("///bucket///object//");
+    assert (target.length == 2);
+    assert ("bucket".equals(target[0]));
+    assert ("//object//".equals(target[1]));
+
+    target = OSGUtil.getTarget("///bucket/");
+    assert (target.length == 1);
+    assert ("bucket".equals(target[0]));
+
+    target = OSGUtil.getTarget("///");
+    assert (target == null);
+
+    target = OSGUtil.getTarget("/");
+    assert (target == null);
+  }
 }

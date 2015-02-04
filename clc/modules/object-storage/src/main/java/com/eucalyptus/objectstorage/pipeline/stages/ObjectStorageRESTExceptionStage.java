@@ -27,19 +27,19 @@ import com.eucalyptus.ws.stages.UnrollableStage;
 
 public class ObjectStorageRESTExceptionStage implements UnrollableStage {
 
-	@Override
-	public int compareTo(UnrollableStage arg0) {
-		return this.getName().compareTo(arg0.getName());
-	}
+  @Override
+  public int compareTo(UnrollableStage arg0) {
+    return this.getName().compareTo(arg0.getName());
+  }
 
-	@Override
-	public void unrollStage(ChannelPipeline pipeline) {
-		pipeline.addLast("osg-exception", new ObjectStorageRESTExceptionHandler());
-	}
+  @Override
+  public void unrollStage(ChannelPipeline pipeline) {
+    pipeline.addLast("osg-exception", new ObjectStorageRESTExceptionHandler());
+  }
 
-	@Override
-	public String getName() {
-		return "osg-exception";
-	}
+  @Override
+  public String getName() {
+    return "osg-exception";
+  }
 
 }

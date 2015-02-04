@@ -68,13 +68,13 @@ import java.nio.channels.FileChannel;
 
 public abstract class FileIO {
 
-    protected FileChannel channel;
+  protected FileChannel channel;
 
-    public abstract int read(long offset) throws IOException;
+  public abstract int read(long offset) throws IOException;
 
-    public abstract void write(byte[] bytes) throws IOException;
+  public abstract void write(byte[] bytes) throws IOException;
 
-    public abstract ByteBuffer getBuffer();
+  public abstract ByteBuffer getBuffer();
 
-    public abstract void finish();
+  public abstract void finish();
 }

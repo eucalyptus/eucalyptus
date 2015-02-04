@@ -65,95 +65,94 @@ package com.eucalyptus.walrus.msgs;
 import java.nio.ByteBuffer;
 
 public class WalrusDataMessage {
-    private Header header;
-    private byte[] payload;
-    private static final String DELIMITER = "/";
+  private Header header;
+  private byte[] payload;
+  private static final String DELIMITER = "/";
 
-    public enum Header {
-        START, DATA, INTERRUPT, EOF
+  public enum Header {
+    START, DATA, INTERRUPT, EOF
+  }
+
+  public Header getHeader() {
+    return header;
+  }
+
+  public void setHeader(Header header) {
+    this.header = header;
+  }
+
+  public byte[] getPayload() {
+    return payload;
+  }
+
+  public void setPayload(byte[] payload) {
+    this.payload = payload;
+  }
+
+  public WalrusDataMessage(Header header, byte[] payload) {
+    this.header = header;
+    this.payload = payload;
+  }
+
+  public WalrusDataMessage() {}
+
+  public static WalrusDataMessage EOF() {
+    return new WalrusDataMessage(Header.EOF, String.valueOf(System.currentTimeMillis()).getBytes());
+  }
+
+  public static WalrusDataMessage InterruptTransaction() {
+    return new WalrusDataMessage(Header.INTERRUPT, new byte[0]);
+  }
+
+  public static WalrusDataMessage StartOfData(long size) {
+    return new WalrusDataMessage(Header.START, String.valueOf(size).getBytes());
+  }
+
+  public static WalrusDataMessage DataMessage(byte[] data) {
+    return new WalrusDataMessage(Header.DATA, data);
+  }
+
+  public static WalrusDataMessage DataMessage(byte[] data, int length) {
+    byte[] bytes = new byte[length];
+    copyBytes(data, bytes, 0, length);
+    return new WalrusDataMessage(Header.DATA, bytes);
+  }
+
+  public static WalrusDataMessage DataMessage(ByteBuffer buffer, int length) {
+    byte[] bytes = new byte[length];
+    buffer.get(bytes, 0, length);
+    return new WalrusDataMessage(Header.DATA, bytes);
+  }
+
+  public static boolean isStart(WalrusDataMessage message) {
+    if (Header.START.equals(message.header)) {
+      return true;
     }
+    return false;
+  }
 
-    public Header getHeader() {
-        return header;
+  public static boolean isEOF(WalrusDataMessage message) {
+    if (Header.EOF.equals(message.header)) {
+      return true;
     }
+    return false;
+  }
 
-    public void setHeader(Header header) {
-        this.header = header;
+  public static boolean isInterrupted(WalrusDataMessage message) {
+    if (Header.INTERRUPT.equals(message.header)) {
+      return true;
     }
+    return false;
+  }
 
-    public byte[] getPayload() {
-        return payload;
+  public static boolean isData(WalrusDataMessage message) {
+    if (Header.DATA.equals(message.header)) {
+      return true;
     }
+    return false;
+  }
 
-    public void setPayload(byte[] payload) {
-        this.payload = payload;
-    }
-
-    public WalrusDataMessage(Header header, byte[] payload) {
-        this.header = header;
-        this.payload = payload;
-    }
-
-    public WalrusDataMessage() {}
-
-    public static WalrusDataMessage EOF() {
-        return new WalrusDataMessage(Header.EOF, String.valueOf(System.currentTimeMillis()).getBytes());
-    }
-
-    public static WalrusDataMessage InterruptTransaction() {
-        return new WalrusDataMessage(Header.INTERRUPT, new byte[0]);
-    }
-
-    public static WalrusDataMessage StartOfData(long size) {
-        return new WalrusDataMessage(Header.START, String.valueOf(size).getBytes());
-    }
-
-    public static WalrusDataMessage DataMessage(byte[] data) {
-        return new WalrusDataMessage(Header.DATA, data);
-    }
-
-    public static WalrusDataMessage DataMessage(byte[] data, int length) {
-        byte[] bytes = new byte[length];
-        copyBytes(data, bytes, 0, length);
-        return new WalrusDataMessage(Header.DATA, bytes);
-    }
-
-    public static WalrusDataMessage DataMessage(ByteBuffer buffer, int length) {
-        byte[] bytes = new byte[length];
-        buffer.get(bytes, 0, length);
-        return new WalrusDataMessage(Header.DATA, bytes);
-    }
-
-
-    public static boolean isStart(WalrusDataMessage message) {
-        if(Header.START.equals(message.header)) {
-            return true;
-        }
-        return false;
-    }
-
-    public static boolean isEOF(WalrusDataMessage message) {
-        if(Header.EOF.equals(message.header)) {
-            return true;
-        }
-        return false;
-    }
-
-    public static boolean isInterrupted(WalrusDataMessage message) {
-        if(Header.INTERRUPT.equals(message.header)) {
-            return true;
-        }
-        return false;
-    }
-
-    public static boolean isData(WalrusDataMessage message) {
-        if(Header.DATA.equals(message.header)) {
-            return true;
-        }
-        return false;
-    }
-
-    public static void copyBytes(byte[]sourceBytes, byte[]destBytes, int offset, int length) {
-        System.arraycopy(sourceBytes, 0, destBytes, offset, length);
-    }
+  public static void copyBytes(byte[] sourceBytes, byte[] destBytes, int offset, int length) {
+    System.arraycopy(sourceBytes, 0, destBytes, offset, length);
+  }
 }

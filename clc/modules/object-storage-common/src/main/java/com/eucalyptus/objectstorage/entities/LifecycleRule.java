@@ -62,16 +62,18 @@
 
 package com.eucalyptus.objectstorage.entities;
 
-import com.eucalyptus.entities.AbstractPersistent;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Index;
+import java.util.Date;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import java.util.Date;
+
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Index;
+
+import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity
 @PersistenceContext(name = "eucalyptus_osg")
@@ -79,112 +81,112 @@ import java.util.Date;
 @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class LifecycleRule extends AbstractPersistent {
 
-    @Column(name = "bucket_uuid")
-    @Index(name = "IDX_bucket_uuid")
-    private String bucketUuid;
+  @Column(name = "bucket_uuid")
+  @Index(name = "IDX_bucket_uuid")
+  private String bucketUuid;
 
-    @Column(name = "rule_id", length = 64)
-    private String ruleId;
+  @Column(name = "rule_id", length = 64)
+  private String ruleId;
 
-    @Column(name = "prefix", length = 256)
-    private String prefix;
+  @Column(name = "prefix", length = 256)
+  private String prefix;
 
-    @Column(name = "enabled")
-    private Boolean enabled;
+  @Column(name = "enabled")
+  private Boolean enabled;
 
-    @Column(name = "transition_date")
-    private Date transitionDate;
-    @Column(name = "transition_days")
-    private Integer transitionDays;
+  @Column(name = "transition_date")
+  private Date transitionDate;
+  @Column(name = "transition_days")
+  private Integer transitionDays;
 
-    @Column(name = "transition_storage_class")
-    private String transitionStorageClass;
+  @Column(name = "transition_storage_class")
+  private String transitionStorageClass;
 
-    @Column(name = "expiration_date")
-    private Date expirationDate;
-    @Column(name = "expiration_days")
-    private Integer expirationDays;
+  @Column(name = "expiration_date")
+  private Date expirationDate;
+  @Column(name = "expiration_days")
+  private Integer expirationDays;
 
-    @Column(name = "last_processing_start")
-    private Date lastProcessingStart;
+  @Column(name = "last_processing_start")
+  private Date lastProcessingStart;
 
-    public String getBucketUuid() {
-        return bucketUuid;
-    }
+  public String getBucketUuid() {
+    return bucketUuid;
+  }
 
-    public void setBucketUuid(String bucketUuid) {
-        this.bucketUuid = bucketUuid;
-    }
+  public void setBucketUuid(String bucketUuid) {
+    this.bucketUuid = bucketUuid;
+  }
 
-    public String getRuleId() {
-        return ruleId;
-    }
+  public String getRuleId() {
+    return ruleId;
+  }
 
-    public void setRuleId(String ruleId) {
-        this.ruleId = ruleId;
-    }
+  public void setRuleId(String ruleId) {
+    this.ruleId = ruleId;
+  }
 
-    public String getPrefix() {
-        return prefix;
-    }
+  public String getPrefix() {
+    return prefix;
+  }
 
-    public void setPrefix(String prefix) {
-        this.prefix = prefix;
-    }
+  public void setPrefix(String prefix) {
+    this.prefix = prefix;
+  }
 
-    public Boolean getEnabled() {
-        return enabled;
-    }
+  public Boolean getEnabled() {
+    return enabled;
+  }
 
-    public void setEnabled(Boolean enabled) {
-        this.enabled = enabled;
-    }
+  public void setEnabled(Boolean enabled) {
+    this.enabled = enabled;
+  }
 
-    public Date getTransitionDate() {
-        return transitionDate;
-    }
+  public Date getTransitionDate() {
+    return transitionDate;
+  }
 
-    public void setTransitionDate(Date transitionDate) {
-        this.transitionDate = transitionDate;
-    }
+  public void setTransitionDate(Date transitionDate) {
+    this.transitionDate = transitionDate;
+  }
 
-    public Integer getTransitionDays() {
-        return transitionDays;
-    }
+  public Integer getTransitionDays() {
+    return transitionDays;
+  }
 
-    public void setTransitionDays(Integer transitionDays) {
-        this.transitionDays = transitionDays;
-    }
+  public void setTransitionDays(Integer transitionDays) {
+    this.transitionDays = transitionDays;
+  }
 
-    public String getTransitionStorageClass() {
-        return transitionStorageClass;
-    }
+  public String getTransitionStorageClass() {
+    return transitionStorageClass;
+  }
 
-    public void setTransitionStorageClass(String transitionStorageClass) {
-        this.transitionStorageClass = transitionStorageClass;
-    }
+  public void setTransitionStorageClass(String transitionStorageClass) {
+    this.transitionStorageClass = transitionStorageClass;
+  }
 
-    public Date getExpirationDate() {
-        return expirationDate;
-    }
+  public Date getExpirationDate() {
+    return expirationDate;
+  }
 
-    public void setExpirationDate(Date expirationDate) {
-        this.expirationDate = expirationDate;
-    }
+  public void setExpirationDate(Date expirationDate) {
+    this.expirationDate = expirationDate;
+  }
 
-    public Integer getExpirationDays() {
-        return expirationDays;
-    }
+  public Integer getExpirationDays() {
+    return expirationDays;
+  }
 
-    public void setExpirationDays(Integer expirationDays) {
-        this.expirationDays = expirationDays;
-    }
+  public void setExpirationDays(Integer expirationDays) {
+    this.expirationDays = expirationDays;
+  }
 
-    public Date getLastProcessingStart() {
-        return lastProcessingStart;
-    }
+  public Date getLastProcessingStart() {
+    return lastProcessingStart;
+  }
 
-    public void setLastProcessingStart(Date lastProcessingStart) {
-        this.lastProcessingStart = lastProcessingStart;
-    }
+  public void setLastProcessingStart(Date lastProcessingStart) {
+    this.lastProcessingStart = lastProcessingStart;
+  }
 }

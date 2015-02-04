@@ -67,6 +67,6 @@ package com.eucalyptus.objectstorage.metadata;
  */
 public interface Validator<T> {
 
-    public boolean check(T value);
+  public boolean check(T value);
 
 }

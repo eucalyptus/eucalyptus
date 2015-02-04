@@ -285,21 +285,19 @@
         <value name="SuccessActionStatus" field="successCode" usage="optional"/>
     </mapping>
 
-    <mapping name="CopyObjectResponse"
+    <mapping name="CopyObjectResult"
              class="com.eucalyptus.objectstorage.msgs.CopyObjectResponseType">
-        <structure name="CopyObjectResult">
-            <value name="ETag" field="etag" usage="optional"/>
-            <value name="LastModified" field="lastModified" usage="optional"/>
-            <collection field="metaData"
-                        factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
-                <structure map-as="com.eucalyptus.storage.msgs.s3.MetaDataEntry"/>
-            </collection>
-            <value name="ErrorCode" field="errorCode" usage="optional"/>
-            <value name="Size" field="size" usage="optional"/>
-            <value name="ContentType" field="contentType" usage="optional"/>
-            <value name="ContentDisposition" field="contentDisposition"
-                   usage="optional"/>
-        </structure>
+       <value name="ETag" field="etag" usage="optional"/>
+       <value name="LastModified" field="lastModified" usage="optional"/>
+       <collection field="metaData"
+                   factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
+           <structure map-as="com.eucalyptus.storage.msgs.s3.MetaDataEntry"/>
+       </collection>
+       <value name="ErrorCode" field="errorCode" usage="optional"/>
+       <value name="Size" field="size" usage="optional"/>
+       <value name="ContentType" field="contentType" usage="optional"/>
+       <value name="ContentDisposition" field="contentDisposition"
+              usage="optional"/>
     </mapping>
 
     <mapping name="CopyObject"

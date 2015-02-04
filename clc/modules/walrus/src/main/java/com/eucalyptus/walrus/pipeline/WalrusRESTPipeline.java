@@ -62,8 +62,6 @@
 
 package com.eucalyptus.walrus.pipeline;
 
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.walrus.WalrusBackend;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -71,8 +69,10 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.xbill.DNS.Name;
 
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.util.dns.DomainNames;
+import com.eucalyptus.walrus.WalrusBackend;
 import com.eucalyptus.walrus.pipeline.stages.WalrusOutboundStage;
 import com.eucalyptus.walrus.pipeline.stages.WalrusRESTBindingStage;
 import com.eucalyptus.walrus.pipeline.stages.WalrusRESTExceptionStage;
@@ -82,99 +82,100 @@ import com.eucalyptus.ws.stages.UnrollableStage;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 
-
-@ComponentPart( WalrusBackend.class )
+@ComponentPart(WalrusBackend.class)
 public class WalrusRESTPipeline extends FilteredPipeline {
-	private static Logger LOG = Logger.getLogger( WalrusRESTPipeline.class );
-	private static final Splitter hostSplitter = Splitter.on( ':' ).limit( 2 );
-	
-	private final UnrollableStage auth = new WalrusUserAuthenticationStage( );
-	private final UnrollableStage bind = new WalrusRESTBindingStage( );
-	private final UnrollableStage out = new WalrusOutboundStage( );
-	private final UnrollableStage exception = new WalrusRESTExceptionStage( );
+  private static Logger LOG = Logger.getLogger(WalrusRESTPipeline.class);
+  private static final Splitter hostSplitter = Splitter.on(':').limit(2);
 
-    private final String walrusServicePath = ComponentIds.lookup(WalrusBackend.class).getServicePath();
-	
-	/**
-	 * Does not accept any SOAP request or POST request
-	 * 
-	 * Two options: path-style or virtual-hosted.
-	 * 
-	 * Path Style: walrus.hostname.com/bucket if using DNS, 192.168.1.1/services/Walrus/bucket if not DNS
-	 * 
-	 * Virtual-hosted: bucket.walrus.hostname.com/ if using DNS, not-applicable if not using DNS
-	 */
-	@Override
-	public boolean checkAccepts( HttpRequest message ) {
-		String uriPath = message.getUri();
-		uriPath = (uriPath == null ? "" : uriPath);
-		String hostHeader = message.getHeader(HttpHeaders.Names.HOST);
-		hostHeader = (hostHeader == null ? "" : hostHeader);
-		
-		return (!isSoapRequest(message) && !isPostRequest(message)) && 
-				(isWalrusHostName(hostHeader) || isWalrusServicePathRequest(uriPath, hostHeader));
-	}
-	
-	private static boolean isPostRequest(HttpRequest message ) {
-		return message.getMethod().getName().equals(HttpMethod.POST.toString())
-                && ("multipart/form-data".equals(HttpHeaders.getHeader(message, HttpHeaders.Names.CONTENT_TYPE)));
-	}
+  private final UnrollableStage auth = new WalrusUserAuthenticationStage();
+  private final UnrollableStage bind = new WalrusRESTBindingStage();
+  private final UnrollableStage out = new WalrusOutboundStage();
+  private final UnrollableStage exception = new WalrusRESTExceptionStage();
 
-	private static boolean isSoapRequest(HttpRequest message) {
-		return message.getHeaderNames().contains( "SOAPAction" );
-	}
-	
-	/**
-	 * The service path is the prefix for the URI and DNS is not used (if DNS used then it could be a bucket/key name)
-	 */
-	private boolean isWalrusServicePathRequest(String uriPath, String hostHeader) {
-		return checkServicePathUri(uriPath) && !isWalrusHostName(hostHeader);
-	}
+  private final String walrusServicePath = ComponentIds.lookup(WalrusBackend.class).getServicePath();
 
-    private boolean checkServicePathUri(final String uriPath) {
-        String tmpUri = uriPath;
-        if(!tmpUri.endsWith("/")) {
-            tmpUri += "/"; //Ensure a trailing / for check
-        }
-        return tmpUri.startsWith(this.walrusServicePath + "/");
+  /**
+   * Does not accept any SOAP request or POST request
+   * 
+   * Two options: path-style or virtual-hosted.
+   * 
+   * Path Style: walrus.hostname.com/bucket if using DNS, 192.168.1.1/services/Walrus/bucket if not DNS
+   * 
+   * Virtual-hosted: bucket.walrus.hostname.com/ if using DNS, not-applicable if not using DNS
+   */
+  @Override
+  public boolean checkAccepts(HttpRequest message) {
+    String uriPath = message.getUri();
+    uriPath = (uriPath == null ? "" : uriPath);
+    String hostHeader = message.getHeader(HttpHeaders.Names.HOST);
+    hostHeader = (hostHeader == null ? "" : hostHeader);
+
+    return (!isSoapRequest(message) && !isPostRequest(message)) && (isWalrusHostName(hostHeader) || isWalrusServicePathRequest(uriPath, hostHeader));
+  }
+
+  private static boolean isPostRequest(HttpRequest message) {
+    return message.getMethod().getName().equals(HttpMethod.POST.toString())
+        && ("multipart/form-data".equals(HttpHeaders.getHeader(message, HttpHeaders.Names.CONTENT_TYPE)));
+  }
+
+  private static boolean isSoapRequest(HttpRequest message) {
+    return message.getHeaderNames().contains("SOAPAction");
+  }
+
+  /**
+   * The service path is the prefix for the URI and DNS is not used (if DNS used then it could be a bucket/key name)
+   */
+  private boolean isWalrusServicePathRequest(String uriPath, String hostHeader) {
+    return checkServicePathUri(uriPath) && !isWalrusHostName(hostHeader);
+  }
+
+  private boolean checkServicePathUri(final String uriPath) {
+    String tmpUri = uriPath;
+    if (!tmpUri.endsWith("/")) {
+      tmpUri += "/"; // Ensure a trailing / for check
     }
-	
-	/**
-	 * Returns whether or not the host header resolves to Walrus
-	 * @param hostHeader
-	 * @return
-	 */
-	private boolean isWalrusHostName(String hostHeader) {
-		//Try both the raw name as well as a bucket-stripped version in case using virtual-hosting style.
-        return this.resolvesByHost(hostHeader) || this.maybeBucketHostedStyle(hostHeader);
-	}
-	
-	/**
-	 * Is walrus domainname a subdomain of the host header host. If so, then it is likely a bucket prefix.
-	 * But, since S3 buckets can include '.' can't just parse on '.'s
-	 * @param fullHostHeader
-	 * @return
-	 */
-    private boolean maybeBucketHostedStyle(String fullHostHeader) {
-    	try {
-    		return DomainNames.absolute(Name.fromString( Iterables.getFirst( hostSplitter.split( fullHostHeader ), fullHostHeader ) )).subdomain(DomainNames.externalSubdomain(WalrusBackend.class));
-    	} catch(Exception e) {
-    		LOG.error("Error parsing domain name from hostname: " + fullHostHeader,e);
-    		return false;
-    	}
+    return tmpUri.startsWith(this.walrusServicePath + "/");
+  }
+
+  /**
+   * Returns whether or not the host header resolves to Walrus
+   * 
+   * @param hostHeader
+   * @return
+   */
+  private boolean isWalrusHostName(String hostHeader) {
+    // Try both the raw name as well as a bucket-stripped version in case using virtual-hosting style.
+    return this.resolvesByHost(hostHeader) || this.maybeBucketHostedStyle(hostHeader);
+  }
+
+  /**
+   * Is walrus domainname a subdomain of the host header host. If so, then it is likely a bucket prefix. But, since S3 buckets can include '.' can't
+   * just parse on '.'s
+   * 
+   * @param fullHostHeader
+   * @return
+   */
+  private boolean maybeBucketHostedStyle(String fullHostHeader) {
+    try {
+      return DomainNames.absolute(Name.fromString(Iterables.getFirst(hostSplitter.split(fullHostHeader), fullHostHeader))).subdomain(
+          DomainNames.externalSubdomain(WalrusBackend.class));
+    } catch (Exception e) {
+      LOG.error("Error parsing domain name from hostname: " + fullHostHeader, e);
+      return false;
     }
-	
-	@Override
-	public String getName( ) {
-		return "walrus-rest";
-	}
-	
-	@Override
-	public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
-		auth.unrollStage( pipeline );
-		bind.unrollStage( pipeline );
-		out.unrollStage( pipeline );
-		exception.unrollStage( pipeline );
-		return pipeline;
-	}	
+  }
+
+  @Override
+  public String getName() {
+    return "walrus-rest";
+  }
+
+  @Override
+  public ChannelPipeline addHandlers(ChannelPipeline pipeline) {
+    auth.unrollStage(pipeline);
+    bind.unrollStage(pipeline);
+    out.unrollStage(pipeline);
+    exception.unrollStage(pipeline);
+    return pipeline;
+  }
 }

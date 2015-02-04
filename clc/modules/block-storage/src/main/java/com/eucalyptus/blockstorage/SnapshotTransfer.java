@@ -71,17 +71,17 @@ import com.eucalyptus.blockstorage.exceptions.SnapshotTransferException;
  */
 public interface SnapshotTransfer {
 
-	public String prepareForUpload() throws SnapshotTransferException;
+  public String prepareForUpload() throws SnapshotTransferException;
 
-	public void upload(StorageResource storageResource) throws SnapshotTransferException;
+  public void upload(StorageResource storageResource) throws SnapshotTransferException;
 
-	public void resumeUpload(StorageResource storageResource) throws SnapshotTransferException;
+  public void resumeUpload(StorageResource storageResource) throws SnapshotTransferException;
 
-	public void cancelUpload() throws SnapshotTransferException;
+  public void cancelUpload() throws SnapshotTransferException;
 
-	public void download(StorageResource storageResource) throws SnapshotTransferException;
+  public void download(StorageResource storageResource) throws SnapshotTransferException;
 
-	public void delete() throws SnapshotTransferException;
+  public void delete() throws SnapshotTransferException;
 
-	public Long getSizeInBytes() throws SnapshotTransferException;
+  public Long getSizeInBytes() throws SnapshotTransferException;
 }

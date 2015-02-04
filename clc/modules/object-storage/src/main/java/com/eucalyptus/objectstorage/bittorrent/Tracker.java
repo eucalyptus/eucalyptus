@@ -62,87 +62,88 @@
 
 package com.eucalyptus.objectstorage.bittorrent;
 
+import java.io.File;
+import java.util.Collection;
+
+import org.apache.log4j.Logger;
+
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.util.StreamConsumer;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
-import org.apache.log4j.Logger;
-
-import java.io.File;
-import java.util.Collection;
-
 public class Tracker extends Thread {
-	private static Logger LOG = Logger.getLogger( Tracker.class );
-	private static Tracker tracker;
+  private static Logger LOG = Logger.getLogger(Tracker.class);
+  private static Tracker tracker;
 
-	private Process proc;
+  private Process proc;
 
-	public static void initialize() {
-		tracker = new Tracker();
-		if(tracker.exists())  {
-			ObjectStorageProperties.enableTorrents = true;
-			tracker.start();
-			Runtime.getRuntime().addShutdownHook(new Thread()
-			{
-				public void run() {
-					tracker.bye();
-					Collection<TorrentClient> torrentClients = Torrents.getClients();
-					for(TorrentClient torrentClient : torrentClients) {
-						torrentClient.bye();
-					}
-				}
-			});
-		} else {
-			LOG.warn("bttrack not found (bittorrent installed?). Torrent support disabled (non critical).");
-		}
-	}
+  public static void initialize() {
+    tracker = new Tracker();
+    if (tracker.exists()) {
+      ObjectStorageProperties.enableTorrents = true;
+      tracker.start();
+      Runtime.getRuntime().addShutdownHook(new Thread() {
+        public void run() {
+          tracker.bye();
+          Collection<TorrentClient> torrentClients = Torrents.getClients();
+          for (TorrentClient torrentClient : torrentClients) {
+            torrentClient.bye();
+          }
+        }
+      });
+    } else {
+      LOG.warn("bttrack not found (bittorrent installed?). Torrent support disabled (non critical).");
+    }
+  }
 
-	public boolean exists() {		
-		try {
-			return (findTracker().length() > 0);
-		} catch (EucalyptusCloudException e) {
-			return false;
-		}
-	}
+  public boolean exists() {
+    try {
+      return (findTracker().length() > 0);
+    } catch (EucalyptusCloudException e) {
+      return false;
+    }
+  }
 
-	private String findTracker() throws EucalyptusCloudException {
-		return SystemUtil.run(new String[]{ObjectStorageProperties.TRACKER_BINARY});
-	}
+  private String findTracker() throws EucalyptusCloudException {
+    return SystemUtil.run(new String[] {ObjectStorageProperties.TRACKER_BINARY});
+  }
 
-	public void run() {
-		track();
-	}
+  public void run() {
+    track();
+  }
 
-	private void track() {
-		new File(ObjectStorageProperties.TRACKER_DIR).mkdirs();
-		try {
-			Runtime rt = Runtime.getRuntime();
-			proc = rt.exec(new String[]{ObjectStorageProperties.TRACKER_BINARY, "--port", ObjectStorageProperties.TRACKER_PORT, "--dfile", ObjectStorageProperties.TRACKER_DIR + "dstate", "--logfile", ObjectStorageProperties.TRACKER_DIR + "tracker.log"});
-			StreamConsumer error = new StreamConsumer(proc.getErrorStream());
-			StreamConsumer output = new StreamConsumer(proc.getInputStream());
-			error.start();
-			output.start();
-			Thread.sleep(300);
-			String errValue = error.getReturnValue();
-			if(errValue.length() > 0) {
-				if(!errValue.contains("already in use"))
-					LOG.warn(errValue);
-			}
-		} catch (Exception t) {
-			t.printStackTrace();
-		}
-	}
+  private void track() {
+    new File(ObjectStorageProperties.TRACKER_DIR).mkdirs();
+    try {
+      Runtime rt = Runtime.getRuntime();
+      proc =
+          rt.exec(new String[] {ObjectStorageProperties.TRACKER_BINARY, "--port", ObjectStorageProperties.TRACKER_PORT, "--dfile",
+              ObjectStorageProperties.TRACKER_DIR + "dstate", "--logfile", ObjectStorageProperties.TRACKER_DIR + "tracker.log"});
+      StreamConsumer error = new StreamConsumer(proc.getErrorStream());
+      StreamConsumer output = new StreamConsumer(proc.getInputStream());
+      error.start();
+      output.start();
+      Thread.sleep(300);
+      String errValue = error.getReturnValue();
+      if (errValue.length() > 0) {
+        if (!errValue.contains("already in use"))
+          LOG.warn(errValue);
+      }
+    } catch (Exception t) {
+      t.printStackTrace();
+    }
+  }
 
-	public void bye() {
-		if(proc != null)
-			proc.destroy();
-	}
+  public void bye() {
+    if (proc != null)
+      proc.destroy();
+  }
 
-	public static void die() {
-		if(tracker != null) {
-			tracker.bye();
-		}
-	}
+  public static void die() {
+    if (tracker != null) {
+      tracker.bye();
+    }
+  }
 }

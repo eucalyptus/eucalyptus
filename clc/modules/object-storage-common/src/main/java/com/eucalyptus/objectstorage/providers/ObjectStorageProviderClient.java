@@ -84,146 +84,112 @@ import com.eucalyptus.objectstorage.msgs.UploadPartType;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 /**
- * Class that any ObjectStorageProvider client implementation must extend.
- * This is the interface used by the ObjectStorageGateway to invoke operations
+ * Class that any ObjectStorageProvider client implementation must extend. This is the interface used by the ObjectStorageGateway to invoke operations
  * on the provider backend.
+ * 
  * @author Zach Hill <zhill@eucalyptus.com>
  * @author Neil Soman <neil@eucalyptus.com>
  *
  */
 public interface ObjectStorageProviderClient {
-	/*
-	 * Service lifecycle operations
-	 */
-	public void checkPreconditions() throws EucalyptusCloudException;
-	public void initialize() throws EucalyptusCloudException;
-	public void check() throws EucalyptusCloudException;
-	public void start() throws EucalyptusCloudException;
-	public void stop() throws EucalyptusCloudException;
-	public void enable() throws EucalyptusCloudException;
-	public void disable() throws EucalyptusCloudException;
+  /*
+   * Service lifecycle operations
+   */
+  public void checkPreconditions() throws EucalyptusCloudException;
 
-	/* 
-	 * -------------------------
-	 * Service Operations
-	 * -------------------------
-	 */
+  public void initialize() throws EucalyptusCloudException;
 
-	/**
-	 * List all buckets accessible by the user.
-	 * @param request
-	 * @return
-	 * @throws EucalyptusCloudException
-	 */
-	public ListAllMyBucketsResponseType listAllMyBuckets(
-			ListAllMyBucketsType request) throws EucalyptusCloudException;
+  public void check() throws EucalyptusCloudException;
 
-	/*
-	 * -------------------------
-	 * Bucket Operations
-	 * -------------------------
-	 */
-	/**
-	 * Handles a HEAD request to the bucket. Just returns 200ok if bucket exists and user has access. Otherwise
-	 * returns 404 if not found or 403 if no accesss.
-	 * @param request
-	 * @return
-	 * @throws S3Exception
-	 */
-	public HeadBucketResponseType headBucket(HeadBucketType request)
-			throws S3Exception;
+  public void start() throws EucalyptusCloudException;
 
-	public CreateBucketResponseType createBucket(
-			CreateBucketType request) throws S3Exception;
+  public void stop() throws EucalyptusCloudException;
 
-	public DeleteBucketResponseType deleteBucket(
-			DeleteBucketType request) throws S3Exception;
+  public void enable() throws EucalyptusCloudException;
 
-	public GetBucketAccessControlPolicyResponseType getBucketAccessControlPolicy(
-			GetBucketAccessControlPolicyType request)
-					throws S3Exception;
+  public void disable() throws EucalyptusCloudException;
 
-	public ListBucketResponseType listBucket(ListBucketType request)
-			throws S3Exception;
+  /*
+   * ------------------------- Service Operations -------------------------
+   */
 
-	public SetBucketAccessControlPolicyResponseType setBucketAccessControlPolicy(
-			SetBucketAccessControlPolicyType request)
-			throws S3Exception;
-	
-	public GetBucketLocationResponseType getBucketLocation(
-			GetBucketLocationType request) throws S3Exception;
+  /**
+   * List all buckets accessible by the user.
+   * 
+   * @param request
+   * @return
+   * @throws EucalyptusCloudException
+   */
+  public ListAllMyBucketsResponseType listAllMyBuckets(ListAllMyBucketsType request) throws EucalyptusCloudException;
 
-	public SetBucketLoggingStatusResponseType setBucketLoggingStatus(
-			SetBucketLoggingStatusType request) throws S3Exception;
+  /*
+   * ------------------------- Bucket Operations -------------------------
+   */
+  /**
+   * Handles a HEAD request to the bucket. Just returns 200ok if bucket exists and user has access. Otherwise returns 404 if not found or 403 if no
+   * accesss.
+   * 
+   * @param request
+   * @return
+   * @throws S3Exception
+   */
+  public HeadBucketResponseType headBucket(HeadBucketType request) throws S3Exception;
 
-	public GetBucketLoggingStatusResponseType getBucketLoggingStatus(
-			GetBucketLoggingStatusType request) throws S3Exception;
+  public CreateBucketResponseType createBucket(CreateBucketType request) throws S3Exception;
 
-	public GetBucketVersioningStatusResponseType getBucketVersioningStatus(
-			GetBucketVersioningStatusType request)
-					throws S3Exception;
+  public DeleteBucketResponseType deleteBucket(DeleteBucketType request) throws S3Exception;
 
-	public SetBucketVersioningStatusResponseType setBucketVersioningStatus(
-			SetBucketVersioningStatusType request)
-					throws S3Exception;
+  public GetBucketAccessControlPolicyResponseType getBucketAccessControlPolicy(GetBucketAccessControlPolicyType request) throws S3Exception;
 
-	public ListVersionsResponseType listVersions(
-			ListVersionsType request) throws S3Exception;
+  public ListBucketResponseType listBucket(ListBucketType request) throws S3Exception;
 
-	/*
-	 * -------------------------
-	 * Object Operations
-	 * ------------------------- 
-	 */
-	public PutObjectResponseType putObject(PutObjectType request, InputStream inputData)
-			throws S3Exception;
+  public SetBucketAccessControlPolicyResponseType setBucketAccessControlPolicy(SetBucketAccessControlPolicyType request) throws S3Exception;
 
-	public PostObjectResponseType postObject(PostObjectType request)
-			throws S3Exception;
+  public GetBucketLocationResponseType getBucketLocation(GetBucketLocationType request) throws S3Exception;
 
-	public DeleteObjectResponseType deleteObject(
-			DeleteObjectType request) throws S3Exception;
+  public SetBucketLoggingStatusResponseType setBucketLoggingStatus(SetBucketLoggingStatusType request) throws S3Exception;
 
-	public GetObjectAccessControlPolicyResponseType getObjectAccessControlPolicy(
-			GetObjectAccessControlPolicyType request)
-					throws S3Exception;
+  public GetBucketLoggingStatusResponseType getBucketLoggingStatus(GetBucketLoggingStatusType request) throws S3Exception;
 
-	public SetObjectAccessControlPolicyResponseType setObjectAccessControlPolicy(
-			SetObjectAccessControlPolicyType request)
-					throws S3Exception;
+  public GetBucketVersioningStatusResponseType getBucketVersioningStatus(GetBucketVersioningStatusType request) throws S3Exception;
 
-	public GetObjectResponseType getObject(GetObjectType request)
-			throws S3Exception;
+  public SetBucketVersioningStatusResponseType setBucketVersioningStatus(SetBucketVersioningStatusType request) throws S3Exception;
 
-	public GetObjectExtendedResponseType getObjectExtended(
-			GetObjectExtendedType request) throws S3Exception;
+  public ListVersionsResponseType listVersions(ListVersionsType request) throws S3Exception;
 
-	public HeadObjectResponseType headObject(HeadObjectType request)
-			throws S3Exception;
+  /*
+   * ------------------------- Object Operations -------------------------
+   */
+  public PutObjectResponseType putObject(PutObjectType request, InputStream inputData) throws S3Exception;
 
-	public CopyObjectResponseType copyObject(CopyObjectType request)
-			throws S3Exception;
+  public PostObjectResponseType postObject(PostObjectType request) throws S3Exception;
 
-	public DeleteVersionResponseType deleteVersion(
-			DeleteVersionType request) throws S3Exception;
+  public DeleteObjectResponseType deleteObject(DeleteObjectType request) throws S3Exception;
 
-	public abstract InitiateMultipartUploadResponseType initiateMultipartUpload(
-			InitiateMultipartUploadType request) throws S3Exception;
+  public GetObjectAccessControlPolicyResponseType getObjectAccessControlPolicy(GetObjectAccessControlPolicyType request) throws S3Exception;
 
-	public abstract UploadPartResponseType uploadPart(
-			UploadPartType request, InputStream dataContent) throws S3Exception;
+  public SetObjectAccessControlPolicyResponseType setObjectAccessControlPolicy(SetObjectAccessControlPolicyType request) throws S3Exception;
 
-	public abstract CompleteMultipartUploadResponseType completeMultipartUpload(
-			CompleteMultipartUploadType request) throws S3Exception;
+  public GetObjectResponseType getObject(GetObjectType request) throws S3Exception;
 
-	public abstract AbortMultipartUploadResponseType abortMultipartUpload(
-			AbortMultipartUploadType request) throws S3Exception;
+  public GetObjectExtendedResponseType getObjectExtended(GetObjectExtendedType request) throws S3Exception;
 
-	public abstract ListPartsResponseType listParts(
-			ListPartsType request) throws S3Exception;
-	
-	public abstract ListMultipartUploadsResponseType listMultipartUploads(
-			ListMultipartUploadsType request) throws S3Exception;
-	
+  public HeadObjectResponseType headObject(HeadObjectType request) throws S3Exception;
+
+  public CopyObjectResponseType copyObject(CopyObjectType request) throws S3Exception;
+
+  public DeleteVersionResponseType deleteVersion(DeleteVersionType request) throws S3Exception;
+
+  public abstract InitiateMultipartUploadResponseType initiateMultipartUpload(InitiateMultipartUploadType request) throws S3Exception;
+
+  public abstract UploadPartResponseType uploadPart(UploadPartType request, InputStream dataContent) throws S3Exception;
+
+  public abstract CompleteMultipartUploadResponseType completeMultipartUpload(CompleteMultipartUploadType request) throws S3Exception;
+
+  public abstract AbortMultipartUploadResponseType abortMultipartUpload(AbortMultipartUploadType request) throws S3Exception;
+
+  public abstract ListPartsResponseType listParts(ListPartsType request) throws S3Exception;
+
+  public abstract ListMultipartUploadsResponseType listMultipartUploads(ListMultipartUploadsType request) throws S3Exception;
 
 }

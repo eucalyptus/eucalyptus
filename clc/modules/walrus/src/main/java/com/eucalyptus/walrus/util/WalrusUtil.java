@@ -78,51 +78,56 @@ public class WalrusUtil {
 
   public static BaseMessage convertErrorMessage(ExceptionResponseType errorMessage) {
     Throwable ex = errorMessage.getException();
-    String correlationId = errorMessage.getCorrelationId( );
+    String correlationId = errorMessage.getCorrelationId();
     BaseMessage errMsg = null;
-    if( ( errMsg = convertException( correlationId, ex ) ) == null ) {
+    if ((errMsg = convertException(correlationId, ex)) == null) {
       errMsg = errorMessage;
     }
     return errMsg;
   }
-	public static BaseMessage convertErrorMessage(EucalyptusErrorMessageType errorMessage) {
-		Throwable ex = errorMessage.getException();
-		String correlationId = errorMessage.getCorrelationId( );
-    BaseMessage errMsg = null;
-		if( ( errMsg = convertException( correlationId, ex ) ) == null ) {
-		  errMsg = errorMessage;
-		}
-		return errMsg;
-	}
-  private static BaseMessage convertException( String correlationId, Throwable ex ) {
-    BaseMessage errMsg;
-    if(ex instanceof WalrusException) {
-			WalrusException e = (WalrusException) ex;
-			errMsg = new WalrusErrorMessageType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), correlationId, Internets.localHostAddress( ), e.getLogData());
-			errMsg.setCorrelationId( correlationId );
-			return errMsg;
-		} else {
-		  return null;
-		}
-  }
-	
-	public static String URLdecode(String objectKey) throws UnsupportedEncodingException {
-		return URLDecoder.decode(objectKey, "UTF-8");
-	}
 
-	public static String[] getTarget(String operationPath) {
-		operationPath = operationPath.replaceAll("^/{2,}", "/"); // If its in the form "/////bucket/key", change it to "/bucket/key"
-		if (operationPath.startsWith("/")) { // If its in the form "/bucket/key", change it to "bucket/key"
-			operationPath = operationPath.substring(1);
-		}
-		String[] parts = operationPath.split("/", 2); // Split into a maximum of two parts [bucket, key]
-		if (parts != null) {
-			if(parts.length == 1 && Strings.isNullOrEmpty(parts[0])) { // Splitting empty string will lead one part, check if the part is empty
-				return null;
-			} else if (parts.length == 2 && Strings.isNullOrEmpty(parts[1])) { // Splitting "bucket/" will lead to two parts where the second one is empty, send only bucket
-				return new String [] {parts[0]};
-			}
-		}
-		return parts;
-	}
+  public static BaseMessage convertErrorMessage(EucalyptusErrorMessageType errorMessage) {
+    Throwable ex = errorMessage.getException();
+    String correlationId = errorMessage.getCorrelationId();
+    BaseMessage errMsg = null;
+    if ((errMsg = convertException(correlationId, ex)) == null) {
+      errMsg = errorMessage;
+    }
+    return errMsg;
+  }
+
+  private static BaseMessage convertException(String correlationId, Throwable ex) {
+    BaseMessage errMsg;
+    if (ex instanceof WalrusException) {
+      WalrusException e = (WalrusException) ex;
+      errMsg =
+          new WalrusErrorMessageType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), correlationId,
+              Internets.localHostAddress(), e.getLogData());
+      errMsg.setCorrelationId(correlationId);
+      return errMsg;
+    } else {
+      return null;
+    }
+  }
+
+  public static String URLdecode(String objectKey) throws UnsupportedEncodingException {
+    return URLDecoder.decode(objectKey, "UTF-8");
+  }
+
+  public static String[] getTarget(String operationPath) {
+    operationPath = operationPath.replaceAll("^/{2,}", "/"); // If its in the form "/////bucket/key", change it to "/bucket/key"
+    if (operationPath.startsWith("/")) { // If its in the form "/bucket/key", change it to "bucket/key"
+      operationPath = operationPath.substring(1);
+    }
+    String[] parts = operationPath.split("/", 2); // Split into a maximum of two parts [bucket, key]
+    if (parts != null) {
+      if (parts.length == 1 && Strings.isNullOrEmpty(parts[0])) { // Splitting empty string will lead one part, check if the part is empty
+        return null;
+      } else if (parts.length == 2 && Strings.isNullOrEmpty(parts[1])) { // Splitting "bucket/" will lead to two parts where the second one is empty,
+                                                                         // send only bucket
+        return new String[] {parts[0]};
+      }
+    }
+    return parts;
+  }
 }

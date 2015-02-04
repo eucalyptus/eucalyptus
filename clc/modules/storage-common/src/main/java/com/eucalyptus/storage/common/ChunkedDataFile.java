@@ -71,11 +71,9 @@ import org.jboss.netty.handler.stream.ChunkedFile;
 import edu.ucsb.eucalyptus.constants.IsData;
 
 public class ChunkedDataFile extends ChunkedFile implements IsData {
-	private static Logger LOG = Logger.getLogger(ChunkedDataFile.class);
+  private static Logger LOG = Logger.getLogger(ChunkedDataFile.class);
 
-	public ChunkedDataFile(RandomAccessFile file, long offset, long length,
-			int chunkSize) throws IOException {
-		super(file, offset, length, chunkSize);
-	}		
+  public ChunkedDataFile(RandomAccessFile file, long offset, long length, int chunkSize) throws IOException {
+    super(file, offset, length, chunkSize);
+  }
 }
-

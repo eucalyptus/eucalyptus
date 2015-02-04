@@ -66,76 +66,78 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableIdentifier;
 
 @Entity
-@PersistenceContext(name="eucalyptus_storage")
-@Table( name = "ISCSIMetadata" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ConfigurableClass(root = "storage", description = "Storage controller ISCSI meta info", singleton=false, deferred = true)
+@PersistenceContext(name = "eucalyptus_storage")
+@Table(name = "ISCSIMetadata")
+@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+@ConfigurableClass(root = "storage", description = "Storage controller ISCSI meta info", singleton = false, deferred = true)
 public class ISCSIMetaInfo extends LVMMetaInfo {
-	@ConfigurableIdentifier
-	@Column(name = "hostname")
-	private String hostName;
-	@ConfigurableField( description = "Prefix for ISCSI device", displayName = "ISCSI Prefix", type = ConfigurableFieldType.PRIVATE)
-	@Column(name = "store_prefix")
-	private String storePrefix;
-	@Column(name = "store_number")
-	private Integer storeNumber;
-	@ConfigurableField( description = "Next Target ID for ISCSI device", displayName = "Next Target ID", type = ConfigurableFieldType.PRIVATE)
-	@Column(name = "tid")
-	private Integer tid;
-	@Column(name = "store_user")
-	private String storeUser;
+  @ConfigurableIdentifier
+  @Column(name = "hostname")
+  private String hostName;
+  @ConfigurableField(description = "Prefix for ISCSI device", displayName = "ISCSI Prefix", type = ConfigurableFieldType.PRIVATE)
+  @Column(name = "store_prefix")
+  private String storePrefix;
+  @Column(name = "store_number")
+  private Integer storeNumber;
+  @ConfigurableField(description = "Next Target ID for ISCSI device", displayName = "Next Target ID", type = ConfigurableFieldType.PRIVATE)
+  @Column(name = "tid")
+  private Integer tid;
+  @Column(name = "store_user")
+  private String storeUser;
 
-	public ISCSIMetaInfo() {}
+  public ISCSIMetaInfo() {}
 
-	public ISCSIMetaInfo(String hostName) {
-		this.hostName = hostName;
-	}
+  public ISCSIMetaInfo(String hostName) {
+    this.hostName = hostName;
+  }
 
-	public String getStorePrefix() {
-		return storePrefix;
-	}
+  public String getStorePrefix() {
+    return storePrefix;
+  }
 
-	public void setStorePrefix(String store_prefix) {
-		this.storePrefix = store_prefix;
-	}
+  public void setStorePrefix(String store_prefix) {
+    this.storePrefix = store_prefix;
+  }
 
-	public Integer getStoreNumber() {
-		return storeNumber;
-	}
+  public Integer getStoreNumber() {
+    return storeNumber;
+  }
 
-	public void setStoreNumber(Integer storeNumber) {
-		this.storeNumber = storeNumber;
-	}
+  public void setStoreNumber(Integer storeNumber) {
+    this.storeNumber = storeNumber;
+  }
 
-	public Integer getTid() {
-		return tid;
-	}
+  public Integer getTid() {
+    return tid;
+  }
 
-	public void setTid(Integer tid) {
-		this.tid = tid;
-	}
+  public void setTid(Integer tid) {
+    this.tid = tid;
+  }
 
-	public String getStoreUser() {
-		return storeUser;
-	}
+  public String getStoreUser() {
+    return storeUser;
+  }
 
-	public void setStoreUser(String storeUser) {
-		this.storeUser = storeUser;
-	}
+  public void setStoreUser(String storeUser) {
+    this.storeUser = storeUser;
+  }
 
-	public String getHostName() {
-		return hostName;
-	}
+  public String getHostName() {
+    return hostName;
+  }
 
-	public void setHostName(String hostName) {
-		this.hostName = hostName;
-	}
+  public void setHostName(String hostName) {
+    this.hostName = hostName;
+  }
 }

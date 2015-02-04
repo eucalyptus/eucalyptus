@@ -66,32 +66,26 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.storage.msgs.BucketLogData;
 
-
-
 @SuppressWarnings("serial")
 public class BucketNotEmptyException extends WalrusException {
 
-  public BucketNotEmptyException()
-  {
-    super( "Bucket Not Empty" );
+  public BucketNotEmptyException() {
+    super("Bucket Not Empty");
   }
-  
-  public BucketNotEmptyException(String bucket)
-  {
+
+  public BucketNotEmptyException(String bucket) {
     super("BucketNotEmpty", "The bucket you tried to delete is not empty.", "Bucket", bucket, HttpResponseStatus.CONFLICT);
   }
 
-  public BucketNotEmptyException(String bucket, BucketLogData logData)
-  {
+  public BucketNotEmptyException(String bucket, BucketLogData logData) {
     super("BucketNotEmpty", "The bucket you tried to delete is not empty.", "Bucket", bucket, HttpResponseStatus.CONFLICT, logData);
   }
 
-  public BucketNotEmptyException(Throwable ex)
-  {
+  public BucketNotEmptyException(Throwable ex) {
     super("Bucket Not Empty", ex);
   }
-  public BucketNotEmptyException(String message, Throwable ex)
-  {
-    super(message,ex);
+
+  public BucketNotEmptyException(String message, Throwable ex) {
+    super(message, ex);
   }
 }
