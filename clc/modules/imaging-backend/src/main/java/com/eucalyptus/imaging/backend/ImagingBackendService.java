@@ -36,6 +36,9 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.images.ImageConversionManager;
+import com.eucalyptus.images.ImageInfo;
+import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.imaging.backend.AbstractTaskScheduler.WorkerTask;
 import com.eucalyptus.imaging.common.backend.msgs.CancelConversionTaskResponseType;
 import com.eucalyptus.imaging.common.backend.msgs.CancelConversionTaskType;
@@ -52,6 +55,10 @@ import com.eucalyptus.imaging.common.ImagingBackend;
 import com.eucalyptus.imaging.worker.ImagingServiceLaunchers;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
+import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.VmInstance.Reason;
+import com.eucalyptus.vm.VmInstance.VmState;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
@@ -300,6 +307,26 @@ public class ImagingBackendService {
                 request.getImportTaskId(), request.getInstanceId()));
             ImagingWorkers.retireWorker(request.getInstanceId());
           }
+          if(imagingTask instanceof DiskImagingTask){
+            // terminate all instances that are waiting for the conversion
+            String conversionTaskId = ((DiskImagingTask)imagingTask).getTask().getConversionTaskId();
+            String imageId = null;
+            for( ImageInfo imageInfo:ImageConversionManager.getPartitionedImages() ){
+              if ( imageInfo instanceof MachineImageInfo ) {
+                if ( conversionTaskId.equals( ((MachineImageInfo)imageInfo).getImageConversionId() ) ) {
+                  imageId = imageInfo.getDisplayName();
+                  break;
+                }
+              }
+            }
+            LOG.debug("Image that failed conversion: " + imageId);
+            if ( imageId != null ) {
+              for( VmInstance vm : VmInstances.list( new InstanceByImageId(imageId)) ) {
+                LOG.debug("Shutting down instance: " + vm.getInstanceId());
+                vm.setState( VmState.SHUTTING_DOWN, Reason.FAILED );
+              }
+            }
+          }
           break;
         }
       }else{ // state other than "CONVERTING" is not valid and worker should stop working
@@ -312,6 +339,17 @@ public class ImagingBackendService {
       LOG.warn(String.format("Imaging task %s has been cancelled", request.getImportTaskId()));
     }
     return reply;
+  }
+
+  private class InstanceByImageId implements Predicate<VmInstance> {
+    private String imageId;
+    public InstanceByImageId(String imageId) {
+      this.imageId = imageId;
+    }
+    @Override
+    public boolean apply( final VmInstance input ) {
+      return imageId.equals(input.getImageId());
+    }
   }
 
   public GetInstanceImportTaskResponseType GetInstanceImportTask( GetInstanceImportTaskType request ) throws EucalyptusCloudException {
