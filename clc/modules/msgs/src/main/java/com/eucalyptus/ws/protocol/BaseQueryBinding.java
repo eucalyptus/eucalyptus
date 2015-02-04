@@ -79,6 +79,7 @@ import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.binding.Binding;
+import com.eucalyptus.binding.BindingElementNotFoundException;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.binding.HttpEmbedded;
@@ -181,7 +182,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
                + " in HTTP request: " + httpRequest );
     return null;
   }
-  
+
   @Override
   public Object bind( final MappingHttpRequest httpRequest ) throws BindingException {
     final String operationName = this.extractOperationName( httpRequest );
@@ -202,18 +203,14 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
       }
       if ( currentBinding == null ) {
         //this will necessarily fault.
-        try {
-          targetType = this.getBinding( ).getElementClass( operationName );
-        } catch ( final BindingException ex ) {
-          LOG.error( ex, ex );
-          throw ex;
-        }
+        targetType = this.getBinding( ).getElementClass( operationName );
       }
       fieldMap = this.buildFieldMap( targetType );
       eucaMsg = ( BaseMessage ) targetType.newInstance( );
     } catch ( final BindingException e ) {
-      LOG.debug( "Failed to construct message of type: " + operationName, e );
-      LOG.error( e, e );
+      LOG.debug(
+          "Failed to construct message of type: " + operationName,
+          e instanceof BindingElementNotFoundException ? null : e );
       throw e;
     } catch ( final Exception e ) {
       throw new BindingException( "Failed to construct message of type " + operationName, e );

@@ -98,11 +98,6 @@ public class HttpServerBootstrapper extends Bootstrapper {
                       changeListener = PortChangeListener.class,
                       displayName = "euca.https.port" )
   public static Integer HTTPS_PORT = 8443;
-  @ConfigurableField( description = "Listen to HTTP on this port.",
-                      initial = "" + 8080,
-                      changeListener = PortChangeListener.class,
-                      displayName = "euca.http.port" )
-  public static Integer HTTP_PORT  = 8080;
   private static Server jettyServer;
   @ConfigurableField( initial = "",
                       description = "Http Proxy Host" )
@@ -127,7 +122,6 @@ public class HttpServerBootstrapper extends Bootstrapper {
     }
     jettyServer = new org.eclipse.jetty.server.Server( );
     System.setProperty( "org.eclipse.jetty.util.log.DEBUG", "true" );
-    System.setProperty( "euca.http.port", "" + HTTP_PORT );
     System.setProperty( "euca.https.port", "" + HTTPS_PORT );
     URL defaultConfig = ClassLoader.getSystemResource( "eucalyptus-jetty.xml" );
     XmlConfiguration jettyConfig = new XmlConfiguration( defaultConfig );

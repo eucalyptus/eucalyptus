@@ -253,18 +253,20 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 						}catch(final Exception ex){
 							LOG.warn("unable to delete the old launch configuration", ex);
 						}	
-	          // copy all tags from image to ASG
-	          try {
-	            final List<ImageDetails> images =
-	                EucalyptusActivityTasks.getInstance().describeImages(Lists.newArrayList(emi));
-	            // image should exist at this point
-	            for(ResourceTag tag:images.get(0).getTagSet())
-	              EucalyptusActivityTasks.getInstance().createOrUpdateAutoscalingTags(tag.getKey(), tag.getValue(), asgName);
-	          } catch (final Exception ex) {
-	            LOG.warn("unable to propogate tags from image to ASG", ex);
-	          }
-						LOG.debug(String.format("autoscaling group '%s' was updated", asgName));
-					}
+						// copy all tags from new image to ASG
+            if ( emi != null) {
+              try {
+                final List<ImageDetails> images =
+                  EucalyptusActivityTasks.getInstance().describeImages(Lists.newArrayList(emi));
+                // image should exist at this point
+                for(ResourceTag tag:images.get(0).getTagSet())
+                  EucalyptusActivityTasks.getInstance().createOrUpdateAutoscalingTags(tag.getKey(), tag.getValue(), asgName);
+              } catch (final Exception ex) {
+                LOG.warn("unable to propogate tags from image to ASG", ex);
+              }
+            }
+            LOG.debug(String.format("autoscaling group '%s' was updated", asgName));
+				  }
 				}catch(final EucalyptusCloudException ex){
 					throw ex;
 				}catch(final Exception ex){

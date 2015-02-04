@@ -222,15 +222,10 @@ public class VolumeManager {
         reply.setVolume( newVol.morph( new com.eucalyptus.compute.common.Volume( ) ) );
         return reply;
       } catch ( RuntimeException ex ) {
-        final VolumeSizeExceededException volumeSizeException =
-            Exceptions.findCause( ex, VolumeSizeExceededException.class );
-        if ( volumeSizeException != null ) {
-          throw new ClientComputeException(
-              "VolumeLimitExceeded",
-              "Failed to create volume because of: " + volumeSizeException.getMessage( ) );
-        } else if ( !( ex.getCause( ) instanceof ExecutionException ) ) {
+        if ( !( ex.getCause( ) instanceof ExecutionException ) ) {
           throw handleException( ex );
         } else {
+          LOG.error( ex, ex );
           lastEx = ex;
         }
       }
@@ -713,6 +708,12 @@ public class VolumeManager {
       }
     }
 
+    final VolumeSizeExceededException volumeSizeException = 
+        Exceptions.findCause( e, VolumeSizeExceededException.class );
+    if ( volumeSizeException != null )
+      throw new ClientComputeException(
+          "VolumeLimitExceeded", volumeSizeException.getMessage( ) );
+ 
     LOG.error( e, e );
 
     final ComputeException exception = new ComputeException( "InternalError", String.valueOf( e.getMessage( ) ) );
