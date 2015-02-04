@@ -288,7 +288,8 @@ public class ImagingWorkers {
     setWorkerState(workerId, ImagingWorker.STATE.DECOMMISSIONED);
   }
   
-  private static Set<String> FatalTaskErrors = Sets.newHashSet("FailureToAttachVolume", "FailureToDetachVolume");
+  private static Set<String> FatalTaskErrors = Sets.newHashSet("FailureToAttachVolume", "FailureToDetachVolume",
+      "CertificateFailure");
   public static boolean isFatalError(final String errorCode){
       return FatalTaskErrors.contains(errorCode);
   }
