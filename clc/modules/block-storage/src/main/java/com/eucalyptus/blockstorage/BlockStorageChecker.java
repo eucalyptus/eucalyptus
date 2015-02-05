@@ -120,8 +120,8 @@ public class BlockStorageChecker {
 
   public void cleanSnapshots() {
     LOG.info("Initiating snapshot cleanup for block storage");
-    cleanFailedSnapshots();
     cleanStuckSnapshots();
+    cleanFailedSnapshots();
   }
 
   public void cleanStuckVolumes() {

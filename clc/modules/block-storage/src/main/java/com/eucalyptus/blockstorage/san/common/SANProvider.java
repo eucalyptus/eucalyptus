@@ -68,6 +68,7 @@ package com.eucalyptus.blockstorage.san.common;
 import java.util.ArrayList;
 
 import com.eucalyptus.blockstorage.StorageResource;
+import com.eucalyptus.blockstorage.exceptions.ConnectionInfoNotFoundException;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
@@ -311,7 +312,7 @@ public interface SANProvider {
    */
   public void deleteSnapshotPoint(String parentVolumeId, String snapshotPointId) throws EucalyptusCloudException;
 
-  public boolean checkSANCredentialsExist();
+  public void checkConnectionInfo() throws ConnectionInfoNotFoundException;
 
   /**
    * Checks for the snapshot on the SAN backend and returns true or false accordingly
