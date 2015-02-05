@@ -98,6 +98,11 @@ class TimestampsTest {
     assertEquals( new Date(1358200169581L), Timestamps.parseIso8601Timestamp( "2013-01-14T21:49:29.5819999Z" ) )
     assertEquals( new Date(1358200169581L), Timestamps.parseIso8601Timestamp( "2013-01-14T21:49:29.58199999Z" ) )
     assertEquals( new Date(1358200169581L), Timestamps.parseIso8601Timestamp( "2013-01-14T21:49:29.581999999Z" ) )
+    assertEquals( new Date(1358200169581L), Timestamps.parseIso8601Timestamp( "2013-01-14T14:49:29.581-0700" ) )
+    assertEquals( new Date(1358200169581L), Timestamps.parseIso8601Timestamp( "2013-01-14T14:49:29.581-07" ) )
+    assertEquals( new Date(1358200169581L), Timestamps.parseIso8601Timestamp( "2013-01-14T14:49:29.581-07:00" ) )
+    assertEquals( new Date(1358200169000L), Timestamps.parseIso8601Timestamp( "2013-01-14T14:49:29-07" ) )
+    assertEquals( new Date(1358200169000L), Timestamps.parseIso8601Timestamp( "2013-01-14T14:49:29-07:00"  ) )
   }
 
   @Test
