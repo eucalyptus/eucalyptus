@@ -84,6 +84,48 @@ public class Strings {
   }
 
   /**
+   * Get the substring of text that precedes the match, empty if not found.
+   *
+   * @param match The boundary string to search for
+   * @param text The text to process
+   * @return The substring, null if text was null
+   */
+  public static String substringBefore( @Nonnull  final String match,
+                                        @Nullable final String text ) {
+    if ( text != null ) {
+      final int index = text.indexOf( match );
+      if ( index < 0 ) {
+        return "";
+      } else {
+        return text.substring( 0, index );
+      }
+    } else {
+      return null;
+    }
+  }
+
+  /**
+   * Get the substring of text that follows the match, empty if not found.
+   *
+   * @param match The boundary string to search for
+   * @param text The text to process
+   * @return The substring, null if text was null
+   */
+  public static String substringAfter( @Nonnull  final String match,
+                                       @Nullable final String text ) {
+    if ( text != null ) {
+      final int index = text.indexOf( match );
+      if ( index < 0 ) {
+        return "";
+      } else {
+        return text.substring( index + match.length( ) );
+      }
+    } else {
+      return null;
+    }
+  }
+
+  /**
    * Get a Function for upper casing a String.
    *
    * <P>The returned function will pass through null values.</P>
