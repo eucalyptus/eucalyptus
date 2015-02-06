@@ -1598,6 +1598,7 @@ public class LoadBalancingBackendService {
     try ( final TransactionResource db = Entities.transactionFor( LoadBalancer.class ) ){
       final LoadBalancer update = Entities.uniqueResult(lb);
       update.setHealthCheck(healthyThreshold, interval, target, timeout, unhealthyThreshold);
+      hc.setTarget( update.getHealthCheckTarget( ) );
       Entities.persist(update);
       db.commit();
     }catch(final IllegalArgumentException ex){
