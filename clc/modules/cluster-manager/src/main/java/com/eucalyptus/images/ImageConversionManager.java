@@ -279,8 +279,14 @@ public class ImageConversionManager implements EventListener<ClockTick> {
           systemBuckets.addAll(bucketNames);
         }
       }catch(final Exception ex){
-        ;
+        // probably Object storage is not ready yet
+        LOG.debug("Can't init system buckets.");
+        return;
       }
+    }
+    if (systemBuckets == null) {
+      LOG.warn("Can't init system buckets. Skipping clenup up.");
+      return;
     }
     
     for(final ImageInfo image: images) {
