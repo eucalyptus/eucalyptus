@@ -1101,7 +1101,7 @@ public class VmControl {
           reply.setSriovNetSupport( false );
           break;
         case "userData":
-          reply.setUserData( vm.getUserData( ) == null ? null : Base64.toBase64String( vm.getUserData( ) ) );
+          reply.setUserData( vm.getUserData( ) == null ? "" : Base64.toBase64String( vm.getUserData( ) ) );
           break;
         default:
           throw new ClientComputeException( " InvalidParameterValue", "Invalid value for attribute ("+attribute+")" );
