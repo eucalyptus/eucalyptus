@@ -599,7 +599,7 @@
       <value name="value" field="sriovNetSupport" usage="optional"/>
     </structure>
     <structure name="userData" usage="optional" test-method="hasUserData">
-      <value name="value" field="userData" usage="optional"/>
+      <value name="value" field="userData" usage="optional" test-method="hasNonEmptyUserData"/>
     </structure>
   </mapping>
   <mapping name="ResetInstanceAttribute" class="com.eucalyptus.compute.common.ResetInstanceAttributeType"
