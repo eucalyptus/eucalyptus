@@ -139,15 +139,12 @@ import com.eucalyptus.loadbalancing.common.backend.msgs.DisableAvailabilityZones
 import com.eucalyptus.loadbalancing.common.backend.msgs.DisableAvailabilityZonesForLoadBalancerType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.EnableAvailabilityZonesForLoadBalancerResponseType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.EnableAvailabilityZonesForLoadBalancerType;
-import com.eucalyptus.loadbalancing.common.msgs.AccessLog;
 import com.eucalyptus.loadbalancing.common.msgs.AppCookieStickinessPolicies;
 import com.eucalyptus.loadbalancing.common.msgs.AppCookieStickinessPolicy;
 import com.eucalyptus.loadbalancing.common.msgs.AvailabilityZones;
 import com.eucalyptus.loadbalancing.common.msgs.ConfigureHealthCheckResult;
-import com.eucalyptus.loadbalancing.common.msgs.ConnectionDraining;
 import com.eucalyptus.loadbalancing.common.msgs.ConnectionSettings;
 import com.eucalyptus.loadbalancing.common.msgs.CreateLoadBalancerResult;
-import com.eucalyptus.loadbalancing.common.msgs.CrossZoneLoadBalancing;
 import com.eucalyptus.loadbalancing.common.msgs.DeleteLoadBalancerResult;
 import com.eucalyptus.loadbalancing.common.msgs.DeregisterInstancesFromLoadBalancerResult;
 import com.eucalyptus.loadbalancing.common.msgs.DescribeInstanceHealthResult;
@@ -181,7 +178,6 @@ import com.eucalyptus.loadbalancing.common.backend.msgs.SetLoadBalancerPoliciesO
 import com.eucalyptus.loadbalancing.common.msgs.ListenerDescription;
 import com.eucalyptus.loadbalancing.common.msgs.ListenerDescriptions;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerAttributes;
-import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerDescription;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerDescription;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerDescriptions;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerServoDescription;
@@ -1019,8 +1015,6 @@ public class LoadBalancingBackendService {
 						ctx.setUser(owner);
 						return lb;
 					}catch(Exception ex2){
-						if(ex2 instanceof NoSuchElementException)
-							throw Exceptions.toUndeclared(new LoadBalancingException("Unable to find the loadbalancer (use DNS name if you are Cloud admin)"));
 						throw Exceptions.toUndeclared(ex2);
 					}
 				}
@@ -1604,6 +1598,7 @@ public class LoadBalancingBackendService {
     try ( final TransactionResource db = Entities.transactionFor( LoadBalancer.class ) ){
       final LoadBalancer update = Entities.uniqueResult(lb);
       update.setHealthCheck(healthyThreshold, interval, target, timeout, unhealthyThreshold);
+      hc.setTarget( update.getHealthCheckTarget( ) );
       Entities.persist(update);
       db.commit();
     }catch(final IllegalArgumentException ex){
