@@ -111,6 +111,9 @@ public interface Account extends /*HasId,*/ BasePrincipal, RestrictedType, Seria
   //EUCA-9533 - System account for pre-signed urls in download manifests
   public static final String AWS_EXEC_READ_SYSTEM_ACCOUNT = SYSTEM_ACCOUNT_PREFIX + "aws-exec-read";
 
+  // EUCA-8667 - System account for osg <--> walrus
+  public static final String OBJECT_STORAGE_WALRUS_ACCOUNT = SYSTEM_ACCOUNT_PREFIX + "objectstorage";
+
   public void setName( String name ) throws AuthException;
   
   public List<User> getUsers( ) throws AuthException;

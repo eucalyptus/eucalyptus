@@ -261,6 +261,25 @@ public class Accounts {
 	return user;
   }
 
+  public static User lookupObjectStorageWalrusAccount(boolean ensureActiveKey) throws AuthException {
+    Account system = Accounts.getAccountProvider( ).lookupAccountByName( Account.OBJECT_STORAGE_WALRUS_ACCOUNT );
+    User user = system.lookupAdmin();
+    if (ensureActiveKey) {
+      boolean hasActiveKey = false;
+      for (AccessKey k:user.getKeys()) {
+        if ( k.isActive() ) {
+          hasActiveKey = true;
+          break;
+        }
+      }
+      if (!hasActiveKey) {
+        user.createKey();
+        LOG.debug("Created new user key for " + user.getName());
+      }
+    }
+    return user;
+  }
+
   public static String getFirstActiveAccessKeyId( User user ) throws AuthException {
     for ( AccessKey k : user.getKeys( ) ) {
       if ( k.isActive( ) ) {

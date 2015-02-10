@@ -113,6 +113,8 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
       this.ensureCloudFormationAccountExists();
       //EUCA-9533 - System account for pre-signed urls in download manifests
       this.ensureExecReadAccountExists();
+      //EUCA-8667 - System account for osg <--> walrus
+      this.ensureObjectStorageWalrusAccountExists();
       LdapSync.start( );
     }
     return true;
@@ -271,6 +273,20 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
         LOG.info("Created " + Account.AWS_EXEC_READ_SYSTEM_ACCOUNT + " account");
       } catch (Exception e1) {
         LOG.error("Error during account creation for " + Account.AWS_EXEC_READ_SYSTEM_ACCOUNT, e1);
+      }
+    }
+  }
+
+  //EUCA-8667 - System account for osg <--> walrus
+  private void ensureObjectStorageWalrusAccountExists() throws Exception {
+    try {
+      Accounts.lookupAccountByName( Account.OBJECT_STORAGE_WALRUS_ACCOUNT );
+    } catch ( Exception e ) {
+      try {
+        Accounts.addSystemAccountWithAdmin( Account.OBJECT_STORAGE_WALRUS_ACCOUNT );
+        LOG.info("Created " + Account.OBJECT_STORAGE_WALRUS_ACCOUNT + " account");
+      } catch (Exception e1) {
+        LOG.error("Error during account creation for " + Account.OBJECT_STORAGE_WALRUS_ACCOUNT, e1);
       }
     }
   }

@@ -62,15 +62,23 @@
 
 package com.eucalyptus.walrus.pipeline;
 
-import java.io.UnsupportedEncodingException;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
+import com.google.common.base.Joiner;
+import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
+
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.login.AuthenticationException;
+import com.eucalyptus.auth.login.SecurityContext;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.walrus.WalrusBackend;
+import com.eucalyptus.walrus.auth.WalrusWrappedCredentials;
+import com.eucalyptus.walrus.exceptions.AccessDeniedException;
+import com.eucalyptus.walrus.util.WalrusProperties;
+import com.eucalyptus.walrus.util.WalrusUtil;
+import com.eucalyptus.ws.handlers.MessageStackHandler;
 
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
@@ -86,63 +94,71 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
-import com.eucalyptus.auth.login.AuthenticationException;
-import com.eucalyptus.auth.login.SecurityContext;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.walrus.WalrusBackend;
-import com.eucalyptus.walrus.auth.WalrusWrappedCredentials;
-import com.eucalyptus.walrus.exceptions.AccessDeniedException;
-import com.eucalyptus.walrus.util.WalrusProperties;
-import com.eucalyptus.walrus.util.WalrusUtil;
-import com.eucalyptus.ws.handlers.MessageStackHandler;
-import com.google.common.base.Joiner;
-import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
+import java.io.UnsupportedEncodingException;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+
 
 public class WalrusAuthenticationHandler extends MessageStackHandler {
+
   private static Logger LOG = Logger.getLogger(WalrusAuthenticationHandler.class);
   private static final String AWS_AUTH_TYPE = "AWS";
   private static final String EUCA_AUTH_TYPE = "EUCA2-RSA-SHA256";
   private static final String EUCA_OLD_AUTH_TYPE = "Euca";
-  protected static final String ISO_8601_FORMAT = "yyyyMMdd'T'HHmmss'Z'"; // Use the ISO8601 format
+  protected static final String ISO_8601_FORMAT = "yyyyMMdd'T'HHmmss'Z'"; //Use the ISO8601 format
 
   public static enum SecurityParameter {
-    AWSAccessKeyId, Timestamp, Expires, Signature, Authorization, Date, Content_MD5, Content_Type, SecurityToken,
+    AWSAccessKeyId,
+    Timestamp,
+    Expires,
+    Signature,
+    Authorization,
+    Date,
+    Content_MD5,
+    Content_Type,
+    SecurityToken,
   }
 
   /* The possible fields in an authorization header */
   private static enum AuthorizationField {
-    Type, AccessKeyId, CertFingerPrint, SignedHeaders, Signature
+    Type,
+    AccessKeyId,
+    CertFingerPrint,
+    SignedHeaders,
+    Signature
   }
 
   /**
    * Ensure that only one header for each name exists (i.e. not 2 Authorization headers) Accomplish this by comma-delimited concatenating any
    * duplicates found as per HTTP 1.1 RFC 2616 section 4.2
-   * 
+   *
    * TODO: Also, should convert all headers to lower-case for consistent processing later. This is okay since headers are case-insensitive.
-   * 
+   *
    * in HTTP
-   * 
-   * @param httpRequest
    */
   private static void canonicalizeHeaders(MappingHttpRequest httpRequest) {
-    // Iterate through headers and find duplicates, concatenate their values together and remove from
+    //Iterate through headers and find duplicates, concatenate their values together and remove from
     // request as we find them.
     TreeMap<String, String> headerMap = new TreeMap<String, String>();
     String value = null;
 
-    // Construct a map of the normalized headers, cannot modify in-place since
+    //Construct a map of the normalized headers, cannot modify in-place since
     // conconcurrent-modify exception may result
     for (String header : httpRequest.getHeaderNames()) {
-      // TODO: zhill, put in the map in lower-case form.
+      //TODO: zhill, put in the map in lower-case form.
       headerMap.put(header, Joiner.on(',').join(httpRequest.getHeaders(header)));
     }
 
-    // Remove *all* headers
+    //Remove *all* headers
     httpRequest.clearHeaders();
 
-    // Add the normalized headers back into the request
+    //Add the normalized headers back into the request
     for (String foundHeader : headerMap.keySet()) {
       httpRequest.addHeader(foundHeader, headerMap.get(foundHeader).toString());
     }
@@ -150,8 +166,6 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 
   /**
    * This method exists to clean up a problem encountered periodically where the HTTP headers are duplicated
-   * 
-   * @param httpRequest
    */
   private static void removeDuplicateHeaderValues(MappingHttpRequest httpRequest) {
     List<String> hdrList = null;
@@ -160,7 +174,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
     for (String header : httpRequest.getHeaderNames()) {
       hdrList = httpRequest.getHeaders(header);
 
-      // Only address the specific case where there is exactly one identical copy of the header
+      //Only address the specific case where there is exactly one identical copy of the header
       if (hdrList != null && hdrList.size() == 2 && hdrList.get(0).equals(hdrList.get(1))) {
         foundDup = true;
         fixedHeaders.put(header, Lists.newArrayList(hdrList.get(0)));
@@ -188,7 +202,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
         MappingHttpRequest httpRequest = (MappingHttpRequest) event.getMessage();
 
         removeDuplicateHeaderValues(httpRequest);
-        // Consolidate duplicates, etc.
+        //Consolidate duplicates, etc.
 
         canonicalizeHeaders(httpRequest);
         if (httpRequest.containsHeader(WalrusProperties.Headers.S3UploadPolicy.toString())) {
@@ -203,10 +217,6 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 
   /**
    * Process the authorization header
-   * 
-   * @param authorization
-   * @return
-   * @throws AccessDeniedException
    */
   public static Map<AuthorizationField, String> processAuthorizationHeader(String authorization) throws AccessDeniedException {
     if (Strings.isNullOrEmpty(authorization)) {
@@ -221,7 +231,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
     }
 
     if (AWS_AUTH_TYPE.equals(components[0]) && (components.length == 2 || (components.length == 3 && components[2].startsWith(":")))) {
-      // Expect: components[1] = <AccessKeyId>:<Signature>
+      //Expect: components[1] = <AccessKeyId>:<Signature>
       authMap.put(AuthorizationField.Type, AWS_AUTH_TYPE);
       if (components.length == 2) {
         String[] signatureElements = components[1].split(":");
@@ -232,8 +242,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
         authMap.put(AuthorizationField.Signature, components[2].substring(1).trim());
       }
     } else if (EUCA_AUTH_TYPE.equals(components[0]) && components.length == 4) {
-      // Expect: components[0] = EUCA2-RSA-SHA256 components[1] = <fingerprint of signing certificate> components[2] = <list of signed headers>
-      // components[3] = <Signature>
+      //Expect: components[0] = EUCA2-RSA-SHA256 components[1] = <fingerprint of signing certificate> components[2] = <list of signed headers> components[3] = <Signature>
       authMap.put(AuthorizationField.Type, EUCA_AUTH_TYPE);
       authMap.put(AuthorizationField.CertFingerPrint, components[1].trim());
       authMap.put(AuthorizationField.SignedHeaders, components[2].trim());
@@ -248,29 +257,34 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
   }
 
   /*
-   * Handle S3UploadPolicy optionally sent as headers for bundle-upload calls. Simply verifies the policy and signature of the policy.
+   * Handle S3UploadPolicy optionally sent as headers for bundle-upload calls.
+   * Simply verifies the policy and signature of the policy.
    */
   private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws AccessDeniedException {
     Map<String, String> fields = new HashMap<String, String>();
     String policy = httpRequest.getHeader(WalrusProperties.Headers.S3UploadPolicy.toString());
     fields.put(WalrusProperties.FormField.policy.toString(), policy);
     String policySignature = httpRequest.getHeader(WalrusProperties.Headers.S3UploadPolicySignature.toString());
-    if (policySignature == null)
+    if (policySignature == null) {
       throw new AccessDeniedException("Policy signature must be specified with policy.");
+    }
     String awsAccessKeyId = httpRequest.getHeader(SecurityParameter.AWSAccessKeyId.toString());
-    if (awsAccessKeyId == null)
+    if (awsAccessKeyId == null) {
       throw new AccessDeniedException("AWSAccessKeyID must be specified.");
+    }
     fields.put(WalrusProperties.FormField.signature.toString(), policySignature);
     fields.put(SecurityParameter.AWSAccessKeyId.toString(), awsAccessKeyId);
     String acl = httpRequest.getHeader(WalrusProperties.AMZ_ACL.toString());
-    if (acl != null)
+    if (acl != null) {
       fields.put(WalrusProperties.FormField.acl.toString(), acl);
+    }
     String operationPath = httpRequest.getServicePath().replaceAll(ComponentIds.lookup(WalrusBackend.class).getServicePath(), "");
     String[] target = WalrusUtil.getTarget(operationPath);
     if (target != null) {
       fields.put(WalrusProperties.FormField.bucket.toString(), target[0]);
-      if (target.length > 1)
+      if (target.length > 1) {
         fields.put(WalrusProperties.FormField.key.toString(), target[1]);
+      }
     }
     try {
       UploadPolicyChecker.checkPolicy(httpRequest, fields);
@@ -281,19 +295,16 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
   }
 
   private static class S3Authentication {
+
     /**
      * Authenticate using S3-spec REST authentication
-     * 
-     * @param httpRequest
-     * @param authMap
-     * @throws AccessDeniedException
      */
     private static void authenticate(MappingHttpRequest httpRequest, Map<AuthorizationField, String> authMap) throws AccessDeniedException {
       if (!authMap.get(AuthorizationField.Type).equals(AWS_AUTH_TYPE)) {
         throw new AccessDeniedException("Mismatch between expected and found authentication types");
       }
 
-      // Standard S3 authentication signed by SecretKeyID
+      //Standard S3 authentication signed by SecretKeyID
       String verb = httpRequest.getMethod().getName();
       String date = getDate(httpRequest);
       String addrString = getS3AddressString(httpRequest);
@@ -306,19 +317,26 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
       String data = verb + "\n" + content_md5 + "\n" + content_type + "\n" + date + "\n" + canonicalizedAmzHeaders + addrString;
       String accessKeyId = authMap.get(AuthorizationField.AccessKeyId);
       String signature = authMap.get(AuthorizationField.Signature);
-
+      try {
+        Account account = Accounts.lookupAccessKeyById(accessKeyId).getUser().getAccount();
+        if (!Account.OBJECT_STORAGE_WALRUS_ACCOUNT.equals(account.getName())) {
+          throw new AccessDeniedException("walrus only accepts requests from " + Account.OBJECT_STORAGE_WALRUS_ACCOUNT);
+        }
+      } catch (AuthException e) {
+        throw new AccessDeniedException(e.getMessage());
+      }
       try {
         SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature, securityToken))
             .login();
       } catch (Exception ex) {
-        // Try stripping of the '/services/Walrus' portion of the addrString and retry the signature calc
+        //Try stripping of the '/services/Walrus' portion of the addrString and retry the signature calc
         String servicePath = ComponentIds.lookup(WalrusBackend.class).getServicePath();
         if (addrString.startsWith(servicePath)) {
           try {
             String modifiedAddrString = addrString.replaceFirst(servicePath, "");
             data = verb + "\n" + content_md5 + "\n" + content_type + "\n" + date + "\n" + canonicalizedAmzHeaders + modifiedAddrString;
-            SecurityContext
-                .getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature, securityToken)).login();
+            SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature, securityToken))
+                .login();
           } catch (Exception ex2) {
             LOG.error(ex2);
             throw new AccessDeniedException(ex2.getMessage());
@@ -332,24 +350,18 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 
     /**
      * See if the expires string indicates the message is expired.
-     * 
-     * @param expires
-     * @return
      */
     private static boolean checkExpires(String expires) {
       Long expireTime = Long.parseLong(expires);
       Long currentTime = new Date().getTime() / 1000;
-      if (currentTime > expireTime)
+      if (currentTime > expireTime) {
         return false;
+      }
       return true;
     }
 
     /**
      * Gets the date for S3-spec authentication
-     * 
-     * @param httpRequest
-     * @return
-     * @throws AccessDeniedException
      */
     private static String getDate(MappingHttpRequest httpRequest) throws AccessDeniedException {
       String date;
@@ -360,8 +372,9 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
       } else {
         date = httpRequest.getAndRemoveHeader(SecurityParameter.Date.toString());
         verifyDate = date;
-        if (date == null || date.length() <= 0)
+        if (date == null || date.length() <= 0) {
           throw new AccessDeniedException("User authentication failed. Date must be specified.");
+        }
       }
 
       try {
@@ -369,7 +382,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
         Date currentDate = new Date();
         if (Math.abs(currentDate.getTime() - dateToVerify.getTime()) > WalrusProperties.EXPIRATION_LIMIT) {
           LOG.error("Incoming WalrusBackend message is expired. Current date: " + currentDate.toString() + " Message's Verification Date: "
-              + dateToVerify.toString());
+                    + dateToVerify.toString());
           throw new AccessDeniedException("Message expired. Sorry.");
         }
       } catch (Exception ex) {
@@ -415,7 +428,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
       return result;
     }
 
-    // Old method for getting signature info from Auth header
+    //Old method for getting signature info from Auth header
     private static String[] getSigInfo(String auth_part) {
       int index = auth_part.lastIndexOf(" ");
       String sigString = auth_part.substring(index + 1);
@@ -424,10 +437,6 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 
     /**
      * AWS S3-spec address string, which includes the query parameters
-     * 
-     * @param httpRequest
-     * @return
-     * @throws AccessDeniedException
      */
     private static String getS3AddressString(MappingHttpRequest httpRequest) throws AccessDeniedException {
       String addr = httpRequest.getUri();
@@ -440,16 +449,16 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
       StringBuilder addrString = new StringBuilder(addrStrings[0]);
 
       if (addrStrings.length > 1) {
-        // Split into individual parameter=value strings
+        //Split into individual parameter=value strings
         String[] params = addrStrings[1].split("&");
 
-        // Sort the query parameters before adding them to the canonical string
+        //Sort the query parameters before adding them to the canonical string
         Arrays.sort(params);
         String[] pair = null;
         boolean first = true;
         try {
           for (String qparam : params) {
-            pair = qparam.split("="); // pair[0] = param name, pair[1] = param value if it is present
+            pair = qparam.split("="); //pair[0] = param name, pair[1] = param value if it is present
 
             for (WalrusProperties.SubResource subResource : WalrusProperties.SubResource.values()) {
               if (pair[0].equals(subResource.toString())) {
@@ -470,17 +479,14 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
       return addrString.toString();
     }
 
-  } // End class S3Authentication
+  } //End class S3Authentication
 
   /**
    * Authentication Handler for Walrus REST requests (POST method and SOAP are processed using different handlers)
-   * 
-   * @param httpRequest
-   * @throws AccessDeniedException
    */
   public void handle(MappingHttpRequest httpRequest) throws AccessDeniedException {
-    // Clean up the headers such that no duplicates may exist etc.
-    // sanitizeHeaders(httpRequest);
+    //Clean up the headers such that no duplicates may exist etc.
+    //sanitizeHeaders(httpRequest);
     Map<String, String> parameters = httpRequest.getParameters();
 
     if (httpRequest.containsHeader(SecurityParameter.Authorization.toString())) {
@@ -488,7 +494,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
       Map<AuthorizationField, String> authMap = processAuthorizationHeader(authHeader);
 
       if (AWS_AUTH_TYPE.equals(authMap.get(AuthorizationField.Type))) {
-        // Normally signed request using AccessKeyId/SecretKeyId pair
+        //Normally signed request using AccessKeyId/SecretKeyId pair
         S3Authentication.authenticate(httpRequest, authMap);
         return;
       }

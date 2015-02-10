@@ -152,7 +152,7 @@ import com.google.common.base.Objects;
 /**
  * The provider client that is used by the OSG to communicate with the Walrus backend. Because Walrus is IAM-aware, this provider does *not* perform
  * IAM policy checks itself.
- * 
+ *
  * WalrusProviderClient leverages the AWS Java SDK for the GET/PUT data operations on Walrus. All metadata operations are handled using normal
  * Eucalyptus message delivery
  *
@@ -160,7 +160,7 @@ import com.google.common.base.Objects;
 @ObjectStorageProviders.ObjectStorageProviderClientProperty("walrus")
 public class WalrusProviderClient extends S3ProviderClient {
   private static Logger LOG = Logger.getLogger(WalrusProviderClient.class);
-  private static User systemAdmin = null;
+  private static User osgUser = null;
 
   /**
    * Class for handling the message pass-thru
@@ -168,18 +168,18 @@ public class WalrusProviderClient extends S3ProviderClient {
    */
   protected static class WalrusClient extends SynchronousClient<WalrusRequestType, WalrusBackend> {
     WalrusClient() {
-      super(systemAdmin.getUserId(), WalrusBackend.class);
+      super(osgUser.getUserId(), WalrusBackend.class);
     }
 
     public <REQ extends WalrusRequestType, RES extends WalrusResponseType> RES sendSyncA(final REQ request) throws Exception {
-      request.setUser(systemAdmin);
-      request.setUserId(systemAdmin.getUserId());
+      request.setUser(osgUser);
+      request.setUserId(osgUser.getUserId());
       return AsyncRequests.sendSync(configuration, request);
     }
 
     public <REQ extends WalrusDataRequestType, RES extends WalrusDataResponseType> RES sendSyncADataReq(final REQ request) throws Exception {
-      request.setUser(systemAdmin);
-      request.setUserId(systemAdmin.getUserId());
+      request.setUser(osgUser);
+      request.setUserId(osgUser.getUserId());
       return AsyncRequests.sendSync(configuration, request);
     }
 
@@ -199,7 +199,7 @@ public class WalrusProviderClient extends S3ProviderClient {
   public void initialize() throws EucalyptusCloudException {
     super.initialize();
     try {
-      systemAdmin = Accounts.lookupSystemAdmin();
+      osgUser = Accounts.lookupObjectStorageWalrusAccount(true);
     } catch (AuthException e) {
       LOG.error("Failed to lookup system admin account. Cannot initialize Walrus provider client.", e);
       throw new EucalyptusCloudException(e);
@@ -216,7 +216,7 @@ public class WalrusProviderClient extends S3ProviderClient {
 
   /**
    * Simply looks up the currently enabled Walrus service.
-   * 
+   *
    * @return
    */
   protected WalrusClient getEnabledWalrusClient() throws ObjectStorageException {
@@ -235,18 +235,19 @@ public class WalrusProviderClient extends S3ProviderClient {
    */
   @Override
   protected BasicAWSCredentials mapCredentials(User requestUser) throws AuthException, IllegalArgumentException {
-    List<AccessKey> eucaAdminKeys = systemAdmin.getKeys();
+    List<AccessKey> eucaAdminKeys = osgUser.getKeys();
     if (eucaAdminKeys != null && eucaAdminKeys.size() > 0) {
       return new BasicAWSCredentials(eucaAdminKeys.get(0).getAccessKey(), eucaAdminKeys.get(0).getSecretKey());
     } else {
-      LOG.error("No key found for user " + requestUser.getUserId() + " . Cannot map credentials for call to WalrusBackend backend for data operation");
+      LOG.error(
+          "No key found for user " + requestUser.getUserId() + " . Cannot map credentials for call to WalrusBackend backend for data operation");
       throw new AuthException("No access key found for backend call to WalrusBackend for UserId: " + requestUser.getUserId());
     }
   }
 
   /**
    * Do the request proxying
-   * 
+   *
    * @param request
    * @param walrusRequestClass
    * @param walrusResponseClass
