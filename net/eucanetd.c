@@ -617,7 +617,6 @@ int update_isolation_rules(void)
     int i = 0;
     int rc = 0;
     int ret = 0;
-    int brMacLen = 0;
     char cmd[EUCA_MAX_PATH] = "";
     char *strptra = NULL;
     char *strptrb = NULL;
@@ -661,13 +660,11 @@ int update_isolation_rules(void)
 
     if (gwip && brmac) {
         // The bridge MAC does have a \n character at the end. We must remove it to prevent issues creating the strings below.
-        if ((brMacLen = strlen(brmac)) == 0) {
-            if (brmac[brMacLen - 1] == '\n')
-                brmac[brMacLen - 1] = '\0';
-        }
+        if ((strptra = strchr(brmac, '\n')) != NULL)
+            (*strptra) = '\0';
 
         // Add this one for DHCP to pass since windows may be requesting broadcast responses
-        snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -o vn_i+ -s %s -d Broadcast --ip-proto udp --ip-dport 67:68 -j DROP", brmac);
+        snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -o vn_i+ -s %s -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT", brmac);
         rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
 
         // If we're using the "fake" router option and have some instance running,
