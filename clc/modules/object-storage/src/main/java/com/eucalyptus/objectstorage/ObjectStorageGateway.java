@@ -57,6 +57,21 @@ import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.objectstorage.auth.OsgAuthorizationHandler;
 import com.eucalyptus.objectstorage.bittorrent.Tracker;
+import com.eucalyptus.objectstorage.entities.BucketTags;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidTagErrorException;
+import com.eucalyptus.objectstorage.exceptions.s3.NoSuchTagSetException;
+import com.eucalyptus.objectstorage.exceptions.s3.UnresolvableGrantByEmailAddressException;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingResponseType;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingType;
+import com.eucalyptus.objectstorage.msgs.DeleteMultipleObjectsResponseType;
+import com.eucalyptus.objectstorage.msgs.DeleteMultipleObjectsType;
+import com.eucalyptus.objectstorage.msgs.GetBucketTaggingResponseType;
+import com.eucalyptus.objectstorage.msgs.GetBucketTaggingType;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
+import com.eucalyptus.objectstorage.msgs.SetBucketTaggingResponseType;
+import com.eucalyptus.objectstorage.msgs.SetBucketTaggingType;
+import com.eucalyptus.records.Logs;
+import com.eucalyptus.storage.config.ConfigurationCache;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.entities.BucketTags;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
@@ -184,6 +199,12 @@ import com.eucalyptus.storage.msgs.s3.BucketTag;
 import com.eucalyptus.storage.msgs.s3.BucketTagSet;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
 import com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry;
+import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntry;
+import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntryVersioned;
+import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsError;
+import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsErrorCode;
+import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsMessage;
+import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsMessageReply;
 import com.eucalyptus.storage.msgs.s3.Grant;
 import com.eucalyptus.storage.msgs.s3.Initiator;
 import com.eucalyptus.storage.msgs.s3.LifecycleConfiguration;
@@ -197,6 +218,7 @@ import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.storage.msgs.s3.Upload;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.net.HttpHeaders;
 
@@ -2284,4 +2306,90 @@ public class ObjectStorageGateway implements ObjectStorageService {
       LOG.error(e, e);
     }
   }
+
+  @Override
+  public DeleteMultipleObjectsResponseType deleteMultipleObjects(DeleteMultipleObjectsType request) throws S3Exception {
+    logRequest(request);
+    DeleteMultipleObjectsResponseType reply = request.getReply();
+    DeleteMultipleObjectsMessageReply deleted = new DeleteMultipleObjectsMessageReply();
+    deleted.setDeleted(Lists.<DeleteMultipleObjectsEntryVersioned>newArrayList());
+    deleted.setErrors(Lists.<DeleteMultipleObjectsError>newArrayList());
+    reply.setDeleteResult(deleted);
+    DeleteMultipleObjectsMessage message = request.getDelete();
+    Bucket bucket = ensureBucketExists(request.getBucket());
+    boolean quiet = message.getQuiet() == null ? false : message.getQuiet().booleanValue();
+    reply.setQuiet(new Boolean(quiet));
+    if (quiet) {
+      reply.setStatus(HttpResponseStatus.NO_CONTENT);
+      reply.setStatusMessage("No Content");
+    }
+    if (message.getObjects() != null) {
+      for (DeleteMultipleObjectsEntry entry : message.getObjects()) {
+        DeleteMultipleObjectsEntryVersioned response = null;
+        DeleteMultipleObjectsError error = null;
+        String versionId = entry.getVersionId() != null && !"".equals(entry.getVersionId().trim()) ? entry.getVersionId() : null;
+        String key = entry.getKey();
+        ObjectEntity object = null;
+        String keyFullName = bucket.getBucketName() + "/" + key + (versionId == null ? "" : "?versionId=" + versionId);
+        try {
+          object = ObjectMetadataManagers.getInstance().lookupObject(bucket, key, versionId);
+        } catch (NoSuchEntityException | NoSuchElementException e) {
+          // this is okay, the real S3 just happily pretends to delete objects that don't exist
+          // in fact, if the bucket is versioned, a delete marker will be created :/
+          // this was the case as of Feb 6, 2015
+        } catch (Exception e) {
+          if (!quiet) {
+            LOG.error("Error getting metadata for " + keyFullName);
+            error = generateDeleteError(key, versionId, DeleteMultipleObjectsErrorCode.InternalError, "Internal Error");
+          }
+        }
+        if (object != null && error == null && !OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, object, 0)) {
+          error = generateDeleteError(key, versionId, DeleteMultipleObjectsErrorCode.AccessDenied, "Access Denied");
+        }
+
+        if (error == null) {
+          try {
+            ObjectEntity responseEntity = null;
+            User currentUser = Contexts.lookup().getUser();
+            if (object != null) {
+              responseEntity = OsgObjectFactory.getFactory().logicallyDeleteObject(ospClient, object, currentUser);
+              try {
+                fireObjectUsageEvent(S3ObjectEvent.S3ObjectAction.OBJECTDELETE, bucket.getBucketName(), key, versionId,
+                                     Contexts.lookup().getUser().getUserId(), object.getSize());
+              } catch (Exception e) {
+                LOG.warn("caught exception while attempting to fire reporting event, exception message - " + e.getMessage());
+              }
+            }
+            response = new DeleteMultipleObjectsEntryVersioned();
+            response.setKey(key);
+            response.setVersionId(versionId);
+            if (responseEntity != null && responseEntity.getIsDeleteMarker() != null && responseEntity.getIsDeleteMarker().booleanValue()) {
+              response.setDeleteMarker(Boolean.TRUE);
+              response.setDeleteMarkerVersionId(responseEntity.getVersionId());
+            }
+          } catch (Exception e) {
+            error = generateDeleteError(key, versionId, DeleteMultipleObjectsErrorCode.InternalError, "Internal Error");
+          }
+        }
+        if (!quiet) {
+          if (error != null) {
+            deleted.getErrors().add(error);
+          } else {
+            deleted.getDeleted().add(response);
+          }
+        }
+      }
+    }
+    return reply;
+  }
+
+  private DeleteMultipleObjectsError generateDeleteError(String key, String versionId, DeleteMultipleObjectsErrorCode code, String message) {
+    DeleteMultipleObjectsError error = new DeleteMultipleObjectsError();
+    error.setKey(key);
+    error.setVersionId(versionId);
+    error.setCode(code);
+    error.setMessage(message);
+    return error;
+  }
+
 }

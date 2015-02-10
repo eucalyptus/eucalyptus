@@ -768,6 +768,10 @@
              class="com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingResponseType">
     </mapping>
 
+    <!-- multi-object-delete: POST bucket?delete -->
+    <mapping class="com.eucalyptus.objectstorage.msgs.DeleteMultipleObjectsResponseType" abstract="true">
+        <structure field="deleteResult" map-as="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsMessageReply" usage="optional"/>
+    </mapping>
 
 </binding>
         

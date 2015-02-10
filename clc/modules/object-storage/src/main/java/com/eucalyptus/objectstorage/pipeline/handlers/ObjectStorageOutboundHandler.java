@@ -77,6 +77,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.objectstorage.msgs.CopyObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.CreateBucketResponseType;
+import com.eucalyptus.objectstorage.msgs.DeleteMultipleObjectsResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageResponseType;
@@ -91,6 +92,7 @@ import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyResponseTyp
 import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.common.DateFormatter;
+import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsMessageReply;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -178,7 +180,9 @@ public class ObjectStorageOutboundHandler extends MessageStackHandler {
         // Remove the content in response for certain operations
         if (msg instanceof SetBucketAccessControlPolicyResponseType || msg instanceof SetBucketLifecycleResponseType
             || msg instanceof SetBucketLoggingStatusResponseType || msg instanceof SetBucketVersioningStatusResponseType
-            || msg instanceof SetObjectAccessControlPolicyResponseType || msg instanceof SetBucketTaggingResponseType) {
+            || msg instanceof SetObjectAccessControlPolicyResponseType || msg instanceof SetBucketTaggingResponseType
+            || (msg instanceof DeleteMultipleObjectsResponseType && ((DeleteMultipleObjectsResponseType)msg).getQuiet() != null
+                && ((DeleteMultipleObjectsResponseType)msg).getQuiet().booleanValue())) {
           if (msg instanceof SetObjectAccessControlPolicyResponseType && ((SetObjectAccessControlPolicyResponseType) msg).getVersionId() != null) {
             httpResponse.setHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, ((SetObjectAccessControlPolicyResponseType) msg).getVersionId());
           }

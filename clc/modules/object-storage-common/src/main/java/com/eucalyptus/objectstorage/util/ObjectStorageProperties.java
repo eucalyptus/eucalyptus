@@ -314,6 +314,13 @@ public class ObjectStorageProperties {
     Bucket, Key, RandomKey, VolumeId, S3UploadPolicy, S3UploadPolicySignature
   }
 
+  public enum SubResource {
+    //Per the S3 Dev guide, these must be included in the canonicalized resource:
+    acl, lifecycle, location, logging, notification, partNumber, policy, requestPayment, torrent, uploadId, uploads, versionId, versioning, versions,
+    website, cors, tagging, delete
+  }
+
+
   public enum ExtendedGetHeaders {
     IfModifiedSince, IfUnmodifiedSince, IfMatch, IfNoneMatch, Range
   }
@@ -409,11 +416,6 @@ public class ObjectStorageProperties {
     COPY, REPLACE
   }
 
-  public enum SubResource {
-    // Per the S3 Dev guide, these must be included in the canonicalized resource:
-    acl, lifecycle, location, logging, notification, partNumber, policy, requestPayment, torrent, uploadId, uploads, versionId, versioning, versions, website, cors, tagging
-  }
-
   public enum ResponseHeaderOverrides {
     response_content_type {
       public String toString() {
@@ -486,7 +488,8 @@ public class ObjectStorageProperties {
   }
 
   public enum BucketParameter {
-    acl, location, prefix, maxkeys, delimiter, marker, torrent, logging, versioning, versions, versionidmarker, keymarker, cors, lifecycle, policy, notification, tagging, requestPayment, website, uploads, maxUploads, uploadIdMarker;
+    acl, location, prefix, maxkeys, delimiter, marker, torrent, logging, versioning, versions, versionidmarker, keymarker, cors, lifecycle, policy,
+    notification, tagging, requestPayment, website, uploads, maxUploads, uploadIdMarker, delete
   }
 
   public enum ObjectParameter {

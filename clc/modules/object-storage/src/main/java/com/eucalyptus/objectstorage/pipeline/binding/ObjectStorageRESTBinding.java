@@ -62,38 +62,10 @@
 
 package com.eucalyptus.objectstorage.pipeline.binding;
 
-import java.io.ByteArrayOutputStream;
-import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.lang.reflect.ParameterizedType;
-import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import org.apache.axiom.om.OMElement;
-import org.apache.commons.httpclient.util.DateUtil;
-import org.apache.commons.lang.StringUtils;
-import org.apache.log4j.Logger;
-import org.apache.tools.ant.util.DateUtils;
-import org.apache.xml.dtm.ref.DTMNodeList;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.w3c.dom.Node;
+import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
 
 import com.eucalyptus.auth.policy.key.Iso8601DateParser;
 import com.eucalyptus.auth.principal.User;
@@ -132,6 +104,8 @@ import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.BucketTag;
 import com.eucalyptus.storage.msgs.s3.BucketTagSet;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
+import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntry;
+import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsMessage;
 import com.eucalyptus.storage.msgs.s3.Expiration;
 import com.eucalyptus.storage.msgs.s3.Grant;
 import com.eucalyptus.storage.msgs.s3.Grantee;
@@ -148,15 +122,46 @@ import com.eucalyptus.util.ChannelBufferStreamingInputStream;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.XMLParser;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
-import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
+
+import groovy.lang.GroovyObject;
+
+import org.apache.axiom.om.OMElement;
+import org.apache.commons.httpclient.util.DateUtil;
+import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
+import org.apache.tools.ant.util.DateUtils;
+import org.apache.xml.dtm.ref.DTMNodeList;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.w3c.dom.Node;
+
+import java.io.ByteArrayOutputStream;
+import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.nio.charset.StandardCharsets;
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
-import groovy.lang.GroovyObject;
 
 public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
   protected static Logger LOG = Logger.getLogger(ObjectStorageRESTBinding.class);
@@ -374,63 +379,67 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         operationParams.put("Bucket", target[0]);
         operationParams.put("Operation", verb.toUpperCase() + "." + "BUCKET");
         if (verb.equals(ObjectStorageProperties.HTTPVerb.POST.toString())) {
-          // Handle POST form upload.
-          /*
-           * For multipart-form uploads we get the metadata from the from fields and the first data chunk from the "file" form field
-           */
-          Map formFields = httpRequest.getFormFields();
-          String objectKey = null;
-          String file = (String) formFields.get(ObjectStorageProperties.FormField.file.toString());
-          if (formFields.containsKey(ObjectStorageProperties.FormField.key.toString())) {
-            objectKey = (String) formFields.get(ObjectStorageProperties.FormField.key.toString());
-            objectKey = objectKey.replaceAll("\\$\\{filename\\}", file);
-            operationParams.put("Key", objectKey);
-          }
-          if (formFields.containsKey(ObjectStorageProperties.FormField.acl.toString())) {
-            String acl = (String) formFields.get(ObjectStorageProperties.FormField.acl.toString());
-            httpRequest.addHeader(ObjectStorageProperties.AMZ_ACL, acl);
-          }
-          if (formFields.containsKey(ObjectStorageProperties.FormField.redirect.toString())) {
-            String successActionRedirect = (String) formFields.get(ObjectStorageProperties.FormField.redirect.toString());
-            operationParams.put("SuccessActionRedirect", successActionRedirect);
-          }
-          if (formFields.containsKey(ObjectStorageProperties.FormField.success_action_redirect.toString())) {
-            String successActionRedirect = (String) formFields.get(ObjectStorageProperties.FormField.success_action_redirect.toString());
-            operationParams.put("SuccessActionRedirect", successActionRedirect);
-          }
-          if (formFields.containsKey(ObjectStorageProperties.FormField.success_action_status.toString())) {
-            Integer successActionStatus =
-                Integer.parseInt((String) formFields.get(ObjectStorageProperties.FormField.success_action_status.toString()));
-            if (successActionStatus == 200 || successActionStatus == 201) {
-              operationParams.put("SuccessActionStatus", successActionStatus);
+          if (params.containsKey(ObjectStorageProperties.BucketParameter.delete.toString())) {
+            operationParams.put("delete", getMultiObjectDeleteMessage(httpRequest));
+          } else {
+            //Handle POST form upload.
+            /* For multipart-form uploads we get the metadata from the form fields
+               and the first data chunk from the "file" form field
+            */
+            Map formFields = httpRequest.getFormFields();
+            String objectKey = null;
+            String file = (String) formFields.get(ObjectStorageProperties.FormField.file.toString());
+            if (formFields.containsKey(ObjectStorageProperties.FormField.key.toString())) {
+              objectKey = (String) formFields.get(ObjectStorageProperties.FormField.key.toString());
+              objectKey = objectKey.replaceAll("\\$\\{filename\\}", file);
+              operationParams.put("Key", objectKey);
+            }
+            if (formFields.containsKey(ObjectStorageProperties.FormField.acl.toString())) {
+              String acl = (String) formFields.get(ObjectStorageProperties.FormField.acl.toString());
+              httpRequest.addHeader(ObjectStorageProperties.AMZ_ACL, acl);
+            }
+            if (formFields.containsKey(ObjectStorageProperties.FormField.redirect.toString())) {
+              String successActionRedirect = (String) formFields.get(ObjectStorageProperties.FormField.redirect.toString());
+              operationParams.put("SuccessActionRedirect", successActionRedirect);
+            }
+            if (formFields.containsKey(ObjectStorageProperties.FormField.success_action_redirect.toString())) {
+              String successActionRedirect = (String) formFields.get(ObjectStorageProperties.FormField.success_action_redirect.toString());
+              operationParams.put("SuccessActionRedirect", successActionRedirect);
+            }
+            if (formFields.containsKey(ObjectStorageProperties.FormField.success_action_status.toString())) {
+              Integer successActionStatus =
+                  Integer.parseInt((String) formFields.get(ObjectStorageProperties.FormField.success_action_status.toString()));
+              if (successActionStatus == 200 || successActionStatus == 201) {
+                operationParams.put("SuccessActionStatus", successActionStatus);
+              } else {
+                //Default is 204, as per S3 spec
+                operationParams.put("SuccessActionStatus", 204);
+              }
             } else {
-              // Default is 204, as per S3 spec
               operationParams.put("SuccessActionStatus", 204);
             }
-          } else {
-            operationParams.put("SuccessActionStatus", 204);
-          }
 
-          // Get the content-type of the upload content, not the form itself
-          if (formFields.get(ObjectStorageProperties.FormField.Content_Type.toString()) != null) {
-            operationParams.put("ContentType", formFields.get(ObjectStorageProperties.FormField.Content_Type.toString()));
-          }
+            // Get the content-type of the upload content, not the form itself
+            if (formFields.get(ObjectStorageProperties.FormField.Content_Type.toString()) != null) {
+              operationParams.put("ContentType", formFields.get(ObjectStorageProperties.FormField.Content_Type.toString()));
+            }
 
-          if (formFields.get(ObjectStorageProperties.FormField.x_ignore_filecontentlength.toString()) != null) {
-            operationParams.put("ContentLength", (long) formFields.get(ObjectStorageProperties.FormField.x_ignore_filecontentlength.toString()));
-          } else {
-            throw new MalformedPOSTRequestException("Could not calculate upload content length from request");
-            // if(contentLengthString != null) {
-            // operationParams.put("ContentLength", (new Long(contentLength).toString()));
-            // }
-          }
-          key = target[0] + "." + objectKey;
+            if (formFields.get(ObjectStorageProperties.FormField.x_ignore_filecontentlength.toString()) != null) {
+              operationParams.put("ContentLength", (long) formFields.get(ObjectStorageProperties.FormField.x_ignore_filecontentlength.toString()));
+            } else {
+              throw new MalformedPOSTRequestException("Could not calculate upload content length from request");
+              // if(contentLengthString != null) {
+              // operationParams.put("ContentLength", (new Long(contentLength).toString()));
+              // }
+            }
+            key = target[0] + "." + objectKey;
 
-          // Verify the message content is found.
-          ChannelBuffer buffer = (ChannelBuffer) formFields.get(ObjectStorageProperties.FormField.x_ignore_firstdatachunk.toString());
-          if (buffer == null) {
-            // No content found.
-            throw new MalformedPOSTRequestException("No upload content found");
+            // Verify the message content is found.
+            ChannelBuffer buffer = (ChannelBuffer) formFields.get(ObjectStorageProperties.FormField.x_ignore_firstdatachunk.toString());
+            if (buffer == null) {
+              // No content found.
+              throw new MalformedPOSTRequestException("No upload content found");
+            }
           }
         } else if (ObjectStorageProperties.HTTPVerb.PUT.toString().equals(verb)) {
           if (params.containsKey(ObjectStorageProperties.BucketParameter.logging.toString())) {
@@ -1495,5 +1504,50 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     }
 
     return lifecycleRule;
+  }
+
+  private DeleteMultipleObjectsMessage getMultiObjectDeleteMessage(MappingHttpRequest httpRequest) throws S3Exception {
+    DeleteMultipleObjectsMessage message = new DeleteMultipleObjectsMessage();
+    String rawMessage = httpRequest.getContent().toString(StandardCharsets.UTF_8);
+    if (rawMessage.length() > 0) {
+      try {
+        XMLParser xmlParser = new XMLParser(rawMessage);
+        String quietVal = xmlParser.getValue("//Delete/Quiet");
+        if (quietVal != null && !"".equals(quietVal) && quietVal.trim().startsWith("true")) {
+           message.setQuiet(Boolean.TRUE);
+        }
+        else {
+          message.setQuiet(Boolean.FALSE);
+        }
+        DTMNodeList deletes = xmlParser.getNodes("//Delete/Object");
+        if (deletes == null) {
+          throw new MalformedXMLException("/Delete/Object");
+        }
+        List<DeleteMultipleObjectsEntry> deleteObjList = Lists.newArrayList();
+        for (int idx = 0; idx < deletes.getLength(); idx++) {
+          //lifecycleConfigurationType.getRules().add( extractLifecycleRule( xmlParser, deletes.item(idx) ) );
+          deleteObjList.add(extractDeleteObjectEntry(xmlParser, deletes.item(idx)));
+        }
+        message.setObjects(deleteObjList);
+      }
+      catch (S3Exception e) {
+        throw e;
+      }
+      catch (Exception ex) {
+        MalformedXMLException e = new MalformedXMLException("/LifecycleConfiguration");
+        ex.initCause(ex);
+        throw e;
+      }
+    }
+    return message;
+  }
+
+  private DeleteMultipleObjectsEntry extractDeleteObjectEntry(XMLParser parser, Node node) {
+    DeleteMultipleObjectsEntry entry = new DeleteMultipleObjectsEntry();
+    String objectKey = parser.getValue(node, "Key");
+    String objectVersionId = parser.getValue(node, "VersionId");
+    entry.setKey(objectKey);
+    entry.setVersionId(objectVersionId);
+    return entry;
   }
 }

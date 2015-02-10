@@ -36,6 +36,8 @@ import com.eucalyptus.storage.msgs.s3.AccessControlList
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy
 import com.eucalyptus.storage.msgs.s3.CanonicalUser
 import com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry
+import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsMessage
+import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsMessageReply
 import com.eucalyptus.storage.msgs.s3.Initiator
 import com.eucalyptus.storage.msgs.s3.KeyEntry
 import com.eucalyptus.storage.msgs.s3.LifecycleConfiguration
@@ -964,4 +966,19 @@ public class ListMultipartUploadsResponseType extends ObjectStorageDataResponseT
   Boolean isTruncated;
   List<Upload> uploads = new ArrayList<Upload>();
   ArrayList<CommonPrefixesEntry> commonPrefixes = new ArrayList<CommonPrefixesEntry>();
+}
+
+/* POST /bucket?delete */
+
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_DELETEOBJECT])
+@ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
+@RequiresACLPermission(object = [], bucket = [], ownerOnly = true)
+public class DeleteMultipleObjectsType extends ObjectStorageRequestType {
+    DeleteMultipleObjectsMessage delete;
+}
+
+public class DeleteMultipleObjectsResponseType extends ObjectStorageResponseType {
+    DeleteMultipleObjectsMessageReply deleteResult;
+    Boolean quiet;
 }

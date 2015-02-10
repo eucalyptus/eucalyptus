@@ -35,6 +35,8 @@ import com.eucalyptus.objectstorage.msgs.DeleteBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketType;
+import com.eucalyptus.objectstorage.msgs.DeleteMultipleObjectsResponseType;
+import com.eucalyptus.objectstorage.msgs.DeleteMultipleObjectsType;
 import com.eucalyptus.objectstorage.msgs.DeleteObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteObjectType;
 import com.eucalyptus.objectstorage.msgs.DeleteVersionResponseType;
@@ -171,4 +173,5 @@ public interface ObjectStorageService {
 
   public abstract DeleteBucketTaggingResponseType deleteBucketTagging(DeleteBucketTaggingType request) throws S3Exception;
 
+  public abstract DeleteMultipleObjectsResponseType deleteMultipleObjects(DeleteMultipleObjectsType request) throws S3Exception;
 }

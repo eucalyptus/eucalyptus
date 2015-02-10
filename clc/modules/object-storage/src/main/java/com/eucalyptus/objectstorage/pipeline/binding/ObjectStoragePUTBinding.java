@@ -77,13 +77,14 @@ public class ObjectStoragePUTBinding extends ObjectStorageRESTBinding {
   protected Map<String, String> populateOperationMap() {
     Map<String, String> newMap = new HashMap<>();
 
-    // Bucket operations
+    //Bucket operations
     newMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.acl.toString(), "SetBucketAccessControlPolicy");
     newMap.put(BUCKET + HttpMethod.PUT.toString(), "CreateBucket");
     newMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.logging.toString(), "SetBucketLoggingStatus");
     newMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.versioning.toString(), "SetBucketVersioningStatus");
     newMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "SetBucketLifecycle");
     newMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "SetBucketTagging");
+    newMap.put(BUCKET + HttpMethod.POST.toString() + ObjectStorageProperties.BucketParameter.delete, "DeleteMultipleObjects");
 
     // Object operations
     newMap.put(OBJECT + HttpMethod.PUT.toString() + ObjectStorageProperties.ObjectParameter.acl.toString(), "SetObjectAccessControlPolicy");
@@ -92,12 +93,12 @@ public class ObjectStoragePUTBinding extends ObjectStorageRESTBinding {
 
     // Multipart Uploads
     newMap.put(OBJECT + HttpMethod.PUT.toString() + ObjectStorageProperties.ObjectParameter.partNumber.toString().toLowerCase()
-        + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(), "UploadPart");
+               + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(), "UploadPart");
     newMap.put(OBJECT + HttpMethod.PUT.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase()
-        + ObjectStorageProperties.ObjectParameter.partNumber.toString().toLowerCase(), "UploadPart");
+               + ObjectStorageProperties.ObjectParameter.partNumber.toString().toLowerCase(), "UploadPart");
     newMap.put(OBJECT + HttpMethod.POST.toString() + ObjectStorageProperties.ObjectParameter.uploads.toString(), "InitiateMultipartUpload");
     newMap.put(OBJECT + HttpMethod.POST.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(),
-        "CompleteMultipartUpload");
+               "CompleteMultipartUpload");
 
     return newMap;
   }

@@ -478,3 +478,34 @@ public class SetBucketPolicyResponse extends S3Response {}
 public class DeleteBucketPolicyRequest extends S3Request {}
 public class DeleteBucketPolicyResponse extends S3Response {}
 
+/*
+ * POST /bucket/?delete
+ */
+public class DeleteMultipleObjectsMessage {
+	Boolean quiet;
+	List<DeleteMultipleObjectsEntry> objects;
+}
+public class DeleteMultipleObjectsMessageReply {
+	List<DeleteMultipleObjectsEntryVersioned> deleted;
+	List<DeleteMultipleObjectsError> errors;
+}
+
+public class DeleteMultipleObjectsEntry {
+	String key;
+	String versionId;
+}
+
+public class DeleteMultipleObjectsEntryVersioned extends DeleteMultipleObjectsEntry {
+	Boolean deleteMarker;
+	String deleteMarkerVersionId;
+}
+
+public class DeleteMultipleObjectsError extends DeleteMultipleObjectsEntry {
+	DeleteMultipleObjectsErrorCode code;
+	String message;
+}
+
+public enum DeleteMultipleObjectsErrorCode {
+	AccessDenied,
+	InternalError;
+}
