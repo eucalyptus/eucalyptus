@@ -104,7 +104,7 @@ public class LoadBalancers {
 		return LoadBalancers.getLoadbalancer( ctx.getAccount().getAccountNumber(), lbName );
 	}
 	
-	private static LoadBalancer getLoadbalancer(final String accountNumber, final String lbName){
+	public static LoadBalancer getLoadbalancer(final String accountNumber, final String lbName){
 		 LoadBalancer lb = null;
 		 try ( final TransactionResource db = Entities.transactionFor( LoadBalancer.class ) ) {
 			 lb = Entities.uniqueResult( LoadBalancer.namedByAccountId(accountNumber, lbName)); 
