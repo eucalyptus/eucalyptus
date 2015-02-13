@@ -446,9 +446,13 @@ public class SnapshotManager {
             }
         });
 
-        boolean result = false;
+        final boolean result;
         try {
-            result = Transactions.one(Snapshot.named( ctx.getUserFullName( ).asAccountFullName( ), snapshotId ), modifySnapshotAttribute);
+            result = Transactions.one(
+                Snapshot.named(
+                    ctx.isAdministrator( ) ? null : ctx.getUserFullName( ).asAccountFullName( ),
+                    snapshotId ),
+                modifySnapshotAttribute );
         } catch ( NoSuchElementException ex2 ) {
             throw new ClientComputeException( "InvalidSnapshot.NotFound", "The snapshot '"+request.getSnapshotId( )+"' does not exist." );
         } catch ( ExecutionException ex1 ) {
@@ -464,7 +468,9 @@ public class SnapshotManager {
         final Context ctx = Contexts.lookup( );
         final String snapshotId = normalizeSnapshotIdentifier( request.getSnapshotId( ) );
         try (TransactionResource db = Entities.transactionFor(Snapshot.class)) {
-            Snapshot result = Entities.uniqueResult(Snapshot.named( ctx.getUserFullName( ).asAccountFullName( ), snapshotId));
+            Snapshot result = Entities.uniqueResult( Snapshot.named(
+                ctx.isAdministrator( ) ? null : ctx.getUserFullName( ).asAccountFullName( ),
+                snapshotId ) );
             if( !RestrictedTypes.filterPrivileged( ).apply( result ) ) {
                 throw new EucalyptusCloudException("Not authorized to describe attributes for snapshot " + request.getSnapshotId());
             }

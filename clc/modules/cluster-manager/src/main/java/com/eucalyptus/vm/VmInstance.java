@@ -2328,7 +2328,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return VmStateSet.TORNDOWN.apply( this ) ?
         "" :
         VmNetworkConfig.DEFAULT_IP.equals( Objects.firstNonNull( Strings.emptyToNull( getPublicAddress( ) ), VmNetworkConfig.DEFAULT_IP ) ) ?
-            getDisplayPrivateAddress( ) :
+            getVpcId( ) == null ? getDisplayPrivateAddress( ) : "" :
             getPublicAddress( );
   }
 

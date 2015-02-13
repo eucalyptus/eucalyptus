@@ -650,10 +650,6 @@ int update_isolation_rules(void)
     rc = ebt_chain_add_rule(config->ebt, "nat", "POSTROUTING", "-j EUCA_EBT_NAT_POST");
     rc = ebt_chain_flush(config->ebt, "nat", "EUCA_EBT_NAT_POST");
 
-    // add these for DHCP to pass
-    //    rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT");
-    //    rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-sport 67:68 -j ACCEPT");
-
     rc = gni_find_self_node(globalnetworkinfo, &myself);
     if (!rc) {
         rc = gni_node_get_instances(globalnetworkinfo, myself, NULL, 0, NULL, 0, &instances, &max_instances);
@@ -663,6 +659,14 @@ int update_isolation_rules(void)
     brmac = interface2mac(config->bridgeDev);
 
     if (gwip && brmac) {
+        // The bridge MAC does have a \n character at the end. We must remove it to prevent issues creating the strings below.
+        if ((strptra = strchr(brmac, '\n')) != NULL)
+            (*strptra) = '\0';
+
+        // Add this one for DHCP to pass since windows may be requesting broadcast responses
+        snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -o vn_i+ -s %s -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT", brmac);
+        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
         // If we're using the "fake" router option and have some instance running,
         // we need to respond for out of network ARP request.
         if (config->nc_router && !config->nc_router_ip && (max_instances > 0)) {
@@ -783,7 +787,7 @@ int update_isolation_rules(void)
     }
 
     // DROP everything from the instance by default
-    snprintf(cmd, EUCA_MAX_PATH, "-i vn_i+ -j DROP", vnetinterface);
+    snprintf(cmd, EUCA_MAX_PATH, "-i vn_i+ -j DROP");
     rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
 
     // DROP everything to the instance by default

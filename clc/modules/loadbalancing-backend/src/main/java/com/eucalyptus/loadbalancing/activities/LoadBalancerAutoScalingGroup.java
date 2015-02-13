@@ -21,6 +21,7 @@ package com.eucalyptus.loadbalancing.activities;
 
 import java.util.Collection;
 import java.util.List;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -44,6 +45,7 @@ import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreViewTransform;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
@@ -181,11 +183,11 @@ public class LoadBalancerAutoScalingGroup extends AbstractPersistent {
 		}
     }
 
-	public enum LoadBalancerAutoScalingGroupEntityTransform implements Function<LoadBalancerAutoScalingGroupCoreView, LoadBalancerAutoScalingGroup>{
+	public enum LoadBalancerAutoScalingGroupEntityTransform implements NonNullFunction<LoadBalancerAutoScalingGroupCoreView, LoadBalancerAutoScalingGroup> {
 		INSTANCE;
 
-		@Override
-		@Nullable
+		@Nonnull
+    @Override
 		public LoadBalancerAutoScalingGroup apply(
 				@Nullable LoadBalancerAutoScalingGroupCoreView arg0) {
 			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerAutoScalingGroup.class ) ) {
