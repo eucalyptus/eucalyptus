@@ -101,10 +101,12 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
+
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.blockstorage.exceptions.SnapshotTooLargeException;
 import com.eucalyptus.blockstorage.msgs.DeleteStorageSnapshotResponseType;
 import com.eucalyptus.blockstorage.msgs.DeleteStorageSnapshotType;
 import com.eucalyptus.compute.common.CloudMetadatas;
@@ -176,7 +178,7 @@ public class SnapshotManager {
     Snapshot snap = RestrictedTypes.allocateUnitlessResource( allocator );
     try {
       snap = Snapshots.startCreateSnapshot( volReady, snap );
-    } catch ( EucalyptusCloudException e ) {
+    } catch ( Exception e ) {
       final EntityTransaction db = Entities.get( Snapshot.class );
       try {
         Snapshot entity = Entities.uniqueResult( snap );
@@ -187,7 +189,17 @@ public class SnapshotManager {
       } finally {
         if ( db.isActive() ) db.rollback( );
       }
-      throw e;
+      final SnapshotTooLargeException snapshotTooLargeException =
+          Exceptions.findCause( e, SnapshotTooLargeException.class );
+      if ( snapshotTooLargeException != null ) {
+        throw new ClientComputeException(
+            "SnapshotLimitExceeded", snapshotTooLargeException.getMessage( ) );
+      }
+      if ( !( e.getCause( ) instanceof ExecutionException ) ) {
+        throw handleException( e );
+      } else {
+        throw e;
+      }
     }
 
     try {
