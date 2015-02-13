@@ -367,7 +367,7 @@ public class DatabaseServerProperties {
           onPropertyChange(null, null, null, null, null, newValue, null, null);
       } catch (final Exception e) {
         throw new ConfigurablePropertyException(
-         "Could not change log server to " + newValue, e);
+         "Could not change log server to " + newValue + " due to: " + e.getMessage());
       }
     }
   }
@@ -384,7 +384,7 @@ public class DatabaseServerProperties {
          throw new ConfigurablePropertyException("Invalid number");
       } catch (final Exception e) {
          throw new ConfigurablePropertyException(
-             "Could not change log server port to " + newValue, e);
+             "Could not change log server port to " + newValue + " due to: " + e.getMessage());
       }
     }
   }
@@ -398,7 +398,7 @@ public class DatabaseServerProperties {
              onPropertyChange((String)newValue, null, null, null, null, null, null, null);
          }
        } catch ( final Exception e ) {
-         throw new ConfigurablePropertyException("Could not change EMI ID", e);
+         throw new ConfigurablePropertyException("Could not change EMI ID due to: " + e.getMessage());
        }
      }
    }
@@ -413,7 +413,7 @@ public class DatabaseServerProperties {
             onPropertyChange(null, (String)newValue, null, null, null, null, null, null);
         }
       } catch ( final Exception e ) {
-        throw new ConfigurablePropertyException("Could not change VOLUME ID", e);
+        throw new ConfigurablePropertyException("Could not change VOLUME ID due to: " + e.getMessage());
       }
     }
    }
@@ -429,7 +429,7 @@ public class DatabaseServerProperties {
              onPropertyChange(null, null, (String)newValue, null, null, null, null, null);
          }
        } catch ( final Exception e ) {
-         throw new ConfigurablePropertyException("Could not change instance type", e);
+         throw new ConfigurablePropertyException("Could not change instance type due to: " + e.getMessage());
        }
      }
    }
@@ -443,7 +443,7 @@ public class DatabaseServerProperties {
              onPropertyChange(null, null, null, (String)newValue, null, null, null, null);
          }
        } catch ( final Exception e ) {
-         throw new ConfigurablePropertyException("Could not change key name", e);
+         throw new ConfigurablePropertyException("Could not change key name due to: " + e.getMessage());
        }
      }
    }
@@ -547,7 +547,7 @@ public class DatabaseServerProperties {
          if (t.getValue() != null && !t.getValue().equals(newValue))
            onPropertyChange(null, null, null, null, null, null, null, newValue);
        } catch (final Exception e) {
-         throw new ConfigurablePropertyException("Could not change init script", e);
+         throw new ConfigurablePropertyException("Could not change init script due to: " + e.getMessage());
        }
      }
    }
@@ -612,6 +612,9 @@ public class DatabaseServerProperties {
        ; // already sanitized
      }
      
+     if( !Topology.isEnabledLocally( Eucalyptus.class) )
+       return;
+
      // should find the asg name using the special TAG
      // then create a new launch config and replace the old one
      if((emi!=null && emi.length()>0) || (instanceType!=null && instanceType.length()>0) 
@@ -619,7 +622,7 @@ public class DatabaseServerProperties {
          || (logServer!=null && logServer.length()>0) || (logServerPort!=null && logServerPort.length()>0)
          | initScript!=null ) {
        String asgName = null;
-       LOG.warn("Changing launch configuration");//TODO: remove
+       LOG.info("Changing launch configuration");
        try{
         final List<TagDescription> tags = AutoScalingClient.getInstance().describeAutoScalingTags(null); 
         for(final TagDescription tag : tags){
