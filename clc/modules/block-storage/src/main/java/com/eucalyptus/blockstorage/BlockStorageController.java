@@ -710,7 +710,7 @@ public class BlockStorageController {
             throw new EucalyptusCloudException("Total snapshot size limit is less than or equal to 0");
           }
           if (totalSnapshotSizeLimitExceeded(snapshotId, sourceVolumeInfo.getSize(), maxSize)) {
-            LOG.info("Snapshot " + snapshotId + " exceeds global total snapshot size limit of " + maxSize + "GB");
+            LOG.info("Snapshot " + snapshotId + " exceeds global total snapshot size limit of " + maxSize + "GB (see storage.global_total_snapshot_size_limit_gb configurable property)");
             throw new SnapshotTooLargeException(maxSize);
           }
         }
