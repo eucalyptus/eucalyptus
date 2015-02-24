@@ -89,8 +89,11 @@ public class MonitorCreateStackWorkflowImpl implements MonitorCreateStackWorkflo
       } else {
         throw new InternalFailureException("Unsupported close status for workflow " + closedStatus);
       }
-      Promise<String> setStackStatusPromise = promiseFor(activities.setStackStatus(stackId, accountId,
-        StackEntity.Status.CREATE_FAILED.toString(), statusReason));
+      Promise<String> cancelOutstandingResources = promiseFor(activities.cancelOutstandingCreateResources(stackId, accountId, "Resource creation cancelled"));
+      Promise<String> setStackStatusPromise = waitFor(cancelOutstandingResources) {
+        promiseFor(activities.setStackStatus(stackId, accountId,
+          StackEntity.Status.CREATE_FAILED.toString(), statusReason))
+      };
       return waitFor(setStackStatusPromise) {
         Promise<String> createGlobalStackEventPromise = promiseFor(activities.createGlobalStackEvent(stackId,
           accountId, StackResourceEntity.Status.CREATE_FAILED.toString(), statusReason));
