@@ -43,7 +43,7 @@ yum install ant ant-nodeps apache-ivy axis2-adb axis2-adb-codegen axis2c-devel \
     axis2-codegen axis2c-devel curl-devel gawk git java-1.6.0-openjdk-devel \
     java-1.7.0-openjdk-devel jpackage-utils libvirt-devel libxml2-devel \
     libxslt-devel m2crypto openssl-devel python-devel python-setuptools \
-    rampartc-devel swig xalan-j2-xsltc
+    rampartc-devel swig xalan-j2-xsltc json-c-devel
 
 Install the following runtime dependencies (this is the superset of all
 dependencies. Not all may be required for every component):
@@ -276,7 +276,7 @@ export EUCALYPTUS="/"
 
 On RHEL or CentOS,
 
-export JAVA_HOME="/usr/lib/jvm/jre-1.7.0/"
+export JAVA_HOME="/usr/lib/jvm/java-1.7.0/"
 export JAVA="$JAVA_HOME/bin/java"
 export EUCALYPTUS="/"
 
