@@ -229,6 +229,9 @@ public class PolicyParser {
     if ( values.size( ) < 1 && attachmentType.isPrincipalRequired() ) {
       throw new JSONException( "Empty principal values" );
     }
+    if ( values.size( ) > 0 && !attachmentType.isPrincipalRequired() ) {
+      throw new JSONException( "Policy document should not specify a principal." );
+    }
     boolean notPrincipal = PolicySpec.NOTPRINCIPAL.equals( principalElement );
     return new PrincipalEntity( notPrincipal, PrincipalType.valueOf( principalType ), Sets.newHashSet( values ) );
   }
