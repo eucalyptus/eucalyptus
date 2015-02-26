@@ -89,7 +89,7 @@ import com.eucalyptus.util.RestrictedType;
  */
 @PolicyVendor( PolicySpec.VENDOR_IAM )
 @PolicyResourceType( PolicySpec.IAM_RESOURCE_ACCOUNT )
-public interface Account extends /*HasId,*/ BasePrincipal, RestrictedType, Serializable {
+public interface Account extends BasePrincipal, RestrictedType, Serializable {
   public static final String NOBODY_ACCOUNT = "nobody";
   public static final Long NOBODY_ACCOUNT_ID = 1l;
   /**
@@ -152,9 +152,6 @@ public interface Account extends /*HasId,*/ BasePrincipal, RestrictedType, Seria
   public ServerCertificate lookupServerCertificate(String certName) throws AuthException;
   public List<ServerCertificate> listServerCertificates(String pathPrefix) throws AuthException;
   public void updateServerCeritificate(String certName, String newCertName, String newPath) throws AuthException;
-  
-  public List<Authorization> lookupAccountGlobalAuthorizations( String resourceType ) throws AuthException;
-  public List<Authorization> lookupAccountGlobalQuotas( String resourceType ) throws AuthException;
   
   public String getAccountNumber( );
   public String getCanonicalId( );

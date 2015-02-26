@@ -86,7 +86,6 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.PolicyParseException;
-import com.eucalyptus.auth.Privileged;
 import com.eucalyptus.auth.ServerCertificate;
 import com.eucalyptus.auth.ServerCertificates;
 import com.eucalyptus.auth.entities.ServerCertificateEntity;
@@ -525,9 +524,6 @@ public class EuareService {
       Boolean enabled = request.getEnabled( ) != null ? "true".equalsIgnoreCase( request.getEnabled( ) ) : null;
       Long passwordExpiration = request.getPasswordExpiration( ) != null ? Iso8601DateParser.parse( request.getPasswordExpiration( ) ).getTime( ) : null;
       Privileged.modifyUser( requestUser, account, userFound, request.getNewUserName( ), request.getNewPath( ), enabled, passwordExpiration, null/*info*/ );
-      if ( request.getRegStatus( ) != null ) {
-        userFound.setRegistrationStatus( parseRegStatIgnoreCase( request.getRegStatus( ) ) );
-      }
     } catch ( IllegalArgumentException e ) {
       LOG.error( e, e );
       throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "Invalid registration status " + request.getRegStatus( ) );
@@ -2214,7 +2210,7 @@ public class EuareService {
   
   private void fillUserResultExtra( UserType u, User userFound ) {
     u.setEnabled( userFound.isEnabled().toString() );
-    u.setRegStatus( userFound.getRegistrationStatus().toString() );
+    u.setRegStatus( RegistrationStatus.CONFIRMED.toString( ) );
     u.setPasswordExpiration( new Date( userFound.getPasswordExpires() ).toString() );
   }
   

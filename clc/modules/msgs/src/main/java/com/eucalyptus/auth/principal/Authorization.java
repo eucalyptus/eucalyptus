@@ -62,23 +62,15 @@
 
 package com.eucalyptus.auth.principal;
 
-import java.io.Serializable;
 import java.util.List;
 import java.util.Set;
-import com.eucalyptus.auth.AuthException;
 
-public interface Authorization extends Serializable {
+public interface Authorization {
 
   enum EffectType {
     Deny,
     Allow,
     Limit, // extension to IAM for quota
-  }
-
-  enum Scope {
-    ACCOUNT,
-    GROUP,
-    USER,
   }
 
   EffectType getEffect( );
@@ -87,19 +79,15 @@ public interface Authorization extends Serializable {
 
   String getType( );
   
-  Boolean isNotAction( );
+  boolean isNotAction( );
   
-  Set<String> getActions( ) throws AuthException;
-  
-  Boolean isNotResource( );
-  
-  Set<String> getResources( ) throws AuthException;
-  
-  List<Condition> getConditions( ) throws AuthException;
+  Set<String> getActions( );
 
-  Scope getScope( ) throws AuthException;
+  boolean isNotResource( );
+  
+  Set<String> getResources( );
+  
+  List<Condition> getConditions( );
 
-  String getScopeId( ) throws AuthException;
-
-  Principal getPrincipal() throws AuthException;
+  Principal getPrincipal();
 }

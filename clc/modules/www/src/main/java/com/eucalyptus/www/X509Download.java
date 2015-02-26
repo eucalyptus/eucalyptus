@@ -157,7 +157,7 @@ public class X509Download extends HttpServlet {
     try {
       Account account = Accounts.lookupAccountByName( accountName );
       user = account.lookupUserByName( userName );
-      if ( !user.isEnabled( ) || !RegistrationStatus.CONFIRMED.equals( user.getRegistrationStatus( ) ) ) {
+      if ( !user.isEnabled( ) ) {
         hasError( HttpServletResponse.SC_FORBIDDEN, "Access is not authorized", response );
         return;
       }

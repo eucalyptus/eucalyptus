@@ -99,7 +99,6 @@ public class WsSecLoginModule extends BaseLoginModule<WsSecCredentials> {
         final User user = Accounts.lookupUserByCertificate( cert );
         super.setCredential( cert );
         super.setPrincipal( user );
-        //super.getGroups( ).addAll( Groups.lookupUserGroups( super.getPrincipal( ) ) );
       } catch ( AuthException e ) {
         try {
           if ( !Accounts.lookupCertificate( cert ).isActive( ) ) {

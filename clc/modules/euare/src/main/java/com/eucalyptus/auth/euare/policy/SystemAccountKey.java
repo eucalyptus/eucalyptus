@@ -51,7 +51,7 @@ public class SystemAccountKey implements EuareKey {
   }
 
   @Override
-  public boolean canApply( final String action, final String resourceType ) {
+  public boolean canApply( final String action ) {
     return true;
   }
 }

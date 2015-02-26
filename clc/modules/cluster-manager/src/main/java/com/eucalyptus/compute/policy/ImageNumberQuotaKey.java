@@ -70,7 +70,7 @@ import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.PolicyKey;
 import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.Authorization;
+import com.eucalyptus.auth.principal.PolicyScope;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.component.id.Euare;
@@ -93,7 +93,7 @@ public class ImageNumberQuotaKey extends QuotaKey {
   }
   
   @Override
-  public boolean canApply( final String action, final String resourceType ) {
+  public boolean canApply( final String action ) {
     if ( PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, PolicySpec.EC2_REGISTERIMAGE ).equals( action ) ) {
       return true;
     }
@@ -101,13 +101,13 @@ public class ImageNumberQuotaKey extends QuotaKey {
   }
   
   @Override
-  public String value( final Authorization.Scope scope, final String id, final String resource, final Long quantity ) throws AuthException {
+  public String value( final PolicyScope scope, final String id, final String resource, final Long quantity ) throws AuthException {
     switch ( scope ) {
-      case ACCOUNT:
+      case Account:
         return Long.toString( RestrictedTypes.quantityMetricFunction( ImageMetadata.class ).apply( AccountFullName.getInstance( id ) ) + 1 );
-      case GROUP:
+      case Group:
         return NOT_SUPPORTED;
-      case USER:
+      case User:
         return Long.toString( RestrictedTypes.quantityMetricFunction( ImageMetadata.class ).apply( UserFullName.getInstance( id ) ) + 1 );
     }
     throw new AuthException( "Invalid scope" );

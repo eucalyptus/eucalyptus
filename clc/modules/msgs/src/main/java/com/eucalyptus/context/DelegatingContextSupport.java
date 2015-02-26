@@ -20,6 +20,7 @@
 package com.eucalyptus.context;
 
 import java.net.InetAddress;
+import java.util.List;
 import java.util.Map;
 import javax.security.auth.Subject;
 import org.jboss.netty.channel.Channel;
@@ -27,6 +28,7 @@ import com.eucalyptus.auth.AuthContextSupplier;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Contract;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.http.MappingHttpRequest;
@@ -156,6 +158,11 @@ abstract class DelegatingContextSupport extends Context implements Wrapper<Conte
   public Map<String, String> evaluateKeys( ) throws AuthException {
     return this.delegate.evaluateKeys(); 
  }
+
+  @Override
+  public List<PolicyVersion> loadPolicies( ) throws AuthException {
+    return this.delegate.loadPolicies();
+  }
 
   @Override
   public AuthContextSupplier getAuthContext( ) {

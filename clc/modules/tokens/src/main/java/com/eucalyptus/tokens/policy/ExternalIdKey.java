@@ -51,7 +51,7 @@ public class ExternalIdKey implements Key {
   }
 
   @Override
-  public boolean canApply( final String action, final String resourceType ) {
+  public boolean canApply( final String action ) {
     return PolicySpec.qualifiedName(
         PolicySpec.VENDOR_STS,
         PolicySpec.STS_ASSUMEROLE ).equals( action );

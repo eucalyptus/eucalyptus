@@ -23,14 +23,20 @@ import com.eucalyptus.auth.AuthException
 import com.eucalyptus.auth.api.PolicyEngine
 import com.eucalyptus.auth.policy.ern.Ern
 import com.eucalyptus.auth.policy.ern.EuareErnBuilder
+import com.eucalyptus.auth.principal.PolicyScope
+import com.eucalyptus.auth.principal.PolicyVersion
+import com.eucalyptus.crypto.Digest
+import com.eucalyptus.crypto.util.B64
 import com.google.common.base.Suppliers
 import org.junit.Before
 import org.junit.BeforeClass
 
+import java.nio.charset.StandardCharsets
+
 import static com.eucalyptus.auth.api.PolicyEngine.AuthorizationMatch.All
-import com.eucalyptus.auth.entities.AuthorizationEntity
+
 import com.eucalyptus.auth.entities.PolicyEntity
-import com.eucalyptus.auth.entities.StatementEntity
+
 import com.eucalyptus.auth.principal.Authorization
 import com.eucalyptus.auth.principal.Condition
 import com.eucalyptus.auth.principal.Group
@@ -130,16 +136,19 @@ class PolicyEngineTest {
   }
 
   private void evaluateAuthorization( String policy,
-                                      String requestType,
+                                      String resourceType,
                                       String requestAction,
                                       String resourceAccountNumber,
                                       String resourceName ) {
-    List<Authorization> authorizations = authorizations( PolicyParser.instance.parse( policy ) )
     PolicyEngine engine = new PolicyEngineImpl( accountResolver( ), Suppliers.ofInstance( Boolean.FALSE ) )
-    PolicyEngineImpl.AuthEvaluationContextImpl context = new PolicyEngineImpl.AuthEvaluationContextImpl( requestType, requestAction, user(), [:] as Map<String,String> ){
+    PolicyEngineImpl.AuthEvaluationContextImpl context = new PolicyEngineImpl.AuthEvaluationContextImpl( resourceType, requestAction, user(), [:] as Map<String,String>, [ new PolicyVersion(){
+      @Override String getPolicyVersionId( ) { '1234567890' }
+      @Override String getPolicyName( ) { 'test' }
+      @Override PolicyScope getPolicyScope() { PolicyScope.User }
+      @Override String getPolicy( ) { policy }
+      @Override String getPolicyHash() { B64.standard.encString( Digest.SHA256.digestBinary( getPolicy( ).getBytes( StandardCharsets.UTF_8 ) ) ) }
+    } ] as List<PolicyVersion> ){
       @Override boolean isSystemUser() { true }
-      @Override List<Authorization> lookupGlobalAuthorizations() { [] }
-      @Override List<Authorization> lookupLocalAuthorizations() { authorizations }
     }
     engine.evaluateAuthorization( context, All, resourceAccountNumber, resourceName, [:] )
   }
@@ -153,18 +162,4 @@ class PolicyEngineTest {
     { String account -> "010101010101" } as Function<String, String>
   }
 
-  private List<Authorization> authorizations( PolicyEntity policy ) {
-    policy.statements.collect{ StatementEntity statement ->
-      statement.authorizations.collect { AuthorizationEntity authorization ->
-        new AuthorizationEntityAsAuthorization( authorization )
-    } }.flatten() as List<Authorization>
-  }
-
-  @TupleConstructor private static class AuthorizationEntityAsAuthorization implements Authorization {
-    @Delegate AuthorizationEntity entity
-    @Override List<Condition> getConditions() { [] } //TODO:Conditions from statement
-    @Override Authorization.Scope getScope( ) throws AuthException { Authorization.Scope.USER}
-    @Override String getScopeId( ) throws AuthException { null }
-    @Override Principal getPrincipal() { null }
-  }
 }

@@ -104,7 +104,6 @@ public class Hmacv1LoginModule extends HmacLoginModuleSupport {
     }
     super.setCredential( credentials.getQueryIdCredential( AccessKeys.getKeyType( accessKey ) ) );
     super.setPrincipal( user );
-    //super.getGroups( ).addAll( Groups.lookupUserGroups( super.getPrincipal( ) ) );
     return true;
   }
 

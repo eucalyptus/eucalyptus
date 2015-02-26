@@ -83,6 +83,8 @@ import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.principal.PolicyVersion;
+import com.eucalyptus.auth.principal.PolicyVersions;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.util.MetadataException;
@@ -563,7 +565,8 @@ public class Allocations {
       return context != null ?
           context.getAuthContext( ) :
           Permissions.createAuthContextSupplier(
-              Accounts.lookupUserById( getOwnerFullName().getUserId() ),
+              Accounts.lookupUserById( getOwnerFullName( ).getUserId( ) ),
+              Lists.newArrayList( PolicyVersions.getAdministratorPolicy( ) ),
               Collections.<String,String>emptyMap( ) );
     }
   }

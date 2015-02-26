@@ -26,7 +26,7 @@ import com.eucalyptus.auth.policy.key.KeyUtils;
 import com.eucalyptus.auth.policy.key.PolicyKey;
 import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.Authorization;
+import com.eucalyptus.auth.principal.PolicyScope;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.loadbalancing.common.policy.LoadBalancingPolicySpec;
 import com.eucalyptus.util.OwnerFullName;
@@ -47,25 +47,25 @@ public class LoadBalancerNumberQuotaKey extends QuotaKey {
   }
 
   @Override
-  public final boolean canApply( String action, String resourceType ) {
+  public final boolean canApply( String action ) {
     return PolicySpec.qualifiedName(
         LoadBalancingPolicySpec.VENDOR_LOADBALANCING,
         LoadBalancingPolicySpec.LOADBALANCING_CREATELOADBALANCER ).equals( action );
   }
 
   @Override
-  public final String value( final Authorization.Scope scope,
+  public final String value( final PolicyScope scope,
                              final String id,
                              final String resource,
                              final Long quantity ) throws AuthException {
     final OwnerFullName name;
     switch ( scope ) {
-      case ACCOUNT:
+      case Account:
         name = AccountFullName.getInstance( id );
         break;
-      case GROUP:
+      case Group:
         return NOT_SUPPORTED;
-      case USER:
+      case User:
         name = UserFullName.getInstance( id );
         break;
       default:

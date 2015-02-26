@@ -65,7 +65,7 @@ package com.eucalyptus.auth.euare;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 
-public class EuareQuotaUtil {
+class EuareQuotaUtil {
 
   public static long countUserByAccount( String accountId ) throws AuthException {
     return Accounts.lookupAccountById( accountId ).getUsers( ).size( );

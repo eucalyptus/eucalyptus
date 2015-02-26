@@ -62,16 +62,14 @@
 
 package com.eucalyptus.auth.principal;
 
-import java.io.Serializable;
 import java.util.Set;
-import com.eucalyptus.auth.AuthException;
 
-public interface Condition extends Serializable {
+public interface Condition {
 
-  public String getType( );
+  String getType( );
   
-  public String getKey( );
+  String getKey( );
   
-  public Set<String> getValues( ) throws AuthException;
+  Set<String> getValues( );
   
 }

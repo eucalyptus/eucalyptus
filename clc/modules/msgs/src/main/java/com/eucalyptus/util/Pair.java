@@ -55,8 +55,8 @@ public class Pair<L,R> {
    * @return The pair function
    */
   @Nonnull
-  public static <L,R> Function<L,Function<R, Pair<L,R>>> pair( ) {
-    return new Function<L,Function<R, Pair<L,R>>>( ){
+  public static <L,R> NonNullFunction<L,Function<R, Pair<L,R>>> pair( ) {
+    return new NonNullFunction<L,Function<R, Pair<L,R>>>( ){
       @Override
       public Function<R, Pair<L, R>> apply( final L left ) {
         return new Function<R, Pair<L, R>>( ){

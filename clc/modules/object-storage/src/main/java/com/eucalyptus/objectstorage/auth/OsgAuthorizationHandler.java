@@ -35,6 +35,7 @@ import com.eucalyptus.auth.PolicyResourceContext;
 import com.eucalyptus.auth.PolicyResourceContext.PolicyResourceInfo;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.context.Context;
@@ -163,8 +164,11 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
       return true;
     }
 
-    if (authContext == null) {
-      authContext = Permissions.createAuthContextSupplier(requestUser, Collections.<String, String>emptyMap());
+    if (authContext == null) try {
+      authContext = Permissions.createAuthContextSupplier( requestUser, Context.loadPolicies( requestUser ), Collections.<String, String>emptyMap( ) );
+    } catch ( AuthException e ) {
+      LOG.error("Failed to get user policies for request, cannot verify authorization: " + e.getMessage(), e);
+      return false;
     }
 
     final Account resourceOwnerAccount;

@@ -109,7 +109,7 @@ public class KeepAlive extends ContractKey<Date> {
   }
 
   @Override
-  public boolean canApply( String action, String resourceType ) {
+  public boolean canApply( String action ) {
     return ACTION_RUNINSTANCES.equals( action );
   }
 

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,29 +19,18 @@
  ************************************************************************/
 package com.eucalyptus.auth.principal;
 
-import java.util.List;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.PolicyParseException;
-
 /**
  *
  */
-public interface AuthorizedPrincipal extends AccountScopedPrincipal {
+public interface PolicyVersion {
 
-  List<Policy> getPolicies( ) throws AuthException;
+  String getPolicyVersionId( );
 
-  /**
-   * Add a policy, fail if exists.
-   */
-  Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException;
+  String getPolicyName( );
 
-  /**
-   * Add or update the named policy.
-   */
-  Policy putPolicy( String name, String policy ) throws AuthException, PolicyParseException;
-  void removePolicy( String name ) throws AuthException;
+  PolicyScope getPolicyScope( );
 
-  List<Authorization> lookupAuthorizations( String resourceType ) throws AuthException;
-  List<Authorization> lookupQuotas( String resourceType ) throws AuthException;
+  String getPolicy( );
 
+  String getPolicyHash( ); // SHA-256 hash useful for content based caching  //TODO:STEVE: B64? B32? hex?
 }

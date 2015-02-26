@@ -26,7 +26,7 @@ import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.PolicyKey;
 import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.Authorization;
+import com.eucalyptus.auth.principal.PolicyScope;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.util.RestrictedTypes;
@@ -46,21 +46,21 @@ public class VpcNumberQuotaKey extends QuotaKey {
   }
 
   @Override
-  public boolean canApply( final String action, final String resourceType ) {
+  public boolean canApply( final String action ) {
     return PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, PolicySpec.EC2_CREATEVPC ).equals( action );
   }
 
   @Override
-  public String value( final Authorization.Scope scope,
+  public String value( final PolicyScope scope,
                        final String id,
                        final String resource,
                        final Long quantity ) throws AuthException {
     switch ( scope ) {
-      case ACCOUNT:
+      case Account:
         return Long.toString( RestrictedTypes.quantityMetricFunction( CloudMetadata.VpcMetadata.class ).apply( AccountFullName.getInstance( id ) ) + quantity );
-      case GROUP:
+      case Group:
         return NOT_SUPPORTED;
-      case USER:
+      case User:
         return Long.toString( RestrictedTypes.quantityMetricFunction( CloudMetadata.VpcMetadata.class ).apply( UserFullName.getInstance( id ) ) + quantity );
     }
     throw new AuthException( "Invalid scope" );

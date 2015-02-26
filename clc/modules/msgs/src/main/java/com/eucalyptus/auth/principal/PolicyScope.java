@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,18 +17,15 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.auth.policy;
-
-import java.util.List;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.Authorization;
-import com.eucalyptus.auth.principal.User;
+package com.eucalyptus.auth.principal;
 
 /**
- *
+ * Represents policy holder / attachment.
  */
-public interface AuthorizationProvider {
-
-  List<Authorization> lookupQuotas( Account account, User user, String resourceType ) throws AuthException;
+public enum PolicyScope {
+  Account,
+  User,
+  Group,
+  Role,
+  Resource,
 }

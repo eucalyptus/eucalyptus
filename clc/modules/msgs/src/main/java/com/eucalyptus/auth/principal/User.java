@@ -68,13 +68,14 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.PolicyParseException;
 
 /**
  * The interface for a user in Eucalyptus.
  * 
  * @author decker
  */
-public interface User extends /*HasId, */AuthorizedPrincipal, Serializable {
+public interface User extends AccountScopedPrincipal, Serializable {
   
   String USER_GROUP_PREFIX = "_";  
   String ACCOUNT_ADMIN = "admin";
@@ -100,9 +101,6 @@ public interface User extends /*HasId, */AuthorizedPrincipal, Serializable {
 
   Date getCreateDate( );
 
-  RegistrationStatus getRegistrationStatus( );
-  void setRegistrationStatus( RegistrationStatus stat ) throws AuthException;
-
   Boolean isEnabled( );
   void setEnabled( Boolean enabled ) throws AuthException;
   
@@ -110,11 +108,7 @@ public interface User extends /*HasId, */AuthorizedPrincipal, Serializable {
   void setToken( String token ) throws AuthException;
   String resetToken( ) throws AuthException;
   
-  String getConfirmationCode( );
-  void setConfirmationCode( String code ) throws AuthException;
-  void createConfirmationCode( ) throws AuthException;
-    
-  String getPassword( );  
+  String getPassword( );
   void setPassword( String password ) throws AuthException;
 
   Long getPasswordExpires( );
@@ -137,7 +131,20 @@ public interface User extends /*HasId, */AuthorizedPrincipal, Serializable {
   void removeCertificate( String certificateId ) throws AuthException;
   
   List<Group> getGroups( ) throws AuthException;
-  
+
+  List<Policy> getPolicies( ) throws AuthException;
+
+  /**
+   * Add a policy, fail if exists.
+   */
+  Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException;
+
+  /**
+   * Add or update the named policy.
+   */
+  Policy putPolicy( String name, String policy ) throws AuthException, PolicyParseException;
+  void removePolicy( String name ) throws AuthException;
+
   boolean isSystemAdmin( );
   
   boolean isSystemUser( );

@@ -78,7 +78,6 @@ public abstract class BaseLoginModule<CB extends WrappedCredentials> implements 
   private boolean         authenticated = false;
   private CallbackHandler callbackHandler;
   private Object          credential;
-  //private List<Group>     groups = Lists.newArrayList( );
   private User            principal;
   private Subject         subject;
   private CB              wrappedCredentials;
@@ -95,7 +94,6 @@ public abstract class BaseLoginModule<CB extends WrappedCredentials> implements 
       return false;
     }
     this.getSubject( ).getPrincipals( ).add( this.getPrincipal( ) );
-    //this.getSubject( ).getPrincipals( ).addAll( this.getGroups( ) );
     this.getSubject( ).getPublicCredentials( ).add( this.getCredential( ) );
     try {
       Contexts.lookup( this.getWrappedCredentials( ).getCorrelationId( ) ).setUser( this.getPrincipal( ) );
@@ -114,11 +112,7 @@ public abstract class BaseLoginModule<CB extends WrappedCredentials> implements 
   public Object getCredential( ) {
     return this.credential;
   }
-  /*
-  public List<Group> getGroups( ) {
-    return this.groups;
-  }
-  */
+
   public User getPrincipal( ) {
     return this.principal;
   }
@@ -155,6 +149,9 @@ public abstract class BaseLoginModule<CB extends WrappedCredentials> implements 
     }
     try {
       this.setAuthenticated( this.authenticate( this.wrappedCredentials ) );
+      if ( this.isAuthenticated( ) && ( principal == null || !principal.isEnabled( ) ) ) {
+        throw new LoginException( "Access denied for user" );
+      }
     } catch ( final Exception e ) {
       LOG.trace( e, e );
       this.setAuthenticated( false );
@@ -195,10 +192,6 @@ public abstract class BaseLoginModule<CB extends WrappedCredentials> implements 
     this.principal = principal;
   }
 
-  public void setWrappedCredentials( final CB wrappedCredentials ) {
-    this.wrappedCredentials = wrappedCredentials;
-  }
-  
   private void baseReset( ) {
     if ( this.principal != null ) {
       this.subject.getPrincipals( ).remove( this.principal );

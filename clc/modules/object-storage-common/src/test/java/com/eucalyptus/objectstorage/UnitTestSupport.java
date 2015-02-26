@@ -34,16 +34,12 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.DatabaseAuthProvider;
 import com.eucalyptus.auth.entities.AccessKeyEntity;
 import com.eucalyptus.auth.entities.AccountEntity;
-import com.eucalyptus.auth.entities.AuthorizationEntity;
 import com.eucalyptus.auth.entities.CertificateEntity;
-import com.eucalyptus.auth.entities.ConditionEntity;
 import com.eucalyptus.auth.entities.GroupEntity;
 import com.eucalyptus.auth.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.entities.PolicyEntity;
-import com.eucalyptus.auth.entities.PrincipalEntity;
 import com.eucalyptus.auth.entities.RoleEntity;
 import com.eucalyptus.auth.entities.ServerCertificateEntity;
-import com.eucalyptus.auth.entities.StatementEntity;
 import com.eucalyptus.auth.entities.UserEntity;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
@@ -109,11 +105,11 @@ public class UnitTestSupport {
     props.put("hibernate.connection.url", "jdbc:derby:memory:test;create=true");
 
     Ejb3Configuration config =
-        (new Ejb3Configuration()).configure(props).addAnnotatedClass(AccessKeyEntity.class).addAnnotatedClass(AccountEntity.class)
-            .addAnnotatedClass(StatementEntity.class).addAnnotatedClass(InstanceProfileEntity.class).addAnnotatedClass(GroupEntity.class)
-            .addAnnotatedClass(PolicyEntity.class).addAnnotatedClass(PrincipalEntity.class).addAnnotatedClass(UserEntity.class)
-            .addAnnotatedClass(RoleEntity.class).addAnnotatedClass(CertificateEntity.class).addAnnotatedClass(ConditionEntity.class)
-            .addAnnotatedClass(ServerCertificateEntity.class).addAnnotatedClass(AuthorizationEntity.class);
+        (new Ejb3Configuration()).configure( props ).addAnnotatedClass( AccessKeyEntity.class ).addAnnotatedClass( AccountEntity.class )
+            .addAnnotatedClass( InstanceProfileEntity.class ).addAnnotatedClass( GroupEntity.class )
+            .addAnnotatedClass( PolicyEntity.class ).addAnnotatedClass( UserEntity.class )
+            .addAnnotatedClass( RoleEntity.class ).addAnnotatedClass( CertificateEntity.class )
+            .addAnnotatedClass( ServerCertificateEntity.class );
 
     PersistenceContexts.registerPersistenceContext("eucalyptus_auth", config);
     Accounts.setAccountProvider(new DatabaseAuthProvider());

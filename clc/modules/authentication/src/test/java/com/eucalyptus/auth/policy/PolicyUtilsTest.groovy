@@ -24,7 +24,7 @@ import static org.junit.Assert.*
 import org.junit.Test
 import java.util.regex.Pattern
 
-class PatternUtilsTest {
+class PolicyUtilsTest {
 
   @Test
   void testBasicMatch( ) {
@@ -78,6 +78,6 @@ class PatternUtilsTest {
   }
 
   boolean matches( String pattern, String value ) {
-    Pattern.matches( PatternUtils.toJavaPattern( pattern ), value )
+    Pattern.matches( PolicyUtils.toJavaPattern( pattern ), value )
   }
 }
