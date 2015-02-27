@@ -156,16 +156,6 @@ public class TestAccount implements Account {
   }
 
   @Override
-  public List<Authorization> lookupAccountGlobalAuthorizations( final String resourceType ) throws AuthException {
-    throw new AuthException( "Not implemented" );
-  }
-
-  @Override
-  public List<Authorization> lookupAccountGlobalQuotas( final String resourceType ) throws AuthException {
-    throw new AuthException( "Not implemented" );
-  }
-
-  @Override
   public ServerCertificate addServerCertificate( final String certName, final String certBody, final String certChain, final String path, final String pk ) throws AuthException {
     throw new AuthException( "Not implemented" );
   }

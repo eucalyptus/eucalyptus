@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,14 +60,78 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth.principal;
+package com.eucalyptus.auth.policy;
 
-public abstract interface HasId {
+import java.nio.charset.StandardCharsets;
+import java.util.regex.Pattern;
+import com.eucalyptus.auth.principal.Authorization;
+import com.eucalyptus.auth.principal.Condition;
+import com.eucalyptus.auth.principal.PolicyVersions;
+import com.eucalyptus.auth.principal.Principal;
+import com.eucalyptus.crypto.Digest;
+import com.eucalyptus.crypto.util.B64;
+import com.google.common.base.Function;
+import com.google.common.collect.Interner;
+import com.google.common.collect.Interners;
+
+public class PolicyUtils {
+
+  private static final Pattern ESCAPE_PATTERN = Pattern.compile( "([^a-zA-Z0-9*?])" );
+  private static final Pattern WILDCARD_MULTIPLE_PATTERN = Pattern.compile( "([*])" );
+  private static final Pattern WILDCARD_SINGLE_PATTERN = Pattern.compile( "([?])" );
+
+  private static final Interner<String> stringInterner = Interners.newWeakInterner( );
+  private static final Interner<Authorization> authorizationInterner = Interners.newWeakInterner( );
+  private static final Interner<PolicyPrincipal> principalInterner = Interners.newWeakInterner( );
+  private static final Interner<Condition> conditionInterner = Interners.newWeakInterner( );
+  private static final Interner<PolicyPolicy> policyInterner = Interners.newWeakInterner( );
+
+  private static final Function<String,String> stringInternFunction = Interners.asFunction( stringInterner );
+  private static final Function<Authorization,Authorization> authorizationInternFunction = Interners.asFunction( authorizationInterner );
+  private static final Function<Condition,Condition> conditionInternFunction = Interners.asFunction( conditionInterner );
 
   /**
-   * TODO:YE: in certain cases we /cannot/ rely on the database's ID field for use in the AWS API.
-   * @see {@link com.eucalyptus.auth.Accounts}
+   * Convert an IAM policy pattern (action pattern or resource pattern with * and ?)
+   * to a canonical Java regex Pattern.
    */
-  public String getId( );
-  
+  public static String toJavaPattern( String pattern ) { //TODO:STEVE: caching for patterns
+    String result = pattern;
+    
+    if ( pattern == null ) {
+      return null;
+    }
+    result = ESCAPE_PATTERN.matcher( result ).replaceAll( "\\\\$1" );
+    result = WILDCARD_SINGLE_PATTERN.matcher( result ).replaceAll( "." );
+    result = WILDCARD_MULTIPLE_PATTERN.matcher( result ).replaceAll( ".*" );
+    
+    return result;
+  }
+
+  static String hash( String text ) {
+    return PolicyVersions.hash( text );
+  }
+
+  static String intern( final String string ) {
+    return string == null ? null : stringInterner.intern( string );
+  }
+
+  static PolicyPrincipal intern( final PolicyPrincipal principal ) {
+    return principal == null ? null : principalInterner.intern( principal );
+  }
+
+  static PolicyPolicy intern( final PolicyPolicy policy ) {
+    return policy == null ? null : policyInterner.intern( policy );
+  }
+
+  static Function<String,String> internString( ) {
+    return stringInternFunction;
+  }
+
+  static Function<Authorization,Authorization> internAuthorization( ) {
+    return authorizationInternFunction;
+  }
+
+  static Function<Condition,Condition> internCondition( ) {
+    return conditionInternFunction;
+  }
 }

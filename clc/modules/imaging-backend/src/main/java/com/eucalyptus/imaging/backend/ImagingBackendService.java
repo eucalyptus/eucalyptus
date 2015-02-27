@@ -73,7 +73,7 @@ public class ImagingBackendService {
     
     try{
       /// api is callable only by sysadmin
-      if ( ! (context.getUser().isSystemAdmin() && context.getUser().isAccountAdmin())) {
+      if ( !context.getUser().isSystemAdmin() ) {
         throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to import image." );
       }
     }catch(final ImagingServiceException ex){
@@ -111,7 +111,7 @@ public class ImagingBackendService {
     boolean verbose = request.getConversionTaskIdSet( ).remove( "verbose" );
     try{
       /// api is callable only by sysadmin
-      if ( ! (ctx.getUser().isSystemAdmin() && ctx.getUser().isAccountAdmin())) {
+      if ( !ctx.getUser().isSystemAdmin() ) {
         throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to describe conversion tasks." );
       }
     }catch(final ImagingServiceException ex){
@@ -150,7 +150,7 @@ public class ImagingBackendService {
     Context ctx = Contexts.lookup( );
     try{
       /// api is callable only by sysadmin
-      if ( ! (ctx.getUser().isSystemAdmin() && ctx.getUser().isAccountAdmin())) {
+      if ( ! (ctx.getUser().isSystemAdmin( ) )) {
         throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to cancel conversion tasks." );
       }
     }catch(final ImagingServiceException ex){

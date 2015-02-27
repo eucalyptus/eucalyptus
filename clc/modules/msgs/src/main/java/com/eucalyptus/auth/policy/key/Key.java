@@ -74,7 +74,7 @@ public interface Key {
   
   void validateValueType( String value ) throws JSONException;
   
-  boolean canApply( String action, String resourceType );
+  boolean canApply( String action );
 
   enum EvaluationConstraint {
     /**

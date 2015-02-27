@@ -24,7 +24,7 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.key.KeyUtils;
 import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.Authorization;
+import com.eucalyptus.auth.principal.PolicyScope;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
 import com.eucalyptus.util.RestrictedTypes;
@@ -53,24 +53,24 @@ abstract class AutoScalingNumberQuotaKeySupport<T extends AutoScalingMetadata> e
   }
 
   @Override
-  public final boolean canApply( String action, String resourceType ) {
+  public final boolean canApply( String action ) {
     return PolicySpec.qualifiedName(
         PolicySpec.VENDOR_AUTOSCALING,
         this.action ).equals( action );
   }
 
   @Override
-  public final String value( final Authorization.Scope scope,
+  public final String value( final PolicyScope scope,
                              final String id, 
                              final String resource, 
                              final Long quantity ) throws AuthException {
     switch ( scope ) {
-      case ACCOUNT:
+      case Account:
         return Long.toString( RestrictedTypes.quantityMetricFunction( metadataClass )
             .apply( AccountFullName.getInstance( id ) ) + 1 );
-      case GROUP:
+      case Group:
         return NOT_SUPPORTED;
-      case USER:
+      case User:
         return Long.toString( RestrictedTypes.quantityMetricFunction( metadataClass )
             .apply( UserFullName.getInstance( id ) ) + 1 );
     }

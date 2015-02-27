@@ -39,8 +39,7 @@ public abstract class InstanceComputeKey implements ComputeKey {
       .build( );
 
   @Override
-  public boolean canApply( final String action,
-                           final String resourceType ) {
+  public boolean canApply( final String action ) {
     return actions.contains( action );
   }
 

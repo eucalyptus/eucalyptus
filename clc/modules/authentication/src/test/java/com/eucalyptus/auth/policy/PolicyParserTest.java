@@ -68,17 +68,13 @@ import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import com.eucalyptus.auth.PolicyParseException;
-import com.eucalyptus.auth.entities.AuthorizationEntity;
-import com.eucalyptus.auth.entities.ConditionEntity;
-import com.eucalyptus.auth.entities.PolicyEntity;
-import com.eucalyptus.auth.entities.PrincipalEntity;
-import com.eucalyptus.auth.entities.StatementEntity;
 import com.eucalyptus.auth.principal.Authorization;
+import com.eucalyptus.auth.principal.Condition;
 import com.eucalyptus.auth.principal.Principal;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
-import net.sf.json.JSONException;
+
 
 
 public class PolicyParserTest {
@@ -91,19 +87,16 @@ public class PolicyParserTest {
 
     String policy = Files.toString( new File( args[0] ), Charsets.UTF_8 );
         
-    PolicyEntity parsed = PolicyParser.getInstance( ).parse( policy );
+    PolicyPolicy parsed = PolicyParser.getInstance( ).parse( policy );
     
     printPolicy( parsed );
   }
   
-  private static void printPolicy( PolicyEntity parsed ) {
-    System.out.println( "Policy:\n" + parsed.getText( ) + "\n" + "Version = " + parsed.getPolicyVersion( ) );
-    for ( StatementEntity statement : parsed.getStatements( ) ) {
-      System.out.println( "Statement: " + statement.getSid( ) );
-      for ( AuthorizationEntity auth : statement.getAuthorizations( ) ) {
-        System.out.println( "Authorization: " + auth );
-      }
-      for ( ConditionEntity cond : statement.getConditions( ) ) {
+  private static void printPolicy( PolicyPolicy parsed ) {
+    System.out.println( "Version = " + parsed.getPolicyVersion( ) );
+    for ( Authorization auth : parsed.getAuthorizations() ) {
+      System.out.println( "Authorization: " + auth );
+      for ( Condition cond : auth.getConditions( ) ) {
         System.out.println( "Condition: " + cond );
       }
     }
@@ -120,24 +113,20 @@ public class PolicyParserTest {
             "   }]\n" +
             "}";
 
-    PolicyEntity policy = PolicyParser.getInstance().parse( policyJson );
+    PolicyPolicy policy = PolicyParser.getInstance().parse( policyJson );
     assertNotNull( "Policy null", policy );
-    assertNotNull( "Statements null", policy.getStatements() );
-    assertEquals( "Statement count", 1, policy.getStatements().size() );
-    StatementEntity statement = policy.getStatements().get( 0 );
-    assertNotNull( "Statement null", statement );
-    assertNull( "Statement principal", statement.getPrincipal() );
-    assertNotNull( "Statement authorizations", statement.getAuthorizations() );
-    assertEquals( "Statement authorization count", 1, statement.getAuthorizations().size() );
-    AuthorizationEntity authorization = statement.getAuthorizations().get( 0 );
+    assertNotNull( "Policy authorizations", policy.getAuthorizations() );
+    assertEquals( "Policy authorization count", 1, policy.getAuthorizations().size() );
+    Authorization authorization = policy.getAuthorizations().get( 0 );
     assertNotNull( "Authorization null", authorization );
+    assertNull( "Authorization principal", authorization.getPrincipal( ) );
     assertEquals( "Authorization actions", Sets.newHashSet( "autoscaling:*" ), authorization.getActions() );
     assertEquals( "Authorization effect", Authorization.EffectType.Allow, authorization.getEffect() );
     assertNotNull( "Authorization resources", authorization.getResources() );
     assertEquals( "Authorization resource count", 1, authorization.getResources().size() );
     assertEquals( "Authorization resources", Sets.newHashSet("*"), authorization.getResources() );
-    assertNotNull( "Statement conditions", statement.getConditions() );
-    assertEquals( "Statement condition count", 0, statement.getConditions().size() );  }
+    assertNotNull( "Authorization conditions", authorization.getConditions() );
+    assertEquals( "Authorization condition count", 0, authorization.getConditions().size() );  }
 
   @Test(expected = PolicyParseException.class )
   public void testParseUserPolicyMissingResource() throws Exception {
@@ -166,27 +155,23 @@ public class PolicyParserTest {
         "    } ]\n" +
         "}";
 
-    PolicyEntity policy = PolicyParser.getResourceInstance().parse( policyJson );
+    PolicyPolicy policy = PolicyParser.getResourceInstance().parse( policyJson );
     assertNotNull( "Policy null", policy );
-    assertNotNull( "Statements null", policy.getStatements() );
-    assertEquals( "Statement count", 1, policy.getStatements().size() );
-    StatementEntity statement = policy.getStatements().get( 0 );
-    assertNotNull( "Statement null", statement );
-    assertNotNull( "Statement principal", statement.getPrincipal() );
-    PrincipalEntity principal = statement.getPrincipal();
+    assertNotNull( "Statement authorizations", policy.getAuthorizations() );
+    assertEquals( "Statement authorization count", 1, policy.getAuthorizations().size() );
+    Authorization authorization = policy.getAuthorizations().get( 0 );
+    assertNotNull( "Authorization principal", authorization.getPrincipal() );
+    Principal principal = authorization.getPrincipal();
     assertEquals( "Principal type", Principal.PrincipalType.Service, principal.getType() );
     assertEquals( "Principal values", Sets.newHashSet( "ec2.amazonaws.com" ), principal.getValues() );
     assertEquals( "Principal not", false, principal.isNotPrincipal() );
-    assertNotNull( "Statement authorizations", statement.getAuthorizations() );
-    assertEquals( "Statement authorization count", 1, statement.getAuthorizations().size() );
-    AuthorizationEntity authorization = statement.getAuthorizations().get( 0 );
     assertNotNull( "Authorization null", authorization );
     assertEquals( "Authorization actions", Sets.newHashSet( "sts:assumerole" ), authorization.getActions() );
     assertEquals( "Authorization effect", Authorization.EffectType.Allow, authorization.getEffect() );
     assertNotNull( "Authorization resources", authorization.getResources() );
     assertEquals( "Authorization resource count", 0, authorization.getResources().size() );
-    assertNotNull( "Statement conditions", statement.getConditions() );
-    assertEquals( "Statement condition count", 0, statement.getConditions().size() );
+    assertNotNull( "Authorization conditions", authorization.getConditions() );
+    assertEquals( "Authorization condition count", 0, authorization.getConditions().size() );
   }
 
   @Test(expected = PolicyParseException.class )

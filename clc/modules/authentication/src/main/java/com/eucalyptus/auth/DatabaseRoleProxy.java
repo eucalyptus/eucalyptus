@@ -22,7 +22,6 @@ package com.eucalyptus.auth;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.util.Date;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
@@ -30,14 +29,13 @@ import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.checker.InvalidValueException;
 import com.eucalyptus.auth.checker.ValueChecker;
 import com.eucalyptus.auth.checker.ValueCheckerFactory;
-import com.eucalyptus.auth.entities.AuthorizationEntity;
 import com.eucalyptus.auth.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.entities.PolicyEntity;
 import com.eucalyptus.auth.entities.RoleEntity;
 import com.eucalyptus.auth.policy.PolicyParser;
+import com.eucalyptus.auth.policy.PolicyPolicy;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.Role;
@@ -143,15 +141,15 @@ public class DatabaseRoleProxy implements Role {
 
   @Override
   public Policy setAssumeRolePolicy( final String policy ) throws AuthException, PolicyParseException {
-    final PolicyEntity parsedPolicy = PolicyParser.getResourceInstance().parse( policy );
-    parsedPolicy.setName( "assume-role-policy-for-" + getRoleId() );
+    final PolicyPolicy parsedPolicy = PolicyParser.getResourceInstance().parse( policy );
+    final PolicyEntity policyEntity = PolicyEntity.create( "assume-role-policy-for-" + getRoleId(), parsedPolicy.getPolicyVersion( ), policy );
     try ( final TransactionResource db = Entities.transactionFor( RoleEntity.class ) ) {
       final RoleEntity roleEntity = getRoleEntity( );
       // Due to https://hibernate.onjira.com/browse/HHH-6484 we must explicitly delete the old policy
       final PolicyEntity oldAssumeRolePolicy = roleEntity.getAssumeRolePolicy();
-      roleEntity.setAssumeRolePolicy( parsedPolicy );
+      roleEntity.setAssumeRolePolicy( policyEntity );
       Entities.delete( oldAssumeRolePolicy );
-      final PolicyEntity persistedPolicyEntity = Entities.persist( parsedPolicy );
+      final PolicyEntity persistedPolicyEntity = Entities.persist( policyEntity );
       db.commit( );
       return new DatabasePolicyProxy( persistedPolicyEntity );
     } catch ( Exception e ) {
@@ -213,8 +211,8 @@ public class DatabaseRoleProxy implements Role {
       Debugging.logError( LOG, null, "Policy name already used: " + name );
       throw new AuthException( AuthException.INVALID_NAME );
     }
-    final PolicyEntity parsedPolicy = PolicyParser.getInstance().parse( policy );
-    parsedPolicy.setName( name );
+    final PolicyPolicy policyPolicy = PolicyParser.getInstance().parse( policy );
+    final PolicyEntity parsedPolicy = PolicyEntity.create( name, policyPolicy.getPolicyVersion( ), policy );
     try ( final TransactionResource db = Entities.transactionFor( RoleEntity.class ) ) {
       final RoleEntity roleEntity = getRoleEntity( );
       final PolicyEntity remove = DatabaseAuthUtils.removeNamedPolicy( roleEntity.getPolicies( ), name );
@@ -265,74 +263,6 @@ public class DatabaseRoleProxy implements Role {
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to get instance profiles for " + this.delegate.getName( ) );
       throw new AuthException( "Failed to get instance profiles", e );
-    }
-  }
-
-  @SuppressWarnings( "unchecked" )
-  @Override
-  public List<Authorization> lookupAuthorizations( final String resourceType ) throws AuthException {
-    try ( final TransactionResource db = Entities.transactionFor( AuthorizationEntity.class ) ) {
-      List<AuthorizationEntity> authorizations;
-      if ( resourceType == null ) {
-        // Load authorizations for determining if action may be permitted
-        // deny effects are not required
-        authorizations = ( List<AuthorizationEntity> ) Entities
-            .createCriteria( AuthorizationEntity.class ).add(
-                Restrictions.eq( "effect", Authorization.EffectType.Allow )
-            )
-            .createCriteria( "statement" )
-            .createCriteria( "policy" )
-            .createCriteria( "role" ).add(
-                Restrictions.eq( "roleId", getRoleId() ) )
-            .setCacheable( true )
-            .list();
-      } else {
-        authorizations = ( List<AuthorizationEntity> ) Entities
-          .createCriteria( AuthorizationEntity.class ).add(
-              Restrictions.and(
-                  Restrictions.or( Restrictions.eq( "type", resourceType ), Restrictions.eq( "type", "*" )),
-                  Restrictions.in( "effect", EnumSet.of(  Authorization.EffectType.Allow, Authorization.EffectType.Deny ) ) ) )
-          .createCriteria( "statement" )
-          .createCriteria( "policy" )
-          .createCriteria( "role" ).add(
-              Restrictions.eq( "roleId", getRoleId() ) )
-          .setCacheable( true )
-          .list();
-      }
-      final List<Authorization> results = Lists.newArrayList( );
-      for ( final AuthorizationEntity auth : authorizations ) {
-        results.add( new DatabaseAuthorizationProxy( auth ) );
-      }
-      return results;
-    } catch ( Exception e ) {
-      Debugging.logError( LOG, e, "Failed to lookup authorization for user with ID " + getRoleId() + ", type=" + resourceType);
-      throw new AuthException( "Failed to lookup auth", e );
-    }
-  }
-
-  @Override
-  public List<Authorization> lookupQuotas( final String resourceType ) throws AuthException {
-    try ( final TransactionResource db = Entities.transactionFor( AuthorizationEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      final List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) Entities
-          .createCriteria( AuthorizationEntity.class ).add(
-              Restrictions.and(
-                  Restrictions.eq( "type", resourceType ),
-                  Restrictions.eq( "effect", Authorization.EffectType.Limit ) ) )
-          .createCriteria( "statement" )
-          .createCriteria( "policy" )
-          .createCriteria( "role" ).add(
-              Restrictions.eq( "roleId", getRoleId() ) )
-          .setCacheable( true )
-          .list( );
-      final List<Authorization> results = Lists.newArrayList( );
-      for ( AuthorizationEntity auth : authorizations ) {
-        results.add( new DatabaseAuthorizationProxy( auth ) );
-      }
-      return results;
-    } catch ( Exception e ) {
-      Debugging.logError( LOG, e, "Failed to lookup quotas for user with ID " + getRoleId() + ", type=" + resourceType);
-      throw new AuthException( "Failed to lookup quota", e );
     }
   }
 

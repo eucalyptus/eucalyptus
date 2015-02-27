@@ -66,10 +66,12 @@ import static org.hamcrest.Matchers.notNullValue;
 import static com.eucalyptus.auth.principal.Principal.PrincipalType;
 import static com.eucalyptus.util.Parameters.checkParam;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nonnull;
@@ -96,17 +98,22 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Condition;
 import com.eucalyptus.auth.principal.Policy;
+import com.eucalyptus.auth.principal.PolicyScope;
+import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.Principal;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
-import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Pair;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -116,6 +123,12 @@ import com.google.common.collect.Lists;
 public class PolicyEngineImpl implements PolicyEngine {
   
   private static final Logger LOG = Logger.getLogger( PolicyEngineImpl.class );
+
+  private static final Cache<String,ImmutableList<Authorization>> authorizationCache = CacheBuilder
+      .<String,ImmutableList<Authorization>>newBuilder()
+      .maximumSize( 10_000 )
+      .expireAfterWrite( 1, TimeUnit.HOURS )
+      .build( );
 
   @Nonnull
   private final Function<String,String> accountResolver;
@@ -135,7 +148,7 @@ public class PolicyEngineImpl implements PolicyEngine {
   private static final Matcher PATTERN_MATCHER = new Matcher( ) {
     @Override
     public boolean match( String pattern, String instance ) {
-      pattern = PatternUtils.toJavaPattern( pattern );
+      pattern = PolicyUtils.toJavaPattern( pattern );
       if ( pattern == null ) {
         return false;
       }
@@ -220,6 +233,7 @@ public class PolicyEngineImpl implements PolicyEngine {
     } catch ( AuthException e ) {
       throw e;
     } catch ( Exception e ) {
+      LOG.debug( e, e );
       throw new AuthException( "An error occurred while trying to evaluate policy for resource access", e );
     }    
   }
@@ -239,8 +253,6 @@ public class PolicyEngineImpl implements PolicyEngine {
 
       // System admin can do everything
       if ( !evaluationContext.isSystemAdmin() ) {
-        // Disabled user can't do anything
-        verifyUser( requestUser );
         final Account account = evaluationContext.getRequestAccount();
 
         // Account admin can do everything within the account
@@ -250,7 +262,7 @@ public class PolicyEngineImpl implements PolicyEngine {
           // Check resource authorizations
           Decision decision = resourcePolicy == null ?
               Decision.ALLOW :
-              processAuthorizations( resourcePolicy.getAuthorizations(), AuthorizationMatch.All, action, null, null, evaluationContext.getPrincipalType(), evaluationContext.getPrincipalName(), keyEval, contractEval );
+              processAuthorizations( AuthEvaluationContextImpl.authorizations( resourcePolicy, true ), AuthorizationMatch.All, action, null, null, evaluationContext.getPrincipalType(), evaluationContext.getPrincipalName(), keyEval, contractEval );
           // Denied by explicit or default deny
           if ( decision != Decision.ALLOW ) {
             LOG.debug( "Request is rejected by resource authorization check, due to decision " + decision );
@@ -288,16 +300,21 @@ public class PolicyEngineImpl implements PolicyEngine {
     try {
       final AuthEvaluationContextImpl evaluationContext = (AuthEvaluationContextImpl)context;
 
-      User requestUser = context.getRequestUser();
       String resourceType = context.getResourceType();
-      // Case insensitive
       resourceName = PolicySpec.canonicalizeResourceName( resourceType, resourceName );
       String action = context.getAction().toLowerCase();
 
       // Quotas can be disabled for system users
       if ( !evaluationContext.isSystemUser( ) || enableSystemQuotas.get( ) ) {
-        List<Authorization> quotas = lookupQuotas( resourceType, requestUser, evaluationContext.getRequestAccount( ) );
-        processQuotas( quotas, action, resourceType, resourceName, quantity );
+        List<Pair<PolicyVersion,Authorization>> quotas = evaluationContext.lookupQuotas( );
+        processQuotas(
+            quotas,
+            evaluationContext.getRequestAccount( ).getAccountNumber( ),
+            evaluationContext.getRequestUser( ).getUserId( ),
+            action,
+            resourceType,
+            resourceName,
+            quantity );
       }
     } catch ( AuthException e ) {
       //throw by the policy engine implementation 
@@ -309,20 +326,22 @@ public class PolicyEngineImpl implements PolicyEngine {
 
   @Override
   public AuthEvaluationContext createEvaluationContext( final String resourceType,
-                                                    final String action,
-                                                    final User requestUser,
-                                                    final Map<String,String> evaluatedKeys ) {
-    return new AuthEvaluationContextImpl( resourceType, action, requestUser, evaluatedKeys );
+                                                        final String action,
+                                                        final User requestUser,
+                                                        final Map<String,String> evaluatedKeys,
+                                                        final Iterable<PolicyVersion> policies ) {
+    return new AuthEvaluationContextImpl( resourceType, action, requestUser, evaluatedKeys, policies );
   }
 
   @Override
   public AuthEvaluationContext createEvaluationContext( final String resourceType,
-                                                    final String action,
-                                                    final User requestUser,
-                                                    final Map<String,String> evaluatedKeys,
-                                                    final PrincipalType principalType,
-                                                    final String principalName ) {
-    return new AuthEvaluationContextImpl( resourceType, action, requestUser, evaluatedKeys, principalType, principalName );
+                                                        final String action,
+                                                        final User requestUser,
+                                                        final Map<String,String> evaluatedKeys,
+                                                        final Iterable<PolicyVersion> policies,
+                                                        final PrincipalType principalType,
+                                                        final String principalName ) {
+    return new AuthEvaluationContextImpl( resourceType, action, requestUser, evaluatedKeys, policies, principalType, principalName );
   }
 
   private Decision evaluateResourceAuthorization( @Nonnull  final AuthEvaluationContext context,
@@ -343,21 +362,11 @@ public class PolicyEngineImpl implements PolicyEngine {
       return Decision.ALLOW;
     }
 
-    // Disabled user can't do anything
-    verifyUser( requestUser );
     final Account account = evaluationContext.getRequestAccount( );
-
-    // Check global (inter-account) authorizations first //TODO:STEVE: Should these apply for roles?
-    Decision decision = processAuthorizations( evaluationContext.lookupGlobalAuthorizations( ), authorizationMatch, action, resourceAccountNumber, resourceName, keyEval, contractEval );
-    if ( decision == Decision.DENY ) {
-      LOG.debug( "Request is rejected by global authorization check, due to decision " + decision );
-      return decision;
-    }
-
     if ( resourceAccountNumber != null && !resourceAccountNumber.equals( account.getAccountNumber( ) ) && !evaluationContext.isSystemUser() ) {
-      decision = processAuthorizations( evaluationContext.lookupLocalAuthorizations( ), authorizationMatch ,action, resourceAccountNumber ,resourceName, keyEval, contractEval );
+      final Decision decision = processAuthorizations( evaluationContext.lookupAuthorizations( ), authorizationMatch ,action, resourceAccountNumber ,resourceName, keyEval, contractEval );
       if ( decision == Decision.DENY ) {
-        LOG.debug( "Request is rejected by local authorization check, due to decision " + decision );
+        LOG.debug( "Request is rejected by authorization check, due to decision " + decision );
       }
       // Local authorizations may DENY access to a resource in another account but cannot grant it
       return decision == Decision.ALLOW ? Decision.DEFAULT : decision;
@@ -365,19 +374,12 @@ public class PolicyEngineImpl implements PolicyEngine {
       return Decision.ALLOW;
     } else {
       // If not denied by global authorizations, check local (intra-account) authorizations.
-      decision = processAuthorizations( evaluationContext.lookupLocalAuthorizations(), authorizationMatch, action, resourceAccountNumber, resourceName, keyEval, contractEval );
+      final Decision decision = processAuthorizations( evaluationContext.lookupAuthorizations(), authorizationMatch, action, resourceAccountNumber, resourceName, keyEval, contractEval );
       // Denied by explicit or default deny
       if ( decision == Decision.DENY || decision == Decision.DEFAULT ) {
-        LOG.debug( "Request is rejected by local authorization check, due to decision " + decision );
+        LOG.debug( "Request is rejected by authorization check, due to decision " + decision );
       }
       return decision;
-    }
-  }
-
-  private void verifyUser( final User requestUser ) throws AuthException {
-    if ( !requestUser.isEnabled( ) || !RegistrationStatus.CONFIRMED.equals( requestUser.getRegistrationStatus( ) ) ) {
-      LOG.debug( "Request user is rejected because he/she is not enabled or confirmed yet" );
-      throw new AuthException( AuthException.ACCESS_DENIED );
     }
   }
 
@@ -413,6 +415,8 @@ public class PolicyEngineImpl implements PolicyEngine {
                                           @Nonnull  final ContractKeyEvaluator contractEval ) throws AuthException {
     Decision result = Decision.DEFAULT;
     for ( Authorization auth : authorizations ) {
+      if ( auth.getEffect( ) == EffectType.Limit ) continue;
+
       if ( !matchActions( auth, action ) ) {
         continue;
       }
@@ -425,7 +429,7 @@ public class PolicyEngineImpl implements PolicyEngine {
       if ( !matchResources( auth, resourceAccountNumber, resource ) ) {
         continue;
       }
-      if ( !evaluateConditions( auth.getConditions( ), action, auth.getType( ), keyEval, contractEval ) ) {
+      if ( !evaluateConditions( auth.getConditions( ), action, keyEval, contractEval ) ) {
         continue;
       }
       if ( auth.getEffect( ) == EffectType.Deny ) {
@@ -490,11 +494,11 @@ public class PolicyEngineImpl implements PolicyEngine {
   /**
    * Evaluate conditions for an authorization.
    */
-  private boolean evaluateConditions( List<? extends Condition> conditions, String action, String resourceType, CachedKeyEvaluator keyEval, ContractKeyEvaluator contractEval ) throws AuthException {
+  private boolean evaluateConditions( List<? extends Condition> conditions, String action, CachedKeyEvaluator keyEval, ContractKeyEvaluator contractEval ) throws AuthException {
     for ( Condition cond : conditions ) {
       ConditionOp op = Conditions.getOpInstance( cond.getType( ) );
       Key key = Keys.getKeyInstance( Keys.getKeyClass( cond.getKey( ) ) );
-      final boolean applies = key.canApply( action, resourceType );
+      final boolean applies = key.canApply( action );
       if ( key instanceof ContractKey ) {
         if ( applies ) contractEval.addContract( ( ContractKey ) key, cond.getValues( ) );
         continue;
@@ -514,56 +518,6 @@ public class PolicyEngineImpl implements PolicyEngine {
   }
   
   /**
-   * Lookup global (inter-accounts) authorizations.
-   * 
-   * @param resourceType Type of the resource
-   * @param account The account of the request user
-   * @return The list of global authorizations apply to the request user
-   * @throws AuthException for any error
-   */
-  private static List<Authorization> lookupGlobalAuthorizations( String resourceType, Account account ) throws AuthException {
-    List<Authorization> results = Lists.newArrayList( );
-    results.addAll( account.lookupAccountGlobalAuthorizations( resourceType ) );
-    if ( !PolicySpec.ALL_RESOURCE.equals( resourceType ) ) {
-      results.addAll( account.lookupAccountGlobalAuthorizations( PolicySpec.ALL_RESOURCE ) );
-    }
-    return results;
-  }
-  
-  /**
-   * Lookup local (intra-accounts) authorizations.
-   * 
-   * @param resourceType Type of the resource
-   * @param user The request user
-   * @return The list of local authorization apply to the request user
-   * @throws AuthException for any error
-   */
-  private static List<Authorization> lookupLocalAuthorizations( String resourceType, User user ) throws AuthException {
-    List<Authorization> results = Lists.newArrayList( );
-    results.addAll( user.lookupAuthorizations( resourceType ) );
-    if ( resourceType != null && resourceType.contains( ":" ) && !resourceType.endsWith( ":*" ) ) {
-      results.addAll( user.lookupAuthorizations( resourceType.substring( 0, resourceType.indexOf( ':' ) ) + ":*" ) );
-    }
-    if ( resourceType != null && !PolicySpec.ALL_RESOURCE.equals( resourceType ) ) {
-      results.addAll( user.lookupAuthorizations( PolicySpec.ALL_RESOURCE ) );
-    }
-    return results;
-  }
-  
-  /**
-   * Find all quotas that can be applied for the request, by resource type, user and account.
-   * 
-   * @param resourceType The resource type to allocate.
-   * @param user The request user.
-   * @param account The request user account.
-   * @return The list of authorizations (quotas) that match.
-   * @throws AuthException for any error.
-   */
-  private static List<Authorization> lookupQuotas( String resourceType, User user, Account account ) throws AuthException {
-    return AuthorizationProviders.lookupQuotas( account, user, resourceType );
-  }
-  
-  /**
    * Process each of the quota authorizations. If any of them is exceeded, deny access.
    * 
    * @param quotas The quota authorizations
@@ -573,9 +527,17 @@ public class PolicyEngineImpl implements PolicyEngine {
    * @param quantity The quantity to allocate.
    * @throws AuthException for any error.
    */
-  private void processQuotas( List<Authorization> quotas, String action, String resourceType, String resourceName, Long quantity ) throws AuthException {
+  private void processQuotas( final List<Pair<PolicyVersion,Authorization>> quotas,
+                              final String accountId,
+                              final String userId,
+                              final String action,
+                              final String resourceType,
+                              final String resourceName,
+                              final Long quantity ) throws AuthException {
     NumericGreaterThan ngt = new NumericGreaterThan( );
-    for ( Authorization auth : quotas ) {
+    for ( Pair<PolicyVersion,Authorization> quota : quotas ) {
+      final PolicyVersion policy = quota.getLeft();
+      final Authorization auth = quota.getRight( );
       if ( !matchActions( auth, action ) ) {
         LOG.debug( "Action " + action + " not matching" );
         continue;
@@ -584,8 +546,8 @@ public class PolicyEngineImpl implements PolicyEngine {
         LOG.debug( "Resource " + resourceName + " not matching" );
         continue;
       }
-      Authorization.Scope scope = getAuthorizationScope( auth );
-      String principalId = getAuthorizationPrincipalId( auth );
+      PolicyScope scope = policy.getPolicyScope();
+      String principalId = getAuthorizationPrincipalId( scope, accountId, userId );
       for ( Condition cond : auth.getConditions( ) ) {
         Key key = Keys.getKeyInstance( Keys.getKeyClass( cond.getKey( ) ) );
         if ( !( key instanceof QuotaKey ) ) {
@@ -593,7 +555,7 @@ public class PolicyEngineImpl implements PolicyEngine {
           continue;
         }
         QuotaKey quotaKey = ( QuotaKey ) key;
-        if ( !key.canApply( action, resourceType ) ) {
+        if ( !key.canApply( action ) ) {
           LOG.debug( "Key " + cond.getKey( ) + " can not apply for action=" + action + ", resourceType=" + resourceType );
           continue;
         }
@@ -614,23 +576,20 @@ public class PolicyEngineImpl implements PolicyEngine {
   /**
    * Get the principal ID for an authorization based on scope.
    * 
-   * @param auth The authorization
+   * @param scope The scope
    * @return The principal ID (account, group or user)
    * @throws AuthException for any error
    */
-  private String getAuthorizationPrincipalId( Authorization auth ) throws AuthException {
-    return auth.getScopeId( );
-  }
-  
-  /**
-   * Found out the scope of the authorization.
-   * 
-   * @param auth The authorization to be inspected.
-   * @return The scope of the authorization, ACCOUNT, GROUP or USER.
-   * @throws AuthException for any error.
-   */
-  private Authorization.Scope getAuthorizationScope( Authorization auth ) throws AuthException {
-    return auth.getScope( );
+  private String getAuthorizationPrincipalId( PolicyScope scope, String accountId, String userId ) throws AuthException {
+    switch ( scope )  {
+      case Account:
+        return accountId;
+      case User:
+      case Group:
+      case Role:
+        return userId;
+    }
+    throw new RuntimeException( "Should not reach here: unrecognized scope." );
   }
   
   static class AuthEvaluationContextImpl implements AuthEvaluationContext {
@@ -646,25 +605,29 @@ public class PolicyEngineImpl implements PolicyEngine {
     private Boolean systemAdmin;
     private Boolean systemUser;
     private Map<String,String> evaluatedKeys;
-    private List<Authorization> globalAuthorizations;
-    private List<Authorization> localAuthorizations;
+    private List<Authorization> authorizations;
+    private List<Pair<PolicyVersion,Authorization>> quotaAuthorizations;
+    private final List<PolicyVersion> policies;
 
     AuthEvaluationContextImpl( @Nullable final String resourceType,
                                final String action,
                                final User requestUser,
-                               final Map<String, String> evaluatedKeys ) {
-      this( resourceType, action, requestUser, evaluatedKeys, null, null );
+                               final Map<String, String> evaluatedKeys,
+                               final Iterable<PolicyVersion> policies ) {
+      this( resourceType, action, requestUser, evaluatedKeys, policies, null, null );
     }
 
     AuthEvaluationContextImpl( @Nullable final String resourceType,
                                final String action,
                                final User requestUser,
                                final Map<String, String> evaluatedKeys,
+                               final Iterable<PolicyVersion> policies,
                                @Nullable final PrincipalType principalType,
                                @Nullable final String principalName ) {
       this.resourceType = resourceType;
       this.action = action.toLowerCase();
       this.evaluatedKeys = ImmutableMap.copyOf( evaluatedKeys );
+      this.policies = ImmutableList.copyOf( policies );
       this.requestUser = requestUser;
       this.principalType = principalType;
       this.principalName = principalName;
@@ -739,154 +702,99 @@ public class PolicyEngineImpl implements PolicyEngine {
       return systemUser;
     }
 
-    public List<Authorization> lookupGlobalAuthorizations( ) throws AuthException {
-      if ( globalAuthorizations == null ) {
-        if ( resourceType != null ) {
-          globalAuthorizations = cached( PolicyEngineImpl.lookupGlobalAuthorizations( resourceType, getRequestAccount() ) );
-        } else {
-          globalAuthorizations = Collections.emptyList();
+    public List<Authorization> lookupAuthorizations( ) throws AuthException {
+      if ( authorizations == null ) {
+        final List<Pair<PolicyVersion,Authorization>> authorizations = authorizations( policies, false );
+        this.authorizations = ImmutableList.copyOf( Iterables.filter(
+            Iterables.transform( authorizations, Pair.<PolicyVersion,Authorization>right( ) ),
+            resourceType == null ?
+                AuthorizationPredicates.ALLOW_EFFECT :
+                Predicates.not( AuthorizationPredicates.LIMIT_EFFECT ) //TODO:STEVE: resource matching here? -- Predicates.or( AuthorizationPredicates.ALL_RESOURCE, resource( resourceType ) )
+        ) );
+      }
+      return authorizations;
+    }
+
+    static List<Authorization> authorizations( final Policy policy, final boolean resourcePolicy ) throws AuthException {
+      return authorizations( new PolicyVersion( ) {
+        @Override
+        public String getPolicyVersionId( ) {
+          throw new UnsupportedOperationException( ); //TODO:STEVE: super interface needed - PolicySource?
         }
-      }
-      return globalAuthorizations;
+
+        @Override
+        public String getPolicyName() {
+          return policy.getName( );
+        }
+
+        @Override
+        public PolicyScope getPolicyScope() {
+          throw new UnsupportedOperationException( ); //TODO:STEVE: super interface needed - PolicySource?
+        }
+
+        @Override
+        public String getPolicy() {
+          return policy.getText( );
+        }
+
+        @Override
+        public String getPolicyHash( ) {
+          return PolicyUtils.hash( getPolicy( ) );
+        }
+      }, resourcePolicy );
     }
 
-    public List<Authorization> lookupLocalAuthorizations( ) throws AuthException {
-      if ( localAuthorizations == null ) {
-        localAuthorizations = cached( PolicyEngineImpl.lookupLocalAuthorizations( resourceType, getRequestUser( ) ) );
+    static List<Authorization> authorizations( final PolicyVersion policy, final boolean resourcePolicy ) throws AuthException {
+      try {
+        return authorizationCache.get( policy.getPolicyHash( ), new Callable<ImmutableList<Authorization>>() {
+          @Override
+          public ImmutableList<Authorization> call() throws Exception {
+            return ImmutableList.copyOf(  ( resourcePolicy ? PolicyParser.getResourceInstance( ) : PolicyParser.getInstance( ) ).parse( policy.getPolicy( ) ).getAuthorizations( ) );
+          }
+        } );
+      } catch ( final ExecutionException e ) {
+        throw new AuthException( "Invalid policy", e.getCause( ) );
       }
-      return localAuthorizations;
     }
 
-    private List<Authorization> cached( final List<Authorization> authorizations ) {
-      return ImmutableList.copyOf( Iterables.transform( authorizations, CachedAuthorizationTransform.INSTANCE ) );
+    static List<Pair<PolicyVersion,Authorization>> authorizations( final List<PolicyVersion> policies, final boolean resourcePolicy ) throws AuthException {
+      final List<Pair<PolicyVersion,Authorization>> authorizations = Lists.newArrayList( );
+      for ( final PolicyVersion policy : policies ) {
+        Iterables.addAll( authorizations, Iterables.transform( authorizations( policy, resourcePolicy ), Pair.<PolicyVersion,Authorization>pair( ).apply( policy ) ) );
+      }
+      return authorizations;
+    }
+
+    public List<Pair<PolicyVersion,Authorization>> lookupQuotas( ) throws AuthException {
+      if ( quotaAuthorizations == null ) {
+        this.quotaAuthorizations = ImmutableList.copyOf( Iterables.filter(
+            authorizations( policies, false ),
+            Predicates.compose( AuthorizationPredicates.LIMIT_EFFECT, Pair.<PolicyVersion,Authorization>right( ) )
+        ) );
+      }
+      return quotaAuthorizations;
     }
   }
 
-  private static final class CachedDelegatingAuthorization implements Authorization {
-    private static final long serialVersionUID = 1L;
-    private final Authorization delegate;
-    private Set<String> actions;
-    private List<Condition> conditions;
-    private Set<String> resource;
-    private Principal principal;
-
-    private CachedDelegatingAuthorization( final Authorization delegate ) {
-      this.delegate = delegate;
-    }
-
-    @Override
-    public Set<String> getActions( ) throws AuthException {
-      if ( actions == null ) {
-        actions = ImmutableSet.copyOf( delegate.getActions() );
+  private enum AuthorizationPredicates implements Predicate<Authorization> {
+    ALLOW_EFFECT {
+      @Override
+      public boolean apply( @Nullable final Authorization authorization ) {
+        return authorization != null && authorization.getEffect( ) == EffectType.Allow;
       }
-      return actions;
-    }
-
-    @Override
-    public List<Condition> getConditions( ) throws AuthException {
-      if ( conditions == null ) {
-        conditions = ImmutableList.copyOf(
-            Iterables.transform( delegate.getConditions( ), CachedConditionTransform.INSTANCE ) );
+    },
+    ALL_RESOURCE {
+      @Override
+      public boolean apply( @Nullable final Authorization authorization ) {
+        return authorization != null && authorization.getResources( ).contains( PolicySpec.ALL_RESOURCE );
       }
-      return conditions;
-    }
-
-    @Override
-    public Set<String> getResources( ) throws AuthException {
-      if ( resource == null ) {
-        resource = ImmutableSet.copyOf( delegate.getResources() );
+    },
+    LIMIT_EFFECT {
+      @Override
+      public boolean apply( @Nullable final Authorization authorization ) {
+        return authorization != null && authorization.getEffect( ) == EffectType.Limit;
       }
-      return resource;
-    }
-
-    @Override
-    public String getAccount() {
-      return delegate.getAccount( );
-    }
-
-    @Override
-    public String getType( ) {
-      return delegate.getType( );
-    }
-
-    @Override
-    public Principal getPrincipal() throws AuthException {
-      if ( principal == null ) {
-        principal = delegate.getPrincipal( );
-      }
-      return principal;
-    }
-
-    @Override
-    public Boolean isNotResource() {
-      return delegate.isNotResource();
-    }
-
-    @Override
-    public Boolean isNotAction() {
-      return delegate.isNotAction();
-    }
-
-    @Override
-    public Scope getScope() throws AuthException {
-      return delegate.getScope( );
-    }
-
-    @Override
-    public String getScopeId() throws AuthException {
-      return delegate.getScopeId( );
-    }
-
-    @Override
-    public EffectType getEffect() {
-      return delegate.getEffect();
-    }
-  }
-
-  private static class CachedDelegatingCondition implements Condition {
-    private static final long serialVersionUID = 1L;
-    private final Condition delegate;
-    private Set<String> values;
-
-    private CachedDelegatingCondition( final Condition delegate ) {
-      this.delegate = delegate;
-    }
-
-    @Override
-    public String getKey() {
-      return delegate.getKey();
-    }
-
-    @Override
-    public String getType() {
-      return delegate.getType();
-    }
-
-    @Override
-    public Set<String> getValues() throws AuthException {
-      if ( values == null ) {
-        values = delegate.getValues();
-      }
-      return values;
-    }
-  }
-
-  private enum CachedAuthorizationTransform implements Function<Authorization,Authorization> {
-    INSTANCE;
-
-    @Override
-    public Authorization apply( final Authorization authorization ) {
-      return new CachedDelegatingAuthorization( authorization );
-    }
-  }
-
-  private enum CachedConditionTransform implements Function<Condition,Condition> {
-    INSTANCE;
-
-    @Override
-    public Condition apply( final Condition condition ) {
-      return new CachedDelegatingCondition( condition );
-    }
+    },
   }
 
   private enum EucalyptusAccountNumberSupplier implements Supplier<String> {

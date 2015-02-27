@@ -69,7 +69,7 @@ import javax.annotation.Nullable;
 import com.eucalyptus.auth.AuthException;
 import com.google.common.base.Function;
 
-public interface Certificate extends /*HasId,*/ Serializable {
+public interface Certificate extends Serializable {
 
   String getCertificateId( );
 

@@ -91,7 +91,7 @@ public class CurrentTime implements Key {
   }
 
   @Override
-  public boolean canApply( String action, String resourceType ) {
+  public boolean canApply( String action ) {
     return true;
   }
   

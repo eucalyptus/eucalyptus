@@ -68,7 +68,7 @@ import java.util.List;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyParseException;
 
-public interface Group extends /*HasId, */AccountScopedPrincipal, Serializable {
+public interface Group extends AccountScopedPrincipal, Serializable {
 
   String getGroupId( );
   void setName( String name ) throws AuthException;

@@ -67,12 +67,18 @@ import com.eucalyptus.auth.AuthContext;
 import com.eucalyptus.auth.AuthContextSupplier;
 import static com.google.common.collect.Maps.newHashMap;
 
+import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.Policy;
+import com.eucalyptus.auth.principal.PolicyScope;
+import com.eucalyptus.auth.principal.PolicyVersion;
+import com.eucalyptus.auth.principal.PolicyVersions;
 import com.eucalyptus.ws.server.MessageStatistics;
 import edu.ucsb.eucalyptus.msgs.EvaluatedIamConditionKey;
 import java.lang.ref.WeakReference;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import javax.annotation.Nullable;
@@ -98,6 +104,8 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.CollectionUtils;
 import com.google.common.base.Optional;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseCallerContext;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -245,6 +253,24 @@ public class Context {
     return Permissions.evaluateHostKeys( );
   }
 
+  public List<PolicyVersion> loadPolicies( ) throws AuthException {
+    return loadPolicies( getUser( ) );
+  }
+
+  public static List<PolicyVersion> loadPolicies( final User user ) throws AuthException {
+    final List<PolicyVersion> policies = Lists.newArrayList( );
+    if ( user.isAccountAdmin( ) ) {
+      policies.add( PolicyVersions.getAdministratorPolicy( ) );
+    } else {
+      Iterables.addAll( policies, Iterables.transform( user.getPolicies( ), PolicyVersions.policyVersion( PolicyScope.User, Accounts.getUserArn( user ) ) ) );
+      for ( final Group group : user.getGroups( ) ) {
+        if ( !group.isUserGroup( ) ) Iterables.addAll( policies, Iterables.transform( group.getPolicies( ), PolicyVersions.policyVersion( PolicyScope.Group, Accounts.getGroupArn( group ) ) ) );
+      }
+    }
+    Iterables.addAll( policies, Iterables.transform( user.getAccount().lookupAdmin().getPolicies( ), PolicyVersions.policyVersion( PolicyScope.Account, user.getAccountNumber( ) ) ) ); //TODO:STEVE: ARN for account?
+    return policies;
+  }
+
   public User getUser( ) {
     return check( this.user );
   }
@@ -253,7 +279,7 @@ public class Context {
     return new AuthContextSupplier( ){
       @Override
       public AuthContext get( ) throws AuthException {
-        return Permissions.createAuthContext( getUser( ), Collections.<String,String>emptyMap() );
+        return Permissions.createAuthContext( getUser( ), loadPolicies(), Collections.<String,String>emptyMap() );
       }
     };
   }
@@ -364,6 +390,7 @@ public class Context {
       private Boolean isSystemUser;
       private Subject subject = new Subject( );
       private Map<String,String> evaluatedKeys;
+      private List<PolicyVersion> policies;
 
       @Override
       public User getUser( ) {
@@ -393,7 +420,7 @@ public class Context {
       @Override
       public boolean isAdministrator( ) {
         if ( isSystemUser == null ) {
-          isSystemUser = this.getUser( ).isSystemUser();
+          isSystemUser = this.getUser( ).isSystemUser( );
         }
         return isSystemUser;
       }
@@ -401,7 +428,7 @@ public class Context {
       @Override
       public boolean hasAdministrativePrivileges( ) {
         if ( isSystemAdmin == null ) {
-          isSystemAdmin = user.isSystemAdmin();
+          isSystemAdmin = user.isSystemAdmin( );
         }
         return isSystemAdmin;
       }
@@ -426,16 +453,24 @@ public class Context {
         if ( evaluatedKeys == null ) {
           final BaseCallerContext context = super.getRequest( ).getCallerContext( );
           if ( context == null ) {
-            evaluatedKeys = Collections.emptyMap();
+            evaluatedKeys = Collections.emptyMap( );
           } else {
             evaluatedKeys = CollectionUtils.putAll(
                 context.getEvaluatedKeys( ),
                 Maps.<String,String>newHashMap( ),
-                EvaluatedIamConditionKey.key(),
-                EvaluatedIamConditionKey.value() );
+                EvaluatedIamConditionKey.key( ),
+                EvaluatedIamConditionKey.value( ) );
           }
         }
         return evaluatedKeys;
+      }
+
+      @Override
+      public List<PolicyVersion> loadPolicies( ) throws AuthException {
+        if ( policies == null ) {
+          policies = loadPolicies( getUser( ) );
+        }
+        return policies;
       }
 
       @Override
@@ -443,7 +478,7 @@ public class Context {
         return new AuthContextSupplier( ){
           @Override
           public AuthContext get( ) throws AuthException {
-            return Permissions.createAuthContext( getUser( ), evaluateKeys( ) );
+            return Permissions.createAuthContext( getUser( ), loadPolicies( ), evaluateKeys( ) );
           }
         };
       }

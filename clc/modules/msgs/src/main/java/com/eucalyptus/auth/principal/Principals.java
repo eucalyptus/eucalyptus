@@ -164,22 +164,12 @@ public class Principals {
                                                 }
 
                                                 @Override
-                                                public User.RegistrationStatus getRegistrationStatus( ) {
-                                                  return null;
-                                                }
-                                                
-                                                @Override
                                                 public Boolean isEnabled( ) {
                                                   return true;
                                                 }
                                                 
                                                 @Override
                                                 public String getToken( ) {
-                                                  return null;
-                                                }
-                                                
-                                                @Override
-                                                public String getConfirmationCode( ) {
                                                   return null;
                                                 }
                                                 
@@ -279,23 +269,10 @@ public class Principals {
                                                 }
 
                                                 @Override
-                                                public List<Authorization> lookupAuthorizations( String resourceType ) throws AuthException {
-                                                  return Lists.newArrayList( );
-                                                }
-                                                
-                                                @Override
-                                                public List<Authorization> lookupQuotas( String resourceType ) throws AuthException {
-                                                  return Lists.newArrayList( );
-                                                }
-                                                
-                                                @Override
                                                 public void setName( String name ) throws AuthException {}
                                                 
                                                 @Override
                                                 public void setPath( String path ) throws AuthException {}
-                                                
-                                                @Override
-                                                public void setRegistrationStatus( User.RegistrationStatus stat ) throws AuthException {}
                                                 
                                                 @Override
                                                 public void setEnabled( Boolean enabled ) throws AuthException {}
@@ -305,12 +282,6 @@ public class Principals {
                                                 
                                                 @Override
                                                 public String resetToken( ) throws AuthException { return null; }
-                                                
-                                                @Override
-                                                public void setConfirmationCode( String code ) throws AuthException {}
-                                                
-                                                @Override
-                                                public void createConfirmationCode( ) throws AuthException {}
                                                 
                                                 @Override
                                                 public void setPassword( String password ) throws AuthException {}
@@ -414,22 +385,12 @@ public class Principals {
                                                 }
 
                                                 @Override
-                                                public User.RegistrationStatus getRegistrationStatus( ) {
-                                                  return null;
-                                                }
-                                                
-                                                @Override
                                                 public Boolean isEnabled( ) {
                                                   return true;
                                                 }
                                                 
                                                 @Override
                                                 public String getToken( ) {
-                                                  return null;
-                                                }
-                                                
-                                                @Override
-                                                public String getConfirmationCode( ) {
                                                   return null;
                                                 }
                                                 
@@ -529,23 +490,10 @@ public class Principals {
                                                 }
 
                                                 @Override
-                                                public List<Authorization> lookupAuthorizations( String resourceType ) throws AuthException {
-                                                  return Lists.newArrayList( );
-                                                }
-                                                
-                                                @Override
-                                                public List<Authorization> lookupQuotas( String resourceType ) throws AuthException {
-                                                  return Lists.newArrayList( );
-                                                }
-                                                
-                                                @Override
                                                 public void setName( String name ) throws AuthException {}
                                                 
                                                 @Override
                                                 public void setPath( String path ) throws AuthException {}
-                                                
-                                                @Override
-                                                public void setRegistrationStatus( User.RegistrationStatus stat ) throws AuthException {}
                                                 
                                                 @Override
                                                 public void setEnabled( Boolean enabled ) throws AuthException {}
@@ -555,12 +503,6 @@ public class Principals {
                                                 
                                                 @Override
                                                 public String resetToken( ) throws AuthException { return null; }
-                                                
-                                                @Override
-                                                public void setConfirmationCode( String code ) throws AuthException {}
-                                                
-                                                @Override
-                                                public void createConfirmationCode( ) throws AuthException {}
                                                 
                                                 @Override
                                                 public void setPassword( String password ) throws AuthException {}
@@ -773,16 +715,6 @@ public class Principals {
     @Override
     public User lookupAdmin() throws AuthException {
       return systemUser;
-    }
-
-    @Override
-    public List<Authorization> lookupAccountGlobalAuthorizations( String resourceType ) throws AuthException {
-      return Lists.newArrayList( );
-    }
-
-    @Override
-    public List<Authorization> lookupAccountGlobalQuotas( String resourceType ) throws AuthException {
-      return Lists.newArrayList( );
     }
 
     @Override

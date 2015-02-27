@@ -32,7 +32,7 @@ import com.google.common.collect.Sets;
 /**
  *
  */
-public interface Principal extends Serializable {
+public interface Principal {
 
   enum PrincipalType {
     AWS {
@@ -80,7 +80,7 @@ public interface Principal extends Serializable {
     public abstract String convertForUserMatching( final String principal );
   }
 
-  Boolean isNotPrincipal();
+  boolean isNotPrincipal();
 
   PrincipalType getType();
 

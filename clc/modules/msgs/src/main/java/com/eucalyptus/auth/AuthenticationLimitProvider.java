@@ -38,16 +38,16 @@ public interface AuthenticationLimitProvider {
 
   int getSigningCertificateLimitSpi( );
 
-  static class Values {
-    static long getDefaultPasswordExpiry( ) {
+  public static class Values {
+    public static long getDefaultPasswordExpiry( ) {
       return getLongValue( AuthenticationLongProperties.DEFAULT_PASSWORD_EXPIRY );
     }
 
-    static int getAccessKeyLimit( ) {
+    public static int getAccessKeyLimit( ) {
       return getIntValue( AuthenticationLimit.ACCESS_KEY );
     }
 
-    static int getSigningCertificateLimit( ) {
+    public static int getSigningCertificateLimit( ) {
       return getIntValue( AuthenticationLimit.SIGNING_CERTIFICATE );
     }
 

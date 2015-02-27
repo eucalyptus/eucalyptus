@@ -73,16 +73,6 @@ public final class RoleUser implements User {
   }
 
   @Override
-  public List<Authorization> lookupAuthorizations( final String resourceType ) throws AuthException {
-    return role.lookupAuthorizations( resourceType );
-  }
-
-  @Override
-  public List<Authorization> lookupQuotas( final String resourceType ) throws AuthException {
-    return role.lookupQuotas( resourceType );
-  }
-
-  @Override
   public String getName() {
     return user.getName();
   }
@@ -117,16 +107,6 @@ public final class RoleUser implements User {
   }
 
   @Override
-  public RegistrationStatus getRegistrationStatus() {
-    return RegistrationStatus.CONFIRMED;
-  }
-
-  @Override
-  public void setRegistrationStatus( final RegistrationStatus stat ) throws AuthException {
-    throw new AuthException( "Not supported" );
-  }
-
-  @Override
   public Boolean isEnabled() {
     return true;
   }
@@ -149,20 +129,6 @@ public final class RoleUser implements User {
   @Override
   public String resetToken() throws AuthException {
     throw new AuthException( "Not supported" );
-  }
-
-  @Override
-  public String getConfirmationCode() {
-    return null;
-  }
-
-  @Override
-  public void setConfirmationCode( final String code ) throws AuthException {
-    throw new AuthException( "Not supported" );
-  }
-
-  @Override
-  public void createConfirmationCode() throws AuthException {
   }
 
   @Override

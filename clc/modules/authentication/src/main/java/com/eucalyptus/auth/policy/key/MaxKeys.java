@@ -113,7 +113,7 @@ public class MaxKeys extends ContractKey<Long> {
   }
 
   @Override
-  public boolean canApply( String action, String resourceType ) {
+  public boolean canApply( String action ) {
     return ( ACTION_LISTBUCKET.equals( action ) || ACTION_LISTBUCKETVERSIONS.equals( action ) );
   }
 

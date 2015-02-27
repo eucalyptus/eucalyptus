@@ -319,7 +319,7 @@ public class RestrictedTypes {
       final Lock lock = allocationInterner.intern( new AllocationScope( vendor.value( ), type.value( ), userContext.get().getAccountNumber() ) ).lock( );
       lock.lock();
       try {
-        if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, ctx.getUser( ), ( long ) quantity ) ) {
+        if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, userContext, ( long ) quantity ) ) {
           throw new AuthQuotaException( type.value( ), "Quota exceeded while trying to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
         }
         return allocator.get( );
@@ -365,7 +365,7 @@ public class RestrictedTypes {
           String identifier = rsc.getDisplayName( );
           if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, userContext ) ) {
             throw new AuthException( "Not authorized to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
-          } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, ctx.getUser( ), ( long ) quantity ) ) {
+          } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, userContext, ( long ) quantity ) ) {
             throw new AuthQuotaException( type.value( ), "Quota exceeded while trying to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
           }
         } catch ( AuthException ex ) {
@@ -404,7 +404,7 @@ public class RestrictedTypes {
       try {
         if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, userContext ) ) {
           throw new AuthException( "Not authorized to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
-        } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, ctx.getUser( ), amount ) ) {
+        } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, userContext, amount ) ) {
           throw new AuthQuotaException( type.value( ), "Quota exceeded while trying to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
         }
       } catch ( AuthException ex ) {
@@ -470,6 +470,7 @@ public class RestrictedTypes {
       PolicyResourceType type = ats.get( PolicyResourceType.class );
       String action = getIamActionByMessageType( );
       String actionVendor = findPolicyVendor( msgType );
+      AuthContextSupplier authContextSupplier = ctx.getAuthContext( );
       User requestUser = ctx.getUser( );
       Map<String,String> evaluatedKeys = ctx.evaluateKeys( );
       T requestedObject;
@@ -514,7 +515,7 @@ public class RestrictedTypes {
       try ( final PolicyResourceContext policyResourceContext = PolicyResourceContext.of( requestedObject, qualifiedAction ) ) {
         if ( !Permissions.isAuthorized( principalType, principalName, findPolicy( requestedObject, actionVendor, action ),
                                         PolicySpec.qualifiedName( vendor.value( ), type.value( ) ), identifier, owningAccount,
-                                        qualifiedAction, requestUser, evaluatedKeys ) ) {
+                                        qualifiedAction, requestUser, ctx.getAuthContext( ).get( ).getPolicies( ), evaluatedKeys ) ) {
           throw new AuthException( "Not authorized to use " + type.value( ) + " identified by " + identifier + " as the user "
                                    + UserFullName.getInstance( requestUser ) );
         }
@@ -626,9 +627,7 @@ public class RestrictedTypes {
         final PolicyVendor vendor = ats.get( PolicyVendor.class );
         final PolicyResourceType type = ats.get( PolicyResourceType.class );
         final String action = getIamActionByMessageType( );
-        final User requestUser = ctx.getUser( );
-        final Map<String,String> evaluatedKeys = ctx.evaluateKeys( );
-        return Permissions.createEvaluationContext( vendor.value( ), type.value( ), action, requestUser, evaluatedKeys );
+        return ctx.getAuthContext( ).get( ).evaluationContext( vendor.value( ), type.value( ), action );
       } catch ( AuthException e ) {
         throw Exceptions.toUndeclared( e );
       }

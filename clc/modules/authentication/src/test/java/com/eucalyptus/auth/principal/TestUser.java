@@ -212,11 +212,6 @@ public class TestUser implements User {
   }
 
   @Override
-  public void createConfirmationCode() throws AuthException {
-    throw new AuthException("Not implemented");
-  }
-
-  @Override
   public String getInfo( final String key ) throws AuthException {
     throw new AuthException("Not implemented");
   }
@@ -286,13 +281,4 @@ public class TestUser implements User {
     throw new AuthException("Not implemented");
   }
 
-  @Override
-  public List<Authorization> lookupAuthorizations( final String resourceType ) throws AuthException {
-    throw new AuthException("Not implemented");
-  }
-
-  @Override
-  public List<Authorization> lookupQuotas( final String resourceType ) throws AuthException {
-    throw new AuthException("Not implemented");
-  }
 }

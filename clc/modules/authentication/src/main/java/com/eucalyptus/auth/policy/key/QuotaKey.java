@@ -66,13 +66,13 @@ import net.sf.json.JSONException;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
 import com.eucalyptus.auth.policy.condition.NumericLessThanEquals;
-import com.eucalyptus.auth.principal.Authorization;
+import com.eucalyptus.auth.principal.PolicyScope;
 
 public abstract class QuotaKey implements Key {
 
   public static final String NOT_SUPPORTED = "Not supported";
 
-  public abstract String value( Authorization.Scope scope, String id, String resource, Long quantity ) throws AuthException;
+  public abstract String value( PolicyScope scope, String id, String resource, Long quantity ) throws AuthException;
   
   public static final Long MB = 1024 * 1024L;
   

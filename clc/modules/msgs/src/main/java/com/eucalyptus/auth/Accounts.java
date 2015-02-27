@@ -338,26 +338,26 @@ public class Accounts {
   }
 
   public static String getUserArn( final User user ) throws AuthException {
-    return buildArn( user.getAccount(), PolicySpec.IAM_RESOURCE_USER, user.getPath(), user.getName() );
+    return buildArn( user.getAccountNumber( ), PolicySpec.IAM_RESOURCE_USER, user.getPath(), user.getName() );
   }
 
   public static String getGroupArn( final Group group ) throws AuthException {
-    return buildArn( group.getAccount(), PolicySpec.IAM_RESOURCE_GROUP, group.getPath(), group.getName() );
+    return buildArn( group.getAccountNumber( ), PolicySpec.IAM_RESOURCE_GROUP, group.getPath(), group.getName() );
   }
 
   public static String getRoleArn( final Role role ) throws AuthException {
-    return buildArn( role.getAccount(), PolicySpec.IAM_RESOURCE_ROLE, role.getPath(), role.getName() );
+    return buildArn( role.getAccountNumber( ), PolicySpec.IAM_RESOURCE_ROLE, role.getPath(), role.getName() );
   }
 
   public static String getInstanceProfileArn( final InstanceProfile instanceProfile ) throws AuthException {
-    return buildArn( instanceProfile.getAccount(), PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, instanceProfile.getPath(), instanceProfile.getName() );
+    return buildArn( instanceProfile.getAccount().getAccountNumber( ), PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, instanceProfile.getPath(), instanceProfile.getName() );
   }
 
-  private static String buildArn( final Account account,
+  private static String buildArn( final String accountNumber,
                                   final String type,
                                   final String path,
                                   final String name ) throws AuthException {
-    return new EuareResourceName( account.getAccountNumber(), type, path, name ).toString( );
+    return new EuareResourceName( accountNumber, type, path, name ).toString( );
   }
 
   public static boolean isRoleIdentifier( final String identifier ) {

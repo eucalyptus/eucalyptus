@@ -60,7 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth;
+package com.eucalyptus.auth.euare;
 
 import static com.eucalyptus.auth.policy.PolicySpec.*;
 
@@ -70,6 +70,13 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthContext;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.AuthenticationLimitProvider;
+import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.PolicyParseException;
+import com.eucalyptus.auth.ServerCertificate;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
@@ -89,7 +96,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-public class Privileged {
+class Privileged {
 
   public static Account createAccount( AuthContext requestUser, String accountName, String password, String email ) throws AuthException {
     if ( !requestUser.isSystemUser( ) ||
@@ -104,8 +111,7 @@ public class Privileged {
       info.put( User.EMAIL, email );
     }
     User admin = newAccount.addUser( User.ACCOUNT_ADMIN, "/", true/*enabled*/, info );
-    admin.resetToken( );
-    admin.createConfirmationCode( );
+    admin.resetToken();
     if ( password != null ) {
       admin.setPassword( Crypto.generateEncryptedPassword( password ) );
       admin.setPasswordExpires( System.currentTimeMillis( ) + AuthenticationLimitProvider.Values.getDefaultPasswordExpiry( ) );

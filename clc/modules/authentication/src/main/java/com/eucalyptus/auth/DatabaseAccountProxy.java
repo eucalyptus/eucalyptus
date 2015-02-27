@@ -82,7 +82,6 @@ import com.eucalyptus.auth.checker.InvalidValueException;
 import com.eucalyptus.auth.checker.ValueChecker;
 import com.eucalyptus.auth.checker.ValueCheckerFactory;
 import com.eucalyptus.auth.entities.AccountEntity;
-import com.eucalyptus.auth.entities.AuthorizationEntity;
 import com.eucalyptus.auth.entities.CertificateEntity;
 import com.eucalyptus.auth.entities.GroupEntity;
 import com.eucalyptus.auth.entities.InstanceProfileEntity;
@@ -91,14 +90,14 @@ import com.eucalyptus.auth.entities.RoleEntity;
 import com.eucalyptus.auth.entities.ServerCertificateEntity;
 import com.eucalyptus.auth.entities.UserEntity;
 import com.eucalyptus.auth.policy.PolicyParser;
+import com.eucalyptus.auth.policy.PolicyPolicy;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.InstanceProfile;
+import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Euare;
@@ -112,6 +111,7 @@ import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.Tx;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 
@@ -205,7 +205,7 @@ public class DatabaseAccountProxy implements Account {
           .createCriteria( "groups" ).setCacheable( true ).add( Restrictions.eq( "userGroup", true ) )
           .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", this.delegate.getName( ) ) )
           .list( );
-      db.commit( );
+      db.commit();
       for ( UserEntity u : users ) {
         results.add( new DatabaseUserProxy( u ) );
       }
@@ -223,11 +223,11 @@ public class DatabaseAccountProxy implements Account {
       @SuppressWarnings( "unchecked" )
       List<GroupEntity> groups = ( List<GroupEntity> ) Entities
           .createCriteria( GroupEntity.class ).setCacheable( true ).add( Restrictions.eq( "userGroup", false ) )
-          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", this.delegate.getName( ) ) )
+          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", this.delegate.getName() ) )
           .list( );
       db.commit( );
       for ( GroupEntity g : groups ) {
-        results.add( new DatabaseGroupProxy( g ) );
+        results.add( new DatabaseGroupProxy( g, Suppliers.ofInstance( getAccountNumber( ) ) ) );
       }
       return results;
     } catch ( Exception e ) {
@@ -243,7 +243,7 @@ public class DatabaseAccountProxy implements Account {
       @SuppressWarnings( "unchecked" )
       List<RoleEntity> roles = ( List<RoleEntity> ) Entities
           .createCriteria( RoleEntity.class )
-          .createCriteria( "account" ).add( Restrictions.eq( "name", this.delegate.getName( ) ) )
+          .createCriteria( "account" ).add( Restrictions.eq( "name", this.delegate.getName() ) )
           .setCacheable( true )
           .list( );
       for ( final RoleEntity role : roles ) {
@@ -404,7 +404,8 @@ public class DatabaseAccountProxy implements Account {
     if ( DatabaseAuthUtils.checkRoleExists( roleName, this.delegate.getName() ) ) {
       throw new AuthException( AuthException.ROLE_ALREADY_EXISTS );
     }
-    final PolicyEntity parsedPolicy = PolicyParser.getResourceInstance().parse( assumeRolePolicy );
+    final PolicyPolicy policyPolicy = PolicyParser.getResourceInstance( ).parse( assumeRolePolicy );
+    final PolicyEntity parsedPolicy = PolicyEntity.create( null, policyPolicy.getPolicyVersion( ), assumeRolePolicy );
     try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
       final AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, "name", this.delegate.getName( ) );
       final RoleEntity newRole = new RoleEntity( roleName );
@@ -466,7 +467,7 @@ public class DatabaseAccountProxy implements Account {
       group.setAccount( account );
       Entities.persist( group );
       db.commit( );
-      return new DatabaseGroupProxy( group );
+      return new DatabaseGroupProxy( group, Suppliers.ofInstance( getAccountNumber( ) ) );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to add group " + groupName + " in " + this.delegate.getName( ) );
       throw new AuthException( AuthException.GROUP_CREATE_FAILURE, e );
@@ -564,7 +565,7 @@ public class DatabaseAccountProxy implements Account {
     try ( final TransactionResource db = Entities.transactionFor( GroupEntity.class ) ) {
       GroupEntity group = DatabaseAuthUtils.getUniqueGroup( groupName, accountName );
       db.commit( );
-      return new DatabaseGroupProxy( group );
+      return new DatabaseGroupProxy( group, Suppliers.ofInstance( getAccountNumber( ) ) );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to get group " + groupName + " for " + accountName );
       throw new AuthException( AuthException.NO_SUCH_GROUP, e );
@@ -623,69 +624,6 @@ public class DatabaseAccountProxy implements Account {
     return lookupUserByName( User.ACCOUNT_ADMIN );
   }
 
-  @Override
-  public List<Authorization> lookupAccountGlobalAuthorizations( String resourceType ) throws AuthException {
-    String accountId = this.delegate.getAccountNumber( );
-    if ( resourceType == null ) {
-      throw new AuthException( "Empty resource type" );
-    }
-    try ( final TransactionResource db = Entities.transactionFor( AuthorizationEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) Entities
-          .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add(
-              Restrictions.and(
-                  Restrictions.eq( "type", resourceType ),
-                  Restrictions.or( 
-                      Restrictions.eq( "effect", EffectType.Allow ),
-                      Restrictions.eq( "effect", EffectType.Deny ) ) ) )
-          .createCriteria( "statement" ).setCacheable( true )
-          .createCriteria( "policy" ).setCacheable( true )
-          .createCriteria( "group" ).setCacheable( true ).add( Restrictions.eq( "name", DatabaseAuthUtils.getUserGroupName( User.ACCOUNT_ADMIN ) ) )
-          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "accountNumber", accountId ) )
-          .list( );
-      db.commit( );
-      List<Authorization> results = Lists.newArrayList( );
-      for ( AuthorizationEntity auth : authorizations ) {
-        results.add( new DatabaseAuthorizationProxy( auth ) );
-      }
-      return results;
-    } catch ( Exception e ) {
-      Debugging.logError( LOG, e, "Failed to lookup global authorization for account " + accountId + ", type=" + resourceType);
-      throw new AuthException( "Failed to lookup account global auth", e );
-    }
-  }
-  
-  @Override
-  public List<Authorization> lookupAccountGlobalQuotas( String resourceType ) throws AuthException {
-    String accountId = this.delegate.getAccountNumber( );
-    if ( resourceType == null ) {
-      throw new AuthException( "Empty resource type" );
-    }
-    try ( final TransactionResource db = Entities.transactionFor( AuthorizationEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) Entities
-          .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add(
-              Restrictions.and(
-                  Restrictions.eq( "type", resourceType ),
-                  Restrictions.eq( "effect", EffectType.Limit ) ) )
-          .createCriteria( "statement" ).setCacheable( true )
-          .createCriteria( "policy" ).setCacheable( true )
-          .createCriteria( "group" ).setCacheable( true ).add( Restrictions.eq( "name", DatabaseAuthUtils.getUserGroupName( User.ACCOUNT_ADMIN ) ) )
-          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "accountNumber", accountId ) )
-          .list( );
-      db.commit( );
-      List<Authorization> results = Lists.newArrayList( );
-      for ( AuthorizationEntity auth : authorizations ) {
-        results.add( new DatabaseAuthorizationProxy( auth ) );
-      }
-      return results;
-    } catch ( Exception e ) {
-      Debugging.logError( LOG, e, "Failed to lookup global quota for account " + accountId + ", type=" + resourceType);
-      throw new AuthException( "Failed to lookup account global quota", e );
-    }
-  }
-  
-  
   @Override
   public ServerCertificate addServerCertificate(String certName,
       String certBody, String certChain, String certPath, String pk)

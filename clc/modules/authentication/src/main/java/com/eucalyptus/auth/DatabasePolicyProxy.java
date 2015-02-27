@@ -64,10 +64,7 @@ package com.eucalyptus.auth;
 
 import java.util.List;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.entities.AuthorizationEntity;
 import com.eucalyptus.auth.entities.PolicyEntity;
-import com.eucalyptus.auth.entities.StatementEntity;
-import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.entities.Transactions;
@@ -88,11 +85,6 @@ public class DatabasePolicyProxy implements Policy {
   }
   
   @Override
-  public String getPolicyId( ) {
-    return this.delegate.getPolicyId( );
-  }
-  
-  @Override
   public String getName( ) {
     return this.delegate.getName( );
   }
@@ -102,12 +94,14 @@ public class DatabasePolicyProxy implements Policy {
     return this.delegate.getText( );
   }
   
-  @Override
   public String getVersion( ) {
     return this.delegate.getPolicyVersion( );
   }
-  
-  @Override
+
+  public Integer getPolicyVersion( ) {
+    return this.delegate.getVersion( );
+  }
+
   public Group getGroup( ) throws AuthException {
     final List<Group> results = Lists.newArrayList( );
     try {
@@ -121,26 +115,5 @@ public class DatabasePolicyProxy implements Policy {
       throw new AuthException( e );
     }
     return results.get( 0 );
-  }
-
-  @Override
-  public List<Authorization> getAuthorizations() throws AuthException {
-    final List<Authorization> results = Lists.newArrayList( );
-    try {
-      Transactions.one( PolicyEntity.newInstanceWithId( this.delegate.getPolicyId( ) ), new Tx<PolicyEntity>( ) {
-        @Override
-        public void fire( PolicyEntity t ) {
-          for ( final StatementEntity statementEntity : t.getStatements() ) {
-            for ( final AuthorizationEntity authorizationEntity : statementEntity.getAuthorizations() ) {
-              results.add( new DatabaseAuthorizationProxy( authorizationEntity ) );
-            }
-          }
-        }
-      } );
-    } catch ( ExecutionException e ) {
-      Debugging.logError( LOG, e, "Failed to getAuthorizations for " + this.delegate );
-      throw new AuthException( e );
-    }
-    return results;
   }
 }

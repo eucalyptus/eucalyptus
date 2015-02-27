@@ -77,8 +77,10 @@ import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
+import com.eucalyptus.auth.policy.PolicyPolicy;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.google.common.collect.Lists;
 
 /**
  * Database policy entity.
@@ -105,11 +107,6 @@ public class PolicyEntity extends AbstractPersistent implements Serializable {
   @Type(type="org.hibernate.type.StringClobType")
   String text;
   
-  // The set of statements of this policy
-  @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "policy" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  List<StatementEntity> statements;
-  
   // The owning group
   @ManyToOne
   @JoinColumn( name = "auth_policy_owning_group" )
@@ -127,13 +124,16 @@ public class PolicyEntity extends AbstractPersistent implements Serializable {
     this.name = name;
   }
 
-  public PolicyEntity( String version, String text, List<StatementEntity> statements ) {
+  public PolicyEntity( String name, String version, String text ) {
+    this( name );
     this.policyVersion = version;
     this.text = text;
-    this.statements = statements;
-    if ( statements != null ) for ( StatementEntity statement : statements ) {
-        statement.setPolicy( this );
-    }
+  }
+
+  public static PolicyEntity create( final String name,
+                                     final String policyVersion,
+                                     final String text ) {
+    return new PolicyEntity( name, policyVersion, text );
   }
 
   public static PolicyEntity newInstanceWithId( final String id ) {
@@ -156,10 +156,6 @@ public class PolicyEntity extends AbstractPersistent implements Serializable {
   
   public void setName( String name ) {
     this.name = name;
-  }
-  
-  public List<StatementEntity> getStatements( ) {
-    return this.statements;
   }
   
   public GroupEntity getGroup( ) {
@@ -207,18 +203,4 @@ public class PolicyEntity extends AbstractPersistent implements Serializable {
     return this.getId( );
   }
 
-  /**
-   * @return true if the policy contains Effect is "Allow".
-   */
-  public boolean containsAllowEffect() {
-    for ( StatementEntity statement : this.getStatements( ) ) {
-      for ( AuthorizationEntity authorization : statement.getAuthorizations( ) ) {
-        if ( authorization.getEffect( ) == EffectType.Allow ) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-  
 }

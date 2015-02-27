@@ -68,17 +68,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.PolicyParseException;
-import com.eucalyptus.auth.entities.AuthorizationEntity;
-import com.eucalyptus.auth.entities.ConditionEntity;
-import com.eucalyptus.auth.entities.PolicyEntity;
-import com.eucalyptus.auth.entities.PrincipalEntity;
-import com.eucalyptus.auth.entities.StatementEntity;
 import com.eucalyptus.auth.json.JsonUtils;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
 import com.eucalyptus.auth.policy.condition.Conditions;
@@ -87,6 +81,7 @@ import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.key.Key;
 import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.QuotaKey;
+import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.eucalyptus.util.Pair;
 import com.google.common.base.Optional;
@@ -149,7 +144,7 @@ public class PolicyParser {
    * @return The parsed the policy entity.
    * @throws PolicyParseException for policy syntax error.
    */
-  public PolicyEntity parse( String policy ) throws PolicyParseException {
+  public PolicyPolicy parse( String policy ) throws PolicyParseException {
     if ( policy == null ) {
       throw new PolicyParseException( PolicyParseException.EMPTY_POLICY );
     }
@@ -160,8 +155,8 @@ public class PolicyParser {
       JSONObject policyJsonObj = JSONObject.fromObject( policy );
       String version = JsonUtils.getByType( String.class, policyJsonObj, PolicySpec.VERSION );
       // Policy statements
-      List<StatementEntity> statements = parseStatements( policyJsonObj );
-      return new PolicyEntity( version, policy, statements );
+      List<PolicyAuthorization> authorizations = parseStatements( policyJsonObj );
+      return PolicyUtils.intern( new PolicyPolicy( version, authorizations ) );
     } catch ( JSONException e ) {
       Debugging.logError( LOG, e, "Syntax error in input policy" );
       throw new PolicyParseException( e );
@@ -175,13 +170,13 @@ public class PolicyParser {
    * @return A list of statement entities from the input policy.
    * @throws JSONException for syntax error.
    */
-  private List<StatementEntity> parseStatements( JSONObject policy ) throws JSONException {
+  private List<PolicyAuthorization> parseStatements( JSONObject policy ) throws JSONException {
     List<JSONObject> objs = JsonUtils.getRequiredArrayByType( JSONObject.class, policy, PolicySpec.STATEMENT );
-    List<StatementEntity> statements = Lists.newArrayList( );
+    List<PolicyAuthorization> authorizations = Lists.newArrayList( );
     for ( JSONObject o : objs ) {
-      statements.add( parseStatement( o ) );
+      authorizations.addAll( parseStatement( o ) );
     }
-    return statements;
+    return authorizations;
   }
   
   /**
@@ -194,7 +189,7 @@ public class PolicyParser {
    * @return The parsed statement entity
    * @throws JSONException for syntax error
    */
-  private StatementEntity parseStatement( JSONObject statement ) throws JSONException {
+  private List<PolicyAuthorization> parseStatement( JSONObject statement ) throws JSONException {
     // statement ID
     String sid = JsonUtils.getByType( String.class, statement, PolicySpec.SID );
     // effect
@@ -202,13 +197,10 @@ public class PolicyParser {
     String effect = JsonUtils.getByType( String.class, statement, PolicySpec.EFFECT );
     checkEffect( effect );
     // principal
-    PrincipalEntity principal = parsePrincipal( statement );
-    // authorizations: action + resource
-    List<AuthorizationEntity> authorizations = parseAuthorizations( statement, effect );
+    PolicyPrincipal principal = parsePrincipal( statement );
     // conditions
-    List<ConditionEntity> conditions = parseConditions( statement, effect );
-    // Construct the statement: a list of authorizations and a list of conditions
-    return new StatementEntity( sid, principal, authorizations, conditions );
+    List<PolicyCondition> conditions = parseConditions( statement, effect );
+    return parseAuthorizations( statement, sid, effect, principal, conditions );
   }
 
   /**
@@ -218,7 +210,7 @@ public class PolicyParser {
    * @return The optional principal entity entities.
    * @throws JSONException for syntax error.
    */
-  private PrincipalEntity parsePrincipal( final JSONObject statement ) {
+  private PolicyPrincipal parsePrincipal( final JSONObject statement ) {
     final String principalElement =
         JsonUtils.checkBinaryOption( statement, PolicySpec.PRINCIPAL, PolicySpec.NOTPRINCIPAL, attachmentType.isPrincipalRequired() );
     final JSONObject principal = JsonUtils.getByType( JSONObject.class, statement, principalElement );
@@ -233,7 +225,7 @@ public class PolicyParser {
       throw new JSONException( "Policy document should not specify a principal." );
     }
     boolean notPrincipal = PolicySpec.NOTPRINCIPAL.equals( principalElement );
-    return new PrincipalEntity( notPrincipal, PrincipalType.valueOf( principalType ), Sets.newHashSet( values ) );
+    return new PolicyPrincipal( notPrincipal, PrincipalType.valueOf( principalType ), Sets.newHashSet( values ) );
   }
 
   /**
@@ -244,7 +236,12 @@ public class PolicyParser {
    * @return A list of authorization entities.
    * @throws JSONException for syntax error.
    */
-  private List<AuthorizationEntity> parseAuthorizations( JSONObject statement, String effect ) throws JSONException {
+  private List<PolicyAuthorization> parseAuthorizations(
+      final JSONObject statement,
+      final String sid,
+      final String effect,
+      final PolicyPrincipal principal,
+      final List<PolicyCondition> conditions ) throws JSONException {
     // actions
     String actionElement = JsonUtils.checkBinaryOption( statement, PolicySpec.ACTION, PolicySpec.NOTACTION );
     List<String> actions = JsonUtils.parseStringOrStringList( statement, actionElement );
@@ -258,7 +255,7 @@ public class PolicyParser {
       throw new JSONException( "Empty resource values" );
     }
     // decompose actions and resources and re-combine them into a list of authorizations
-    return decomposeStatement( effect, actionElement, actions, resourceElement, resources );
+    return decomposeStatement( effect, sid, actionElement, actions, resourceElement, resources, principal, conditions );
   }
   
   /**
@@ -268,12 +265,15 @@ public class PolicyParser {
    * 3. Permute all combinations of action groups and resource groups, matching them by the same
    *    vendors.
    */
-  private List<AuthorizationEntity> decomposeStatement(
+  private List<PolicyAuthorization> decomposeStatement(
       final String effect,
+      final String sid,
       final String actionElement,
       final List<String> actions,
       final String resourceElement,
-      final List<String> resources
+      final List<String> resources,
+      final PolicyPrincipal principal,
+      final List<PolicyCondition> conditions
   ) {
     // Group actions by vendor
     final SetMultimap<String, String> actionMap = HashMultimap.create( );
@@ -295,7 +295,7 @@ public class PolicyParser {
     final boolean notAction = PolicySpec.NOTACTION.equals( actionElement );
     final boolean notResource = PolicySpec.NOTRESOURCE.equals( resourceElement );
     // Permute action and resource groups and construct authorizations.
-    final List<AuthorizationEntity> results = Lists.newArrayList( );
+    final List<PolicyAuthorization> results = Lists.newArrayList( );
     for ( final Map.Entry<String, Collection<String>> actionSetEntry : actionMap.asMap( ).entrySet() ) {
       final String vendor = actionSetEntry.getKey( );
       final Set<String> actionSet = (Set<String>) actionSetEntry.getValue( );
@@ -307,10 +307,13 @@ public class PolicyParser {
         if ( PolicySpec.ALL_ACTION.equals( vendor )
             || PolicySpec.ALL_RESOURCE.equals( type )
             || PolicySpec.isPermittedResourceVendor( vendor, PolicySpec.vendor( type ) ) ) {
-          results.add( new AuthorizationEntity(
+          results.add( new PolicyAuthorization(
+              sid,
               EffectType.valueOf( effect ),
               accountIdOrName.orNull( ),
               type,
+              principal,
+              conditions,
               actionSet,
               notAction,
               resourceSet,
@@ -319,7 +322,7 @@ public class PolicyParser {
         }
       }
       if ( !added ) {
-        results.add( new AuthorizationEntity( EffectType.valueOf( effect ), actionSet, notAction ) );
+        results.add( new PolicyAuthorization( sid, EffectType.valueOf( effect ), principal, conditions, actionSet, notAction ) );
       }
     }
     return results;
@@ -333,10 +336,10 @@ public class PolicyParser {
    * @return A list of parsed condition entity.
    * @throws JSONException for syntax error.
    */
-  private List<ConditionEntity> parseConditions( JSONObject statement, String effect ) throws JSONException {
+  private List<PolicyCondition> parseConditions( JSONObject statement, String effect ) throws JSONException {
     JSONObject condsObj = JsonUtils.getByType( JSONObject.class, statement, PolicySpec.CONDITION );
     boolean isQuota = EffectType.Limit.name( ).equals( effect );
-    List<ConditionEntity> results = Lists.newArrayList( );
+    List<PolicyCondition> results = Lists.newArrayList( );
     if ( condsObj != null ) {    
       for ( Object t : condsObj.keySet( ) ) {
         String type = ( String ) t;
@@ -348,7 +351,7 @@ public class PolicyParser {
           values.addAll( JsonUtils.parseStringOrStringList( paramsObj, key ) );
           key = normalize( key );
           checkConditionKeyAndValues( key, values, typeClass, isQuota );
-          results.add( new ConditionEntity( type, key, values ) );
+          results.add( new PolicyCondition( type, key, values ) );
         }
       }
     }

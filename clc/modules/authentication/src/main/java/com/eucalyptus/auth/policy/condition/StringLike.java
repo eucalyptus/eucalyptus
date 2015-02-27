@@ -64,14 +64,14 @@ package com.eucalyptus.auth.policy.condition;
 
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
-import com.eucalyptus.auth.policy.PatternUtils;
+import com.eucalyptus.auth.policy.PolicyUtils;
 
 @PolicyCondition( { Conditions.STRINGLIKE, Conditions.STRINGLIKE_S } )
 public class StringLike implements StringConditionOp {
   
   @Override
   public boolean check( @Nullable String key, String value ) {
-    String pattern = PatternUtils.toJavaPattern( value.toLowerCase( ) );
+    String pattern = PolicyUtils.toJavaPattern( value.toLowerCase() );
     return key != null && Pattern.matches( pattern, key );
   }
   

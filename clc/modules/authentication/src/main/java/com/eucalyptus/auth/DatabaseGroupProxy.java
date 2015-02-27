@@ -71,13 +71,11 @@ import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.checker.InvalidValueException;
 import com.eucalyptus.auth.checker.ValueChecker;
 import com.eucalyptus.auth.checker.ValueCheckerFactory;
-import com.eucalyptus.auth.entities.AuthorizationEntity;
-import com.eucalyptus.auth.entities.ConditionEntity;
 import com.eucalyptus.auth.entities.GroupEntity;
 import com.eucalyptus.auth.entities.PolicyEntity;
-import com.eucalyptus.auth.entities.StatementEntity;
 import com.eucalyptus.auth.entities.UserEntity;
 import com.eucalyptus.auth.policy.PolicyParser;
+import com.eucalyptus.auth.policy.PolicyPolicy;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
@@ -109,9 +107,9 @@ public class DatabaseGroupProxy implements Group {
   }
 
   public DatabaseGroupProxy( final GroupEntity delegate,
-                             final String accountNumber ) {
+                             final Supplier<String> accountNumberSupplier ) {
     this.delegate = delegate;
-    this.accountNumberSupplier = Suppliers.ofInstance( accountNumber );
+    this.accountNumberSupplier = accountNumberSupplier;
   }
 
   @Override
@@ -293,9 +291,9 @@ public class DatabaseGroupProxy implements Group {
     if ( DatabaseAuthUtils.policyNameinList( name, this.getPolicies( ) ) && !allowUpdate ) {
       Debugging.logError( LOG, null, "Policy name already used: " + name );
       throw new AuthException( AuthException.INVALID_NAME );
-    }    
-    PolicyEntity parsedPolicy = PolicyParser.getInstance( ).parse( policy );
-    parsedPolicy.setName( name );
+    }
+    final PolicyPolicy policyPolicy = PolicyParser.getInstance().parse( policy );
+    final PolicyEntity parsedPolicy = PolicyEntity.create( name, policyPolicy.getPolicyVersion( ), policy );
     try ( final TransactionResource db = Entities.transactionFor( GroupEntity.class ) ) {
       final GroupEntity groupEntity = DatabaseAuthUtils.getUnique( GroupEntity.class, "groupId", this.delegate.getGroupId( ) );
       final PolicyEntity remove = DatabaseAuthUtils.removeGroupPolicy( groupEntity, name );
@@ -304,18 +302,6 @@ public class DatabaseGroupProxy implements Group {
       }
       Entities.persist( parsedPolicy );
       parsedPolicy.setGroup( groupEntity );
-      for ( StatementEntity statement : parsedPolicy.getStatements( ) ) {
-        Entities.persist( statement );
-        statement.setPolicy( parsedPolicy );
-        for ( AuthorizationEntity auth : statement.getAuthorizations( ) ) {
-          Entities.persist( auth );
-          auth.setStatement( statement );
-        }
-        for ( ConditionEntity cond : statement.getConditions( ) ) {
-          Entities.persist( cond );
-          cond.setStatement( statement );
-        }
-      }
       groupEntity.getPolicies( ).add( parsedPolicy );
       db.commit( );
       return new DatabasePolicyProxy( parsedPolicy );

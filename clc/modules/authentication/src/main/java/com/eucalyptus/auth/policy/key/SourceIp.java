@@ -98,7 +98,7 @@ public class SourceIp implements Key {
   }
   
   @Override
-  public boolean canApply( String action, String resourceType ) {
+  public boolean canApply( String action ) {
     return true;
   }
   

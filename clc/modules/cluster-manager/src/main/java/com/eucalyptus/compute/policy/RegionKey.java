@@ -49,8 +49,7 @@ public class RegionKey implements ComputeKey {
   }
 
   @Override
-  public boolean canApply( final String action,
-                           final String resourceType ) {
+  public boolean canApply( final String action ) {
     return true;
   }
 }

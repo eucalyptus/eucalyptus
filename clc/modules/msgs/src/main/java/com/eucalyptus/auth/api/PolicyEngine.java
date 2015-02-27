@@ -71,6 +71,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Contract;
 import com.eucalyptus.auth.Contract.Type;
 import com.eucalyptus.auth.principal.Policy;
+import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.User;
 
 public interface PolicyEngine {
@@ -128,12 +129,14 @@ public interface PolicyEngine {
    * @param action The associated action
    * @param requestUser The user making the request
    * @param evaluatedKeys Evaluated IAM condition keys
+   * @param policies The (non-resource) policies to use for authorization
    * @return The context
    */
   AuthEvaluationContext createEvaluationContext( String resourceType,
                                                  String action,
                                                  User requestUser,
-                                                 Map<String,String> evaluatedKeys );
+                                                 Map<String,String> evaluatedKeys,
+                                                 Iterable<PolicyVersion> policies );
 
   /**
    * Create a context for use in an evaluation.
@@ -142,6 +145,7 @@ public interface PolicyEngine {
    * @param action The associated action
    * @param requestUser The user making the request
    * @param evaluatedKeys Evaluated IAM condition keys
+   * @param policies The (non-resource) policies to use for authorization
    * @param principalType The type of the principal
    * @param principalName The principal name
    * @return The context
@@ -150,6 +154,7 @@ public interface PolicyEngine {
                                                  String action,
                                                  User requestUser,
                                                  Map<String,String> evaluatedKeys,
+                                                 Iterable<PolicyVersion> policies,
                                                  PrincipalType principalType,
                                                  String principalName );
 

@@ -34,7 +34,7 @@ import com.eucalyptus.util.RestrictedType;
  */
 @PolicyVendor( PolicySpec.VENDOR_IAM )
 @PolicyResourceType( value = PolicySpec.IAM_RESOURCE_ROLE, resourcePolicyActions = "sts:assumerole" )
-public interface Role extends AuthorizedPrincipal, RestrictedType, PolicyRestrictedType {
+public interface Role extends AccountScopedPrincipal, RestrictedType, PolicyRestrictedType {
 
   String getRoleId( );
 
@@ -48,4 +48,17 @@ public interface Role extends AuthorizedPrincipal, RestrictedType, PolicyRestric
   List<InstanceProfile> getInstanceProfiles() throws AuthException;
 
   Date getCreationTimestamp();
+
+  List<Policy> getPolicies( ) throws AuthException;
+
+  /**
+   * Add a policy, fail if exists.
+   */
+  Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException;
+
+  /**
+   * Add or update the named policy.
+   */
+  Policy putPolicy( String name, String policy ) throws AuthException, PolicyParseException;
+  void removePolicy( String name ) throws AuthException;
 }

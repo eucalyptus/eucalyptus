@@ -65,7 +65,6 @@ package com.eucalyptus.auth;
 import static com.eucalyptus.auth.api.PolicyEngine.AuthorizationMatch;
 import static com.eucalyptus.auth.principal.Principal.PrincipalType;
 import static com.google.common.collect.Maps.newHashMap;
-import java.util.Collections;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -76,6 +75,7 @@ import com.eucalyptus.auth.policy.key.Key;
 import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Policy;
+import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
@@ -97,19 +97,21 @@ public class Permissions {
 
 	public static AuthContext createAuthContext(
 			final User requestUser,
+			final Iterable<PolicyVersion> policies,
 			final Map<String, String> evaluatedKeys
 	) throws AuthException {
-		return new AuthContext( requestUser, evaluatedKeys );
+		return new AuthContext( requestUser, policies, evaluatedKeys );
 	}
 
 	public static AuthContextSupplier createAuthContextSupplier(
 			final User requestUser,
+			final Iterable<PolicyVersion> policies,
 			final Map<String, String> evaluatedKeys
 	) {
 		return new AuthContextSupplier( ) {
 			@Override
 			public AuthContext get( ) throws AuthException {
-				return createAuthContext( requestUser, evaluatedKeys );
+				return createAuthContext( requestUser, policies, evaluatedKeys );
 			}
 		};
 	}
@@ -119,10 +121,12 @@ public class Permissions {
 			final String resourceType,
 			final String action,
 			final User requestUser,
+			final Iterable<PolicyVersion> policies,
 			final Map<String,String> evaluatedKeys
 	) {
-		return policyEngine.createEvaluationContext( PolicySpec.qualifiedName( vendor, resourceType ), PolicySpec.qualifiedName( vendor, action ), requestUser, evaluatedKeys );
+		return policyEngine.createEvaluationContext( PolicySpec.qualifiedName( vendor, resourceType ), PolicySpec.qualifiedName( vendor, action ), requestUser, evaluatedKeys, policies );
 	}
+
 
 	public static boolean isAuthorized(
 			@Nonnull  final String vendor,
@@ -182,10 +186,11 @@ public class Permissions {
 		final Account resourceAccount,
 		final String action,
 		final User requestUser,
+		final Iterable<PolicyVersion> policies,
 		final Map<String,String> evaluatedKeys
 	) {
 		final String resourceAccountNumber = resourceAccount==null ? null : resourceAccount.getAccountNumber( );
-		final AuthEvaluationContext context = policyEngine.createEvaluationContext( resourceType, action, requestUser, evaluatedKeys, principalType, principalName );
+		final AuthEvaluationContext context = policyEngine.createEvaluationContext( resourceType, action, requestUser, evaluatedKeys, policies, principalType, principalName );
 		try {
 			final Map<Contract.Type, Contract> contracts = newHashMap();
 			policyEngine.evaluateAuthorization( context, resourcePolicy, resourceAccountNumber, resourceName, contracts );
@@ -228,10 +233,6 @@ public class Permissions {
 			LOG.error( "Exception in access for action " + action, e );
 		}
 		return false;
-	}
-
-	public static boolean canAllocate( String vendor, String resourceType, String resourceName, String action, User requestUser, Long quantity ) {
-		return canAllocate( createEvaluationContext( vendor, resourceType, action, requestUser, Collections.<String,String>emptyMap( ) ), resourceName, quantity );
 	}
 
 	public static boolean canAllocate( String vendor, String resourceType, String resourceName, String action, AuthContext requestUser, Long quantity ) {

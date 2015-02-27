@@ -22,7 +22,7 @@ package com.eucalyptus.auth.policy.condition;
 import java.util.List;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
-import com.eucalyptus.auth.policy.PatternUtils;
+import com.eucalyptus.auth.policy.PolicyUtils;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 
@@ -50,7 +50,7 @@ public class ArnLikeConditionOp implements ArnConditionOp {
       for ( int i= 0; i<6; i++ ) {
         final String arnPatternPart = arnPatternParts.get( i ).toLowerCase( );
         final String arnPart = arnParts.get( i ).toLowerCase( );
-        final String pattern = PatternUtils.toJavaPattern( arnPatternPart );
+        final String pattern = PolicyUtils.toJavaPattern( arnPatternPart );
         if ( !Pattern.matches( pattern, arnPart ) ) {
           matches = false;
           break;
