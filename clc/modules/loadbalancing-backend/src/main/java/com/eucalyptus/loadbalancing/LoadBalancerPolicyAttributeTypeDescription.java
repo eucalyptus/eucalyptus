@@ -72,6 +72,12 @@ public class LoadBalancerPolicyAttributeTypeDescription {
     this.attributeType=type;
     this.cardinality = c.toString();
   }
+	public LoadBalancerPolicyAttributeTypeDescription(final String name, final String type, final Cardinality c, final String description){
+    this.attributeName=name;
+    this.attributeType=type;
+    this.cardinality = c.toString();
+    this.description = description;
+  }
 	
 	public LoadBalancerPolicyTypeDescription getPolicyType(){
 	  return this.policyType;

@@ -19,18 +19,23 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing;
 
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
+import org.codehaus.jackson.annotate.JsonProperty;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.type.TypeReference;
 
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAttributeDescriptionCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeTypeDescription.Cardinality;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeTypeDescription.LoadBalancerPolicyAttributeTypeDescriptionCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionEntityTransform;
@@ -47,6 +52,8 @@ import com.eucalyptus.loadbalancing.common.msgs.PolicyDescription;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyTypeDescription;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
+import com.google.common.base.Predicates;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Collections2;
 import com.google.common.base.Predicate;
@@ -63,7 +70,7 @@ public class LoadBalancerPolicies {
    */
   public static void initialize(){
     final List<LoadBalancerPolicyTypeDescription> requiredPolicyTypes =
-        Lists.newArrayList(initialize40());
+        Lists.newArrayList(initialize42());
    
     for(final LoadBalancerPolicyTypeDescription policyType : requiredPolicyTypes){
       try ( final TransactionResource db = Entities.transactionFor( LoadBalancerPolicyTypeDescription.class ) ) {
@@ -97,6 +104,148 @@ public class LoadBalancerPolicies {
                 new LoadBalancerPolicyAttributeTypeDescription("CookieExpirationPeriod", "Long",
                     LoadBalancerPolicyAttributeTypeDescription.Cardinality.ZERO_OR_ONE))));
     
+    return requiredPolicyTypes;
+  }
+  
+  final static List<String> cipherNamesIn42 = Lists.newArrayList(
+      "ECDHE-ECDSA-AES128-GCM-SHA256", 
+      "ECDHE-RSA-AES128-GCM-SHA256", 
+      "ECDHE-ECDSA-AES128-SHA256", 
+      "ECDHE-RSA-AES128-SHA256", 
+      "ECDHE-ECDSA-AES128-SHA", 
+      "ECDHE-RSA-AES128-SHA", 
+      "DHE-RSA-AES128-SHA", 
+      "ECDHE-ECDSA-AES256-GCM-SHA384", 
+      "ECDHE-RSA-AES256-GCM-SHA384", 
+      "ECDHE-ECDSA-AES256-SHA384", 
+      "ECDHE-RSA-AES256-SHA384", 
+      "ECDHE-RSA-AES256-SHA", 
+      "ECDHE-ECDSA-AES256-SHA", 
+      "AES128-GCM-SHA256", 
+      "AES128-SHA256", 
+      "AES128-SHA", 
+      "AES256-GCM-SHA384", 
+      "AES256-SHA256", 
+      "AES256-SHA", 
+      "DHE-DSS-AES128-SHA", 
+      "CAMELLIA128-SHA", 
+      "EDH-RSA-DES-CBC3-SHA", 
+      "DES-CBC3-SHA", 
+      "ECDHE-RSA-RC4-SHA", 
+      "RC4-SHA", 
+      "ECDHE-ECDSA-RC4-SHA", 
+      "DHE-DSS-AES256-GCM-SHA384", 
+      "DHE-RSA-AES256-GCM-SHA384", 
+      "DHE-RSA-AES256-SHA256", 
+      "DHE-DSS-AES256-SHA256", 
+      "DHE-RSA-AES256-SHA", 
+      "DHE-DSS-AES256-SHA", 
+      "DHE-RSA-CAMELLIA256-SHA", 
+      "DHE-DSS-CAMELLIA256-SHA", 
+      "CAMELLIA256-SHA", 
+      "EDH-DSS-DES-CBC3-SHA", 
+      "DHE-DSS-AES128-GCM-SHA256", 
+      "DHE-RSA-AES128-GCM-SHA256", 
+      "DHE-RSA-AES128-SHA256", 
+      "DHE-DSS-AES128-SHA256", 
+      "DHE-RSA-CAMELLIA128-SHA", 
+      "DHE-DSS-CAMELLIA128-SHA", 
+      "ADH-AES128-GCM-SHA256", 
+      "ADH-AES128-SHA", 
+      "ADH-AES128-SHA256", 
+      "ADH-AES256-GCM-SHA384", 
+      "ADH-AES256-SHA", 
+      "ADH-AES256-SHA256", 
+      "ADH-CAMELLIA128-SHA", 
+      "ADH-CAMELLIA256-SHA", 
+      "ADH-DES-CBC3-SHA", 
+      "ADH-DES-CBC-SHA", 
+      "ADH-RC4-MD5", 
+      "ADH-SEED-SHA", 
+      "DES-CBC-SHA", 
+      "DHE-DSS-SEED-SHA", 
+      "DHE-RSA-SEED-SHA", 
+      "EDH-DSS-DES-CBC-SHA", 
+      "EDH-RSA-DES-CBC-SHA", 
+      "IDEA-CBC-SHA", 
+      "RC4-MD5", 
+      "SEED-SHA", 
+      "DES-CBC3-MD5", 
+      "DES-CBC-MD5", 
+      "RC2-CBC-MD5", 
+      "PSK-AES256-CBC-SHA", 
+      "PSK-3DES-EDE-CBC-SHA", 
+      "KRB5-DES-CBC3-SHA", 
+      "KRB5-DES-CBC3-MD5", 
+      "PSK-AES128-CBC-SHA", 
+      "PSK-RC4-SHA", 
+      "KRB5-RC4-SHA", 
+      "KRB5-RC4-MD5", 
+      "KRB5-DES-CBC-SHA", 
+      "KRB5-DES-CBC-MD5", 
+      "EXP-EDH-RSA-DES-CBC-SHA", 
+      "EXP-EDH-DSS-DES-CBC-SHA", 
+      "EXP-ADH-DES-CBC-SHA", 
+      "EXP-DES-CBC-SHA", 
+      "EXP-RC2-CBC-MD5", 
+      "EXP-KRB5-RC2-CBC-SHA", 
+      "EXP-KRB5-DES-CBC-SHA", 
+      "EXP-KRB5-RC2-CBC-MD5", 
+      "EXP-KRB5-DES-CBC-MD5", 
+      "EXP-ADH-RC4-MD5", 
+      "EXP-RC4-MD5", 
+      "EXP-KRB5-RC4-SHA", 
+      "EXP-KRB5-RC4-MD5"
+      );
+  
+  private static List<LoadBalancerPolicyTypeDescription> initialize42(){
+    final List<LoadBalancerPolicyTypeDescription> requiredPolicyTypes = 
+        initialize40();
+    final LoadBalancerPolicyTypeDescription sslNego =   new LoadBalancerPolicyTypeDescription(
+        "SSLNegotiationPolicyType", 
+        "Listener policy that defines the ciphers and protocols that will be accepted by the load balancer. This policy can be associated only with HTTPS/SSL listeners."
+        );
+    
+    final List<LoadBalancerPolicyAttributeTypeDescription> sslNegoAttributeTypes = Lists.newArrayList(
+        new LoadBalancerPolicyAttributeTypeDescription("Protocol-SSLv2", "Boolean", Cardinality.ZERO_OR_ONE),
+        new LoadBalancerPolicyAttributeTypeDescription("Protocol-TLSv1", "Boolean", Cardinality.ZERO_OR_ONE),
+        new LoadBalancerPolicyAttributeTypeDescription("Protocol-SSLv3", "Boolean", Cardinality.ZERO_OR_ONE),
+        new LoadBalancerPolicyAttributeTypeDescription("Protocol-TLSv1.1", "Boolean", Cardinality.ZERO_OR_ONE, "A description for Protocol-TLSv1.1"),
+        new LoadBalancerPolicyAttributeTypeDescription("Protocol-TLSv1.2", "Boolean", Cardinality.ZERO_OR_ONE, "A description for Protocol-TLSv1.2"),
+        new LoadBalancerPolicyAttributeTypeDescription("Reference-Security-Policy", "String", Cardinality.ZERO_OR_ONE, "The value of this attribute is the name of our sample policy (referring to our sample policy"),
+        new LoadBalancerPolicyAttributeTypeDescription("Server-Defined-Cipher-Order", "Boolean", Cardinality.ZERO_OR_ONE, "The value true means the policy will follow the cipher order")
+    );
+    for(final String name : cipherNamesIn42){
+      sslNegoAttributeTypes.add(new LoadBalancerPolicyAttributeTypeDescription(name, "Boolean", Cardinality.ZERO_OR_ONE, String.format("A description for %s", name)));
+    }
+    for(final LoadBalancerPolicyAttributeTypeDescription attrType : sslNegoAttributeTypes){
+      sslNego.addPolicyAttributeTypeDescription(attrType);
+    }
+    
+    // policy type for ssl protocol/cipher negotiation
+    requiredPolicyTypes.add(sslNego);
+    
+    // policy type for backend server authentication
+    requiredPolicyTypes.add(new LoadBalancerPolicyTypeDescription(
+        "BackendServerAuthenticationPolicyType",
+        "Policy that controls authentication to back-end server(s) and contains one or more policies, such as an instance of a PublicKeyPolicyType. This policy can be associated only with back-end servers that are using HTTPS/SSL.",
+        Lists.newArrayList(
+            new LoadBalancerPolicyAttributeTypeDescription("PublicKeyPolicyName", "PolicyName", Cardinality.ONE_OR_MORE))
+            ));
+    
+    requiredPolicyTypes.add(new LoadBalancerPolicyTypeDescription(
+        "ProxyProtocolPolicyType",
+        "Policy that controls whether to include the IP address and port of the originating request for TCP messages. This policy operates on TCP/SSL listeners only",
+        Lists.newArrayList(
+            new LoadBalancerPolicyAttributeTypeDescription("ProxyProtocol", "Boolean", Cardinality.ONE))
+            ));
+    // policy type for containing the list of public key when authenticating back-end servers
+    requiredPolicyTypes.add(new LoadBalancerPolicyTypeDescription(
+        "PublicKeyPolicyType",
+        "Policy containing a list of public keys to accept when authenticating the back-end server(s). This policy cannot be applied directly to back-end servers or listeners but must be part of a BackendServerAuthenticationPolicyType.",
+        Lists.newArrayList( 
+            new LoadBalancerPolicyAttributeTypeDescription("PublicKey", "String", Cardinality.ONE))
+        ));
     return requiredPolicyTypes;
   }
   
@@ -309,7 +458,68 @@ public class LoadBalancerPolicies {
   }
   
   public static List<PolicyDescription> getSamplePolicyDescription(){
-    return Lists.newArrayList(getSamplePolicyDescription40());
+    return Lists.newArrayList(getSamplePolicyDescription42());
+  }
+  
+  private static class AttributeNameValuePair {
+    @JsonProperty("AttributeName")
+    public String AttributeName = null;
+    
+    @JsonProperty("AttributeValue")
+    public String AttributeValue = null;
+  }
+  
+  private static PolicyDescription getPolicyDescription(final String policyName, 
+      final String policyTypeName, final String pathToAttributeJson) {
+    final ClassLoader classLoader = LoadBalancerPolicies.class.getClassLoader();
+    try{
+      final InputStream fileStream = classLoader.getResourceAsStream(pathToAttributeJson);
+      final ObjectMapper objectMapper = new ObjectMapper();
+      final List<AttributeNameValuePair> attrList = objectMapper.readValue(fileStream, new TypeReference<List<AttributeNameValuePair>>(){ });
+      final PolicyDescription policyDesc = new PolicyDescription();
+      policyDesc.setPolicyName(policyName);
+      policyDesc.setPolicyTypeName(policyTypeName);
+      final List<PolicyAttributeDescription> policyAttrs = Lists.newArrayList(Iterables.filter(
+          Lists.transform(attrList, new Function<AttributeNameValuePair, PolicyAttributeDescription>(){
+        @Override
+        public PolicyAttributeDescription apply(AttributeNameValuePair arg0) {
+          if(arg0.AttributeName==null || arg0.AttributeValue==null)
+            return null;
+          final PolicyAttributeDescription attr = new PolicyAttributeDescription();
+          attr.setAttributeName(arg0.AttributeName);
+          attr.setAttributeValue(arg0.AttributeValue);
+          return attr;
+        }
+      }), Predicates.notNull()));
+      final PolicyAttributeDescriptions descs = new PolicyAttributeDescriptions();
+      descs.setMember((ArrayList<PolicyAttributeDescription>) policyAttrs);
+      policyDesc.setPolicyAttributeDescriptions(descs);
+      return policyDesc;
+    }catch(final Exception ex){
+      LOG.warn("Unable to read ELB sample policy files", ex);
+      return null;
+    } 
+  }
+  
+  private static List<PolicyDescription> samplePolicyDescription = Lists.newArrayList();
+  private static List<PolicyDescription> getSamplePolicyDescription42(){
+    if(samplePolicyDescription.isEmpty()){
+      samplePolicyDescription = getSamplePolicyDescription40();
+      PolicyDescription policyDesc = null;
+      if ((policyDesc=getPolicyDescription("ELBSecurityPolicy-2015-02", "SSLNegotiationPolicyType", "com/eucalyptus/loadbalancing/elb_security_policy_2015_02.json"))!=null)
+        samplePolicyDescription.add(policyDesc);
+      if ((policyDesc=getPolicyDescription("ELBSecurityPolicy-2014-10", "SSLNegotiationPolicyType", "com/eucalyptus/loadbalancing/elb_security_policy_2014_10.json"))!=null)
+        samplePolicyDescription.add(policyDesc);
+      if((policyDesc=getPolicyDescription("ELBSecurityPolicy-2014-01", "SSLNegotiationPolicyType", "com/eucalyptus/loadbalancing/elb_security_policy_2014_01.json"))!=null)
+        samplePolicyDescription.add(policyDesc);
+      if((policyDesc=getPolicyDescription("ELBSecurityPolicy-2011-08", "SSLNegotiationPolicyType", "com/eucalyptus/loadbalancing/elb_security_policy_2011_08.json"))!=null)
+        samplePolicyDescription.add(policyDesc);
+      if((policyDesc=getPolicyDescription("ELBSample-ELBDefaultNegotiationPolicy", "SSLNegotiationPolicyType", "com/eucalyptus/loadbalancing/elb_security_policy_sample_elb_default_negotiation_policy.json"))!=null)
+        samplePolicyDescription.add(policyDesc);
+      if((policyDesc=getPolicyDescription("ELBSample-OpenSSLDefaultNegotiationPolicy", "SSLNegotiationPolicyType", "com/eucalyptus/loadbalancing/elb_security_policy_sample_openssl_default_negotiation_policy.json"))!=null)
+        samplePolicyDescription.add(policyDesc);
+    }
+    return samplePolicyDescription;
   }
   
   private static List<PolicyDescription> getSamplePolicyDescription40(){

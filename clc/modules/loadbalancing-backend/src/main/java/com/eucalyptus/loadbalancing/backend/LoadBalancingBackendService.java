@@ -1750,10 +1750,16 @@ public class LoadBalancingBackendService {
   
   public DescribeLoadBalancerPolicyTypesResponseType describeLoadBalancerPolicyTypes(DescribeLoadBalancerPolicyTypesType request) throws EucalyptusCloudException {
     final List<PolicyTypeDescription> policyTypes = Lists.newArrayList();
+    Set<String> requestedTypeNames = Sets.newHashSet();
+    if (request.getPolicyTypeNames()!=null &&
+        request.getPolicyTypeNames().getMember()!=null){
+      requestedTypeNames.addAll(request.getPolicyTypeNames().getMember());
+    }
     try{ 
       final List<LoadBalancerPolicyTypeDescription> internalPolicyTypes  = LoadBalancerPolicies.getLoadBalancerPolicyTypeDescriptions();
       for(final LoadBalancerPolicyTypeDescription from : internalPolicyTypes){
-        policyTypes.add(LoadBalancerPolicies.AsPolicyTypeDescription.INSTANCE.apply(from));
+        if(requestedTypeNames.isEmpty() || requestedTypeNames.contains(from.getPolicyTypeName()))
+          policyTypes.add(LoadBalancerPolicies.AsPolicyTypeDescription.INSTANCE.apply(from));
       }
     }catch(final Exception ex){
       LOG.error("Failed to retrieve policy types", ex);
