@@ -110,22 +110,6 @@ public class DatabaseAuthProvider implements AccountProvider {
   }
 
   @Override
-  @Deprecated
-  public User lookupUserByName( final String userName ) throws AuthException {
-    if ( userName == null ) {
-      throw new AuthException( AuthException.EMPTY_USER_ID );
-    }
-    try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
-      UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, "name", userName );
-      db.commit( );
-      return new DatabaseUserProxy( user );
-    } catch ( Exception e ) {
-      Debugging.logError( LOG, e, "Failed to find user by ID " + userName );
-      throw new AuthException( AuthException.NO_SUCH_USER, e );
-    }
-  }
-
-  @Override
   public User lookupUserById( final String userId ) throws AuthException {
     if ( userId == null ) {
       throw new AuthException( AuthException.EMPTY_USER_ID );
@@ -400,26 +384,6 @@ public class DatabaseAuthProvider implements AccountProvider {
   }
 
   @Override
-  public boolean shareSameAccount( String userId1, String userId2 ) {
-    if ( userId1 == null || userId2 == null ) {
-      return false;
-    }
-    if ( userId1.equals( userId2 ) ) {
-      return true;
-    }
-    try {
-      User user1 = lookupUserById( userId1 );
-      User user2 = lookupUserById( userId2 );
-      if ( user1.getAccount( ).getAccountNumber( ).equals( user2.getAccount( ).getAccountNumber( ) ) ) {
-        return true;
-      }
-    } catch ( AuthException e ) {
-      LOG.warn( "User(s) can not be found", e );
-    }
-    return false;
-  }
-
-  @Override
   public Certificate lookupCertificate( X509Certificate cert ) throws AuthException {
     if ( cert == null ) {
       throw new AuthException( "Empty input cert" );
@@ -514,30 +478,6 @@ public class DatabaseAuthProvider implements AccountProvider {
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to find access key with ID " + keyId );
       throw new InvalidAccessKeyAuthException( "Failed to find access key", e );
-    }
-  }
-
-  @Override
-  public User lookupUserByConfirmationCode( String code ) throws AuthException {
-    if ( code == null ) {
-      throw new AuthException( "Empty confirmation code to search" );
-    }
-    try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      UserEntity result = ( UserEntity ) Entities
-          .createCriteria( UserEntity.class ).setCacheable( true ).add( Restrictions.eq( "confirmationCode", code ) )
-          .setReadOnly( true )
-          .uniqueResult( );
-      if ( result == null ) {
-        throw new AuthException( AuthException.NO_SUCH_USER );
-      }
-      return new DatabaseUserProxy( result );
-    } catch ( AuthException e ) {
-      Debugging.logError( LOG, e, "Failed to find user by confirmation code " + code );
-      throw e;      
-    } catch ( Exception e ) {
-      Debugging.logError( LOG, e, "Failed to find user by confirmation code " + code );
-      throw new AuthException( AuthException.NO_SUCH_USER, e );
     }
   }
 

@@ -199,15 +199,6 @@ public class Accounts {
   public static List<User> listAllUsers( ) throws AuthException {
     return Accounts.getAccountProvider( ).listAllUsers( );
   }
-  
-  public static boolean shareSameAccount( String userId1, String userId2 ) {
-    return Accounts.getAccountProvider( ).shareSameAccount( userId1, userId2 );
-  }
-  
-  @Deprecated
-  public static User lookupUserByName( String userName ) throws AuthException {
-    return Accounts.getAccountProvider( ).lookupUserByName( userName );
-  }
 
   public static User lookupUserById( String userId ) throws AuthException {
     return Accounts.getAccountProvider( ).lookupUserById( userId );
@@ -278,19 +269,6 @@ public class Accounts {
       }
     }
     return user;
-  }
-
-  public static String getFirstActiveAccessKeyId( User user ) throws AuthException {
-    for ( AccessKey k : user.getKeys( ) ) {
-      if ( k.isActive( ) ) {
-        return k.getAccessKey( );
-      }
-    }
-    throw new AuthException( "No active access key for " + user );
-  }
-  
-  public static User lookupUserByConfirmationCode( String code ) throws AuthException {
-    return Accounts.getAccountProvider( ).lookupUserByConfirmationCode( code );
   }
 
     public static User lookupUserByEmailAddress( String email ) throws AuthException {

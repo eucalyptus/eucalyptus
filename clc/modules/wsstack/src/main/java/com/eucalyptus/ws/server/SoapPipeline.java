@@ -29,6 +29,7 @@ import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.util.Strings;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
+import com.eucalyptus.ws.Handlers;
 import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.WebServices;
 import com.eucalyptus.ws.WebServicesException;
@@ -99,7 +100,9 @@ public abstract class SoapPipeline extends FilteredPipeline {
         }
       } );
     }
-    getAuthenticationStage().unrollStage( pipeline );
+    pipeline.addLast( "deserialize", Handlers.soapMarshalling( ) );
+    getAuthenticationStage( ).unrollStage( pipeline );
+    pipeline.addLast( "build-soap-envelope", Handlers.soapHandler( ) );
     pipeline.addLast( "binding",
         new BindingHandler(
             BindingManager.getBinding( defaultNamespace, component ),

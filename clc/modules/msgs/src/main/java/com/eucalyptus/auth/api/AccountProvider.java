@@ -86,13 +86,10 @@ public interface AccountProvider {
   Set<String> resolveAccountNumbersForName( String accountNameLike ) throws AuthException;
   
   List<User> listAllUsers( ) throws AuthException;
-
-  boolean shareSameAccount( String userId1, String userId2 );
   
   User lookupUserById( String userId ) throws AuthException;
   User lookupUserByAccessKeyId( String keyId ) throws AuthException;
   User lookupUserByCertificate( X509Certificate cert ) throws AuthException;
-  User lookupUserByConfirmationCode( String code ) throws AuthException;
   User lookupUserByEmailAddress( String email ) throws AuthException;
 
   Group lookupGroupById( String groupId ) throws AuthException;
@@ -102,6 +99,5 @@ public interface AccountProvider {
   Certificate lookupCertificate( X509Certificate cert ) throws AuthException;
   
   AccessKey lookupAccessKeyById( String keyId ) throws AuthException;
-  @Deprecated
-  User lookupUserByName( String userName ) throws AuthException;
+
 }
