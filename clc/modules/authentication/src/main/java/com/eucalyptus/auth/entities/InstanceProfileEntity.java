@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.entities.AbstractPersistent;
 
 /**
@@ -121,7 +121,7 @@ public class InstanceProfileEntity extends AbstractPersistent implements Seriali
   @PreUpdate
   public void generateOnCommit() {
     if( this.instanceProfileId == null ) {
-      this.instanceProfileId = Crypto.generateAlphanumericId( 21, "AIP" );
+      this.instanceProfileId = Identifiers.generateIdentifier( "AIP" );
     }
     this.uniqueName = account.getAccountNumber() + ":" + name;
   }

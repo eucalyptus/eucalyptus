@@ -72,6 +72,8 @@ public class TokensService {
       throw new TokensException( TokensException.Code.MissingAuthenticationToken, "Missing credential." );
     }
 
+    //TODO:STEVE: verify disabled user functionality
+
     final String queryId = Iterables.getOnlyElement( queryIdCreds ).getQueryId( );
     final AccessKey accessKey;
     try {

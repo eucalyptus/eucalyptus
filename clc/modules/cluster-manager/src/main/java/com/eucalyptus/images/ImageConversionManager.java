@@ -234,9 +234,9 @@ public class ImageConversionManager implements EventListener<ClockTick> {
         final String prefix = tokens[1].replace(".manifest.xml", "");
         do{
           newBucket = String.format("%s-%s-%s", 
-              BUCKET_PREFIX, Crypto.generateAlphanumericId(5, ""), bucketName);
+              BUCKET_PREFIX, Crypto.generateAlphanumericId(5), bucketName);
           if(newBucket.length()>63){
-            newBucket = String.format("%s-%s", BUCKET_PREFIX, Crypto.generateAlphanumericId(8, ""));
+            newBucket = String.format("%s-%s", BUCKET_PREFIX, Crypto.generateAlphanumericId(8));
           }
           newBucket = newBucket.toLowerCase();
         }while (systemBuckets.contains(newBucket));

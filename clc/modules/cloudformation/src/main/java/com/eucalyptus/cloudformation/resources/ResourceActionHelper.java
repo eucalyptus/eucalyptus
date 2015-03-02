@@ -29,7 +29,7 @@ public class ResourceActionHelper {
     // in case we need to truncate this we need to truncate prefix and middle
     String prefix = (stackName != null) ? stackName : "UNKNOWN";
     String middle = (logicalResourceId != null) ? logicalResourceId : "UNKNOWN";
-    String suffix = Crypto.generateAlphanumericId(13, "");
+    String suffix = Crypto.generateAlphanumericId(13);
     String finalString = prefix + "-" + middle + "-" + suffix;
     if (finalString.length() > maxLength) {
       int prefixMiddleAndDashesLength = maxLength - suffix.length();

@@ -64,6 +64,9 @@ public class IdentityService {
           key.setSecretAccessKey( accessKey.getSecretKey( ) );
           principal.setAccessKeys( Lists.newArrayList( key ) );
         }
+
+        //TODO:STEVE: ensure policy permits no access if a user is disabled
+
         result.setPrincipal( principal );
       }
     } catch ( InvalidAccessKeyAuthException e ) {

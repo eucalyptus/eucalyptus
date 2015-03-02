@@ -240,7 +240,7 @@ public class CephRbdInfo extends AbstractPersistent {
       virshSecret = UUID.randomUUID().toString();
     }
     if (Strings.isNullOrEmpty(deletedImagePrefix)) {
-      deletedImagePrefix = DELETED_IMAGE_COMMON_PREFIX + Crypto.generateAlphanumericId(8, "") + '-';
+      deletedImagePrefix = DELETED_IMAGE_COMMON_PREFIX + Crypto.generateAlphanumericId(8) + '-';
     }
   }
 

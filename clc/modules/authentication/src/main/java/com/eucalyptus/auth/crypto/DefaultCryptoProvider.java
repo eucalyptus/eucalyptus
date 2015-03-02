@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -131,12 +131,11 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
   }
   
   /**
-   * @see com.eucalyptus.crypto.CryptoProvider#generateAlphanumericId(int,String)
+   * @see com.eucalyptus.crypto.CryptoProvider#generateAlphanumericId(int)
    */
   @Override
-  public String generateAlphanumericId( final int length, 
-                                        final String prefix ) {
-    return prefix + generateRandomAlphanumeric( length - prefix.length() ).toUpperCase();//NOTE: this MUST be upper case.
+  public String generateAlphanumericId( final int length ) {
+    return generateRandomAlphanumeric( length ).toUpperCase();//NOTE: this MUST be upper case.
   }
 
   /**

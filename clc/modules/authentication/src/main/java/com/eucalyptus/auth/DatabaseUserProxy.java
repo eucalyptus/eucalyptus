@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -87,7 +87,6 @@ import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.Entities;
 import java.util.concurrent.ExecutionException;
@@ -467,7 +466,7 @@ public class DatabaseUserProxy implements User {
   public Certificate addCertificate( X509Certificate cert ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
       UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, "userId", this.delegate.getUserId( ) );
-      CertificateEntity certEntity = new CertificateEntity( X509CertHelper.fromCertificate( cert ) );
+      CertificateEntity certEntity = new CertificateEntity( cert );
       certEntity.setActive( true );
       certEntity.setRevoked( false );
       Entities.persist( certEntity );

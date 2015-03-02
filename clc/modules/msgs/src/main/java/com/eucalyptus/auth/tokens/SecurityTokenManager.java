@@ -51,6 +51,7 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.TemporaryAccessKey;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.bootstrap.SystemIds;
 import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Crypto;
@@ -458,7 +459,7 @@ public class SecurityTokenManager {
     private EncryptedSecurityToken( final String originatingId,
                                     final long created,
                                     final long durationMillis ) {
-      this.accessKeyId = Crypto.generateAlphanumericId( 20, "AKI" );
+      this.accessKeyId = Identifiers.generateAccessKeyIdentifier( );
       this.originatingId = originatingId;
       this.nonce = Crypto.generateSessionToken();
       this.created = created;

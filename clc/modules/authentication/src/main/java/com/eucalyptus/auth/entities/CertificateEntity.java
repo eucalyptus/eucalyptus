@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,6 +63,8 @@
 package com.eucalyptus.auth.entities;
 
 import java.io.Serializable;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.X509Certificate;
 import java.util.Date;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -71,13 +73,13 @@ import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
-import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
-import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.auth.util.Identifiers;
+import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.entities.AbstractPersistent;
 
 /**
@@ -122,21 +124,9 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
   public CertificateEntity( ) {
   }
   
-  public CertificateEntity( String pem ) {
-    this.pem = pem;
-  }
-  
-  public static CertificateEntity newInstanceWithId( final String id ) {
-    CertificateEntity c = new CertificateEntity( );
-    c.certificateId = id;
-    return c;
-  }
-  
-  @PrePersist
-  public void generateOnCommit() {
-    if( this.certificateId == null ) {
-      this.certificateId = Crypto.generateAlphanumericId( 21, "" );
-    }
+  public CertificateEntity( final X509Certificate cert ) throws CertificateEncodingException {
+    this.certificateId = Identifiers.generateCertificateIdentifier( cert );
+    this.pem = X509CertHelper.fromCertificate( cert );
   }
   
   @Override

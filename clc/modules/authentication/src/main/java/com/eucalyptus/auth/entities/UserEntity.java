@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -83,7 +83,7 @@ import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
-import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -181,7 +181,7 @@ public class UserEntity extends AbstractPersistent implements Serializable {
   @PrePersist
   public void generateOnCommit() {
     if( this.userId == null ) {/** NOTE: first time that user is committed it needs to generate its own ID (i.e., not the database id), do this at commit time and generate if null **/
-      this.userId = Crypto.generateAlphanumericId( 21, "AID" );
+      this.userId = Identifiers.generateIdentifier( "AID" );
     }
   }
   

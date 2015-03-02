@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -95,10 +95,10 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.InstanceProfile;
-import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.crypto.Ciphers;
@@ -409,7 +409,7 @@ public class DatabaseAccountProxy implements Account {
     try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
       final AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, "name", this.delegate.getName( ) );
       final RoleEntity newRole = new RoleEntity( roleName );
-      newRole.setRoleId( Crypto.generateAlphanumericId( 21, "ARO" ) );
+      newRole.setRoleId( Identifiers.generateIdentifier( "ARO" ) );
       newRole.setPath( path );
       newRole.setAccount( account );
       newRole.setAssumeRolePolicy( parsedPolicy );
@@ -679,7 +679,7 @@ public class DatabaseAccountProxy implements Account {
       throw ex;
     }
     
-    final String certId = Crypto.generateAlphanumericId( 21, "ASC" );
+    final String certId = Identifiers.generateIdentifier( "ASC" );
     ServerCertificateEntity entity = null;
     try ( final TransactionResource db = Entities.transactionFor( ServerCertificateEntity.class ) ) {
       final UserFullName accountAdmin = UserFullName.getInstance( this.lookupAdmin());

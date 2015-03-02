@@ -256,7 +256,7 @@ public class PolicyEngineImpl implements PolicyEngine {
         final Account account = evaluationContext.getRequestAccount();
 
         // Account admin can do everything within the account
-        if ( !requestUser.isAccountAdmin( ) ||
+        if ( !requestUser.isAccountAdmin( ) || //TODO:STEVE: remove account admin special handling
              resourceAccountNumber == null ||
              !resourceAccountNumber.equals( account.getAccountNumber( ) ) ) {
           // Check resource authorizations
@@ -716,7 +716,7 @@ public class PolicyEngineImpl implements PolicyEngine {
     }
 
     static List<Authorization> authorizations( final Policy policy, final boolean resourcePolicy ) throws AuthException {
-      return authorizations( new PolicyVersion( ) {
+      return authorizations( new PolicyVersion( ) { //TODO:STEVE: conversion via PolicyVersions
         @Override
         public String getPolicyVersionId( ) {
           throw new UnsupportedOperationException( ); //TODO:STEVE: super interface needed - PolicySource?

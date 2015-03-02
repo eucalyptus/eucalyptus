@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -79,7 +79,7 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.google.common.collect.Lists;
 
@@ -152,7 +152,7 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
   @PrePersist
   public void generateOnCommit() {
     if( this.groupId == null ) {
-      this.groupId = Crypto.generateAlphanumericId( 21, "AGP" );
+      this.groupId = Identifiers.generateIdentifier( "AGP" );
     }
   }
   

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -124,11 +124,10 @@ public class Crypto {
   }
 
   /**
-   * @see com.eucalyptus.crypto.CryptoProvider#generateAlphanumericId(int, String)
+   * @see com.eucalyptus.crypto.CryptoProvider#generateAlphanumericId(int)
    */
-  public static String generateAlphanumericId( final int length,
-                                               final String prefix ) {
-    return Crypto.getCryptoProvider().generateAlphanumericId( length, prefix );
+  public static String generateAlphanumericId( final int length ) {
+    return Crypto.getCryptoProvider().generateAlphanumericId( length );
   }
 
   /**
