@@ -72,7 +72,6 @@ import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicies;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyTypeDescription;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroupRef;
@@ -181,7 +180,6 @@ import com.eucalyptus.loadbalancing.common.backend.msgs.SetLoadBalancerPoliciesO
 import com.eucalyptus.loadbalancing.common.msgs.ListenerDescription;
 import com.eucalyptus.loadbalancing.common.msgs.ListenerDescriptions;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerAttributes;
-import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerDescription;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerDescription;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerDescriptions;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerServoDescription;
@@ -317,7 +315,8 @@ public class LoadBalancingBackendService {
         /// availability zones
         desc.setAvailabilityZones(new AvailabilityZones( ));
         desc.getAvailabilityZones( ).getMember( ).add( zone.getName( ) );
-
+        
+        final Set<String> policiesOfListener = Sets.newHashSet();
         /// listeners
         if(lb.getListeners().size()>0){
           desc.setListenerDescriptions(new ListenerDescriptions());
@@ -342,24 +341,13 @@ public class LoadBalancingBackendService {
                     public String apply(
                         LoadBalancerPolicyDescriptionCoreView arg0) {
                       try{
-                        // HACK: to send the values associated with the cookie stickiness policy
-                        final LoadBalancerPolicyDescription policy = LoadBalancerPolicyDescriptionEntityTransform.INSTANCE.apply(arg0);
-                        if("LBCookieStickinessPolicyType".equals(arg0.getPolicyTypeName())){
-                          final String expiration=
-                              policy.findAttributeDescription("CookieExpirationPeriod").getAttributeValue();
-                          return String.format("LBCookieStickinessPolicyType:%s", expiration);
-                        }else if("AppCookieStickinessPolicyType".equals(arg0.getPolicyTypeName())){
-                          final String cookieName=
-                              policy.findAttributeDescription("CookieName").getAttributeValue();
-                          return String.format("AppCookieStickinessPolicyType:%s", cookieName);
-                        }else{
                           return arg0.getPolicyName(); // No other policy types are supported
-                        }
                       }catch(final Exception ex){
-                        return arg0.getPolicyName(); // No other policy types are supported
+                        return ""; // No other policy types are supported
                       }
                     }
                   })));
+                  policiesOfListener.addAll(pnames.getMember());
                   desc.setPolicyNames(pnames);
                   return desc;
                 }
@@ -387,6 +375,23 @@ public class LoadBalancingBackendService {
         // attributes
         desc.setLoadBalancerAttributes( TypeMappers.transform( lb, LoadBalancerAttributes.class ) );
 
+        // policies (EUCA-specific)
+        List<LoadBalancerPolicyDescription> lbPolicies = Lists.newArrayList();
+        try{
+            lbPolicies = LoadBalancerPolicies.getLoadBalancerPolicyDescription(lb);
+        }catch(final Exception ex){
+          ;
+        }
+        final List<PolicyDescription> policies = Lists.newArrayList();
+        for(final LoadBalancerPolicyDescription lbPolicy : lbPolicies){
+          // for efficiency, add policies only if they are set for listeners
+          if(policiesOfListener.contains(lbPolicy.getPolicyName()))
+            policies.add(LoadBalancerPolicies.AsPolicyDescription.INSTANCE.apply(lbPolicy));
+        }
+        final PolicyDescriptions policyDescs = new PolicyDescriptions();
+        policyDescs.setMember((ArrayList<PolicyDescription>) policies);
+        desc.setPolicyDescriptions(policyDescs);
+        
         return Optional.of( desc );
       }
     };

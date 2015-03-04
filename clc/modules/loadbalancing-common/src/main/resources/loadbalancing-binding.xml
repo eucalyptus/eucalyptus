@@ -40,7 +40,7 @@
         <value name="CanonicalHostedZoneName" field="canonicalHostedZoneName" usage="optional"/>
         <value name="CanonicalHostedZoneNameID" field="canonicalHostedZoneNameID" usage="optional"/>
         <structure name="ListenerDescriptions" field="listenerDescriptions" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.ListenerDescriptions"/>
-        <structure name="Policies" field="policies" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.Policies"/>
+        <structure name="PolicyDescriptions" field="policyDescriptions" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.PolicyDescriptions"/>
         <structure name="BackendServerDescriptions" field="backendServerDescriptions" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.BackendServerDescriptions"/>
         <structure name="AvailabilityZones" field="availabilityZones" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.AvailabilityZones"/>
         <structure name="Subnets" field="subnets" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.Subnets"/>

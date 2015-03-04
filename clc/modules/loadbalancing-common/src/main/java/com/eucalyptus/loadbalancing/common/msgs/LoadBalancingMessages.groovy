@@ -68,7 +68,7 @@ class LoadBalancerServoDescription extends EucalyptusData {
 	String canonicalHostedZoneName
 	String canonicalHostedZoneNameID
 	ListenerDescriptions listenerDescriptions
-	Policies policies
+  PolicyDescriptions policyDescriptions
 	BackendServerDescriptions backendServerDescriptions
 	AvailabilityZones availabilityZones
 	Subnets subnets
