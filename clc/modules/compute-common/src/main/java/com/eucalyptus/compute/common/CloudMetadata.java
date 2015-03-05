@@ -64,6 +64,7 @@ package com.eucalyptus.compute.common;
 
 import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.component.annotation.PolicyVendor;
+import com.eucalyptus.util.LimitedType;
 import com.eucalyptus.util.RestrictedType;
 
 /**
@@ -98,7 +99,16 @@ public interface CloudMetadata extends RestrictedType {
   
   @PolicyResourceType( "instance" )
   public interface VmInstanceMetadata extends CloudMetadata {}
-  
+
+  @PolicyResourceType( "instance.memory" )
+  public interface VmInstanceMemoryMetadata extends LimitedType {}
+
+  @PolicyResourceType( "instance.cpu" )
+  public interface VmInstanceCpuMetadata extends LimitedType {}
+
+  @PolicyResourceType( "instance.disk" )
+  public interface VmInstanceDiskMetadata extends LimitedType {}
+
   @PolicyResourceType( "vmtype" )
   public interface VmTypeMetadata extends CloudMetadata {
     public abstract Integer getMemory( );
