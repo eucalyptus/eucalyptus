@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,6 +39,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloudwatch.common.CloudWatch;
 import com.eucalyptus.cloudwatch.common.msgs.Dimension;
@@ -430,7 +431,7 @@ public class CloudWatchHelper {
     public String getInstanceId(String instanceId);
     public String getImageId(String instanceId);
     public String getVmTypeDisplayName(String instanceId);
-    public String getEffectiveUserId(String instanceId) throws Exception;
+    public AccountFullName getEffectiveUserId(String instanceId) throws Exception;
     public Integer getStatusCheckFailed(String instanceId);
     public Integer getInstanceStatusCheckFailed(String instanceId);
     public Integer getSystemStatusCheckFailed(String instanceId);
@@ -490,11 +491,9 @@ public class CloudWatchHelper {
     }
 
     @Override
-    public String getEffectiveUserId(String instanceId) throws Exception {
+    public AccountFullName getEffectiveUserId(String instanceId) throws Exception {
       VmInstance instance = lookupInstance(instanceId);
-      Account account = Accounts.getAccountProvider().lookupAccountById(instance.getOwnerAccountNumber());
-      User user = account.lookupUserByName(User.ACCOUNT_ADMIN);
-      return user.getUserId();
+      return AccountFullName.getInstance( instance.getOwnerAccountNumber( ) );
     }
 
     @Override
@@ -735,7 +734,7 @@ public class CloudWatchHelper {
       
       metricData.setMember(Lists.newArrayList(metricDatum));
       putMetricData.setMetricData(metricData);
-      putMetricData.setUserId(instanceInfoProvider.getEffectiveUserId(event.getInstanceId()));
+      putMetricData.setUserId(instanceInfoProvider.getEffectiveUserId(event.getInstanceId()).getAccountNumber());
       putMetricData.markPrivileged();
       putMetricDataList.add(putMetricData);
     }
@@ -805,7 +804,7 @@ public class CloudWatchHelper {
     final PutMetricDataType putMetricData = new PutMetricDataType( );
     putMetricData.setNamespace( "AWS/EC2" );
     putMetricData.setMetricData( metricData );
-    putMetricData.setUserId( instanceInfoProvider.getEffectiveUserId( instanceId ) );
+    putMetricData.setUserId( instanceInfoProvider.getEffectiveUserId( instanceId ).getAccountNumber() );
     putMetricData.markPrivileged( );
 
     return putMetricData;

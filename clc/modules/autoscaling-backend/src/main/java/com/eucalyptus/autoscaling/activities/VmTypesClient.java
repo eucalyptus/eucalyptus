@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.activities;
 
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.ComputeMessage;
 import com.eucalyptus.util.DispatchingClient;
@@ -28,7 +29,7 @@ import com.eucalyptus.util.DispatchingClient;
  */
 public class VmTypesClient extends DispatchingClient<ComputeMessage,Eucalyptus> {
 
-  public VmTypesClient( final String userId ) {
-    super( userId, Eucalyptus.class );
+  public VmTypesClient( final AccountFullName accountFullName ) {
+    super( accountFullName, Eucalyptus.class );
   }
 }

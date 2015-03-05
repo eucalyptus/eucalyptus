@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -89,7 +89,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Hmac;
@@ -159,7 +159,7 @@ public class WalrusPOSTAuthenticationHandler extends MessageStackHandler {
     signature = signature.replaceAll("=", "");
     try {
       final AccessKey key = AccessKeys.lookupAccessKey(accessKeyID, httpRequest.getHeader(WalrusProperties.X_AMZ_SECURITY_TOKEN));
-      final User user = key.getUser();
+      final UserPrincipal user = key.getPrincipal();
       final String queryKey = key.getSecretKey();
       final String authSig = checkSignature(queryKey, data);
       if (!authSig.equals(signature))

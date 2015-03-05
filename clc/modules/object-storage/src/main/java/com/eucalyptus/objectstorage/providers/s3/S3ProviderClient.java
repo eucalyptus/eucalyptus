@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -459,7 +459,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 
   protected CanonicalUser getCanonicalUser(User usr) {
     try {
-      return new CanonicalUser(usr.getAccount().getCanonicalId(), usr.getAccount().getName());
+      return AclUtils.buildCanonicalUser( usr.getAccountNumber( ) );
     } catch (AuthException e) {
       LOG.debug("Exception getting the canonicalId and display name for the user: " + usr.getName(), e);
       return new CanonicalUser();
@@ -1006,7 +1006,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 
       CanonicalUser owner;
       try {
-        owner = AclUtils.buildCanonicalUser(requestUser.getAccount());
+        owner = AclUtils.buildCanonicalUser(requestUser.getAccountNumber());
       } catch (AuthException e) {
         LOG.error("Error getting request user's account during bucket version listing", e);
         owner = null;

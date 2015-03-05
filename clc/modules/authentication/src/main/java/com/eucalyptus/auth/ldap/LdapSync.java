@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -78,6 +78,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.LdapException;
 import com.eucalyptus.auth.checker.ValueCheckerFactory;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -193,7 +194,7 @@ public class LdapSync {
    * @return
    * @throws LdapException
    */
-  public static synchronized void authenticate( User user, String password ) throws LdapException {
+  public static synchronized void authenticate( EuareUser user, String password ) throws LdapException {
     if ( !lic.isSyncEnabled( ) ) {
       throw new LdapException( "LDAP sync is not enabled" );
     }

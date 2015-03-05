@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -437,8 +437,11 @@ public class AclUtils {
     return outputList;
   }
 
-  public static CanonicalUser buildCanonicalUser(Account accnt) {
-    return new CanonicalUser(accnt.getCanonicalId(), accnt.getName());
+  public static CanonicalUser buildCanonicalUser( String accountNumber ) throws AuthException {
+    return new CanonicalUser(
+        Accounts.lookupCanonicalIdByAccountId( accountNumber ),
+        Accounts.lookupAccountAliasById( accountNumber )
+    );
   }
 
   /**
@@ -459,7 +462,7 @@ public class AclUtils {
     }
 
     if (acPolicy.getOwner() == null) {
-      acPolicy.setOwner(buildCanonicalUser(requestUser.getAccount()));
+      acPolicy.setOwner(buildCanonicalUser(requestUser.getAccountNumber()));
     }
 
     if (acPolicy.getAccessControlList() == null) {
@@ -469,14 +472,14 @@ public class AclUtils {
     if (acPolicy.getAccessControlList().getGrants() == null || acPolicy.getAccessControlList().getGrants().size() == 0) {
       // Add default 'fullcontrol' grant for owner.
       acPolicy.getAccessControlList().getGrants()
-          .add(new Grant(new Grantee(buildCanonicalUser(requestUser.getAccount())), ObjectStorageProperties.Permission.FULL_CONTROL.toString()));
+          .add(new Grant(new Grantee(buildCanonicalUser(requestUser.getAccountNumber())), ObjectStorageProperties.Permission.FULL_CONTROL.toString()));
     }
 
+    final String canonicalId = Accounts.lookupCanonicalIdByAccountId( requestUser.getAccountNumber( ) );
     if (bucketOwnerCanonicalId != null) {
-      acPolicy.setAccessControlList(AclUtils.expandCannedAcl(acPolicy.getAccessControlList(), bucketOwnerCanonicalId, requestUser.getAccount()
-          .getCanonicalId()));
+      acPolicy.setAccessControlList(AclUtils.expandCannedAcl(acPolicy.getAccessControlList(), bucketOwnerCanonicalId, canonicalId));
     } else {
-      acPolicy.setAccessControlList(AclUtils.expandCannedAcl(acPolicy.getAccessControlList(), requestUser.getAccount().getCanonicalId(), null));
+      acPolicy.setAccessControlList(AclUtils.expandCannedAcl(acPolicy.getAccessControlList(), canonicalId, null));
     }
 
     return acPolicy;
@@ -513,10 +516,7 @@ public class AclUtils {
       canonicalId = canonicalUser == null ? null : resolveCanonicalId(canonicalUser.getID());
       if (canonicalId == null) {
         try {
-          User user = Accounts.lookupUserByEmailAddress(email);
-          if (user != null && user.isAccountAdmin() && user.getAccount() != null) {
-            canonicalId = user.getAccount().getCanonicalId();
-          }
+          canonicalId = Accounts.lookupCanonicalIdByEmail( email );
         } catch (AuthException authEx) {
           // no-op, we'll check the group
         }
@@ -594,9 +594,8 @@ public class AclUtils {
     @Override
     public String check(String id) {
       try {
-        User user = Accounts.lookupUserByEmailAddress(id);
-        if (user.isAccountAdmin()) {
-          return user.getAccount().getCanonicalId();
+        if ( Strings.nullToEmpty( id ).contains( "@" ) ) {
+          return Accounts.lookupCanonicalIdByEmail( id );
         }
         return null;
       } catch (AuthException authEx) {

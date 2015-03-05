@@ -312,7 +312,7 @@ public class SnapshotManager {
 
       final Iterable<Snapshot> snapshots = Iterables.filter( unfilteredSnapshots, requestedAndAccessible );
       final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( Snapshot.class )
-          .getResourceTagMap( AccountFullName.getInstance( ctx.getAccount( ) ),
+          .getResourceTagMap( AccountFullName.getInstance( ctx.getAccountNumber( ) ),
               Iterables.transform( snapshots, CloudMetadatas.toDisplayName() ) );
       for ( final Snapshot snap : snapshots ) {
         try {

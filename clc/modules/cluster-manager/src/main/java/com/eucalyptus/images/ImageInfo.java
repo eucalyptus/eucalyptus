@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -481,11 +481,11 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
           } catch ( final Exception e ) {
             try {
               final User user = Accounts.lookupUserById( input );
-              ImageInfo.this.getPermissions( ).add( user.getAccount( ).getAccountNumber( ) );
+              ImageInfo.this.getPermissions( ).add( user.getAccountNumber( ) );
             } catch ( AuthException ex ) {
               try {
                 final User user = Accounts.lookupUserByAccessKeyId( input );
-                ImageInfo.this.getPermissions( ).add( user.getAccount( ).getAccountNumber( ) );
+                ImageInfo.this.getPermissions( ).add( user.getAccountNumber( ) );
               } catch ( AuthException ex1 ) {
                 LOG.error( ex1, ex1 );
               }

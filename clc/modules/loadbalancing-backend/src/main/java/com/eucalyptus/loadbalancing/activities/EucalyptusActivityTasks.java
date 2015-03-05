@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -58,6 +58,7 @@ import com.eucalyptus.auth.euare.PutRolePolicyType;
 import com.eucalyptus.auth.euare.RemoveRoleFromInstanceProfileType;
 import com.eucalyptus.auth.euare.RoleType;
 import com.eucalyptus.auth.euare.ServerCertificateType;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupNames;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage;
@@ -181,6 +182,8 @@ public class EucalyptusActivityTasks {
 
 		abstract String getUserId( );
 
+		abstract AccountFullName getAccount( );
+
 		@Override
 		public DispatchingClient<TM, TC> getClient() {
 			try{
@@ -199,6 +202,7 @@ public class EucalyptusActivityTasks {
 			super( componentIdClass );
 		}
 
+		@Override
 		public final String getUserId() {
 			try{
 				return Accounts.lookupSystemAdmin().getUserId();
@@ -206,10 +210,16 @@ public class EucalyptusActivityTasks {
 				throw Exceptions.toUndeclared(ex);
 			}
 		}
+
+		@Override
+		AccountFullName getAccount( ) {
+			return null;
+		}
 	}
 
 	private abstract class UserActivityContextSupport<TM extends BaseMessage, TC extends ComponentId> extends ActivityContextSupport<TM, TC>{
-		private String userId = null;
+		private final String userId;
+		private final AccountFullName accountFullName;
 
 		private UserActivityContextSupport(
 				final Class<TC> componentIdClass,
@@ -217,10 +227,24 @@ public class EucalyptusActivityTasks {
 		) {
 			super( componentIdClass );
 			this.userId = userId;
+			this.accountFullName = null;
+		}
+
+		private UserActivityContextSupport(
+				final Class<TC> componentIdClass,
+				final AccountFullName accountFullName
+		) {
+			super( componentIdClass );
+			this.userId = null;
+			this.accountFullName = accountFullName;
 		}
 
 		public final String getUserId() {
 			return userId;
+		}
+
+		public final AccountFullName getAccount() {
+			return accountFullName;
 		}
 	}
 
@@ -257,6 +281,10 @@ public class EucalyptusActivityTasks {
 	private class EucalyptusUserActivity extends UserActivityContextSupport<ComputeMessage, Eucalyptus>{
 		private EucalyptusUserActivity(final String userId){
 			super( Eucalyptus.class, userId );
+		}
+
+		private EucalyptusUserActivity(final AccountFullName accountFullName){
+			super( Eucalyptus.class, accountFullName );
 		}
 	}
 	
@@ -328,15 +356,15 @@ public class EucalyptusActivityTasks {
 		);
 	}
 
-	public List<SecurityGroupItemType> describeUserSecurityGroupsByName( String userId, String vpcId, String groupNameFilter ){
+	public List<SecurityGroupItemType> describeUserSecurityGroupsByName( AccountFullName accountFullName, String vpcId, String groupNameFilter ){
 		final EucalyptusDescribeSecurityGroupTask task =
 				new EucalyptusDescribeSecurityGroupTask( null, null, Lists.newArrayList( groupNameFilter ), vpcId );
-		return resultOf( task, new EucalyptusUserActivity( userId ), "failed to describe security groups" );
+		return resultOf( task, new EucalyptusUserActivity( accountFullName ), "failed to describe security groups" );
 	}
 
-	public void createUserSecurityGroup( String userId, String groupName, String groupDesc ){
+	public void createUserSecurityGroup( AccountFullName accountFullName, String groupName, String groupDesc ){
 		final EucalyptusCreateGroupTask task = new EucalyptusCreateGroupTask( groupName, groupDesc );
-		checkResult( task, new EucalyptusUserActivity( userId ), "failed to create the group "+groupName );
+		checkResult( task, new EucalyptusUserActivity( accountFullName ), "failed to create the group "+groupName );
 	}
 
 	public void createARecord(String zone, String name){
@@ -494,12 +522,12 @@ public class EucalyptusActivityTasks {
 	}
 
 	public List<SecurityGroupItemType> describeUserSecurityGroupsById(
-			final String userId,
+			final AccountFullName accountFullName,
 			final String vpcId,
 			final Collection<String> securityGroupIds ){
 		return resultOf(
 				new EucaDescribeSecurityGroupsTask( vpcId, securityGroupIds ),
-				new EucalyptusUserActivity( userId ),
+				new EucalyptusUserActivity( accountFullName ),
 				"failed to describe security groups"
 		);
 	}
@@ -523,10 +551,10 @@ public class EucalyptusActivityTasks {
 		);
 	}
 
-	public Optional<VpcType> defaultVpc( final String userId ) {
+	public Optional<VpcType> defaultVpc( final AccountFullName accountFullName ) {
 		return Iterables.tryFind( resultOf(
 				new EucaDescribeVpcsTask( true ),
-				new EucalyptusUserActivity( userId ),
+				new EucalyptusUserActivity( accountFullName ),
 				"failed to describe default vpc"
 		), Predicates.alwaysTrue() );
 	}

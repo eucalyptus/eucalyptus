@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -69,9 +69,9 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
+import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Role;
-import com.eucalyptus.auth.principal.User;
 
 public interface AccountProvider {
 
@@ -85,18 +85,19 @@ public interface AccountProvider {
   List<Account> listAllAccounts( ) throws AuthException;
   Set<String> resolveAccountNumbersForName( String accountNameLike ) throws AuthException;
   
-  List<User> listAllUsers( ) throws AuthException;
-  
-  User lookupUserById( String userId ) throws AuthException;
-  User lookupUserByAccessKeyId( String keyId ) throws AuthException;
-  User lookupUserByCertificate( X509Certificate cert ) throws AuthException;
-  User lookupUserByEmailAddress( String email ) throws AuthException;
+  List<EuareUser> listAllUsers( ) throws AuthException;
+
+  EuareUser lookupUserById( String userId ) throws AuthException;
+  EuareUser lookupUserByAccessKeyId( String keyId ) throws AuthException;
+  EuareUser lookupUserByCertificate( X509Certificate cert ) throws AuthException;
+  EuareUser lookupUserByEmailAddress( String email ) throws AuthException;
 
   Group lookupGroupById( String groupId ) throws AuthException;
 
   Role lookupRoleById( String roleId ) throws AuthException;
 
   Certificate lookupCertificate( X509Certificate cert ) throws AuthException;
+  Certificate lookupCertificateById( String certificateId ) throws AuthException;;
   
   AccessKey lookupAccessKeyById( String keyId ) throws AuthException;
 

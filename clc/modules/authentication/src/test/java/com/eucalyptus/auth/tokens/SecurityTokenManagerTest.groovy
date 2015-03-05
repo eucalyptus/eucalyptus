@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,8 +19,12 @@
  ************************************************************************/
 package com.eucalyptus.auth.tokens
 
+import com.eucalyptus.auth.principal.PolicyVersion
+import com.eucalyptus.auth.principal.UserPrincipal
+import com.eucalyptus.auth.principal.UserPrincipalImpl
 import groovy.transform.CompileStatic
 
+import javax.annotation.Nonnull
 import javax.crypto.Cipher
 
 import static org.hamcrest.CoreMatchers.*
@@ -38,11 +42,6 @@ import java.security.Security
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import com.eucalyptus.auth.AuthException
 import com.eucalyptus.auth.principal.Certificate
-import java.security.cert.X509Certificate
-import com.eucalyptus.auth.principal.Group
-import com.eucalyptus.auth.principal.Account
-import com.eucalyptus.auth.principal.Policy
-import com.eucalyptus.auth.principal.Authorization
 
 import static org.junit.Assume.assumeThat
 
@@ -88,7 +87,7 @@ class SecurityTokenManagerTest {
     long desiredLifetimeHours = 6
 
     AccessKey testKey = accessKey( now - TimeUnit.HOURS.toMillis( 24 ), Principals.nobodyUser() )
-    SecurityTokenManager manager = manager( now, testKey )
+    SecurityTokenManager manager = manager( now, testKey, Principals.nobodyUser() )
     SecurityToken token = manager.doIssueSecurityToken(
         Principals.nobodyUser(),
         testKey,
@@ -99,7 +98,7 @@ class SecurityTokenManagerTest {
     assertThat( "Null key", tokenKey, notNullValue() )
     assertThat( "Invalid access key identifier", tokenKey.getAccessKey(), equalTo(token.getAccessKeyId()) )
     assertThat( "Invalid secret key", tokenKey.getSecretKey(), equalTo(token.getSecretKey())  )
-    assertThat( "Invalid user", tokenKey.getUser().getUserId(), equalTo(Principals.nobodyUser().getUserId())  )
+    assertThat( "Invalid user", tokenKey.getPrincipal().getUserId(), equalTo(Principals.nobodyUser().getUserId())  )
     assertThat( "Invalid creation time", tokenKey.getCreateDate(), equalTo( new Date(now) ) )
     assertThat( "Invalid creation time", tokenKey.isActive(), equalTo(true) )
   }
@@ -112,7 +111,7 @@ class SecurityTokenManagerTest {
     long now = System.currentTimeMillis()
     long desiredLifetimeHours = 6
 
-    User user = user();
+    UserPrincipal user = user();
     AccessKey testKey = accessKey( now - TimeUnit.HOURS.toMillis( 24 ), Principals.nobodyUser() )
     SecurityTokenManager manager = manager( now, testKey, user )
     SecurityToken token = manager.doIssueSecurityToken(
@@ -149,7 +148,7 @@ class SecurityTokenManagerTest {
     assertThat( "Null key", tokenKey, notNullValue() )
     assertThat( "Invalid access key identifier", tokenKey.getAccessKey(), equalTo(token.getAccessKeyId()) )
     assertThat( "Invalid secret key", tokenKey.getSecretKey(), equalTo(token.getSecretKey())  )
-    assertThat( "Invalid user", tokenKey.getUser().getUserId(), equalTo(user.getUserId())  )
+    assertThat( "Invalid user", tokenKey.getPrincipal().getUserId(), equalTo(user.getUserId())  )
     assertThat( "Invalid creation time", tokenKey.getCreateDate(), equalTo( new Date(now) ) )
     assertThat( "Invalid creation time", tokenKey.isActive(), equalTo(true) )
   }
@@ -228,79 +227,69 @@ class SecurityTokenManagerTest {
     manager.doIssueSecurityToken( Principals.nobodyUser(), testKey, 0, 300 )
   }
 
-  private AccessKey accessKey( long created, User owner ) {
+  private static AccessKey accessKey( long created, UserPrincipal owner ) {
+    accessKey( created, owner, 'VXCDGDDNO5L89OSHF1LHF', '8jbLUrY34CsXQ8oIOMplYhYDhbrXumfrsJ4SB4aX' )
+  }
+
+  private static AccessKey accessKey( long created, UserPrincipal owner, String accessKey, String secretKey ) {
     new AccessKey(){
       @Override Boolean isActive() { true }
       @Override void setActive( final Boolean active) { }
-      @Override String getAccessKey() { "VXCDGDDNO5L89OSHF1LHF" }
-      @Override String getSecretKey() { "8jbLUrY34CsXQ8oIOMplYhYDhbrXumfrsJ4SB4aX" }
+      @Override String getAccessKey() { accessKey }
+      @Override String getSecretKey() { secretKey }
       @Override Date getCreateDate() { new Date( created ) }
-      @Override User getUser() { owner }
+      @Override UserPrincipal getPrincipal() { owner }
     }
   }
 
-  private SecurityTokenManager manager( long now, AccessKey keyForLookup, User userForLookup = null ) {
+  private SecurityTokenManager manager( long now, AccessKey keyForLookup, UserPrincipal userForLookup = null ) {
     new SecurityTokenManager() {
       @Override protected String getSecurityTokenPassword() { "password" }
       @Override protected long getCurrentTimeMillis() { now }
-      @Override protected AccessKey lookupAccessKeyById( String accessKeyId ) {
-        assertThat( "Correct original access key id", accessKeyId, equalTo(keyForLookup.getAccessKey()) )
-        keyForLookup
-      }
-      @Override protected User lookupUserById( String userId ) {
+      @Override protected UserPrincipal lookupByUserById(final String userId, final String nonce) throws AuthException {
         assertThat( "Correct user id", userId, equalTo(userForLookup?.getUserId()) )
-        userForLookup
+        String secret = generateSecret( nonce, userForLookup.getToken( ) )
+        final Collection<AccessKey> keys = Collections.singleton( accessKey( 0, null, null, secret ) )
+        new UserPrincipalImpl( userForLookup, keys )
+      }
+      @Override protected UserPrincipal lookupByRoleById(final String roleId, final String nonce) throws AuthException {
+        new UserPrincipalImpl( userForLookup, Collections.singleton( keyForLookup ) )
+      }
+      @Override protected UserPrincipal lookupByAccessKeyId(final String accessKeyId, final String nonce) throws AuthException {
+        assertThat( "Correct original access key id", accessKeyId, equalTo(keyForLookup.getAccessKey()) )
+        String secret = generateSecret( nonce, keyForLookup.getSecretKey( ) )
+        final Collection<AccessKey> keys = Collections.singleton( accessKey( 0, null, null, secret ) )
+        new UserPrincipalImpl( userForLookup, keys )
       }
     }
   }
 
-  // Hey! wouldn't it be great if we had a mocking framework (spock comes with one - http://code.google.com/p/spock/)
-  private User user() {
-    new User() {
+  private UserPrincipal user() {
+    new UserPrincipal() {
+      @Nonnull
+      @Override String getAuthenticatedId() { userId }
+      @Nonnull
+      @Override String getAccountAlias( ) { 'alias' }
+      @Nonnull
+      @Override String getCanonicalId() { 'iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiid' }
+      @Nonnull
       @Override String getUserId() { "EXAMPLEUUFKQWVU6MBZWL" }
-      @Override void setName(String name) { }
+      @Nonnull
       @Override String getPath() { "" }
-      @Override void setPath(String path) { }
-      @Override Date getCreateDate(){ null }
-      @Override User.RegistrationStatus getRegistrationStatus() { User.RegistrationStatus.CONFIRMED }
-      @Override void setRegistrationStatus(User.RegistrationStatus stat) { }
-      @Override Boolean isEnabled() { true }
-      @Override void setEnabled(Boolean enabled) { }
+      @Override boolean isEnabled() { true }
       @Override String getToken() { "examplefnBk4b4TfjAjRMhjmu7eBjNmpvR8llmHPfXKzYw1s3vC8tDMCeEk02OKxuXBZJeDMbaynoo6N" }
-      @Override void setToken(String token) { }
-      @Override String resetToken() { getToken() }
-      @Override String getConfirmationCode() { null }
-      @Override void setConfirmationCode(String code) { }
-      @Override void createConfirmationCode() { }
-      @Override String getPassword() { "" }
-      @Override void setPassword(String password) { }
-      @Override Long getPasswordExpires() { null }
-      @Override void setPasswordExpires(Long time) { }
-      @Override String getInfo(String key) { null }
-      @Override Map<String, String> getInfo() { [:] }
-      @Override void setInfo(String key, String value) { }
-      @Override void setInfo(Map<String, String> newInfo) { }
-      @Override void removeInfo(String key) { }
+      @Nonnull
       @Override List<AccessKey> getKeys() { [] }
-      @Override AccessKey getKey(String keyId) { null }
-      @Override void removeKey(String keyId) { }
-      @Override AccessKey createKey() { null }
+      @Nonnull
       @Override List<Certificate> getCertificates() { [] }
-      @Override Certificate getCertificate(String certificateId) { null }
-      @Override Certificate addCertificate(X509Certificate certificate) { null }
-      @Override void removeCertificate(String certficateId) { }
-      @Override List<Group> getGroups() { [] }
+      @Nonnull
       @Override String getAccountNumber() { null }
-      @Override Account getAccount() { null }
+      @Override boolean isAccountAdmin() { false }
       @Override boolean isSystemAdmin() { false }
       @Override boolean isSystemUser() { false }
-      @Override boolean isAccountAdmin() { false }
-      @Override List<Policy> getPolicies() { [] }
-      @Override Policy addPolicy(String name, String policy) { null }
-      @Override Policy putPolicy(String name, String policy) { null }
-      @Override void removePolicy(String name) { }
-      @Override List<Authorization> lookupAuthorizations(String resourceType) { [] }
-      @Override List<Authorization> lookupQuotas(String resourceType) { [] }
+      @Nonnull
+      @Override List<PolicyVersion> getPrincipalPolicies() { [] }
+      @Nonnull
       @Override String getName() { "test-user-1" }
     }
   }

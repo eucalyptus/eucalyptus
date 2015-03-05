@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,10 +38,9 @@ import javax.persistence.OptimisticLockException;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.AuthQuotaException;
-import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloudwatch.common.msgs.MetricData;
 import com.eucalyptus.compute.common.ClusterInfoType;
@@ -139,15 +138,12 @@ import com.eucalyptus.loadbalancing.common.backend.msgs.DisableAvailabilityZones
 import com.eucalyptus.loadbalancing.common.backend.msgs.DisableAvailabilityZonesForLoadBalancerType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.EnableAvailabilityZonesForLoadBalancerResponseType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.EnableAvailabilityZonesForLoadBalancerType;
-import com.eucalyptus.loadbalancing.common.msgs.AccessLog;
 import com.eucalyptus.loadbalancing.common.msgs.AppCookieStickinessPolicies;
 import com.eucalyptus.loadbalancing.common.msgs.AppCookieStickinessPolicy;
 import com.eucalyptus.loadbalancing.common.msgs.AvailabilityZones;
 import com.eucalyptus.loadbalancing.common.msgs.ConfigureHealthCheckResult;
-import com.eucalyptus.loadbalancing.common.msgs.ConnectionDraining;
 import com.eucalyptus.loadbalancing.common.msgs.ConnectionSettings;
 import com.eucalyptus.loadbalancing.common.msgs.CreateLoadBalancerResult;
-import com.eucalyptus.loadbalancing.common.msgs.CrossZoneLoadBalancing;
 import com.eucalyptus.loadbalancing.common.msgs.DeleteLoadBalancerResult;
 import com.eucalyptus.loadbalancing.common.msgs.DeregisterInstancesFromLoadBalancerResult;
 import com.eucalyptus.loadbalancing.common.msgs.DescribeInstanceHealthResult;
@@ -609,10 +605,10 @@ public class LoadBalancingBackendService {
         }
       }
     }
-    final String adminUserId = lookupAdmin( ctx );
+    final AccountFullName accountFullName = ctx.getAccount( );
     boolean defaultVpc = false;
     if ( subnetVpcId == null ) { // check for a default VPC
-      final Optional<VpcType> vpcOptional = EucalyptusActivityTasks.getInstance( ).defaultVpc( adminUserId );
+      final Optional<VpcType> vpcOptional = EucalyptusActivityTasks.getInstance( ).defaultVpc( accountFullName );
       subnetVpcId = vpcOptional.transform( VpcType.id( ) ).orNull( );
       defaultVpc = subnetVpcId != null;
     }
@@ -657,7 +653,7 @@ public class LoadBalancingBackendService {
       securityGroupIds.addAll( request.getSecurityGroups( ).getMember( ) );
     } else if ( vpcId != null && !defaultVpc ) { // for default VPC a group is created/discovered later
       final List<SecurityGroupItemType> groups =  EucalyptusActivityTasks.getInstance( )
-          .describeUserSecurityGroupsByName( adminUserId, vpcId, "default" );
+          .describeUserSecurityGroupsByName( accountFullName, vpcId, "default" );
       if ( groups.isEmpty( ) ) {
         throw new InvalidConfigurationRequestException( "Default security group not found for VPC " + vpcId );
       }
@@ -668,7 +664,7 @@ public class LoadBalancingBackendService {
     }
     final List<SecurityGroupItemType> groups = securityGroupIds.isEmpty() ?
         Collections.<SecurityGroupItemType>emptyList( ) :
-        EucalyptusActivityTasks.getInstance().describeUserSecurityGroupsById( adminUserId, vpcId, securityGroupIds );
+        EucalyptusActivityTasks.getInstance().describeUserSecurityGroupsById( accountFullName, vpcId, securityGroupIds );
     if ( groups.size( ) != securityGroupIds.size( ) ) {
       throw new LoadBalancingBackendClientException( "InvalidSecurityGroup", "Invalid security group(s)" );
     }
@@ -752,6 +748,7 @@ public class LoadBalancingBackendService {
     try{
       NewLoadbalancerEvent evt = new NewLoadbalancerEvent();
       evt.setLoadBalancer(lbName);
+      evt.setLoadBalancerAccountNumber( lb.getOwnerAccountNumber( ) );
       evt.setContext(ctx);
       evt.setZones(zones);
       ActivityManager.getInstance().fire(evt);
@@ -767,6 +764,7 @@ public class LoadBalancingBackendService {
       try{
         CreateListenerEvent evt = new CreateListenerEvent();
         evt.setLoadBalancer(lbName);
+        evt.setLoadBalancerAccountNumber( lb.getOwnerAccountNumber( ) );
         evt.setListeners(listeners);
         evt.setContext(ctx);
         ActivityManager.getInstance().fire(evt);
@@ -1009,18 +1007,14 @@ public class LoadBalancingBackendService {
 		@Nullable
 		public LoadBalancer apply(@Nullable String lbName) {
 			try{
-				LoadBalancer lb = LoadBalancers.getLoadbalancer(ctx, lbName);
-				return lb;
+				return LoadBalancers.getLoadbalancer(ctx, lbName);
 			}catch(NoSuchElementException ex){
 				if(ctx.isAdministrator()){
 					try{
-						final LoadBalancer lb = LoadBalancers.getLoadBalancerByDnsName(lbName);		
-						final User owner = Accounts.lookupUserById(lb.getOwnerUserId());
-						ctx.setUser(owner);
-						return lb;
+						return LoadBalancers.getLoadBalancerByDnsName(lbName);
 					}catch(Exception ex2){
 						if(ex2 instanceof NoSuchElementException)
-							throw Exceptions.toUndeclared(new LoadBalancingException("Unable to find the loadbalancer (use DNS name if you are Cloud admin)"));
+							throw Exceptions.toUndeclared(new LoadBalancingException("Unable to find the loadbalancer (use DNS name if you are an administrator)"));
 						throw Exceptions.toUndeclared(ex2);
 					}
 				}
@@ -1031,7 +1025,7 @@ public class LoadBalancingBackendService {
     
     try {
       if ( candidateLB != null ) {
-    	String lbToDelete = null;
+        String lbToDelete = null;
         LoadBalancer lb = null;
         try {
           lb = findLoadBalancer.apply(candidateLB);
@@ -1060,6 +1054,7 @@ public class LoadBalancingBackendService {
           try {
             DeleteListenerEvent evt = new DeleteListenerEvent();
             evt.setLoadBalancer( lbToDelete );
+            evt.setLoadBalancerAccountNumber( lb.getOwnerAccountNumber( ) );
             evt.setContext( ctx );
             evt.setPorts( ports );
             ActivityManager.getInstance().fire( evt );
@@ -1070,6 +1065,7 @@ public class LoadBalancingBackendService {
           try {
             DeleteLoadbalancerEvent evt = new DeleteLoadbalancerEvent();
             evt.setLoadBalancer( lbToDelete );
+            evt.setLoadBalancerAccountNumber( lb.getOwnerAccountNumber( ) );
             evt.setContext( ctx );
             ActivityManager.getInstance().fire( evt );
           } catch ( EventFailedException e ) {
@@ -1113,7 +1109,7 @@ public class LoadBalancingBackendService {
 	  		throw new AccessPointNotFoundException();
 	  }
   	  //IAM support to restricted lb modification
-  	  if(lb != null && !LoadBalancingMetadatas.filterPrivileged().apply(lb)) {
+  	  if( !LoadBalancingMetadatas.filterPrivileged().apply(lb)) {
 	       throw new AccessPointNotFoundException(); 
 	  }
 	  
@@ -1140,6 +1136,7 @@ public class LoadBalancingBackendService {
 	  try{
     		CreateListenerEvent evt = new CreateListenerEvent();
     		evt.setLoadBalancer(lbName);
+        evt.setLoadBalancerAccountNumber( lb.getOwnerAccountNumber( ) );
     		evt.setContext(ctx);
     		evt.setListeners(listeners);
     		ActivityManager.getInstance().fire(evt);
@@ -1189,7 +1186,7 @@ public class LoadBalancingBackendService {
     }
 
    //IAM support to restricted lb modification
-   if( lb!=null && !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) {
+   if( !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) {
      throw new AccessPointNotFoundException();
    }
 
@@ -1228,6 +1225,7 @@ public class LoadBalancingBackendService {
     try{
       DeleteListenerEvent evt = new DeleteListenerEvent();
       evt.setLoadBalancer(lbName);
+      evt.setLoadBalancerAccountNumber( lb.getOwnerAccountNumber( ) );
       evt.setContext(ctx);
       evt.setPorts(listenerPorts);
       ActivityManager.getInstance().fire(evt);
@@ -1303,6 +1301,7 @@ public class LoadBalancingBackendService {
    try{
      final RegisterInstancesEvent evt = new RegisterInstancesEvent();
      evt.setLoadBalancer(lbName);
+     evt.setLoadBalancerAccountNumber( lb.getOwnerAccountNumber( ) );
      evt.setContext(ctx);
      evt.setInstances(instances);
      ActivityManager.getInstance().fire(evt);
@@ -1338,7 +1337,7 @@ public class LoadBalancingBackendService {
 		  throw new AccessPointNotFoundException();
 	  }
 	  
-	  if( lb!=null && !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
+	  if( !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
 		  throw new AccessPointNotFoundException();
 	  }
 	  	 
@@ -1412,6 +1411,7 @@ public class LoadBalancingBackendService {
 	  try{
 		  DeregisterInstancesEvent evt = new DeregisterInstancesEvent();
 		  evt.setLoadBalancer(lbName);
+      evt.setLoadBalancerAccountNumber( lb.getOwnerAccountNumber( ) );
 		  evt.setContext(ctx);
 		  evt.setInstances(instances);
 		  ActivityManager.getInstance().fire(evt);
@@ -1465,7 +1465,7 @@ public class LoadBalancingBackendService {
     final Set<String> allZones = Sets.newHashSet( Iterables.transform( lb.getZones(), LoadBalancerZoneCoreView.name( ) ) );
 
     // check for a default VPC
-    final Optional<VpcType> vpcOptional = EucalyptusActivityTasks.getInstance( ).defaultVpc( lookupAdmin( ctx ) );
+    final Optional<VpcType> vpcOptional = EucalyptusActivityTasks.getInstance( ).defaultVpc( ctx.getAccount() );
     final Map<String,String> zoneToSubnetIdMap = Maps.newHashMap( );
     if ( vpcOptional.isPresent( ) && Objects.equals( lb.getVpcId( ), vpcOptional.get( ) ) ) {
       final List<SubnetType> subnets = EucalyptusActivityTasks.getInstance( ).describeSubnetsByZone( lb.getVpcId( ), true, requestedZones );
@@ -1481,6 +1481,7 @@ public class LoadBalancingBackendService {
       try{
         final EnabledZoneEvent evt = new EnabledZoneEvent( );
         evt.setLoadBalancer( lbName );
+        evt.setLoadBalancerAccountNumber( lb.getOwnerAccountNumber( ) );
         evt.setContext( ctx );
         evt.setZones( requestedZones );
         evt.setZoneToSubnetIdMap( zoneToSubnetIdMap );
@@ -1515,7 +1516,7 @@ public class LoadBalancingBackendService {
 		  throw new AccessPointNotFoundException();
 	  }
 	
-	  if( lb!=null && !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
+	  if( !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
 		  throw new AccessPointNotFoundException();
 	  }
 	  
@@ -1523,6 +1524,7 @@ public class LoadBalancingBackendService {
 		 try{
 	    	final DisabledZoneEvent evt = new DisabledZoneEvent();
 	    	evt.setLoadBalancer(lbName);
+        evt.setLoadBalancerAccountNumber( lb.getOwnerAccountNumber( ) );
 	    	evt.setContext(ctx);
 	    	evt.setZones(zones);
 	    	ActivityManager.getInstance().fire(evt);
@@ -2060,18 +2062,12 @@ public class LoadBalancingBackendService {
   public ApplySecurityGroupsToLoadBalancerResponseType applySecurityGroupsToLoadBalancer(
       final ApplySecurityGroupsToLoadBalancerType request
   ) throws EucalyptusCloudException {
-    final ApplySecurityGroupsToLoadBalancerResponseType reply = request.getReply( );
+    final ApplySecurityGroupsToLoadBalancerResponseType reply = request.getReply();
     final Context ctx = Contexts.lookup();
-    final String accountNumber = ctx.getAccount( ).getAccountNumber();
-    final String adminUserId;
-    try {
-      adminUserId = ctx.getAccount().lookupAdmin().getUserId();
-    } catch ( final AuthException e ) {
-      throw new LoadBalancingException( "Error accessing default security group" );
-    }
+    final String accountNumber = ctx.getAccountNumber();
     final Set<String> securityGroupIds = Sets.newHashSet( request.getSecurityGroups( ).getMember( ) );
     final List<SecurityGroupItemType> groups =
-        EucalyptusActivityTasks.getInstance( ).describeUserSecurityGroupsById( adminUserId, null, securityGroupIds );
+        EucalyptusActivityTasks.getInstance( ).describeUserSecurityGroupsById( ctx.getAccount( ), null, securityGroupIds );
     if ( groups.size( ) != securityGroupIds.size( ) ) {
       throw new LoadBalancingBackendClientException( "InvalidSecurityGroup", "Invalid security group(s)" );
     }
@@ -2089,6 +2085,7 @@ public class LoadBalancingBackendService {
                 TypeMappers.lookup( SecurityGroupItemType.class, LoadBalancerSecurityGroupRef.class ) ) ) );
             final ApplySecurityGroupsEvent evt = new ApplySecurityGroupsEvent( );
             evt.setContext( ctx );
+            evt.setLoadBalancerAccountNumber( loadBalancer.getOwnerAccountNumber( ) );
             evt.setLoadBalancer( loadBalancer.getDisplayName( ) );
             evt.setSecurityGroupIdsToNames( CollectionUtils.putAll(
                 sortedGroups,
@@ -2175,6 +2172,7 @@ public class LoadBalancingBackendService {
       final EnabledZoneEvent evt = new EnabledZoneEvent( );
       evt.setLoadBalancer( lbName );
       evt.setContext( ctx );
+      evt.setLoadBalancerAccountNumber( lb.getOwnerAccountNumber( ) );
       evt.setZones( requestedZones );
       evt.setZoneToSubnetIdMap( zoneToSubnetIdMap );
       ActivityManager.getInstance( ).fire( evt );
@@ -2196,7 +2194,7 @@ public class LoadBalancingBackendService {
     final DetachLoadBalancerFromSubnetsResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     final String lbName = request.getLoadBalancerName();
-    final Collection<String> requestedSubnetIds = request.getSubnets( ).getMember( );
+    final Collection<String> requestedSubnetIds = request.getSubnets( ).getMember();
 
     final BiMap<String,String> zoneToSubnetIdMap = HashBiMap.create( );
     final String vpcId;
@@ -2226,6 +2224,7 @@ public class LoadBalancingBackendService {
         final DisabledZoneEvent evt = new DisabledZoneEvent( );
         evt.setLoadBalancer( lbName );
         evt.setContext( ctx );
+        evt.setLoadBalancerAccountNumber( lb.getOwnerAccountNumber( ) );
         evt.setZones( zones );
         ActivityManager.getInstance( ).fire( evt );
       }catch(EventFailedException e){
@@ -2462,7 +2461,7 @@ public class LoadBalancingBackendService {
   public DescribeLoadBalancerAttributesResponseType describeLoadBalancerAttributes(
       final DescribeLoadBalancerAttributesType request
   ) throws EucalyptusCloudException {
-    final DescribeLoadBalancerAttributesResponseType reply = request.getReply( );
+    final DescribeLoadBalancerAttributesResponseType reply = request.getReply();
     final Context ctx = Contexts.lookup( );
     final String accountNumber = ctx.getAccount( ).getAccountNumber( );
     final Function<String, LoadBalancerAttributes> lookupAttributes = new Function<String, LoadBalancerAttributes>( ) {
@@ -2498,14 +2497,6 @@ public class LoadBalancingBackendService {
       predicates.add(  com.eucalyptus.util.Strings.startsWith( prefix ) );
     }
     return Predicates.or( predicates );
-  }
-
-  private static String lookupAdmin( final Context ctx ) throws LoadBalancingException {
-    try {
-      return ctx.getAccount( ).lookupAdmin( ).getUserId( );
-    } catch ( final AuthException e ) {
-      throw new LoadBalancingException( "Error accessing account information" );
-    }
   }
 
   private static LoadBalancingException handleException( final Exception e ) throws LoadBalancingException {

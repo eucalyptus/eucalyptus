@@ -51,6 +51,8 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.TemporaryAccessKey;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
+import com.eucalyptus.auth.principal.UserPrincipalImpl;
 import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.bootstrap.SystemIds;
 import com.eucalyptus.crypto.Ciphers;
@@ -181,6 +183,21 @@ public class SecurityTokenManager {
     return instance.doLookupAccessKey(accessKeyId, token);
   }
 
+
+  /**
+   * Generate a secret key access key for the given nonce / secret.
+   *
+   * @param nonce The security token nonce
+   * @param secret The secret source value related to the security token
+   * @return The secret key
+   * @throws AuthException If an error occurs
+   */
+  @Nonnull
+  public static String generateSecret( @Nonnull final String nonce,
+                                       @Nonnull final String secret ) throws AuthException {
+    return instance.doGenerateSecret( nonce, secret );
+  }
+
   /**
    *
    */
@@ -204,7 +221,7 @@ public class SecurityTokenManager {
     final long restrictedDurationMillis =
         restrictDuration( 36, durationTruncationSeconds, durationSeconds );
 
-    if ( !key.getUser().getUserId().equals( user.getUserId() ) ) {
+    if ( !key.getPrincipal().getUserId().equals( user.getUserId() ) ) {
       throw new AuthException("Key not valid for user");
     }
 
@@ -297,34 +314,25 @@ public class SecurityTokenManager {
 
     final String originatingAccessKeyId = encryptedToken.getOriginatingAccessKeyId();
     final String userId = encryptedToken.getUserId();
-    final boolean active;
-    final String secretKey;
-    final User user;
+    final UserPrincipal user;
     final TemporaryKeyType type;
     if ( originatingAccessKeyId != null ) {
-      final AccessKey key = lookupAccessKeyById( originatingAccessKeyId );
-      active = key.isActive();
-      secretKey = encryptedToken.getSecretKey( key.getSecretKey() );
-      user = key.getUser();
+      user = lookupByAccessKeyId( originatingAccessKeyId, encryptedToken.getNonce() );
       type = TemporaryKeyType.Session;
     } else if ( userId != null ) {
-      user = lookupUserById( encryptedToken.getUserId() );
-      active = user.isEnabled();
-      secretKey = encryptedToken.getSecretKey( Objects.firstNonNull( user.getToken(), "" ) );
+      user = lookupByUserById( encryptedToken.getUserId(), encryptedToken.getNonce() );
       type = TemporaryKeyType.Access;
     } else  {
-      final Role role = lookupRoleById( encryptedToken.getRoleId() );
-      user = roleAsUser( role );
-      active = true;
-      secretKey = encryptedToken.getSecretKey( role.getSecret() );
+      user = lookupByRoleById( encryptedToken.getRoleId(), encryptedToken.getNonce() );
       type = TemporaryKeyType.Role;
     }
 
     return new TemporaryAccessKey() {
       private static final long serialVersionUID = 1L;
+      private UserPrincipal principal = new UserPrincipalImpl( user, Collections.<AccessKey>singleton( this ) );
 
       @Override public Boolean isActive() {
-        return active && encryptedToken.isValid();
+        return user.isEnabled() && encryptedToken.isValid();
       }
 
       @Override public String getAccessKey() {
@@ -336,7 +344,7 @@ public class SecurityTokenManager {
       }
 
       @Override public String getSecretKey() {
-        return secretKey;
+        return Iterables.getOnlyElement( user.getKeys( ) ).getSecretKey( );
       }
 
       @Override public TemporaryKeyType getType() {
@@ -351,32 +359,34 @@ public class SecurityTokenManager {
         return new Date(encryptedToken.getExpires());
       }
 
-      @Override public User getUser() throws AuthException {
-        return user;
+      @Override public UserPrincipal getPrincipal() throws AuthException {
+        return principal;
       }
 
       @Override public void setActive(final Boolean active) throws AuthException { }
     };
   }
 
+  @Nonnull
+  protected String doGenerateSecret( @Nonnull final String nonce,
+                                     @Nonnull final String secret ) {
+    return EncryptedSecurityToken.getSecretKey( nonce, secret );
+  }
+
   protected long getCurrentTimeMillis() {
     return System.currentTimeMillis();
   }
 
-  protected AccessKey lookupAccessKeyById( final String accessKeyId ) throws AuthException {
-    return Accounts.lookupAccessKeyById( accessKeyId );
+  protected UserPrincipal lookupByUserById( final String userId, final String nonce ) throws AuthException {
+    return Accounts.lookupPrincipalByUserId( userId, nonce );
   }
 
-  protected User lookupUserById( final String userId ) throws AuthException {
-    return Accounts.lookupUserById( userId );
+  protected UserPrincipal lookupByRoleById( final String roleId, final String nonce ) throws AuthException {
+    return Accounts.lookupPrincipalByRoleId( roleId, nonce );
   }
 
-  protected Role lookupRoleById( final String roleId ) throws AuthException {
-    return Accounts.lookupRoleById( roleId );
-  }
-
-  protected User roleAsUser( final Role role ) throws AuthException {
-    return Accounts.roleAsUser( role );
+  protected UserPrincipal lookupByAccessKeyId( final String accessKeyId, final String nonce ) throws AuthException {
+    return Accounts.lookupPrincipalByAccessKeyId( accessKeyId, nonce );
   }
 
   protected String getSecurityTokenPassword() {
@@ -489,6 +499,10 @@ public class SecurityTokenManager {
       return getTrimmedIfPrefixed( "$a$", originatingId );
     }
 
+    public String getNonce() {
+      return nonce;
+    }
+
     public String getUserId() {
       return getTrimmedIfPrefixed( "$u$", originatingId );
     }
@@ -521,6 +535,10 @@ public class SecurityTokenManager {
     }
 
     private String getSecretKey( final String secret ) {
+      return getSecretKey( nonce, secret );
+    }
+
+    static String getSecretKey( final String nonce, final String secret ) {
       final MessageDigest digest = Digest.SHA256.get();
       digest.update( secret.getBytes( Charsets.UTF_8 ) );
 

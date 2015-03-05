@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -72,7 +72,7 @@ import org.apache.xml.security.utils.Base64;
 import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.InvalidSignatureAuthException;
 import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.crypto.Hmac;
 import com.eucalyptus.crypto.util.SecurityParameter;
 import com.google.common.base.Strings;
@@ -91,7 +91,7 @@ public class Hmacv2LoginModule extends HmacLoginModuleSupport {
     String sig = credentials.getSignature( );
     checkForReplay( sig );
     AccessKey accessKey = lookupAccessKey( credentials );
-    User user = accessKey.getUser();
+    UserPrincipal user = accessKey.getPrincipal( );
     String secretKey = accessKey.getSecretKey();
     String canonicalString = this.makeSubjectString( credentials.getVerb(), credentials.getHeaderHost(), credentials.getServicePath(), credentials.getParameters() );
     String canonicalStringWithPort = this.makeSubjectString( credentials.getVerb(), credentials.getHeaderHost() + ":" + credentials.getHeaderPort(), credentials.getServicePath(), credentials.getParameters() );

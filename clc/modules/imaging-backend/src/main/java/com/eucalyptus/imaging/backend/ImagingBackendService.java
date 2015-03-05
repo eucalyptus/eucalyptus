@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -130,7 +130,7 @@ public class ImagingBackendService {
             .byPrivileges( )
             .buildPredicate( );
 
-        Iterable<DiskImagingTask> tasksToList = ImagingTasks.getDiskImagingTasks(AccountFullName.getInstance(ctx.getAccount()), 
+        Iterable<DiskImagingTask> tasksToList = ImagingTasks.getDiskImagingTasks(AccountFullName.getInstance(ctx.getAccountNumber()),
             request.getConversionTaskIdSet());
         for ( DiskImagingTask task : Iterables.filter( tasksToList, requestedAndAccessible ) ) {
           DiskImageConversionTask t = (DiskImageConversionTask) task.getTask( );
@@ -165,7 +165,7 @@ public class ImagingBackendService {
           state.equals(ImportTaskState.PENDING) ||
           state.equals(ImportTaskState.CONVERTING) ||
           state.equals(ImportTaskState.INSTANTIATING) ) {
-        ImagingTasks.setState(AccountFullName.getInstance(Contexts.lookup().getAccount()), request.getConversionTaskId(), 
+        ImagingTasks.setState(AccountFullName.getInstance(Contexts.lookup().getAccountNumber()), request.getConversionTaskId(),
           ImportTaskState.CANCELLING, ImportTaskState.STATE_MSG_USER_CANCELLATION);
       }
       reply.set_return(true);

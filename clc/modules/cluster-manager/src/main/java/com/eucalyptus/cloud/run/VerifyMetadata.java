@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -81,6 +81,7 @@ import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.UserFullName;
@@ -377,12 +378,12 @@ public class VerifyMetadata {
           final String profileArn = Accounts.getInstanceProfileArn( profile );
           final AuthContextSupplier user = allocInfo.getAuthContext( );
           if ( !Permissions.isAuthorized(
-                  PolicySpec.VENDOR_IAM,
-                  PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE,
-                  Accounts.getInstanceProfileFullName( profile ),
-                  profile.getAccount( ),
-                  PolicySpec.IAM_LISTINSTANCEPROFILES,
-                  user ) ) {
+              PolicySpec.VENDOR_IAM,
+              PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE,
+              Accounts.getInstanceProfileFullName( profile ),
+              AccountFullName.getInstance( profile.getAccount( ).getAccountNumber( ) ),
+              PolicySpec.IAM_LISTINSTANCEPROFILES,
+              user ) ) {
             throw new IllegalMetadataAccessException( String.format(
                 "Not authorized to access instance profile with ARN %s for %s",
                 profileArn,
@@ -395,7 +396,7 @@ public class VerifyMetadata {
                   PolicySpec.VENDOR_IAM,
                   PolicySpec.IAM_RESOURCE_ROLE,
                   Accounts.getRoleFullName( role ),
-                  role.getAccount( ),
+                  AccountFullName.getInstance( role.getAccount( ).getAccountNumber( ) ),
                   PolicySpec.IAM_PASSROLE,
                   user ) ) {
             throw new IllegalMetadataAccessException( String.format(

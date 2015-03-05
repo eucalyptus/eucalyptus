@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -71,7 +71,7 @@ public class TestAccount implements Account {
   }
 
   @Override
-  public List<User> getUsers() throws AuthException {
+  public List<EuareUser> getUsers() throws AuthException {
     throw new AuthException( "Not implemented" );
   }
 
@@ -91,7 +91,7 @@ public class TestAccount implements Account {
   }
 
   @Override
-  public User addUser( final String userName, final String path, final boolean enabled, final Map<String, String> info ) throws AuthException {
+  public EuareUser addUser( final String userName, final String path, final boolean enabled, final Map<String, String> info ) throws AuthException {
     throw new AuthException( "Not implemented" );
   }
 
@@ -136,7 +136,7 @@ public class TestAccount implements Account {
   }
 
   @Override
-  public User lookupUserByName( final String userName ) throws AuthException {
+  public EuareUser lookupUserByName( final String userName ) throws AuthException {
     throw new AuthException( "Not implemented" );
   }
 
@@ -151,7 +151,7 @@ public class TestAccount implements Account {
   }
 
   @Override
-  public User lookupAdmin() throws AuthException {
+  public EuareUser lookupAdmin() throws AuthException {
     throw new AuthException( "Not implemented" );
   }
 

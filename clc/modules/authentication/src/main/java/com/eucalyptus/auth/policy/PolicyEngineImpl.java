@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -253,25 +253,18 @@ public class PolicyEngineImpl implements PolicyEngine {
 
       // System admin can do everything
       if ( !evaluationContext.isSystemAdmin() ) {
-        final Account account = evaluationContext.getRequestAccount();
-
-        // Account admin can do everything within the account
-        if ( !requestUser.isAccountAdmin( ) || //TODO:STEVE: remove account admin special handling
-             resourceAccountNumber == null ||
-             !resourceAccountNumber.equals( account.getAccountNumber( ) ) ) {
-          // Check resource authorizations
-          Decision decision = resourcePolicy == null ?
-              Decision.ALLOW :
-              processAuthorizations( AuthEvaluationContextImpl.authorizations( resourcePolicy, true ), AuthorizationMatch.All, action, null, null, evaluationContext.getPrincipalType(), evaluationContext.getPrincipalName(), keyEval, contractEval );
-          // Denied by explicit or default deny
-          if ( decision != Decision.ALLOW ) {
-            LOG.debug( "Request is rejected by resource authorization check, due to decision " + decision );
+        // Check resource authorizations
+        Decision decision = resourcePolicy == null ?
+            Decision.ALLOW :
+            processAuthorizations( AuthEvaluationContextImpl.authorizations( resourcePolicy, true ), AuthorizationMatch.All, action, null, null, evaluationContext.getPrincipalType(), evaluationContext.getPrincipalName(), keyEval, contractEval );
+        // Denied by explicit or default deny
+        if ( decision != Decision.ALLOW ) {
+          LOG.debug( "Request is rejected by resource authorization check, due to decision " + decision );
+          throw new AuthException( AuthException.ACCESS_DENIED );
+        } else {
+          decision = evaluateResourceAuthorization( evaluationContext, AuthorizationMatch.All, resourceAccountNumber, resourceName, contracts );
+          if ( Decision.DENY == decision || ( Decision.ALLOW != decision && resourcePolicy == null ) ) {
             throw new AuthException( AuthException.ACCESS_DENIED );
-          } else {
-            decision = evaluateResourceAuthorization( evaluationContext, AuthorizationMatch.All, resourceAccountNumber, resourceName, contracts );
-            if ( Decision.DENY == decision || ( Decision.ALLOW != decision && resourcePolicy == null ) ) {
-              throw new AuthException( AuthException.ACCESS_DENIED );
-            }
           }
         }
       }
@@ -309,7 +302,7 @@ public class PolicyEngineImpl implements PolicyEngine {
         List<Pair<PolicyVersion,Authorization>> quotas = evaluationContext.lookupQuotas( );
         processQuotas(
             quotas,
-            evaluationContext.getRequestAccount( ).getAccountNumber( ),
+            evaluationContext.getRequestAccountNumber( ),
             evaluationContext.getRequestUser( ).getUserId( ),
             action,
             resourceType,
@@ -362,16 +355,14 @@ public class PolicyEngineImpl implements PolicyEngine {
       return Decision.ALLOW;
     }
 
-    final Account account = evaluationContext.getRequestAccount( );
-    if ( resourceAccountNumber != null && !resourceAccountNumber.equals( account.getAccountNumber( ) ) && !evaluationContext.isSystemUser() ) {
+    final String accountNumber = evaluationContext.getRequestAccountNumber( );
+    if ( resourceAccountNumber != null && !resourceAccountNumber.equals( accountNumber ) && !evaluationContext.isSystemUser() ) {
       final Decision decision = processAuthorizations( evaluationContext.lookupAuthorizations( ), authorizationMatch ,action, resourceAccountNumber ,resourceName, keyEval, contractEval );
       if ( decision == Decision.DENY ) {
         LOG.debug( "Request is rejected by authorization check, due to decision " + decision );
       }
       // Local authorizations may DENY access to a resource in another account but cannot grant it
       return decision == Decision.ALLOW ? Decision.DEFAULT : decision;
-    } else if ( requestUser.isAccountAdmin( ) ) { // Account admin can do everything within their account
-      return Decision.ALLOW;
     } else {
       // If not denied by global authorizations, check local (intra-account) authorizations.
       final Decision decision = processAuthorizations( evaluationContext.lookupAuthorizations(), authorizationMatch, action, resourceAccountNumber, resourceName, keyEval, contractEval );
@@ -681,11 +672,8 @@ public class PolicyEngineImpl implements PolicyEngine {
         String.valueOf( requestUser );
     }
 
-    Account getRequestAccount() throws AuthException {
-      if ( requestAccount == null ) {
-        requestAccount = requestUser.getAccount();        
-      }
-      return requestAccount;
+    String getRequestAccountNumber() throws AuthException {
+      return requestUser.getAccountNumber( );
     }
 
     boolean isSystemAdmin() {

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -54,6 +54,7 @@ import org.hibernate.annotations.Type;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Restrictions;
 
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.objectstorage.ObjectState;
@@ -226,8 +227,8 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
     entity.setObjectUuid(generateInternalKey(objectKey));
 
     try {
-      entity.setOwnerCanonicalId(usr.getAccount().getCanonicalId());
-      entity.setOwnerDisplayName(usr.getAccount().getName());
+      entity.setOwnerCanonicalId( Accounts.lookupCanonicalIdByAccountId( usr.getAccountNumber( ) ) );
+      entity.setOwnerDisplayName( Accounts.lookupAccountAliasById( usr.getAccountNumber( ) ) );
     } catch (AuthException e) {
       throw new AccountProblemException();
     }

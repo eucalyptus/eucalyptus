@@ -30,7 +30,7 @@ import com.eucalyptus.auth.euare.common.identity.DescribePrincipalResult;
 import com.eucalyptus.auth.euare.common.identity.DescribePrincipalType;
 import com.eucalyptus.auth.euare.common.identity.Principal;
 import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.Exceptions;
@@ -52,11 +52,11 @@ public class IdentityService {
       final String accessKeyId = request.getAccessKeyId( );
       if ( accessKeyId != null ) {
         final AccessKey accessKey = Accounts.lookupAccessKeyById( accessKeyId );
-        final User user = accessKey.getUser( );
+        final UserPrincipal user = accessKey.getPrincipal();
         final Principal principal = new Principal( );
         principal.setArn( Accounts.getUserArn( user ) );
         principal.setUserId( user.getUserId( ) );
-        principal.setAccountAlias( user.getAccount( ).getName( ) );
+        principal.setAccountAlias( Accounts.lookupAccountAliasById( user.getAccountNumber( ) ) );
         if ( accessKey.isActive( ) ) {
           final com.eucalyptus.auth.euare.common.identity.AccessKey key =
               new com.eucalyptus.auth.euare.common.identity.AccessKey( );

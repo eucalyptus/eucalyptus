@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -77,15 +77,14 @@ import com.eucalyptus.auth.entities.UserEntity;
 import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.policy.PolicyPolicy;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.Entities;
 import java.util.concurrent.ExecutionException;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.Tx;
 import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
 
 public class DatabaseGroupProxy implements Group {
@@ -330,8 +329,8 @@ public class DatabaseGroupProxy implements Group {
   }
   
   @Override
-  public List<User> getUsers( ) {
-    final List<User> results = Lists.newArrayList( );
+  public List<EuareUser> getUsers( ) {
+    final List<EuareUser> results = Lists.newArrayList( );
     try {
       DatabaseAuthUtils.invokeUnique( GroupEntity.class, "groupId", this.delegate.getGroupId( ), new Tx<GroupEntity>( ) {
         public void fire( GroupEntity t ) {

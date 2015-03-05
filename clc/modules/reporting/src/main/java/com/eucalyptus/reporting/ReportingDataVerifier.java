@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,9 +36,6 @@ import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.DatabaseAuthProvider;
-import com.eucalyptus.auth.api.AccountProvider;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.blockstorage.State;
@@ -74,8 +71,6 @@ import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -88,17 +83,6 @@ import com.google.common.collect.Sets;
  * cloud metadata. Views can be compared and synchronized.
  */
 public final class ReportingDataVerifier {
-
-  // Accounts.getAccountProvider() will be null during a DB upgrade
-  private static Supplier<AccountProvider> accountProviderSupplier =
-      Suppliers.memoize( new Supplier<AccountProvider>() {
-    @Override
-    public AccountProvider get() {
-      return Accounts.getAccountProvider() != null ?
-          Accounts.getAccountProvider() :
-          new DatabaseAuthProvider();
-    }
-  } );
 
   /**
    * Update the reporting database to ensure events are present for existing items.
@@ -212,7 +196,7 @@ public final class ReportingDataVerifier {
 
   private static void addCreateEvents( final Set<String> verifiedUserIds,
                                        final List<TypedResourceHolder> holders ) {
-    final Map<String,User> accountNumberToAccountAdminMap = Maps.newHashMap();
+    final Map<String,User> canonicalIdToUserMap = Maps.newHashMap();
     for ( TypedResourceHolder holder : holders ) {
       for ( ResourceWithRelation resource : holder.resources ) {
         if ( Address.class.equals( holder.type ) ) {
@@ -225,14 +209,7 @@ public final class ReportingDataVerifier {
           final ReportingS3ObjectEventStore store = ReportingS3ObjectEventStore.getInstance();
           final S3ObjectKey key = (S3ObjectKey) resource.resourceKey;
           final ObjectEntity objectInfo = findObjectInfo( key );
-          String accountId = null;
-          try{
-        	  accountId = Accounts.lookupAccountById(objectInfo.getOwnerCanonicalId()).getAccountNumber();
-          } catch(Exception e) { 
-        	  accountId = null; 
-          }
-          
-          final User user = objectInfo==null ? null : getAccountAdmin( accountNumberToAccountAdminMap, accountId);
+          final User user = objectInfo==null ? null : getAccountAdmin( canonicalIdToUserMap, objectInfo.getOwnerCanonicalId());
           if ( objectInfo != null && user != null && ensureUserAndAccount( verifiedUserIds, user.getUserId() ) ) {
             store.insertS3ObjectCreateEvent( objectInfo.getBucket().getBucketName(), objectInfo.getObjectKey(), objectInfo.getVersionId(), objectInfo.getSize(), objectInfo.getCreationTimestamp().getTime(), user.getUserId() );
           }
@@ -335,10 +312,9 @@ public final class ReportingDataVerifier {
       verified = true;
     } else {
       try {
-        final User user = getAccountProvider().lookupUserById( userId );
-        final Account account = user.getAccount();
-        ReportingAccountCrud.getInstance().createOrUpdateAccount( account.getAccountNumber(), account.getName() );
-        ReportingUserCrud.getInstance().createOrUpdateUser( user.getUserId(), account.getAccountNumber(), user.getName() );
+        final User user = Accounts.lookupPrincipalByUserId( userId, null );
+        ReportingAccountCrud.getInstance().createOrUpdateAccount( user.getAccountNumber(), Accounts.lookupAccountAliasById( user.getName() ) );
+        ReportingUserCrud.getInstance().createOrUpdateUser( user.getUserId(), user.getAccountNumber(), user.getName() );
         verified = true;
       } catch ( AuthException e ) {
         verified = false;
@@ -348,23 +324,19 @@ public final class ReportingDataVerifier {
     return verified;
   }
 
-  private static User getAccountAdmin( final Map<String, User> accountNumberToAccountAdminMap, final String accountNumber ) {
-    User user = accountNumberToAccountAdminMap.get( accountNumber );
+  private static User getAccountAdmin( final Map<String, User> canonicalIdAccountAdminMap, final String canonicalId ) {
+    User user = canonicalIdAccountAdminMap.get( canonicalId );
 
-    if ( user==null && !accountNumberToAccountAdminMap.containsKey( accountNumber ) ) {
+    if ( user==null && !canonicalIdAccountAdminMap.containsKey( canonicalId ) ) {
       try {
-        user = getAccountProvider().lookupAccountById( accountNumber ).lookupAdmin();
-        accountNumberToAccountAdminMap.put( accountNumber, user );
+        user = Accounts.lookupPrincipalByCanonicalId( canonicalId );
+        canonicalIdAccountAdminMap.put( canonicalId, user );
       } catch ( AuthException e ) {
-        accountNumberToAccountAdminMap.put( accountNumber, null );
+        canonicalIdAccountAdminMap.put( canonicalId, null );
       }
     }
 
     return user;
-  }
-
-  private static AccountProvider getAccountProvider() {
-    return accountProviderSupplier.get();
   }
 
   private static Address findAddress( final String uuid ) {

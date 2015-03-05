@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,7 +34,7 @@ import com.eucalyptus.util.RestrictedType;
  */
 public class ServerCertificate {
   private static Logger LOG = Logger.getLogger(ServerCertificate.class);
-  private Account owningAccount = null;
+  private String owningAccountNumber = null;
   private String certName = null;
   private String certId = null;
   private String certPath =  null;
@@ -43,8 +43,8 @@ public class ServerCertificate {
   private String privateKey = null;
   private Date createdTime = null;
   
-  public ServerCertificate(final Account owningAcct, final String certName, final Date createdTime){
-    this.owningAccount= owningAcct;
+  public ServerCertificate(final String owningAccountNumber, final String certName, final Date createdTime){
+    this.owningAccountNumber= owningAccountNumber;
     this.certName = certName;
     this.createdTime = createdTime;
   }
@@ -102,7 +102,7 @@ public class ServerCertificate {
     if(!path.endsWith("/"))
       path = path+"/";
     
-    return String.format("arn:aws:iam::%s:server-certificate%s%s", this.owningAccount.getAccountNumber(), path, this.certName);
+    return String.format("arn:aws:iam::%s:server-certificate%s%s", this.owningAccountNumber, path, this.certName);
   }
   
   public Date getCreatedTime(){

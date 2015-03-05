@@ -17,19 +17,27 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.activities;
+package com.eucalyptus.auth.api;
 
-import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.cloudwatch.common.CloudWatch;
-import com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage;
-import com.eucalyptus.util.DispatchingClient;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.UserPrincipal;
 
 /**
  *
  */
-public class CloudWatchClient extends DispatchingClient<CloudWatchMessage,CloudWatch> {
+public interface IdentityProvider {
 
-  public CloudWatchClient( final AccountFullName accountFullName ) {
-    super( accountFullName, CloudWatch.class );
-  }
+  /**
+   *
+   * @param nonce value used for secret access key generation (optional)
+   * @return
+   * @throws AuthException
+   */
+  UserPrincipal lookupPrincipalByUserId( String userId, String nonce ) throws AuthException;
+  UserPrincipal lookupPrincipalByRoleId( String roleId, String nonce ) throws AuthException;
+  UserPrincipal lookupPrincipalByAccessKeyId( String keyId, String nonce ) throws AuthException;
+  UserPrincipal lookupPrincipalByCertificateId( String certificateId ) throws AuthException;
+  UserPrincipal lookupPrincipalByCanonicalId( String canonicalId ) throws AuthException;
+  UserPrincipal lookupPrincipalByAccountNumber( String accountNumber ) throws AuthException;
+
 }

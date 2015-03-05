@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,7 +44,7 @@ public class AccessKeys {
   public static AccessKey lookupAccessKey( @Nonnull  final String accessKeyId,
                                            @Nullable final String securityToken ) throws AuthException {
     return securityToken == null ?
-        Accounts.lookupAccessKeyById( accessKeyId ) :
+        Accounts.lookupAccessKeyById( accessKeyId ) : //TODO:STEVE: check by region here ...
         SecurityTokenManager.lookupAccessKey( accessKeyId, securityToken );
   }
 

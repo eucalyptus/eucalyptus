@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,6 +68,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.ldap.LdapSync;
 import com.eucalyptus.auth.policy.PolicyEngineImpl;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -88,8 +89,6 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( DatabaseAuthBootstrapper.class );
     
   public boolean load( ) throws Exception {
-    DatabaseAuthProvider dbAuth = new DatabaseAuthProvider( );
-    Accounts.setAccountProvider( dbAuth );
     Permissions.setPolicyEngine( new PolicyEngineImpl( new Supplier<Boolean>( ){
       @Override
       public Boolean get( ) {
@@ -123,7 +122,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   private void ensureUserInfoNormalized() {
     try {
       Account account = Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT );
-      User sysadmin = account.lookupUserByName( User.ACCOUNT_ADMIN );
+      EuareUser sysadmin = account.lookupUserByName( User.ACCOUNT_ADMIN );
       if ( sysadmin.getInfo( ).containsKey( "Email" ) ) {
         Threads.newThread( new Runnable( ) {
 
@@ -192,7 +191,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
       // Order matters.
       try {
         Account system = Accounts.addSystemAccount( );
-        User admin = system.addUser( User.ACCOUNT_ADMIN, "/", true, null );
+        EuareUser admin = system.addUser( User.ACCOUNT_ADMIN, "/", true, null );
         admin.createKey( );
       } catch ( Exception ex ) {
         LOG.error( ex , ex );

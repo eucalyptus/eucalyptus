@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,11 +20,12 @@
 package com.eucalyptus.autoscaling.activities
 
 import com.eucalyptus.auth.Accounts
-import com.eucalyptus.auth.AuthException
 import com.eucalyptus.auth.api.AccountProvider
 import com.eucalyptus.auth.principal.AccessKey
 import com.eucalyptus.auth.principal.Account
+import com.eucalyptus.auth.principal.AccountFullName
 import com.eucalyptus.auth.principal.Certificate
+import com.eucalyptus.auth.principal.EuareUser
 import com.eucalyptus.auth.principal.Group
 import com.eucalyptus.auth.principal.Principals
 import com.eucalyptus.auth.principal.Role
@@ -80,8 +81,6 @@ import com.google.common.base.Functions
 import com.google.common.base.Predicate
 import com.google.common.base.Predicates
 import com.google.common.base.Strings
-import com.google.common.base.Supplier
-import com.google.common.base.Suppliers
 import com.google.common.collect.Sets
 import static org.junit.Assert.*
 
@@ -1173,8 +1172,8 @@ class ActivityManagerTest {
       }
 
       @Override
-      EucalyptusClient createEucalyptusClientForUser(String userId) {
-        new TestClients.TestEucalyptusClient( userId, { request ->
+      EucalyptusClient createEucalyptusClientForUser(AccountFullName accountFullName) {
+        new TestClients.TestEucalyptusClient( accountFullName, { request ->
           if (request instanceof RunInstancesType) {
             if ( "emi-00000000".equals( request.imageId ) )
                 throw new WebServicesException( "Test error triggered by using emi-00000000" )
@@ -1212,8 +1211,8 @@ class ActivityManagerTest {
       }
 
       @Override
-      ElbClient createElbClientForUser(final String userId) {
-        new TestClients.TestElbClient( userId, { request ->
+      ElbClient createElbClientForUser(final AccountFullName accountFullName) {
+        new TestClients.TestElbClient( accountFullName, { request ->
           if (request instanceof RegisterInstancesWithLoadBalancerType ) {
             new RegisterInstancesWithLoadBalancerResponseType(
                 registerInstancesWithLoadBalancerResult: new RegisterInstancesWithLoadBalancerResult(
@@ -1247,11 +1246,6 @@ class ActivityManagerTest {
             throw new RuntimeException("Unknown request type: " + request.getClass())
           }
         } as TestClients.RequestHandler )
-      }
-
-      @Override
-      Supplier<String> userIdSupplier(String accountNumber) {
-        Suppliers.ofInstance(accountNumber)
       }
 
       @Override
@@ -1305,27 +1299,17 @@ class ActivityManagerTest {
       }
 
       @Override
-      boolean shareSameAccount(final String userId1, final String userId2) {
+      EuareUser lookupUserById(final String userId) {
         throw new UnsupportedOperationException()
       }
 
       @Override
-      User lookupUserById(final String userId) {
+      EuareUser lookupUserByAccessKeyId(final String keyId) {
         throw new UnsupportedOperationException()
       }
 
       @Override
-      User lookupUserByAccessKeyId(final String keyId) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      User lookupUserByCertificate(final X509Certificate cert) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      User lookupUserByConfirmationCode(final String code) {
+      EuareUser lookupUserByCertificate(final X509Certificate cert) {
         throw new UnsupportedOperationException()
       }
 
@@ -1345,22 +1329,22 @@ class ActivityManagerTest {
       }
 
       @Override
+      Certificate lookupCertificateById(final String certificateId) {
+        throw new UnsupportedOperationException()
+      }
+
+      @Override
       AccessKey lookupAccessKeyById(final String keyId) {
         throw new UnsupportedOperationException()
       }
 
       @Override
-      User lookupUserByName(final String userName) {
+      Account lookupAccountByCanonicalId(String canonicalId) {
         throw new UnsupportedOperationException()
       }
 
       @Override
-      Account lookupAccountByCanonicalId(String canonicalId) throws AuthException {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      User lookupUserByEmailAddress(String email) throws AuthException {
+      EuareUser lookupUserByEmailAddress(String email) {
         throw new UnsupportedOperationException()
       }
     }

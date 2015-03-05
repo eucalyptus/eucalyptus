@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,6 +43,7 @@ import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.annotations.OptimisticLockType;
 import org.hibernate.annotations.OptimisticLocking;
 
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.objectstorage.ObjectState;
@@ -183,8 +184,8 @@ public class PartEntity extends S3AccessControlledEntity<ObjectState> implements
     entity.setPartUuid(generateInternalKey(objectKey));
 
     try {
-      entity.setOwnerCanonicalId(usr.getAccount().getCanonicalId());
-      entity.setOwnerDisplayName(usr.getAccount().getName());
+      entity.setOwnerCanonicalId( Accounts.lookupCanonicalIdByAccountId( usr.getAccountNumber( ) ) );
+      entity.setOwnerDisplayName( Accounts.lookupAccountAliasById( usr.getAccountNumber( ) ) );
     } catch (AuthException e) {
       throw new AccountProblemException();
     }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@ package edu.ucsb.eucalyptus.msgs;
 
 import java.util.Map;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.RoleUser;
 import com.eucalyptus.context.Context;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
@@ -37,9 +36,7 @@ public class CallerContext {
   private final Map<String,String> evaluatedKeys;
 
   public CallerContext( final Context context ) throws AuthException {
-    identity = context.getUser( ) instanceof RoleUser ?
-        ((RoleUser) context.getUser( )).getRoleId( ) :
-        context.getUser( ).getUserId( );
+    identity = context.getUser( ).getAuthenticatedId( );
     privileged = context.isPrivileged( );
     evaluatedKeys = context.evaluateKeys( );
   }

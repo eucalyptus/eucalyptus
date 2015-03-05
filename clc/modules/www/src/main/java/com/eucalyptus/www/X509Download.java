@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -84,6 +84,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import com.eucalyptus.auth.AuthenticationProperties;
+import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloudformation.CloudFormation;
@@ -95,8 +96,6 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
 import com.eucalyptus.cloudwatch.common.CloudWatch;
@@ -153,7 +152,7 @@ public class X509Download extends HttpServlet {
       return;
     }
     
-    User user = null;
+    EuareUser user = null;
     try {
       Account account = Accounts.lookupAccountByName( accountName );
       user = account.lookupUserByName( userName );
@@ -213,7 +212,7 @@ public class X509Download extends HttpServlet {
     }
   }
   
-  private static byte[] getX509Zip( User u, boolean force ) throws Exception {
+  private static byte[] getX509Zip( EuareUser u, boolean force ) throws Exception {
     X509Certificate cloudCert = null;
     X509Certificate x509 = null;
     String userAccessKey = null;

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,6 +68,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.entities.Entities;
 import org.apache.log4j.Logger;
 import org.hibernate.FetchMode;
@@ -110,7 +111,7 @@ public class DatabaseAuthProvider implements AccountProvider {
   }
 
   @Override
-  public User lookupUserById( final String userId ) throws AuthException {
+  public EuareUser lookupUserById( final String userId ) throws AuthException {
     if ( userId == null ) {
       throw new AuthException( AuthException.EMPTY_USER_ID );
     }
@@ -132,7 +133,7 @@ public class DatabaseAuthProvider implements AccountProvider {
    * @throws AuthException
    */
   @Override
-  public User lookupUserByAccessKeyId( String keyId ) throws AuthException {
+  public EuareUser lookupUserByAccessKeyId( String keyId ) throws AuthException {
     if ( keyId == null || "".equals( keyId) ) {
       throw new AuthException( "Empty key ID" );
     }
@@ -162,7 +163,7 @@ public class DatabaseAuthProvider implements AccountProvider {
    * @throws AuthException
    */
   @Override
-  public User lookupUserByCertificate( X509Certificate cert ) throws AuthException {
+  public EuareUser lookupUserByCertificate( X509Certificate cert ) throws AuthException {
     if ( cert == null ) {
       throw new AuthException( "Empty input cert" );
     }
@@ -354,8 +355,8 @@ public class DatabaseAuthProvider implements AccountProvider {
   }
 
   @Override
-  public List<User> listAllUsers( ) throws AuthException {
-    List<User> results = Lists.newArrayList( );
+  public List<EuareUser> listAllUsers( ) throws AuthException {
+    List<EuareUser> results = Lists.newArrayList( );
     try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
       List<UserEntity> users = Entities.query( new UserEntity( ) );
       db.commit( );
@@ -394,6 +395,21 @@ public class DatabaseAuthProvider implements AccountProvider {
       return new DatabaseCertificateProxy( certEntity );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to lookup cert " + cert );
+      throw new AuthException( AuthException.NO_SUCH_CERTIFICATE, e );
+    }
+  }
+
+  @Override
+  public Certificate lookupCertificateById( String certificateId ) throws AuthException {
+    if ( certificateId == null ) {
+      throw new AuthException( "Certificate identifier required" );
+    }
+    try ( final TransactionResource db = Entities.transactionFor( CertificateEntity.class ) ) {
+      CertificateEntity certEntity = DatabaseAuthUtils.getUnique( CertificateEntity.class, "certificateId", certificateId );
+      db.commit( );
+      return new DatabaseCertificateProxy( certEntity );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to lookup cert " + certificateId );
       throw new AuthException( AuthException.NO_SUCH_CERTIFICATE, e );
     }
   }
@@ -481,7 +497,7 @@ public class DatabaseAuthProvider implements AccountProvider {
     }
   }
 
-    public User lookupUserByEmailAddress( String email ) throws AuthException {
+    public EuareUser lookupUserByEmailAddress( String email ) throws AuthException {
         if (email == null || "".equals(email)) {
             throw new AuthException("Empty email address to search");
         }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,11 +32,7 @@ import javax.annotation.Nullable;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
@@ -66,7 +62,6 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.DeviceMapping;
-import com.eucalyptus.images.Emis;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.images.Images.DeviceMappingDetails;
@@ -97,14 +92,13 @@ public class CreateImageTask {
 			new ConcurrentHashMap<String, CreateImageTask>();
 	
 	/* from CreateImage request */
-	private String userId = null;
-	private String accountAdminId = null;
+	private String accountNumber = null;
 	private String instanceId = null;
 	private Boolean noReboot = null;
 	private List<BlockDeviceMappingItemType> blockDevices = null;
 	
-	public CreateImageTask(final String userId, final String instanceId, final Boolean noReboot, List<BlockDeviceMappingItemType> blockDevices){
-		this.userId = userId;
+	public CreateImageTask(final String accountNumber, final String instanceId, final Boolean noReboot, List<BlockDeviceMappingItemType> blockDevices){
+		this.accountNumber = accountNumber;
 		this.instanceId = instanceId;
 		this.noReboot = noReboot;
 		this.blockDevices  = blockDevices;
@@ -115,7 +109,6 @@ public class CreateImageTask {
 		@Override
 		@Nullable
 		public CreateImageTask apply(@Nullable VmInstance input) {
-			final String userId = input.getOwnerUserId();
 			final String instanceId = input.getDisplayName();
 			Boolean noReboot =null;
 			List<BlockDeviceMappingItemType> deviceMaps = null;
@@ -134,13 +127,8 @@ public class CreateImageTask {
 			
 			noReboot = vmTask.getNoReboot();
 			final CreateImageTask newTask =
-					new CreateImageTask(userId, instanceId, noReboot, deviceMaps);
-			try{
-				newTask.setAccountAdmin();
-			}catch(final AuthException ex){
-				throw Exceptions.toUndeclared("Failed to set account admin", ex);
-			}
-			
+					new CreateImageTask(input.getOwnerAccountNumber(), instanceId, noReboot, deviceMaps);
+
 			try{
 				final String partition = input.getPartition();
 				final ServiceConfiguration sc = Topology.lookup(Storage.class, 
@@ -464,9 +452,7 @@ public class CreateImageTask {
 	
 	public void create(final String imageId) throws Exception{
 		try{
-			LOG.info(String.format("Starting create image task for %s : %s", this.instanceId, imageId));
-			// find account admin's user id
-			this.setAccountAdmin();
+			LOG.info( String.format( "Starting create image task for %s : %s", this.instanceId, imageId ) );
 			// will throw Exception if check failed
 			this.validateVmInstance();
 			try ( TransactionResource db =
@@ -491,20 +477,8 @@ public class CreateImageTask {
 		}
 	}
 	
-	private void setAccountAdmin() throws AuthException{
-		final User requestingUser = Accounts.lookupUserById(this.userId);
-		final Account account = requestingUser.getAccount();
-		final User adminUser = account.lookupAdmin();
-		this.accountAdminId = adminUser.getUserId();
-	}
-	
 	private String getInstanceImageId(){
 		return this.getVmInstance().getImageId();
-	}
-	
-	private String getInstanceArchitecture(){
-		final ImageInfo image = Emis.LookupImage.INSTANCE.apply(this.getInstanceImageId());
-		return image.getArchitecture().name();
 	}
 	
 	/*
@@ -740,9 +714,9 @@ public class CreateImageTask {
 				devices.add(device);
 			}
 
-			final UserFullName accountAdmin = UserFullName.getInstance(this.accountAdminId);
+			final AccountFullName accountFullName = AccountFullName.getInstance(this.accountNumber);
 			final ImageInfo updatedImage = 
-					Images.updateWithDeviceMapping(imageId, accountAdmin, rootDeviceName, devices );
+					Images.updateWithDeviceMapping(imageId, accountFullName, rootDeviceName, devices );
 		}catch(final Exception ex){
 			throw Exceptions.toUndeclared(ex);
 		}
@@ -887,7 +861,7 @@ public class CreateImageTask {
 	    protected DispatchingClient<ComputeMessage, Eucalyptus> getClient() {
 			try{
 				final DispatchingClient<ComputeMessage, Eucalyptus> client =
-					new DispatchingClient<>(CreateImageTask.this.accountAdminId , Eucalyptus.class );
+					new DispatchingClient<>(AccountFullName.getInstance( CreateImageTask.this.accountNumber ), Eucalyptus.class );
 				client.init();
 				return client;
 			}catch(Exception e){

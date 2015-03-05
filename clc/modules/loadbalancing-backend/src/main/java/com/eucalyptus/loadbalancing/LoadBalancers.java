@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -104,7 +104,7 @@ public class LoadBalancers {
 		return LoadBalancers.getLoadbalancer( ctx.getAccount().getAccountNumber(), lbName );
 	}
 	
-	private static LoadBalancer getLoadbalancer(final String accountNumber, final String lbName){
+	public static LoadBalancer getLoadbalancer(final String accountNumber, final String lbName){
 		 LoadBalancer lb = null;
 		 try ( final TransactionResource db = Entities.transactionFor( LoadBalancer.class ) ) {
 			 lb = Entities.uniqueResult( LoadBalancer.namedByAccountId(accountNumber, lbName)); 

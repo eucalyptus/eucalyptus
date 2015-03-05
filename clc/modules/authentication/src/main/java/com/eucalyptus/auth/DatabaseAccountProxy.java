@@ -93,6 +93,7 @@ import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.policy.PolicyPolicy;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
@@ -196,8 +197,8 @@ public class DatabaseAccountProxy implements Account {
   }
 
   @Override
-  public List<User> getUsers( ) throws AuthException {
-    List<User> results = Lists.newArrayList();
+  public List<EuareUser> getUsers( ) throws AuthException {
+    List<EuareUser> results = Lists.newArrayList();
     try ( final TransactionResource db = Entities.transactionFor( GroupEntity.class ) ) {
       @SuppressWarnings( "unchecked" )
       List<UserEntity> users = ( List<UserEntity> ) Entities
@@ -277,7 +278,7 @@ public class DatabaseAccountProxy implements Account {
   }
 
   @Override
-  public User addUser( String userName, String path, boolean enabled, Map<String, String> info ) throws AuthException {
+  public EuareUser addUser( String userName, String path, boolean enabled, Map<String, String> info ) throws AuthException {
     try {
       USER_GROUP_NAME_CHECKER.check( userName );
     } catch ( InvalidValueException e ) {
@@ -604,7 +605,7 @@ public class DatabaseAccountProxy implements Account {
   }
 
   @Override
-  public User lookupUserByName( String userName ) throws AuthException {
+  public EuareUser lookupUserByName( String userName ) throws AuthException {
     String accountName = this.delegate.getName( );
     if ( userName == null ) {
       throw new AuthException( AuthException.EMPTY_USER_NAME );
@@ -620,7 +621,7 @@ public class DatabaseAccountProxy implements Account {
   }
 
   @Override
-  public User lookupAdmin() throws AuthException {
+  public EuareUser lookupAdmin() throws AuthException {
     return lookupUserByName( User.ACCOUNT_ADMIN );
   }
 

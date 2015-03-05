@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -97,6 +97,7 @@ import com.eucalyptus.auth.policy.key.Iso8601DateParser;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
+import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Policy;
@@ -241,7 +242,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = ctx.getUser( );
+    EuareUser userFound = lookupUser( ctx );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
     }
@@ -267,7 +268,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = ctx.getUser( );
+    EuareUser userFound = lookupUser( ctx );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) || request.getDelegateAccount( ) != null ) {
       userFound = lookupUserByName( account, Objects.firstNonNull(
           Strings.emptyToNull( request.getUserName( ) ),
@@ -304,7 +305,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = ctx.getUser( );
+    EuareUser userFound = lookupUser( ctx );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
     }
@@ -342,7 +343,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = lookupUserByName( account, request.getUserName( ) );
+    EuareUser userFound = lookupUserByName( account, request.getUserName( ) );
     try {
       Privileged.deleteUserPolicy( requestUser, account, userFound, request.getPolicyName( ) );
     } catch ( Exception e ) {
@@ -365,7 +366,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = lookupUserByName( account, request.getUserName( ) );
+    EuareUser userFound = lookupUserByName( account, request.getUserName( ) );
     try {
       Privileged.putUserPolicy( requestUser, account, userFound, request.getPolicyName( ), request.getPolicyDocument( ) );
     } catch ( PolicyParseException e ) {
@@ -428,7 +429,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = lookupUserByName( account, request.getUserName( ) );
+    EuareUser userFound = lookupUserByName( account, request.getUserName( ) );
     try {
       Policy policy = Privileged.getUserPolicy( requestUser, account, userFound, request.getPolicyName( ) );
       if ( policy != null ) {
@@ -461,7 +462,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = lookupUserByName( account, request.getUserName( ) );
+    EuareUser userFound = lookupUserByName( account, request.getUserName( ) );
     try {
       Privileged.updateLoginProfile( requestUser, account, userFound, request.getPassword( ) );
     } catch ( Exception e ) {
@@ -519,7 +520,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = lookupUserByName( account, request.getUserName( ) );
+    EuareUser userFound = lookupUserByName( account, request.getUserName( ) );
     try {
       Boolean enabled = request.getEnabled( ) != null ? "true".equalsIgnoreCase( request.getEnabled( ) ) : null;
       Long passwordExpiration = request.getPasswordExpiration( ) != null ? Iso8601DateParser.parse( request.getPasswordExpiration( ) ).getTime( ) : null;
@@ -554,7 +555,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = lookupUserByName( account, request.getUserName( ) );
+    EuareUser userFound = lookupUserByName( account, request.getUserName( ) );
     try {
       Privileged.deleteLoginProfile( requestUser, account, userFound );
     } catch ( Exception e ) {
@@ -575,7 +576,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = ctx.getUser( );
+    EuareUser userFound = lookupUser( ctx );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
     }
@@ -639,7 +640,7 @@ public class EuareService {
     result.setIsTruncated( false );
     ArrayList<UserType> users = reply.getListUsersResult( ).getUsers( ).getMemberList( );
     try {
-      for ( final User user : account.getUsers( ) ) {
+      for ( final EuareUser user : account.getUsers( ) ) {
         if ( user.getPath( ).startsWith( path ) ) {
           if ( Privileged.allowListUser( requestUser, account, user ) ) {
             UserType u = new UserType( );
@@ -751,7 +752,7 @@ public class EuareService {
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     try {
-      User newUser = Privileged.createUser( requestUser, account, request.getUserName( ), sanitizePath( request.getPath( ) ) );
+      EuareUser newUser = Privileged.createUser( requestUser, account, request.getUserName( ), sanitizePath( request.getPath( ) ) );
       UserType u = reply.getCreateUserResult( ).getUser( );
       fillUserResult( u, newUser, account );
     } catch ( Exception e ) {
@@ -780,7 +781,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = ctx.getUser( );
+    EuareUser userFound = lookupUser( ctx );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
     }
@@ -812,7 +813,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = lookupUserByName( account, request.getUserName( ) );
+    EuareUser userFound = lookupUserByName( account, request.getUserName( ) );
     ListUserPoliciesResultType result = reply.getListUserPoliciesResult( );
     result.setIsTruncated( false );
     ArrayList<String> policies = result.getPolicyNames( ).getMemberList( );
@@ -838,7 +839,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = ctx.getUser( );
+    EuareUser userFound = lookupUser( ctx );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) || request.getDelegateAccount( ) != null ) {
       userFound = lookupUserByName( account, Objects.firstNonNull(
           Strings.emptyToNull( request.getUserName( ) ),
@@ -873,7 +874,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = lookupUserByName( account, request.getUserName( ) );
+    EuareUser userFound = lookupUserByName( account, request.getUserName( ) );
     if ( userFound.getPassword( ) == null ) {
       throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find login profile for " + request.getUserName( ) );
     }
@@ -898,7 +899,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = lookupUserByName( account, request.getUserName( ) );
+    EuareUser userFound = lookupUserByName( account, request.getUserName( ) );
     reply.getListGroupsForUserResult( ).setIsTruncated( false );
     ArrayList<GroupType> groups = reply.getListGroupsForUserResult( ).getGroups( ).getMemberList( );
     try {
@@ -987,7 +988,7 @@ public class EuareService {
     try{
       final UploadServerCertificateResultType result = new UploadServerCertificateResultType();
       final ServerCertificateMetadataType metadata = 
-          getServerCertificateMetadata(ctx.getAccount().lookupServerCertificate(certName));
+          getServerCertificateMetadata(account.lookupServerCertificate(certName));
       result.setServerCertificateMetadata(metadata);
       reply.setUploadServerCertificateResult(result);
     }catch(final Exception ex){
@@ -1036,7 +1037,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userToDelete = lookupUserByName( account, request.getUserName( ) );
+    EuareUser userToDelete = lookupUserByName( account, request.getUserName( ) );
     try {
       boolean recursive = request.getIsRecursive( ) != null && request.getIsRecursive( );
       Privileged.deleteUser( requestUser, account, userToDelete, recursive );
@@ -1148,7 +1149,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = lookupUserByName( account, request.getUserName( ) );
+    EuareUser userFound = lookupUserByName( account, request.getUserName( ) );
     if ( userFound.getPassword( ) != null ) {
       throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "User " + userFound.getName( ) + " already has a login profile" );
     }
@@ -1175,7 +1176,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = ctx.getUser( );
+    EuareUser userFound = lookupUser( ctx );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
     }
@@ -1207,7 +1208,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = ctx.getUser( );
+    EuareUser userFound = lookupUser( ctx );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
     }
@@ -1247,7 +1248,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = ctx.getUser( );
+    EuareUser userFound = lookupUser( ctx );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
     }
@@ -1309,7 +1310,7 @@ public class EuareService {
       GroupType g = reply.getGetGroupResult( ).getGroup( );
       fillGroupResult( g, groupFound, account );
       ArrayList<UserType> users = reply.getGetGroupResult( ).getUsers( ).getMemberList( );
-      for ( User user : groupFound.getUsers( ) ) {
+      for ( EuareUser user : groupFound.getUsers( ) ) {
         UserType u = new UserType( );
         fillUserResult( u, user, account );
         users.add( u );
@@ -1447,7 +1448,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = ctx.getUser( );
+    EuareUser userFound = lookupUser( ctx );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
     }
@@ -1481,7 +1482,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = ctx.getUser( );
+    EuareUser userFound = lookupUser( ctx );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
     }
@@ -1521,7 +1522,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = lookupUserByName( account, request.getUserName( ) );
+    EuareUser userFound = lookupUserByName( account, request.getUserName( ) );
     if ( Strings.isNullOrEmpty( request.getInfoKey( ) ) ) {
       throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty key name" );
     }
@@ -2200,7 +2201,7 @@ public class EuareService {
     return reply;
   }
   
-  private void fillUserResult( UserType u, User userFound, Account account ) {
+  private void fillUserResult( UserType u, EuareUser userFound, Account account ) {
     u.setUserName( userFound.getName( ) );
     u.setUserId( userFound.getUserId( ) );
     u.setPath( userFound.getPath( ) );
@@ -2208,8 +2209,8 @@ public class EuareService {
     u.setCreateDate( userFound.getCreateDate( ) );
   }
   
-  private void fillUserResultExtra( UserType u, User userFound ) {
-    u.setEnabled( userFound.isEnabled().toString() );
+  private void fillUserResultExtra( UserType u, EuareUser userFound ) {
+    u.setEnabled( String.valueOf( userFound.isEnabled() ) );
     u.setRegStatus( RegistrationStatus.CONFIRMED.toString( ) );
     u.setPasswordExpiration( new Date( userFound.getPasswordExpires() ).toString() );
   }
@@ -2252,9 +2253,9 @@ public class EuareService {
   }
 
   private Account getRealAccount( Context ctx, String delegateAccount ) throws EuareException {
-    Account requestAccount = ctx.getAccount( );
+    final Account requestAccount;
     if ( delegateAccount != null ) {
-      if ( Account.SYSTEM_ACCOUNT.equals( requestAccount.getName( ) ) ) {
+      if ( ctx.hasAdministrativePrivileges( ) ) {
         try {
           Account account = Accounts.lookupAccountByName( delegateAccount );
           if ( !RestrictedTypes.filterPrivileged( ).apply( account ) ) {
@@ -2267,8 +2268,13 @@ public class EuareService {
       } else {
         throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Non-sysadmin can not have delegation access to " + delegateAccount );
       }
-    } else if ( ctx.isAdministrator( ) ) {
-      if ( !RestrictedTypes.filterPrivileged().apply( requestAccount ) ) {
+    } else {
+      try {
+        requestAccount = Accounts.lookupAccountById( ctx.getAccountNumber( ) );
+      } catch ( AuthException e ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Request account error " + ctx.getAccountNumber( ) );
+      }
+      if ( ctx.isAdministrator( ) && !RestrictedTypes.filterPrivileged().apply( requestAccount ) ) {
         throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Access not authorized for " + requestAccount );
       }
     }
@@ -2283,8 +2289,21 @@ public class EuareService {
     }
     return path;
   }
-  
-  private static User lookupUserByName( Account account, String userName ) throws EucalyptusCloudException  {
+
+  private static EuareUser lookupUser( Context context ) throws EucalyptusCloudException {
+    return lookupUserById( context.getUser( ).getUserId( ) );
+  }
+
+  private static EuareUser lookupUserById( String userId ) throws EucalyptusCloudException {
+    try {
+      return Accounts.lookupUserById( userId );
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
+  }
+
+  private static EuareUser lookupUserByName( Account account, String userName ) throws EucalyptusCloudException  {
     try {
       return account.lookupUserByName( userName );
     } catch ( Exception e ) {

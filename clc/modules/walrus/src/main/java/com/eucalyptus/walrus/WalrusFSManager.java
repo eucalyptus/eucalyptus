@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -88,7 +88,8 @@ import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Context;
@@ -254,15 +255,10 @@ public class WalrusFSManager extends WalrusManager {
   public ListAllMyBucketsResponseType listAllMyBuckets(ListAllMyBucketsType request) throws WalrusException {
     ListAllMyBucketsResponseType reply = (ListAllMyBucketsResponseType) request.getReply();
     Context ctx = Contexts.lookup();
-    Account account = ctx.getAccount();
-
-    if (account == null) {
-      throw new AccessDeniedException("no such account");
-    }
 
     try {
       BucketInfo searchBucket = new BucketInfo();
-      searchBucket.setOwnerId(account.getAccountNumber());
+      searchBucket.setOwnerId(ctx.getAccountNumber());
       List<BucketInfo> bucketInfoList = Transactions.findAll(searchBucket);
       ListAllMyBucketsList bucketList = new ListAllMyBucketsList();
 
@@ -279,10 +275,10 @@ public class WalrusFSManager extends WalrusManager {
       }
 
       reply.setBucketList(bucketList);
-      reply.setOwner(new CanonicalUser(account.getCanonicalId(), account.getName()));
+      reply.setOwner(buildCanonicalUser(ctx.getAccountNumber()));
     } catch (Exception e) {
-      LOG.error("Failed to list buckets for account " + account.getDisplayName(), e);
-      throw new InternalErrorException("Failed to list buckets for account " + account.getDisplayName(), e);
+      LOG.error("Failed to list buckets for account " + ctx.getAccountAlias(), e);
+      throw new InternalErrorException("Failed to list buckets for account " + ctx.getAccountAlias(), e);
     }
     return reply;
   }
@@ -397,7 +393,6 @@ public class WalrusFSManager extends WalrusManager {
   @Override
   public GetBucketAccessControlPolicyResponseType getBucketAccessControlPolicy(GetBucketAccessControlPolicyType request) throws WalrusException {
     Context ctx = Contexts.lookup();
-    Account account = ctx.getAccount();
 
     GetBucketAccessControlPolicyResponseType reply = (GetBucketAccessControlPolicyResponseType) request.getReply();
 
@@ -412,7 +407,12 @@ public class WalrusFSManager extends WalrusManager {
       throw new InternalErrorException("Failed to lookup metadata for bucket=" + bucketName, e);
     }
 
-    reply.setAccessControlPolicy(getPrivateACP(account.getCanonicalId(), account.getName()));
+    try {
+      reply.setAccessControlPolicy(getPrivateACP(buildCanonicalUser(ctx.getAccountNumber())));
+    } catch ( AuthException e ) {
+      LOG.error("Failed to build canonical user for " + ctx.getAccountNumber(), e);
+      throw new InternalErrorException("Authorization error");
+    }
     return reply;
   }
 
@@ -922,7 +922,6 @@ public class WalrusFSManager extends WalrusManager {
     ListBucketResponseType reply = (ListBucketResponseType) request.getReply();
 
     Context ctx = Contexts.lookup();
-    Account account = ctx.getAccount();
     String bucketName = request.getBucket();
 
     // Lookup bucket
@@ -1000,7 +999,7 @@ public class WalrusFSManager extends WalrusManager {
       String nextMarker = null;
       TreeSet<String> commonPrefixes = new TreeSet<String>();
       int firstResult = -1;
-      CanonicalUser owner = new CanonicalUser(account.getCanonicalId(), account.getName()); // same owner for every object
+      CanonicalUser owner = buildCanonicalUser(ctx.getAccountNumber()); // same owner for every object
 
       // Iterate over result sets of size maxkeys + 1
       do {
@@ -1103,7 +1102,6 @@ public class WalrusFSManager extends WalrusManager {
     String bucketName = request.getBucket();
     String objectKey = request.getKey();
     Context ctx = Contexts.lookup();
-    Account account = ctx.getAccount();
 
     // Lookup bucket
     try {
@@ -1125,7 +1123,12 @@ public class WalrusFSManager extends WalrusManager {
       throw new InternalErrorException("Failed to look up metadata for object-key=" + objectKey + ", bucket=" + bucketName, e);
     }
 
-    reply.setAccessControlPolicy(getPrivateACP(account.getCanonicalId(), account.getName()));
+    try {
+      reply.setAccessControlPolicy( getPrivateACP( buildCanonicalUser( ctx.getAccountNumber() ) ) );
+    } catch ( AuthException e ) {
+      LOG.error("Failed to build canonical user for " + ctx.getAccountNumber(), e);
+      throw new InternalErrorException("Authorization error");
+    }
     return reply;
   }
 
@@ -2393,16 +2396,23 @@ public class WalrusFSManager extends WalrusManager {
     }
   }
 
-  private static AccessControlPolicy getPrivateACP(String canonicalId, String displayName) {
+  private static AccessControlPolicy getPrivateACP( CanonicalUser canonicalUser ) {
     AccessControlList accessControlList = new AccessControlList();
-    ArrayList<Grant> grants = getPrivateGrants(canonicalId, displayName);
+    ArrayList<Grant> grants = getPrivateGrants( canonicalUser.getID( ), canonicalUser.getDisplayName( ) );
     accessControlList.setGrants(grants);
-    return new AccessControlPolicy(new CanonicalUser(canonicalId, displayName), accessControlList);
+    return new AccessControlPolicy( canonicalUser, accessControlList);
   }
 
   private static ArrayList<Grant> getPrivateGrants(String canonicalId, String displayName) {
     ArrayList<Grant> grants = new ArrayList<Grant>();
     grants.add(new Grant(new Grantee(new CanonicalUser(canonicalId, displayName)), WalrusProperties.Permission.FULL_CONTROL.toString()));
     return grants;
+  }
+
+  private static CanonicalUser buildCanonicalUser( final String accountNumber ) throws AuthException {
+    return new CanonicalUser(
+        Accounts.lookupCanonicalIdByAccountId( accountNumber ),
+        Accounts.lookupAccountAliasById( accountNumber )
+    );
   }
 }

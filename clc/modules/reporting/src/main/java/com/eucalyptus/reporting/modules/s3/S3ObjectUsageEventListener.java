@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -59,10 +59,10 @@ public class S3ObjectUsageEventListener implements EventListener<S3ObjectEvent>{
       try {
         final User user = lookupUser( event.getOwnerUserId() );
 
-        getReportingAccountCrud().createOrUpdateAccount(user.getAccount().getAccountNumber(),
-            user.getAccount().getName());
+        getReportingAccountCrud().createOrUpdateAccount(user.getAccountNumber(),
+            lookupAccountAliasById(user.getAccountNumber()));
         getReportingUserCrud().createOrUpdateUser(user.getUserId(), user
-            .getAccount().getAccountNumber(), user.getName());
+            .getAccountNumber(), user.getName());
 
         final ReportingS3ObjectEventStore eventStore = getReportingS3ObjectEventStore();
         switch (event.getAction()) {
@@ -106,6 +106,10 @@ public class S3ObjectUsageEventListener implements EventListener<S3ObjectEvent>{
 
     protected User lookupUser( final String userId ) throws AuthException {
       return Accounts.lookupUserById( userId );
+    }
+
+    protected String lookupAccountAliasById( final String accountNumber ) throws AuthException {
+      return Accounts.lookupAccountAliasById( accountNumber );
     }
 
     private String toReportingVersion( final String version ) {
