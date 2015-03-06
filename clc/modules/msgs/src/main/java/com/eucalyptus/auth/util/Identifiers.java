@@ -21,8 +21,10 @@ package com.eucalyptus.auth.util;
 
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
+import java.util.ServiceLoader;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Digest;
+import com.google.common.collect.Iterables;
 import com.google.common.io.BaseEncoding;
 
 /**
@@ -51,6 +53,15 @@ public class Identifiers {
   }
 
   private static String getRegionPartition( ) {
-    return "AA"; //TODO:STEVE: implement
+    return Iterables.getFirst( Partition.supplier.getPartitions( ), "AA" );
+  }
+
+  private static class Partition {
+    private static final IdentifierPartitionSupplier supplier =
+        Iterables.get( ServiceLoader.load( IdentifierPartitionSupplier.class ), 0 );
+  }
+
+  public static interface IdentifierPartitionSupplier {
+    public Iterable<String> getPartitions( );
   }
 }

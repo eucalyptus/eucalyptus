@@ -19,21 +19,32 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare.identity;
 
+import static com.eucalyptus.auth.principal.Certificate.Util.revoked;
+import static com.eucalyptus.util.CollectionUtils.propertyPredicate;
+import java.util.ArrayList;
+import javax.inject.Inject;
+import javax.inject.Named;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.InvalidAccessKeyAuthException;
+import com.eucalyptus.auth.api.IdentityProvider;
 import com.eucalyptus.auth.euare.EuareException;
 import com.eucalyptus.auth.euare.common.identity.DescribePrincipalResponseType;
 import com.eucalyptus.auth.euare.common.identity.DescribePrincipalResult;
 import com.eucalyptus.auth.euare.common.identity.DescribePrincipalType;
+import com.eucalyptus.auth.euare.common.identity.Policy;
 import com.eucalyptus.auth.euare.common.identity.Principal;
 import com.eucalyptus.auth.principal.AccessKey;
+import com.eucalyptus.auth.principal.Certificate;
+import com.eucalyptus.auth.principal.PolicyVersion;
+import com.eucalyptus.auth.principal.PolicyVersions;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.Exceptions;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 /**
@@ -44,28 +55,79 @@ public class IdentityService {
 
   private static final Logger logger = Logger.getLogger( IdentityService.class );
 
+  private IdentityProvider identityProvider;
+
+  @Inject
+  public IdentityService( @Named( "localIdentityProvider" ) final IdentityProvider identityProvider ) {
+    this.identityProvider = identityProvider;
+  }
+
   public DescribePrincipalResponseType describePrincipal( final DescribePrincipalType request ) throws EuareException {
     final DescribePrincipalResponseType response = request.getReply( );
     final DescribePrincipalResult result = new DescribePrincipalResult( );
 
     try {
-      final String accessKeyId = request.getAccessKeyId( );
-      if ( accessKeyId != null ) {
-        final AccessKey accessKey = Accounts.lookupAccessKeyById( accessKeyId );
-        final UserPrincipal user = accessKey.getPrincipal();
+      final UserPrincipal user;
+      if ( request.getAccessKeyId( ) != null ) {
+        user = identityProvider.lookupPrincipalByAccessKeyId( request.getAccessKeyId( ), request.getNonce( ) );
+      } else if ( request.getCertificateId( ) != null ) {
+        user = identityProvider.lookupPrincipalByCertificateId( request.getCertificateId( ) );
+      } else if ( request.getUserId( ) != null ) {
+        user = identityProvider.lookupPrincipalByUserId( request.getUserId( ), request.getNonce( ) );
+      } else if ( request.getRoleId( ) != null ) {
+        user = identityProvider.lookupPrincipalByRoleId( request.getRoleId( ), request.getNonce( ) );
+      } else if ( request.getAccountId( ) != null ) {
+        user = identityProvider.lookupPrincipalByAccountNumber( request.getAccountId( ) );
+      } else if ( request.getCanonicalId( ) != null ) {
+        user = identityProvider.lookupPrincipalByCanonicalId( request.getCanonicalId( ) );
+      } else {
+        user = null;
+      }
+
+      if ( user != null ) {
         final Principal principal = new Principal( );
+        principal.setEnabled( user.isEnabled( ) );
         principal.setArn( Accounts.getUserArn( user ) );
         principal.setUserId( user.getUserId( ) );
-        principal.setAccountAlias( Accounts.lookupAccountAliasById( user.getAccountNumber( ) ) );
-        if ( accessKey.isActive( ) ) {
+        principal.setRoleId( Accounts.isRoleIdentifier( user.getAuthenticatedId( ) ) ?
+                user.getAuthenticatedId( ) :
+                null
+        );
+        principal.setCanonicalId( user.getCanonicalId( ) );
+        principal.setAccountAlias( user.getAccountAlias() );
+
+        final ArrayList<com.eucalyptus.auth.euare.common.identity.AccessKey> accessKeys = Lists.newArrayList( );
+        for ( final AccessKey accessKey : user.getKeys( ) ) {
           final com.eucalyptus.auth.euare.common.identity.AccessKey key =
               new com.eucalyptus.auth.euare.common.identity.AccessKey( );
           key.setAccessKeyId( accessKey.getAccessKey( ) );
           key.setSecretAccessKey( accessKey.getSecretKey( ) );
-          principal.setAccessKeys( Lists.newArrayList( key ) );
+          accessKeys.add( key );
         }
+        principal.setAccessKeys( accessKeys );
 
-        //TODO:STEVE: ensure policy permits no access if a user is disabled
+        final ArrayList<com.eucalyptus.auth.euare.common.identity.Certificate> certificates = Lists.newArrayList( );
+        for ( final Certificate certificate :
+            Iterables.filter( user.getCertificates(), propertyPredicate( false, revoked() ) ) ) {
+          final com.eucalyptus.auth.euare.common.identity.Certificate cert =
+              new com.eucalyptus.auth.euare.common.identity.Certificate();
+          cert.setCertificateId( certificate.getCertificateId() );
+          cert.setCertificateBody( certificate.getPem() );
+          certificates.add( cert );
+        }
+        principal.setCertificates( certificates );
+
+        final ArrayList<Policy> policies = Lists.newArrayList( );
+        if ( user.isEnabled( ) ) for ( final PolicyVersion policyVersion : user.getPrincipalPolicies() ) {
+          final Policy policy = new Policy();
+          policy.setVersionId( policyVersion.getPolicyVersionId( ) );
+          policy.setName( policyVersion.getPolicyName( ) );
+          policy.setScope( policyVersion.getPolicyScope( ).toString() );
+          policy.setPolicy( policyVersion.getPolicy( ) );
+          policy.setHash( PolicyVersions.hash( policyVersion.getPolicy( ) ) );
+          policies.add( policy );
+        }
+        principal.setPolicies( policies );
 
         result.setPrincipal( principal );
       }

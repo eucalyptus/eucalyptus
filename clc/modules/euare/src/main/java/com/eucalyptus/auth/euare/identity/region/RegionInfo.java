@@ -35,20 +35,28 @@ import com.google.common.collect.Sets;
  */
 public class RegionInfo {
   private final String name;
+  private final Set<Integer> partitions;
   private final Set<RegionService> services;
 
   public RegionInfo(
       final String name,
+      final Collection<Integer> partitions,
       final Collection<RegionService> services
   ) {
     Parameters.checkParam( "name", name, not( isEmptyOrNullString( ) ) );
+    Parameters.checkParam( "partitions", partitions, hasSize( greaterThan( 0 ) ) );
     Parameters.checkParam( "services", services, hasSize( greaterThan( 0 ) ) );
     this.name = name;
+    this.partitions = ImmutableSet.copyOf( Sets.newTreeSet( partitions ) );
     this.services = ImmutableSet.copyOf( Sets.newTreeSet( services ) );
   }
 
   public String getName( ) {
     return name;
+  }
+
+  public Set<Integer> getPartitions( ) {
+    return partitions;
   }
 
   public Set<RegionService> getServices( ) {

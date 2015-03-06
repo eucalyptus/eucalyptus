@@ -28,9 +28,11 @@
         http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/3.4/mule.xsd
         http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/3.4/mule-vm.xsd
         http://www.eucalyptus.com/schema/cloud/3.4 http://www.eucalyptus.com/schema/cloud/3.4/euca.xsd">
-  <euca:endpoint name="IdentityWS" connector-ref="eucaws" address="http://127.0.0.1:8773/services/Identity"
+  <euca:endpoint name="IdentityControllerWS" connector-ref="eucaws" address="http://127.0.0.1:8773/services/Identity"
                  exchange-pattern="request-response" />
-  <endpoint name="IdentityVMEndpoint" address="vm://IdentityVM" exchange-pattern="one-way"/>
+
+  <endpoint name="IdentityWS" address="vm://Identity" exchange-pattern="one-way"/>
+  <endpoint name="IdentityInternalVM" address="vm://IdentityInternal" exchange-pattern="request-response"/>
 
   <model name="identity">
     <default-service-exception-strategy>
@@ -43,7 +45,7 @@
       </inbound>
       <outbound>
         <filtering-router>
-          <outbound-endpoint ref="IdentityVMEndpoint" />
+          <outbound-endpoint ref="IdentityWS" />
           <payload-type-filter expectedType="com.eucalyptus.auth.euare.common.identity.IdentityMessage" />
         </filtering-router>
       </outbound>
@@ -51,7 +53,6 @@
 
     <service name="Identity">
       <inbound>
-        <inbound-endpoint ref="IdentityVMEndpoint" />
         <inbound-endpoint ref="IdentityWS" />
       </inbound>
       <component>
@@ -63,6 +64,16 @@
         </pass-through-router>
       </outbound>
     </service>
+  </model>
 
+  <model name="identity-internal">
+    <service name="IdentityInternal">
+      <inbound>
+        <inbound-endpoint ref="IdentityInternalVM" />
+      </inbound>
+      <component>
+        <spring-object bean="identityService"/>
+      </component>
+    </service>
   </model>
 </mule>

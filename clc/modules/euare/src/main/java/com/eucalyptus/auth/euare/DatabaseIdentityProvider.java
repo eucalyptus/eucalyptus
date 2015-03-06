@@ -33,10 +33,12 @@ import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.auth.principal.UserPrincipalImpl;
 import com.eucalyptus.auth.tokens.SecurityTokenManager;
+import com.eucalyptus.component.annotation.ComponentNamed;
 
 /**
  *
  */
+@ComponentNamed( "localIdentityProvider" )
 public class DatabaseIdentityProvider implements IdentityProvider {
 
   @Override

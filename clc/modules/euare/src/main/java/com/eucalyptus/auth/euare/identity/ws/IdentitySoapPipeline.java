@@ -31,7 +31,6 @@ import com.eucalyptus.ws.stages.UnrollableStage;
 @ComponentPart( Identity.class )
 public class IdentitySoapPipeline extends SoapPipeline {
 
-  private static final String DEFAULT_NAMESPACE = "2015-03-01";
   private final UnrollableStage auth = new IdentitySoapAuthenticationStage( );
 
   public IdentitySoapPipeline( ) {
@@ -39,7 +38,7 @@ public class IdentitySoapPipeline extends SoapPipeline {
         "identity-soap",
         Identity.class,
         IdentityConfiguration.SERVICE_PATH,
-        DEFAULT_NAMESPACE,
+        "http://www.eucalyptus.com/ns/identity/2015-03-01/",
         "http://www.eucalyptus.com/ns/identity/\\d\\d\\d\\d-\\d\\d-\\d\\d/" );
   }
 

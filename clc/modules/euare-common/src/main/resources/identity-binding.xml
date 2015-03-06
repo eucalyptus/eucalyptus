@@ -38,11 +38,19 @@
   <mapping name="DescribePrincipal" class="com.eucalyptus.auth.euare.common.identity.DescribePrincipalType">
     <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
     <value name="AccessKeyId" field="accessKeyId" usage="optional"/>
+    <value name="CertificateId" field="certificateId" usage="optional"/>
+    <value name="UserId" field="userId" usage="optional"/>
+    <value name="RoleId" field="roleId" usage="optional"/>
+    <value name="AccountId" field="accountId" usage="optional"/>
+    <value name="CanonicalId" field="canonicalId" usage="optional"/>
+    <value name="Nonce" field="nonce" usage="optional"/>
   </mapping>
   <mapping class="com.eucalyptus.auth.euare.common.identity.Principal" abstract="true">
+    <value name="Enabled" field="enabled" usage="optional"/>
     <value name="Arn" field="arn" usage="optional"/>
     <value name="UserId" field="userId" usage="optional"/>
     <value name="RoleId" field="roleId" usage="optional"/>
+    <value name="CanonicalId" field="canonicalId" usage="optional"/>
     <value name="AccountAlias" field="accountAlias" usage="optional"/>
     <value name="PasswordHash" field="passwordHash" usage="optional"/>
     <collection name="AccessKeys" field="accessKeys" usage="optional">>
@@ -50,6 +58,9 @@
     </collection>
     <collection name="Certificates" field="certificates" usage="optional">>
       <structure name="member" type="com.eucalyptus.auth.euare.common.identity.Certificate"/>
+    </collection>
+    <collection name="Policies" field="policies" usage="optional">>
+      <structure name="member" type="com.eucalyptus.auth.euare.common.identity.Policy"/>
     </collection>
   </mapping>
   <mapping class="com.eucalyptus.auth.euare.common.identity.AccessKey" abstract="true">
@@ -59,5 +70,12 @@
   <mapping class="com.eucalyptus.auth.euare.common.identity.Certificate" abstract="true">
     <value name="CertificateId" field="certificateId" usage="optional"/>
     <value name="CertificateBody" field="certificateBody" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.common.identity.Policy" abstract="true">
+    <value name="VersionId" field="versionId" usage="optional"/>
+    <value name="Name" field="name" usage="optional"/>
+    <value name="Scope" field="scope" usage="optional"/>
+    <value name="Policy" field="policy" usage="optional"/>
+    <value name="Hash" field="hash" usage="optional"/>
   </mapping>
 </binding>

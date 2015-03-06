@@ -19,12 +19,17 @@
  ************************************************************************/
 package com.eucalyptus.auth.principal;
 
+import static com.eucalyptus.auth.principal.Certificate.Util.revoked;
+import static com.eucalyptus.util.CollectionUtils.propertyPredicate;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.util.NonNullFunction;
+import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -82,27 +87,29 @@ public class UserPrincipalImpl implements UserPrincipal {
     final Account account = user.getAccount( );
 
     final List<PolicyVersion> policies = Lists.newArrayList( );
-    if ( user.isAccountAdmin( ) ) {
-      policies.add( PolicyVersions.getAdministratorPolicy( ) );
-    } else {
-      Iterables.addAll(
-          policies,
-          Iterables.transform(
-              user.getPolicies( ),
-              PolicyVersions.policyVersion( PolicyScope.User, Accounts.getUserArn( user ) ) ) );
-      for ( final Group group : Iterables.filter( user.getGroups(), Predicates.not( Accounts.isUserGroup() ) ) ) {
+    if ( user.isEnabled( ) ) {
+      if ( user.isAccountAdmin() ) {
+        policies.add( PolicyVersions.getAdministratorPolicy() );
+      } else {
         Iterables.addAll(
             policies,
             Iterables.transform(
-                group.getPolicies( ),
-                PolicyVersions.policyVersion( PolicyScope.Group, Accounts.getGroupArn( group ) ) ) );
+                user.getPolicies( ),
+                PolicyVersions.policyVersion( PolicyScope.User, Accounts.getUserArn( user ) ) ) );
+        for ( final Group group : Iterables.filter( user.getGroups(), Predicates.not( Accounts.isUserGroup() ) ) ) {
+          Iterables.addAll(
+              policies,
+              Iterables.transform(
+                  group.getPolicies( ),
+                  PolicyVersions.policyVersion( PolicyScope.Group, Accounts.getGroupArn( group ) ) ) );
+        }
       }
+      Iterables.addAll(
+          policies,
+          Iterables.transform(
+              account.lookupAdmin( ).getPolicies( ),
+              PolicyVersions.policyVersion( PolicyScope.Account, user.getAccountNumber( ) ) ) ); //TODO:STEVE: ARN for account?
     }
-    Iterables.addAll(
-        policies,
-        Iterables.transform(
-            account.lookupAdmin().getPolicies( ),
-            PolicyVersions.policyVersion( PolicyScope.Account, user.getAccountNumber( ) ) ) ); //TODO:STEVE: ARN for account?
 
     this.name = user.getName( );
     this.path = user.getPath();
@@ -116,8 +123,9 @@ public class UserPrincipalImpl implements UserPrincipal {
     this.accountAdmin = user.isAccountAdmin( );
     this.systemAdmin = user.isSystemAdmin( );
     this.systemUser = user.isSystemUser( );
-    this.keys = ImmutableList.copyOf( user.getKeys( ) );
-    this.certificates = ImmutableList.copyOf( user.getCertificates( ) );
+    this.keys = ImmutableList.copyOf( Iterables.transform( user.getKeys( ), keyWrapper( this )) );
+    this.certificates = ImmutableList.copyOf(
+        Iterables.filter( user.getCertificates( ), propertyPredicate( false, revoked( ) ) ) );
     this.principalPolicies = ImmutableList.copyOf( policies );
   }
 
@@ -244,5 +252,22 @@ public class UserPrincipalImpl implements UserPrincipal {
   @Nonnull
   public ImmutableList<PolicyVersion> getPrincipalPolicies( ) {
     return principalPolicies;
+  }
+
+  private static NonNullFunction<AccessKey,AccessKey> keyWrapper( final UserPrincipal userPrincipal ) {
+    return new NonNullFunction<AccessKey, AccessKey>() {
+      @Nonnull
+      @Override
+      public AccessKey apply( final AccessKey accessKey ) {
+        return new AccessKey( ){
+          @Override public Boolean isActive( ) { return accessKey.isActive( ); }
+          @Override public void setActive( final Boolean active ) throws AuthException { }
+          @Override public String getAccessKey() { return accessKey.getAccessKey( ); }
+          @Override public String getSecretKey( ) { return accessKey.getSecretKey( ); }
+          @Override public Date getCreateDate( ) { return accessKey.getCreateDate( ); }
+          @Override public UserPrincipal getPrincipal( ) { return userPrincipal; }
+        };
+      }
+    };
   }
 }

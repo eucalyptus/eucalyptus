@@ -31,6 +31,12 @@ class IdentityMessage extends BaseMessage {
 
 class DescribePrincipalType extends IdentityMessage {
   String accessKeyId
+  String certificateId
+  String userId
+  String roleId
+  String accountId
+  String canonicalId
+  String nonce
 }
 
 class DescribePrincipalResponseType extends IdentityMessage {
@@ -42,13 +48,16 @@ class DescribePrincipalResult extends EucalyptusData {
 }
 
 class Principal extends EucalyptusData {
+  Boolean enabled
   String arn
   String userId
   String roleId
+  String canonicalId
   String accountAlias
   String passwordHash
   ArrayList<AccessKey> accessKeys
   ArrayList<Certificate> certificates
+  ArrayList<Policy> policies
 }
 
 class AccessKey extends EucalyptusData {
@@ -60,3 +69,12 @@ class Certificate extends EucalyptusData {
   String certificateId
   String certificateBody
 }
+
+class Policy extends EucalyptusData {
+  String versionId
+  String name
+  String scope
+  String policy
+  String hash
+}
+

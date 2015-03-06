@@ -20,15 +20,26 @@
 package com.eucalyptus.auth.euare.identity.region;
 
 import static com.eucalyptus.auth.euare.identity.region.RegionInfo.RegionService;
+import static com.eucalyptus.util.CollectionUtils.propertyPredicate;
+import java.nio.charset.StandardCharsets;
+import java.security.cert.X509Certificate;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import com.eucalyptus.auth.util.Identifiers;
+import com.eucalyptus.crypto.util.PEMFiles;
+import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 
@@ -44,6 +55,11 @@ public class RegionConfigurationManager {
           return RegionConfigurations.getRegionConfiguration( );
         }
       }, 1, TimeUnit.MINUTES );
+
+  private final Cache<String,X509Certificate> certificateCache = CacheBuilder
+      .<String,X509Certificate>newBuilder( )
+      .expireAfterWrite( 1, TimeUnit.HOURS )
+      .build( );
 
   /**
    * Get information for a region based on an IAM identifier (AKI, etc)
@@ -69,6 +85,43 @@ public class RegionConfigurationManager {
     return regionInfoOptional;
   }
 
+  /**
+   * Get the region information for the local region (if any)
+   *
+   * @return The optional region information
+   */
+  public Optional<RegionInfo> getRegionInfo( ) {
+    return Iterables.tryFind(
+          Iterables.concat( regionConfigurationSupplier.get( ).asSet() ),
+          propertyPredicate( RegionConfigurations.getRegionName( ).asSet(), RegionNameTransform.INSTANCE )
+      ).transform( TypeMappers.lookup( Region.class, RegionInfo.class ) );
+  }
+
+  public boolean isRegionCertificate( final X509Certificate certificate ) {
+    boolean found = false;
+    final Optional<RegionConfiguration> configurationOptional = regionConfigurationSupplier.get( );
+    if ( configurationOptional.isPresent( ) ) {
+      final RegionConfiguration configuration = configurationOptional.get( );
+      for ( final Region region : configuration ) {
+        try {
+          final X509Certificate regionCertificate = certificateCache.get(
+              region.getCertificate( ),
+              new Callable<X509Certificate>( ) {
+                @Override
+                public X509Certificate call() throws Exception {
+                  return PEMFiles.getCert( region.getCertificate().getBytes( StandardCharsets.UTF_8 ) );
+                }
+              } );
+          found = regionCertificate.equals( certificate );
+          if ( found ) break;
+        } catch ( ExecutionException e ) {
+          // skip the certificate
+        }
+      }
+    }
+    return found;
+  }
+
   private enum PartitionFunctions implements Function<Integer,String> {
     IDENTIFIER {
       private final char[] characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567".toCharArray( );
@@ -78,6 +131,26 @@ public class RegionConfigurationManager {
       public String apply( final Integer integer ) {
         return new String( new char[ ]{ characters[ integer / 32 ], characters[ integer % 32 ] } );
       }
+    }
+  }
+
+  private enum RegionNameTransform implements NonNullFunction<Region,String> {
+    INSTANCE;
+
+    @Nonnull
+    @Override
+    public String apply( final Region region ) {
+      return region.getName( );
+    }
+  }
+
+  private enum RegionInfoPartitionsTransform implements NonNullFunction<RegionInfo,Set<Integer>> {
+    INSTANCE;
+
+    @Nonnull
+    @Override
+    public Set<Integer> apply(final RegionInfo region ) {
+      return region.getPartitions( );
     }
   }
 
@@ -92,6 +165,7 @@ public class RegionConfigurationManager {
           null :
           new RegionInfo(
               region.getName( ),
+              region.getIdentifierPartitions( ),
               Collections2.transform( region.getServices( ), TypeMappers.lookup( Service.class, RegionService.class ) ) );
     }
   }
@@ -106,6 +180,18 @@ public class RegionConfigurationManager {
       return service == null ?
           null :
           new RegionService( service.getType( ), service.getEndpoints( ) );
+    }
+  }
+
+  public static class ConfiguredIdentifierPartitionSupplier implements Identifiers.IdentifierPartitionSupplier {
+    private final RegionConfigurationManager regionConfigurationManager = new RegionConfigurationManager( );
+
+    @Override
+    public Iterable<String> getPartitions( ) {
+      return Iterables.transform(
+          Iterables.concat(
+              regionConfigurationManager.getRegionInfo( ).transform( RegionInfoPartitionsTransform.INSTANCE ).asSet( ) ),
+          PartitionFunctions.IDENTIFIER );
     }
   }
 }
