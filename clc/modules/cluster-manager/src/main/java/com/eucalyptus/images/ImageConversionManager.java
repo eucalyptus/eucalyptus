@@ -284,8 +284,8 @@ public class ImageConversionManager implements EventListener<ClockTick> {
         return;
       }
     }
-    if (systemBuckets == null) {
-      LOG.warn("Can't init system buckets. Skipping clenup up.");
+    if (images.size()>0 && systemBuckets == null) {
+      LOG.debug("Can't init system buckets. Skipping clenup up.");
       return;
     }
     
