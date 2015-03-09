@@ -390,7 +390,7 @@ public class RestrictedTypes {
    * @return List<T> of size {@code quantity} of new allocations of {@code <T>}
    */
   @SuppressWarnings( { "cast", "unchecked" } )
-  public static <T extends RestrictedType> T allocateMeasurableResource( Long amount, Function<Long, T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+  public static <T extends LimitedType> T allocateMeasurableResource( Long amount, Function<Long, T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     String identifier = "";
     Context ctx = Contexts.lookup( );
     if ( !ctx.hasAdministrativePrivileges( ) ) {

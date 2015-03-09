@@ -72,6 +72,10 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
+
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.RestrictedTypes;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
@@ -142,7 +146,16 @@ public class ResourceState {
                                         ? maxAmount
                                         : available );
     }
-    
+
+    // TODO: evan. Add the cpu, disk, etc, here
+    try {
+      RestrictedTypes.allocateMeasurableResource(Long.valueOf(vmTypeStatus.getType().getCpu().longValue()), null);
+    } catch (AuthException e) {
+      throw Exceptions.toUndeclared(e);
+    }
+//    RestrictedTypes.allocateMeasurableResource(Long.valueOf(vmTypeStatus.getType().getMemory().longValue()), null);
+//    RestrictedTypes.allocateMeasurableResource(Long.valueOf(vmTypeStatus.getType().getDisk().longValue()), null);
+//;
     Set<VmTypeAvailability> tailSet = sorted.tailSet( vmTypeStatus );
     Set<VmTypeAvailability> headSet = sorted.headSet( vmTypeStatus );
     LOG.debug( LogUtil.header( "DURING ALLOCATE" ) );
@@ -182,6 +195,17 @@ public class ResourceState {
     }
     return count;
   }
+
+  public long measureUncommittedPendingInstanceCpus( final OwnerFullName ownerFullName ) {
+    long amount = 0;
+    for ( final ResourceToken token : this.pendingTokens ) {
+      if ( !token.isCommitted( ) && token.getOwner( ).isOwner( ownerFullName ) ) {
+        amount += token.getAmount( ) * token.getAllocationInfo().getVmType().getCpu();
+      }
+    }
+    return amount;
+  }
+
 
   public synchronized void releaseToken( ResourceToken token ) {
     LOG.debug( EventType.TOKEN_RELEASED.name( ) + ": " + token.toString( ) );
