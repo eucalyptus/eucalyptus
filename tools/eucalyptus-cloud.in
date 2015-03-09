@@ -60,7 +60,7 @@
 #   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
 #   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
 #
-# chkconfig: 2345 99 05
+# chkconfig: - 99 05
 # description: eucalyptus java ws services
 #
 ### BEGIN INIT INFO
