@@ -46,6 +46,7 @@ import org.hibernate.annotations.OptimisticLocking;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.objectstorage.ObjectState;
 import com.eucalyptus.objectstorage.exceptions.s3.AccountProblemException;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
@@ -179,16 +180,12 @@ public class PartEntity extends S3AccessControlledEntity<ObjectState> implements
    * @param usr
    */
   public static PartEntity newInitializedForCreate(@Nonnull Bucket bucket, @Nonnull String objectKey, @Nonnull String uploadId,
-      @Nonnull Integer partNumber, @Nonnull long contentLength, @Nonnull User usr) throws Exception {
+      @Nonnull Integer partNumber, long contentLength, @Nonnull UserPrincipal usr) throws Exception {
     PartEntity entity = new PartEntity(bucket, objectKey, uploadId);
     entity.setPartUuid(generateInternalKey(objectKey));
 
-    try {
-      entity.setOwnerCanonicalId( Accounts.lookupCanonicalIdByAccountId( usr.getAccountNumber( ) ) );
-      entity.setOwnerDisplayName( Accounts.lookupAccountAliasById( usr.getAccountNumber( ) ) );
-    } catch (AuthException e) {
-      throw new AccountProblemException();
-    }
+    entity.setOwnerCanonicalId(usr.getCanonicalId());
+    entity.setOwnerDisplayName(usr.getAccountAlias());
     entity.setPartNumber(partNumber);
     entity.setUploadId(uploadId);
     entity.setOwnerIamUserId(usr.getUserId());

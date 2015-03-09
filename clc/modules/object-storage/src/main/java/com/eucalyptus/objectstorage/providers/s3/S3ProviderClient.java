@@ -81,12 +81,11 @@ import com.amazonaws.services.s3.model.SetBucketVersioningConfigurationRequest;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.model.VersionListing;
-import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.objectstorage.client.OsgInternalS3Client;
 import com.eucalyptus.objectstorage.entities.S3ProviderConfiguration;
 import com.eucalyptus.objectstorage.exceptions.S3ExceptionMapper;
-import com.eucalyptus.objectstorage.exceptions.s3.AccountProblemException;
 import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.NotImplementedException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
@@ -457,13 +456,8 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
     LOG.debug("Disable completed successfully");
   }
 
-  protected CanonicalUser getCanonicalUser(User usr) {
-    try {
-      return AclUtils.buildCanonicalUser( usr.getAccountNumber( ) );
-    } catch (AuthException e) {
-      LOG.debug("Exception getting the canonicalId and display name for the user: " + usr.getName(), e);
-      return new CanonicalUser();
-    }
+  protected CanonicalUser getCanonicalUser( UserPrincipal usr ) {
+    return AclUtils.buildCanonicalUser( usr );
   }
 
   /*
@@ -572,7 +566,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
    * @param request
    * @return
    */
-  private static User getRequestUser(ObjectStorageRequestType request) {
+  private static UserPrincipal getRequestUser(ObjectStorageRequestType request) {
     return request.getUser();
   }
 
@@ -650,7 +644,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
   @Override
   public ListBucketResponseType listBucket(ListBucketType request) throws S3Exception {
     ListBucketResponseType reply = request.getReply();
-    User requestUser = getRequestUser(request);
+    UserPrincipal requestUser = getRequestUser(request);
     OsgInternalS3Client internalS3Client = null;
     try {
       internalS3Client = getS3Client(requestUser);
@@ -993,7 +987,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
   @Override
   public ListVersionsResponseType listVersions(ListVersionsType request) throws S3Exception {
     ListVersionsResponseType reply = request.getReply();
-    User requestUser = getRequestUser(request);
+    UserPrincipal requestUser = getRequestUser(request);
     OsgInternalS3Client internalS3Client = null;
 
     try {
@@ -1004,14 +998,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
               request.getDelimiter(), Integer.parseInt(request.getMaxKeys()));
       VersionListing result = s3Client.listVersions(listVersionsRequest);
 
-      CanonicalUser owner;
-      try {
-        owner = AclUtils.buildCanonicalUser(requestUser.getAccountNumber());
-      } catch (AuthException e) {
-        LOG.error("Error getting request user's account during bucket version listing", e);
-        owner = null;
-        throw new AccountProblemException("Account for user " + requestUser.getUserId());
-      }
+      CanonicalUser owner = getCanonicalUser(requestUser);
 
       // Populate result to euca
       reply.setBucket(request.getBucket());

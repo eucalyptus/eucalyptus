@@ -54,11 +54,8 @@ import org.hibernate.annotations.Type;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Restrictions;
 
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.objectstorage.ObjectState;
-import com.eucalyptus.objectstorage.exceptions.s3.AccountProblemException;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
@@ -221,18 +218,12 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
    * @param objectKey
    * @param usr
    */
-  public static ObjectEntity newInitializedForCreate(@Nonnull Bucket bucket, @Nonnull String objectKey, @Nonnull long contentLength, @Nonnull User usr)
+  public static ObjectEntity newInitializedForCreate(@Nonnull Bucket bucket, @Nonnull String objectKey, long contentLength, @Nonnull UserPrincipal usr)
       throws Exception {
     ObjectEntity entity = new ObjectEntity(bucket, objectKey, bucket.generateObjectVersionId());
     entity.setObjectUuid(generateInternalKey(objectKey));
-
-    try {
-      entity.setOwnerCanonicalId( Accounts.lookupCanonicalIdByAccountId( usr.getAccountNumber( ) ) );
-      entity.setOwnerDisplayName( Accounts.lookupAccountAliasById( usr.getAccountNumber( ) ) );
-    } catch (AuthException e) {
-      throw new AccountProblemException();
-    }
-
+    entity.setOwnerCanonicalId(usr.getCanonicalId());
+    entity.setOwnerDisplayName(usr.getAccountAlias());
     entity.setOwnerIamUserId(usr.getUserId());
     entity.setOwnerIamUserDisplayName(usr.getName());
     entity.setObjectModifiedTimestamp(null);
@@ -244,8 +235,8 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
     return entity;
   }
 
-  public static ObjectEntity newInitializedForCreate(@Nonnull Bucket bucket, @Nonnull String objectKey, @Nonnull long contentLength,
-      @Nonnull User usr, @Nullable Map<String, String> headersToStore) throws Exception {
+  public static ObjectEntity newInitializedForCreate(@Nonnull Bucket bucket, @Nonnull String objectKey, long contentLength,
+      @Nonnull UserPrincipal usr, @Nullable Map<String, String> headersToStore) throws Exception {
     ObjectEntity entity = newInitializedForCreate(bucket, objectKey, contentLength, usr);
     entity.setStoredHeaders(headersToStore);
     return entity;

@@ -104,11 +104,19 @@ public class UserPrincipalImpl implements UserPrincipal {
                   PolicyVersions.policyVersion( PolicyScope.Group, Accounts.getGroupArn( group ) ) ) );
         }
       }
-      Iterables.addAll(
-          policies,
-          Iterables.transform(
-              account.lookupAdmin( ).getPolicies( ),
-              PolicyVersions.policyVersion( PolicyScope.Account, user.getAccountNumber( ) ) ) ); //TODO:STEVE: ARN for account?
+      EuareUser admin = null;
+      try {
+        admin = account.lookupAdmin( );
+      } catch ( AuthException e ) {
+        //
+      }
+      if ( admin != null ) {
+        Iterables.addAll(
+            policies,
+            Iterables.transform(
+                admin.getPolicies(),
+                PolicyVersions.policyVersion( PolicyScope.Account, user.getAccountNumber() ) ) ) ; //TODO:STEVE: ARN for account?
+      }
     }
 
     this.name = user.getName( );

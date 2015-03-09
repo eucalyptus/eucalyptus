@@ -43,6 +43,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -373,7 +374,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   protected PutObjectResponseType doPutOperation(final PutObjectType request) throws S3Exception {
     try {
-      User requestUser = getRequestUser(request);
+      UserPrincipal requestUser = getRequestUser(request);
       Bucket bucket;
       try {
         bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(request.getBucket());
@@ -451,16 +452,16 @@ public class ObjectStorageGateway implements ObjectStorageService {
    * @return
    * @throws AccountProblemException
    */
-  private User getRequestUser(ObjectStorageRequestType request) throws AccountProblemException {
+  private UserPrincipal getRequestUser(ObjectStorageRequestType request) throws AccountProblemException {
     try {
       String requestUserId = request.getEffectiveUserId();
       if (Strings.isNullOrEmpty(requestUserId)) {
         return Contexts.lookup().getUser();
       } else {
         if (Principals.systemFullName().getUserId().equals(requestUserId)) {
-          return Accounts.lookupSystemAdmin();
+          return Accounts.lookupSystemAdminAsPrincipal();
         } else {
-          return Accounts.lookupUserById(requestUserId);
+          return Accounts.lookupPrincipalByUserId(requestUserId, null);
         }
       }
     } catch (AuthException e) {
@@ -539,7 +540,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
    * @return
    * @throws Exception
    */
-  protected AccessControlPolicy getFullAcp(@Nonnull AccessControlList acl, @Nonnull User requestUser, @Nullable String extantBucketOwnerCanonicalId)
+  protected AccessControlPolicy getFullAcp(@Nonnull AccessControlList acl, @Nonnull UserPrincipal requestUser, @Nullable String extantBucketOwnerCanonicalId)
       throws Exception {
     // Generate a full ACP based on the request. If empty or null acl, generates a 'private' acl with fullcontrol for owner
     AccessControlPolicy tmpPolicy = new AccessControlPolicy();
@@ -560,8 +561,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
   public CreateBucketResponseType createBucket(final CreateBucketType request) throws S3Exception {
     logRequest(request);
     try {
-      final User requestUser = getRequestUser(request);
-      final String canonicalId = Accounts.lookupCanonicalIdByAccountId( requestUser.getAccountNumber( ) );
+      final UserPrincipal requestUser = getRequestUser(request);
+      final String canonicalId = requestUser.getCanonicalId( );
 
       // Check the validity of the bucket name.
       if (!checkBucketNameValidity(request.getBucket())) {
@@ -686,13 +687,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
   public ListAllMyBucketsResponseType listAllMyBuckets(ListAllMyBucketsType request) throws S3Exception {
     logRequest(request);
 
-    CanonicalUser canonicalUser;
-    try {
-      canonicalUser = AclUtils.buildCanonicalUser( Contexts.lookup( ).getAccountNumber( ) );
-    } catch ( AuthException e) {
-      LOG.error("Could not retrieve canonicalId for user with userId: " + request.getUserId() + " effectiveUserId: " + request.getEffectiveUserId());
-      throw new AccountProblemException(request.getUserId());
-    }
+    CanonicalUser canonicalUser = AclUtils.buildCanonicalUser( Contexts.lookup( ).getUser( ) );
 
     // Create a fake bucket record just for IAM verification. The IAM policy is only valid for arn:s3:* so empty should match
     /*
@@ -1335,7 +1330,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     String sourceBucket = request.getSourceBucket();
     String sourceKey = request.getSourceObject();
     String sourceVersionId = request.getSourceVersionId();
-    User requestUser = Contexts.lookup().getUser();
+    UserPrincipal requestUser = Contexts.lookup().getUser();
 
     // Check for source bucket
     final Bucket srcBucket = ensureBucketExists(sourceBucket);
@@ -1362,7 +1357,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       // Initialize entity for destination object
       ObjectEntity destObject;
       try {
-        destObject = ObjectEntity.newInitializedForCreate(destBucket, destinationKey, srcObject.getSize().longValue(), requestUser);
+        destObject = ObjectEntity.newInitializedForCreate(destBucket, destinationKey, srcObject.getSize(), requestUser);
       } catch (Exception e) {
         LOG.error("Error initializing entity for persisting object metadata for " + destinationBucket + "/" + destinationKey);
         throw new InternalErrorException(destinationBucket + "/" + destinationKey);
@@ -1370,7 +1365,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
       // Check authorization for PUT operation on destination bucket and object
       if (OsgAuthorizationHandler.getInstance().operationAllowed(request.getPutObjectRequest(), destBucket, destObject,
-          srcObject.getSize().longValue())) {
+          srcObject.getSize())) {
 
         String metadataDirective = request.getMetadataDirective();
         String copyIfMatch = request.getCopySourceIfMatch();
@@ -1893,7 +1888,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       throw new InternalErrorException();
     }
 
-    User requestUser = getRequestUser(request);
+    UserPrincipal requestUser = getRequestUser(request);
     ObjectEntity objectEntity;
     try {
       // Only create the entity for auth checks below, don't persist it
@@ -1973,7 +1968,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       throw new MissingContentLengthException(request.getBucket() + "/" + request.getKey());
     }
 
-    User requestUser = Contexts.lookup().getUser();
+    UserPrincipal requestUser = Contexts.lookup().getUser();
     PartEntity partEntity;
     try {
       partEntity = PartEntity.newInitializedForCreate(bucket, request.getKey(), request.getUploadId(), partNumber, objectSize, requestUser);
@@ -2342,7 +2337,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         if (error == null) {
           try {
             ObjectEntity responseEntity = null;
-            User currentUser = Contexts.lookup().getUser();
+            UserPrincipal currentUser = Contexts.lookup().getUser();
             if (object != null) {
               responseEntity = OsgObjectFactory.getFactory().logicallyDeleteObject(ospClient, object, currentUser);
               try {

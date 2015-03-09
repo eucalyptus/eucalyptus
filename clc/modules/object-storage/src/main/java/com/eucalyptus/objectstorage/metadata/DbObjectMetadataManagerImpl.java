@@ -41,6 +41,7 @@ import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
@@ -340,13 +341,13 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
   }
 
   @Override
-  public ObjectEntity generateAndPersistDeleteMarker(@Nonnull ObjectEntity currentObject, @Nonnull AccessControlPolicy acp, @Nonnull User owningUser)
+  public ObjectEntity generateAndPersistDeleteMarker(@Nonnull ObjectEntity currentObject, @Nonnull AccessControlPolicy acp, @Nonnull UserPrincipal owningUser)
       throws MetadataOperationFailureException {
     final ObjectEntity deleteMarker = currentObject.generateNewDeleteMarkerFrom();
 
     try (TransactionResource trans = Entities.transactionFor(ObjectEntity.class)) {
-      deleteMarker.setOwnerCanonicalId( Accounts.lookupCanonicalIdByAccountId( owningUser.getAccountNumber( ) ) );
-      deleteMarker.setOwnerDisplayName( Accounts.lookupAccountAliasById( owningUser.getAccountNumber( ) ) );
+      deleteMarker.setOwnerCanonicalId( owningUser.getCanonicalId( ) );
+      deleteMarker.setOwnerDisplayName( owningUser.getAccountAlias( ) );
       deleteMarker.setOwnerIamUserDisplayName(owningUser.getName());
       deleteMarker.setOwnerIamUserId(owningUser.getUserId());
       deleteMarker.setAcl(acp);

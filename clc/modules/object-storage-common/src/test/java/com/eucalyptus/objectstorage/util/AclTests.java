@@ -33,6 +33,7 @@ import org.junit.Test;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.objectstorage.UnitTestSupport;
 import com.eucalyptus.objectstorage.entities.S3AccessControlledEntity;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.Permission;
@@ -371,8 +372,8 @@ public class AclTests {
 
   @Test
   public void testAcpGeneration() throws Exception {
-    String canonicalId = Accounts.lookupAccountByName(UnitTestSupport.getTestAccounts().iterator().next()).getCanonicalId();
-    User user = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().iterator().next()).get(0));
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().iterator().next()).get(0), null);
+    String canonicalId = user.getCanonicalId( );
 
     AccessControlList acl = new AccessControlList();
     AccessControlPolicy acp = new AccessControlPolicy();
@@ -418,8 +419,8 @@ public class AclTests {
 
   @Test
   public void testAcpGenerationFailWithNulls() throws Exception {
-    String canonicalId = Accounts.lookupAccountByName(UnitTestSupport.getTestAccounts().iterator().next()).getCanonicalId();
-    User user = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().iterator().next()).get(0));
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().iterator().next()).get(0), null);
+    String canonicalId = user.getCanonicalId( );
 
     AccessControlList acl = new AccessControlList();
     AccessControlPolicy acp = new AccessControlPolicy();
@@ -451,8 +452,8 @@ public class AclTests {
 
   @Test
   public void testAcpGenerationForDeleteMarkers() throws Exception {
-    String canonicalId = Accounts.lookupAccountByName(UnitTestSupport.getTestAccounts().iterator().next()).getCanonicalId();
-    User user = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().iterator().next()).get(0));
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().iterator().next()).get(0), null);
+    String canonicalId = user.getCanonicalId( );
 
     AccessControlList acl = new AccessControlList();
     AccessControlPolicy acp = new AccessControlPolicy();

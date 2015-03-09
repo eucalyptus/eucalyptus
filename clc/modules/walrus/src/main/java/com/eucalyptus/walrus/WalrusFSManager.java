@@ -90,6 +90,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Context;
@@ -275,7 +276,7 @@ public class WalrusFSManager extends WalrusManager {
       }
 
       reply.setBucketList(bucketList);
-      reply.setOwner(buildCanonicalUser(ctx.getAccountNumber()));
+      reply.setOwner(buildCanonicalUser( ctx.getUser( ) ));
     } catch (Exception e) {
       LOG.error("Failed to list buckets for account " + ctx.getAccountAlias(), e);
       throw new InternalErrorException("Failed to list buckets for account " + ctx.getAccountAlias(), e);
@@ -408,7 +409,7 @@ public class WalrusFSManager extends WalrusManager {
     }
 
     try {
-      reply.setAccessControlPolicy(getPrivateACP(buildCanonicalUser(ctx.getAccountNumber())));
+      reply.setAccessControlPolicy(getPrivateACP(buildCanonicalUser( ctx.getUser( ) )));
     } catch ( AuthException e ) {
       LOG.error("Failed to build canonical user for " + ctx.getAccountNumber(), e);
       throw new InternalErrorException("Authorization error");
@@ -999,7 +1000,7 @@ public class WalrusFSManager extends WalrusManager {
       String nextMarker = null;
       TreeSet<String> commonPrefixes = new TreeSet<String>();
       int firstResult = -1;
-      CanonicalUser owner = buildCanonicalUser(ctx.getAccountNumber()); // same owner for every object
+      CanonicalUser owner = buildCanonicalUser( ctx.getUser( ) ); // same owner for every object
 
       // Iterate over result sets of size maxkeys + 1
       do {
@@ -1124,7 +1125,7 @@ public class WalrusFSManager extends WalrusManager {
     }
 
     try {
-      reply.setAccessControlPolicy( getPrivateACP( buildCanonicalUser( ctx.getAccountNumber() ) ) );
+      reply.setAccessControlPolicy( getPrivateACP( buildCanonicalUser( ctx.getUser( ) ) ) );
     } catch ( AuthException e ) {
       LOG.error("Failed to build canonical user for " + ctx.getAccountNumber(), e);
       throw new InternalErrorException("Authorization error");
@@ -2409,10 +2410,7 @@ public class WalrusFSManager extends WalrusManager {
     return grants;
   }
 
-  private static CanonicalUser buildCanonicalUser( final String accountNumber ) throws AuthException {
-    return new CanonicalUser(
-        Accounts.lookupCanonicalIdByAccountId( accountNumber ),
-        Accounts.lookupAccountAliasById( accountNumber )
-    );
+  private static CanonicalUser buildCanonicalUser( final UserPrincipal user ) throws AuthException {
+    return new CanonicalUser(user.getCanonicalId(), user.getAccountAlias());
   }
 }

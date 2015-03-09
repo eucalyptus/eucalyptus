@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.objectstorage.ObjectState;
 import com.eucalyptus.objectstorage.PaginatedResult;
@@ -168,7 +169,7 @@ public interface ObjectMetadataManager {
    * @return
    * @throws MetadataOperationFailureException
    */
-  public ObjectEntity generateAndPersistDeleteMarker(ObjectEntity currentObject, AccessControlPolicy acp, User owningUser)
+  public ObjectEntity generateAndPersistDeleteMarker(ObjectEntity currentObject, AccessControlPolicy acp, UserPrincipal owningUser)
       throws MetadataOperationFailureException;
 
   /**

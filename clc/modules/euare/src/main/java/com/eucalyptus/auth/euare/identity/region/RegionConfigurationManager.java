@@ -94,7 +94,7 @@ public class RegionConfigurationManager {
     return Iterables.tryFind(
           Iterables.concat( regionConfigurationSupplier.get( ).asSet() ),
           propertyPredicate( RegionConfigurations.getRegionName( ).asSet(), RegionNameTransform.INSTANCE )
-      ).transform( TypeMappers.lookup( Region.class, RegionInfo.class ) );
+      ).transform( RegionToRegionInfoTransform.INSTANCE );
   }
 
   public boolean isRegionCertificate( final X509Certificate certificate ) {

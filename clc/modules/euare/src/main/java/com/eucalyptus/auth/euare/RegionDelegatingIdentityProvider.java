@@ -21,12 +21,13 @@ package com.eucalyptus.auth.euare;
 
 import javax.annotation.Nonnull;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.DatabaseIdentityProvider;
 import com.eucalyptus.auth.api.IdentityProvider;
-import com.eucalyptus.auth.euare.identity.region.RegionConfiguration;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurationManager;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
 import com.eucalyptus.auth.euare.identity.region.RegionInfo;
 import com.eucalyptus.auth.principal.UserPrincipal;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.NonNullFunction;
 import com.google.common.base.Optional;
@@ -91,11 +92,17 @@ public class RegionDelegatingIdentityProvider implements IdentityProvider {
 
   @Override
   public UserPrincipal lookupPrincipalByCanonicalId( final String canonicalId ) throws AuthException {
+    if ( regionConfigurationManager.getRegionInfo().isPresent() && Contexts.exists( ) && Contexts.lookup( ).getUser( ).getCanonicalId( ).equals( canonicalId ) ) {
+      return Contexts.lookup( ).getUser( ); //TODO:STEVE: remove this temporary lookup hack
+    }
     return localProvider.lookupPrincipalByCanonicalId( canonicalId ); //TODO:STEVE: remote for canonical id lookup
   }
 
   @Override
   public UserPrincipal lookupPrincipalByAccountNumber( final String accountNumber ) throws AuthException {
+    if ( regionConfigurationManager.getRegionInfo().isPresent() && Contexts.exists( ) && Contexts.lookup( ).getUser( ).getAccountNumber( ).equals( accountNumber ) ) {
+      return Contexts.lookup( ).getUser( ); //TODO:STEVE: remove this temporary lookup hack
+    }
     return localProvider.lookupPrincipalByAccountNumber( accountNumber ); //TODO:STEVE: remote for account number lookup
   }
 

@@ -45,6 +45,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
@@ -444,7 +445,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
   }
 
   @Override
-  public ObjectEntity logicallyDeleteObject(@Nonnull ObjectStorageProviderClient provider, @Nonnull ObjectEntity entity, @Nonnull User requestUser)
+  public ObjectEntity logicallyDeleteObject(@Nonnull ObjectStorageProviderClient provider, @Nonnull ObjectEntity entity, @Nonnull UserPrincipal requestUser)
       throws S3Exception {
     ObjectEntity toBeReturned = null;
 

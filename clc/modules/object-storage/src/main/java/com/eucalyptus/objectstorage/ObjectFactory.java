@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
 import com.eucalyptus.objectstorage.entities.PartEntity;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
@@ -60,7 +61,7 @@ public interface ObjectFactory {
    * @return objectEntity
    * @throws S3Exception
    */
-  public ObjectEntity logicallyDeleteObject(ObjectStorageProviderClient provider, ObjectEntity entity, User requestUser) throws S3Exception;
+  public ObjectEntity logicallyDeleteObject(ObjectStorageProviderClient provider, ObjectEntity entity, UserPrincipal requestUser) throws S3Exception;
 
   /**
    * Delete a specific version. Differs from logicallyDeleteObject in that it will never generate a delete marker, but will operate on that specific

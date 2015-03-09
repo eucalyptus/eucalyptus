@@ -23,6 +23,7 @@ package com.eucalyptus.objectstorage
 import com.eucalyptus.auth.Accounts
 import com.eucalyptus.auth.principal.Account
 import com.eucalyptus.auth.principal.User
+import com.eucalyptus.auth.principal.UserPrincipal
 import com.eucalyptus.objectstorage.entities.Bucket
 import com.eucalyptus.objectstorage.exceptions.s3.BucketAlreadyExistsException
 import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException
@@ -253,8 +254,8 @@ public class BucketFactoryTest {
     String location = ""
     String correlationId = "123456789"
 
-    User user = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
-    String canonicalId = Accounts.lookupAccountByName(UnitTestSupport.getTestAccounts().first()).getCanonicalId()
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
+    String canonicalId = user.getCanonicalId()
     def tmpAcp = new AccessControlPolicy()
     tmpAcp.setAccessControlList(new AccessControlList())
     AccessControlPolicy acp = AclUtils.processNewResourcePolicy(user, tmpAcp, canonicalId)
