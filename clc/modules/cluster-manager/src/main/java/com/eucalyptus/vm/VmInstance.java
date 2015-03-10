@@ -187,7 +187,7 @@ import com.eucalyptus.images.Images;
 import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
-import com.eucalyptus.network.EdgeNetworking;
+import com.eucalyptus.network.NetworkingDriver;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.network.PrivateNetworkIndex;
@@ -2164,7 +2164,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             if ( !InstanceStatus.Ok.apply( VmInstance.this ) ) {
               VmInstance.this.getRuntimeState().reachable( );
             }
-            if ( !EdgeNetworking.isEnabled( ) ) {
+            if ( !NetworkingDriver.isEnabled( ) ) {
               VmInstance.this.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
             }
           }

@@ -307,7 +307,7 @@ int ncStubDestroy(ncStub * pStub)
 int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId,
                       char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId,
                       char *keyName, netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime, char **groupNames,
-                      int groupNamesSize, char *rootDirective, ncInstance ** outInstPtr)
+                      int groupNamesSize, char *rootDirective, char **groupIds, int groupIdsSize, ncInstance ** outInstPtr)
 {
     int i = 0;
     int status = 0;
@@ -365,6 +365,11 @@ int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *inst
         adb_ncRunInstanceType_add_groupNames(request, env, groupNames[i]);
     }
     adb_ncRunInstanceType_set_rootDirective(request, env, rootDirective);
+
+    for (i = 0; i < groupIdsSize; i++) {
+        adb_ncRunInstanceType_add_groupIds(request, env, groupIds[i]);
+    }
+
     adb_ncRunInstance_set_ncRunInstance(input, env, request);
 
     // do it
@@ -714,7 +719,7 @@ int ncDescribeResourceStub(ncStub * pStub, ncMetadata * pMeta, char *resourceTyp
 //!
 //! @param[in] pStub a pointer to the node controller (NC) stub structure
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
-//! @param[in] networkInfo is a string 
+//! @param[in] networkInfo is a string
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure.
 //!
@@ -1453,7 +1458,7 @@ int ncDescribeSensorsStub(ncStub * pStub, ncMetadata * pMeta, int historySize, l
                 }
             }
         } else {
-            *outResources = NULL; // when NC returned no results
+            *outResources = NULL;      // when NC returned no results
         }
     }
 

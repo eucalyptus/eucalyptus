@@ -82,8 +82,8 @@
 #include <euca_axis.h>
 #include <data.h>
 #include <sensor.h>
+#include <euca_network.h>
 
-#include <vnetwork.h>
 #include "cc-client-marshal.h"
 
 /*----------------------------------------------------------------------------*\
@@ -306,7 +306,7 @@ int main(int argc, char **argv)
             }
             // retrieve the vlan value and sanitize it.
             vlan = atoi(argv[8]);
-            if ((vlan < 1) || (vlan >= NUMBER_OF_VLANS)) {
+            if ((vlan < 1) || (vlan >= NB_VLAN_802_1Q)) {
                 printf("cc_runInstances() failed: invalid instance count: vlan:%d\n", vlan);
                 exit(1);
             }

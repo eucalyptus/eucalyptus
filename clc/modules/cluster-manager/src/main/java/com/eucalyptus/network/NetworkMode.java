@@ -26,6 +26,10 @@ public enum NetworkMode {
 
   EDGE,
 
+  MANAGED,
+
+  MANAGED_NOVLAN,
+
   VPCMIDO,
 
   ;

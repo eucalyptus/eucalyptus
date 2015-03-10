@@ -81,7 +81,7 @@ class NetworkConfigurationTest {
         publicIps: [ '10.111.200.1-10.111.200.2' ],
         privateIps: [ '1.0.0.33-1.0.0.34' ],
         subnets: [
-          new Subnet(
+          new EdgeSubnet(
               name: "1.0.0.0",
               subnet: "1.0.0.0",
               netmask: "255.255.0.0",
@@ -93,7 +93,7 @@ class NetworkConfigurationTest {
                 name: 'edgecluster0',
                 macPrefix: 'd0:0d',
                 subnet:
-                    new Subnet(
+                    new EdgeSubnet(
                         name: "1.0.0.0",
                         subnet: "1.0.0.0",
                         netmask: "255.255.0.0",
@@ -142,7 +142,7 @@ class NetworkConfigurationTest {
                 name: 'edgecluster0',
                 macPrefix: 'd0:0d',
                 subnet:
-                    new Subnet(
+                    new EdgeSubnet(
                         subnet: "1.0.0.0",
                         netmask: "255.255.0.0",
                         gateway: "1.0.0.1"
@@ -193,7 +193,7 @@ class NetworkConfigurationTest {
         publicIps: [ '10.111.200.1-10.111.200.2' ],
         privateIps: [ '1.0.0.33-1.0.0.34' ],
         subnets: [
-            new Subnet(
+            new EdgeSubnet(
                 name: "1.0.0.0",
                 subnet: "1.0.0.0",
                 netmask: "255.255.0.0",
@@ -204,7 +204,7 @@ class NetworkConfigurationTest {
             new Cluster(
                 name: 'edgecluster0',
                 subnet:
-                    new Subnet(
+                    new EdgeSubnet(
                         name: "1.0.0.0"
                     )
             )
@@ -244,7 +244,7 @@ class NetworkConfigurationTest {
         publicIps: [ '10.111.200.1-10.111.200.2' ],
         privateIps: [ '1.0.0.33-1.0.0.34' ],
         subnets: [
-            new Subnet(
+            new EdgeSubnet(
                 name: "1.0.0.0",
                 subnet: "1.0.0.0",
                 netmask: "255.255.0.0",

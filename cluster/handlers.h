@@ -63,8 +63,8 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-#ifndef _INCLUDE_HANDLERS_H_
-#define _INCLUDE_HANDLERS_H_
+#ifndef _INCLUDE_CC_HANDLERS_H_
+#define _INCLUDE_CC_HANDLERS_H_
 
 //!
 //! @file cluster/handlers.h
@@ -81,7 +81,6 @@
 #include <semaphore.h>
 #include <data.h>
 #include <client-marshal.h>
-#include <vnetwork.h>
 #include <linux/limits.h>
 #include "config.h"
 
@@ -96,7 +95,7 @@
 #define OP_TIMEOUT_MIN                            5
 #define LOG_INTERVAL_SUMMARY_SEC                 60
 #define SCHED_TIMEOUT_SEC                         8 //! timeout for user scheduler
-#define MESSAGE_STATS_MEMORY_REGION_SIZE         10485760 //! 10 MB
+#define MESSAGE_STATS_MEMORY_REGION_SIZE         10485760   //! 10 MB
 
 /*
 {
@@ -117,14 +116,14 @@
 \*----------------------------------------------------------------------------*/
 
 enum {
-    SHARED_MEM,
-    SHARED_FILE,
+    SHARED_MEM = 0,
+    SHARED_FILE = 1,
 };
 
 enum {
     INIT,
     CONFIG,
-    VNET,
+    NETCONFIG,
     INSTCACHE,
     RESCACHE,
     RESCACHESTAGE,
@@ -268,6 +267,7 @@ typedef struct instance_t {
     int expiryTime;
 
     char groupNames[64][64];
+    char groupIds[64][64];
 
     ncVolume volumes[EUCA_MAX_VOLUMES];
     int volumesSize;
@@ -390,14 +390,12 @@ int doAttachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *r
 int doDetachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force);
 int doConfigureNetwork(ncMetadata * pMeta, char *accountId, char *type, int namedLen, char **sourceNames, char **userNames, int netLen,
                        char **sourceNets, char *destName, char *destUserName, char *protocol, int minPort, int maxPort);
-int doFlushNetwork(ncMetadata * pMeta, char *accountId, char *destName);
 int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo);
 int doAssignAddress(ncMetadata * pMeta, char *uuid, char *src, char *dst);
-int doDescribePublicAddresses(ncMetadata * pMeta, publicip ** outAddresses, int *outAddressesLen);
 int doUnassignAddress(ncMetadata * pMeta, char *src, char *dst);
 int doStopNetwork(ncMetadata * pMeta, char *accountId, char *netName, int vlan);
-int doDescribeNetworks(ncMetadata * pMeta, char *vmsubdomain, char *nameservers, char **ccs, int ccsLen, vnetConfig * outvnetConfig);
-int doStartNetwork(ncMetadata * pMeta, char *accountId, char *uuid, char *netName, int vlan, char *vmsubdomain, char *nameservers, char **ccs, int ccsLen);
+int doDescribeNetworks(ncMetadata * pMeta, char **ccs, int ccsLen);
+int doStartNetwork(ncMetadata * pMeta, char *accountId, char *uuid, char *groupId, char *netName, int vlan, char *vmsubdomain, char *nameservers, char **ccs, int ccsLen);
 int doDescribeResources(ncMetadata * pMeta, virtualMachine ** ccvms, int vmLen, int **outTypesMax, int **outTypesAvail, int *outTypesLen, ccResource ** outNodes, int *outNodesLen);
 int changeState(ccResource * in, int newstate);
 int refresh_resources(ncMetadata * pMeta, int timeout, int dolock);
@@ -416,9 +414,9 @@ int schedule_instance_explicit(virtualMachine * vm, char *targetNode, int *outre
 int schedule_instance_user(virtualMachine * vm, char *amiId, char *kernelId, char *ramdiskId, char *instId, char *userData, char *platform, int *outresid);
 int schedule_instance_greedy(virtualMachine * vm, int *outresid);
 int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds,
-                   int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen,
-                   char **uuids, int uuidsLen, char **privateIps, int privateIpsLen, int minCount, int maxCount, char *accountId, char *ownerId,
-                   char *reservationId, virtualMachine * ccvm, char *keyName, int vlan, char *userData, char *credential, char *launchIndex,
+                   int instIdsLen, char **netNames, int netNamesLen, char **netIds, int netIdsLen, char **macAddrs, int macAddrsLen, int *networkIndexList,
+                   int networkIndexListLen, char **uuids, int uuidsLen, char **privateIps, int privateIpsLen, int minCount, int maxCount, char *accountId,
+                   char *ownerId, char *reservationId, virtualMachine * ccvm, char *keyName, int vlan, char *userData, char *credential, char *launchIndex,
                    char *platform, int expiryTime, char *targetNode, char *rootDirective, ccInstance ** outInsts, int *outInstsLen);
 int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutput);
 int doRebootInstances(ncMetadata * pMeta, char **instIds, int instIdsLen);
@@ -457,7 +455,8 @@ int free_instanceNetwork(char *mac, int vlan, int force, int dolock);
 int allocate_ccInstance(ccInstance * out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL,
                         char *ownerId, char *accountId, char *state, char *ccState, time_t ts, char *reservationId, netConfig * ccnet, netConfig * ncnet,
                         virtualMachine * ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char *platform,
-                        char *guestStateName, char *bundleTaskStateName, char groupNames[][64], ncVolume * volumes, int volumesSize, double bundleTaskProgress);
+                        char *guestStateName, char *bundleTaskStateName, char groupNames[][64], char groupIds[][64], ncVolume * volumes, int volumesSize,
+                        double bundleTaskProgress);
 int pubIpCmp(ccInstance * inst, void *ip);
 int privIpCmp(ccInstance * inst, void *ip);
 int privIpSet(ccInstance * inst, void *ip);
@@ -507,4 +506,4 @@ int cached_message_stats_update(const char *message_name, long call_time, int ms
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#endif /* ! _INCLUDE_HANDLERS_H_ */
+#endif /* ! _INCLUDE_CC_HANDLERS_H_ */

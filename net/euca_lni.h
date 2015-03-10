@@ -63,12 +63,29 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-#ifndef _INCLUDE_CONFIG_EUCANETD_H_
-#define _INCLUDE_CONFIG_EUCANETD_H_
+#ifndef _INCLUDE_EUCA_LNI_H_
+#define _INCLUDE_EUCA_LNI_H_
 
 //!
-//! @file net/config-eucanetd.h
-//! This file needs a description
+//! @file net/euca_lni.h
+//! Defines the Local Network View of the system. This library retrieves networking
+//! information from the system and stores it into a data structure that the EUCANETD
+//! network drivers can use to take some decisions.
+//!
+//! Coding Standard:
+//! Every function that has multiple words must follow the word1_word2_word3() naming
+//! convention and variables must follow the 'word1Word2Word3()' convention were no
+//! underscore is used and every word, except for the first one, starts with a capitalized
+//! letter. Whenever possible (not mendatory but strongly encouraged), prefixing a variable
+//! name with one or more of the following qualifier would help reading code:
+//!     - p - indicates a variable is a pointer (example: int *pAnIntegerPointer)
+//!     - s - indicates a string variable (examples: char sThisString[10], char *psAnotherString). When 's' is used on its own, this mean a static string.
+//!     - a - indicates an array of objects (example: int aAnArrayOfInteger[10])
+//!     - g - indicates a variable with global scope to the file or application (example: static eucanetdConfig gConfig)
+//!
+//! Any other function implemented must have its name start with "lni" followed by an underscore
+//! and the rest of the function name with every words separated with an underscore character. For
+//! example: lni_this_is_a_good_function_name().
 //!
 
 /*----------------------------------------------------------------------------*\
@@ -76,8 +93,6 @@
  |                                  INCLUDES                                  |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-
-#include <config.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -97,39 +112,28 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-enum {
-    EUCANETD_CVAL_PUBINTERFACE,
-    EUCANETD_CVAL_PRIVINTERFACE,
-    EUCANETD_CVAL_BRIDGE,
-    EUCANETD_CVAL_EUCAHOME,
-    EUCANETD_CVAL_MODE,
-    EUCANETD_CVAL_DHCPDAEMON,
-    EUCANETD_CVAL_DHCPUSER,
-    EUCANETD_CVAL_POLLING_FREQUENCY,
-    EUCANETD_CVAL_DISABLE_L2_ISOLATION,
-    EUCANETD_CVAL_NC_ROUTER,
-    EUCANETD_CVAL_NC_ROUTER_IP,
-    EUCANETD_CVAL_METADATA_USE_VM_PRIVATE,
-    EUCANETD_CVAL_METADATA_IP,
-    EUCANETD_CVAL_EUCA_USER,
-    EUCANETD_CVAL_LOGLEVEL,
-    EUCANETD_CVAL_LOGROLLNUMBER,
-    EUCANETD_CVAL_LOGMAXSIZE,
-    EUCANETD_CVAL_MIDOSETUPCORE,
-    EUCANETD_CVAL_MIDOEUCANETDHOST,
-    EUCANETD_CVAL_MIDOGWHOST,
-    EUCANETD_CVAL_MIDOGWIP,
-    EUCANETD_CVAL_MIDOGWIFACE,
-    EUCANETD_CVAL_MIDOPUBNW,
-    EUCANETD_CVAL_MIDOPUBGWIP,
-    EUCANETD_CVAL_LAST,
-};
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                 STRUCTURES                                 |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
+//!
+//! Structure containing the local network information. This information is a result
+//! of a system scrup done by ENCANETD in order for each driver to determine what
+//! is differing between the latest received GNI and the current state of the system
+//!
+typedef struct lni_t {
+    ipt_handler *pIpTables;            //!< Pointer to the IP Table Content
+    ips_handler *pIpSet;               //!< Pointer to the IP Set Content
+    ebt_handler *pEbTables;            //!< Pointer to the EB Table Content
+
+    dev_entry *pDevices;               //!< Pointer to a list of devices on the system
+    int numberOfDevices;               //!< The number of devices in the pDevices list
+
+    in_addr_entry *pNetworks;          //!< Pointer to a list of networks on the system
+    int numberOfNetworks;              //!< The number of networks in the pNetworks list
+} lni_t;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -137,14 +141,23 @@ enum {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-extern configEntry configKeysRestartEUCANETD[];
-extern configEntry configKeysNoRestartEUCANETD[];
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                             EXPORTED PROTOTYPES                            |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
+//! LNI structure allocation and initialization
+lni_t *lni_init(const char *psCmdPrefix, const char *psIptPreload);
+
+//! Re-initialize the LNI content between calls to lni_populate
+void lni_reinit(lni_t * pLni);
+
+//! Frees the memory allocated with the LNI structure
+void lni_free(lni_t * pLni);
+
+//! Scrub the system and populates the content of the LNI structure
+int lni_populate(lni_t * pLni);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -158,10 +171,21 @@ extern configEntry configKeysNoRestartEUCANETD[];
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//! Macro to free the Local Network Info structure and set its pointer to NULL. This is the
+//! preferred call over the lni_free() call.
+#define LNI_FREE(_pLni)  \
+{                        \
+    lni_free((_pLni));   \
+    (_pLni) = NULL;      \
+}
+
+//! Macro to reset the LNI data structure content. This is a shortcut to lni_reinit()
+#define LNI_RESET(_pLni)                     lni_reinit((_pLni))
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                          STATIC INLINE IMPLEMENTATION                      |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#endif /* ! _INCLUDE_CONFIG_EUCANETD_H_ */
+#endif /* ! _INCLUDE_EUCA_LNI_H_ */

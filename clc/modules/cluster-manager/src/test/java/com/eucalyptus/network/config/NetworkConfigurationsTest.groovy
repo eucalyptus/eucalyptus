@@ -51,12 +51,13 @@ class NetworkConfigurationsTest {
     println result
 
     NetworkConfiguration expected = new NetworkConfiguration(
+        mode: 'EDGE',
         instanceDnsDomain: 'eucalyptus.internal',
         instanceDnsServers: [ '10.1.1.254' ],
         publicIps: [ '10.111.103.26', '10.111.103.27', '10.111.103.28', '10.111.103.29' ],
         privateIps: [ '10.111.103.30', '10.111.103.36', '10.111.103.38', '10.111.103.42' ],
         subnets: [
-            new Subnet(
+            new EdgeSubnet(
                 subnet: "10.111.0.0",
                 netmask: "255.255.0.0",
                 gateway: "10.111.0.1"
@@ -73,7 +74,7 @@ class NetworkConfigurationsTest {
     NetworkConfigurations.getPrivateAddresses( new NetworkConfiguration(
         privateIps: [ '10.10.10.10-10.10.10.11' ],
         subnets: [
-            new Subnet(
+            new EdgeSubnet(
                 subnet: "10.10.10.0",
                 netmask: "255.255.255.0",
                 gateway: "10.10.10.1"
@@ -89,7 +90,7 @@ class NetworkConfigurationsTest {
     NetworkConfigurations.getPrivateAddresses( new NetworkConfiguration(
         privateIps: [ '1.1.1.1' ],
         subnets: [
-            new Subnet(
+            new EdgeSubnet(
                 subnet: "10.0.0.0",
                 netmask: "255.0.0.0",
                 gateway: "10.0.0.1"
@@ -114,7 +115,7 @@ class NetworkConfigurationsTest {
             publicIps: [ '10.111.103.26', '10.111.103.27', '10.111.103.28', '10.111.103.29' ],
             privateIps: [ '10.111.103.30', '10.111.103.36', '10.111.103.38', '10.111.103.42' ],
             subnets: [
-                new Subnet(
+                new EdgeSubnet(
                     subnet: "10.111.0.0",
                     netmask: "255.255.0.0",
                     gateway: "10.111.0.1"
@@ -135,7 +136,7 @@ class NetworkConfigurationsTest {
                 name: 'cluster1',
                 macPrefix: 'ab:cd',
                 privateIps: [ '10.111.103.30', '10.111.103.36', '10.111.103.38', '10.111.103.42' ],
-                subnet: new Subnet(
+                subnet: new EdgeSubnet(
                     name: "10.111.0.0",
                     subnet: "10.111.0.0",
                     netmask: "255.255.0.0",
@@ -154,7 +155,7 @@ class NetworkConfigurationsTest {
         new NetworkConfiguration(
             publicIps: [ '10.111.103.26', '10.111.103.27', '10.111.103.28', '10.111.103.29' ],
             subnets: [
-                new Subnet(
+                new EdgeSubnet(
                     subnet: "10.111.0.0",
                     netmask: "255.255.0.0",
                     gateway: "10.111.0.1"
@@ -170,7 +171,7 @@ class NetworkConfigurationsTest {
             new Cluster(
                 name: 'cluster1',
                 privateIps: [ '10.111.0.2-10.111.255.254' ],
-                subnet: new Subnet(
+                subnet: new EdgeSubnet(
                     name: "10.111.0.0",
                     subnet: "10.111.0.0",
                     netmask: "255.255.0.0",
@@ -199,7 +200,7 @@ class NetworkConfigurationsTest {
             publicIps: [ '10.111.103.26' ],
             privateIps: [ '10.1.1.1' ],
             subnets: [
-                new Subnet(
+                new EdgeSubnet(
                     subnet: "10.111.0.0",
                     netmask: "255.255.0.0",
                     gateway: "10.111.0.1"
@@ -219,7 +220,7 @@ class NetworkConfigurationsTest {
                 new Cluster(
                     name: 'cluster1',
                     privateIps: [ '10.1.1.1' ],
-                    subnet: new Subnet(
+                    subnet: new EdgeSubnet(
                         name: "10.111.0.0",
                         subnet: "10.111.0.0",
                         netmask: "255.255.0.0",

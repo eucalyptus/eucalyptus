@@ -53,6 +53,7 @@ class NIConfiguration {
   @XmlElement(name="property") List<NIProperty> properties = Lists.newArrayList()
   @XmlElement(name="property") NIMidonet midonet
   @XmlElement(name="property") NISubnets subnets
+  @XmlElement(name="property") NIManagedSubnets managedSubnet
   @XmlElement(name="property") NIClusters clusters
 }
 
@@ -84,6 +85,22 @@ class NISubnets {
 @CompileStatic
 @XmlAccessorType( XmlAccessType.NONE )
 class NISubnet {
+  @XmlAttribute String name
+  @XmlElement(name="property") List<NIProperty> properties = Lists.newArrayList()
+}
+
+@Canonical
+@CompileStatic
+@XmlAccessorType( XmlAccessType.NONE )
+class NIManagedSubnets {
+  @XmlAttribute String name
+  @XmlElement(name="managedSubnet") NIManagedSubnet managedSubnet
+}
+
+@Canonical
+@CompileStatic
+@XmlAccessorType( XmlAccessType.NONE )
+class NIManagedSubnet {
   @XmlAttribute String name
   @XmlElement(name="property") List<NIProperty> properties = Lists.newArrayList()
 }

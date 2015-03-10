@@ -77,7 +77,7 @@ import com.eucalyptus.cluster.ResourceState.NoSuchTokenException;
 import com.eucalyptus.compute.common.backend.RunInstancesType;
 import com.eucalyptus.compute.common.network.PublicIPResource;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.network.EdgeNetworking;
+import com.eucalyptus.network.NetworkingDriver;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.tracking.MessageContexts;
 import com.eucalyptus.util.Callback;
@@ -163,7 +163,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       @Override
       public Boolean apply( final VmInfo input ) {
         final VmInstance vm = VmInstances.lookup( input.getInstanceId( ) );
-        if ( !EdgeNetworking.isEnabled( ) ) {
+        if ( !NetworkingDriver.isEnabled( ) ) {
           vm.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
         }
         try {

@@ -1,3 +1,79 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
+/*************************************************************************
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ *
+ * This file may incorporate work covered under the following copyright
+ * and permission notice:
+ *
+ *   Software License Agreement (BSD License)
+ *
+ *   Copyright (c) 2008, Regents of the University of California
+ *   All rights reserved.
+ *
+ *   Redistribution and use of this software in source and binary forms,
+ *   with or without modification, are permitted provided that the
+ *   following conditions are met:
+ *
+ *     Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *     Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer
+ *     in the documentation and/or other materials provided with the
+ *     distribution.
+ *
+ *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
+ *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
+ *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
+ *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
+ *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
+ *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
+ *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
+ *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
+ *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
+ ************************************************************************/
+
+//!
+//! @file net/euca-to-mido.c
+//! Need definition
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,7 +89,6 @@
 
 #include <eucalyptus.h>
 #include <misc.h>
-#include <vnetwork.h>
 #include <euca_string.h>
 #include <log.h>
 #include <hash.h>
@@ -21,24 +96,134 @@
 #include <http.h>
 #include <config.h>
 #include <sequence_executor.h>
-#include <ipt_handler.h>
 #include <atomic_file.h>
 
-#include "globalnetwork.h"
+#include "ipt_handler.h"
+#include "ips_handler.h"
+#include "ebt_handler.h"
+#include "euca_gni.h"
 #include "midonet-api.h"
 #include "euca-to-mido.h"
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//!
+//!
+//! @param[in] mido
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int do_metaproxy_teardown(mido_config * mido)
 {
     LOGDEBUG("RUNNING TEARDOWN\n");
     return (do_metaproxy_maintain(mido, 1));
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int do_metaproxy_setup(mido_config * mido)
 {
     return (do_metaproxy_maintain(mido, 0));
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//! @param[in] mode
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int do_metaproxy_maintain(mido_config * mido, int mode)
 {
     int ret = 0, rc = 0, i = 0, dorun = 0;
@@ -58,17 +243,16 @@ int do_metaproxy_maintain(mido_config * mido, int mode)
     dorun = 0;
     snprintf(pidfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/nginx_localproxy.pid", mido->eucahome);
     if (!check_file(pidfile)) {
-      pidstr = file2str(pidfile);
-      if (pidstr) {
-        npid = atoi(pidstr);
-      } else {
-        npid = 0;
-      }
-      EUCA_FREE(pidstr);
+        pidstr = file2str(pidfile);
+        if (pidstr) {
+            npid = atoi(pidstr);
+        } else {
+            npid = 0;
+        }
+        EUCA_FREE(pidstr);
     } else {
-      npid = 0;
+        npid = 0;
     }
-
 
     if (mode == 0) {
         if (npid > 1) {
@@ -104,17 +288,17 @@ int do_metaproxy_maintain(mido_config * mido, int mode)
         if (strlen(mido->vpcs[i].name)) {
             dorun = 0;
             snprintf(pidfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/nginx_vpcproxy_%s.pid", mido->eucahome, mido->vpcs[i].name);
-	    if (!check_file(pidfile)) {
-	      pidstr = file2str(pidfile);
-	      if (pidstr) {
-                npid = atoi(pidstr);
-	      } else {
+            if (!check_file(pidfile)) {
+                pidstr = file2str(pidfile);
+                if (pidstr) {
+                    npid = atoi(pidstr);
+                } else {
+                    npid = 0;
+                }
+                EUCA_FREE(pidstr);
+            } else {
                 npid = 0;
-	      }
-	      EUCA_FREE(pidstr);
-	    } else {
-	      npid = 0;
-	    }
+            }
 
             if (mode == 0) {
                 if (npid > 1) {
@@ -159,6 +343,21 @@ int do_metaproxy_maintain(mido_config * mido, int mode)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int delete_mido_meta_core(mido_config * mido)
 {
     int ret = 0, rc = 0;
@@ -186,6 +385,21 @@ int delete_mido_meta_core(mido_config * mido)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int create_mido_meta_core(mido_config * mido)
 {
     int ret = 0, rc = 0;
@@ -216,6 +430,22 @@ int create_mido_meta_core(mido_config * mido)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//! @param[in] vpc
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int delete_mido_meta_vpc_namespace(mido_config * mido, mido_vpc * vpc)
 {
     int ret = 0, rc = 0;
@@ -245,6 +475,22 @@ int delete_mido_meta_vpc_namespace(mido_config * mido, mido_vpc * vpc)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//! @param[in] vpc
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int create_mido_meta_vpc_namespace(mido_config * mido, mido_vpc * vpc)
 {
     int ret = 0, rc = 0;
@@ -295,6 +541,22 @@ int create_mido_meta_vpc_namespace(mido_config * mido, mido_vpc * vpc)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int delete_mido_meta_subnet_veth(mido_config * mido, char *name)
 {
     int ret = 0, rc = 0;
@@ -320,6 +582,26 @@ int delete_mido_meta_subnet_veth(mido_config * mido, char *name)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//! @param[in] vpc
+//! @param[in] name
+//! @param[in] subnet
+//! @param[in] slashnet
+//! @param[in] tapiface
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int create_mido_meta_subnet_veth(mido_config * mido, mido_vpc * vpc, char *name, char *subnet, char *slashnet, char **tapiface)
 {
     int ret = 0, rc = 0;
@@ -370,6 +652,21 @@ int create_mido_meta_subnet_veth(mido_config * mido, mido_vpc * vpc, char *name,
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int do_midonet_populate(mido_config * mido)
 {
     int i = 0, j = 0, k = 0, rc = 0, rtid = 0, ret = 0;
@@ -395,21 +692,21 @@ int do_midonet_populate(mido_config * mido)
     }
 
     if (mido->setupcore) {
-      // create the core (only the things that aren't already there)
-      rc = create_mido_core(mido, mido->midocore);
-      if (rc) {
-        LOGERROR("cannot setup midonet core router/bridge: check midonet health\n");
-        return (1);
-      }
+        // create the core (only the things that aren't already there)
+        rc = create_mido_core(mido, mido->midocore);
+        if (rc) {
+            LOGERROR("cannot setup midonet core router/bridge: check midonet health\n");
+            return (1);
+        }
     } else {
-      LOGDEBUG("skipping the create of midocore (see MIDOSETUPCORE parameter in eucalyptus.conf)\n");
+        LOGDEBUG("skipping the create of midocore (see MIDOSETUPCORE parameter in eucalyptus.conf)\n");
     }
 
-    // pattern 
+    // pattern
     // - find all VPC routers (and populate VPCs)
     // - for each VPC, find all subnets (and populate subnets)
     // - for each VPC, for each subnet, find all instances (and populate instances)
-    
+
     // VPCs
     for (i = 0; i < mido->max_routers; i++) {
         LOGDEBUG("inspecting mido router '%s'\n", mido->routers[i].name);
@@ -507,7 +804,7 @@ int do_midonet_populate(mido_config * mido)
                         vpcinstance = &(vpcsubnet->instances[vpcsubnet->max_instances]);
                         bzero(vpcinstance, sizeof(mido_vpc_instance));
                         vpcsubnet->max_instances++;
-                        snprintf(vpcinstance->name, 16, "%s", instanceId);
+                        snprintf(vpcinstance->name, INSTANCE_ID_LEN, "%s", instanceId);
 
                         rc = populate_mido_vpc_instance(mido, mido->midocore, vpc, vpcsubnet, vpcinstance);
                         if (rc) {
@@ -527,6 +824,21 @@ int do_midonet_populate(mido_config * mido)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int do_midonet_teardown(mido_config * mido)
 {
     int ret = 0, rc = 0, i = 0;
@@ -551,9 +863,9 @@ int do_midonet_teardown(mido_config * mido)
     }
 
     if (mido->setupcore) {
-      delete_mido_core(mido, mido->midocore);
+        delete_mido_core(mido, mido->midocore);
     } else {
-      LOGDEBUG("skipping the delete of midocore (see MIDOSETUPCORE param in eucalyptus.conf)\n");
+        LOGDEBUG("skipping the delete of midocore (see MIDOSETUPCORE param in eucalyptus.conf)\n");
     }
 
     free_mido_config(mido);
@@ -561,6 +873,22 @@ int do_midonet_teardown(mido_config * mido)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] gni
+//! @param[in] mido
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
 {
     int i = 0, j = 0, k = 0, rc = 0;
@@ -632,8 +960,7 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
         if (rc) {
             LOGERROR("failed to create VPC '%s': check midonet health\n", gnivpc->name);
         }
-	vpc->gnipresent = 1;
-
+        vpc->gnipresent = 1;
 
         // do subnets
         for (j = 0; j < gnivpc->max_subnets; j++) {
@@ -679,7 +1006,7 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
 
         LOGDEBUG("inspecting gni instance '%s'\n", gni->instances[i].name);
 
-        // check that we can do something about this instance: 
+        // check that we can do something about this instance:
         if (gniinstance->vpc && strlen(gniinstance->vpc) && gniinstance->nodehostname && strlen(gniinstance->nodehostname)) {
             rc = find_mido_vpc(mido, gniinstance->vpc, &vpc);
             if (vpc) {
@@ -695,7 +1022,7 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                         vpcinstance = &(vpcsubnet->instances[vpcsubnet->max_instances]);
                         bzero(vpcinstance, sizeof(mido_vpc_instance));
                         vpcsubnet->max_instances++;
-                        snprintf(vpcinstance->name, 16, "%s", gniinstance->name);
+                        snprintf(vpcinstance->name, INSTANCE_ID_LEN, "%s", gniinstance->name);
                         vpcinstance->gniInst = gniinstance;
                     }
 
@@ -724,25 +1051,25 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                         } else {
                             char *strptra = NULL;
 
-			    strptra = hex2dot(gniinstance->privateIp);
-			    rc = mido_create_ipaddrgroup_ip(&(vpcinstance->midos[ELIP_POST_IPADDRGROUP]), strptra, NULL);
-			    if (rc) {
-			      LOGERROR("cannot add instance private IP to ip-address-group: check midonet health\n");
-			    }
-			    EUCA_FREE(strptra);
+                            strptra = hex2dot(gniinstance->privateIp);
+                            rc = mido_create_ipaddrgroup_ip(&(vpcinstance->midos[ELIP_POST_IPADDRGROUP]), strptra, NULL);
+                            if (rc) {
+                                LOGERROR("cannot add instance private IP to ip-address-group: check midonet health\n");
+                            }
+                            EUCA_FREE(strptra);
 
                             strptra = hex2dot(gniinstance->publicIp);
                             LOGINFO("setting up floating IP '%s' for instance '%s'\n", strptra, vpcinstance->name);
                             EUCA_FREE(strptra);
 
-			    rc = disconnect_mido_vpc_instance_elip(vpcinstance);
-			    if (rc) {
-			      LOGERROR("cannot remove prior midonet floating IP for instance: check midonet health\n");
-			    }
-			    
+                            rc = disconnect_mido_vpc_instance_elip(vpcinstance);
+                            if (rc) {
+                                LOGERROR("cannot remove prior midonet floating IP for instance: check midonet health\n");
+                            }
+
                             rc = connect_mido_vpc_instance_elip(mido, mido->midocore, vpc, vpcsubnet, vpcinstance);
                             if (rc) {
-			      LOGERROR("cannot setup midonet floating IP <-> instance mapping: check midonet health\n");
+                                LOGERROR("cannot setup midonet floating IP <-> instance mapping: check midonet health\n");
                             }
                         }
                     } else {
@@ -834,7 +1161,7 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                                 vpcsecgroup = &(mido->vpcsecgroups[mido->max_vpcsecgroups]);
                                 bzero(vpcsecgroup, sizeof(mido_vpc_secgroup));
                                 mido->max_vpcsecgroups++;
-                                snprintf(vpcsecgroup->name, 16, "%s", gnisecgroup->name);
+                                snprintf(vpcsecgroup->name, SECURITY_GROUP_ID_LEN, "%s", gnisecgroup->name);
                                 vpcsecgroup->gniSecgroup = gnisecgroup;
                             }
 
@@ -850,10 +1177,10 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                             EUCA_FREE(tmpstr);
 
                             tmpstr = hex2dot(gniinstance->publicIp);
-			    if (tmpstr && strcmp(tmpstr, "0.0.0.0")) {
-			      rc = mido_create_ipaddrgroup_ip(&(vpcsecgroup->midos[VPCSG_IAGPUB]), tmpstr, NULL);
-			      rc = mido_create_ipaddrgroup_ip(&(vpcsecgroup->midos[VPCSG_IAGALL]), tmpstr, NULL);
-			    }
+                            if (tmpstr && strcmp(tmpstr, "0.0.0.0")) {
+                                rc = mido_create_ipaddrgroup_ip(&(vpcsecgroup->midos[VPCSG_IAGPUB]), tmpstr, NULL);
+                                rc = mido_create_ipaddrgroup_ip(&(vpcsecgroup->midos[VPCSG_IAGALL]), tmpstr, NULL);
+                            }
                             EUCA_FREE(tmpstr);
 
                             vpcsecgroup->gnipresent = 1;
@@ -1043,6 +1370,22 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
     return (0);
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//! @param[in] nextid
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int get_next_router_id(mido_config * mido, int *nextid)
 {
     int i;
@@ -1056,6 +1399,22 @@ int get_next_router_id(mido_config * mido, int *nextid)
     return (1);
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//! @param[in] id
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int set_router_id(mido_config * mido, int id)
 {
     if (id < 4096) {
@@ -1065,6 +1424,21 @@ int set_router_id(mido_config * mido, int id)
     return (1);
 }
 
+//!
+//!
+//!
+//! @param[in] vpc
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 void print_mido_vpc(mido_vpc * vpc)
 {
     LOGDEBUG("PRINT VPC: name=%s max_rtports=%d max_subnets=%d gnipresent=%d\n", vpc->name, vpc->max_rtports, vpc->max_subnets, vpc->gnipresent);
@@ -1076,6 +1450,21 @@ void print_mido_vpc(mido_vpc * vpc)
 
 }
 
+//!
+//!
+//!
+//! @param[in] vpcsubnet
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 void print_mido_vpc_subnet(mido_vpc_subnet * vpcsubnet)
 {
     LOGDEBUG("PRINT VPCSUBNET: name=%s vpcname=%s max_brports=%d max_dhcphosts=%d max_instances=%d gnipresent=%d\n", vpcsubnet->name, vpcsubnet->vpcname, vpcsubnet->max_brports,
@@ -1086,6 +1475,21 @@ void print_mido_vpc_subnet(mido_vpc_subnet * vpcsubnet)
     mido_print_midoname(&(vpcsubnet->midos[VPCBR_DHCP]));
 }
 
+//!
+//!
+//!
+//! @param[in] vpcinstance
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 void print_mido_vpc_instance(mido_vpc_instance * vpcinstance)
 {
     LOGDEBUG("PRINT VPCINSTANCE: name=%s gnipresent=%d\n", vpcinstance->name, vpcinstance->gnipresent);
@@ -1094,6 +1498,21 @@ void print_mido_vpc_instance(mido_vpc_instance * vpcinstance)
     mido_print_midoname(&(vpcinstance->midos[VMHOST]));
 }
 
+//!
+//!
+//!
+//! @param[in] vpcsecgroup
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 void print_mido_vpc_secgroup(mido_vpc_secgroup * vpcsecgroup)
 {
     int i;
@@ -1103,6 +1522,23 @@ void print_mido_vpc_secgroup(mido_vpc_secgroup * vpcsecgroup)
     }
 }
 
+//!
+//!
+//!
+//! @param[in] vpcsubnet
+//! @param[in] instancename
+//! @param[in] outvpcinstance
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int find_mido_vpc_instance(mido_vpc_subnet * vpcsubnet, char *instancename, mido_vpc_instance ** outvpcinstance)
 {
     int i;
@@ -1121,6 +1557,23 @@ int find_mido_vpc_instance(mido_vpc_subnet * vpcsubnet, char *instancename, mido
     return (1);
 }
 
+//!
+//!
+//!
+//! @param[in] vpc
+//! @param[in] subnetname
+//! @param[in] outvpcsubnet
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int find_mido_vpc_subnet(mido_vpc * vpc, char *subnetname, mido_vpc_subnet ** outvpcsubnet)
 {
     int i;
@@ -1140,6 +1593,23 @@ int find_mido_vpc_subnet(mido_vpc * vpc, char *subnetname, mido_vpc_subnet ** ou
     return (1);
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//! @param[in] vpcname
+//! @param[in] outvpc
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int find_mido_vpc(mido_config * mido, char *vpcname, mido_vpc ** outvpc)
 {
     int i;
@@ -1159,6 +1629,22 @@ int find_mido_vpc(mido_config * mido, char *vpcname, mido_vpc ** outvpc)
     return (1);
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//! @param[in] vpcsecgroup
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int populate_mido_vpc_secgroup(mido_config * mido, mido_vpc_secgroup * vpcsecgroup)
 {
     int ret = 0, found = 0, foundcount = 0, rc = 0, i = 0;
@@ -1243,6 +1729,22 @@ int populate_mido_vpc_secgroup(mido_config * mido, mido_vpc_secgroup * vpcsecgro
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//! @param[in] vpcsecgroup
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int create_mido_vpc_secgroup(mido_config * mido, mido_vpc_secgroup * vpcsecgroup)
 {
     int ret = 0, rc = 0;
@@ -1290,6 +1792,21 @@ int create_mido_vpc_secgroup(mido_config * mido, mido_vpc_secgroup * vpcsecgroup
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] vpcsecgroup
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int delete_mido_vpc_secgroup(mido_vpc_secgroup * vpcsecgroup)
 {
     int ret = 0, rc = 0;
@@ -1312,6 +1829,23 @@ int delete_mido_vpc_secgroup(mido_vpc_secgroup * vpcsecgroup)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//! @param[in] secgroupname
+//! @param[in] outvpcsecgroup
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int find_mido_vpc_secgroup(mido_config * mido, char *secgroupname, mido_vpc_secgroup ** outvpcsecgroup)
 {
     int i = 0;
@@ -1331,6 +1865,21 @@ int find_mido_vpc_secgroup(mido_config * mido, char *secgroupname, mido_vpc_secg
     return (1);
 }
 
+//!
+//!
+//!
+//! @param[in] vpcsecgroup
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int free_mido_vpc_secgroup(mido_vpc_secgroup * vpcsecgroup)
 {
     int ret = 0;
@@ -1344,14 +1893,32 @@ int free_mido_vpc_secgroup(mido_vpc_secgroup * vpcsecgroup)
     return (ret);
 }
 
-int populate_mido_vpc_instance(mido_config * mido, mido_core * midocore, mido_vpc *vpc, mido_vpc_subnet * vpcsubnet, mido_vpc_instance * vpcinstance)
+//!
+//!
+//!
+//! @param[in] mido
+//! @param[in] midocore
+//! @param[in] vpc
+//! @param[in] vpcsubnet
+//! @param[in] vpcinstance
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int populate_mido_vpc_instance(mido_config * mido, mido_core * midocore, mido_vpc * vpc, mido_vpc_subnet * vpcsubnet, mido_vpc_instance * vpcinstance)
 {
     int ret = 0, rc = 0, found = 0, i = 0, founda = 0, j = 0;
     char *tmpstr = NULL, fstr[64], tmp_name[32];
     midoname *ips = NULL, *rules = NULL, *routes = NULL;
     int max_ips = 0, max_rules = 0, max_routes = 0;
     char *ip = NULL, *targetIP = NULL, *rdst = NULL;
-
 
     if (vpcsubnet->midos[VPCBR].init) {
         for (i = 0; i < vpcsubnet->max_brports && !found; i++) {
@@ -1425,56 +1992,55 @@ int populate_mido_vpc_instance(mido_config * mido, mido_core * midocore, mido_vp
 
         rc = mido_get_ipaddrgroup_ips(&(vpcinstance->midos[ELIP_PRE_IPADDRGROUP]), &ips, &max_ips);
         for (i = 0; i < max_ips && !found; i++) {
-	  rc = mido_getel_midoname(&(ips[i]), "addr", &ip);
-	  if (ip) {
-	    // found it
-	    mido_copy_midoname(&(vpcinstance->midos[ELIP_PRE_IPADDRGROUP_IP]), &(ips[i]));
-	    found = 1;
+            rc = mido_getel_midoname(&(ips[i]), "addr", &ip);
+            if (ip) {
+                // found it
+                mido_copy_midoname(&(vpcinstance->midos[ELIP_PRE_IPADDRGROUP_IP]), &(ips[i]));
+                found = 1;
 
-	    // now find the associated chain rule
-	    rc = mido_get_rules(&(vpc->midos[VPCRT_POSTCHAIN]), &rules, &max_rules);
-	    for (j=0; j<max_rules; j++) {
-	      rc = mido_getel_midoname(&(rules[j]), "natTargets", &targetIP);
-	      if (targetIP && ip && !strstr(ip, targetIP)) {
-		mido_copy_midoname(&(vpcinstance->midos[ELIP_PRE]), &(rules[j]));
-		EUCA_FREE(targetIP);
-	      }
-	    }
-	    mido_free_midoname_list(rules, max_rules);
-	    EUCA_FREE(rules);
-	    EUCA_FREE(ip);
-	  }
-	}
+                // now find the associated chain rule
+                rc = mido_get_rules(&(vpc->midos[VPCRT_POSTCHAIN]), &rules, &max_rules);
+                for (j = 0; j < max_rules; j++) {
+                    rc = mido_getel_midoname(&(rules[j]), "natTargets", &targetIP);
+                    if (targetIP && ip && !strstr(ip, targetIP)) {
+                        mido_copy_midoname(&(vpcinstance->midos[ELIP_PRE]), &(rules[j]));
+                        EUCA_FREE(targetIP);
+                    }
+                }
+                mido_free_midoname_list(rules, max_rules);
+                EUCA_FREE(rules);
+                EUCA_FREE(ip);
+            }
+        }
         mido_free_midoname_list(ips, max_ips);
         EUCA_FREE(ips);
     }
-
     // this is the private IP
     if (vpcinstance->midos[ELIP_POST_IPADDRGROUP].init) {
         found = 0;
 
         rc = mido_get_ipaddrgroup_ips(&(vpcinstance->midos[ELIP_POST_IPADDRGROUP]), &ips, &max_ips);
         for (i = 0; i < max_ips && !found; i++) {
-	  rc = mido_getel_midoname(&(ips[i]), "addr", &ip);
-	  if (ip) {
-	    // found it
-	    mido_copy_midoname(&(vpcinstance->midos[ELIP_POST_IPADDRGROUP_IP]), &(ips[i]));
-	    found = 1;
+            rc = mido_getel_midoname(&(ips[i]), "addr", &ip);
+            if (ip) {
+                // found it
+                mido_copy_midoname(&(vpcinstance->midos[ELIP_POST_IPADDRGROUP_IP]), &(ips[i]));
+                found = 1;
 
-	    // now find the associated chain rule
-	    rc = mido_get_rules(&(vpc->midos[VPCRT_PREELIPCHAIN]), &rules, &max_rules);
-	    for (j=0; j<max_rules; j++) {
-	      rc = mido_getel_midoname(&(rules[j]), "natTargets", &targetIP);
-	      if (targetIP && ip && !strstr(ip, targetIP)) {
-		mido_copy_midoname(&(vpcinstance->midos[ELIP_POST]), &(rules[j]));
-		EUCA_FREE(targetIP);
-	      }
-	    }
-	    mido_free_midoname_list(rules, max_rules);
-	    EUCA_FREE(rules);
-	    EUCA_FREE(ip);
-	  }
-	}
+                // now find the associated chain rule
+                rc = mido_get_rules(&(vpc->midos[VPCRT_PREELIPCHAIN]), &rules, &max_rules);
+                for (j = 0; j < max_rules; j++) {
+                    rc = mido_getel_midoname(&(rules[j]), "natTargets", &targetIP);
+                    if (targetIP && ip && !strstr(ip, targetIP)) {
+                        mido_copy_midoname(&(vpcinstance->midos[ELIP_POST]), &(rules[j]));
+                        EUCA_FREE(targetIP);
+                    }
+                }
+                mido_free_midoname_list(rules, max_rules);
+                EUCA_FREE(rules);
+                EUCA_FREE(ip);
+            }
+        }
         mido_free_midoname_list(ips, max_ips);
         EUCA_FREE(ips);
     }
@@ -1517,12 +2083,29 @@ int populate_mido_vpc_instance(mido_config * mido, mido_core * midocore, mido_vp
     }
 
     LOGTRACE("vpc instance: AFTER POPULATE\n");
-    for (i=0; i<VPCINSTANCEEND; i++) {
-      LOGTRACE("\tmidos[%d]: |%d|\n", i, vpcinstance->midos[i].init);
+    for (i = 0; i < VPCINSTANCEEND; i++) {
+        LOGTRACE("\tmidos[%d]: |%d|\n", i, vpcinstance->midos[i].init);
     }
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//! @param[in] vpcinstance
+//! @param[in] nodehostname
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int create_mido_vpc_instance(mido_config * mido, mido_vpc_instance * vpcinstance, char *nodehostname)
 {
     int ret = 0, found = 0, i = 0, rc = 0;
@@ -1564,6 +2147,21 @@ int create_mido_vpc_instance(mido_config * mido, mido_vpc_instance * vpcinstance
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] vpcinstance
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int delete_mido_vpc_instance(mido_vpc_instance * vpcinstance)
 {
     int ret = 0, rc = 0;
@@ -1620,30 +2218,49 @@ int delete_mido_vpc_instance(mido_vpc_instance * vpcinstance)
     return (ret);
 }
 
-int initialize_mido(mido_config * mido, char *eucahome, char *setupcore, char *ext_eucanetdhostname, char *ext_rthostname, char *ext_rtaddr, char *ext_rtiface, char *ext_pubnw, char *ext_pubgwip,
-                    char *int_rtnetwork, char *int_rtslashnet)
+//!
+//!
+//!
+//! @param[in] mido
+//! @param[in] eucahome
+//! @param[in] setupcore
+//! @param[in] ext_eucanetdhostname
+//! @param[in] ext_rthostname
+//! @param[in] ext_rtaddr
+//! @param[in] ext_rtiface
+//! @param[in] ext_pubnw
+//! @param[in] ext_pubgwip
+//! @param[in] int_rtnetwork
+//! @param[in] int_rtslashnet
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int initialize_mido(mido_config * mido, char *eucahome, char *setupcore, char *ext_eucanetdhostname, char *ext_rthostname, char *ext_rtaddr, char *ext_rtiface, char *ext_pubnw,
+                    char *ext_pubgwip, char *int_rtnetwork, char *int_rtslashnet)
 {
     int ret = 0;
 
     if (!mido ||
-	!eucahome ||
-	!ext_eucanetdhostname || 
-	!ext_rthostname || 
-	!ext_rtaddr || 
-	!ext_rtiface || 
-	!ext_pubnw || 
-	!ext_pubgwip || 
-	!int_rtnetwork || 
-	!int_rtslashnet || 
-	!strlen(ext_eucanetdhostname) || 
-	!strlen(ext_rthostname) || 
-	!strlen(ext_rtaddr) || 
-	!strlen(ext_rtiface) || 
-	!strlen(ext_pubnw) || 
-	!strlen(ext_pubgwip) || 
-	!strlen(int_rtnetwork) || 
-	!strlen(int_rtslashnet) )
-	return (1);
+        !eucahome ||
+        !ext_eucanetdhostname ||
+        !ext_rthostname ||
+        !ext_rtaddr ||
+        !ext_rtiface ||
+        !ext_pubnw ||
+        !ext_pubgwip ||
+        !int_rtnetwork ||
+        !int_rtslashnet ||
+        !strlen(ext_eucanetdhostname) ||
+        !strlen(ext_rthostname) || !strlen(ext_rtaddr) || !strlen(ext_rtiface) || !strlen(ext_pubnw) || !strlen(ext_pubgwip) || !strlen(int_rtnetwork) || !strlen(int_rtslashnet))
+        return (1);
 
     bzero(mido, sizeof(mido_config));
 
@@ -1651,7 +2268,7 @@ int initialize_mido(mido_config * mido, char *eucahome, char *setupcore, char *e
 
     mido->setupcore = 1;
     if (setupcore && (strlen(setupcore) > 0) && (!strcmp(setupcore, "N") || !strcmp(setupcore, "n"))) {
-      mido->setupcore = 0;
+        mido->setupcore = 0;
     }
 
     mido->ext_eucanetdhostname = strdup(ext_eucanetdhostname);
@@ -1664,11 +2281,28 @@ int initialize_mido(mido_config * mido, char *eucahome, char *setupcore, char *e
     mido->int_rtsn = atoi(int_rtslashnet);
     mido->int_rtaddr = mido->int_rtnw + 1;
     mido->midocore = calloc(1, sizeof(mido_core));
-    LOGDEBUG("mido initialized: mido->ext_eucanetdhostname=%s ext_rthostname=%s ext_rtaddr=%s  mido->ext_rtiface=%s mido->ext_pubnw=%s mido->ext_pubgwip=%s int_rtcidr=%s/%s \n", SP(mido->ext_eucanetdhostname), SP(mido->ext_rthostname), SP(mido->ext_rtaddr), SP(mido->ext_rtiface), SP(mido->ext_pubnw), SP(mido->ext_pubgwip), SP(int_rtnetwork), SP(int_rtslashnet));
+    LOGDEBUG("mido initialized: mido->ext_eucanetdhostname=%s ext_rthostname=%s ext_rtaddr=%s  mido->ext_rtiface=%s mido->ext_pubnw=%s mido->ext_pubgwip=%s int_rtcidr=%s/%s \n",
+             SP(mido->ext_eucanetdhostname), SP(mido->ext_rthostname), SP(mido->ext_rtaddr), SP(mido->ext_rtiface), SP(mido->ext_pubnw), SP(mido->ext_pubgwip), SP(int_rtnetwork),
+             SP(int_rtslashnet));
 
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int discover_mido_resources(mido_config * mido)
 {
     int rc = 0, ret = 0, i = 0, max_ports = 0, j = 0, count = 0;
@@ -1762,6 +2396,23 @@ int discover_mido_resources(mido_config * mido)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//! @param[in] vpc
+//! @param[in] vpcsubnet
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int populate_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet * vpcsubnet)
 {
     int rc = 0, ret = 0, i = 0, j = 0, found = 0;
@@ -1845,6 +2496,23 @@ int populate_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//! @param[in] midocore
+//! @param[in] vpc
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int populate_mido_vpc(mido_config * mido, mido_core * midocore, mido_vpc * vpc)
 {
     int rc = 0, ret = 0, i = 0, j = 0;
@@ -1932,6 +2600,22 @@ int populate_mido_vpc(mido_config * mido, mido_core * midocore, mido_vpc * vpc)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//! @param[in] midocore
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int populate_mido_core(mido_config * mido, mido_core * midocore)
 {
     int rc = 0, ret = 0, i = 0, j = 0;
@@ -1988,6 +2672,21 @@ int populate_mido_core(mido_config * mido, mido_core * midocore)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] vpcinstance
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int disconnect_mido_vpc_instance_elip(mido_vpc_instance * vpcinstance)
 {
     int ret = 0, rc = 0;
@@ -1995,15 +2694,15 @@ int disconnect_mido_vpc_instance_elip(mido_vpc_instance * vpcinstance)
     mido_print_midoname(&(vpcinstance->midos[ELIP_PRE_IPADDRGROUP_IP]));
     rc = mido_delete_ipaddrgroup_ip(&(vpcinstance->midos[ELIP_PRE_IPADDRGROUP]), &(vpcinstance->midos[ELIP_PRE_IPADDRGROUP_IP]));
     if (rc) {
-      LOGERROR("could not delete instance IP addr from ipaddrgroup\n");
-      ret = 1;
+        LOGERROR("could not delete instance IP addr from ipaddrgroup\n");
+        ret = 1;
     }
-    
+
     mido_print_midoname(&(vpcinstance->midos[ELIP_POST_IPADDRGROUP_IP]));
     rc = mido_delete_ipaddrgroup_ip(&(vpcinstance->midos[ELIP_POST_IPADDRGROUP]), &(vpcinstance->midos[ELIP_POST_IPADDRGROUP_IP]));
     if (rc) {
-      LOGERROR("could not delete instance IP addr from ipaddrgroup\n");
-      ret = 1;
+        LOGERROR("could not delete instance IP addr from ipaddrgroup\n");
+        ret = 1;
     }
 
     mido_print_midoname(&(vpcinstance->midos[ELIP_PRE]));
@@ -2030,6 +2729,25 @@ int disconnect_mido_vpc_instance_elip(mido_vpc_instance * vpcinstance)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//! @param[in] midocore
+//! @param[in] vpc
+//! @param[in] vpcsubnet
+//! @param[in] vpcinstance
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mido_vpc * vpc, mido_vpc_subnet * vpcsubnet, mido_vpc_instance * vpcinstance)
 {
     int rc = 0, ret = 0;
@@ -2040,7 +2758,6 @@ int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mid
         LOGERROR("input ip is 0.0.0.0\n");
         return (1);
     }
-
     // TODO - check for a change, and do a DC if the pub/priv mapping has changed
     /*
        rc = disconnect_mido_vpc_instance_elip(vpcinstance);
@@ -2096,13 +2813,30 @@ int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mid
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] vpcsubnet
+//! @param[in] vpcinstance
+//! @param[in] vmhost
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int connect_mido_vpc_instance(mido_vpc_subnet * vpcsubnet, mido_vpc_instance * vpcinstance, midoname * vmhost)
 {
     int ret = 0, rc = 0;
     char *macAddr = NULL, *ipAddr = NULL;
-    char ifacename[16];
+    char ifacename[IF_NAME_LEN];
 
-    snprintf(ifacename, 16, "vn_%s", vpcinstance->gniInst->name);
+    snprintf(ifacename, IF_NAME_LEN, "vn_%s", vpcinstance->gniInst->name);
 
     // create the Exterior ports for VMs
     rc = mido_create_port(&(vpcsubnet->midos[VPCBR]), "ExteriorBridge", NULL, NULL, NULL, &(vpcinstance->midos[VPCBR_VMPORT]));
@@ -2116,7 +2850,7 @@ int connect_mido_vpc_instance(mido_vpc_subnet * vpcsubnet, mido_vpc_instance * v
         LOGERROR("cannot create midonet bridge port to vm interface link: check midonet health\n");
         return (1);
     }
-    // set up dhcp host entry  
+    // set up dhcp host entry
     hex2mac(vpcinstance->gniInst->macAddress, &macAddr);
     ipAddr = hex2dot(vpcinstance->gniInst->privateIp);
     for (int i = 0; i < strlen(macAddr); i++) {
@@ -2148,6 +2882,21 @@ int connect_mido_vpc_instance(mido_vpc_subnet * vpcsubnet, mido_vpc_instance * v
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int free_mido_config(mido_config * mido)
 {
     int ret = 0, i = 0;
@@ -2203,6 +2952,21 @@ int free_mido_config(mido_config * mido)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] midocore
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int free_mido_core(mido_core * midocore)
 {
     int ret = 0;
@@ -2232,6 +2996,21 @@ int free_mido_core(mido_core * midocore)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] vpc
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int free_mido_vpc(mido_vpc * vpc)
 {
     int ret = 0, i = 0;
@@ -2254,6 +3033,21 @@ int free_mido_vpc(mido_vpc * vpc)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] vpcsubnet
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int free_mido_vpc_subnet(mido_vpc_subnet * vpcsubnet)
 {
     int ret = 0, i = 0;
@@ -2279,6 +3073,21 @@ int free_mido_vpc_subnet(mido_vpc_subnet * vpcsubnet)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] vpcinstance
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int free_mido_vpc_instance(mido_vpc_instance * vpcinstance)
 {
     int ret = 0;
@@ -2293,6 +3102,22 @@ int free_mido_vpc_instance(mido_vpc_instance * vpcinstance)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//! @param[in] vpcsubnet
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int delete_mido_vpc_subnet(mido_config * mido, mido_vpc_subnet * vpcsubnet)
 {
     int rc = 0, ret = 0, i = 0;
@@ -2326,6 +3151,22 @@ int delete_mido_vpc_subnet(mido_config * mido, mido_vpc_subnet * vpcsubnet)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//! @param[in] vpc
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int delete_mido_vpc(mido_config * mido, mido_vpc * vpc)
 {
     int rc = 0, ret = 0, i = 0;
@@ -2361,8 +3202,31 @@ int delete_mido_vpc(mido_config * mido, mido_vpc * vpc)
     return (ret);
 }
 
-  //int create_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet * vpcsubnet, char *subnet, char *slashnet, char *gw)
-int create_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet * vpcsubnet, char *subnet, char *slashnet, char *gw, char *instanceDNSDomain, u32 *instanceDNSServers, int max_instanceDNSServers)
+//!
+//!
+//!
+//! @param[in] mido
+//! @param[in] vpc
+//! @param[in] vpcsubnet
+//! @param[in] subnet
+//! @param[in] slashnet
+//! @param[in] gw
+//! @param[in] instanceDNSDomain
+//! @param[in] instanceDNSServers
+//! @param[in] max_instanceDNSServers
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int create_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet * vpcsubnet, char *subnet, char *slashnet, char *gw, char *instanceDNSDomain,
+                           u32 * instanceDNSServers, int max_instanceDNSServers)
 {
     int rc = 0, ret = 0, i = 0, found = 0;
     char name_buf[32], *tapiface = NULL;
@@ -2446,6 +3310,23 @@ int create_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet *
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//! @param[in] midocore
+//! @param[in] vpc
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int create_mido_vpc(mido_config * mido, mido_core * midocore, mido_vpc * vpc)
 {
     int rc = 0;
@@ -2590,6 +3471,22 @@ int create_mido_vpc(mido_config * mido, mido_core * midocore, mido_vpc * vpc)
     return (0);
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//! @param[in] midocore
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int delete_mido_core(mido_config * mido, mido_core * midocore)
 {
     int rc;
@@ -2608,6 +3505,22 @@ int delete_mido_core(mido_config * mido, mido_core * midocore)
     return (0);
 }
 
+//!
+//!
+//!
+//! @param[in] mido
+//! @param[in] midocore
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int create_mido_core(mido_config * mido, mido_core * midocore)
 {
     int ret = 0, rc = 0;
@@ -2708,6 +3621,25 @@ int create_mido_core(mido_config * mido, mido_core * midocore)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in]  cidr
+//! @param[out] outnet
+//! @param[out] outslashnet
+//! @param[out] outgw
+//! @param[out] outplustwo
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int cidr_split(char *cidr, char *outnet, char *outslashnet, char *outgw, char *outplustwo)
 {
     char *tok = NULL;

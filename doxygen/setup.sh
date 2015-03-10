@@ -33,7 +33,7 @@ Print()
 	echo "[$1] $0: $2";
 }
 
-projects=( "eucalyptus" "node" "cluster" );
+projects=( "eucalyptus" "node" "cluster" "eucanetd" );
 
 path=`cd ..;pwd`;
 cfgfile="";
@@ -146,6 +146,8 @@ do
 		inputs="extra_pages/doxygen.txt extra_pages/node_project.txt extra_pages/readme.txt extra_pages/changelog.txt extra_pages/install.txt extra_pages/license.txt ../node ../net ../storage ../util";
 	elif [ $project == "cluster" ]; then
 		inputs="extra_pages/doxygen.txt extra_pages/cluster_project.txt extra_pages/readme.txt extra_pages/changelog.txt extra_pages/install.txt extra_pages/license.txt ../cluster ../net ../storage ../util";
+	elif [ $project == "eucanetd" ]; then
+		inputs="extra_pages/doxygen.txt extra_pages/eucanetd_project.txt extra_pages/readme.txt extra_pages/changelog.txt extra_pages/install.txt extra_pages/license.txt ../net ../util";
 	fi
 	
 	cfgfile=$project".doxyfile";

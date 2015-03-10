@@ -21,7 +21,7 @@ package com.eucalyptus.compute.vpc;
 
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
-import com.eucalyptus.network.EdgeNetworking;
+import com.eucalyptus.network.NetworkingDriver;
 import com.eucalyptus.network.NetworkInfoBroadcaster;
 
 /**
@@ -35,7 +35,7 @@ public class VpcInvalidationEventListener implements EventListener<VpcInvalidati
 
   @Override
   public void fireEvent( final VpcInvalidationEvent event ) {
-    if ( EdgeNetworking.isEnabled( ) ) {
+    if ( NetworkingDriver.isEnabled( ) ) {
       NetworkInfoBroadcaster.requestNetworkInfoBroadcast( );
     }
   }

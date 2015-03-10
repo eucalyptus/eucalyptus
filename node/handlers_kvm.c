@@ -93,6 +93,7 @@
 #include <ipc.h>
 #include <misc.h>
 #include <euca_auth.h>
+#include <euca_network.h>
 #include <backing.h>
 #include <diskutil.h>
 #include <sensor.h>
@@ -132,7 +133,6 @@ typedef struct rebooting_thread_params_t {
     ncInstance instance;
     struct nc_state_t nc;
 } rebooting_thread_params;
-
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -393,9 +393,9 @@ static void *rebooting_thread(void *arg)
     }
     // domain is now shut down, create a new one with the same XML
     LOGINFO("[%s] rebooting\n", instance->instanceId);
-    if (!strcmp(nc->vnetconfig->mode, NETMODE_VPCMIDO)) {
-            // need to sleep to allow midolman to update the VM interface
-            sleep (10);
+    if (!strcmp(nc->pEucaNet->sMode, NETMODE_VPCMIDO)) {
+        // need to sleep to allow midolman to update the VM interface
+        sleep(10);
     }
     dom = virDomainCreateLinux(conn, xml, 0);
     if (dom == NULL) {
@@ -406,15 +406,15 @@ static void *rebooting_thread(void *arg)
         sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so we set base value accurately
         virDomainFree(dom);
 
-
-        if (!strcmp(nc->vnetconfig->mode, NETMODE_VPCMIDO)) {
+        if (!strcmp(nc->pEucaNet->sMode, NETMODE_VPCMIDO)) {
             char iface[16], cmd[EUCA_MAX_PATH], obuf[256], ebuf[256];
             int rc;
             snprintf(iface, 16, "vn_%s", instance->instanceId);
             snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc->rootwrap_cmd_path, instance->params.guestNicDeviceName, iface);
             rc = timeshell(cmd, obuf, ebuf, 256, 10);
             if (rc) {
-                LOGERROR("unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n");
+                LOGERROR
+                    ("unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n");
             }
         }
 
@@ -426,7 +426,6 @@ static void *rebooting_thread(void *arg)
     EUCA_FREE(params);
     return NULL;
 }
-
 
 //!
 //! Handles the reboot request of an instance.
@@ -443,7 +442,6 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     pthread_t tcb = { 0 };
     ncInstance *instance = NULL;
     rebooting_thread_params *params = NULL;
-
 
     sem_p(inst_sem);
     {
@@ -877,10 +875,10 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             }
             // set up networking
             char *brname = NULL;
-            if ((error = vnetStartNetwork(nc->vnetconfig, instance->ncnet.vlan, NULL, NULL, NULL, &brname)) != EUCA_OK) {
-                LOGERROR("[%s] start network failed for instance, terminating it\n", instance->instanceId);
-                EUCA_FREE(brname);
-                goto failed_dest;
+            if (!strcmp(nc->pEucaNet->sMode, NETMODE_MANAGED)) {
+                snprintf(brname, 32, "%s", instance->groupIds[0]);
+            } else {
+                snprintf(brname, 32, "%s", nc->pEucaNet->sBridgeDevice);
             }
             euca_strncpy(instance->params.guestNicDeviceName, brname, sizeof(instance->params.guestNicDeviceName));
             EUCA_FREE(brname);

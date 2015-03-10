@@ -84,7 +84,6 @@
 
 #include "handlers.h"
 #include <misc.h>
-#include <vnetwork.h>
 #include <adb-helpers.h>
 #include "handlers-state.h"
 
@@ -231,8 +230,8 @@ adb_DescribeServicesResponse_t *DescribeServicesMarshal(adb_DescribeServices_t *
     call_time = time_ms() - call_time;
     int stats_ret = 0;
     stats_ret = cached_message_stats_update("DescribeServices", (long)call_time, rc);
-    if(stats_ret != EUCA_OK) {
-        LOGERROR("Error updating message stats: %d\n", stats_ret); 
+    if (stats_ret != EUCA_OK) {
+        LOGERROR("Error updating message stats: %d\n", stats_ret);
     }
 
     return (ret);

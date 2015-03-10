@@ -378,13 +378,11 @@ static int write_xml_file(const xmlDocPtr doc, const char *instanceId, const cha
 int gen_nc_xml(const struct nc_state_t *nc_state_param)
 {
     int ret = EUCA_ERROR;
-    char *psCloudIp = NULL;
     char path[EUCA_MAX_PATH] = "";
     xmlDocPtr doc = NULL;
     xmlNodePtr nc = NULL;
     xmlNodePtr version = NULL;
     xmlNodePtr enabled = NULL;
-    xmlNodePtr cloudIp = NULL;
 
     INIT();
 
@@ -396,11 +394,6 @@ int gen_nc_xml(const struct nc_state_t *nc_state_param)
 
         version = xmlNewChild(nc, NULL, BAD_CAST("version"), BAD_CAST(nc_state_param->version));
         enabled = xmlNewChild(nc, NULL, BAD_CAST("enabled"), BAD_CAST(nc_state_param->is_enabled ? "true" : "false"));
-
-        if ((psCloudIp = hex2dot(nc_state_param->vnetconfig->cloudIp)) != NULL) {
-            cloudIp = xmlNewChild(nc, NULL, BAD_CAST("cloudIp"), BAD_CAST(psCloudIp));
-            EUCA_FREE(psCloudIp);
-        }
 
         snprintf(path, sizeof(path), EUCALYPTUS_NC_STATE_FILE, nc_home);
         ret = write_xml_file(doc, "global", path, "nc");
@@ -420,7 +413,6 @@ int gen_nc_xml(const struct nc_state_t *nc_state_param)
 //!
 int read_nc_xml(struct nc_state_t *nc_state_param)
 {
-    char buf[1024] = "";
     char xml_path[EUCA_MAX_PATH] = "";
 
     INIT();
@@ -429,9 +421,6 @@ int read_nc_xml(struct nc_state_t *nc_state_param)
 
     XGET_STR("/nc/version", nc_state_param->version);
     XGET_BOOL("/nc/enabled", nc_state_param->is_enabled);
-    XGET_STR("/nc/cloudIp", buf);
-    nc_state_param->vnetconfig->cloudIp = dot2hex(buf);
-
     return (EUCA_OK);
 }
 
@@ -649,7 +638,7 @@ int gen_instance_xml(const ncInstance * instance)
                     }
                 }
 
-                if (vbr->locationType == NC_LOCATION_SC) { // for EBS volumes, libvirt XML will be available under /instance/volumes
+                if (vbr->locationType == NC_LOCATION_SC) {  // for EBS volumes, libvirt XML will be available under /instance/volumes
                     continue;
                 }
 
@@ -1370,7 +1359,7 @@ int get_xpath_xml(const char *xml_path, const char *xpath, char *buf, int buf_le
                                 } else if (len > buf_len) {
                                     LOGERROR("insufficient buffer for %s\n", xpath);
                                 } else {
-                                    char * str = (char*)xmlBufferContent(xbuf);
+                                    char *str = (char *)xmlBufferContent(xbuf);
                                     euca_strncpy(buf, str, buf_len);
                                     ret = EUCA_OK;
                                 }
@@ -1779,14 +1768,14 @@ int main(int argc, char **argv)
 
     LOGINFO("trying out get_xpath_* functions\n");
     char buf[1024];
-    char * xpath1 = "/domain/devices/disk[1]/source/@file";
+    char *xpath1 = "/domain/devices/disk[1]/source/@file";
     if (get_xpath_content_at(out_path, xpath1, 0, buf, sizeof(buf)) == NULL) {
         err = EUCA_ERROR;
         LOGERROR("failed to read xpath '%s' from '%s'\n", xpath1, out_path);
         goto out;
     }
     LOGINFO("extracted %s as {%s}\n", xpath1, buf);
-    char * xpath2 = "/domain/devices/disk[1]";
+    char *xpath2 = "/domain/devices/disk[1]";
     if (get_xpath_xml(out_path, xpath2, buf, sizeof(buf)) != EUCA_OK) {
         err = EUCA_ERROR;
         LOGERROR("failed to read xpath '%s' XML from '%s'\n", xpath2, out_path);

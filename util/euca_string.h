@@ -119,6 +119,7 @@ boolean euca_lscanf(const char *haystack, const char *format, void *value);
 char *euca_strestr(const char *haystack, const char *begin, const char *end);
 long long euca_strtoll(const char *string, const char *begin, const char *end);
 char *euca_strduptolower(const char *restrict string);
+char *euca_strtolower(char *restrict string);
 char *euca_strdup(const char *s1);
 char *euca_strdupcat(char *restrict s1, const char *restrict s2);
 char *euca_strncat(char *restrict dest, const char *restrict src, size_t size);
@@ -132,10 +133,10 @@ char *euca_hex2dot(u32 hex);
 
 //! @{
 //! @name MAC conversion APIs
-u8 *euca_mac2hex(char *psMacIn, u8 aHexOut[6]);
-void euca_hex2mac(u8 aHexIn[6], char **ppsMacOut);
-int euca_maczero(u8 aMac[6]);
-int euca_machexcmp(char *psMac, u8 aMac[6]);
+u8 *euca_mac2hex(char *psMacIn, u8 aHexOut[ENET_BUF_SIZE]);
+void euca_hex2mac(u8 aHexIn[ENET_BUF_SIZE], char **ppsMacOut);
+int euca_maczero(u8 aMac[ENET_BUF_SIZE]);
+int euca_machexcmp(char *psMac, u8 aMac[ENET_BUF_SIZE]);
 //! @}
 
 int euca_tokenizer(char *list, char *delim, char *tokens[], int nbTokens);

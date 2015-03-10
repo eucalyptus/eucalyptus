@@ -847,6 +847,10 @@ static inline void copy_instance_to_adb(adb_instanceType_t * instance, const axu
         adb_instanceType_add_groupNames(instance, env, outInst->groupNames[i]);
     }
 
+    for (i = 0; i < outInst->groupIdsSize; i++) {
+        adb_instanceType_add_groupIds(instance, env, outInst->groupIds[i]);
+    }
+
     // updated by NC upon Attach/DetachVolume
     for (i = 0; i < EUCA_MAX_VOLUMES; i++) {
         if (strlen(outInst->volumes[i].volumeId) == 0)
@@ -874,8 +878,10 @@ static inline ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, 
 {
     int i = 0;
     int groupNamesSize = 0;
+    int groupIdsSize = 0;
     int expiryTime = 0;
     char *groupNames[EUCA_MAX_GROUPS] = { NULL };
+    char *groupIds[EUCA_MAX_GROUPS] = { NULL };
     netConfig ncnet = { 0 };
     ncInstance *outInst = NULL;
     virtualMachine params = { 0 };
@@ -892,14 +898,19 @@ static inline ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, 
     if ((netconf = adb_instanceType_get_netParams(instance, env)) != NULL) {
         ncnet.vlan = adb_netConfigType_get_vlan(netconf, env);
         ncnet.networkIndex = adb_netConfigType_get_networkIndex(netconf, env);
-        euca_strncpy(ncnet.privateMac, adb_netConfigType_get_privateMacAddress(netconf, env), MAC_BUFFER_SIZE);
-        euca_strncpy(ncnet.privateIp, adb_netConfigType_get_privateIp(netconf, env), IP_BUFFER_SIZE);
-        euca_strncpy(ncnet.publicIp, adb_netConfigType_get_publicIp(netconf, env), IP_BUFFER_SIZE);
+        euca_strncpy(ncnet.privateMac, adb_netConfigType_get_privateMacAddress(netconf, env), ENET_ADDR_LEN);
+        euca_strncpy(ncnet.privateIp, adb_netConfigType_get_privateIp(netconf, env), INET_ADDR_LEN);
+        euca_strncpy(ncnet.publicIp, adb_netConfigType_get_publicIp(netconf, env), INET_ADDR_LEN);
     }
 
     groupNamesSize = adb_instanceType_sizeof_groupNames(instance, env);
     for (i = 0; ((i < EUCA_MAX_GROUPS) && (i < groupNamesSize)); i++) {
         groupNames[i] = adb_instanceType_get_groupNames_at(instance, env, i);
+    }
+
+    groupIdsSize = adb_instanceType_sizeof_groupIds(instance, env);
+    for (i = 0; ((i < EUCA_MAX_GROUPS) && (i < groupIdsSize)); i++) {
+        groupIds[i] = adb_instanceType_get_groupIds_at(instance, env, i);
     }
 
     dt = adb_instanceType_get_expiryTime(instance, env);
@@ -918,7 +929,7 @@ static inline ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, 
                                 (char *)adb_instanceType_get_keyName(instance, env),
                                 (char *)adb_instanceType_get_userData(instance, env),
                                 (char *)adb_instanceType_get_launchIndex(instance, env),
-                                (char *)adb_instanceType_get_platform(instance, env), expiryTime, groupNames, groupNamesSize);
+                                (char *)adb_instanceType_get_platform(instance, env), expiryTime, groupNames, groupNamesSize, groupIds, groupIdsSize);
 
     euca_strncpy(outInst->guestStateName, (char *)adb_instanceType_get_guestStateName(instance, env), CHAR_BUFFER_SIZE);
     euca_strncpy(outInst->bundleTaskStateName, (char *)adb_instanceType_get_bundleTaskStateName(instance, env), CHAR_BUFFER_SIZE);

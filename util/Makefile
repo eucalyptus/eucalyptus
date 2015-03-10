@@ -65,42 +65,43 @@ include ../Makedefs
 SUBDIRS = stats
 EFENCE=-lefence
 #DEBUGS = -DDEBUG # -DDEBUG1
+CFLAGS += 
 
-all: euca_system.o euca_string.o euca_file.o utf8.o log.o config.o fault.o misc.o wc.o hash.o data.o sensor.o euca_auth.o euca_axis.o ipc.o sequence_executor.o atomic_file.o euca_rootwrap euca_mountwrap euca-generate-fault 
+all: euca_system.o euca_string.o euca_network.o euca_file.o utf8.o log.o config.o fault.o misc.o wc.o hash.o data.o sensor.o euca_auth.o euca_axis.o ipc.o sequence_executor.o atomic_file.o euca_rootwrap euca_mountwrap euca-generate-fault 
 	@for subdir in $(SUBDIRS); do \
         	(cd $$subdir && $(MAKE) buildall) || exit $$? ; done
 
 build: all
 
 euca_rootwrap: euca_rootwrap.c euca_string.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o euca_rootwrap euca_rootwrap.c euca_string.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o euca_rootwrap euca_rootwrap.c euca_string.o 
 
 euca_mountwrap: euca_mountwrap.c euca_string.o
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o euca_mountwrap euca_mountwrap.c euca_string.o
 
-test: test.c ipc.o log.o misc.o ../storage/diskutil.o euca_string.o euca_file.o data.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o test test.c ipc.o log.o misc.o ../storage/diskutil.o euca_string.o euca_file.o data.o -lpthread $(LIBS) $(LDFLAGS)
+test: test.c ipc.o log.o misc.o ../storage/diskutil.o euca_string.o euca_network.o euca_file.o data.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o test test.c ipc.o log.o misc.o ../storage/diskutil.o euca_string.o euca_network.o euca_file.o data.o -lpthread $(LIBS) $(LDFLAGS)
 
-test_misc: misc.c euca_string.o euca_file.o log.o ../storage/diskutil.o ipc.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST -o test_misc misc.c euca_string.o euca_file.o log.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS)
+test_misc: misc.c euca_string.o euca_network.o euca_file.o log.o ../storage/diskutil.o ipc.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST -o test_misc misc.c euca_string.o euca_network.o euca_file.o log.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS)
 
-test_wc: wc.c misc.o euca_string.o euca_file.o log.o ../storage/diskutil.o ipc.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(DEBUGS) -D_UNIT_TEST -o test_wc wc.c misc.o euca_string.o euca_file.o log.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS)
+test_wc: wc.c misc.o euca_string.o euca_network.o euca_file.o log.o ../storage/diskutil.o ipc.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(DEBUGS) -D_UNIT_TEST -o test_wc wc.c misc.o euca_string.o euca_network.o euca_file.o log.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS)
 
-test_fault: fault.c misc.o euca_string.o euca_file.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) `xslt-config --cflags` $(DEBUGS) -D_UNIT_TEST -o test_fault fault.c misc.o euca_string.o euca_file.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o -lpthread -lxml2 $(LDFLAGS)
+test_fault: fault.c misc.o euca_string.o euca_network.o euca_file.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) `xslt-config --cflags` $(DEBUGS) -D_UNIT_TEST -o test_fault fault.c misc.o euca_string.o euca_network.o euca_file.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o -lpthread -lxml2 $(LDFLAGS)
 
-euca-generate-fault: fault.c misc.o euca_string.o euca_file.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) `xslt-config --cflags` $(DEBUGS) -DEUCA_GENERATE_FAULT -o euca-generate-fault fault.c misc.o euca_string.o euca_file.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o -lpthread -lxml2 $(LDFLAGS)
+euca-generate-fault: fault.c misc.o euca_string.o euca_network.o euca_file.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) `xslt-config --cflags` $(DEBUGS) -DEUCA_GENERATE_FAULT -o euca-generate-fault fault.c misc.o euca_string.o euca_network.o euca_file.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o -lpthread -lxml2 $(LDFLAGS)
 
-test_sensor: sensor.c sensor.h misc.o euca_string.o euca_file.o log.o ipc.o ../storage/diskutil.o stats/stats.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(DEBUG) -D_UNIT_TEST -o test_sensor sensor.c stats/stats.o misc.o euca_string.o euca_file.o log.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS) $(EFENCE)
+test_sensor: sensor.c sensor.h misc.o euca_string.o euca_network.o euca_file.o log.o ipc.o ../storage/diskutil.o stats/stats.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(DEBUG) -D_UNIT_TEST -o test_sensor sensor.c stats/stats.o misc.o euca_string.o euca_network.o euca_file.o log.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS) $(EFENCE)
 
 ../storage/diskutil.o:
 	make -C ../storage
 
-test_auth: euca_auth.c euca_string.o euca_file.o log.o misc.o ipc.o ../storage/diskutil.o
-	$(CC) $(CFLAGS) $(INCLUDES) $(DEBUGS) -trigraphs -D_UNIT_TEST -o test_auth euca_auth.c euca_string.o euca_file.o log.o misc.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS) $(EFENCE) -lcurl
+test_auth: euca_auth.c euca_string.o euca_network.o euca_file.o log.o misc.o ipc.o ../storage/diskutil.o
+	$(CC) $(CFLAGS) $(INCLUDES) $(DEBUGS) -trigraphs -D_UNIT_TEST -o test_auth euca_auth.c euca_string.o euca_network.o euca_file.o log.o misc.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS) $(EFENCE) -lcurl
 
 %.o: %.c %.h
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(DEBUGS) -trigraphs `xslt-config --cflags` $<

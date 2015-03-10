@@ -84,6 +84,7 @@ NC_HANDLERS=handlers_xen.o handlers_kvm.o handlers_default.o xml.o hooks.o
 STORAGE_OBJS=../storage/backing.o ../storage/diskutil.o ../storage/blobstore.o ../storage/objectstorage.o ../storage/vbr.o ../storage/iscsi.o ../storage/ebs_utils.o ../storage/sc-client-marshal-adb.o ../storage/storage-controller.o
 STATS_OBJS = ../util/stats/stats.o ../util/stats/sensor_common.o ../util/stats/message_sensor.o ../util/stats/service_sensor.o ../util/stats/fs_emitter.o ../util/stats/message_stats.o
 STATS_LIBS = -ljson -lm
+CFLAGS += 
 
 BUILD_ID=-DEUCA_COMPILE_TIMESTAMP=\""[built `date --rfc-3339='sec'`]"\"
 #EFENCE=-lefence
@@ -142,9 +143,6 @@ server: $(SCLIBS) $(SERVICE_SO)
 ../storage/vbr.o: ../storage/vbr.c ../util/data.o
 	make -C ../storage
 
-../net/vnetwork.o: ../net/vnetwork.c
-	make -C ../net
-
 ../util/misc.o: ../util/misc.c ../util/misc.h ../util/eucalyptus.h
 	make -C ../util
 
@@ -178,8 +176,8 @@ server: $(SCLIBS) $(SERVICE_SO)
 ../storage/storage-controller.o: ../storage/storage-controller.c ../storage/sc-client-marshal-adb.o
 	make -C ../storage
 
-$(SERVICE_SO): generated/stubs $(STORAGE_OBJS) ../net/vnetwork.o ../util/log.o ../util/misc.o ../util/euca_system.o ../util/euca_file.o ../util/euca_file.o ../util/sensor.o ../util/hash.o ../util/data.o server-marshal.o handlers.o $(NC_HANDLERS) ../util/eucalyptus.h ../util/euca_auth.o ../storage/http.o $(STATS_OBJS)
-	$(CC) -shared generated/*.o server-marshal.o handlers.o $(NC_HANDLERS) $(STORAGE_OBJS) ../net/vnetwork.o $(STATS_OBJS) ../util/*.o ../storage/http.o ../storage/storage-windows.o $(SCLIBS) $(NC_LIBS) $(STATS_LIBS) $(EFENCE) -o $(SERVICE_SO)
+$(SERVICE_SO): generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/euca_file.o ../util/euca_system.o ../util/sensor.o ../util/hash.o ../util/data.o server-marshal.o handlers.o $(NC_HANDLERS) ../util/eucalyptus.h ../util/euca_auth.o ../storage/http.o $(STATS_OBJS)
+	$(CC) -shared generated/*.o server-marshal.o handlers.o $(NC_HANDLERS) $(STORAGE_OBJS) $(STATS_OBJS) ../util/*.o ../storage/http.o ../storage/storage-windows.o $(SCLIBS) $(NC_LIBS) $(STATS_LIBS) $(EFENCE) -o $(SERVICE_SO)
 
 ../util/stats/%.o:
 	make -C ../util/stats
@@ -191,12 +189,12 @@ client: $(CLIENT) $(CLIENT)_local
 fake: $(CLIENT)_fake
 
 $(CLIENT): generated/stubs $(CLIENT).c $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o $(CLIENT).c ../storage/vbr.o $(STATS_OBJS)
-	$(CC) -o $(CLIENT) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(CLIENT).c client-marshal-adb.c generated/adb_*.o generated/axis2_stub_*.o ../util/*.o ../storage/diskutil.o ../net/vnetwork.o ../storage/http.o -lcurl ../storage/storage-windows.o $(STATS_OBJS) $(STATS_LIBS) -lm $(AXIOM_LIBS) $(OPENSSL_LIBS) $(NC_LIBS)
+	$(CC) -o $(CLIENT) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(CLIENT).c client-marshal-adb.c generated/adb_*.o generated/axis2_stub_*.o ../util/*.o ../storage/diskutil.o ../storage/http.o -lcurl ../storage/storage-windows.o $(STATS_OBJS) $(STATS_LIBS) -lm $(AXIOM_LIBS) $(OPENSSL_LIBS) $(NC_LIBS)
 
 $(CLIENT)_fake: generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o client-marshal-fake.o $(CLIENT).c ../storage/vbr.o $(STATS_OBJS)
 
 $(CLIENT)_local: generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o handlers.o $(NC_HANDLERS) $(CLIENT).c ../util/euca_auth.o ../storage/vbr.o $(STATS_OBJS)
-	$(CC) -o $(CLIENT)_local -DNO_COMP $(INCLUDES) $(CPPFLAGS) $(CFLAGS) -shared client-marshal-local.o ../util/*.o $(STORAGE_OBJS) ../net/vnetwork.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS) ../storage/http.o ../storage/storage-windows.o $(SCLIBS) $(STATS_OBJS) $(STATS_LIBS)
+	$(CC) -o $(CLIENT)_local -DNO_COMP $(INCLUDES) $(CPPFLAGS) $(CFLAGS) -shared client-marshal-local.o ../util/*.o $(STORAGE_OBJS) handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS) ../storage/http.o ../storage/storage-windows.o $(SCLIBS) $(STATS_OBJS) $(STATS_LIBS)
 
 test_misc: test.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../util/data.o $(STATS_OBJS)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o test_misc test.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../storage/diskutil.o ../util/data.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o $(NC_LIBS) $(STATS_OBJS) $(STATS_LIBS) ../util/config.o

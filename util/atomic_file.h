@@ -124,7 +124,7 @@ typedef struct atomic_file_t {
 
 int atomic_file_init(atomic_file * file, char *source, char *dest, int dosort);
 int atomic_file_set_source(atomic_file * file, char *newsource);
-int atomic_file_get(atomic_file * file, int *file_updated);
+int atomic_file_get(atomic_file * file, boolean * file_updated);
 int atomic_file_free(atomic_file * file);
 int atomic_file_sort_tmpfile(atomic_file * file);
 int strcmp_ptr(const void *ina, const void *inb);

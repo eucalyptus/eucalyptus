@@ -448,119 +448,6 @@ int killwait(pid_t pid)
 }
 
 //!
-//! Validates a list of parameters for a given vnet function.
-//!
-//! @param[in] func the function name that parameters will be validated against
-//! @param[in] ... the list of parameters
-//!
-//! @return 0 if the parameter list is valid or 1 if not
-//!
-int param_check(const char *func, ...)
-{
-    int i1 = 0;
-    char *str1 = NULL;
-    char *str2 = NULL;
-    char *str3 = NULL;
-    char *str4 = NULL;
-    char *str5 = NULL;
-    char *str6 = NULL;
-    va_list al = { {0} };
-    boolean fail = FALSE;
-    vnetConfig *vnet1 = NULL;
-
-    if (!func) {
-        return (1);
-    }
-
-    va_start(al, func);
-    {
-        if (!strcmp(func, "vnetGenerateDHCP") || !strcmp(func, "vnetKickDHCP")) {
-            if ((vnet1 = va_arg(al, vnetConfig *)) == NULL) {
-                fail = TRUE;
-            }
-        } else if (!strcmp(func, "vnetAddPublicIP") || !strcmp(func, "vnetAddDev")) {
-            vnet1 = va_arg(al, vnetConfig *);
-            str1 = va_arg(al, char *);
-            if (!vnet1 || !str1) {
-                fail = TRUE;
-            }
-        } else if (!strcmp(func, "vnetAddHost")) {
-            vnet1 = va_arg(al, vnetConfig *);
-            str1 = va_arg(al, char *);
-            str2 = va_arg(al, char *);
-            i1 = va_arg(al, int);
-            if (!vnet1 || !str1 || (i1 < 0) || (i1 > (NUMBER_OF_VLANS - 1))) {
-                fail = TRUE;
-            }
-        } else if (!strcmp(func, "vnetGetNextHost")) {
-            vnet1 = va_arg(al, vnetConfig *);
-            str1 = va_arg(al, char *);
-            str2 = va_arg(al, char *);
-            i1 = va_arg(al, int);
-            if (!vnet1 || !str1 || !str2 || (i1 < 0) || (i1 > (NUMBER_OF_VLANS - 1))) {
-                fail = TRUE;
-            }
-        } else if (!strcmp(func, "vnetDelHost") || !strcmp(func, "vnetEnableHost") || !strcmp(func, "vnetDisableHost")) {
-            vnet1 = va_arg(al, vnetConfig *);
-            str1 = va_arg(al, char *);
-            str2 = va_arg(al, char *);
-            i1 = va_arg(al, int);
-            if (!vnet1 || (!str1 && !str2) || (i1 < 0) || (i1 > (NUMBER_OF_VLANS - 1))) {
-                fail = TRUE;
-            }
-        } else if (!strcmp(func, "vnetDeleteChain") || !strcmp(func, "vnetCreateChain")) {
-            vnet1 = va_arg(al, vnetConfig *);
-            str1 = va_arg(al, char *);
-            str2 = va_arg(al, char *);
-            if (!vnet1 || !str1 || !str2) {
-                fail = TRUE;
-            }
-        } else if (!strcmp(func, "vnetTableRule")) {
-            vnet1 = va_arg(al, vnetConfig *);
-            str1 = va_arg(al, char *);
-            str2 = va_arg(al, char *);
-            str3 = va_arg(al, char *);
-            str4 = va_arg(al, char *);
-            str5 = va_arg(al, char *);
-            str6 = va_arg(al, char *);
-            if (!vnet1 || !str1 || !str2 || !str3 || (!str4 && !str5 && !str6)) {
-                fail = TRUE;
-            }
-        } else if (!strcmp(func, "vnetSetVlan")) {
-            vnet1 = va_arg(al, vnetConfig *);
-            i1 = va_arg(al, int);
-            str1 = va_arg(al, char *);
-            str2 = va_arg(al, char *);
-            if (!vnet1 || (i1 < 0) || (i1 >= NUMBER_OF_VLANS) || !str1 || !str2) {
-                fail = TRUE;
-            }
-        } else if (!strcmp(func, "vnetDelVlan")) {
-            vnet1 = va_arg(al, vnetConfig *);
-            i1 = va_arg(al, int);
-            if (!vnet1 || (i1 < 0) || (i1 >= NUMBER_OF_VLANS)) {
-                fail = TRUE;
-            }
-        } else if (!strcmp(func, "vnetInit")) {
-            vnet1 = va_arg(al, vnetConfig *);
-            str1 = va_arg(al, char *);
-            str2 = va_arg(al, char *);
-            str3 = va_arg(al, char *);
-            i1 = va_arg(al, int);
-            if (!vnet1 || !str1 || !str2 || (i1 < 0)) {
-                fail = TRUE;
-            }
-        }
-    }
-    va_end(al);
-
-    if (fail) {
-        LOGERROR("incorrect input parameters to function %s\n", func);
-        return (1);
-    }
-    return (0);
-}
-
-//!
 //!
 //!
 //! @param[in] pid
@@ -1158,7 +1045,7 @@ int uint32compar(const void *ina, const void *inb)
 //!
 //! @see safekill()
 //!
-int safekillfile(char *pidfile, char *procname, int sig, char *rootwrap)
+int safekillfile(const char *pidfile, const char *procname, int sig, const char *rootwrap)
 {
     int rc = 0;
     char *pidstr = NULL;
@@ -1192,7 +1079,7 @@ int safekillfile(char *pidfile, char *procname, int sig, char *rootwrap)
 //!         \li EUCA_PERMISSION_ERROR: if the file is not readable
 //!         \li EUCA_ACCESS_ERROR: if we fail to open or read the /proc/{pid}/cmdline file.
 //!
-int safekill(pid_t pid, char *procname, int sig, char *rootwrap)
+int safekill(pid_t pid, const char *procname, int sig, const char *rootwrap)
 {
     int ret = 0;
     FILE *FH = NULL;
@@ -1942,22 +1829,23 @@ int check_for_string_in_list(char *string, char **list, int count)
 
 char **build_argv(const char *first, va_list va)
 {
+    int args = 0;                      // count 'first' as one
+    char *s = NULL;
+    char **argv = NULL;
+
     if (first == NULL) {
         LOGDEBUG("internal error: build_argv called with NULL\n");
         return NULL;
     }
 
-    int args = 1;                      // count 'first' as one
-    char **argv = EUCA_ZALLOC(args + 1, sizeof(char *));    // one more for NULL
-    if (argv == NULL) {
+    if ((argv = EUCA_ZALLOC(args + 1, sizeof(char *))) == NULL) {
         LOGERROR("out of memory\n");
         return NULL;
     }
-    argv[0] = strdup(first);
+    argv[args++] = strdup(first);
 
-    for (char *s = NULL; (s = va_arg(va, char *)) != NULL; args++) {
-        argv = EUCA_REALLOC(argv, (args + 2), sizeof(char *));
-        if (argv == NULL) {
+    for (s = NULL; (s = va_arg(va, char *)) != NULL; args++) {
+        if ((argv = EUCA_REALLOC(argv, (args + 2), sizeof(char *))) == NULL) {
             LOGERROR("out of memory\n");
             return NULL;
         }
@@ -1965,17 +1853,18 @@ char **build_argv(const char *first, va_list va)
         argv[args + 1] = (char *)NULL;
     }
 
-    return argv;
+    return (argv);
 }
 
 void log_argv(char **argv)
 {
-    char cmd[10240];
     int args = 0;
+    char cmd[10240] = "";
 
     for (char **s = argv; *s != NULL; s++, args++) {
-        char formatted[1024];
         char *arg = *s;
+        char formatted[1024] = "";
+
         if (args > 0) {
             if (arg[0] == '-') {
                 snprintf(formatted, sizeof(formatted), " %s", arg);
@@ -2009,8 +1898,7 @@ void log_argv(char **argv)
 //! @param[in] stdin_fd a pointer to populate with child process's stdin descriptr, if not NULL
 //! @param[in] stdout_fd a pointer to populate with child process's stdout descriptr, if not NULL
 //! @param[in] stderr_fd a pointer to populate with child process's stderr descriptr, if not NULL
-//! @param[in] file a constant pointer to the pathname of a file which is to be executed
-//! @param[in] ... the list of string arguments to pass to the program
+//! @param[in] argv
 //!
 //! @return EUCA_OK on success or the following error codes on failure:
 //!         \li EUCA_ERROR if the execution terminated but failed
@@ -2062,7 +1950,7 @@ int euca_execvp_fd(pid_t * ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, 
     }
     // child?
     if (*ppid == 0) {
-        setpgid(0,0);
+        setpgid(0, 0);
         // arrange the file descriptors
         if (stdin_fd) {
             close(stdin_p[1]);
@@ -2223,8 +2111,8 @@ int euca_execlp_fd(pid_t * ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, 
 //!
 int euca_execlp(int *pStatus, const char *file, ...)
 {
+    int result = 0;
     char **argv = NULL;
-    int result;
 
     // Default the returned status to -1
     if (pStatus != NULL)
@@ -2394,6 +2282,8 @@ close_fds:
 //! and returns status
 //!
 //! @param[in] pStatus a pointer to the status field to return (status from waitpid()) if not NULL
+//! @param[in] custom_parser
+//! @param[in] parser_data
 //! @param[in] file a constant pointer to the pathname of a file which is to be executed
 //! @param[in] ... the list of string arguments to pass to the program
 //!
@@ -2462,7 +2352,7 @@ char *create_corrid(const char *id)
     // correlation_id = [prefix(36)::new_id(36)]
     if (id != NULL && strstr(id, "::") != NULL && strlen(id) >= 74) {
         char *newid = system_output("uuidgen");
-        newid[strlen(newid)-1] = '\0';
+        newid[strlen(newid) - 1] = '\0';
         memset(hex_id, '\0', 8);
         strncpy(hex_id, strstr(id, "::") + 11, 4);
         hex_val = strtol(hex_id, NULL, 16);
@@ -2720,19 +2610,19 @@ int main(int argc, char **argv)
     }
 
     printf("Testing correlation id creation\n");
-    char corr_id_arg [128];
-    for (int i=0; i<100; i++){ 
-       memset(corr_id_arg, '\0', 128);
-       char *prefix = system_output("uuidgen");
-       char *postfix = system_output("uuidgen");
-       prefix[strlen(prefix)-1] = '\0';
-       postfix[strlen(postfix)-1] = '\0';
-       snprintf(corr_id_arg, 128, "%s::%s", prefix, postfix) ;
-       EUCA_FREE(prefix);
-       EUCA_FREE(postfix);
-       char *new_corr_id = create_corrid(corr_id_arg);
-       printf("%s --> %s\n", corr_id_arg, new_corr_id);
-       EUCA_FREE(new_corr_id);
+    char corr_id_arg[128];
+    for (int i = 0; i < 100; i++) {
+        memset(corr_id_arg, '\0', 128);
+        char *prefix = system_output("uuidgen");
+        char *postfix = system_output("uuidgen");
+        prefix[strlen(prefix) - 1] = '\0';
+        postfix[strlen(postfix) - 1] = '\0';
+        snprintf(corr_id_arg, 128, "%s::%s", prefix, postfix);
+        EUCA_FREE(prefix);
+        EUCA_FREE(postfix);
+        char *new_corr_id = create_corrid(corr_id_arg);
+        printf("%s --> %s\n", corr_id_arg, new_corr_id);
+        EUCA_FREE(new_corr_id);
     }
 
     // We're testing the euca_execlp() API.

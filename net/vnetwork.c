@@ -68,6 +68,7 @@
 //! Implements the Virtual Network library.
 //!
 
+#ifdef EUCA_USE_VNETWORK
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  INCLUDES                                  |
@@ -3313,7 +3314,7 @@ int vnetAssignAddress(vnetConfig * vnetconfig, char *src, char *dst, int vlan)
             LOGERROR("failed to assign IP address '%s'\n", cmd);
             ret = EUCA_ERROR;
         }
-        
+
         network = hex2dot(vnetconfig->nw);
         slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->nm)) + 1);
         snprintf(cmd, EUCA_MAX_PATH, "-A PREROUTING -s %s/%d -d %s -j MARK --set-xmark 0x15/0xffffffff", network, slashnet, src);
@@ -3352,7 +3353,6 @@ int vnetAssignAddress(vnetConfig * vnetconfig, char *src, char *dst, int vlan)
             LOGERROR("failed to apply SNAT rule '%s'\n", cmd);
             ret = EUCA_ERROR;
         }
-        
         //snprintf(cmd, EUCA_MAX_PATH, "-I POSTROUTING -s %s -d %s -j SNAT --to-source %s", dst, dst, src);
         snprintf(cmd, EUCA_MAX_PATH, "-I POSTROUTING -s %s -m mark --mark 0x15 -j SNAT --to-source %s", dst, src);
         if ((rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd)) != 0) {
@@ -3592,7 +3592,7 @@ int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst, int vlan)
             LOGERROR("failed to remove DNAT rule '%s'\n", cmd);
             //            ret = EUCA_ERROR;
         }
-        
+
         network = hex2dot(vnetconfig->nw);
         slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->nm)) + 1);
         snprintf(cmd, EUCA_MAX_PATH, "-D PREROUTING -s %s/%d -d %s -j MARK --set-xmark 0x15/0xffffffff", network, slashnet, src);
@@ -4370,3 +4370,4 @@ char *host2ip(char *host)
     }
     return (ret);
 }
+#endif /* EUCA_USE_VNETWORK */

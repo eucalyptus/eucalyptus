@@ -139,7 +139,6 @@
 /* Should preferably be handled in header file */
 
 extern ccConfig *config;
-extern vnetConfig *vnetconfig;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -775,14 +774,14 @@ int instIpSync(ccInstance * inst, void *in)
         && (inst->ncnet.publicIp[0] != '\0' && strcmp(inst->ncnet.publicIp, "0.0.0.0"))) {
         // case 2
         LOGDEBUG("CC publicIp is empty, NC publicIp is set\n");
-        snprintf(inst->ccnet.publicIp, IP_BUFFER_SIZE, "%s", inst->ncnet.publicIp);
+        snprintf(inst->ccnet.publicIp, INET_ADDR_LEN, "%s", inst->ncnet.publicIp);
         ret++;
     } else if (((inst->ccnet.publicIp[0] != '\0' && strcmp(inst->ccnet.publicIp, "0.0.0.0"))
                 && (inst->ncnet.publicIp[0] != '\0' && strcmp(inst->ncnet.publicIp, "0.0.0.0")))
                && strcmp(inst->ccnet.publicIp, inst->ncnet.publicIp)) {
         // case 4
         LOGDEBUG("CC publicIp and NC publicIp differ\n");
-        snprintf(inst->ccnet.publicIp, IP_BUFFER_SIZE, "%s", inst->ncnet.publicIp);
+        snprintf(inst->ccnet.publicIp, INET_ADDR_LEN, "%s", inst->ncnet.publicIp);
         ret++;
     }
     // VLAN cases
@@ -790,13 +789,9 @@ int instIpSync(ccInstance * inst, void *in)
         // problem
         LOGERROR("CC and NC vlans differ instanceId=%s CCvlan=%d NCvlan=%d\n", inst->instanceId, inst->ccnet.vlan, inst->ncnet.vlan);
     }
+
     inst->ccnet.vlan = inst->ncnet.vlan;
-    if (inst->ccnet.vlan >= 0) {
-        if (!vnetconfig->networks[inst->ccnet.vlan].active) {
-            LOGWARN("detected instance from NC that is running in a currently inactive network; will attempt to re-activate network '%d'\n", inst->ccnet.vlan);
-            ret++;
-        }
-    }
+
     // networkIndex cases
     if (inst->ccnet.networkIndex != inst->ncnet.networkIndex) {
         // problem
@@ -809,223 +804,13 @@ int instIpSync(ccInstance * inst, void *in)
         // problem;
         LOGERROR("CC and NC mac addrs differ instanceId=%s CCmac=%s NCmac=%s\n", inst->instanceId, inst->ccnet.privateMac, inst->ncnet.privateMac);
     }
-    snprintf(inst->ccnet.privateMac, MAC_BUFFER_SIZE, "%s", inst->ncnet.privateMac);
+    snprintf(inst->ccnet.privateMac, ENET_ADDR_LEN, "%s", inst->ncnet.privateMac);
 
     // privateIp cases
     if (strcmp(inst->ccnet.privateIp, inst->ncnet.privateIp)) {
         // sync em
-        snprintf(inst->ccnet.privateIp, IP_BUFFER_SIZE, "%s", inst->ncnet.privateIp);
+        snprintf(inst->ccnet.privateIp, INET_ADDR_LEN, "%s", inst->ncnet.privateIp);
     }
 
     return (ret);
-}
-
-//!
-//!
-//!
-//! @param[in] inst a pointer to the instance structure
-//! @param[in] in a transparent pointer (unused)
-//!
-//! @return
-//!
-//! @pre
-//!
-//! @note
-//!
-int instNetParamsSet(ccInstance * inst, void *in)
-{
-    int rc = 0;
-    int ret = 0;
-    char userToken[64] = { 0 };
-    char *cleanGroupName = NULL;
-
-    if (!inst) {
-        return (1);
-    } else if ((strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant"))) {
-        return (0);
-    }
-
-    LOGDEBUG("instanceId=%s publicIp=%s privateIp=%s privateMac=%s vlan=%d\n", inst->instanceId, inst->ccnet.publicIp,
-             inst->ccnet.privateIp, inst->ccnet.privateMac, inst->ccnet.vlan);
-
-    if (inst->ccnet.vlan >= 0) {
-        // activate network
-        vnetconfig->networks[inst->ccnet.vlan].active = 1;
-
-        // set up groupName and userName
-        if (inst->groupNames[0][0] != '\0' && inst->accountId[0] != '\0') {
-            // logic to strip the username from the supplied network name
-            snprintf(userToken, 63, "%s-", inst->accountId);
-            cleanGroupName = strstr(inst->groupNames[0], userToken);
-            if (cleanGroupName) {
-                cleanGroupName = cleanGroupName + strlen(userToken);
-            } else {
-                cleanGroupName = inst->groupNames[0];
-            }
-
-            //      if ( (vnetconfig->users[inst->ccnet.vlan].netName[0] != '\0' && strcmp(vnetconfig->users[inst->ccnet.vlan].netName, inst->groupNames[0])) || (vnetconfig->users[inst->ccnet.vlan].userName[0] != '\0' && strcmp(vnetconfig->users[inst->ccnet.vlan].userName, inst->accountId)) ) {
-            if ((vnetconfig->users[inst->ccnet.vlan].netName[0] != '\0' && strcmp(vnetconfig->users[inst->ccnet.vlan].netName, cleanGroupName))
-                || (vnetconfig->users[inst->ccnet.vlan].userName[0] != '\0' && strcmp(vnetconfig->users[inst->ccnet.vlan].userName, inst->accountId))) {
-                // this means that there is a pre-existing network with the passed in vlan tag, but with a different netName or userName
-                LOGERROR("input instance vlan<->user<->netname mapping is incompatible with internal state. Internal - userName=%s netName=%s "
-                         "vlan=%d.  Instance - userName=%s netName=%s vlan=%d\n", vnetconfig->users[inst->ccnet.vlan].userName,
-                         vnetconfig->users[inst->ccnet.vlan].netName, inst->ccnet.vlan, inst->accountId, cleanGroupName, inst->ccnet.vlan);
-                ret = 1;
-            } else {
-                //  snprintf(vnetconfig->users[inst->ccnet.vlan].netName, 32, "%s", inst->groupNames[0]);
-                snprintf(vnetconfig->users[inst->ccnet.vlan].netName, 64, "%s", cleanGroupName);
-                snprintf(vnetconfig->users[inst->ccnet.vlan].userName, 48, "%s", inst->accountId);
-            }
-        }
-    }
-
-    if (!ret) {
-        // so far so good
-        rc = vnetGenerateNetworkParams(vnetconfig, inst->instanceId, inst->ccnet.vlan, inst->ccnet.networkIndex, inst->ccnet.privateMac,
-                                       inst->ccnet.publicIp, inst->ccnet.privateIp);
-        if (rc) {
-            print_ccInstance("failed to (re)generate network parameters: ", inst);
-            ret = 1;
-        }
-    }
-
-    if (ret) {
-        LOGDEBUG("sync of network cache with instance data FAILED (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n",
-                 inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex);
-    } else {
-        LOGDEBUG("sync of network cache with instance data SUCCESS (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n",
-                 inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex);
-    }
-
-    return (0);
-}
-
-//!
-//!
-//!
-//! @param[in] inst a pointer to the instance structure
-//! @param[in] in a transparent pointer (unused)
-//!
-//! @return
-//!
-//! @pre
-//!
-//! @note
-//!
-int instNetReassignAddrs(ccInstance * inst, void *in)
-{
-    int rc = 0;
-    int ret = 0;
-
-    if (!inst) {
-        return (1);
-    } else if ((strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant"))) {
-        return (0);
-    }
-
-    LOGDEBUG("instanceId=%s publicIp=%s privateIp=%s\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp);
-    if (!strcmp(inst->ccnet.publicIp, "0.0.0.0") || !strcmp(inst->ccnet.privateIp, "0.0.0.0")) {
-        LOGWARN("ignoring instance with unset publicIp/privateIp\n");
-    } else {
-        rc = vnetReassignAddress(vnetconfig, "UNSET", inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan);
-        if (rc) {
-            LOGERROR("cannot reassign address\n");
-            ret = 1;
-        }
-    }
-
-    return (0);
-}
-
-//!
-//!
-//!
-//! @return
-//!
-//! @pre
-//!
-//! @note
-//!
-int clean_network_state(void)
-{
-    int i = 0;
-    int rc = 0;
-    int status = -1;
-    char *pidstr = NULL;
-    char *ipstr = NULL;
-    char ipnetstr[32] = "";
-    char file[EUCA_MAX_PATH] = "";
-    char rootwrap[EUCA_MAX_PATH] = "";
-    vnetConfig *tmpvnetconfig = NULL;
-
-    if (!strcmp(vnetconfig->mode, NETMODE_EDGE) || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
-        LOGDEBUG("no network cleanup required for EDGE or VPCMIDO\n");
-        return (0);
-    }
-
-    tmpvnetconfig = EUCA_ZALLOC(1, sizeof(vnetConfig));
-    if (!tmpvnetconfig) {
-        LOGERROR("out of memory\n");
-        return (-1);
-    }
-
-    snprintf(rootwrap, sizeof(rootwrap), EUCALYPTUS_ROOTWRAP, config->eucahome);
-    memcpy(tmpvnetconfig, vnetconfig, sizeof(vnetConfig));
-
-    rc = vnetUnsetMetadataRedirect(tmpvnetconfig);
-    if (rc) {
-        LOGWARN("failed to unset metadata redirect\n");
-    }
-
-    for (i = 1; i < NUMBER_OF_PUBLIC_IPS; i++) {
-        if (tmpvnetconfig->publicips[i].ip != 0 && tmpvnetconfig->publicips[i].allocated != 0) {
-            ipstr = hex2dot(tmpvnetconfig->publicips[i].ip);
-            snprintf(ipnetstr, sizeof(ipnetstr), "%s/32", ipstr);
-            LOGDEBUG("running command '%s ip addr del %s dev %s'\n", rootwrap, ipnetstr, tmpvnetconfig->pubInterface);
-
-            if ((rc = WEXITSTATUS(euca_execlp(&status, rootwrap, "ip", "addr", "del", ipnetstr, "dev", tmpvnetconfig->pubInterface, NULL))) != EUCA_OK) {
-                if (status && (status != 2)) {
-                    LOGERROR("running cmd '%s ip addr del %s dev %s' failed: cannot remove ip %s. rc=%d status=%d\n",
-                             rootwrap, ipnetstr, tmpvnetconfig->pubInterface, SP(ipstr), rc, status);
-                }
-            }
-            EUCA_FREE(ipstr);
-        }
-    }
-
-    // dhcp
-    snprintf(file, EUCA_MAX_PATH, "%s/euca-dhcp.pid", tmpvnetconfig->path);
-    snprintf(rootwrap, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, tmpvnetconfig->eucahome);
-    if (!check_file(file)) {
-        pidstr = file2str(file);
-        if (pidstr) {
-            rc = safekillfile(file, tmpvnetconfig->dhcpdaemon, 9, rootwrap);
-            if (rc) {
-                LOGERROR("could not terminate dhcpd (%s)\n", tmpvnetconfig->dhcpdaemon);
-            }
-            EUCA_FREE(pidstr);
-        }
-    }
-
-    sem_mywait(VNET);
-    {
-        // stop all running networks
-        for (i = 2; i < NUMBER_OF_VLANS; i++) {
-            if (vnetconfig->networks[i].active) {
-                rc = vnetStopNetwork(vnetconfig, i, vnetconfig->users[i].userName, vnetconfig->users[i].netName);
-                if (rc) {
-                    LOGDEBUG("failed to tear down network rc=%d\n", rc);
-                }
-            }
-        }
-        // clear stored cloudIP
-        vnetconfig->cloudIp = 0;
-    }
-    sem_mypost(VNET);
-
-    // Re-initialize our IPT. We are called when CC is DISABLED
-    vnetIptReInit(vnetconfig, FALSE);
-
-    EUCA_FREE(tmpvnetconfig);
-    return (0);
 }

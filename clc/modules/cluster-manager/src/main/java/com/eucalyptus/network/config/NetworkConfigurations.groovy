@@ -33,7 +33,7 @@ import com.eucalyptus.entities.Entities
 import com.eucalyptus.event.ClockTick
 import com.eucalyptus.event.Listeners
 import com.eucalyptus.event.EventListener as EucaEventListener
-import com.eucalyptus.network.EdgeNetworking
+import com.eucalyptus.network.NetworkingDriver
 import com.eucalyptus.network.IPRange
 import com.eucalyptus.network.NetworkGroups
 import com.eucalyptus.network.PrivateAddresses
@@ -48,6 +48,7 @@ import com.google.common.base.Suppliers
 import com.google.common.collect.Iterables
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
+import com.google.common.primitives.Ints
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -123,25 +124,30 @@ class NetworkConfigurations {
     Addresses.addressManager.update( iterateRangesAsString( networkConfiguration.publicIps ) )
     Entities.transaction( ClusterConfiguration.class ) { EntityTransaction db ->
       Components.lookup(ClusterController.class).services().each { ClusterConfiguration config ->
-        (networkConfiguration?.clusters?.find{ Cluster cluster -> cluster.name == config.partition }?:new Cluster()).with{
-          ClusterConfiguration clusterConfiguration = Entities.uniqueResult( config )
-          clusterConfiguration.networkMode = networkConfiguration.mode ?: 'EDGE'
-          clusterConfiguration.addressesPerNetwork = -1
-          clusterConfiguration.useNetworkTags = false
-          clusterConfiguration.minNetworkTag = -1
-          clusterConfiguration.maxNetworkTag = -1
-          clusterConfiguration.minNetworkIndex = -1
-          clusterConfiguration.maxNetworkIndex = -1
+        (networkConfiguration?.clusters?.find{ Cluster cluster -> cluster.name == config.partition }?:new Cluster()).with {
+          boolean managed = ['MANAGED', 'MANAGED-NOVLAN'].contains(networkConfiguration.mode)
+          ClusterConfiguration clusterConfiguration = Entities.uniqueResult(config)
+          clusterConfiguration.networkMode = networkConfiguration.mode
+          clusterConfiguration.addressesPerNetwork = managed ? ( networkConfiguration?.managedSubnet?.segmentSize ?: ManagedSubnet.DEF_SEGMENT_SIZE ) : -1
+          clusterConfiguration.useNetworkTags = managed
+          clusterConfiguration.minNetworkTag = networkConfiguration?.managedSubnet?.minVlan ?: ManagedSubnet.MIN_VLAN
+          clusterConfiguration.maxNetworkTag = networkConfiguration?.managedSubnet?.maxVlan ?: ManagedSubnet.MAX_VLAN
+          clusterConfiguration.minNetworkIndex = managed ? ManagedSubnet.MIN_INDEX : -1
+          clusterConfiguration.maxNetworkIndex = managed ? ( clusterConfiguration.addressesPerNetwork - 1 ) : -1
 
-          Subnet defaultSubnet = null
-          if ( subnet && subnet.name ) {
-            defaultSubnet = networkConfiguration.subnets?.find{ Subnet s -> s.name?:s.subnet == subnet.name }
-          } else if ( !subnet ) {
-            defaultSubnet = networkConfiguration.subnets?.getAt(0) // must be only one
+          if ( networkConfiguration?.managedSubnet ) {
+            clusterConfiguration.vnetSubnet = networkConfiguration?.managedSubnet?.subnet
+            clusterConfiguration.vnetNetmask = networkConfiguration?.managedSubnet?.netmask
+          } else {
+            Subnet defaultSubnet = null
+            if (subnet && subnet.name) {
+              defaultSubnet = networkConfiguration.subnets?.find { Subnet s -> s.name ?: s.subnet == subnet.name }
+            } else if (!subnet) {
+              defaultSubnet = networkConfiguration.subnets?.getAt(0) // must be only one
+            }
+            clusterConfiguration.vnetSubnet = subnet?.subnet ?: defaultSubnet?.subnet
+            clusterConfiguration.vnetNetmask = subnet?.netmask ?: defaultSubnet?.netmask
           }
-
-          clusterConfiguration.vnetSubnet = subnet?.subnet?:defaultSubnet?.subnet
-          clusterConfiguration.vnetNetmask = subnet?.netmask?:defaultSubnet?.netmask
         }
       }
       db.commit( );
@@ -149,17 +155,17 @@ class NetworkConfigurations {
   }
 
   @Nullable
-  static Subnet getSubnetForCluster( NetworkConfiguration configuration, String clusterName ) {
-    Subnet defaultSubnet = 1==(configuration?.subnets?.size()?:0) ? configuration?.subnets[0] : null
+  static EdgeSubnet getSubnetForCluster( NetworkConfiguration configuration, String clusterName ) {
+    EdgeSubnet defaultSubnet = 1==(configuration?.subnets?.size()?:0) ? configuration?.subnets[0] : null
     Cluster cluster = configuration.clusters?.find{ Cluster cluster -> clusterName == cluster.name }
-    Subnet clusterSubnetFallback = cluster?.subnet?.name ?
-        configuration?.subnets?.find{ Subnet subnet -> (subnet.name?:subnet.subnet)==cluster?.subnet?.name }?:defaultSubnet :
+    EdgeSubnet clusterSubnetFallback = cluster?.subnet?.name ?
+        configuration?.subnets?.find{ EdgeSubnet subnet -> (subnet.name?:subnet.subnet)==cluster?.subnet?.name }?:defaultSubnet :
         defaultSubnet
     String name = cluster?.subnet?.name?:cluster?.subnet?.subnet?:clusterSubnetFallback?.name?:clusterSubnetFallback?.subnet
     String subnet = cluster?.subnet?.subnet?:clusterSubnetFallback?.subnet
     String netmask = cluster?.subnet?.netmask?:clusterSubnetFallback?.netmask
     String gateway = cluster?.subnet?.gateway?:clusterSubnetFallback?.gateway
-    subnet && netmask && gateway ? new Subnet(
+    subnet && netmask && gateway ? new EdgeSubnet(
       name: name,
       subnet: subnet,
       netmask: netmask,
@@ -170,12 +176,13 @@ class NetworkConfigurations {
   static Collection<String> getPrivateAddressRanges( NetworkConfiguration configuration, String clusterName ) {
     NetworkConfigurations.explode( configuration, [ clusterName ] ).with{ NetworkConfiguration exploded ->
       exploded.clusters.find{ Cluster cluster -> cluster.name == clusterName }.with{ Cluster cluster ->
-        if ( cluster.subnet == null || !cluster.privateIps ) {
+        if ( cluster.subnet == null ) {
           // We check the subnet since if this is not configured the
           // request will fail on the back end
           throw new IllegalStateException( "Networking configuration not found for cluster '${clusterName}'" )
         }
-        cluster.privateIps
+
+        cluster.privateIps ? cluster.privateIps : [ ] as List<String>
       }
     }
   }
@@ -264,7 +271,11 @@ class NetworkConfigurations {
       if ( cluster.privateIps == null && configuration.privateIps ) {
         cluster.privateIps = configuration.privateIps
       } else if ( !cluster.privateIps && subnet ) {
-        cluster.privateIps = subnet.with{ IPRange.fromSubnet( subnet, netmask ).split( gateway ).collect{ IPRange range -> range.toString( ) } }
+        if ( subnet.gateway && !subnet.gateway.isEmpty( ) && !subnet.gateway.isAllWhitespace( ) ) {
+          cluster.privateIps = subnet.with {IPRange.fromSubnet(subnet, netmask).split(gateway).collect { IPRange range -> range.toString() }}
+        } else {
+          cluster.privateIps = [ ] as List<String>
+        }
       }
 
       void
@@ -374,19 +385,36 @@ class NetworkConfigurations {
       final Map<String,String> properties
   ) {
     Optional<NetworkConfiguration> configuration = Optional.absent( )
-    if ( 'EDGE' == getTrimmedDequotedProperty( properties, 'VNET_MODE' ) ) {
+    String mode = getTrimmedDequotedProperty( properties, 'VNET_MODE' )
+    if ( 'EDGE' == mode ) {
       configuration = Optional.of( new NetworkConfiguration(
+          mode: mode,
           instanceDnsDomain: getTrimmedDequotedProperty( properties, "VNET_DOMAINNAME" ),
           instanceDnsServers: primaryInstanceDnsServers + [ getTrimmedDequotedProperty( properties, "VNET_DNS" ) ] as List<String>,
           publicIps: getFilteredDequotedPropertyList(  properties, 'VNET_PUBLICIPS', IPRange.&isIPRange ),
           privateIps: getFilteredDequotedPropertyList(  properties, 'VNET_PRIVATEIPS', IPRange.&isIPRange ),
           subnets: [
-              new Subnet(
+              new EdgeSubnet(
                   subnet: getTrimmedDequotedProperty( properties, "VNET_SUBNET" ),
-                  netmask: getTrimmedDequotedProperty( properties, "VNET_NETMASK" ) ,
+                  netmask: getTrimmedDequotedProperty( properties, "VNET_NETMASK" ),
                   gateway: getTrimmedDequotedProperty( properties, "VNET_ROUTER" )
               )
           ]
+      ) )
+    } else if ( 'MANAGED' == mode || 'MANAGED-NOVLAN' == mode ) {
+      configuration = Optional.of( new NetworkConfiguration(
+          mode: mode,
+          instanceDnsDomain: getTrimmedDequotedProperty( properties, "VNET_DOMAINNAME" ),
+          instanceDnsServers: primaryInstanceDnsServers + [ getTrimmedDequotedProperty( properties, "VNET_DNS" ) ] as List<String>,
+          publicIps: getFilteredDequotedPropertyList(  properties, 'VNET_PUBLICIPS', IPRange.&isIPRange ),
+          privateIps: getFilteredDequotedPropertyList(  properties, 'VNET_PRIVATEIPS', IPRange.&isIPRange ),
+          managedSubnet: new ManagedSubnet(
+              subnet: getTrimmedDequotedProperty( properties, "VNET_SUBNET" ),
+              netmask: getTrimmedDequotedProperty( properties, "VNET_NETMASK" ),
+              minVlan: ManagedSubnet.MIN_VLAN,
+              maxVlan: ManagedSubnet.MAX_VLAN,
+              segmentSize: properties.containsKey( "VNET_ADDRSPERNET" ) ? getTrimmedDequotedIntProperty( properties, "VNET_ADDRSPERNET" ) : ManagedSubnet.DEF_SEGMENT_SIZE
+            )
       ) )
     }
     configuration
@@ -396,6 +424,10 @@ class NetworkConfigurations {
     properties.get( name, '' ).trim( ).with{
       startsWith('"') && endsWith('"') ? substring( 1, length() - 1 ) : toString( )
     }.trim( )?:null
+  }
+
+  private static Integer getTrimmedDequotedIntProperty( Map<String,String> properties, String name ) {
+    Ints.tryParse( getTrimmedDequotedProperty( properties, name ) )
   }
 
   private static List<String> getFilteredDequotedPropertyList( Map<String,String> properties, String name, Closure filter ) {
@@ -439,14 +471,14 @@ class NetworkConfigurations {
         try {
           Optional<NetworkConfiguration> configurationOptional = NetworkConfigurations.networkConfigurationFromProperty
           if ( !configurationOptional.isPresent( ) ) {
-            EdgeNetworking.configured = false
-            if ( EdgeNetworking.isEnabled( ) ) { // Configure from environment if possible
+            NetworkingDriver.configured = false
+            if ( NetworkingDriver.isEnabled( ) ) { // Configure from environment if possible
               configurationOptional = NetworkConfigurations.networkConfigurationFromEnvironment
             }
           } else {
-            EdgeNetworking.configured = true
+            NetworkingDriver.configured = true
           }
-          if ( EdgeNetworking.isEnabled( ) ) {
+          if ( NetworkingDriver.isEnabled( ) ) {
             Iterables.all(
                 configurationOptional.or( NetworkConfigurations.networkConfigurationFromEnvironmentSupplier.get( ) ).asSet( ),
                 Entities.asTransaction( ClusterConfiguration.class, { NetworkConfiguration networkConfiguration ->

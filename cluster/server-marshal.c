@@ -81,13 +81,11 @@
 
 #include <eucalyptus.h>
 #include <misc.h>
-#include <vnetwork.h>
+#include <euca_network.h>
 
 #include "handlers.h"
 #include "server-marshal.h"
 #include <adb-helpers.h>
-
-
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -123,6 +121,7 @@
 \*----------------------------------------------------------------------------*/
 
 /* Should preferably be handled in header file */
+extern euca_network *gpEucaNet;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -376,7 +375,7 @@ adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t * bundl
 
     //update stats and return
     call_time = time_ms() - call_time;
-    cached_message_stats_update("BundleInstance" , (long)call_time, rc);
+    cached_message_stats_update("BundleInstance", (long)call_time, rc);
 
     return (ret);
 }
@@ -614,7 +613,6 @@ reply:
     call_time = time_ms() - call_time;
     cached_message_stats_update("DescribeSensors", (long)call_time, result);
 
-
     return response;
 }
 
@@ -700,27 +698,21 @@ adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t * stopNetwork, c
 //!
 adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t * describeNetworks, const axutil_env_t * env)
 {
-    adb_DescribeNetworksResponse_t *ret = NULL;
-    adb_describeNetworksResponseType_t *snrt = NULL;
-    adb_describeNetworksType_t *snt = NULL;
-    adb_networkType_t *nt = NULL;
-    int rc = 0;
     int i = 0;
-    int j = 0;
-    axis2_bool_t status = AXIS2_TRUE;
+    int rc = 0;
+    int numAddrs = 0;
+    int clusterControllersLen = 0;
     char *incc = NULL;
     char statusMessage[256] = { 0 };
     char **clusterControllers = NULL;
     char *vmsubdomain = NULL;
     char *nameservers = NULL;
-    char *vnetSubnet = NULL;
-    char *vnetNetmask = NULL;
-    int clusterControllersLen = 0;
+    char *psNumAddrs = NULL;
     ncMetadata ccMeta = { 0 };
-    vnetConfig *outvnetConfig = NULL;
-    long long call_time = time_ms();
-
-    outvnetConfig = EUCA_ZALLOC(1, sizeof(vnetConfig));
+    axis2_bool_t status = AXIS2_TRUE;
+    adb_describeNetworksType_t *snt = NULL;
+    adb_DescribeNetworksResponse_t *ret = NULL;
+    adb_describeNetworksResponseType_t *snrt = NULL;
 
     snt = adb_DescribeNetworks_get_DescribeNetworks(describeNetworks, env);
     EUCA_MESSAGE_UNMARSHAL(describeNetworksType, snt, (&ccMeta));
@@ -732,63 +724,47 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
     clusterControllers = EUCA_ZALLOC(clusterControllersLen, sizeof(char *));
     for (i = 0; i < clusterControllersLen; i++) {
         incc = adb_describeNetworksType_get_clusterControllers_at(snt, env, i);
-        clusterControllers[i] = host2ip(incc);
+        HOST2IP(incc, &clusterControllers[i]);
     }
 
     snrt = adb_describeNetworksResponseType_create(env);
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
-        rc = doDescribeNetworks(&ccMeta, vmsubdomain, nameservers, clusterControllers, clusterControllersLen, outvnetConfig);
-        unset_corrid(corr_id);
-        if (rc) {
-            LOGERROR("doDescribeNetworks() failed: %d (%s, %s)\n", rc, vmsubdomain, nameservers);
+        if ((rc = doDescribeNetworks(&ccMeta, clusterControllers, clusterControllersLen)) != 0) {
+            LOGERROR("doDescribeNetworks() failed with %d\n", rc);
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         } else {
-            if (!strcmp(outvnetConfig->mode, NETMODE_MANAGED) || !strcmp(outvnetConfig->mode, NETMODE_MANAGED_NOVLAN)) {
-                adb_describeNetworksResponseType_set_useVlans(snrt, env, 1);
-            } else {
-                adb_describeNetworksResponseType_set_useVlans(snrt, env, 0);
-            }
-            adb_describeNetworksResponseType_set_mode(snrt, env, outvnetConfig->mode);
-            adb_describeNetworksResponseType_set_addrsPerNet(snrt, env, outvnetConfig->numaddrs);
-            adb_describeNetworksResponseType_set_addrIndexMin(snrt, env, outvnetConfig->addrIndexMin);
-            adb_describeNetworksResponseType_set_addrIndexMax(snrt, env, outvnetConfig->addrIndexMax);
+            sem_mywait(NETCONFIG);
+            {
+                if (!gpEucaNet) {
+                    LOGERROR("doDescribeNetworks() failed. Network mode not known yet.\n");
+                    status = AXIS2_FALSE;
+                    snprintf(statusMessage, 255, "ERROR");
+                } else {
+                    adb_describeNetworksResponseType_set_mode(snrt, env, gpEucaNet->sMode);
+                    if (!strcmp(gpEucaNet->sMode, NETMODE_MANAGED) || !strcmp(gpEucaNet->sMode, NETMODE_MANAGED_NOVLAN)) {
+                        psNumAddrs = configFileValue("VNET_ADDRSPERNET");
+                        numAddrs = atoi(psNumAddrs);
+                        EUCA_FREE(psNumAddrs);
 
-            vnetSubnet = hex2dot(outvnetConfig->nw);
-            if (vnetSubnet) {
-                adb_describeNetworksResponseType_set_vnetSubnet(snrt, env, vnetSubnet);
-                EUCA_FREE(vnetSubnet);
-            }
-
-            vnetNetmask = hex2dot(outvnetConfig->nm);
-            if (vnetNetmask) {
-                adb_describeNetworksResponseType_set_vnetNetmask(snrt, env, vnetNetmask);
-                EUCA_FREE(vnetNetmask);
-            }
-            adb_describeNetworksResponseType_set_vlanMin(snrt, env, 2);
-            adb_describeNetworksResponseType_set_vlanMax(snrt, env, outvnetConfig->max_vlan);
-
-            for (i = 2; i < NUMBER_OF_VLANS; i++) {
-                if (outvnetConfig->networks[i].active) {
-                    nt = adb_networkType_create(env);
-                    adb_networkType_set_uuid(nt, env, outvnetConfig->users[i].uuid);
-                    adb_networkType_set_vlan(nt, env, i);
-                    adb_networkType_set_netName(nt, env, outvnetConfig->users[i].netName);
-                    adb_networkType_set_userName(nt, env, outvnetConfig->users[i].userName);
-                    for (j = 0; j < NUMBER_OF_HOSTS_PER_VLAN; j++) {
-                        if (outvnetConfig->networks[i].addrs[j].active) {
-                            adb_networkType_add_activeAddrs(nt, env, j);
-                        }
+                        adb_describeNetworksResponseType_set_useVlans(snrt, env, 1);
+                        adb_describeNetworksResponseType_set_addrsPerNet(snrt, env, numAddrs);
+                        adb_describeNetworksResponseType_set_addrIndexMin(snrt, env, 9);    // MAX NUM CC + 1
+                        adb_describeNetworksResponseType_set_addrIndexMax(snrt, env, (numAddrs - 2));
+                    } else {
+                        adb_describeNetworksResponseType_set_useVlans(snrt, env, 0);
                     }
-                    adb_describeNetworksResponseType_add_activeNetworks(snrt, env, nt);
+
+                    adb_describeNetworksResponseType_set_vlanMin(snrt, env, MIN_VLAN_EUCA);
+                    adb_describeNetworksResponseType_set_vlanMax(snrt, env, NB_VLAN_802_1Q);
+                    status = AXIS2_TRUE;
                 }
             }
-
-            status = AXIS2_TRUE;
+            sem_mypost(NETCONFIG);
         }
     }
+
     for (i = 0; i < clusterControllersLen; i++) {
         EUCA_FREE(clusterControllers[i]);
     }
@@ -804,13 +780,6 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
 
     ret = adb_DescribeNetworksResponse_create(env);
     adb_DescribeNetworksResponse_set_DescribeNetworksResponse(ret, env, snrt);
-
-    EUCA_FREE(outvnetConfig);
-
-    //update stats and return
-    call_time = time_ms() - call_time;
-    cached_message_stats_update("DescribeNetworks", (long)call_time, rc);
-
     return (ret);
 }
 
@@ -828,62 +797,61 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
 //!
 adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_DescribePublicAddresses_t * describePublicAddresses, const axutil_env_t * env)
 {
+    int i = 0;
+    int rc = 0;
+    int nbInstances = 0;
+    char *psUuid = NULL;
+    char *psPubIp = NULL;
+    char *psPubIps = NULL;
+    char *psPrivIp = NULL;
+    char *pTokenSaveStr = NULL;
+    char statusMessage[256] = "";
+    long long call_time = time_ms();
+    ncMetadata ccMeta = { 0 };
+    ccInstance *pOutInsts = NULL;
+    axis2_bool_t status = AXIS2_TRUE;
+    adb_publicAddressType_t *addr = NULL;
     adb_describePublicAddressesType_t *dpa = NULL;
     adb_DescribePublicAddressesResponse_t *ret = NULL;
     adb_describePublicAddressesResponseType_t *dpart = NULL;
-    adb_publicAddressType_t *addr;
-    axis2_bool_t status = AXIS2_TRUE;
-    char statusMessage[256], *ipstr = NULL;
-    int rc = 0;
-    int outAddressesLen = 0;
-    int i = 0;
-    ncMetadata ccMeta = { 0 };
-    publicip *outAddresses = NULL;
-    long long call_time = time_ms();
 
     dpa = adb_DescribePublicAddresses_get_DescribePublicAddresses(describePublicAddresses, env);
     EUCA_MESSAGE_UNMARSHAL(describePublicAddressesType, dpa, (&ccMeta));
 
     if (!DONOTHING) {
-        threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
-        rc = doDescribePublicAddresses(&ccMeta, &outAddresses, &outAddressesLen);
-        unset_corrid(corr_id);
-    }
-
-    if (rc == 2) {
-        snprintf(statusMessage, 256, "NOTSUPPORTED");
-        status = AXIS2_FALSE;
-        outAddressesLen = 0;
-    } else if (rc) {
-        LOGERROR("doDescribePublicAddresses() failed: %d\n", rc);
-        snprintf(statusMessage, 256, "ERROR");
-        status = AXIS2_FALSE;
-        outAddressesLen = 0;
-    } else {
-        status = AXIS2_TRUE;
+        rc = doDescribeInstances(&ccMeta, NULL, 0, &pOutInsts, &nbInstances);
     }
 
     dpart = adb_describePublicAddressesResponseType_create(env);
-    for (i = 0; i < outAddressesLen; i++) {
-        if (outAddresses[i].ip) {
-            addr = adb_publicAddressType_create(env);
+    if (!strcmp(gpEucaNet->sMode, NETMODE_MANAGED) || !strcmp(gpEucaNet->sMode, NETMODE_MANAGED_NOVLAN)) {
+        psPubIps = configFileValue("VNET_PUBLICIPS");
 
-            adb_publicAddressType_set_uuid(addr, env, outAddresses[i].uuid);
-
-            ipstr = hex2dot(outAddresses[i].ip);
-            adb_publicAddressType_set_sourceAddress(addr, env, ipstr);
-            EUCA_FREE(ipstr);
-
-            if (outAddresses[i].dstip) {
-                ipstr = hex2dot(outAddresses[i].dstip);
-                adb_publicAddressType_set_destAddress(addr, env, ipstr);
-                EUCA_FREE(ipstr);
-            } else {
-                adb_publicAddressType_set_destAddress(addr, env, "0.0.0.0");
+        psPubIp = strtok_r(psPubIps, " ", &pTokenSaveStr);
+        while (psPubIp) {
+            psUuid = NULL;
+            psPrivIp = NULL;
+            if (pOutInsts) {
+                for (i = 0; ((i < nbInstances) && !psPrivIp); i++) {
+                    if (!strcmp(psPubIp, pOutInsts[i].ccnet.publicIp)) {
+                        psPrivIp = pOutInsts[i].ccnet.privateIp;
+                        psUuid = pOutInsts[i].uuid;
+                    }
+                }
             }
+            psUuid = ((psUuid) ? psUuid : "");
+            psPrivIp = ((psPrivIp) ? psPrivIp : "0.0.0.0");
 
+            addr = adb_publicAddressType_create(env);
+            adb_publicAddressType_set_uuid(addr, env, psUuid);
+            adb_publicAddressType_set_sourceAddress(addr, env, psPubIp);
+            adb_publicAddressType_set_destAddress(addr, env, psPrivIp);
             adb_describePublicAddressesResponseType_add_addresses(dpart, env, addr);
+
+            psPubIp = strtok_r(NULL, " ", &pTokenSaveStr);
         }
+
+        EUCA_FREE(psPubIps);
+        EUCA_FREE(pOutInsts);
     }
 
     adb_describePublicAddressesResponseType_set_correlationId(dpart, env, ccMeta.correlationId);
@@ -917,15 +885,15 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
 //!
 adb_BroadcastNetworkInfoResponse_t *BroadcastNetworkInfoMarshal(adb_BroadcastNetworkInfo_t * broadcastNetworkInfo, const axutil_env_t * env)
 {
+    int rc = 0;
+    char statusMessage[256] = { 0 };
+    char *networkInfo = NULL;
+    long long call_time = time_ms();
+    ncMetadata ccMeta = { 0 };
+    axis2_bool_t status = AXIS2_TRUE;
     adb_BroadcastNetworkInfoResponse_t *ret = NULL;
     adb_broadcastNetworkInfoResponseType_t *response = NULL;
     adb_broadcastNetworkInfoType_t *input = NULL;
-    int rc = 0;
-    axis2_bool_t status = AXIS2_TRUE;
-    char statusMessage[256] = { 0 };
-    char *networkInfo = NULL;
-    ncMetadata ccMeta = { 0 };
-    long long call_time = time_ms();
 
     input = adb_BroadcastNetworkInfo_get_BroadcastNetworkInfo(broadcastNetworkInfo, env);
 
@@ -1105,147 +1073,22 @@ adb_UnassignAddressResponse_t *UnassignAddressMarshal(adb_UnassignAddress_t * un
 //!
 adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t * configureNetwork, const axutil_env_t * env)
 {
+    ncMetadata ccMeta = { 0 };
+    adb_configureNetworkType_t *cnt = NULL;
     adb_ConfigureNetworkResponse_t *ret = NULL;
     adb_configureNetworkResponseType_t *cnrt = NULL;
-    adb_configureNetworkType_t *cnt = NULL;
-    adb_networkRule_t *nr = NULL;
-    int rc = 0;
-    int i = 0;
-    int ruleLen = 0;
-    int j = 0;
-    int done = 0;
-    axis2_bool_t status = AXIS2_TRUE;
-    char statusMessage[256] = { 0 };
-    char **sourceNets = NULL;
-    char **userNames = NULL;
-    char **sourceNames = NULL;
-    char *protocol = NULL;
-    char *destName = NULL;
-    char *type = NULL;
-    char *destNameLast = NULL;
-    char *destUserName = NULL;
-    char *accountId = NULL;
-    int minPort = 0;
-    int maxPort = 0;
-    int namedLen = 0;
-    int netLen = 0;
-    ncMetadata ccMeta = { 0 };
-    long long call_time = time_ms();
 
     cnt = adb_ConfigureNetwork_get_ConfigureNetwork(configureNetwork, env);
     EUCA_MESSAGE_UNMARSHAL(configureNetworkType, cnt, (&ccMeta));
 
-    accountId = adb_configureNetworkType_get_accountId(cnt, env);
-    if (!accountId) {
-        accountId = ccMeta.userId;
-    }
-
-    ruleLen = adb_configureNetworkType_sizeof_rules(cnt, env);
-    done = 0;
-    destNameLast = strdup("EUCAFIRST");
-    if (!destNameLast) {
-        LOGERROR("out of memory\n");
-        status = AXIS2_FALSE;
-        snprintf(statusMessage, 255, "ERROR");
-        return ret;
-    }
-
-    for (j = 0; j < ruleLen && !done; j++) {
-        nr = adb_configureNetworkType_get_rules_at(cnt, env, j);
-        type = adb_networkRule_get_type(nr, env);
-        destName = adb_networkRule_get_destName(nr, env);
-        destUserName = adb_networkRule_get_destUserName(nr, env);
-        protocol = adb_networkRule_get_protocol(nr, env);
-        minPort = adb_networkRule_get_portRangeMin(nr, env);
-        maxPort = adb_networkRule_get_portRangeMax(nr, env);
-
-        if (strcmp(destName, destNameLast)) {
-            doFlushNetwork(&ccMeta, accountId, destName);
-        }
-
-        EUCA_FREE(destNameLast);
-        destNameLast = strdup(destName);
-        if (!destNameLast) {
-            LOGERROR("out of memory\n");
-            status = AXIS2_FALSE;
-            snprintf(statusMessage, 255, "ERROR");
-            return ret;
-        }
-
-        userNames = NULL;
-        namedLen = adb_networkRule_sizeof_userNames(nr, env);
-        if (namedLen) {
-            userNames = EUCA_ZALLOC(namedLen, sizeof(char *));
-        }
-
-        sourceNames = NULL;
-        namedLen = adb_networkRule_sizeof_sourceNames(nr, env);
-        if (namedLen) {
-            sourceNames = EUCA_ZALLOC(namedLen, sizeof(char *));
-        }
-
-        sourceNets = NULL;
-        netLen = adb_networkRule_sizeof_sourceNets(nr, env);
-        if (netLen) {
-            sourceNets = EUCA_ZALLOC(netLen, sizeof(char *));
-        }
-
-        for (i = 0; i < namedLen; i++) {
-            if (userNames) {
-                userNames[i] = adb_networkRule_get_userNames_at(nr, env, i);
-            }
-
-            if (sourceNames) {
-                sourceNames[i] = adb_networkRule_get_sourceNames_at(nr, env, i);
-            }
-        }
-
-        for (i = 0; i < netLen; i++) {
-            if (sourceNets) {
-                sourceNets[i] = adb_networkRule_get_sourceNets_at(nr, env, i);
-            }
-        }
-
-        cnrt = adb_configureNetworkResponseType_create(env);
-
-        rc = 1;
-        if (!DONOTHING) {
-            threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
-            rc = doConfigureNetwork(&ccMeta, accountId, type, namedLen, sourceNames, userNames, netLen, sourceNets, destName, destUserName, protocol, minPort, maxPort);
-            unset_corrid(corr_id);
-        }
-
-        EUCA_FREE(userNames);
-        EUCA_FREE(sourceNames);
-        EUCA_FREE(sourceNets);
-
-        if (rc) {
-            done++;
-        }
-    }
-    EUCA_FREE(destNameLast);
-
-    if (done) {
-        LOGERROR("doConfigureNetwork() failed: %d (%s, %s, %d, %d)\n", rc, accountId, type, namedLen, netLen);
-        status = AXIS2_FALSE;
-        snprintf(statusMessage, 255, "ERROR");
-    } else {
-        status = AXIS2_TRUE;
-    }
+    cnrt = adb_configureNetworkResponseType_create(env);
 
     adb_configureNetworkResponseType_set_correlationId(cnrt, env, ccMeta.correlationId);
     adb_configureNetworkResponseType_set_userId(cnrt, env, ccMeta.userId);
-    adb_configureNetworkResponseType_set_return(cnrt, env, status);
-    if (status == AXIS2_FALSE) {
-        adb_configureNetworkResponseType_set_statusMessage(cnrt, env, statusMessage);
-    }
+    adb_configureNetworkResponseType_set_return(cnrt, env, AXIS2_TRUE);
 
     ret = adb_ConfigureNetworkResponse_create(env);
     adb_ConfigureNetworkResponse_set_ConfigureNetworkResponse(ret, env, cnrt);
-
-    //update stats and return
-    call_time = time_ms() - call_time;
-    cached_message_stats_update("ConfigureNetwork", (long)call_time, rc);
 
     return (ret);
 }
@@ -1339,6 +1182,7 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t * startNetwor
     axis2_bool_t status = AXIS2_TRUE;
     char statusMessage[256] = { 0 };
     char *netName = NULL;
+    char *groupId = NULL;
     char **clusterControllers = NULL;
     char *vmsubdomain = NULL;
     char *nameservers = NULL;
@@ -1354,6 +1198,7 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t * startNetwor
 
     vlan = adb_startNetworkType_get_vlan(snt, env);
     netName = adb_startNetworkType_get_netName(snt, env);
+    groupId = adb_startNetworkType_get_groupId(snt, env);
     vmsubdomain = adb_startNetworkType_get_vmsubdomain(snt, env);
     nameservers = adb_startNetworkType_get_nameserver(snt, env);
     uuid = adb_startNetworkType_get_uuid(snt, env);
@@ -1365,14 +1210,14 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t * startNetwor
     clusterControllersLen = adb_startNetworkType_sizeof_clusterControllers(snt, env);
     clusterControllers = EUCA_ZALLOC(clusterControllersLen, sizeof(char *));
     for (i = 0; i < clusterControllersLen; i++) {
-        clusterControllers[i] = host2ip(adb_startNetworkType_get_clusterControllers_at(snt, env, i));
+        HOST2IP(adb_startNetworkType_get_clusterControllers_at(snt, env, i), &clusterControllers[i]);
     }
 
     snrt = adb_startNetworkResponseType_create(env);
     status = AXIS2_TRUE;
     if (!DONOTHING) {
         threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
-        rc = doStartNetwork(&ccMeta, accountId, uuid, netName, vlan, vmsubdomain, nameservers, clusterControllers, clusterControllersLen);
+        rc = doStartNetwork(&ccMeta, accountId, uuid, groupId, netName, vlan, vmsubdomain, nameservers, clusterControllers, clusterControllersLen);
         unset_corrid(corr_id);
         if (rc) {
             LOGERROR("doStartNetwork() failed: %d (%s, %s, %s, %d)\n", rc, accountId, uuid, netName, vlan);
@@ -1719,6 +1564,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     int vlan = 0;
     int instIdsLen = 0;
     int netNamesLen = 0;
+    int netIdsLen = 0;
     int macAddrsLen = 0;
     int privateIpsLen = 0;
     int *networkIndexList = NULL;
@@ -1732,6 +1578,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     char **instIds = NULL;
     char *reservationId = NULL;
     char **netNames = NULL;
+    char **netIds = NULL;
     char **macAddrs = NULL;
     char **privateIps = NULL;
     char *kernelId = NULL;
@@ -1818,8 +1665,19 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     if (netNamesLen > 1) {
         netNamesLen = 1;
     }
+
     for (i = 0; i < netNamesLen; i++) {
         netNames[i] = adb_runInstancesType_get_netNames_at(rit, env, i);
+    }
+
+    netIdsLen = adb_runInstancesType_sizeof_netIds(rit, env);
+    netIds = EUCA_ZALLOC(netIdsLen, sizeof(char *));
+    if (netIdsLen > 1) {
+        netIdsLen = 1;
+    }
+
+    for (i = 0; i < netIdsLen; i++) {
+        netIds[i] = adb_runInstancesType_get_netIds_at(rit, env, i);
     }
 
     macAddrsLen = adb_runInstancesType_sizeof_macAddresses(rit, env);
@@ -1863,7 +1721,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     rc = 1;
     if (!DONOTHING) {
         threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
-        rc = doRunInstances(&ccMeta, emiId, kernelId, ramdiskId, emiURL, kernelURL, ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, macAddrs,
+        rc = doRunInstances(&ccMeta, emiId, kernelId, ramdiskId, emiURL, kernelURL, ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, netIds, netIdsLen, macAddrs,
                             macAddrsLen, networkIndexList, networkIndexListLen, uuids, uuidsLen, privateIps, privateIpsLen, minCount, maxCount, accountId, ownerId,
                             reservationId, &ccvm, keyName, vlan, userData, credential, launchIndex, platform, expiryTime, NULL, rootDirective, &outInsts, &outInstsLen);
         unset_corrid(corr_id);

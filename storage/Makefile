@@ -80,6 +80,7 @@ TEST_DISKUTIL_OBJS  =                                            map.o          
 
 STORAGE_LIBS    = $(LDFLAGS) -lcurl -lssl -lcrypto -pthread -lpthread
 TESTS           = test_vbr test_blobstore test_ebs test_diskutil
+CFLAGS         += 
 #EFENCE          = -lefence
 
 #all: vbr.o backing.o storage-windows.o objectstorage.o diskutil.o map.o Wclient euca-blobs generated/stubs $(SCCLIENT) $(TESTS)
@@ -153,9 +154,6 @@ vbr_no_ebs.o: vbr.c vbr.h
 
 ../util/data.o: ../util/data.c ../util/data.h ../util/eucalyptus.h
 	make -C ../util
-
-../net/vnetwork.o: ../net/vnetwork.c
-	make -C ../net
 
 ../util/euca_auth.o: ../util/euca_auth.c ../util/data.h ../util/eucalyptus.h
 	make -C ../util

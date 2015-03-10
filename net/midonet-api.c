@@ -64,8 +64,8 @@
  ************************************************************************/
 
 //!
-//! @file util/template.c
-//! Template source file
+//! @file net/midonet-api.c
+//! Need description
 //!
 
 /*----------------------------------------------------------------------------*\
@@ -88,7 +88,6 @@
 
 #include <eucalyptus.h>
 #include <misc.h>
-#include <vnetwork.h>
 #include <euca_string.h>
 #include <log.h>
 #include <hash.h>
@@ -96,11 +95,13 @@
 #include <http.h>
 #include <config.h>
 #include <sequence_executor.h>
-#include <ipt_handler.h>
 #include <atomic_file.h>
 #include <log.h>
 
-#include "globalnetwork.h"
+#include "ipt_handler.h"
+#include "ips_handler.h"
+#include "ebt_handler.h"
+#include "euca_gni.h"
 #include "midonet-api.h"
 
 /*----------------------------------------------------------------------------*\
@@ -127,6 +128,11 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+struct mem_params_t {
+    char *mem;
+    size_t size;
+};
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                             EXTERNAL VARIABLES                             |
@@ -141,6 +147,21 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//!
+//!
+//!
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 void mido_print_midoname(midoname * name)
 {
     //    printf("init=%d tenant=%s name=%s uuid=%s resource_type=%s content_type=%s jsonbuf=%s\n", name->init, SP(name->tenant), SP(name->name), SP(name->uuid), SP(name->resource_type), SP(name->content_type), SP(name->jsonbuf));
@@ -148,6 +169,22 @@ void mido_print_midoname(midoname * name)
              SP(name->content_type));
 }
 
+//!
+//!
+//!
+//! @param[in] name
+//! @param[in] max_name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 void mido_free_midoname_list(midoname * name, int max_name)
 {
     int i = 0;
@@ -157,6 +194,21 @@ void mido_free_midoname_list(midoname * name, int max_name)
     }
 }
 
+//!
+//!
+//!
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 void mido_free_midoname(midoname * name)
 {
 
@@ -172,6 +224,23 @@ void mido_free_midoname(midoname * name)
     bzero(name, sizeof(midoname));
 }
 
+//!
+//!
+//!
+//! @param[in]  name
+//! @param[in]  key
+//! @param[out] val
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_getel_midoname(midoname * name, char *key, char **val)
 {
     int ret = 0;
@@ -201,6 +270,23 @@ int mido_getel_midoname(midoname * name, char *key, char **val)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in]  tenant
+//! @param[in]  name
+//! @param[out] outname
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_create_router(char *tenant, char *name, midoname * outname)
 {
     int rc;
@@ -220,12 +306,43 @@ int mido_create_router(char *tenant, char *name, midoname * outname)
 }
 
 /*
+//!
+//!
+//!
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_read_router(midoname * name)
 {
     return (mido_read_resource("routers", name, NULL));
 }
 */
 
+//!
+//!
+//!
+//! @param[in] name
+//! @param[in] ... variable argument section
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_update_router(midoname * name, ...)
 {
     va_list al = { {0} };
@@ -237,16 +354,63 @@ int mido_update_router(midoname * name, ...)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_print_router(midoname * name)
 {
     return (mido_print_resource("routers", name));
 }
 
+//!
+//!
+//!
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_delete_router(midoname * name)
 {
     return (mido_delete_resource(NULL, name));
 }
 
+//!
+//!
+//!
+//! @param[in]  tenant
+//! @param[in]  name
+//! @param[out] outname
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_create_bridge(char *tenant, char *name, midoname * outname)
 {
     int rc;
@@ -275,12 +439,43 @@ int mido_create_bridge(char *tenant, char *name, midoname * outname)
 }
 
 /*
+//!
+//!
+//!
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_read_bridge(midoname * name)
 {
     return (mido_read_resource("bridges", name, NULL));
 }
 */
 
+//!
+//!
+//!
+//! @param[in] name
+//! @param[in] ... variable argument section
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_update_bridge(midoname * name, ...)
 {
     va_list al = { {0} };
@@ -292,16 +487,63 @@ int mido_update_bridge(midoname * name, ...)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_print_bridge(midoname * name)
 {
     return (mido_print_resource("bridges", name));
 }
 
+//!
+//!
+//!
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_delete_bridge(midoname * name)
 {
     return (mido_delete_resource(NULL, name));
 }
 
+//!
+//!
+//!
+//! @param[in]  tenant
+//! @param[in]  name
+//! @param[out] outname
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_create_ipaddrgroup(char *tenant, char *name, midoname * outname)
 {
     int rc = 0, max_iags = 0, found = 0, i;
@@ -342,12 +584,43 @@ int mido_create_ipaddrgroup(char *tenant, char *name, midoname * outname)
 }
 
 /*
+//!
+//!
+//!
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_read_ipaddrgroup(midoname * name)
 {
     return (mido_read_resource("ip_addr_groups", name, NULL));
 }
 */
 
+//!
+//!
+//!
+//! @param[in] name
+//! @param[in] ... variable argument section
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_update_ipaddrgroup(midoname * name, ...)
 {
     va_list al = { {0} };
@@ -359,27 +632,95 @@ int mido_update_ipaddrgroup(midoname * name, ...)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_delete_ipaddrgroup(midoname * name)
 {
     return (mido_delete_resource(NULL, name));
 }
 
+//!
+//!
+//!
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_print_ipaddrgroup(midoname * name)
 {
     int ret = 0;
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in]  tenant
+//! @param[out] outnames
+//! @param[out] outnames_max
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_get_ipaddrgroups(char *tenant, midoname ** outnames, int *outnames_max)
 {
     return (mido_get_resources(NULL, 0, tenant, "ip_addr_groups", "application/vnd.org.midonet.collection.IpAddrGroup-v1+json", outnames, outnames_max));
 }
 
-int mido_create_dhcp(midoname * devname, char *subnet, char *slashnet, char *gw, u32 *dnsServers, int max_dnsServers, midoname * outname)
+//!
+//!
+//!
+//! @param[in]  devname
+//! @param[in]  subnet
+//! @param[in]  slashnet
+//! @param[in]  gw
+//! @param[in]  dnsServers
+//! @param[in]  max_dnsServers
+//! @param[out] outname
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int mido_create_dhcp(midoname * devname, char *subnet, char *slashnet, char *gw, u32 * dnsServers, int max_dnsServers, midoname * outname)
 {
     int rc;
     midoname myname;
-    char *da=NULL, *db=NULL, *dc=NULL;
+    char *da = NULL, *db = NULL, *dc = NULL;
 
     bzero(&myname, sizeof(midoname));
     myname.tenant = strdup(devname->tenant);
@@ -390,21 +731,25 @@ int mido_create_dhcp(midoname * devname, char *subnet, char *slashnet, char *gw,
     switch (max_dnsServers) {
     case 1:
         da = hex2dot(dnsServers[0]);
-        rc = mido_create_resource(devname, 1, &myname, outname, "subnetPrefix", subnet, "subnetLength", slashnet, "defaultGateway", gw, "dnsServerAddrs", "jsonarr", "dnsServerAddrs:", da, "dnsServerAddrs:END", "END", NULL);
+        rc = mido_create_resource(devname, 1, &myname, outname, "subnetPrefix", subnet, "subnetLength", slashnet, "defaultGateway", gw, "dnsServerAddrs", "jsonarr",
+                                  "dnsServerAddrs:", da, "dnsServerAddrs:END", "END", NULL);
         break;
     case 2:
         da = hex2dot(dnsServers[0]);
         db = hex2dot(dnsServers[1]);
-        rc = mido_create_resource(devname, 1, &myname, outname, "subnetPrefix", subnet, "subnetLength", slashnet, "defaultGateway", gw, "dnsServerAddrs", "jsonarr", "dnsServerAddrs:", da, "dnsServerAddrs:", db, "dnsServerAddrs:END", "END", NULL);
+        rc = mido_create_resource(devname, 1, &myname, outname, "subnetPrefix", subnet, "subnetLength", slashnet, "defaultGateway", gw, "dnsServerAddrs", "jsonarr",
+                                  "dnsServerAddrs:", da, "dnsServerAddrs:", db, "dnsServerAddrs:END", "END", NULL);
         break;
     case 3:
         da = hex2dot(dnsServers[0]);
         db = hex2dot(dnsServers[1]);
         dc = hex2dot(dnsServers[2]);
-        rc = mido_create_resource(devname, 1, &myname, outname, "subnetPrefix", subnet, "subnetLength", slashnet, "defaultGateway", gw, "dnsServerAddrs", "jsonarr", "dnsServerAddrs:", da, "dnsServerAddrs:", db, "dnsServerAddrs:", dc, "dnsServerAddrs:END", "END", NULL);
+        rc = mido_create_resource(devname, 1, &myname, outname, "subnetPrefix", subnet, "subnetLength", slashnet, "defaultGateway", gw, "dnsServerAddrs", "jsonarr",
+                                  "dnsServerAddrs:", da, "dnsServerAddrs:", db, "dnsServerAddrs:", dc, "dnsServerAddrs:END", "END", NULL);
         break;
     default:
-        rc = mido_create_resource(devname, 1, &myname, outname, "subnetPrefix", subnet, "subnetLength", slashnet, "defaultGateway", gw, "dnsServerAddrs", "jsonarr", "dnsServerAddrs:", "8.8.8.8", "dnsServerAddrs:END", "END", NULL);
+        rc = mido_create_resource(devname, 1, &myname, outname, "subnetPrefix", subnet, "subnetLength", slashnet, "defaultGateway", gw, "dnsServerAddrs", "jsonarr",
+                                  "dnsServerAddrs:", "8.8.8.8", "dnsServerAddrs:END", "END", NULL);
         break;
     }
     EUCA_FREE(da);
@@ -415,12 +760,43 @@ int mido_create_dhcp(midoname * devname, char *subnet, char *slashnet, char *gw,
 }
 
 /*
+//!
+//!
+//!
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_read_dhcp(midoname * name)
 {
     return (mido_read_resource("dhcp", name, NULL));
 }
 */
 
+//!
+//!
+//!
+//! @param[in] name
+//! @param[in] ... variable argument section
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_update_dhcp(midoname * name, ...)
 {
     va_list al = { {0} };
@@ -432,21 +808,87 @@ int mido_update_dhcp(midoname * name, ...)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_print_dhcp(midoname * name)
 {
     return (mido_print_resource("dhcp", name));
 }
 
+//!
+//!
+//!
+//! @param[in] devname
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_delete_dhcp(midoname * devname, midoname * name)
 {
     return (mido_delete_resource(devname, name));
 }
 
+//!
+//!
+//!
+//! @param[in]  devname
+//! @param[out] outnames
+//! @param[out] outnames_max
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_get_dhcps(midoname * devname, midoname ** outnames, int *outnames_max)
 {
     return (mido_get_resources(devname, 1, devname->tenant, "dhcp", "application/vnd.org.midonet.collection.DhcpSubnet-v2+json", outnames, outnames_max));
 }
 
+//!
+//!
+//!
+//! @param[in]  devname
+//! @param[in]  dhcp
+//! @param[out] outnames
+//! @param[out] outnames_max
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_get_dhcphosts(midoname * devname, midoname * dhcp, midoname ** outnames, int *outnames_max)
 {
     int rc = 0;
@@ -462,6 +904,26 @@ int mido_get_dhcphosts(midoname * devname, midoname * dhcp, midoname ** outnames
     return (rc);
 }
 
+//!
+//!
+//!
+//! @param[in]  devname
+//! @param[in]  dhcp
+//! @param[in]  name
+//! @param[in]  mac
+//! @param[in]  ip
+//! @param[out] outname
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_create_dhcphost(midoname * devname, midoname * dhcp, char *name, char *mac, char *ip, midoname * outname)
 {
     int rc = 0, ret = 0, max_dhcphosts = 0, found = 0, i = 0;
@@ -511,11 +973,43 @@ int mido_create_dhcphost(midoname * devname, midoname * dhcp, char *name, char *
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_delete_dhcphost(midoname * name)
 {
     return (mido_delete_resource(NULL, name));
 }
 
+//!
+//!
+//!
+//! @param[in]  tenant
+//! @param[in]  name
+//! @param[out] outname
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_create_chain(char *tenant, char *name, midoname * outname)
 {
     int rc, max_chains, found = 0, i;
@@ -554,13 +1048,44 @@ int mido_create_chain(char *tenant, char *name, midoname * outname)
     return (rc);
 }
 
-/* 
+/*
+//!
+//!
+//!
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_read_chain(midoname * name)
 {
     return (mido_read_resource("chains", name, NULL));
 }
 */
 
+//!
+//!
+//!
+//! @param[in] name
+//! @param[in] ... variable argument section
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_update_chain(midoname * name, ...)
 {
     va_list al = { {0} };
@@ -572,16 +1097,63 @@ int mido_update_chain(midoname * name, ...)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_print_chain(midoname * name)
 {
     return (mido_print_resource("chains", name));
 }
 
+//!
+//!
+//!
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_delete_chain(midoname * name)
 {
     return (mido_delete_resource(NULL, name));
 }
 
+//!
+//!
+//!
+//! @param[in]  ipaddrgroup
+//! @param[in]  ip
+//! @param[out] outname
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_create_ipaddrgroup_ip(midoname * ipaddrgroup, char *ip, midoname * outname)
 {
     int rc = 0, ret = 0, max_ips = 0, found = 0, i = 0;
@@ -623,23 +1195,88 @@ int mido_create_ipaddrgroup_ip(midoname * ipaddrgroup, char *ip, midoname * outn
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] ipaddrgroup
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_delete_ipaddrgroup_ip(midoname * ipaddrgroup, midoname * name)
 {
     return (mido_delete_resource(ipaddrgroup, name));
 }
 
+//!
+//!
+//!
+//! @param[in]  ipaddrgroup
+//! @param[out] outnames
+//! @param[out] outnames_max
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_get_ipaddrgroup_ips(midoname * ipaddrgroup, midoname ** outnames, int *outnames_max)
 {
     return (mido_get_resources(ipaddrgroup, 1, ipaddrgroup->tenant, "ip_addrs", "application/vnd.org.midonet.collection.IpAddrGroupAddr-v1+json", outnames, outnames_max));
 }
 
 /*
-int mido_allocate_midorule(char *position, char *type, char *action, char *protocol, char *srcIAGuuid, char *src_port_min,  char *src_port_max, char *dstIAGuuid, char *dst_port_min, char *dst_port_max, char *matchForwardFlow, char *matchReturnFlow, char *nat_target, char *nat_port_min, char *nat_port_max, midorule *outrule) {
+//!
+//!
+//!
+//! @param[in]  position
+//! @param[in]  type
+//! @param[in]  action
+//! @param[in]  protocol
+//! @param[in]  srcIAGuuid
+//! @param[in]  src_port_min
+//! @param[in]  src_port_max
+//! @param[in]  dstIAGuuid
+//! @param[in]  dst_port_min
+//! @param[in]  dst_port_max
+//! @param[in]  matchForwardFlow
+//! @param[in]  matchReturnFlow
+//! @param[in]  nat_target
+//! @param[in]  nat_port_min
+//! @param[in]  nat_port_max
+//! @param[out] outrule
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int mido_allocate_midorule(char *position, char *type, char *action, char *protocol, char *srcIAGuuid, char *src_port_min,  char *src_port_max, char *dstIAGuuid,
+                           char *dst_port_min, char *dst_port_max, char *matchForwardFlow, char *matchReturnFlow, char *nat_target, char *nat_port_min, char *nat_port_max,
+                           midorule *outrule) {
     int ret=0;
     if (!outrule) {
         return(1);
     }
-    
+
     bzero(outrule, sizeof(midorule));
 
     if (position) snprintf(outrule->position, sizeof(outrule->position), "%s", position);
@@ -657,10 +1294,28 @@ int mido_allocate_midorule(char *position, char *type, char *action, char *proto
     if (nat_target) snprintf(outrule->nat_target, sizeof(outrule->nat_target), "%s", nat_target);
     if (nat_port_min) snprintf(outrule->nat_port_min, sizeof(outrule->nat_port_min), "%s", nat_port_min);
     if (nat_port_max) snprintf(outrule->nat_port_max, sizeof(outrule->nat_port_max), "%s", nat_port_max);
-    
+
     return(ret);
 }
 */
+
+//!
+//!
+//!
+//! @param[in]  chain
+//! @param[out] outname
+//! @param[in]  ... variable argument section
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_create_rule(midoname * chain, midoname * outname, ...)
 {
     int rc = 0, ret = 0, max_rules = 0, found = 0, i = 0;
@@ -712,10 +1367,27 @@ int mido_create_rule(midoname * chain, midoname * outname, ...)
 }
 
 /*
+//!
+//!
+//!
+//! @param[in] chain
+//! @param[in] rule
+//! @param[in] outname
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_create_rule_v1(midoname *chain, midorule *rule, midoname *outname) {
     int rc=0, ret=0, max_rules=0, found=0, i=0;
     midoname myname, *rules=NULL;
-    
+
     bzero(&myname, sizeof(midoname));
 
     myname.tenant = strdup(chain->tenant);
@@ -742,9 +1414,9 @@ int mido_create_rule_v1(midoname *chain, midorule *rule, midoname *outname) {
     }
     mido_free_midoname_list(rules, max_rules);
     EUCA_FREE(rules);
-    
+
     LOGTRACE("FOUND?: %d\n", found);
-    if (!found) {    
+    if (!found) {
         if (!strcmp(rule->type, "jump")) {
             rc = mido_create_resource(chain, 1, &myname, outname, "type", rule->type, "jumpChainId", rule->action, "position", rule->position, NULL);
         } else {
@@ -759,31 +1431,112 @@ int mido_create_rule_v1(midoname *chain, midorule *rule, midoname *outname) {
     return(ret);
 }
 */
+
 /*
+//!
+//!
+//!
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_read_rule(midoname * name)
 {
     return (mido_read_resource("ports", name, NULL));
 }
 */
 
+//!
+//!
+//!
+//! @param[in] name
+//! @param[in] ... variable argument section
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_update_rule(midoname * name, ...)
 {
     return (0);
 }
 
+//!
+//!
+//!
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_print_rule(midoname * name)
 {
     return (mido_print_resource("ports", name));
 }
 
+//!
+//!
+//!
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_delete_rule(midoname * name)
 {
     return (mido_delete_resource(NULL, name));
 }
 
+//!
+//!
+//!
+//! @param[in] devname
+//! @param[in] port_type
+//! @param[in] ip
+//! @param[in] nw
+//! @param[in] slashnet
+//! @param[in] outname
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_create_port(midoname * devname, char *port_type, char *ip, char *nw, char *slashnet, midoname * outname)
 {
-    //int mido_create_port(midoname *devname, char *port_type, midoname *outname) {
     int rc;
     midoname myname;
 
@@ -805,12 +1558,43 @@ int mido_create_port(midoname * devname, char *port_type, char *ip, char *nw, ch
 }
 
 /*
+//!
+//!
+//!
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_read_port(midoname * name)
 {
     return (mido_read_resource("ports", name, "application/vnd.org.midonet.Port-v2+json"));
 }
 */
 
+//!
+//!
+//!
+//! @param[in] name
+//! @param[in] ... variable argument section
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_update_port(midoname * name, ...)
 {
     va_list al = { {0} };
@@ -822,26 +1606,106 @@ int mido_update_port(midoname * name, ...)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_print_port(midoname * name)
 {
     return (mido_print_resource("ports", name));
 }
 
+//!
+//!
+//!
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_delete_port(midoname * name)
 {
     return (mido_delete_resource(NULL, name));
 }
 
+//!
+//!
+//!
+//! @param[in]  devname
+//! @param[out] outnames
+//! @param[out] outnames_max
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_get_ports(midoname * devname, midoname ** outnames, int *outnames_max)
 {
     return (mido_get_resources(devname, 1, devname->tenant, "ports", "application/vnd.org.midonet.collection.Port-v2+json", outnames, outnames_max));
 }
 
+//!
+//!
+//!
+//! @param[in]  chainname
+//! @param[out] outnames
+//! @param[out] outnames_max
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_get_rules(midoname * chainname, midoname ** outnames, int *outnames_max)
 {
     return (mido_get_resources(chainname, 1, chainname->tenant, "rules", "application/vnd.org.midonet.collection.Rule-v2+json", outnames, outnames_max));
 }
 
+//!
+//!
+//!
+//! @param[in] host
+//! @param[in] port
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_unlink_host_port(midoname * host, midoname * port)
 {
     int rc = 0, ret = 0;
@@ -855,6 +1719,24 @@ int mido_unlink_host_port(midoname * host, midoname * port)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] host
+//! @param[in] interface
+//! @param[in] device
+//! @param[in] port
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_link_host_port(midoname * host, char *interface, midoname * device, midoname * port)
 {
 
@@ -887,6 +1769,22 @@ int mido_link_host_port(midoname * host, char *interface, midoname * device, mid
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] a
+//! @param[in] b
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_link_ports(midoname * a, midoname * b)
 {
     int rc = 0, found = 0, ret = 0;
@@ -921,6 +1819,24 @@ int mido_link_ports(midoname * a, midoname * b)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] resource_type
+//! @param[in] content_type
+//! @param[in] name
+//! @param[in] al
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_update_resource(char *resource_type, char *content_type, midoname * name, va_list * al)
 {
     char url[EUCA_MAX_PATH];
@@ -969,6 +1885,23 @@ int mido_update_resource(char *resource_type, char *content_type, midoname * nam
 }
 
 /*
+//!
+//!
+//!
+//! @param[in] resource_type
+//! @param[in] name
+//! @param[in] apistr
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_read_resource(char *resource_type, midoname * name, char *apistr)
 {
     char url[EUCA_MAX_PATH], *outhttp = NULL;
@@ -988,6 +1921,22 @@ int mido_read_resource(char *resource_type, midoname * name, char *apistr)
 }
 */
 
+//!
+//!
+//!
+//! @param[in] resource_type
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_print_resource(char *resource_type, midoname * name)
 {
     int ret = 0;
@@ -1008,6 +1957,22 @@ int mido_print_resource(char *resource_type, midoname * name)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] tenant
+//! @param[in] al
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 char *mido_jsonize(char *tenant, va_list * al)
 {
     char *payload = NULL;
@@ -1134,6 +2099,25 @@ char *mido_jsonize(char *tenant, va_list * al)
     return (payload);
 }
 
+//!
+//!
+//!
+//! @param[in]  parents
+//! @param[in]  max_parents
+//! @param[in]  newname
+//! @param[out] outname
+//! @param[in]  ... variable argument part
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_create_resource(midoname * parents, int max_parents, midoname * newname, midoname * outname, ...)
 {
     int ret = 0;
@@ -1144,6 +2128,25 @@ int mido_create_resource(midoname * parents, int max_parents, midoname * newname
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in]  parents
+//! @param[in]  max_parents
+//! @param[in]  newname
+//! @param[out] outname
+//! @param[in]  al
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_create_resource_v(midoname * parents, int max_parents, midoname * newname, midoname * outname, va_list * al)
 {
     int ret = 0, rc = 0;
@@ -1216,6 +2219,22 @@ int mido_create_resource_v(midoname * parents, int max_parents, midoname * newna
 
 }
 
+//!
+//!
+//!
+//! @param[in] dst
+//! @param[in] src
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 void mido_copy_midoname(midoname * dst, midoname * src)
 {
     if (!dst || !src) {
@@ -1241,6 +2260,27 @@ void mido_copy_midoname(midoname * dst, midoname * src)
     dst->init = 1;
 }
 
+//!
+//!
+//!
+//! @param[in]  tenant
+//! @param[in]  name
+//! @param[in]  uuid
+//! @param[in]  resource_type
+//! @param[in]  content_type
+//! @param[in]  jsonbuf
+//! @param[out] outname
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_create_midoname(char *tenant, char *name, char *uuid, char *resource_type, char *content_type, char *jsonbuf, midoname * outname)
 {
     if (!outname) {
@@ -1265,6 +2305,21 @@ int mido_create_midoname(char *tenant, char *name, char *uuid, char *resource_ty
     return (0);
 }
 
+//!
+//!
+//!
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_update_midoname(midoname * name)
 {
     int ret = 0;
@@ -1281,7 +2336,7 @@ int mido_update_midoname(midoname * name)
         if (el) {
             EUCA_FREE(name->uuid);
             name->uuid = strdup(json_object_get_string(el));
-            //            json_object_put(el);                
+            //            json_object_put(el);
         }
 
         el = json_object_object_get(jobj, "tenantId");
@@ -1360,6 +2415,22 @@ int mido_update_midoname(midoname * name)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] parentname
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_delete_resource(midoname * parentname, midoname * name)
 {
     int rc = 0, ret = 0;
@@ -1403,11 +2474,24 @@ int mido_delete_resource(midoname * parentname, midoname * name)
     return (ret);
 }
 
-struct mem_params_t {
-    char *mem;
-    size_t size;
-};
-
+//!
+//!
+//!
+//! @param[in] contents
+//! @param[in] size
+//! @param[in] nmemb
+//! @param[in] in_params
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 static size_t mem_writer(void *contents, size_t size, size_t nmemb, void *in_params)
 {
     struct mem_params_t *params = (struct mem_params_t *)in_params;
@@ -1426,6 +2510,24 @@ static size_t mem_writer(void *contents, size_t size, size_t nmemb, void *in_par
     return (size * nmemb);
 }
 
+//!
+//!
+//!
+//! @param[in] contents
+//! @param[in] size
+//! @param[in] nmemb
+//! @param[in] in_params
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 static size_t mem_reader(void *contents, size_t size, size_t nmemb, void *in_params)
 {
     struct mem_params_t *params = (struct mem_params_t *)in_params;
@@ -1450,6 +2552,23 @@ static size_t mem_reader(void *contents, size_t size, size_t nmemb, void *in_par
     return (bytes_to_copy);
 }
 
+//!
+//!
+//!
+//! @param[in]  url
+//! @param[in]  apistr
+//! @param[out] out_payload
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int midonet_http_get(char *url, char *apistr, char **out_payload)
 {
     CURL *curl = NULL;
@@ -1480,7 +2599,7 @@ int midonet_http_get(char *url, char *apistr, char **out_payload)
        snprintf(hbuf, EUCA_MAX_PATH, "Expect:");
        headers = curl_slist_append(headers, hbuf);
        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    */
+     */
 
     curlret = curl_easy_perform(curl);
     if (curlret != CURLE_OK) {
@@ -1510,6 +2629,23 @@ int midonet_http_get(char *url, char *apistr, char **out_payload)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] url
+//! @param[in] resource_type
+//! @param[in] payload
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int midonet_http_put(char *url, char *resource_type, char *payload)
 {
     CURL *curl = NULL;
@@ -1554,6 +2690,24 @@ int midonet_http_put(char *url, char *resource_type, char *payload)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] content
+//! @param[in] size
+//! @param[in] nmemb
+//! @param[in] params
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 static size_t header_find_location(char *content, size_t size, size_t nmemb, void *params)
 {
     char *buf = NULL;
@@ -1572,6 +2726,24 @@ static size_t header_find_location(char *content, size_t size, size_t nmemb, voi
     return (size * nmemb);
 }
 
+//!
+//!
+//!
+//! @param[in]  url
+//! @param[in]  resource_type
+//! @param[in]  payload
+//! @param[out] out_payload
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int midonet_http_post(char *url, char *resource_type, char *payload, char **out_payload)
 {
     CURL *curl = NULL;
@@ -1620,6 +2792,21 @@ int midonet_http_post(char *url, char *resource_type, char *payload, char **out_
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] url
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int midonet_http_delete(char *url)
 {
     CURL *curl = NULL;
@@ -1640,6 +2827,29 @@ int midonet_http_delete(char *url)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in]  router
+//! @param[in]  rport
+//! @param[in]  src
+//! @param[in]  src_slashnet
+//! @param[in]  dst
+//! @param[in]  dst_slashnet
+//! @param[in]  next_hop_ip
+//! @param[in]  weight
+//! @param[out] outname
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_create_route(midoname * router, midoname * rport, char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip, char *weight, midoname * outname)
 {
     int rc = 0, found = 0, ret = 0;
@@ -1683,7 +2893,7 @@ int mido_create_route(midoname * router, midoname * rport, char *src, char *src_
         if (outname && outname->init) {
             mido_delete_route(outname);
         }
-        
+
         if (strcmp(next_hop_ip, "UNSET")) {
             rc = mido_create_resource(router, 1, &myname, outname, "srcNetworkAddr", src, "srcNetworkLength", src_slashnet, "dstNetworkAddr", dst, "dstNetworkLength", dst_slashnet,
                                       "type", "Normal", "nextHopPort", rport->uuid, "weight", weight, "nextHopGateway", next_hop_ip, NULL);
@@ -1700,16 +2910,64 @@ int mido_create_route(midoname * router, midoname * rport, char *src, char *src_
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] name
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_delete_route(midoname * name)
 {
     return (mido_delete_resource(NULL, name));
 }
 
+//!
+//!
+//!
+//! @param[in]  router
+//! @param[out] outnames
+//! @param[out] outnames_max
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_get_routes(midoname * router, midoname ** outnames, int *outnames_max)
 {
     return (mido_get_resources(router, 1, router->tenant, "routes", "application/vnd.org.midonet.collection.Route-v1+json", outnames, outnames_max));
 }
 
+//!
+//!
+//!
+//! @param[in] one
+//! @param[in] two
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int json_object_cmp(json_object * one, json_object * two)
 {
     int onetype = 0, twotype = 0, onesubtype = 0, twosubtype = 0, rc = 0, ret = 0, i = 0;
@@ -1764,6 +3022,22 @@ int json_object_cmp(json_object * one, json_object * two)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] name
+//! @param[in] ... variable argument part
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_cmp_midoname_to_input_json(midoname * name, ...)
 {
     va_list al = { {0} };
@@ -1775,6 +3049,22 @@ int mido_cmp_midoname_to_input_json(midoname * name, ...)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] name
+//! @param[in] al
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_cmp_midoname_to_input_json_v(midoname * name, va_list * al)
 {
     va_list ala = { {0} };
@@ -1823,6 +3113,22 @@ int mido_cmp_midoname_to_input_json_v(midoname * name, va_list * al)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] name
+//! @param[in] ... variable argument
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_cmp_midoname_to_input(midoname * name, ...)
 {
     va_list al = { {0} };
@@ -1858,21 +3164,93 @@ int mido_cmp_midoname_to_input(midoname * name, ...)
     return (0);
 }
 
+//!
+//!
+//!
+//! @param[in]  tenant
+//! @param[out] outnames
+//! @param[out] outnames_max
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_get_routers(char *tenant, midoname ** outnames, int *outnames_max)
 {
     return (mido_get_resources(NULL, 0, tenant, "routers", "application/vnd.org.midonet.collection.Router-v2+json", outnames, outnames_max));
 }
 
+//!
+//!
+//!
+//! @param[in]  tenant
+//! @param[out] outnames
+//! @param[out] outnames_max
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_get_bridges(char *tenant, midoname ** outnames, int *outnames_max)
 {
     return (mido_get_resources(NULL, 0, tenant, "bridges", "application/vnd.org.midonet.collection.Bridge-v2+json", outnames, outnames_max));
 }
 
+//!
+//!
+//!
+//! @param[in]  tenant
+//! @param[out] outnames
+//! @param[out] outnames_max
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_get_chains(char *tenant, midoname ** outnames, int *outnames_max)
 {
     return (mido_get_resources(NULL, 0, tenant, "chains", "application/vnd.org.midonet.collection.Chain-v1+json", outnames, outnames_max));
 }
 
+//!
+//!
+//!
+//! @param[in]  parents
+//! @param[in]  max_parents
+//! @param[in]  tenant
+//! @param[in]  resource_type
+//! @param[in]  apistr
+//! @param[out] outnames
+//! @param[out] outnames_max
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_get_resources(midoname * parents, int max_parents, char *tenant, char *resource_type, char *apistr, midoname ** outnames, int *outnames_max)
 {
     int rc = 0, ret = 0, i = 0;
@@ -1953,6 +3331,22 @@ int mido_get_resources(midoname * parents, int max_parents, char *tenant, char *
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[out] outnames
+//! @param[out] outnames_max
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int mido_get_hosts(midoname ** outnames, int *outnames_max)
 {
     int rc = 0, ret = 0, i = 0, hostup = 0;
@@ -2043,6 +3437,16 @@ int mido_get_hosts(midoname ** outnames, int *outnames_max)
 }
 
 #ifdef MIDONET_API_TEST
+//!
+//!
+//!
+//! @param[in] argc
+//! @param[in] argv
+//!
+//! @return
+//!
+//! @note
+//!
 int main(int argc, char **argv)
 {
     exit(0);

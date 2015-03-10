@@ -206,10 +206,11 @@ int ncStubDestroy(ncStub * pStub)
 int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId,
                       char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId,
                       char *keyName, netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime, char **groupNames,
-                      int groupNamesSize, char *rootDirective, ncInstance ** outInstPtr)
+                      int groupNamesSize, char *rootDirective, char **groupIds, int groupIdsSize, ncInstance ** outInstPtr)
 {
     return doRunInstance(pMeta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, ownerId,
-                         accountId, keyName, netparams, userData, credential, launchIndex, platform, expiryTime, groupNames, groupNamesSize, rootDirective, outInstPtr);
+                         accountId, keyName, netparams, userData, credential, launchIndex, platform, expiryTime, groupNames, groupNamesSize, rootDirective, groupIds, groupIdsSize,
+                         outInstPtr);
 }
 
 //!
@@ -236,7 +237,7 @@ int ncTerminateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId
 //!
 //! @param[in] pStub a pointer to the node controller (NC) stub structure
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
-//! @param[in] networkInfo is a string 
+//! @param[in] networkInfo is a string
 //!
 //! @return Always return EUCA_OK
 //!
@@ -463,7 +464,7 @@ int ncDescribeSensorsStub(ncStub * pStub, ncMetadata * pMeta, int historySize, l
 //! @param[in]  pStub a pointer to the node controller (NC) stub structure
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
 //! @param[in]  stateName the next state for the node controller
-//! 
+//!
 //! @return the result of doModifyNode() (either EUCA_OK or EUCA_ERROR)
 //!
 //! @see doModifyNode()

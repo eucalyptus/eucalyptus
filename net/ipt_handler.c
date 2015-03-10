@@ -82,10 +82,11 @@
 
 #include <eucalyptus.h>
 #include <log.h>
-#include <vnetwork.h>
 #include <euca_string.h>
 
 #include "ipt_handler.h"
+#include "ips_handler.h"
+#include "ebt_handler.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -150,187 +151,236 @@
 \*----------------------------------------------------------------------------*/
 
 //!
-//! Function description.
+//! Initialize an IP table handler structure
 //!
-//! @param[in] ipth pointer to the IP table handler structure
-//! @param[in] cmdprefix
+//! @param[in] pIpt pointer to the IP table handler structure
+//! @param[in] psCmdPrefix a constant pointer to a string containing the prefix for EUCA commands
+//! @param[in] psPreloadPath a constant pointer to a string containing the path to the IP table preload file
 //!
-//! @return
+//! @return 0 on success or 1 if any failure occured
 //!
-//! @see
+//! @see ipt_handler_free()
 //!
-//! @pre List of pre-conditions
+//! @pre
+//!     - The pIpt pointer should not be NULL
+//!     - We should be able to create temporary files on the system
+//!     - We should be able to execute the iptables commands
 //!
-//! @post List of post conditions
+//! @post
+//!     On success, the IP table structure will be initialized with the following:
+//!     - The ipt_file will point to a temporary file under /tmp/ipt_file-XXXXXX
+//!     - If psCmdPrefix was provided, the table's cmdprefix field will be set with it
+//!     - If psPreloadPath was provided, the structure's preloadPath will be set with it
+//!     -
 //!
 //! @note
 //!
-int ipt_handler_init(ipt_handler * ipth, char *cmdprefix)
+int ipt_handler_init(ipt_handler * pIpt, const char *psCmdPrefix, const char *psPreloadPath)
 {
-    int fd;
-    char cmd[EUCA_MAX_PATH];
+    int fd = 0;
+    char sCommand[EUCA_MAX_PATH] = "";
 
-    if (!ipth) {
+    // Make sure our pointers are valid
+    if (!pIpt) {
         return (1);
     }
-    bzero(ipth, sizeof(ipt_handler));
+    // Empty this structure
+    bzero(pIpt, sizeof(ipt_handler));
 
-    snprintf(ipth->ipt_file, EUCA_MAX_PATH, "/tmp/ipt_file-XXXXXX");
-    fd = safe_mkstemp(ipth->ipt_file);
-    if (fd < 0) {
-        LOGERROR("cannot create tmpfile '%s': check permissions\n", ipth->ipt_file);
+    // Initialize the temporaty file name
+    snprintf(pIpt->ipt_file, EUCA_MAX_PATH, "/tmp/ipt_file-XXXXXX");
+
+    // Test to see that we can create these temporary files
+    if ((fd = safe_mkstemp(pIpt->ipt_file)) < 0) {
+        LOGERROR("cannot create tmpfile '%s': check permissions\n", pIpt->ipt_file);
         return (1);
     }
-    if (chmod(ipth->ipt_file, 0600)) {
-        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", ipth->ipt_file);
+    // Check to see if we can set the permissions to 0600
+    if (chmod(pIpt->ipt_file, 0600)) {
+        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", pIpt->ipt_file);
     }
+    // We're done
     close(fd);
 
-    if (cmdprefix) {
-        snprintf(ipth->cmdprefix, EUCA_MAX_PATH, "%s", cmdprefix);
-    } else {
-        ipth->cmdprefix[0] = '\0';
+    // If we have a command prefix (like euca_rootwrap) set it
+    pIpt->cmdprefix[0] = '\0';
+    if (psCmdPrefix) {
+        snprintf(pIpt->cmdprefix, EUCA_MAX_PATH, "%s", psCmdPrefix);
     }
-
+    // If we have a preload file path, set it.
+    pIpt->preloadPath[0] = '\0';
+    if (psPreloadPath) {
+        snprintf(pIpt->preloadPath, EUCA_MAX_PATH, "%s", psPreloadPath);
+    }
     // test required shell-outs
-    snprintf(cmd, EUCA_MAX_PATH, "%s iptables-save >/dev/null 2>&1", ipth->cmdprefix);
-    if (system(cmd)) {
-        LOGERROR("could not execute required shell out '%s': check command/permissions\n", cmd);
+    snprintf(sCommand, EUCA_MAX_PATH, "%s iptables-save >/dev/null 2>&1", pIpt->cmdprefix);
+    if (system(sCommand)) {
+        LOGERROR("could not execute required shell out '%s': check command/permissions\n", sCommand);
         return (1);
     }
 
-    ipth->init = 1;
+    pIpt->init = 1;
     return (0);
 }
 
 //!
-//! Function description.
+//! Runs iptables-save and store the content in our configured IP table file
 //!
-//! @param[in] ipth pointer to the IP table handler structure
+//! @param[in] pIpt pointer to the IP table handler structure
 //!
-//! @return
+//! @return 0 on success or any other values if any failure occured
 //!
-//! @see
+//! @see ipt_system_restore()
 //!
-//! @pre List of pre-conditions
+//! @pre
+//!     - pIpt MUST not be NULL
+//!     - We should be able to write to the configured IP table structure temporary file
 //!
-//! @post List of post conditions
+//! @post
+//!     On success, the content from iptables-save is stored in ipth->ipt_file. On failure,
+//!     the destination file should remain unchanged.
 //!
 //! @note
 //!
-int ipt_system_save(ipt_handler * ipth)
+int ipt_system_save(ipt_handler * pIpt)
 {
     int rc = 0;
-    char cmd[EUCA_MAX_PATH] = "";
+    char sCommand[EUCA_MAX_PATH] = "";
 
-    snprintf(cmd, EUCA_MAX_PATH, "%s iptables-save -c > %s", ipth->cmdprefix, ipth->ipt_file);
-    rc = system(cmd);
+    // Setup and execute the comand
+    snprintf(sCommand, EUCA_MAX_PATH, "%s iptables-save -c > %s", pIpt->cmdprefix, pIpt->ipt_file);
+    rc = system(sCommand);
     rc = rc >> 8;
     if (rc) {
-        LOGERROR("iptables-save failed '%s'\n", cmd);
+        LOGERROR("iptables-save failed '%s'\n", sCommand);
     }
     return (rc);
 }
 
 //!
-//! Function description.
+//! Runs the iptables-restore program provided with our IP table configured file.
 //!
-//! @param[in] ipth pointer to the IP table handler structure
+//! @param[in] pIpt pointer to the IP table handler structure
 //!
-//! @return
+//! @return 0 on success or any other value if any failure occured
 //!
-//! @see
+//! @see ipt_system_save()
 //!
-//! @pre List of pre-conditions
+//! @pre
+//!     - pIpt MUST not be NULL
+//!     - The IP table structure temporary file must exists on the system
 //!
-//! @post List of post conditions
+//! @post
+//!     On success, the system IP tables have been restored with the content from our
+//!     configured file. On failure, the system IP tables should remain unchanged and
+//!     the content of the file saved in /tmp/euca_ipt_file_failed.
 //!
 //! @note
 //!
-int ipt_system_restore(ipt_handler * ipth)
+int ipt_system_restore(ipt_handler * pIpt)
 {
-    int rc;
-    char cmd[EUCA_MAX_PATH];
+    int rc = 0;
+    char sCommand[EUCA_MAX_PATH] = "";
 
-    snprintf(cmd, EUCA_MAX_PATH, "%s iptables-restore -c < %s", ipth->cmdprefix, ipth->ipt_file);
-    rc = system(cmd);
+    // Setup and execute the command
+    snprintf(sCommand, EUCA_MAX_PATH, "%s iptables-restore -c < %s", pIpt->cmdprefix, pIpt->ipt_file);
+    rc = system(sCommand);
     rc = rc >> 8;
     if (rc) {
-        copy_file(ipth->ipt_file, "/tmp/euca_ipt_file_failed");
-        LOGERROR("iptables-restore failed '%s': copying failed input file to '/tmp/euca_ipt_file_failed' for manual retry.\n", cmd);
+        copy_file(pIpt->ipt_file, "/tmp/euca_ipt_file_failed");
+        LOGERROR("iptables-restore failed '%s': copying failed input file to '/tmp/euca_ipt_file_failed' for manual retry.\n", sCommand);
     }
-    unlink(ipth->ipt_file);
+    unlink(pIpt->ipt_file);
     return (rc);
 }
 
 //!
-//! Function description.
+//! Takes our latest IP table virtual content and puts it into a file in IP tables format that
+//! will be passed to ip_system_restore(). Once completed, the system IP tables should contain
+//! the latest changes we made.
 //!
-//! @param[in] ipth pointer to the IP table handler structure
+//! @param[in] pIpt pointer to the IP table handler structure
 //!
-//! @return
+//! @return 0 on success or any other value if any failure occured
 //!
-//! @see
+//! @see ipt_system_restore()
 //!
-//! @pre List of pre-conditions
+//! @pre
+//!     - Our given pointers must not be NULL
+//!     - The IP table structure must have been intialized
+//!     - The system must allow us to write to the file configured in the IP table structure
 //!
-//! @post List of post conditions
+//! @post
+//!     On success, the system IP tables will contain what we put in our structure. On failure, the
+//!     system IP tables should remain unchanged.
 //!
 //! @note
 //!
-int ipt_handler_deploy(ipt_handler * ipth)
+int ipt_handler_deploy(ipt_handler * pIpt)
 {
-    int i, j, k;
-    FILE *FH = NULL;
-    if (!ipth || !ipth->init) {
+    int i = 0;
+    int j = 0;
+    int k = 0;
+    char *psPreload = NULL;
+    FILE *pFh = NULL;
+
+    if (!pIpt || !pIpt->init) {
         return (1);
     }
 
-    ipt_handler_update_refcounts(ipth);
+    ipt_handler_update_refcounts(pIpt);
 
-    FH = fopen(ipth->ipt_file, "w");
-    if (!FH) {
-        LOGERROR("could not open file for write '%s': check permissions\n", ipth->ipt_file);
+    if ((pFh = fopen(pIpt->ipt_file, "w")) == NULL) {
+        LOGERROR("could not open file for write '%s': check permissions\n", pIpt->ipt_file);
         return (1);
     }
-    for (i = 0; i < ipth->max_tables; i++) {
-        fprintf(FH, "*%s\n", ipth->tables[i].name);
-        for (j = 0; j < ipth->tables[i].max_chains; j++) {
-            if (!ipth->tables[i].chains[j].flushed && ipth->tables[i].chains[j].ref_count) {
-                fprintf(FH, ":%s %s %s\n", ipth->tables[i].chains[j].name, ipth->tables[i].chains[j].policyname, ipth->tables[i].chains[j].counters);
+    // do the preload stuff first if needed
+    if (strlen(pIpt->preloadPath)) {
+        if ((psPreload = file2str(pIpt->preloadPath)) == NULL) {
+            LOGTRACE("Fail to load IP table preload content from '%s'.\n", pIpt->preloadPath);
+        } else {
+            fprintf(pFh, "%s\n", psPreload);
+            EUCA_FREE(psPreload);
+        }
+    }
+
+    for (i = 0; i < pIpt->max_tables; i++) {
+        fprintf(pFh, "*%s\n", pIpt->tables[i].name);
+        for (j = 0; j < pIpt->tables[i].max_chains; j++) {
+            if (!pIpt->tables[i].chains[j].flushed && pIpt->tables[i].chains[j].ref_count) {
+                fprintf(pFh, ":%s %s %s\n", pIpt->tables[i].chains[j].name, pIpt->tables[i].chains[j].policyname, pIpt->tables[i].chains[j].counters);
             }
         }
-        for (j = 0; j < ipth->tables[i].max_chains; j++) {
-            if (!ipth->tables[i].chains[j].flushed && ipth->tables[i].chains[j].ref_count) {
+        for (j = 0; j < pIpt->tables[i].max_chains; j++) {
+            if (!pIpt->tables[i].chains[j].flushed && pIpt->tables[i].chains[j].ref_count) {
                 // qsort!
-                qsort(ipth->tables[i].chains[j].rules, ipth->tables[i].chains[j].max_rules, sizeof(ipt_rule), ipt_ruleordercmp);
-                for (k = 0; k < ipth->tables[i].chains[j].max_rules; k++) {
-                    if (!ipth->tables[i].chains[j].rules[k].flushed) {
-                        fprintf(FH, "%s %s\n", ipth->tables[i].chains[j].rules[k].counterstr, ipth->tables[i].chains[j].rules[k].iptrule);
+                qsort(pIpt->tables[i].chains[j].rules, pIpt->tables[i].chains[j].max_rules, sizeof(ipt_rule), ipt_ruleordercmp);
+                for (k = 0; k < pIpt->tables[i].chains[j].max_rules; k++) {
+                    if (!pIpt->tables[i].chains[j].rules[k].flushed) {
+                        fprintf(pFh, "%s %s\n", pIpt->tables[i].chains[j].rules[k].counterstr, pIpt->tables[i].chains[j].rules[k].iptrule);
                     }
                 }
             }
         }
-        fprintf(FH, "COMMIT\n");
+        fprintf(pFh, "COMMIT\n");
     }
-    fclose(FH);
-
-    return (ipt_system_restore(ipth));
+    fclose(pFh);
+    return (ipt_system_restore(pIpt));
 }
 
 //!
-//! Function description.
+//! Compares to given rules to see which comes first
 //!
-//! @param[in] p1
-//! @param[in] p2
+//! @param[in] p1 a pointer to the left hand side IP table rule
+//! @param[in] p2 a pointer to the right hand side IP table rule
 //!
-//! @return
+//! @return 0 if p1 an p2 are of the same order, -1 if p1 comes before p2 and 1 if p2 comes before p1.
 //!
 //! @see
 //!
-//! @pre List of pre-conditions
+//! @pre
 //!
-//! @post List of post conditions
+//! @post
 //!
 //! @note
 //!
@@ -354,13 +404,13 @@ int ipt_ruleordercmp(const void *p1, const void *p2)
 //!
 //! @param[in] ipth pointer to the IP table handler structure
 //!
-//! @return
+//! @return 0 on success or 1 if any failure occured
 //!
 //! @see
 //!
-//! @pre List of pre-conditions
+//! @pre
 //!
-//! @post List of post conditions
+//! @post
 //!
 //! @note
 //!
@@ -446,15 +496,15 @@ int ipt_handler_repopulate(ipt_handler * ipth)
 //! Function description.
 //!
 //! @param[in] ipth pointer to the IP table handler structure
-//! @param[in] tablename
+//! @param[in] tablename a string pointer to the table name
 //!
-//! @return
+//! @return 0 on success or 1 if any failure occured
 //!
 //! @see
 //!
-//! @pre List of pre-conditions
+//! @pre
 //!
-//! @post List of post conditions
+//! @post
 //!
 //! @note
 //!
@@ -484,18 +534,18 @@ int ipt_handler_add_table(ipt_handler * ipth, char *tablename)
 //! Function description.
 //!
 //! @param[in] ipth pointer to the IP table handler structure
-//! @param[in] tablename
-//! @param[in] chainname
-//! @param[in] policyname
-//! @param[in] counters
+//! @param[in] tablename a string pointer to the table name
+//! @param[in] chainname a string pointer to the chain name
+//! @param[in] policyname a string pointer to the policy to apply
+//! @param[in] counters a string pointer to the counters
 //!
-//! @return
+//! @return 0 on success or 1 if any failure occured
 //!
 //! @see
 //!
-//! @pre List of pre-conditions
+//! @pre
 //!
-//! @post List of post conditions
+//! @post
 //!
 //! @note
 //!
@@ -541,17 +591,17 @@ int ipt_table_add_chain(ipt_handler * ipth, char *tablename, char *chainname, ch
 //! Function description.
 //!
 //! @param[in] ipth pointer to the IP table handler structure
-//! @param[in] tablename
-//! @param[in] chainname
-//! @param[in] newrule
+//! @param[in] tablename a string pointer to the table name
+//! @param[in] chainname a string pointer to the chain name
+//! @param[in] newrule a string pointer to the rule to add
 //!
-//! @return
+//! @return 0 on success or 1 if any failure occured
 //!
 //! @see
 //!
-//! @pre List of pre-conditions
+//! @pre
 //!
-//! @post List of post conditions
+//! @post
 //!
 //! @note
 //!
@@ -564,18 +614,18 @@ int ipt_chain_add_rule(ipt_handler * ipth, char *tablename, char *chainname, cha
 //! Function description.
 //!
 //! @param[in] ipth pointer to the IP table handler structure
-//! @param[in] tablename
-//! @param[in] chainname
-//! @param[in] newrule
-//! @param[in] counterstr
+//! @param[in] tablename a string pointer to the table name
+//! @param[in] chainname a string pointer to the chain name
+//! @param[in] newrule a string pointer to the rule to add
+//! @param[in] counterstr a string pointer to the counters
 //!
-//! @return
+//! @return 0 on success or 1 if any failure occured
 //!
 //! @see
 //!
-//! @pre List of pre-conditions
+//! @pre
 //!
-//! @post List of post conditions
+//! @post
 //!
 //! @note
 //!
@@ -588,19 +638,19 @@ int ipt_chain_add_rule_with_counters(ipt_handler * ipth, char *tablename, char *
 //! Function description.
 //!
 //! @param[in] ipth pointer to the IP table handler structure
-//! @param[in] tablename
-//! @param[in] chainname
-//! @param[in] newrule
-//! @param[in] counterstr
-//! @param[in] order
+//! @param[in] tablename a string pointer to the table name
+//! @param[in] chainname a string pointer to the chain name
+//! @param[in] newrule a string pointer to the new rule
+//! @param[in] counterstr a string pointer to the counters
+//! @param[in] order the order in which to insert this rule
 //!
-//! @return
+//! @return 0 on success or 1 if any failure occured
 //!
 //! @see
 //!
-//! @pre List of pre-conditions
+//! @pre
 //!
-//! @post List of post conditions
+//! @post
 //!
 //! @note
 //!
@@ -659,13 +709,13 @@ int ipt_chain_insert_rule(ipt_handler * ipth, char *tablename, char *chainname, 
 //!
 //! @param[in] ipth pointer to the IP table handler structure
 //!
-//! @return
+//! @return Always returns 0
 //!
 //! @see
 //!
-//! @pre List of pre-conditions
+//! @pre
 //!
-//! @post List of post conditions
+//! @post
 //!
 //! @note
 //!
@@ -691,8 +741,8 @@ int ipt_handler_update_refcounts(ipt_handler * ipth)
                     if (strlen(jumpchain)) {
                         refchain = ipt_table_find_chain(ipth, table->name, jumpchain);
                         if (refchain) {
-                            LOGDEBUG("FOUND REF TO CHAIN (name=%s sourcechain=%s jumpchain=%s currref=%d) (rule=%s\n", refchain->name, chain->name, jumpchain, refchain->ref_count,
-                                     rule->iptrule);
+                            LOGDEBUG("FOUND REF TO CHAIN (name=%s sourcechain=%s jumpchain=%s currref=%d) (rule=%s)\n",
+                                     refchain->name, chain->name, jumpchain, refchain->ref_count, rule->iptrule);
                             refchain->ref_count++;
                         }
                     }
@@ -707,19 +757,19 @@ int ipt_handler_update_refcounts(ipt_handler * ipth)
 //! Function description.
 //!
 //! @param[in] ipth pointer to the IP table handler structure
-//! @param[in] findtable
+//! @param[in] findtable a string pointer to the name of the table we're looking for
 //!
-//! @return
+//! @return a pointer to the IP table structure if found. Otherwise, NULL is returned
 //!
 //! @see
 //!
-//! @pre List of pre-conditions
+//! @pre
 //!
-//! @post List of post conditions
+//! @post
 //!
 //! @note
 //!
-ipt_table *ipt_handler_find_table(ipt_handler * ipth, char *findtable)
+ipt_table *ipt_handler_find_table(ipt_handler * ipth, const char *findtable)
 {
     int i, tableidx = 0, found = 0;
     if (!ipth || !findtable || !ipth->init) {
@@ -742,20 +792,20 @@ ipt_table *ipt_handler_find_table(ipt_handler * ipth, char *findtable)
 //! Function description.
 //!
 //! @param[in] ipth pointer to the IP table handler structure
-//! @param[in] tablename
-//! @param[in] findchain
+//! @param[in] tablename a string pointer to the table name
+//! @param[in] findchain a string pointer to the chain name we're looking for
 //!
-//! @return
+//! @return a pointer to the IP table chain structure if found. Otherwise, NULL is returned
 //!
 //! @see
 //!
-//! @pre List of pre-conditions
+//! @pre
 //!
-//! @post List of post conditions
+//! @post
 //!
 //! @note
 //!
-ipt_chain *ipt_table_find_chain(ipt_handler * ipth, char *tablename, char *findchain)
+ipt_chain *ipt_table_find_chain(ipt_handler * ipth, const char *tablename, const char *findchain)
 {
     int i, found = 0, chainidx = 0;
     ipt_table *table = NULL;
@@ -784,20 +834,60 @@ ipt_chain *ipt_table_find_chain(ipt_handler * ipth, char *tablename, char *findc
 }
 
 //!
-//! Function description.
+//! Finds a given IPT chain in a given IPT and set its default policy.
 //!
-//! @param[in] ipth pointer to the IP table handler structure
-//! @param[in] tablename
-//! @param[in] chainname
-//! @param[in] findrule
+//! @param[in] pIpth pointer to the IP table handler structure
+//! @param[in] tablename a constant string pointer to the name of the table (e.g. 'filter', 'nat', 'mangle', etc.)
+//! @param[in] chainname a constant string pointer to the name of the chain (e.g. 'INPUT', 'FORWARD', etc.)
+//! @param[in] policyname a constant string pointer to the policy name (e.g. 'ACCEPT', 'DROP')
 //!
-//! @return
+//! @return 0 on success or 1 if any failure occured
 //!
 //! @see
 //!
-//! @pre List of pre-conditions
+//! @pre \li All pointers and strings must not be NULL
+//!      \li The referred table and chain must exists
 //!
-//! @post List of post conditions
+//! @post On success the chain default policy has been changed. On failure, the original policy
+//!       will remain.
+//!
+//! @note
+//!
+int ipt_table_set_chain_policy(ipt_handler * pIpth, const char *tablename, const char *chainname, const char *policyname)
+{
+    ipt_table *pTable = NULL;
+    ipt_chain *pChain = NULL;
+
+    if (!pIpth || !tablename || !chainname || !pIpth->init) {
+        return (1);
+    }
+
+    if ((pTable = ipt_handler_find_table(pIpth, tablename)) == NULL) {
+        return (1);
+    }
+
+    if ((pChain = ipt_table_find_chain(pIpth, tablename, chainname)) != NULL) {
+        snprintf(pChain->policyname, 64, "%s", policyname);
+    }
+
+    return (0);
+}
+
+//!
+//! Function description.
+//!
+//! @param[in] ipth pointer to the IP table handler structure
+//! @param[in] tablename a string pointer to the table name
+//! @param[in] chainname a string pointer to the chain name
+//! @param[in] findrule a string pointer to the rule we're looking for
+//!
+//! @return a pointer to the IP table rule structure if found. Otherwise, NULL is returned
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
 //!
 //! @note
 //!
@@ -830,15 +920,15 @@ ipt_rule *ipt_chain_find_rule(ipt_handler * ipth, char *tablename, char *chainna
 //! Function description.
 //!
 //! @param[in] ipth pointer to the IP table handler structure
-//! @param[in] tablename
+//! @param[in] tablename a string pointer to the table name
 //!
-//! @return
+//! @return 0 on success or 1 if any failure occured
 //!
 //! @see
 //!
-//! @pre List of pre-conditions
+//! @pre
 //!
-//! @post List of post conditions
+//! @post
 //!
 //! @note
 //!
@@ -873,22 +963,22 @@ int ipt_table_deletechainempty(ipt_handler * ipth, char *tablename)
 //! Function description.
 //!
 //! @param[in] ipth pointer to the IP table handler structure
-//! @param[in] tablename
-//! @param[in] chainmatch
+//! @param[in] tablename a string pointer to the table name
+//! @param[in] chainmatch a string pointer to the list of characters to match
 //!
-//! @return
+//! @return 0 on success or 1 if any failure occured
 //!
 //! @see
 //!
-//! @pre List of pre-conditions
+//! @pre
 //!
-//! @post List of post conditions
+//! @post
 //!
 //! @note
 //!
 int ipt_table_deletechainmatch(ipt_handler * ipth, char *tablename, char *chainmatch)
 {
-    int i, found = 0;
+    int i = 0;
     ipt_table *table = NULL;
     ipt_chain *chain = NULL;
 
@@ -901,8 +991,7 @@ int ipt_table_deletechainmatch(ipt_handler * ipth, char *tablename, char *chainm
         return (1);
     }
 
-    found = 0;
-    for (i = 0; i < table->max_chains && !found; i++) {
+    for (i = 0; i < table->max_chains; i++) {
         if (strstr(table->chains[i].name, chainmatch)) {
             chain = &(table->chains[i]);
             ipt_chain_flush(ipth, tablename, chain->name);
@@ -917,16 +1006,16 @@ int ipt_table_deletechainmatch(ipt_handler * ipth, char *tablename, char *chainm
 //! Function description.
 //!
 //! @param[in] ipth pointer to the IP table handler structure
-//! @param[in] tablename
-//! @param[in] chainname
+//! @param[in] tablename a string pointer to the table name
+//! @param[in] chainname a string pointer to the chain name
 //!
-//! @return
+//! @return 0 on success or 1 if any failure occured
 //!
 //! @see
 //!
-//! @pre List of pre-conditions
+//! @pre
 //!
-//! @post List of post conditions
+//! @post
 //!
 //! @note
 //!
@@ -963,13 +1052,13 @@ int ipt_chain_flush(ipt_handler * ipth, char *tablename, char *chainname)
 //!
 //! @param[in] ipth pointer to the IP table handler structure
 //!
-//! @return
+//! @return 0 on success or 1 if any failure occured
 //!
 //! @see
 //!
-//! @pre List of pre-conditions
+//! @pre
 //!
-//! @post List of post conditions
+//! @post
 //!
 //! @note
 //!
@@ -978,11 +1067,13 @@ int ipt_handler_free(ipt_handler * ipth)
     int i = 0;
     int j = 0;
     char saved_cmdprefix[EUCA_MAX_PATH] = "";
+    char saved_preloadPath[EUCA_MAX_PATH] = "";
 
     if (!ipth || !ipth->init) {
         return (1);
     }
     snprintf(saved_cmdprefix, EUCA_MAX_PATH, "%s", ipth->cmdprefix);
+    snprintf(saved_preloadPath, EUCA_MAX_PATH, "%s", ipth->preloadPath);
 
     for (i = 0; i < ipth->max_tables; i++) {
         for (j = 0; j < ipth->tables[i].max_chains; j++) {
@@ -993,7 +1084,7 @@ int ipt_handler_free(ipt_handler * ipth)
     EUCA_FREE(ipth->tables);
     unlink(ipth->ipt_file);
 
-    return (ipt_handler_init(ipth, saved_cmdprefix));
+    return (ipt_handler_init(ipth, saved_cmdprefix, saved_preloadPath));
 }
 
 //!
@@ -1001,13 +1092,13 @@ int ipt_handler_free(ipt_handler * ipth)
 //!
 //! @param[in] ipth pointer to the IP table handler structure
 //!
-//! @return
+//! @return 0 on success or 1 if any failure occured
 //!
 //! @see
 //!
-//! @pre List of pre-conditions
+//! @pre
 //!
-//! @post List of post conditions
+//! @post
 //!
 //! @note
 //!
@@ -1041,203 +1132,20 @@ int ipt_handler_print(ipt_handler * ipth)
 //!
 //! Function description.
 //!
-//! @param[in] ipsh pointer to the IP set handler structure
-//! @param[in] cmdprefix
+//! @param[in]  ipname pointer to the IP set handler structure
+//! @param[out] ippart
+//! @param[out] nmpart
 //!
 //! @return
 //!
 //! @see
 //!
-//! @pre List of pre-conditions
+//! @pre
 //!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int ips_handler_init(ips_handler * ipsh, char *cmdprefix)
-{
-    int fd;
-    char cmd[EUCA_MAX_PATH];
-
-    if (!ipsh) {
-        LOGERROR("invalid input\n");
-        return (1);
-    }
-    bzero(ipsh, sizeof(ips_handler));
-
-    snprintf(ipsh->ips_file, EUCA_MAX_PATH, "/tmp/ips_file-XXXXXX");
-    fd = safe_mkstemp(ipsh->ips_file);
-    if (fd < 0) {
-        LOGERROR("cannot create tmpfile '%s': check permissions\n", ipsh->ips_file);
-        return (1);
-    }
-    if (chmod(ipsh->ips_file, 0600)) {
-        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", ipsh->ips_file);
-    }
-    close(fd);
-
-    if (cmdprefix) {
-        snprintf(ipsh->cmdprefix, EUCA_MAX_PATH, "%s", cmdprefix);
-    } else {
-        ipsh->cmdprefix[0] = '\0';
-    }
-
-    // test required shell-outs
-    snprintf(cmd, EUCA_MAX_PATH, "%s ipset -L >/dev/null 2>&1", ipsh->cmdprefix);
-    if (system(cmd)) {
-        LOGERROR("could not execute required shell out '%s': check command/permissions\n", cmd);
-        return (1);
-    }
-
-    ipsh->init = 1;
-    return (0);
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
+//! @post
 //!
 //! @note
 //!
-int ips_system_save(ips_handler * ipsh)
-{
-    int rc = 0;
-    char cmd[EUCA_MAX_PATH] = "";
-
-    snprintf(cmd, EUCA_MAX_PATH, "%s ipset save > %s", ipsh->cmdprefix, ipsh->ips_file);
-    rc = system(cmd);
-    rc = rc >> 8;
-    if (rc) {
-        LOGERROR("ipset save failed '%s'\n", cmd);
-    }
-    return (rc);
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int ips_system_restore(ips_handler * ipsh)
-{
-    int rc;
-    char cmd[EUCA_MAX_PATH];
-
-    snprintf(cmd, EUCA_MAX_PATH, "%s ipset -! restore < %s", ipsh->cmdprefix, ipsh->ips_file);
-    rc = system(cmd);
-    rc = rc >> 8;
-    LOGDEBUG("RESTORE CMD: %s\n", cmd);
-    if (rc) {
-        copy_file(ipsh->ips_file, "/tmp/euca_ips_file_failed");
-        LOGERROR("ipset restore failed '%s': copying failed input file to '/tmp/euca_ips_file_failed' for manual retry.\n", cmd);
-    }
-    unlink(ipsh->ips_file);
-    return (rc);
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int ips_handler_repopulate(ips_handler * ipsh)
-{
-    int rc = 0, nm = 0;
-    FILE *FH = NULL;
-    char buf[1024] = "";
-    char *strptr = NULL;
-    char setname[64] = "";
-    char ipname[64] = "", *ip = NULL;
-
-    if (!ipsh || !ipsh->init) {
-        return (1);
-    }
-
-    rc = ips_handler_free(ipsh);
-    if (rc) {
-        return (1);
-    }
-
-    rc = ips_system_save(ipsh);
-    if (rc) {
-        LOGERROR("could not save current IPS rules to file, exiting re-populate\n");
-        return (1);
-    }
-
-    FH = fopen(ipsh->ips_file, "r");
-    if (!FH) {
-        LOGERROR("could not open file for read '%s': check permissions\n", ipsh->ips_file);
-        return (1);
-    }
-
-    while (fgets(buf, 1024, FH)) {
-        if ((strptr = strchr(buf, '\n'))) {
-            *strptr = '\0';
-        }
-
-        if (strlen(buf) < 1) {
-            continue;
-        }
-
-        while (buf[strlen(buf) - 1] == ' ') {
-            buf[strlen(buf) - 1] = '\0';
-        }
-
-        if (strstr(buf, "create")) {
-            setname[0] = '\0';
-            sscanf(buf, "create %s", setname);
-            if (strlen(setname)) {
-                ips_handler_add_set(ipsh, setname);
-            }
-        } else if (strstr(buf, "add")) {
-            ipname[0] = '\0';
-            sscanf(buf, "add %s %[0-9./]", setname, ipname);
-            if (strlen(setname) && strlen(ipname)) {
-                rc = cidrsplit(ipname, &ip, &nm);
-                if (ip && strlen(ip) && nm >= 0 && nm <= 32) {
-                    LOGDEBUG("reading in from ipset: adding ip/nm %s/%d to ipset %s\n", SP(ip), nm, SP(setname));
-                    ips_set_add_net(ipsh, setname, ip, nm);
-                    EUCA_FREE(ip);
-                }
-            }
-        } else {
-            LOGWARN("unknown IPS rule on ingress, rule will be thrown out: (%s)\n", buf);
-        }
-    }
-    fclose(FH);
-
-    return (0);
-}
-
 int cidrsplit(char *ipname, char **ippart, int *nmpart)
 {
     char *idx = NULL;
@@ -1265,1288 +1173,5 @@ int cidrsplit(char *ipname, char **ippart, int *nmpart)
         *nmpart = 32;
         *ippart = strdup(ipname);
     }
-    return (0);
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//! @param[in] dodelete
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int ips_handler_deploy(ips_handler * ipsh, int dodelete)
-{
-    int i = 0;
-    int j = 0;
-    FILE *FH = NULL;
-    char *strptra = NULL;
-
-    if (!ipsh || !ipsh->init) {
-        return (1);
-    }
-
-    FH = fopen(ipsh->ips_file, "w");
-    if (!FH) {
-        LOGERROR("could not open file for write '%s': check permissions\n", ipsh->ips_file);
-        return (1);
-    }
-    for (i = 0; i < ipsh->max_sets; i++) {
-        if (ipsh->sets[i].ref_count) {
-            fprintf(FH, "create %s hash:net family inet hashsize 2048 maxelem 65536\n", ipsh->sets[i].name);
-            fprintf(FH, "flush %s\n", ipsh->sets[i].name);
-            for (j = 0; j < ipsh->sets[i].max_member_ips; j++) {
-                strptra = hex2dot(ipsh->sets[i].member_ips[j]);
-                LOGDEBUG("adding ip/nm %s/%d to ipset %s\n", strptra, ipsh->sets[i].member_nms[j], ipsh->sets[i].name);
-                fprintf(FH, "add %s %s/%d\n", ipsh->sets[i].name, strptra, ipsh->sets[i].member_nms[j]);
-                EUCA_FREE(strptra);
-            }
-        } else if ((ipsh->sets[i].ref_count == 0) && dodelete) {
-            fprintf(FH, "create %s hash:net family inet hashsize 2048 maxelem 65536\n", ipsh->sets[i].name);
-            fprintf(FH, "flush %s\n", ipsh->sets[i].name);
-            fprintf(FH, "destroy %s\n", ipsh->sets[i].name);
-        }
-    }
-    fclose(FH);
-
-    return (ips_system_restore(ipsh));
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//! @param[in] setname
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int ips_handler_add_set(ips_handler * ipsh, char *setname)
-{
-    ips_set *set = NULL;
-
-    if (!ipsh || !setname || !ipsh->init) {
-        return (1);
-    }
-
-    set = ips_handler_find_set(ipsh, setname);
-    if (!set) {
-        ipsh->sets = realloc(ipsh->sets, sizeof(ips_set) * (ipsh->max_sets + 1));
-        if (!ipsh->sets) {
-            LOGFATAL("out of memory!\n");
-            exit(1);
-        }
-        bzero(&(ipsh->sets[ipsh->max_sets]), sizeof(ips_set));
-        snprintf(ipsh->sets[ipsh->max_sets].name, 64, setname);
-        ipsh->sets[ipsh->max_sets].ref_count = 1;
-        ipsh->max_sets++;
-    }
-    return (0);
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//! @param[in] findset
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-ips_set *ips_handler_find_set(ips_handler * ipsh, char *findset)
-{
-    int i, setidx = 0, found = 0;
-    if (!ipsh || !findset || !ipsh->init) {
-        return (NULL);
-    }
-
-    found = 0;
-    for (i = 0; i < ipsh->max_sets && !found; i++) {
-        setidx = i;
-        if (!strcmp(ipsh->sets[i].name, findset))
-            found++;
-    }
-    if (!found) {
-        return (NULL);
-    }
-    return (&(ipsh->sets[setidx]));
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//! @param[in] setname
-//! @param[in] ipname
-//! @param[in] nmname
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int ips_set_add_ip(ips_handler * ipsh, char *setname, char *ipname)
-{
-    return (ips_set_add_net(ipsh, setname, ipname, 32));
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//! @param[in] setname
-//! @param[in] ipname
-//! @param[in] nmname
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int ips_set_add_net(ips_handler * ipsh, char *setname, char *ipname, int nmname)
-{
-    ips_set *set = NULL;
-    u32 *ip = NULL;
-    if (!ipsh || !setname || !ipname || !ipsh->init) {
-        return (1);
-    }
-
-    set = ips_handler_find_set(ipsh, setname);
-    if (!set) {
-        return (1);
-    }
-
-    ip = ips_set_find_net(ipsh, setname, ipname, nmname);
-    if (!ip) {
-        set->member_ips = realloc(set->member_ips, sizeof(u32) * (set->max_member_ips + 1));
-        if (!set->member_ips) {
-            LOGFATAL("out of memory!\n");
-            exit(1);
-        }
-        set->member_nms = realloc(set->member_nms, sizeof(int) * (set->max_member_ips + 1));
-        if (!set->member_nms) {
-            LOGFATAL("out of memory!\n");
-            exit(1);
-        }
-
-        bzero(&(set->member_ips[set->max_member_ips]), sizeof(u32));
-        bzero(&(set->member_nms[set->max_member_ips]), sizeof(int));
-        set->member_ips[set->max_member_ips] = dot2hex(ipname);
-        set->member_nms[set->max_member_ips] = nmname;
-        set->max_member_ips++;
-        set->ref_count++;
-    }
-    return (0);
-}
-
-u32 *ips_set_find_ip(ips_handler * ipsh, char *setname, char *findipstr)
-{
-    return (ips_set_find_net(ipsh, setname, findipstr, 32));
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//! @param[in] setname
-//! @param[in] findipstr
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-u32 *ips_set_find_net(ips_handler * ipsh, char *setname, char *findipstr, int findnm)
-{
-    int i, found = 0, ipidx = 0;
-    ips_set *set = NULL;
-    u32 findip;
-
-    if (!ipsh || !setname || !findipstr || !ipsh->init) {
-        return (NULL);
-    }
-
-    set = ips_handler_find_set(ipsh, setname);
-    if (!set) {
-        return (NULL);
-    }
-
-    findip = dot2hex(findipstr);
-    found = 0;
-    for (i = 0; i < set->max_member_ips && !found; i++) {
-        ipidx = i;
-        if (set->member_ips[i] == findip && set->member_nms[i] == findnm)
-            found++;
-    }
-
-    if (!found) {
-        return (NULL);
-    }
-
-    return (&(set->member_ips[ipidx]));
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//! @param[in] setname
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int ips_set_flush(ips_handler * ipsh, char *setname)
-{
-    ips_set *set = NULL;
-
-    if (!ipsh || !setname || !ipsh->init) {
-        return (1);
-    }
-
-    set = ips_handler_find_set(ipsh, setname);
-    if (!set) {
-        return (1);
-    }
-
-    EUCA_FREE(set->member_ips);
-    EUCA_FREE(set->member_nms);
-    set->max_member_ips = set->ref_count = 0;
-
-    return (0);
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//! @param[in] setmatch
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int ips_handler_deletesetmatch(ips_handler * ipsh, char *setmatch)
-{
-    int i = 0;
-    int found = 0;
-
-    if (!ipsh || !setmatch || !ipsh->init) {
-        return (1);
-    }
-
-    found = 0;
-    for (i = 0; i < ipsh->max_sets && !found; i++) {
-        if (strstr(ipsh->sets[i].name, setmatch)) {
-            EUCA_FREE(ipsh->sets[i].member_ips);
-            EUCA_FREE(ipsh->sets[i].member_nms);
-            ipsh->sets[i].max_member_ips = 0;
-            ipsh->sets[i].ref_count = 0;
-        }
-    }
-
-    return (0);
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int ips_handler_free(ips_handler * ipsh)
-{
-    int i = 0;
-    char saved_cmdprefix[EUCA_MAX_PATH] = "";
-
-    if (!ipsh || !ipsh->init) {
-        return (1);
-    }
-    snprintf(saved_cmdprefix, EUCA_MAX_PATH, "%s", ipsh->cmdprefix);
-
-    for (i = 0; i < ipsh->max_sets; i++) {
-        EUCA_FREE(ipsh->sets[i].member_ips);
-        EUCA_FREE(ipsh->sets[i].member_nms);
-    }
-    EUCA_FREE(ipsh->sets);
-
-    unlink(ipsh->ips_file);
-
-    return (ips_handler_init(ipsh, saved_cmdprefix));
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int ips_handler_print(ips_handler * ipsh)
-{
-    int i, j;
-    char *strptra = NULL;
-
-    if (!ipsh) {
-        return (1);
-    }
-
-    if (log_level_get() == EUCA_LOG_TRACE) {
-        for (i = 0; i < ipsh->max_sets; i++) {
-            LOGTRACE("IPSET NAME: %s\n", ipsh->sets[i].name);
-            for (j = 0; j < ipsh->sets[i].max_member_ips; j++) {
-                strptra = hex2dot(ipsh->sets[i].member_ips[j]);
-                LOGTRACE("\t MEMBER IP: %s/%d\n", strptra, ipsh->sets[i].member_nms[j]);
-                EUCA_FREE(strptra);
-            }
-        }
-    }
-    return (0);
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//! @param[in] cmdprefix
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int ebt_handler_init(ebt_handler * ebth, char *cmdprefix)
-{
-    int fd;
-    char cmd[EUCA_MAX_PATH];
-
-    if (!ebth) {
-        return (1);
-    }
-    bzero(ebth, sizeof(ebt_handler));
-
-    snprintf(ebth->ebt_filter_file, EUCA_MAX_PATH, "/tmp/ebt_filter_file-XXXXXX");
-    fd = safe_mkstemp(ebth->ebt_filter_file);
-    if (fd < 0) {
-        LOGERROR("cannot create tmpfile '%s': check permissions\n", ebth->ebt_filter_file);
-        return (1);
-    }
-    if (chmod(ebth->ebt_filter_file, 0600)) {
-        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", ebth->ebt_filter_file);
-    }
-    close(fd);
-
-    snprintf(ebth->ebt_nat_file, EUCA_MAX_PATH, "/tmp/ebt_nat_file-XXXXXX");
-    fd = safe_mkstemp(ebth->ebt_nat_file);
-    if (fd < 0) {
-        LOGERROR("cannot create tmpfile '%s': check permissions\n", ebth->ebt_nat_file);
-        return (1);
-    }
-    if (chmod(ebth->ebt_nat_file, 0600)) {
-        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", ebth->ebt_nat_file);
-    }
-    close(fd);
-
-    snprintf(ebth->ebt_asc_file, EUCA_MAX_PATH, "/tmp/ebt_asc_file-XXXXXX");
-    fd = safe_mkstemp(ebth->ebt_asc_file);
-    if (fd < 0) {
-        LOGERROR("cannot create tmpfile '%s': check permissions\n", ebth->ebt_asc_file);
-        unlink(ebth->ebt_filter_file);
-        unlink(ebth->ebt_nat_file);
-        return (1);
-    }
-    if (chmod(ebth->ebt_asc_file, 0600)) {
-        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", ebth->ebt_asc_file);
-    }
-    close(fd);
-
-    if (cmdprefix) {
-        snprintf(ebth->cmdprefix, EUCA_MAX_PATH, "%s", cmdprefix);
-    } else {
-        ebth->cmdprefix[0] = '\0';
-    }
-
-    // test required shell-outs
-    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables -L >/dev/null 2>&1", ebth->cmdprefix);
-    if (system(cmd)) {
-        LOGERROR("could not execute required shell out '%s': check command/permissions\n", cmd);
-        unlink(ebth->ebt_filter_file);
-        unlink(ebth->ebt_nat_file);
-        unlink(ebth->ebt_asc_file);
-        return (1);
-    }
-
-    ebth->init = 1;
-    return (0);
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int ebt_system_save(ebt_handler * ebth)
-{
-    int rc = 0;
-    int ret = 0;
-    char cmd[EUCA_MAX_PATH] = "";
-
-    ret = 0;
-
-    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t filter --atomic-save", ebth->cmdprefix, ebth->ebt_filter_file);
-    rc = system(cmd);
-    rc = rc >> 8;
-    if (rc) {
-        LOGERROR("ebtables-save failed '%s'\n", cmd);
-        ret = 1;
-    }
-
-    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t nat --atomic-save", ebth->cmdprefix, ebth->ebt_nat_file);
-    rc = system(cmd);
-    rc = rc >> 8;
-    if (rc) {
-        LOGERROR("ebtables-save failed '%s'\n", cmd);
-        ret = 1;
-    }
-
-    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t filter -L > %s", ebth->cmdprefix, ebth->ebt_filter_file, ebth->ebt_asc_file);
-    rc = system(cmd);
-    rc = rc >> 8;
-    if (rc) {
-        LOGERROR("ebtables-list failed '%s'\n", cmd);
-        ret = 1;
-    }
-
-    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t nat -L >> %s", ebth->cmdprefix, ebth->ebt_nat_file, ebth->ebt_asc_file);
-    rc = system(cmd);
-    rc = rc >> 8;
-    if (rc) {
-        LOGERROR("ebtables-list failed '%s'\n", cmd);
-        ret = 1;
-    }
-
-    return (ret);
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int ebt_system_restore(ebt_handler * ebth)
-{
-    int rc;
-    char cmd[EUCA_MAX_PATH];
-
-    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t filter --atomic-commit", ebth->cmdprefix, ebth->ebt_filter_file);
-    rc = system(cmd);
-    rc = rc >> 8;
-    if (rc) {
-        copy_file(ebth->ebt_filter_file, "/tmp/euca_ebt_filter_file_failed");
-        LOGERROR("ebtables-restore failed '%s': copying failed input file to '/tmp/euca_ebt_filter_file_failed' for manual retry.\n", cmd);
-    }
-    unlink(ebth->ebt_filter_file);
-
-    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t nat --atomic-commit", ebth->cmdprefix, ebth->ebt_nat_file);
-    rc = system(cmd);
-    rc = rc >> 8;
-    if (rc) {
-        copy_file(ebth->ebt_nat_file, "/tmp/euca_ebt_nat_file_failed");
-        LOGERROR("ebtables-restore failed '%s': copying failed input file to '/tmp/euca_ebt_nat_file_failed' for manual retry.\n", cmd);
-    }
-    unlink(ebth->ebt_nat_file);
-
-    unlink(ebth->ebt_asc_file);
-
-    return (rc);
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int ebt_handler_deploy(ebt_handler * ebth)
-{
-    int i = 0;
-    int j = 0;
-    int k = 0;
-    int rc = 0;
-    char cmd[EUCA_MAX_PATH] = "";
-
-    if (!ebth || !ebth->init) {
-        return (1);
-    }
-
-    ebt_handler_update_refcounts(ebth);
-
-    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t filter --atomic-init", ebth->cmdprefix, ebth->ebt_filter_file);
-    rc = system(cmd);
-    rc = rc >> 8;
-    if (rc) {
-        LOGERROR("ebtables-save failed '%s'\n", cmd);
-        return (1);
-    }
-
-    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t nat --atomic-init", ebth->cmdprefix, ebth->ebt_nat_file);
-    rc = system(cmd);
-    rc = rc >> 8;
-    if (rc) {
-        LOGERROR("ebtables-save failed '%s'\n", cmd);
-        return (1);
-    }
-
-    for (i = 0; i < ebth->max_tables; i++) {
-        for (j = 0; j < ebth->tables[i].max_chains; j++) {
-            if (strcmp(ebth->tables[i].chains[j].name, "EMPTY") && ebth->tables[i].chains[j].ref_count) {
-                if (strcmp(ebth->tables[i].chains[j].name, "INPUT") && strcmp(ebth->tables[i].chains[j].name, "OUTPUT") && strcmp(ebth->tables[i].chains[j].name, "FORWARD")
-                    && strcmp(ebth->tables[i].chains[j].name, "PREROUTING") && strcmp(ebth->tables[i].chains[j].name, "POSTROUTING")) {
-                    if (!strcmp(ebth->tables[i].name, "filter")) {
-                        snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t %s -N %s", ebth->cmdprefix, ebth->ebt_filter_file, ebth->tables[i].name,
-                                 ebth->tables[i].chains[j].name);
-                    } else if (!strcmp(ebth->tables[i].name, "nat")) {
-                        snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t %s -N %s", ebth->cmdprefix, ebth->ebt_nat_file, ebth->tables[i].name,
-                                 ebth->tables[i].chains[j].name);
-                    }
-                    rc = system(cmd);
-                    rc = rc >> 8;
-                    LOGTRACE("executed command (exit=%d): %s\n", rc, cmd);
-                    if (rc)
-                        LOGERROR("command failed: exitcode=%d command=%s\n", rc, cmd);
-                }
-            }
-        }
-        for (j = 0; j < ebth->tables[i].max_chains; j++) {
-            if (strcmp(ebth->tables[i].chains[j].name, "EMPTY") && ebth->tables[i].chains[j].ref_count) {
-                for (k = 0; k < ebth->tables[i].chains[j].max_rules; k++) {
-                    if (!strcmp(ebth->tables[i].name, "filter")) {
-                        snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t %s -A %s %s", ebth->cmdprefix, ebth->ebt_filter_file, ebth->tables[i].name,
-                                 ebth->tables[i].chains[j].name, ebth->tables[i].chains[j].rules[k].ebtrule);
-                    } else if (!strcmp(ebth->tables[i].name, "nat")) {
-                        snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t %s -A %s %s", ebth->cmdprefix, ebth->ebt_nat_file, ebth->tables[i].name,
-                                 ebth->tables[i].chains[j].name, ebth->tables[i].chains[j].rules[k].ebtrule);
-                    }
-                    rc = system(cmd);
-                    rc = rc >> 8;
-                    LOGTRACE("executed command (exit=%d): %s\n", rc, cmd);
-                    if (rc)
-                        LOGERROR("command failed: exitcode=%d command=%s\n", rc, cmd);
-                }
-            }
-        }
-    }
-    return (ebt_system_restore(ebth));
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int ebt_handler_repopulate(ebt_handler * ebth)
-{
-    int rc = 0;
-    FILE *FH = NULL;
-    char buf[1024] = "";
-    char tmpbuf[1024] = "";
-    char *strptr = NULL;
-    char tablename[64] = "";
-    char chainname[64] = "";
-    char policyname[64] = "";
-
-    if (!ebth || !ebth->init) {
-        return (1);
-    }
-
-    rc = ebt_handler_free(ebth);
-    if (rc) {
-        return (1);
-    }
-
-    rc = ebt_system_save(ebth);
-    if (rc) {
-        LOGERROR("could not save current EBT rules to file, exiting re-populate\n");
-        return (1);
-    }
-
-    FH = fopen(ebth->ebt_asc_file, "r");
-    if (!FH) {
-        LOGERROR("could not open file for read '%s': check permissions\n", ebth->ebt_asc_file);
-        return (1);
-    }
-
-    while (fgets(buf, 1024, FH)) {
-        if ((strptr = strchr(buf, '\n'))) {
-            *strptr = '\0';
-        }
-
-        if (strlen(buf) < 1) {
-            continue;
-        }
-
-        while (buf[strlen(buf) - 1] == ' ') {
-            buf[strlen(buf) - 1] = '\0';
-        }
-
-        if (strstr(buf, "Bridge table:")) {
-            tablename[0] = '\0';
-            sscanf(buf, "Bridge table: %s", tablename);
-            if (strlen(tablename)) {
-                ebt_handler_add_table(ebth, tablename);
-            }
-        } else if (strstr(buf, "Bridge chain: ")) {
-            chainname[0] = '\0';
-            sscanf(buf, "Bridge chain: %[^,]%s %s %s %s %s", chainname, tmpbuf, tmpbuf, tmpbuf, tmpbuf, policyname);
-            if (strlen(chainname)) {
-                ebt_table_add_chain(ebth, tablename, chainname, policyname, "");
-            }
-        } else if (buf[0] == '#') {
-        } else if (buf[0] == '-') {
-            ebt_chain_add_rule(ebth, tablename, chainname, buf);
-        } else {
-            LOGWARN("unknown EBT rule on ingress, will be thrown out: (%s)\n", buf);
-        }
-    }
-    fclose(FH);
-
-    return (0);
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//! @param[in] tablename
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int ebt_handler_add_table(ebt_handler * ebth, char *tablename)
-{
-    ebt_table *table = NULL;
-    if (!ebth || !tablename || !ebth->init) {
-        return (1);
-    }
-
-    LOGDEBUG("adding table %s\n", tablename);
-    table = ebt_handler_find_table(ebth, tablename);
-    if (!table) {
-        ebth->tables = realloc(ebth->tables, sizeof(ebt_table) * (ebth->max_tables + 1));
-        if (!ebth->tables) {
-            LOGFATAL("out of memory!\n");
-            exit(1);
-        }
-        bzero(&(ebth->tables[ebth->max_tables]), sizeof(ebt_table));
-        snprintf(ebth->tables[ebth->max_tables].name, 64, tablename);
-        ebth->max_tables++;
-    }
-
-    return (0);
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//! @param[in] tablename
-//! @param[in] chainname
-//! @param[in] policyname
-//! @param[in] counters
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int ebt_table_add_chain(ebt_handler * ebth, char *tablename, char *chainname, char *policyname, char *counters)
-{
-    ebt_table *table = NULL;
-    ebt_chain *chain = NULL;
-    if (!ebth || !tablename || !chainname || !counters || !ebth->init) {
-        return (1);
-    }
-    LOGDEBUG("adding chain %s to table %s\n", chainname, tablename);
-    table = ebt_handler_find_table(ebth, tablename);
-    if (!table) {
-        return (1);
-    }
-
-    chain = ebt_table_find_chain(ebth, tablename, chainname);
-    if (!chain) {
-        table->chains = realloc(table->chains, sizeof(ebt_chain) * (table->max_chains + 1));
-        if (!table->chains) {
-            LOGFATAL("out of memory!\n");
-            exit(1);
-        }
-        bzero(&(table->chains[table->max_chains]), sizeof(ebt_chain));
-        snprintf(table->chains[table->max_chains].name, 64, "%s", chainname);
-        snprintf(table->chains[table->max_chains].policyname, 64, "%s", policyname);
-        snprintf(table->chains[table->max_chains].counters, 64, "%s", counters);
-        if (!strcmp(table->chains[table->max_chains].name, "INPUT") ||
-            !strcmp(table->chains[table->max_chains].name, "FORWARD") ||
-            !strcmp(table->chains[table->max_chains].name, "OUTPUT") ||
-            !strcmp(table->chains[table->max_chains].name, "PREROUTING") || !strcmp(table->chains[table->max_chains].name, "POSTROUTING")) {
-            table->chains[table->max_chains].ref_count = 1;
-        }
-
-        table->max_chains++;
-
-    }
-
-    return (0);
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//! @param[in] tablename
-//! @param[in] chainname
-//! @param[in] newrule
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int ebt_chain_add_rule(ebt_handler * ebth, char *tablename, char *chainname, char *newrule)
-{
-    ebt_table *table = NULL;
-    ebt_chain *chain = NULL;
-    ebt_rule *rule = NULL;
-
-    LOGDEBUG("adding rules (%s) to chain %s to table %s\n", newrule, chainname, tablename);
-    if (!ebth || !tablename || !chainname || !newrule || !ebth->init) {
-        return (1);
-    }
-
-    table = ebt_handler_find_table(ebth, tablename);
-    if (!table) {
-        return (1);
-    }
-
-    chain = ebt_table_find_chain(ebth, tablename, chainname);
-    if (!chain) {
-        return (1);
-    }
-
-    rule = ebt_chain_find_rule(ebth, tablename, chainname, newrule);
-    if (!rule) {
-        chain->rules = realloc(chain->rules, sizeof(ebt_rule) * (chain->max_rules + 1));
-        if (!chain->rules) {
-            LOGFATAL("out of memory!\n");
-            exit(1);
-        }
-        bzero(&(chain->rules[chain->max_rules]), sizeof(ebt_rule));
-        snprintf(chain->rules[chain->max_rules].ebtrule, 1024, "%s", newrule);
-        chain->max_rules++;
-    }
-    return (0);
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int ebt_handler_update_refcounts(ebt_handler * ebth)
-{
-    char *jumpptr = NULL, jumpchain[64], tmp[64];
-    int i, j, k;
-    ebt_table *table = NULL;
-    ebt_chain *chain = NULL, *refchain = NULL;
-    ebt_rule *rule = NULL;
-
-    for (i = 0; i < ebth->max_tables; i++) {
-        table = &(ebth->tables[i]);
-        for (j = 0; j < table->max_chains; j++) {
-            chain = &(table->chains[j]);
-            for (k = 0; k < chain->max_rules; k++) {
-                rule = &(chain->rules[k]);
-
-                jumpptr = strstr(rule->ebtrule, "-j");
-                if (jumpptr) {
-                    jumpchain[0] = '\0';
-                    sscanf(jumpptr, "%[-j] %s", tmp, jumpchain);
-                    if (strlen(jumpchain)) {
-                        refchain = ebt_table_find_chain(ebth, table->name, jumpchain);
-                        if (refchain) {
-                            LOGDEBUG("FOUND REF TO CHAIN (name=%s sourcechain=%s jumpchain=%s currref=%d) (rule=%s\n", refchain->name, chain->name, jumpchain, refchain->ref_count,
-                                     rule->ebtrule);
-                            refchain->ref_count++;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return (0);
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//! @param[in] findtable
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-ebt_table *ebt_handler_find_table(ebt_handler * ebth, char *findtable)
-{
-    int i, tableidx = 0, found = 0;
-    if (!ebth || !findtable || !ebth->init) {
-        return (NULL);
-    }
-
-    found = 0;
-    for (i = 0; i < ebth->max_tables && !found; i++) {
-        tableidx = i;
-        if (!strcmp(ebth->tables[i].name, findtable))
-            found++;
-    }
-    if (!found) {
-        return (NULL);
-    }
-    return (&(ebth->tables[tableidx]));
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//! @param[in] tablename
-//! @param[in] findchain
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-ebt_chain *ebt_table_find_chain(ebt_handler * ebth, char *tablename, char *findchain)
-{
-    int i, found = 0, chainidx = 0;
-    ebt_table *table = NULL;
-
-    if (!ebth || !tablename || !findchain || !ebth->init) {
-        return (NULL);
-    }
-
-    table = ebt_handler_find_table(ebth, tablename);
-    if (!table) {
-        return (NULL);
-    }
-
-    found = 0;
-    for (i = 0; i < table->max_chains && !found; i++) {
-        chainidx = i;
-        if (!strcmp(table->chains[i].name, findchain))
-            found++;
-    }
-
-    if (!found) {
-        return (NULL);
-    }
-
-    return (&(table->chains[chainidx]));
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//! @param[in] tablename
-//! @param[in] chainname
-//! @param[in] findrule
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-ebt_rule *ebt_chain_find_rule(ebt_handler * ebth, char *tablename, char *chainname, char *findrule)
-{
-    int i, found = 0, ruleidx = 0;
-    ebt_chain *chain;
-
-    if (!ebth || !tablename || !chainname || !findrule || !ebth->init) {
-        return (NULL);
-    }
-
-    chain = ebt_table_find_chain(ebth, tablename, chainname);
-    if (!chain) {
-        return (NULL);
-    }
-
-    for (i = 0; i < chain->max_rules; i++) {
-        ruleidx = i;
-        if (!strcmp(chain->rules[i].ebtrule, findrule))
-            found++;
-    }
-    if (!found) {
-        return (NULL);
-    }
-    return (&(chain->rules[i]));
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//! @param[in] tablename
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int ebt_table_deletechainempty(ebt_handler * ebth, char *tablename)
-{
-    int i, found = 0;
-    ebt_table *table = NULL;
-
-    if (!ebth || !tablename || !ebth->init) {
-        return (1);
-    }
-
-    table = ebt_handler_find_table(ebth, tablename);
-    if (!table) {
-        return (1);
-    }
-
-    found = 0;
-    for (i = 0; i < table->max_chains && !found; i++) {
-        if (table->chains[i].max_rules == 0) {
-            ebt_table_deletechainmatch(ebth, tablename, table->chains[i].name);
-            found++;
-        }
-    }
-    if (!found) {
-        return (1);
-    }
-    return (0);
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//! @param[in] tablename
-//! @param[in] chainmatch
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int ebt_table_deletechainmatch(ebt_handler * ebth, char *tablename, char *chainmatch)
-{
-    int i, found = 0;
-    ebt_table *table = NULL;
-
-    if (!ebth || !tablename || !chainmatch || !ebth->init) {
-        return (1);
-    }
-
-    table = ebt_handler_find_table(ebth, tablename);
-    if (!table) {
-        return (1);
-    }
-
-    found = 0;
-    for (i = 0; i < table->max_chains && !found; i++) {
-        if (strstr(table->chains[i].name, chainmatch)) {
-            EUCA_FREE(table->chains[i].rules);
-            bzero(&(table->chains[i]), sizeof(ebt_chain));
-            snprintf(table->chains[i].name, 64, "EMPTY");
-        }
-    }
-
-    return (0);
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//! @param[in] tablename
-//! @param[in] chainname
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int ebt_chain_flush(ebt_handler * ebth, char *tablename, char *chainname)
-{
-    ebt_table *table = NULL;
-    ebt_chain *chain = NULL;
-
-    if (!ebth || !tablename || !chainname || !ebth->init) {
-        return (1);
-    }
-
-    table = ebt_handler_find_table(ebth, tablename);
-    if (!table) {
-        return (1);
-    }
-    chain = ebt_table_find_chain(ebth, tablename, chainname);
-    if (!chain) {
-        return (1);
-    }
-
-    EUCA_FREE(chain->rules);
-    chain->max_rules = 0;
-    chain->counters[0] = '\0';
-
-    return (0);
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int ebt_handler_free(ebt_handler * ebth)
-{
-    int i = 0;
-    int j = 0;
-    char saved_cmdprefix[EUCA_MAX_PATH] = "";
-    if (!ebth || !ebth->init) {
-        return (1);
-    }
-    snprintf(saved_cmdprefix, EUCA_MAX_PATH, "%s", ebth->cmdprefix);
-
-    for (i = 0; i < ebth->max_tables; i++) {
-        for (j = 0; j < ebth->tables[i].max_chains; j++) {
-            EUCA_FREE(ebth->tables[i].chains[j].rules);
-        }
-        EUCA_FREE(ebth->tables[i].chains);
-    }
-    EUCA_FREE(ebth->tables);
-
-    unlink(ebth->ebt_filter_file);
-    unlink(ebth->ebt_nat_file);
-    unlink(ebth->ebt_asc_file);
-
-    return (ebt_handler_init(ebth, saved_cmdprefix));
-}
-
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int ebt_handler_print(ebt_handler * ebth)
-{
-    int i, j, k;
-    if (!ebth || !ebth->init) {
-        return (1);
-    }
-
-    if (log_level_get() == EUCA_LOG_TRACE) {
-        for (i = 0; i < ebth->max_tables; i++) {
-            LOGTRACE("TABLE (%d of %d): %s\n", i, ebth->max_tables, ebth->tables[i].name);
-            for (j = 0; j < ebth->tables[i].max_chains; j++) {
-                LOGTRACE("\tCHAIN: (%d of %d, refcount=%d): %s policy=%s counters=%s\n", j, ebth->tables[i].max_chains, ebth->tables[i].chains[j].ref_count,
-                         ebth->tables[i].chains[j].name, ebth->tables[i].chains[j].policyname, ebth->tables[i].chains[j].counters);
-                for (k = 0; k < ebth->tables[i].chains[j].max_rules; k++) {
-                    LOGTRACE("\t\tRULE (%d of %d): %s\n", k, ebth->tables[i].chains[j].max_rules, ebth->tables[i].chains[j].rules[k].ebtrule);
-                }
-            }
-        }
-    }
-
     return (0);
 }

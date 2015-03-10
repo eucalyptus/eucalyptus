@@ -117,6 +117,7 @@ public class StartNetworkType extends CloudClusterMessage {
   String networkUuid;
   int vlan;
   String netName;
+  String groupId;
   String vmsubdomain;
   String nameserver;
   ArrayList<String> clusterControllers = new ArrayList<String>();
@@ -126,11 +127,12 @@ public class StartNetworkType extends CloudClusterMessage {
   public StartNetworkType( ) {
   }
 
-  public StartNetworkType(final String accountId, final String userId, final Integer vlan, final String netName, final String networkUuid) {
+  public StartNetworkType(final String accountId, final String userId, final Integer vlan, final String netName, final String groupId, final String networkUuid) {
     super( userId );
     this.networkUuid = networkUuid;
     this.vlan = vlan;
     this.netName = netName;
+    this.groupId = groupId;
   }
 }
 

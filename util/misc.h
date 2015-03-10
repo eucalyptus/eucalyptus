@@ -150,7 +150,6 @@ int timeread(int fd, void *buf, size_t bytes, int timeout);
 int add_euca_to_path(const char *euca_home_supplied);
 pid_t timewait(pid_t pid, int *status, int timeout_sec);
 int killwait(pid_t pid);
-int param_check(const char *func, ...);
 int check_process(pid_t pid, char *search);
 char *system_output(char *shell_command);
 char *getConfString(char configFiles[][EUCA_MAX_PATH], int numFiles, char *key);
@@ -164,8 +163,8 @@ int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *ro
 int daemonrun(char *incmd, char *pidfile);
 int vrun(const char *fmt, ...) _attribute_format_(1, 2);
 int uint32compar(const void *ina, const void *inb);
-int safekillfile(char *pidfile, char *procname, int sig, char *rootwrap);
-int safekill(pid_t pid, char *procname, int sig, char *rootwrap);
+int safekillfile(const char *pidfile, const char *procname, int sig, const char *rootwrap);
+int safekill(pid_t pid, const char *procname, int sig, const char *rootwrap);
 int maxint(int a, int b);
 int minint(int a, int b);
 char *xpath_content(const char *xml, const char *xpath);
@@ -191,7 +190,7 @@ int euca_nanosleep(unsigned long long nsec);
 void euca_srand(void);
 
 //! global variable and functions for setting correlation id
-//! 
+//!
 typedef struct threadCorrelationId_t {
     char correlation_id[128];
     pid_t pid;
@@ -205,6 +204,7 @@ threadCorrelationId *set_corrid_pthread(const char *corr_id, pthread_t);
 threadCorrelationId *set_corrid_fork(const char *corr_id, pid_t);
 void unset_corrid(threadCorrelationId *);
 threadCorrelationId *get_corrid();
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                           STATIC INLINE PROTOTYPES                         |

@@ -71,7 +71,7 @@ import com.eucalyptus.compute.common.network.NetworkReportType;
 import com.eucalyptus.compute.common.network.NetworkResourceReportType;
 import com.eucalyptus.compute.common.network.Networking;
 import com.eucalyptus.compute.common.network.UpdateNetworkResourcesType;
-import com.eucalyptus.network.EdgeNetworking;
+import com.eucalyptus.network.NetworkingDriver;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
@@ -105,7 +105,7 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
    */
   @Override
   public void fire( final DescribeNetworksResponseType reply ) {
-    EdgeNetworking.setReported( "EDGE".equals( reply.getMode( ) ) );
+    NetworkingDriver.setReported( reply.getMode( ) );
     UpdateNetworkResourcesType update = new UpdateNetworkResourcesType( );
     update.setCluster( this.getSubject( ).getName( ) );
     update.setResources( TypeMappers.transform( reply, NetworkResourceReportType.class ) );

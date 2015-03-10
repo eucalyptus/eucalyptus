@@ -81,7 +81,6 @@
 #include <semaphore.h>
 #include <data.h>
 #include <client-marshal.h>
-#include <vnetwork.h>
 #include <linux/limits.h>
 
 /*----------------------------------------------------------------------------*\
@@ -129,9 +128,6 @@ int doShutdownService(ncMetadata * pMeta);
 
 int validCmp(ccInstance * inst, void *in);
 int instIpSync(ccInstance * inst, void *in);
-int instNetParamsSet(ccInstance * inst, void *in);
-int instNetReassignAddrs(ccInstance * inst, void *in);
-int clean_network_state(void);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

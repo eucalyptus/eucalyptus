@@ -275,7 +275,7 @@ int euca_rmdir(const char *psPath, boolean force)
 //! @return EUCA_OK if the path is a valid string and EUCA_ERROR if its not. If NULL is passed
 //!         this function will return EUCA_INVALID_ERROR.
 //!
-//! @note a valid path should not contain any of the following characters: "!@#$%^&*()+={}[]\|;?<>,`~'
+//! @note a valid path should not contain any of the following characters: !@#$%^&*(...
 //!
 int euca_sanitize_path(const char *psPath)
 {
@@ -1014,38 +1014,37 @@ long long file_size(const char *file_path)
     return ((long long)mystat.st_size);
 }
 
-
 //! Removes duplicate '/' in paths in-place.
 //!
 //! @param[in] path to modify in-place
 //!
-void dedup_path(char *path) {
+void dedup_path(char *path)
+{
     int i = 0;
     int j = 0;
     int src_len;
     int duplicate_detected = 0;
 
-    if(path == NULL) {
+    if (path == NULL) {
         return;
     }
 
     src_len = strlen(path);
-    if(src_len <= 1) { 
-      return;
+    if (src_len <= 1) {
+        return;
     }
-    
     //Include copying the null terminator
-    for(i = 1, j = 0 ; i < src_len + 1; i++) {
-        if(duplicate_detected && path[i] != '/') {
+    for (i = 1, j = 0; i < src_len + 1; i++) {
+        if (duplicate_detected && path[i] != '/') {
             duplicate_detected = 0;
-        } else if(path[j] == '/' && path[i] == '/') {
+        } else if (path[j] == '/' && path[i] == '/') {
             duplicate_detected = 1;
         }
-        
-        if(!duplicate_detected) {
+
+        if (!duplicate_detected) {
             path[++j] = path[i];
         }
-    }   
+    }
     return;
 }
 

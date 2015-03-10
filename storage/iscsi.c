@@ -85,7 +85,7 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <limits.h> /* LOGIN_NAME_MAX */
+#include <limits.h>                    /* LOGIN_NAME_MAX */
 
 #include "eucalyptus.h"
 #include "config.h"
@@ -210,7 +210,6 @@ void init_iscsi(const char *euca_home, const char *new_ceph_user, const char *ne
         euca_strncpy(ceph_conf, new_ceph_conf, sizeof(ceph_conf));
         LOGDEBUG("Ceph configuration path: %s\n", ceph_conf);
     }
-
     // initialize the semaphore on first invocation only
     if (iscsi_sem == NULL) {
         iscsi_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
@@ -233,17 +232,8 @@ char *connect_iscsi_target(const char *volume_id, const char *target_dev, const 
 
     assert(strlen(home));
 
-    snprintf(command, EUCA_MAX_PATH, "%s %s,%s,%s,%s,%s,%s,%s,%s,%s", 
-             connect_storage_cmd_path, 
-             home,
-             volume_id,
-             target_dev,
-             target_serial,
-             target_bus,
-             ceph_user,
-             ceph_keyring,
-             ceph_conf,
-             dev_string);
+    snprintf(command, EUCA_MAX_PATH, "%s %s,%s,%s,%s,%s,%s,%s,%s,%s",
+             connect_storage_cmd_path, home, volume_id, target_dev, target_serial, target_bus, ceph_user, ceph_keyring, ceph_conf, dev_string);
     LOGDEBUG("invoking `%s`\n", command);
 
     sem_p(iscsi_sem);
@@ -273,11 +263,7 @@ int disconnect_iscsi_target(const char *dev_string, boolean do_rescan)
 
     assert(strlen(home));
 
-    snprintf(command, EUCA_MAX_PATH, "%s %s,,,,,,,,%s%s", 
-             disconnect_storage_cmd_path, 
-             home,
-             dev_string,
-             (do_rescan)?(" norescan"):(""));
+    snprintf(command, EUCA_MAX_PATH, "%s %s,,,,,,,,%s%s", disconnect_storage_cmd_path, home, dev_string, (do_rescan) ? (" norescan") : (""));
     LOGDEBUG("invoking `%s`\n", command);
 
     sem_p(iscsi_sem);
@@ -303,10 +289,7 @@ char *get_iscsi_target(const char *dev_string)
     char stderr_str[MAX_OUTPUT] = "";
 
     assert(strlen(home));
-    snprintf(command, EUCA_MAX_PATH, "%s %s,,,,,,,,%s", 
-             get_storage_cmd_path, 
-             home,
-             dev_string);
+    snprintf(command, EUCA_MAX_PATH, "%s %s,,,,,,,,%s", get_storage_cmd_path, home, dev_string);
     LOGDEBUG("invoking `%s`\n", command);
 
     sem_p(iscsi_sem);

@@ -145,6 +145,7 @@
     <value name="uuid" field="networkUuid" usage="required" />
     <value name="vlan" field="vlan" usage="required" />
     <value name="netName" field="netName" usage="required" />
+    <value name="groupId" field="groupId" usage="required" />
     <value name="vmsubdomain" field="vmsubdomain" usage="optional" />
     <value name="nameserver" field="nameserver" usage="optional" />
     <collection field="clusterControllers" factory="org.jibx.runtime.Utility.arrayListFactory">

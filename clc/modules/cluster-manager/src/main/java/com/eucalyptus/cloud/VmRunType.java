@@ -146,7 +146,14 @@ public class VmRunType extends CloudClusterMessage {
       }
       return this;
     }
-    
+
+    public VmRunType.Builder networkIds( List<NetworkGroup> list ) {
+      for ( NetworkGroup g : list ) {
+        this.buildit.getNetworkIds( ).add( g.getGroupId() );
+      }
+      return this;
+    }
+
     public VmRunType.Builder naturalId( final String naturalId ) {
       this.buildit.setUuid( naturalId );
       return this;
@@ -168,6 +175,7 @@ public class VmRunType extends CloudClusterMessage {
       checkParam( this.buildit.getLaunchIndex(), notNullValue() );
       checkParam( this.buildit.getMacAddress(), notNullValue() );
       checkParam( this.buildit.getNetworkNames().isEmpty(), is( false ) );
+      checkParam( this.buildit.getNetworkIds().isEmpty(), is( false ) );
       checkParam( this.buildit.getNetworkIndex(), notNullValue() );
       checkParam( this.buildit.getPlatform(), notNullValue() );
       checkParam( this.buildit.getReservationId(), notNullValue() );
@@ -213,6 +221,7 @@ public class VmRunType extends CloudClusterMessage {
   private String       uuid;
   private String       macAddress = "";
   private List<String> networkNames = new ArrayList<String>( );
+  private List<String> networkIds = new ArrayList<String>( );
   private Long         networkIndex = -1l;
   private String       privateAddress;
   
@@ -221,13 +230,14 @@ public class VmRunType extends CloudClusterMessage {
   private VmRunType( final String reservationId, final String userData, final int amount,
                      final VmTypeInfo vmTypeInfo, final VmKeyInfo keyInfo, final String platform,
                      final List<String> instanceIds,
-                     final int vlan, final List<String> networkNames, final List<String> networkIndexList, final List<String> uuids ) {
+                     final int vlan, final List<String> networkNames, final List<String> networkIds, final List<String> networkIndexList, final List<String> uuids ) {
     this.reservationId = reservationId;
     this.userData = userData;
     this.vlan = vlan;
     this.vmTypeInfo = vmTypeInfo;
     this.keyInfo = keyInfo;
     this.networkNames = networkNames;
+    this.networkIds = networkIds;
     this.platform = platform;
   }
   
@@ -281,7 +291,11 @@ public class VmRunType extends CloudClusterMessage {
   void setNetworkNames( final List<String> networkNames ) {
     this.networkNames = networkNames;
   }
-  
+
+  void setNetworkIds( final List<String> networkIds ) {
+        this.networkIds = networkIds;
+    }
+
   void setInstanceId( final String instanceId ) {
     this.instanceId = instanceId;
   }
@@ -351,7 +365,11 @@ public class VmRunType extends CloudClusterMessage {
   public List<String> getNetworkNames( ) {
     return this.networkNames;
   }
-  
+
+  public List<String> getNetworkIds( ) {
+        return this.networkIds;
+    }
+
   public Long getNetworkIndex( ) {
     return this.networkIndex;
   }
