@@ -170,8 +170,8 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-boolean virtio_root = FALSE; //!< flag that forces use of Virtio for root disk
-boolean virtio_disk = FALSE; //!< flag that forces use of Virtio for non-root disks
+boolean virtio_root = FALSE;           //!< flag that forces use of Virtio for root disk
+boolean virtio_disk = FALSE;           //!< flag that forces use of Virtio for non-root disks
 
 #ifdef _UNIT_TEST
 const char *euca_this_component_name = "sc";    //!< Eucalyptus Component Name
@@ -727,8 +727,8 @@ int vbr_parse(virtualMachine * vm, ncMetadata * pMeta)
     bzero(partitions, sizeof(partitions));  //! @fixme: chuck - this is not zeroing out the hole structure!!!
 
     // ref: http://docs.amazonaws.cn/en_us/AWSEC2/latest/UserGuide/ec2-ug.pdf
-    int count_ebs = 1; // ebsN numbers in AWS metadata answers start at 1
-    int count_eph = 0; // ephemeralN numbers in AWS metadata answers and in block-device mappings start at 0
+    int count_ebs = 1;                 // ebsN numbers in AWS metadata answers start at 1
+    int count_eph = 0;                 // ephemeralN numbers in AWS metadata answers and in block-device mappings start at 0
 
     for (int i = 0; i < EUCA_MAX_VBRS && i < vm->virtualBootRecordLen; i++) {
         virtualBootRecord *vbr = &(vm->virtualBootRecord[i]);
@@ -750,17 +750,15 @@ int vbr_parse(virtualMachine * vm, ncMetadata * pMeta)
                 return (EUCA_ERROR);
             }
         }
-        
+
         if ((vbr->guestDeviceType == DEV_TYPE_DISK) && (vbr->type != NC_RESOURCE_KERNEL && vbr->type != NC_RESOURCE_RAMDISK)) {
 
             // force use of Virtio, based on node config
             if ((vm->root == vbr && virtio_root)
-                ||
-                (vm->root != vbr && virtio_disk)) { 
+                || (vm->root != vbr && virtio_disk)) {
                 vbr->guestDeviceBus = BUS_TYPE_VIRTIO;
                 vbr->guestDeviceName[0] = 'v';
             }
-            
             // compute serial ID for BDM disks (available at boot time)
             char disk_id[128];
             if (vbr->type == NC_RESOURCE_EBS) {
@@ -770,8 +768,7 @@ int vbr_parse(virtualMachine * vm, ncMetadata * pMeta)
             } else {
                 snprintf(disk_id, sizeof(disk_id), "bdm-%s", vbr->typeName);
             }
-            snprintf(vbr->guestDeviceSerialId, sizeof(vbr->guestDeviceSerialId),
-                     "euca-%s-dev-%s", disk_id, vbr->guestDeviceName);
+            snprintf(vbr->guestDeviceSerialId, sizeof(vbr->guestDeviceSerialId), "euca-%s-dev-%s", disk_id, vbr->guestDeviceName);
         }
 
         if (vbr->type != NC_RESOURCE_KERNEL && vbr->type != NC_RESOURCE_RAMDISK) {
@@ -1647,7 +1644,8 @@ static int iqn_creator(artifact * a)
     vbr = a->vbr;
     assert(vbr);
 
-    rc = connect_ebs_volume(vbr->guestDeviceName, vbr->guestDeviceSerialId, libvirtBusTypeNames[vbr->guestDeviceBus], vbr->preparedResourceLocation, vbr->resourceLocation, localhost_config.use_ws_sec, localhost_config.ws_sec_policy_file, localhost_config.ip, localhost_config.iqn, &libvirt_xml, &vol_data);
+    rc = connect_ebs_volume(vbr->guestDeviceName, vbr->guestDeviceSerialId, libvirtBusTypeNames[vbr->guestDeviceBus], vbr->preparedResourceLocation, vbr->resourceLocation,
+                            localhost_config.use_ws_sec, localhost_config.ws_sec_policy_file, localhost_config.ip, localhost_config.iqn, &libvirt_xml, &vol_data);
     if (rc) {
         LOGERROR("[%s] failed to attach volume during VBR construction for %s\n", a->instanceId, vbr->guestDeviceName);
         EUCA_FREE(vol_data);

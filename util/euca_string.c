@@ -399,6 +399,35 @@ char *euca_strduptolower(const char *restrict string)
 }
 
 //!
+//! Convert a string to lower characters
+//!
+//! @param[in] string the string to convert to lower case
+//!
+//! @return a pointer to the lower care result which is identical to the passed parameter
+//!
+//! @pre The \p string field must not be NULL.
+//!
+//! @post On success, \p string will be converted to lower case.
+//!
+//! @note
+//!
+char *euca_strtolower(char *restrict string)
+{
+    register size_t i = 0;
+    register size_t len = 0;
+
+    // Was str provided?
+    if (string) {
+        len = strlen(string);
+        for (i = 0; i < len; i++) {
+            string[i] = tolower(string[i]);
+        }
+    }
+
+    return (string);
+}
+
+//!
 //! Works in exactly the same way strdup() does but we allocate the memory and sanitize the string. This
 //! is mainly when we want to duplicate untrusted strings
 //!
@@ -590,9 +619,9 @@ u32 euca_dot2hex(char *psDot)
 //!
 char *euca_hex2dot(u32 hex)
 {
-    char sDot[16] = "";
+    char sDot[INET_ADDR_LEN] = "";
 
-    snprintf(sDot, 16, "%u.%u.%u.%u", ((hex & 0xFF000000) >> 24), ((hex & 0x00FF0000) >> 16), ((hex & 0x0000FF00) >> 8), (hex & 0x000000FF));
+    snprintf(sDot, INET_ADDR_LEN, "%u.%u.%u.%u", ((hex & 0xFF000000) >> 24), ((hex & 0x00FF0000) >> 16), ((hex & 0x0000FF00) >> 8), (hex & 0x000000FF));
     return (strdup(sDot));
 }
 
@@ -616,7 +645,7 @@ char *euca_hex2dot(u32 hex)
 u8 *euca_mac2hex(char *psMacIn, u8 aHexOut[6])
 {
     int rc = 0;
-    u32 aTmp[6] = { 0 };
+    u32 aTmp[ENET_BUF_SIZE] = { 0 };
 
     if (psMacIn != NULL) {
         rc = sscanf(psMacIn, "%X:%X:%X:%X:%X:%X", ((u32 *) & aTmp[0]), ((u32 *) & aTmp[1]), ((u32 *) & aTmp[2]), ((u32 *) & aTmp[3]), ((u32 *) & aTmp[4]), ((u32 *) & aTmp[5]));
@@ -643,11 +672,11 @@ u8 *euca_mac2hex(char *psMacIn, u8 aHexOut[6])
 //!
 //! @note The \p (*ppsMacOut) field should be NULL.
 //!
-void euca_hex2mac(u8 aHexIn[6], char **ppsMacOut)
+void euca_hex2mac(u8 aHexIn[ENET_BUF_SIZE], char **ppsMacOut)
 {
     if (ppsMacOut != NULL) {
-        if ((*ppsMacOut = EUCA_ALLOC(24, sizeof(char))) != NULL) {
-            snprintf(*ppsMacOut, 24, "%02X:%02X:%02X:%02X:%02X:%02X", aHexIn[0], aHexIn[1], aHexIn[2], aHexIn[3], aHexIn[4], aHexIn[5]);
+        if ((*ppsMacOut = EUCA_ALLOC(ENET_ADDR_LEN, sizeof(char))) != NULL) {
+            snprintf(*ppsMacOut, ENET_ADDR_LEN, "%02X:%02X:%02X:%02X:%02X:%02X", aHexIn[0], aHexIn[1], aHexIn[2], aHexIn[3], aHexIn[4], aHexIn[5]);
         }
     }
 }
@@ -659,11 +688,11 @@ void euca_hex2mac(u8 aHexIn[6], char **ppsMacOut)
 //!
 //! @return 0 if the given MAC address is ALL 0s or any other values if its not ALL 0s.
 //!
-int euca_maczero(u8 aMac[6])
+int euca_maczero(u8 aMac[ENET_BUF_SIZE])
 {
-    u8 aZeroMac[6] = { 0 };
-    bzero(aZeroMac, (6 * sizeof(u8)));
-    return (memcmp(aMac, aZeroMac, (6 * sizeof(u8))));
+    u8 aZeroMac[ENET_BUF_SIZE] = { 0 };
+    bzero(aZeroMac, (ENET_BUF_SIZE * sizeof(u8)));
+    return (memcmp(aMac, aZeroMac, (ENET_BUF_SIZE * sizeof(u8))));
 }
 
 //!
@@ -684,9 +713,9 @@ int euca_maczero(u8 aMac[6])
 //!
 int euca_machexcmp(char *psMac, u8 aMac[6])
 {
-    u8 aMacConv[6] = { 0 };
+    u8 aMacConv[ENET_BUF_SIZE] = { 0 };
     if (mac2hex(psMac, aMacConv) != NULL)
-        return (memcmp(aMacConv, aMac, (6 * sizeof(u8))));
+        return (memcmp(aMacConv, aMac, (ENET_BUF_SIZE * sizeof(u8))));
     return (-1);
 }
 

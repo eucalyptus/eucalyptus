@@ -80,11 +80,11 @@
 #include <libvirt/libvirt.h>
 #include <libvirt/virterror.h>
 
-#include "misc.h"
-#include "vnetwork.h"
-#include "data.h"
-#include "config.h"
-#include "sensor.h"
+#include <misc.h>
+#include <euca_network.h>
+#include <data.h>
+#include <config.h>
+#include <sensor.h>
 #include "ebs_utils.h"
 #include "stats.h"
 #include "message_stats.h"
@@ -127,7 +127,7 @@ struct nc_state_t {
     struct handlers *H;                //!< selected handler
     struct handlers *D;                //!< default  handler
     hypervisorCapabilityType capability;
-    vnetConfig *vnetconfig;            //!< network config
+    euca_network *pEucaNet;            //!< network configuration information
 
     //! @{
     //! @name Globals fields
@@ -228,7 +228,7 @@ struct handlers {
     int (*doRunInstance) (struct nc_state_t * nc, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params,
                           char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId,
                           char *accountId, char *keyName, netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime,
-                          char **groupNames, int groupNamesSize, char *rootDirective, ncInstance ** outInstPtr);
+                          char **groupNames, int groupNamesSize, char *rootDirective, char **groupIds, int groupIdsSize, ncInstance ** outInstPtr);
     int (*doTerminateInstance) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, int force, int *shutdownState, int *previousState);
     int (*doRebootInstance) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId);
     int (*doGetConsoleOutput) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char **consoleOutput);
@@ -305,7 +305,7 @@ void doInitNC(void);
 //Functions for internal stats tracking
 void nc_lock_stats();
 void nc_unlock_stats();
-int nc_update_message_stats(const char* message_name, long call_time, int msg_failed);
+int nc_update_message_stats(const char *message_name, long call_time, int msg_failed);
 
 int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo);
 int doAssignAddress(ncMetadata * pMeta, char *instanceId, char *publicIp);
@@ -314,7 +314,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
 int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId, char *imageURL,
                   char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId, char *keyName,
                   netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize,
-                  char *rootDirective, ncInstance ** outInst);
+                  char *rootDirective, char **groupIds, int groupIdsSize, ncInstance ** outInst);
 int doTerminateInstance(ncMetadata * pMeta, char *instanceId, int force, int *shutdownState, int *previousState);
 int doRebootInstance(ncMetadata * pMeta, char *instanceId);
 int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutput);
@@ -367,7 +367,8 @@ int is_migration_src(const ncInstance * instance);
 int migration_rollback(ncInstance * instance);
 int get_service_url(const char *service_type, struct nc_state_t *nc, char *dest_buffer);
 int authorize_migration_keys(char *options, char *host, char *credentials, ncInstance * instance, boolean lock_hyp_sem);
-int connect_ebs(const char *dev_name, const char *dev_serial, const char *dev_bus, struct nc_state_t *nc, char *instanceId, char *volumeId, char *attachmentToken, char **libvirt_xml, ebs_volume_data ** vol_data);
+int connect_ebs(const char *dev_name, const char *dev_serial, const char *dev_bus, struct nc_state_t *nc, char *instanceId, char *volumeId, char *attachmentToken,
+                char **libvirt_xml, ebs_volume_data ** vol_data);
 int disconnect_ebs(struct nc_state_t *nc, char *instanceId, char *volumeId, char *attachmentToken, char *connect_string);
 void set_serial_and_bus(const char *vol, const char *dev, char *serial, int serial_len, char *bus, int bus_len);
 

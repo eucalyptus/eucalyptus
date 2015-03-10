@@ -332,7 +332,8 @@ int serialize_volume(ebs_volume_data * vol_data, char **dest)
 //!
 //! @note
 //!
-int connect_ebs_volume(const char *target_dev, const char *target_serial, const char *target_bus, char *sc_url, char *attachment_token, int use_ws_sec, char *ws_sec_policy_file, char *local_ip, char *local_iqn, char **result_xml, ebs_volume_data ** vol_data)
+int connect_ebs_volume(const char *target_dev, const char *target_serial, const char *target_bus, char *sc_url, char *attachment_token, int use_ws_sec, char *ws_sec_policy_file,
+                       char *local_ip, char *local_iqn, char **result_xml, ebs_volume_data ** vol_data)
 {
     int ret = EUCA_OK;
     char *reencrypted_token = NULL;
@@ -387,11 +388,7 @@ int connect_ebs_volume(const char *target_dev, const char *target_serial, const 
     }
 
     //copy the connection info from the SC return to the resourceLocation.
-    xml = connect_iscsi_target((*vol_data)->volumeId,
-                               target_dev,
-                               target_serial,
-                               target_bus,
-                               (*vol_data)->connect_string);
+    xml = connect_iscsi_target((*vol_data)->volumeId, target_dev, target_serial, target_bus, (*vol_data)->connect_string);
     if (!xml) {
         LOGERROR("Failed to connect to EBS target: %s\n", (*vol_data)->connect_string);
         //disconnect the volume
@@ -585,13 +582,13 @@ static int cleanup_volume_attachment(char *sc_url, int use_ws_sec, char *ws_sec_
         //Should return error of not found.
         refreshedDev = get_iscsi_target(connect_string);
         if (refreshedDev) {
-        	if (strstr(refreshedDev, "no-op")) { // Some providers (ceph) may always return no-op, account for it and return success
-        		EUCA_FREE(refreshedDev);
-        		return EUCA_OK;
-        	} else {
-				EUCA_FREE(refreshedDev);
-				return EUCA_ERROR;
-        	}
+            if (strstr(refreshedDev, "no-op")) {    // Some providers (ceph) may always return no-op, account for it and return success
+                EUCA_FREE(refreshedDev);
+                return EUCA_OK;
+            } else {
+                EUCA_FREE(refreshedDev);
+                return EUCA_ERROR;
+            }
         } else {
             //We're good
             return EUCA_OK;

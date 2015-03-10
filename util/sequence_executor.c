@@ -216,7 +216,7 @@ int se_add(sequence_executor * se, char *command, char *cleanup_command, void *c
     }
 
     if (se->max_commands >= MAX_SE_COMMANDS) {
-        return(1);
+        return (1);
     }
 
     if (command) {

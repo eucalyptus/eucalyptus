@@ -716,6 +716,7 @@ public class ClusterAllocator implements Runnable {
                                    .keyInfo( vmKeyInfo )
                                    .launchIndex( childToken.getLaunchIndex( ) )
                                    .networkNames( this.allocInfo.getNetworkGroups( ) )
+                                   .networkIds( this.allocInfo.getNetworkGroups( ) )
                                    .platform( platform )
                                    .reservationId( childToken.getAllocationInfo( ).getReservationId( ) )
                                    .userData( this.allocInfo.getRequest( ).getUserData( ) )

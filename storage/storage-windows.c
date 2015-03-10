@@ -501,7 +501,7 @@ typedef struct _instance_creds {
     char instancePubkey[KEY_STRING_SIZE];   //!<instance's public key
     char instanceToken[BIG_CHAR_BUFFER_SIZE];   //!< token from Euare service that proves the instances' authorization
     char instancePk[KEY_STRING_SIZE];  //!<instance's private key
-    char eucaKey[KEY_STRING_SIZE];    //!<public key of Eucalyptus service
+    char eucaKey[KEY_STRING_SIZE];     //!<public key of Eucalyptus service
 } instance_creds;
 
 static int decode_credential(char *credential, instance_creds * creds)

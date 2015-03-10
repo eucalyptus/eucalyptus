@@ -1,5 +1,8 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
- * Copyright 2013-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +19,60 @@
  * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
+ *
+ * This file may incorporate work covered under the following copyright
+ * and permission notice:
+ *
+ *   Software License Agreement (BSD License)
+ *
+ *   Copyright (c) 2008, Regents of the University of California
+ *   All rights reserved.
+ *
+ *   Redistribution and use of this software in source and binary forms,
+ *   with or without modification, are permitted provided that the
+ *   following conditions are met:
+ *
+ *     Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *     Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer
+ *     in the documentation and/or other materials provided with the
+ *     distribution.
+ *
+ *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
+ *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
+ *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
+ *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
+ *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
+ *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
+ *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
+ *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
+ *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
+
+//!
+//! @file net/euca_gni.c
+//! Implementation of the global network interface
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,10 +87,105 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
-#include <globalnetwork.h>
 #include <eucalyptus.h>
+#include <misc.h>
 #include <hash.h>
+#include <euca_string.h>
+#include <euca_network.h>
+#include <atomic_file.h>
 
+#include "ipt_handler.h"
+#include "ips_handler.h"
+#include "ebt_handler.h"
+#include "dev_handler.h"
+#include "euca_gni.h"
+#include "euca_lni.h"
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//! Creates a unique IP table chain name for a given security group. This name, if successful
+//! will have the form of EU_[hash] where [hash] is the 64 bit encoding of the resulting
+//! "[account id]-[group name]" string from the given security group information.
+//!
+//! @param[in] gni a pointer to the global network information structure
+//! @param[in] secgroup a pointer to the security group for which we compute the chain name
+//! @param[out] outchainname a pointer to the string that will contain the computed name
+//!
+//! @return 0 on success or 1 on failure
+//!
+//! @see
+//!
+//! @pre
+//!     The outchainname parameter Must not be NULL but it should point to a NULL value. If
+//!     this does not point to NULL, the memory will be lost when replaced with the out value.
+//!
+//! @post
+//!     On success, the outchainname will point to the resulting string. If a failure occur, any
+//!     value pointed by outchainname is non-deterministic.
+//!
+//! @note
+//!
 int gni_secgroup_get_chainname(globalNetworkInfo * gni, gni_secgroup * secgroup, char **outchainname)
 {
     char hashtok[16 + 128 + 1];
@@ -58,6 +209,25 @@ int gni_secgroup_get_chainname(globalNetworkInfo * gni, gni_secgroup * secgroup,
     return (1);
 }
 
+//!
+//! Looks up for the cluster for which we are assigned within a configured cluster list. We can
+//! be the cluster itself or one of its node.
+//!
+//! @param[in] gni a pointer to the global network information structure
+//! @param[out] outclusterptr a pointer to the associated cluster structure pointer
+//!
+//! @return 0 if a matching cluster structure is found or 1 if not found or a failure occured
+//!
+//! @see gni_is_self()
+//!
+//! @pre
+//!
+//! @post
+//!     On success the value pointed by outclusterptr is valid. On failure, this value
+//!     is non-deterministic.
+//!
+//! @note
+//!
 int gni_find_self_cluster(globalNetworkInfo * gni, gni_cluster ** outclusterptr)
 {
     int i, j;
@@ -71,7 +241,6 @@ int gni_find_self_cluster(globalNetworkInfo * gni, gni_cluster ** outclusterptr)
     *outclusterptr = NULL;
 
     for (i = 0; i < gni->max_clusters; i++) {
-
         // check to see if local host is the enabled cluster controller
         strptra = hex2dot(gni->clusters[i].enabledCCIp);
         if (strptra) {
@@ -94,6 +263,67 @@ int gni_find_self_cluster(globalNetworkInfo * gni, gni_cluster ** outclusterptr)
     return (1);
 }
 
+//!
+//! Looks up for the cluster for which we are assigned within a configured cluster list. We can
+//! be the cluster itself or one of its node.
+//!
+//! @param[in] gni a pointer to the global network information structure
+//! @param[in] psGroupId a pointer to a constant string containing the Security-Group ID we're looking for
+//! @param[out] pSecGroup a pointer to the associated security group structure pointer
+//!
+//! @return 0 if a matching security group structure is found or 1 if not found or a failure occured
+//!
+//! @see
+//!
+//! @pre
+//!     All the provided parameter must be valid and non-NULL.
+//!
+//! @post
+//!     On success the value pointed by pSecGroup is valid. On failure, this value
+//!     is non-deterministic.
+//!
+//! @note
+//!
+int gni_find_secgroup(globalNetworkInfo * gni, const char *psGroupId, gni_secgroup ** pSecGroup)
+{
+    int i = 0;
+
+    if (!gni || !psGroupId || !pSecGroup) {
+        LOGERROR("invalid input\n");
+        return (1);
+    }
+    // Initialize to NULL
+    (*pSecGroup) = NULL;
+
+    // Go through our security group list and look for that group
+    for (i = 0; i < gni->max_secgroups; i++) {
+        if (!strcmp(psGroupId, gni->secgroups[i].name)) {
+            (*pSecGroup) = &(gni->secgroups[i]);
+            return (0);
+        }
+    }
+    return (1);
+}
+
+//!
+//! Looks up through a list of configured node for the one that is associated with
+//! this currently running instance.
+//!
+//! @param[in]  gni a pointer to the global network information structure
+//! @param[out] outnodeptr a pointer to the associated node structure pointer
+//!
+//! @return 0 if a matching node structure is found or 1 if not found or a failure occured
+//!
+//! @see gni_is_self()
+//!
+//! @pre
+//!
+//! @post
+//!     On success the value pointed by outnodeptr is valid. On failure, this value
+//!     is non-deterministic.
+//!
+//! @note
+//!
 int gni_find_self_node(globalNetworkInfo * gni, gni_node ** outnodeptr)
 {
     int i, j;
@@ -117,7 +347,22 @@ int gni_find_self_node(globalNetworkInfo * gni, gni_node ** outnodeptr)
     return (1);
 }
 
-int gni_is_self(char *test_ip)
+//!
+//! Validates if the given test_ip is a local IP address on this system
+//!
+//! @param[in] test_ip a string containing the IP to validate
+//!
+//! @return 0 if the test_ip is a local IP or 1 on failure or if not found locally
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int gni_is_self(const char *test_ip)
 {
     DIR *DH = NULL;
     struct dirent dent, *result = NULL;
@@ -163,6 +408,27 @@ int gni_is_self(char *test_ip)
     return (1);
 }
 
+//!
+//! TODO: Function description.
+//!
+//! @param[in]  gni a pointer to the global network information structure
+//! @param[in]  cluster_names
+//! @param[in]  max_cluster_names
+//! @param[out] out_cluster_names
+//! @param[out] out_max_cluster_names
+//! @param[out] out_clusters
+//! @param[out] out_max_clusters
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int gni_cloud_get_clusters(globalNetworkInfo * gni, char **cluster_names, int max_cluster_names, char ***out_cluster_names, int *out_max_cluster_names, gni_cluster ** out_clusters,
                            int *out_max_clusters)
 {
@@ -243,6 +509,140 @@ int gni_cloud_get_clusters(globalNetworkInfo * gni, char **cluster_names, int ma
     return (ret);
 }
 
+//!
+//! Retrives the list of security groups configured under a cloud
+//!
+//! @param[in]  pGni a pointer to our global network view structure
+//! @param[in]  psSecGroupNames a string pointer to the name of groups we're looking for
+//! @param[in]  nbSecGroupNames the number of groups in the psSecGroupNames list
+//! @param[out] psOutSecGroupNames a string pointer that will contain the list of group names we found (if non NULL)
+//! @param[out] pOutNbSecGroupNames a pointer to the number of groups that matched in the psOutSecGroupNames list
+//! @param[out] pOutSecGroups a pointer to the list of security group structures that match what we're looking for
+//! @param[out] pOutNbSecGroups a pointer to the number of structures in the psOutSecGroups list
+//!
+//! @return 0 on success or 1 if any failure occured
+//!
+//! @see
+//!
+//! @pre  TODO:
+//!
+//! @post TODO:
+//!
+//! @note
+//!
+int gni_cloud_get_secgroup(globalNetworkInfo * pGni, char **psSecGroupNames, int nbSecGroupNames, char ***psOutSecGroupNames, int *pOutNbSecGroupNames,
+                           gni_secgroup ** pOutSecGroups, int *pOutNbSecGroups)
+{
+    int ret = 0;
+    int i = 0;
+    int x = 0;
+    int retCount = 0;
+    char **psRetSecGroupNames = NULL;
+    boolean getAll = FALSE;
+    boolean doOutNames = FALSE;
+    boolean doOutStructs = FALSE;
+    gni_secgroup *pRetSecGroup = NULL;
+
+    // Make sure our GNI pointer isn't NULL
+    if (!pGni) {
+        LOGERROR("invalid input\n");
+        return (1);
+    }
+    // Are we building the name list?
+    if (psOutSecGroupNames && pOutNbSecGroupNames) {
+        doOutNames = TRUE;
+        *psOutSecGroupNames = NULL;
+        *pOutNbSecGroupNames = 0;
+    }
+    // Are we building the structure list?
+    if (pOutSecGroups && pOutNbSecGroups) {
+        doOutStructs = TRUE;
+        *pOutSecGroups = NULL;
+        *pOutNbSecGroups = 0;
+    }
+    // Are we doing anything?
+    if (!doOutNames && !doOutStructs) {
+        LOGDEBUG("nothing to do, both output variables are NULL\n");
+        return (0);
+    }
+    // Do we have any groups?
+    if (pGni->max_secgroups == 0)
+        return (0);
+
+    // If we do it all, allocate the memory now
+    if (psSecGroupNames == NULL || !strcmp(psSecGroupNames[0], "*")) {
+        getAll = TRUE;
+        if (doOutNames)
+            *psOutSecGroupNames = EUCA_ZALLOC(pGni->max_secgroups, sizeof(char *));
+        if (doOutStructs)
+            *pOutSecGroups = EUCA_ZALLOC(pGni->max_secgroups, sizeof(gni_secgroup));
+    }
+    // Setup our returning name list pointer
+    if (doOutNames)
+        psRetSecGroupNames = *psOutSecGroupNames;
+
+    // Setup our returning structure list pointer
+    if (doOutStructs)
+        pRetSecGroup = *pOutSecGroups;
+
+    // Go through the group list
+    for (i = 0, retCount = 0; i < pGni->max_secgroups; i++) {
+        if (getAll) {
+            if (doOutNames)
+                psRetSecGroupNames[retCount] = strdup(pGni->secgroups[i].name);
+
+            if (doOutStructs)
+                memcpy(&(pRetSecGroup[retCount]), &(pGni->secgroups[i]), sizeof(gni_secgroup));
+            retCount++;
+        } else {
+            if (!strcmp(psSecGroupNames[x], pGni->secgroups[i].name)) {
+                if (doOutNames) {
+                    *psOutSecGroupNames = EUCA_REALLOC(*psOutSecGroupNames, (retCount + 1), sizeof(char *));
+                    psRetSecGroupNames = *psOutSecGroupNames;
+                    psRetSecGroupNames[retCount] = strdup(pGni->secgroups[i].name);
+                }
+
+                if (doOutStructs) {
+                    *pOutSecGroups = EUCA_REALLOC(*pOutSecGroups, (retCount + 1), sizeof(gni_instance));
+                    pRetSecGroup = *pOutSecGroups;
+                    memcpy(&(pRetSecGroup[retCount]), &(pGni->secgroups[i]), sizeof(gni_secgroup));
+                }
+                retCount++;
+            }
+        }
+    }
+
+    if (doOutNames)
+        *pOutNbSecGroupNames = retCount;
+
+    if (doOutStructs)
+        *pOutNbSecGroups = retCount;
+
+    return (ret);
+}
+
+//!
+//! TODO: Function description.
+//!
+//! @param[in]  gni a pointer to the global network information structure
+//! @param[in]  cluster
+//! @param[in]  node_names
+//! @param[in]  max_node_names
+//! @param[out] out_node_names
+//! @param[out] out_max_node_names
+//! @param[out] out_nodes
+//! @param[out] out_max_nodes
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int gni_cluster_get_nodes(globalNetworkInfo * gni, gni_cluster * cluster, char **node_names, int max_node_names, char ***out_node_names, int *out_max_node_names,
                           gni_node ** out_nodes, int *out_max_nodes)
 {
@@ -251,7 +651,7 @@ int gni_cluster_get_nodes(globalNetworkInfo * gni, gni_cluster * cluster, char *
     gni_cluster *out_clusters = NULL;
     char **ret_node_names = NULL, **cluster_names = NULL;
 
-    if (!node_names || max_node_names <= 0) {
+    if (!gni) {
         LOGERROR("invalid input\n");
         return (1);
     }
@@ -287,26 +687,29 @@ int gni_cluster_get_nodes(globalNetworkInfo * gni, gni_cluster * cluster, char *
         return (0);
     }
 
-    if (!strcmp(node_names[0], "*")) {
+    if ((node_names == NULL) || !strcmp(node_names[0], "*")) {
         getall = 1;
         if (do_outnames)
-            *out_node_names = EUCA_ZALLOC(out_clusters[0].max_nodes, sizeof(char *));
+            *out_node_names = EUCA_ZALLOC(cluster->max_nodes, sizeof(char *));
         if (do_outstructs)
-            *out_nodes = EUCA_ZALLOC(out_clusters[0].max_nodes, sizeof(gni_node));
+            *out_nodes = EUCA_ZALLOC(cluster->max_nodes, sizeof(gni_node));
     }
 
     if (do_outnames)
         ret_node_names = *out_node_names;
+
     if (do_outstructs)
         ret_nodes = *out_nodes;
 
     retcount = 0;
-    for (i = 0; i < out_clusters[0].max_nodes; i++) {
+    for (i = 0; i < cluster->max_nodes; i++) {
         if (getall) {
             if (do_outnames)
                 ret_node_names[i] = strdup(out_clusters[0].nodes[i].name);
+
             if (do_outstructs)
                 memcpy(&(ret_nodes[i]), &(out_clusters[0].nodes[i]), sizeof(gni_node));
+
             retcount++;
         } else {
             for (j = 0; j < max_node_names; j++) {
@@ -326,8 +729,10 @@ int gni_cluster_get_nodes(globalNetworkInfo * gni, gni_cluster * cluster, char *
             }
         }
     }
+
     if (do_outnames)
         *out_max_node_names = retcount;
+
     if (do_outstructs)
         *out_max_nodes = retcount;
 
@@ -336,6 +741,320 @@ int gni_cluster_get_nodes(globalNetworkInfo * gni, gni_cluster * cluster, char *
     return (ret);
 }
 
+//!
+//! TODO: Function description.
+//!
+//! @param[in]  pGni a pointer to the global network information structure
+//! @param[in]  pCluster
+//! @param[in]  psInstanceNames
+//! @param[in]  nbInstanceNames
+//! @param[out] psOutInstanceNames
+//! @param[out] pOutNbInstanceNames
+//! @param[out] pOutInstances
+//! @param[out] pOutNbInstances
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int gni_cluster_get_instances(globalNetworkInfo * pGni, gni_cluster * pCluster, char **psInstanceNames, int nbInstanceNames,
+                              char ***psOutInstanceNames, int *pOutNbInstanceNames, gni_instance ** pOutInstances, int *pOutNbInstances)
+{
+    int ret = 0;
+    int i = 0;
+    int k = 0;
+    int x = 0;
+    int y = 0;
+    int retCount = 0;
+    int nbInstances = 0;
+    char **psRetInstanceNames = NULL;
+    boolean getAll = FALSE;
+    boolean doOutNames = FALSE;
+    boolean doOutStructs = FALSE;
+    gni_instance *pRetInstances = NULL;
+
+    if (!pGni || !pCluster) {
+        LOGERROR("invalid input\n");
+        return (1);
+    }
+
+    if (psOutInstanceNames && pOutNbInstanceNames) {
+        doOutNames = TRUE;
+    }
+    if (pOutInstances && pOutNbInstances) {
+        doOutStructs = TRUE;
+    }
+
+    if (!doOutNames && !doOutStructs) {
+        LOGDEBUG("nothing to do, both output variables are NULL\n");
+        return (0);
+    }
+
+    if (doOutNames) {
+        *psOutInstanceNames = NULL;
+        *pOutNbInstanceNames = 0;
+    }
+    if (doOutStructs) {
+        *pOutInstances = NULL;
+        *pOutNbInstances = 0;
+    }
+    // Do we have any nodes?
+    if (pCluster->max_nodes == 0)
+        return (0);
+
+    for (i = 0, nbInstances = 0; i < pCluster->max_nodes; i++) {
+        nbInstances += pCluster->nodes[i].max_instance_names;
+    }
+
+    // Do we have any instances?
+    if (nbInstances == 0)
+        return (0);
+
+    if (psInstanceNames == NULL || !strcmp(psInstanceNames[0], "*")) {
+        getAll = TRUE;
+        if (doOutNames)
+            *psOutInstanceNames = EUCA_ZALLOC(nbInstances, sizeof(char *));
+        if (doOutStructs)
+            *pOutInstances = EUCA_ZALLOC(nbInstances, sizeof(gni_instance));
+    }
+
+    if (doOutNames)
+        psRetInstanceNames = *psOutInstanceNames;
+
+    if (doOutStructs)
+        pRetInstances = *pOutInstances;
+
+    for (i = 0, retCount = 0; i < pCluster->max_nodes; i++) {
+        for (k = 0; k < pCluster->nodes[i].max_instance_names; k++) {
+            if (getAll) {
+                if (doOutNames)
+                    psRetInstanceNames[retCount] = strdup(pCluster->nodes[i].instance_names[k].name);
+
+                if (doOutStructs) {
+                    for (x = 0; x < pGni->max_instances; x++) {
+                        if (!strcmp(pGni->instances[x].name, pCluster->nodes[i].instance_names[k].name)) {
+                            memcpy(&(pRetInstances[retCount]), &(pGni->instances[x]), sizeof(gni_instance));
+                            break;
+                        }
+                    }
+                }
+                retCount++;
+            } else {
+                for (x = 0; x < nbInstanceNames; x++) {
+                    if (!strcmp(psInstanceNames[x], pCluster->nodes[i].instance_names[k].name)) {
+                        if (doOutNames) {
+                            *psOutInstanceNames = EUCA_REALLOC(*psOutInstanceNames, (retCount + 1), sizeof(char *));
+                            psRetInstanceNames = *psOutInstanceNames;
+                            psRetInstanceNames[retCount] = strdup(pCluster->nodes[i].instance_names[k].name);
+                        }
+
+                        if (doOutStructs) {
+                            for (y = 0; y < pGni->max_instances; y++) {
+                                if (!strcmp(pGni->instances[y].name, pCluster->nodes[i].instance_names[k].name)) {
+                                    *pOutInstances = EUCA_REALLOC(*pOutInstances, (retCount + 1), sizeof(gni_instance));
+                                    pRetInstances = *pOutInstances;
+                                    memcpy(&(pRetInstances[retCount]), &(pGni->instances[y]), sizeof(gni_instance));
+                                    break;
+                                }
+                            }
+                        }
+                        retCount++;
+                    }
+                }
+            }
+        }
+    }
+
+    if (doOutNames)
+        *pOutNbInstanceNames = retCount;
+
+    if (doOutStructs)
+        *pOutNbInstances = retCount;
+
+    return (ret);
+}
+
+//!
+//! Retrives the list of security groups configured and active on a given cluster
+//!
+//! @param[in]  pGni a pointer to our global network view structure
+//! @param[in]  pCluster a pointer to the cluster we're building the security group list for
+//! @param[in]  psSecGroupNames a string pointer to the name of groups we're looking for
+//! @param[in]  nbSecGroupNames the number of groups in the psSecGroupNames list
+//! @param[out] psOutSecGroupNames a string pointer that will contain the list of group names we found (if non NULL)
+//! @param[out] pOutNbSecGroupNames a pointer to the number of groups that matched in the psOutSecGroupNames list
+//! @param[out] pOutSecGroups a pointer to the list of security group structures that match what we're looking for
+//! @param[out] pOutNbSecGroups a pointer to the number of structures in the psOutSecGroups list
+//!
+//! @return 0 on success or 1 if any failure occured
+//!
+//! @see
+//!
+//! @pre  TODO:
+//!
+//! @post TODO:
+//!
+//! @note
+//!
+int gni_cluster_get_secgroup(globalNetworkInfo * pGni, gni_cluster * pCluster, char **psSecGroupNames, int nbSecGroupNames, char ***psOutSecGroupNames, int *pOutNbSecGroupNames,
+                             gni_secgroup ** pOutSecGroups, int *pOutNbSecGroups)
+{
+    int ret = 0;
+    int i = 0;
+    int k = 0;
+    int x = 0;
+    int retCount = 0;
+    int nbInstances = 0;
+    char **psRetSecGroupNames = NULL;
+    boolean found = FALSE;
+    boolean getAll = FALSE;
+    boolean doOutNames = FALSE;
+    boolean doOutStructs = FALSE;
+    gni_instance *pInstances = NULL;
+    gni_secgroup *pRetSecGroup = NULL;
+
+    // Make sure our GNI and Cluster pointers are valid
+    if (!pGni || !pCluster) {
+        LOGERROR("invalid input\n");
+        return (1);
+    }
+    // We will need to get the instances that are running under this cluster
+    if (gni_cluster_get_instances(pGni, pCluster, NULL, 0, NULL, NULL, &pInstances, &nbInstances)) {
+        LOGERROR("Failed to retrieve instances for cluster '%s'\n", pCluster->name);
+        return (1);
+    }
+    // Are we building the name list?
+    if (psOutSecGroupNames && pOutNbSecGroupNames) {
+        doOutNames = TRUE;
+        *psOutSecGroupNames = NULL;
+        *pOutNbSecGroupNames = 0;
+    }
+    // Are we building the structure list?
+    if (pOutSecGroups && pOutNbSecGroups) {
+        doOutStructs = TRUE;
+        *pOutSecGroups = NULL;
+        *pOutNbSecGroups = 0;
+    }
+    // Are we doing anything?
+    if (!doOutNames && !doOutStructs) {
+        LOGDEBUG("nothing to do, both output variables are NULL\n");
+        return (0);
+    }
+    // Do we have any instances?
+    if (nbInstances == 0)
+        return (0);
+
+    // Do we have any groups?
+    if (pGni->max_secgroups == 0) {
+        EUCA_FREE(pInstances);
+        return (0);
+    }
+    // Allocate memory for all the groups if there is no search criterias
+    if ((psSecGroupNames == NULL) || !strcmp(psSecGroupNames[0], "*")) {
+        getAll = TRUE;
+        if (doOutNames)
+            *psOutSecGroupNames = EUCA_ZALLOC(pGni->max_secgroups, sizeof(char *));
+
+        if (doOutStructs)
+            *pOutSecGroups = EUCA_ZALLOC(pGni->max_secgroups, sizeof(gni_secgroup));
+    }
+    // Setup our returning name pointer
+    if (doOutNames)
+        psRetSecGroupNames = *psOutSecGroupNames;
+
+    // Setup our returning structure pointer
+    if (doOutStructs)
+        pRetSecGroup = *pOutSecGroups;
+
+    // Scan all our groups
+    for (i = 0, retCount = 0; i < pGni->max_secgroups; i++) {
+        if (getAll) {
+            // Check if this we have any instance using this group
+            for (k = 0, found = FALSE; ((k < nbInstances) && !found); k++) {
+                for (x = 0; ((x < pInstances[k].max_secgroup_names) && !found); x++) {
+                    if (!strcmp(pGni->secgroups[i].name, pInstances[k].secgroup_names[x].name)) {
+                        found = TRUE;
+                    }
+                }
+            }
+
+            // If we have any instance using this group, then copy it
+            if (found) {
+                if (doOutNames)
+                    psRetSecGroupNames[retCount] = strdup(pGni->secgroups[i].name);
+
+                if (doOutStructs)
+                    memcpy(&(pRetSecGroup[retCount]), &(pGni->secgroups[i]), sizeof(gni_secgroup));
+                retCount++;
+            }
+        } else {
+            if (!strcmp(psSecGroupNames[x], pGni->secgroups[i].name)) {
+                // Check if this we have any instance using this group
+                for (k = 0, found = FALSE; ((k < nbInstances) && !found); k++) {
+                    for (x = 0; ((x < pInstances[k].max_secgroup_names) && !found); x++) {
+                        if (!strcmp(pGni->secgroups[i].name, pInstances[k].secgroup_names[x].name)) {
+                            found = TRUE;
+                        }
+                    }
+                }
+
+                // If we have any instance using this group, then copy it
+                if (found) {
+                    if (doOutNames) {
+                        *psOutSecGroupNames = EUCA_REALLOC(*psOutSecGroupNames, (retCount + 1), sizeof(char *));
+                        psRetSecGroupNames = *psOutSecGroupNames;
+                        psRetSecGroupNames[retCount] = strdup(pGni->secgroups[i].name);
+                    }
+
+                    if (doOutStructs) {
+                        *pOutSecGroups = EUCA_REALLOC(*pOutSecGroups, (retCount + 1), sizeof(gni_instance));
+                        pRetSecGroup = *pOutSecGroups;
+                        memcpy(&(pRetSecGroup[retCount]), &(pGni->secgroups[i]), sizeof(gni_secgroup));
+                    }
+                    retCount++;
+                }
+            }
+        }
+    }
+
+    if (doOutNames)
+        *pOutNbSecGroupNames = retCount;
+
+    if (doOutStructs)
+        *pOutNbSecGroups = retCount;
+
+    EUCA_FREE(pInstances);
+    return (ret);
+}
+
+//!
+//! TODO: Function description.
+//!
+//! @param[in]  gni a pointer to the global network information structure
+//! @param[in]  node
+//! @param[in]  instance_names
+//! @param[in]  max_instance_names
+//! @param[out] out_instance_names
+//! @param[out] out_max_instance_names
+//! @param[out] out_instances
+//! @param[out] out_max_instances
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int gni_node_get_instances(globalNetworkInfo * gni, gni_node * node, char **instance_names, int max_instance_names, char ***out_instance_names, int *out_max_instance_names,
                            gni_instance ** out_instances, int *out_max_instances)
 {
@@ -425,9 +1144,185 @@ int gni_node_get_instances(globalNetworkInfo * gni, gni_node * node, char **inst
         *out_max_instances = retcount;
 
     return (ret);
-
 }
 
+//!
+//! Retrives the list of security groups configured and active on a given cluster
+//!
+//! @param[in]  pGni a pointer to our global network view structure
+//! @param[in]  pNode a pointer to the node we're building the security group list for
+//! @param[in]  psSecGroupNames a string pointer to the name of groups we're looking for
+//! @param[in]  nbSecGroupNames the number of groups in the psSecGroupNames list
+//! @param[out] psOutSecGroupNames a string pointer that will contain the list of group names we found (if non NULL)
+//! @param[out] pOutNbSecGroupNames a pointer to the number of groups that matched in the psOutSecGroupNames list
+//! @param[out] pOutSecGroups a pointer to the list of security group structures that match what we're looking for
+//! @param[out] pOutNbSecGroups a pointer to the number of structures in the psOutSecGroups list
+//!
+//! @return 0 on success or 1 if any failure occured
+//!
+//! @see
+//!
+//! @pre  TODO:
+//!
+//! @post TODO:
+//!
+//! @note
+//!
+int gni_node_get_secgroup(globalNetworkInfo * pGni, gni_node * pNode, char **psSecGroupNames, int nbSecGroupNames, char ***psOutSecGroupNames, int *pOutNbSecGroupNames,
+                          gni_secgroup ** pOutSecGroups, int *pOutNbSecGroups)
+{
+    int ret = 0;
+    int i = 0;
+    int k = 0;
+    int x = 0;
+    int retCount = 0;
+    int nbInstances = 0;
+    char **psRetSecGroupNames = NULL;
+    boolean found = FALSE;
+    boolean getAll = FALSE;
+    boolean doOutNames = FALSE;
+    boolean doOutStructs = FALSE;
+    gni_instance *pInstances = NULL;
+    gni_secgroup *pRetSecGroup = NULL;
+
+    // Make sure our GNI and Cluster pointers are valid
+    if (!pGni || !pNode) {
+        LOGERROR("invalid input\n");
+        return (1);
+    }
+    // We will need to get the instances that are running under this cluster
+    if (gni_node_get_instances(pGni, pNode, NULL, 0, NULL, NULL, &pInstances, &nbInstances)) {
+        LOGERROR("Failed to retrieve instances for node '%s'\n", pNode->name);
+        return (1);
+    }
+    // Are we building the name list?
+    if (psOutSecGroupNames && pOutNbSecGroupNames) {
+        doOutNames = TRUE;
+        *psOutSecGroupNames = NULL;
+        *pOutNbSecGroupNames = 0;
+    }
+    // Are we building the structure list?
+    if (pOutSecGroups && pOutNbSecGroups) {
+        doOutStructs = TRUE;
+        *pOutSecGroups = NULL;
+        *pOutNbSecGroups = 0;
+    }
+    // Are we doing anything?
+    if (!doOutNames && !doOutStructs) {
+        LOGDEBUG("nothing to do, both output variables are NULL\n");
+        EUCA_FREE(pInstances);
+        return (0);
+    }
+    // Do we have any instances?
+    if (nbInstances == 0) {
+        EUCA_FREE(pInstances);
+        return (0);
+    }
+    // Do we have any groups?
+    if (pGni->max_secgroups == 0) {
+        EUCA_FREE(pInstances);
+        return (0);
+    }
+    // Allocate memory for all the groups if there is no search criterias
+    if ((psSecGroupNames == NULL) || !strcmp(psSecGroupNames[0], "*")) {
+        getAll = TRUE;
+        if (doOutNames)
+            *psOutSecGroupNames = EUCA_ZALLOC(pGni->max_secgroups, sizeof(char *));
+
+        if (doOutStructs)
+            *pOutSecGroups = EUCA_ZALLOC(pGni->max_secgroups, sizeof(gni_secgroup));
+    }
+    // Setup our returning name pointer
+    if (doOutNames)
+        psRetSecGroupNames = *psOutSecGroupNames;
+
+    // Setup our returning structure pointer
+    if (doOutStructs)
+        pRetSecGroup = *pOutSecGroups;
+
+    // Scan all our groups
+    for (i = 0, retCount = 0; i < pGni->max_secgroups; i++) {
+        if (getAll) {
+            // Check if this we have any instance using this group
+            for (k = 0, found = FALSE; ((k < nbInstances) && !found); k++) {
+                for (x = 0; ((x < pInstances[k].max_secgroup_names) && !found); x++) {
+                    if (!strcmp(pGni->secgroups[i].name, pInstances[k].secgroup_names[x].name)) {
+                        found = TRUE;
+                    }
+                }
+            }
+
+            // If we have any instance using this group, then copy it
+            if (found) {
+                if (doOutNames)
+                    psRetSecGroupNames[retCount] = strdup(pGni->secgroups[i].name);
+
+                if (doOutStructs)
+                    memcpy(&(pRetSecGroup[retCount]), &(pGni->secgroups[i]), sizeof(gni_secgroup));
+                retCount++;
+            }
+        } else {
+            if (!strcmp(psSecGroupNames[x], pGni->secgroups[i].name)) {
+                // Check if this we have any instance using this group
+                for (k = 0, found = FALSE; ((k < nbInstances) && !found); k++) {
+                    for (x = 0; ((x < pInstances[k].max_secgroup_names) && !found); x++) {
+                        if (!strcmp(pGni->secgroups[i].name, pInstances[k].secgroup_names[x].name)) {
+                            found = TRUE;
+                        }
+                    }
+                }
+
+                // If we have any instance using this group, then copy it
+                if (found) {
+                    if (doOutNames) {
+                        *psOutSecGroupNames = EUCA_REALLOC(*psOutSecGroupNames, (retCount + 1), sizeof(char *));
+                        psRetSecGroupNames = *psOutSecGroupNames;
+                        psRetSecGroupNames[retCount] = strdup(pGni->secgroups[i].name);
+                    }
+
+                    if (doOutStructs) {
+                        *pOutSecGroups = EUCA_REALLOC(*pOutSecGroups, (retCount + 1), sizeof(gni_instance));
+                        pRetSecGroup = *pOutSecGroups;
+                        memcpy(&(pRetSecGroup[retCount]), &(pGni->secgroups[i]), sizeof(gni_secgroup));
+                    }
+                    retCount++;
+                }
+            }
+        }
+    }
+
+    if (doOutNames)
+        *pOutNbSecGroupNames = retCount;
+
+    if (doOutStructs)
+        *pOutNbSecGroups = retCount;
+
+    EUCA_FREE(pInstances);
+    return (ret);
+}
+
+//!
+//! TODO: Function description.
+//!
+//! @param[in]  gni a pointer to the global network information structure
+//! @param[in]  instance
+//! @param[in]  secgroup_names
+//! @param[in]  max_secgroup_names
+//! @param[out] out_secgroup_names
+//! @param[out] out_max_secgroup_names
+//! @param[out] out_secgroups
+//! @param[out] out_max_secgroups
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int gni_instance_get_secgroups(globalNetworkInfo * gni, gni_instance * instance, char **secgroup_names, int max_secgroup_names, char ***out_secgroup_names,
                                int *out_max_secgroup_names, gni_secgroup ** out_secgroups, int *out_max_secgroups)
 {
@@ -520,6 +1415,28 @@ int gni_instance_get_secgroups(globalNetworkInfo * gni, gni_instance * instance,
 
 }
 
+//!
+//! TODO: Function description.
+//!
+//! @param[in]  gni a pointer to the global network information structure
+//! @param[in]  secgroup
+//! @param[in]  instance_names
+//! @param[in]  max_instance_names
+//! @param[out] out_instance_names
+//! @param[out] out_max_instance_names
+//! @param[out] out_instances
+//! @param[out] out_max_instances
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int gni_secgroup_get_instances(globalNetworkInfo * gni, gni_secgroup * secgroup, char **instance_names, int max_instance_names, char ***out_instance_names,
                                int *out_max_instance_names, gni_instance ** out_instances, int *out_max_instances)
 {
@@ -611,6 +1528,24 @@ int gni_secgroup_get_instances(globalNetworkInfo * gni, gni_secgroup * secgroup,
     return (ret);
 }
 
+//!
+//! Function description.
+//!
+//! @param[in]  ctxptr
+//! @param[in]  expression
+//! @param[out] results
+//! @param[out] max_results
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int evaluate_xpath_property(xmlXPathContextPtr ctxptr, char *expression, char ***results, int *max_results)
 {
     int i, max_nodes = 0, result_count = 0;
@@ -647,6 +1582,24 @@ int evaluate_xpath_property(xmlXPathContextPtr ctxptr, char *expression, char **
     return (0);
 }
 
+//!
+//! TODO: Describe
+//!
+//! @param[in]  ctxptr a pointer to the XML context
+//! @param[in]  expression a string pointer to the expression we want to evaluate
+//! @param[out] results the results of the expression evaluation
+//! @param[out] max_results the number of results returned
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int evaluate_xpath_element(xmlXPathContextPtr ctxptr, char *expression, char ***results, int *max_results)
 {
     int i, max_nodes = 0, result_count = 0;
@@ -683,6 +1636,19 @@ int evaluate_xpath_element(xmlXPathContextPtr ctxptr, char *expression, char ***
     return (0);
 }
 
+//!
+//! Allocates an initialize a new globalNetworkInfo structure.
+//!
+//! @return A pointer to the newly allocated structure or NULL if any memory failure occured
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 globalNetworkInfo *gni_init()
 {
     globalNetworkInfo *gni = NULL;
@@ -696,6 +1662,22 @@ globalNetworkInfo *gni_init()
     return (gni);
 }
 
+//!
+//! Populates a given globalNetworkInfo structure from the content of an XML file
+//!
+//! @param[in] gni a pointer to the global network information structure
+//! @param[in] xmlpath path the XML file use to populate the structure
+//!
+//! @return 0 on success or 1 on failure
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int gni_populate(globalNetworkInfo * gni, char *xmlpath)
 {
     int rc;
@@ -734,14 +1716,13 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
     gni->instances = EUCA_ZALLOC(max_results, sizeof(gni_instance));
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(gni->instances[i].name, 16, "%s", results[i]);
+        snprintf(gni->instances[i].name, INSTANCE_ID_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     gni->max_instances = max_results;
     EUCA_FREE(results);
 
     for (j = 0; j < gni->max_instances; j++) {
-
         snprintf(expression, 2048, "/network-data/instances/instance[@name='%s']/ownerId", gni->instances[j].name);
         rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
         for (i = 0; i < max_results; i++) {
@@ -814,14 +1795,13 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
     gni->secgroups = EUCA_ZALLOC(max_results, sizeof(gni_secgroup));
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(gni->secgroups[i].name, 128, "%s", results[i]);
+        snprintf(gni->secgroups[i].name, SECURITY_GROUP_ID_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     gni->max_secgroups = max_results;
     EUCA_FREE(results);
 
     for (j = 0; j < gni->max_secgroups; j++) {
-
         // populate secgroup's instance_names
         gni->secgroups[j].max_instance_names = 0;
         gni->secgroups[j].instance_names = EUCA_ZALLOC(gni->max_instances, sizeof(gni_name));
@@ -893,7 +1873,7 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
             rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
             for (i = 0; i < max_results; i++) {
                 LOGTRACE("after function: %d: %s\n", i, results[i]);
-                snprintf(gni->secgroups[j].ingress_rules[k].groupId, 16, "%s", results[i]);
+                snprintf(gni->secgroups[j].ingress_rules[k].groupId, SECURITY_GROUP_ID_LEN, "%s", results[i]);
                 EUCA_FREE(results[i]);
             }
             EUCA_FREE(results);
@@ -911,7 +1891,7 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
             rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
             for (i = 0; i < max_results; i++) {
                 LOGTRACE("after function: %d: %s\n", i, results[i]);
-                snprintf(gni->secgroups[j].ingress_rules[k].cidr, 16, "%s", results[i]);
+                snprintf(gni->secgroups[j].ingress_rules[k].cidr, INET_ADDR_LEN, "%s", results[i]);
                 EUCA_FREE(results[i]);
             }
             EUCA_FREE(results);
@@ -957,7 +1937,7 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
         /*  for (k=0; k<gni->secgroups[j].max_ingress_rules; k++) {
            LOGTRACE("HELLO: rule=%d %d %d %d %d %d %s %s %s\n", k, gni->secgroups[j].ingress_rules[k].protocol, gni->secgroups[j].ingress_rules[k].fromPort, gni->secgroups[j].ingress_rules[k].toPort, gni->secgroups[j].ingress_rules[k].icmpType, gni->secgroups[j].ingress_rules[k].icmpCode, gni->secgroups[j].ingress_rules[k].groupId, gni->secgroups[j].ingress_rules[k].groupOwnerId, gni->secgroups[j].ingress_rules[k].cidr);
            }
-           exit(0); 
+           exit(0);
          */
     }
 
@@ -974,7 +1954,6 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
     EUCA_FREE(results);
 
     for (j = 0; j < gni->max_vpcs; j++) {
-
         snprintf(expression, 2048, "/network-data/vpcs/vpc[@name='%s']/ownerId", gni->vpcs[j].name);
         rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
         for (i = 0; i < max_results; i++) {
@@ -1004,6 +1983,7 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
 
         snprintf(expression, 2048, "/network-data/vpcs/vpc[@name='%s']/subnets/*", gni->vpcs[j].name);
         rc = evaluate_xpath_element(ctxptr, expression, &results, &max_results);
+
         gni->vpcs[j].subnets = EUCA_ZALLOC(max_results, sizeof(gni_vpcsubnet));
         for (i = 0; i < max_results; i++) {
             LOGTRACE("after function: %d: %s\n", i, results[i]);
@@ -1014,7 +1994,6 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
         EUCA_FREE(results);
 
         for (k = 0; k < gni->vpcs[j].max_subnets; k++) {
-
             snprintf(expression, 2048, "/network-data/vpcs/vpc[@name='%s']/subnets/subnet[@name='%s']/ownerId", gni->vpcs[j].name, gni->vpcs[j].subnets[k].name);
             rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
             for (i = 0; i < max_results; i++) {
@@ -1037,7 +2016,7 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
             rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
             for (i = 0; i < max_results; i++) {
                 LOGTRACE("after function: %d: %s\n", i, results[i]);
-                snprintf(gni->vpcs[j].subnets[k].cluster_name, HOSTNAME_SIZE, "%s", results[i]);
+                snprintf(gni->vpcs[j].subnets[k].cluster_name, HOSTNAME_LEN, "%s", results[i]);
                 EUCA_FREE(results[i]);
             }
             EUCA_FREE(results);
@@ -1067,6 +2046,15 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
 
     // begin configuration
 
+    snprintf(expression, 2048, "/network-data/configuration/property[@name='mode']/value");
+    rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+    for (i = 0; i < max_results; i++) {
+        LOGTRACE("after function: %d: %s\n", i, results[i]);
+        snprintf(gni->sMode, NETMODE_LEN, results[i]);
+        EUCA_FREE(results[i]);
+    }
+    EUCA_FREE(results);
+
     snprintf(expression, 2048, "/network-data/configuration/property[@name='enabledCLCIp']/value");
     rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
@@ -1080,7 +2068,7 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
     rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(gni->instanceDNSDomain, HOSTNAME_SIZE, "%s", results[i]);
+        snprintf(gni->instanceDNSDomain, HOSTNAME_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
@@ -1089,7 +2077,7 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
     rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(gni->EucanetdHost, HOSTNAME_SIZE, "%s", results[i]);
+        snprintf(gni->EucanetdHost, HOSTNAME_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
@@ -1098,7 +2086,7 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
     rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(gni->GatewayHost, HOSTNAME_SIZE, "%s", results[i]);
+        snprintf(gni->GatewayHost, HOSTNAME_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
@@ -1107,7 +2095,7 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
     rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(gni->GatewayIP, HOSTNAME_SIZE, "%s", results[i]);
+        snprintf(gni->GatewayIP, HOSTNAME_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
@@ -1125,7 +2113,7 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
     rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(gni->PublicNetworkCidr, HOSTNAME_SIZE, "%s", results[i]);
+        snprintf(gni->PublicNetworkCidr, HOSTNAME_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
@@ -1134,7 +2122,7 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
     rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(gni->PublicGatewayIP, HOSTNAME_SIZE, "%s", results[i]);
+        snprintf(gni->PublicGatewayIP, HOSTNAME_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
@@ -1163,6 +2151,63 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
         }
         //    gni->max_public_ips = max_results;
         EUCA_FREE(results);
+    }
+    // Do we have any managed subnets?
+    snprintf(expression, 2048, "/network-data/configuration/property[@name='managedSubnet']/managedSubnet");
+    rc = evaluate_xpath_element(ctxptr, expression, &results, &max_results);
+    gni->managedSubnet = EUCA_ZALLOC(max_results, sizeof(gni_subnet));
+    for (i = 0; i < max_results; i++) {
+        LOGTRACE("after function: %d: %s\n", i, results[i]);
+        gni->managedSubnet[i].subnet = dot2hex(results[i]);
+        EUCA_FREE(results[i]);
+    }
+    gni->max_managedSubnets = max_results;
+    EUCA_FREE(results);
+
+    // If we do have any managed subnets, retrieve the rest of the information
+    for (j = 0; j < gni->max_managedSubnets; j++) {
+        strptra = hex2dot(gni->managedSubnet[j].subnet);
+
+        // Get the netmask
+        snprintf(expression, 2048, "/network-data/configuration/property[@name='managedSubnet']/managedSubnet[@name='%s']/property[@name='netmask']/value", SP(strptra));
+        rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+        for (i = 0; i < max_results; i++) {
+            LOGTRACE("after function: %d: %s\n", i, results[i]);
+            gni->managedSubnet[j].netmask = dot2hex(results[i]);
+            EUCA_FREE(results[i]);
+        }
+        EUCA_FREE(results);
+
+        // Now get the minimum VLAN index
+        snprintf(expression, 2048, "/network-data/configuration/property[@name='managedSubnet']/managedSubnet[@name='%s']/property[@name='minVlan']/value", SP(strptra));
+        rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+        for (i = 0; i < max_results; i++) {
+            LOGTRACE("after function: %d: %s\n", i, results[i]);
+            gni->managedSubnet[j].minVlan = atoi(results[i]);
+            EUCA_FREE(results[i]);
+        }
+        EUCA_FREE(results);
+
+        // Now get the maximum VLAN index
+        snprintf(expression, 2048, "/network-data/configuration/property[@name='managedSubnet']/managedSubnet[@name='%s']/property[@name='maxVlan']/value", SP(strptra));
+        rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+        for (i = 0; i < max_results; i++) {
+            LOGTRACE("after function: %d: %s\n", i, results[i]);
+            gni->managedSubnet[j].maxVlan = atoi(results[i]);
+            EUCA_FREE(results[i]);
+        }
+        EUCA_FREE(results);
+
+        // Now get the minimum VLAN index
+        snprintf(expression, 2048, "/network-data/configuration/property[@name='managedSubnet']/managedSubnet[@name='%s']/property[@name='segmentSize']/value", SP(strptra));
+        rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+        for (i = 0; i < max_results; i++) {
+            LOGTRACE("after function: %d: %s\n", i, results[i]);
+            gni->managedSubnet[j].segmentSize = atoi(results[i]);
+            EUCA_FREE(results[i]);
+        }
+        EUCA_FREE(results);
+        EUCA_FREE(strptra);
     }
 
     snprintf(expression, 2048, "/network-data/configuration/property[@name='subnets']/subnet");
@@ -1205,7 +2250,7 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
     gni->clusters = EUCA_ZALLOC(max_results, sizeof(gni_cluster));
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(gni->clusters[i].name, HOSTNAME_SIZE, "%s", results[i]);
+        snprintf(gni->clusters[i].name, HOSTNAME_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     gni->max_clusters = max_results;
@@ -1226,7 +2271,7 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
         rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
         for (i = 0; i < max_results; i++) {
             LOGTRACE("after function: %d: %s\n", i, results[i]);
-            snprintf(gni->clusters[j].macPrefix, 8, "%s", results[i]);
+            snprintf(gni->clusters[j].macPrefix, ENET_MACPREFIX_LEN, "%s", results[i]);
             EUCA_FREE(results[i]);
         }
         EUCA_FREE(results);
@@ -1283,7 +2328,7 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
         gni->clusters[j].nodes = EUCA_ZALLOC(max_results, sizeof(gni_node));
         for (i = 0; i < max_results; i++) {
             LOGTRACE("after function: %d: %s\n", i, results[i]);
-            snprintf(gni->clusters[j].nodes[i].name, HOSTNAME_SIZE, "%s", results[i]);
+            snprintf(gni->clusters[j].nodes[i].name, HOSTNAME_LEN, "%s", results[i]);
             EUCA_FREE(results[i]);
         }
         gni->clusters[j].max_nodes = max_results;
@@ -1302,7 +2347,7 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
 
                 for (l = 0; l < gni->max_instances; l++) {
                     if (!strcmp(gni->instances[l].name, gni->clusters[j].nodes[k].instance_names[i].name)) {
-                        snprintf(gni->instances[l].node, HOSTNAME_SIZE, "%s", gni->clusters[j].nodes[k].name);
+                        snprintf(gni->instances[l].node, HOSTNAME_LEN, "%s", gni->clusters[j].nodes[k].name);
                         {
                             struct hostent *hent;
                             struct in_addr addr;
@@ -1311,11 +2356,11 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
                             ip = strdup(gni->instances[l].node);
 
                             if (!inet_aton(ip, &addr)) {
-                                snprintf(gni->instances[l].nodehostname, HOSTNAME_SIZE, "%s", ip);
+                                snprintf(gni->instances[l].nodehostname, HOSTNAME_LEN, "%s", ip);
                             } else if ((hent = gethostbyaddr((char *)&(addr.s_addr), sizeof(addr.s_addr), AF_INET))) {
-                                snprintf(gni->instances[l].nodehostname, HOSTNAME_SIZE, "%s", hent->h_name);
+                                snprintf(gni->instances[l].nodehostname, HOSTNAME_LEN, "%s", hent->h_name);
                             } else {
-                                snprintf(gni->instances[l].nodehostname, HOSTNAME_SIZE, "%s", gni->instances[l].node);
+                                snprintf(gni->instances[l].nodehostname, HOSTNAME_LEN, "%s", gni->instances[l].node);
                             }
                             EUCA_FREE(ip);
                         }
@@ -1344,6 +2389,24 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
     return (0);
 }
 
+//!
+//! TODO: Describe
+//!
+//! @param[in]  inlist
+//! @param[in]  inmax
+//! @param[out] outlist
+//! @param[out] outmax
+//!
+//! @return 0 on success or 1 on failure
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int gni_serialize_iprange_list(char **inlist, int inmax, u32 ** outlist, int *outmax)
 {
     int i = 0;
@@ -1426,6 +2489,23 @@ int gni_serialize_iprange_list(char **inlist, int inmax, u32 ** outlist, int *ou
     return (ret);
 }
 
+//!
+//! Iterates through a given globalNetworkInfo structure and execute the
+//! given operation mode.
+//!
+//! @param[in] gni a pointer to the global network information structure
+//! @param[in] mode the iteration mode: GNI_ITERATE_PRINT or GNI_ITERATE_FREE
+//!
+//! @return Always return 0
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int gni_iterate(globalNetworkInfo * gni, int mode)
 {
     int i, j;
@@ -1590,16 +2670,62 @@ int gni_iterate(globalNetworkInfo * gni, int mode)
     return (0);
 }
 
+//!
+//! Clears a given globalNetworkInfo structure. This will free member's allocated memory and zero
+//! out the structure itself.
+//!
+//! @param[in] gni a pointer to the global network information structure
+//!
+//! @return the result of the gni_iterate() call
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int gni_clear(globalNetworkInfo * gni)
 {
     return (gni_iterate(gni, GNI_ITERATE_FREE));
 }
 
+//!
+//! Logs the content of a given globalNetworkInfo structure
+//!
+//! @param[in] gni a pointer to the global network information structure
+//!
+//! @return the result of the gni_iterate() call
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int gni_print(globalNetworkInfo * gni)
 {
     return (gni_iterate(gni, GNI_ITERATE_PRINT));
 }
 
+//!
+//! Clears and free a given globalNetworkInfo structure.
+//!
+//! @param[in] gni a pointer to the global network information structure
+//!
+//! @return Always return 0
+//!
+//! @see gni_clear()
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note The caller should free the given pointer
+//!
 int gni_free(globalNetworkInfo * gni)
 {
     if (!gni) {
@@ -1611,18 +2737,20 @@ int gni_free(globalNetworkInfo * gni)
 }
 
 //!
-//! Function description.
+//! TODO: Define
 //!
-//! @param[in] rulebuf
-//! @param[in] outrule
+//! @param[in]  rulebuf a string containing the IP table rule to convert
+//! @param[out] outrule a string containing the converted rule
 //!
-//! @return
+//! @return 0 on success or 1 on failure.
 //!
 //! @see
 //!
-//! @pre List of pre-conditions
+//! @pre Both rulebuf and outrule MUST not be NULL
 //!
-//! @post List of post conditions
+//! @post \li uppon success the outrule contains the converted value
+//!       \li uppon failure, outrule does not contain any valid data
+//!       \li regardless of success or failure case, rulebuf will be modified by a strtok_r() call
 //!
 //! @note
 //!
@@ -1689,24 +2817,17 @@ int ruleconvert(char *rulebuf, char *outrule)
             snprintf(buf, 2048, "-s %s ", sourcecidr);
             strncat(newrule, buf, 2048);
         }
-        if (strlen(sourceowner) && strlen(sourcegroup)) {
-            char ug[64], *chainhash = NULL;
-            snprintf(ug, 64, "%s-%s", sourceowner, sourcegroup);
-            hash_b64enc_string(ug, &chainhash);
-            if (chainhash) {
-                snprintf(buf, 2048, "-m set --set EU_%s src ", chainhash);
-                strncat(newrule, buf, 2048);
-                EUCA_FREE(chainhash);
-            }
-        }
+
         if (strlen(proto)) {
             snprintf(buf, 2048, "-p %s -m %s ", proto, proto);
             strncat(newrule, buf, 2048);
         }
+
         if (strlen(portrange)) {
             snprintf(buf, 2048, "--dport %s ", portrange);
             strncat(newrule, buf, 2048);
         }
+
         if (strlen(icmptyperange)) {
             snprintf(buf, 2048, "--icmp-type %s ", icmptyperange);
             strncat(newrule, buf, 2048);
@@ -1726,6 +2847,22 @@ int ruleconvert(char *rulebuf, char *outrule)
     return (ret);
 }
 
+//!
+//! Clears a gni_cluster structure. This will free member's allocated memory and zero
+//! out the structure itself.
+//!
+//! @param[in] cluster a pointer to the structure to clear
+//!
+//! @return This function always returns 0
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int gni_cluster_clear(gni_cluster * cluster)
 {
     if (!cluster) {
@@ -1739,6 +2876,22 @@ int gni_cluster_clear(gni_cluster * cluster)
     return (0);
 }
 
+//!
+//! Clears a gni_node structure. This will free member's allocated memory and zero
+//! out the structure itself.
+//!
+//! @param[in] node a pointer to the structure to clear
+//!
+//! @return This function always returns 0
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int gni_node_clear(gni_node * node)
 {
     if (!node) {
@@ -1752,6 +2905,22 @@ int gni_node_clear(gni_node * node)
     return (0);
 }
 
+//!
+//! Clears a gni_instance structure. This will free member's allocated memory and zero
+//! out the structure itself.
+//!
+//! @param[in] instance a pointer to the structure to clear
+//!
+//! @return This function always returns 0
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int gni_instance_clear(gni_instance * instance)
 {
     if (!instance) {
@@ -1765,6 +2934,22 @@ int gni_instance_clear(gni_instance * instance)
     return (0);
 }
 
+//!
+//! Clears a gni_secgroup structure. This will free member's allocated memory and zero
+//! out the structure itself.
+//!
+//! @param[in] secgroup a pointer to the structure to clear
+//!
+//! @return This function always returns 0
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int gni_secgroup_clear(gni_secgroup * secgroup)
 {
     if (!secgroup) {
@@ -1781,6 +2966,21 @@ int gni_secgroup_clear(gni_secgroup * secgroup)
     return (0);
 }
 
+//!
+//! Zero out a VPC structure
+//!
+//! @param[in] vpc a pointer to the GNI VPC structure to reset
+//!
+//! @return Always return 0
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int gni_vpc_clear(gni_vpc * vpc)
 {
     if (!vpc) {
@@ -1797,77 +2997,131 @@ int gni_vpc_clear(gni_vpc * vpc)
     return (0);
 }
 
+//!
+//! Validates a given globalNetworkInfo structure and its content
+//!
+//! @param[in] gni a pointer to the Global Network Information structure to validate
+//!
+//! @return 0 if the structure is valid or 1 if it isn't
+//!
+//! @see gni_subnet_validate(), gni_cluster_validate(), gni_instance_validate(), gni_secgroup_validate()
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int gni_validate(globalNetworkInfo * gni)
 {
-    int i;
+    int i = 0;
 
     // this is going to be messy, until we get XML validation in place
-
     if (!gni) {
         LOGERROR("invalid input\n");
         return (1);
     }
-
+    // GNI should be initialized... but check just in case
     if (!gni->init) {
         LOGWARN("BUG: gni is not initialized yet\n");
         return (1);
     }
-    // top level
-    if (!gni->enabledCLCIp) {
-        LOGWARN("no enabled CLC IP set: cannot validate XML\n");
+    // Make sure we have a valid mode
+    if (gni_netmode_validate(gni->sMode)) {
+        LOGWARN("Invalid network mode provided: cannot validate XML\n");
         return (1);
     }
 
+    LOGDEBUG("Validating XML for '%s' networking mode.\n", gni->sMode);
+
+    // We need to know about which CLC is the enabled one. 0.0.0.0 means we don't know
+    if (gni->enabledCLCIp == 0) {
+        LOGWARN("no enabled CLC IP set: cannot validate XML\n");
+        return (1);
+    }
+    // We should have some instance Domain Name information
     if (!strlen(gni->instanceDNSDomain)) {
         LOGWARN("no instanceDNSDomain set: cannot validate XML\n");
         return (1);
     }
-
+    // We should have some instance Domain Name Server information
     if (!gni->max_instanceDNSServers || !gni->instanceDNSServers) {
         LOGWARN("no instanceDNSServers set: cannot validate XML\n");
         return (1);
-    } else {
-        for (i = 0; i < gni->max_instanceDNSServers; i++) {
-            if (!gni->instanceDNSServers[i]) {
-                LOGWARN("empty instanceDNSServer set at idx %d: cannot validate XML\n", i);
-                return (1);
-            }
+    }
+    // Validate that we don't have a corrupted list. All 0.0.0.0 addresses are invalid
+    for (i = 0; i < gni->max_instanceDNSServers; i++) {
+        if (gni->instanceDNSServers[i] == 0) {
+            LOGWARN("empty instanceDNSServer set at idx %d: cannot validate XML\n", i);
+            return (1);
         }
     }
-
+    // We should have some public IPs set if not, we'll just warn the user
     if (!gni->max_public_ips || !gni->public_ips) {
         LOGTRACE("no public_ips set: cannot validate XML\n");
     } else {
+        // Make sure none of the public IPs is 0.0.0.0
         for (i = 0; i < gni->max_public_ips; i++) {
-            if (!gni->public_ips[i]) {
+            if (gni->public_ips[i] == 0) {
                 LOGWARN("empty public_ip set at idx %d: cannot validate XML\n", i);
                 return (1);
             }
         }
     }
 
-    if (!gni->max_subnets || !gni->subnets) {
-        LOGTRACE("no subnets set\n");
+    // Now we have different behavior between managed and managed-novlan
+    if (!strcmp(gni->sMode, NETMODE_MANAGED) || !strcmp(gni->sMode, NETMODE_MANAGED_NOVLAN)) {
+        // We must have 1 managed subnet declaration
+        if ((gni->max_managedSubnets != 1) || !gni->subnets) {
+            LOGWARN("invalid number of managed subnets set '%d'.\n", gni->max_managedSubnets);
+            return (1);
+        }
+        // Validate our managed subnet
+        if (gni_managed_subnet_validate(gni->managedSubnet)) {
+            LOGWARN("invalid managed subnet: cannot validate XML\n");
+            return (1);
+        }
+        // Validate the clusters
+        if (!gni->max_clusters || !gni->clusters) {
+            LOGTRACE("no clusters set\n");
+        } else {
+            for (i = 0; i < gni->max_clusters; i++) {
+                if (gni_cluster_validate(&(gni->clusters[i]), TRUE)) {
+                    LOGWARN("invalid clusters set at idx %d: cannot validate XML\n", i);
+                    return (1);
+                }
+            }
+        }
     } else {
-        for (i = 0; i < gni->max_subnets; i++) {
-            if (gni_subnet_validate(&(gni->subnets[i]))) {
-                LOGWARN("invalid subnets set at idx %d: cannot validate XML\n", i);
-                return (1);
+        //
+        // This is for the EDGE case. We should have a valid list of subnets and our clusters
+        // should be valid for an EDGE mode
+        //
+        if (!gni->max_subnets || !gni->subnets) {
+            LOGTRACE("no subnets set\n");
+        } else {
+            for (i = 0; i < gni->max_subnets; i++) {
+                if (gni_subnet_validate(&(gni->subnets[i]))) {
+                    LOGWARN("invalid subnets set at idx %d: cannot validate XML\n", i);
+                    return (1);
+                }
+            }
+        }
+
+        // Validate the clusters
+        if (!gni->max_clusters || !gni->clusters) {
+            LOGTRACE("no clusters set\n");
+        } else {
+            for (i = 0; i < gni->max_clusters; i++) {
+                if (gni_cluster_validate(&(gni->clusters[i]), FALSE)) {
+                    LOGWARN("invalid clusters set at idx %d: cannot validate XML\n", i);
+                    return (1);
+                }
             }
         }
     }
 
-    if (!gni->max_clusters || !gni->clusters) {
-        LOGTRACE("no clusters set\n");
-    } else {
-        for (i = 0; i < gni->max_clusters; i++) {
-            if (gni_cluster_validate(&(gni->clusters[i]))) {
-                LOGWARN("invalid clusters set at idx %d: cannot validate XML\n", i);
-                return (1);
-            }
-        }
-    }
-
+    // If we have any instance provided, validate them
     if (!gni->max_instances || !gni->instances) {
         LOGTRACE("no instances set\n");
     } else {
@@ -1879,6 +3133,7 @@ int gni_validate(globalNetworkInfo * gni)
         }
     }
 
+    // If we have any security group provided, we should be able to validate them
     if (!gni->max_secgroups || !gni->secgroups) {
         LOGTRACE("no secgroups set\n");
     } else {
@@ -1893,65 +3148,195 @@ int gni_validate(globalNetworkInfo * gni)
     return (0);
 }
 
-int gni_subnet_validate(gni_subnet * subnet)
+//!
+//! Validate a networking mode provided in the GNI message. The only supported networking
+//! mode strings are: EDGE, MANAGED and MANAGED-NOVLAN
+//!
+//! @param[in] psMode a string pointer to the network mode to validate
+//!
+//! @return 0 if the mode is valid or 1 if the mode isn't
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int gni_netmode_validate(const char *psMode)
 {
-    if (!subnet) {
+    int i = 0;
+
+    //
+    // In the globalNetworkInfo structure, the mode is a static string. But just in case
+    // some bozo passed us a NULL pointer.
+    //
+    if (!psMode) {
         LOGERROR("invalid input\n");
         return (1);
     }
+    // Do we know anything about this mode?
+    for (i = 0; asNetModes[i] != NULL; i++) {
+        if (!strcmp(psMode, asNetModes[i])) {
+            return (0);
+        }
+    }
 
-    if (!subnet->subnet || !subnet->netmask || !subnet->gateway) {
-        LOGWARN("invalid subnet: subnet=%d netmask=%d gateway=%d\n", subnet->subnet, subnet->netmask, subnet->gateway);
+    // Nope, we don't know jack shit
+    LOGWARN("invalid network mode '%s'\n", psMode);
+    return (1);
+}
+
+//!
+//! Validate a gni_subnet structure content
+//!
+//! @param[in] pSubnet a pointer to the subnet structure to validate
+//!
+//! @return 0 if the structure is valid or 1 if the structure isn't
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int gni_subnet_validate(gni_subnet * pSubnet)
+{
+    if (!pSubnet) {
+        LOGERROR("invalid input\n");
+        return (1);
+    }
+    // If any of the subnet, netmask or gateway is 0.0.0.0, this is invalid
+    if ((pSubnet->subnet == 0) || (pSubnet->netmask == 0) || (pSubnet->gateway == 0)) {
+        LOGWARN("invalid subnet: subnet=%d netmask=%d gateway=%d\n", pSubnet->subnet, pSubnet->netmask, pSubnet->gateway);
         return (1);
     }
 
     return (0);
 }
 
-int gni_cluster_validate(gni_cluster * cluster)
+//!
+//! Validate a gni_subnet structure content
+//!
+//! @param[in] pSubnet a pointer to the subnet structure to validate
+//!
+//! @return 0 if the structure is valid or 1 if the structure isn't
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int gni_managed_subnet_validate(gni_managedsubnet * pSubnet)
 {
-    int i;
+    // Make sure we didn't get a NULL pointer
+    if (!pSubnet) {
+        LOGERROR("invalid input\n");
+        return (1);
+    }
+    // If any of the subnet or netmask is 0.0.0.0, this is invalid
+    if ((pSubnet->subnet == 0) || (pSubnet->netmask == 0)) {
+        LOGWARN("invalid managed subnet: subnet=%d netmask=%d\n", pSubnet->subnet, pSubnet->netmask);
+        return (1);
+    }
+    // If the segment size is less than 16 or not a power of 2 than we have a problem
+    if ((pSubnet->segmentSize < 16) || ((pSubnet->segmentSize & (pSubnet->segmentSize - 1)) != 0)) {
+        LOGWARN("invalid managed subnet: segmentSize=%d\n", pSubnet->segmentSize);
+        return (1);
+    }
+    // If minVlan is less than MIN_VLAN_EUCA or greater than MAX_VLAN_EUCA, we have a problem
+    if ((pSubnet->minVlan < MIN_VLAN_EUCA) || (pSubnet->minVlan > MAX_VLAN_EUCA)) {
+        LOGWARN("invalid managed subnet: minVlan=%d\n", pSubnet->minVlan);
+        return (1);
+    }
+    // If maxVlan is less than MIN_VLAN_EUCA or greater than MAX_VLAN_EUCA, we have a problem
+    if ((pSubnet->maxVlan < MIN_VLAN_EUCA) || (pSubnet->maxVlan > MAX_VLAN_EUCA)) {
+        LOGWARN("invalid managed subnet: maxVlan=%d\n", pSubnet->maxVlan);
+        return (1);
+    }
+    // If minVlan is greater than maxVlan, we have a problem too!!
+    if (pSubnet->minVlan > pSubnet->maxVlan) {
+        LOGWARN("invalid managed subnet: minVlan=%d, maxVlan=%d\n", pSubnet->minVlan, pSubnet->maxVlan);
+        return (1);
+    }
+    return (0);
+}
 
+//!
+//! Validate a gni_cluster structure content
+//!
+//! @param[in] cluster a pointer to the cluster structure to validate
+//! @param[in] isManaged set to TRUE if this is a MANAGED style cluster or FALSE for EDGE
+//!
+//! @return 0 if the structure is valid or 1 if it isn't
+//!
+//! @see gni_node_validate()
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int gni_cluster_validate(gni_cluster * cluster, boolean isManaged)
+{
+    int i = 0;
+
+    // Make sure our pointer is valid
     if (!cluster) {
         LOGERROR("invalid input\n");
         return (1);
     }
-
+    // We must have a name
     if (!strlen(cluster->name)) {
         LOGWARN("no cluster name\n");
         return (1);
     }
-
-    if (!cluster->enabledCCIp) {
+    // The enabled CC IP must not be 0.0.0.0
+    if (cluster->enabledCCIp == 0) {
         LOGWARN("cluster %s: no enabledCCIp\n", cluster->name);
         return (1);
     }
-
-    if (!strlen(cluster->macPrefix)) {
+    // We must be provided with a MAC prefix
+    if (strlen(cluster->macPrefix) == 0) {
         LOGWARN("cluster %s: no macPrefix\n", cluster->name);
         return (1);
     }
-
-    if (gni_subnet_validate(&(cluster->private_subnet))) {
-        LOGWARN("cluster %s: invalid cluster private_subnet\n", cluster->name);
-        return (1);
-    }
-
-    if (!cluster->max_private_ips || !cluster->private_ips) {
-        LOGWARN("cluster %s: no private_ips\n", cluster->name);
-        return (1);
-    } else {
-        for (i = 0; i < cluster->max_private_ips; i++) {
-            if (!cluster->private_ips[i]) {
-                LOGWARN("cluster %s: empty private_ips set at idx %d\n", cluster->name, i);
-                return (1);
+    //
+    // For non-MANAGED modes, we need to validate the subnet and the private IPs which
+    // aren't provided in MANAGED mode
+    //
+    if (!isManaged) {
+        // Validate the given private subnet
+        if (gni_subnet_validate(&(cluster->private_subnet))) {
+            LOGWARN("cluster %s: invalid cluster private_subnet\n", cluster->name);
+            return (1);
+        }
+        // Validate the list of private IPs. We must have some.
+        if (!cluster->max_private_ips || !cluster->private_ips) {
+            LOGWARN("cluster %s: no private_ips\n", cluster->name);
+            return (1);
+        } else {
+            // None of our private IPs should be 0.0.0.0
+            for (i = 0; i < cluster->max_private_ips; i++) {
+                if (cluster->private_ips[i] == 0) {
+                    LOGWARN("cluster %s: empty private_ips set at idx %d\n", cluster->name, i);
+                    return (1);
+                }
             }
         }
     }
-
+    // Do we have some nodes for this cluster?
     if (!cluster->max_nodes || !cluster->nodes) {
         LOGWARN("cluster %s: no nodes set\n", cluster->name);
     } else {
+        // Validate each nodes
         for (i = 0; i < cluster->max_nodes; i++) {
             if (gni_node_validate(&(cluster->nodes[i]))) {
                 LOGWARN("cluster %s: invalid nodes set at idx %d\n", cluster->name, i);
@@ -1963,6 +3348,21 @@ int gni_cluster_validate(gni_cluster * cluster)
     return (0);
 }
 
+//!
+//! Validate a gni_node structure content
+//!
+//! @param[in] node a pointer to the node structure to validate
+//!
+//! @return 0 if the structure is valid or 1 if it isn't
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int gni_node_validate(gni_node * node)
 {
     int i;
@@ -1990,6 +3390,21 @@ int gni_node_validate(gni_node * node)
     return (0);
 }
 
+//!
+//! Validates a given gni_secgroup structure content
+//!
+//! @param[in] instance a pointer to the instance structure to validate
+//!
+//! @return 0 if the structure is valid or 1 if it isn't
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int gni_instance_validate(gni_instance * instance)
 {
     int i;
@@ -2037,6 +3452,21 @@ int gni_instance_validate(gni_instance * instance)
     return (0);
 }
 
+//!
+//! Validates a given gni_secgroup structure content
+//!
+//! @param[in] secgroup a pointer to the security group structure to validate
+//!
+//! @return 0 if the structure is valid and 1 if the structure isn't
+//!
+//! @see gni_secgroup
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
 int gni_secgroup_validate(gni_secgroup * secgroup)
 {
     int i;

@@ -53,9 +53,14 @@ class DispatchingNetworkingService {
       LockResource.withLock( delegateLock.writeLock( ) ) {
         if ( delegateNeedsUpdatingFor( networkService ) ) {
           networkingServiceDelegateName = networkService
-          networkingServiceDelegate = poolInvoked( 'EDGE' == networkService ?
-              new EdgeNetworkingService( ) :
-              new GenericNetworkingService( ) )
+          if ('EDGE' == networkService) {
+            networkingServiceDelegate = poolInvoked(new EdgeNetworkingService())
+          } else if (('MANAGED' == networkService) || ('MANAGED-NOVLAN' == networkService)) {
+            networkingServiceDelegate = poolInvoked(new ManagedNetworkingService())
+          } else {
+            // TODO: Need to figure out why we hit this case...
+            networkingServiceDelegate = poolInvoked(new ManagedNetworkingService())
+          }
         }
         void
       }

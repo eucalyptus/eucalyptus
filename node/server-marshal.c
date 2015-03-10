@@ -187,7 +187,7 @@ adb_ncBroadcastNetworkInfoResponse_t *ncBroadcastNetworkInfoMarshal(adb_ncBroadc
     adb_ncBroadcastNetworkInfoResponse_t *response = NULL;
     adb_ncBroadcastNetworkInfoResponseType_t *output = NULL;
     long long call_time = time_ms();
-    
+
     pthread_mutex_lock(&ncHandlerLock);
     {
         input = adb_ncBroadcastNetworkInfo_get_ncBroadcastNetworkInfo(ncBroadcastNetworkInfo, env);
@@ -487,6 +487,8 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
     int expiryTime = 0;
     int groupNamesSize = 0;
     char **groupNames = NULL;
+    int groupIdsSize = 0;
+    char **groupIds = NULL;
     netConfig netparams = { 0 };
     ncMetadata meta = { 0 };
     ncInstance *outInst = NULL;
@@ -538,9 +540,9 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
         net_type = adb_ncRunInstanceType_get_netParams(input, env);
         netparams.vlan = adb_netConfigType_get_vlan(net_type, env);
         netparams.networkIndex = adb_netConfigType_get_networkIndex(net_type, env);
-        snprintf(netparams.privateMac, MAC_BUFFER_SIZE, "%s", adb_netConfigType_get_privateMacAddress(net_type, env));
-        snprintf(netparams.privateIp, IP_BUFFER_SIZE, "%s", adb_netConfigType_get_privateIp(net_type, env));
-        snprintf(netparams.publicIp, IP_BUFFER_SIZE, "%s", adb_netConfigType_get_publicIp(net_type, env));
+        snprintf(netparams.privateMac, ENET_ADDR_LEN, "%s", adb_netConfigType_get_privateMacAddress(net_type, env));
+        snprintf(netparams.privateIp, INET_ADDR_LEN, "%s", adb_netConfigType_get_privateIp(net_type, env));
+        snprintf(netparams.publicIp, INET_ADDR_LEN, "%s", adb_netConfigType_get_publicIp(net_type, env));
         userData = adb_ncRunInstanceType_get_userData(input, env);
         credential = adb_ncRunInstanceType_get_credential(input, env);
         launchIndex = adb_ncRunInstanceType_get_launchIndex(input, env);
@@ -559,30 +561,44 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
             }
             rootDirective = adb_ncRunInstanceType_get_rootDirective(input, env);
 
-            // do it
-            EUCA_MESSAGE_UNMARSHAL(ncRunInstanceType, input, (&meta));
-
-            threadCorrelationId *corr_id = set_corrid(meta.correlationId);
-            error = doRunInstance(&meta, uuid, instanceId, reservationId, &params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL,
-                                  ownerId, accountId, keyName, &netparams, userData, credential, launchIndex, platform, expiryTime, groupNames, groupNamesSize, rootDirective,
-                                  &outInst);
-            unset_corrid(corr_id);
-
-            if (error != EUCA_OK) {
-                LOGERROR("[%s] failed error=%d\n", instanceId, error);
+            groupIdsSize = adb_ncRunInstanceType_sizeof_groupIds(input, env);
+            if ((groupIds = EUCA_ZALLOC(groupIdsSize, sizeof(char *))) == NULL) {
+                LOGERROR("[%s] out of memory. Cannot allocate %d groups.\n", instanceId, groupIdsSize);
                 adb_ncRunInstanceResponseType_set_return(output, env, AXIS2_FALSE);
             } else {
-                // set standard fields in output
-                adb_ncRunInstanceResponseType_set_return(output, env, AXIS2_TRUE);
-                adb_ncRunInstanceResponseType_set_correlationId(output, env, meta.correlationId);
-                adb_ncRunInstanceResponseType_set_userId(output, env, meta.userId);
+                for (i = 0; i < groupIdsSize; i++) {
+                    groupIds[i] = adb_ncRunInstanceType_get_groupIds_at(input, env, i);
+                }
 
-                // set operation-specific fields in output
-                adb_instanceType_t *instance = adb_instanceType_create(env);
-                copy_instance_to_adb(instance, env, outInst);   // copy all values outInst->instance
+                // do it
+                EUCA_MESSAGE_UNMARSHAL(ncRunInstanceType, input, (&meta));
 
-                //! @TODO should we free_instance(&outInst) here or not? currently you don't have to
-                adb_ncRunInstanceResponseType_set_instance(output, env, instance);
+                threadCorrelationId *corr_id = set_corrid(meta.correlationId);
+
+                error = doRunInstance(&meta, uuid, instanceId, reservationId, &params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL,
+                                      ownerId, accountId, keyName, &netparams, userData, credential, launchIndex, platform, expiryTime, groupNames,
+                                      groupNamesSize, rootDirective, groupIds, groupIdsSize, &outInst);
+
+                unset_corrid(corr_id);
+
+                if (error != EUCA_OK) {
+                    LOGERROR("[%s] failed error=%d\n", instanceId, error);
+                    adb_ncRunInstanceResponseType_set_return(output, env, AXIS2_FALSE);
+                } else {
+                    // set standard fields in output
+                    adb_ncRunInstanceResponseType_set_return(output, env, AXIS2_TRUE);
+                    adb_ncRunInstanceResponseType_set_correlationId(output, env, meta.correlationId);
+                    adb_ncRunInstanceResponseType_set_userId(output, env, meta.userId);
+
+                    // set operation-specific fields in output
+                    adb_instanceType_t *instance = adb_instanceType_create(env);
+                    copy_instance_to_adb(instance, env, outInst);   // copy all values outInst->instance
+
+                    //! @TODO should we free_instance(&outInst) here or not? currently you don't have to
+                    adb_ncRunInstanceResponseType_set_instance(output, env, instance);
+                }
+
+                EUCA_FREE(groupIds);
             }
 
             EUCA_FREE(groupNames);
@@ -1108,7 +1124,7 @@ adb_ncBundleInstanceResponse_t *ncBundleInstanceMarshal(adb_ncBundleInstance_t *
         // set response to output
         adb_ncBundleInstanceResponse_set_ncBundleInstanceResponse(response, env, output);
     }
-    pthread_mutex_unlock(&ncHandlerLock);    
+    pthread_mutex_unlock(&ncHandlerLock);
     eventlog("NC", userId, correlationId, "BundleInstance", "end");
     nc_update_message_stats("BundleInstance", (long)(time_ms() - call_time), error);
     return (response);

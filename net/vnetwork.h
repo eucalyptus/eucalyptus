@@ -71,6 +71,7 @@
 //! Defines the Virtual Network library.
 //!
 
+#ifdef EUCA_USE_VNETWORK
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  INCLUDES                                  |
@@ -330,4 +331,5 @@ char *host2ip(char *host);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+#endif /* EUCA_USE_VNETWORK */
 #endif /* ! INCLUDE_VNETWORK_H */

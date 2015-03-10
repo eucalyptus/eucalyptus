@@ -137,6 +137,9 @@
     <collection field="networkNames" factory="org.jibx.runtime.Utility.arrayListFactory">
       <value name="netNames" type="java.lang.String" />
     </collection>
+    <collection field="networkIds" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <value name="netIds" type="java.lang.String" />
+    </collection>
     <value name="macAddresses" field="macAddress"/>
     <value name="networkIndexList" field="networkIndex" usage="optional"/>
     <value name="privateIps" field="privateAddress" usage="optional"/>

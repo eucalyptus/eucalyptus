@@ -152,6 +152,7 @@
 //! @param[in] file
 //! @param[in] source
 //! @param[in] dest
+//! @param[in] dosort
 //!
 //! @return
 //!
@@ -197,7 +198,7 @@ int atomic_file_init(atomic_file * file, char *source, char *dest, int dosort)
 //!
 //! @note
 //!
-int atomic_file_get(atomic_file * file, int *file_updated)
+int atomic_file_get(atomic_file * file, boolean * file_updated)
 {
     int port = 0;
     int fd = 0;
@@ -215,7 +216,7 @@ int atomic_file_get(atomic_file * file, int *file_updated)
     }
 
     ret = 0;
-    *file_updated = 0;
+    *file_updated = FALSE;
 
     snprintf(file->tmpfile, EUCA_MAX_PATH, "%s", file->tmpfilebase);
     fd = safe_mkstemp(file->tmpfile);
@@ -278,7 +279,7 @@ int atomic_file_get(atomic_file * file, int *file_updated)
                 } else {
                     EUCA_FREE(file->lasthash);
                     file->lasthash = strdup(file->currhash);
-                    *file_updated = 1;
+                    *file_updated = TRUE;
                 }
             }
         }

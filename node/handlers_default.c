@@ -199,7 +199,7 @@ static int doInitialize(struct nc_state_t *nc);
 static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params,
                          char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId,
                          char *accountId, char *keyName, netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime,
-                         char **groupNames, int groupNamesSize, char *rootDirective, ncInstance ** outInst);
+                         char **groupNames, int groupNamesSize, char *rootDirective, char **groupIds, int groupIdsSize, ncInstance ** outInst);
 static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
 static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char **consoleOutput);
 static int doTerminateInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, int force, int *shutdownState, int *previousState);
@@ -289,7 +289,7 @@ static void refresh_instance_resources(const char *instanceId)
     // call the hypervisor
     {
         sem_p(hyp_sem);
-        sensor_refresh_resources(res_name, res_alias, 1); // refresh stats
+        sensor_refresh_resources(res_name, res_alias, 1);   // refresh stats
         sem_v(hyp_sem);
     }
 }
@@ -343,7 +343,7 @@ static int doInitialize(struct nc_state_t *nc)
 static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params,
                          char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId,
                          char *accountId, char *keyName, netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime,
-                         char **groupNames, int groupNamesSize, char *rootDirective, ncInstance ** outInstPtr)
+                         char **groupNames, int groupNamesSize, char *rootDirective, char **groupIds, int groupIdsSize, ncInstance ** outInstPtr)
 {
     int ret = EUCA_OK;
     ncInstance *instance = NULL;
@@ -367,8 +367,10 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
             return EUCA_ERROR;         //! @todo return meaningful error codes?
         }
     }
+
     instance = allocate_instance(uuid, instanceId, reservationId, params, instance_state_names[PENDING], PENDING, pMeta->userId, ownerId, accountId,
-                                 &ncnet, keyName, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize);
+                                 &ncnet, keyName, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize, groupIds, groupIdsSize);
+
     if (kernelId)
         euca_strncpy(instance->kernelId, kernelId, sizeof(instance->kernelId));
 
@@ -857,21 +859,21 @@ static int doDescribeInstances(struct nc_state_t *nc, ncMetadata * pMeta, char *
 //!
 //! Adds up NC disk usage for an instance
 //!
-static long long get_disk_use_gb(virtualMachine *vm)
+static long long get_disk_use_gb(virtualMachine * vm)
 {
     long long disk_use_bytes = 0L;
 
     for (int i = 0; i < EUCA_MAX_VBRS && i < vm->virtualBootRecordLen; i++) {
         virtualBootRecord *vbr = &(vm->virtualBootRecord[i]);
         if (vbr->type != NC_RESOURCE_EBS && // EBS volumes do not count
-            vbr->type != NC_RESOURCE_KERNEL && // EKI doesn't count, though it maybe should
+            vbr->type != NC_RESOURCE_KERNEL &&  // EKI doesn't count, though it maybe should
             vbr->type != NC_RESOURCE_RAMDISK && // ERI doesn't count, though it maybe should
-            vbr->type != NC_RESOURCE_BOOT) { // boot sector is too small to be worth counting
+            vbr->type != NC_RESOURCE_BOOT) {    // boot sector is too small to be worth counting
             disk_use_bytes += vbr->sizeBytes;
         }
     }
 
-    return disk_use_bytes/(1024*1024*1024);
+    return disk_use_bytes / (1024 * 1024 * 1024);
 }
 
 //!
@@ -903,14 +905,14 @@ static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *r
     *outRes = NULL;
 
     // EUCA-10056 if EUCANETD is not running, then we have no resources available for instances
-    if (!strcmp(nc->vnetconfig->mode, NETMODE_EDGE)) {
+    if (!strcmp(nc->pEucaNet->sMode, NETMODE_EDGE)) {
         if (nc->isEucanetdEnabled == FALSE) {
             if ((res = allocate_resource("disabled", nc->migration_capable, nc->iqn, nc->mem_max, 0, nc->disk_max, 0, nc->cores_max, 0, "none", "KVM")) == NULL) {
                 LOGERROR("out of memory\n");
                 return (EUCA_MEMORY_ERROR);
             }
             LOGDEBUG("returning status=%s cores=%d/%d mem=%d/%d disk=%d/%d iqn=%s\n", res->nodeStatus, res->numberOfCoresAvailable, res->numberOfCoresMax, res->memorySizeAvailable,
-                    res->memorySizeMax, res->diskSizeAvailable, res->diskSizeMax, res->iqn);
+                     res->memorySizeMax, res->diskSizeAvailable, res->diskSizeMax, res->iqn);
             (*outRes) = res;
             return (EUCA_OK);
         }
@@ -958,7 +960,7 @@ static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *r
     LOGDEBUG("Core status:   in-use %d physical %lld over-committed %s\n", sum_cores, nc->phy_max_cores, (((sum_cores - cores_free) > nc->phy_max_cores) ? "yes" : "no"));
     LOGDEBUG("Memory status: in-use %lld physical %lld over-committed %s\n", sum_mem, nc->phy_max_mem, (((sum_mem - mem_free) > nc->phy_max_mem) ? "yes" : "no"));
     LOGDEBUG("returning status=%s cores=%d/%d mem=%d/%d disk=%d/%d iqn=%s\n", res->nodeStatus, res->numberOfCoresAvailable, res->numberOfCoresMax, res->memorySizeAvailable,
-            res->memorySizeMax, res->diskSizeAvailable, res->diskSizeMax, res->iqn);
+             res->memorySizeMax, res->diskSizeAvailable, res->diskSizeMax, res->iqn);
     return (EUCA_OK);
 }
 
@@ -1022,7 +1024,7 @@ static int doAssignAddress(struct nc_state_t *nc, ncMetadata * pMeta, char *inst
     sem_p(inst_sem);
     {
         if ((instance = find_instance(&global_instances, instanceId)) != NULL) {
-            snprintf(instance->ncnet.publicIp, IP_BUFFER_SIZE, "%s", publicIp);
+            snprintf(instance->ncnet.publicIp, INET_ADDR_LEN, "%s", publicIp);
             save_instance_struct(instance);
         }
         copy_instances();
@@ -1067,22 +1069,7 @@ static int doPowerDown(struct nc_state_t *nc, ncMetadata * pMeta)
 //!
 static int doStartNetwork(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, char **remoteHosts, int remoteHostsLen, int port, int vlan)
 {
-    int rc = 0;
-    int ret = EUCA_ERROR;
-    char *brname = NULL;
-
-    rc = vnetStartNetwork(nc->vnetconfig, vlan, NULL, NULL, NULL, &brname);
-    if (rc) {
-        ret = EUCA_ERROR;
-        LOGERROR("failed to start network (port=%d vlan=%d return=%d)\n", port, vlan, rc);
-    } else {
-        ret = EUCA_OK;
-        LOGINFO("started network (port=%d vlan=%d)\n", port, vlan);
-    }
-
-    // Regardless of the error code, we should always check and free brname
-    EUCA_FREE(brname);
-    return (ret);
+    return (0);
 }
 
 //!
@@ -1158,14 +1145,15 @@ static int xen_detach_helper(struct nc_state_t *nc, const char *instanceId, cons
 }
 
 // create or update volume record in the instance struct
-static int update_volume(char *instanceId, char *volumeId, char *attachmentToken, char *connect_string, char *canonicalDev, const char *state, const char *xml, boolean do_update_aliases)
+static int update_volume(char *instanceId, char *volumeId, char *attachmentToken, char *connect_string, char *canonicalDev, const char *state, const char *xml,
+                         boolean do_update_aliases)
 {
     int ret = EUCA_OK;
 
     sem_p(inst_sem);
     {
         ncInstance *instance = find_instance(&global_instances, instanceId);
-        ncVolume * volume = NULL;
+        ncVolume *volume = NULL;
 
         if (instance) {
             volume = save_volume(instance, volumeId, attachmentToken, connect_string, canonicalDev, state, xml);
@@ -1189,7 +1177,8 @@ static int update_volume(char *instanceId, char *volumeId, char *attachmentToken
     return ret;
 }
 
-int connect_ebs(const char *dev_name, const char *dev_serial, const char *dev_bus, struct nc_state_t *nc, char *instanceId, char *volumeId, char *attachmentToken, char **libvirt_xml, ebs_volume_data ** vol_data)
+int connect_ebs(const char *dev_name, const char *dev_serial, const char *dev_bus, struct nc_state_t *nc, char *instanceId, char *volumeId, char *attachmentToken,
+                char **libvirt_xml, ebs_volume_data ** vol_data)
 {
     int ret = EUCA_OK;
     char scUrl[512];
@@ -1202,7 +1191,8 @@ int connect_ebs(const char *dev_name, const char *dev_serial, const char *dev_bu
         LOGTRACE("[%s][%s] Using SC URL: %s\n", instanceId, volumeId, scUrl);
     }
 
-    if (connect_ebs_volume(dev_name, dev_serial, dev_bus, scUrl, attachmentToken, nc->config_use_ws_sec, nc->config_sc_policy_file, nc->ip, nc->iqn, libvirt_xml, vol_data) != EUCA_OK) {
+    if (connect_ebs_volume(dev_name, dev_serial, dev_bus, scUrl, attachmentToken, nc->config_use_ws_sec, nc->config_sc_policy_file, nc->ip, nc->iqn, libvirt_xml, vol_data) !=
+        EUCA_OK) {
         LOGERROR("Error connecting ebs volume %s\n", attachmentToken);
         return EUCA_ERROR;
     }
@@ -1219,7 +1209,7 @@ int connect_ebs(const char *dev_name, const char *dev_serial, const char *dev_bu
 
 int disconnect_ebs(struct nc_state_t *nc, char *instanceId, char *volumeId, char *attachmentToken, char *connect_string)
 {
-   int ret = EUCA_OK;
+    int ret = EUCA_OK;
     char scUrl[512];
 
     LOGTRACE("[%s][%s] Disnnecting EBS volume from local host\n", instanceId, volumeId);
@@ -1263,7 +1253,7 @@ int create_vol_xml(const char *instanceId, const char *volumeId, const char *xml
     get_instance_path(instanceId, ipath, sizeof(ipath));
 
     char lpath[EUCA_MAX_PATH];
-    snprintf(lpath, (sizeof(lpath) - 1), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, ipath, volumeId);  // vol-XXX-libvirt.xml
+    snprintf(lpath, (sizeof(lpath) - 1), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, ipath, volumeId);   // vol-XXX-libvirt.xml
     lpath[sizeof(lpath) - 1] = '\0';
 
     if (str2file(xml_in, lpath, O_CREAT | O_TRUNC | O_WRONLY, BACKING_FILE_PERM, FALSE) != EUCA_OK) {
@@ -1283,21 +1273,21 @@ int create_vol_xml(const char *instanceId, const char *volumeId, const char *xml
         ret = EUCA_ERROR;
         goto release;
     }
- release:
+release:
     return ret;
 }
 
-char * read_vol_xml(const char *instanceId, const char *volumeId)
+char *read_vol_xml(const char *instanceId, const char *volumeId)
 {
     char ipath[EUCA_MAX_PATH];
     get_instance_path(instanceId, ipath, sizeof(ipath));
 
     char lpath[EUCA_MAX_PATH];
-    snprintf(lpath, (sizeof(lpath) - 1), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, ipath, volumeId);  // vol-XXX-libvirt.xml
+    snprintf(lpath, (sizeof(lpath) - 1), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, ipath, volumeId);   // vol-XXX-libvirt.xml
     lpath[sizeof(lpath) - 1] = '\0';
 
     // read in libvirt XML
-    char * libvirt_xml = file2str(lpath);
+    char *libvirt_xml = file2str(lpath);
     if (libvirt_xml == NULL) {
         LOGERROR("[%s][%s] failed to read volume XML from %s\n", instanceId, volumeId, lpath);
     }
@@ -1310,12 +1300,12 @@ int delete_vol_xml(const char *instanceId, const char *volumeId)
     get_instance_path(instanceId, ipath, sizeof(ipath));
 
     char lpath[EUCA_MAX_PATH];
-    snprintf(lpath, (sizeof(lpath) - 1), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, ipath, volumeId);  // vol-XXX-libvirt.xml
+    snprintf(lpath, (sizeof(lpath) - 1), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, ipath, volumeId);   // vol-XXX-libvirt.xml
     lpath[sizeof(lpath) - 1] = '\0';
 
-    call_hooks(NC_EVENT_POST_DETACH, lpath);  // invoke hooks, but do not do anything if they return error
+    call_hooks(NC_EVENT_POST_DETACH, lpath);    // invoke hooks, but do not do anything if they return error
 
-    return (unlink(lpath))?(EUCA_ERROR):(EUCA_OK);
+    return (unlink(lpath)) ? (EUCA_ERROR) : (EUCA_OK);
 }
 
 int attach_vol_instance(struct nc_state_t *nc, const char *devName, const char *instanceId, const char *volumeId, const char *libvirt_xml)
@@ -1327,7 +1317,6 @@ int attach_vol_instance(struct nc_state_t *nc, const char *devName, const char *
         LOGERROR("[%s][%s] cannot get connection to hypervisor\n", instanceId, volumeId);
         return EUCA_HYPERVISOR_ERROR;
     }
-
     // find domain on hypervisor
     virDomainPtr dom = virDomainLookupByName(conn, instanceId);
     if (dom == NULL) {
@@ -1341,7 +1330,7 @@ int attach_vol_instance(struct nc_state_t *nc, const char *devName, const char *
         if (err) {
             LOGERROR("[%s][%s] failed to attach EBS guest device on attempt %d of 3\n", instanceId, volumeId, i);
             LOGDEBUG("[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, libvirt_xml);
-            sleep(3);              // sleep a bit and retry.
+            sleep(3);                  // sleep a bit and retry.
         } else {
             break;
         }
@@ -1353,7 +1342,7 @@ int attach_vol_instance(struct nc_state_t *nc, const char *devName, const char *
         ret = EUCA_ERROR;
     }
 
-    virDomainFree(dom);            // release libvirt resource
+    virDomainFree(dom);                // release libvirt resource
     unlock_hypervisor_conn();
 
     return ret;
@@ -1446,7 +1435,6 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         goto release;
     }
 
-
     if (create_vol_xml(instanceId, volumeId, libvirt_xml, &libvirt_xml_modified) != EUCA_OK) {
         ret = EUCA_ERROR;
         goto release;
@@ -1457,8 +1445,8 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
 release:
 
     // record volume state in memory and on disk
-    if (update_volume(instanceId, volumeId, NULL, NULL, NULL,(ret==EUCA_OK)?VOL_STATE_ATTACHED:VOL_STATE_ATTACHING_FAILED, libvirt_xml_modified, (ret==EUCA_OK))
-    		&& (libvirt_xml_modified != NULL)) {
+    if (update_volume(instanceId, volumeId, NULL, NULL, NULL, (ret == EUCA_OK) ? VOL_STATE_ATTACHED : VOL_STATE_ATTACHING_FAILED, libvirt_xml_modified, (ret == EUCA_OK))
+        && (libvirt_xml_modified != NULL)) {
         LOGERROR("[%s][%s] failed to save the volume record, aborting volume attachment (detaching)\n", instanceId, volumeId);
 
         detach_vol_instance(nc, canonicalDev, instanceId, volumeId, libvirt_xml_modified);
@@ -1528,7 +1516,6 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         ret = EUCA_ERROR;
         goto disconnect;
     }
-
     // refresh stats so volume measurements are captured before it disappears
     refresh_instance_resources(instanceId);
 
@@ -1539,16 +1526,15 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         delete_vol_xml(instanceId, volumeId);
     }
 
- disconnect:
+disconnect:
 
-    update_volume(instanceId, volumeId, NULL, NULL, NULL, (ret==EUCA_OK)?(VOL_STATE_DETACHED):(VOL_STATE_DETACHING_FAILED), NULL, TRUE);
-
+    update_volume(instanceId, volumeId, NULL, NULL, NULL, (ret == EUCA_OK) ? (VOL_STATE_DETACHED) : (VOL_STATE_DETACHING_FAILED), NULL, TRUE);
 
     sem_p(inst_sem);
     {
-        ncInstance * instance = find_instance(&global_instances, instanceId);
+        ncInstance *instance = find_instance(&global_instances, instanceId);
         if (instance) {
-            ncVolume * volume = save_volume(instance, volumeId, NULL, NULL, NULL, NULL, NULL);
+            ncVolume *volume = save_volume(instance, volumeId, NULL, NULL, NULL, NULL, NULL);
             if (volume) {
                 connect_string = strdup(volume->connectionString);
             }
@@ -1866,10 +1852,9 @@ static void *bundling_thread(void *arg)
 
     if (check_directory(run_workflow_work_dir)) {
         if (mkdir(run_workflow_work_dir, 0700)) {
-           LOGWARN("mkdir failed: could not make directory '%s', check permissions\n", run_workflow_work_dir);
+            LOGWARN("mkdir failed: could not make directory '%s', check permissions\n", run_workflow_work_dir);
         }
     }
-
 #define _COMMON_BUNDLING_PARAMS \
                          euca_run_workflow_parser,\
                          (void *)pInstance->instanceId,\
@@ -2122,11 +2107,11 @@ static int doCancelBundleTask(struct nc_state_t *nc, ncMetadata * pMeta, char *p
         }
 
         pid = atoi(pid_str);
-        pInstance->bundleCanceled = 1;     // record the intent to cancel bundling so that bundling thread can abort
+        pInstance->bundleCanceled = 1; // record the intent to cancel bundling so that bundling thread can abort
         if ((pid > 0) && !check_process(pid, "euca-run-workflow")) {
             LOGDEBUG("[%s] found bundlePid '%d', sending kill signal...\n", psInstanceId, pid);
-            if (kill((-1)*pid, 9) != EUCA_OK) { // kill process group
-                LOGERROR("[%s] can't kill process group with pid '%d'\n", psInstanceId, (-1)*pid);
+            if (kill((-1) * pid, 9) != EUCA_OK) {   // kill process group
+                LOGERROR("[%s] can't kill process group with pid '%d'\n", psInstanceId, (-1) * pid);
             }
         }
         EUCA_FREE(pid_str);

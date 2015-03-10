@@ -88,6 +88,7 @@ public class StartNetworkCallback extends BroadcastCallback<StartNetworkType, St
                                                  extantNet.getOwnerUserId( ),
                                                  extantNet.getTag( ),
                                                  extantNet.getNetworkGroup( ).getNaturalId( ),
+                                                 extantNet.getNetworkGroup().getGroupId(),
                                                  extantNet.getNetworkGroup( ).getNaturalId( ) );
     msg.setUserId( this.extantNet.getOwnerUserId( ) );
     msg.setAccountId( this.extantNet.getOwnerAccountNumber( ) );

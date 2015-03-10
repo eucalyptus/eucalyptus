@@ -109,6 +109,7 @@
 #include <diskutil.h>
 #include <euca_auth.h>
 #include <euca_axis.h>
+#include <euca_network.h>
 
 #include <vbr.h>
 #include <iscsi.h>
@@ -257,7 +258,7 @@ static struct handlers *available_handlers[] = {
 };
 
 static json_object *stats_json = NULL; //!< The json object that holds all of the internal message counters
-static int stats_sensor_interval_sec; //!< Keeps the current value for sensor interval. Set during init
+static int stats_sensor_interval_sec;  //!< Keeps the current value for sensor interval. Set during init
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -280,8 +281,6 @@ static json_object **message_stats_getter();
 static void message_stats_setter();
 static int initialize_stats_system(int interval_sec);
 static void *nc_run_stats(void *ignored_arg);
-
-
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -313,7 +312,7 @@ static void *nc_run_stats(void *ignored_arg);
 static void *nc_run_stats(void *ignored_arg)
 {
     LOGDEBUG("Starting stats subsystem execution. Will not terminate until service halts\n");
-    if(run_stats(FALSE, stats_sensor_interval_sec, NULL) != EUCA_OK) {
+    if (run_stats(FALSE, stats_sensor_interval_sec, NULL) != EUCA_OK) {
         LOGERROR("Stats run call returned with error. Unexepcted. Should not have returned\n");
     }
     return NULL;
@@ -321,10 +320,10 @@ static void *nc_run_stats(void *ignored_arg)
 
 //! Runs a check on service and returns result in string form
 //! for the stats sensor
-static char *stats_service_check_call() 
+static char *stats_service_check_call()
 {
     LOGTRACE("Invoking NC check function for internal stats\n");
-    if(nc_state.is_enabled) {
+    if (nc_state.is_enabled) {
         return SERVICE_CHECK_OK_MSG;
     }
     return SERVICE_CHECK_FAILED_MSG;
@@ -333,8 +332,8 @@ static char *stats_service_check_call()
 //! Gets the CC state as a string for use by the stats system
 static char *stats_service_state_call()
 {
-    LOGTRACE("Getting NC service state for internal stats\n");    
-    if(nc_state.is_enabled) {
+    LOGTRACE("Getting NC service state for internal stats\n");
+    if (nc_state.is_enabled) {
         return "ENABLED";
     } else {
         return "DISABLED";
@@ -366,19 +365,18 @@ void nc_unlock_stats()
     sem_v(stats_sem);
 }
 
-
 //! Update the message stat structure
 //! Wraps the message stats update with the necessary caching copies and locking
 int nc_update_message_stats(const char *message_name, long call_time, int msg_failed)
 {
     LOGTRACE("Updating message stats for message %s\n", message_name);
 
-    nc_lock_stats();    
+    nc_lock_stats();
     json_object **stats_state = message_stats_getter();
 
     //Update the counters
     update_message_stats(*stats_state, message_name, call_time, msg_failed);
-    message_stats_setter();    
+    message_stats_setter();
 
     nc_unlock_stats();
     LOGTRACE("Message stats update complete\n");
@@ -388,7 +386,8 @@ int nc_update_message_stats(const char *message_name, long call_time, int msg_fa
 //! Provides NC-specific initializations for the stats system of
 //! internal service sensors (state sensors, message statistics, etc)
 //! @returns EUCA_OK on success, or error code on failure
-static int initialize_stats_system(int interval_sec) {
+static int initialize_stats_system(int interval_sec)
+{
     LOGDEBUG("Initializing stats subsystem for NC\n");
     int ret = EUCA_OK;
     int stats_ttl = interval_sec + 1;
@@ -397,40 +396,39 @@ static int initialize_stats_system(int interval_sec) {
     {
         //Init the message sensor with component-specific data
         ret = initialize_message_sensor(euca_this_component_name, interval_sec, stats_ttl, message_stats_getter, message_stats_setter);
-        if(ret != EUCA_OK) {
+        if (ret != EUCA_OK) {
             LOGERROR("Error initializing internal message sensor: %d\n", ret);
             goto cleanup;
         } else {
             json_object **tmp = message_stats_getter();
             const char *tmp_out = json_object_to_json_string(*tmp);
             LOGINFO("Initialized internal message stats: %s\n", tmp_out);
-            
+
         }
-        
+
         //Init the service state sensor with component-specific data
         ret = initialize_service_state_sensor(euca_this_component_name, interval_sec, stats_ttl, stats_service_state_call, stats_service_check_call);
-        if(ret != EUCA_OK) {
+        if (ret != EUCA_OK) {
             LOGERROR("Error initializing internal service state sensor: %d\n", ret);
             goto cleanup;
         }
-        
+
         ret = init_stats(nc_state.home, euca_this_component_name, nc_lock_stats, nc_unlock_stats);
-        if(ret != EUCA_OK) {
+        if (ret != EUCA_OK) {
             LOGERROR("Could not initialize CC stats system: %d\n", ret);
             goto cleanup;
         }
     }
 
-    if(!ret) {
+    if (!ret) {
         LOGINFO("Stats subsystem initialized\n");
     } else {
         LOGERROR("Stat subsystem init failed: %d\n", ret);
     }
- cleanup:
+cleanup:
     nc_unlock_stats();
     return ret;
 }
-
 
 //!
 //! Authorize (or deauthorize) migration keys on destination host.
@@ -717,7 +715,7 @@ int canonicalize_dev(const char *dev, char *cdev, int cdev_len)
     char cdev_local[128];
     euca_strncpy(cdev_local, dev, sizeof(cdev_local));
 
-    const char * s = cdev_local;
+    const char *s = cdev_local;
     if (strstr(dev, "/dev/") == dev) {
         s = s + strlen("/dev/");
     }
@@ -1281,22 +1279,11 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
     if (instance->state == RUNNING || instance->state == BLOCKED || instance->state == PAUSED) {
         ip = NULL;
 
-        if (!strncmp(instance->ncnet.publicIp, "0.0.0.0", IP_BUFFER_SIZE)) {
-            if (!strcmp(nc_state.vnetconfig->mode, "SYSTEM") || !strcmp(nc_state.vnetconfig->mode, "STATIC")) {
-                rc = mac2ip(nc_state.vnetconfig, instance->ncnet.privateMac, &ip);
-                if (!rc && ip) {
-                    LOGINFO("[%s] discovered public IP %s for instance\n", instance->instanceId, ip);
-                    euca_strncpy(instance->ncnet.publicIp, ip, IP_BUFFER_SIZE);
-                    EUCA_FREE(ip);
-                }
-            }
-        }
-
-        if (!strncmp(instance->ncnet.privateIp, "0.0.0.0", IP_BUFFER_SIZE)) {
-            rc = mac2ip(nc_state.vnetconfig, instance->ncnet.privateMac, &ip);
+        if (!strncmp(instance->ncnet.privateIp, "0.0.0.0", INET_ADDR_LEN)) {
+            rc = MAC2IP(instance->ncnet.privateMac, &ip);
             if (!rc && ip) {
                 LOGINFO("[%s] discovered private IP %s for instance\n", instance->instanceId, ip);
-                euca_strncpy(instance->ncnet.privateIp, ip, IP_BUFFER_SIZE);
+                euca_strncpy(instance->ncnet.privateIp, ip, INET_ADDR_LEN);
                 EUCA_FREE(ip);
             }
         }
@@ -1377,13 +1364,12 @@ static void update_log_params(void)
 //!
 static void update_ebs_params(void)
 {
-    char * ceph_user = getConfString(nc_state.configFiles, 2, CONFIG_NC_CEPH_USER);
-    char * ceph_keys = getConfString(nc_state.configFiles, 2, CONFIG_NC_CEPH_KEYS);
-    char * ceph_conf = getConfString(nc_state.configFiles, 2, CONFIG_NC_CEPH_CONF);
+    char *ceph_user = getConfString(nc_state.configFiles, 2, CONFIG_NC_CEPH_USER);
+    char *ceph_keys = getConfString(nc_state.configFiles, 2, CONFIG_NC_CEPH_KEYS);
+    char *ceph_conf = getConfString(nc_state.configFiles, 2, CONFIG_NC_CEPH_CONF);
     init_iscsi(nc_state.home,
-               (ceph_user==NULL)?(DEFAULT_CEPH_USER):(ceph_user),
-               (ceph_keys==NULL)?(DEFAULT_CEPH_KEYRING):(ceph_keys),
-               (ceph_conf==NULL)?(DEFAULT_CEPH_CONF):(ceph_conf));
+               (ceph_user == NULL) ? (DEFAULT_CEPH_USER) : (ceph_user),
+               (ceph_keys == NULL) ? (DEFAULT_CEPH_KEYRING) : (ceph_keys), (ceph_conf == NULL) ? (DEFAULT_CEPH_CONF) : (ceph_conf));
     EUCA_FREE(ceph_user);
     EUCA_FREE(ceph_keys);
     EUCA_FREE(ceph_conf);
@@ -1406,7 +1392,6 @@ void *monitoring_thread(void *arg)
     int left = 0;
     int cleaned_up = 0;
     int destroy_files = 0;
-    u32 ipHex = 0;
     char *psPid = NULL;
     char sPidFile[EUCA_MAX_PATH] = "";
     char nfile[EUCA_MAX_PATH] = "";
@@ -1440,7 +1425,7 @@ void *monitoring_thread(void *arg)
         now = time(NULL);
 
         // EUCA-10056 we need to check if EUCANETD is running when in EDGE of VPC mode
-        if (!strcmp(nc_state.vnetconfig->mode, NETMODE_EDGE)) {
+        if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_EDGE)) {
             snprintf(sPidFile, EUCA_MAX_PATH, EUCANETD_PID_FILE, nc_state.home);
             if ((psPid = file2str(sPidFile)) != NULL) {
                 // Is the
@@ -1501,49 +1486,6 @@ void *monitoring_thread(void *arg)
 
             if (strlen(clcHost)) {
                 fprintf(FP, "CLCIP=%s\n", clcHost);
-
-                // See if we're in system mode, which in this case we have some work to do
-                if (!strcmp(nc_state.vnetconfig->mode, NETMODE_SYSTEM)) {
-                    ipHex = dot2hex(clcHost);
-
-                    // don't change anything unless our cloud controller knowledge changed
-                    if (ipHex != nc_state.vnetconfig->cloudIp) {
-                        if (ipHex == 0) {
-                            // We lost the cloud controller IP, remove the metadata redirect first then
-                            // update vnetconfig second. The vnetUnsetMetadaRedirect() IP needs the old IP.
-                            // We only do this if we had a cloud IP set...
-                            if (nc_state.vnetconfig->cloudIp != 0) {
-                                if (vnetUnsetMetadataRedirect(nc_state.vnetconfig) == EUCA_OK) {
-                                    nc_state.vnetconfig->cloudIp = ipHex;
-                                    LOGDEBUG("Lost cloud controller IP information.\n");
-
-                                    // now save our config
-                                    if (gen_nc_xml(&nc_state) != EUCA_OK) {
-                                        LOGERROR("failed to update NC state on disk after learning new cloud IP\n");
-                                    }
-                                } else {
-                                    LOGERROR("Failed to unset metadata redirect after CLC loss.");
-                                }
-                            }
-                        } else {
-                            LOGDEBUG("Learned new cloud controller IP %s.\n", clcHost);
-
-                            // HA, YAY!!! Cloud controller IP changed, remove our old metadata redirect and
-                            // then update the IP and re-install the rule with the new IP.
-                            if (vnetUnsetMetadataRedirect(nc_state.vnetconfig) == EUCA_OK) {
-                                nc_state.vnetconfig->cloudIp = ipHex;
-                                vnetSetMetadataRedirect(nc_state.vnetconfig);
-
-                                // now save our config
-                                if (gen_nc_xml(&nc_state) != EUCA_OK) {
-                                    LOGERROR("failed to update NC state on disk after learning new cloud IP\n");
-                                }
-                            } else {
-                                LOGERROR("Failed to unset metadata redirect after CLC IP change.");
-                            }
-                        }
-                    }
-                }
             }
             fflush(FP);
         }
@@ -1594,7 +1536,7 @@ void *monitoring_thread(void *arg)
                     //! @TODO yes! for EDGE networking
                     // have a running instance, write its information to local state file
                     fprintf(FP, "%s %s %s %d %s %s %s\n",
-                            SP(instance->instanceId), SP(nc_state.vnetconfig->pubInterface), "NA", instance->ncnet.vlan, SP(instance->ncnet.privateMac),
+                            SP(instance->instanceId), SP(nc_state.pEucaNet->sPublicDevice), "NA", instance->ncnet.vlan, SP(instance->ncnet.privateMac),
                             SP(instance->ncnet.publicIp), SP(instance->ncnet.privateIp));
                     fflush(FP);
                 }
@@ -1671,10 +1613,7 @@ void *monitoring_thread(void *arg)
                         left++;
                     }
                 }
-                if (left == 0) {
-                    LOGINFO("[%s] stopping the network (vlan=%d)\n", instance->instanceId, (instance->ncnet).vlan);
-                    vnetStopNetwork(nc_state.vnetconfig, (instance->ncnet).vlan, NULL, NULL);
-                }
+
                 change_state(instance, TEARDOWN);   // TEARDOWN = no more resources
                 instance->terminationTime = time(NULL);
             }
@@ -1796,7 +1735,7 @@ void *startup_thread(void *arg)
     int status = 0;
     int rc = 0;
     char *xml = NULL;
-    char *brname = NULL;
+    char brname[IF_NAME_LEN] = "";
     pid_t cpid = 0;
     boolean try_killing = FALSE;
     boolean created = FALSE;
@@ -1812,13 +1751,13 @@ void *startup_thread(void *arg)
     unlock_hypervisor_conn();          // unlock right away, since we are just checking on it
 
     // set up networking
-    if ((error = vnetStartNetwork(nc_state.vnetconfig, instance->ncnet.vlan, NULL, NULL, NULL, &brname)) != EUCA_OK) {
-        LOGERROR("[%s] start network failed for instance, terminating it\n", instance->instanceId);
-        EUCA_FREE(brname);
-        goto shutoff;
+    if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_MANAGED)) {
+        snprintf(brname, IF_NAME_LEN, "%s", instance->groupIds[0]);
+    } else {
+        snprintf(brname, IF_NAME_LEN, "%s", nc_state.pEucaNet->sBridgeDevice);
     }
+
     euca_strncpy(instance->params.guestNicDeviceName, brname, sizeof(instance->params.guestNicDeviceName));
-    EUCA_FREE(brname);
 
     // set parameters like hypervisor type, bitness, NIC type, key injection, etc.
     set_instance_params(instance);
@@ -1856,6 +1795,11 @@ void *startup_thread(void *arg)
     LOGTRACE("[%s] instance about to boot\n", instance->instanceId);
 
     for (i = 0; i < MAX_CREATE_TRYS; i++) { // retry loop
+        // TODO: CHUCK -----> Find better
+        if (i == 0) {
+            sleep(10);
+        }
+
         if (i > 0) {
             LOGINFO("[%s] attempt %d of %d to create the instance\n", instance->instanceId, i + 1, MAX_CREATE_TRYS);
         }
@@ -1891,13 +1835,16 @@ void *startup_thread(void *arg)
                 if ((dom = virDomainCreateLinux(conn, xml, 0)) != NULL) {
                     virDomainFree(dom); // To be safe. Docs are not clear on whether the handle exists outside the process.
 
-                    if (!strcmp(nc_state.vnetconfig->mode, NETMODE_VPCMIDO)) {
+                    // DAN TEMPORARY FOR VPC TESTING
+                    //                if (!strcmp(nc_state.vnetconfig->mode, NETMODE_SYSTEM)) {
+                    if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_VPCMIDO)) {
                         char iface[16], cmd[EUCA_MAX_PATH], obuf[256], ebuf[256];
                         snprintf(iface, 16, "vn_%s", instance->instanceId);
                         snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc_state.rootwrap_cmd_path, instance->params.guestNicDeviceName, iface);
                         rc = timeshell(cmd, obuf, ebuf, 256, 10);
                         if (rc) {
-                            LOGERROR("unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n");
+                            LOGERROR
+                                ("unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n");
                         }
                     }
 
@@ -1931,6 +1878,7 @@ void *startup_thread(void *arg)
 
         if (created)
             break;
+
         sleep(1);
     }
 
@@ -1963,7 +1911,6 @@ shutoff:                              // escape point for error conditions
 
 free:
     EUCA_FREE(xml);
-    EUCA_FREE(brname);
     unset_corrid(get_corrid());
     return NULL;
 }
@@ -2269,22 +2216,21 @@ static int init(void)
     }
 
     GET_VAR_INT(nc_state.config_cpu_passthrough, CONFIG_CPU_PASSTHROUGH, 0);
-    LOGINFO("CPU passthrough to instance: %s\n", (nc_state.config_cpu_passthrough)?("enabled"):("disabled"));
+    LOGINFO("CPU passthrough to instance: %s\n", (nc_state.config_cpu_passthrough) ? ("enabled") : ("disabled"));
 
     {
         // load NC's state from disk, if any
-        char *psCloudIp = NULL;
         struct nc_state_t nc_state_disk = { 0 };
 
         // allocate temporary network struct (we cannot put vnetConfig on the stack, it is large: 102MB)
-        if ((nc_state_disk.vnetconfig = EUCA_ZALLOC(1, sizeof(vnetConfig))) == NULL) {
-            LOGFATAL("Cannot allocate temporary vnetconfig!\n");
+        if ((nc_state_disk.pEucaNet = EUCA_ZALLOC(1, sizeof(euca_network))) == NULL) {
+            LOGFATAL("Cannot allocate network configuration structure!\n");
             return (EUCA_FATAL_ERROR);
         }
         // Allocate our network structure
-        if ((nc_state.vnetconfig = EUCA_ZALLOC(1, sizeof(vnetConfig))) == NULL) {
-            LOGFATAL("Cannot allocate vnetconfig!\n");
-            EUCA_FREE(nc_state_disk.vnetconfig);
+        if ((nc_state.pEucaNet = EUCA_ZALLOC(1, sizeof(euca_network))) == NULL) {
+            LOGFATAL("Cannot allocate network configuration structure!\n");
+            EUCA_FREE(nc_state_disk.pEucaNet);
             return (EUCA_FATAL_ERROR);
         }
 
@@ -2302,22 +2248,14 @@ static int init(void)
                 LOGINFO("NC will start up as DISABLED based on disk state\n");
                 nc_state.is_enabled = FALSE;
             }
-            // Check the Cloud Controller IP set?
-            if (nc_state_disk.vnetconfig->cloudIp != 0) {
-                psCloudIp = hex2dot(nc_state_disk.vnetconfig->cloudIp);
-                LOGINFO("Found cloud controller IP %s while starting NC.\n", psCloudIp);
-                nc_state.vnetconfig->cloudIp = nc_state_disk.vnetconfig->cloudIp;
-                EUCA_FREE(psCloudIp);
-            }
-        } else {                       // there is no disk state, so create it
+        } else {
+            // there is no disk state, so create it
             if (gen_nc_xml(&nc_state) != EUCA_OK) {
                 LOGERROR("failed to update NC state on disk\n");
             } else {
                 LOGINFO("wrote NC state to disk\n");
             }
         }
-
-        EUCA_FREE(nc_state_disk.vnetconfig);
     }
 
     {
@@ -2459,7 +2397,6 @@ static int init(void)
         LOGFATAL("Failed to initialize ebs utils\n");
         return (EUCA_FATAL_ERROR);
     }
-
     // initialize the EBS subsystem
     update_ebs_params();
 
@@ -2711,7 +2648,7 @@ static int init(void)
 
     tmp = getConfString(nc_state.configFiles, 2, "VNET_MODE");
     if (!tmp) {
-        LOGWARN("VNET_MODE is not defined, defaulting to 'SYSTEM'\n");
+        LOGWARN("VNET_MODE is not defined, defaulting to '%s'\n", NETMODE_MANAGED_NOVLAN);
         tmp = strdup(NETMODE_MANAGED_NOVLAN);
         if (!tmp) {
             LOGFATAL("Out of memory\n");
@@ -2721,8 +2658,7 @@ static int init(void)
 
     int initFail = 0;
 
-    if (tmp && !(!strcmp(tmp, NETMODE_SYSTEM) || !strcmp(tmp, NETMODE_STATIC) || !strcmp(tmp, NETMODE_MANAGED_NOVLAN) || !strcmp(tmp, NETMODE_MANAGED) || !strcmp(tmp, NETMODE_EDGE)
-                 || !strcmp(tmp, NETMODE_VPCMIDO))) {
+    if (tmp && !(!strcmp(tmp, NETMODE_MANAGED_NOVLAN) || !strcmp(tmp, NETMODE_MANAGED) || !strcmp(tmp, NETMODE_EDGE) || !strcmp(tmp, NETMODE_VPCMIDO))) {
         char errorm[256];
         memset(errorm, 0, 256);
         sprintf(errorm, "Invalid VNET_MODE setting: %s", tmp);
@@ -2731,14 +2667,14 @@ static int init(void)
         initFail = 1;
     }
 
-    if (tmp
-        && (!strcmp(tmp, NETMODE_SYSTEM) || !strcmp(tmp, NETMODE_STATIC) || !strcmp(tmp, NETMODE_MANAGED_NOVLAN) || !strcmp(tmp, NETMODE_EDGE) || !strcmp(tmp, NETMODE_VPCMIDO))) {
+    if (tmp && (!strcmp(tmp, NETMODE_MANAGED_NOVLAN) || !strcmp(tmp, NETMODE_EDGE) || !strcmp(tmp, NETMODE_VPCMIDO))) {
         bridge = getConfString(nc_state.configFiles, 2, "VNET_BRIDGE");
         if (!bridge) {
-            LOGFATAL("in 'SYSTEM', 'STATIC', 'EDGE', or 'MANAGED-NOVLAN' network mode, you must specify a value for VNET_BRIDGE\n");
+            LOGFATAL("in 'EDGE', 'VPC' , or 'MANAGED-NOVLAN' network mode, you must specify a value for VNET_BRIDGE\n");
             initFail = 1;
         }
     }
+
     if (tmp && (!strcmp(tmp, NETMODE_MANAGED) || !strcmp(tmp, NETMODE_EDGE))) {
         pubinterface = getConfString(nc_state.configFiles, 2, "VNET_PUBINTERFACE");
         if (!pubinterface)
@@ -2754,11 +2690,12 @@ static int init(void)
         }
     }
 
-    if (!initFail) {
-        initFail = vnetInit(nc_state.vnetconfig,
-                            tmp, nc_state.home, nc_state.config_network_path, NC, pubinterface, pubinterface, NULL, NULL, NULL, NULL, NULL, NULL,
-                            NULL, NULL, NULL, bridge, NULL, NULL);
-    }
+    snprintf(nc_state.pEucaNet->sMode, NETMODE_LEN, "%s", tmp);
+    if (pubinterface)
+        snprintf(nc_state.pEucaNet->sPublicDevice, IF_NAME_LEN, "%s", pubinterface);
+
+    if (bridge)
+        snprintf(nc_state.pEucaNet->sBridgeDevice, IF_NAME_LEN, "%s", bridge);
 
     EUCA_FREE(pubinterface);
     EUCA_FREE(bridge);
@@ -2766,19 +2703,6 @@ static int init(void)
 
     if (initFail)
         return (EUCA_FATAL_ERROR);
-
-    //
-    // Fix EUCA-9807. Only in SYSTEM mode, we unset and reset the CLC IP for
-    // metadata redirect rule to handle NC reboot case
-    //
-    if (!strcmp(nc_state.vnetconfig->mode, NETMODE_SYSTEM)) {
-        if (nc_state.vnetconfig->cloudIp != 0) {
-            if (vnetUnsetMetadataRedirect(nc_state.vnetconfig) != EUCA_OK) {
-                LOGDEBUG("Failed to unset metadata redirect on NC startup. Ignore if this wan't set previously.");
-            }
-            vnetSetMetadataRedirect(nc_state.vnetconfig);
-        }
-    }
 
     // set NC helper path
     tmp = getConfString(nc_state.configFiles, 2, CONFIG_NC_BUNDLE_UPLOAD);
@@ -2868,7 +2792,8 @@ static int init(void)
         LOGINFO("using IP %s\n", nc_state.ip);
 
         LOGINFO("Initializing localhost info for vbr processing\n");
-        if (vbr_init_hostconfig(nc_state.iqn, nc_state.ip, nc_state.config_sc_policy_file, nc_state.config_use_ws_sec, nc_state.config_use_virtio_root, nc_state.config_use_virtio_disk) != 0) {
+        if (vbr_init_hostconfig
+            (nc_state.iqn, nc_state.ip, nc_state.config_sc_policy_file, nc_state.config_use_ws_sec, nc_state.config_use_virtio_root, nc_state.config_use_virtio_disk) != 0) {
             LOGFATAL("Error initializing vbr localhost configuration\n");
             return (EUCA_FATAL_ERROR);
         }
@@ -2888,9 +2813,9 @@ static int init(void)
         nc_state.notreadyServicesLen = 0;
 
         for (i = 0; i < 32 && nc_state.ncStatus.serviceId.urisLen < 8; i++) {
-            if (nc_state.vnetconfig->localIps[i]) {
+            if (nc_state.pEucaNet->aLocalIps[i]) {
                 char *host;
-                host = hex2dot(nc_state.vnetconfig->localIps[i]);
+                host = hex2dot(nc_state.pEucaNet->aLocalIps[i]);
                 if (host) {
                     snprintf(nc_state.ncStatus.serviceId.uris[nc_state.ncStatus.serviceId.urisLen], 512, "http://%s:8775/axis2/services/EucalyptusNC", host);
                     nc_state.ncStatus.serviceId.urisLen++;
@@ -2898,6 +2823,7 @@ static int init(void)
                 }
             }
         }
+
         LOGINFO("Done initializing services state\n");
     }
 
@@ -2915,7 +2841,7 @@ static int init(void)
 
     {
 
-        if(initialize_stats_system(DEFAULT_SENSOR_INTERVAL_SEC) != EUCA_OK) {
+        if (initialize_stats_system(DEFAULT_SENSOR_INTERVAL_SEC) != EUCA_OK) {
             //        if (init_stats(nc_state.home, euca_this_component_name, nc_stats_lock, nc_stats_unlock) != EUCA_OK) {
             LOGERROR("Could not initialize NC stats system\n");
             return EUCA_ERROR;
@@ -2928,7 +2854,7 @@ static int init(void)
             LOGFATAL("Failed to spawn the internal stats thread\n");
             return (EUCA_FATAL_ERROR);
         }
-        if(pthread_detach(stats_thread)) {
+        if (pthread_detach(stats_thread)) {
             LOGFATAL("Failed to detach the internal stats thread\n");
             return (EUCA_FATAL_ERROR);
         }
@@ -3088,7 +3014,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
             if (gethostname(myName, CHAR_BUFFER_SIZE) == 0)
                 fprintf(f, "node: %s\n", myName);
             fprintf(f, "hypervisor: %s\n", nc_state.H->name);
-            fprintf(f, "network: %s\n", nc_state.vnetconfig->mode);
+            fprintf(f, "network: %s\n", nc_state.pEucaNet->sMode);
 
             used_disk = used_mem = used_cores = 0;
             for (i = 0; i < (*outInstsLen); i++) {
@@ -3231,7 +3157,7 @@ int doPowerDown(ncMetadata * pMeta)
 int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId, char *imageURL,
                   char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId, char *keyName,
                   netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize,
-                  char *rootDirective, ncInstance ** outInst)
+                  char *rootDirective, char **groupIds, int groupIdsSize, ncInstance ** outInst)
 {
     int ret = EUCA_OK;
 
@@ -3239,8 +3165,9 @@ int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reserv
         return (EUCA_ERROR);
     DISABLED_CHECK;
 
-    LOGINFO("[%s] running instance cores=%d disk=%d memory=%d vlan=%d net=%d priMAC=%s privIp=%s plat=%s kernel=%s ramdisk=%s\n", instanceId, params->cores, params->disk,
-            params->mem, netparams->vlan, netparams->networkIndex, netparams->privateMac, netparams->privateIp, platform, kernelId, ramdiskId);
+    LOGINFO("[%s] running instance groupId=%s cores=%d disk=%d memory=%d vlan=%d net=%d priMAC=%s privIp=%s plat=%s kernel=%s ramdisk=%s\n",
+            instanceId, SP(groupIds[0]), params->cores, params->disk, params->mem, netparams->vlan, netparams->networkIndex, netparams->privateMac, netparams->privateIp, platform,
+            kernelId, ramdiskId);
     if (vbr_legacy(instanceId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL) != EUCA_OK)
         return (EUCA_ERROR);
     // spark: kernel and ramdisk id are required for linux bundle-instance, but are not in the runInstance request;
@@ -3264,17 +3191,15 @@ int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reserv
             }
         }
     }
-
     if (nc_state.H->doRunInstance) {
         ret = nc_state.H->doRunInstance(&nc_state, pMeta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId,
                                         ramdiskURL, ownerId, accountId, keyName, netparams, userData, credential, launchIndex, platform, expiryTime, groupNames, groupNamesSize,
-                                        rootDirective, outInst);
+                                        rootDirective, groupIds, groupIdsSize, outInst);
     } else {
         ret = nc_state.D->doRunInstance(&nc_state, pMeta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId,
                                         ramdiskURL, ownerId, accountId, keyName, netparams, userData, credential, launchIndex, platform, expiryTime, groupNames, groupNamesSize,
-                                        rootDirective, outInst);
+                                        rootDirective, groupIds, groupIdsSize, outInst);
     }
-
     return ret;
 }
 

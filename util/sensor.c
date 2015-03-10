@@ -473,14 +473,14 @@ static void sensor_bottom_half(void)
 
         //Run internal stats sensor updates
         /*
-          LOGTRACE("Executing internal stats sensor pass...not really\n");
-        //Don't return immediately on failure, run all internal sensors                
-        if(internal_sensor_pass(FALSE) != EUCA_OK) {
-            LOGERROR("Error encountered during internal stats sensor run.\n");
-        } else {
-            LOGTRACE("Internal stats sensor pass completed successfully\n");
-            }
-        */
+           LOGTRACE("Executing internal stats sensor pass...not really\n");
+           //Don't return immediately on failure, run all internal sensors                
+           if(internal_sensor_pass(FALSE) != EUCA_OK) {
+           LOGERROR("Error encountered during internal stats sensor run.\n");
+           } else {
+           LOGTRACE("Internal stats sensor pass completed successfully\n");
+           }
+         */
 
         if (skip)
             continue;

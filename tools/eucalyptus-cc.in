@@ -240,6 +240,20 @@ do_start() {
 		fi
 	fi
 
+    #
+    # IMPORTANT
+    # Need to remove this on final product but for now we need to automatically start
+    # eucanetd for testing purpose
+    #
+    pidfile=$EUCALYPTUS/var/run/eucalyptus/eucanetd.pid
+    if [ ! -s $pidfile ]; then
+        if ! $EUCALYPTUS/usr/sbin/eucanetd ; then
+            echo
+            echo "Failed to start EUCANETD!"
+            exit 1
+        fi
+    fi
+        
 	ulimit -u 100000
 	ulimit -n 10000
 	# now we start the services

@@ -43,6 +43,8 @@ import com.eucalyptus.cluster.NISecurityGroup
 import com.eucalyptus.cluster.NISecurityGroupIpPermission
 import com.eucalyptus.cluster.NISubnet
 import com.eucalyptus.cluster.NISubnets
+import com.eucalyptus.cluster.NIManagedSubnet
+import com.eucalyptus.cluster.NIManagedSubnets
 import com.eucalyptus.cluster.NIVpc
 import com.eucalyptus.cluster.NIVpcSubnet
 import com.eucalyptus.cluster.NetworkInfo
@@ -68,7 +70,8 @@ import com.eucalyptus.event.EventListener as EucaEventListener
 import com.eucalyptus.network.config.Cluster as ConfigCluster
 import com.eucalyptus.network.config.NetworkConfiguration
 import com.eucalyptus.network.config.NetworkConfigurations
-import com.eucalyptus.network.config.Subnet
+import com.eucalyptus.network.config.EdgeSubnet
+import com.eucalyptus.network.config.ManagedSubnet
 import com.eucalyptus.system.BaseDirectory
 import com.eucalyptus.system.Threads
 import com.eucalyptus.util.Strings as EucaStrings
@@ -254,6 +257,7 @@ class NetworkInfoBroadcaster {
         .transform( TypeMappers.lookup( NetworkConfiguration, NetworkInfo ) )
         .or( new NetworkInfo( ) )
     boolean vpcmido = 'VPCMIDO' == networkConfiguration.orNull()?.mode
+    boolean managed = ( ( 'MANAGED' == networkConfiguration.orNull()?.mode ) || ( 'MANAGED-NOVLAN' == networkConfiguration.orNull()?.mode ) )
 
     // populate clusters
     info.configuration.clusters = new NIClusters(
@@ -278,13 +282,22 @@ class NetworkInfoBroadcaster {
                         new NIProperty( name: 'gateway', values: [ configCluster.subnet.gateway ])
                     ]
                 ),
-                properties: ( [
-                    new NIProperty( name: 'enabledCCIp', values: [ InetAddress.getByName(cluster.hostName).hostAddress ]),
-                    new NIProperty( name: 'macPrefix', values: [ configCluster.macPrefix?:VmInstances.MAC_PREFIX ] ),
-                ] + ( vpcmido ?
-                    [ new NIProperty( name: 'privateIps', values: [ '172.31.0.5' ] ) ] :
-                    [ new NIProperty( name: 'privateIps', values: configCluster.privateIps ) ]
-                ) ) as List<NIProperty>,
+                properties: [
+                    new NIProperty( name: 'enabledCCIp', values: [ InetAddress.getByName(cluster.hostName).hostAddress ] ),
+                    new NIProperty( name: 'macPrefix', values: [ configCluster.macPrefix ?: VmInstances.MAC_PREFIX ] ),
+                    vpcmido ? new NIProperty( name: 'privateIps', values: [ '172.31.0.5' ] ) : new NIProperty( name: 'privateIps', values: configCluster.privateIps )
+                ],
+                nodes: new NINodes(
+                    name: 'nodes',
+                    nodes: cluster.nodeMap.values().collect{ NodeInfo nodeInfo -> new NINode( name: nodeInfo.name ) }
+                )
+            ) :
+            configCluster && managed ? new NICluster(
+                name: configCluster.name,
+                properties: [
+                    new NIProperty( name: 'enabledCCIp', values: [ InetAddress.getByName(cluster.hostName).hostAddress ] ),
+                    new NIProperty( name: 'macPrefix', values: [ configCluster.macPrefix ?: VmInstances.MAC_PREFIX ] )
+                ],
                 nodes: new NINodes(
                     name: 'nodes',
                     nodes: cluster.nodeMap.values().collect{ NodeInfo nodeInfo -> new NINode( name: nodeInfo.name ) }
@@ -538,9 +551,11 @@ class NetworkInfoBroadcaster {
 
     @Override
     NetworkInfo apply( final NetworkConfiguration networkConfiguration ) {
+      ManagedSubnet managedSubnet = networkConfiguration.managedSubnet
       new NetworkInfo(
           configuration: new NIConfiguration(
               properties: [
+                  new NIProperty( name: 'mode', values: [ networkConfiguration.mode ?: 'EDGE' ] ),
                   networkConfiguration.publicIps ?
                       new NIProperty( name: 'publicIps', values: networkConfiguration.publicIps ) :
                       null
@@ -570,7 +585,7 @@ class NetworkInfoBroadcaster {
               ) : null,
               subnets: networkConfiguration.subnets ? new NISubnets(
                   name: "subnets",
-                  subnets: networkConfiguration.subnets.collect{ Subnet subnet ->
+                  subnets: networkConfiguration.subnets.collect{ EdgeSubnet subnet ->
                       new NISubnet(
                           name: subnet.subnet,  // broadcast name is always the subnet value
                           properties: [
@@ -580,7 +595,20 @@ class NetworkInfoBroadcaster {
                           ]
                       )
                   }
-              ) : null
+              ) : null,
+              managedSubnet: managedSubnet ? new NIManagedSubnets(
+                  name: "managedSubnet",
+                  managedSubnet: new NIManagedSubnet(
+                      name: managedSubnet.subnet,  // broadcast name is always the subnet value
+                      properties: [
+                          new NIProperty( name: 'subnet', values: [ managedSubnet.subnet ] ),
+                          new NIProperty( name: 'netmask', values: [ managedSubnet.netmask ] ),
+                          new NIProperty( name: 'minVlan', values: [ ( managedSubnet.minVlan ?: ManagedSubnet.MIN_VLAN )  as String ] ),
+                          new NIProperty( name: 'maxVlan', values: [ ( managedSubnet.maxVlan ?: ManagedSubnet.MAX_VLAN ) as String ] ),
+                          new NIProperty( name: 'segmentSize', values: [ ( managedSubnet.segmentSize ?: ManagedSubnet.DEF_SEGMENT_SIZE ) as String ] )
+                  ]
+                )
+             ) : null
           )
       )
     }
@@ -1025,7 +1053,7 @@ class NetworkInfoBroadcaster {
       }
 
       if ( counter++%intervalTicks == 0 &&
-          EdgeNetworking.enabled &&
+          NetworkingDriver.enabled &&
           Hosts.coordinator &&
           !Bootstrap.isShuttingDown() &&
           !Databases.isVolatile() ) {

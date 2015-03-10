@@ -541,7 +541,7 @@ int ncBroadcastNetworkInfoStub(ncStub * pStub, ncMetadata * pMeta, char *network
 int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId,
                       char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId,
                       char *keyName, netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime, char **groupNames,
-                      int groupNamesSize, char *rootDirective, ncInstance ** outInstPtr)
+                      int groupNamesSize, char *rootDirective, char **groupIds, int groupIdsSize, ncInstance ** outInstPtr)
 {
     int i = 0;
     int foundidx = -1;
@@ -558,7 +558,8 @@ int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *inst
     loadNcStuff();
 
     instance = allocate_instance(uuid, instanceId, reservationId, params, instance_state_names[PENDING], PENDING, pMeta->userId, ownerId, accountId,
-                                 netparams, keyName, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize, rootDirective);
+                                 netparams, keyName, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize, rootDirective, groupIds, groupIdsSize);
+
     if (instance) {
         instance->launchTime = time(NULL);
         foundidx = -1;
@@ -655,7 +656,7 @@ int ncAssignAddressStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, ch
     for (i = 0; i < MAX_FAKE_INSTANCES && !done; i++) {
         if (!strcmp(myconfig->global_instances[i].instanceId, instanceId)) {
             LOGDEBUG("fakeNC: assignAddress()\tsetting publicIp at idx %d\n", i);
-            snprintf(myconfig->global_instances[i].ncnet.publicIp, IP_BUFFER_SIZE, "%s", publicIp);
+            snprintf(myconfig->global_instances[i].ncnet.publicIp, INET_ADDR_LEN, "%s", publicIp);
             done++;
         }
     }
@@ -712,10 +713,10 @@ int ncDescribeInstancesStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, 
             if (!strcmp(myconfig->global_instances[i].stateName, "Pending")) {
                 snprintf(myconfig->global_instances[i].stateName, 8, "Extant");
                 if (!strcmp(myconfig->global_instances[i].ncnet.publicIp, "0.0.0.0")) {
-                    snprintf(myconfig->global_instances[i].ncnet.publicIp, IP_BUFFER_SIZE, "%d.%d.%d.%d", rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1);
+                    snprintf(myconfig->global_instances[i].ncnet.publicIp, INET_ADDR_LEN, "%d.%d.%d.%d", rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1);
                 }
                 if (!strcmp(myconfig->global_instances[i].ncnet.privateIp, "0.0.0.0")) {
-                    snprintf(myconfig->global_instances[i].ncnet.privateIp, IP_BUFFER_SIZE, "%d.%d.%d.%d", rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1);
+                    snprintf(myconfig->global_instances[i].ncnet.privateIp, INET_ADDR_LEN, "%d.%d.%d.%d", rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1);
                 }
             }
 

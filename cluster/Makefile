@@ -78,11 +78,12 @@ SHUTDOWNCC=shutdownCC
 NCLIBS=../util/data.o ../node/client-marshal-adb.o ../util/ipc.o ../util/sensor.o
 NC_FAKE_LIBS=../util/data.o ../node/client-marshal-fake.o ../util/ipc.o ../util/sensor.o
 SCLIBS=../storage/storage-windows.o ../storage/objectstorage.o ../storage/http.o ../storage/ebs_utils.o
-VNLIBS=../net/vnetwork.o ../util/log.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/hash.o ../net/globalnetwork.o
+VNLIBS= ../util/euca_network.o ../util/log.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/hash.o
 WSSECLIBS=../util/euca_axis.o ../util/euca_auth.o
 CC_LIBS = ../util/config.o ${LIBS} ${LDFLAGS} -lcurl -lssl -lcrypto -lrampart
 STATS_OBJS= ../util/stats/stats.o ../util/stats/sensor_common.o ../util/stats/message_sensor.o ../util/stats/service_sensor.o ../util/stats/fs_emitter.o ../util/stats/message_stats.o
 STATS_LIBS=-ljson -lm
+CFLAGS += 
 
 all: generated/stubs
 	@for subdir in $(SUBDIRS); do \
@@ -134,15 +135,15 @@ $(STATS_OBJS): %.o: %.c
 $(WSSECLIBS): %.o: %.c
 	make -C ../util
 
-server: $(STATS_OBJS) $(NCLIBS) $(VNLIBS) $(SERVICE_SO)
+server: $(STATS_OBJS) $(NCLIBS) $(VNLIBS) ../net/libeucanet.a $(SERVICE_SO)
 
-fake: all $(NC_FAKE_LIBS) $(VLIBS) $(STATS_OBJS) $(SERVICE_SO_FAKE)
+fake: all $(NC_FAKE_LIBS) $(VLIBS) ../net/libeucanet.a $(STATS_OBJS) $(SERVICE_SO_FAKE)
 
-$(SERVICE_SO): generated/stubs server-marshal.o handlers.o handlers-state.o server-marshal-state.o $(SCLIBS) $(NCLIBS) $(VNLIBS) $(WSSECLIBS) $(STATS_OBJS)
-	$(CC) -shared generated/*.o server-marshal.o handlers.o handlers-state.o server-marshal-state.o $(SCLIBS) $(STATS_OBJS) $(STATS_LIBS) $(NCLIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO)
+$(SERVICE_SO): generated/stubs server-marshal.o handlers.o handlers-state.o server-marshal-state.o $(SCLIBS) $(NCLIBS) $(VNLIBS) ../net/libeucanet.a $(WSSECLIBS) $(STATS_OBJS)
+	$(CC) -shared generated/*.o server-marshal.o handlers.o handlers-state.o server-marshal-state.o $(SCLIBS) $(STATS_OBJS) $(STATS_LIBS) $(NCLIBS) $(VNLIBS) ../net/libeucanet.a $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO)
 
-$(SERVICE_SO_FAKE): generated/stubs server-marshal.o handlers.o handlers-state.o server-marshal-state.o $(SCLIBS) $(STATS_OBJS) $(NC_FAKE_LIBS) $(VNLIBS) $(WSSECLIBS)
-	$(CC) -shared generated/*.o server-marshal.o handlers.o handlers-state.o server-marshal-state.o $(SCLIBS) $(STATS_OBJS) $(STATS_LIBS) $(NC_FAKE_LIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO_FAKE)
+$(SERVICE_SO_FAKE): generated/stubs server-marshal.o handlers.o handlers-state.o server-marshal-state.o $(SCLIBS) $(STATS_OBJS) $(NC_FAKE_LIBS) $(VNLIBS) ../net/libeucanet.a $(WSSECLIBS)
+	$(CC) -shared generated/*.o server-marshal.o handlers.o handlers-state.o server-marshal-state.o $(SCLIBS) $(STATS_OBJS) $(STATS_LIBS) $(NC_FAKE_LIBS) $(VNLIBS) ../net/libeucanet.a $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO_FAKE)
 
 client: $(CLIENT)_full $(CLIENTKILLALL) $(SHUTDOWNCC)
 

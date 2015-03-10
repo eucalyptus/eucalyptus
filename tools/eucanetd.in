@@ -206,6 +206,12 @@ do_stop() {
                 rm -f $pidfile
                 return
         fi
+        
+        # Retrieve our tunneling PIDs
+        vtunPids=`ps -ef | grep vtund | grep -v "grep" | awk '{print $2}'`;
+        # or
+		vtunPids=`pidof vtund`
+        
         # now kill the services
         pidfiles="$EUCALYPTUS/var/run/eucalyptus/net/euca-dhcp.pid $EUCALYPTUS/var/run/eucalyptus/eucanetd.pid"
         pids=""
@@ -216,6 +222,7 @@ do_stop() {
                 sids="$pid $sids"
                 morepids="$pid"
                 for i in `pgrep -P $pid`; do
+                	echo "PID BS: $pid";
                     morepids="$morepids `echo $i`"
                     morepids="$morepids `pgrep -P $i`"
                 done

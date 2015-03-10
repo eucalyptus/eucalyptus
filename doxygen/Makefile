@@ -73,22 +73,26 @@ doc: eucadoc
 
 eucadoc: setup
 	@doxygen eucalyptus.doxyfile > /dev/null;
-	
 
 nodedoc: setup
 	@doxygen node.doxyfile > /dev/null;
 
 clusterdoc: setup
 	@doxygen cluster.doxyfile > /dev/null;
+	
+eucanetd: setup
+	@doxygen eucanetd.doxyfile > /dev/null;
 
 deploy:
 
 clean:
 	@\rm -f node.doxyfile*;
 	@\rm -f cluster.doxyfile*;
+	@\rm -f eucanetd.doxyfile*;
 	@\rm -f eucalyptus.doxyfile*;
 	@\rm -rf node;
 	@\rm -rf cluster;
+	@\rm -rf eucanetd;
 	@\rm -rf eucalyptus;
 
 distclean:

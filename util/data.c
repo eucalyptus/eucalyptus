@@ -368,13 +368,13 @@ int allocate_netConfig(netConfig * pNetCfg, const char *sPvMac, const char *sPvI
     // make sure our netconfig parameter isn't NULL
     if (pNetCfg != NULL) {
         if (sPvMac)
-            euca_strncpy(pNetCfg->privateMac, sPvMac, MAC_BUFFER_SIZE);
+            euca_strncpy(pNetCfg->privateMac, sPvMac, ENET_ADDR_LEN);
 
         if (sPvIp)
-            euca_strncpy(pNetCfg->privateIp, sPvIp, IP_BUFFER_SIZE);
+            euca_strncpy(pNetCfg->privateIp, sPvIp, INET_ADDR_LEN);
 
         if (sPbIp)
-            euca_strncpy(pNetCfg->publicIp, sPbIp, IP_BUFFER_SIZE);
+            euca_strncpy(pNetCfg->publicIp, sPbIp, INET_ADDR_LEN);
 
         pNetCfg->networkIndex = networkIndex;
         pNetCfg->vlan = vlan;
@@ -458,7 +458,9 @@ void free_metadata(ncMetadata ** ppMeta)
 //! @param[in] sPlatform the instance's platform type
 //! @param[in] expiryTime the instance's expiration time before it reaches running
 //! @param[in] asGroupNames an array list of group name string
-//! @param[in] groupNamesSize the number of group name in the groupNames list
+//! @param[in] groupNamesSize the number of group name in the asGroupNames list
+//! @param[in] asGroupIds an array list of group identifier string
+//! @param[in] groupIdsSize the number of group name in the asGroupIds list
 //!
 //! @return a pointer to the newly allocated instance structure or NULL if any error occured.
 //!
@@ -470,7 +472,7 @@ void free_metadata(ncMetadata ** ppMeta)
 ncInstance *allocate_instance(const char *sUUID, const char *sInstanceId, const char *sReservationId, virtualMachine * pVirtMachine,
                               const char *sStateName, int stateCode, const char *sUserId, const char *sOwnerId, const char *sAccountId,
                               netConfig * pNetCfg, const char *sKeyName, const char *sUserData, const char *sLaunchIndex, const char *sPlatform,
-                              int expiryTime, char **asGroupNames, int groupNamesSize)
+                              int expiryTime, char **asGroupNames, int groupNamesSize, char **asGroupIds, int groupIdsSize)
 {
     u32 i = 0;
     ncInstance *pInstance = NULL;
@@ -492,6 +494,12 @@ ncInstance *allocate_instance(const char *sUUID, const char *sInstanceId, const 
     if ((asGroupNames != NULL) && (groupNamesSize > 0)) {
         for (i = 0; i < groupNamesSize && asGroupNames[i]; i++)
             euca_strncpy(pInstance->groupNames[i], asGroupNames[i], CHAR_BUFFER_SIZE);
+    }
+
+    pInstance->groupIdsSize = groupIdsSize;
+    if ((asGroupIds != NULL) && (groupIdsSize > 0)) {
+        for (i = 0; i < groupIdsSize && asGroupIds[i]; i++)
+            euca_strncpy(pInstance->groupIds[i], asGroupIds[i], CHAR_BUFFER_SIZE);
     }
 
     if (pNetCfg != NULL)
@@ -945,9 +953,9 @@ boolean is_volume_used(const ncVolume * pVolume)
 //! @param[in] sVolumeId the volume identifier string (vol-XXXXXXXX)
 //! @param[in] sVolumeAttachmentToken the attachment token associated with this volume and attachment
 //! @param[in] sConnectionString the connection string info specific to this host's volume attachment
-//! @param[in] sLocalDev the local device name
-//! @param[in] sLocalDevReal the local real device name
+//! @param[in] sDevName the device name
 //! @param[in] sStateName the current volume state name
+//! @param[in] sXml the current volume xml
 //!
 //! @return a pointer to the volume if found. Otherwise NULL is returned.
 //!
@@ -959,7 +967,8 @@ boolean is_volume_used(const ncVolume * pVolume)
 //!       \li If the volume is found or if we have an empty slot, the volume information will be saved
 //!       \li If the volume is not found and if we do not have empty slot, NULL is returned and nothing is saved
 //!
-ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sVolumeAttachmentToken, const char *sConnectionString, const char *sDevName, const char *sStateName, const char *sXml)
+ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sVolumeAttachmentToken, const char *sConnectionString, const char *sDevName,
+                      const char *sStateName, const char *sXml)
 {
     ncVolume *pVol = NULL;
 

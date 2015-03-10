@@ -397,14 +397,17 @@ cleanup:
 //! @param[in] key_buffer - Base64-encoded string that contains symmetric key
 //! @param[in] iv_buffer - The string buffer that contains initialization vector (length defined by IV_LENGTH)
 //! @param[out] out_buffer - Pointer to pointer where base64-encoded result will be placed. Null-terminated string. Caller is responsible for freeing
+//! @param[out] out_len - pointer to the integer that will contain the length of the buffer
 //!
 //! @return EUCA_OK if operation was successful and *out_buffer has a value. EUCA_ERROR otherwise.
 //!
 //! @pre in_buffer contains a valid null-terminated string that is a Base-64 encoded cipher-text
 //!
 //! @post *out_buffer points to the base64-encoded, encrypted string
-//
-//! WARNING: symmetric encryption is not fully tested with decrypt_string_symmetric(..). May need to consider tag stream
+//!
+//! @note
+//!     WARNING: symmetric encryption is not fully tested with decrypt_string_symmetric(..). May need to consider tag stream
+//!
 int encrypt_string_symmetric(char *in_buffer, char *key_buffer, char *iv_buffer, char **out_buffer, int *out_len)
 {
     int len = -1;
@@ -2044,8 +2047,8 @@ static void init_url_regex(void)
 
         case REG_BADBR:
             LOGERROR
-                ("There was an invalid ���������������������������\\{...\\}��������������������������� construct "
-                 "in the regular expression. A valid ���������������������������\\{...\\}��������������������������� construct "
+                ("There was an invalid ���������������������������������������������������������������������������������\\{...\\}��������������������������������������������������������������������������������� construct "
+                 "in the regular expression. A valid ���������������������������������������������������������������������������������\\{...\\}��������������������������������������������������������������������������������� construct "
                  "must contain either a single number, or two numbers in increasing order separated by a comma.\n");
             break;
 
@@ -2055,8 +2058,8 @@ static void init_url_regex(void)
 
         case REG_BADRPT:
             LOGERROR
-                ("A repetition operator such as ���������������������������?��������������������������� or "
-                 "���������������������������*��������������������������� appeared in a bad position (with no preceding "
+                ("A repetition operator such as ���������������������������������������������������������������������������������?��������������������������������������������������������������������������������� or "
+                 "���������������������������������������������������������������������������������*��������������������������������������������������������������������������������� appeared in a bad position (with no preceding "
                  "subexpression to act on).\n");
             break;
 
@@ -2070,12 +2073,12 @@ static void init_url_regex(void)
 
         case REG_EESCAPE:
             LOGERROR
-                ("The regular expression ended with ���������������������������\\���������������������������.\n");
+                ("The regular expression ended with ���������������������������������������������������������������������������������\\���������������������������������������������������������������������������������.\n");
             break;
 
         case REG_ESUBREG:
             LOGERROR
-                ("There was an invalid number in the ���������������������������\\digit��������������������������� construct.\n");
+                ("There was an invalid number in the ���������������������������������������������������������������������������������\\digit��������������������������������������������������������������������������������� construct.\n");
             break;
 
         case REG_EBRACK:
@@ -2084,14 +2087,14 @@ static void init_url_regex(void)
 
         case REG_EPAREN:
             LOGERROR("An extended regular expression had unbalanced parentheses, or a basic regular expression had unbalanced "
-                     "���������������������������\\(��������������������������� and ���������������������������\\)"
-                     "���������������������������.\n");
+                     "���������������������������������������������������������������������������������\\(��������������������������������������������������������������������������������� and ���������������������������������������������������������������������������������\\)"
+                     "���������������������������������������������������������������������������������.\n");
             break;
 
         case REG_EBRACE:
             LOGERROR
-                ("The regular expression had unbalanced ���������������������������\\{��������������������������� and "
-                 "���������������������������\\}���������������������������.\n");
+                ("The regular expression had unbalanced ���������������������������������������������������������������������������������\\{��������������������������������������������������������������������������������� and "
+                 "���������������������������������������������������������������������������������\\}���������������������������������������������������������������������������������.\n");
             break;
 
         case REG_ERANGE:

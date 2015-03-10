@@ -62,39 +62,65 @@
 
 include ../Makedefs
 
-all: vnetwork.o ipt_handler.o eucanetd.o globalnetwork.o midonet-api.o euca-to-mido.o eucanetd
+# Standard Libraries, Dependencies and Includes
+STDLIBS      := -lpthread -lm -lssl -lxml2 -lcurl -lcrypto -ljson
+STDDEPS      := ../util/sequence_executor.o ../util/atomic_file.o ../util/log.o ../util/ipc.o ../util/misc.o  
+STDDEPS      += ../util/euca_string.o ../util/euca_file.o ../util/hash.o ../util/fault.o ../util/wc.o ../util/utf8.o  
+STDDEPS      += ../util/euca_auth.o ../storage/diskutil.o ../storage/http.o ../util/config.o ../util/euca_network.o
+STDINC       +=
+ 
+# The Eucalyptus Network Library
+LIBNET       := euca_lni euca_gni ipt_handler ips_handler ebt_handler dev_handler
+LIBNETOBJS   := $(LIBNET:=.o)
+LIBNETDEPS   := $(LIBNETOBJS) $(STDDEPS)
+LIBNETNAME   := libeucanet.a
+
+# The EUCANETD Cloud Component
+EUCANETD     := eucanetd eucanetd_util eucanetd_edge eucanetd_managed eucanetd_managednv 
+EUCANETD     += eucanetd_system eucanetd_static eucanetd_vpc midonet-api euca-to-mido
+EUCANETDOBJS := $(EUCANETD:=.o)
+EUCANETDDEPS := $(EUCANETDOBJS) $(LIBNETNAME) $(STDDEPS)
+EUCANETDNAME := eucanetd
+
+# Various global Makefile parameters
+TARGETS      := $(LIBNETNAME) $(EUCANETDNAME)  
+MAJOR        := 0
+AR           := /usr/bin/ar
+ARFLAGS      := -cq
+CFLAGS       += `xslt-config --cflags`
+
+all: $(TARGETS)
 
 build: all
 
+$(LIBNETNAME): $(LIBNETDEPS)
+	$(AR) $(ARFLAGS) $@ $(LIBNETOBJS)
+
+$(EUCANETDNAME): $(EUCANETDDEPS)
+	$(CC) -o $@ $(EUCANETDDEPS) $(LIBNETNAME) $(STDLIBS)
+
 .c.o:
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) `xslt-config --cflags` $(INCLUDES) $<
-
-indent:
-	@for idfile in *.[ch]; do \
-		echo $(INDENTTOOLS) $$idfile $(INDENTFLAGS) -o $$idfile ; \
-		$(INDENTTOOLS) $$idfile $(INDENTFLAGS) -o $$idfile ; \
-	done
-
-eucanetd: vnetwork.o ipt_handler.o globalnetwork.o eucanetd.o 
-	$(CC) $(CPPFLAGS) $(CFLAGS) `xslt-config --cflags` $(INCLUDES) eucanetd.c ipt_handler.o globalnetwork.o midonet-api.o euca-to-mido.o ../util/sequence_executor.o ../util/atomic_file.o ../net/vnetwork.o ../util/log.o ../util/ipc.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/hash.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/euca_auth.o ../storage/diskutil.o ../storage/http.o ../util/config.o -I../util -I../net  -lpthread -lm -lssl  -lxml2 -lcurl -lcrypto -lxml2 -ljson -o eucanetd
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $<
 
 clean:
-	rm -rf *~ *.o eucanetd
-
-test:
-	$(CC) $(CPPFLAGS) $(CFLAGS) `xslt-config --cflags` -DEUCANETD_TEST $(INCLUDES) eucanetd.c ipt_handler.o globalnetwork.o ../util/sequence_executor.o ../util/atomic_file.o ../net/vnetwork.o ../util/log.o ../util/ipc.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/hash.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/euca_auth.o ../storage/diskutil.o ../storage/http.o ../util/config.o -I../util -I../net  -lpthread -lm -lssl  -lxml2 -lcurl -lcrypto -lxml2 -o eucanetd
-	$(CC) $(CPPFLAGS) $(CFLAGS) `xslt-config --cflags` -DMIDONET_API_TEST $(INCLUDES) midonet-api.c ipt_handler.o globalnetwork.o ../util/sequence_executor.o ../util/atomic_file.o ../net/vnetwork.o ../util/log.o ../util/ipc.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/hash.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/euca_auth.o ../storage/diskutil.o ../storage/http.o ../util/config.o -I../util -I../net  -lpthread -lm -lssl  -lxml2 -lcurl -lcrypto -lxml2 -ljson -o midonet-api
+	@rm -rf *~ *.o *.a $(LIBNETNAME) $(EUCANETDNAME)
 
 distclean: clean
 
 install:
 	@$(INSTALL) -d $(DESTDIR)$(sbindir)
-	@$(INSTALL) -m 755 eucanetd $(DESTDIR)$(sbindir)
+	@$(INSTALL) -m 755 $(EUCANETDNAME) $(DESTDIR)$(sbindir)
 
 deploy:
 	@$(INSTALL) -d $(DESTDIR)$(sbindir)
 	@$(INSTALL) -m 755 eucanetd $(DESTDIR)$(sbindir)
 
 uninstall:
-	@$(RM) -f $(DESTDIR)$(sbindir)/eucanetd
+	@$(RM) -f $(DESTDIR)$(sbindir)/$(EUCANETDNAME)
+
+indent:
+	@for idfile in *.[ch]; do \
+		echo $(INDENTTOOLS) $$idfile $(INDENTFLAGS) -o $$idfile ; \
+		$(INDENTTOOLS) $$idfile $(INDENTFLAGS) -o $$idfile ; \
+	done
 

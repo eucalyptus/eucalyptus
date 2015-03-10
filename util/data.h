@@ -81,7 +81,8 @@
 
 #include <pthread.h>
 #include "eucalyptus.h"
-#include "misc.h"                      // boolean
+#include "misc.h"
+#include "euca_network.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -100,10 +101,10 @@
 #define HOSTNAME_SIZE                             255   //!< Hostname buffer size
 #define CREDENTIAL_SIZE                            17   //!< Migration-credential buffer size (16 chars + NULL)
 #define MAX_SERVICE_URIS                            8   //!< Maximum number of serivce URIs Euca message can carry
-#define IP_BUFFER_SIZE                             32   //!< Maximum size for a buffer holding a string representation of an IP address
-#define MAC_BUFFER_SIZE                            32   //!< Maximum size for a buffer holding a string representation of a MAC address
 
-#define KEY_STRING_SIZE				 4096   //! Buffer to hold RSA pub/private keys
+#define KEY_STRING_SIZE                          4096   //! Buffer to hold RSA pub/private keys
+#define INSTANCE_ID_LEN                            11   //! Length of the instance ID string (i-xxxxxxxx\0)
+#define SECURITY_GROUP_ID_LEN                      12   //! Length of the instance ID string (sg-xxxxxxxx\0)
 //! @}
 
 //! @{
@@ -123,8 +124,8 @@
 //! @name Guest OS State
 //! Defines the strings sent on the wire for guestStateName field of instance struce
 
-#define GUEST_STATE_POWERED_ON  "poweredOn" //!< The instance is found on hypervisor
-#define GUEST_STATE_POWERED_OFF "poweredOff"    //!< The instance is not found on hypervisor
+#define GUEST_STATE_POWERED_ON                   "poweredOn"    //!< The instance is found on hypervisor
+#define GUEST_STATE_POWERED_OFF                  "poweredOff"   //!< The instance is not found on hypervisor
 //!@}
 
 /*----------------------------------------------------------------------------*\
@@ -291,7 +292,7 @@ typedef struct virtualBootRecord_t {
     libvirtDevType guestDeviceType;    //!< DEV_TYPE_{DISK|FLOPPY|CDROM}
     libvirtBusType guestDeviceBus;     //!< BUS_TYPE_{IDE|SCSI|VIRTIO|XEN}
     libvirtSourceType backingType;     //!< SOURCE_TYPE_{FILE|BLOCK}
-    char backingPath[VERY_BIG_CHAR_BUFFER_SIZE]; //!< XML for describing the disk to libvirt
+    char backingPath[VERY_BIG_CHAR_BUFFER_SIZE];    //!< XML for describing the disk to libvirt
     char preparedResourceLocation[VERY_BIG_CHAR_BUFFER_SIZE];   //!< e.g., URL + resourceLocation for Walrus downloads, sc url for ebs volumes prior to SC call, then connection string for ebs volumes returned from SC
     //! @}
     char guestDeviceSerialId[128];     //!< Serial ID to assign to the device
@@ -319,19 +320,19 @@ typedef struct virtualMachine_t {
 typedef struct netConfig_t {
     int vlan;                          //!< Virtual LAN
     int networkIndex;                  //!< Network index
-    char privateMac[MAC_BUFFER_SIZE];  //!< Private MAC address
-    char publicIp[IP_BUFFER_SIZE];     //!< Public IP address
-    char privateIp[IP_BUFFER_SIZE];    //!< Private IP address
+    char privateMac[ENET_ADDR_LEN];    //!< Private MAC address
+    char publicIp[INET_ADDR_LEN];      //!< Public IP address
+    char privateIp[INET_ADDR_LEN];     //!< Private IP address
 } netConfig;
 
 //! Structure defining NC Volumes
 typedef struct ncVolume_t {
     char volumeId[CHAR_BUFFER_SIZE];   //!< Remote volume identifier string
     char attachmentToken[CHAR_BUFFER_SIZE]; //!< Remote device name string, the token reference
-    char devName[CHAR_BUFFER_SIZE];   //!< Canonical device name (without '/dev/')
+    char devName[CHAR_BUFFER_SIZE];    //!< Canonical device name (without '/dev/')
     char stateName[CHAR_BUFFER_SIZE];  //!< Volume state name string
     char connectionString[VERY_BIG_CHAR_BUFFER_SIZE];   //!< Volume Token for attachment/detachment
-    char volLibvirtXml[VERY_BIG_CHAR_BUFFER_SIZE]; //!< XML for describing the disk to libvirt
+    char volLibvirtXml[VERY_BIG_CHAR_BUFFER_SIZE];  //!< XML for describing the disk to libvirt
 } ncVolume;
 
 //TODO: zhill, use this in the CC instead of ncVolume to save mem. Need to change the adb-helpers as well to copy nc->cc
@@ -339,7 +340,7 @@ typedef struct ncVolume_t {
 typedef struct ccVolume_t {
     char volumeId[CHAR_BUFFER_SIZE];   //!< Remote volume identifier string
     char attachmentToken[CHAR_BUFFER_SIZE]; //!< Remote device name string, the token reference
-    char devName[CHAR_BUFFER_SIZE];   //!< Canonical device name (without '/dev/')
+    char devName[CHAR_BUFFER_SIZE];    //!< Canonical device name (without '/dev/')
     char stateName[CHAR_BUFFER_SIZE];  //!< Volume state name string
 } ccVolume;
 
@@ -420,6 +421,8 @@ typedef struct ncInstance_t {
     char platform[CHAR_BUFFER_SIZE];   //!< the platform used for this instance (typically 'windows' or 'linux')
     char groupNames[EUCA_MAX_GROUPS][CHAR_BUFFER_SIZE]; //!< Network groups assigned to this instance.
     int groupNamesSize;                //!< Number of network groups.
+    char groupIds[EUCA_MAX_GROUPS][CHAR_BUFFER_SIZE];   //!< Network groups assigned to this instance.
+    int groupIdsSize;                  //!< Number of network groups.
     //! @}
 
     //! @{
@@ -462,7 +465,7 @@ typedef struct ncResource_t {
     int numberOfCoresMax;              //!< Maximum number of core supported by this node controller
     int numberOfCoresAvailable;        //!< Currently available number of core on this node controller
     char publicSubnets[CHAR_BUFFER_SIZE];   //!< Public subnet configured on this node controller
-    char hypervisor[CHAR_BUFFER_SIZE];  //!< Node hypervisor                   
+    char hypervisor[CHAR_BUFFER_SIZE]; //!< Node hypervisor
 } ncResource;
 
 //! Instance list node structure
@@ -523,7 +526,7 @@ void free_metadata(ncMetadata ** ppMeta);
 ncInstance *allocate_instance(const char *sUUID, const char *sInstanceId, const char *sReservationId, virtualMachine * pVirtMachine,
                               const char *sStateName, int stateCode, const char *sUserId, const char *sOwnerId, const char *sAccountId,
                               netConfig * pNetCfg, const char *sKeyName, const char *sUserData, const char *sLaunchIndex, const char *sPlatform,
-                              int expiryTime, char **asGroupNames, int groupNamesSize) _attribute_wur_;
+                              int expiryTime, char **asGroupNames, int groupNamesSize, char **asGroupIds, int groupIdsSize) _attribute_wur_;
 ncInstance *clone_instance(const ncInstance * old_instance);
 void free_instance(ncInstance ** ppInstance);
 int add_instance(bunchOfInstances ** ppHead, ncInstance * pInstance);
@@ -544,7 +547,8 @@ void free_resource(ncResource ** ppresource);
 //! @{
 //! @name Volumes APIs
 boolean is_volume_used(const ncVolume * pVolume);
-ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sVolumeAttachmentToken, const char *sConnectionString, const char *sDevName, const char *sStateName, const char *sXml);
+ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sVolumeAttachmentToken, const char *sConnectionString, const char *sDevName,
+                      const char *sStateName, const char *sXml);
 ncVolume *free_volume(ncInstance * pInstance, const char *sVolumeId);
 //! @}
 

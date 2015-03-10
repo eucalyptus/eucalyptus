@@ -42,6 +42,7 @@
 #include <eucalyptus.h>
 #include <euca_auth.h>
 #include <misc.h>
+#include <euca_string.h>
 #include <map.h>
 #include <euca_string.h>
 

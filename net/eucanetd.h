@@ -68,7 +68,7 @@
 
 //!
 //! @file net/eucanetd.h
-//! This file needs a description
+//! Definition of the service management layer
 //!
 
 /*----------------------------------------------------------------------------*\
@@ -78,9 +78,7 @@
 \*----------------------------------------------------------------------------*/
 
 #include <data.h>
-#include <ipt_handler.h>
 #include <atomic_file.h>
-#include <globalnetwork.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -88,7 +86,29 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define NUM_EUCANETD_CONFIG                     1
+//! @{
+//! @name The bitmask indicating which of the API needs to be executed after a successful system scrup
+
+#define EUCANETD_RUN_NO_API                      0x00000000 //!< Bassically says don't do anything
+#define EUCANETD_RUN_NETWORK_API                 0x00000001 //!< If set, this will trigger the core to run the implement_network() driver API
+#define EUCANETD_RUN_SECURITY_GROUP_API          0x00000002 //!< If set, this will trigger the core to run the implement_sg() driver API
+#define EUCANETD_RUN_ADDRESSING_API              0x00000004 //!< If set, this will trigger the core to run the implement_addressing() driver API
+#define EUCANETD_RUN_ALL_API                     (EUCANETD_RUN_NETWORK_API | EUCANETD_RUN_SECURITY_GROUP_API | EUCANETD_RUN_ADDRESSING_API)
+#define EUCANETD_RUN_ERROR_API                   0xFFFFFFFF //!< This is to indicate an error case
+
+//! @}
+
+//! @{
+//! @name Various known network IP and usual bitmask
+
+#define INADDR_METADATA                          0xA9FEA9FE //!< Metadata IP address
+#define IN_HOST_NET                              0xFFFFFFFF //!< 32 bit host network (not defined in in.h)
+
+//! @}
+
+//! Defined to use the SG name in chain names instead of hash
+//! TODO: Remove after upgrade test
+#define USE_SG_ID_IN_CHAIN
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -102,44 +122,33 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//! Enumeration of the peer component type running alongside this eucanetd service
+typedef enum eucanetd_peer_t {
+    PEER_INVALID = 0,                  //!< This is an invalid peer, this is used to detect initialization failures (forget to initialize)
+    PEER_CLC = 1,                      //!< This indicates we are currently working with a CLC component
+    PEER_CC = 2,                       //!< This indicates we are currently working with a CC component
+    PEER_NC = 3,                       //!< This indicates we are currently working with an NC component
+    PEER_MAX = 4,                      //!< This is an invalid role use to detect initialization errors (couldn't set the role)
+} eucanetd_peer;
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                 STRUCTURES                                 |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-typedef struct eucanetdConfig_t {
-    ipt_handler *ipt;
-    ips_handler *ips;
-    ebt_handler *ebt;
-
-    char *eucahome, *eucauser;
-    char cmdprefix[EUCA_MAX_PATH];
-    char configFiles[NUM_EUCANETD_CONFIG][EUCA_MAX_PATH];
-    char bridgeDev[32];
-    u32 vmGatewayIP, clcMetadataIP;
-    char ncRouterIP[32];
-    char metadataIP[32];
-    char pubInterface[32];
-    char privInterface[32];
-    char dhcpDaemon[EUCA_MAX_PATH];
-    char midoeucanetdhost[HOSTNAME_SIZE];
-    char midosetupcore[32];
-    char midogwhost[HOSTNAME_SIZE];
-    char midogwip[HOSTNAME_SIZE];
-    char midogwiface[HOSTNAME_SIZE];
-    char midopubnw[HOSTNAME_SIZE];
-    char midopubgwip[HOSTNAME_SIZE];
-
-    atomic_file global_network_info_file;
-
-    // these are flags that can be set by values in eucalyptus.conf
-    int polling_frequency, disable_l2_isolation, nc_router_ip, nc_router, metadata_use_vm_private, metadata_ip;
-
-    int debug, flushmode;
-    char vnetMode[32];
-    int init;
-} eucanetdConfig;
+//! Network Driver API
+typedef struct driver_handler_t {
+    char name[CHAR_BUFFER_SIZE];       //!< The name of the given network driver (e.g. EDGE, MANAGED, etc.)
+    int (*init) (eucanetdConfig * pConfig); //!< The driver initialization interface
+    int (*cleanup) (globalNetworkInfo * pGni, boolean doFlush); //!< The driver cleanup interface
+    int (*upgrade) (globalNetworkInfo * pGni);  //!< This is optional when upgrade tasks are required.
+    int (*system_flush) (globalNetworkInfo * pGni); //!< Responsible for the flushing of all euca networking artifacts
+     u32(*system_scrub) (globalNetworkInfo * pGni, lni_t * pLni);   //!< Works on detecting what is changing
+    int (*implement_network) (globalNetworkInfo * pGni, lni_t * pLni);  //!< Takes care of network devices, tunnels, etc.
+    int (*implement_sg) (globalNetworkInfo * pGni, lni_t * pLni);   //!< Takes care of security group implementations and membership
+    int (*implement_addressing) (globalNetworkInfo * pGni, lni_t * pLni);   //!< Takes care of IP addressing, Elastic IPs, etc.
+} driver_handler;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -147,55 +156,30 @@ typedef struct eucanetdConfig_t {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//! @{
+//! @name Network Driver Interfaces (NDIs)
+extern struct driver_handler_t edgeDriverHandler;   //!< EDGE network driver callback instance
+extern struct driver_handler_t managedDriverHandler;    //!< MANAGED network driver callback instance
+extern struct driver_handler_t managedNoVlanDriverHandler;  //!< MANAGED-NOVLAN network driver callback instance
+extern struct driver_handler_t midoVpcDriverHandler;    //!< MIDONET VPC network driver callback instance
+extern struct driver_handler_t systemDriverHandler; //!< SYSTEM network driver callback instance
+extern struct driver_handler_t staticDriverHandler; //!< STATIC network driver callback instance
+//! @}
+
+//! Global Network Information structure pointer.
+extern globalNetworkInfo *globalnetworkinfo;
+
+//! Role of the component running alongside this eucanetd service
+extern eucanetd_peer eucanetdPeer;
+
+//! Array of peer type strings
+extern const char *asPeerRoleName[];
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                             EXPORTED PROTOTYPES                            |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-
-int temporary(void);
-
-int daemonize(void);
-
-int eucanetdInit(void);
-int logInit(void);
-
-int read_config_bootstrap(void);
-int read_config(void);
-int read_latest_network(void);
-
-int fetch_latest_network(int *update_globalnet);
-int fetch_latest_localconfig(void);
-int fetch_latest_serviceIps(int *);
-int fetch_latest_euca_network(int *update_globalnet);
-
-int parse_network_topology(char *);
-int parse_pubprivmap(char *pubprivmap_file);
-int parse_ccpubprivmap(char *cc_configfile);
-
-//int ruleconvert(char *rulebuf, char *outrule);
-//int check_for_network_update(int *, int *);
-
-int update_private_ips(void);
-int update_public_ips(void);
-int update_sec_groups(void);
-int update_isolation_rules(void);
-
-int flush_all(void);
-
-void sec_groups_print(gni_secgroup * newgroups, int max_newgroups);
-gni_secgroup *find_sec_group_bypriv(gni_secgroup * groups, int max_groups, u32 privip, int *foundidx);
-gni_secgroup *find_sec_group_bypub(gni_secgroup * groups, int max_groups, u32 pubip, int *foundidx);
-
-int check_stderr_already_exists(int rc, char *o, char *e);
-
-char *mac2interface(char *mac);
-char *interface2mac(char *dev);
-
-int kick_dhcpd_server(void);
-int generate_dhcpd_config(void);
-
-// XML parsing stuff
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -208,6 +192,21 @@ int generate_dhcpd_config(void);
  |                                   MACROS                                   |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
+//! Macro to check wether or not a given peer value is valid
+#define PEER_IS_VALID(_peer)             (((_peer) > PEER_INVALID) && ((_peer) < PEER_MAX))
+
+//! Macro to determine if we are on a CLC
+#define PEER_IS_CLC(_peer)               ((_peer) == PEER_CLC)
+
+//! Macro to determine if we are on a CLC
+#define PEER_IS_CC(_peer)                ((_peer) == PEER_CC)
+
+//! Macro to determine if we are on a CLC
+#define PEER_IS_NC(_peer)                ((_peer) == PEER_NC)
+
+//! Macro to convert a peer enumeration to a string representation
+#define PEER2STR(_peer)                  ((((unsigned)(_peer)) > PEER_MAX) ? asPeerRoleName[PEER_MAX] : asPeerRoleName[(_peer)])
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

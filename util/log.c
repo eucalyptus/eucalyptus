@@ -298,7 +298,10 @@ static FILE *get_file(const char *log_file, boolean do_reopen)
 //! To avoid unpredictable behavior due to concurrency,  this function should be called while
 //! holding a lock.
 //!
-//! @param[in] do_reopen set to TRUE to for re-open teh log file
+//! @param[in] log_file a string containing the log file name
+//! @param[in] fp the log file structure pointer
+//! @param[in] log_inop pointer to the inode number
+//! @param[in] do_reopen set to TRUE to for re-open the log file
 //!
 //! @return a pointer to the lof file or NULL if any error occured
 //!
@@ -468,7 +471,7 @@ void log_params_get(int *log_level_out, int *log_roll_number_out, long *log_max_
 //!
 //! Sets the file descriptor for log output
 //!
-//! @param[in] fd file descriptor to use or NULL to reset to default
+//! @param[in] fp file descriptor to use or NULL to reset to default
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure
 //!
@@ -488,6 +491,7 @@ int log_fp_set(FILE * fp)
 //! Sets and opens the log file
 //!
 //! @param[in] file the file name of the log file. A NULL value unset the file
+//! @param[in] req_track_file
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure
 //!
@@ -683,6 +687,7 @@ static int fill_timestamp(char *buf, int buf_size)
 //!
 //! This is the function that ultimately dumps a buffer into a log.
 //!
+//! @param[in] log_file string containing the log file name
 //! @param[in] line the string buffer to log
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure

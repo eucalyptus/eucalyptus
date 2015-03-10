@@ -186,7 +186,6 @@
 #define EUCALYPTUS_STATS_OUTPUT_DIR              EUCALYPTUS_RUN_DIR "/status"
 #define EUCALYPTUS_STATS_CONF_PATH               EUCALYPTUS_CONF_DIR "/stats.conf"
 
-
 #define EUCALYPTUS_XM                            "sudo xm"
 
 //! @{
