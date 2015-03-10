@@ -827,7 +827,7 @@ public class RestrictedTypes {
         
         @Override
         public boolean apply( Class arg0 ) {
-          return RestrictedType.class.isAssignableFrom( arg0 );
+          return LimitedType.class.isAssignableFrom( arg0 );
         }
       } );
     } catch ( NoSuchElementException ex1 ) {

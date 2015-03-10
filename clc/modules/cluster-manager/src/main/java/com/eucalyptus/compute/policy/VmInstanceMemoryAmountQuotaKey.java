@@ -3,7 +3,6 @@ package com.eucalyptus.compute.policy;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.key.KeyUtils;
-import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.PolicyKey;
 import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.AccountFullName;
@@ -11,31 +10,27 @@ import com.eucalyptus.auth.principal.PolicyScope;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.common.CloudMetadataLimitedType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.vm.VmInstance;
-import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Function;
 import net.sf.json.JSONException;
-import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.Restrictions;
 
-import java.util.Collections;
 import java.util.List;
 
 /**
  * Created by ethomas on 3/8/15.
  */
-@PolicyKey( VmInstanceCpuNumberQuotaKey.KEY )
-public class VmInstanceCpuNumberQuotaKey extends QuotaKey {
+@PolicyKey( VmInstanceMemoryAmountQuotaKey.KEY )
+public class VmInstanceMemoryAmountQuotaKey extends QuotaKey {
 
-  public static final String KEY = "ec2:quota-vminstance.cpu-number";
+  public static final String KEY = "ec2:quota-vminstance.memory-amount";
 
   @Override
   public void validateValueType( String value ) throws JSONException {
@@ -55,17 +50,17 @@ public class VmInstanceCpuNumberQuotaKey extends QuotaKey {
   public String value( PolicyScope scope, String id, String resource, Long quantity ) throws AuthException {
     switch ( scope ) {
       case Account:
-        return Long.toString( RestrictedTypes.usageMetricFunction(CloudMetadataLimitedType.VmInstanceCpuMetadata.class).apply( AccountFullName.getInstance(id) ) + quantity );
+        return Long.toString( RestrictedTypes.usageMetricFunction(CloudMetadataLimitedType.VmInstanceMemoryMetadata.class).apply( AccountFullName.getInstance(id) ) + quantity );
       case Group:
         return NOT_SUPPORTED;
       case User:
-        return Long.toString( RestrictedTypes.usageMetricFunction(CloudMetadataLimitedType.VmInstanceCpuMetadata.class).apply( UserFullName.getInstance(id) ) + quantity );
+        return Long.toString( RestrictedTypes.usageMetricFunction(CloudMetadataLimitedType.VmInstanceMemoryMetadata.class).apply( UserFullName.getInstance(id) ) + quantity );
     }
     throw new AuthException( "Invalid scope" );
   }
 
-  @RestrictedTypes.UsageMetricFunction( CloudMetadataLimitedType.VmInstanceCpuMetadata.class )
-  public enum MeasureCPUs implements Function<OwnerFullName, Long> {
+  @RestrictedTypes.UsageMetricFunction( CloudMetadataLimitedType.VmInstanceMemoryMetadata.class )
+  public enum MeasureMemoryAmount implements Function<OwnerFullName, Long> {
     INSTANCE;
 
     @Override
@@ -76,7 +71,7 @@ public class VmInstanceCpuNumberQuotaKey extends QuotaKey {
     }
 
     private long measureFromPersistentInstances( final OwnerFullName ownerFullName ) {
-      long numCpus = 0L;
+      long numMemorys = 0L;
       try ( TransactionResource tx = Entities.transactionFor( VmInstance.class ) ){
         Criteria criteria = Entities.createCriteria(VmInstance.class)
           .add(Example.create(VmInstance.named(ownerFullName, null)))
@@ -84,17 +79,17 @@ public class VmInstanceCpuNumberQuotaKey extends QuotaKey {
         List<VmInstance> result = (List<VmInstance>) criteria.list();
         if (result != null) {
           for (VmInstance instance : result) {
-            numCpus += instance.getVmType().getCpu();
+            numMemorys += instance.getVmType().getMemory();
           }
         }
       }
-      return numCpus;
+      return numMemorys;
     }
 
     private long measureFromPendingInstances( final OwnerFullName ownerFullName ) {
       long pending = 0;
       for ( final Cluster cluster : Clusters.getInstance().listValues( ) ) {
-        pending += cluster.getNodeState( ).measureUncommittedPendingInstanceCpus(ownerFullName);
+        pending += cluster.getNodeState( ).measureUncommittedPendingInstanceMemoryAmount(ownerFullName);
       }
       return pending;
     }
