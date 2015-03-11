@@ -510,18 +510,15 @@ public class CloudFormationService {
       final String stackName = request.getStackName();
       final String logicalResourceId = request.getLogicalResourceId();
       final String physicalResourceId = request.getPhysicalResourceId();
-      if (stackName != null && logicalResourceId != null) {
-        throw new ValidationErrorException("Only one of StackName or LogicalResourceId can be set");
+      if ( Strings.isNullOrEmpty( stackName ) && Strings.isNullOrEmpty( physicalResourceId ) ) {
+        throw new ValidationErrorException("StackName or PhysicalResourceId required");
       }
-      if (stackName == null && logicalResourceId == null) {
-        throw new ValidationErrorException("StackName or LogicalResourceId must be set");
-      }
-      ArrayList<StackResource> stackResourceList = Lists.newArrayList();
-      List<StackResourceEntity> stackResourceEntityList = StackResourceEntityManager.describeStackResources(
+      final ArrayList<StackResource> stackResourceList = Lists.newArrayList();
+      final List<StackResourceEntity> stackResourceEntityList = StackResourceEntityManager.describeStackResources(
           ctx.isAdministrator( ) && stackName!=null && stackName.startsWith( STACK_ID_PREFIX ) ? null : accountId,
           stackName,
           physicalResourceId,
-          logicalResourceId);
+          logicalResourceId );
       if (stackResourceEntityList != null && !stackResourceEntityList.isEmpty()) {
         checkStackPermission( ctx, stackResourceEntityList.get( 0 ).getStackId( ), accountId );
         for (StackResourceEntity stackResourceEntity: stackResourceEntityList) {
@@ -538,8 +535,8 @@ public class CloudFormationService {
           stackResourceList.add(stackResource);
         }
       }
-      DescribeStackResourcesResult describeStackResourcesResult = new DescribeStackResourcesResult();
-      StackResources stackResources = new StackResources();
+      final DescribeStackResourcesResult describeStackResourcesResult = new DescribeStackResourcesResult();
+      final StackResources stackResources = new StackResources();
       stackResources.setMember(stackResourceList);
       describeStackResourcesResult.setStackResources(stackResources);
       reply.setDescribeStackResourcesResult(describeStackResourcesResult);
