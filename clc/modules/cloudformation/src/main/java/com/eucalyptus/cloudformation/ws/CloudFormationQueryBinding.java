@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,23 +21,29 @@ package com.eucalyptus.cloudformation.ws;
 
 
 import com.eucalyptus.binding.Binding;
-import com.eucalyptus.binding.BindingException;
-import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.ws.protocol.BaseQueryBinding;
 import com.eucalyptus.ws.protocol.OperationParameter;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.module.SimpleSerializers;
+import com.fasterxml.jackson.databind.ser.std.StdSerializer;
+import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -46,6 +52,8 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.Date;
 
 
 public class CloudFormationQueryBinding extends BaseQueryBinding<OperationParameter> {
@@ -94,7 +102,6 @@ public class CloudFormationQueryBinding extends BaseQueryBinding<OperationParame
             httpResponse.setStatus( msg.getHttpStatus( ) );
           } else {//actually try to bind response
             try {
-              ObjectMapper mapper = new ObjectMapper();
               // hack, assume type
               String className = httpResponse.getMessage().getClass().getName();
               // just get the last part
@@ -103,7 +110,7 @@ public class CloudFormationQueryBinding extends BaseQueryBinding<OperationParame
               // seriously cheating here
               byteOut.write("{".getBytes());
               byteOut.write(("\"" + messageType + "\" : ").getBytes());
-              mapper.writer().without(SerializationFeature.FAIL_ON_EMPTY_BEANS).writeValue(byteOut, httpResponse.getMessage());
+              jsonWriter().writeValue(byteOut, httpResponse.getMessage());
               byteOut.write("}".getBytes());
             } catch ( Exception e ) {
               LOG.debug( e );
@@ -123,5 +130,25 @@ public class CloudFormationQueryBinding extends BaseQueryBinding<OperationParame
     }
   }
 
+  public static ObjectWriter jsonWriter( ) {
+    final ObjectMapper mapper = new ObjectMapper( );
+    mapper.setPropertyNamingStrategy( PropertyNamingStrategy.PASCAL_CASE_TO_CAMEL_CASE );
+    mapper.setSerializerFactory( mapper.getSerializerFactory( ).withAdditionalSerializers(
+        new SimpleSerializers( Lists.<JsonSerializer<?>>newArrayList( new EpochSecondsDateSerializer( ) ) )
+    ) );
+    return mapper.writer( ).without( SerializationFeature.FAIL_ON_EMPTY_BEANS );
+  }
 
+  private static final class EpochSecondsDateSerializer extends StdSerializer<Date> {
+    public EpochSecondsDateSerializer( ) {
+      super( Date.class );
+    }
+
+    @Override
+    public void serialize( final Date date,
+                           final JsonGenerator jsonGenerator,
+                           final SerializerProvider serializerProvider ) throws IOException {
+      jsonGenerator.writeRawValue( String.valueOf( date.getTime( ) / 1000 ) + "." + Strings.padStart( Long.toString( date.getTime() % 1000 ), 3, '0' ) );
+    }
+  }
 }
