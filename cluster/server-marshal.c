@@ -851,7 +851,6 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
         }
 
         EUCA_FREE(psPubIps);
-        EUCA_FREE(pOutInsts);
     }
 
     adb_describePublicAddressesResponseType_set_correlationId(dpart, env, ccMeta.correlationId);
@@ -867,7 +866,7 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
     //update stats and return
     call_time = time_ms() - call_time;
     cached_message_stats_update("DescribePublicAddresses", (long)call_time, rc);
-
+    EUCA_FREE(pOutInsts);
     return (ret);
 }
 
@@ -1550,29 +1549,21 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t * dst, ccInstance * src, const axut
 //!
 adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstances, const axutil_env_t * env)
 {
-    adb_RunInstancesResponse_t *ret = NULL;
-    adb_runInstancesResponseType_t *rirt = NULL;
-    adb_runInstancesType_t *rit = NULL;
-    adb_ccInstanceType_t *it = NULL;
-    adb_virtualMachineType_t *vm = NULL;
-    ccInstance *outInsts = NULL, *myInstance = NULL;
+    int i = 0;
+    int rc = 0;
+    int vlan = 0;
     int minCount = 0;
     int maxCount = 0;
-    int rc = 0;
-    int outInstsLen = 0;
-    int i = 0;
-    int vlan = 0;
-    int instIdsLen = 0;
-    int netNamesLen = 0;
+    int uuidsLen = 0;
     int netIdsLen = 0;
+    int expiryTime = 0;
+    int instIdsLen = 0;
+    int outInstsLen = 0;
+    int netNamesLen = 0;
     int macAddrsLen = 0;
     int privateIpsLen = 0;
-    int *networkIndexList = NULL;
     int networkIndexListLen = 0;
-    int uuidsLen = 0;
-    int expiryTime = 0;
-    axis2_bool_t status = AXIS2_TRUE;
-    char statusMessage[256] = { 0 };
+    int *networkIndexList = NULL;
     char *emiId = NULL;
     char *keyName = NULL;
     char **instIds = NULL;
@@ -1596,10 +1587,19 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     char *accountId = NULL;
     char *ownerId = NULL;
     char *rootDirective = NULL;
+    char statusMessage[256] = "";
+    long long call_time = time_ms();
     ncMetadata ccMeta = { 0 };
+    axis2_bool_t status = AXIS2_TRUE;
     virtualMachine ccvm = { 0 };
     axutil_date_time_t *dt = NULL;
-    long long call_time = time_ms();
+    adb_RunInstancesResponse_t *ret = NULL;
+    adb_runInstancesResponseType_t *rirt = NULL;
+    adb_runInstancesType_t *rit = NULL;
+    adb_ccInstanceType_t *it = NULL;
+    adb_virtualMachineType_t *vm = NULL;
+    ccInstance *outInsts = NULL;
+    ccInstance *myInstance = NULL;
 
     rit = adb_RunInstances_get_RunInstances(runInstances, env);
     EUCA_MESSAGE_UNMARSHAL(runInstancesType, rit, (&ccMeta));
@@ -1754,6 +1754,9 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
 
     ret = adb_RunInstancesResponse_create(env);
     adb_RunInstancesResponse_set_RunInstancesResponse(ret, env, rirt);
+    EUCA_FREE(netIds);
+    EUCA_FREE(credential);
+    EUCA_FREE(rootDirective);
     EUCA_FREE(networkIndexList);
     EUCA_FREE(macAddrs);
     EUCA_FREE(netNames);

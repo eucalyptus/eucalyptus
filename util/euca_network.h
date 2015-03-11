@@ -72,7 +72,7 @@
 //!
 //! For every constant definition, use the following naming rules. When defining
 //! the size of an array or byte buffer, use the suffix "_SIZE". When defining a
-//! constant represending the lenght of a string INCLUDING the NULL terminating
+//! constant represending the length of a string INCLUDING the NULL terminating
 //! character, use the suffix "_LEN".
 //!
 

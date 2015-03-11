@@ -2004,8 +2004,10 @@ managed_subnet *managed_find_subnet(globalNetworkInfo * pGni, gni_secgroup * pSe
         return (NULL);
     }
     // If we don't have any instances, continue with the next group
-    if (nbInstances == 0)
+    if (nbInstances == 0) {
+        EUCA_FREE(pInstances);
         return (NULL);
+    }
     // Scan our instances until we get one with a valid private IP assigned
     for (k = 0, pSubnet = NULL; ((k < nbInstances) && !pSubnet); k++) {
         // Ok, now we should be able to find our subnet
@@ -2440,6 +2442,7 @@ static int managed_create_tunnel(gni_cluster * pCluster, const char *psPidFile, 
                                 // The process is running and its for the same endpoint, we won't kick it
                                 LOGTRACE("Tunnel session '%s' running properly. Nothing to do.\n", sSessionId);
                                 EUCA_FREE(psPidId);
+                                fclose(pFh);
                                 return (0);
                             } else {
                                 //
@@ -2450,6 +2453,7 @@ static int managed_create_tunnel(gni_cluster * pCluster, const char *psPidFile, 
                                 if (eucanetd_kill_program(atoi(psPidId), VTUND_APPLICATION, config->cmdprefix) != EUCA_OK) {
                                     LOGERROR("Failed to stop tunnel session '%s' for endpoint '%s'.\n", sSessionId, sRemoteIp);
                                     EUCA_FREE(psPidId);
+                                    fclose(pFh);
                                     return (1);
                                 }
 
@@ -2458,6 +2462,7 @@ static int managed_create_tunnel(gni_cluster * pCluster, const char *psPidFile, 
                         }
                     }
                     fclose(pFh);
+                    pFh = NULL;
                 }
             } else {
                 // pidfile passed in but process is not running
@@ -3212,7 +3217,7 @@ static int managed_detach_tunnels(globalNetworkInfo * pGni, gni_cluster * pClust
 
                     // If not found, then detach...
                     if (!found) {
-                        if (dev_get_bridges(psBridgeName, &pBridges, &nbBridges) != 0) {
+                        if (dev_get_bridges(psBridgeName, &pBridges, &nbBridges) == 0) {
                             LOGDEBUG("Detaching tunnel device '%s' from bridge device '%s'.\n", pTunnels[i].sDevName, pBridges[0].sDevName);
                             if (managed_detach_tunnel(&pBridges[0], &pTunnels[i]) != 0) {
                                 LOGERROR("Failed to detach tunnel device '%s' from bridge device '%s'. Look at above log errors for more details.\n",

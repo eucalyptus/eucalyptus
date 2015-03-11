@@ -944,11 +944,14 @@ int gni_cluster_get_secgroup(globalNetworkInfo * pGni, gni_cluster * pCluster, c
     // Are we doing anything?
     if (!doOutNames && !doOutStructs) {
         LOGDEBUG("nothing to do, both output variables are NULL\n");
+        EUCA_FREE(pInstances);
         return (0);
     }
     // Do we have any instances?
-    if (nbInstances == 0)
+    if (nbInstances == 0) {
+        EUCA_FREE(pInstances);
         return (0);
+    }
 
     // Do we have any groups?
     if (pGni->max_secgroups == 0) {
