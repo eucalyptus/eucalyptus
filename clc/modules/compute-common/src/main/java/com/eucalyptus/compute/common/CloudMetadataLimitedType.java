@@ -7,14 +7,18 @@ import com.eucalyptus.util.RestrictedType;
 
 @PolicyVendor( "ec2" )
 public interface CloudMetadataLimitedType extends LimitedType {
-  @PolicyResourceType( "instance.memory" )
-  public interface VmInstanceMemoryMetadata extends CloudMetadataLimitedType {}
+  @PolicyResourceType( VmInstanceMemoryMetadata.POLICY_RESOURCE_TYPE )
+  public interface VmInstanceMemoryMetadata extends CloudMetadataLimitedType {
+    public static String POLICY_RESOURCE_TYPE = "instance-memory";
+  }
 
-  @PolicyResourceType( "instance.cpu" )
-  public interface VmInstanceCpuMetadata extends CloudMetadataLimitedType {}
+  @PolicyResourceType( VmInstanceCpuMetadata.POLICY_RESOURCE_TYPE )
+  public interface VmInstanceCpuMetadata extends CloudMetadataLimitedType {
+    public static String POLICY_RESOURCE_TYPE = "instance-cpu";
+  }
 
-  @PolicyResourceType( "instance.disk" )
-  public interface VmInstanceDiskMetadata extends CloudMetadataLimitedType {}
-
-
+  @PolicyResourceType( VmInstanceDiskMetadata.POLICY_RESOURCE_TYPE )
+  public interface VmInstanceDiskMetadata extends CloudMetadataLimitedType {
+    public static String POLICY_RESOURCE_TYPE = "instance-disk";
+  }
 }

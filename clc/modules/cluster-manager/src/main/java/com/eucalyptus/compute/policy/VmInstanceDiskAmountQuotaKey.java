@@ -32,20 +32,21 @@ import java.util.List;
 public class VmInstanceDiskAmountQuotaKey extends QuotaKey {
 
   public static final String KEY = "ec2:quota-vminstance.disk-amount";
-
+  public static final String POLICY_RESOURCE_TYPE = CloudMetadataLimitedType.VmInstanceDiskMetadata.POLICY_RESOURCE_TYPE;
   @Override
   public void validateValueType( String value ) throws JSONException {
     KeyUtils.validateIntegerValue(value, KEY);
   }
 
   @Override
-  public boolean canApply( String action ) {
-    // requires run-instances
-    if ( PolicySpec.qualifiedName(PolicySpec.VENDOR_EC2, PolicySpec.EC2_RUNINSTANCES).equals( action ) ) {
+  public boolean canApply( String action, String resourceType) {
+    if ( PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RUNINSTANCES ).equals( action )
+      && PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, POLICY_RESOURCE_TYPE).equals(resourceType) ) {
       return true;
     }
     return false;
   }
+
 
   @Override
   public String value( PolicyScope scope, String id, String resource, Long quantity ) throws AuthException {

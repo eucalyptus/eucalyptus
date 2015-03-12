@@ -97,8 +97,10 @@ public interface CloudMetadata extends RestrictedType {
   @PolicyResourceType( "snapshot" )
   public interface SnapshotMetadata extends CloudMetadata {}
   
-  @PolicyResourceType( "instance" )
-  public interface VmInstanceMetadata extends CloudMetadata {}
+  @PolicyResourceType( VmInstanceMetadata.POLICY_RESOURCE_TYPE )
+  public interface VmInstanceMetadata extends CloudMetadata {
+    public static String POLICY_RESOURCE_TYPE = "instance";
+  }
 
   @PolicyResourceType( "vmtype" )
   public interface VmTypeMetadata extends CloudMetadata {

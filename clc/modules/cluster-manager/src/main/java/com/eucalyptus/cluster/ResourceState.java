@@ -153,7 +153,6 @@ public class ResourceState {
                                         : available );
     }
 
-    // TODO: evan. Add the cpu, disk, etc, here
     try {
       RestrictedTypes.allocateMeasurableResource(Long.valueOf(vmTypeStatus.getType().getCpu().longValue()),
         new Function<Long, CloudMetadataLimitedType.VmInstanceCpuMetadata>() {
@@ -170,7 +169,7 @@ public class ResourceState {
             @Override
           public CloudMetadataLimitedType.VmInstanceMemoryMetadata apply(@Nullable Long amount) {
             return new CloudMetadataLimitedType.VmInstanceMemoryMetadata() {
-            }; // kind of a marker for cpu
+            }; // kind of a marker for memory
           }
         });
         RestrictedTypes.allocateMeasurableResource(Long.valueOf(vmTypeStatus.getType().getDisk().longValue()),
@@ -179,7 +178,7 @@ public class ResourceState {
             @Override
           public CloudMetadataLimitedType.VmInstanceDiskMetadata apply(@Nullable Long amount) {
              return new CloudMetadataLimitedType.VmInstanceDiskMetadata() {
-            }; // kind of a marker for cpu
+            }; // kind of a marker for disk
           }
          });
     } catch (AuthException e) {
