@@ -22,6 +22,7 @@ package com.eucalyptus.loadbalancing.backend;
 
 import static com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView.name;
 import static com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView.subnetId;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -62,6 +63,10 @@ import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceEntityTransform;
+import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription;
+import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionEntityTransform;
+import com.eucalyptus.loadbalancing.LoadBalancerBackendServers;
 import com.eucalyptus.loadbalancing.LoadBalancerCwatchMetrics;
 import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord;
 import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.LoadBalancerDnsRecordCoreView;
@@ -70,6 +75,7 @@ import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCor
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicies;
+import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeDescription;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyTypeDescription;
@@ -142,6 +148,8 @@ import com.eucalyptus.loadbalancing.common.msgs.AccessLog;
 import com.eucalyptus.loadbalancing.common.msgs.AppCookieStickinessPolicies;
 import com.eucalyptus.loadbalancing.common.msgs.AppCookieStickinessPolicy;
 import com.eucalyptus.loadbalancing.common.msgs.AvailabilityZones;
+import com.eucalyptus.loadbalancing.common.msgs.BackendServerDescription;
+import com.eucalyptus.loadbalancing.common.msgs.BackendServerDescriptions;
 import com.eucalyptus.loadbalancing.common.msgs.ConfigureHealthCheckResult;
 import com.eucalyptus.loadbalancing.common.msgs.ConnectionDraining;
 import com.eucalyptus.loadbalancing.common.msgs.ConnectionSettings;
@@ -317,6 +325,7 @@ public class LoadBalancingBackendService {
         desc.getAvailabilityZones( ).getMember( ).add( zone.getName( ) );
         
         final Set<String> policiesOfListener = Sets.newHashSet();
+        final Set<String> policiesForBackendServer = Sets.newHashSet();
         /// listeners
         if(lb.getListeners().size()>0){
           desc.setListenerDescriptions(new ListenerDescriptions());
@@ -353,6 +362,40 @@ public class LoadBalancingBackendService {
                 }
               })));
         }
+        
+        /// backend server descriptions
+        try{
+          if(lb.getBackendServers().size()>0) {
+            desc.setBackendServerDescriptions(new BackendServerDescriptions());
+            desc.getBackendServerDescriptions().setMember(new ArrayList<>( 
+                Collections2.transform(lb.getBackendServers(), new Function<LoadBalancerBackendServerDescriptionCoreView, BackendServerDescription>(){
+                  @Override
+                  public BackendServerDescription apply(
+                      LoadBalancerBackendServerDescriptionCoreView arg0) {
+                    final LoadBalancerBackendServerDescription backend =
+                        LoadBalancerBackendServerDescriptionEntityTransform.INSTANCE.apply(arg0);
+
+                    final BackendServerDescription desc = new BackendServerDescription();
+                    desc.setInstancePort(arg0.getInstancePort());
+                    desc.setPolicyNames(new PolicyNames());
+                    desc.getPolicyNames().setMember(new ArrayList<>( 
+                        Collections2.transform(backend.getPolicyDescriptions(), new Function<LoadBalancerPolicyDescriptionCoreView, String> () {
+                          @Override
+                          public String apply(
+                              LoadBalancerPolicyDescriptionCoreView arg0) {
+                            return arg0.getPolicyName();
+                          }
+                        }   )
+                        ));
+                    policiesForBackendServer.addAll(desc.getPolicyNames().getMember());
+                    return desc;
+                  }
+                })
+                ));
+          }
+        }catch(final Exception ex) {
+          ;
+        }
 
         /// health check
         try{
@@ -385,7 +428,10 @@ public class LoadBalancingBackendService {
         final List<PolicyDescription> policies = Lists.newArrayList();
         for(final LoadBalancerPolicyDescription lbPolicy : lbPolicies){
           // for efficiency, add policies only if they are set for listeners
-          if(policiesOfListener.contains(lbPolicy.getPolicyName()))
+          // PublicKey policies should always be included bc it's referenced from BackendAuthenticationPolicyType
+          if(policiesOfListener.contains(lbPolicy.getPolicyName()) 
+              || policiesForBackendServer.contains(lbPolicy.getPolicyName())
+              || "PublicKeyPolicyType".equals(lbPolicy.getPolicyTypeName()))
             policies.add(LoadBalancerPolicies.AsPolicyDescription.INSTANCE.apply(lbPolicy));
         }
         final PolicyDescriptions policyDescs = new PolicyDescriptions();
@@ -931,6 +977,31 @@ public class LoadBalancingBackendService {
           } catch(Exception ex){
           }
           /// backend server description
+          try{
+            final List<LoadBalancerBackendServerDescription> backendServers = 
+                LoadBalancerBackendServers.getLoadBalancerBackendServerDescription(lb);
+            final List<BackendServerDescription> backendDescription = Lists.newArrayList();
+            
+            for(final LoadBalancerBackendServerDescription server : backendServers){
+              final BackendServerDescription serverDesc = new BackendServerDescription();
+              serverDesc.setInstancePort(server.getInstancePort());
+              final PolicyNames polNames = new PolicyNames();
+              polNames.setMember(new ArrayList<String>(Lists.transform(server.getPolicyDescriptions(), new Function<LoadBalancerPolicyDescriptionCoreView, String>() {
+                @Override
+                public String apply(LoadBalancerPolicyDescriptionCoreView arg0) {
+                  return arg0.getPolicyName();
+                }
+              })));
+              serverDesc.setPolicyNames(polNames);
+              backendDescription.add(serverDesc);
+            }
+            final BackendServerDescriptions backendDescs = new BackendServerDescriptions();
+            backendDescs.setMember((ArrayList<BackendServerDescription>) backendDescription);
+            desc.setBackendServerDescriptions(backendDescs);
+          }catch(final Exception ex){
+            LOG.error("Failed to load backend server description", ex);
+          }
+          
           /// source security group
           try{
             LoadBalancerSecurityGroupCoreView group = lb.getGroup();
@@ -960,13 +1031,18 @@ public class LoadBalancingBackendService {
               if("LBCookieStickinessPolicyType".equals(policy.getPolicyTypeName())){
                 final LBCookieStickinessPolicy lbp = new LBCookieStickinessPolicy();
                 lbp.setPolicyName(policy.getPolicyName());
-                lbp.setCookieExpirationPeriod(Long.parseLong(
-                    policy.findAttributeDescription("CookieExpirationPeriod").getAttributeValue()));
+                final List<LoadBalancerPolicyAttributeDescription> attrs = policy.findAttributeDescription("CookieExpirationPeriod");
+                if ( ! attrs.isEmpty())
+                  lbp.setCookieExpirationPeriod(Long.parseLong(attrs.get(0).getAttributeValue()));
+               
                 lbCookiePolicies.add(lbp);
               }else if("AppCookieStickinessPolicyType".equals(policy.getPolicyTypeName())){
                 final AppCookieStickinessPolicy app = new AppCookieStickinessPolicy();
                 app.setPolicyName(policy.getPolicyName());
-                app.setCookieName(policy.findAttributeDescription("CookieName").getAttributeValue());
+                final List<LoadBalancerPolicyAttributeDescription> attrs = policy.findAttributeDescription("CookieName");
+                if (! attrs.isEmpty())
+                  app.setCookieName(attrs.get(0).getAttributeValue());
+                
                 appCookiePolicies.add(app);
               }
               else
@@ -2038,7 +2114,17 @@ public class LoadBalancingBackendService {
       if(policyNames!=null){
         for(final String policyName : policyNames){
           try{
-            policies.add(LoadBalancerPolicies.getLoadBalancerPolicyDescription(lb, policyName));
+            final LoadBalancerPolicyDescription p = 
+                LoadBalancerPolicies.getLoadBalancerPolicyDescription(lb, policyName);
+            final String policyType = p.getPolicyTypeName();
+            if (! ( "SSLNegotiationPolicyType".equals(policyType) 
+                    || "LBCookieStickinessPolicyType".equals(policyType)
+                    || "AppCookieStickinessPolicyType".equals(policyType))) {
+              throw new InvalidConfigurationRequestException(policyType +" cannot be set to listeners");
+            }
+            policies.add(p);
+          }catch(final LoadBalancingException ex) {
+            throw ex;
           }catch(final Exception ex){
             throw new PolicyNotFoundException();
           }
@@ -2064,7 +2150,85 @@ public class LoadBalancingBackendService {
   }
 
   public SetLoadBalancerPoliciesForBackendServerResponseType setLoadBalancerPoliciesForBackendServer(SetLoadBalancerPoliciesForBackendServerType request) throws EucalyptusCloudException {
-    SetLoadBalancerPoliciesForBackendServerResponseType reply = request.getReply( );
+    final SetLoadBalancerPoliciesForBackendServerResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final String lbName = request.getLoadBalancerName();
+    final int instancePort = request.getInstancePort();
+    final PolicyNames pNames = request.getPolicyNames();
+    
+    if(lbName==null || lbName.isEmpty())
+      throw new InvalidConfigurationRequestException("Loadbalancer name must be specified");
+    if(instancePort <0 || instancePort >65535)
+      throw new InvalidConfigurationRequestException("Invalid port number specified");
+    final List<String> policyNames = pNames.getMember();
+    
+    LoadBalancer lb;
+    try{
+      lb= LoadBalancers.getLoadbalancer(ctx, lbName);
+    }catch(final NoSuchElementException ex){
+      throw new AccessPointNotFoundException();
+    }catch(final Exception ex){
+      LOG.error("Failed to find the loadbalancer", ex);
+      throw new InternalFailure400Exception("Failed to find the loadbalancer");
+    }
+    if( lb!=null && !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
+      throw new AccessPointNotFoundException();
+    }
+    
+    try{
+      final Set<String> policyTypes = Sets.newHashSet();
+      final List<LoadBalancerPolicyDescription> policiesToAdd = Lists.newArrayList();
+      if(policyNames!=null){
+        for(final String policyName : policyNames){
+          try{
+            final LoadBalancerPolicyDescription policy = LoadBalancerPolicies.getLoadBalancerPolicyDescription(lb, policyName);
+            if(! "BackendServerAuthenticationPolicyType".equals(policy.getPolicyTypeName()))
+              throw new InvalidConfigurationRequestException("Only BackendServerAuthenticationPolicyType can be set to backend server");
+            policyTypes.add(policy.getPolicyTypeName());
+            policiesToAdd.add(policy);
+          }catch(final LoadBalancingException ex) {
+            throw ex;
+          }catch(final Exception ex){
+            throw new PolicyNotFoundException();
+          }
+        }
+      }
+      boolean listenerFound = false;
+      for(final LoadBalancerListenerCoreView l : lb.getListeners()){
+        if(l.getInstancePort() == instancePort) {
+          if( policyTypes.contains("BackendServerAuthenticationPolicyType") &&
+              !(PROTOCOL.HTTPS.equals(l.getInstanceProtocol()) || PROTOCOL.SSL.equals(l.getInstanceProtocol()))){
+            throw new InvalidConfigurationRequestException("Policies of BackendServerAuthenticationPolicyType can be set to only HTTPS/SSL instance protocol");
+          }
+          listenerFound =true;
+          break;
+        }
+      }
+      if(!listenerFound)
+        throw new InvalidConfigurationRequestException("Listener with the specified backend instance port is not found");
+      
+      LoadBalancerBackendServerDescription backend = null;
+      if(! LoadBalancerBackendServers.hasBackendServerDescription(lb, instancePort)){
+        backend= LoadBalancerBackendServers.createBackendServerDescription(lb, instancePort);
+      }else{
+        backend = LoadBalancerBackendServers.getBackendServerDescription(lb, instancePort);
+      }
+      if (backend == null)
+        throw new InvalidConfigurationRequestException("Failed to find the backend server description for port " + instancePort);
+      
+      LoadBalancerPolicies.clearPoliciesFromBackendServer(backend);
+      try{
+        if(policiesToAdd.size()>0)
+          LoadBalancerPolicies.addPoliciesToBackendServer(backend, policiesToAdd);
+      }catch(final Exception ex){
+        throw ex;
+      }
+    }catch(final LoadBalancingException ex){
+      throw ex;
+    }catch(final Exception ex){
+      LOG.error("Failed to set policies to backend server description", ex);
+      throw new InternalFailure400Exception("Failed to set policies to backend server description", ex);
+    }    
     return reply;
   }
 

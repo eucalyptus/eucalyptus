@@ -60,6 +60,8 @@ import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreViewTransform;
+import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreViewTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.LoadBalancerDnsRecordCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreViewTransform;
@@ -216,6 +218,10 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerPolicyDescription> policies = null;
+	
+	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
+  @Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
+  private Collection<LoadBalancerBackendServerDescription> backendServers = null;
 
 	@ElementCollection
 	@CollectionTable( name = "metadata_loadbalancer_security_groups" )
@@ -327,6 +333,19 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	    return;
 	  this.policies.remove(desc);
 	}
+	
+	public void addBackendServerDescription(final LoadBalancerBackendServerDescription desc) {
+	  if (this.backendServers == null)
+	    this.backendServers = Lists.newArrayList();
+	  this.backendServers.remove(desc);
+	  this.backendServers.add(desc);
+	}
+	
+	public void removeBackendServerDescription(final LoadBalancerBackendServerDescription desc) {
+	  if(this.backendServers == null)
+	    return;
+	  this.backendServers.remove(desc);
+	}
 
 	public LoadBalancerCoreView getCoreView( ) {
 		return coreView;
@@ -334,6 +353,10 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 
 	public Collection<LoadBalancerPolicyDescriptionCoreView> getPolicies(){
 	  return this.relationView.getPolicies();
+	}
+	
+	public Collection<LoadBalancerBackendServerDescriptionCoreView> getBackendServers(){
+	  return this.relationView.getBackendServers();
 	}
 	
 	public void setHealthCheck(int healthyThreshold, int interval, String target, int timeout, int unhealthyThreshold)
@@ -489,6 +512,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		private ImmutableList<LoadBalancerListenerCoreView> listeners = null;
 		private ImmutableList<LoadBalancerZoneCoreView> zones = null;
 		private ImmutableList<LoadBalancerPolicyDescriptionCoreView> policies = null;
+		private ImmutableList<LoadBalancerBackendServerDescriptionCoreView> backendServers = null;
 		LoadBalancerRelationView(final LoadBalancer lb){
 			this.loadbalancer = lb;
 
@@ -506,6 +530,8 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 				this.zones = ImmutableList.copyOf(Collections2.transform(lb.zones,  LoadBalancerZoneCoreViewTransform.INSTANCE));
 			if(lb.policies!=null)
 			  this.policies = ImmutableList.copyOf(Collections2.transform(lb.policies, LoadBalancerPolicyDescriptionCoreViewTransform.INSTANCE));
+			if(lb.backendServers!=null)
+			  this.backendServers =  ImmutableList.copyOf(Collections2.transform(lb.backendServers, LoadBalancerBackendServerDescriptionCoreViewTransform.INSTANCE));
 		}
 		
 
@@ -575,6 +601,10 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		
 		public Collection<LoadBalancerPolicyDescriptionCoreView> getPolicies(){
 		  return this.policies;
+		}
+		
+		public Collection<LoadBalancerBackendServerDescriptionCoreView> getBackendServers(){
+		  return this.backendServers;
 		}
 	}
 	
