@@ -293,7 +293,7 @@ public class LoadBalancerPolicies {
   }
   
   public static void addLoadBalancerPolicy(final LoadBalancer lb, final String policyName, final String policyTypeName, 
-      final List<PolicyAttribute> attributes) throws LoadBalancingException
+      final List<PolicyAttribute> policyAttributes) throws LoadBalancingException
   {
       for(final LoadBalancerPolicyDescriptionCoreView current : lb.getPolicies()){
         if(policyName.equals(current.getPolicyName()))
@@ -309,6 +309,45 @@ public class LoadBalancerPolicies {
       }
       if(policyType == null)
         throw new PolicyTypeNotFoundException();
+
+      List<PolicyAttribute> attributes = null;
+      // Check Reference-Security-Policy
+      if ("SSLNegotiationPolicyType".equals(policyType.getPolicyTypeName())) {
+        String refPolicy = null;
+        for(final PolicyAttribute attr : policyAttributes) {
+          if("Reference-Security-Policy".equals(attr.getAttributeName())) {
+            refPolicy = attr.getAttributeValue();
+            break;
+          }
+        }
+        if(refPolicy!=null) {
+          PolicyDescription predefinedPolicy = null;
+          List<PolicyDescription> predefinedPolicies = LoadBalancerPolicies.getSamplePolicyDescription();
+          for(final PolicyDescription policy : predefinedPolicies) {
+            if(refPolicy.equals(policy.getPolicyName())) {
+              predefinedPolicy = policy;
+              break;
+            }
+          }
+          if (predefinedPolicy == null) {
+            throw new InvalidConfigurationRequestException(String.format("Referenced security policy %s is not found", refPolicy));
+          }else {
+            attributes = Lists.transform(predefinedPolicy.getPolicyAttributeDescriptions().getMember(),
+               new Function<PolicyAttributeDescription,PolicyAttribute>() {
+                @Override
+                public PolicyAttribute apply(PolicyAttributeDescription arg0) {
+                  final PolicyAttribute attr = new PolicyAttribute();
+                  attr.setAttributeName(arg0.getAttributeName());
+                  attr.setAttributeValue(arg0.getAttributeValue());
+                  return attr;
+                }
+            });
+          }
+        }
+      }
+      
+      if(attributes == null)
+        attributes = policyAttributes;
       
       /* check for cardinality
        * ONE(1) : Single value required
