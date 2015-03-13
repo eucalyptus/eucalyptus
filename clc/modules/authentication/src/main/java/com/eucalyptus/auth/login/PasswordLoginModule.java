@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,13 +19,9 @@
  ************************************************************************/
 package com.eucalyptus.auth.login;
 
-import javax.security.auth.login.FailedLoginException;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PasswordAuthentication;
 import com.eucalyptus.auth.api.BaseLoginModule;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
 
 /**
  *
@@ -44,16 +40,8 @@ public class PasswordLoginModule extends BaseLoginModule<AccountUsernamePassword
     final String password = credentials.getPassword();
     final String newPassword = credentials.getNewPassword();
 
-    final Account account;
-    final User user;
-    try {
-      account = Accounts.lookupAccountByName( accountName );
-      user = account.lookupUserByName( username );
-    } catch ( final AuthException e ) {
-      throw new FailedLoginException();
-    }
-
-    PasswordAuthentication.authenticate( user, password, newPassword );
+    final UserPrincipal user =
+        PasswordAuthentication.authenticate( accountName, username, password, newPassword );
 
     super.setCredential( credentials.getAccountUsername() );
     super.setPrincipal( user );

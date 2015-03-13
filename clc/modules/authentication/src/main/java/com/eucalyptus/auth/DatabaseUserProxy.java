@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -84,10 +84,9 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Certificate;
+import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.Entities;
 import java.util.concurrent.ExecutionException;
@@ -99,7 +98,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-public class DatabaseUserProxy implements User {
+public class DatabaseUserProxy implements EuareUser {
 
   private static final long serialVersionUID = 1L;
   
@@ -223,12 +222,12 @@ public class DatabaseUserProxy implements User {
   }
 
   @Override
-  public Boolean isEnabled( ) {
+  public boolean isEnabled( ) {
     return this.delegate.isEnabled( );
   }
 
   @Override
-  public void setEnabled( final Boolean enabled ) throws AuthException {
+  public void setEnabled( final boolean enabled ) throws AuthException {
     try {
       DatabaseAuthUtils.invokeUnique( UserEntity.class, "userId", this.delegate.getUserId( ), new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) {
@@ -467,7 +466,7 @@ public class DatabaseUserProxy implements User {
   public Certificate addCertificate( X509Certificate cert ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
       UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, "userId", this.delegate.getUserId( ) );
-      CertificateEntity certEntity = new CertificateEntity( X509CertHelper.fromCertificate( cert ) );
+      CertificateEntity certEntity = new CertificateEntity( cert );
       certEntity.setActive( true );
       certEntity.setRevoked( false );
       Entities.persist( certEntity );

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -59,9 +59,7 @@ import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage;
 import com.eucalyptus.autoscaling.common.msgs.ExecutePolicyType;
@@ -766,11 +764,19 @@ public class AlarmManager {
     public AutoScalingClient( final String userId ) {
       super( userId, AutoScaling.class );
     }
+
+    public AutoScalingClient( final AccountFullName accountFullName ) {
+      super( accountFullName, AutoScaling.class );
+    }
   }
 
   private static class EucalyptusClient extends DispatchingClient<ComputeMessage,Eucalyptus> {
     public EucalyptusClient( final String userId ) {
       super( userId, Eucalyptus.class );
+    }
+
+    public EucalyptusClient( final AccountFullName accountFullName ) {
+      super( accountFullName, Eucalyptus.class );
     }
   }
   
@@ -821,10 +827,7 @@ public class AlarmManager {
         }
       };
       try {
-        Account account = Accounts.getAccountProvider().lookupAccountById(
-          alarmEntity.getAccountId());
-        User user = account.lookupUserByName(User.ACCOUNT_ADMIN);
-        AutoScalingClient client = new AutoScalingClient(user.getUserId());
+        AutoScalingClient client = new AutoScalingClient(AccountFullName.getInstance( alarmEntity.getAccountId() ));
         client.init();
         client.dispatch(executePolicyType, callback);
       } catch (Exception ex) {
@@ -868,10 +871,7 @@ public class AlarmManager {
         }
       };
       try {
-        Account account = Accounts.getAccountProvider().lookupAccountById(
-          alarmEntity.getAccountId());
-        User user = account.lookupUserByName(User.ACCOUNT_ADMIN);
-        EucalyptusClient client = new EucalyptusClient(user.getUserId());
+        EucalyptusClient client = new EucalyptusClient( AccountFullName.getInstance( alarmEntity.getAccountId( ) ) );
         client.init();
         client.dispatch(terminateInstances, callback);
       } catch (Exception ex) {
@@ -913,10 +913,7 @@ public class AlarmManager {
         }
       };
       try {
-        Account account = Accounts.getAccountProvider().lookupAccountById(
-          alarmEntity.getAccountId());
-        User user = account.lookupUserByName(User.ACCOUNT_ADMIN);
-        EucalyptusClient client = new EucalyptusClient(user.getUserId());
+        EucalyptusClient client = new EucalyptusClient(AccountFullName.getInstance( alarmEntity.getAccountId( ) ));
         client.init();
         client.dispatch(stopInstances, callback);
       } catch (Exception ex) {

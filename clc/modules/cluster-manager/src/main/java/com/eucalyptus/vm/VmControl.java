@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -332,7 +332,7 @@ public class VmControl {
       final List<VmInstance> instances =
           VmInstances.list( ownerFullName, criterion, filter.getAliases(), requestedAndAccessible );
       final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( VmInstance.class )
-          .getResourceTagMap( AccountFullName.getInstance( ctx.getAccount() ),
+          .getResourceTagMap( AccountFullName.getInstance( ctx.getAccountNumber() ),
               Iterables.transform( instances, CloudMetadatas.toDisplayName() ) );
 
       for ( final VmInstance vm : instances ) {

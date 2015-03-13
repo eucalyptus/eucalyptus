@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -69,7 +69,7 @@ import javax.security.auth.login.LoginException;
 import javax.security.auth.spi.LoginModule;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.login.WrappedCredentials;
-import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
 
@@ -78,7 +78,7 @@ public abstract class BaseLoginModule<CB extends WrappedCredentials> implements 
   private boolean         authenticated = false;
   private CallbackHandler callbackHandler;
   private Object          credential;
-  private User            principal;
+  private UserPrincipal   principal;
   private Subject         subject;
   private CB              wrappedCredentials;
   
@@ -113,7 +113,7 @@ public abstract class BaseLoginModule<CB extends WrappedCredentials> implements 
     return this.credential;
   }
 
-  public User getPrincipal( ) {
+  public UserPrincipal getPrincipal( ) {
     return this.principal;
   }
   
@@ -188,7 +188,7 @@ public abstract class BaseLoginModule<CB extends WrappedCredentials> implements 
     this.credential = credential;
   }
   
-  public void setPrincipal( final User principal ) {
+  public void setPrincipal( final UserPrincipal principal ) {
     this.principal = principal;
   }
 

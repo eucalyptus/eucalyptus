@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,11 +30,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.euare.GetRolePolicyResult;
 import com.eucalyptus.auth.euare.InstanceProfileType;
 import com.eucalyptus.auth.euare.RoleType;
-import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupsType;
@@ -549,21 +548,15 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			} else if ( lb.getSecurityGroupIdsToNames( ).isEmpty( ) ) {
 				final String groupName = generateDefaultVPCSecurityGroupName( lb.getVpcId( ) );
 				final String groupDesc = String.format( "ELB created security group used when no security group is specified during ELB creation - modifications could impact traffic to future ELBs" );
-				final Account account = evt.getContext( ).getAccount( );
-				final String userId;
-				try {
-					userId = account.lookupAdmin( ).getUserId( );
-				} catch ( AuthException e ) {
-					throw Exceptions.toUndeclared( e );
-				}
+				final AccountFullName accountFullName = evt.getContext( ).getAccount( );
 				final List<SecurityGroupItemType> groups = EucalyptusActivityTasks.getInstance()
-						.describeUserSecurityGroupsByName( userId, lb.getVpcId( ), groupName );
+						.describeUserSecurityGroupsByName( accountFullName, lb.getVpcId( ), groupName );
 
 				final SecurityGroupItemType elbVpcGroup;
 				if ( groups.isEmpty( ) ) {
-					EucalyptusActivityTasks.getInstance().createUserSecurityGroup( userId, groupName, groupDesc );
+					EucalyptusActivityTasks.getInstance().createUserSecurityGroup( accountFullName, groupName, groupDesc );
 					final List<SecurityGroupItemType> createdGroupList = EucalyptusActivityTasks.getInstance( )
-							.describeUserSecurityGroupsByName( userId, lb.getVpcId( ), groupName );
+							.describeUserSecurityGroupsByName( accountFullName, lb.getVpcId( ), groupName );
 					elbVpcGroup = Iterables.getOnlyElement( createdGroupList );
 				} else {
 					elbVpcGroup = Iterables.get( groups, 0 );
@@ -574,7 +567,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 					public boolean apply( @Nullable final String loadBalancerName ) {
 						try {
 							final LoadBalancer lb =
-									Entities.uniqueResult( LoadBalancer.namedByAccountId( account.getAccountNumber( ), loadBalancerName ) );
+									Entities.uniqueResult( LoadBalancer.namedByAccountId( accountFullName.getAccountNumber( ), loadBalancerName ) );
 							lb.setSecurityGroupRefs( Lists.newArrayList(
 								new LoadBalancerSecurityGroupRef( elbVpcGroup.getGroupId( ), elbVpcGroup.getGroupName( ) )
 							) );

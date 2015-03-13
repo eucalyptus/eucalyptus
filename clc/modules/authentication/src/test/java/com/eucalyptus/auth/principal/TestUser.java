@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,7 +29,7 @@ import com.eucalyptus.auth.PolicyParseException;
 /**
  *
  */
-public class TestUser implements User {
+public class TestUser implements EuareUser {
   private static final long serialVersionUID = 1L;
 
   private Account account;
@@ -38,7 +38,7 @@ public class TestUser implements User {
   private String name;
   private String path;
   private RegistrationStatus registrationStatus;
-  private Boolean enabled;
+  private boolean enabled;
   private String token;
   private String confirmationCode;
   private String password;
@@ -55,7 +55,7 @@ public class TestUser implements User {
    * Set any properties required for this user to be considered valid.
    */
   public TestUser activate( ) {
-    setEnabled( Boolean.TRUE );
+    setEnabled( true );
     setRegistrationStatus( RegistrationStatus.CONFIRMED );
     return this;
   }
@@ -110,11 +110,11 @@ public class TestUser implements User {
     this.registrationStatus = registrationStatus;
   }
 
-  public Boolean isEnabled() {
+  public boolean isEnabled() {
     return enabled;
   }
 
-  public void setEnabled( final Boolean enabled ) {
+  public void setEnabled( final boolean enabled ) {
     this.enabled = enabled;
   }
 

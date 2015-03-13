@@ -348,7 +348,7 @@ public class PartInfo extends AbstractPersistent {
 
   public static PartInfo generateManifest(String bucketName, String objectKey) {
     PartInfo part = new PartInfo(bucketName, objectKey);
-    part.setUploadId(Crypto.generateAlphanumericId(64, ""));
+    part.setUploadId(Crypto.generateAlphanumericId(64));
     part.setSize(0L);
     // Not setting part number and object name on purpose
     return part;

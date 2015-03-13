@@ -21,6 +21,7 @@
 package com.eucalyptus.objectstorage
 
 import com.eucalyptus.auth.Accounts
+import com.eucalyptus.auth.principal.UserPrincipal
 import com.eucalyptus.entities.Entities
 import com.eucalyptus.entities.Transactions
 import com.eucalyptus.objectstorage.exceptions.IllegalResourceStateException
@@ -30,7 +31,6 @@ import com.eucalyptus.objectstorage.metadata.BucketMetadataManager
 import com.eucalyptus.objectstorage.metadata.ObjectMetadataManager
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties
 import com.google.common.collect.Lists
-import groovy.transform.CompileStatic
 import org.junit.After
 import org.junit.AfterClass
 import org.junit.Before
@@ -98,7 +98,7 @@ public class ObjectMetadataManagerTest {
     assert(bucket != null)
     assert(mgr.lookupBucket(bucket.getName()) != null)
 
-    User usr = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
+    UserPrincipal usr = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
 
     def objs = TestUtils.createNObjects(objMgr, entityCount, bucket, key, 100, usr)
     assert(objs != null && objs.size() == entityCount)
@@ -137,7 +137,7 @@ public class ObjectMetadataManagerTest {
     assert(mgr.lookupBucket(bucket.getName()) != null)
     bucket = mgr.setVersioning(bucket, ObjectStorageProperties.VersioningStatus.Enabled);
 
-    User usr = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
+    UserPrincipal usr = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
 
     def objs = TestUtils.createNObjects(objMgr, entityCount, bucket, key, 100, usr)
     assert(objs != null && objs.size() == entityCount)
@@ -181,7 +181,7 @@ public class ObjectMetadataManagerTest {
     assert(bucket != null)
     assert((bucket = mgr.lookupBucket(bucket.getName())) != null)
 
-    User usr = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
+    UserPrincipal usr = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
     ObjectEntity object1 = ObjectEntity.newInitializedForCreate(bucket, key, contentLength, usr)
 
     object1 = objMgr.initiateCreation(object1);
@@ -233,7 +233,7 @@ public class ObjectMetadataManagerTest {
     assert(bucket1 != null)
     assert(mgr.lookupBucket(bucket1.getName()) != null)
 
-    User usr = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
+    UserPrincipal usr = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
 
     def objList = TestUtils.createNObjects(objMgr, 10, bucket1, key, contentLength, usr)
     assert(objList.size() == 10)
@@ -262,7 +262,7 @@ public class ObjectMetadataManagerTest {
   public void testListPaginatedSinglePage() {
     def keyPrefixes = ['aa', 'bb', 'cc', 'dd', 'ee']
     def bucketName = 'bucket'
-    User usr = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
+    UserPrincipal usr = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
     Bucket bucket = TestUtils.createTestBucket(mgr, bucketName)
 
     PaginatedResult<ObjectEntity> list1 = objMgr.listPaginated(bucket, 1000, null, null, null)
@@ -311,7 +311,7 @@ public class ObjectMetadataManagerTest {
   public void testTransitionObjectToState() {
     String bucketName = 'bucket'
     String key = 'key'
-    User usr = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
+    UserPrincipal usr = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
     Bucket bucket = TestUtils.createTestBucket(mgr, bucketName)
 
     //null->creating OK
@@ -415,7 +415,7 @@ public class ObjectMetadataManagerTest {
     assert(bucket2 != null)
     assert(mgr.lookupBucket(bucket2.getName()) != null)
 
-    User usr = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
+    UserPrincipal usr = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
 
     //Create some other objects to ensure operations don't affect unintended objects
     def immutableBucket2Objs = TestUtils.createNObjects(objMgr, 10, bucket2, "immutableobject", 100, usr)
@@ -464,7 +464,7 @@ public class ObjectMetadataManagerTest {
     assert(bucket2 != null)
     assert(mgr.lookupBucket(bucket2.getName()) != null)
 
-    User usr = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
+    UserPrincipal usr = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
 
     def immutableObjsBucket1 = TestUtils.createNObjects(objMgr, 10, bucket, "immutablekey", 100, usr)
     def immutableObjsBucket2 = TestUtils.createNObjects(objMgr, 10, bucket2, "immutablekey", 100, usr)
@@ -525,7 +525,7 @@ public class ObjectMetadataManagerTest {
     assert(bucket != null)
     assert(mgr.lookupBucket(bucket.getName()) != null)
 
-    User usr = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
+    UserPrincipal usr = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
 
     def parallelCount = 10
     List<ObjectEntity> objs = Lists.newArrayList();
@@ -559,7 +559,7 @@ public class ObjectMetadataManagerTest {
     Bucket bucket = TestUtils.createTestBucket(mgr, "testbucket")
     assert(bucket != null)
     assert(mgr.lookupBucket(bucket.getName()) != null)
-    User usr = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
+    UserPrincipal usr = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
 
     def objList = TestUtils.createNObjects(objMgr, 10, bucket, key, contentLength, usr)
     assert(objList.size() == 10)
@@ -586,7 +586,7 @@ public class ObjectMetadataManagerTest {
     Bucket bucket = TestUtils.createTestBucket(mgr, "testbucket")
     assert(bucket != null)
     assert(mgr.lookupBucket(bucket.getName()) != null)
-    User usr = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
+    UserPrincipal usr = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
 
     ObjectEntity entity = ObjectEntity.newInitializedForCreate(bucket, key, contentLength, usr)
     entity = objMgr.initiateCreation(entity)

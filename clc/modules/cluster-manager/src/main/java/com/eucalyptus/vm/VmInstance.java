@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1341,7 +1341,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             userId,
             Accounts.lookupUserById(userId).getName(),
             accountId,
-            Accounts.lookupAccountById(accountId).getName(),
+            Accounts.lookupAccountAliasById(accountId),
             this.placement.getPartitionName()));
       } catch ( final Exception ex ) {
         LOG.error( ex, ex );

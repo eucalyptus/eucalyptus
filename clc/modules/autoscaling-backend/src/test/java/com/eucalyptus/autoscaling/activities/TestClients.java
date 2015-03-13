@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 package com.eucalyptus.autoscaling.activities;
 
 import javax.annotation.Nullable;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage;
 import com.eucalyptus.compute.common.ComputeMessage;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage;
@@ -37,8 +38,8 @@ public class TestClients {
   static class TestEucalyptusClient extends EucalyptusClient {
     private final RequestHandler handler;
 
-    TestEucalyptusClient( String userId, RequestHandler handler ) {
-      super(userId);
+    TestEucalyptusClient( AccountFullName accountFullName, RequestHandler handler ) {
+      super(accountFullName);
       this.handler = handler;
     }
 
@@ -60,8 +61,8 @@ public class TestClients {
   static class TestElbClient extends ElbClient {
     private final RequestHandler handler;
 
-    TestElbClient( String userId, RequestHandler handler ) {
-      super(userId);
+    TestElbClient( AccountFullName accountFullName, RequestHandler handler ) {
+      super(accountFullName);
       this.handler = handler;
     }
 
@@ -83,8 +84,8 @@ public class TestClients {
   public static class TesCloudWatchClient extends CloudWatchClient {
     private final RequestHandler handler;
 
-    TesCloudWatchClient( String userId, RequestHandler handler ) {
-      super(userId);
+    TesCloudWatchClient( AccountFullName accountFullName, RequestHandler handler ) {
+      super(accountFullName);
       this.handler = handler;
     }
 

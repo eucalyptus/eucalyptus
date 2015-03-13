@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -83,7 +83,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 			LoadBalancer lb;
 			List<LoadBalancerServoInstanceCoreView> servos = Lists.newArrayList();
 			try{ 
-				lb= LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
+				lb= LoadBalancers.getLoadbalancer(evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
 				
 				if(lb.getZones()!=null){
 					for(final LoadBalancerZoneCoreView zoneView : lb.getZones()){
@@ -152,7 +152,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 		public void apply(DeleteLoadbalancerEvent evt) throws EventHandlerException{
 			LoadBalancer lb;
 			try{ 
-				lb= LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
+				lb= LoadBalancers.getLoadbalancer(evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
 			}catch(NoSuchElementException ex){
 				return;
 			}catch(Exception ex){
@@ -263,8 +263,8 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 	    public void apply(DeleteLoadbalancerEvent evt) throws EventHandlerException{
 	      // remove a role from the instance profile
 	      final String instanceProfileName = String.format("%s-%s-%s", EventHandlerChainNew.InstanceProfileSetup.INSTANCE_PROFILE_NAME_PREFIX,
-	          evt.getContext().getAccount().getAccountNumber(), evt.getLoadBalancer());
-	      final String roleName = String.format("%s-%s-%s", EventHandlerChainNew.IAMRoleSetup.ROLE_NAME_PREFIX, evt.getContext().getAccount().getAccountNumber(), evt.getLoadBalancer());
+	          evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
+	      final String roleName = String.format("%s-%s-%s", EventHandlerChainNew.IAMRoleSetup.ROLE_NAME_PREFIX, evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
 	      
 	      try{
 	        EucalyptusActivityTasks.getInstance().removeRoleFromInstanceProfile(instanceProfileName, roleName);
@@ -293,7 +293,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 
     @Override
     public void apply(DeleteLoadbalancerEvent evt) throws EventHandlerException {
-      final String roleName = String.format("%s-%s-%s", EventHandlerChainNew.IAMRoleSetup.ROLE_NAME_PREFIX, evt.getContext().getAccount().getAccountNumber(), evt.getLoadBalancer());
+      final String roleName = String.format("%s-%s-%s", EventHandlerChainNew.IAMRoleSetup.ROLE_NAME_PREFIX, evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
       // delete role policy
       try{
         EucalyptusActivityTasks.getInstance().deleteRolePolicy(roleName, 
@@ -327,7 +327,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 			LoadBalancer lb;
 			LoadBalancerSecurityGroupCoreView groupView = null;
 			try{
-				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
+				lb = LoadBalancers.getLoadbalancer(evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
 				if(lb.getGroup()!=null){
 					groupView = lb.getGroup();
 				}

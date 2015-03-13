@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -73,7 +73,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.crypto.Hmac;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidAccessKeyIdException;
 
@@ -100,7 +100,7 @@ public class ObjectStorageLoginModule extends BaseLoginModule<ObjectStorageWrapp
     if (!key.isActive()) {
       throw new InvalidAccessKeyIdException(credentials.getQueryId());
     }
-    final User user = key.getUser();
+    final UserPrincipal user = key.getPrincipal();
     final String queryKey = key.getSecretKey();
     final String authSig = checkSignature(queryKey, credentials.getLoginData());
     if (authSig.equals(signature)) {

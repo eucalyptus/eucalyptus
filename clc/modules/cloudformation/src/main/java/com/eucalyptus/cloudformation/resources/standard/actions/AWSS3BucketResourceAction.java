@@ -40,6 +40,7 @@ import com.amazonaws.services.s3.model.TagSet;
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.login.AuthenticationException;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.tokens.SecurityTokenAWSCredentialsProvider;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
@@ -155,7 +156,7 @@ public class AWSS3BucketResourceAction extends ResourceAction {
             s3c.setBucketTaggingConfiguration( bucketName, action.convertTags( allTags ) );
 
           } else { // add as admin
-            EucaS3Client s3cAdmin = EucaS3ClientFactory.getEucaS3Client(new SecurityTokenAWSCredentialsProvider(user.getAccount().lookupAdmin()));
+            EucaS3Client s3cAdmin = EucaS3ClientFactory.getEucaS3Client(new SecurityTokenAWSCredentialsProvider(AccountFullName.getInstance(user.getAccountNumber())));
             s3cAdmin.setBucketTaggingConfiguration( bucketName, action.convertTags( systemTags ));
           }
 

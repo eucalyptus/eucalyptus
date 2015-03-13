@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -74,9 +74,11 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.key.Key;
 import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.util.Exceptions;
@@ -96,22 +98,20 @@ public class Permissions {
 	}
 
 	public static AuthContext createAuthContext(
-			final User requestUser,
-			final Iterable<PolicyVersion> policies,
+			final UserPrincipal requestUser,
 			final Map<String, String> evaluatedKeys
 	) throws AuthException {
-		return new AuthContext( requestUser, policies, evaluatedKeys );
+		return new AuthContext( requestUser, requestUser.getPrincipalPolicies( ), evaluatedKeys );
 	}
 
 	public static AuthContextSupplier createAuthContextSupplier(
-			final User requestUser,
-			final Iterable<PolicyVersion> policies,
+			final UserPrincipal requestUser,
 			final Map<String, String> evaluatedKeys
 	) {
 		return new AuthContextSupplier( ) {
 			@Override
 			public AuthContext get( ) throws AuthException {
-				return createAuthContext( requestUser, policies, evaluatedKeys );
+				return createAuthContext( requestUser, evaluatedKeys );
 			}
 		};
 	}
@@ -132,7 +132,7 @@ public class Permissions {
 			@Nonnull  final String vendor,
 			@Nonnull  final String resourceType,
 			@Nonnull  final String resourceName,
-			@Nullable final Account resourceAccount,
+			@Nullable final AccountFullName resourceAccount,
 			@Nonnull  final String action,
 			@Nonnull  final AuthContextSupplier requestUser
 	) {
@@ -150,6 +150,18 @@ public class Permissions {
 		@Nonnull  final String resourceType,
 		@Nonnull  final String resourceName,
 		@Nullable final Account resourceAccount,
+		@Nonnull  final String action,
+		@Nonnull  final AuthContext requestUser
+	) {
+		final String resourceAccountNumber = resourceAccount==null ? null : resourceAccount.getAccountNumber( );
+		return isAuthorized( requestUser.evaluationContext( vendor, resourceType, action ), resourceAccountNumber, resourceName );
+	}
+
+	public static boolean isAuthorized(
+		@Nonnull  final String vendor,
+		@Nonnull  final String resourceType,
+		@Nonnull  final String resourceName,
+		@Nullable final AccountFullName resourceAccount,
 		@Nonnull  final String action,
 		@Nonnull  final AuthContext requestUser
 	) {
@@ -183,7 +195,7 @@ public class Permissions {
 		final Policy resourcePolicy,
 		final String resourceType,
 		final String resourceName,
-		final Account resourceAccount,
+		final AccountFullName resourceAccount,
 		final String action,
 		final User requestUser,
 		final Iterable<PolicyVersion> policies,

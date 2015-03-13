@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,11 +67,9 @@ import com.eucalyptus.auth.AuthContext;
 import com.eucalyptus.auth.AuthContextSupplier;
 import static com.google.common.collect.Maps.newHashMap;
 
-import com.eucalyptus.auth.principal.Group;
-import com.eucalyptus.auth.principal.Policy;
-import com.eucalyptus.auth.principal.PolicyScope;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.PolicyVersion;
-import com.eucalyptus.auth.principal.PolicyVersions;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.ws.server.MessageStatistics;
 import edu.ucsb.eucalyptus.msgs.EvaluatedIamConditionKey;
 import java.lang.ref.WeakReference;
@@ -94,18 +92,14 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Contract;
 import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.Role;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.CollectionUtils;
 import com.google.common.base.Optional;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseCallerContext;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -119,7 +113,7 @@ public class Context {
   private final Channel                channel;
   private final boolean                channelManaged;
   private WeakReference<MuleEvent>     muleEvent = new WeakReference<>( null );
-  private User                         user      = null;
+  private UserPrincipal                user      = null;
   private Subject                      subject   = null;
   private Map<Contract.Type, Contract> contracts = null;
   private Boolean isSystemAdmin;
@@ -134,7 +128,7 @@ public class Context {
 
   protected Context( String dest, final BaseMessage msg ) {
     this.correlationId = msg.getCorrelationId( );
-    this.creationTime = System.nanoTime( );
+    this.creationTime = System.nanoTime();
     this.httpRequest = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.GET, dest ) {
       {
         this.setCorrelationId( msg.getCorrelationId( ) );
@@ -151,13 +145,13 @@ public class Context {
     UUID uuid = UUID.randomUUID( );
     MessageStatistics.startRequest(channel);
     this.correlationId = uuid.toString( );
-    this.creationTime = System.nanoTime( );
+    this.creationTime = System.nanoTime();
     this.httpRequest = httpRequest;
     this.channel = channel;
     this.channelManaged = false;
     EventRecord.caller( Context.class, EventType.CONTEXT_CREATE, this.correlationId, this.channel.toString( ) ).debug( );
   }
-  
+
   public Channel getChannel( ) {
     return check( this.channel );
   }
@@ -192,7 +186,7 @@ public class Context {
     return check( this.request );
   }
   
-  public void setUser( User user ) {
+  public void setUser( UserPrincipal user ) {
     if ( user != null ) {
       EventRecord.caller( Context.class, EventType.CONTEXT_USER, this.correlationId, user.getUserId( ) ).debug( );
       this.user = user;
@@ -253,25 +247,7 @@ public class Context {
     return Permissions.evaluateHostKeys( );
   }
 
-  public List<PolicyVersion> loadPolicies( ) throws AuthException {
-    return loadPolicies( getUser( ) );
-  }
-
-  public static List<PolicyVersion> loadPolicies( final User user ) throws AuthException {
-    final List<PolicyVersion> policies = Lists.newArrayList( );
-    if ( user.isAccountAdmin( ) ) {
-      policies.add( PolicyVersions.getAdministratorPolicy( ) );
-    } else {
-      Iterables.addAll( policies, Iterables.transform( user.getPolicies( ), PolicyVersions.policyVersion( PolicyScope.User, Accounts.getUserArn( user ) ) ) );
-      for ( final Group group : user.getGroups( ) ) {
-        if ( !group.isUserGroup( ) ) Iterables.addAll( policies, Iterables.transform( group.getPolicies( ), PolicyVersions.policyVersion( PolicyScope.Group, Accounts.getGroupArn( group ) ) ) );
-      }
-    }
-    Iterables.addAll( policies, Iterables.transform( user.getAccount().lookupAdmin().getPolicies( ), PolicyVersions.policyVersion( PolicyScope.Account, user.getAccountNumber( ) ) ) ); //TODO:STEVE: ARN for account?
-    return policies;
-  }
-
-  public User getUser( ) {
+  public UserPrincipal getUser( ) {
     return check( this.user );
   }
 
@@ -279,7 +255,7 @@ public class Context {
     return new AuthContextSupplier( ){
       @Override
       public AuthContext get( ) throws AuthException {
-        return Permissions.createAuthContext( getUser( ), loadPolicies(), Collections.<String,String>emptyMap() );
+        return Permissions.createAuthContext( getUser( ), Collections.<String,String>emptyMap() );
       }
     };
   }
@@ -349,13 +325,16 @@ public class Context {
     this.contracts = unmodifiableMap(newHashMap(contracts));
   }
 
-  public Account getAccount( ) {
-    try {
-      return this.user.getAccount( );
-    } catch ( AuthException ex ) {
-      LOG.error( ex, ex );
-      throw new IllegalStateException( "Context populated with ill-defined user:  no corresponding account found.", ex );
-    }
+  public String getAccountNumber( ) {
+    return getUser( ).getAccountNumber( );
+  }
+
+  public String getAccountAlias( ) {
+    return getUser( ).getAccountNumber( );
+  }
+
+  public AccountFullName getAccount( ) {
+    return AccountFullName.getInstance( getAccountNumber() );
   }
   
   static Context maybeImpersonating( Context ctx ) {
@@ -368,12 +347,13 @@ public class Context {
            !Principals.isFakeIdentify(userId) &&
            ctx.hasAdministrativePrivileges( ) ) {
         try {
-          final User user;
-          if ( Accounts.isRoleIdentifier( userId ) ) {
-            Role role = Accounts.lookupRoleById( userId );
-            user = Accounts.roleAsUser( role );
+          final UserPrincipal user;
+          if ( Accounts.isAccountNumber( userId ) ) {
+            user = Accounts.lookupPrincipalByAccountNumber( userId );
+          } else if ( Accounts.isRoleIdentifier( userId ) ) {
+            user = Accounts.lookupPrincipalByRoleId( userId, null );
           } else {
-            user = Accounts.lookupUserById( userId );
+            user = Accounts.lookupPrincipalByUserId( userId, null );
           }
           return createImpersona( ctx, user );
         } catch ( AuthException ex ) {
@@ -384,27 +364,31 @@ public class Context {
     return ctx;
   }
 
-  private static Context createImpersona( final Context ctx, final User user ) {
+  private static Context createImpersona( final Context ctx, final UserPrincipal user ) {
     return new DelegatingContextSupport( ctx ) {
       private Boolean isSystemAdmin;
       private Boolean isSystemUser;
       private Subject subject = new Subject( );
       private Map<String,String> evaluatedKeys;
-      private List<PolicyVersion> policies;
 
       @Override
-      public User getUser( ) {
+      public UserPrincipal getUser( ) {
         return user;
       }
       
       @Override
-      public Account getAccount( ) {
-        try {
-          return user.getAccount( );
-        } catch ( AuthException ex ) {
-          LOG.error( ex, ex );
-          throw new IllegalStateException( "Context populated with ill-defined user:  no corresponding account found.", ex );
-        }
+      public AccountFullName getAccount( ) {
+        return AccountFullName.getInstance( getAccountNumber( ) );
+      }
+
+      @Override
+      public String getAccountAlias() {
+        return getUser( ).getAccountAlias( );
+      }
+
+      @Override
+      public String getAccountNumber() {
+        return getUser( ).getAccountNumber( );
       }
 
       @Override
@@ -466,19 +450,11 @@ public class Context {
       }
 
       @Override
-      public List<PolicyVersion> loadPolicies( ) throws AuthException {
-        if ( policies == null ) {
-          policies = loadPolicies( getUser( ) );
-        }
-        return policies;
-      }
-
-      @Override
       public AuthContextSupplier getAuthContext( ) {
         return new AuthContextSupplier( ){
           @Override
           public AuthContext get( ) throws AuthException {
-            return Permissions.createAuthContext( getUser( ), loadPolicies( ), evaluateKeys( ) );
+            return Permissions.createAuthContext( getUser( ), evaluateKeys( ) );
           }
         };
       }

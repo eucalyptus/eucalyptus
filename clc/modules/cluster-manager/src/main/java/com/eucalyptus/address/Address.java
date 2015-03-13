@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -924,7 +924,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
             AddressEvent.with(
                 getDisplayName(),
                 ownerFullName,
-                Accounts.lookupAccountById(ownerFullName.getAccountNumber()).getName(),
+                Accounts.lookupAccountAliasById( ownerFullName.getAccountNumber( ) ),
                 actionInfoSupplier.get() ) );
       } catch ( final Throwable e ) {
         LOG.error( e, e );

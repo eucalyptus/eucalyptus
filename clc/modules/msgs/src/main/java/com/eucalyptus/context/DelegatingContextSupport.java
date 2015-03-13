@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,17 +20,15 @@
 package com.eucalyptus.context;
 
 import java.net.InetAddress;
-import java.util.List;
 import java.util.Map;
 import javax.security.auth.Subject;
 import org.jboss.netty.channel.Channel;
 import com.eucalyptus.auth.AuthContextSupplier;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Contract;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.PolicyVersion;
-import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.Wrapper;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -46,12 +44,22 @@ abstract class DelegatingContextSupport extends Context implements Wrapper<Conte
   }
 
   @Override
-  public User getUser( ) {
+  public UserPrincipal getUser( ) {
     return this.delegate.getUser();
   }
 
   @Override
-  public Account getAccount( ) {
+  public String getAccountAlias( ) {
+    return delegate.getAccountAlias( );
+  }
+
+  @Override
+  public String getAccountNumber( ) {
+    return delegate.getAccountNumber( );
+  }
+
+  @Override
+  public AccountFullName getAccount( ) {
     return this.delegate.getAccount();
   }
 
@@ -67,22 +75,22 @@ abstract class DelegatingContextSupport extends Context implements Wrapper<Conte
 
   @Override
   public boolean isAdministrator() {
-    return this.delegate.isAdministrator( );
+    return this.delegate.isAdministrator();
   }
 
   @Override
   public Channel getChannel( ) {
-    return this.delegate.getChannel( );
+    return this.delegate.getChannel();
   }
 
   @Override
   public InetAddress getRemoteAddress( ) {
-    return this.delegate.getRemoteAddress( );
+    return this.delegate.getRemoteAddress();
   }
 
   @Override
   public MappingHttpRequest getHttpRequest( ) {
-    return this.delegate.getHttpRequest( );
+    return this.delegate.getHttpRequest();
   }
 
   @Override
@@ -97,7 +105,7 @@ abstract class DelegatingContextSupport extends Context implements Wrapper<Conte
 
   @Override
   public Long getCreationTime( ) {
-    return this.delegate.getCreationTime( );
+    return this.delegate.getCreationTime();
   }
 
   @Override
@@ -106,8 +114,8 @@ abstract class DelegatingContextSupport extends Context implements Wrapper<Conte
   }
 
   @Override
-  public void setUser( User user ) {
-    this.delegate.setUser( user );
+  public void setUser( final UserPrincipal user ) {
+    delegate.setUser( user );
   }
 
   @Override
@@ -158,11 +166,6 @@ abstract class DelegatingContextSupport extends Context implements Wrapper<Conte
   public Map<String, String> evaluateKeys( ) throws AuthException {
     return this.delegate.evaluateKeys(); 
  }
-
-  @Override
-  public List<PolicyVersion> loadPolicies( ) throws AuthException {
-    return this.delegate.loadPolicies();
-  }
 
   @Override
   public AuthContextSupplier getAuthContext( ) {

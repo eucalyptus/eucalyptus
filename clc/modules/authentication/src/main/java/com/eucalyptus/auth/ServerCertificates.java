@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,9 +32,7 @@ import javax.crypto.spec.IvParameterSpec;
 import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.entities.ServerCertificateEntity;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.crypto.Ciphers;
@@ -83,11 +81,9 @@ public class ServerCertificates {
           throw new EucalyptusCloudException("malformed arn");
         
         // get admin name of the account
-        String token = arn.substring("arn:aws:iam::".length());
-        String acctId = token.substring(0, token.indexOf(":server-certificate"));
-        final Account acct = Accounts.lookupAccountById(acctId);
-        final User adminUser = acct.lookupAdmin();
-        
+        String token = arn.substring( "arn:aws:iam::".length() );
+        String acctId = token.substring( 0, token.indexOf( ":server-certificate" ) );
+
         // get certname of the arn
         final String prefix = 
             String.format("arn:aws:iam::%s:server-certificate", acctId);
@@ -99,7 +95,7 @@ public class ServerCertificates {
         ServerCertificateEntity found = null;
         try ( final TransactionResource db = Entities.transactionFor( ServerCertificateEntity.class ) ) {
           found = 
-              Entities.uniqueResult(ServerCertificateEntity.named(UserFullName.getInstance(adminUser), certName));
+              Entities.uniqueResult(ServerCertificateEntity.named( AccountFullName.getInstance( acctId ), certName));
           db.rollback();
         } catch(final NoSuchElementException ex){
           ;
@@ -120,7 +116,7 @@ public class ServerCertificates {
     public ServerCertificate apply(ServerCertificateEntity entity) {
       try {
         final ServerCertificate cert = new ServerCertificate(
-            Accounts.lookupAccountById(entity.getOwnerAccountNumber()),
+            entity.getOwnerAccountNumber(),
             entity.getCertName(), entity.getCreationTimestamp());
         cert.setCertificatePath(entity.getCertPath());
         cert.setCertificateBody(entity.getCertBody());

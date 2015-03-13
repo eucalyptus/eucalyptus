@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,9 +67,9 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.entities.AccessKeyEntity;
 import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.entities.Entities;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import java.util.concurrent.ExecutionException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
 
@@ -129,13 +129,16 @@ public class DatabaseAccessKeyProxy implements AccessKey {
   }
   
   @Override
-  public User getUser( ) throws AuthException {
-    final List<User> results = Lists.newArrayList( );
+  public UserPrincipal getPrincipal( ) throws AuthException {
+    final List<UserPrincipal> results = Lists.newArrayList( );
     try {
       DatabaseAuthUtils.invokeUnique( AccessKeyEntity.class, "accessKey", this.delegate.getAccessKey( ), new Tx<AccessKeyEntity>( ) {
         public void fire( AccessKeyEntity t ) {
-          Entities.initialize( t.getUser( ) );
-          results.add( new DatabaseUserProxy( t.getUser( ) ) );
+          try {
+            results.add( Accounts.userAsPrincipal( new DatabaseUserProxy( t.getUser( ) ) ) );
+          } catch ( AuthException e ) {
+            throw Exceptions.toUndeclared( e );
+          }
         }
       } );
     } catch ( ExecutionException e ) {

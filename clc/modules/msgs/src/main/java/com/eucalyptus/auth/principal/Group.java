@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -81,7 +81,7 @@ public interface Group extends AccountScopedPrincipal, Serializable {
   Boolean isUserGroup( );
   void setUserGroup( Boolean userGroup ) throws AuthException;
   
-  List<User> getUsers( ) throws AuthException;
+  List<EuareUser> getUsers( ) throws AuthException;
   boolean hasUser( String userName ) throws AuthException;
   void addUserByName( String userName ) throws AuthException;
   void removeUserByName( String userName ) throws AuthException;

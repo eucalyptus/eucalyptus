@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -85,6 +85,7 @@ import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccessKey;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -959,15 +960,15 @@ public class Images {
    * @return
    * @throws EucalyptusCloudException
    */
-  public static ImageInfo updateWithDeviceMapping( String imageId, UserFullName userFullName, final String rootDeviceName,
+  public static ImageInfo updateWithDeviceMapping( String imageId, AccountFullName accountFullName, final String rootDeviceName,
 		  final List<BlockDeviceMappingItemType> blockDeviceMappings ) throws EucalyptusCloudException {
 	  // Block device mappings have been verified before control gets here. 
 	  // If anything has changed with regard to the snapshot state, it will be caught while data structures for the image.
 	  final BlockDeviceMappingItemType rootBlockDevice = Iterables.find( blockDeviceMappings, findEbsRoot( rootDeviceName ) );
 	  final String snapshotId = ResourceIdentifiers.tryNormalize( ).apply( rootBlockDevice.getEbs( ).getSnapshotId( ) );
 	  try {
-		  Snapshot snap = Transactions.find( Snapshot.named( userFullName, snapshotId ) );
-		  if ( !userFullName.getUserId( ).equals( snap.getOwnerUserId( ) ) ) {
+		  Snapshot snap = Transactions.find( Snapshot.named( accountFullName, snapshotId ) );
+		  if ( !accountFullName.getAccountNumber( ).equals( snap.getOwnerAccountNumber( ) ) ) {
 			  throw new EucalyptusCloudException( "Failed to create image from specified block device mapping: " + rootBlockDevice
 					  + " because of: you must be the owner of the source snapshot." );
 		  }
@@ -990,7 +991,7 @@ public class Images {
 			  ret.setState( ImageMetadata.State.available );
 			  Entities.persist(ret);
 			  tx.commit( );
-			  LOG.info( "Registering image pk=" + ret.getDisplayName( ) + " ownerId=" + userFullName );
+			  LOG.info( "Registering image pk=" + ret.getDisplayName( ) + " owner=" + accountFullName );
 		  } catch ( Exception e ) {
 			  tx.rollback( );
 			  throw new EucalyptusCloudException( "Failed to register image using snapshot: " + snapshotId + " because of: " + e.getMessage( ), e );

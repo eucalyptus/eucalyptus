@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -116,7 +116,7 @@ public interface Account extends BasePrincipal, RestrictedType, Serializable {
 
   public void setName( String name ) throws AuthException;
   
-  public List<User> getUsers( ) throws AuthException;
+  public List<EuareUser> getUsers( ) throws AuthException;
   
   public List<Group> getGroups( ) throws AuthException;
 
@@ -124,7 +124,7 @@ public interface Account extends BasePrincipal, RestrictedType, Serializable {
 
   public List<InstanceProfile> getInstanceProfiles() throws AuthException;
 
-  public User addUser( String userName, String path, boolean enabled, Map<String, String> info ) throws AuthException;
+  public EuareUser addUser( String userName, String path, boolean enabled, Map<String, String> info ) throws AuthException;
   public void deleteUser( String userName, boolean forceDeleteAdmin, boolean recursive ) throws AuthException;
 
   public Role addRole( String roleName, String path, String assumeRolePolicy ) throws AuthException, PolicyParseException;
@@ -141,13 +141,13 @@ public interface Account extends BasePrincipal, RestrictedType, Serializable {
   
   public Group lookupGroupByName( String groupName ) throws AuthException;
   
-  public User lookupUserByName( String userName ) throws AuthException;
+  public EuareUser lookupUserByName( String userName ) throws AuthException;
 
   public Role lookupRoleByName( String roleName ) throws AuthException;
 
   public InstanceProfile lookupInstanceProfileByName( String instanceProfileName ) throws AuthException;
 
-  public User lookupAdmin() throws AuthException;
+  public EuareUser lookupAdmin() throws AuthException;
   
   public ServerCertificate lookupServerCertificate(String certName) throws AuthException;
   public List<ServerCertificate> listServerCertificates(String pathPrefix) throws AuthException;

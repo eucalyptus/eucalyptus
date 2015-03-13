@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,6 +34,7 @@ import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.AbstractPersistent;
 
@@ -159,7 +160,7 @@ public class RoleEntity extends AbstractPersistent implements Serializable {
   @PreUpdate
   public void generateOnCommit() {
     if( this.roleId == null ) {
-      this.roleId = Crypto.generateAlphanumericId( 21, "ARO" );
+      this.roleId = Identifiers.generateIdentifier( "ARO" );
     }
     if ( this.secret == null ) {
       this.secret = Crypto.generateSecretKey();

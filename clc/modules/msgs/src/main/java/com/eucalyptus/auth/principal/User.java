@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,19 +63,15 @@
 package com.eucalyptus.auth.principal;
 
 import java.io.Serializable;
-import java.security.cert.X509Certificate;
-import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.PolicyParseException;
 
 /**
  * The interface for a user in Eucalyptus.
  * 
  * @author decker
  */
-public interface User extends AccountScopedPrincipal, Serializable {
+public interface User extends BasePrincipal, Serializable {
   
   String USER_GROUP_PREFIX = "_";  
   String ACCOUNT_ADMIN = "admin";
@@ -92,63 +88,25 @@ public interface User extends AccountScopedPrincipal, Serializable {
     APPROVED,
     CONFIRMED,
   }
-  
+
   String getUserId( );
-  void setName( String name ) throws AuthException;
-  
+
   String getPath( );
-  void setPath( String path ) throws AuthException;
 
-  Date getCreateDate( );
+  boolean isEnabled( );
 
-  Boolean isEnabled( );
-  void setEnabled( Boolean enabled ) throws AuthException;
-  
+  String getAccountNumber( ) throws AuthException;
+
   String getToken( );
-  void setToken( String token ) throws AuthException;
-  String resetToken( ) throws AuthException;
-  
-  String getPassword( );
-  void setPassword( String password ) throws AuthException;
 
-  Long getPasswordExpires( );
-  void setPasswordExpires( Long time ) throws AuthException;
-  
-  String getInfo( String key ) throws AuthException;
-  Map<String, String> getInfo( ) throws AuthException;
-  void setInfo( String key, String value ) throws AuthException;  
-  void setInfo( Map<String, String> newInfo ) throws AuthException;
-  void removeInfo( String key ) throws AuthException;
-  
   List<AccessKey> getKeys( ) throws AuthException;
-  AccessKey getKey( String keyId ) throws AuthException;
-  void removeKey( String keyId ) throws AuthException;
-  AccessKey createKey( ) throws AuthException;
-  
+
   List<Certificate> getCertificates( ) throws AuthException;
-  Certificate getCertificate( String certificateId ) throws AuthException;
-  Certificate addCertificate( X509Certificate certificate ) throws AuthException;
-  void removeCertificate( String certificateId ) throws AuthException;
-  
-  List<Group> getGroups( ) throws AuthException;
 
-  List<Policy> getPolicies( ) throws AuthException;
-
-  /**
-   * Add a policy, fail if exists.
-   */
-  Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException;
-
-  /**
-   * Add or update the named policy.
-   */
-  Policy putPolicy( String name, String policy ) throws AuthException, PolicyParseException;
-  void removePolicy( String name ) throws AuthException;
+  boolean isAccountAdmin( );
 
   boolean isSystemAdmin( );
   
   boolean isSystemUser( );
-  
-  boolean isAccountAdmin( );
 
 }

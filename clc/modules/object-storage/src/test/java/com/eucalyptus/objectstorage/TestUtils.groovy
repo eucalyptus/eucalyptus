@@ -23,6 +23,7 @@ package com.eucalyptus.objectstorage
 import com.eucalyptus.auth.Accounts
 import com.eucalyptus.auth.principal.Account
 import com.eucalyptus.auth.principal.User
+import com.eucalyptus.auth.principal.UserPrincipal
 import com.eucalyptus.objectstorage.entities.Bucket
 import com.eucalyptus.objectstorage.entities.ObjectEntity
 import com.eucalyptus.objectstorage.metadata.BucketMetadataManager
@@ -88,7 +89,7 @@ public class TestUtils {
 
   public static List<ObjectEntity> createNObjects(
       final ObjectMetadataManager objMgr, int count,
-      final Bucket bucket, String keyPrefix, long contentLength, final User usr) {
+      final Bucket bucket, String keyPrefix, long contentLength, final UserPrincipal usr) {
     def objectEntities = []
     for (int i = 0; i < count; i++) {
       ObjectEntity entity = ObjectEntity.newInitializedForCreate(bucket, keyPrefix + i, contentLength, usr)

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,9 +41,9 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -52,13 +52,11 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.objectstorage.auth.OsgAuthorizationHandler;
 import com.eucalyptus.objectstorage.bittorrent.Tracker;
 import com.eucalyptus.objectstorage.entities.BucketTags;
-import com.eucalyptus.objectstorage.exceptions.s3.InvalidTagErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.NoSuchTagSetException;
 import com.eucalyptus.objectstorage.exceptions.s3.UnresolvableGrantByEmailAddressException;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingResponseType;
@@ -73,7 +71,6 @@ import com.eucalyptus.objectstorage.msgs.SetBucketTaggingType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.storage.config.ConfigurationCache;
 import com.eucalyptus.objectstorage.entities.Bucket;
-import com.eucalyptus.objectstorage.entities.BucketTags;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
 import com.eucalyptus.objectstorage.entities.ObjectStorageGlobalConfiguration;
 import com.eucalyptus.objectstorage.entities.PartEntity;
@@ -377,7 +374,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   protected PutObjectResponseType doPutOperation(final PutObjectType request) throws S3Exception {
     try {
-      User requestUser = getRequestUser(request);
+      UserPrincipal requestUser = getRequestUser(request);
       Bucket bucket;
       try {
         bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(request.getBucket());
@@ -455,16 +452,16 @@ public class ObjectStorageGateway implements ObjectStorageService {
    * @return
    * @throws AccountProblemException
    */
-  private User getRequestUser(ObjectStorageRequestType request) throws AccountProblemException {
+  private UserPrincipal getRequestUser(ObjectStorageRequestType request) throws AccountProblemException {
     try {
       String requestUserId = request.getEffectiveUserId();
       if (Strings.isNullOrEmpty(requestUserId)) {
         return Contexts.lookup().getUser();
       } else {
         if (Principals.systemFullName().getUserId().equals(requestUserId)) {
-          return Accounts.lookupSystemAdmin();
+          return Accounts.lookupSystemAdminAsPrincipal();
         } else {
-          return Accounts.lookupUserById(requestUserId);
+          return Accounts.lookupPrincipalByUserId(requestUserId, null);
         }
       }
     } catch (AuthException e) {
@@ -543,7 +540,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
    * @return
    * @throws Exception
    */
-  protected AccessControlPolicy getFullAcp(@Nonnull AccessControlList acl, @Nonnull User requestUser, @Nullable String extantBucketOwnerCanonicalId)
+  protected AccessControlPolicy getFullAcp(@Nonnull AccessControlList acl, @Nonnull UserPrincipal requestUser, @Nullable String extantBucketOwnerCanonicalId)
       throws Exception {
     // Generate a full ACP based on the request. If empty or null acl, generates a 'private' acl with fullcontrol for owner
     AccessControlPolicy tmpPolicy = new AccessControlPolicy();
@@ -564,9 +561,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
   public CreateBucketResponseType createBucket(final CreateBucketType request) throws S3Exception {
     logRequest(request);
     try {
-      User requestUser = getRequestUser(request);
-      Account requestAccount = requestUser.getAccount();
-      long bucketCount;
+      final UserPrincipal requestUser = getRequestUser(request);
+      final String canonicalId = requestUser.getCanonicalId( );
 
       // Check the validity of the bucket name.
       if (!checkBucketNameValidity(request.getBucket())) {
@@ -581,7 +577,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
          * This is a secondary check, independent to the iam quota check, based on the configured max bucket count property.
          */
         if (!Contexts.lookup().hasAdministrativePrivileges()
-            && BucketMetadataManagers.getInstance().countBucketsByAccount(requestAccount.getCanonicalId()) >= ConfigurationCache.getConfiguration(
+            && BucketMetadataManagers.getInstance().countBucketsByAccount(canonicalId) >= ConfigurationCache.getConfiguration(
                 ObjectStorageGlobalConfiguration.class).getMax_buckets_per_account()) {
           throw new TooManyBucketsException(request.getBucket());
         }
@@ -599,7 +595,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
           return reply;
         } catch (BucketAlreadyExistsException e) {
           Bucket extantBucket = BucketMetadataManagers.getInstance().lookupExtantBucket(request.getBucket());
-          if (extantBucket.isOwnedBy(requestAccount.getCanonicalId())) {
+          if (extantBucket.isOwnedBy(canonicalId)) {
             /*
              * //Update the bucket metadata if the bucket already exists...ACL specifically. only for owner or any user with write_acp?
              * if(!extantBucket.getAccessControlPolicy().equals(acPolicy)) { //Try to update the ACL SetBucketAccessControlPolicyType aclRequest = new
@@ -691,6 +687,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
   public ListAllMyBucketsResponseType listAllMyBuckets(ListAllMyBucketsType request) throws S3Exception {
     logRequest(request);
 
+    CanonicalUser canonicalUser = AclUtils.buildCanonicalUser( Contexts.lookup( ).getUser( ) );
+
     // Create a fake bucket record just for IAM verification. The IAM policy is only valid for arn:s3:* so empty should match
     /*
      * ListAllMyBuckets uses a weird authentication check for IAM because it is technically a bucket operation(there are no service operations) , but
@@ -701,7 +699,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
      */
     Bucket fakeBucket = new Bucket();
     fakeBucket.setBucketName("*"); // '*' should match this, and only this since it isn't a valid bucket name
-    fakeBucket.setOwnerCanonicalId(Contexts.lookup().getAccount().getCanonicalId()); // make requestor the owner of fake bucket
+    fakeBucket.setOwnerCanonicalId(canonicalUser.getID()); // make requestor the owner of fake bucket
     request.setBucket(fakeBucket.getBucketName());
 
     if (OsgAuthorizationHandler.getInstance().operationAllowed(request, fakeBucket, null, 0)) {
@@ -709,21 +707,10 @@ public class ObjectStorageGateway implements ObjectStorageService {
       /*
        * This is a strictly metadata operation, no backend is hit. The sync of metadata in OSG to backend is done elsewhere asynchronously.
        */
-      Account accnt;
       try {
-        accnt = Contexts.lookup(request.getCorrelationId()).getAccount();
-        if (accnt == null) {
-          throw new NoSuchContextException();
-        }
-      } catch (NoSuchContextException e) {
-        LOG.error("Could not retrieve canonicalId for user with userId: " + request.getUserId() + " effectiveUserId: " + request.getEffectiveUserId());
-        throw new AccountProblemException(request.getUserId());
-      }
-
-      try {
-        List<Bucket> listing = BucketMetadataManagers.getInstance().lookupBucketsByOwner(accnt.getCanonicalId());
+        List<Bucket> listing = BucketMetadataManagers.getInstance().lookupBucketsByOwner(canonicalUser.getID());
         response.setBucketList(generateBucketListing(listing));
-        response.setOwner(AclUtils.buildCanonicalUser(accnt));
+        response.setOwner(canonicalUser);
         return response;
       } catch (Exception e) {
         throw new InternalErrorException("Error getting bucket metadata", e);
@@ -1343,7 +1330,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     String sourceBucket = request.getSourceBucket();
     String sourceKey = request.getSourceObject();
     String sourceVersionId = request.getSourceVersionId();
-    User requestUser = Contexts.lookup().getUser();
+    UserPrincipal requestUser = Contexts.lookup().getUser();
 
     // Check for source bucket
     final Bucket srcBucket = ensureBucketExists(sourceBucket);
@@ -1370,7 +1357,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       // Initialize entity for destination object
       ObjectEntity destObject;
       try {
-        destObject = ObjectEntity.newInitializedForCreate(destBucket, destinationKey, srcObject.getSize().longValue(), requestUser);
+        destObject = ObjectEntity.newInitializedForCreate(destBucket, destinationKey, srcObject.getSize(), requestUser);
       } catch (Exception e) {
         LOG.error("Error initializing entity for persisting object metadata for " + destinationBucket + "/" + destinationKey);
         throw new InternalErrorException(destinationBucket + "/" + destinationKey);
@@ -1378,7 +1365,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
       // Check authorization for PUT operation on destination bucket and object
       if (OsgAuthorizationHandler.getInstance().operationAllowed(request.getPutObjectRequest(), destBucket, destObject,
-          srcObject.getSize().longValue())) {
+          srcObject.getSize())) {
 
         String metadataDirective = request.getMetadataDirective();
         String copyIfMatch = request.getCopySourceIfMatch();
@@ -1901,7 +1888,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       throw new InternalErrorException();
     }
 
-    User requestUser = getRequestUser(request);
+    UserPrincipal requestUser = getRequestUser(request);
     ObjectEntity objectEntity;
     try {
       // Only create the entity for auth checks below, don't persist it
@@ -1981,7 +1968,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       throw new MissingContentLengthException(request.getBucket() + "/" + request.getKey());
     }
 
-    User requestUser = Contexts.lookup().getUser();
+    UserPrincipal requestUser = Contexts.lookup().getUser();
     PartEntity partEntity;
     try {
       partEntity = PartEntity.newInitializedForCreate(bucket, request.getKey(), request.getUploadId(), partNumber, objectSize, requestUser);
@@ -2350,7 +2337,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         if (error == null) {
           try {
             ObjectEntity responseEntity = null;
-            User currentUser = Contexts.lookup().getUser();
+            UserPrincipal currentUser = Contexts.lookup().getUser();
             if (object != null) {
               responseEntity = OsgObjectFactory.getFactory().logicallyDeleteObject(ospClient, object, currentUser);
               try {

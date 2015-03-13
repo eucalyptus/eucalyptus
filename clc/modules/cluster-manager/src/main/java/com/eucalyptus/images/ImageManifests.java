@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -81,6 +81,7 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
+import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 
@@ -346,7 +347,7 @@ public class ImageManifests {
       }
     }
     
-    public boolean checkManifestSignature( User user ) throws EucalyptusCloudException {
+    public boolean checkManifestSignature( EuareUser user ) throws EucalyptusCloudException {
       int idxImgOpen = this.manifest.indexOf("<image>");
       int idxImgClose = this.manifest.lastIndexOf("</image>");
       if (idxImgOpen < 0 || idxImgClose < 0 || idxImgOpen > idxImgClose)

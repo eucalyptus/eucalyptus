@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,10 +60,10 @@ public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> 
     try {
       final User user = lookupUser( event.getUserId() );
 
-      getReportingAccountCrud().createOrUpdateAccount(user.getAccount().getAccountNumber(),
-    		  user.getAccount().getName());
+      getReportingAccountCrud().createOrUpdateAccount(user.getAccountNumber(),
+           lookupAccountAliasById( user.getAccountNumber() ) );
       getReportingUserCrud().createOrUpdateUser(user.getUserId(), user
-          .getAccount().getAccountNumber(), user.getName());
+          .getAccountNumber(), user.getName());
 
       final ReportingVolumeSnapshotEventStore eventStore = getReportingVolumeSnapshotEventStore();
       switch (event.getActionInfo().getAction()) {
@@ -106,5 +106,9 @@ public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> 
 
   protected User lookupUser( final String userId ) throws AuthException {
     return Accounts.lookupUserById( userId );
+  }
+
+  protected String lookupAccountAliasById( final String accountNumber ) throws AuthException {
+    return Accounts.lookupAccountAliasById( accountNumber );
   }
 }

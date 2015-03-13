@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@
  * additional information or have any questions.
  ************************************************************************/
 package com.eucalyptus.loadbalancing.activities
+
 import com.eucalyptus.loadbalancing.common.msgs.Instance
 import com.eucalyptus.loadbalancing.common.msgs.Listener
 import com.eucalyptus.context.Context
@@ -29,6 +30,7 @@ import com.eucalyptus.event.GenericEvent
  */
 class LoadbalancingEvent extends GenericEvent<String> { 
 	String loadBalancer=""
+	String loadBalancerAccountNumber
 	Context context
 	
 	@Override

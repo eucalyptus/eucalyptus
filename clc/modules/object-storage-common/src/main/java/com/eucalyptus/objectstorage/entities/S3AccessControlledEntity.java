@@ -367,7 +367,7 @@ public abstract class S3AccessControlledEntity<STATE extends Enum<STATE>> extend
 
       // Check for valid owner
       try {
-        Accounts.lookupAccountByCanonicalId(ownerCanonicalId);
+        Accounts.lookupPrincipalByCanonicalId(ownerCanonicalId);
       } catch (Exception e) {
         // Invalid owner
         LOG.warn("Got invalid owner in AccessControlPolicy during mapping to DB: " + ownerCanonicalId);
