@@ -1250,8 +1250,10 @@ public class ActivityManager {
       updateActivity( new Callback<ScalingActivity>( ) {
         @Override
         public void fire( final ScalingActivity input ) {
-          input.setStatusCode( activityStatusCode );
-          input.setProgress( progress );
+          if ( !input.isComplete( ) ) {
+            input.setStatusCode( activityStatusCode );
+            input.setProgress( progress );
+          }
         }
       } );
     }
@@ -1266,11 +1268,15 @@ public class ActivityManager {
       updateActivity( new Callback<ScalingActivity>( ) {
         @Override
         public void fire( final ScalingActivity input ) {
-          input.setStatusCode( activityStatusCode );
-          if ( message != null ) input.setStatusMessage( Iterables.getFirst( Splitter.fixedLength(255).split(message), null ) );
-          if ( description != null ) input.setDescription( Iterables.getFirst( Splitter.fixedLength(255).split(description), null ) );
-          input.setProgress( 100 );
-          input.setEndTime( new Date() );
+          if ( !input.isComplete( ) ) {
+            input.setStatusCode( activityStatusCode );
+            if ( message != null )
+              input.setStatusMessage( Iterables.getFirst( Splitter.fixedLength( 255 ).split( message ), null ) );
+            if ( description != null )
+              input.setDescription( Iterables.getFirst( Splitter.fixedLength( 255 ).split( description ), null ) );
+            input.setProgress( 100 );
+            input.setEndTime( new Date() );
+          }
         }
       } );
     }
