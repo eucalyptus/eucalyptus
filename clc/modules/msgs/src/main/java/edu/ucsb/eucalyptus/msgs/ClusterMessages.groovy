@@ -278,25 +278,6 @@ public class UnassignAddressType extends CloudClusterMessage {
 public class UnassignAddressResponseType extends CloudClusterMessage {
 }
 
-public class ConfigureNetworkType extends CloudClusterMessage {
-  ArrayList<PacketFilterRule> rules = new ArrayList<PacketFilterRule>();
-
-  def ConfigureNetworkType(final EucalyptusMessage msg, final ArrayList<PacketFilterRule> rules) {
-    super(msg);
-    this.rules = rules;
-  }
-
-  def ConfigureNetworkType(final ArrayList<PacketFilterRule> rules) {
-    this.rules = rules;
-  }
-
-  def ConfigureNetworkType(){
-  }
-}
-
-public class ConfigureNetworkResponseType extends CloudClusterMessage {
-}
-
 class BroadcastNetworkInfoType extends CloudClusterMessage {
   String networkInfo
 }
@@ -519,101 +500,6 @@ public class NetworkParameters extends EucalyptusData {
   String publicMacAddress;
   int macLimit;
   int vlan;
-}
-
-public class PacketFilterRule extends EucalyptusData {
-  public static String ACCEPT = "firewall-open";
-  public static String DENY = "firewall-close";
-
-  public static PacketFilterRule revoke( PacketFilterRule  existingRule ) {
-    PacketFilterRule pf = new PacketFilterRule();
-    pf.destUserName = existingRule.getDestUserName();
-    pf.destNetworkName = existingRule.getDestNetworkName();
-    pf.policy = DENY;
-    pf.portMin = existingRule.getPortMin();
-    pf.portMax = existingRule.getPortMax();
-    pf.protocol = existingRule.getProtocol();
-    pf.setPeers( existingRule.getPeers() );
-    pf.setSourceCidrs( existingRule.getSourceCidrs() );
-    pf.setSourceNetworkNames( existingRule.getSourceNetworkNames() );
-    pf.setSourceUserNames( existingRule.getSourceUserNames() );
-    return pf;
-  }
-  String destUserName;
-  String destNetworkName;
-  String policy = "firewall-open";
-  String protocol;
-  Integer portMin;
-  Integer portMax;
-  ArrayList<String> sourceCidrs = new ArrayList<String>();
-  ArrayList<VmNetworkPeer> peers = new ArrayList<VmNetworkPeer>();
-  ArrayList<String> sourceNetworkNames = new ArrayList<String>();
-  ArrayList<String> sourceUserNames = new ArrayList<String>();
-
-  def PacketFilterRule(String destUserName, String destNetworkName, String protocol, Integer portMin, Integer portMax) {
-    this.destUserName = destUserName;
-    this.destNetworkName = destNetworkName;
-    this.protocol = protocol;
-    this.portMin = portMin;
-    this.portMax = portMax;
-  }
-
-  def PacketFilterRule(){
-  }
-
-  @Override
-  public String toString() {
-    return "PacketFilterRule ${destUserName} ${destNetworkName} ${policy} ${protocol} ${portMin}-${portMax} " +
-        ((!sourceCidrs.isEmpty())?"":" source ${sourceCidrs}") +
-        ((!peers.isEmpty())?"":" peers ${peers}") +
-        ((!sourceNetworkNames.isEmpty())?"":" sourceNetworks ${sourceNetworkNames}") +
-        ((!sourceUserNames.isEmpty())?"":" sourceUsers ${sourceUserNames}");
-  }
-
-
-  public void addPeer( String queryKey, String groupName ) {
-    VmNetworkPeer peer = new VmNetworkPeer( queryKey, groupName );
-    this.peers.add(peer);
-    this.sourceNetworkNames.add( peer.getSourceNetworkName() );
-    this.sourceUserNames.add(peer.userName);
-  }
-}
-
-public class VmNetworkPeer  extends EucalyptusData {
-
-  String userName;
-  String sourceNetworkName;
-
-  def VmNetworkPeer() {
-  }
-
-  def VmNetworkPeer(final userName, final sourceNetworkName) {
-    this.userName = userName;
-    this.sourceNetworkName = sourceNetworkName;
-  }
-
-
-
-  boolean equals(final Object o) {
-    if ( this.is(o) ) return true;
-
-    if ( !o || getClass() != o.class ) return false;
-
-    VmNetworkPeer that = (VmNetworkPeer) o;
-
-    if ( sourceNetworkName ? !sourceNetworkName.equals(that.sourceNetworkName) : that.sourceNetworkName != null ) return false;
-    if ( userName ? !userName.equals(that.userName) : that.userName != null ) return false;
-
-    return true;
-  }
-
-  int hashCode() {
-    int result;
-
-    result = (userName ? userName.hashCode() : 0);
-    result = 31 * result + (sourceNetworkName ? sourceNetworkName.hashCode() : 0);
-    return result;
-  }
 }
 
 
