@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.network
 
+import com.eucalyptus.address.AddressingDispatcher
 import com.eucalyptus.bootstrap.Bootstrap
 import com.eucalyptus.bootstrap.Databases
 import com.eucalyptus.bootstrap.Hosts
@@ -78,6 +79,7 @@ import com.eucalyptus.util.Strings as EucaStrings
 import com.eucalyptus.util.TypeMapper
 import com.eucalyptus.util.TypeMappers
 import com.eucalyptus.util.async.AsyncRequests
+import com.eucalyptus.util.async.Request
 import com.eucalyptus.util.async.UnconditionalCallback
 import com.eucalyptus.vm.VmInstance
 import com.eucalyptus.vm.VmInstance.VmState
@@ -102,7 +104,9 @@ import com.google.common.collect.Multimap
 import com.google.common.collect.Sets
 import com.google.common.io.Files as GFiles
 import edu.ucsb.eucalyptus.cloud.NodeInfo
+import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.BroadcastNetworkInfoResponseType
+import edu.ucsb.eucalyptus.msgs.UnassignAddressType
 import groovy.transform.CompileStatic
 import groovy.transform.Immutable
 import groovy.transform.PackageScope
@@ -1033,6 +1037,20 @@ class NetworkInfoBroadcaster {
     }
   }
 
+  public static final class BroadcastAddressingInterceptor extends AddressingDispatcher.AddressingInterceptorSupport {
+    @Override
+    protected void onMessage(
+        final Request<? extends BaseMessage, ? extends BaseMessage> request,
+        final String partition
+    ) {
+      NetworkInfoBroadcaster.requestNetworkInfoBroadcast( )
+      if ( request.getRequest( ) instanceof UnassignAddressType ) {
+        UnassignAddressType unassign = (UnassignAddressType) request.getRequest( )
+        PublicAddresses.markDirty( unassign.getSource( ), partition )
+      }
+    }
+  }
+
   public static class NetworkInfoBroadcasterEventListener implements EucaEventListener<ClockTick> {
     private final int intervalTicks = 3
     private final int activeBroadcastTimeoutMins = 3
@@ -1053,7 +1071,7 @@ class NetworkInfoBroadcaster {
       }
 
       if ( counter++%intervalTicks == 0 &&
-          NetworkingDriver.enabled &&
+          Topology.isEnabledLocally( Eucalyptus ) &&
           Hosts.coordinator &&
           !Bootstrap.isShuttingDown() &&
           !Databases.isVolatile() ) {

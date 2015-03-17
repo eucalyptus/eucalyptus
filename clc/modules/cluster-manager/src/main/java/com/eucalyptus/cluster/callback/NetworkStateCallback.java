@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -71,8 +71,6 @@ import com.eucalyptus.compute.common.network.NetworkReportType;
 import com.eucalyptus.compute.common.network.NetworkResourceReportType;
 import com.eucalyptus.compute.common.network.Networking;
 import com.eucalyptus.compute.common.network.UpdateNetworkResourcesType;
-import com.eucalyptus.network.NetworkingDriver;
-import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.FailedRequestException;
@@ -105,7 +103,6 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
    */
   @Override
   public void fire( final DescribeNetworksResponseType reply ) {
-    NetworkingDriver.setReported( reply.getMode( ) );
     UpdateNetworkResourcesType update = new UpdateNetworkResourcesType( );
     update.setCluster( this.getSubject( ).getName( ) );
     update.setResources( TypeMappers.transform( reply, NetworkResourceReportType.class ) );

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,12 @@
  ************************************************************************/
 package com.eucalyptus.network;
 
+import static org.hamcrest.Matchers.notNullValue;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import com.eucalyptus.util.Parameters;
+import com.google.common.base.Strings;
+
 /**
  *
  */
@@ -34,8 +40,27 @@ public enum NetworkMode {
 
   ;
 
+  @Nonnull
   public String toString( ) {
     return name( ).replace( '_', '-' );
+  }
+
+  @Nonnull
+  public static NetworkMode fromString( @Nonnull final String value ) {
+    return NetworkMode.valueOf( value.replace( '-', '_' ) );
+  }
+
+  /**
+   * Network mode from the value if present, else the given default
+   */
+  @Nonnull
+  public static NetworkMode fromString( @Nullable final String value,
+                                        @Nonnull final NetworkMode defaultMode ) {
+    Parameters.checkParam( "defaultMode", defaultMode, notNullValue( ) );
+    //noinspection ConstantConditions
+    return !Strings.isNullOrEmpty( value ) ?
+        fromString( value ) :
+        defaultMode;
   }
 
 }

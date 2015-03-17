@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +20,6 @@
 package com.eucalyptus.network.config
 
 import com.eucalyptus.network.PrivateAddresses
-import com.google.common.base.Optional
 import com.google.common.collect.Lists
 import groovy.transform.CompileStatic
 import org.junit.Test
@@ -31,42 +30,6 @@ import static org.junit.Assert.*
  */
 @CompileStatic
 class NetworkConfigurationsTest {
-
-  @Test
-  void testBuildConfigurationFromProperties( ) {
-    Optional<NetworkConfiguration> networkConfigurationOptional =
-      NetworkConfigurations.buildNetworkConfigurationFromProperties( [], [
-        VNET_MODE: '"EDGE"',
-        VNET_DOMAINNAME: '"eucalyptus.internal"',
-        VNET_DNS: '"10.1.1.254"',
-        VNET_PUBLICIPS: '"10.111.103.26 10.111.103.27 10.111.103.28 10.111.103.29"',
-        VNET_PRIVATEIPS: '"10.111.103.30 10.111.103.36 10.111.103.38 10.111.103.42"',
-        VNET_SUBNET: '"10.111.0.0"',
-        VNET_NETMASK: '"255.255.0.0"',
-        VNET_ROUTER: '"10.111.0.1"'
-      ] )
-    assertTrue( "Expected network configuration", networkConfigurationOptional.isPresent( ) )
-
-    NetworkConfiguration result = networkConfigurationOptional.get( )
-    println result
-
-    NetworkConfiguration expected = new NetworkConfiguration(
-        mode: 'EDGE',
-        instanceDnsDomain: 'eucalyptus.internal',
-        instanceDnsServers: [ '10.1.1.254' ],
-        publicIps: [ '10.111.103.26', '10.111.103.27', '10.111.103.28', '10.111.103.29' ],
-        privateIps: [ '10.111.103.30', '10.111.103.36', '10.111.103.38', '10.111.103.42' ],
-        subnets: [
-            new EdgeSubnet(
-                subnet: "10.111.0.0",
-                netmask: "255.255.0.0",
-                gateway: "10.111.0.1"
-            )
-        ],
-    )
-
-    assertEquals( 'Result does not match template', expected, result )
-  }
 
   @Test
   void testConfiguredPrivateIPsForCluster(){
