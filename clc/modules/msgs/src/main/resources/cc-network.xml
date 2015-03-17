@@ -112,31 +112,6 @@
     </structure>
   </mapping>
 
-  <mapping name="StartNetwork" class="edu.ucsb.eucalyptus.msgs.StartNetworkType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="uuid" field="networkUuid" usage="required" />
-    <value name="vlan" field="vlan" usage="required" />
-    <value name="netName" field="netName" usage="required" />
-    <value name="groupId" field="groupId" usage="required" />
-    <value name="vmsubdomain" field="vmsubdomain" usage="optional" />
-    <value name="nameserver" field="nameserver" usage="optional" />
-    <collection field="clusterControllers" factory="org.jibx.runtime.Utility.arrayListFactory">
-      <value name="clusterControllers" type="java.lang.String" />
-    </collection>
-    <value name="accountId" field="accountId" usage="optional" />
-  </mapping>
-  <mapping name="StartNetworkResponse" class="edu.ucsb.eucalyptus.msgs.StartNetworkResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-  </mapping>
-  <mapping name="StopNetwork" class="edu.ucsb.eucalyptus.msgs.StopNetworkType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="vlan" field="vlan" usage="required" />
-    <value name="netName" field="netName" usage="required" />
-    <value name="accountId" field="accountId" usage="required" />
-  </mapping>
-  <mapping name="StopNetworkResponse" class="edu.ucsb.eucalyptus.msgs.StopNetworkResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-  </mapping>
   <mapping name="AssignAddress" class="edu.ucsb.eucalyptus.msgs.AssignAddressType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="uuid" field="uuid" usage="required" />

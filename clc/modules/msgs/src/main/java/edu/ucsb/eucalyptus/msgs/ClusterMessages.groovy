@@ -113,57 +113,6 @@ public class ClusterMigrateInstancesType extends CloudClusterMessage {
 
 public class ClusterMigrateInstancesResponseType extends CloudClusterMessage {}
 
-public class StartNetworkType extends CloudClusterMessage {
-  String networkUuid;
-  int vlan;
-  String netName;
-  String groupId;
-  String vmsubdomain;
-  String nameserver;
-  ArrayList<String> clusterControllers = new ArrayList<String>();
-  String accountId;
-
-
-  public StartNetworkType( ) {
-  }
-
-  public StartNetworkType(final String accountId, final String userId, final Integer vlan, final String netName, final String groupId, final String networkUuid) {
-    super( userId );
-    this.networkUuid = networkUuid;
-    this.vlan = vlan;
-    this.netName = netName;
-    this.groupId = groupId;
-  }
-}
-
-public class StartNetworkResponseType extends CloudClusterMessage {
-}
-
-public class StopNetworkType extends CloudClusterMessage {
-  Integer vlan;
-  String netName;
-  String accountId;
-
-  public StopNetworkType(){
-  }
-
-  public StopNetworkType(final String accountId, final String userId, final String netName, final Integer vlan) {
-    super( userId );
-    this.vlan = vlan;
-    this.netName = netName;
-    this.accountId = accountId;
-  }
-
-  public StopNetworkType(final StartNetworkType msg) {
-    super(msg);
-    this.vlan = msg.vlan;
-    this.netName = msg.netName;
-  }
-}
-
-public class StopNetworkResponseType extends CloudClusterMessage {
-}
-
 public class DescribeNetworksType extends CloudClusterMessage {
   String vmsubdomain;
   String nameserver;
