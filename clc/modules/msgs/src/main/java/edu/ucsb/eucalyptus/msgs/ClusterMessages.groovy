@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -207,48 +207,6 @@ public class NetworkInfoType extends EucalyptusData {
   }
 }
 
-public class ClusterAddressInfo extends EucalyptusData implements Comparable<ClusterAddressInfo> {
-  String uuid;
-  String address;
-  String instanceIp;
-
-  public ClusterAddressInfo( String address ) {
-    this.address = address;
-  }
-
-  public boolean hasMapping() {
-    return this.instanceIp != null &&  !"".equals( this.instanceIp ) && !"0.0.0.0".equals( this.instanceIp );
-  }
-
-  @Override
-  public int hashCode( ) {
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + ( ( this.address == null ) ? 0 : this.address.hashCode( ) );
-    return result;
-  }
-
-  public int compareTo( ClusterAddressInfo that ) {
-    return this.address.compareTo( that.address );
-  }
-
-  @Override
-  public boolean equals( Object obj ) {
-    if ( this.is( obj ) ) return true;
-    if ( obj == null ) return false;
-    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
-    ClusterAddressInfo other = ( ClusterAddressInfo ) obj;
-    if ( this.address == null ) {
-      if ( other.address != null ) return false;
-    } else if ( !this.address.equals( other.address ) ) return false;
-    return true;
-  }
-
-  public String toString( ) {
-    return String.format( "ClusterAddressInfo %s %s", this.address, this.instanceIp );
-  }
-}
-
 public class AssignAddressType extends CloudClusterMessage {
   String uuid;
   String instanceId;
@@ -320,18 +278,7 @@ public class UnassignAddressType extends CloudClusterMessage {
 public class UnassignAddressResponseType extends CloudClusterMessage {
 }
 
-public class DescribePublicAddressesType extends CloudClusterMessage {
-}
-
-public class DescribePublicAddressesResponseType extends CloudClusterMessage {
-  ArrayList<ClusterAddressInfo> addresses = new ArrayList<ClusterAddressInfo>();
-  public String toString() {
-    return "${this.getClass().getSimpleName()} " + addresses.each{ it -> "${it}" }.join("\n${this.getClass().getSimpleName()} ");
-  }
-}
-
 public class ConfigureNetworkType extends CloudClusterMessage {
-
   ArrayList<PacketFilterRule> rules = new ArrayList<PacketFilterRule>();
 
   def ConfigureNetworkType(final EucalyptusMessage msg, final ArrayList<PacketFilterRule> rules) {

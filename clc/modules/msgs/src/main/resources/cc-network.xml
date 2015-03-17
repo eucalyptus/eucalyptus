@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2009-2012 Eucalyptus Systems, Inc.
+  Copyright 2009-2015 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -80,11 +80,6 @@
         <value name="activeAddrs" type="java.lang.String" />
       </collection>
     </structure>
-  </mapping>
-  <mapping class="edu.ucsb.eucalyptus.msgs.ClusterAddressInfo" abstract="true">
-    <value name="uuid" field="uuid" />
-    <value name="sourceAddress" field="address" usage="required" />
-    <value name="destAddress" field="instanceIp" />
   </mapping>
 
   <mapping class="edu.ucsb.eucalyptus.msgs.PacketFilterRule" abstract="true">
@@ -181,17 +176,6 @@
   </mapping>
   <mapping name="UnassignAddressResponse" class="edu.ucsb.eucalyptus.msgs.UnassignAddressResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-  </mapping>
-  <mapping name="DescribePublicAddresses" class="edu.ucsb.eucalyptus.msgs.DescribePublicAddressesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-  </mapping>
-
-  <mapping name="DescribePublicAddressesResponse" class="edu.ucsb.eucalyptus.msgs.DescribePublicAddressesResponseType"
-    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <collection field="addresses" factory="org.jibx.runtime.Utility.arrayListFactory">
-      <structure name="addresses" type="edu.ucsb.eucalyptus.msgs.ClusterAddressInfo" />
-    </collection>
   </mapping>
 
   <mapping name="ConfigureNetwork" class="edu.ucsb.eucalyptus.msgs.ConfigureNetworkType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
