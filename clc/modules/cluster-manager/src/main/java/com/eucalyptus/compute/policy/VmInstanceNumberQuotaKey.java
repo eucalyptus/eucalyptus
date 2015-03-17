@@ -84,22 +84,23 @@ import com.eucalyptus.util.RestrictedTypes;
  */
 @PolicyKey( Keys.EC2_QUOTA_VM_INSTANCE_NUMBER )
 public class VmInstanceNumberQuotaKey extends QuotaKey {
-  
+
   private static final String KEY = Keys.EC2_QUOTA_VM_INSTANCE_NUMBER;
-  
+  private static final String POLICY_RESOURCE_TYPE = VmInstanceMetadata.POLICY_RESOURCE_TYPE;
   @Override
   public void validateValueType( String value ) throws JSONException {
-    KeyUtils.validateIntegerValue( value, KEY );
+    KeyUtils.validateIntegerValue(value, KEY);
   }
-  
+
   @Override
-  public boolean canApply( String action ) {
-    if ( PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RUNINSTANCES ).equals( action ) ) {
+  public boolean canApply( String action, String resourceType) {
+    if ( PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RUNINSTANCES ).equals( action )
+      && PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, POLICY_RESOURCE_TYPE).equals(resourceType) ) {
       return true;
     }
     return false;
   }
-  
+
   @Override
   public String value( PolicyScope scope, String id, String resource, Long quantity ) throws AuthException {
     switch ( scope ) {

@@ -69,7 +69,7 @@ import com.eucalyptus.auth.principal.Policy;
  * 
  * @see RestrictedTypes
  */
-public interface RestrictedType {
+public interface RestrictedType extends LimitedType {
   String getDisplayName( );
   
   OwnerFullName getOwner( );

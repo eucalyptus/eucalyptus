@@ -235,7 +235,7 @@ public class RestrictedTypes {
    * @see RestrictedTypes#allocateUnitlessResources(Integer, Supplier)
    */
   @SuppressWarnings( { "cast", "unchecked" } )
-  public static <T extends RestrictedType> T allocateUnitlessResource( Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+  public static <T extends LimitedType> T allocateUnitlessResource( Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     return allocateUnitlessResources( 1, allocator ).get( 0 );
   }
 
@@ -249,7 +249,7 @@ public class RestrictedTypes {
    * @return List<T> of size {@code quantity} of new allocations of {@code <T>}
    */
   @SuppressWarnings( { "cast", "unchecked" } )
-  public static <T extends RestrictedType> List<T> allocateUnitlessResources( Integer quantity, Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+  public static <T extends LimitedType> List<T> allocateUnitlessResources( Integer quantity, Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     return allocateUnitlessResources( findResourceClass( allocator ), quantity, allocator );
   }
 
@@ -264,7 +264,7 @@ public class RestrictedTypes {
    * @return List<T> of size {@code quantity} of new allocations of {@code <T>}
    */
   @SuppressWarnings( { "cast", "unchecked" } )
-  public static <T extends RestrictedType> List<T> allocateUnitlessResources(
+  public static <T extends LimitedType> List<T> allocateUnitlessResources(
           final Class<?> rscType,
           final Integer quantity,
           final Supplier<T> allocator
@@ -289,7 +289,7 @@ public class RestrictedTypes {
    * @return List<T> of size {@code quantity} of new allocations of {@code <T>}
    */
   @SuppressWarnings( { "cast", "unchecked" } )
-  public static <T extends RestrictedType> List<T> allocateUnitlessResources(
+  public static <T extends LimitedType> List<T> allocateUnitlessResources(
       final Class<?> rscType,
       final int min,
       final int max,
@@ -390,7 +390,7 @@ public class RestrictedTypes {
    * @return List<T> of size {@code quantity} of new allocations of {@code <T>}
    */
   @SuppressWarnings( { "cast", "unchecked" } )
-  public static <T extends RestrictedType> T allocateMeasurableResource( Long amount, Function<Long, T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+  public static <T extends LimitedType> T allocateMeasurableResource( Long amount, Function<Long, T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     String identifier = "";
     Context ctx = Contexts.lookup( );
     if ( !ctx.hasAdministrativePrivileges( ) ) {
@@ -827,7 +827,7 @@ public class RestrictedTypes {
         
         @Override
         public boolean apply( Class arg0 ) {
-          return RestrictedType.class.isAssignableFrom( arg0 );
+          return LimitedType.class.isAssignableFrom( arg0 );
         }
       } );
     } catch ( NoSuchElementException ex1 ) {

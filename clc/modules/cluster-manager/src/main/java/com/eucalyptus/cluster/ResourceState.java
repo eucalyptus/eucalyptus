@@ -72,6 +72,15 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.compute.common.CloudMetadata;
+import com.eucalyptus.compute.common.CloudMetadataLimitedType;
+import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.LimitedType;
+import com.eucalyptus.util.RestrictedTypes;
+import com.google.common.base.Function;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
@@ -96,6 +105,7 @@ public class ResourceState {
   private NavigableSet<ResourceToken>                        submittedTokens;
   private NavigableSet<ResourceToken>                        redeemedTokens;
   private String                                             clusterName;
+
   public static class NoSuchTokenException extends Exception {
     private static final long serialVersionUID = 1L;
 
@@ -142,7 +152,38 @@ public class ResourceState {
                                         ? maxAmount
                                         : available );
     }
-    
+
+    try {
+      RestrictedTypes.allocateMeasurableResource(Long.valueOf(vmTypeStatus.getType().getCpu().longValue()),
+        new Function<Long, CloudMetadataLimitedType.VmInstanceCpuMetadata>() {
+          @Nullable
+          @Override
+          public CloudMetadataLimitedType.VmInstanceCpuMetadata apply(@Nullable Long amount) {
+            return new CloudMetadataLimitedType.VmInstanceCpuMetadata() {
+            }; // kind of a marker for cpu
+          }
+        });
+        RestrictedTypes.allocateMeasurableResource(Long.valueOf(vmTypeStatus.getType().getMemory().longValue()),
+          new Function<Long, CloudMetadataLimitedType.VmInstanceMemoryMetadata>() {
+            @Nullable
+            @Override
+          public CloudMetadataLimitedType.VmInstanceMemoryMetadata apply(@Nullable Long amount) {
+            return new CloudMetadataLimitedType.VmInstanceMemoryMetadata() {
+            }; // kind of a marker for memory
+          }
+        });
+        RestrictedTypes.allocateMeasurableResource(Long.valueOf(vmTypeStatus.getType().getDisk().longValue()),
+          new Function<Long, CloudMetadataLimitedType.VmInstanceDiskMetadata>() {
+            @Nullable
+            @Override
+          public CloudMetadataLimitedType.VmInstanceDiskMetadata apply(@Nullable Long amount) {
+             return new CloudMetadataLimitedType.VmInstanceDiskMetadata() {
+            }; // kind of a marker for disk
+          }
+         });
+    } catch (AuthException e) {
+      throw Exceptions.toUndeclared(e);
+    }
     Set<VmTypeAvailability> tailSet = sorted.tailSet( vmTypeStatus );
     Set<VmTypeAvailability> headSet = sorted.headSet( vmTypeStatus );
     LOG.debug( LogUtil.header( "DURING ALLOCATE" ) );
@@ -182,6 +223,37 @@ public class ResourceState {
     }
     return count;
   }
+
+  public long measureUncommittedPendingInstanceCpus( final OwnerFullName ownerFullName ) {
+    long amount = 0;
+    for ( final ResourceToken token : this.pendingTokens ) {
+      if ( !token.isCommitted( ) && token.getOwner( ).isOwner( ownerFullName ) ) {
+        amount += token.getAmount( ) * token.getAllocationInfo().getVmType().getCpu();
+      }
+    }
+    return amount;
+  }
+
+  public long measureUncommittedPendingInstanceMemoryAmount(OwnerFullName ownerFullName) {
+    long amount = 0;
+    for ( final ResourceToken token : this.pendingTokens ) {
+      if ( !token.isCommitted( ) && token.getOwner( ).isOwner( ownerFullName ) ) {
+        amount += token.getAmount( ) * token.getAllocationInfo().getVmType().getMemory();
+      }
+    }
+    return amount;
+  }
+
+  public long measureUncommittedPendingInstanceDisks(OwnerFullName ownerFullName) {
+    long amount = 0;
+    for ( final ResourceToken token : this.pendingTokens ) {
+      if ( !token.isCommitted( ) && token.getOwner( ).isOwner( ownerFullName ) ) {
+        amount += token.getAmount( ) * token.getAllocationInfo().getVmType().getDisk();
+      }
+    }
+    return amount;
+  }
+
 
   public synchronized void releaseToken( ResourceToken token ) {
     LOG.debug( EventType.TOKEN_RELEASED.name( ) + ": " + token.toString( ) );
