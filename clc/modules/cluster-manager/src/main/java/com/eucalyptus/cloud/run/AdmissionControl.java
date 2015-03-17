@@ -66,7 +66,12 @@ import static com.eucalyptus.cloud.VmInstanceLifecycleHelpers.NetworkResourceVmI
 import static com.eucalyptus.util.RestrictedTypes.BatchAllocator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
+
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.compute.common.CloudMetadataLimitedType;
+import com.google.common.base.Function;
 import org.apache.log4j.Logger;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.cloud.ResourceToken;
@@ -257,10 +262,38 @@ public class AdmissionControl {
             @Override
             public List<ResourceToken> allocate( int min, int max ) {
               try {
+              // do quotas for instance specific items (cpu, memory, disk)
+                RestrictedTypes.allocateMeasurableResource(max * Long.valueOf(allocInfo.getVmType().getCpu().longValue()),
+                  new Function<Long, CloudMetadataLimitedType.CpuMetadata>() {
+                    @Nullable
+                    @Override
+                    public CloudMetadataLimitedType.CpuMetadata apply(@Nullable Long amount) {
+                      return new CloudMetadataLimitedType.CpuMetadata() {
+                      }; // kind of a marker for cpu
+                    }
+                  });
+                RestrictedTypes.allocateMeasurableResource(max * Long.valueOf(allocInfo.getVmType().getMemory().longValue()),
+                  new Function<Long, CloudMetadataLimitedType.MemoryMetadata>() {
+                    @Nullable
+                    @Override
+                    public CloudMetadataLimitedType.MemoryMetadata apply(@Nullable Long amount) {
+                      return new CloudMetadataLimitedType.MemoryMetadata() {
+                      }; // kind of a marker for memory
+                    }
+                  });
+                RestrictedTypes.allocateMeasurableResource(max * Long.valueOf(allocInfo.getVmType().getDisk().longValue()),
+                  new Function<Long, CloudMetadataLimitedType.DiskMetadata>() {
+                    @Nullable
+                    @Override
+                    public CloudMetadataLimitedType.DiskMetadata apply(@Nullable Long amount) {
+                      return new CloudMetadataLimitedType.DiskMetadata() {
+                      }; // kind of a marker for disk
+                    }
+                  });
                 final List<ResourceToken> ret = state.requestResourceAllocation( allocInfo, min, max );
                 allocInfo.getAllocationTokens().addAll( ret );
                 return ret;
-              } catch ( final NotEnoughResourcesException e ) {
+              } catch ( final NotEnoughResourcesException | AuthException e ) {
                 throw Exceptions.toUndeclared( e );
               }
             }

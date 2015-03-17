@@ -77,7 +77,7 @@ public abstract class QuotaKey implements Key {
   public static final Long MB = 1024 * 1024L;
   
   public boolean canApply( String action, String resourceType ) {
-    return canApply( resourceType );
+    return canApply( action );
   }
 
   @Override
