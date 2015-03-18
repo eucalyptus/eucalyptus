@@ -100,7 +100,6 @@ import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
 import com.eucalyptus.cluster.callback.ClusterCertsCallback;
 import com.eucalyptus.cluster.callback.LogDataCallback;
-import com.eucalyptus.cluster.callback.NetworkStateCallback;
 import com.eucalyptus.cluster.callback.ResourceStateCallback;
 import com.eucalyptus.cluster.callback.VmStateCallback;
 import com.eucalyptus.component.Faults.CheckException;
@@ -401,7 +400,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   
   enum Refresh implements Function<Cluster, TransitionAction<Cluster>> {
     RESOURCES( ResourceStateCallback.class ),
-    NETWORKS( NetworkStateCallback.class ),
     INSTANCES( VmStateCallback.class ),
     VOLATILEINSTANCES( VmStateCallback.VmPendingCallback.class ),
     SERVICEREADY( ServiceStateCallback.class );
@@ -529,14 +527,12 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     /** Component.State.DISABLED -> Component.State.ENABLED **/
     ENABLING,
     ENABLING_RESOURCES,
-    ENABLING_NET,
     ENABLING_VMS,
     ENABLING_VMS_PASS_TWO,
     /** Component.State.ENABLED -> Component.State.ENABLED **/
     ENABLED,
     ENABLED_SERVICE_CHECK,
     ENABLED_RSC,
-    ENABLED_NET,
     ENABLED_VMS;
     public Component.State proxyState( ) {
       try {
@@ -641,15 +637,13 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         this.from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLE ).run( Cluster.ServiceStateDispatch.DISABLED );
         
         this.from( State.ENABLING ).to( State.ENABLING_RESOURCES ).error( State.NOTREADY ).on( Transition.ENABLING_RESOURCES ).run( Refresh.RESOURCES );
-        this.from( State.ENABLING_RESOURCES ).to( State.ENABLING_NET ).error( State.NOTREADY ).on( Transition.ENABLING_NET ).run( Refresh.NETWORKS );
-        this.from( State.ENABLING_NET ).to( State.ENABLING_VMS ).error( State.NOTREADY ).on( Transition.ENABLING_VMS ).run( Refresh.INSTANCES );
+        this.from( State.ENABLING_RESOURCES ).to( State.ENABLING_VMS ).error( State.NOTREADY ).on( Transition.ENABLING_VMS ).run( Refresh.INSTANCES );
         this.from( State.ENABLING_VMS ).to( State.ENABLING_VMS_PASS_TWO ).error( State.NOTREADY ).on( Transition.ENABLING_VMS_PASS_TWO ).run( Refresh.INSTANCES );
         this.from( State.ENABLING_VMS_PASS_TWO ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLING_VMS_PASS_TWO ).run( Refresh.INSTANCES );
         
         this.from( State.ENABLED ).to( State.ENABLED_SERVICE_CHECK ).error( State.NOTREADY ).on( Transition.ENABLED_SERVICES ).run( Refresh.SERVICEREADY );
         this.from( State.ENABLED_SERVICE_CHECK ).to( State.ENABLED_RSC ).error( State.NOTREADY ).on( Transition.ENABLED_RSC ).run( Refresh.RESOURCES );
-        this.from( State.ENABLED_RSC ).to( State.ENABLED_NET ).error( State.NOTREADY ).on( Transition.ENABLED_NET ).run( Refresh.NETWORKS );
-        this.from( State.ENABLED_NET ).to( State.ENABLED_VMS ).error( State.NOTREADY ).on( Transition.ENABLED_VMS ).run( Refresh.INSTANCES );
+        this.from( State.ENABLED_RSC ).to( State.ENABLED_VMS ).error( State.NOTREADY ).on( Transition.ENABLED_VMS ).run( Refresh.INSTANCES );
         this.from( State.ENABLED_VMS ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLED ).run( ErrorStateListeners.FLUSHPENDING );
       }
     }.newAtomicMarkedState( );
@@ -705,13 +699,11 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
             break;
           case ENABLING:
           case ENABLING_RESOURCES:
-          case ENABLING_NET:
           case ENABLING_VMS:
           case ENABLING_VMS_PASS_TWO:
             break;
           case ENABLED:
           case ENABLED_RSC:
-          case ENABLED_NET:
           case ENABLED_VMS:
           case ENABLED_SERVICE_CHECK:
             if ( initialized && tick.isAsserted( VmInstances.VOLATILE_STATE_INTERVAL_SEC )
@@ -751,7 +743,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
                                                                   State.DISABLED,
                                                                   State.ENABLING,
                                                                   State.ENABLING_RESOURCES,
-                                                                  State.ENABLING_NET,
                                                                   State.ENABLING_VMS,
                                                                   State.ENABLING_VMS_PASS_TWO,
                                                                   State.ENABLED };
@@ -759,7 +750,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   private static final State[] PATH_ENABLED_CHECK = new State[] { State.ENABLED,
                                                                   State.ENABLED_SERVICE_CHECK,
                                                                   State.ENABLED_RSC,
-                                                                  State.ENABLED_NET,
                                                                   State.ENABLED_VMS,
                                                                   State.ENABLED };
   

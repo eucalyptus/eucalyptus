@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,14 +20,10 @@
 package com.eucalyptus.network
 
 import com.eucalyptus.address.Addresses
-import com.eucalyptus.cluster.Cluster
-import com.eucalyptus.cluster.ClusterConfiguration
-import com.eucalyptus.cluster.Clusters
 import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesResponseType
 import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesResult
 import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesType
 import com.eucalyptus.compute.common.network.NetworkResource
-import com.eucalyptus.compute.common.network.NetworkResourceReportType
 import com.eucalyptus.compute.common.network.NetworkingFeature
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesResponseType
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesResultType
@@ -40,8 +36,6 @@ import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType
 import com.eucalyptus.compute.common.network.SecurityGroupResource
 import com.eucalyptus.compute.common.network.UpdateInstanceResourcesResponseType
 import com.eucalyptus.compute.common.network.UpdateInstanceResourcesType
-import com.eucalyptus.compute.common.network.UpdateNetworkResourcesResponseType
-import com.eucalyptus.compute.common.network.UpdateNetworkResourcesType
 import com.eucalyptus.entities.Entities
 import com.eucalyptus.network.config.ManagedSubnet
 import com.eucalyptus.network.config.NetworkConfiguration
@@ -83,22 +77,19 @@ class ManagedNetworkingService extends NetworkingServiceSupport {
   @Override
   protected PrepareNetworkResourcesResponseType prepareWithRollback( final PrepareNetworkResourcesType request,
                                                                      final List<NetworkResource> resources ) {
-    // Only if we have a valid networking configuration
-    if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
-      request.getResources( ).each { NetworkResource networkResource ->
-        switch( networkResource ) {
-          case PublicIPResource:
-            if ( networkResource.ownerId.startsWith( 'i-' ) ) {
-              resources.addAll( preparePublicIp( request, (PublicIPResource) networkResource ) )
-            }
-            break
-          case SecurityGroupResource:
-            // Only serve the request if we do not have any PrivateIndexResources in the list
-            if ( !resources.find{ NetworkResource resource -> resource instanceof PrivateNetworkIndex } ) {
-              resources.addAll( prepareSecurityGroup( request, (SecurityGroupResource) networkResource ) )
-            }
-            break
-        }
+    request.getResources( ).each { NetworkResource networkResource ->
+      switch( networkResource ) {
+        case PublicIPResource:
+          if ( networkResource.ownerId.startsWith( 'i-' ) ) {
+            resources.addAll( preparePublicIp( request, (PublicIPResource) networkResource ) )
+          }
+          break
+        case SecurityGroupResource:
+          // Only serve the request if we do not have any PrivateIndexResources in the list
+          if ( !resources.find{ NetworkResource resource -> resource instanceof PrivateNetworkIndex } ) {
+            resources.addAll( prepareSecurityGroup( request, (SecurityGroupResource) networkResource ) )
+          }
+          break
       }
     }
 
@@ -167,31 +158,15 @@ class ManagedNetworkingService extends NetworkingServiceSupport {
   DescribeNetworkingFeaturesResponseType describeFeatures( final DescribeNetworkingFeaturesType request ) {
     DescribeNetworkingFeaturesResponseType.cast( request.reply( new DescribeNetworkingFeaturesResponseType(
           describeNetworkingFeaturesResult : new DescribeNetworkingFeaturesResult(
-            networkingFeatures: NetworkGroups.networkingConfiguration( ).hasNetworking( ) ?
-              [ Classic, ElasticIPs ] as ArrayList<NetworkingFeature>:
-              [ Classic ] as ArrayList<NetworkingFeature>
+            networkingFeatures: [ Classic ] as ArrayList<NetworkingFeature>
           )
     ) ) )
   }
 
   @Override
-  UpdateNetworkResourcesResponseType update( final UpdateNetworkResourcesType request ) {
-    try {
-      Cluster cluster = Clusters.instance.lookup( request.cluster )
-      NetworkGroups.updateNetworkRangeConfiguration( );
-      NetworkGroups.updateExtantNetworks( cluster.configuration, request.resources.activeNetworks );
-    } catch ( NoSuchElementException e ) {
-      logger.debug( "Not updating network resource availability, cluster not found ${request.cluster}.", e )
-    } catch ( e ) {
-      logger.error( "Error updating network resource availability.", e )
-    }
-    PrivateAddresses.releasing( request.resources.privateIps, request.cluster )
-    UpdateNetworkResourcesResponseType.cast( request.reply( new UpdateNetworkResourcesResponseType( ) ) )
-  }
-
-  @Override
   UpdateInstanceResourcesResponseType update( final UpdateInstanceResourcesType request ) {
     PublicAddresses.clearDirty( request.resources.publicIps, request.partition )
+    PrivateAddresses.releasing( request.resources.privateIps, request.partition )
     UpdateInstanceResourcesResponseType.cast( request.reply( new UpdateInstanceResourcesResponseType( ) ) )
   }
 

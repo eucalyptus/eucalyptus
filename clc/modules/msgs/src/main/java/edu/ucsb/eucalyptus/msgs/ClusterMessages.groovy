@@ -20,9 +20,6 @@
 @GroovyAddClassUUID
 package edu.ucsb.eucalyptus.msgs
 
-import com.google.common.base.Joiner
-import com.google.common.collect.Lists
-
 public class CloudClusterMessage extends EucalyptusMessage {
 
   public CloudClusterMessage( ) {
@@ -112,49 +109,6 @@ public class ClusterMigrateInstancesType extends CloudClusterMessage {
 }
 
 public class ClusterMigrateInstancesResponseType extends CloudClusterMessage {}
-
-public class DescribeNetworksType extends CloudClusterMessage {
-  String vmsubdomain;
-  String nameserver;
-  String dnsDomainName;
-  ArrayList<String> clusterControllers = new ArrayList<String>();
-}
-
-public class DescribeNetworksResponseType extends CloudClusterMessage {
-  Integer useVlans;
-  String mode;
-  Integer addrsPerNet;
-  Integer addrIndexMin;
-  Integer addrIndexMax;
-  Integer vlanMin;
-  Integer vlanMax;
-  String vnetSubnet;
-  String vnetNetmask;
-  ArrayList<String> privateIps = Lists.newArrayList( )
-  ArrayList<NetworkInfoType> activeNetworks = Lists.newArrayList( )
-
-  public String toString() {
-    return "${this.getClass().getSimpleName()} mode=${mode} addrsPerNet=${addrsPerNet} " +
-        "\n${this.getClass().getSimpleName()} " + (Joiner.on( "\n${this.getClass().getSimpleName()} " as String ).join(activeNetworks.iterator()));
-  }
-}
-
-public class AddressMappingInfoType extends EucalyptusData {
-  String uuid;
-  String source;
-  String destination;
-}
-
-public class NetworkInfoType extends EucalyptusData {
-  String uuid;
-  Integer tag;
-  String networkName;
-  String accountNumber;
-  ArrayList<String> allocatedIndexes = new ArrayList<String>();
-  public String toString( ) {
-    return "NetworkInfoType ${accountNumber} ${networkName} ${uuid} ${tag} ${allocatedIndexes}";
-  }
-}
 
 public class AssignAddressType extends CloudClusterMessage {
   String uuid;

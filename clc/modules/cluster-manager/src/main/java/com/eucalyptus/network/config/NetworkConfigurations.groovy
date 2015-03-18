@@ -46,7 +46,6 @@ import com.google.common.base.Splitter
 import com.google.common.base.Strings
 import com.google.common.collect.Iterables
 import com.google.common.collect.Lists
-import com.google.common.primitives.Ints
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -129,6 +128,7 @@ class NetworkConfigurations {
       }
       db.commit( );
     }
+    NetworkGroups.updateNetworkRangeConfiguration( )
   }
 
   @Nullable
