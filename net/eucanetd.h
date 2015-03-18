@@ -128,7 +128,8 @@ typedef enum eucanetd_peer_t {
     PEER_CLC = 1,                      //!< This indicates we are currently working with a CLC component
     PEER_CC = 2,                       //!< This indicates we are currently working with a CC component
     PEER_NC = 3,                       //!< This indicates we are currently working with an NC component
-    PEER_MAX = 4,                      //!< This is an invalid role use to detect initialization errors (couldn't set the role)
+    PEER_NONE = 4,                     //!< This indicates we are currently running on a non-euca host
+    PEER_MAX = 5,                      //!< This is an invalid role use to detect initialization errors (couldn't set the role)
 } eucanetd_peer;
 
 /*----------------------------------------------------------------------------*\
