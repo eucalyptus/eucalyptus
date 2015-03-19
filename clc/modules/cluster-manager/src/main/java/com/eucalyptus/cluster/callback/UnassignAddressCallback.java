@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,7 +67,6 @@ import java.util.concurrent.CancellationException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
-import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
 import com.eucalyptus.address.Address.Transition;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -75,10 +74,8 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Expendable;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.MessageCallback;
-import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmNetworkConfig;
-import com.google.common.base.Function;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressType;
 
@@ -107,10 +104,6 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
   
   public UnassignAddressCallback( String addr ) {
     this( addr, Addresses.getInstance( ).lookup( addr ).getInstanceAddress( ) );
-  }
-  
-  public UnassignAddressCallback( ClusterAddressInfo addrInfo ) {
-    this( addrInfo.getAddress( ), addrInfo.getInstanceIp( ) );
   }
   
   public UnassignAddressCallback( final Address address ) {

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -109,44 +109,12 @@ class DescribeNetworkingFeaturesResponseType extends NetworkingMessage {
   DescribeNetworkingFeaturesResult describeNetworkingFeaturesResult = new DescribeNetworkingFeaturesResult( )
 }
 
-class UpdateNetworkResourcesType extends NetworkingMessage {
-  String cluster
-  NetworkResourceReportType resources
-}
-
-class UpdateNetworkResourcesResponseType extends NetworkingMessage {}
-
 class UpdateInstanceResourcesType extends NetworkingMessage {
   String partition
   InstanceResourceReportType resources
 }
 
 class UpdateInstanceResourcesResponseType extends NetworkingMessage {}
-
-class NetworkResourceReportType {
-  Integer useVlans
-  String mode
-  Integer addrsPerNet
-  Integer addrIndexMin
-  Integer addrIndexMax
-  Integer vlanMin
-  Integer vlanMax
-  String vnetSubnet
-  String vnetNetmask
-  ArrayList<String> privateIps = Lists.newArrayList( )
-  ArrayList<NetworkReportType> activeNetworks = Lists.newArrayList( )
-}
-
-class NetworkReportType extends EucalyptusData {
-  String uuid
-  Integer tag
-  String networkName
-  String accountNumber
-  ArrayList<String> allocatedIndexes = Lists.newArrayList( )
-  String toString( ) {
-    return "NetworkInfoType ${accountNumber} ${networkName} ${uuid} ${tag} ${allocatedIndexes}"
-  }
-}
 
 class InstanceResourceReportType extends EucalyptusData {
   ArrayList<String> publicIps = Lists.newArrayList( )
