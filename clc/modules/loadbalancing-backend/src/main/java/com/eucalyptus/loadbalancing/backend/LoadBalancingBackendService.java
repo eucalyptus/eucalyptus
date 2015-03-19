@@ -146,11 +146,14 @@ import com.eucalyptus.loadbalancing.common.backend.msgs.EnableAvailabilityZonesF
 import com.eucalyptus.loadbalancing.common.msgs.AppCookieStickinessPolicies;
 import com.eucalyptus.loadbalancing.common.msgs.AppCookieStickinessPolicy;
 import com.eucalyptus.loadbalancing.common.msgs.AvailabilityZones;
+import com.eucalyptus.loadbalancing.common.msgs.BackendInstance;
+import com.eucalyptus.loadbalancing.common.msgs.BackendInstances;
 import com.eucalyptus.loadbalancing.common.msgs.BackendServerDescription;
 import com.eucalyptus.loadbalancing.common.msgs.BackendServerDescriptions;
 import com.eucalyptus.loadbalancing.common.msgs.ConfigureHealthCheckResult;
 import com.eucalyptus.loadbalancing.common.msgs.ConnectionSettings;
 import com.eucalyptus.loadbalancing.common.msgs.CreateLoadBalancerResult;
+import com.eucalyptus.loadbalancing.common.msgs.CrossZoneLoadBalancing;
 import com.eucalyptus.loadbalancing.common.msgs.DeleteLoadBalancerResult;
 import com.eucalyptus.loadbalancing.common.msgs.DeregisterInstancesFromLoadBalancerResult;
 import com.eucalyptus.loadbalancing.common.msgs.DescribeInstanceHealthResult;
@@ -291,8 +294,13 @@ public class LoadBalancingBackendService {
 
         /// dns name
         desc.setDnsName(dnsView.getDnsName());
+        
 
-        Collection<LoadBalancerBackendInstanceCoreView> notInError =
+        // attributes
+        desc.setLoadBalancerAttributes( TypeMappers.transform( lb, LoadBalancerAttributes.class ) );
+       
+        /// backend instances in the same zone
+        Collection<LoadBalancerBackendInstanceCoreView> backendInstancesInSameZone =
             Collections2.filter(zone.getBackendInstances(), new Predicate<LoadBalancerBackendInstanceCoreView>(){
               @Override
               public boolean apply( LoadBalancerBackendInstanceCoreView arg0 ) {
@@ -300,17 +308,53 @@ public class LoadBalancingBackendService {
                     !(arg0.getIpAddress()==null || arg0.getIpAddress().length()<=0)  ;
               }
             });
+        
+        // backend instances in cross-zone
+        Collection<LoadBalancerBackendInstanceCoreView> crossZoneBackendInstances = 
+            Lists.newArrayList();
+        if(desc.getLoadBalancerAttributes().getCrossZoneLoadBalancing().getEnabled()) {
+          crossZoneBackendInstances = Collections2.filter(lb.getBackendInstances(), new Predicate<LoadBalancerBackendInstanceCoreView>() {
+            @Override
+            public boolean apply(LoadBalancerBackendInstanceCoreView arg0) {
+              // Instance's service state can only be determined in the same zone. Cross-zone instances are enabled only when InService
+              final boolean inService = LoadBalancerBackendInstance.STATE.InService.equals( arg0.getBackendState( ) ) && 
+                   !(arg0.getIpAddress()==null || arg0.getIpAddress().length()<=0);
+              
+              return inService &&
+                  arg0.getVmInstance()!=null &&
+                  !zone.getName().equals(arg0.getVmInstance().getPlacement()); // different zone
+            }
+          });
+        }
 
-        if( !notInError.isEmpty( ) ){
-          desc.setInstances( new Instances( ) );
-          desc.getInstances( ).getMember( ).addAll(
-              Collections2.transform(notInError, new Function<LoadBalancerBackendInstanceCoreView, Instance>(){
+        if( !backendInstancesInSameZone.isEmpty( ) ){
+          desc.setBackendInstances( new BackendInstances( ) );
+          desc.getBackendInstances( ).getMember( ).addAll(
+              Collections2.transform(backendInstancesInSameZone, new Function<LoadBalancerBackendInstanceCoreView, BackendInstance>(){
                 @Override
-                public Instance apply(final LoadBalancerBackendInstanceCoreView be){
-                  Instance instance = new Instance();
-                  // re-use instanceId field to mark the instance's IP
-                  // servo tool should interpret it properly
-                  instance.setInstanceId(be.getInstanceId() +":"+ be.getIpAddress());
+                public BackendInstance apply(final LoadBalancerBackendInstanceCoreView be){
+                  final BackendInstance instance = new BackendInstance();
+                  instance.setInstanceId(be.getInstanceId());
+                  instance.setInstanceIpAddress(be.getIpAddress());
+                  instance.setReportHealthCheck(true);
+                  return instance;
+                }
+              }));
+        }
+        
+        if( !crossZoneBackendInstances.isEmpty()) {
+          if(desc.getBackendInstances() == null)
+            desc.setBackendInstances(new BackendInstances());
+          desc.getBackendInstances().getMember().addAll(
+              Collections2.transform(crossZoneBackendInstances, new Function<LoadBalancerBackendInstanceCoreView, BackendInstance>(){
+                @Override
+                public BackendInstance apply(final LoadBalancerBackendInstanceCoreView be){
+                  final BackendInstance instance = new BackendInstance();
+                  instance.setInstanceId(be.getInstanceId());
+                  instance.setInstanceIpAddress(be.getIpAddress());
+                  // if the servo's zone != backend instance's, it does not report health check
+                  // only the servo in the same zone will change the instance's state
+                  instance.setReportHealthCheck(false);
                   return instance;
                 }
               }));
@@ -410,9 +454,6 @@ public class LoadBalancingBackendService {
           desc.setHealthCheck(hc);
         } catch(Exception ex){
         }
-
-        // attributes
-        desc.setLoadBalancerAttributes( TypeMappers.transform( lb, LoadBalancerAttributes.class ) );
 
         // policies (EUCA-specific)
         List<LoadBalancerPolicyDescription> lbPolicies = Lists.newArrayList();
@@ -2613,6 +2654,10 @@ public class LoadBalancingBackendService {
             if ( connectionSettings != null ) {
               loadBalancer.setConnectionIdleTimeout( connectionSettings.getIdleTimeout( ) );
             }
+            final CrossZoneLoadBalancing crossZoneLb = 
+                request.getLoadBalancerAttributes().getCrossZoneLoadBalancing();
+            if( crossZoneLb != null)
+              loadBalancer.setCrossZoneLoadbalancingEnabled(crossZoneLb.getEnabled());
             return TypeMappers.transform( loadBalancer, LoadBalancerAttributes.class );
           } else {
             throw new NoSuchElementException( );
