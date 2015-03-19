@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -55,7 +55,7 @@ public class EventHandlerChainDeleteListeners extends EventHandlerChain<DeleteLi
       final Collection<Integer> portsToDelete = evt.getPorts();
       LoadBalancer lb;
       try{
-        lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
+        lb = LoadBalancers.getLoadbalancer(evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
       }catch(Exception ex){
         throw new EventHandlerException("could not find the loadbalancer", ex);
       }
@@ -77,9 +77,9 @@ public class EventHandlerChainDeleteListeners extends EventHandlerChain<DeleteLi
         return;
       
       final String roleName = String.format("%s-%s-%s", EventHandlerChainNew.IAMRoleSetup.ROLE_NAME_PREFIX, 
-          evt.getContext().getAccount().getAccountNumber(), evt.getLoadBalancer());
+          evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
       final String prefix = 
-          String.format("arn:aws:iam::%s:server-certificate", evt.getContext().getAccount().getAccountNumber());
+          String.format("arn:aws:iam::%s:server-certificate", evt.getLoadBalancerAccountNumber());
     
       for (final String arn : arnToDelete){
         if(!arn.startsWith(prefix))
@@ -88,8 +88,8 @@ public class EventHandlerChainDeleteListeners extends EventHandlerChain<DeleteLi
         String certName = pathAndName.substring(pathAndName.lastIndexOf("/")+1);
         String policyName = String.format("%s-%s-%s-%s", 
             EventHandlerChainNewListeners.AuthorizeSSLCertificate.SERVER_CERT_ROLE_POLICY_NAME_PREFIX,
-            evt.getContext().getAccount().getAccountNumber(), 
-            evt.getLoadBalancer(), certName);
+            evt.getLoadBalancerAccountNumber( ),
+            evt.getLoadBalancer( ), certName);
         try{
           EucalyptusActivityTasks.getInstance().deleteRolePolicy(roleName, policyName);
         }catch(final Exception ex){
@@ -115,7 +115,7 @@ public class EventHandlerChainDeleteListeners extends EventHandlerChain<DeleteLi
 			LoadBalancer lb;
 			String groupName = null;
 			try{
-				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
+				lb = LoadBalancers.getLoadbalancer(evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
 				final LoadBalancerSecurityGroupCoreView group = lb.getGroup();
 				if(group!=null)
 					groupName = group.getName();

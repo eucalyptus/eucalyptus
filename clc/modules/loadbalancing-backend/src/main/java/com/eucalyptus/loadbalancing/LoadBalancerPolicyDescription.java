@@ -20,6 +20,7 @@
 
 package com.eucalyptus.loadbalancing;
 
+import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -41,9 +42,12 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
+import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreViewTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreViewTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAttributeDescriptionCoreView;
@@ -51,7 +55,9 @@ import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeDescription.LoadB
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAtttributeDescriptionEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeTypeDescription.LoadBalancerPolicyAttributeTypeDescriptionCoreView;
 import com.eucalyptus.loadbalancing.backend.InvalidConfigurationRequestException;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
+import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
@@ -78,6 +84,10 @@ public class LoadBalancerPolicyDescription extends AbstractPersistent {
   @ManyToMany( fetch = FetchType.LAZY, mappedBy="policies", cascade = CascadeType.REMOVE )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<LoadBalancerListener> listeners = null;
+
+  @ManyToMany( fetch = FetchType.LAZY, mappedBy="policyDescriptions", cascade = CascadeType.REMOVE )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  private List<LoadBalancerBackendServerDescription> backendServers = null;
   
   @Column( name = "policy_name", nullable=false)
   private String policyName = null;
@@ -148,12 +158,36 @@ public class LoadBalancerPolicyDescription extends AbstractPersistent {
          throw new InvalidConfigurationRequestException(String.format("Attribute %s is not defined in the policy type", attrName));
       if(!LoadBalancerPolicies.isAttributeValueValid(attrType.getAttributeType(), attrType.getCardinality(), attrValue))
         throw new InvalidConfigurationRequestException(String.format("Attribute value %s is not valid", attrValue));
+     
+      /* check for cardinality
+       * ONE(1) : Single value required
+        ZERO_OR_ONE(0..1) : Up to one value can be supplied
+        ZERO_OR_MORE(0..*) : Optional. Multiple values are allowed
+        ONE_OR_MORE(1..*0) : Required. Multiple values are allowed
+       */
+      final String cardinality = attrType.getCardinality();
+      if(this.policyAttrDescription != null && ("ONE".equals(cardinality) || "ZERO_OR_ONE".equals(cardinality))) {
+        for(final LoadBalancerPolicyAttributeDescription existing : this.policyAttrDescription) {
+          if(attrName.equals(existing.getAttributeName()))
+            throw new InvalidConfigurationRequestException(String.format("More than one attribute(%s) is found (Cardinality: %s)", attrName, cardinality));
+        }
+      }
+      
+      if ("PublicKeyPolicyType".equals(this.policyType.getPolicyTypeName()) &&
+          "PublicKey".equals(attrName)) {
+        try{
+          final X509Certificate cert = PEMFiles.getCert(attrValue.getBytes( Charsets.UTF_8 ));
+          if(cert==null)
+            throw new EucalyptusCloudException("Malformed cert");
+        }catch(final Exception ex){
+          throw new InvalidConfigurationRequestException("PublicKey is invalid");
+        }
+      }
     }
     
     final LoadBalancerPolicyAttributeDescription attr = new LoadBalancerPolicyAttributeDescription(this, attrName, attrValue);
     if(this.policyAttrDescription == null)
       this.policyAttrDescription = Lists.newArrayList();
-    this.removePolicyAttributeDescription(attr);
     this.policyAttrDescription.add(attr);
   }
   
@@ -167,16 +201,22 @@ public class LoadBalancerPolicyDescription extends AbstractPersistent {
     return this.view.getPolicyAttributeDescription();
   }
   
-  public LoadBalancerPolicyAttributeDescription findAttributeDescription(final String attrName) throws NoSuchElementException{
+  public List<LoadBalancerPolicyAttributeDescription> findAttributeDescription(final String attrName) throws NoSuchElementException{
+    final List<LoadBalancerPolicyAttributeDescription> attributes = Lists.newArrayList();
     for (final LoadBalancerPolicyAttributeDescriptionCoreView attrView : this.getPolicyAttributeDescription()){
-      if(attrView.getAttributeName().equals(attrName))
-        return LoadBalancerPolicyAtttributeDescriptionEntityTransform.INSTANCE.apply(attrView);
+      if(attrView.getAttributeName().equals(attrName)) {
+        attributes.add(LoadBalancerPolicyAtttributeDescriptionEntityTransform.INSTANCE.apply(attrView));
+      }
     }
-    throw new NoSuchElementException();
+    return attributes;
   }
   
   public List<LoadBalancerListenerCoreView> getListeners(){
     return this.view.getListeners();
+  }
+  
+  public List<LoadBalancerBackendServerDescriptionCoreView> getBackendServers(){
+    return this.view.getBackendServers();
   }
   
   @PostLoad
@@ -258,6 +298,7 @@ public class LoadBalancerPolicyDescription extends AbstractPersistent {
     private LoadBalancerPolicyDescription policyDesc = null;
     private ImmutableList<LoadBalancerPolicyAttributeDescriptionCoreView> policyAttrDesc = null;
     private ImmutableList<LoadBalancerListenerCoreView> listeners = null;
+    private ImmutableList<LoadBalancerBackendServerDescriptionCoreView> backendServers = null;
     LoadBalancerPolicyDescriptionRelationView(final LoadBalancerPolicyDescription desc){
       this.policyDesc = desc;
       if(desc.policyAttrDescription != null)
@@ -266,6 +307,10 @@ public class LoadBalancerPolicyDescription extends AbstractPersistent {
       if(desc.listeners!= null)
         this.listeners = ImmutableList.copyOf(Collections2.transform(desc.listeners, 
             LoadBalancerListenerCoreViewTransform.INSTANCE));
+      
+      if(desc.backendServers!=null)
+        this.backendServers = ImmutableList.copyOf(Collections2.transform(desc.backendServers,
+            LoadBalancerBackendServerDescriptionCoreViewTransform.INSTANCE));
     }
     
     public ImmutableList<LoadBalancerPolicyAttributeDescriptionCoreView> getPolicyAttributeDescription(){
@@ -274,6 +319,10 @@ public class LoadBalancerPolicyDescription extends AbstractPersistent {
     
     public ImmutableList<LoadBalancerListenerCoreView> getListeners(){
       return this.listeners;
+    }
+    
+    public ImmutableList<LoadBalancerBackendServerDescriptionCoreView> getBackendServers(){
+      return this.backendServers;
     }
   }
   

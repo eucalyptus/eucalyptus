@@ -22,6 +22,7 @@ package com.eucalyptus.objectstorage
 
 import com.eucalyptus.auth.Accounts
 import com.eucalyptus.auth.principal.User
+import com.eucalyptus.auth.principal.UserPrincipal
 import com.eucalyptus.objectstorage.entities.Bucket
 import com.eucalyptus.objectstorage.entities.ObjectEntity
 import com.eucalyptus.objectstorage.entities.PartEntity
@@ -87,8 +88,8 @@ public class ObjectFactoryTest {
    */
   @Test
   public void testCreateObject() throws Exception {
-    User user = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
-    String canonicalId = user.getAccount().getCanonicalId()
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
+    String canonicalId = user.getCanonicalId()
     AccessControlPolicy acp = new AccessControlPolicy()
     acp.setAccessControlList(new AccessControlList())
     acp = AclUtils.processNewResourcePolicy(user, acp, canonicalId)
@@ -140,8 +141,8 @@ public class ObjectFactoryTest {
    */
   @Test
   public void testCreateObjectOverwrite() throws Exception {
-    User user = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
-    String canonicalId = user.getAccount().getCanonicalId()
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
+    String canonicalId = user.getCanonicalId()
     AccessControlPolicy acp = new AccessControlPolicy()
     acp.setAccessControlList(new AccessControlList())
     acp = AclUtils.processNewResourcePolicy(user, acp, canonicalId)
@@ -204,8 +205,8 @@ public class ObjectFactoryTest {
    */
   @Test
   public void testCreateDuplicateObject() throws Exception {
-    User user = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
-    String canonicalId = user.getAccount().getCanonicalId()
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
+    String canonicalId = user.getCanonicalId()
     AccessControlPolicy acp = new AccessControlPolicy()
     acp.setAccessControlList(new AccessControlList())
     acp = AclUtils.processNewResourcePolicy(user, acp, canonicalId)
@@ -262,8 +263,8 @@ public class ObjectFactoryTest {
    */
   @Test
   public void testFullDeleteObject() throws Exception {
-    User user = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
-    String canonicalId = user.getAccount().getCanonicalId()
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
+    String canonicalId = user.getCanonicalId()
     AccessControlPolicy acp = new AccessControlPolicy()
     acp.setAccessControlList(new AccessControlList())
     acp = AclUtils.processNewResourcePolicy(user, acp, canonicalId)
@@ -321,8 +322,8 @@ public class ObjectFactoryTest {
    */
   @Test
   public void testDeleteAlreadyDeletingObject() throws Exception {
-    User user = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
-    String canonicalId = user.getAccount().getCanonicalId()
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
+    String canonicalId = user.getCanonicalId()
     AccessControlPolicy acp = new AccessControlPolicy()
     acp.setAccessControlList(new AccessControlList())
     acp = AclUtils.processNewResourcePolicy(user, acp, canonicalId)
@@ -369,8 +370,8 @@ public class ObjectFactoryTest {
    */
   @Test
   public void testDeleteNonExistentObject() throws Exception {
-    User user = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
-    String canonicalId = user.getAccount().getCanonicalId()
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
+    String canonicalId = user.getCanonicalId()
     AccessControlPolicy acp = new AccessControlPolicy()
     acp.setAccessControlList(new AccessControlList())
     acp = AclUtils.processNewResourcePolicy(user, acp, canonicalId)
@@ -404,8 +405,8 @@ public class ObjectFactoryTest {
     //Set the min part size to 1 to allow small tests
     ObjectStorageProperties.MPU_PART_MIN_SIZE = 1;
 
-    User user = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
-    String canonicalId = user.getAccount().getCanonicalId()
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
+    String canonicalId = user.getCanonicalId()
     AccessControlPolicy acp = new AccessControlPolicy()
     acp.setAccessControlList(new AccessControlList())
     acp = AclUtils.processNewResourcePolicy(user, acp, canonicalId)
@@ -486,8 +487,8 @@ public class ObjectFactoryTest {
     //Set the min part size to 1 to allow small tests
     ObjectStorageProperties.MPU_PART_MIN_SIZE = 1;
 
-    User user = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
-    String canonicalId = user.getAccount().getCanonicalId()
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
+    String canonicalId = user.getCanonicalId()
     AccessControlPolicy acp = new AccessControlPolicy()
     acp.setAccessControlList(new AccessControlList())
     acp = AclUtils.processNewResourcePolicy(user, acp, canonicalId)
@@ -585,8 +586,8 @@ public class ObjectFactoryTest {
     //Set the min part size to 1 to allow small tests
     ObjectStorageProperties.MPU_PART_MIN_SIZE = 1;
 
-    User user = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
-    String canonicalId = user.getAccount().getCanonicalId()
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
+    String canonicalId = user.getCanonicalId()
     AccessControlPolicy acp = new AccessControlPolicy()
     acp.setAccessControlList(new AccessControlList())
     acp = AclUtils.processNewResourcePolicy(user, acp, canonicalId)
@@ -651,8 +652,8 @@ public class ObjectFactoryTest {
    */
   @Test
   public void testCopyObject() throws Exception {
-    User user = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
-    String canonicalId = user.getAccount().getCanonicalId()
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
+    String canonicalId = user.getCanonicalId()
     AccessControlPolicy acp = new AccessControlPolicy()
     acp.setAccessControlList(new AccessControlList())
     acp = AclUtils.processNewResourcePolicy(user, acp, canonicalId)
@@ -706,8 +707,8 @@ public class ObjectFactoryTest {
    */
   @Test
   public void testDeleteMarker() throws Exception {
-    User user = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
-    String canonicalId = user.getAccount().getCanonicalId()
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
+    String canonicalId = user.getCanonicalId()
     AccessControlPolicy acp = new AccessControlPolicy()
     acp.setAccessControlList(new AccessControlList())
     acp = AclUtils.processNewResourcePolicy(user, acp, canonicalId)

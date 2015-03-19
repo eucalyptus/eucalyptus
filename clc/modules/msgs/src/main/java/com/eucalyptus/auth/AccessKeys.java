@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,8 +25,11 @@ import javax.annotation.Nullable;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.TemporaryAccessKey;
 import com.eucalyptus.auth.tokens.SecurityTokenManager;
+import com.eucalyptus.util.CollectionUtils;
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 
 /**
  *
@@ -44,7 +47,9 @@ public class AccessKeys {
   public static AccessKey lookupAccessKey( @Nonnull  final String accessKeyId,
                                            @Nullable final String securityToken ) throws AuthException {
     return securityToken == null ?
-        Accounts.lookupAccessKeyById( accessKeyId ) :
+        Iterables.tryFind(
+            Accounts.lookupPrincipalByAccessKeyId( accessKeyId, null ).getKeys( ),
+            CollectionUtils.propertyPredicate( accessKeyId, accessKeyIdentifier( ) ) ).get( ) :
         SecurityTokenManager.lookupAccessKey( accessKeyId, securityToken );
   }
 
@@ -56,6 +61,15 @@ public class AccessKeys {
    */
   public static Predicate<AccessKey> isActive() {
     return IS_ACTIVE.INSTANCE;
+  }
+
+  /**
+   * Function to get the identifier for an access key.
+   *
+   * @return the function
+   */
+  public static Function<AccessKey,String> accessKeyIdentifier( ) {
+    return AccessKeyStringProperties.IDENTIFIER;
   }
 
   /**
@@ -71,6 +85,16 @@ public class AccessKeys {
       type = Optional.of( ((TemporaryAccessKey) key ).getType( ) );
     }
     return type;
+  }
+
+  private static enum AccessKeyStringProperties implements Function<AccessKey,String> {
+    IDENTIFIER {
+      @Nullable
+      @Override
+      public String apply( @Nullable final AccessKey accessKey ) {
+        return accessKey == null ? null : accessKey.getAccessKey( );
+      }
+    },
   }
 
   private static enum IS_ACTIVE implements Predicate<AccessKey> {

@@ -257,7 +257,7 @@ public class NetworkGroupManager {
 
       final OwnerFullName ownerFn = Contexts.lookup( ).isAdministrator( ) && showAll ?
           null :
-          AccountFullName.getInstance( ctx.getAccount( ) );
+          AccountFullName.getInstance( ctx.getAccountNumber( ) );
 
       final Iterable<SecurityGroupItemType> securityGroupItems = 
           Entities.asDistinctTransaction( NetworkGroup.class, new Function<Void, Iterable<SecurityGroupItemType>>() {
@@ -282,7 +282,7 @@ public class NetworkGroupManager {
       } ).apply( null );
 
       final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( NetworkGroup.class )
-          .getResourceTagMap( AccountFullName.getInstance( ctx.getAccount( ) ),
+          .getResourceTagMap( AccountFullName.getInstance( ctx.getAccountNumber( ) ),
               Iterables.transform( securityGroupItems, SecurityGroupItemToGroupId.INSTANCE ) );
       for ( final SecurityGroupItemType securityGroupItem : securityGroupItems ) {
         Tags.addFromTags( securityGroupItem.getTagSet(), ResourceTag.class, tagsMap.get( securityGroupItem.getGroupId() ) );

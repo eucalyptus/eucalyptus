@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,9 @@ package com.eucalyptus.auth;
 
 import javax.security.auth.login.CredentialExpiredException;
 import com.eucalyptus.auth.ldap.LdapSync;
-import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.EuareUser;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.crypto.Crypto;
 import com.google.common.base.Objects;
 import com.google.common.base.Strings;
@@ -33,7 +35,7 @@ public class PasswordAuthentication {
   public static final String INVALID_USERNAME_OR_PASSWORD = "Invalid username or password";
   public static final String PASSWORD_CHANGE_NOT_SUPPORTED = "Changing password is not supported for this user";
 
-  public static void authenticate( final User user,
+  public static void authenticate( final EuareUser user,
                                    final String password ) throws AuthException, CredentialExpiredException {
     boolean checkExpiration = true;
     if ( authenticateWithLdap( user ) ) try {
@@ -49,7 +51,7 @@ public class PasswordAuthentication {
     }
   }
 
-  public static boolean authenticateWithLdap( final User user ) {
+  public static boolean authenticateWithLdap( final EuareUser user ) {
     return LdapSync.enabled( ) && !user.isSystemAdmin( ) && !user.isAccountAdmin( );
   }
 
@@ -57,16 +59,24 @@ public class PasswordAuthentication {
    * Authenticates a user by {@code user}/{@code password} and if provided updates the user's
    * password to be the given {@code newPassword}
    * 
-   * @param user - identified user
+   * @param accountAlias - identified user account alias
+   * @param username - identified username
    * @param password - user provided password
    * @param newPassword - user provided new password, may be null, cannot be given w/ LDAP
    * @throws AuthException
    * @throws CredentialExpiredException 
-   * @see {@link PasswordAuthentication#authenticate(User, String)}
+   * @see {@link PasswordAuthentication#authenticate(EuareUser, String)}
    */
-  public static void authenticate( final User user,
-                                   final String password,
-                                   final String newPassword ) throws AuthException, CredentialExpiredException {
+  public static UserPrincipal authenticate(
+      final String accountAlias,
+      final String username,
+      final String password,
+      final String newPassword
+  ) throws AuthException, CredentialExpiredException {
+    //TODO:STEVE: password auth for federated users
+    final Account account = Accounts.lookupAccountByName( accountAlias );
+    final EuareUser user = account.lookupUserByName( username );
+
     if ( newPassword == null ) {
       authenticate( user, password );
     } else if ( authenticateWithLdap( user ) ) {
@@ -77,10 +87,11 @@ public class PasswordAuthentication {
     } catch ( CredentialExpiredException ex ) {
       updatePassword( user, newPassword );//Password is expired but user is authenticated, allow this update.
     }
-    
+
+    return Accounts.lookupPrincipalByUserId( user.getUserId( ), null );
   }
 
-  private static void updatePassword( User user, String newPassword ) throws AuthException {
+  private static void updatePassword( EuareUser user, String newPassword ) throws AuthException {
     if ( Strings.isNullOrEmpty( newPassword ) || user.getName( ).equals( newPassword ) ) {
       throw new AuthException( AuthException.INVALID_PASSWORD );
     }
@@ -89,7 +100,7 @@ public class PasswordAuthentication {
     user.setPasswordExpires( System.currentTimeMillis( ) + AuthenticationLimitProvider.Values.getDefaultPasswordExpiry( ) );
   }
 
-  private static void checkPasswordExpiration( final User user ) throws CredentialExpiredException {
+  private static void checkPasswordExpiration( final EuareUser user ) throws CredentialExpiredException {
     if ( Objects.firstNonNull( user.getPasswordExpires(), Long.MAX_VALUE )
         < System.currentTimeMillis() ) {
       throw new CredentialExpiredException();

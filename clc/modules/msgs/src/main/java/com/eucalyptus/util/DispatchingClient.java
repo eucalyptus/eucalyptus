@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,11 +23,13 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.concurrent.ListenableFuture;
+import com.google.common.base.Objects;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 /**
@@ -36,17 +38,26 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 public class DispatchingClient<MT extends BaseMessage,CT extends ComponentId> {
   @Nullable
   private final String userId;
+  private final AccountFullName accountFullName;
   private final Class<CT> componentIdClass;
   private ServiceConfiguration configuration;
 
   public DispatchingClient( @Nullable final String userId,
                             @Nonnull  final Class<CT> componentIdClass ) {
     this.userId = userId;
+    this.accountFullName = null;
+    this.componentIdClass = componentIdClass;
+  }
+
+  public DispatchingClient( @Nullable final AccountFullName accountFullName,
+                            @Nonnull  final Class<CT> componentIdClass ) {
+    this.userId = null;
+    this.accountFullName = accountFullName;
     this.componentIdClass = componentIdClass;
   }
 
   public DispatchingClient( @Nonnull final Class<CT> componentIdClass ) {
-    this( null, componentIdClass );
+    this( (String)null, componentIdClass );
   }
 
   public void init() throws DispatchingClientException {
@@ -66,7 +77,7 @@ public class DispatchingClient<MT extends BaseMessage,CT extends ComponentId> {
    void dispatch( final REQ request,
                  final Callback.Checked<RES> callback,
                  @Nullable final Runnable then ) {
-    request.setUserId( userId );
+    request.setUserId( userId != null ? userId : accountFullName != null ? accountFullName.getAccountNumber( ) : null );
     request.markPrivileged( );
     try {
       final ListenableFuture<RES> future =

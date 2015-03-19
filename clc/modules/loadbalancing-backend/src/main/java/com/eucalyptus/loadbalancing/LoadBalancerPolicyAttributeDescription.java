@@ -24,6 +24,7 @@ import java.util.NoSuchElementException;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
+import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
@@ -32,6 +33,7 @@ import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Type;
 
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
@@ -61,6 +63,8 @@ public class LoadBalancerPolicyAttributeDescription extends AbstractPersistent{
   @Column( name = "attribute_name", nullable=true)
   private String attributeName = null;
 
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   @Column( name = "attribute_value", nullable=true)
   private String attributeValue = null;
   
@@ -125,6 +129,14 @@ public class LoadBalancerPolicyAttributeDescription extends AbstractPersistent{
     } else if ( !this.attributeName.equals( other.attributeName ) ) {
       return false;
     }
+    
+    if ( this.attributeValue == null ) {
+      if ( other.attributeValue != null ) {
+        return false;
+      }
+    } else if ( !this.attributeValue.equals( other.attributeValue ) ) {
+      return false;
+    }
 
     return true;
   }
@@ -140,6 +152,10 @@ public class LoadBalancerPolicyAttributeDescription extends AbstractPersistent{
     result = prime * result + ( ( this.attributeName == null )
       ? 0
       : this.attributeName.hashCode( ) );
+    
+    result = prime * result + ( ( this.attributeValue == null )
+        ? 0
+        : this.attributeValue.hashCode( ) );
     return result;
   }
   

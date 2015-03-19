@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,11 +20,12 @@
 package com.eucalyptus.autoscaling
 
 import com.eucalyptus.auth.Accounts
-import com.eucalyptus.auth.AuthException
 import com.eucalyptus.auth.api.AccountProvider
 import com.eucalyptus.auth.principal.AccessKey
 import com.eucalyptus.auth.principal.Account
+import com.eucalyptus.auth.principal.AccountFullName
 import com.eucalyptus.auth.principal.Certificate
+import com.eucalyptus.auth.principal.EuareUser
 import com.eucalyptus.auth.principal.Group
 import com.eucalyptus.auth.principal.Principals
 import com.eucalyptus.auth.principal.Role
@@ -488,7 +489,7 @@ class AutoScalingServiceTest {
       }
 
       @Override
-      Set<String> resolveAccountNumbersForName(final String accountNAmeLike) {
+      Set<String> resolveAccountNumbersForName(final String accountNameLike) {
         [] as Set
       }
 
@@ -498,27 +499,17 @@ class AutoScalingServiceTest {
       }
 
       @Override
-      boolean shareSameAccount(final String userId1, final String userId2) {
+      EuareUser lookupUserById(final String userId) {
         throw new UnsupportedOperationException()
       }
 
       @Override
-      User lookupUserById(final String userId) {
+      EuareUser lookupUserByAccessKeyId(final String keyId) {
         throw new UnsupportedOperationException()
       }
 
       @Override
-      User lookupUserByAccessKeyId(final String keyId) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      User lookupUserByCertificate(final X509Certificate cert) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      User lookupUserByConfirmationCode(final String code) {
+      EuareUser lookupUserByCertificate(final X509Certificate cert) {
         throw new UnsupportedOperationException()
       }
 
@@ -538,12 +529,12 @@ class AutoScalingServiceTest {
       }
 
       @Override
-      AccessKey lookupAccessKeyById(final String keyId) {
+      Certificate lookupCertificateById(final String certificateId) {
         throw new UnsupportedOperationException()
       }
 
       @Override
-      User lookupUserByName(final String userName) {
+      AccessKey lookupAccessKeyById(final String keyId) {
         throw new UnsupportedOperationException()
       }
 
@@ -553,7 +544,7 @@ class AutoScalingServiceTest {
       }
 
       @Override
-      User lookupUserByEmailAddress(String email) throws AuthException {
+      EuareUser lookupUserByEmailAddress(String email) {
         throw new UnsupportedOperationException()
       }
     }
@@ -903,8 +894,8 @@ class AutoScalingServiceTest {
       }
 
       @Override
-      CloudWatchClient createCloudWatchClientForUser( final String userId ) {
-        new TestClients.TesCloudWatchClient( userId, { request ->
+      CloudWatchClient createCloudWatchClientForUser( final AccountFullName accountFullName ) {
+        new TestClients.TesCloudWatchClient( accountFullName, { request ->
           if (request instanceof DescribeAlarmsType ) {
             new DescribeAlarmsResponseType( )
           }

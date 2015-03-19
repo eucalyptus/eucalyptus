@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.reporting.modules.storage
 
+import com.eucalyptus.auth.AuthException
 import org.junit.Test
 import com.eucalyptus.auth.principal.Principals
 
@@ -110,6 +111,10 @@ class SnapShotUsageEventListenerTest {
       @Override protected User lookupUser( final String userId ) {
         assertEquals( "Looked up user", "eucalyptus", userId )
         Principals.systemUser()
+      }
+      @Override protected String lookupAccountAliasById(final String accountNumber) throws AuthException {
+        assertEquals( "Account Id", "000000000000", accountNumber  )
+        'eucalyptus'
       }
     }
 

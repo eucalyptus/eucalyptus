@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2009-2015 Eucalyptus Systems, Inc.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+
+  Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+  CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+  additional information or have any questions.
+  -->
+<binding name="www_eucalyptus_com_ns_identity_2015_03_01">
+  <namespace uri="http://www.eucalyptus.com/ns/identity/2015-03-01/" default="elements"/>
+  <mapping class="com.eucalyptus.auth.euare.common.identity.IdentityMessage" abstract="true">
+  </mapping>
+  <mapping type-name="IdentityResponseMessage" class="com.eucalyptus.auth.euare.common.identity.IdentityMessage" abstract="true">
+    <structure name="ResponseMetadata">
+      <value name="RequestId" get-method="getCorrelationId" set-method="setCorrelationId" usage="required"/>
+    </structure>
+  </mapping>
+  <mapping name="DescribePrincipalResponse" class="com.eucalyptus.auth.euare.common.identity.DescribePrincipalResponseType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+    <structure name="DescribePrincipalResult" field="describePrincipalResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.DescribePrincipalResult"/>
+    <structure map-as="IdentityResponseMessage"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.common.identity.DescribePrincipalResult" abstract="true">
+    <structure name="Principal" field="principal" usage="optional" type="com.eucalyptus.auth.euare.common.identity.Principal"/>
+  </mapping>
+  <mapping name="DescribePrincipal" class="com.eucalyptus.auth.euare.common.identity.DescribePrincipalType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+    <value name="AccessKeyId" field="accessKeyId" usage="optional"/>
+    <value name="CertificateId" field="certificateId" usage="optional"/>
+    <value name="UserId" field="userId" usage="optional"/>
+    <value name="RoleId" field="roleId" usage="optional"/>
+    <value name="AccountId" field="accountId" usage="optional"/>
+    <value name="CanonicalId" field="canonicalId" usage="optional"/>
+    <value name="Nonce" field="nonce" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.common.identity.Principal" abstract="true">
+    <value name="Enabled" field="enabled" usage="optional"/>
+    <value name="Arn" field="arn" usage="optional"/>
+    <value name="UserId" field="userId" usage="optional"/>
+    <value name="RoleId" field="roleId" usage="optional"/>
+    <value name="CanonicalId" field="canonicalId" usage="optional"/>
+    <value name="AccountAlias" field="accountAlias" usage="optional"/>
+    <value name="PasswordHash" field="passwordHash" usage="optional"/>
+    <collection name="AccessKeys" field="accessKeys" usage="optional">>
+      <structure name="member" type="com.eucalyptus.auth.euare.common.identity.AccessKey"/>
+    </collection>
+    <collection name="Certificates" field="certificates" usage="optional">>
+      <structure name="member" type="com.eucalyptus.auth.euare.common.identity.Certificate"/>
+    </collection>
+    <collection name="Policies" field="policies" usage="optional">>
+      <structure name="member" type="com.eucalyptus.auth.euare.common.identity.Policy"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.common.identity.AccessKey" abstract="true">
+    <value name="AccessKeyId" field="accessKeyId" usage="optional"/>
+    <value name="SecretAccessKey" field="secretAccessKey" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.common.identity.Certificate" abstract="true">
+    <value name="CertificateId" field="certificateId" usage="optional"/>
+    <value name="CertificateBody" field="certificateBody" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.common.identity.Policy" abstract="true">
+    <value name="VersionId" field="versionId" usage="optional"/>
+    <value name="Name" field="name" usage="optional"/>
+    <value name="Scope" field="scope" usage="optional"/>
+    <value name="Policy" field="policy" usage="optional"/>
+    <value name="Hash" field="hash" usage="optional"/>
+  </mapping>
+</binding>

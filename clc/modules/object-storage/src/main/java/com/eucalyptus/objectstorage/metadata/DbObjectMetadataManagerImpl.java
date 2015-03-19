@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,7 +39,9 @@ import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
@@ -339,13 +341,13 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
   }
 
   @Override
-  public ObjectEntity generateAndPersistDeleteMarker(@Nonnull ObjectEntity currentObject, @Nonnull AccessControlPolicy acp, @Nonnull User owningUser)
+  public ObjectEntity generateAndPersistDeleteMarker(@Nonnull ObjectEntity currentObject, @Nonnull AccessControlPolicy acp, @Nonnull UserPrincipal owningUser)
       throws MetadataOperationFailureException {
     final ObjectEntity deleteMarker = currentObject.generateNewDeleteMarkerFrom();
 
     try (TransactionResource trans = Entities.transactionFor(ObjectEntity.class)) {
-      deleteMarker.setOwnerCanonicalId(owningUser.getAccount().getCanonicalId());
-      deleteMarker.setOwnerDisplayName(owningUser.getAccount().getName());
+      deleteMarker.setOwnerCanonicalId( owningUser.getCanonicalId( ) );
+      deleteMarker.setOwnerDisplayName( owningUser.getAccountAlias( ) );
       deleteMarker.setOwnerIamUserDisplayName(owningUser.getName());
       deleteMarker.setOwnerIamUserId(owningUser.getUserId());
       deleteMarker.setAcl(acp);

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -565,8 +565,7 @@ public class Allocations {
       return context != null ?
           context.getAuthContext( ) :
           Permissions.createAuthContextSupplier(
-              Accounts.lookupUserById( getOwnerFullName( ).getUserId( ) ),
-              Lists.newArrayList( PolicyVersions.getAdministratorPolicy( ) ),
+              Accounts.lookupPrincipalByUserId( getOwnerFullName( ).getUserId( ), null ),
               Collections.<String,String>emptyMap( ) );
     }
   }

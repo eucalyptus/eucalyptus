@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,7 +38,7 @@ import org.bouncycastle.util.encoders.Hex;
 import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.InvalidSignatureAuthException;
 import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.crypto.Hmac;
 import com.eucalyptus.crypto.util.SecurityHeader;
@@ -75,7 +75,7 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
     final AccessKey accessKey = lookupAccessKey( credentials );
     final Date date = HmacUtils.getSignatureDate( EnumSet.of(HmacUtils.SignatureVersion.SignatureV4), headerLookup, parameterLookup );
     signatureCredential.verify( date, null, null, V4_TERMINATOR ); //TODO Do we want to validate region and service name?
-    final User user = accessKey.getUser( );
+    final UserPrincipal user = accessKey.getPrincipal( );
     final String secretKey = accessKey.getSecretKey( );
     final byte[] signatureKey = getSignatureKey( secretKey, signatureCredential );
     final String canonicalString = this.makeSubjectString( credentials, signatureCredential, authorizationParameters, date, false );

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -66,11 +66,8 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.login.SecurityContext;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.walrus.WalrusBackend;
@@ -317,14 +314,6 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
       String data = verb + "\n" + content_md5 + "\n" + content_type + "\n" + date + "\n" + canonicalizedAmzHeaders + addrString;
       String accessKeyId = authMap.get(AuthorizationField.AccessKeyId);
       String signature = authMap.get(AuthorizationField.Signature);
-      try {
-        Account account = Accounts.lookupAccessKeyById(accessKeyId).getUser().getAccount();
-        if (!Account.OBJECT_STORAGE_WALRUS_ACCOUNT.equals(account.getName())) {
-          throw new AccessDeniedException("walrus only accepts requests from " + Account.OBJECT_STORAGE_WALRUS_ACCOUNT);
-        }
-      } catch (AuthException e) {
-        throw new AccessDeniedException(e.getMessage());
-      }
       try {
         SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature, securityToken))
             .login();

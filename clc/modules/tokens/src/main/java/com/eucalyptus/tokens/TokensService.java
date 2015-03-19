@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,6 +37,7 @@ import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.tokens.SecurityToken;
@@ -71,6 +72,8 @@ public class TokensService {
     if ( queryIdCreds.isEmpty( ) ) {
       throw new TokensException( TokensException.Code.MissingAuthenticationToken, "Missing credential." );
     }
+
+    //TODO:STEVE: verify disabled user functionality
 
     final String queryId = Iterables.getOnlyElement( queryIdCreds ).getQueryId( );
     final AccessKey accessKey;
@@ -175,23 +178,26 @@ public class TokensService {
     final AccountUsername accountUsername = subject == null ?
         null :
         Iterables.getFirst( subject.getPublicCredentials( AccountUsername.class ), null );
-    if ( accountUsername == null ||
-        !accountUsername.getAccount( ).equals( ctx.getAccount( ).getName( ) ) ||
-        !accountUsername.getUsername( ).equals( requestUser.getName( ) ) ) {
-      throw new EucalyptusCloudException( "Invalid authentication" );
-    }
 
     try {
+      if ( accountUsername == null ||
+          !accountUsername.getAccount( ).equals( Accounts.lookupAccountAliasById( ctx.getAccountNumber( ) ) ) ||
+          !accountUsername.getUsername( ).equals( requestUser.getName( ) ) ) {
+        throw new EucalyptusCloudException( "Invalid authentication" );
+      }
+
       final SecurityToken token = SecurityTokenManager.issueSecurityToken(
           requestUser,
-          requestUser.isAccountAdmin( ) ? (int)TimeUnit.DAYS.toSeconds( 1 ) : 0,
-          Objects.firstNonNull( request.getDurationSeconds(), (int)TimeUnit.HOURS.toSeconds(12)));
+          requestUser.isAccountAdmin( ) ? (int) TimeUnit.DAYS.toSeconds( 1 ) : 0,
+          Objects.firstNonNull( request.getDurationSeconds(), (int) TimeUnit.HOURS.toSeconds( 12 ) ) );
       reply.setResult( GetAccessTokenResultType.forCredentials(
           token.getAccessKeyId(),
           token.getSecretKey(),
           token.getToken(),
           token.getExpires()
       ) );
+    } catch ( final EucalyptusCloudException e  ) {
+      throw e;
     } catch ( final SecurityTokenValidationException e ) {
       throw new TokensException( TokensException.Code.ValidationError, e.getMessage( ) );
     } catch ( final AuthException e ) {
@@ -210,7 +216,7 @@ public class TokensService {
     rejectPasswordCredentials( );
 
     final User impersonated;
-    final Account impersonatedAccount;
+    final AccountFullName impersonatedAccount;
     try {
       if ( !Strings.isNullOrEmpty( request.getImpersonatedUserId( ) ) ) {
         impersonated = Accounts.lookupUserById( request.getImpersonatedUserId( ) );
@@ -218,7 +224,7 @@ public class TokensService {
         Account account = Accounts.lookupAccountByName( request.getAccountAlias( ) );
         impersonated = account.lookupUserByName( request.getUserName( ) );
       }
-      impersonatedAccount = impersonated.getAccount( );
+      impersonatedAccount = AccountFullName.getInstance( impersonated.getAccountNumber( ) );
     } catch ( AuthException e ) {
       throw new TokensException( TokensException.Code.ValidationError, e.getMessage( ) );
     }

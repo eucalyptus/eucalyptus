@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,7 +46,6 @@ import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import org.mule.component.ComponentException;
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
@@ -165,8 +164,6 @@ import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Splitter;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -1036,9 +1033,9 @@ public class ActivityManager {
     return runner.taskInProgress( groupArn );
   }
 
-  EucalyptusClient createEucalyptusClientForUser( final String userId ) {
+  EucalyptusClient createEucalyptusClientForUser( final AccountFullName accountFullName ) {
     try {
-      final EucalyptusClient client = new EucalyptusClient( userId );
+      final EucalyptusClient client = new EucalyptusClient( accountFullName );
       client.init();
       return client;
     } catch ( DispatchingClient.DispatchingClientException e ) {
@@ -1046,9 +1043,9 @@ public class ActivityManager {
     }
   }
 
-  ElbClient createElbClientForUser( final String userId ) {
+  ElbClient createElbClientForUser( final AccountFullName accountFullName ) {
     try {
-      final ElbClient client = new ElbClient( userId );
+      final ElbClient client = new ElbClient( accountFullName );
       client.init();
       return client;
     } catch ( DispatchingClient.DispatchingClientException e ) {
@@ -1056,9 +1053,9 @@ public class ActivityManager {
     }
   }
 
-  public CloudWatchClient createCloudWatchClientForUser( final String userId ) {
+  public CloudWatchClient createCloudWatchClientForUser( final AccountFullName accountFullName ) {
     try {
-      final CloudWatchClient client = new CloudWatchClient( userId );
+      final CloudWatchClient client = new CloudWatchClient( accountFullName );
       client.init();
       return client;
     } catch ( DispatchingClient.DispatchingClientException e ) {
@@ -1066,28 +1063,14 @@ public class ActivityManager {
     }
   }
 
-  VmTypesClient createVmTypesClientForUser( final String userId ) {
+  VmTypesClient createVmTypesClientForUser( final AccountFullName accountFullName ) {
     try {
-      final VmTypesClient client = new VmTypesClient( userId );
+      final VmTypesClient client = new VmTypesClient( accountFullName );
       client.init();
       return client;
     } catch ( DispatchingClient.DispatchingClientException e ) {
       throw Exceptions.toUndeclared( e );
     }
-  }
-
-  Supplier<String> userIdSupplier( final String accountNumber ) {
-    return new Supplier<String>(){
-      @Override
-      public String get() {
-        try {
-          return Accounts.lookupAccountById( accountNumber )
-              .lookupAdmin().getUserId();
-        } catch ( AuthException e ) {
-          throw Exceptions.toUndeclared( e );
-        }
-      }
-    };
   }
 
   List<Tag> getTags( final AutoScalingGroupMetadata group ) {
@@ -1295,7 +1278,6 @@ public class ActivityManager {
 
   abstract class ScalingProcessTask<GVT extends AutoScalingGroupCoreView, AT extends ScalingActivityTask> extends TaskWithBackOff implements ActivityContext {
     private final GVT group;
-    private final Supplier<String> userIdSupplier;
     private final AtomicReference<List<ScalingActivity>> activities =
         new AtomicReference<>( Collections.<ScalingActivity>emptyList() );
     private volatile CheckedListenableFuture<Boolean> taskFuture;
@@ -1305,7 +1287,6 @@ public class ActivityManager {
                         final String activity ) {
       super( uniqueKey, activity );
       this.group = group;
-      this.userIdSupplier = Suppliers.memoize( userIdSupplier( group.getOwnerAccountNumber() ) );
     }
 
     ScalingProcessTask( final GVT group,
@@ -1325,8 +1306,8 @@ public class ActivityManager {
       return getGroup().getOwner();
     }
 
-    public String getUserId() {
-      return userIdSupplier.get();
+    public AccountFullName getUserId() {
+      return AccountFullName.getInstance( group.getOwnerAccountNumber( ) );
     }
 
     @Override

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,10 +34,9 @@ import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.PolicyResourceContext;
 import com.eucalyptus.auth.PolicyResourceContext.PolicyResourceInfo;
 import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
@@ -127,33 +126,36 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
     }
 
     // Use these variables to isolate where all the AuthExceptions can happen on account/user lookups
-    User requestUser = null;
-    Account requestAccount = null;
+    UserPrincipal requestUser = null;
+    String requestAccountNumber = null;
+    String requestCanonicalId = null;
     AuthContextSupplier authContext = null;
     try {
       // Use context if available as it saves a DB lookup
       try {
         Context ctx = Contexts.lookup(request.getCorrelationId());
         requestUser = ctx.getUser();
-        requestAccount = requestUser.getAccount();
+        requestAccountNumber = ctx.getAccountNumber( );
         authContext = ctx.getAuthContext();
       } catch (NoSuchContextException e) {
         requestUser = null;
-        requestAccount = null;
+        requestAccountNumber = null;
         authContext = null;
       }
 
       // This is not an expected path, but if no context found use the request credentials itself
       if (requestUser == null && !Strings.isNullOrEmpty(request.getEffectiveUserId())) {
-        requestUser = Accounts.lookupUserById(request.getEffectiveUserId());
-        requestAccount = requestUser.getAccount();
+        requestUser = Accounts.lookupPrincipalByUserId(request.getEffectiveUserId(), null);
+        requestAccountNumber = requestUser.getAccountNumber( );
       }
 
       if (requestUser == null) {
         // Set to anonymous user since all else failed
         requestUser = Principals.nobodyUser();
-        requestAccount = requestUser.getAccount();
+        requestAccountNumber = requestUser.getAccountNumber( );
       }
+
+      requestCanonicalId = requestUser.getCanonicalId( );
     } catch (AuthException e) {
       LOG.error("Failed to get user for request, cannot verify authorization: " + e.getMessage(), e);
       return false;
@@ -164,14 +166,11 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
       return true;
     }
 
-    if (authContext == null) try {
-      authContext = Permissions.createAuthContextSupplier( requestUser, Context.loadPolicies( requestUser ), Collections.<String, String>emptyMap( ) );
-    } catch ( AuthException e ) {
-      LOG.error("Failed to get user policies for request, cannot verify authorization: " + e.getMessage(), e);
-      return false;
+    if (authContext == null) {
+      authContext = Permissions.createAuthContextSupplier(requestUser, Collections.<String, String>emptyMap());
     }
 
-    final Account resourceOwnerAccount;
+    final String resourceOwnerAccountNumber;
     final PolicyResourceInfo policyResourceInfo;
     if (resourceType == null) {
       LOG.error("No resource type found in request class annotations, cannot process.");
@@ -186,8 +185,8 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
               LOG.error("Could not check access for operation due to no bucket resource entity found");
               return false;
             } else {
-              resourceOwnerAccount = Accounts.lookupAccountByCanonicalId(bucketResourceEntity.getOwnerCanonicalId());
-              policyResourceInfo = PolicyResourceContext.resourceInfo(resourceOwnerAccount.getAccountNumber(), bucketResourceEntity);
+              resourceOwnerAccountNumber = Accounts.lookupPrincipalByCanonicalId(bucketResourceEntity.getOwnerCanonicalId()).getAccountNumber( );
+              policyResourceInfo = PolicyResourceContext.resourceInfo(resourceOwnerAccountNumber, bucketResourceEntity);
             }
             break;
           case PolicySpec.S3_RESOURCE_OBJECT:
@@ -195,8 +194,8 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
               LOG.error("Could not check access for operation due to no object resource entity found");
               return false;
             } else {
-              resourceOwnerAccount = Accounts.lookupAccountByCanonicalId(objectResourceEntity.getOwnerCanonicalId());
-              policyResourceInfo = PolicyResourceContext.resourceInfo(resourceOwnerAccount.getAccountNumber(), objectResourceEntity);
+              resourceOwnerAccountNumber = Accounts.lookupPrincipalByCanonicalId(objectResourceEntity.getOwnerCanonicalId()).getAccountNumber( );
+              policyResourceInfo = PolicyResourceContext.resourceInfo(resourceOwnerAccountNumber, objectResourceEntity);
             }
             break;
           default:
@@ -243,7 +242,7 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
 
       // Evaluate the bucket ACL, any matching grant gives permission
       for (ObjectStorageProperties.Permission permission : requiredBucketACLPermissions) {
-        aclAllow = aclAllow || bucketResourceEntity.can(permission, requestAccount.getCanonicalId());
+        aclAllow = aclAllow || bucketResourceEntity.can(permission, requestCanonicalId);
       }
     }
 
@@ -256,7 +255,7 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
         return false;
       }
       for (ObjectStorageProperties.Permission permission : requiredObjectACLPermissions) {
-        aclAllow = aclAllow || objectResourceEntity.can(permission, requestAccount.getCanonicalId());
+        aclAllow = aclAllow || objectResourceEntity.can(permission, requestCanonicalId);
       }
     }
 
@@ -265,7 +264,7 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
      * Regular owner permissions (READ, WRITE, READ_ACP, WRITE_ACP) are handled by the regular acl checks. OwnerOnly should be only used for
      * operations not covered by the other Permissions (e.g. logging, or versioning)
      */
-    aclAllow = (allowOwnerOnly ? resourceOwnerAccount.getAccountNumber().equals(requestAccount.getAccountNumber()) : aclAllow);
+    aclAllow = (allowOwnerOnly ? resourceOwnerAccountNumber.equals(requestAccountNumber) : aclAllow);
     if (isUserAnonymous(requestUser)) {
       // Skip the IAM checks for anonymous access since they will always fail and aren't valid for anonymous users.
       return aclAllow;

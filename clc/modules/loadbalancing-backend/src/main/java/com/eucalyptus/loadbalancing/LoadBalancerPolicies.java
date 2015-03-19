@@ -32,6 +32,8 @@ import org.codehaus.jackson.type.TypeReference;
 
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAttributeDescriptionCoreView;
@@ -291,24 +293,85 @@ public class LoadBalancerPolicies {
   }
   
   public static void addLoadBalancerPolicy(final LoadBalancer lb, final String policyName, final String policyTypeName, 
-      final List<PolicyAttribute> attributes) throws LoadBalancingException
+      final List<PolicyAttribute> policyAttributes) throws LoadBalancingException
   {
       for(final LoadBalancerPolicyDescriptionCoreView current : lb.getPolicies()){
         if(policyName.equals(current.getPolicyName()))
           throw new DuplicatePolicyNameException();
       }
       
-      boolean typeFound=false;
+      LoadBalancerPolicyTypeDescription policyType = null;
       for(final LoadBalancerPolicyTypeDescription type : getLoadBalancerPolicyTypeDescriptions()){
           if(policyTypeName.equals(type.getPolicyTypeName())){
-            typeFound=true;
+            policyType = type;
             break;
           }
       }
-      if(!typeFound)
+      if(policyType == null)
         throw new PolicyTypeNotFoundException();
-      final LoadBalancerPolicyDescription policyDesc = new LoadBalancerPolicyDescription(lb, policyName, policyTypeName); 
+
+      List<PolicyAttribute> attributes = null;
+      // Check Reference-Security-Policy
+      if ("SSLNegotiationPolicyType".equals(policyType.getPolicyTypeName())) {
+        String refPolicy = null;
+        for(final PolicyAttribute attr : policyAttributes) {
+          if("Reference-Security-Policy".equals(attr.getAttributeName())) {
+            refPolicy = attr.getAttributeValue();
+            break;
+          }
+        }
+        if(refPolicy!=null) {
+          PolicyDescription predefinedPolicy = null;
+          List<PolicyDescription> predefinedPolicies = LoadBalancerPolicies.getSamplePolicyDescription();
+          for(final PolicyDescription policy : predefinedPolicies) {
+            if(refPolicy.equals(policy.getPolicyName())) {
+              predefinedPolicy = policy;
+              break;
+            }
+          }
+          if (predefinedPolicy == null) {
+            throw new InvalidConfigurationRequestException(String.format("Referenced security policy %s is not found", refPolicy));
+          }else {
+            attributes = Lists.transform(predefinedPolicy.getPolicyAttributeDescriptions().getMember(),
+               new Function<PolicyAttributeDescription,PolicyAttribute>() {
+                @Override
+                public PolicyAttribute apply(PolicyAttributeDescription arg0) {
+                  final PolicyAttribute attr = new PolicyAttribute();
+                  attr.setAttributeName(arg0.getAttributeName());
+                  attr.setAttributeValue(arg0.getAttributeValue());
+                  return attr;
+                }
+            });
+          }
+        }
+      }
       
+      if(attributes == null)
+        attributes = policyAttributes;
+
+      /* check for cardinality
+       * ONE(1) : Single value required
+        ZERO_OR_ONE(0..1) : Up to one value can be supplied
+        ZERO_OR_MORE(0..*) : Optional. Multiple values are allowed
+        ONE_OR_MORE(1..*0) : Required. Multiple values are allowed
+       */
+      final List<LoadBalancerPolicyAttributeTypeDescriptionCoreView> policyAttrTypes = 
+          policyType.getPolicyAttributeTypeDescriptions();
+      for (final LoadBalancerPolicyAttributeTypeDescriptionCoreView policyAttrType : policyAttrTypes) {
+        if("ONE".equals(policyAttrType.getCardinality()) || "ONE_OR_MORE".equals(policyAttrType.getCardinality())) {
+          boolean attrFound = false;
+          for(final PolicyAttribute attr : attributes) {
+            if(policyAttrType.getAttributeName().equals(attr.getAttributeName()) && attr.getAttributeValue()!=null){
+              attrFound = true;
+              break;
+            }
+          }
+          if (!attrFound)
+            throw new InvalidConfigurationRequestException(String.format("There is no attribute %s found (Cardinality: %s)", policyAttrType.getAttributeName(), policyAttrType.getCardinality()));
+        } // other rules are enforced in addPolicyAttributeDescription
+      }
+      
+      final LoadBalancerPolicyDescription policyDesc = new LoadBalancerPolicyDescription(lb, policyName, policyTypeName); 
       for(final PolicyAttribute attr : attributes){
         policyDesc.addPolicyAttributeDescription(attr.getAttributeName(), attr.getAttributeValue());
       }
@@ -421,6 +484,66 @@ public class LoadBalancerPolicies {
     }catch(final Exception ex){
       throw Exceptions.toUndeclared(ex);
     }
+  }
+  
+  
+  public static void addPoliciesToBackendServer(final LoadBalancerBackendServerDescription server, final List<LoadBalancerPolicyDescription> policies) 
+      throws LoadBalancingException {
+    try ( final TransactionResource db = 
+        Entities.transactionFor( LoadBalancerBackendServerDescription.class ) ) {
+      try{
+        final LoadBalancerBackendServerDescription entity = Entities.uniqueResult(server);
+        for(final LoadBalancerPolicyDescription p : policies)
+          entity.addPolicy(p);
+        Entities.persist(entity);
+        db.commit();
+      }catch(final NoSuchElementException ex){
+        throw new InvalidConfigurationRequestException("Backend server description is not found on db");
+      }catch(final Exception ex){
+        throw new InvalidConfigurationRequestException("Unknown error ocrrued while updating db");
+      }
+    }
+  }
+  
+
+  public static void removePoliciesFromBackendServer(final LoadBalancerBackendServerDescription backend, final List<String> policyNames) 
+      throws LoadBalancingException {
+    final List<LoadBalancerPolicyDescription> policyToRemove = Lists.newArrayList();
+    for(final LoadBalancerPolicyDescriptionCoreView pview : backend.getPolicyDescriptions()) {
+      if(policyNames.contains(pview.getPolicyName()))
+        policyToRemove.add(LoadBalancerPolicyDescriptionEntityTransform.INSTANCE.apply(pview));
+    }
+    
+    if(policyToRemove.size() < policyNames.size())
+      throw new InvalidConfigurationRequestException("Unknow policy names found");
+   
+    try ( final TransactionResource db = 
+        Entities.transactionFor( LoadBalancerBackendServerDescription.class ) ) {
+      try{
+        final LoadBalancerBackendServerDescription entity = Entities.uniqueResult(backend);
+        for(final LoadBalancerPolicyDescription p : policyToRemove)
+          entity.removePolicy(p);
+        Entities.persist(entity);
+        db.commit();
+      }catch(final NoSuchElementException ex){
+        throw new InvalidConfigurationRequestException("Backend server description is not found on db");
+      }catch(final Exception ex){
+        throw new InvalidConfigurationRequestException("Unknown error ocrrued while updating db");
+      }
+    }
+  }
+  
+  public static void clearPoliciesFromBackendServer(final LoadBalancerBackendServerDescription backend) throws LoadBalancingException {
+    if (backend == null)
+      throw new InvalidConfigurationRequestException("Backend server description is not found");
+    final List<String> allPolicies = Lists.transform( backend.getPolicyDescriptions(), 
+        new Function<LoadBalancerPolicyDescriptionCoreView, String> () {
+          @Override
+          public String apply(LoadBalancerPolicyDescriptionCoreView arg0) {
+            return arg0.getPolicyName();
+          }
+        });
+    removePoliciesFromBackendServer(backend, allPolicies);
   }
   
   public static void addPoliciesToListener(final LoadBalancerListener listener, 

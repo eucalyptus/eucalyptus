@@ -22,7 +22,7 @@ package com.eucalyptus.objectstorage.policy
 
 import com.eucalyptus.auth.Accounts
 import com.eucalyptus.auth.principal.Account
-import com.eucalyptus.auth.principal.User
+import com.eucalyptus.auth.principal.UserPrincipal
 import com.eucalyptus.objectstorage.BucketMetadataManagers
 import com.eucalyptus.objectstorage.BucketState
 import com.eucalyptus.objectstorage.ObjectMetadataManagers
@@ -50,20 +50,20 @@ public class ObjectStorageQuotaUtilTest {
   static int size = 1024 * 1024
   static Account account1
   static Account account2
-  static User a1u1
-  static User a1u2
-  static User a2u1
-  static User a2u2
+  static UserPrincipal a1u1
+  static UserPrincipal a1u2
+  static UserPrincipal a2u1
+  static UserPrincipal a2u2
 
   private static void initMetaData() {
     def name = "bucket"
     account1 = Accounts.lookupAccountByName(UnitTestSupport.getTestAccounts().first())
-    a1u1 = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
-    a1u2 = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).getAt(1))
+    a1u1 = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
+    a1u2 = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).getAt(1), null)
 
     account2 = Accounts.lookupAccountByName(UnitTestSupport.getTestAccounts().getAt(1))
-    a2u1 = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().getAt(1)).first())
-    a2u2 = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().getAt(1)).getAt(1))
+    a2u1 = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().getAt(1)).first(), null)
+    a2u2 = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().getAt(1)).getAt(1), null)
 
     def acl = ""
     def location = ""

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicSessionCredentials;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Supplier;
@@ -40,6 +42,19 @@ public class SecurityTokenAWSCredentialsProvider implements AWSCredentialsProvid
 
   private final AtomicReference<Supplier<AWSCredentials>> credentialsSupplier = new AtomicReference<>( );
   private final Supplier<User> user;
+
+  public SecurityTokenAWSCredentialsProvider( final AccountFullName accountFullName ) {
+    this( new Supplier<User>() { //TODO:STEVE: remove user lookup
+      @Override
+      public User get() {
+        try {
+          return Accounts.lookupAccountById( accountFullName.getAccountNumber( ) ).lookupAdmin( );
+        } catch ( AuthException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      }
+    } );
+  }
 
   public SecurityTokenAWSCredentialsProvider( final User user ) {
     this( Suppliers.ofInstance( user ) );

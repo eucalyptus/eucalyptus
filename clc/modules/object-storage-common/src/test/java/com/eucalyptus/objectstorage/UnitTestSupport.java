@@ -142,6 +142,7 @@ public class UnitTestSupport {
         User usr = accnt.addUser(userName, "/", true, props);
         userMap.get(accountName).add(usr.getUserId());
       }
+      accnt.addUser("admin", "/", true, null);
     }
   }
 

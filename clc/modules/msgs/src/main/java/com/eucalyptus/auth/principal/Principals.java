@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -69,6 +69,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.annotation.Nonnull;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyParseException;
@@ -88,7 +89,7 @@ public class Principals {
   private static final String  SYSTEM_ID      = Account.SYSTEM_ACCOUNT;
   private static final String  NOBODY_ID      = Account.NOBODY_ACCOUNT;
 
-  private static final User    SYSTEM_USER    = new User( ) {
+  private static final SystemUser SYSTEM_USER = new SystemUser( ) {
                                                 private final Certificate       cert  = new Certificate( ) {
                                                                                         @Override
                                                                                         public Boolean isActive( ) {
@@ -104,9 +105,6 @@ public class Principals {
                                                                                         }
                                                                                         
                                                                                         @Override
-                                                                                        public void setRevoked( Boolean revoked ) throws AuthException {}
-                                                                                        
-                                                                                        @Override
                                                                                         public String getPem( ) {
                                                                                           return B64.url.encString( PEMFiles.getBytes( getX509Certificate( ) ) );
                                                                                         }
@@ -117,18 +115,12 @@ public class Principals {
                                                                                         }
                                                                                         
                                                                                         @Override
-                                                                                        public void setX509Certificate( X509Certificate x509 ) throws AuthException {}
-                                                                                        
-                                                                                        @Override
                                                                                         public Date getCreateDate( ) {
                                                                                           return SystemCredentials.lookup( Eucalyptus.class ).getCertificate( ).getNotBefore( );
                                                                                         }
                                                                                         
                                                                                         @Override
-                                                                                        public void setCreateDate( Date createDate ) throws AuthException {}
-                                                                                        
-                                                                                        @Override
-                                                                                        public User getUser( ) throws AuthException {
+                                                                                        public UserPrincipal getPrincipal( ) throws AuthException {
                                                                                           return Principals.systemUser( );
                                                                                         }
                                                                                         
@@ -142,17 +134,26 @@ public class Principals {
                                                                                           add( cert );
                                                                                         }
                                                                                       };
-                                                
+
+                                                @Nonnull
+                                                @Override
+                                                public String getAuthenticatedId( ) {
+                                                  return getUserId( );
+                                                }
+
+                                                @Nonnull
                                                 @Override
                                                 public String getUserId( ) {
                                                   return Account.SYSTEM_ACCOUNT;
                                                 }
                                                 
+                                                @Nonnull
                                                 @Override
                                                 public String getName( ) {
                                                   return Account.SYSTEM_ACCOUNT;
                                                 }
                                                 
+                                                @Nonnull
                                                 @Override
                                                 public String getPath( ) {
                                                   return "/";
@@ -164,7 +165,7 @@ public class Principals {
                                                 }
 
                                                 @Override
-                                                public Boolean isEnabled( ) {
+                                                public boolean isEnabled( ) {
                                                   return true;
                                                 }
                                                 
@@ -193,8 +194,9 @@ public class Principals {
                                                   return null;
                                                 }
                                                 
+                                                @Nonnull
                                                 @Override
-                                                public List<AccessKey> getKeys( ) throws AuthException {
+                                                public List<AccessKey> getKeys( ) {
                                                   return null;
                                                 }
                                                 
@@ -208,8 +210,9 @@ public class Principals {
                                                   return null;
                                                 }
                                                 
+                                                @Nonnull
                                                 @Override
-                                                public List<Certificate> getCertificates( ) throws AuthException {
+                                                public List<Certificate> getCertificates( ) {
                                                   return certs;
                                                 }
                                                 
@@ -228,13 +231,26 @@ public class Principals {
                                                   return Lists.newArrayList( );
                                                 }
 
+                                                @Nonnull
                                                 @Override
-                                                public String getAccountNumber() throws AuthException {
-                                                  return getAccount().getAccountNumber();
+                                                public String getAccountNumber( ) {
+                                                  return getAccount( ).getAccountNumber( );
+                                                }
+
+                                                @Nonnull
+                                                @Override
+                                                public String getAccountAlias( ) {
+                                                  return getAccount( ).getName();
+                                                }
+
+                                                @Nonnull
+                                                @Override
+                                                public String getCanonicalId( ) {
+                                                  return getAccount( ).getCanonicalId();
                                                 }
 
                                                 @Override
-                                                public Account getAccount( ) throws AuthException {
+                                                public Account getAccount( ) {
                                                   return systemAccount( );
                                                 }
                                                 
@@ -252,9 +268,15 @@ public class Principals {
                                                 public boolean isAccountAdmin( ) {
                                                   return true;
                                                 }
-                                                
+
+                                                @Nonnull
                                                 @Override
-                                                public List<Policy> getPolicies( ) throws AuthException {
+                                                public List<PolicyVersion> getPrincipalPolicies( ) {
+                                                  return Lists.newArrayList( );
+                                                }
+
+                                                @Override
+                                                public List<Policy> getPolicies( ) {
                                                   return Lists.newArrayList( );
                                                 }
                                                 
@@ -275,7 +297,7 @@ public class Principals {
                                                 public void setPath( String path ) throws AuthException {}
                                                 
                                                 @Override
-                                                public void setEnabled( Boolean enabled ) throws AuthException {}
+                                                public void setEnabled( boolean enabled ) throws AuthException {}
                                                 
                                                 @Override
                                                 public void setToken( String token ) throws AuthException {}
@@ -308,7 +330,7 @@ public class Principals {
                                                 public void removeInfo(String key) throws AuthException {}
                                               };
                                                                                            
-  private static final User    NOBODY_USER    = new User( ) {
+  private static final SystemUser NOBODY_USER = new SystemUser( ) {
                                                 private final Certificate       cert  = new Certificate( ) {
                                                                                         
                                                                                         @Override
@@ -325,9 +347,6 @@ public class Principals {
                                                                                         }
                                                                                         
                                                                                         @Override
-                                                                                        public void setRevoked( Boolean revoked ) throws AuthException {}
-                                                                                        
-                                                                                        @Override
                                                                                         public String getPem( ) {
                                                                                           return B64.url.encString( PEMFiles.getBytes( getX509Certificate( ) ) );
                                                                                         }
@@ -338,18 +357,12 @@ public class Principals {
                                                                                         }
                                                                                         
                                                                                         @Override
-                                                                                        public void setX509Certificate( X509Certificate x509 ) throws AuthException {}
-                                                                                        
-                                                                                        @Override
                                                                                         public Date getCreateDate( ) {
                                                                                           return null;
                                                                                         }
                                                                                         
                                                                                         @Override
-                                                                                        public void setCreateDate( Date createDate ) throws AuthException {}
-                                                                                        
-                                                                                        @Override
-                                                                                        public User getUser( ) throws AuthException {
+                                                                                        public UserPrincipal getPrincipal( ) throws AuthException {
                                                                                           return Principals.nobodyUser( );
                                                                                         }
                                                                                         
@@ -363,17 +376,26 @@ public class Principals {
                                                                                           add( cert );
                                                                                         }
                                                                                       };
-                                                
+
+                                                @Nonnull
+                                                @Override
+                                                public String getAuthenticatedId( ) {
+                                                  return getUserId( );
+                                                }
+
+                                                @Nonnull
                                                 @Override
                                                 public String getUserId( ) {
                                                   return Account.NOBODY_ACCOUNT;
                                                 }
                                                 
+                                                @Nonnull
                                                 @Override
                                                 public String getName( ) {
                                                   return Account.NOBODY_ACCOUNT;
                                                 }
                                                 
+                                                @Nonnull
                                                 @Override
                                                 public String getPath( ) {
                                                   return "/";
@@ -385,7 +407,7 @@ public class Principals {
                                                 }
 
                                                 @Override
-                                                public Boolean isEnabled( ) {
+                                                public boolean isEnabled( ) {
                                                   return true;
                                                 }
                                                 
@@ -414,8 +436,9 @@ public class Principals {
                                                   return null;
                                                 }
                                                 
+                                                @Nonnull
                                                 @Override
-                                                public List<AccessKey> getKeys( ) throws AuthException {
+                                                public List<AccessKey> getKeys( ) {
                                                   return null;
                                                 }
                                                 
@@ -429,8 +452,9 @@ public class Principals {
                                                   return null;
                                                 }
                                                 
+                                                @Nonnull
                                                 @Override
-                                                public List<Certificate> getCertificates( ) throws AuthException {
+                                                public List<Certificate> getCertificates( ) {
                                                   return certs;
                                                 }
                                                 
@@ -449,13 +473,26 @@ public class Principals {
                                                   return Lists.newArrayList( );
                                                 }
 
+                                                @Nonnull
                                                 @Override
-                                                public String getAccountNumber() throws AuthException {
+                                                public String getAccountNumber() {
                                                   return getAccount().getAccountNumber();
                                                 }
 
+                                                @Nonnull
                                                 @Override
-                                                public Account getAccount( ) throws AuthException {
+                                                public String getAccountAlias( ) {
+                                                  return getAccount( ).getName();
+                                                }
+
+                                                @Nonnull
+                                                @Override
+                                                public String getCanonicalId( ) {
+                                                  return getAccount( ).getCanonicalId( );
+                                                }
+
+                                                @Override
+                                                public Account getAccount( ) {
                                                   return NOBODY_ACCOUNT;
                                                 }
                                                 
@@ -473,9 +510,15 @@ public class Principals {
                                                 public boolean isAccountAdmin( ) {
                                                   return false;
                                                 }
-                                                
+
+                                                @Nonnull
                                                 @Override
-                                                public List<Policy> getPolicies( ) throws AuthException {
+                                                public List<PolicyVersion> getPrincipalPolicies( ) {
+                                                  return Lists.newArrayList( );
+                                                }
+
+                                                @Override
+                                                public List<Policy> getPolicies( ) {
                                                   return Lists.newArrayList( );
                                                 }
                                                 
@@ -496,7 +539,7 @@ public class Principals {
                                                 public void setPath( String path ) throws AuthException {}
                                                 
                                                 @Override
-                                                public void setEnabled( Boolean enabled ) throws AuthException {}
+                                                public void setEnabled( boolean enabled ) throws AuthException {}
                                                 
                                                 @Override
                                                 public void setToken( String token ) throws AuthException {}
@@ -535,15 +578,15 @@ public class Principals {
   private static final Set<Account> FAKE_ACCOUNTS        = ImmutableSet.of( systemAccount(), nobodyAccount() );
   private static final Set<String>  FAKE_ACCOUNT_NUMBERS =
       ImmutableSet.copyOf( Iterables.transform(FAKE_ACCOUNTS, Accounts.toAccountNumber() ) );
-  private static final Set<User>    FAKE_USERS           = ImmutableSet.of( systemUser(), nobodyUser() );
+  private static final Set<SystemUser> FAKE_USERS         = ImmutableSet.of( systemUser(), nobodyUser() );
   private static final Set<String>  FAKE_USER_IDS        =
       ImmutableSet.copyOf( Iterables.transform(FAKE_USERS, Accounts.toUserId() ) );
 
-  public static User systemUser( ) {
+  public static SystemUser systemUser( ) {
     return SYSTEM_USER;
   }
   
-  public static User nobodyUser( ) {
+  public static SystemUser nobodyUser( ) {
     return NOBODY_USER;
   }
     
@@ -594,15 +637,18 @@ public class Principals {
         user1.getUserId().equals( user2.getUserId() );
   }
 
+  public interface SystemUser extends EuareUser, UserPrincipal {
+  }
+
   private static class SystemAccount implements Account {
     private static final long serialVersionUID = 1L;
     private final Long accountId;
     private final String accountName;
-    private final User systemUser;
+    private final SystemUser systemUser;
 
     private SystemAccount( final Long accountId,
                            final String accountName,
-                           final User systemUser ) {
+                           final SystemUser systemUser ) {
       this.accountId = accountId;
       this.accountName = accountName;
       this.systemUser = systemUser;
@@ -637,8 +683,8 @@ public class Principals {
     }
 
     @Override
-    public List<User> getUsers( ) throws AuthException {
-      return Lists.newArrayList( systemUser );
+    public List<EuareUser> getUsers( ) throws AuthException {
+      return Lists.<EuareUser>newArrayList( systemUser );
     }
 
     @Override
@@ -670,7 +716,7 @@ public class Principals {
     }
 
     @Override
-    public User addUser( String userName, String path, boolean enabled, Map<String, String> info ) throws AuthException {
+    public EuareUser addUser( String userName, String path, boolean enabled, Map<String, String> info ) throws AuthException {
       throw new AuthException( AuthException.SYSTEM_MODIFICATION );
     }
 
@@ -704,7 +750,7 @@ public class Principals {
     }
 
     @Override
-    public User lookupUserByName( String userName ) throws AuthException {
+    public EuareUser lookupUserByName( String userName ) throws AuthException {
       if ( systemUser.getName().equals( userName ) ) {
         return systemUser;
       } else {
@@ -713,7 +759,7 @@ public class Principals {
     }
 
     @Override
-    public User lookupAdmin() throws AuthException {
+    public EuareUser lookupAdmin() throws AuthException {
       return systemUser;
     }
 

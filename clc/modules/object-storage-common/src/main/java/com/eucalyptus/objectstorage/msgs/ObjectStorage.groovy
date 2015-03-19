@@ -24,6 +24,7 @@ package com.eucalyptus.objectstorage.msgs
 import com.eucalyptus.auth.policy.PolicySpec
 import com.eucalyptus.auth.principal.Principals
 import com.eucalyptus.auth.principal.User
+import com.eucalyptus.auth.principal.UserPrincipal
 import com.eucalyptus.component.annotation.ComponentMessage
 import com.eucalyptus.objectstorage.ObjectStorage
 import com.eucalyptus.objectstorage.policy.AdminOverrideAllowed
@@ -115,7 +116,7 @@ public class ObjectStorageRequestType extends BaseMessage {
     return this.timeStamp;
   }
 
-  public User getUser() {
+  public UserPrincipal getUser() {
     return Principals.nobodyUser();
   }
 

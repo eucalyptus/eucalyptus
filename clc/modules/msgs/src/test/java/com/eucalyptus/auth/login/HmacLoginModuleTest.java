@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -81,7 +81,7 @@ import org.junit.Test;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.InvalidSignatureAuthException;
 import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.crypto.Hmac;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.SecurityParameter;
@@ -126,140 +126,6 @@ public class HmacLoginModuleTest {
   private void testNormalize( final String desc, final String signature, final String expectedNormalized )  {
     final String normalized = loginModule().normalize( signature );
     assertEquals(desc, expectedNormalized, normalized);
-  }
-
-  @Test
-  public void testAcceptanceHmacV1() throws Exception {
-    final HmacCredentials credsV1 = creds(
-        "MrFSyGZ44/Oe4nOfXQImKmq8oRABMrmNk2mJIWz1dCA=",
-        Maps.newHashMap(ImmutableMap.of(
-            "AWSAccessKeyId", "1234567890",
-            "SignatureVersion", "1"
-        )),
-        "GET",
-        "/path",
-        "localhost:8773",
-        1,
-        Hmac.HmacSHA256);
-    final Hmacv1LoginModule loginModule = hmacV1LoginModule();
-    loginModule.initialize( new Subject(), credsV1, Collections.<String,String>emptyMap(), Collections.<String,String>emptyMap() );
-    assertTrue("Module accepts credentials", loginModule.accepts());
-
-    final HmacCredentials credsV2 = creds(
-        "MrFSyGZ44/Oe4nOfXQImKmq8oRABMrmNk2mJIWz1dCA=",
-        Maps.newHashMap(ImmutableMap.of(
-            "AWSAccessKeyId", "1234567890",
-            "SignatureVersion", "2"
-        )),
-        "GET",
-        "/path",
-        "localhost:8773",
-        2,
-        Hmac.HmacSHA256 );
-    loginModule.reset();
-    loginModule.initialize( new Subject(), credsV2, Collections.<String,String>emptyMap(), Collections.<String,String>emptyMap() );
-    assertFalse("Module rejects credentials", loginModule.accepts());
-  }
-
-  @Test
-  public void testBasicHmacV1() throws Exception {
-    final HmacCredentials creds = creds(
-        "6Yjg3XTjomQWCuCRNa+96CTI+EdY1Pu56xRAgijk/DM=",
-        Maps.newHashMap(ImmutableMap.of(
-            "AWSAccessKeyId", "1234567890",
-            "SignatureVersion", "1"
-        )),
-        "GET", "/path", "localhost:8773",
-        1,
-        Hmac.HmacSHA256);
-    assertTrue("Authentication successful", hmacV1LoginModule().authenticate(creds));
-  }
-
-  @Test
-  public void testHmacV1LexicographicalOrdering() throws Exception {
-    final HmacCredentials creds = creds(
-        "hqd08+ge/qtPDpRIFYqnjMv1+sNbmrs/zTg9DvmZMJE=",
-        new LinkedHashMap<String,String>(){{
-          put( "AWSAccessKeyId", "1234567890" );
-          put( "SignatureVersion", "1" );
-          put( "R", "1" );
-          put( "A", "1" );
-        }},
-        "GET", "/path", "localhost:8773",
-        1,
-        Hmac.HmacSHA256);
-    assertTrue("Authentication successful", hmacV1LoginModule().authenticate(creds));
-  }
-
-  @Test
-  public void testHmacV1NoValue() throws Exception {
-    final HmacCredentials creds = creds(
-        "Ul8W6d1ppeWI7A51Sdq3LYr/1vPtl5ppb/BMY08vA/Y=",
-        new LinkedHashMap<String,String>(){{
-          put( "AWSAccessKeyId", "1234567890" );
-          put( "SignatureVersion", "1" );
-          put( "NP", null );
-        }},
-        "GET", "/path", "localhost:8773",
-        1,
-        Hmac.HmacSHA256);
-    assertTrue("Authentication successful", hmacV1LoginModule().authenticate(creds));
-  }
-
-  @Test
-  public void testHmacV1ExtraEquals() throws Exception {
-    final HmacCredentials creds = creds(
-        "6Yjg3XTjomQWCuCRNa+96CTI+EdY1Pu56xRAgijk/DM=====",
-        Maps.newHashMap( ImmutableMap.of(
-            "AWSAccessKeyId", "1234567890",
-            "SignatureVersion", "1"
-        )),
-        "GET", "/path", "localhost:8773",
-        1,
-        Hmac.HmacSHA256);
-    assertTrue("Authentication successful", hmacV1LoginModule().authenticate(creds));
-  }
-
-  @Test
-  public void testHmacV1UrlEncoded() throws Exception {
-    final HmacCredentials creds = creds(
-        "6Yjg3XTjomQWCuCRNa%2b96CTI%2bEdY1Pu56xRAgijk%2fDM%3d",
-        Maps.newHashMap(ImmutableMap.of(
-            "AWSAccessKeyId", "1234567890",
-            "SignatureVersion", "1"
-        )),
-        "GET", "/path", "localhost:8773",
-        1,
-        Hmac.HmacSHA256);
-    assertTrue("Authentication successful", hmacV1LoginModule().authenticate(creds));
-  }
-
-  @Test
-  public void testHmacV1Sha1() throws Exception {
-    final HmacCredentials creds = creds(
-        "fOwwQ5cRgzn13ZrEhif2OLGetaA=",
-        Maps.newHashMap(ImmutableMap.of(
-            "AWSAccessKeyId", "1234567890",
-            "SignatureVersion", "1"
-        )),
-        "GET", "/path", "localhost:8773",
-        1,
-        Hmac.HmacSHA1);
-    assertTrue("Authentication successful", hmacV1LoginModule().authenticate(creds));
-  }
-
-  @Test
-  public void testHmacV1Invalid() throws Exception {
-    final HmacCredentials creds = creds(
-        "fOwwQ5cRgzn13ZrEhif2OLGeWaA=",
-        Maps.newHashMap(ImmutableMap.of(
-            "AWSAccessKeyId", "1234567890",
-            "SignatureVersion", "1"
-        )),
-        "GET", "/path", "localhost:8773",
-        1,
-        Hmac.HmacSHA1);
-    assertFalse("Authentication failed", hmacV1LoginModule().authenticate(creds));
   }
 
   @Test
@@ -501,46 +367,6 @@ public class HmacLoginModuleTest {
   }
 
   /**
-   * Elasticfox version 1.7 build 000116 (EC2 API 2010-06-15)
-   */
-  @Test
-  public void testElasticfox_1_7_000116() throws Exception {
-    final HmacCredentials creds = creds(
-        "u4jJ7NM5Vt2oMCuHea2BQeAfNDI=",
-        Maps.newHashMap(ImmutableMap.of(
-            "Action", "DescribeAvailabilityZones",
-            "AWSAccessKeyId", "1234567890",
-            "SignatureVersion", "1",
-            "Timestamp", "2012-05-09T22:35:14Z",
-            "Version", "2010-06-15"
-            )),
-        "POST", "/services/Eucalyptus/", "localhost:8773",
-        1,
-        Hmac.HmacSHA1);
-    assertTrue("Authentication successful", hmacV1LoginModule().authenticate(creds));
-  }
-
-  /**
-   * Hybridfox version 1.7 build 000177 (EC2 API 2011-12-01)
-   */
-  @Test
-  public void testHybridfox_1_7_000177_Sigv1() throws Exception {
-    final HmacCredentials creds = creds(
-        "eCijXehApkoj7VwTDSMf7V6pCM8=",
-        Maps.newHashMap(ImmutableMap.of(
-            "Action", "DescribeVpcs",
-            "AWSAccessKeyId", "1234567890",
-            "SignatureVersion", "1",
-            "Timestamp", "2012-05-09T23:01:39Z",
-            "Version", "2011-12-01"
-        )),
-        "POST", "/services/Eucalyptus/", "localhost:8773",
-        1,
-        Hmac.HmacSHA1);
-    assertTrue("Authentication successful", hmacV1LoginModule().authenticate(creds));
-  }
-
-  /**
    * Hybridfox version 1.7 build 000177 (EC2 API 2011-12-01)
    */
   @Test
@@ -583,28 +409,6 @@ public class HmacLoginModuleTest {
         2,
         Hmac.HmacSHA256);
     assertTrue("Authentication successful", hmacV2LoginModule().authenticate(creds));
-  }
-
-  /**
-   * Typica 1.7.2
-   *
-   * Note: Typica does not include the port in the host header - "Host: localhost"
-   */
-  @Test
-  public void testTypica_1_7_2_Sigv1() throws Exception {
-    final HmacCredentials creds = creds(
-        "bb3F2grNDpz1cwkOT4xtc2Hk5eM=",
-        Maps.newHashMap(ImmutableMap.<String,String>builder()
-            .put( "Action", "DescribeImages" )
-            .put( "AWSAccessKeyId", "1234567890" )
-            .put( "SignatureVersion", "1" )
-            .put( "Timestamp", "2012-05-10T19:08:00Z" )
-            .put( "Version", "2010-06-15" )
-            .build()),
-        "GET", "/services/Eucalyptus", "localhost:8773",
-        1,
-        Hmac.HmacSHA1);
-    assertTrue("Authentication successful", hmacV1LoginModule().authenticate(creds));
   }
 
   /**
@@ -913,19 +717,6 @@ public class HmacLoginModuleTest {
   }
 
   //TODO:MOCKING
-  private Hmacv1LoginModule hmacV1LoginModule() {
-    return new Hmacv1LoginModule(){
-      @Override
-      protected AccessKey lookupAccessKey(final HmacCredentials credentials) throws AuthException {
-        return accessKey();
-      }
-
-      @Override
-      protected void checkForReplay( final String signature ) throws AuthenticationException {
-      }
-    };
-  }
-
   private Hmacv2LoginModule hmacV2LoginModule() {
     return hmacV2LoginModule( "ZRvYnXG04PxhYuP228IWLmCG0o3kYIr2fPByxMlb" );
   }
@@ -994,7 +785,7 @@ public class HmacLoginModuleTest {
       }
 
       @Override
-      public User getUser() throws AuthException {
+      public UserPrincipal getPrincipal() throws AuthException {
         return null;
       }
     };

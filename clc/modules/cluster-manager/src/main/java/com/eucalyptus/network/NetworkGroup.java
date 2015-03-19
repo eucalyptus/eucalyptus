@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -91,8 +91,6 @@ import javax.persistence.Table;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.DatabaseAuthProvider;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.compute.common.CloudMetadata.NetworkGroupMetadata;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
@@ -462,10 +460,6 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
                 // find the corresponding network group from network groups
                 String groupId = null;
                 try {
-                  if ( Accounts.getAccountProvider() == null ) {
-                    DatabaseAuthProvider dbAuth = new DatabaseAuthProvider();
-                    Accounts.setAccountProvider( dbAuth );
-                  }
                   final NetworkGroup networkGroup =
                       NetworkGroups.lookup( AccountFullName.getInstance( networkPeer.getUserQueryKey() ), networkPeer.getGroupName() );
                   groupId = networkGroup.getGroupId();

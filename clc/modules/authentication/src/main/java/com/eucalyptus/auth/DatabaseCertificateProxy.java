@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,10 +68,10 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.entities.CertificateEntity;
 import com.eucalyptus.auth.principal.Certificate;
-import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.auth.util.X509CertHelper;
-import com.eucalyptus.entities.Entities;
 import java.util.concurrent.ExecutionException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
 
@@ -131,7 +131,6 @@ public class DatabaseCertificateProxy implements Certificate {
     return this.delegate.isRevoked( );
   }
   
-  @Override
   public void setRevoked( final Boolean revoked ) throws AuthException {
     try {
       DatabaseAuthUtils.invokeUnique( CertificateEntity.class, "certificateId", this.delegate.getCertificateId( ), new Tx<CertificateEntity>( ) {
@@ -150,7 +149,6 @@ public class DatabaseCertificateProxy implements Certificate {
     return this.delegate.getCreateDate( );
   }
   
-  @Override
   public void setCreateDate( final Date createDate ) throws AuthException {
     try {
       DatabaseAuthUtils.invokeUnique( CertificateEntity.class, "certificateId", this.delegate.getCertificateId( ), new Tx<CertificateEntity>( ) {
@@ -165,13 +163,16 @@ public class DatabaseCertificateProxy implements Certificate {
   }
   
   @Override
-  public User getUser( ) throws AuthException {
-    final List<User> results = Lists.newArrayList( );
+  public UserPrincipal getPrincipal( ) throws AuthException {
+    final List<UserPrincipal> results = Lists.newArrayList( );
     try {
       DatabaseAuthUtils.invokeUnique( CertificateEntity.class, "certificateId", this.delegate.getCertificateId( ), new Tx<CertificateEntity>( ) {
         public void fire( CertificateEntity t ) {
-          Entities.initialize( t.getUser() );
-          results.add( new DatabaseUserProxy( t.getUser( ) ) );
+          try {
+            results.add( Accounts.userAsPrincipal( new DatabaseUserProxy( t.getUser( ) ) ) );
+          } catch ( AuthException e ) {
+            throw Exceptions.toUndeclared( e );
+          }
         }
       } );
     } catch ( ExecutionException e ) {
@@ -186,7 +187,6 @@ public class DatabaseCertificateProxy implements Certificate {
     return X509CertHelper.toCertificate( this.delegate.getPem( ) );
   }
 
-  @Override
   public void setX509Certificate( final X509Certificate x509 ) throws AuthException {
     try {
       DatabaseAuthUtils.invokeUnique( CertificateEntity.class, "certificateId", this.delegate.getCertificateId( ), new Tx<CertificateEntity>( ) {

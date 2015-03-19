@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,9 +67,9 @@ import org.apache.log4j.Logger;
 import org.apache.xml.security.signature.XMLSignature;
 import org.w3c.dom.Element;
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.api.BaseLoginModule;
-import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
+import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.WSSecurity;
@@ -95,22 +95,9 @@ public class WsSecLoginModule extends BaseLoginModule<WsSecCredentials> {
       SecurityContext.enqueueSignature( sigValue );
       
       final X509Certificate cert = WSSecurity.verifySignature( secNode, sig );
-      try {
-        final User user = Accounts.lookupUserByCertificate( cert );
-        super.setCredential( cert );
-        super.setPrincipal( user );
-      } catch ( AuthException e ) {
-        try {
-          if ( !Accounts.lookupCertificate( cert ).isActive( ) ) {
-            throw new AuthException( "Certificate is inactive or revoked: " + e.getMessage( ), e );
-          } else {
-            throw e;
-          }
-        } catch ( Exception ex ) {
-        	// TODO: GRZE should it be "throw ex" instead?
-        	throw e;
-        }
-      }
+      final UserPrincipal user = Accounts.lookupPrincipalByCertificateId( Identifiers.generateCertificateIdentifier( cert) );
+      super.setCredential( cert );
+      super.setPrincipal( user );
     } finally {
       HoldMe.canHas.unlock( );
     }

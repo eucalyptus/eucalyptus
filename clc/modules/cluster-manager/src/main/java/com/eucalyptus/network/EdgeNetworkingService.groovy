@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,8 +34,6 @@ import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesResponseType
 import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType
 import com.eucalyptus.compute.common.network.UpdateInstanceResourcesResponseType
 import com.eucalyptus.compute.common.network.UpdateInstanceResourcesType
-import com.eucalyptus.compute.common.network.UpdateNetworkResourcesResponseType
-import com.eucalyptus.compute.common.network.UpdateNetworkResourcesType
 import com.eucalyptus.compute.common.network.VpcNetworkInterfaceResource
 import com.eucalyptus.compute.vpc.Subnet
 import com.eucalyptus.entities.Entities
@@ -127,7 +125,6 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
         describeNetworkingFeaturesResult : new DescribeNetworkingFeaturesResult(
             networkingFeatures: Lists.newArrayList(
                 Consistent,
-                ElasticIPs,
                 configurationOptional.isPresent( ) && NetworkMode.VPCMIDO.toString( ) == configurationOptional.get( ).mode ? Vpc : Classic
             )
         )
@@ -135,14 +132,9 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
   }
 
   @Override
-  UpdateNetworkResourcesResponseType update( final UpdateNetworkResourcesType request ) {
-    PrivateAddresses.releasing( request.resources.privateIps, request.cluster )
-    UpdateNetworkResourcesResponseType.cast( request.reply( new UpdateNetworkResourcesResponseType( ) ) )
-  }
-
-  @Override
   UpdateInstanceResourcesResponseType update(final UpdateInstanceResourcesType request) {
     PublicAddresses.clearDirty( request.resources.publicIps, request.partition )
+    PrivateAddresses.releasing( request.resources.privateIps, request.partition )
     UpdateInstanceResourcesResponseType.cast( request.reply( new UpdateInstanceResourcesResponseType( ) ) )
   }
 

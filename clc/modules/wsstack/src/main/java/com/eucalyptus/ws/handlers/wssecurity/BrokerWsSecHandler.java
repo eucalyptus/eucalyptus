@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,7 +68,7 @@ import org.apache.axiom.soap.SOAPEnvelope;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.MessageEvent;
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.context.Contexts;
@@ -99,7 +99,7 @@ public class BrokerWsSecHandler extends MessageStackHandler implements ChannelHa
         if( !found ) {
         	throw new WebServiceException("Authentication failure: cert is not trusted");
         }
-        User admin = Accounts.lookupSystemAdmin( ); 
+        UserPrincipal admin = Accounts.lookupSystemAdminAsPrincipal( );
         Contexts.lookup( ( ( MappingHttpMessage ) o ).getCorrelationId( ) ).setUser( admin );
     }
   }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -249,7 +249,7 @@ public class ImportManager {
           state.equals(ImportTaskState.PENDING) ||
           state.equals(ImportTaskState.CONVERTING) ||
           state.equals(ImportTaskState.INSTANTIATING) ) {
-        ImagingTasks.setState(AccountFullName.getInstance(Contexts.lookup().getAccount()), request.getConversionTaskId(), 
+        ImagingTasks.setState(AccountFullName.getInstance(Contexts.lookup().getAccountNumber()), request.getConversionTaskId(),
             ImportTaskState.CANCELLING, ImportTaskState.STATE_MSG_USER_CANCELLATION);
       }
       reply.set_return(true);

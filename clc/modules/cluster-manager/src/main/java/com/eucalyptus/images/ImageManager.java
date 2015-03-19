@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -192,7 +192,7 @@ public class ImageManager {
         Images.TO_IMAGE_DETAILS );
 
     final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( ImageInfo.class )
-        .getResourceTagMap( AccountFullName.getInstance( ctx.getAccount() ),
+        .getResourceTagMap( AccountFullName.getInstance( ctx.getAccountNumber() ),
             Iterables.transform( imageDetailsList, ImageDetailsToImageId.INSTANCE ) );
 
     for ( final ImageDetails details : imageDetailsList ) {
@@ -581,7 +581,6 @@ public class ImageManager {
       throw new EucalyptusCloudException( "Instance does not exist: " + request.getInstanceId( ), ex );
     }
     
-    final String userId = ctx.getUser().getUserId();
     final String name = request.getName();
     final boolean noReboot = true ? request.getNoReboot()!=null && request.getNoReboot().booleanValue() : false;
     final String desc = request.getDescription();
@@ -696,7 +695,7 @@ public class ImageManager {
     	throw new EucalyptusCloudException( "Unable to register the image", ex);
     }
 
-    final CreateImageTask task = new CreateImageTask(userId, instanceId, noReboot, blockDevices);
+    final CreateImageTask task = new CreateImageTask(ctx.getAccountNumber(), instanceId, noReboot, blockDevices);
     try{
     	task.create(imageInfo.getDisplayName());
     }catch(final Exception ex){

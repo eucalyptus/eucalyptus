@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -187,7 +187,6 @@ import com.eucalyptus.images.Images;
 import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
-import com.eucalyptus.network.NetworkingDriver;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.network.PrivateNetworkIndex;
@@ -1341,7 +1340,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             userId,
             Accounts.lookupUserById(userId).getName(),
             accountId,
-            Accounts.lookupAccountById(accountId).getName(),
+            Accounts.lookupAccountAliasById(accountId),
             this.placement.getPartitionName()));
       } catch ( final Exception ex ) {
         LOG.error( ex, ex );
@@ -2163,9 +2162,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           if ( VmStateSet.RUN.apply( VmInstance.this ) ) {
             if ( !InstanceStatus.Ok.apply( VmInstance.this ) ) {
               VmInstance.this.getRuntimeState().reachable( );
-            }
-            if ( !NetworkingDriver.isEnabled( ) ) {
-              VmInstance.this.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
             }
           }
           if ( VmState.RUNNING.apply( VmInstance.this ) ) {

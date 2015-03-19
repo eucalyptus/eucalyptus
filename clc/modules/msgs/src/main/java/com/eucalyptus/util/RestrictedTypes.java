@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -85,7 +85,7 @@ import com.eucalyptus.auth.PolicyResourceContext;
 import com.eucalyptus.auth.policy.PolicyAction;
 import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.Principal;
 import com.eucalyptus.auth.principal.Principals;
@@ -504,11 +504,11 @@ public class RestrictedTypes {
         principalName = Accounts.getUserArn( requestUser );
       }
 
-      Account owningAccount = null;
+      AccountFullName owningAccount = null;
       if ( !ignoreOwningAccount ) {
         owningAccount = Principals.nobodyFullName( ).getAccountNumber( ).equals( requestedObject.getOwner( ).getAccountNumber( ) )
           ? null
-          : Accounts.lookupAccountById( requestedObject.getOwner( ).getAccountNumber( ) );
+          : AccountFullName.getInstance( requestedObject.getOwner( ).getAccountNumber( ) );
       }
 
       final String qualifiedAction = PolicySpec.qualifiedName( actionVendor, action );

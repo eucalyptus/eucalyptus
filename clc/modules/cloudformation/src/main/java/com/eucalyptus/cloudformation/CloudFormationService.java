@@ -25,7 +25,6 @@ import com.amazonaws.services.simpleworkflow.model.DescribeWorkflowExecutionRequ
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecution;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionDetail;
 import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.tokens.SecurityTokenAWSCredentialsProvider;
 import com.eucalyptus.cloudformation.common.policy.CloudFormationPolicySpec;
@@ -128,8 +127,8 @@ public class CloudFormationService {
       final Context ctx = Contexts.lookup();
       final User user = ctx.getUser();
       final String userId = user.getUserId();
-      final String accountId = user.getAccount().getAccountNumber();
-      final String accountName = user.getAccount().getName();
+      final String accountId = ctx.getAccountNumber();
+      final String accountName = ctx.getAccountAlias();
       final String stackName = request.getStackName();
       final String templateBody = request.getTemplateBody();
       final String templateUrl = request.getTemplateURL();
@@ -377,7 +376,8 @@ public class CloudFormationService {
       final Context ctx = Contexts.lookup();
       final User user = ctx.getUser();
       final String userId = user.getUserId();
-      final String accountId = user.getAccount().getAccountNumber();
+      final String accountId = ctx.getAccountNumber();
+      final String accountAlias = ctx.getAccountAlias();
       final String stackName = request.getStackName();
       if (stackName == null) throw new ValidationErrorException("Stack name is null");
       StackEntity stackEntity = StackEntityManager.getNonDeletedStackByNameOrId(stackName, accountId);
@@ -419,7 +419,7 @@ public class CloudFormationService {
         if (!existingOpenDeleteWorkflow) {
           String stackId = stackEntity.getStackId();
           StackWorkflowTags stackWorkflowTags =
-              new StackWorkflowTags(stackId, stackName, stackAccountId, AccountFullName.getInstance(stackAccountId).getAccountName( ) );
+              new StackWorkflowTags(stackId, stackName, stackAccountId, accountAlias );
 
           WorkflowClientFactory workflowClientFactory = new WorkflowClientFactory(WorkflowClientManager.getSimpleWorkflowClient(), CloudFormationProperties.SWF_DOMAIN, CloudFormationProperties.SWF_TASKLIST);
           WorkflowDescriptionTemplate workflowDescriptionTemplate = new DeleteStackWorkflowDescriptionTemplate();
@@ -445,7 +445,7 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       User user = ctx.getUser();
-      String accountId = user.getAccount().getAccountNumber();
+      String accountId = user.getAccountNumber();
       String stackName = request.getStackName();
       if (stackName == null) throw new ValidationErrorException("Stack name is null");
       checkStackPermission( ctx, stackName, accountId );
@@ -470,7 +470,7 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       final User user = ctx.getUser();
-      final String accountId = user.getAccount().getAccountNumber();
+      final String accountId = user.getAccountNumber();
       final String stackName = request.getStackName();
       if (stackName == null) throw new ValidationErrorException("Stack name is null");
       checkStackPermission( ctx, stackName, accountId );
@@ -506,7 +506,7 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       final User user = ctx.getUser();
-      final String accountId = user.getAccount().getAccountNumber();
+      final String accountId = user.getAccountNumber();
       final String stackName = request.getStackName();
       final String logicalResourceId = request.getLogicalResourceId();
       final String physicalResourceId = request.getPhysicalResourceId();
@@ -555,7 +555,7 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       final User user = ctx.getUser();
-      final String accountId = user.getAccount().getAccountNumber();
+      final String accountId = user.getAccountNumber();
       final String stackName = request.getStackName();
       final List<StackEntity> stackEntities = StackEntityManager.describeStacks(
           ctx.isAdministrator( ) && stackName!=null && ("verbose".equals(stackName) || stackName.startsWith( STACK_ID_PREFIX )) ? null : accountId,
@@ -654,7 +654,7 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       final User user = ctx.getUser();
-      final String accountId = user.getAccount().getAccountNumber();
+      final String accountId = user.getAccountNumber();
       final String stackName = request.getStackName();
       if (stackName == null) {
         throw new ValidationErrorException("StackName must not be null");
@@ -681,7 +681,7 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       final User user = ctx.getUser();
-      final String accountId = user.getAccount().getAccountNumber();
+      final String accountId = user.getAccountNumber();
       final String stackName = request.getStackName();
       if (stackName == null) {
         throw new ValidationErrorException("StackName must not be null");
@@ -708,7 +708,7 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       final User user = ctx.getUser();
-      final String accountId = user.getAccount().getAccountNumber();
+      final String accountId = user.getAccountNumber();
       final String stackName = request.getStackName();
       if (stackName == null) {
         throw new ValidationErrorException("StackName must not be null");
@@ -747,7 +747,7 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       final User user = ctx.getUser();
-      final String accountId = user.getAccount().getAccountNumber();
+      final String accountId = user.getAccountNumber();
       final ResourceList stackStatusFilter = request.getStackStatusFilter();
       final List<StackEntity.Status> statusFilterList = Lists.newArrayList();
       if (stackStatusFilter != null && stackStatusFilter.getMember() != null) {
@@ -791,7 +791,7 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       final User user = ctx.getUser();
-      final String accountId = user.getAccount().getAccountNumber();
+      final String accountId = user.getAccountNumber();
       // TODO: validate policy
       final String stackName = request.getStackName();
       final String stackPolicyBody = request.getStackPolicyBody();
@@ -831,7 +831,7 @@ public class CloudFormationService {
       checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_VALIDATETEMPLATE, ctx);
       final User user = ctx.getUser();
       final String userId = user.getUserId();
-      final String accountId = user.getAccount().getAccountNumber();
+      final String accountId = user.getAccountNumber();
       final String templateBody = request.getTemplateBody();
       final String templateUrl = request.getTemplateURL();
       String stackName = "stackName"; // just some value to make the validate code work

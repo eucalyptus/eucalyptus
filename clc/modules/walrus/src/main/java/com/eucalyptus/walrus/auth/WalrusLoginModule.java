@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -69,11 +69,15 @@ import org.apache.log4j.Logger;
 import org.apache.xml.security.utils.Base64;
 
 import com.eucalyptus.auth.AccessKeys;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.crypto.Hmac;
+import com.eucalyptus.walrus.exceptions.AccessDeniedException;
 
 public class WalrusLoginModule extends BaseLoginModule<WalrusWrappedCredentials> {
   private static Logger LOG = Logger.getLogger(WalrusLoginModule.class);
@@ -92,10 +96,17 @@ public class WalrusLoginModule extends BaseLoginModule<WalrusWrappedCredentials>
     if (!key.isActive()) {
       throw new AuthenticationException("The AWS Access Key Id you provided does not exist in our records.");
     }
-    final User user = key.getUser();
+    final UserPrincipal user = key.getPrincipal();
     final String queryKey = key.getSecretKey();
     final String authSig = checkSignature(queryKey, credentials.getLoginData());
     if (authSig.equals(signature)) {
+      try {
+        if (!Account.OBJECT_STORAGE_WALRUS_ACCOUNT.equals( Accounts.lookupAccountAliasById( user.getAccountNumber( ) ) )) {
+          throw new AccessDeniedException("walrus only accepts requests from " + Account.OBJECT_STORAGE_WALRUS_ACCOUNT);
+        }
+      } catch (AuthException e) {
+        throw new AccessDeniedException(e.getMessage());
+      }
       super.setCredential(credentials.getQueryIdCredential());
       super.setPrincipal(user);
       return true;

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@ package com.eucalyptus.compute.vpc;
 
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
-import com.eucalyptus.network.NetworkingDriver;
 import com.eucalyptus.network.NetworkInfoBroadcaster;
 
 /**
@@ -35,8 +34,6 @@ public class VpcInvalidationEventListener implements EventListener<VpcInvalidati
 
   @Override
   public void fireEvent( final VpcInvalidationEvent event ) {
-    if ( NetworkingDriver.isEnabled( ) ) {
-      NetworkInfoBroadcaster.requestNetworkInfoBroadcast( );
-    }
+    NetworkInfoBroadcaster.requestNetworkInfoBroadcast( );
   }
 }

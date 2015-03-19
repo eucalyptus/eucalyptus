@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,9 +33,10 @@ import com.eucalyptus.entities.Entities
 import com.eucalyptus.event.ClockTick
 import com.eucalyptus.event.Listeners
 import com.eucalyptus.event.EventListener as EucaEventListener
-import com.eucalyptus.network.NetworkingDriver
+import com.eucalyptus.network.DispatchingNetworkingService
 import com.eucalyptus.network.IPRange
 import com.eucalyptus.network.NetworkGroups
+import com.eucalyptus.network.NetworkMode
 import com.eucalyptus.network.PrivateAddresses
 import com.eucalyptus.util.Exceptions
 import com.eucalyptus.util.UpperCamelPropertyNamingStrategy
@@ -43,12 +44,8 @@ import com.google.common.base.Optional
 import com.google.common.base.Predicate
 import com.google.common.base.Splitter
 import com.google.common.base.Strings
-import com.google.common.base.Supplier
-import com.google.common.base.Suppliers
 import com.google.common.collect.Iterables
 import com.google.common.collect.Lists
-import com.google.common.collect.Maps
-import com.google.common.primitives.Ints
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -62,7 +59,6 @@ import org.springframework.validation.ValidationUtils
 
 import javax.annotation.Nullable
 import javax.persistence.EntityTransaction
-import java.util.concurrent.TimeUnit
 
 /**
  *
@@ -71,18 +67,11 @@ import java.util.concurrent.TimeUnit
 @CompileStatic
 class NetworkConfigurations {
   private static final Logger logger = Logger.getLogger( NetworkConfigurations )
-  private static final Supplier<Optional<NetworkConfiguration>> networkConfigurationFromEnvironmentSupplier =
-      Suppliers.memoizeWithExpiration(
-          NetworkConfigurations.&loadNetworkConfigurationFromEnvironment as Supplier<Optional<NetworkConfiguration>>,
-          5,
-          TimeUnit.MINUTES
-      )
   private static final boolean validateConfiguration =
       Boolean.valueOf( System.getProperty( 'com.eucalyptus.network.config.validateNetworkConfiguration', 'true' ) )
 
   static Optional<NetworkConfiguration> getNetworkConfiguration( ) {
-    NetworkConfigurations.networkConfigurationFromProperty.or(
-        NetworkConfigurations.networkConfigurationFromEnvironmentSupplier.get( ) )
+    NetworkConfigurations.networkConfigurationFromProperty
   }
 
   static Optional<NetworkConfiguration> getNetworkConfigurationFromProperty( ) {
@@ -98,25 +87,12 @@ class NetworkConfigurations {
     configuration
   }
 
-  static Optional<NetworkConfiguration> getNetworkConfigurationFromEnvironment( ) {
-    networkConfigurationFromEnvironmentSupplier.get( )
-  }
-
   @PackageScope
   static List<String> loadSystemNameservers( final List<String> fallback ) {
     final String dnsServersProperty = SystemConfiguration.getSystemConfiguration( ).getNameserverAddress( )
     '127.0.0.1'.equals( dnsServersProperty ) ?
         fallback :
         Lists.newArrayList( Splitter.on(',').omitEmptyStrings().trimResults().split( dnsServersProperty ) ) as List<String> ?: fallback
-  }
-
-  @PackageScope
-  static Optional<NetworkConfiguration> loadNetworkConfigurationFromEnvironment( ) {
-    buildNetworkConfigurationFromProperties(
-        loadSystemNameservers( [] as List<String> ),
-        loadEucalyptusConf( ).collectEntries( Maps.<String,String>newHashMap( ) ){
-      Object key, Object value -> [ String.valueOf(key), String.valueOf(value) ]
-    } )
   }
 
   @PackageScope
@@ -152,6 +128,7 @@ class NetworkConfigurations {
       }
       db.commit( );
     }
+    NetworkGroups.updateNetworkRangeConfiguration( )
   }
 
   @Nullable
@@ -367,75 +344,6 @@ class NetworkConfigurations {
 
   }
 
-  @PackageScope
-  static Properties loadEucalyptusConf( ) {
-    Properties properties = new Properties()
-    File eucalyptusConf = new File( "${System.getenv('EUCALYPTUS')}/etc/eucalyptus/eucalyptus.conf" )
-    if ( eucalyptusConf.canRead( ) && eucalyptusConf.isFile( ) ) {
-      eucalyptusConf.newInputStream().withStream{ InputStream input ->
-        properties.load( input )
-      }
-    }
-    properties
-  }
-
-  @PackageScope
-  static Optional<NetworkConfiguration> buildNetworkConfigurationFromProperties(
-      final List<String> primaryInstanceDnsServers,
-      final Map<String,String> properties
-  ) {
-    Optional<NetworkConfiguration> configuration = Optional.absent( )
-    String mode = getTrimmedDequotedProperty( properties, 'VNET_MODE' )
-    if ( 'EDGE' == mode ) {
-      configuration = Optional.of( new NetworkConfiguration(
-          mode: mode,
-          instanceDnsDomain: getTrimmedDequotedProperty( properties, "VNET_DOMAINNAME" ),
-          instanceDnsServers: primaryInstanceDnsServers + [ getTrimmedDequotedProperty( properties, "VNET_DNS" ) ] as List<String>,
-          publicIps: getFilteredDequotedPropertyList(  properties, 'VNET_PUBLICIPS', IPRange.&isIPRange ),
-          privateIps: getFilteredDequotedPropertyList(  properties, 'VNET_PRIVATEIPS', IPRange.&isIPRange ),
-          subnets: [
-              new EdgeSubnet(
-                  subnet: getTrimmedDequotedProperty( properties, "VNET_SUBNET" ),
-                  netmask: getTrimmedDequotedProperty( properties, "VNET_NETMASK" ),
-                  gateway: getTrimmedDequotedProperty( properties, "VNET_ROUTER" )
-              )
-          ]
-      ) )
-    } else if ( 'MANAGED' == mode || 'MANAGED-NOVLAN' == mode ) {
-      configuration = Optional.of( new NetworkConfiguration(
-          mode: mode,
-          instanceDnsDomain: getTrimmedDequotedProperty( properties, "VNET_DOMAINNAME" ),
-          instanceDnsServers: primaryInstanceDnsServers + [ getTrimmedDequotedProperty( properties, "VNET_DNS" ) ] as List<String>,
-          publicIps: getFilteredDequotedPropertyList(  properties, 'VNET_PUBLICIPS', IPRange.&isIPRange ),
-          privateIps: getFilteredDequotedPropertyList(  properties, 'VNET_PRIVATEIPS', IPRange.&isIPRange ),
-          managedSubnet: new ManagedSubnet(
-              subnet: getTrimmedDequotedProperty( properties, "VNET_SUBNET" ),
-              netmask: getTrimmedDequotedProperty( properties, "VNET_NETMASK" ),
-              minVlan: ManagedSubnet.MIN_VLAN,
-              maxVlan: ManagedSubnet.MAX_VLAN,
-              segmentSize: properties.containsKey( "VNET_ADDRSPERNET" ) ? getTrimmedDequotedIntProperty( properties, "VNET_ADDRSPERNET" ) : ManagedSubnet.DEF_SEGMENT_SIZE
-            )
-      ) )
-    }
-    configuration
-  }
-
-  private static String getTrimmedDequotedProperty( Map<String,String> properties, String name ) {
-    properties.get( name, '' ).trim( ).with{
-      startsWith('"') && endsWith('"') ? substring( 1, length() - 1 ) : toString( )
-    }.trim( )?:null
-  }
-
-  private static Integer getTrimmedDequotedIntProperty( Map<String,String> properties, String name ) {
-    Ints.tryParse( getTrimmedDequotedProperty( properties, name ) )
-  }
-
-  private static List<String> getFilteredDequotedPropertyList( Map<String,String> properties, String name, Closure filter ) {
-    final Splitter splitter = Splitter.on( ' ' ).trimResults( ).omitEmptyStrings( )
-    Lists.newArrayList( splitter.split( getTrimmedDequotedProperty( properties, name )?:'' ) )
-        .findAll( filter ) as List<String>
-  }
-
   private static Iterable<Integer> iterateRanges( Iterable<String> rangeIterable ) {
     Iterables.concat( Optional.presentInstances( Iterables.transform( rangeIterable, IPRange.parse( ) ) ) )
   }
@@ -469,18 +377,12 @@ class NetworkConfigurations {
     public void fireEvent( final ClockTick event ) {
       if ( Hosts.isCoordinator( ) && !Bootstrap.isShuttingDown( ) && !Databases.isVolatile( ) ) {
         try {
-          Optional<NetworkConfiguration> configurationOptional = NetworkConfigurations.networkConfigurationFromProperty
-          if ( !configurationOptional.isPresent( ) ) {
-            NetworkingDriver.configured = false
-            if ( NetworkingDriver.isEnabled( ) ) { // Configure from environment if possible
-              configurationOptional = NetworkConfigurations.networkConfigurationFromEnvironment
-            }
-          } else {
-            NetworkingDriver.configured = true
-          }
-          if ( NetworkingDriver.isEnabled( ) ) {
+          Optional<NetworkConfiguration> configurationOptional = NetworkConfigurations.networkConfiguration
+          if ( configurationOptional.present ) {
+            DispatchingNetworkingService.updateNetworkService(
+                NetworkMode.fromString( configurationOptional.get( ).mode, NetworkMode.EDGE ) )
             Iterables.all(
-                configurationOptional.or( NetworkConfigurations.networkConfigurationFromEnvironmentSupplier.get( ) ).asSet( ),
+                configurationOptional.asSet( ),
                 Entities.asTransaction( ClusterConfiguration.class, { NetworkConfiguration networkConfiguration ->
                   NetworkConfigurations.process( networkConfiguration )
                   true

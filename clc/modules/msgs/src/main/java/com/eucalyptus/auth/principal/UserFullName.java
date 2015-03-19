@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -81,7 +81,6 @@ public class UserFullName implements OwnerFullName {
   private final String                               userId;
   private final String                               userName;
   private final String                               accountNumber;
-  private final String                               accountName;
   private final String                                     authority;
   private final String                                     relativeId;
   String                                             qName;
@@ -90,11 +89,8 @@ public class UserFullName implements OwnerFullName {
     this.userId = user.getUserId( );
     checkParam( this.userId, notNullValue() );
     this.userName = user.getName( );
-    final Account account = user.getAccount( );
-    this.accountNumber = account.getAccountNumber( );
+    this.accountNumber = user.getAccountNumber( );
     checkParam( this.accountNumber, notNullValue() );
-    this.accountName = account.getName( );
- //   this.accountName = null;
     this.authority = new StringBuilder( ).append( FullName.PREFIX ).append( FullName.SEP ).append( VENDOR ).append( FullName.SEP ).append( FullName.SEP ).append( this.accountNumber ).append( FullName.SEP ).toString( );
     this.relativeId = FullName.ASSEMBLE_PATH_PARTS.apply( new String[] { "user", user.getName( ) } );
     this.qName = this.authority + this.relativeId;
@@ -206,11 +202,6 @@ public class UserFullName implements OwnerFullName {
   @Override
   public String getAccountNumber( ) {
     return this.accountNumber;
-  }
-  
-  @Override
-  public String getAccountName( ) {
-    return this.accountName;
   }
   
   @Override

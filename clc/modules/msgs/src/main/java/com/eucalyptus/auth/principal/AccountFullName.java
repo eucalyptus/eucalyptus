@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,8 +63,6 @@
 package com.eucalyptus.auth.principal;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import static com.eucalyptus.util.Parameters.checkParam;
@@ -74,7 +72,6 @@ public class AccountFullName implements OwnerFullName {
   private static Logger       LOG    = Logger.getLogger( UserFullName.class );
   private static final String VENDOR = "euare";
   private final String        accountNumber;
-  private final String        accountName;
   private final String        authority;
   private final String        relativeId;
   private final String        qName;
@@ -83,18 +80,15 @@ public class AccountFullName implements OwnerFullName {
     checkParam( ownerFn, notNullValue() );
     this.accountNumber = ownerFn.getAccountNumber( );
     checkParam( this.accountNumber, notNullValue() );
-    //this.accountName = ownerFn.getAccountName( );
-    this.accountName = null;
     this.authority = ownerFn.getAuthority( );
     this.relativeId = FullName.ASSEMBLE_PATH_PARTS.apply( relativePath );
     this.qName = this.authority + this.relativeId;
   }
-  
-  protected AccountFullName( Account account, String... relativePath ) {
-    this.accountNumber = account.getAccountNumber( );
+
+  //TODO:STEVE: need to preserve the old (validating) constructor?
+  protected AccountFullName( String accountNumber, String... relativePath ) {
+    this.accountNumber = accountNumber;
     checkParam( this.accountNumber, notNullValue() );
-    //this.accountName = account.getName( );
-    this.accountName = null;
     this.authority = new StringBuilder( ).append( FullName.PREFIX ).append( FullName.SEP ).append( VENDOR ).append( FullName.SEP ).append( FullName.SEP ).append( this.accountNumber ).append( FullName.SEP ).toString( );
     this.relativeId = FullName.ASSEMBLE_PATH_PARTS.apply( relativePath );
     this.qName = this.authority + this.relativeId;
@@ -175,22 +169,16 @@ public class AccountFullName implements OwnerFullName {
   }
   
   public static AccountFullName getInstance( String accountId, String... relativePath ) {
-    Account account = null;
-    try {
-      account = Accounts.lookupAccountById( accountId );
-    } catch ( AuthException ex ) {
-      account = Principals.systemAccount( );
-    }
-    return getInstance( account, relativePath );
+    return new AccountFullName( accountId, relativePath );
   }
   
   public static AccountFullName getInstance( Account account, String... relativePath ) {
     if ( account == null ) {
-      return new AccountFullName( Principals.nobodyAccount( ), relativePath );
+      return new AccountFullName( Principals.nobodyAccount( ).getAccountNumber( ), relativePath );
     } else if ( account == Principals.systemAccount( ) ) {
-      return new AccountFullName( Principals.systemAccount( ), relativePath );
+      return new AccountFullName( Principals.systemAccount( ).getAccountNumber( ), relativePath );
     } else {
-      return new AccountFullName( account, relativePath );
+      return new AccountFullName( account.getAccountNumber( ), relativePath );
     }
   }
   
@@ -202,11 +190,6 @@ public class AccountFullName implements OwnerFullName {
   @Override
   public String getUserName( ) {
     return null;
-  }
-  
-  @Override
-  public String getAccountName( ) {
-    return this.accountName;
   }
   
   /**
