@@ -63,6 +63,7 @@
 package com.eucalyptus.auth.crypto;
 
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyFactory;
@@ -79,6 +80,8 @@ import java.util.Date;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.apache.commons.codec.digest.Crypt;
+import org.apache.commons.codec.digest.Sha2Crypt;
 import org.apache.log4j.Logger;
 import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.asn1.x509.X509Extensions;
@@ -369,16 +372,15 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
 
   @Override
   public String generateLinuxSaltedPassword(String password) {
-    // Use MD5Crypt
-    // TODO(wenye): try SHA256?
-    return MD5Crypt.crypt( password );
+    return Sha2Crypt.sha512Crypt( password.getBytes( StandardCharsets.UTF_8 ) );
   }
 
   @Override
   public boolean verifyLinuxSaltedPassword(String clear, String hashed) {
-    // Use MD5Crypt
-    // TODO(wenye): try SHA256?
-    return MD5Crypt.verifyPassword( clear, hashed );
+    return MessageDigest.isEqual( // constant time comparison
+        hashed.getBytes( StandardCharsets.UTF_8 ),
+        Crypt.crypt( clear.getBytes( StandardCharsets.UTF_8 ), hashed ).getBytes( StandardCharsets.UTF_8 )
+    );
   }
 
 }
