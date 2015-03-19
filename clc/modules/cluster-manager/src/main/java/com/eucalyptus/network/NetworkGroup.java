@@ -103,6 +103,8 @@ import com.eucalyptus.compute.vpc.Vpc;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransientEntityException;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.upgrade.Upgrades;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
@@ -389,12 +391,16 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
             exNet = ExtantNetwork.create( this, i );
             Entities.persist( exNet );
             this.setExtantNetwork( exNet );
+            EventRecord.here( NetworkGroup.class, EventType.VLAN_ALLOCATED, "VLAN allocated: " + exNet.getTag( ) ).info();
             return this.getExtantNetwork( );
           }
         }
         throw new NotEnoughResourcesException( "Failed to allocate network tag for network: " + this.getFullName( ) + ": no network tags are free." );
       } else {
-        return this.getExtantNetwork( );
+        if ( !exNet.inUse( ) ) {
+          exNet.updateTimeStamps( );
+        }
+        return exNet;
       }
     }
   }
@@ -409,6 +415,15 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   
   public boolean hasExtantNetwork( ) {
     return this.extantNetwork != null;
+  }
+
+  public boolean clearExtantNetwork( ) {
+    if ( extantNetwork != null ) {
+      EventRecord.here( NetworkGroup.class, EventType.VLAN_RELEASED, "VLAN released: " + extantNetwork.getTag( ) ).info();
+      setExtantNetwork( null );
+      return true;
+    }
+    return false;
   }
 
   @EntityUpgrade(entities = { NetworkGroup.class },  since = Version.v3_3_0, value = Eucalyptus.class)

@@ -56,7 +56,8 @@ abstract class NetworkResource extends EucalyptusData {
 
 @Canonical class PrivateNetworkIndexResource extends NetworkResource {
   @Override String getType( ){ "private-network-index" }
-  String tag
+  Integer tag
+  String privateIp
 }
 
 @Canonical class PublicIPResource extends NetworkResource {

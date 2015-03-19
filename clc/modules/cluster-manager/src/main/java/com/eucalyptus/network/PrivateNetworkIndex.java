@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -266,7 +266,10 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
   
   @Override
   public PrivateNetworkIndex release( ) throws ResourceAllocationException {
-    this.extantNetwork = null;
+    if ( this.extantNetwork != null ) {
+      this.extantNetwork.remove( this );
+      this.extantNetwork = null;
+    }
     return super.release( );
   }
   
