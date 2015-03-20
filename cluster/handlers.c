@@ -6410,6 +6410,23 @@ int init_config(void)
             snprintf(gpEucaNet->sMacPrefix, ENET_MACPREFIX_LEN, "%s", macPrefix);
         }
         sem_mypost(NETCONFIG);
+
+        EUCA_FREE(pubSubnet);
+        EUCA_FREE(pubSubnetMask);
+        EUCA_FREE(pubBroadcastAddress);
+        EUCA_FREE(pubRouter);
+        EUCA_FREE(pubDomainname);
+        EUCA_FREE(pubDNS);
+        EUCA_FREE(pubmacmap);
+        EUCA_FREE(numaddrs);
+        EUCA_FREE(pubips);
+        EUCA_FREE(localIp);
+        EUCA_FREE(pubInterface);
+        EUCA_FREE(privInterface);
+        EUCA_FREE(dhcpuser);
+        EUCA_FREE(daemon);
+        EUCA_FREE(pubmode);
+        EUCA_FREE(macPrefix);
     }
 
     tmpstr = configFileValue("SCHEDPOLICY");

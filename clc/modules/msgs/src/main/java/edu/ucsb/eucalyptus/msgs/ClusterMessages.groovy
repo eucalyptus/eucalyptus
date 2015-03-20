@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,9 +19,6 @@
  ************************************************************************/
 @GroovyAddClassUUID
 package edu.ucsb.eucalyptus.msgs
-
-import com.google.common.base.Joiner
-import com.google.common.collect.Lists
 
 public class CloudClusterMessage extends EucalyptusMessage {
 
@@ -113,142 +110,6 @@ public class ClusterMigrateInstancesType extends CloudClusterMessage {
 
 public class ClusterMigrateInstancesResponseType extends CloudClusterMessage {}
 
-public class StartNetworkType extends CloudClusterMessage {
-  String networkUuid;
-  int vlan;
-  String netName;
-  String groupId;
-  String vmsubdomain;
-  String nameserver;
-  ArrayList<String> clusterControllers = new ArrayList<String>();
-  String accountId;
-
-
-  public StartNetworkType( ) {
-  }
-
-  public StartNetworkType(final String accountId, final String userId, final Integer vlan, final String netName, final String groupId, final String networkUuid) {
-    super( userId );
-    this.networkUuid = networkUuid;
-    this.vlan = vlan;
-    this.netName = netName;
-    this.groupId = groupId;
-  }
-}
-
-public class StartNetworkResponseType extends CloudClusterMessage {
-}
-
-public class StopNetworkType extends CloudClusterMessage {
-  Integer vlan;
-  String netName;
-  String accountId;
-
-  public StopNetworkType(){
-  }
-
-  public StopNetworkType(final String accountId, final String userId, final String netName, final Integer vlan) {
-    super( userId );
-    this.vlan = vlan;
-    this.netName = netName;
-    this.accountId = accountId;
-  }
-
-  public StopNetworkType(final StartNetworkType msg) {
-    super(msg);
-    this.vlan = msg.vlan;
-    this.netName = msg.netName;
-  }
-}
-
-public class StopNetworkResponseType extends CloudClusterMessage {
-}
-
-public class DescribeNetworksType extends CloudClusterMessage {
-  String vmsubdomain;
-  String nameserver;
-  String dnsDomainName;
-  ArrayList<String> clusterControllers = new ArrayList<String>();
-}
-
-public class DescribeNetworksResponseType extends CloudClusterMessage {
-  Integer useVlans;
-  String mode;
-  Integer addrsPerNet;
-  Integer addrIndexMin;
-  Integer addrIndexMax;
-  Integer vlanMin;
-  Integer vlanMax;
-  String vnetSubnet;
-  String vnetNetmask;
-  ArrayList<String> privateIps = Lists.newArrayList( )
-  ArrayList<NetworkInfoType> activeNetworks = Lists.newArrayList( )
-
-  public String toString() {
-    return "${this.getClass().getSimpleName()} mode=${mode} addrsPerNet=${addrsPerNet} " +
-        "\n${this.getClass().getSimpleName()} " + (Joiner.on( "\n${this.getClass().getSimpleName()} " as String ).join(activeNetworks.iterator()));
-  }
-}
-
-public class AddressMappingInfoType extends EucalyptusData {
-  String uuid;
-  String source;
-  String destination;
-}
-
-public class NetworkInfoType extends EucalyptusData {
-  String uuid;
-  Integer tag;
-  String networkName;
-  String accountNumber;
-  ArrayList<String> allocatedIndexes = new ArrayList<String>();
-  public String toString( ) {
-    return "NetworkInfoType ${accountNumber} ${networkName} ${uuid} ${tag} ${allocatedIndexes}";
-  }
-}
-
-public class ClusterAddressInfo extends EucalyptusData implements Comparable<ClusterAddressInfo> {
-  String uuid;
-  String address;
-  String instanceIp;
-
-  public ClusterAddressInfo( String address ) {
-    this.address = address;
-  }
-
-  public boolean hasMapping() {
-    return this.instanceIp != null &&  !"".equals( this.instanceIp ) && !"0.0.0.0".equals( this.instanceIp );
-  }
-
-  @Override
-  public int hashCode( ) {
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + ( ( this.address == null ) ? 0 : this.address.hashCode( ) );
-    return result;
-  }
-
-  public int compareTo( ClusterAddressInfo that ) {
-    return this.address.compareTo( that.address );
-  }
-
-  @Override
-  public boolean equals( Object obj ) {
-    if ( this.is( obj ) ) return true;
-    if ( obj == null ) return false;
-    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
-    ClusterAddressInfo other = ( ClusterAddressInfo ) obj;
-    if ( this.address == null ) {
-      if ( other.address != null ) return false;
-    } else if ( !this.address.equals( other.address ) ) return false;
-    return true;
-  }
-
-  public String toString( ) {
-    return String.format( "ClusterAddressInfo %s %s", this.address, this.instanceIp );
-  }
-}
-
 public class AssignAddressType extends CloudClusterMessage {
   String uuid;
   String instanceId;
@@ -318,36 +179,6 @@ public class UnassignAddressType extends CloudClusterMessage {
 }
 
 public class UnassignAddressResponseType extends CloudClusterMessage {
-}
-
-public class DescribePublicAddressesType extends CloudClusterMessage {
-}
-
-public class DescribePublicAddressesResponseType extends CloudClusterMessage {
-  ArrayList<ClusterAddressInfo> addresses = new ArrayList<ClusterAddressInfo>();
-  public String toString() {
-    return "${this.getClass().getSimpleName()} " + addresses.each{ it -> "${it}" }.join("\n${this.getClass().getSimpleName()} ");
-  }
-}
-
-public class ConfigureNetworkType extends CloudClusterMessage {
-
-  ArrayList<PacketFilterRule> rules = new ArrayList<PacketFilterRule>();
-
-  def ConfigureNetworkType(final EucalyptusMessage msg, final ArrayList<PacketFilterRule> rules) {
-    super(msg);
-    this.rules = rules;
-  }
-
-  def ConfigureNetworkType(final ArrayList<PacketFilterRule> rules) {
-    this.rules = rules;
-  }
-
-  def ConfigureNetworkType(){
-  }
-}
-
-public class ConfigureNetworkResponseType extends CloudClusterMessage {
 }
 
 class BroadcastNetworkInfoType extends CloudClusterMessage {
@@ -572,101 +403,6 @@ public class NetworkParameters extends EucalyptusData {
   String publicMacAddress;
   int macLimit;
   int vlan;
-}
-
-public class PacketFilterRule extends EucalyptusData {
-  public static String ACCEPT = "firewall-open";
-  public static String DENY = "firewall-close";
-
-  public static PacketFilterRule revoke( PacketFilterRule  existingRule ) {
-    PacketFilterRule pf = new PacketFilterRule();
-    pf.destUserName = existingRule.getDestUserName();
-    pf.destNetworkName = existingRule.getDestNetworkName();
-    pf.policy = DENY;
-    pf.portMin = existingRule.getPortMin();
-    pf.portMax = existingRule.getPortMax();
-    pf.protocol = existingRule.getProtocol();
-    pf.setPeers( existingRule.getPeers() );
-    pf.setSourceCidrs( existingRule.getSourceCidrs() );
-    pf.setSourceNetworkNames( existingRule.getSourceNetworkNames() );
-    pf.setSourceUserNames( existingRule.getSourceUserNames() );
-    return pf;
-  }
-  String destUserName;
-  String destNetworkName;
-  String policy = "firewall-open";
-  String protocol;
-  Integer portMin;
-  Integer portMax;
-  ArrayList<String> sourceCidrs = new ArrayList<String>();
-  ArrayList<VmNetworkPeer> peers = new ArrayList<VmNetworkPeer>();
-  ArrayList<String> sourceNetworkNames = new ArrayList<String>();
-  ArrayList<String> sourceUserNames = new ArrayList<String>();
-
-  def PacketFilterRule(String destUserName, String destNetworkName, String protocol, Integer portMin, Integer portMax) {
-    this.destUserName = destUserName;
-    this.destNetworkName = destNetworkName;
-    this.protocol = protocol;
-    this.portMin = portMin;
-    this.portMax = portMax;
-  }
-
-  def PacketFilterRule(){
-  }
-
-  @Override
-  public String toString() {
-    return "PacketFilterRule ${destUserName} ${destNetworkName} ${policy} ${protocol} ${portMin}-${portMax} " +
-        ((!sourceCidrs.isEmpty())?"":" source ${sourceCidrs}") +
-        ((!peers.isEmpty())?"":" peers ${peers}") +
-        ((!sourceNetworkNames.isEmpty())?"":" sourceNetworks ${sourceNetworkNames}") +
-        ((!sourceUserNames.isEmpty())?"":" sourceUsers ${sourceUserNames}");
-  }
-
-
-  public void addPeer( String queryKey, String groupName ) {
-    VmNetworkPeer peer = new VmNetworkPeer( queryKey, groupName );
-    this.peers.add(peer);
-    this.sourceNetworkNames.add( peer.getSourceNetworkName() );
-    this.sourceUserNames.add(peer.userName);
-  }
-}
-
-public class VmNetworkPeer  extends EucalyptusData {
-
-  String userName;
-  String sourceNetworkName;
-
-  def VmNetworkPeer() {
-  }
-
-  def VmNetworkPeer(final userName, final sourceNetworkName) {
-    this.userName = userName;
-    this.sourceNetworkName = sourceNetworkName;
-  }
-
-
-
-  boolean equals(final Object o) {
-    if ( this.is(o) ) return true;
-
-    if ( !o || getClass() != o.class ) return false;
-
-    VmNetworkPeer that = (VmNetworkPeer) o;
-
-    if ( sourceNetworkName ? !sourceNetworkName.equals(that.sourceNetworkName) : that.sourceNetworkName != null ) return false;
-    if ( userName ? !userName.equals(that.userName) : that.userName != null ) return false;
-
-    return true;
-  }
-
-  int hashCode() {
-    int result;
-
-    result = (userName ? userName.hashCode() : 0);
-    result = 31 * result + (sourceNetworkName ? sourceNetworkName.hashCode() : 0);
-    return result;
-  }
 }
 
 

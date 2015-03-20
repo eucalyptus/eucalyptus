@@ -73,13 +73,46 @@ class LoadBalancerServoDescription extends EucalyptusData {
 	AvailabilityZones availabilityZones
 	Subnets subnets
 	String vpcId
-	Instances instances
+	BackendInstances backendInstances
 	HealthCheck healthCheck
 	SourceSecurityGroup sourceSecurityGroup
 	SecurityGroups securityGroups
 	Date createdTime
 	String scheme
 	LoadBalancerAttributes loadBalancerAttributes
+}
+
+/* EUCA-specific extension to describe backend-instances passed to LB VM */
+class BackendInstances extends EucalyptusData {
+  BackendInstances() {  }
+  @HttpEmbedded(multiple=true)
+  @HttpParameterMapping(parameter="member")
+  @FieldRange( min = 1l )
+  ArrayList<BackendInstance> member = new ArrayList<BackendInstance>();
+}
+
+class BackendInstance extends EucalyptusData {
+  @Nonnull
+  @FieldRegex( FieldRegexValue.LOAD_BALANCER_INSTANCE_ID_OPTIONAL_STATUS )
+  String instanceId;
+  
+  @Nonnull
+  String instanceIpAddress;
+  
+  /* true if instance is in the same zone as servo
+   * false otherwise
+   */
+  Boolean reportHealthCheck;
+
+  BackendInstance() {  }
+
+  static Function<BackendInstance,String> instanceId( ) {
+    return { BackendInstance instance -> instance.instanceId } as Function<BackendInstance,String>
+  }
+
+  static Function<String,BackendInstance> instance( ) {
+    return { String instanceId -> new BackendInstance( instanceId: instanceId ) } as Function<String,BackendInstance>
+  }
 }
 
 class PutServoStatesType extends LoadBalancingServoMessage {
@@ -318,6 +351,7 @@ class Instance extends EucalyptusData {
   @Nonnull
   @FieldRegex( FieldRegexValue.LOAD_BALANCER_INSTANCE_ID_OPTIONAL_STATUS )
   String instanceId;
+
   Instance() {  }
 
   static Function<Instance,String> instanceId( ) {

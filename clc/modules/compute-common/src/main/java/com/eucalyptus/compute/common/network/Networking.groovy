@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -55,10 +55,6 @@ class Networking {
 
   void release( final ReleaseNetworkResourcesType releaseNetworkResourcesType ) {
     service.release( releaseNetworkResourcesType )
-  }
-
-  void update( final UpdateNetworkResourcesType updateNetworkResourcesType ) {
-    service.update( updateNetworkResourcesType )
   }
 
   void update( final UpdateInstanceResourcesType updateInstanceResourcesType ) {

@@ -1620,6 +1620,7 @@ int dev_get_ips(const char *psDeviceName, in_addr_entry ** pOutIps, int *pNumber
             dev_free_ips(pOutIps);
             (*pNumberOfIps) = 0;
             freeifaddrs(pIfAddr);
+            EUCA_FREE(pEntry);
             return (1);
         }
         // Retrieve the netmask address information
@@ -1628,6 +1629,7 @@ int dev_get_ips(const char *psDeviceName, in_addr_entry ** pOutIps, int *pNumber
             dev_free_ips(pOutIps);
             (*pNumberOfIps) = 0;
             freeifaddrs(pIfAddr);
+            EUCA_FREE(pEntry);
             return (1);
         }
         // Fill in our structure
@@ -1673,6 +1675,7 @@ boolean dev_has_ip(const char *psDeviceName, in_addr_t ip)
     }
     // Do we have any IP assigned with this device?
     if (nbIps == 0) {
+        EUCA_FREE(pIps);
         return (FALSE);
     }
     // Check if the given IP is part of our list
@@ -1720,6 +1723,7 @@ boolean dev_has_host(const char *psDeviceName, in_addr_t ip, in_addr_t netmask)
     }
     // Do we have any IP assigned with this device?
     if (nbIps == 0) {
+        EUCA_FREE(pIps);
         return (FALSE);
     }
     // Check if the given IP is part of our list
