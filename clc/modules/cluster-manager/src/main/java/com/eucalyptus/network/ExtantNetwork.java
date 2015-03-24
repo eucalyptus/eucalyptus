@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -75,7 +75,6 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
-import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
@@ -97,11 +96,12 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.entities.TransientEntityException;
-import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.Numbers;
+import com.google.common.base.Predicates;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -119,10 +119,9 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
   private Integer                        tag;
   
   @NotFound( action = NotFoundAction.IGNORE )
-  @OneToMany( fetch = FetchType.EAGER, orphanRemoval = true, cascade = CascadeType.ALL )
-  @JoinColumn( name = "metadata_extant_network_index_fk" )
+  @OneToMany( fetch = FetchType.EAGER, orphanRemoval = true, cascade = CascadeType.ALL, mappedBy = "extantNetwork" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private final Set<PrivateNetworkIndex> indexes          = new HashSet<PrivateNetworkIndex>( );
+  private Set<PrivateNetworkIndex> indexes           = new HashSet<>( );
   
   @OneToOne( fetch = FetchType.EAGER )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -142,7 +141,7 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
     super( networkGroup.getOwner( ), networkGroup.getDisplayName( ) );
     this.tag = tag;
     this.networkGroup = networkGroup;
-    this.setState( Reference.State.PENDING );
+    this.setState( Reference.State.EXTANT );
   }
   
   private ExtantNetwork( final NetworkGroup networkGroup ) {
@@ -229,6 +228,10 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
     }
   }
 
+  public boolean inUse( ) {
+    return !indexes.isEmpty( ) || lastUpdateMillis( ) < TimeUnit.MINUTES.toMillis( 1 );
+  }
+
   private void clearInFlight( final Collection<Long> indexes ) {
     for ( final Long index: indexes ) {
       final NetworkIndexKey key = new NetworkIndexKey( getTag(), index );
@@ -252,7 +255,7 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
   void setNetworkGroup( final NetworkGroup networkGroup ) {
     this.networkGroup = networkGroup;
   }
-  
+
   @Override
   public int hashCode( ) {
     final int prime = 31;
@@ -323,7 +326,19 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
                           .relativeId( "security-group", this.getNetworkGroup( ).getDisplayName( ),
                                        "tag", this.getTag( ).toString( ) );
   }
-  
+
+  void remove( final PrivateNetworkIndex index ) {
+    // Removal works around hibernate issue
+    // https://hibernate.atlassian.net/browse/HHH-3799
+    int sizeBefore = indexes.size( );
+    if ( Iterables.removeIf( indexes, Predicates.equalTo( index ) ) && sizeBefore == indexes.size( ) ) {
+      List<PrivateNetworkIndex> temp = Lists.newArrayList( indexes );
+      indexes.clear( );
+      indexes.addAll( temp );
+      indexes.remove( index );
+    }
+  }
+
   boolean teardown( ) {
     if ( !this.indexes.isEmpty( ) ) {
       for ( PrivateNetworkIndex index : this.indexes ) {
