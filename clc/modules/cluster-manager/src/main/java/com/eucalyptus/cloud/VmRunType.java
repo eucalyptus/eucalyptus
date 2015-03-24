@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -219,7 +219,7 @@ public class VmRunType extends CloudClusterMessage {
   private String       ownerId;
   private String       accountId;
   private String       uuid;
-  private String       macAddress = "";
+  private String       macAddress;
   private List<String> networkNames = new ArrayList<String>( );
   private List<String> networkIds = new ArrayList<String>( );
   private Long         networkIndex = -1l;

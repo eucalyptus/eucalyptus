@@ -163,7 +163,6 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       public Boolean apply( final VmInfo input ) {
         final VmInstance vm = VmInstances.lookup( input.getInstanceId( ) );
         try {
-          vm.updateMacAddress( input.getNetParams( ).getMacAddress( ) );
           vm.setServiceTag( input.getServiceTag( ) );
         } catch ( Exception ex ) {
           LOG.error( VmRunCallback.this.token + ": " + ex );

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@ package com.eucalyptus.network
 
 import com.eucalyptus.address.Address
 import com.eucalyptus.address.Addresses
-import com.eucalyptus.component.Partitions
 import com.eucalyptus.compute.common.network.NetworkResource
 import com.eucalyptus.compute.common.network.NetworkingService
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesResponseType
@@ -33,6 +32,8 @@ import com.google.common.collect.Lists
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import org.apache.log4j.Logger
+
+import static com.eucalyptus.vm.VmInstances.MAC_PREFIX
 
 /**
  *
@@ -93,6 +94,14 @@ abstract class NetworkingServiceSupport implements NetworkingService {
     address ?
         [ new PublicIPResource(  value: address, ownerId: publicIPResource.ownerId ) ] :
         [ ]
+  }
+
+  protected static String mac( final String identifier ) {
+    String.format( "${MAC_PREFIX}:%s:%s:%s:%s",
+        identifier.substring( 2, 4 ),
+        identifier.substring( 4, 6 ),
+        identifier.substring( 6, 8 ),
+        identifier.substring( 8, 10 ) ).toLowerCase( );
   }
 
 
