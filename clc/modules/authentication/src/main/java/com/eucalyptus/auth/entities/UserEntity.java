@@ -70,8 +70,6 @@ import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
 import javax.persistence.ManyToMany;
 import javax.persistence.MapKeyColumn;
@@ -82,7 +80,6 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.google.common.collect.Lists;
@@ -112,11 +109,6 @@ public class UserEntity extends AbstractPersistent implements Serializable {
   @Column( name = "auth_user_path" )
   String path;
   
-  // The progress of user registration process: REGISTERED -> APPROVED -> CONFIRMED (and enabled)
-  @Enumerated( EnumType.STRING )
-  @Column( name = "auth_user_reg_stat" )
-  RegistrationStatus regStat;
-
   // Flag to control the activeness of a user.
   @Column( name = "auth_user_is_enabled" )
   Boolean enabled;
@@ -211,7 +203,6 @@ public class UserEntity extends AbstractPersistent implements Serializable {
     sb.append( "name=" ).append( this.getName( ) ).append( ", " );
     sb.append( "path=" ).append( this.getPath( ) ).append( ", " );
     sb.append( "enabled=" ).append( this.isEnabled( ) ).append( ", " );
-    sb.append( "regStat=" ).append( this.getRegistrationStatus( ) ).append( ", " );
     sb.append( "passwordExpires=" ).append( this.getPasswordExpires( ) );
     sb.append( ")" );
     return sb.toString( );
@@ -231,14 +222,6 @@ public class UserEntity extends AbstractPersistent implements Serializable {
   
   public void setPath( String path ) {
     this.path = path;
-  }
-  
-  public RegistrationStatus getRegistrationStatus( ) {
-    return this.regStat;
-  }
-  
-  public void setRegistrationStatus( RegistrationStatus regStat ) {
-    this.regStat = regStat;
   }
   
   public Boolean isEnabled( ) {
