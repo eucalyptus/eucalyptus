@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2013-2014 Eucalyptus Systems, Inc.
+ * Copyright 2013-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 package com.eucalyptus.address
 
 import com.eucalyptus.cluster.ClusterConfiguration
+import com.eucalyptus.network.NetworkInfoBroadcaster
 import com.eucalyptus.util.Parameters
 import com.eucalyptus.util.async.AsyncRequests
 import com.eucalyptus.util.async.Request
@@ -98,8 +99,8 @@ class AddressingDispatcher {
     }
   }
 
-  private static final AtomicReference<Dispatcher> dispatcher = new AtomicReference<Dispatcher>( Dispatcher.STANDARD )
-  private static final AtomicReference<AddressingInterceptor> interceptor = new AtomicReference<AddressingInterceptor>( new AddressingInterceptorSupport() )
+  private static final AtomicReference<Dispatcher> dispatcher = new AtomicReference<Dispatcher>( Dispatcher.SHORTCUT )
+  private static final AtomicReference<AddressingInterceptor> interceptor = new AtomicReference<AddressingInterceptor>( new NetworkInfoBroadcaster.BroadcastAddressingInterceptor() )
 
   public static interface AddressingInterceptor {
     void onDispatch( Request<? extends BaseMessage,? extends BaseMessage> request, String clusterOrPartition )

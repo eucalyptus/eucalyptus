@@ -45,7 +45,7 @@
         <structure name="AvailabilityZones" field="availabilityZones" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.AvailabilityZones"/>
         <structure name="Subnets" field="subnets" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.Subnets"/>
         <value name="VPCId" field="vpcId" usage="optional"/>
-        <structure name="Instances" field="instances" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.Instances"/>
+        <structure name="BackendInstances" field="backendInstances" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.BackendInstances"/>
         <structure name="HealthCheck" field="healthCheck" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.HealthCheck"/>
         <structure name="SourceSecurityGroup" field="sourceSecurityGroup" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.SourceSecurityGroup"/>
         <structure name="SecurityGroups" field="securityGroups" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.SecurityGroups"/>
@@ -381,6 +381,11 @@
   <mapping class="com.eucalyptus.loadbalancing.common.msgs.Instance" abstract="true">
     <value name="InstanceId" field="instanceId" usage="optional"/>
   </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.common.msgs.BackendInstance" abstract="true">
+    <value name="InstanceId" field="instanceId" usage="optional"/>
+    <value name="InstanceIpAddress" field="instanceIpAddress" usage="optional"/>
+    <value name="ReportHealthCheck" field="reportHealthCheck" usage="optional"/>
+  </mapping>
   <mapping class="com.eucalyptus.loadbalancing.common.msgs.AppCookieStickinessPolicies" abstract="true">
     <collection field="member">
       <structure name="member" type="com.eucalyptus.loadbalancing.common.msgs.AppCookieStickinessPolicy"/>
@@ -455,6 +460,11 @@
   <mapping class="com.eucalyptus.loadbalancing.common.msgs.Subnets" abstract="true">
     <collection field="member">
       <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.common.msgs.BackendInstances" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancing.common.msgs.BackendInstance"/>
     </collection>
   </mapping>
   <mapping class="com.eucalyptus.loadbalancing.common.msgs.Instances" abstract="true">

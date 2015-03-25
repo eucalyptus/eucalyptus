@@ -298,7 +298,6 @@ public class DatabaseAccountProxy implements Account {
     newUser.setPath( path );
     newUser.setEnabled( enabled );
     newUser.setPasswordExpires( System.currentTimeMillis( ) + AuthenticationLimitProvider.Values.getDefaultPasswordExpiry( ) );
-    newUser.setRegistrationStatus( User.RegistrationStatus.CONFIRMED );
     if ( info != null ) {
       newUser.getInfo( ).putAll( info );
     }

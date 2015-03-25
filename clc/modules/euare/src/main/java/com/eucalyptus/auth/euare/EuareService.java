@@ -103,7 +103,6 @@ import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -525,9 +524,6 @@ public class EuareService {
       Boolean enabled = request.getEnabled( ) != null ? "true".equalsIgnoreCase( request.getEnabled( ) ) : null;
       Long passwordExpiration = request.getPasswordExpiration( ) != null ? Iso8601DateParser.parse( request.getPasswordExpiration( ) ).getTime( ) : null;
       Privileged.modifyUser( requestUser, account, userFound, request.getNewUserName( ), request.getNewPath( ), enabled, passwordExpiration, null/*info*/ );
-    } catch ( IllegalArgumentException e ) {
-      LOG.error( e, e );
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "Invalid registration status " + request.getRegStatus( ) );
     } catch ( ParseException e ) {
       LOG.error( e, e );
       throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "Invalid password expiration " + request.getPasswordExpiration( ) );
@@ -2211,7 +2207,6 @@ public class EuareService {
   
   private void fillUserResultExtra( UserType u, EuareUser userFound ) {
     u.setEnabled( String.valueOf( userFound.isEnabled() ) );
-    u.setRegStatus( RegistrationStatus.CONFIRMED.toString( ) );
     u.setPasswordExpiration( new Date( userFound.getPasswordExpires() ).toString() );
   }
   
@@ -2387,15 +2382,6 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-  }
-  
-  private static RegistrationStatus parseRegStatIgnoreCase( String value ) throws IllegalArgumentException {
-    for ( RegistrationStatus stat : RegistrationStatus.values( ) ) {
-      if ( stat.toString( ).equalsIgnoreCase( value ) ) {
-        return stat;
-      }
-    }
-    throw new IllegalArgumentException( "Invalid registration status value" );
   }
   
   private static ServerCertificateMetadataType getServerCertificateMetadata(final ServerCertificate cert){

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -77,7 +77,6 @@ import com.eucalyptus.cluster.ResourceState.NoSuchTokenException;
 import com.eucalyptus.compute.common.backend.RunInstancesType;
 import com.eucalyptus.compute.common.network.PublicIPResource;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.network.NetworkingDriver;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.tracking.MessageContexts;
 import com.eucalyptus.util.Callback;
@@ -163,9 +162,6 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       @Override
       public Boolean apply( final VmInfo input ) {
         final VmInstance vm = VmInstances.lookup( input.getInstanceId( ) );
-        if ( !NetworkingDriver.isEnabled( ) ) {
-          vm.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
-        }
         try {
           vm.updateMacAddress( input.getNetParams( ).getMacAddress( ) );
           vm.setServiceTag( input.getServiceTag( ) );

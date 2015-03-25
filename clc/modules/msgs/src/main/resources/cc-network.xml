@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2009-2012 Eucalyptus Systems, Inc.
+  Copyright 2009-2015 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -62,7 +62,7 @@
   -->
 
 <binding force-classes="true" add-constructors="true">
-  <!-- TODO: change name space to reflect change of API -->
+
   <mapping class="edu.ucsb.eucalyptus.msgs.NetworkConfigType" abstract="true">
     <value name="privateMacAddress" field="macAddress" />
     <value name="privateIp" field="ipAddress" />
@@ -70,146 +70,12 @@
     <value name="vlan" field="vlan" />
     <value name="networkIndex" field="networkIndex" />
   </mapping>
-  <mapping class="edu.ucsb.eucalyptus.msgs.NetworkInfoType" abstract="true">
-    <value name="uuid" field="uuid" usage="required" />
-    <value name="vlan" field="tag" />
-    <value name="netName" field="networkName" />
-    <value name="userName" field="accountNumber" />
-    <structure usage="optional">
-      <collection field="allocatedIndexes" factory="org.jibx.runtime.Utility.arrayListFactory">
-        <value name="activeAddrs" type="java.lang.String" />
-      </collection>
-    </structure>
-  </mapping>
-  <mapping class="edu.ucsb.eucalyptus.msgs.ClusterAddressInfo" abstract="true">
-    <value name="uuid" field="uuid" />
-    <value name="sourceAddress" field="address" usage="required" />
-    <value name="destAddress" field="instanceIp" />
-  </mapping>
-
-  <mapping class="edu.ucsb.eucalyptus.msgs.PacketFilterRule" abstract="true">
-    <value name="type" field="policy" usage="required" />
-    <structure usage="optional">
-      <collection field="sourceNetworkNames" factory="org.jibx.runtime.Utility.arrayListFactory">
-        <value name="sourceNames" type="java.lang.String" />
-      </collection>
-    </structure>
-    <structure usage="optional">
-      <collection field="sourceUserNames" factory="org.jibx.runtime.Utility.arrayListFactory">
-        <value name="userNames" type="java.lang.String" />
-      </collection>
-    </structure>
-    <structure usage="optional">
-      <collection field="sourceCidrs" factory="org.jibx.runtime.Utility.arrayListFactory">
-        <value name="sourceNets" type="java.lang.String" />
-      </collection>
-    </structure>
-    <value name="destUserName" field="destUserName" usage="required" />
-    <value name="destName" field="destNetworkName" usage="required" />
-    <value name="protocol" field="protocol" usage="required" />
-    <value name="portRangeMin" field="portMin" usage="required" />
-    <value name="portRangeMax" field="portMax" usage="required" />
-  </mapping>
-  <mapping name="DescribeNetworks" class="edu.ucsb.eucalyptus.msgs.DescribeNetworksType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="vmsubdomain" field="vmsubdomain" usage="optional" />
-    <value name="nameserver" field="nameserver" usage="optional" />
-    <collection field="clusterControllers" factory="org.jibx.runtime.Utility.arrayListFactory">
-      <value name="clusterControllers" type="java.lang.String" />
-    </collection>
-  </mapping>
-  <mapping name="DescribeNetworksResponse" class="edu.ucsb.eucalyptus.msgs.DescribeNetworksResponseType"
-    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" ordered="false">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="mode" field="mode" usage="required" />
-    <value name="useVlans" field="useVlans" usage="required" />
-    <value name="addrsPerNet" field="addrsPerNet" usage="optional" />
-    <value name="addrIndexMin" field="addrIndexMin" usage="optional" />
-    <value name="addrIndexMax" field="addrIndexMax" usage="optional" />
-    <value name="vlanMin" field="vlanMin" usage="optional" />
-    <value name="vlanMax" field="vlanMax" usage="optional" />
-    <value name="vnetSubnet" field="vnetSubnet" usage="optional" />
-    <value name="vnetNetmask" field="vnetNetmask" usage="optional" />
-    <collection field="privateIps" factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
-      <value name="privateIps" type="java.lang.String" />
-    </collection>
-    <structure usage="optional">
-      <collection field="activeNetworks" factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
-        <structure name="activeNetworks" map-as="edu.ucsb.eucalyptus.msgs.NetworkInfoType" />
-      </collection>
-    </structure>
-  </mapping>
-
-  <mapping name="StartNetwork" class="edu.ucsb.eucalyptus.msgs.StartNetworkType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="uuid" field="networkUuid" usage="required" />
-    <value name="vlan" field="vlan" usage="required" />
-    <value name="netName" field="netName" usage="required" />
-    <value name="groupId" field="groupId" usage="required" />
-    <value name="vmsubdomain" field="vmsubdomain" usage="optional" />
-    <value name="nameserver" field="nameserver" usage="optional" />
-    <collection field="clusterControllers" factory="org.jibx.runtime.Utility.arrayListFactory">
-      <value name="clusterControllers" type="java.lang.String" />
-    </collection>
-    <value name="accountId" field="accountId" usage="optional" />
-  </mapping>
-  <mapping name="StartNetworkResponse" class="edu.ucsb.eucalyptus.msgs.StartNetworkResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-  </mapping>
-  <mapping name="StopNetwork" class="edu.ucsb.eucalyptus.msgs.StopNetworkType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="vlan" field="vlan" usage="required" />
-    <value name="netName" field="netName" usage="required" />
-    <value name="accountId" field="accountId" usage="required" />
-  </mapping>
-  <mapping name="StopNetworkResponse" class="edu.ucsb.eucalyptus.msgs.StopNetworkResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-  </mapping>
-  <mapping name="AssignAddress" class="edu.ucsb.eucalyptus.msgs.AssignAddressType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="uuid" field="uuid" usage="required" />
-    <value name="source" field="source" usage="required" />
-    <value name="dest" field="destination" usage="required" />
-  </mapping>
-  <mapping name="AssignAddressResponse" class="edu.ucsb.eucalyptus.msgs.AssignAddressResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-  </mapping>
-  <mapping name="UnassignAddress" class="edu.ucsb.eucalyptus.msgs.UnassignAddressType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="source" field="source" usage="required" />
-    <value name="dest" field="destination" usage="required" />
-  </mapping>
-  <mapping name="UnassignAddressResponse" class="edu.ucsb.eucalyptus.msgs.UnassignAddressResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-  </mapping>
-  <mapping name="DescribePublicAddresses" class="edu.ucsb.eucalyptus.msgs.DescribePublicAddressesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-  </mapping>
-
-  <mapping name="DescribePublicAddressesResponse" class="edu.ucsb.eucalyptus.msgs.DescribePublicAddressesResponseType"
-    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <collection field="addresses" factory="org.jibx.runtime.Utility.arrayListFactory">
-      <structure name="addresses" type="edu.ucsb.eucalyptus.msgs.ClusterAddressInfo" />
-    </collection>
-  </mapping>
-
-  <mapping name="ConfigureNetwork" class="edu.ucsb.eucalyptus.msgs.ConfigureNetworkType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <collection field="rules" factory="org.jibx.runtime.Utility.arrayListFactory">
-      <structure name="rules" type="edu.ucsb.eucalyptus.msgs.PacketFilterRule" />
-    </collection>
-  </mapping>
-
-  <mapping name="ConfigureNetworkResponse" class="edu.ucsb.eucalyptus.msgs.ConfigureNetworkResponseType"
-    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-  </mapping>
 
   <mapping name="BroadcastNetworkInfo" class="edu.ucsb.eucalyptus.msgs.BroadcastNetworkInfoType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="networkInfo" field="networkInfo" usage="required" />
   </mapping>
+
   <mapping name="BroadcastNetworkInfoResponse" class="edu.ucsb.eucalyptus.msgs.BroadcastNetworkInfoResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
   </mapping>

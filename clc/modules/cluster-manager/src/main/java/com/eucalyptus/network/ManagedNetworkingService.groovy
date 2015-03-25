@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,14 +20,12 @@
 package com.eucalyptus.network
 
 import com.eucalyptus.address.Addresses
-import com.eucalyptus.cluster.Cluster
-import com.eucalyptus.cluster.ClusterConfiguration
-import com.eucalyptus.cluster.Clusters
+import com.eucalyptus.cloud.util.Reference as EReference
+import com.eucalyptus.cloud.util.ResourceAllocationException
 import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesResponseType
 import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesResult
 import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesType
 import com.eucalyptus.compute.common.network.NetworkResource
-import com.eucalyptus.compute.common.network.NetworkResourceReportType
 import com.eucalyptus.compute.common.network.NetworkingFeature
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesResponseType
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesResultType
@@ -40,26 +38,31 @@ import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType
 import com.eucalyptus.compute.common.network.SecurityGroupResource
 import com.eucalyptus.compute.common.network.UpdateInstanceResourcesResponseType
 import com.eucalyptus.compute.common.network.UpdateInstanceResourcesType
-import com.eucalyptus.compute.common.network.UpdateNetworkResourcesResponseType
-import com.eucalyptus.compute.common.network.UpdateNetworkResourcesType
 import com.eucalyptus.entities.Entities
+import com.eucalyptus.entities.TransactionResource
 import com.eucalyptus.network.config.ManagedSubnet
-import com.eucalyptus.network.config.NetworkConfiguration
 import com.eucalyptus.network.config.NetworkConfigurations
 import com.eucalyptus.util.EucalyptusCloudException
+import com.eucalyptus.util.Exceptions
+import com.eucalyptus.util.Pair
 import com.google.common.base.Optional
-import com.google.common.net.InetAddresses
+import com.google.common.collect.Iterables
+import com.google.common.collect.Sets
 import groovy.transform.CompileStatic
+import groovy.transform.TypeCheckingMode
 import org.apache.log4j.Logger
+import org.hibernate.exception.ConstraintViolationException
 
 import javax.persistence.EntityTransaction
+import javax.persistence.OptimisticLockException
+import java.util.concurrent.TimeUnit
 
 import static com.eucalyptus.compute.common.network.NetworkingFeature.*
 
 /**
  * NetworkingService implementation supporting MANAGED[-NOVLAN] modes
  */
-@CompileStatic
+@CompileStatic(TypeCheckingMode.SKIP)
 class ManagedNetworkingService extends NetworkingServiceSupport {
   private static final Logger logger = Logger.getLogger( ManagedNetworkingService );
 
@@ -83,22 +86,19 @@ class ManagedNetworkingService extends NetworkingServiceSupport {
   @Override
   protected PrepareNetworkResourcesResponseType prepareWithRollback( final PrepareNetworkResourcesType request,
                                                                      final List<NetworkResource> resources ) {
-    // Only if we have a valid networking configuration
-    if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
-      request.getResources( ).each { NetworkResource networkResource ->
-        switch( networkResource ) {
-          case PublicIPResource:
-            if ( networkResource.ownerId.startsWith( 'i-' ) ) {
-              resources.addAll( preparePublicIp( request, (PublicIPResource) networkResource ) )
-            }
-            break
-          case SecurityGroupResource:
-            // Only serve the request if we do not have any PrivateIndexResources in the list
-            if ( !resources.find{ NetworkResource resource -> resource instanceof PrivateNetworkIndex } ) {
-              resources.addAll( prepareSecurityGroup( request, (SecurityGroupResource) networkResource ) )
-            }
-            break
-        }
+    request.getResources( ).each { NetworkResource networkResource ->
+      switch( networkResource ) {
+        case PublicIPResource:
+          if ( networkResource.ownerId.startsWith( 'i-' ) ) {
+            resources.addAll( preparePublicIp( request, (PublicIPResource) networkResource ) )
+          }
+          break
+        case SecurityGroupResource:
+          // Only serve the request if we do not have any PrivateIndexResources in the list
+          if ( !resources.find{ NetworkResource resource -> resource instanceof PrivateNetworkIndex } ) {
+            resources.addAll( prepareSecurityGroup( request, (SecurityGroupResource) networkResource ) )
+          }
+          break
       }
     }
 
@@ -128,13 +128,6 @@ class ManagedNetworkingService extends NetworkingServiceSupport {
             logger.info( "IP address not found for release: ${networkResource.value}" )
           } catch ( e ) {
             logger.error( "Error releasing IP address: ${networkResource.value}", e )
-          }
-          break
-        case PrivateIPResource:
-          try {
-            PrivateAddresses.release( request.vpc, networkResource.value, networkResource.ownerId )
-          } catch ( e ) {
-            logger.error( "Error releasing private IP address: ${networkResource.value}", e )
           }
           break
         case PrivateNetworkIndexResource:
@@ -167,120 +160,131 @@ class ManagedNetworkingService extends NetworkingServiceSupport {
   DescribeNetworkingFeaturesResponseType describeFeatures( final DescribeNetworkingFeaturesType request ) {
     DescribeNetworkingFeaturesResponseType.cast( request.reply( new DescribeNetworkingFeaturesResponseType(
           describeNetworkingFeaturesResult : new DescribeNetworkingFeaturesResult(
-            networkingFeatures: NetworkGroups.networkingConfiguration( ).hasNetworking( ) ?
-              [ Classic, ElasticIPs ] as ArrayList<NetworkingFeature>:
-              [ Classic ] as ArrayList<NetworkingFeature>
+            networkingFeatures: [ Classic ] as ArrayList<NetworkingFeature>
           )
     ) ) )
   }
 
   @Override
-  UpdateNetworkResourcesResponseType update( final UpdateNetworkResourcesType request ) {
-    try {
-      Cluster cluster = Clusters.instance.lookup( request.cluster )
-      NetworkGroups.updateNetworkRangeConfiguration( );
-      NetworkGroups.updateExtantNetworks( cluster.configuration, request.resources.activeNetworks );
-    } catch ( NoSuchElementException e ) {
-      logger.debug( "Not updating network resource availability, cluster not found ${request.cluster}.", e )
-    } catch ( e ) {
-      logger.error( "Error updating network resource availability.", e )
-    }
-    PrivateAddresses.releasing( request.resources.privateIps, request.cluster )
-    UpdateNetworkResourcesResponseType.cast( request.reply( new UpdateNetworkResourcesResponseType( ) ) )
-  }
-
-  @Override
   UpdateInstanceResourcesResponseType update( final UpdateInstanceResourcesType request ) {
     PublicAddresses.clearDirty( request.resources.publicIps, request.partition )
+    timeoutPrivateNetworkIndexes( request.resources.privateIps, request.partition )
     UpdateInstanceResourcesResponseType.cast( request.reply( new UpdateInstanceResourcesResponseType( ) ) )
-  }
-
-  /**
-   * Retrieves a private IP address from a given network segment index and an IP
-   * address index from within the segment.
-   *
-   * @param segmentId the network segment index to select
-   * @param ipIndex the IP address index from within the network segment
-   *
-   * @return the matching IP address in a String format
-   */
-  private static int getPrivateIpFromSegment( Integer segmentId, Long ipIndex ) {
-    int privateIpInt = -1;
-
-    // Do we have a valid configuration?
-    Optional<NetworkConfiguration> configuration = NetworkConfigurations.networkConfiguration
-    if ( configuration.present ) {
-      // Retrieve our managed subnet configuration
-      NetworkConfiguration config = configuration.get()
-      ManagedSubnet managedSubnet = config.getManagedSubnet()
-      if ( managedSubnet ) {
-        // Convert our strings to integers so we can do some  calculation
-        int subnetInt = InetAddresses.coerceToInteger( InetAddresses.forString( managedSubnet.getSubnet( ) ) )
-        int segmentSizeInt = managedSubnet.segmentSize ?: ManagedSubnet.DEF_SEGMENT_SIZE
-
-        // Compute the private IP and set the return value
-        privateIpInt = subnetInt + ( segmentSizeInt * segmentId.intValue( ) ) + ipIndex.intValue( )
-      }
-    }
-
-    privateIpInt
   }
 
   private Collection<NetworkResource> prepareSecurityGroup( final PrepareNetworkResourcesType request,
                                                             final SecurityGroupResource securityGroupResource ) {
-    final List<NetworkResource> resources = [ ]
-    final List<NetworkResource> networkIndexResources = [ ]
-    Entities.transaction( NetworkGroup ) { EntityTransaction db ->
-      final NetworkGroup networkGroup = Entities.uniqueResult( NetworkGroup.withGroupId( null, securityGroupResource.value ) );
-      final Set<String> identifiers = [ ]
-      // specific values requested, restore case
-      request.getResources( ).findAll{ it instanceof PrivateNetworkIndexResource }.each {
-        PrivateNetworkIndexResource privateNetworkIndexResource ->
-          if ( identifiers.add( privateNetworkIndexResource.ownerId ) ) {
-            Integer restoreVlan = Integer.valueOf( privateNetworkIndexResource.tag )
-            Long restoreNetworkIndex = Long.valueOf( privateNetworkIndexResource.value )
-            if ( networkGroup.hasExtantNetwork( ) && networkGroup.extantNetwork( ).getTag( ) == restoreVlan ) {
-              logger.info( "Found matching extant network for ${privateNetworkIndexResource.ownerId}: ${networkGroup.extantNetwork( )}" );
-              networkGroup.extantNetwork( ).reclaimNetworkIndex( restoreNetworkIndex );
-            } else if ( networkGroup.hasExtantNetwork( ) && networkGroup.extantNetwork( ).getTag( ) != restoreVlan ) {
-              throw new EucalyptusCloudException( "Found conflicting extant network for ${privateNetworkIndexResource.ownerId}: ${networkGroup.extantNetwork( )}" )
-            } else {
-              logger.info( "Restoring extant network for ${privateNetworkIndexResource.ownerId}: ${restoreVlan}" );
-              ExtantNetwork exNet = networkGroup.reclaim( restoreVlan );
-              logger.debug( "Restored extant network for ${privateNetworkIndexResource.ownerId}: ${networkGroup.extantNetwork( )}" );
-              logger.info( "Restoring private network index for ${privateNetworkIndexResource.ownerId}: ${restoreNetworkIndex}" );
-              exNet.reclaimNetworkIndex( restoreNetworkIndex );
+    int retries = 5;
+    while ( true ) {
+      retries--;
+      try {
+        return Entities.transaction(NetworkGroup) { EntityTransaction db ->
+          final List<NetworkResource> resources = [ ]
+          final NetworkGroup networkGroup =
+              Entities.uniqueResult( NetworkGroup.withGroupId( null, securityGroupResource.value ) );
+          if ( !networkGroup.hasExtantNetwork( ) ) {
+            networkGroup.extantNetwork( )
+            try {
+              Entities.flush( NetworkGroup ) // will fail on conflict
+            } catch ( Exception e ) {
+              if ( retries > 0 && (
+                  Exceptions.isCausedBy( e, ConstraintViolationException ) ||
+                  Exceptions.isCausedBy( e, OptimisticLockException.class )
+              ) ) {
+                throw new RetryTransactionException( )
+              }
+              throw e;
             }
-
-            networkIndexResources.add( new PrivateNetworkIndexResource(
-                tag: String.valueOf( restoreVlan ),
-                value: String.valueOf( restoreNetworkIndex ),
-                ownerId: privateNetworkIndexResource.ownerId
-            ) )
           }
-      }
+          final Set<String> identifiers = []
+          // specific values requested, restore case
+          request.getResources( ).findAll{ it instanceof PrivateNetworkIndexResource }.each {
+            PrivateNetworkIndexResource privateNetworkIndexResource ->
+              if ( identifiers.add( privateNetworkIndexResource.ownerId ) ) {
+                Integer restoreVlan = privateNetworkIndexResource.tag
+                Long restoreNetworkIndex = Long.valueOf( privateNetworkIndexResource.value )
+                if ( networkGroup.hasExtantNetwork( ) && networkGroup.extantNetwork( ).getTag( ) == restoreVlan ) {
+                  logger.info( "Found matching extant network for ${privateNetworkIndexResource.ownerId}: ${networkGroup.extantNetwork( )}" );
+                  networkGroup.extantNetwork( ).reclaimNetworkIndex( restoreNetworkIndex );
+                } else if ( networkGroup.hasExtantNetwork( ) && networkGroup.extantNetwork( ).getTag( ) != restoreVlan ) {
+                  throw new EucalyptusCloudException( "Found conflicting extant network for ${privateNetworkIndexResource.ownerId}: ${networkGroup.extantNetwork( )}" )
+                } else {
+                  logger.info( "Restoring extant network for ${privateNetworkIndexResource.ownerId}: ${restoreVlan}" );
+                  ExtantNetwork exNet = networkGroup.reclaim( restoreVlan );
+                  logger.debug( "Restored extant network for ${privateNetworkIndexResource.ownerId}: ${networkGroup.extantNetwork( )}" );
+                  logger.info( "Restoring private network index for ${privateNetworkIndexResource.ownerId}: ${restoreNetworkIndex}" );
+                  exNet.reclaimNetworkIndex( restoreNetworkIndex );
+                }
+                resources.add( new PrivateNetworkIndexResource(
+                    privateIp: privateIp( restoreVlan, restoreNetworkIndex ),
+                    tag: restoreVlan,
+                    value: String.valueOf( restoreNetworkIndex ),
+                    ownerId: privateNetworkIndexResource.ownerId
+                ) )
+              }
+          }
 
-      // regular prepare case
-      request.getResources( ).findAll{ it instanceof PrivateIPResource }.each { PrivateIPResource privateIPResource ->
-        if ( identifiers.add( privateIPResource.ownerId ) ) {
-          networkIndexResources.add( new PrivateNetworkIndexResource(
-                  tag: String.valueOf( networkGroup.extantNetwork( ).getTag( ) ),
-                  value: String.valueOf( networkGroup.extantNetwork( ).allocateNetworkIndex( ).index ),
+          // regular prepare case
+          request.getResources( ).findAll{ it instanceof PrivateIPResource }.each { PrivateIPResource privateIPResource ->
+            if ( identifiers.add( privateIPResource.ownerId ) ) {
+              final Long index = networkGroup.extantNetwork( ).allocateNetworkIndex( ).index;
+              resources.add( new PrivateNetworkIndexResource(
+                  privateIp: privateIp( networkGroup.extantNetwork( ).tag, index ),
+                  tag: networkGroup.extantNetwork( ).tag,
+                  value: String.valueOf( index ),
                   ownerId: privateIPResource.ownerId
-          ) )
+              ) )
+            }
+          }
+
+          db.commit( )
+          resources
         }
+      } catch ( RetryTransactionException retry ) {
+        //
       }
-      db.commit( );
     }
+  }
 
-    // Add the private IPs now
-    networkIndexResources.findAll{ it instanceof PrivateNetworkIndexResource }.each { PrivateNetworkIndexResource privateNetworkIndexResource ->
-      int privateIpInt = getPrivateIpFromSegment( Integer.parseInt( privateNetworkIndexResource.getTag( ) ), Long.parseLong( privateNetworkIndexResource.getValue( ) ) )
-      String privateAllocate = PrivateAddresses.allocate( request.vpc, "0.0.0.0", [ privateIpInt ] )
-      PrivateIPResource privateResource = new PrivateIPResource( value: privateAllocate, ownerId: privateNetworkIndexResource.ownerId )
-      resources.add( privateResource )
+  private static String privateIp( final Integer tag, final Long index ) {
+    final Optional<ManagedSubnet> subnetOptional =
+        NetworkConfigurations.networkConfiguration.transform( ManagedSubnets.managedSubnet( ) )
+    if ( !subnetOptional.isPresent( ) ) {
+      throw new ResourceAllocationException( "Private address allocation failure" );
     }
+    ManagedSubnets.indexToAddress( subnetOptional.get(), tag, index )
+  }
 
-    resources
+  private static void timeoutPrivateNetworkIndexes( final Iterable<String> addresses, final String addressPartition ) {
+    // Time out pending network indexes that are not reported
+    final Optional<ManagedSubnet> subnetOptional =
+        NetworkConfigurations.networkConfiguration.transform( ManagedSubnets.managedSubnet( ) )
+    if ( subnetOptional.isPresent( ) ) {
+      final String partition = addressPartition
+      final Set<Pair<Integer,Long>> activeTaggedIndexes =
+          Sets.newHashSet( Iterables.transform( addresses, ManagedSubnets.addressToIndex( subnetOptional.get( ) ) ) );
+      Entities.transaction( PrivateNetworkIndex.class  ) { final TransactionResource transactionResource ->
+        Entities.query( PrivateNetworkIndex.inState( EReference.State.PENDING) ).each { final PrivateNetworkIndex index ->
+          if ( isTimedOut(index.lastUpdateMillis(), NetworkGroups.NETWORK_INDEX_PENDING_TIMEOUT ) ) {
+            if ( !activeTaggedIndexes.contains( Pair.pair( index.extantNetwork.tag, index.index ) ) &&
+                ( index.reference == null || index.reference.partition == partition ) ) {
+              logger.warn( "Pending network index (${index.displayName}) timed out, tearing down" );
+              index.release( )
+              index.teardown( )
+            }
+          }
+        }
+        transactionResource.commit( )
+      }
+    }
+  }
+
+  private static boolean isTimedOut( Long timeSinceUpdateMillis, Integer timeoutMinutes ) {
+    timeSinceUpdateMillis != null &&
+        timeoutMinutes != null &&
+        ( timeSinceUpdateMillis > TimeUnit.MINUTES.toMillis( timeoutMinutes )  );
+  }
+
+  private static class RetryTransactionException extends RuntimeException {
   }
 }

@@ -148,6 +148,12 @@ class IPRange implements Iterable<Integer> {
         this
   }
 
+  long size( ) {
+    lower == upper ?
+        1 :
+        unsigned( upper ).minus( unsigned( lower ) ).longValue( )
+  }
+
   @Override
   Iterator<Integer> iterator( ) {
     Iterators.<Long,Integer>transform(

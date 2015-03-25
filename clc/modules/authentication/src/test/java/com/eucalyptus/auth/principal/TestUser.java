@@ -37,7 +37,6 @@ public class TestUser implements EuareUser {
   private String userId;
   private String name;
   private String path;
-  private RegistrationStatus registrationStatus;
   private boolean enabled;
   private String token;
   private String confirmationCode;
@@ -56,7 +55,6 @@ public class TestUser implements EuareUser {
    */
   public TestUser activate( ) {
     setEnabled( true );
-    setRegistrationStatus( RegistrationStatus.CONFIRMED );
     return this;
   }
 
@@ -101,14 +99,6 @@ public class TestUser implements EuareUser {
   }
 
   public Date getCreateDate( ){ return null; }
-
-  public RegistrationStatus getRegistrationStatus() {
-    return registrationStatus;
-  }
-
-  public void setRegistrationStatus( final RegistrationStatus registrationStatus ) {
-    this.registrationStatus = registrationStatus;
-  }
 
   public boolean isEnabled() {
     return enabled;

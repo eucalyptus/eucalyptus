@@ -145,6 +145,7 @@ const char *asNetModes[] = {
     NETMODE_EDGE,
     NETMODE_MANAGED,
     NETMODE_MANAGED_NOVLAN,
+    NETMODE_VPCMIDO,
     NULL
 };
 

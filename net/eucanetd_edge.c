@@ -1224,11 +1224,10 @@ static int update_l2_addressing(globalNetworkInfo * pGni)
     brmac = INTFC2MAC(config->bridgeDev);
 
     if (gwip && brmac) {
-#ifdef CHUCK
         // Add this one for DHCP to pass since windows may be requesting broadcast responses
-        snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -o vn_i+ -s %s -d Broadcast --ip-proto udp --ip-dport 67:68 -j DROP", brmac);
+        snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -o vn_i+ -s %s -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT", brmac);
         rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-#endif
+
         // If we're using the "fake" router option and have some instance running,
         // we need to respond for out of network ARP request.
         if (config->nc_router && !config->nc_router_ip && (max_instances > 0)) {

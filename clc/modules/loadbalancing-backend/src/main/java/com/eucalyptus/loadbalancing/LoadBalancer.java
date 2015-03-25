@@ -190,7 +190,10 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 
 	@Column( name = "loadbalancer_connection_idle_timeout" )
 	private Integer connectionIdleTimeout;
-
+	
+	@Column( name = "loadbalancer_cross_zone_loadbalancing")
+	private Boolean crossZoneLoadbalancing;
+	
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, mappedBy = "loadbalancer")
 	@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerBackendInstance> backendInstances = null;
@@ -260,6 +263,14 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 
 	public void setConnectionIdleTimeout( final Integer connectionIdleTimeout ) {
 		this.connectionIdleTimeout = connectionIdleTimeout;
+	}
+	
+	public Boolean getCrossZoneLoadbalancingEnabled() {
+	  return this.crossZoneLoadbalancing;
+	}
+	
+	public void setCrossZoneLoadbalancingEnabled(final boolean enabled) {
+	  this.crossZoneLoadbalancing = enabled;
 	}
 
 	public List<LoadBalancerSecurityGroupRef> getSecurityGroupRefs() {
@@ -651,6 +662,10 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		public Integer getConnectionIdleTimeout( ) {
 			return this.loadbalancer.getConnectionIdleTimeout( );
 		}
+		
+		public Boolean getCrossZoneLoadbalancingEnabled( ) {
+		  return this.loadbalancer.getCrossZoneLoadbalancingEnabled();
+		}
 
 		public Map<String,String> getSecurityGroupIdsToNames( ) {
 			return this.securityGroupIdsToNames;
@@ -708,7 +723,8 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 				attributes.setConnectionSettings( connectionSettings );
 
 				final CrossZoneLoadBalancing crossZoneLoadBalancing = new CrossZoneLoadBalancing( );
-				crossZoneLoadBalancing.setEnabled( false );
+				crossZoneLoadBalancing.setEnabled( 
+				    Objects.firstNonNull(loadBalancer.getCrossZoneLoadbalancingEnabled(), false) );
 				attributes.setCrossZoneLoadBalancing( crossZoneLoadBalancing );
 			}
 			return attributes;

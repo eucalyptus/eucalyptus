@@ -475,7 +475,7 @@ static int network_driver_system_flush(globalNetworkInfo * pGni)
         //
         // Then clear our private network of all addresses
         //
-        if (dev_get_ips(config->privInterface, &pIps, &nbIps)) {
+        if (dev_get_ips(config->privInterface, &pIps, &nbIps) == 0) {
             netmask = pGni->managedSubnet->netmask;
             ipmask = (pGni->managedSubnet->subnet & netmask);
             for (i = 0; i < nbIps; i++) {
@@ -835,6 +835,7 @@ static boolean managednv_has_network_changed(globalNetworkInfo * pGni, lni_t * p
     // Check for Tunnel device changes
     if (managed_has_tunnel_changed(pGni, pSecGroups, nbGroups)) {
         LOGTRACE("Network change detected! Tunnel mapping change detected.\n");
+        EUCA_FREE(pSecGroups);
         return (TRUE);
     }
     //
@@ -1352,6 +1353,7 @@ static int managednv_update_gateway_ips(globalNetworkInfo * pGni)
     // Get the security groups for this cluster only
     if ((rc = gni_cluster_get_secgroup(pGni, pCluster, NULL, 0, NULL, 0, &pSecGroups, &nbGroups)) != 0) {
         LOGERROR("Cannot find security-groups for cluster '%s' in global network view: check network configuration settings\n", pCluster->name);
+        dev_free_ips(pNetworks);
         return (1);
     }
     //

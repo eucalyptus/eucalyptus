@@ -50,8 +50,8 @@ class PrivateAddresses {
     AddressIntegerToString.INSTANCE
   }
 
-  static String fromInteger( final Integer address ) {
-    InetAddresses.toAddrString( InetAddresses.fromInteger( address ) )
+  static String fromInteger( final Number address ) {
+    InetAddresses.toAddrString( InetAddresses.fromInteger( address.intValue( ) ) )
   }
 
   /**

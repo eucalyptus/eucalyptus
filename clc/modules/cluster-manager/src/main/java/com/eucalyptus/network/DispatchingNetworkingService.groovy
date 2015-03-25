@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@ import com.eucalyptus.util.LockResource
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 
+import javax.annotation.Nonnull
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
@@ -39,27 +40,29 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 class DispatchingNetworkingService {
 
   private static ReadWriteLock delegateLock = new ReentrantReadWriteLock( )
-  private static String networkingServiceDelegateName
+  private static NetworkMode networkingServiceDelegateMode
   private static NetworkingService networkingServiceDelegate =
-      networkingServiceProxy{ throw new IllegalStateException( "Networking not initialized" ) }
+      networkingServiceProxy{ Object proxy, Method method, Object[] args ->
+        if ( !method.name.equals( 'update' ) ) throw new IllegalStateException( "Networking not initialized" ); null }
   @Delegate
   private static NetworkingService lockingDelegate =
       networkingServiceProxy{ Object proxy, Method method, Object[] args ->
         method.invoke( LockResource.withLock( delegateLock.readLock( ) ){ networkingServiceDelegate }, args ) }
 
-  @PackageScope
-  static void updateNetworkService( final String networkService ) {
-    if ( delegateNeedsUpdatingFor( networkService ) ) {
+  static void updateNetworkService( @Nonnull final NetworkMode networkMode ) {
+    if ( delegateNeedsUpdatingFor( networkMode ) ) {
       LockResource.withLock( delegateLock.writeLock( ) ) {
-        if ( delegateNeedsUpdatingFor( networkService ) ) {
-          networkingServiceDelegateName = networkService
-          if ('EDGE' == networkService) {
-            networkingServiceDelegate = poolInvoked(new EdgeNetworkingService())
-          } else if (('MANAGED' == networkService) || ('MANAGED-NOVLAN' == networkService)) {
-            networkingServiceDelegate = poolInvoked(new ManagedNetworkingService())
-          } else {
-            // TODO: Need to figure out why we hit this case...
-            networkingServiceDelegate = poolInvoked(new ManagedNetworkingService())
+        if ( delegateNeedsUpdatingFor( networkMode ) ) {
+          networkingServiceDelegateMode = networkMode
+          switch( networkMode ) {
+            case NetworkMode.EDGE:
+            case NetworkMode.VPCMIDO:
+              networkingServiceDelegate = poolInvoked(new EdgeNetworkingService())
+              break
+            case NetworkMode.MANAGED:
+            case NetworkMode.MANAGED_NOVLAN:
+              networkingServiceDelegate = poolInvoked(new ManagedNetworkingService())
+              break
           }
         }
         void
@@ -74,9 +77,9 @@ class DispatchingNetworkingService {
         closure as InvocationHandler )
   }
 
-  private static boolean delegateNeedsUpdatingFor( final String networkMode ) {
+  private static boolean delegateNeedsUpdatingFor( final NetworkMode networkMode ) {
     LockResource.withLock( delegateLock.readLock( ) ) {
-      networkingServiceDelegateName == null || networkingServiceDelegateName != networkMode
+      networkingServiceDelegateMode == null || networkingServiceDelegateMode != networkMode
     }
   }
 

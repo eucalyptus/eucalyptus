@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,6 @@ import com.eucalyptus.auth.principal.AccountFullName
 import com.eucalyptus.auth.principal.UserFullName
 import com.eucalyptus.cloud.VmRunType.Builder as VmRunBuilder
 import com.eucalyptus.cloud.run.Allocations.Allocation
-import com.eucalyptus.cloud.run.ClusterAllocator
 import com.eucalyptus.cloud.run.ClusterAllocator.State
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException
 import com.eucalyptus.cloud.util.InvalidMetadataException
@@ -34,7 +33,6 @@ import com.eucalyptus.cloud.util.InvalidParameterCombinationMetadataException
 import com.eucalyptus.cloud.util.MetadataException
 import com.eucalyptus.cloud.util.ResourceAllocationException
 import com.eucalyptus.cloud.util.SecurityGroupLimitMetadataException
-import com.eucalyptus.cluster.callback.StartNetworkCallback
 import com.eucalyptus.component.Partition
 import com.eucalyptus.component.Partitions
 import com.eucalyptus.component.id.Eucalyptus
@@ -54,7 +52,6 @@ import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType
 import com.eucalyptus.compute.common.network.SecurityGroupResource
 import com.eucalyptus.compute.common.network.VpcNetworkInterfaceResource
 import com.eucalyptus.compute.identifier.ResourceIdentifiers
-import com.eucalyptus.compute.vpc.NetworkInterfaceAssociation
 import com.eucalyptus.compute.vpc.NetworkInterfaceAttachment
 import com.eucalyptus.compute.vpc.NetworkInterfaceHelper
 import com.eucalyptus.compute.vpc.NetworkInterfaces
@@ -75,8 +72,6 @@ import com.eucalyptus.network.NetworkGroup
 import com.eucalyptus.network.NetworkGroups
 import com.eucalyptus.network.PrivateAddresses
 import com.eucalyptus.network.PrivateNetworkIndex
-import com.eucalyptus.records.EventRecord
-import com.eucalyptus.records.EventType
 import com.eucalyptus.records.Logs
 import com.eucalyptus.system.Threads
 import com.eucalyptus.util.Callback
@@ -84,10 +79,9 @@ import com.eucalyptus.util.Cidr
 import com.eucalyptus.util.CollectionUtils
 import com.eucalyptus.util.LockResource
 import com.eucalyptus.util.Ordered
+import com.eucalyptus.util.RestrictedType
 import com.eucalyptus.util.RestrictedTypes
 import com.eucalyptus.util.TypedKey
-import com.eucalyptus.util.async.AsyncRequests
-import com.eucalyptus.util.async.Request
 import com.eucalyptus.util.async.StatefulMessageSet
 import com.eucalyptus.util.dns.DomainNames
 import com.eucalyptus.vm.VmInstance
@@ -434,9 +428,10 @@ class VmInstanceLifecycleHelpers {
     void prepareVmRunType(
         final ResourceToken resourceToken,
         final VmRunBuilder builder ) {
-      doWithPrivateNetworkIndex( resourceToken ){ Integer vlan, Long networkIndex ->
+      doWithPrivateNetworkIndex( resourceToken ){ Integer vlan, Long networkIndex, String privateIp ->
         builder.vlan( vlan )
         builder.networkIndex( networkIndex )
+        builder.privateAddress( privateIp )
       }
     }
 
@@ -444,8 +439,11 @@ class VmInstanceLifecycleHelpers {
     void prepareVmInstance(
         final ResourceToken resourceToken,
         final VmInstanceBuilder builder) {
-      doWithPrivateNetworkIndex( resourceToken ){ Integer vlan, Long networkIndex ->
+      doWithPrivateNetworkIndex( resourceToken ){ Integer vlan, Long networkIndex, String privateIp ->
         builder.networkIndex( Transactions.find( PrivateNetworkIndex.named( vlan, networkIndex ) ) )
+        builder.onBuild({ VmInstance instance ->
+          instance.updatePrivateAddress( privateIp )
+        } as Callback<VmInstance>)
       }
     }
 
@@ -459,7 +457,7 @@ class VmInstanceLifecycleHelpers {
             resourceToken.instanceUuid == vmInfo.uuid
           }?.getAttribute(NetworkResourcesKey)?.add( new PrivateNetworkIndexResource(
               ownerId: vmInfo.instanceId,
-              tag: String.valueOf( vlan ),
+              tag:  vlan,
               value: String.valueOf( networkIndex )
           ) )
         }
@@ -471,11 +469,12 @@ class VmInstanceLifecycleHelpers {
     void startVmInstance(
         final ResourceToken resourceToken,
         final VmInstance instance ) {
-      doWithPrivateNetworkIndex( resourceToken ){ Integer vlan, Long networkIndex ->
+      doWithPrivateNetworkIndex( resourceToken ){ Integer vlan, Long networkIndex, String privateIp ->
         Entities.transaction( PrivateNetworkIndex ) {
           Entities.uniqueResult( PrivateNetworkIndex.named( vlan, networkIndex ) ).with{
             set( instance )
             instance.setNetworkIndex( (PrivateNetworkIndex) getDelegate( ) )
+            instance.updatePrivateAddress( privateIp )
           }
         }
       }
@@ -501,7 +500,7 @@ class VmInstanceLifecycleHelpers {
       PrivateNetworkIndexResource resource = ( PrivateNetworkIndexResource ) \
           resourceToken.getAttribute(NetworkResourcesKey).find{ it instanceof PrivateNetworkIndexResource }
       resource?.with{
-        closure.call( Integer.valueOf( tag ),  Long.valueOf( value ) )
+        closure.call( tag,  Long.valueOf( value ), privateIp )
       }
     }
   }
@@ -685,27 +684,6 @@ class VmInstanceLifecycleHelpers {
         final VmState state ) {
       if ( VmInstance.VmStateSet.DONE.contains( state ) && Entities.isPersistent( instance ) ) {
         instance.networkGroups.clear( )
-      }
-    }
-  }
-
-  @SuppressWarnings("GroovyUnusedDeclaration")
-  static final class ExtantNetworkVmInstanceLifecycleHelper extends NetworkResourceVmInstanceLifecycleHelper {
-    @Override
-    void prepareNetworkMessages(
-        final Allocation allocation,
-        final StatefulMessageSet<State> messages
-    ) {
-      final NetworkGroup net = allocation.getPrimaryNetwork( )
-      if ( net ) {
-        Entities.transaction( NetworkGroup ) { EntityTransaction db ->
-          if ( Entities.merge( net ).hasExtantNetwork( ) ) {
-            final Request callback = AsyncRequests.newRequest( new StartNetworkCallback( allocation.getExtantNetwork( ) ) )
-            messages.addRequest( State.CREATE_NETWORK, callback )
-            EventRecord.here( ClusterAllocator, EventType.VM_PREPARE, callback.getClass( ).getSimpleName( ), net.toString( ) ).debug( )
-          }
-          void
-        }
       }
     }
   }
@@ -1012,7 +990,7 @@ class VmInstanceLifecycleHelpers {
     }
 
     // Generic parameter (type) hits https://jira.codehaus.org/browse/GROOVY-6556 so use ?
-    private static <T> T lookup( final String typeDesc, final String id, final Class<?> type ) {
+    private static <T extends RestrictedType> T lookup( final String typeDesc, final String id, final Class<?> type ) {
       final T resource = RestrictedTypes.<T>resolver( (Class<T>)type ).apply( id )
       if ( !RestrictedTypes.filterPrivileged( ).apply( resource ) ) {
         throw new IllegalMetadataAccessException( "Not authorized to use ${typeDesc} ${id}" )

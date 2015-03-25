@@ -21,6 +21,7 @@ package com.eucalyptus.network.config
 
 import com.eucalyptus.network.IPRange
 import com.eucalyptus.network.NetworkMode
+import com.eucalyptus.network.PrivateAddresses
 import com.eucalyptus.util.Cidr
 import com.google.common.base.CaseFormat
 import com.google.common.base.Functions
@@ -409,14 +410,14 @@ class EdgeSubnetValidator extends TypedValidator<EdgeSubnet> {
 
     if ( !errors.hasErrors( ) ) {
       // The subnet must be a valid ID when tested against the netmask
-      int subnetInt = InetAddresses.coerceToInteger( InetAddresses.forString( subnet.subnet ) )
-      int netmaskInt = InetAddresses.coerceToInteger( InetAddresses.forString( subnet.netmask ) )
+      int subnetInt = PrivateAddresses.asInteger( subnet.subnet )
+      int netmaskInt = PrivateAddresses.asInteger( subnet.netmask )
       if ( ( subnetInt & netmaskInt ) != subnetInt ) {
         errors.reject( "property.invalid.subnet", [ pathTranslate( errors.getNestedPath( ) ), subnet.subnet ] as Object[ ], 'Invalid subnet due to netmask for subnet \"{0}\": \"{1}\"' )
       }
 
       // The gateway must be within the subnet
-      int gatewayInt = InetAddresses.coerceToInteger(InetAddresses.forString(subnet.gateway))
+      int gatewayInt = PrivateAddresses.asInteger(subnet.gateway)
       if ( ( gatewayInt == subnetInt ) || ( ( gatewayInt & netmaskInt ) != subnetInt ) ) {
         errors.reject( "property.invalid.subnet", [ pathTranslate(errors.getNestedPath( ) ), subnet.gateway ] as Object[ ], 'Invalid gateway due to subnet/netmask for subnet \"{0}\": \"{1}\"')
       }
@@ -473,8 +474,8 @@ class ManagedSubnetValidator extends TypedValidator<ManagedSubnet> {
 
     if ( !errors.hasErrors( ) ) {
       // The subnet must be a valid ID when tested against the netmask
-      int subnetInt = InetAddresses.coerceToInteger( InetAddresses.forString( subnet.subnet ) )
-      int netmaskInt = InetAddresses.coerceToInteger( InetAddresses.forString( subnet.netmask ) )
+      int subnetInt = PrivateAddresses.asInteger( subnet.subnet )
+      int netmaskInt = PrivateAddresses.asInteger( subnet.netmask )
       if ( ( subnetInt & netmaskInt ) != subnetInt ) {
         errors.reject( "property.invalid.managedsubnet", [ pathTranslate( errors.getNestedPath( ) ), subnet.netmask ] as Object[ ], 'Invalid managed subnet due to netmask for subnet \"{0}\": \"{1}\"' )
       }

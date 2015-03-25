@@ -639,7 +639,7 @@
 	  <xs:element minOccurs="1" maxOccurs="1" name="destAddress" type="xs:string" />
 	</xs:sequence>
       </xs:complexType>
-      
+
       <xs:complexType name="describePublicAddressesResponseType">
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
@@ -1034,7 +1034,7 @@
 
       <xs:element name="DescribePublicAddresses" nillable="true" type="tns:describePublicAddressesType"/>
       <xs:element name="DescribePublicAddressesResponse" nillable="true" type="tns:describePublicAddressesResponseType"/>
-      
+
       <xs:element name="DescribeInstances" nillable="true" type="tns:describeInstancesType"/>
       <xs:element name="DescribeInstancesResponse" nillable="true" type="tns:describeInstancesResponseType"/>
 
