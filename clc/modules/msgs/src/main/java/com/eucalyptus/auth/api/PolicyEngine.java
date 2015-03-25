@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -105,7 +105,7 @@ public interface PolicyEngine {
    * @throws AuthException If not authorized
    */
   void evaluateAuthorization( AuthEvaluationContext context,
-                              Policy resourcePolicy,
+                              PolicyVersion resourcePolicy,
                               String resourceAccountNumber,
                               String resourceName,
                               Map<Type, Contract> contracts ) throws AuthException;

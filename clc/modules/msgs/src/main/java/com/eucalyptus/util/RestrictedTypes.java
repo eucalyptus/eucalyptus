@@ -87,6 +87,7 @@ import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Policy;
+import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.Principal;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
@@ -877,10 +878,10 @@ public class RestrictedTypes {
         + msgType.getCanonicalName( ) );
   }
 
-  private static Policy findPolicy( final RestrictedType object,
+  private static PolicyVersion findPolicy( final RestrictedType object,
                                     final String vendor,
                                     final String action ) throws AuthException {
-    Policy policy = null;
+    PolicyVersion policy = null;
     if ( object instanceof PolicyRestrictedType ) {
       final Ats ats = Ats.inClassHierarchy( object.getClass() );
       final PolicyResourceType policyResourceType = ats.get( PolicyResourceType.class );

@@ -19,13 +19,25 @@
  ************************************************************************/
 package com.eucalyptus.auth.principal;
 
+import javax.annotation.Nullable;
+import com.eucalyptus.auth.AuthException;
+
 /**
  *
  */
-public interface Role extends BaseRole {
+public interface BaseInstanceProfile {
 
-  String getAccountNumber( );
+  String getAccountNumber( ) throws AuthException;
 
-  String getRoleArn( );
+  String getInstanceProfileId( );
+
+  String getInstanceProfileArn( ) throws AuthException;
+
+  String getName( );
+
+  String getPath( );
+
+  @Nullable
+  BaseRole getRole( ) throws AuthException;
 
 }

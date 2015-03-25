@@ -19,13 +19,28 @@
  ************************************************************************/
 package com.eucalyptus.auth.principal;
 
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.policy.PolicyResourceType;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.component.annotation.PolicyVendor;
+import com.eucalyptus.util.RestrictedType;
+
 /**
  *
  */
-public interface Role extends BaseRole {
+@PolicyVendor( PolicySpec.VENDOR_IAM )
+@PolicyResourceType( value = PolicySpec.IAM_RESOURCE_ROLE, resourcePolicyActions = "sts:assumerole" )
+public interface BaseRole extends RestrictedType, RestrictedType.PolicyRestrictedType {
 
-  String getAccountNumber( );
+  String getAccountNumber( ) throws AuthException;
 
-  String getRoleArn( );
+  String getRoleId( );
 
+  String getRoleArn( ) throws AuthException;
+
+  String getPath( );
+
+  String getName( );
+
+  String getSecret( );
 }

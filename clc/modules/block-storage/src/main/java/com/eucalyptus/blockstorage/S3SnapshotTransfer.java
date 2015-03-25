@@ -110,6 +110,7 @@ import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
+import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.blockstorage.entities.SnapshotInfo;
 import com.eucalyptus.blockstorage.entities.SnapshotPart;
@@ -169,7 +170,7 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
   private ServiceConfiguration serviceConfig;
 
   // Static parameters
-  private static Role role;
+  private static EuareRole role;
 
   // Constants
   private static final Integer TX_RETRIES = 20;

@@ -93,6 +93,8 @@ import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.policy.PolicyPolicy;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.EuareInstanceProfile;
+import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.InstanceProfile;
@@ -238,8 +240,8 @@ public class DatabaseAccountProxy implements Account {
   }
 
   @Override
-  public List<Role> getRoles( ) throws AuthException {
-    final List<Role> results = Lists.newArrayList( );
+  public List<EuareRole> getRoles( ) throws AuthException {
+    final List<EuareRole> results = Lists.newArrayList( );
     try ( final TransactionResource db = Entities.transactionFor( RoleEntity.class ) ) {
       @SuppressWarnings( "unchecked" )
       List<RoleEntity> roles = ( List<RoleEntity> ) Entities
@@ -258,8 +260,8 @@ public class DatabaseAccountProxy implements Account {
   }
 
   @Override
-  public List<InstanceProfile> getInstanceProfiles() throws AuthException {
-    final List<InstanceProfile> results = Lists.newArrayList( );
+  public List<EuareInstanceProfile> getInstanceProfiles() throws AuthException {
+    final List<EuareInstanceProfile> results = Lists.newArrayList( );
     try ( final TransactionResource db = Entities.transactionFor( InstanceProfileEntity.class ) ) {
       @SuppressWarnings( "unchecked" )
       List<InstanceProfileEntity> instanceProfiles = ( List<InstanceProfileEntity> ) Entities
@@ -388,7 +390,7 @@ public class DatabaseAccountProxy implements Account {
   }
 
   @Override
-  public Role addRole( final String roleName, final String path, final String assumeRolePolicy ) throws AuthException, PolicyParseException {
+  public EuareRole addRole( final String roleName, final String path, final String assumeRolePolicy ) throws AuthException, PolicyParseException {
     try {
       USER_GROUP_NAME_CHECKER.check( roleName );
     } catch ( InvalidValueException e ) {
@@ -510,7 +512,7 @@ public class DatabaseAccountProxy implements Account {
   }
 
   @Override
-  public InstanceProfile addInstanceProfile( final String instanceProfileName, final String path ) throws AuthException {
+  public EuareInstanceProfile addInstanceProfile( final String instanceProfileName, final String path ) throws AuthException {
     try {
       USER_GROUP_NAME_CHECKER.check( instanceProfileName );
     } catch ( InvalidValueException e ) {
@@ -573,7 +575,7 @@ public class DatabaseAccountProxy implements Account {
   }
 
   @Override
-  public InstanceProfile lookupInstanceProfileByName( final String instanceProfileName ) throws AuthException {
+  public EuareInstanceProfile lookupInstanceProfileByName( final String instanceProfileName ) throws AuthException {
     final String accountName = this.delegate.getName( );
     if ( instanceProfileName == null ) {
       throw new AuthException( AuthException.EMPTY_INSTANCE_PROFILE_NAME );
@@ -589,7 +591,7 @@ public class DatabaseAccountProxy implements Account {
   }
 
   @Override
-  public Role lookupRoleByName( String roleName ) throws AuthException {
+  public EuareRole lookupRoleByName( String roleName ) throws AuthException {
     final String accountName = this.delegate.getName( );
     if ( roleName == null ) {
       throw new AuthException( AuthException.EMPTY_ROLE_NAME );

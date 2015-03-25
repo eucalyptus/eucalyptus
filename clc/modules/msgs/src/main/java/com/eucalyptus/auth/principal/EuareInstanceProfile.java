@@ -19,13 +19,25 @@
  ************************************************************************/
 package com.eucalyptus.auth.principal;
 
+import java.util.Date;
+import javax.annotation.Nullable;
+import com.eucalyptus.auth.AuthException;
+
 /**
+ * This will move to the euare module. Use InstanceProfile elsewhere
  *
+ * @deprecated This class is temporary, do not use
  */
-public interface Role extends BaseRole {
+@Deprecated
+public interface EuareInstanceProfile extends BaseInstanceProfile {
 
-  String getAccountNumber( );
+  Account getAccount( ) throws AuthException;
 
-  String getRoleArn( );
+  void setRole( @Nullable EuareRole role ) throws AuthException;
+
+  Date getCreationTimestamp();
+
+  @Nullable
+  EuareRole getRole( ) throws AuthException;
 
 }

@@ -48,7 +48,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.InvalidAccessKeyAuthException;
 import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.Role;
+import com.eucalyptus.auth.principal.BaseRole;
 import com.eucalyptus.auth.principal.TemporaryAccessKey;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
@@ -164,7 +164,7 @@ public class SecurityTokenManager {
    * @see com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType#Role
    */
   @Nonnull
-  public static SecurityToken issueSecurityToken( @Nonnull final Role role,
+  public static SecurityToken issueSecurityToken( @Nonnull final BaseRole role,
                                                   final int durationSeconds ) throws AuthException {
     return instance.doIssueSecurityToken( role, durationSeconds );
   }
@@ -269,7 +269,7 @@ public class SecurityTokenManager {
   }
 
   @Nonnull
-  protected SecurityToken doIssueSecurityToken( @Nonnull final Role role,
+  protected SecurityToken doIssueSecurityToken( @Nonnull final BaseRole role,
                                                 final int durationSeconds ) throws AuthException {
     Preconditions.checkNotNull( role, "Role is required" );
 
@@ -457,7 +457,7 @@ public class SecurityTokenManager {
     /**
      * Generate a new token
      */
-    private EncryptedSecurityToken( final Role role,
+    private EncryptedSecurityToken( final BaseRole role,
                                     final long created,
                                     final long durationMillis ) {
       this( "$r$" + role.getRoleId(), created, durationMillis );

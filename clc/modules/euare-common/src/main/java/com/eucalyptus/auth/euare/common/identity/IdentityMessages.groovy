@@ -78,3 +78,41 @@ class Policy extends EucalyptusData {
   String hash
 }
 
+class DescribeInstanceProfileType extends IdentityMessage {
+  String accountId
+  String instanceProfileName
+}
+
+class DescribeInstanceProfileResponseType extends IdentityMessage {
+  DescribeInstanceProfileResult describeInstanceProfileResult
+}
+
+class DescribeInstanceProfileResult extends EucalyptusData {
+  InstanceProfile instanceProfile
+  Role role
+}
+
+class InstanceProfile extends EucalyptusData {
+  String instanceProfileId
+  String instanceProfileArn
+}
+
+class Role extends EucalyptusData {
+  String roleId
+  String roleArn
+  String secret
+  Policy assumeRolePolicy
+}
+
+class DescribeRoleType extends IdentityMessage {
+  String accountId
+  String roleName
+}
+
+class DescribeRoleResponseType extends IdentityMessage {
+  DescribeRoleResult describeRoleResult
+}
+
+class DescribeRoleResult extends EucalyptusData {
+  Role role
+}

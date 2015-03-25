@@ -81,12 +81,12 @@ public class TestAccount implements Account {
   }
 
   @Override
-  public List<Role> getRoles() throws AuthException {
+  public List<EuareRole> getRoles() throws AuthException {
     throw new AuthException( "Not implemented" );
   }
 
   @Override
-  public List<InstanceProfile> getInstanceProfiles() throws AuthException {
+  public List<EuareInstanceProfile> getInstanceProfiles() throws AuthException {
     throw new AuthException( "Not implemented" );
   }
 
@@ -101,7 +101,7 @@ public class TestAccount implements Account {
   }
 
   @Override
-  public Role addRole( final String roleName, final String path, final String assumeRolePolicy ) throws AuthException, PolicyParseException {
+  public EuareRole addRole( final String roleName, final String path, final String assumeRolePolicy ) throws AuthException, PolicyParseException {
     throw new AuthException( "Not implemented" );
   }
 
@@ -121,7 +121,7 @@ public class TestAccount implements Account {
   }
 
   @Override
-  public InstanceProfile addInstanceProfile( final String instanceProfileName, final String path ) throws AuthException {
+  public EuareInstanceProfile addInstanceProfile( final String instanceProfileName, final String path ) throws AuthException {
     throw new AuthException( "Not implemented" );
   }
 
@@ -141,12 +141,12 @@ public class TestAccount implements Account {
   }
 
   @Override
-  public Role lookupRoleByName( final String roleName ) throws AuthException {
+  public EuareRole lookupRoleByName( final String roleName ) throws AuthException {
     throw new AuthException( "Not implemented" );
   }
 
   @Override
-  public InstanceProfile lookupInstanceProfileByName( final String instanceProfileName ) throws AuthException {
+  public EuareInstanceProfile lookupInstanceProfileByName( final String instanceProfileName ) throws AuthException {
     throw new AuthException( "Not implemented" );
   }
 

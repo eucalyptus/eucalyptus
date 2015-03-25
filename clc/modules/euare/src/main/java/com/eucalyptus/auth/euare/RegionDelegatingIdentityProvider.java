@@ -26,6 +26,8 @@ import com.eucalyptus.auth.api.IdentityProvider;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurationManager;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
 import com.eucalyptus.auth.euare.identity.region.RegionInfo;
+import com.eucalyptus.auth.principal.InstanceProfile;
+import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.Exceptions;
@@ -42,7 +44,7 @@ public class RegionDelegatingIdentityProvider implements IdentityProvider {
 
   @Override
   public UserPrincipal lookupPrincipalByUserId( final String userId, final String nonce ) throws AuthException {
-    return regionDispatch( userId, new NonNullFunction<IdentityProvider, UserPrincipal>() {
+    return regionDispatchByIdentifier( userId, new NonNullFunction<IdentityProvider, UserPrincipal>() {
       @Nonnull
       @Override
       public UserPrincipal apply( final IdentityProvider identityProvider ) {
@@ -57,7 +59,7 @@ public class RegionDelegatingIdentityProvider implements IdentityProvider {
 
   @Override
   public UserPrincipal lookupPrincipalByRoleId( final String roleId, final String nonce ) throws AuthException {
-    return regionDispatch( roleId, new NonNullFunction<IdentityProvider, UserPrincipal>() {
+    return regionDispatchByIdentifier( roleId, new NonNullFunction<IdentityProvider, UserPrincipal>() {
       @Nonnull
       @Override
       public UserPrincipal apply( final IdentityProvider identityProvider ) {
@@ -72,7 +74,7 @@ public class RegionDelegatingIdentityProvider implements IdentityProvider {
 
   @Override
   public UserPrincipal lookupPrincipalByAccessKeyId( final String keyId, final String nonce ) throws AuthException {
-    return regionDispatch( keyId, new NonNullFunction<IdentityProvider, UserPrincipal>() {
+    return regionDispatchByIdentifier( keyId, new NonNullFunction<IdentityProvider, UserPrincipal>() {
       @Nonnull
       @Override
       public UserPrincipal apply( final IdentityProvider identityProvider ) {
@@ -100,14 +102,65 @@ public class RegionDelegatingIdentityProvider implements IdentityProvider {
 
   @Override
   public UserPrincipal lookupPrincipalByAccountNumber( final String accountNumber ) throws AuthException {
-    if ( regionConfigurationManager.getRegionInfo().isPresent() && Contexts.exists( ) && Contexts.lookup( ).getUser( ).getAccountNumber( ).equals( accountNumber ) ) {
-      return Contexts.lookup( ).getUser( ); //TODO:STEVE: remove this temporary lookup hack
-    }
-    return localProvider.lookupPrincipalByAccountNumber( accountNumber ); //TODO:STEVE: remote for account number lookup
+    return regionDispatchByAccountNumber( accountNumber, new NonNullFunction<IdentityProvider, UserPrincipal>() {
+      @Nonnull
+      @Override
+      public UserPrincipal apply( final IdentityProvider identityProvider ) {
+        try {
+          return identityProvider.lookupPrincipalByAccountNumber( accountNumber );
+        } catch ( AuthException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      }
+    } );
   }
 
-  private UserPrincipal regionDispatch( final String identifier, final NonNullFunction<IdentityProvider, UserPrincipal> invoker ) throws AuthException {
-    final Optional<RegionInfo> regionInfo = regionConfigurationManager.getRegionByIdentifier( identifier );
+  @Override
+  public InstanceProfile lookupInstanceProfileByName( final String accountNumber, final String name ) throws AuthException {
+    return regionDispatchByAccountNumber( accountNumber, new NonNullFunction<IdentityProvider, InstanceProfile>() {
+      @Nonnull
+      @Override
+      public InstanceProfile apply( final IdentityProvider identityProvider ) {
+        try {
+          return identityProvider.lookupInstanceProfileByName( accountNumber, name );
+        } catch ( AuthException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      }
+    } );
+  }
+
+  @Override
+  public Role lookupRoleByName( final String accountNumber, final String name ) throws AuthException {
+    return regionDispatchByAccountNumber( accountNumber, new NonNullFunction<IdentityProvider, Role>() {
+      @Nonnull
+      @Override
+      public Role apply( final IdentityProvider identityProvider ) {
+        try {
+          return identityProvider.lookupRoleByName( accountNumber, name );
+        } catch ( AuthException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      }
+    } );
+  }
+
+  private UserPrincipal regionDispatchByIdentifier(
+      final String identifier,
+      final NonNullFunction<IdentityProvider, UserPrincipal> invoker ) throws AuthException {
+    return regionDispatch( regionConfigurationManager.getRegionByIdentifier( identifier ), invoker );
+  }
+
+  private <R> R regionDispatchByAccountNumber(
+      final String accountNumber,
+      final NonNullFunction<IdentityProvider, R> invoker ) throws AuthException {
+    return regionDispatch( regionConfigurationManager.getRegionByAccountNumber( accountNumber ), invoker );
+  }
+
+  private <R> R regionDispatch(
+      final Optional<RegionInfo> regionInfo,
+      final NonNullFunction<IdentityProvider, R> invoker
+  ) throws AuthException {
     try {
       if ( regionInfo.isPresent( ) &&
           !RegionConfigurations.getRegionName( ).asSet( ).contains( regionInfo.get( ).getName( ) ) ) {

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,8 +27,8 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.entities.RoleEntity;
 import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.InstanceProfile;
-import com.eucalyptus.auth.principal.Role;
+import com.eucalyptus.auth.principal.EuareInstanceProfile;
+import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.Callback;
@@ -38,7 +38,7 @@ import com.google.common.collect.Lists;
 /**
  * Instance profile implementation backed by InstanceProfileEntity
  */
-public class DatabaseInstanceProfileProxy implements InstanceProfile {
+public class DatabaseInstanceProfileProxy implements EuareInstanceProfile {
 
   private static Logger LOG = Logger.getLogger( DatabaseInstanceProfileProxy.class );
 
@@ -65,6 +65,11 @@ public class DatabaseInstanceProfileProxy implements InstanceProfile {
   }
 
   @Override
+  public String getAccountNumber() throws AuthException {
+    return getAccount( ).getAccountNumber( );
+  }
+
+  @Override
   public Account getAccount() throws AuthException {
     final List<Account> results = Lists.newArrayList();
     dbCallback( "getAccount", new Callback<InstanceProfileEntity>() {
@@ -82,6 +87,11 @@ public class DatabaseInstanceProfileProxy implements InstanceProfile {
   }
 
   @Override
+  public String getInstanceProfileArn( ) throws AuthException {
+    return Accounts.getInstanceProfileArn( this );
+  }
+
+  @Override
   public String getName() {
     return delegate.getName();
   }
@@ -92,8 +102,8 @@ public class DatabaseInstanceProfileProxy implements InstanceProfile {
   }
 
   @Override
-  public Role getRole() throws AuthException {
-    final List<Role> results = Lists.newArrayList();
+  public EuareRole getRole() throws AuthException {
+    final List<EuareRole> results = Lists.newArrayList();
     dbCallback( "getRole", new Callback<InstanceProfileEntity>() {
       @Override
       public void fire( final InstanceProfileEntity instanceProfileEntity ) {
@@ -108,7 +118,7 @@ public class DatabaseInstanceProfileProxy implements InstanceProfile {
   }
 
   @Override
-  public void setRole( @Nullable final Role role ) throws AuthException {
+  public void setRole( @Nullable final EuareRole role ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( InstanceProfileEntity.class ) ) {
       final InstanceProfileEntity instanceProfileEntity =
           DatabaseAuthUtils.getUnique( InstanceProfileEntity.class, "instanceProfileId", getInstanceProfileId() );
