@@ -283,7 +283,7 @@ static int network_driver_init(eucanetdConfig * pConfig)
         return (0);
     }
 
-    if (PEER_IS_NC(eucanetdPeer)) {
+    //    if (PEER_IS_NC(eucanetdPeer)) {
         if ((pMidoConfig = EUCA_ZALLOC(1, sizeof(mido_config))) == NULL) {
             LOGERROR("Failed to initialize '%s' networking mode. Out of memory!\n", DRIVER_NAME());
             return (1);
@@ -295,8 +295,7 @@ static int network_driver_init(eucanetdConfig * pConfig)
             LOGERROR("could not initialize mido: please ensure that all required config options for MIDOVPC mode are set in eucalyptus.conf\n");
             return (1);
         }
-    } else if (PEER_IS_CC(eucanetdPeer)) {
-    }
+        //    }
     // We are now initialize
     gInitialized = TRUE;
     return (0);
@@ -369,15 +368,13 @@ static int network_driver_system_flush(globalNetworkInfo * pGni)
         return (1);
     }
 
-    if (PEER_IS_NC(eucanetdPeer)) {
+    //    if (PEER_IS_NC(eucanetdPeer)) {
         if (pMidoConfig) {
             if ((rc = do_midonet_teardown(pMidoConfig)) != 0) {
                 ret = 1;
             }
         }
-    } else if (PEER_IS_CC(eucanetdPeer)) {
-
-    }
+        //    }
 
     return (0);
 }
@@ -418,7 +415,7 @@ static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni)
         return (EUCANETD_RUN_NO_API);
     }
 
-    if (PEER_IS_NC(eucanetdPeer)) {
+    //    if (PEER_IS_NC(eucanetdPeer)) {
         if (pMidoConfig) {
             free_mido_config(pMidoConfig);
             bzero(pMidoConfig, sizeof(mido_config));
@@ -437,9 +434,7 @@ static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni)
                 LOGINFO("new Eucalyptus/Midonet networking state sync: updated successfully\n");
             }
         }
-    } else if (PEER_IS_CC(eucanetdPeer)) {
-
-    }
+        //    }
 
     return (EUCANETD_RUN_NO_API);
 }

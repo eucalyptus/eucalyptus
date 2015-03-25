@@ -66,9 +66,11 @@ import java.net.Inet4Address;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
@@ -115,6 +117,7 @@ import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -263,9 +266,10 @@ public class NetworkGroups {
       for ( NetworkGroup group : ret ) {
         ExtantNetwork exNet = group.getExtantNetwork( );
         if ( exNet != null && ( exNet.getTag( ) > netConfig.getMaxNetworkTag( ) || exNet.getTag( ) < netConfig.getMinNetworkTag( ) ) ) {
-          exNet.teardown( );
-          Entities.delete( exNet );
-          group.setExtantNetwork( null );
+          if ( exNet.teardown( ) ) {
+            Entities.delete( exNet );
+            group.clearExtantNetwork( );
+          }
         }
       }
       db.commit( );
@@ -371,16 +375,49 @@ public class NetworkGroups {
     }
   }
 
-  public static List<NetworkGroup> lookupExtant( ) throws MetadataException {
+  public static void periodicCleanup( ) {
+    updateNetworkRangeConfiguration( );
+    releaseUnusedExtantNetworks( );
+  }
+
+  private static void releaseUnusedExtantNetworks( ) {
+    try {
+      final List<NetworkGroup> groups = NetworkGroups.lookupUnusedExtant( );
+      for ( NetworkGroup net : groups ) {
+        try ( final TransactionResource tx = Entities.distinctTransactionFor( NetworkGroup.class ) ) {
+          net = Entities.merge( net );
+          if ( net.hasExtantNetwork( ) && !net.getExtantNetwork( ).inUse( ) ) {
+            final ExtantNetwork exNet = net.getExtantNetwork( );
+            if ( exNet.teardown( ) ) {
+              Entities.delete( exNet );
+              net.clearExtantNetwork( );
+            }
+          }
+          tx.commit( );
+        } catch ( final Exception ex ) {
+          LOG.debug( ex );
+          Logs.extreme( ).error( ex, ex );
+        }
+      }
+    } catch ( MetadataException ex ) {
+      LOG.error( ex );
+    }
+  }
+
+  private static List<NetworkGroup> lookupUnusedExtant( ) throws MetadataException {
     try ( final TransactionResource db = Entities.transactionFor( NetworkGroup.class ) ) {
-      final List<NetworkGroup> results = Entities.query(
+      return Entities.query(
           NetworkGroup.withOwner( null ),
-          false,
-          Restrictions.isNotNull( "extantNetwork.tag" ),
-          Collections.singletonMap( "extantNetwork", "extantNetwork" ) );
-      final List<NetworkGroup> ret = Lists.newArrayList( results );
-      db.commit( );
-      return ret;
+          true,
+          Restrictions.and(
+              Restrictions.lt( "extantNetwork.lastUpdateTimestamp", new Date( System.currentTimeMillis( ) - TimeUnit.MINUTES.toMillis( 1 ) ) ),
+              Restrictions.isNotNull( "extantNetwork.tag" ),
+              Restrictions.isEmpty( "extantNetwork.indexes" )
+          ),
+          ImmutableMap.of(
+              "extantNetwork", "extantNetwork"
+          )
+      );
     } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       throw new NoSuchMetadataException( "Error looking up extant groups", ex );

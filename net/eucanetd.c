@@ -1484,5 +1484,5 @@ static int eucanetd_detect_peer(globalNetworkInfo * pGni)
         return (PEER_CC);
     }
 
-    return (PEER_INVALID);
+    return (PEER_NONE);
 }

@@ -428,9 +428,10 @@ class VmInstanceLifecycleHelpers {
     void prepareVmRunType(
         final ResourceToken resourceToken,
         final VmRunBuilder builder ) {
-      doWithPrivateNetworkIndex( resourceToken ){ Integer vlan, Long networkIndex ->
+      doWithPrivateNetworkIndex( resourceToken ){ Integer vlan, Long networkIndex, String privateIp ->
         builder.vlan( vlan )
         builder.networkIndex( networkIndex )
+        builder.privateAddress( privateIp )
       }
     }
 
@@ -438,8 +439,11 @@ class VmInstanceLifecycleHelpers {
     void prepareVmInstance(
         final ResourceToken resourceToken,
         final VmInstanceBuilder builder) {
-      doWithPrivateNetworkIndex( resourceToken ){ Integer vlan, Long networkIndex ->
+      doWithPrivateNetworkIndex( resourceToken ){ Integer vlan, Long networkIndex, String privateIp ->
         builder.networkIndex( Transactions.find( PrivateNetworkIndex.named( vlan, networkIndex ) ) )
+        builder.onBuild({ VmInstance instance ->
+          instance.updatePrivateAddress( privateIp )
+        } as Callback<VmInstance>)
       }
     }
 
@@ -453,7 +457,7 @@ class VmInstanceLifecycleHelpers {
             resourceToken.instanceUuid == vmInfo.uuid
           }?.getAttribute(NetworkResourcesKey)?.add( new PrivateNetworkIndexResource(
               ownerId: vmInfo.instanceId,
-              tag: String.valueOf( vlan ),
+              tag:  vlan,
               value: String.valueOf( networkIndex )
           ) )
         }
@@ -465,11 +469,12 @@ class VmInstanceLifecycleHelpers {
     void startVmInstance(
         final ResourceToken resourceToken,
         final VmInstance instance ) {
-      doWithPrivateNetworkIndex( resourceToken ){ Integer vlan, Long networkIndex ->
+      doWithPrivateNetworkIndex( resourceToken ){ Integer vlan, Long networkIndex, String privateIp ->
         Entities.transaction( PrivateNetworkIndex ) {
           Entities.uniqueResult( PrivateNetworkIndex.named( vlan, networkIndex ) ).with{
             set( instance )
             instance.setNetworkIndex( (PrivateNetworkIndex) getDelegate( ) )
+            instance.updatePrivateAddress( privateIp )
           }
         }
       }
@@ -495,7 +500,7 @@ class VmInstanceLifecycleHelpers {
       PrivateNetworkIndexResource resource = ( PrivateNetworkIndexResource ) \
           resourceToken.getAttribute(NetworkResourcesKey).find{ it instanceof PrivateNetworkIndexResource }
       resource?.with{
-        closure.call( Integer.valueOf( tag ),  Long.valueOf( value ) )
+        closure.call( tag,  Long.valueOf( value ), privateIp )
       }
     }
   }

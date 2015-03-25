@@ -40,6 +40,7 @@ import com.eucalyptus.network.NetworkMode
 import com.eucalyptus.network.PrivateAddresses
 import com.eucalyptus.util.Exceptions
 import com.eucalyptus.util.UpperCamelPropertyNamingStrategy
+import com.google.common.base.Objects as GObjects
 import com.google.common.base.Optional
 import com.google.common.base.Predicate
 import com.google.common.base.Splitter
@@ -103,7 +104,7 @@ class NetworkConfigurations {
         (networkConfiguration?.clusters?.find{ Cluster cluster -> cluster.name == config.partition }?:new Cluster()).with {
           boolean managed = ['MANAGED', 'MANAGED-NOVLAN'].contains(networkConfiguration.mode)
           ClusterConfiguration clusterConfiguration = Entities.uniqueResult(config)
-          clusterConfiguration.networkMode = networkConfiguration.mode
+          clusterConfiguration.networkMode = GObjects.firstNonNull( networkConfiguration.mode, NetworkMode.EDGE.toString( ) )
           clusterConfiguration.addressesPerNetwork = managed ? ( networkConfiguration?.managedSubnet?.segmentSize ?: ManagedSubnet.DEF_SEGMENT_SIZE ) : -1
           clusterConfiguration.useNetworkTags = managed
           clusterConfiguration.minNetworkTag = networkConfiguration?.managedSubnet?.minVlan ?: ManagedSubnet.MIN_VLAN
@@ -124,11 +125,23 @@ class NetworkConfigurations {
             clusterConfiguration.vnetSubnet = subnet?.subnet ?: defaultSubnet?.subnet
             clusterConfiguration.vnetNetmask = subnet?.netmask ?: defaultSubnet?.netmask
           }
+
+          if ( managed ) { // cap max vlan based on available networks
+            clusterConfiguration.maxNetworkTag = Math.min(
+                (int) clusterConfiguration.maxNetworkTag,
+                (int) ( IPRange.fromSubnet(
+                    clusterConfiguration.vnetSubnet,
+                    clusterConfiguration.vnetNetmask
+                ).size( ) + 2 ) / clusterConfiguration.addressesPerNetwork
+            )
+          }
+
+          void
         }
       }
       db.commit( );
     }
-    NetworkGroups.updateNetworkRangeConfiguration( )
+    NetworkGroups.periodicCleanup( )
   }
 
   @Nullable
