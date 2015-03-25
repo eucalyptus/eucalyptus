@@ -32,9 +32,11 @@ import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
 import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistents;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
+import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.CollectionUtils;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -103,12 +105,17 @@ public class PersistenceScalingActivities extends ScalingActivities {
   public void update( final OwnerFullName ownerFullName,
                       final String activityId,
                       final Callback<ScalingActivity> activityUpdateCallback ) throws AutoScalingMetadataException {
-    persistenceSupport.updateByExample(
-        persistenceSupport.exampleWithName( ownerFullName, activityId ),
-        ownerFullName,
-        activityId,
-        activityUpdateCallback
-    );
+    try {
+      persistenceSupport.withRetries( ).updateByExample(
+          persistenceSupport.exampleWithName( ownerFullName, activityId ),
+          ownerFullName,
+          activityId,
+          activityUpdateCallback
+      );
+    } catch ( AutoScalingMetadataException e ) {
+      Exceptions.findAndRethrow( e, AutoScalingMetadataNotFoundException.class );
+      throw e;
+    }
   }
 
   @Override
@@ -143,7 +150,6 @@ public class PersistenceScalingActivities extends ScalingActivities {
     @Override
     protected ScalingActivity exampleWithName( final OwnerFullName ownerFullName, final String name ) {
       return ScalingActivity.named( ownerFullName, name );
-
     }
   }
 }

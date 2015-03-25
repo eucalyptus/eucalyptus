@@ -279,8 +279,14 @@ public class ImageConversionManager implements EventListener<ClockTick> {
           systemBuckets.addAll(bucketNames);
         }
       }catch(final Exception ex){
-        ;
+        // probably Object storage is not ready yet
+        LOG.debug("Can't init system buckets.");
+        return;
       }
+    }
+    if (images.size()>0 && systemBuckets == null) {
+      LOG.debug("Can't init system buckets. Skipping clenup up.");
+      return;
     }
     
     for(final ImageInfo image: images) {
@@ -505,13 +511,12 @@ public class ImageConversionManager implements EventListener<ClockTick> {
       }
     }
   }
-  
-  private List<ImageInfo> getPartitionedImages(){
+
+  public static List<ImageInfo> getPartitionedImages(){
     List<ImageInfo> partitionedImages = null;
     try ( final TransactionResource db =
         Entities.transactionFor( ImageInfo.class ) ) {
       partitionedImages = Entities.query(Images.exampleWithImageFormat(ImageMetadata.ImageFormat.partitioned));
-      
     }
     return partitionedImages;
   }
@@ -523,16 +528,6 @@ public class ImageConversionManager implements EventListener<ClockTick> {
       images = Entities.query(Images.exampleWithImageState(ImageMetadata.State.deregistered_cleanup));
     }
     return images;
-  }
-  
-  private List<ImageInfo> getPendingConversionImages(){
-    List<ImageInfo> pendingImages = null;
-    try ( final TransactionResource db =
-        Entities.transactionFor( ImageInfo.class ) ) {
-      pendingImages = Entities.query(Images.exampleWithImageState(ImageMetadata.State.pending_conversion));
-      
-    }
-    return pendingImages;
   }
   
   private static final LoadingCache<String, Optional<DiskImageConversionTask>> conversionTaskCache =

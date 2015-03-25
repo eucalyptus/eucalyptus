@@ -261,7 +261,7 @@ public abstract class AbstractPersistentSupport<RT extends RestrictedType, AP ex
   }
 
   public AbstractPersistentSupport<RT, AP, PE> withRetries( ) {
-    return withRetries( 5 );
+    return withRetries( Entities.CONCURRENT_UPDATE_RETRIES );
   }
 
   public AbstractPersistentSupport<RT, AP, PE> withRetries( final int retries ) {

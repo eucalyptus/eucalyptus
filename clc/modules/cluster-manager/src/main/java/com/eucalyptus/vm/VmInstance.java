@@ -2255,8 +2255,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         try {
           Volumes.lookup( null, volId );
         } catch ( NoSuchElementException e ) {
-          LOG.error("Invalid volume id " + volId + " passed from back-end");
-          continue; // Throw an error up?
+          // There is a chance that the volume was deleted and back-end does not know about that.
+          // See EUCA-10453 for details
+          LOG.debug("Invalid volume id " + volId + " passed from back-end");
+          continue;
         }
         try {
           VmVolumeAttachment ncVolumeAttachment = ncAttachedVolMap.get( volId );
@@ -2322,7 +2324,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return VmStateSet.TORNDOWN.apply( this ) ?
         "" :
         VmNetworkConfig.DEFAULT_IP.equals( Objects.firstNonNull( Strings.emptyToNull( getPublicAddress( ) ), VmNetworkConfig.DEFAULT_IP ) ) ?
-            getDisplayPrivateAddress( ) :
+            getVpcId( ) == null ? getDisplayPrivateAddress( ) : "" :
             getPublicAddress( );
   }
 

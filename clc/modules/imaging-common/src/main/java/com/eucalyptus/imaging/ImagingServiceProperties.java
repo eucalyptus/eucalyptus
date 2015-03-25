@@ -240,7 +240,7 @@ public class ImagingServiceProperties {
           onPropertyChange(null, null, null, null, newValue, null, null);
       } catch (final Exception e) {
         throw new ConfigurablePropertyException(
-            "Could not change log server to " + newValue, e);
+            "Could not change log server to " + newValue + " due to: " + e.getMessage());
       }
     }
   }
@@ -259,7 +259,7 @@ public class ImagingServiceProperties {
         throw new ConfigurablePropertyException("Invalid number");
       } catch (final Exception e) {
         throw new ConfigurablePropertyException(
-            "Could not change log server port to " + newValue, e);
+            "Could not change log server port to " + newValue + " due to: " + e.getMessage());
       }
     }
   }
@@ -273,7 +273,7 @@ public class ImagingServiceProperties {
         if (t.getValue() != null && !t.getValue().equals(newValue))
           onPropertyChange(null, null, null, null, null, null, (String) newValue);
       } catch (final Exception e) {
-        throw new ConfigurablePropertyException("Could not change init script", e);
+        throw new ConfigurablePropertyException("Could not change init script due to: " + e.getMessage());
       }
     }
   }
@@ -287,7 +287,7 @@ public class ImagingServiceProperties {
             && ((String) newValue).length() > 0)
           onPropertyChange((String) newValue, null, null, null, null, null, null);
       } catch (final Exception e) {
-        throw new ConfigurablePropertyException("Could not change EMI ID", e);
+        throw new ConfigurablePropertyException("Could not change EMI ID due to: " + e.getMessage());
       }
     }
   }
@@ -306,7 +306,7 @@ public class ImagingServiceProperties {
         }
       } catch (final Exception e) {
         throw new ConfigurablePropertyException(
-            "Could not change instance type", e);
+            "Could not change instance type due to: " + e.getMessage());
       }
     }
   }
@@ -321,7 +321,7 @@ public class ImagingServiceProperties {
             onPropertyChange(null, null, (String) newValue, null, null, null, null);
         }
       } catch (final Exception e) {
-        throw new ConfigurablePropertyException("Could not change key name", e);
+        throw new ConfigurablePropertyException("Could not change key name due to: " + e.getMessage());
       }
     }
   }
@@ -356,7 +356,7 @@ public class ImagingServiceProperties {
         onPropertyChange(null, null, null, (String) newValue, null, null, null);
       } catch (final Exception e) {
         throw new ConfigurablePropertyException(
-            "Could not change ntp server address", e);
+            "Could not change ntp server address due to: " + e.getMessage());
       }
     }
   }
@@ -415,9 +415,7 @@ public class ImagingServiceProperties {
   private static void onPropertyChange(final String emi,
       final String instanceType, final String keyname, final String ntpServers,
       String logServer, String logServerPort, String initScript) throws EucalyptusCloudException {
-    if (!(Bootstrap.isFinished() &&
-    // Topology.isEnabledLocally( Imaging.class ) &&
-    Topology.isEnabled(Eucalyptus.class)))
+    if (!( Bootstrap.isFinished() && Topology.isEnabled( Eucalyptus.class ) ) )
       return;
 
     // should validate the parameters
@@ -463,11 +461,12 @@ public class ImagingServiceProperties {
     if (ntpServers != null) {
       ; // already sanitized
     }
+    if ( !Topology.isEnabledLocally( ImagingBackend.class ) )
+      return;
 
     // should find the asg name using the special TAG
     // then create a new launch config and replace the old one
-
-    if ((emi != null && emi.length() > 0)
+    if ( (emi != null && emi.length() > 0)
         || (instanceType != null && instanceType.length() > 0)
         || (keyname != null && keyname.length() > 0)
         || (ntpServers != null && ntpServers.length() > 0)
@@ -475,7 +474,7 @@ public class ImagingServiceProperties {
         || (logServerPort != null && logServerPort.length() > 0)
         || (initScript != null)) {
       String asgName = null;
-      LOG.warn("Changing launch configuration");// TODO: remove
+      LOG.info("Changing launch configuration");
       try {
         final List<TagDescription> tags = EucalyptusActivityTasks.getInstance()
             .describeAutoScalingTags();

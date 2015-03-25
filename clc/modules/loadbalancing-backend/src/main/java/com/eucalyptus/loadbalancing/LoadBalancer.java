@@ -20,6 +20,8 @@
 package com.eucalyptus.loadbalancing;
 
 import static com.eucalyptus.loadbalancing.common.LoadBalancingMetadata.LoadBalancerMetadata;
+import static com.eucalyptus.util.Strings.isPrefixOf;
+import static com.eucalyptus.util.Strings.trimPrefix;
 
 import java.util.Collection;
 import java.util.Date;
@@ -373,6 +375,10 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	public void setHealthCheck(int healthyThreshold, int interval, String target, int timeout, int unhealthyThreshold)
 		throws IllegalArgumentException
 	{
+		final String[] targetParts = target.split( ":", 2 );
+		final String canonicalizedTarget = targetParts.length == 2 ?
+				targetParts[0].toUpperCase( ) + ":" + targetParts[1] :
+				target;
 		// check the validity of the health check param
 		if(healthyThreshold < 0)
 			throw new IllegalArgumentException("healthyThreshold must be > 0");
@@ -383,16 +389,15 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		if(unhealthyThreshold < 0)
 			throw new IllegalArgumentException("unhealthyThreshold must be > 0");
 		
-		if(!(target.startsWith("HTTP") || target.startsWith("HTTPS") || 
-				target.startsWith("TCP") ||target.startsWith("SSL")))
+		if( !Iterables.any( Lists.newArrayList( "HTTP", "HTTPS",  "TCP", "SSL"), isPrefixOf( canonicalizedTarget ) ) )
 			throw new IllegalArgumentException("target must starts with one of HTTP, HTTPS, TCP, SSL");
 		
-		if(target.startsWith("HTTP") || target.startsWith("HTTPS")){
-			int idxPort = target.indexOf(":");
-			int idxPath = target.indexOf("/");
+		if(canonicalizedTarget.startsWith("HTTP") || canonicalizedTarget.startsWith("HTTPS")){
+			int idxPort = canonicalizedTarget.indexOf(":");
+			int idxPath = canonicalizedTarget.indexOf("/");
 			if(idxPort < 0 || idxPath <0 || (idxPath-idxPort) <= 1)
 				throw new IllegalArgumentException("Port and Path must be specified for HTTP");
-			String port = target.substring(idxPort+1, idxPath);
+			String port = canonicalizedTarget.substring(idxPort+1, idxPath);
 			try{
 				int portNum = Integer.parseInt(port);
 				if(!(portNum > 0 && portNum < 65536))
@@ -400,11 +405,10 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 			}catch(Exception ex){
 				throw new IllegalArgumentException("Invalid target specified", ex);
 			}
-		}else if (target.startsWith("TCP") || target.startsWith("SSL")){
-			String copy = target;
-			copy = copy.replace("TCP:","").replace("SSL:", "");
+		}else if (canonicalizedTarget.startsWith("TCP") || canonicalizedTarget.startsWith("SSL")){
+			String portStr = trimPrefix( ":", canonicalizedTarget.substring( 3 ) );
 			try{
-				int portNum = Integer.parseInt(copy);
+				int portNum = Integer.parseInt( portStr );
 				if(!(portNum > 0 && portNum < 65536))
 					throw new Exception("invalid port number");
 			}catch(Exception ex){
@@ -412,7 +416,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 			}
 		}
 	   
-		this.healthConfig = new LoadBalancerHealthCheckConfig(healthyThreshold, interval, target, timeout,unhealthyThreshold);
+		this.healthConfig = new LoadBalancerHealthCheckConfig(healthyThreshold, interval, canonicalizedTarget, timeout,unhealthyThreshold);
 		this.healthConfig.setLoadBalancer(this);
 	}
 	

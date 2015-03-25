@@ -101,10 +101,12 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
+
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.blockstorage.exceptions.SnapshotTooLargeException;
 import com.eucalyptus.blockstorage.msgs.DeleteStorageSnapshotResponseType;
 import com.eucalyptus.blockstorage.msgs.DeleteStorageSnapshotType;
 import com.eucalyptus.compute.common.CloudMetadatas;
@@ -176,7 +178,7 @@ public class SnapshotManager {
     Snapshot snap = RestrictedTypes.allocateUnitlessResource( allocator );
     try {
       snap = Snapshots.startCreateSnapshot( volReady, snap );
-    } catch ( EucalyptusCloudException e ) {
+    } catch ( Exception e ) {
       final EntityTransaction db = Entities.get( Snapshot.class );
       try {
         Snapshot entity = Entities.uniqueResult( snap );
@@ -187,7 +189,17 @@ public class SnapshotManager {
       } finally {
         if ( db.isActive() ) db.rollback( );
       }
-      throw e;
+      final SnapshotTooLargeException snapshotTooLargeException =
+          Exceptions.findCause( e, SnapshotTooLargeException.class );
+      if ( snapshotTooLargeException != null ) {
+        throw new ClientComputeException(
+            "SnapshotLimitExceeded", snapshotTooLargeException.getMessage( ) );
+      }
+      if ( !( e.getCause( ) instanceof ExecutionException ) ) {
+        throw handleException( e );
+      } else {
+        throw e;
+      }
     }
 
     try {
@@ -446,9 +458,13 @@ public class SnapshotManager {
             }
         });
 
-        boolean result = false;
+        final boolean result;
         try {
-            result = Transactions.one(Snapshot.named( ctx.getUserFullName( ).asAccountFullName( ), snapshotId ), modifySnapshotAttribute);
+            result = Transactions.one(
+                Snapshot.named(
+                    ctx.isAdministrator( ) ? null : ctx.getUserFullName( ).asAccountFullName( ),
+                    snapshotId ),
+                modifySnapshotAttribute );
         } catch ( NoSuchElementException ex2 ) {
             throw new ClientComputeException( "InvalidSnapshot.NotFound", "The snapshot '"+request.getSnapshotId( )+"' does not exist." );
         } catch ( ExecutionException ex1 ) {
@@ -464,7 +480,9 @@ public class SnapshotManager {
         final Context ctx = Contexts.lookup( );
         final String snapshotId = normalizeSnapshotIdentifier( request.getSnapshotId( ) );
         try (TransactionResource db = Entities.transactionFor(Snapshot.class)) {
-            Snapshot result = Entities.uniqueResult(Snapshot.named( ctx.getUserFullName( ).asAccountFullName( ), snapshotId));
+            Snapshot result = Entities.uniqueResult( Snapshot.named(
+                ctx.isAdministrator( ) ? null : ctx.getUserFullName( ).asAccountFullName( ),
+                snapshotId ) );
             if( !RestrictedTypes.filterPrivileged( ).apply( result ) ) {
                 throw new EucalyptusCloudException("Not authorized to describe attributes for snapshot " + request.getSnapshotId());
             }

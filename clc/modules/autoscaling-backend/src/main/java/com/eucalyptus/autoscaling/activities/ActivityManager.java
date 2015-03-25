@@ -93,7 +93,6 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.ClusterInfoType;
-import com.eucalyptus.compute.common.DescribeTagsType;
 import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.ImageDetails;
 import com.eucalyptus.compute.common.InstanceNetworkInterfaceSetItemRequestType;
@@ -120,6 +119,7 @@ import com.eucalyptus.compute.common.backend.DescribeSecurityGroupsType;
 import com.eucalyptus.compute.common.backend.DescribeSubnetsResponseType;
 import com.eucalyptus.compute.common.backend.DescribeSubnetsType;
 import com.eucalyptus.compute.common.backend.DescribeTagsResponseType;
+import com.eucalyptus.compute.common.backend.DescribeTagsType;
 import com.eucalyptus.compute.common.backend.RunInstancesResponseType;
 import com.eucalyptus.compute.common.backend.RunInstancesType;
 import com.eucalyptus.compute.common.backend.TerminateInstancesResponseType;
@@ -1233,8 +1233,10 @@ public class ActivityManager {
       updateActivity( new Callback<ScalingActivity>( ) {
         @Override
         public void fire( final ScalingActivity input ) {
-          input.setStatusCode( activityStatusCode );
-          input.setProgress( progress );
+          if ( !input.isComplete( ) ) {
+            input.setStatusCode( activityStatusCode );
+            input.setProgress( progress );
+          }
         }
       } );
     }
@@ -1249,11 +1251,15 @@ public class ActivityManager {
       updateActivity( new Callback<ScalingActivity>( ) {
         @Override
         public void fire( final ScalingActivity input ) {
-          input.setStatusCode( activityStatusCode );
-          if ( message != null ) input.setStatusMessage( Iterables.getFirst( Splitter.fixedLength(255).split(message), null ) );
-          if ( description != null ) input.setDescription( Iterables.getFirst( Splitter.fixedLength(255).split(description), null ) );
-          input.setProgress( 100 );
-          input.setEndTime( new Date() );
+          if ( !input.isComplete( ) ) {
+            input.setStatusCode( activityStatusCode );
+            if ( message != null )
+              input.setStatusMessage( Iterables.getFirst( Splitter.fixedLength( 255 ).split( message ), null ) );
+            if ( description != null )
+              input.setDescription( Iterables.getFirst( Splitter.fixedLength( 255 ).split( description ), null ) );
+            input.setProgress( 100 );
+            input.setEndTime( new Date() );
+          }
         }
       } );
     }
