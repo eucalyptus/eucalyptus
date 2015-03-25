@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -163,7 +163,7 @@ public class VolumeManager {
   
   private static Logger    LOG                = Logger.getLogger( VolumeManager.class );
 
-  public CreateVolumeResponseType CreateVolume( final CreateVolumeType request ) throws EucalyptusCloudException, AuthException {
+  public CreateVolumeResponseType CreateVolume( final CreateVolumeType request ) throws EucalyptusCloudException {
     Context ctx = Contexts.lookup( );
     Long volSize = request.getSize( ) != null
                                              ? Long.parseLong( request.getSize( ) )
@@ -231,6 +231,8 @@ public class VolumeManager {
           LOG.error( ex, ex );
           lastEx = ex;
         }
+      } catch ( AuthException e ) {
+        throw handleException( e );
       }
     }
     throw new EucalyptusCloudException( "Failed to create volume after " + VOL_CREATE_RETRIES + " because of: " + lastEx, lastEx );
