@@ -422,7 +422,6 @@ public class UpdateUserType extends EuareMessage {
   String newUserName;
   String enabled;
   String passwordExpiration;
-  String regStatus;
   public UpdateUserType() {  }
 }
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_PUTUSERPOLICY )
@@ -466,7 +465,6 @@ public class UserType extends EucalyptusData {
   String arn;
   Date createDate;
   String enabled;
-  String regStatus;
   String passwordExpiration;
   public UserType() {  }
 }

@@ -83,12 +83,6 @@ public interface User extends BasePrincipal, Serializable {
   // LDAP user SASL ID
   String SASLID = "saslid";
   
-  enum RegistrationStatus {
-    REGISTERED,
-    APPROVED,
-    CONFIRMED,
-  }
-
   String getUserId( );
 
   String getPath( );
