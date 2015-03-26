@@ -103,14 +103,8 @@ PersistenceContexts.list( ).each { String context_name ->
         'hibernate.transaction.flush_before_completion': 'false',
         'hibernate.transaction.jta.platform': 'org.hibernate.service.jta.platform.internal.BitronixJtaPlatform',
         /** l2 cache **/
-        'hibernate.cache.use_second_level_cache': 'true',
+        'hibernate.cache.use_second_level_cache': 'false',
         'hibernate.cache.use_query_cache': 'false',
-        'hibernate.cache.default_cache_concurrency_strategy': 'transactional',
-        'hibernate.cache.region.factory_class': 'com.eucalyptus.bootstrap.CacheRegionFactory',
-        'hibernate.cache.infinispan.cfg': 'eucalyptus_cache_infinispan.xml',
-        'hibernate.cache.region_prefix': "${context_name}_cache",
-        'hibernate.cache.use_minimal_puts': 'true',
-        'hibernate.cache.use_structured_entries': 'true',
       ] )
 
   String schemaName = PersistenceContexts.toSchemaName( ).apply( context_name )
