@@ -23,59 +23,24 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
+
+import com.eucalyptus.compute.common.*;
+import com.eucalyptus.compute.common.backend.CreateSnapshotResponseType;
+import com.eucalyptus.compute.common.backend.CreateSnapshotType;
+import com.eucalyptus.compute.common.backend.CreateVolumeResponseType;
+import com.eucalyptus.compute.common.backend.CreateVolumeType;
+import com.eucalyptus.compute.common.backend.DeleteVolumeType;
+import com.eucalyptus.compute.common.backend.DescribeSnapshotsResponseType;
+import com.eucalyptus.compute.common.backend.DescribeSnapshotsType;
+import com.eucalyptus.compute.common.backend.RegisterImageResponseType;
+import com.eucalyptus.compute.common.backend.RegisterImageType;
 
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressResponseType;
-import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressType;
-import com.eucalyptus.compute.common.ClusterInfoType;
-import com.eucalyptus.compute.common.Compute;
-import com.eucalyptus.compute.common.ComputeMessage;
-import com.eucalyptus.compute.common.CreateSecurityGroupResponseType;
-import com.eucalyptus.compute.common.CreateSecurityGroupType;
-import com.eucalyptus.compute.common.CreateTagsResponseType;
-import com.eucalyptus.compute.common.CreateTagsType;
-import com.eucalyptus.compute.common.DeleteResourceTag;
-import com.eucalyptus.compute.common.DeleteSecurityGroupResponseType;
-import com.eucalyptus.compute.common.DeleteSecurityGroupType;
-import com.eucalyptus.compute.common.DeleteTagsResponseType;
-import com.eucalyptus.compute.common.DeleteTagsType;
-import com.eucalyptus.compute.common.DescribeAvailabilityZonesResponseType;
-import com.eucalyptus.compute.common.DescribeAvailabilityZonesType;
-import com.eucalyptus.compute.common.DescribeImagesResponseType;
-import com.eucalyptus.compute.common.DescribeImagesType;
-import com.eucalyptus.compute.common.DescribeInstancesResponseType;
-import com.eucalyptus.compute.common.DescribeInstancesType;
-import com.eucalyptus.compute.common.DescribeKeyPairsResponseItemType;
-import com.eucalyptus.compute.common.DescribeKeyPairsResponseType;
-import com.eucalyptus.compute.common.DescribeKeyPairsType;
-import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
-import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
-import com.eucalyptus.compute.common.DescribeTagsResponseType;
-import com.eucalyptus.compute.common.DescribeTagsType;
-import com.eucalyptus.compute.common.DescribeVolumesResponseType;
-import com.eucalyptus.compute.common.DescribeVolumesType;
-import com.eucalyptus.compute.common.Filter;
-import com.eucalyptus.compute.common.GroupItemType;
-import com.eucalyptus.compute.common.ImageDetails;
-import com.eucalyptus.compute.common.IpPermissionType;
-import com.eucalyptus.compute.common.ReservationInfoType;
-import com.eucalyptus.compute.common.ResourceTag;
-import com.eucalyptus.compute.common.RevokeSecurityGroupIngressResponseType;
-import com.eucalyptus.compute.common.RevokeSecurityGroupIngressType;
-import com.eucalyptus.compute.common.RunInstancesResponseType;
-import com.eucalyptus.compute.common.RunInstancesType;
-import com.eucalyptus.compute.common.RunningInstancesItemType;
-import com.eucalyptus.compute.common.SecurityGroupItemType;
-import com.eucalyptus.compute.common.TagInfo;
-import com.eucalyptus.compute.common.TerminateInstancesItemType;
-import com.eucalyptus.compute.common.TerminateInstancesResponseType;
-import com.eucalyptus.compute.common.TerminateInstancesType;
-import com.eucalyptus.compute.common.Volume;
 import com.eucalyptus.resources.EucalyptusActivityException;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.DispatchingClient;
@@ -272,7 +237,6 @@ public class Ec2Client {
     void dispatchSuccess(
         ClientContext<ComputeMessage, Compute> context,
         ComputeMessage response) {
-      final AuthorizeSecurityGroupIngressResponseType resp = (AuthorizeSecurityGroupIngressResponseType) response;
     }
   }
 
@@ -314,7 +278,6 @@ public class Ec2Client {
     void dispatchSuccess(
         ClientContext<ComputeMessage, Compute> context,
         ComputeMessage response) {
-      final RevokeSecurityGroupIngressResponseType resp = (RevokeSecurityGroupIngressResponseType) response;
     }
   }
 
@@ -345,7 +308,6 @@ public class Ec2Client {
     void dispatchSuccess(
         ClientContext<ComputeMessage, Compute> context,
         ComputeMessage response) {
-      final DeleteSecurityGroupResponseType resp = (DeleteSecurityGroupResponseType) response;
     }
   }
 
@@ -386,18 +348,23 @@ public class Ec2Client {
     }
   }
 
-  private class ComputeLaunchInstanceTask extends
+  private class ComputeRunInstanceTask extends
   EucalyptusClientTask<ComputeMessage, Compute> {
     private final String availabilityZone;
     private final String imageId;
     private final String instanceType;
     private String userData;
-    private String groupName;
+    private ArrayList<String> groupNames;
     private int numInstances = 1;
+    private String subnetId;
+    private String privateIp;
+    private boolean monitoring;
+    private String keyName;
+    
     private final AtomicReference<List<String>> instanceIds = new AtomicReference<List<String>>(
         Collections.<String> emptyList());
 
-    private ComputeLaunchInstanceTask(final String availabilityZone,
+    private ComputeRunInstanceTask(final String availabilityZone,
         final String imageId, final String instanceType, int numInstances) {
       this.availabilityZone = availabilityZone;
       this.imageId = imageId;
@@ -408,22 +375,31 @@ public class Ec2Client {
     private RunInstancesType runInstances() {
       OwnerFullName systemAcct = AccountFullName.getInstance(Principals
           .systemAccount());
-      LOG.info("runInstances with zone=" + availabilityZone + ", account="
+      LOG.debug("runInstances with zone=" + availabilityZone + ", account="
           + systemAcct);
-
-      final RunInstancesType runInstances = new RunInstancesType();
-      runInstances.setImageId(imageId);
-      runInstances.setInstanceType(instanceType);
-      if (groupName != null) {
-        runInstances.setSecurityGroups(Lists.newArrayList(new GroupItemType(
-            groupName, null))); // Name or ID can be passed as ID
+      final RunInstancesType req = new RunInstancesType();
+      req.setImageId(this.imageId);
+      req.setInstanceType(this.instanceType);
+      if (keyName != null)
+        req.setKeyName(this.keyName);
+      req.setMonitoring(this.monitoring);
+      if (subnetId != null) {
+        final InstanceNetworkInterfaceSetItemRequestType networkInterface = req
+            .primaryNetworkInterface(true);
+        networkInterface.setSubnetId(this.subnetId);
+        networkInterface.setPrivateIpAddress(this.privateIp);
+      } else {
+        if (groupNames != null && !groupNames.isEmpty())
+          req.setGroupSet(this.groupNames);
+        req.setAvailabilityZone(this.availabilityZone);
       }
       if (availabilityZone != null)
-        runInstances.setAvailabilityZone(availabilityZone);
-      runInstances.setMinCount(Math.max(1, numInstances));
-      runInstances.setMaxCount(Math.max(1, numInstances));
-      runInstances.setUserData(userData);
-      return runInstances;
+        req.setAvailabilityZone(availabilityZone);
+      req.setMinCount(Math.max(1, numInstances));
+      req.setMaxCount(Math.max(1, numInstances));
+      if (userData != null)
+        req.setUserData(userData);
+      return req;
     }
 
     @Override
@@ -453,10 +429,26 @@ public class Ec2Client {
       this.userData = userData;
     }
 
-    void setSecurityGroup(String groupName) {
-      this.groupName = groupName;
+    void setSecurityGroups(ArrayList<String> groupNames) {
+      this.groupNames = groupNames;
     }
 
+    void setSubnetId(String subnetId) {
+      this.subnetId = subnetId;
+    }
+
+    void setPrivateIp(String privateIp) {
+      this.privateIp = privateIp;
+    }
+
+    void setMonitoring(boolean monitoring) {
+      this.monitoring = monitoring;
+    }
+
+    void setKeyName(String keyName) {
+      this.keyName = keyName;
+    }
+    
     List<String> getInstanceIds() {
       return instanceIds.get();
     }
@@ -514,7 +506,7 @@ public class Ec2Client {
     private DescribeImagesType describeImages() {
       final DescribeImagesType req = new DescribeImagesType();
       if (this.imageIds != null && this.imageIds.size() > 0) {
-        req.setImagesSet(new ArrayList(imageIds));
+        req.setImagesSet(new ArrayList<String>(imageIds));
       }
       return req;
     }
@@ -544,24 +536,25 @@ public class Ec2Client {
 
   private class ComputeDeleteTagsTask extends
   EucalyptusClientTask<ComputeMessage, Compute> {
-    private String tagKey = null;
-    private String tagValue = null;
+    private Map<String,String> tags = null;
     private List<String> resources = null;
 
-    private ComputeDeleteTagsTask(final String tagKey, final String tagValue,
+    private ComputeDeleteTagsTask(Map<String,String> tags,
         final List<String> resources) {
-      this.tagKey = tagKey;
-      this.tagValue = tagValue;
+      this.tags = tags;
       this.resources = resources;
     }
 
     private DeleteTagsType deleteTags() {
       final DeleteTagsType req = new DeleteTagsType();
       req.setResourcesSet(Lists.newArrayList(this.resources));
-      final DeleteResourceTag tag = new DeleteResourceTag();
-      tag.setKey(this.tagKey);
-      tag.setValue(this.tagValue);
-      req.setTagSet(Lists.newArrayList(tag));
+      for(Map.Entry<String, String> t:tags.entrySet()){
+        final DeleteResourceTag tag = new DeleteResourceTag();
+        tag.setKey(t.getKey());
+        if (tag.getValue() != null)
+          tag.setValue(t.getValue());
+        req.getTagSet().add(tag);
+      }
       return req;
     }
 
@@ -579,7 +572,6 @@ public class Ec2Client {
     void dispatchSuccess(
         ClientContext<ComputeMessage, Compute> context,
         ComputeMessage response) {
-      final DeleteTagsResponseType resp = (DeleteTagsResponseType) response;
     }
   }
 
@@ -619,7 +611,6 @@ public class Ec2Client {
     void dispatchSuccess(
         ClientContext<ComputeMessage, Compute> context,
         ComputeMessage response) {
-      final CreateTagsResponseType resp = (CreateTagsResponseType) response;
     }
   }
 
@@ -718,6 +709,192 @@ public class Ec2Client {
     }
   }
   
+  private class ComputeCreateSnapshotTask extends EucalyptusClientTask<ComputeMessage, Compute> {
+    private String volumeId = null;
+    private String snapshotId = null;
+    
+    private ComputeCreateSnapshotTask(final String volumeId) {
+      this.volumeId = volumeId;
+    }
+    
+    private CreateSnapshotType createSnapshot() {
+      final CreateSnapshotType req = new CreateSnapshotType();
+      req.setVolumeId(this.volumeId);
+      return req;
+    }
+    
+    @Override
+    void dispatchInternal(
+        ClientContext<ComputeMessage, Compute> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Compute> client = context.getClient();
+      client.dispatch(createSnapshot(), callback);          
+    }
+    
+    @Override
+    void dispatchSuccess(
+        ClientContext<ComputeMessage, Compute> context,
+        ComputeMessage response) {
+      final CreateSnapshotResponseType resp = (CreateSnapshotResponseType) response;
+      try {
+        this.snapshotId = resp.getSnapshot().getSnapshotId();
+      } catch (final Exception ex) {
+        ;
+      }
+    }
+    
+    public String getSnapshotId() {
+      return this.snapshotId;
+    }
+  }
+  
+  private class ComputeRegisterEBSImageTask extends EucalyptusClientTask<ComputeMessage, Compute> {
+    private String snapshotId = null;
+    private String description = null;
+    private String name = null;
+    private String architecture = null;
+    private String platform = null;
+    private String imageId = null;
+    private boolean deleteOnTermination = false;
+    private static final String ROOT_DEVICE_NAME = "/dev/sda";
+    
+    private ComputeRegisterEBSImageTask(final String snapshotId,
+        final String name, final String architecture) {
+      this.snapshotId = snapshotId;
+      this.architecture = architecture;
+      this.name = name;
+    }
+    
+    private void setDescription(final String description) {
+      this.description = description;
+    }
+    
+    private void setPlatform(final String platform) {
+      this.platform = platform;
+    }
+    
+    private void setDeleteOnTermination(final boolean deleteOnTermination) {
+      this.deleteOnTermination = deleteOnTermination;
+    }
+    
+    private RegisterImageType register() {
+      final RegisterImageType req = new RegisterImageType();
+      req.setRootDeviceName(ROOT_DEVICE_NAME);
+      final BlockDeviceMappingItemType device = new BlockDeviceMappingItemType();
+      device.setDeviceName(ROOT_DEVICE_NAME);
+      final EbsDeviceMapping ebsMap = new EbsDeviceMapping();
+      ebsMap.setSnapshotId(this.snapshotId);
+      ebsMap.setDeleteOnTermination(this.deleteOnTermination);
+      device.setEbs(ebsMap);
+      req.setBlockDeviceMappings(Lists.newArrayList(device));
+      req.setArchitecture(this.architecture);
+      if (this.description != null)
+        req.setDescription(this.description);
+      req.setName(this.name);
+      if ("windows".equals(this.platform))
+        req.setKernelId("windows");
+      return req;
+    }
+    
+    @Override
+    void dispatchInternal(
+        ClientContext<ComputeMessage, Compute> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Compute> client = context.getClient();
+      client.dispatch(register(), callback);          
+    }
+    
+    @Override
+    void dispatchSuccess(
+        ClientContext<ComputeMessage, Compute> context,
+        ComputeMessage response) {
+      final RegisterImageResponseType resp = (RegisterImageResponseType) response;
+      this.imageId = resp.getImageId();
+    }
+    
+    public String getImageId() {
+      return this.imageId;
+    }
+}
+
+  private class CreateVolumeTask extends EucalyptusClientTask<ComputeMessage, Compute>{
+    private String availabilityZone = null;
+    private String snapshotId = null;
+    private int size = -1;
+    private String volumeId = null;
+
+    private CreateVolumeTask(final String availabilityZone, final int size) {
+      this.availabilityZone = availabilityZone;
+      this.size = size;
+    }
+
+    private CreateVolumeTask(final String availabilityZone, final int size,
+        final String snapshotId) {
+      this(availabilityZone, size);
+      this.snapshotId = snapshotId;
+    }
+
+    private CreateVolumeType createVolume() {
+      final CreateVolumeType req = new CreateVolumeType();
+      req.setAvailabilityZone(this.availabilityZone);
+      req.setSize(Integer.toString(this.size));
+      if (this.snapshotId != null)
+        req.setSnapshotId(snapshotId);
+      return req;
+    }
+
+    @Override
+    void dispatchInternal(
+        ClientContext<ComputeMessage, Compute> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Compute> client = context.getClient();
+      client.dispatch(createVolume(), callback);          
+    }
+
+    @Override
+    void dispatchSuccess(
+        ClientContext<ComputeMessage, Compute> context,
+        ComputeMessage response) {
+      final CreateVolumeResponseType resp = (CreateVolumeResponseType) response;
+      final Volume vol = resp.getVolume();
+      if (vol != null && !"error".equals(vol.getStatus())) {
+        this.volumeId = vol.getVolumeId();
+      }
+    }
+
+    public String getVolumeId() {
+      return this.volumeId;
+    }
+  }
+  
+  private class DeleteVolumeTask extends  EucalyptusClientTask<ComputeMessage, Compute>{
+    private String volumeId = null;
+    
+    private DeleteVolumeTask(final String volumeId) {
+      this.volumeId = volumeId;
+    }
+    
+    private DeleteVolumeType deleteVolume() {
+      final DeleteVolumeType req = new DeleteVolumeType();
+      req.setVolumeId(this.volumeId);
+      return req;
+    }
+    
+    @Override
+    void dispatchInternal(
+        ClientContext<ComputeMessage, Compute> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Compute> client = context.getClient();
+      client.dispatch(deleteVolume(), callback);          
+    }
+
+    @Override
+    void dispatchSuccess(
+        ClientContext<ComputeMessage, Compute> context,
+        ComputeMessage response) {
+    }
+  }
+
 
   private class DescribeVolumesTask extends EucalyptusClientTask<ComputeMessage, Compute>{
     private List<String> volumeIds = null;
@@ -759,54 +936,127 @@ public class Ec2Client {
     }
   }
 
+  private class DescribeSnapshotsTask extends EucalyptusClientTask<ComputeMessage, Compute>{
+    private List<String> snapshots = null;
+    private List<Snapshot> results = null;
 
+    private DescribeSnapshotsTask(final List<String> subnetIds){
+        this.snapshots = subnetIds;
+    }
 
-  public List<String> launchInstances(final String userId, final String availabilityZone,
-      final String imageId, final String instanceType, final int numInstances) {
-    return launchInstances(userId, availabilityZone, imageId, instanceType, null, null,
-        numInstances);
-  }
+    private DescribeSnapshotsType describeSnapshots() {
+      final DescribeSnapshotsType req = new DescribeSnapshotsType();
+      req.setSnapshotSet(Lists.newArrayList(this.snapshots));
+      return req;
+    }
 
-  public List<String> launchInstances(final String userId, final String availabilityZone,
-      final String imageId, final String instanceType, String groupName,
-      final String userData, final int numInstances) {
-    LOG.info("launching instances at zone=" + availabilityZone + ", imageId="
-        + imageId + ", group=" + groupName);
-    final ComputeLaunchInstanceTask launchTask = new ComputeLaunchInstanceTask(
+    @Override
+    void dispatchInternal(
+            ClientContext<ComputeMessage, Compute> context,
+            Checked<ComputeMessage> callback) {
+        final DispatchingClient<ComputeMessage, Compute> client = context.getClient();
+        client.dispatch(describeSnapshots(), callback);
+    }
+
+    @Override
+    void dispatchSuccess(
+            ClientContext<ComputeMessage, Compute> context,
+            ComputeMessage response) {
+      final DescribeSnapshotsResponseType resp = (DescribeSnapshotsResponseType) response;
+      this.results = resp.getSnapshotSet();
+    }
+
+    public List<Snapshot> getSnapshots(){
+        return this.results;
+    }
+}
+  
+    private class DescribeSubnetsTask extends EucalyptusClientTask<ComputeMessage, Compute>{
+        private List<String> subnetIds = null;
+        private List<SubnetType> result = null;
+
+        private DescribeSubnetsTask(final List<String> subnetIds){
+            this.subnetIds = subnetIds;
+        }
+
+        private DescribeSubnetsType describeSubnets(){
+            final DescribeSubnetsType req = new DescribeSubnetsType();
+            if (subnetIds != null) {
+                final Filter filter = new Filter();
+                filter.setName("subnet-id");
+                filter.setValueSet(Lists.newArrayList(subnetIds));
+                req.getFilterSet().add(filter);
+            }
+            return req;
+        }
+
+        @Override
+        void dispatchInternal(
+                ClientContext<ComputeMessage, Compute> context,
+                Checked<ComputeMessage> callback) {
+            final DispatchingClient<ComputeMessage, Compute> client = context.getClient();
+            client.dispatch(describeSubnets(), callback);
+        }
+
+        @Override
+        void dispatchSuccess(
+                ClientContext<ComputeMessage, Compute> context,
+                ComputeMessage response) {
+            final DescribeSubnetsResponseType resp = (DescribeSubnetsResponseType) response;
+            this.result = resp.getSubnetSet().getItem();
+        }
+
+        public List<SubnetType> getSubnets(){
+            return this.result;
+        }
+    }
+    
+    
+  public List<String> runInstances(final String userId, final String imageId,
+      final ArrayList<String> groupNames, final String userData,
+      final String instanceType, final String availabilityZone,
+      final String subnetId, final String privateIp, boolean monitoring,
+      final String keyName, final int numInstances) throws EucalyptusActivityException {
+    LOG.debug("launching instances at zone=" + availabilityZone + ", imageId="
+        + imageId);
+    final ComputeRunInstanceTask task = new ComputeRunInstanceTask(
         availabilityZone, imageId, instanceType, numInstances);
-    if (userData != null)
-      launchTask.setUserData(userData);
-    if (groupName != null)
-      launchTask.setSecurityGroup(groupName);
-    final CheckedListenableFuture<Boolean> result = launchTask
+    task.setUserData(userData);
+    task.setSecurityGroups(groupNames);
+    task.setSubnetId(subnetId);
+    task.setPrivateIp(privateIp);
+    task.setMonitoring(monitoring);
+    task.setKeyName(keyName);
+    final CheckedListenableFuture<Boolean> result = task
         .dispatch(new Ec2Context(userId));
     try {
       if (result.get()) {
-        final List<String> instances = launchTask.getInstanceIds();
+        final List<String> instances = task.getInstanceIds();
         return instances;
       } else
-        throw new EucalyptusActivityException("failed to launch the instance");
+        throw new EucalyptusActivityException(task.getErrorMessage() != null ?
+            task.getErrorMessage() : "failed to launch the instance");
     } catch (Exception ex) {
       throw Exceptions.toUndeclared(ex);
     }
   }
 
-  public List<String> terminateInstances(final String userId, final List<String> instances) {
-    LOG.info(String.format("terminating %d instances", instances.size()));
+  public List<String> terminateInstances(final String userId, final List<String> instances) throws EucalyptusActivityException {
+    LOG.debug(String.format("terminating %d instances", instances.size()));
     if (instances.size() <= 0)
       return instances;
 
-    final ComputeTerminateInstanceTask terminateTask = new ComputeTerminateInstanceTask(
+    final ComputeTerminateInstanceTask task = new ComputeTerminateInstanceTask(
         instances);
-    final CheckedListenableFuture<Boolean> result = terminateTask
+    final CheckedListenableFuture<Boolean> result = task
         .dispatch(new Ec2Context(userId));
     try {
       if (result.get()) {
-        final List<String> terminated = terminateTask.getTerminatedInstances();
+        final List<String> terminated = task.getTerminatedInstances();
         return terminated;
       } else
-        throw new EucalyptusActivityException(
-            "failed to terminate the instances");
+        throw new EucalyptusActivityException(task.getErrorMessage() != null ?
+            task.getErrorMessage() : "failed to terminate the instances");
     } catch (Exception ex) {
       throw Exceptions.toUndeclared(ex);
     }
@@ -814,24 +1064,24 @@ public class Ec2Client {
 
   public List<RunningInstancesItemType> describeInstances(
       final String userId, final List<String> instances) {
-    final ComputeDescribeInstanceTask describeTask = 
+    final ComputeDescribeInstanceTask task = 
         new ComputeDescribeInstanceTask(instances);
-    final CheckedListenableFuture<Boolean> result = describeTask
+    final CheckedListenableFuture<Boolean> result = task
         .dispatch(new Ec2Context(userId));
     try {
       if (result.get()) {
-        final List<RunningInstancesItemType> describe = describeTask
+        final List<RunningInstancesItemType> describe = task
             .getResult();
         return describe;
       } else
-        throw new EucalyptusActivityException(
-            "failed to describe the instances");
+        throw new EucalyptusActivityException(task.getErrorMessage() != null ?
+            task.getErrorMessage() : "failed to describe the instances");
     } catch (Exception ex) {
       throw Exceptions.toUndeclared(ex);
     }
   }
 
-  public List<ClusterInfoType> describeAvailabilityZones(final String userId, boolean verbose) {
+  public List<ClusterInfoType> describeAvailabilityZones(final String userId, boolean verbose) throws EucalyptusActivityException {
     final ComputeDescribeAvailabilityZonesTask task = new ComputeDescribeAvailabilityZonesTask(
         verbose);
     final CheckedListenableFuture<Boolean> result = task
@@ -841,15 +1091,15 @@ public class Ec2Client {
         final List<ClusterInfoType> describe = task.getAvailabilityZones();
         return describe;
       } else
-        throw new EucalyptusActivityException(
-            "failed to describe the availability zones");
+        throw new EucalyptusActivityException(task.getErrorMessage() != null ?
+            task.getErrorMessage() : "failed to describe the availability zones");
     } catch (Exception ex) {
       throw Exceptions.toUndeclared(ex);
     }
 
   }
 
-  public void createSecurityGroup(final String userId, String groupName, String groupDesc) {
+  public void createSecurityGroup(final String userId, String groupName, String groupDesc) throws EucalyptusActivityException {
     final ComputeCreateGroupTask task = new ComputeCreateGroupTask(
         groupName, groupDesc);
     final CheckedListenableFuture<Boolean> result = task
@@ -858,14 +1108,15 @@ public class Ec2Client {
       if (result.get() && task.getGroupId() != null) {
         return;
       } else
-        throw new EucalyptusActivityException("failed to create the group "
+        throw new EucalyptusActivityException(task.getErrorMessage() != null ?
+            task.getErrorMessage() : "failed to create the group "
             + groupName);
     } catch (Exception ex) {
       throw Exceptions.toUndeclared(ex);
     }
   }
 
-  public void deleteSecurityGroup(final String userId, String groupName) {
+  public void deleteSecurityGroup(final String userId, String groupName) throws EucalyptusActivityException {
     final ComputeDeleteGroupTask task = new ComputeDeleteGroupTask(
         groupName);
     final CheckedListenableFuture<Boolean> result = task
@@ -874,7 +1125,8 @@ public class Ec2Client {
       if (result.get()) {
         return;
       } else
-        throw new EucalyptusActivityException("failed to delete the group "
+        throw new EucalyptusActivityException(task.getErrorMessage() != null ?
+            task.getErrorMessage() : "failed to delete the group "
             + groupName);
     } catch (Exception ex) {
       throw Exceptions.toUndeclared(ex);
@@ -882,7 +1134,7 @@ public class Ec2Client {
   }
 
   public List<SecurityGroupItemType> describeSecurityGroups(
-      final String userId, List<String> groupNames) {
+      final String userId, List<String> groupNames) throws EucalyptusActivityException {
     final ComputeDescribeSecurityGroupTask task = new ComputeDescribeSecurityGroupTask(
         groupNames);
     final CheckedListenableFuture<Boolean> result = task
@@ -891,15 +1143,15 @@ public class Ec2Client {
       if (result.get()) {
         return task.getResult();
       } else
-        throw new EucalyptusActivityException(
-            "failed to describe security groups");
+        throw new EucalyptusActivityException(task.getErrorMessage() != null ?
+            task.getErrorMessage() : "failed to describe security groups");
     } catch (Exception ex) {
       throw Exceptions.toUndeclared(ex);
     }
   }
 
   public void authorizeSecurityGroup(final String userId, String groupName, String protocol,
-      int portNum) {
+      int portNum) throws EucalyptusActivityException {
     final ComputeAuthorizeIngressRuleTask task = new ComputeAuthorizeIngressRuleTask(
         groupName, protocol, portNum);
     final CheckedListenableFuture<Boolean> result = task
@@ -908,14 +1160,15 @@ public class Ec2Client {
       if (result.get()) {
         return;
       } else
-        throw new EucalyptusActivityException(String.format(
+        throw new EucalyptusActivityException(task.getErrorMessage() != null ?
+            task.getErrorMessage() : String.format(
             "failed to authorize:%s, %s, %d ", groupName, protocol, portNum));
     } catch (Exception ex) {
       throw Exceptions.toUndeclared(ex);
     }
   }
 
-  public void revokeSecurityGroup(final String userId, String groupName, String protocol, int portNum) {
+  public void revokeSecurityGroup(final String userId, String groupName, String protocol, int portNum) throws EucalyptusActivityException {
     final ComputeRevokeIngressRuleTask task = new ComputeRevokeIngressRuleTask(
         groupName, protocol, portNum);
     final CheckedListenableFuture<Boolean> result = task
@@ -924,7 +1177,8 @@ public class Ec2Client {
       if (result.get()) {
         return;
       } else
-        throw new EucalyptusActivityException(String.format(
+        throw new EucalyptusActivityException(task.getErrorMessage() != null ?
+            task.getErrorMessage() : String.format(
             "failed to revoke:%s, %s, %d ", groupName, protocol, portNum));
     } catch (Exception ex) {
       throw Exceptions.toUndeclared(ex);
@@ -932,7 +1186,7 @@ public class Ec2Client {
   }
   
   public List<DescribeKeyPairsResponseItemType> describeKeyPairs(
-      final String userId, final List<String> keyNames) {
+      final String userId, final List<String> keyNames) throws EucalyptusActivityException {
     final ComputeDescribeKeyPairsTask task = new ComputeDescribeKeyPairsTask(keyNames);
     final CheckedListenableFuture<Boolean> result = task
         .dispatch(new Ec2Context(userId));
@@ -940,13 +1194,14 @@ public class Ec2Client {
       if (result.get()) {
         return task.getResult();
       } else
-        throw new EucalyptusActivityException("failed to describe keypairs");
+        throw new EucalyptusActivityException(task.getErrorMessage() != null ?
+            task.getErrorMessage() : "failed to describe keypairs");
     } catch (Exception ex) {
       throw Exceptions.toUndeclared(ex);
     }
   }
   
-  public List<ImageDetails> describeImages(final String userId, final List<String> imageIds) {
+  public List<ImageDetails> describeImages(final String userId, final List<String> imageIds) throws EucalyptusActivityException {
     final ComputeDescribeImagesTask task = new ComputeDescribeImagesTask(imageIds);
     final CheckedListenableFuture<Boolean> result = task
         .dispatch(new Ec2Context(userId));
@@ -954,14 +1209,15 @@ public class Ec2Client {
       if (result.get()) {
         return task.getResult();
       } else
-        throw new EucalyptusActivityException("failed to describe images");
+        throw new EucalyptusActivityException(task.getErrorMessage() != null ?
+            task.getErrorMessage() : "failed to describe images");
     } catch (Exception ex) {
       throw Exceptions.toUndeclared(ex);
     }
   }
 
   public void createTags(final String userId, final String tagKey, final String tagValue,
-      final List<String> resources) {
+      final List<String> resources) throws EucalyptusActivityException {
     final ComputeCreateTagsTask task = new ComputeCreateTagsTask(tagKey, tagValue,
         resources);
     final CheckedListenableFuture<Boolean> result = task
@@ -970,13 +1226,14 @@ public class Ec2Client {
       if (result.get()) {
         return;
       } else
-        throw new EucalyptusActivityException("failed to create tags");
+        throw new EucalyptusActivityException(task.getErrorMessage() != null ?
+            task.getErrorMessage() : "failed to create tags");
     } catch (Exception ex) {
       throw Exceptions.toUndeclared(ex);
     }
   }
   
-  public List<TagInfo> describeTags(final String userId, final List<String> names, final List<String> values){
+  public List<TagInfo> describeTags(final String userId, final List<String> names, final List<String> values) throws EucalyptusActivityException{
     final DescribeTagsTask task =
         new DescribeTagsTask(names, values);
     final CheckedListenableFuture<Boolean> result = task.dispatch(new Ec2Context(userId));
@@ -984,15 +1241,16 @@ public class Ec2Client {
       if(result.get()){
         return task.getTags();
       }else
-        throw new EucalyptusActivityException("failed to describe tags");
+        throw new EucalyptusActivityException(task.getErrorMessage() != null ?
+            task.getErrorMessage() : "failed to describe tags");
     }catch(Exception ex){
       throw Exceptions.toUndeclared(ex);
     }
   }
 
-  public void deleteTags(final String userId, final String tagKey, final String tagValue,
-      final List<String> resources) {
-    final ComputeDeleteTagsTask task = new ComputeDeleteTagsTask(tagKey, tagValue,
+  public void deleteTags(final String userId, final List<String> resources,
+      Map<String,String> tags) throws EucalyptusActivityException {
+    final ComputeDeleteTagsTask task = new ComputeDeleteTagsTask(tags,
         resources);
     final CheckedListenableFuture<Boolean> result = task
         .dispatch(new Ec2Context(userId));
@@ -1000,22 +1258,141 @@ public class Ec2Client {
       if (result.get()) {
         return;
       } else
-        throw new EucalyptusActivityException("failed to delete tags");
+        throw new EucalyptusActivityException(task.getErrorMessage() != null ?
+            task.getErrorMessage() : "failed to delete tags");
     } catch (Exception ex) {
       throw Exceptions.toUndeclared(ex);
     }
   }
-    
-  public List<Volume> describeVolumes(final String userId, final List<String> volumeIds){
+  
+  public String createVolume(final String userId, final String zone, final int size, final String snapshotId) throws EucalyptusActivityException {
+    final CreateVolumeTask task = new CreateVolumeTask(zone, size, snapshotId);
+    final CheckedListenableFuture<Boolean> result = task.dispatch(new Ec2Context(userId));
+    try{
+      if(result.get()){
+        return task.getVolumeId();
+      }else
+        throw new EucalyptusActivityException(task.getErrorMessage() != null ?
+            task.getErrorMessage() : "failed to create volume");
+    }catch(Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
+  }
+  
+  public String createVolume(final String userId, final String zone, final int size) throws EucalyptusActivityException {
+    final CreateVolumeTask task = new CreateVolumeTask(zone, size);
+    final CheckedListenableFuture<Boolean> result = task.dispatch(new Ec2Context(userId));
+    try{
+      if(result.get()){
+        return task.getVolumeId();
+      }else
+        throw new EucalyptusActivityException(task.getErrorMessage() != null ?
+            task.getErrorMessage() : "failed to describe volume");
+    }catch(Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
+  }
+  
+  public String createSnapshot(final String userId, final String volumeId) throws EucalyptusActivityException {
+    final ComputeCreateSnapshotTask task = new ComputeCreateSnapshotTask(volumeId);
+    final CheckedListenableFuture<Boolean> result = task.dispatch(new Ec2Context(userId));
+    try{
+      if(result.get()){
+        return task.getSnapshotId();
+      }else
+        throw new EucalyptusActivityException(task.getErrorMessage() != null ?
+            task.getErrorMessage() : "failed to describe volumes");
+    }catch(Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
+  }
+ 
+  public String registerEBSImage(final String userId,
+      final String snapshotId, final String imageName, String architecture,
+      final String platform, final String description,
+      final boolean deleteOnTermination) throws EucalyptusActivityException {
+    if (userId == null || userId.length() <= 0)
+      throw new IllegalArgumentException("User ID is required");
+    if (snapshotId == null || snapshotId.length() <= 0)
+      throw new IllegalArgumentException("Snapshot ID is required");
+    if (imageName == null || imageName.length() <= 0)
+      throw new IllegalArgumentException("Image name is required");
+    if (architecture == null)
+      architecture = "i386";
+
+    final ComputeRegisterEBSImageTask task = new ComputeRegisterEBSImageTask(
+        snapshotId, imageName, architecture);
+    if (platform != null)
+      task.setPlatform(platform);
+    if (description != null)
+      task.setDescription(description);
+    task.setDeleteOnTermination(deleteOnTermination);
+    final CheckedListenableFuture<Boolean> result = task
+        .dispatch(new Ec2Context(userId));
+    try {
+      if (result.get())
+        return task.getImageId();
+      else
+        throw new EucalyptusActivityException(task.getErrorMessage() != null ?
+            task.getErrorMessage() : "failed to register ebs image");
+    } catch (final Exception ex) {
+      throw Exceptions.toUndeclared(ex);
+    }
+  }
+
+  public void deleteVolume(final String userId, final String volumeId) throws EucalyptusActivityException {
+    final DeleteVolumeTask task = new DeleteVolumeTask(volumeId);
+    final CheckedListenableFuture<Boolean> result = task.dispatch(new Ec2Context(userId));
+    try{
+      if(result.get()){
+        return;
+      }else
+        throw new EucalyptusActivityException(task.getErrorMessage() != null ?
+            task.getErrorMessage() : "failed to delete volume");
+    }catch(Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
+  }
+  
+  public List<Volume> describeVolumes(final String userId, final List<String> volumeIds) throws EucalyptusActivityException {
     final DescribeVolumesTask task = new DescribeVolumesTask(volumeIds);
     final CheckedListenableFuture<Boolean> result = task.dispatch(new Ec2Context(userId));
     try{
       if(result.get()){
         return task.getVolumes();
       }else
-        throw new EucalyptusActivityException("failed to describe volumes");
+        throw new EucalyptusActivityException(task.getErrorMessage() != null ?
+            task.getErrorMessage() : "failed to describe volumes");
     }catch(Exception ex){
       throw Exceptions.toUndeclared(ex);
     }
   }
+    public List<SubnetType> describeSubnets(final String userId, final List<String> subnetIds) throws EucalyptusActivityException {
+        final DescribeSubnetsTask task = new DescribeSubnetsTask(subnetIds);
+        final CheckedListenableFuture<Boolean> result = task.dispatch(new Ec2Context(userId));
+        try{
+            if(result.get()){
+                return task.getSubnets();
+            }else
+                throw new EucalyptusActivityException(task.getErrorMessage() != null ?
+                    task.getErrorMessage() : "failed to describe subnets");
+        }catch(Exception ex){
+            throw Exceptions.toUndeclared(ex);
+        }
+    }
+    
+    public List<Snapshot> describeSnapshots(final String userId, final List<String> snapshotIds) throws EucalyptusActivityException {
+      final DescribeSnapshotsTask task = new DescribeSnapshotsTask(snapshotIds);
+      final CheckedListenableFuture<Boolean> result = task.dispatch(new Ec2Context(userId));
+      try{
+          if(result.get()){
+              return task.getSnapshots();
+          }else
+              throw new EucalyptusActivityException(task.getErrorMessage() != null ?
+                  task.getErrorMessage() : "failed to describe snapshots");
+      }catch(Exception ex){
+          throw Exceptions.toUndeclared(ex);
+      }
+  }
+
 }

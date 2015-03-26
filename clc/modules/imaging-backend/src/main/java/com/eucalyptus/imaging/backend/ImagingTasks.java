@@ -19,10 +19,12 @@
  ************************************************************************/
 package com.eucalyptus.imaging.backend;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import com.eucalyptus.resources.client.Ec2Client;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.principal.AccountFullName;
@@ -44,7 +46,6 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.imaging.common.ConvertedImageDetail;
 import com.eucalyptus.imaging.common.ImportDiskImageDetail;
 import com.eucalyptus.imaging.common.backend.msgs.ImportImageType;
-import com.eucalyptus.imaging.common.EucalyptusActivityTasks;
 import com.eucalyptus.imaging.ImagingServiceProperties;
 import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.Exceptions;
@@ -137,8 +138,8 @@ public class ImagingTasks {
     if(launchSpec.getKeyName()!=null && launchSpec.getKeyName().length() > 0){
       try{
         final List<DescribeKeyPairsResponseItemType> keys =
-            EucalyptusActivityTasks.getInstance().describeKeyPairsAsUser(Contexts.lookup().getUser().getUserId(), 
-            Lists.newArrayList(launchSpec.getKeyName()));
+            Ec2Client.getInstance().describeKeyPairs(Contexts.lookup().getUser().getUserId(),
+                    Lists.newArrayList(launchSpec.getKeyName()));
         if(! launchSpec.getKeyName().equals(keys.get(0).getKeyName()))
           throw new Exception();
       }catch(final Exception ex){
@@ -150,9 +151,9 @@ public class ImagingTasks {
     if( Strings.emptyToNull( launchSpec.getSubnetId( ) ) != null ){
       try{
         final List<SubnetType> subnets =
-            EucalyptusActivityTasks.getInstance().describeSubnetsAsUser(
-                Contexts.lookup( ).getUser( ).getUserId( ),
-                Collections.singleton( launchSpec.getSubnetId( ) ));
+            Ec2Client.getInstance().describeSubnets(
+                    Contexts.lookup().getUser().getUserId(),
+                    Lists.newArrayList(launchSpec.getSubnetId()));
         if( subnets.size( ) != 1 ) {
           throw new ImagingServiceException( "Subnet " + launchSpec.getSubnetId() + " not found" );
         }

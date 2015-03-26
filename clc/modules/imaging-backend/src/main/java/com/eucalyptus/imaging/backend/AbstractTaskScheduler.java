@@ -24,6 +24,7 @@ import java.security.PublicKey;
 import java.security.cert.X509Certificate;
 import java.util.List;
 
+import com.eucalyptus.resources.client.EuareClient;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.euare.ServerCertificateType;
@@ -38,7 +39,6 @@ import com.eucalyptus.imaging.common.ImageManifest;
 import com.eucalyptus.imaging.common.ImportDiskImageDetail;
 import com.eucalyptus.imaging.common.InstanceStoreTask;
 import com.eucalyptus.imaging.common.VolumeTask;
-import com.eucalyptus.imaging.common.EucalyptusActivityTasks;
 import com.eucalyptus.imaging.manifest.BundleImageManifest;
 import com.eucalyptus.imaging.manifest.DownloadManifestFactory;
 import com.eucalyptus.imaging.manifest.ImageManifestFile;
@@ -103,7 +103,7 @@ public abstract class AbstractTaskScheduler {
   private void loadImagingServiceKey() throws Exception{
     try{
       final ServerCertificateType cert = 
-          EucalyptusActivityTasks.getInstance().getServerCertificate(ImagingServiceLaunchers.SERVER_CERTIFICATE_NAME);
+          EuareClient.getInstance().getServerCertificate(null, ImagingServiceLaunchers.SERVER_CERTIFICATE_NAME);
       final String certBody = cert.getCertificateBody();
       final X509Certificate x509 = PEMFiles.toCertificate(B64.url.encString(certBody));
       this.imagingServiceKey = x509.getPublicKey();

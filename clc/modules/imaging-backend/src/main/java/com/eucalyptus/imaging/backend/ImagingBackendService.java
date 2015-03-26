@@ -89,14 +89,6 @@ public class ImagingBackendService {
       throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to import image." );
     }
     
-    try{
-      if(ImagingServiceLaunchers.getInstance().shouldEnable())
-        ImagingServiceLaunchers.getInstance().enable();
-    }catch(Exception ex){
-      LOG.error("Failed to enable imaging service workers");
-      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "Could not launch imaging service workers");
-    }
-    
     DiskImagingTask task = null;
     try{
       task = ImagingTasks.createDiskImagingTask(request);

@@ -19,43 +19,10 @@
  ************************************************************************/
 package com.eucalyptus.resources.client;
 
+import java.util.ArrayList;
 import java.util.List;
 
-import com.eucalyptus.auth.euare.AddRoleToInstanceProfileResponseType;
-import com.eucalyptus.auth.euare.AddRoleToInstanceProfileType;
-import com.eucalyptus.auth.euare.CreateInstanceProfileResponseType;
-import com.eucalyptus.auth.euare.CreateInstanceProfileType;
-import com.eucalyptus.auth.euare.CreateRoleResponseType;
-import com.eucalyptus.auth.euare.CreateRoleType;
-import com.eucalyptus.auth.euare.DeleteInstanceProfileResponseType;
-import com.eucalyptus.auth.euare.DeleteInstanceProfileType;
-import com.eucalyptus.auth.euare.DeleteRolePolicyResponseType;
-import com.eucalyptus.auth.euare.DeleteRolePolicyType;
-import com.eucalyptus.auth.euare.DeleteRoleResponseType;
-import com.eucalyptus.auth.euare.DeleteRoleType;
-import com.eucalyptus.auth.euare.DeleteServerCertificateResponseType;
-import com.eucalyptus.auth.euare.DeleteServerCertificateType;
-import com.eucalyptus.auth.euare.EuareMessage;
-import com.eucalyptus.auth.euare.GetRolePolicyResponseType;
-import com.eucalyptus.auth.euare.GetRolePolicyResult;
-import com.eucalyptus.auth.euare.GetRolePolicyType;
-import com.eucalyptus.auth.euare.GetServerCertificateResponseType;
-import com.eucalyptus.auth.euare.GetServerCertificateType;
-import com.eucalyptus.auth.euare.InstanceProfileType;
-import com.eucalyptus.auth.euare.ListInstanceProfilesResponseType;
-import com.eucalyptus.auth.euare.ListInstanceProfilesType;
-import com.eucalyptus.auth.euare.ListRolePoliciesResponseType;
-import com.eucalyptus.auth.euare.ListRolePoliciesType;
-import com.eucalyptus.auth.euare.ListRolesResponseType;
-import com.eucalyptus.auth.euare.ListRolesType;
-import com.eucalyptus.auth.euare.PutRolePolicyResponseType;
-import com.eucalyptus.auth.euare.PutRolePolicyType;
-import com.eucalyptus.auth.euare.RemoveRoleFromInstanceProfileResponseType;
-import com.eucalyptus.auth.euare.RemoveRoleFromInstanceProfileType;
-import com.eucalyptus.auth.euare.RoleType;
-import com.eucalyptus.auth.euare.ServerCertificateType;
-import com.eucalyptus.auth.euare.UploadServerCertificateResponseType;
-import com.eucalyptus.auth.euare.UploadServerCertificateType;
+import com.eucalyptus.auth.euare.*;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.resources.EucalyptusActivityException;
 import com.eucalyptus.util.DispatchingClient;
@@ -63,12 +30,14 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Callback.Checked;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.google.common.collect.Lists;
+import org.apache.log4j.Logger;
 
 /**
  * @author Sang-Min Park
  *
  */
 public class EuareClient {
+    private static Logger LOG = Logger.getLogger(EuareClient.class);
   private static EuareClient _instance = null;
   private EuareClient(){ }
   public static EuareClient getInstance(){
@@ -562,6 +531,7 @@ public class EuareClient {
     private String certPem = null;
     private String pkPem = null;
     private String certChain = null;
+    private ServerCertificateMetadataType serverCertificateMetadata = null;
     
     private UploadServerCertificateTask(final String certName, final String certPath,
         final String certPem, final String pkPem, final String certChain ){
@@ -595,6 +565,11 @@ public class EuareClient {
     void dispatchSuccess(ClientContext<EuareMessage, Euare> context,
         EuareMessage response) {
       final UploadServerCertificateResponseType resp = (UploadServerCertificateResponseType) response;
+      serverCertificateMetadata = resp.getUploadServerCertificateResult().getServerCertificateMetadata();
+    }
+
+    public ServerCertificateMetadataType getCertificateMetadata() {
+      return serverCertificateMetadata;
     }
   }
   
@@ -623,6 +598,56 @@ public class EuareClient {
       final DeleteServerCertificateResponseType resp = new DeleteServerCertificateResponseType();
     }
   }
+
+    //TODO: need formatting
+    private class DescribeServerCertificateTask extends EucalyptusClientTask<EuareMessage, Euare> {
+        private String certName = null;
+        private String path = null;
+        private ServerCertificateMetadataType result = null;
+
+        private DescribeServerCertificateTask(final String certName, final String path) {
+            if (certName == null || certName.isEmpty())
+                throw new IllegalArgumentException("Cert name can't be null or empty");
+            this.certName = certName;
+            this.path = path;
+        }
+
+        private ListServerCertificatesType deleteServerCertificate() {
+            final ListServerCertificatesType req = new ListServerCertificatesType();
+            if (path != null)
+                req.setPathPrefix(path);
+            return req;
+        }
+
+        @Override
+        void dispatchInternal(ClientContext<EuareMessage, Euare> context,
+                              Checked<EuareMessage> callback) {
+            final DispatchingClient<EuareMessage, Euare> client = context.getClient();
+            client.dispatch(deleteServerCertificate(), callback);
+        }
+
+        @Override
+        void dispatchSuccess(ClientContext<EuareMessage, Euare> context,
+                             EuareMessage response) {
+            final ListServerCertificatesResponseType resp = (ListServerCertificatesResponseType) response;
+            if (resp != null && resp.getListServerCertificatesResult() != null) {
+                ArrayList<ServerCertificateMetadataType> results =
+                        resp.getListServerCertificatesResult().getServerCertificateMetadataList().getMemberList();
+                for(ServerCertificateMetadataType cert:results) {
+                    if (cert.getServerCertificateName().equals(certName)) {
+                        result = cert;
+                        break;
+                    }
+                }
+            } else {
+                LOG.debug("Can't get response from ListServerCertificates request");
+            }
+        }
+
+        public ServerCertificateMetadataType getResult() {
+            return result;
+        }
+    }
 
 
   public List<RoleType> listRoles(final String userId, final String pathPrefix) {
@@ -830,14 +855,14 @@ public class EuareClient {
     }
   }
   
-  public void uploadServerCertificate(final String userId, final String certName, final String certPath, final String certBodyPem,
+  public ServerCertificateMetadataType uploadServerCertificate(final String userId, final String certName, final String certPath, final String certBodyPem,
       final String pkPem, final String certChainPem){
     final UploadServerCertificateTask task = 
         new UploadServerCertificateTask(certName, certPath, certBodyPem, pkPem, certChainPem );
     final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareContext(userId));
     try{
       if(result.get()){
-        return;
+        return task.getCertificateMetadata();
       }else
         throw new EucalyptusActivityException("failed to upload server certificate");
     }catch(Exception ex){
@@ -856,6 +881,20 @@ public class EuareClient {
         throw new EucalyptusActivityException("failed to delete server certificate");
     }catch(Exception ex){
       throw Exceptions.toUndeclared(ex);
+    }
+  }
+
+  public ServerCertificateMetadataType describeServerCertificate(final String userId, final String certName, final String path){
+    final DescribeServerCertificateTask task =
+            new DescribeServerCertificateTask(certName, path);
+    final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareContext(userId));
+    try{
+        if(result.get()){
+            return task.getResult();
+        }else
+            throw new EucalyptusActivityException("failed to delete server certificate");
+    }catch(Exception ex){
+        throw Exceptions.toUndeclared(ex);
     }
   }
 }

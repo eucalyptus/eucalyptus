@@ -112,8 +112,10 @@ import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.images.Emis.LookupMachine;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.Images;
+import com.eucalyptus.imaging.common.ImagingBackend;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
+import com.eucalyptus.resources.client.EucalyptusClient;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.vm.VmInstances;
@@ -257,9 +259,13 @@ public class VerifyMetadata {
                 " size " + vmType.getDisk( ) + " GB." );
           }
           final MachineImageInfo emi = LookupMachine.INSTANCE.apply(imageId);
-          if(ImageMetadata.State.pending_available.equals(emi.getState()) && !verifyImagerCapacity(emi)) {
-            throw new MetadataException("Partition image of this size cannot be deployed without an adequately provisioned Imaging Worker."
-                                        + " Please contact your cloud administrator.");
+          if(ImageMetadata.State.pending_available.equals(emi.getState())) {
+            if ( !Topology.isEnabled( ImagingBackend.class) )
+              throw new MetadataException("Partition image cannot be deployed without an adequately "
+                  + "provisioned Imaging Worker. Please contact your cloud administrator.");
+            if ( !verifyImagerCapacity(emi) )
+              throw new MetadataException("Partition image of this size cannot be deployed without an adequately "
+                  + "provisioned Imaging Worker. Please contact your cloud administrator.");
           }
         }
       } catch ( VerificationException e ) {
@@ -286,7 +292,7 @@ public class VerifyMetadata {
         throw new MetadataException("Partition image cannot be deployed without an enabled Imaging Service."
             + " Please contact your cloud administrator.");
       
-      List<VmTypeDetails> allTypes = com.eucalyptus.imaging.common.EucalyptusActivityTasks.getInstance().describeVMTypes();
+      List<VmTypeDetails> allTypes = EucalyptusClient.getInstance().describeVMTypes();
       long diskSizeBytes = 0;
       for(VmTypeDetails type:allTypes){
         if (type.getName().equalsIgnoreCase(workerType)){
