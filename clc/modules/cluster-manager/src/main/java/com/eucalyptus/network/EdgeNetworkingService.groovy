@@ -174,6 +174,7 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
       if ( Iterators.contains( addresses.iterator( ), PrivateAddresses.asInteger( privateIPResource.value ) ) ) {
         try {
           resource = new PrivateIPResource(
+              mac: mac( privateIPResource.ownerId  ),
               value: PrivateAddresses.allocate(
                   vpcId,
                   subnetId,
@@ -182,6 +183,7 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
         } catch ( NotEnoughResourcesException e ) {
           if ( PrivateAddresses.verify( vpcId, privateIPResource.value, privateIPResource.ownerId ) ) {
             resource = new PrivateIPResource(
+                mac: mac( privateIPResource.ownerId  ),
                 value: privateIPResource.value,
                 ownerId: privateIPResource.ownerId )
           } else {
@@ -196,6 +198,7 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
       }
     } else {
       resource = new PrivateIPResource(
+          mac: mac( privateIPResource.ownerId  ),
           value: PrivateAddresses.allocate( vpcId, subnetId, addresses ),
           ownerId: privateIPResource.ownerId )
     }

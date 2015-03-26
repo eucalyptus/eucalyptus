@@ -2158,7 +2158,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         VmInstance.this.setServiceTag( runVm.getServiceTag( ) );
         VmInstance.this.getRuntimeState( ).setGuestState(runVm.getGuestStateName());
         if ( !Boolean.TRUE.equals( VmInstance.this.getRuntimeState( ).getZombie( ) ) ) {
-          VmInstance.this.updateMacAddress( runVm.getNetParams( ).getMacAddress( ) );
           if ( VmStateSet.RUN.apply( VmInstance.this ) ) {
             if ( !InstanceStatus.Ok.apply( VmInstance.this ) ) {
               VmInstance.this.getRuntimeState().reachable( );

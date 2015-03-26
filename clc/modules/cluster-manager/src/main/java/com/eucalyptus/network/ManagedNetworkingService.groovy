@@ -216,6 +216,7 @@ class ManagedNetworkingService extends NetworkingServiceSupport {
                   exNet.reclaimNetworkIndex( restoreNetworkIndex );
                 }
                 resources.add( new PrivateNetworkIndexResource(
+                    mac: mac( privateNetworkIndexResource.ownerId ),
                     privateIp: privateIp( restoreVlan, restoreNetworkIndex ),
                     tag: restoreVlan,
                     value: String.valueOf( restoreNetworkIndex ),
@@ -229,6 +230,7 @@ class ManagedNetworkingService extends NetworkingServiceSupport {
             if ( identifiers.add( privateIPResource.ownerId ) ) {
               final Long index = networkGroup.extantNetwork( ).allocateNetworkIndex( ).index;
               resources.add( new PrivateNetworkIndexResource(
+                  mac: mac( privateIPResource.ownerId ),
                   privateIp: privateIp( networkGroup.extantNetwork( ).tag, index ),
                   tag: networkGroup.extantNetwork( ).tag,
                   value: String.valueOf( index ),
