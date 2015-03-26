@@ -271,22 +271,48 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 		LoadBalancerServoInstanceCoreView(final LoadBalancerServoInstance servo){
 			this.entity = servo;
 		}
-		
+
 		public String getInstanceId(){
 			return this.entity.getInstanceId();
-		}   
-		
-	    public STATE getState(){
-	    	return this.entity.getState();
-	    }
-		    
-	    public String getAddress(){
-		 	return this.entity. getAddress();
-		}   
-		   
-	    public String getPrivateIp(){
-	    	return this.entity.getPrivateIp();
-	    }
+		}
+
+		public STATE getState(){
+				return this.entity.getState();
+			}
+
+		public String getAddress(){
+			return this.entity. getAddress();
+		}
+
+		public String getPrivateIp(){
+				return this.entity.getPrivateIp();
+			}
+
+		public static Function<LoadBalancerServoInstanceCoreView,String> address( ) {
+			return StringFunctions.ADDRESS;
+		}
+
+		public static Function<LoadBalancerServoInstanceCoreView,String> privateIp( ) {
+			return StringFunctions.PRIVATE_IP;
+		}
+
+		private enum StringFunctions implements Function<LoadBalancerServoInstanceCoreView,String>{
+			ADDRESS {
+				@Nullable
+				@Override
+				public String apply( @Nullable final LoadBalancerServoInstanceCoreView loadBalancerServoInstanceCoreView ) {
+					return loadBalancerServoInstanceCoreView.getAddress( );
+				}
+			},
+			PRIVATE_IP {
+				@Nullable
+				@Override
+				public String apply( @Nullable final LoadBalancerServoInstanceCoreView loadBalancerServoInstanceCoreView ) {
+					return loadBalancerServoInstanceCoreView.getPrivateIp( );
+				}
+			},
+			;
+		}
 	}
 
 	@TypeMapper

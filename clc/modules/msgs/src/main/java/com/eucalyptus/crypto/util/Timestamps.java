@@ -200,10 +200,14 @@ public class Timestamps {
     final List<String> patterns = Lists.newArrayList(
       "yyyy-MM-dd'T'HH:mm:ss",
       "yyyy-MM-dd'T'HH:mm:ssZ",
+      "yyyy-MM-dd'T'HH:mm:ssX",
+      "yyyy-MM-dd'T'HH:mm:ssXXX",
       "yyyy-MM-dd'T'HH:mm:ss.SSSZ",
+      "yyyy-MM-dd'T'HH:mm:ss.SSSX",
+      "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
       "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'Z",
       "yyyy-MM-dd'T'HH:mm:ss'Z'",
-      "yyyy-MM-dd'T'HH:mm:ss'Z'Z" 
+      "yyyy-MM-dd'T'HH:mm:ss'Z'Z"
     );
 
     // Generate seed patterns with various sub-second precisions
@@ -256,7 +260,9 @@ public class Timestamps {
       representativeInput = representativeInput.replace( "'T'", "T" );
       representativeInput = representativeInput.replace( "'Z'", "U" );
       representativeInput = representativeInput.replace( "Z", "-0000" );
-      return new PatternHolder( pattern, representativeInput.length() );  
+      representativeInput = representativeInput.replace( "XXX", "-00:00" );
+      representativeInput = representativeInput.replace( "X", "-00" );
+      return new PatternHolder( pattern, representativeInput.length() );
     }
     
     private Date parse( final String timestamp, final ParsePosition position ) {

@@ -66,22 +66,14 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.configurable.PropertyDirectory;
-import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.B64;
-import com.eucalyptus.crypto.util.PEMFiles;
-import com.eucalyptus.database.activities.EventHandlerChainCreateDbInstance.UploadServerCertificate;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
-import com.eucalyptus.resources.AbstractEventHandler;
-import com.eucalyptus.resources.EventHandlerChain;
-import com.eucalyptus.resources.EventHandlerException;
-import com.eucalyptus.resources.StoredResult;
 import com.eucalyptus.resources.client.AutoScalingClient;
 import com.eucalyptus.resources.client.Ec2Client;
-import com.eucalyptus.resources.client.EuareClient;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.DNSProperties;
@@ -230,7 +222,7 @@ public class DatabaseServerProperties {
    private static final int DB_PORT = 5432;
    
    public static String getCredentialsString() {
-     final String credStr = String.format("euca-%s:%s;",
+     final String credStr = String.format("euca-%s:%s",
          B64.standard.encString("setup-credential"), EXPIRATION_DAYS);
      return credStr;
    }
@@ -367,7 +359,7 @@ public class DatabaseServerProperties {
           onPropertyChange(null, null, null, null, null, newValue, null, null);
       } catch (final Exception e) {
         throw new ConfigurablePropertyException(
-         "Could not change log server to " + newValue, e);
+         "Could not change log server to " + newValue + " due to: " + e.getMessage());
       }
     }
   }
@@ -384,21 +376,19 @@ public class DatabaseServerProperties {
          throw new ConfigurablePropertyException("Invalid number");
       } catch (final Exception e) {
          throw new ConfigurablePropertyException(
-             "Could not change log server port to " + newValue, e);
+             "Could not change log server port to " + newValue + " due to: " + e.getMessage());
       }
     }
   }
 
-   public static class EmiChangeListener implements PropertyChangeListener {
+   public static class EmiChangeListener implements PropertyChangeListener<String> {
      @Override
-     public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+     public void fireChange( ConfigurableProperty t, String newValue ) throws ConfigurablePropertyException {
        try {
-         if ( newValue instanceof String  ) {
-           if(t.getValue()!=null && ! t.getValue().equals(newValue) && ((String)newValue).length()>0)
-             onPropertyChange((String)newValue, null, null, null, null, null, null, null);
-         }
+         if(t.getValue()!=null && ! t.getValue().equals(newValue) && newValue.length()>0)
+             onPropertyChange(newValue, null, null, null, null, null, null, null);
        } catch ( final Exception e ) {
-         throw new ConfigurablePropertyException("Could not change EMI ID", e);
+         throw new ConfigurablePropertyException("Could not change EMI ID due to: " + e.getMessage());
        }
      }
    }
@@ -413,7 +403,7 @@ public class DatabaseServerProperties {
             onPropertyChange(null, (String)newValue, null, null, null, null, null, null);
         }
       } catch ( final Exception e ) {
-        throw new ConfigurablePropertyException("Could not change VOLUME ID", e);
+        throw new ConfigurablePropertyException("Could not change VOLUME ID due to: " + e.getMessage());
       }
     }
    }
@@ -429,7 +419,7 @@ public class DatabaseServerProperties {
              onPropertyChange(null, null, (String)newValue, null, null, null, null, null);
          }
        } catch ( final Exception e ) {
-         throw new ConfigurablePropertyException("Could not change instance type", e);
+         throw new ConfigurablePropertyException("Could not change instance type due to: " + e.getMessage());
        }
      }
    }
@@ -443,7 +433,7 @@ public class DatabaseServerProperties {
              onPropertyChange(null, null, null, (String)newValue, null, null, null, null);
          }
        } catch ( final Exception e ) {
-         throw new ConfigurablePropertyException("Could not change key name", e);
+         throw new ConfigurablePropertyException("Could not change key name due to: " + e.getMessage());
        }
      }
    }
@@ -547,7 +537,7 @@ public class DatabaseServerProperties {
          if (t.getValue() != null && !t.getValue().equals(newValue))
            onPropertyChange(null, null, null, null, null, null, null, newValue);
        } catch (final Exception e) {
-         throw new ConfigurablePropertyException("Could not change init script", e);
+         throw new ConfigurablePropertyException("Could not change init script due to: " + e.getMessage());
        }
      }
    }
@@ -612,6 +602,9 @@ public class DatabaseServerProperties {
        ; // already sanitized
      }
      
+     if( !Topology.isEnabledLocally( Eucalyptus.class) )
+       return;
+
      // should find the asg name using the special TAG
      // then create a new launch config and replace the old one
      if((emi!=null && emi.length()>0) || (instanceType!=null && instanceType.length()>0) 
@@ -619,7 +612,7 @@ public class DatabaseServerProperties {
          || (logServer!=null && logServer.length()>0) || (logServerPort!=null && logServerPort.length()>0)
          | initScript!=null ) {
        String asgName = null;
-       LOG.warn("Changing launch configuration");//TODO: remove
+       LOG.info("Changing launch configuration for internal-db ASG");
        try{
         final List<TagDescription> tags = AutoScalingClient.getInstance().describeAutoScalingTags(null); 
         for(final TagDescription tag : tags){
@@ -664,24 +657,35 @@ public class DatabaseServerProperties {
            final String newEmi = emi != null? emi : lc.getImageId();
            final String newType = instanceType != null? instanceType : lc.getInstanceType();
            String newKeyname = keyname != null ? keyname : lc.getKeyName();
-           
+
            if (lc.getUserData() == null || lc.getUserData().length() < 0)
              throw new EucalyptusCloudException("ASG group for internal-db has invalid user data");
-           String newUserdata = new String(Base64.decode(lc.getUserData().getBytes()));
+
+           String oldUserdata = null;
+           try {
+             oldUserdata = new String(Base64.decode(lc.getUserData().getBytes()));
+           } catch (Exception ex) {
+             throw new EucalyptusCloudException("Can't decode user data for internal-db");
+           }
            String encryptedPasword = null;
            String serverCertArn = null;
-           int start = newUserdata.indexOf(CONFIG_COMMMENT);
+           int start = oldUserdata.indexOf(CONFIG_COMMMENT);
            if (start < 0) {
              throw new EucalyptusCloudException("ASG group for internal-db has invalid user data");
            } else {
-             int i = newUserdata.indexOf(PASSWORD_PROPERTY, start);
-             int j = newUserdata.indexOf("\n", i);
-             encryptedPasword = newUserdata.substring(i + PASSWORD_PROPERTY.length() + 1, j);
-             i = newUserdata.indexOf(CERT_PROPERTY, start);
-             j = newUserdata.indexOf("\n", i);
-             serverCertArn = newUserdata.substring(i + CERT_PROPERTY.length() + 1, j);
+             int i = oldUserdata.indexOf(PASSWORD_PROPERTY, start);
+             int j = oldUserdata.indexOf("\n", i);
+             encryptedPasword = oldUserdata.substring(i + PASSWORD_PROPERTY.length() + 1, j);
+             i = oldUserdata.indexOf(CERT_PROPERTY, start);
+             j = oldUserdata.indexOf("\n", i);
+             serverCertArn = oldUserdata.substring(i + CERT_PROPERTY.length() + 1, j);
            }
+           String newUserdata = null;
            
+           if(emi != null) {
+             newUserdata = lc.getUserData(); //re-use old user-data
+           }
+
            if(volumeId != null) {
              newUserdata = B64.standard.encString(String.format("%s\n%s",
                  getCredentialsString(),
@@ -729,6 +733,9 @@ public class DatabaseServerProperties {
                      serverCertArn)));
            }
            
+           if (newUserdata == null)
+             throw new EucalyptusCloudException("Failed to create user-data");
+
            try{
              AutoScalingClient.getInstance().createLaunchConfiguration(null, newEmi, newType, lc.getIamInstanceProfile(), 
                  tmpLaunchConfigName, lc.getSecurityGroups().getMember().get(0), newKeyname, newUserdata);
@@ -736,6 +743,7 @@ public class DatabaseServerProperties {
              LOG.warn("Failed to create temporary launch config", ex);
              throw new EucalyptusCloudException("failed to create temporary launch config", ex);
            }
+
            try{
              AutoScalingClient.getInstance().updateAutoScalingGroup(null, asgName, null,
                  asgType.getDesiredCapacity(), tmpLaunchConfigName);
@@ -743,6 +751,7 @@ public class DatabaseServerProperties {
              LOG.warn("Failed to update the autoscaling group", ex);
              throw new EucalyptusCloudException("failed to update the autoscaling group", ex);
            }
+
            try{
              AutoScalingClient.getInstance().deleteLaunchConfiguration(null, 
                  asgType.getLaunchConfigurationName());
@@ -756,7 +765,7 @@ public class DatabaseServerProperties {
            }catch(final Exception ex){
              throw new EucalyptusCloudException("unable to create the new launch config", ex);
            }
-           
+
            try{
              AutoScalingClient.getInstance().updateAutoScalingGroup(null, asgName, null,
                  asgType.getDesiredCapacity(), asgType.getLaunchConfigurationName());
@@ -769,12 +778,11 @@ public class DatabaseServerProperties {
            }catch(final Exception ex){
              LOG.warn("unable to delete the temporary launch configuration", ex);
            }
-
            // copy all tags from new image to ASG
            if (emi != null) {
              try {
                final List<ImageDetails> images =
-                   Ec2Client.getInstance().describeImages(emi, Lists.newArrayList(emi));
+                   Ec2Client.getInstance().describeImages(null, Lists.newArrayList(emi));
                // image should exist at this point
                for(ResourceTag tag:images.get(0).getTagSet())
                  AutoScalingClient.getInstance().createOrUpdateAutoscalingTags(null, tag.getKey(), tag.getValue(), asgName);

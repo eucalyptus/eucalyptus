@@ -63,6 +63,8 @@
 package com.eucalyptus.vm;
 
 import static com.eucalyptus.cloud.run.VerifyMetadata.ImageInstanceTypeVerificationException;
+import static com.eucalyptus.util.Strings.substringAfter;
+import static com.eucalyptus.util.Strings.substringBefore;
 
 import java.security.MessageDigest;
 import java.util.ArrayList;
@@ -1099,7 +1101,7 @@ public class VmControl {
           reply.setSriovNetSupport( false );
           break;
         case "userData":
-          reply.setUserData( vm.getUserData( ) == null ? null : Base64.toBase64String( vm.getUserData( ) ) );
+          reply.setUserData( vm.getUserData( ) == null ? "" : Base64.toBase64String( vm.getUserData( ) ) );
           break;
         default:
           throw new ClientComputeException( " InvalidParameterValue", "Invalid value for attribute ("+attribute+")" );
@@ -1280,19 +1282,11 @@ public class VmControl {
       throw new EucalyptusCloudException( "Instance " + instanceId + " is not in a running state." );
     }
 
-    if ( !ImageMetadata.Platform.windows.name().equals(v.getPlatform())) {
-      throw new ClientComputeException("OperationNotPermitted", "Instance's platform is not Windows");
-    }
-    
-    if( Strings.isNullOrEmpty( v.getKeyPair( ).getPublicKey( ) ) ){
-      throw new ClientComputeException("OperationNotPermitted", "Keypair is not found for the instance");
-    }
-
-    if ( v.getPasswordData( ) == null ) {
+    if ( v.getPasswordData( ) == null && !Strings.isNullOrEmpty( v.getKeyPair( ).getPublicKey( ) ) ) {
       try {
         final GetConsoleOutputResponseType consoleOutput = getConsoleOutput( new GetConsoleOutputType( instanceId ) );
         final String tempCo = B64.standard.decString( String.valueOf( consoleOutput.getOutput( ) ) ).replaceAll( "[\r\n]*", "" );
-        final String passwordData = tempCo.replaceAll( ".*<Password>", "" ).replaceAll( "</Password>.*", "" );
+        final String passwordData = substringBefore( "</Password>", substringAfter( "<Password>", tempCo ) );
         if ( tempCo.matches( ".*<Password>[\\w=+/]*</Password>.*" ) ) {
           Entities.asTransaction( VmInstance.class, new Predicate<String>() {
             @Override
@@ -1311,7 +1305,7 @@ public class VmControl {
 
     final GetPasswordDataResponseType reply = request.getReply();
     reply.set_return( true );
-    reply.setOutput( v.getPasswordData( ) );
+    reply.setOutput( Strings.nullToEmpty( v.getPasswordData( ) ) );
     reply.setTimestamp( new Date() );
     reply.setInstanceId( v.getInstanceId() );
     return reply;

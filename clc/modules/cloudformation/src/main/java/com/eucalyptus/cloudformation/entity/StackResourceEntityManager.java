@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,23 +21,21 @@ package com.eucalyptus.cloudformation.entity;
 
 import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.InternalFailureException;
-import com.eucalyptus.cloudformation.StackResource;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceInfoHelper;
 import com.eucalyptus.cloudformation.resources.ResourceResolverManager;
-import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Lists;
 import org.hibernate.Criteria;
+import org.hibernate.criterion.DetachedCriteria;
+import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
+import org.hibernate.criterion.Subqueries;
 
-import java.util.Collection;
 import java.util.List;
+import javax.annotation.Nullable;
 
 /**
  * Created by ethomas on 12/19/13.
@@ -232,36 +230,56 @@ public class StackResourceEntityManager {
     return matchingStackResourceEntity;
   }
 
-  public static List<StackResourceEntity> describeStackResources(String accountId, String stackNameOrId, String physicalResourceId, String logicalResourceId) {
-    List<StackResourceEntity> returnValue = null;
-    String stackId = null;
-    try ( TransactionResource db =
-            Entities.transactionFor( StackResourceEntity.class ) ) {
+  public static List<StackResourceEntity> describeStackResources( String accountId, String stackNameOrId ) {
+    return describeStackResources(accountId, stackNameOrId, null, null);
+  }
+
+  public static List<StackResourceEntity> describeStackResources(
+      @Nullable final String accountId,
+      @Nullable final String stackNameOrId,
+      @Nullable final String physicalResourceId,
+      @Nullable final String logicalResourceId
+  ) {
+    if ( stackNameOrId == null && physicalResourceId == null ) {
+      throw new IllegalArgumentException( "stackNameOrId or physicalResourceId required" );
+    }
+    try ( final TransactionResource db = Entities.transactionFor( StackResourceEntity.class ) ) {
       // There is some weirdness in this request.  The stack name represents either the stack name of the
       // non-deleted stack or the stack id of the deleted or non-deleted stack.
-      Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
-        .add( accountId != null ? Restrictions.eq("accountId", accountId) : Restrictions.conjunction( ) );
-      if (stackNameOrId != null) {
+      final Criteria criteria = Entities.createCriteria( StackResourceEntity.class ).add( accountId != null ?
+          Restrictions.eq("accountId", accountId) :
+          Restrictions.conjunction( ) );
+
+      if ( stackNameOrId != null ) { // stack explicitly specified
         criteria.add(Restrictions.or(
-          Restrictions.and(Restrictions.eq("recordDeleted", Boolean.FALSE), Restrictions.eq("stackName", stackNameOrId)),
-          Restrictions.eq("stackId", stackNameOrId))
+                Restrictions.and( Restrictions.eq( "recordDeleted", Boolean.FALSE ), Restrictions.eq( "stackName", stackNameOrId ) ),
+                Restrictions.eq( "stackId", stackNameOrId ) )
         );
       }
-      if (logicalResourceId != null) {
-        criteria.add(Restrictions.eq("logicalResourceId", logicalResourceId));
+
+      if ( physicalResourceId != null ) { // stack specified via physical resource identifier
+        criteria.add( Subqueries.propertyIn(
+            "stackId",
+            DetachedCriteria.forClass( StackResourceEntity.class, "subres" )
+                .add( Restrictions.eq( "subres.physicalResourceId", physicalResourceId ) )
+                .add( Restrictions.eq( "subres.recordDeleted", Boolean.FALSE ) )
+                .setProjection( Projections.property( "subres.stackId" ) )
+        ) );
       }
-      if (physicalResourceId != null) {
-        criteria.add(Restrictions.eq("physicalResourceId", logicalResourceId));
+
+      if ( logicalResourceId != null ) { // filter results for a specific logical resource
+        criteria.add( Restrictions.eq( "logicalResourceId", logicalResourceId ) );
       }
+
       criteria.add(Restrictions.ne("resourceStatus", StackResourceEntity.Status.NOT_STARTED)); // placeholder, AWS doesn't return these
-      returnValue = criteria.list();
-      db.commit( );
+
+      //noinspection unchecked
+      return (List<StackResourceEntity>) criteria.list( );
     }
-    return returnValue;
   }
 
   public static List<StackResourceEntity> listStackResources(String accountId, String stackNameOrId) {
-    return describeStackResources(accountId, stackNameOrId, null, null);
+    return describeStackResources(accountId, stackNameOrId);
   }
 
 }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -70,18 +70,13 @@ import java.util.List;
 import org.xbill.DNS.ARecord;
 import org.xbill.DNS.CNAMERecord;
 import org.xbill.DNS.DClass;
-import org.xbill.DNS.NSRecord;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.PTRRecord;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.ReverseMap;
 import org.xbill.DNS.SOARecord;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
-import com.google.common.collect.Lists;
 import com.google.common.net.InetAddresses;
 
 /**
@@ -150,9 +145,13 @@ public class DomainNameRecords {
   }
   
   public static Record addressRecord( Name name, InetAddress ip ) {
-    return new ARecord( name, DClass.IN, TTL, ip );
+    return addressRecord( name, ip, TTL );
   }
-  
+
+  public static Record addressRecord( Name name, InetAddress ip, long ttl ) {
+    return new ARecord( name, DClass.IN, ttl, ip );
+  }
+
   static long serial( ) {
     return Long.parseLong( DomainNameRecords.SERIALFORMATTER.format( new Date( ) ) );
   }

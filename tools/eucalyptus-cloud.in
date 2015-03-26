@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2009-2014 Eucalyptus Systems, Inc.
+# Copyright 2009-2015 Eucalyptus Systems, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -62,18 +62,6 @@
 #
 # chkconfig: - 99 05
 # description: eucalyptus java ws services
-#
-### BEGIN INIT INFO
-# Provides:                   eucalyptus
-# Required-Start:             $remote_fs $syslog
-# Should-Start:               START
-# Required-Stop:              $remote_fs $syslog
-# Default-Start:              2 3 4 5
-# Default-Stop:	              0 1 6
-# Short-Description:          Eucalyptus java web services
-# Description:                Eucalyptus java web services
-# X-UnitedLinux-Default-Enabled: yes
-### END INIT INFO
 #
 
 # Do NOT "set -e"

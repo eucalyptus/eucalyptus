@@ -2,7 +2,7 @@
 #
 # Init script for the Eucalyptus node controller
 #
-# Copyright 2009-2013 Eucalyptus Systems, Inc.
+# Copyright 2009-2015 Eucalyptus Systems, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -64,17 +64,6 @@
 #
 # chkconfig: - 99 05
 # description: eucalyptus node controller
-#
-### BEGIN INIT INFO
-# Provides:                   eucalyptus-nc
-# Required-Start:             $remote_fs $syslog libvirtd
-# Required-Stop:              $remote_fs $syslog
-# Default-Start:              2 3 4 5
-# Default-Stop:               0 1 6
-# Short-Description:          Eucalyptus node controller
-# Description:                Eucalyptus node controller
-### END INIT INFO
-#
 
 # Do NOT "set -e"
 
