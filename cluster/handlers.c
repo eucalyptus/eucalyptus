@@ -3535,6 +3535,7 @@ static int schedule_instance_migration(ncInstance * instance, char **includeNode
 
     if (includeNodes && excludeNodes) {
         LOGERROR("[%s] migration scheduler cannot be called with both nodes to include and nodes to exclude; the options are mutually exclusive.\n", instance->instanceId);
+        *replyString = strdup("migration scheduler cannot be called with both nodes to include and nodes to exclude");
         ret = 1;
         goto out;
     }
@@ -3617,7 +3618,6 @@ static int schedule_instance_migration(ncInstance * instance, char **includeNode
 out:
     if (ret) {
         LOGERROR("[%s] migration scheduler could not schedule destination node\n", instance->instanceId);
-        *replyString = strdup("not enough resources available for migration");
         *outresid = -1;
     }
 
