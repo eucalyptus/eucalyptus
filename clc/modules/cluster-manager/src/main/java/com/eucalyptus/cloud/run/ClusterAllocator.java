@@ -88,6 +88,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
 import com.eucalyptus.compute.common.backend.RunInstancesType;
 import com.eucalyptus.compute.common.backend.StartInstancesType;
+import com.google.common.base.Objects;
 import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -103,10 +104,10 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.euare.SignCertificateResponseType;
 import com.eucalyptus.auth.euare.SignCertificateType;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.blockstorage.Snapshot;
-import com.eucalyptus.blockstorage.Snapshots;
+import com.eucalyptus.compute.common.internal.blockstorage.Snapshot;
+import com.eucalyptus.compute.common.internal.blockstorage.Snapshots;
 import com.eucalyptus.blockstorage.Storage;
-import com.eucalyptus.blockstorage.Volume;
+import com.eucalyptus.compute.common.internal.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.blockstorage.msgs.DescribeStorageVolumesResponseType;
 import com.eucalyptus.blockstorage.msgs.DescribeStorageVolumesType;
@@ -118,8 +119,8 @@ import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.VmRunType;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cloud.util.MetadataException;
-import com.eucalyptus.cloud.util.NotEnoughResourcesException;
+import com.eucalyptus.compute.common.internal.util.MetadataException;
+import com.eucalyptus.compute.common.internal.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.ResourceState;
@@ -130,7 +131,7 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Euare;
-import com.eucalyptus.compute.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Crypto;
@@ -139,26 +140,25 @@ import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.images.BlockStorageImageInfo;
+import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
 import com.eucalyptus.images.Images;
-import com.eucalyptus.keys.SshKeyPair;
+import com.eucalyptus.compute.common.internal.keys.SshKeyPair;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.system.tracking.MessageContexts;
-import com.eucalyptus.util.ByteArray;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.StatefulMessageSet;
-import com.eucalyptus.vm.VmEphemeralAttachment;
-import com.eucalyptus.vm.VmInstance;
-import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.compute.common.internal.vm.VmEphemeralAttachment;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.vm.VmVolumeAttachment;
+import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -469,12 +469,9 @@ public class ClusterAllocator implements Runnable {
                   throw Exceptions.toUndeclared( "Interrupted when creating volume from snapshot.", e );
                 }
 
-                final Boolean isRootDevice = mapping.getDeviceName().equals(rootDevName);
-                if ( mapping.getEbs().getDeleteOnTermination() ) {
-                  vm.addPersistentVolume( mapping.getDeviceName(), volume, isRootDevice );
-                } else {
-                  vm.addPermanentVolume( mapping.getDeviceName(), volume, isRootDevice );
-                }
+                final boolean isRootDevice = mapping.getDeviceName().equals(rootDevName);
+                final boolean deleteOnTerminate = Objects.firstNonNull( mapping.getEbs().getDeleteOnTermination(), Boolean.FALSE );
+                VmInstances.addPersistentVolume( vm, mapping.getDeviceName(), volume, isRootDevice, deleteOnTerminate );
 
                 // Populate all volumes into resource token so they can be used for attach ops and vbr construction
                 if( isRootDevice ) {
@@ -483,7 +480,7 @@ public class ClusterAllocator implements Runnable {
                   token.getEbsVolumes().put(mapping.getDeviceName(), volume);
                 }
               } else if ( mapping.getVirtualName() != null ) {
-                vm.addEphemeralAttachment(mapping.getDeviceName(), mapping.getVirtualName());
+                VmInstances.addEphemeralAttachment( vm, mapping.getDeviceName(), mapping.getVirtualName() );
                 // Populate all ephemeral devices into resource token so they can used for vbr construction
                 token.getEphemeralDisks().put(mapping.getDeviceName(), mapping.getVirtualName());
               }
@@ -646,7 +643,7 @@ public class ClusterAllocator implements Runnable {
     	
     	// update volume attachment tokens in database
         if (!volumeAttachmentTokenMap.isEmpty()) {
-          vm.updateAttachmentToken(volumeAttachmentTokenMap);
+          VmInstances.updateAttachmentToken( vm, volumeAttachmentTokenMap );
         }
     	
     	// FIXME: multiple ephemerals will result in wrong disk sizes

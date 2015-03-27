@@ -19,6 +19,9 @@
  ************************************************************************/
 package com.eucalyptus.tags
 
+import com.eucalyptus.compute.common.internal.tags.Tag
+import com.eucalyptus.compute.common.internal.tags.TagSupport
+
 /**
  * 
  */

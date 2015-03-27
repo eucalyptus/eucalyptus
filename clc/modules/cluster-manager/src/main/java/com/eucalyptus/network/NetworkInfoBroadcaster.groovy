@@ -52,18 +52,21 @@ import com.eucalyptus.cluster.NetworkInfo
 import com.eucalyptus.cluster.callback.BroadcastNetworkInfoCallback
 import com.eucalyptus.component.Topology
 import com.eucalyptus.component.id.Eucalyptus
-import com.eucalyptus.compute.vpc.DhcpOption
-import com.eucalyptus.compute.vpc.DhcpOptionSet
-import com.eucalyptus.compute.vpc.InternetGateway
-import com.eucalyptus.compute.vpc.NetworkAcl
-import com.eucalyptus.compute.vpc.NetworkAclEntry
-import com.eucalyptus.compute.vpc.NetworkAcls
-import com.eucalyptus.compute.vpc.NetworkInterface as VpcNetworkInterface
-import com.eucalyptus.compute.vpc.Route
-import com.eucalyptus.compute.vpc.RouteTable
-import com.eucalyptus.compute.vpc.RouteTableAssociation
-import com.eucalyptus.compute.vpc.Vpc
-import com.eucalyptus.compute.vpc.Subnet as VpcSubnet
+import com.eucalyptus.compute.common.internal.network.NetworkGroup
+import com.eucalyptus.compute.common.internal.network.NetworkPeer
+import com.eucalyptus.compute.common.internal.network.NetworkRule
+import com.eucalyptus.compute.common.internal.vpc.DhcpOption
+import com.eucalyptus.compute.common.internal.vpc.DhcpOptionSet
+import com.eucalyptus.compute.common.internal.vpc.InternetGateway
+import com.eucalyptus.compute.common.internal.vpc.NetworkAcl
+import com.eucalyptus.compute.common.internal.vpc.NetworkAclEntry
+import com.eucalyptus.compute.common.internal.vpc.NetworkAcls
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterface as VpcNetworkInterface
+import com.eucalyptus.compute.common.internal.vpc.Route
+import com.eucalyptus.compute.common.internal.vpc.RouteTable
+import com.eucalyptus.compute.common.internal.vpc.RouteTableAssociation
+import com.eucalyptus.compute.common.internal.vpc.Vpc
+import com.eucalyptus.compute.common.internal.vpc.Subnet as VpcSubnet
 import com.eucalyptus.entities.EntityCache
 import com.eucalyptus.event.ClockTick
 import com.eucalyptus.event.Listeners
@@ -81,10 +84,10 @@ import com.eucalyptus.util.TypeMappers
 import com.eucalyptus.util.async.AsyncRequests
 import com.eucalyptus.util.async.Request
 import com.eucalyptus.util.async.UnconditionalCallback
-import com.eucalyptus.vm.VmInstance
-import com.eucalyptus.vm.VmInstance.VmState
+import com.eucalyptus.compute.common.internal.vm.VmInstance
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState
 import com.eucalyptus.vm.VmInstances
-import com.eucalyptus.vm.VmNetworkConfig
+import com.eucalyptus.compute.common.internal.vm.VmNetworkConfig
 import com.google.common.base.Charsets
 import com.google.common.base.Function
 import com.google.common.base.Objects as GObjects
@@ -121,7 +124,7 @@ import java.util.concurrent.ConcurrentMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
-import static com.eucalyptus.vm.VmInstance.VmStateSet.TORNDOWN
+import static com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet.TORNDOWN
 
 /**
  *

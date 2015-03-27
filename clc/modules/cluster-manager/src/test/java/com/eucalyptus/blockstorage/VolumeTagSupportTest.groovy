@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.blockstorage
 
+import com.eucalyptus.compute.common.internal.blockstorage.VolumeTag
 import org.junit.Test
 import com.eucalyptus.tags.TagTestSupport
 

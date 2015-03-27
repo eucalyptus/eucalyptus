@@ -19,7 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.network
 
-import com.eucalyptus.vm.VmInstance
+import com.eucalyptus.compute.common.internal.vm.VmInstance
 import com.google.common.base.Optional
 import com.google.common.collect.Iterables
 import com.google.common.collect.Maps

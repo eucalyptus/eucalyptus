@@ -71,20 +71,17 @@ import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 
-import com.eucalyptus.cloud.util.DuplicateMetadataException;
-import com.eucalyptus.compute.common.DescribeKeyPairsResponseItemType;
+import com.eucalyptus.compute.common.internal.util.DuplicateMetadataException;
+import com.eucalyptus.compute.common.internal.keys.KeyPairs;
+import com.eucalyptus.compute.common.internal.keys.SshKeyPair;
 import com.eucalyptus.util.Exceptions;
-import com.google.common.collect.ImmutableList;
 import org.apache.log4j.Logger;
 import org.bouncycastle.openssl.PEMWriter;
 import org.bouncycastle.util.encoders.DecoderException;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -93,10 +90,7 @@ import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
-import com.eucalyptus.tags.Filter;
-import com.eucalyptus.tags.Filters;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Joiner;
@@ -108,47 +102,17 @@ import com.eucalyptus.compute.common.backend.CreateKeyPairResponseType;
 import com.eucalyptus.compute.common.backend.CreateKeyPairType;
 import com.eucalyptus.compute.common.backend.DeleteKeyPairResponseType;
 import com.eucalyptus.compute.common.backend.DeleteKeyPairType;
-import com.eucalyptus.compute.common.backend.DescribeKeyPairsResponseType;
-import com.eucalyptus.compute.common.backend.DescribeKeyPairsType;
 import com.eucalyptus.compute.common.backend.ImportKeyPairResponseType;
 import com.eucalyptus.compute.common.backend.ImportKeyPairType;
 
 public class KeyPairManager {
   private static Logger LOG = Logger.getLogger( KeyPairManager.class );
   
-  public DescribeKeyPairsResponseType describe( DescribeKeyPairsType request ) throws Exception {
-    final DescribeKeyPairsResponseType reply = request.getReply( );
-    final Context ctx = Contexts.lookup( );
-    final boolean showAll = request.getKeySet( ).remove( "verbose" );
-    final OwnerFullName ownerFullName = ctx.isAdministrator( ) &&  showAll  ? null : Contexts.lookup( ).getUserFullName( ).asAccountFullName( );
-    final Filter filter = Filters.generate( request.getFilterSet(), SshKeyPair.class );
-    final Predicate<? super SshKeyPair> requestedAndAccessible = CloudMetadatas.filteringFor( SshKeyPair.class )
-        .byId( request.getKeySet( ) )
-        .byPredicate( filter.asPredicate() )
-        .byPrivileges()
-        .buildPredicate();
-    final List<String> foundKeyNameList = new ArrayList<String>( );
-    for ( final SshKeyPair kp : KeyPairs.list( ownerFullName, requestedAndAccessible, filter.asCriterion(), filter.getAliases() ) ) {
-      reply.getKeySet( ).add( new DescribeKeyPairsResponseItemType( kp.getDisplayName( ), kp.getFingerPrint( ) ) );
-      foundKeyNameList.add( kp.getDisplayName( ) );
-    }
-
-    if ( !request.getKeySet( ).isEmpty( ) && request.getKeySet( ).size( ) != reply.getKeySet( ).size( ) ) {
-      List<String> reverseRequestedKeySet = ImmutableList.copyOf( request.getKeySet( ) ).reverse( );
-      for ( String requestedKey : reverseRequestedKeySet ) {
-        if ( !foundKeyNameList.contains( requestedKey ) ) {
-          throw new ClientComputeException( "InvalidKeyPair.NotFound", "The key pair '" + requestedKey + "' does not exist" );
-        }
-      }
-    }
-    return reply;
-  }
-  
   public DeleteKeyPairResponseType delete( DeleteKeyPairType request ) throws EucalyptusCloudException {
     DeleteKeyPairResponseType reply = ( DeleteKeyPairResponseType ) request.getReply( );
     Context ctx = Contexts.lookup( );
     try {
-      SshKeyPair key = KeyPairs.lookup( ctx.getUserFullName( ).asAccountFullName( ), request.getKeyName( ) );
+      SshKeyPair key = KeyPairs.lookup( ctx.getUserFullName().asAccountFullName(), request.getKeyName() );
       if ( !RestrictedTypes.filterPrivileged( ).apply( key ) ) {
         throw new EucalyptusCloudException( "Permission denied while trying to delete keypair " + key.getName( ) + " by " + ctx.getUser( ) );
       }

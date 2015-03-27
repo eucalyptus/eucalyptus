@@ -80,7 +80,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.compute.common.CloudMetadata.AddressMetadata;
-import com.eucalyptus.cloud.util.NotEnoughResourcesException;
+import com.eucalyptus.compute.common.internal.util.NotEnoughResourcesException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
@@ -93,7 +93,7 @@ import com.eucalyptus.event.Listeners;
 import com.eucalyptus.event.SystemConfigurationEvent;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
-import com.eucalyptus.tags.FilterSupport;
+import com.eucalyptus.compute.common.internal.tags.FilterSupport;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Exceptions;
@@ -105,9 +105,9 @@ import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.UnconditionalCallback;
-import com.eucalyptus.vm.VmInstance;
-import com.eucalyptus.vm.VmInstance.VmState;
-import com.eucalyptus.vm.VmInstance.VmStateSet;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState;
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet;
 import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
@@ -376,7 +376,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
       @Override
       public boolean apply( final String publicAddress ) {
         final VmInstance vm = VmInstances.lookup( instanceId );
-        vm.updatePublicAddress( publicAddress );
+        VmInstances.updatePublicAddress( vm, publicAddress );
         return true;
       }
     } ).apply( publicIp );
@@ -397,7 +397,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
         try {
           final VmInstance vm = VmInstances.lookupByPrivateIp( privateIp );
           if ( expectedPublicIp == null || expectedPublicIp.equals( vm.getPublicAddress() ) ) {
-            vm.updatePublicAddress( publicIp );
+            VmInstances.updatePublicAddress( vm, publicIp );
           }
         } catch ( NoSuchElementException e ) {
           LOG.debug( "Instance not found for private IP " + privateIp );

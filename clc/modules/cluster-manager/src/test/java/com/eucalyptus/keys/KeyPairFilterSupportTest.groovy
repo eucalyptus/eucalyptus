@@ -19,6 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.keys
 
+import com.eucalyptus.compute.common.internal.keys.KeyPairs
+import com.eucalyptus.compute.common.internal.keys.SshKeyPair
 import com.eucalyptus.tags.FilterSupportTest
 import org.junit.Test
 

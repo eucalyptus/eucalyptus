@@ -74,9 +74,9 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.MessageCallback;
-import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
+import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment.AttachmentState;
 import com.google.common.base.Function;
 import edu.ucsb.eucalyptus.msgs.ClusterAttachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.ClusterAttachVolumeType;
@@ -97,10 +97,10 @@ public class VolumeAttachCallback extends MessageCallback<ClusterAttachVolumeTyp
         VmInstance vm = VmInstances.lookup( instanceId );
         try {
           if ( !AttachmentState.attached.equals( vm.lookupVolumeAttachment( volumeId ).getAttachmentState( ) ) ) {
-            vm.updateVolumeAttachment( volumeId, AttachmentState.attaching );
+            VmInstances.updateVolumeAttachment( vm, volumeId, AttachmentState.attaching );
           }
         } catch ( Exception ex ) {
-          vm.updateVolumeAttachment( volumeId, AttachmentState.attaching );
+          VmInstances.updateVolumeAttachment( vm, volumeId, AttachmentState.attaching );
         }
         return vm;
       }
@@ -136,7 +136,7 @@ public class VolumeAttachCallback extends MessageCallback<ClusterAttachVolumeTyp
       final Function<String, VmInstance> removeVolAttachment = new Function<String, VmInstance>( ) {
         public VmInstance apply( final String input ) {
           VmInstance vm = VmInstances.lookup( input );
-          vm.removeVolumeAttachment( VolumeAttachCallback.this.getRequest( ).getVolumeId( ) );
+          VmInstances.removeVolumeAttachment( vm, VolumeAttachCallback.this.getRequest( ).getVolumeId( ) );
           return vm;
         }
       };

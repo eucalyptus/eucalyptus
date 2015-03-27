@@ -62,29 +62,21 @@
 
 package com.eucalyptus.cluster.callback;
 
+import static com.eucalyptus.compute.common.internal.vm.VmInstances.TerminatedInstanceException;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Address.Transition;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.address.AddressingDispatcher;
-import com.eucalyptus.component.Partition;
-import com.eucalyptus.component.Partitions;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.MessageCallback;
-import com.eucalyptus.vm.VmInstance;
-import com.eucalyptus.vm.VmInstance.VmState;
-import com.eucalyptus.vm.VmInstance.VmStateSet;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet;
 import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
-import com.eucalyptus.vm.VmNetworkConfig;
 import edu.ucsb.eucalyptus.msgs.AssignAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AssignAddressType;
 

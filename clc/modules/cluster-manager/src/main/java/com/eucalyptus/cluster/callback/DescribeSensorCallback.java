@@ -46,7 +46,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.InstanceUsageEvent;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.BroadcastCallback;
-import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
 
 import com.google.common.base.Function;

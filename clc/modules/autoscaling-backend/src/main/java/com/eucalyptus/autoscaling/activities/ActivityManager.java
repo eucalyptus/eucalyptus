@@ -93,6 +93,18 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.ClusterInfoType;
+import com.eucalyptus.compute.common.DescribeImagesResponseType;
+import com.eucalyptus.compute.common.DescribeImagesType;
+import com.eucalyptus.compute.common.DescribeInstanceStatusResponseType;
+import com.eucalyptus.compute.common.DescribeInstanceStatusType;
+import com.eucalyptus.compute.common.DescribeKeyPairsResponseType;
+import com.eucalyptus.compute.common.DescribeKeyPairsType;
+import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
+import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
+import com.eucalyptus.compute.common.DescribeSubnetsResponseType;
+import com.eucalyptus.compute.common.DescribeSubnetsType;
+import com.eucalyptus.compute.common.DescribeTagsResponseType;
+import com.eucalyptus.compute.common.DescribeTagsType;
 import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.ImageDetails;
 import com.eucalyptus.compute.common.InstanceNetworkInterfaceSetItemRequestType;
@@ -106,20 +118,8 @@ import com.eucalyptus.compute.common.SubnetType;
 import com.eucalyptus.compute.common.TagInfo;
 import com.eucalyptus.compute.common.backend.DescribeAvailabilityZonesResponseType;
 import com.eucalyptus.compute.common.backend.DescribeAvailabilityZonesType;
-import com.eucalyptus.compute.common.backend.DescribeImagesResponseType;
-import com.eucalyptus.compute.common.backend.DescribeImagesType;
-import com.eucalyptus.compute.common.backend.DescribeInstanceStatusResponseType;
-import com.eucalyptus.compute.common.backend.DescribeInstanceStatusType;
 import com.eucalyptus.compute.common.backend.DescribeInstanceTypesResponseType;
 import com.eucalyptus.compute.common.backend.DescribeInstanceTypesType;
-import com.eucalyptus.compute.common.backend.DescribeKeyPairsResponseType;
-import com.eucalyptus.compute.common.backend.DescribeKeyPairsType;
-import com.eucalyptus.compute.common.backend.DescribeSecurityGroupsResponseType;
-import com.eucalyptus.compute.common.backend.DescribeSecurityGroupsType;
-import com.eucalyptus.compute.common.backend.DescribeSubnetsResponseType;
-import com.eucalyptus.compute.common.backend.DescribeSubnetsType;
-import com.eucalyptus.compute.common.backend.DescribeTagsResponseType;
-import com.eucalyptus.compute.common.backend.DescribeTagsType;
 import com.eucalyptus.compute.common.backend.RunInstancesResponseType;
 import com.eucalyptus.compute.common.backend.RunInstancesType;
 import com.eucalyptus.compute.common.backend.TerminateInstancesResponseType;
@@ -1033,6 +1033,16 @@ public class ActivityManager {
     return runner.taskInProgress( groupArn );
   }
 
+  ComputeClient createComputeClientForUser( final AccountFullName accountFullName ) {
+    try {
+      final ComputeClient client = new ComputeClient( accountFullName );
+      client.init();
+      return client;
+    } catch ( DispatchingClient.DispatchingClientException e ) {
+      throw Exceptions.toUndeclared( e );
+    }
+  }
+
   EucalyptusClient createEucalyptusClientForUser( final AccountFullName accountFullName ) {
     try {
       final EucalyptusClient client = new EucalyptusClient( accountFullName );
@@ -1127,6 +1137,7 @@ public class ActivityManager {
   }
 
   private interface ActivityContext {
+    ComputeClient getComputeClient();
     EucalyptusClient getEucalyptusClient();
     ElbClient getElbClient();
     CloudWatchClient getCloudWatchClient();
@@ -1314,6 +1325,11 @@ public class ActivityManager {
 
     public AccountFullName getUserId() {
       return AccountFullName.getInstance( group.getOwnerAccountNumber( ) );
+    }
+
+    @Override
+    public ComputeClient getComputeClient() {
+      return createComputeClientForUser( getUserId() );
     }
 
     @Override
@@ -2130,7 +2146,7 @@ public class ActivityManager {
       if ( logger.isTraceEnabled() ) {
         logger.trace( "Polling instance tags for groups in account: " + getGroup().getOwnerAccountNumber() );
       }
-      final EucalyptusClient client = context.getEucalyptusClient();
+      final ComputeClient client = context.getComputeClient();
       client.dispatch( describeTags( ), callback );
     }
 
@@ -2265,7 +2281,7 @@ public class ActivityManager {
     @Override
     void dispatchInternal( final ActivityContext context,
                            final Callback.Checked<DescribeInstanceStatusResponseType> callback ) {
-      final EucalyptusClient client = context.getEucalyptusClient();
+      final ComputeClient client = context.getComputeClient();
       client.dispatch( monitorInstances( instanceIds ), callback );
     }
 
@@ -2653,7 +2669,7 @@ public class ActivityManager {
     @Override
     void dispatchInternal( final ActivityContext context,
                            final Callback.Checked<DescribeSubnetsResponseType> callback ) {
-      final EucalyptusClient client = context.getEucalyptusClient();
+      final ComputeClient client = context.getComputeClient();
 
       final ArrayList<SubnetIdSetItemType> subnetIdItems = Lists.newArrayList( );
       for ( final String subnetId : Iterables.concat( Lists.newArrayList( "verbose" ), subnetIds ) ) {
@@ -2769,7 +2785,7 @@ public class ActivityManager {
     @Override
     void dispatchInternal( final ActivityContext context,
                            final Callback.Checked<DescribeImagesResponseType> callback ) {
-      final EucalyptusClient client = context.getEucalyptusClient();
+      final ComputeClient client = context.getComputeClient();
 
       final DescribeImagesType describeImagesType
           = new DescribeImagesType();
@@ -2838,7 +2854,7 @@ public class ActivityManager {
     @Override
     void dispatchInternal( final ActivityContext context,
                            final Callback.Checked<DescribeKeyPairsResponseType> callback ) {
-      final EucalyptusClient client = context.getEucalyptusClient( );
+      final ComputeClient client = context.getComputeClient();
 
       final DescribeKeyPairsType describeKeyPairsType
           = new DescribeKeyPairsType();
@@ -2873,7 +2889,7 @@ public class ActivityManager {
     @Override
     void dispatchInternal( final ActivityContext context,
                            final Callback.Checked<DescribeSecurityGroupsResponseType> callback ) {
-      final EucalyptusClient client = context.getEucalyptusClient();
+      final ComputeClient client = context.getComputeClient( );
 
       final DescribeSecurityGroupsType describeSecurityGroupsType
           = new DescribeSecurityGroupsType();

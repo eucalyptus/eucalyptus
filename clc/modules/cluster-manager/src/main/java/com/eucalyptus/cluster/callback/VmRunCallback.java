@@ -85,8 +85,8 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.MessageCallback;
-import com.eucalyptus.vm.VmInstance;
-import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -163,7 +163,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       public Boolean apply( final VmInfo input ) {
         final VmInstance vm = VmInstances.lookup( input.getInstanceId( ) );
         try {
-          vm.setServiceTag( input.getServiceTag( ) );
+          VmInstances.setServiceTag( vm, input.getServiceTag( ) );
         } catch ( Exception ex ) {
           LOG.error( VmRunCallback.this.token + ": " + ex );
           Logs.extreme( ).error( VmRunCallback.this.token + ": " + ex, ex );

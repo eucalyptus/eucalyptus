@@ -23,7 +23,7 @@ package com.eucalyptus.compute.common;
 
 import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.binding.HttpEmbedded
-
+import com.google.common.base.Function
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
@@ -258,7 +258,11 @@ public class ImageDetails extends EucalyptusData {
   ArrayList<BlockDeviceMappingItemType> blockDeviceMappings = new ArrayList<BlockDeviceMappingItemType>();
   ArrayList<String> productCodes = new ArrayList<String>();
   ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
-  
+
+  static Function<ImageDetails,String> imageId( ) {
+    { ImageDetails details -> details.imageId } as Function<ImageDetails,String>
+  }
+
   boolean equals(final Object o) {
     if ( !o == null || !(o instanceof ImageDetails) ) return false;
     ImageDetails that = (ImageDetails) o;

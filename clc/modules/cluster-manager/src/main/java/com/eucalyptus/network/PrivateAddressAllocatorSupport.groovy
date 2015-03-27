@@ -19,17 +19,17 @@
  ************************************************************************/
 package com.eucalyptus.network
 
-import com.eucalyptus.cloud.util.NotEnoughResourcesException
-import com.eucalyptus.cloud.util.ResourceAllocationException
+import com.eucalyptus.compute.common.internal.util.NotEnoughResourcesException
+import com.eucalyptus.compute.common.internal.util.ResourceAllocationException
 import com.eucalyptus.util.RestrictedTypes
-import com.eucalyptus.vm.VmInstance
+import com.eucalyptus.compute.common.internal.vm.VmInstance
 import com.google.common.collect.Iterables
 import groovy.transform.CompileStatic
 import org.apache.log4j.Logger
 
 import java.util.concurrent.TimeUnit
 
-import static com.eucalyptus.cloud.util.Reference.State.*
+import static com.eucalyptus.compute.common.internal.util.Reference.State.*
 
 /**
  *

@@ -22,18 +22,18 @@ package com.eucalyptus.compute.entities;
 import java.util.List;
 import java.util.concurrent.Callable;
 import com.eucalyptus.address.Address;
-import com.eucalyptus.blockstorage.Snapshot;
-import com.eucalyptus.blockstorage.Volume;
+import com.eucalyptus.compute.common.internal.blockstorage.Snapshot;
+import com.eucalyptus.compute.common.internal.blockstorage.Volume;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.AccountMetadata;
-import com.eucalyptus.images.ImageInfo;
-import com.eucalyptus.keys.SshKeyPair;
-import com.eucalyptus.network.ExtantNetwork;
-import com.eucalyptus.network.NetworkGroup;
-import com.eucalyptus.network.PrivateNetworkIndex;
-import com.eucalyptus.tags.Tag;
+import com.eucalyptus.compute.common.internal.images.ImageInfo;
+import com.eucalyptus.compute.common.internal.keys.SshKeyPair;
+import com.eucalyptus.compute.common.internal.network.ExtantNetwork;
+import com.eucalyptus.compute.common.internal.network.NetworkGroup;
+import com.eucalyptus.compute.common.internal.network.PrivateNetworkIndex;
+import com.eucalyptus.compute.common.internal.tags.Tag;
 import com.eucalyptus.upgrade.Upgrades;
-import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.google.common.collect.ImmutableList;
 
 /**

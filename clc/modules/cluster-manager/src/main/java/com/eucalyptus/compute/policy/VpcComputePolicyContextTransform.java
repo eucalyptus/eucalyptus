@@ -22,7 +22,7 @@ package com.eucalyptus.compute.policy;
 import static com.eucalyptus.compute.policy.ComputePolicyContext.ComputePolicyContextResource;
 import static com.eucalyptus.compute.policy.ComputePolicyContext.ComputePolicyContextResourceSupport;
 import javax.annotation.Nullable;
-import com.eucalyptus.compute.vpc.Vpc;
+import com.eucalyptus.compute.common.internal.vpc.Vpc;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 

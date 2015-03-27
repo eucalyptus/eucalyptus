@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.network
 
+import com.eucalyptus.compute.common.internal.network.NetworkGroupTag
 import org.junit.Test
 import com.eucalyptus.tags.TagTestSupport
 

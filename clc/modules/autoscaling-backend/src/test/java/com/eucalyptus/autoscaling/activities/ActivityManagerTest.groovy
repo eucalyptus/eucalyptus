@@ -45,6 +45,9 @@ import com.eucalyptus.autoscaling.instances.HealthStatus
 import com.eucalyptus.autoscaling.instances.LifecycleState
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException
 import com.eucalyptus.autoscaling.tags.Tag
+import com.eucalyptus.compute.common.DescribeInstanceStatusResponseType
+import com.eucalyptus.compute.common.DescribeInstanceStatusType
+import com.eucalyptus.compute.common.DescribeTagsType
 import com.eucalyptus.compute.common.InstanceStateType
 import com.eucalyptus.compute.common.InstanceStatusItemType
 import com.eucalyptus.compute.common.InstanceStatusSetType
@@ -52,9 +55,6 @@ import com.eucalyptus.compute.common.InstanceStatusType
 import com.eucalyptus.compute.common.ReservationInfoType
 import com.eucalyptus.compute.common.RunningInstancesItemType
 import com.eucalyptus.compute.common.backend.CreateTagsType
-import com.eucalyptus.compute.common.backend.DescribeInstanceStatusResponseType
-import com.eucalyptus.compute.common.backend.DescribeInstanceStatusType
-import com.eucalyptus.compute.common.backend.DescribeTagsType
 import com.eucalyptus.compute.common.backend.RunInstancesResponseType
 import com.eucalyptus.compute.common.backend.RunInstancesType
 import com.eucalyptus.compute.common.backend.TerminateInstancesType
@@ -1172,6 +1172,28 @@ class ActivityManagerTest {
       }
 
       @Override
+      def ComputeClient createComputeClientForUser(final AccountFullName accountFullName) {
+        new TestClients.TestComputeClient( accountFullName, { request ->
+          if ( request instanceof DescribeInstanceStatusType ) {
+            new DescribeInstanceStatusResponseType(
+                instanceStatusSet: new InstanceStatusSetType(
+                    item: request.instancesSet.collect { instanceId ->
+                      new InstanceStatusItemType(
+                          instanceId: instanceId,
+                          instanceState: new InstanceStateType( code: 16, name: "running" ),
+                          instanceStatus: new InstanceStatusType( status: unhealthyInstanceIds.contains( instanceId ) ? "impaired" : "ok" ),
+                          systemStatus: new InstanceStatusType( status: "ok" ),
+                      )
+                    },
+                )
+            )
+          } else {
+            throw new RuntimeException("Unknown request type: " + request.getClass())
+          }
+        } as TestClients.RequestHandler )
+      }
+
+      @Override
       EucalyptusClient createEucalyptusClientForUser(AccountFullName accountFullName) {
         new TestClients.TestEucalyptusClient( accountFullName, { request ->
           if (request instanceof RunInstancesType) {
@@ -1187,19 +1209,6 @@ class ActivityManagerTest {
                       ]
                   )
               )
-          } else if ( request instanceof DescribeInstanceStatusType ) {
-            new DescribeInstanceStatusResponseType(
-              instanceStatusSet: new InstanceStatusSetType(
-                  item: request.instancesSet.collect { instanceId ->
-                    new InstanceStatusItemType(
-                        instanceId: instanceId,
-                        instanceState: new InstanceStateType( code: 16, name: "running" ),
-                        instanceStatus: new InstanceStatusType( status: unhealthyInstanceIds.contains( instanceId ) ? "impaired" : "ok" ),
-                        systemStatus: new InstanceStatusType( status: "ok" ),
-                    )
-                  },
-              )
-            )
           } else if ( request instanceof CreateTagsType ||
               request instanceof TerminateInstancesType ||
               request instanceof DescribeTagsType ) {

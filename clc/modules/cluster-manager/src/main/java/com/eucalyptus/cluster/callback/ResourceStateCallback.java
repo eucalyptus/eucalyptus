@@ -67,7 +67,7 @@ import com.eucalyptus.node.NodeController;
 import com.eucalyptus.node.Nodes;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.async.FailedRequestException;
-import com.eucalyptus.vmtypes.VmType;
+import com.eucalyptus.compute.common.internal.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Joiner;
 import edu.ucsb.eucalyptus.msgs.DescribeResourcesResponseType;

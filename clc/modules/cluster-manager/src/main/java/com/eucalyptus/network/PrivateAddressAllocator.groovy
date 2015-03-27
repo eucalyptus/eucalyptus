@@ -19,9 +19,9 @@
  ************************************************************************/
 package com.eucalyptus.network
 
-import com.eucalyptus.cloud.util.NotEnoughResourcesException
-import com.eucalyptus.cloud.util.ResourceAllocationException
-import com.eucalyptus.vm.VmInstance
+import com.eucalyptus.compute.common.internal.util.NotEnoughResourcesException
+import com.eucalyptus.compute.common.internal.util.ResourceAllocationException
+import com.eucalyptus.compute.common.internal.vm.VmInstance
 import groovy.transform.CompileStatic
 
 /**

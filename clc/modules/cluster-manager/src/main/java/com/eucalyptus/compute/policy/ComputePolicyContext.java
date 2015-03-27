@@ -21,7 +21,7 @@ package com.eucalyptus.compute.policy;
 
 import java.util.Date;
 import javax.annotation.Nullable;
-import com.eucalyptus.blockstorage.Snapshots;
+import com.eucalyptus.compute.common.internal.blockstorage.Snapshots;
 import com.eucalyptus.records.Logs;
 
 /**

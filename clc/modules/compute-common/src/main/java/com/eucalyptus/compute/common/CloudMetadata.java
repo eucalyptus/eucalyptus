@@ -95,7 +95,8 @@ public interface CloudMetadata extends RestrictedType {
   public interface VolumeMetadata extends CloudMetadata {}
   
   @PolicyResourceType( "snapshot" )
-  public interface SnapshotMetadata extends CloudMetadata {}
+  public interface SnapshotMetadata extends CloudMetadata {
+  }
   
   @PolicyResourceType( VmInstanceMetadata.POLICY_RESOURCE_TYPE )
   public interface VmInstanceMetadata extends CloudMetadata {

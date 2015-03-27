@@ -73,7 +73,7 @@ import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.network.Networking;
 import com.eucalyptus.compute.common.network.NetworkingFeature;
-import com.eucalyptus.compute.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.records.Logs;
@@ -81,7 +81,8 @@ import com.eucalyptus.util.ByteArray;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.vm.MetadataRequest;
 import com.eucalyptus.vm.SensorsConfigMetadata;
-import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
+import com.eucalyptus.vm.VmInstanceMetadata;
 import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
@@ -119,7 +120,7 @@ public class VmMetadata {
                                                                                           public ByteArray apply( MetadataRequest arg0 ) {
                                                                                             try ( final TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
                                                                                               final VmInstance instance = VmInstances.lookup( arg0.getVmInstanceId() );
-                                                                                              final String res = instance.getByKey( arg0.getLocalPath( ) );
+                                                                                              final String res = VmInstanceMetadata.getByKey( instance, arg0.getLocalPath() );
                                                                                               if ( res != null ) {
                                                                                                 return ByteArray.newInstance( res );
                                                                                               }

@@ -86,9 +86,24 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.ClusterInfoType;
+import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.ComputeMessage;
 import com.eucalyptus.compute.common.DeleteResourceTag;
+import com.eucalyptus.compute.common.DescribeImagesResponseType;
+import com.eucalyptus.compute.common.DescribeImagesType;
+import com.eucalyptus.compute.common.DescribeInstancesResponseType;
+import com.eucalyptus.compute.common.DescribeInstancesType;
+import com.eucalyptus.compute.common.DescribeInternetGatewaysResponseType;
+import com.eucalyptus.compute.common.DescribeInternetGatewaysType;
 import com.eucalyptus.compute.common.DescribeKeyPairsResponseItemType;
+import com.eucalyptus.compute.common.DescribeKeyPairsResponseType;
+import com.eucalyptus.compute.common.DescribeKeyPairsType;
+import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
+import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
+import com.eucalyptus.compute.common.DescribeSubnetsResponseType;
+import com.eucalyptus.compute.common.DescribeSubnetsType;
+import com.eucalyptus.compute.common.DescribeVpcsResponseType;
+import com.eucalyptus.compute.common.DescribeVpcsType;
 import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.GroupIdSetType;
 import com.eucalyptus.compute.common.ImageDetails;
@@ -111,20 +126,6 @@ import com.eucalyptus.compute.common.backend.CreateSecurityGroupType;
 import com.eucalyptus.compute.common.backend.DeleteSecurityGroupType;
 import com.eucalyptus.compute.common.backend.DescribeAvailabilityZonesResponseType;
 import com.eucalyptus.compute.common.backend.DescribeAvailabilityZonesType;
-import com.eucalyptus.compute.common.backend.DescribeImagesResponseType;
-import com.eucalyptus.compute.common.backend.DescribeImagesType;
-import com.eucalyptus.compute.common.backend.DescribeInstancesResponseType;
-import com.eucalyptus.compute.common.backend.DescribeInstancesType;
-import com.eucalyptus.compute.common.backend.DescribeInternetGatewaysResponseType;
-import com.eucalyptus.compute.common.backend.DescribeInternetGatewaysType;
-import com.eucalyptus.compute.common.backend.DescribeKeyPairsResponseType;
-import com.eucalyptus.compute.common.backend.DescribeKeyPairsType;
-import com.eucalyptus.compute.common.backend.DescribeSecurityGroupsResponseType;
-import com.eucalyptus.compute.common.backend.DescribeSecurityGroupsType;
-import com.eucalyptus.compute.common.backend.DescribeSubnetsResponseType;
-import com.eucalyptus.compute.common.backend.DescribeSubnetsType;
-import com.eucalyptus.compute.common.backend.DescribeVpcsResponseType;
-import com.eucalyptus.compute.common.backend.DescribeVpcsType;
 import com.eucalyptus.compute.common.backend.ModifyInstanceAttributeType;
 import com.eucalyptus.compute.common.backend.RevokeSecurityGroupIngressType;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
@@ -172,8 +173,6 @@ public class EucalyptusActivityTasks {
 
 		abstract String getUserId( );
 
-		abstract AccountFullName getAccount( );
-
 		@Override
 		public DispatchingClient<TM, TC> getClient() {
 			try{
@@ -199,11 +198,6 @@ public class EucalyptusActivityTasks {
 			}catch(AuthException ex){
 				throw Exceptions.toUndeclared(ex);
 			}
-		}
-
-		@Override
-		AccountFullName getAccount( ) {
-			return null;
 		}
 	}
 
@@ -274,25 +268,39 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
+	private class ComputeSystemActivity extends SystemActivityContextSupport<ComputeMessage, Compute>{
+		private ComputeSystemActivity() { super( Compute.class ); }
+	}
+
+	private class ComputeUserActivity extends UserActivityContextSupport<ComputeMessage, Compute>{
+		private ComputeUserActivity(final String userId){
+			super( Compute.class, userId );
+		}
+
+		private ComputeUserActivity(final AccountFullName accountFullName){
+			super( Compute.class, accountFullName );
+		}
+	}
+
 	public List<RunningInstancesItemType> describeSystemInstances(final List<String> instances, boolean verbose){
     if(instances.size() <=0)
       return Lists.newArrayList();
     final EucalyptusDescribeInstanceTask describeTask = new EucalyptusDescribeInstanceTask(instances, verbose);
-    return resultOf( describeTask, new EucalyptusSystemActivity(), "failed to describe the instances" );
+    return resultOf( describeTask, new ComputeSystemActivity(), "failed to describe the instances" );
   }
 	
 	public List<RunningInstancesItemType> describeSystemInstances(final List<String> instances){
 		if(instances.size() <=0)
 			return Lists.newArrayList();
 		final EucalyptusDescribeInstanceTask describeTask = new EucalyptusDescribeInstanceTask(instances);
-		return resultOf( describeTask, new EucalyptusSystemActivity(), "failed to describe the instances" );
+		return resultOf( describeTask, new ComputeSystemActivity(), "failed to describe the instances" );
 	}
 
 	public List<RunningInstancesItemType> describeUserInstances(final String userId, final List<String> instances){
 		if(instances.size() <=0)
 			return Lists.newArrayList();
 		final EucalyptusDescribeInstanceTask describeTask = new EucalyptusDescribeInstanceTask(instances);
-		return resultOf( describeTask, new EucalyptusUserActivity(userId), "failed to describe the instances" );
+		return resultOf( describeTask, new ComputeUserActivity(userId), "failed to describe the instances" );
 	}
 	
 	public List<ServiceStatusType> describeServices(final String componentType){
@@ -321,7 +329,7 @@ public class EucalyptusActivityTasks {
 	
 	public List<SecurityGroupItemType> describeSystemSecurityGroups( List<String> groupNames ){
 		final EucalyptusDescribeSecurityGroupTask task = new EucalyptusDescribeSecurityGroupTask(null,groupNames,null,null);
-		return resultOf( task, new EucalyptusSystemActivity(), "failed to describe security groups" );
+		return resultOf( task, new ComputeSystemActivity(), "failed to describe security groups" );
 	}
 	
 	public void authorizeSystemSecurityGroup( String groupNameOrId, String protocol, int portNum ){
@@ -345,7 +353,7 @@ public class EucalyptusActivityTasks {
 	public List<SecurityGroupItemType> describeUserSecurityGroupsByName( AccountFullName accountFullName, String vpcId, String groupNameFilter ){
 		final EucalyptusDescribeSecurityGroupTask task =
 				new EucalyptusDescribeSecurityGroupTask( null, null, Lists.newArrayList( groupNameFilter ), vpcId );
-		return resultOf( task, new EucalyptusUserActivity( accountFullName ), "failed to describe security groups" );
+		return resultOf( task, new ComputeUserActivity( accountFullName ), "failed to describe security groups" );
 	}
 
 	public void createUserSecurityGroup( AccountFullName accountFullName, String groupName, String groupDesc ){
@@ -466,7 +474,7 @@ public class EucalyptusActivityTasks {
 	public List<DescribeKeyPairsResponseItemType> describeKeyPairs(final List<String> keyNames){
 		return resultOf(
 				new EucaDescribeKeyPairsTask(keyNames),
-				new EucalyptusSystemActivity(),
+				new ComputeSystemActivity(),
 				"failed to describe keypairs"
 		);
 	}
@@ -477,7 +485,7 @@ public class EucalyptusActivityTasks {
 			final Collection<String> securityGroupIds ){
 		return resultOf(
 				new EucaDescribeSecurityGroupsTask( vpcId, securityGroupIds ),
-				new EucalyptusUserActivity( accountFullName ),
+				new ComputeUserActivity( accountFullName ),
 				"failed to describe security groups"
 		);
 	}
@@ -496,7 +504,7 @@ public class EucalyptusActivityTasks {
 	public List<VpcType> describeVpcs(final Collection<String> vpcIds ){
 		return resultOf(
 				new EucaDescribeVpcsTask( vpcIds ),
-				new EucalyptusSystemActivity( ),
+				new ComputeSystemActivity( ),
 				"failed to describe vpcs"
 		);
 	}
@@ -504,7 +512,7 @@ public class EucalyptusActivityTasks {
 	public Optional<VpcType> defaultVpc( final AccountFullName accountFullName ) {
 		return Iterables.tryFind( resultOf(
 				new EucaDescribeVpcsTask( true ),
-				new EucalyptusUserActivity( accountFullName ),
+				new ComputeUserActivity( accountFullName ),
 				"failed to describe default vpc"
 		), Predicates.alwaysTrue() );
 	}
@@ -512,7 +520,7 @@ public class EucalyptusActivityTasks {
 	public List<SubnetType> describeSubnets(final Collection<String> subnetIds ){
 		return resultOf(
 				new EucaDescribeSubnetsTask( subnetIds ),
-				new EucalyptusSystemActivity(),
+				new ComputeSystemActivity(),
 				"failed to describe subnets"
 		);
 	}
@@ -524,7 +532,7 @@ public class EucalyptusActivityTasks {
 			final Collection<String> zones ){
 		return resultOf(
 				new EucaDescribeSubnetsTask( vpcId, defaultSubnet, zones ),
-				new EucalyptusSystemActivity(),
+				new ComputeSystemActivity(),
 				"failed to describe subnets"
 		);
 	}
@@ -532,7 +540,7 @@ public class EucalyptusActivityTasks {
 	public List<InternetGatewayType> describeInternetGateways(final Collection<String> vpcIds ){
 		return resultOf(
 				new EucaDescribeInternetGatewaysTask(vpcIds),
-				new EucalyptusSystemActivity( ),
+				new ComputeSystemActivity( ),
 				"failed to describe internet gateways"
 		);
 	}
@@ -628,7 +636,7 @@ public class EucalyptusActivityTasks {
 	public List<ImageDetails> describeImages(final List<String> imageIds){
 		return resultOf(
 				new EucaDescribeImagesTask(imageIds),
-				new EucalyptusSystemActivity(),
+				new ComputeSystemActivity(),
 				"failed to describe images"
 		);
 	}
@@ -649,7 +657,7 @@ public class EucalyptusActivityTasks {
 		);
 	}
 	
-	private class EucaDescribeImagesTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Eucalyptus, List<ImageDetails>> {
+	private class EucaDescribeImagesTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<ImageDetails>> {
 		private List<String> imageIds = null;
 		private EucaDescribeImagesTask(final List<String> imageIds){
 			this.imageIds = imageIds;
@@ -712,7 +720,7 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
-	private class EucaDescribeKeyPairsTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Eucalyptus, List<DescribeKeyPairsResponseItemType>> {
+	private class EucaDescribeKeyPairsTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<DescribeKeyPairsResponseItemType>> {
 		private List<String> keyNames = null;
 		private EucaDescribeKeyPairsTask(final List<String> keyNames){
 			this.keyNames = keyNames;
@@ -734,7 +742,7 @@ public class EucalyptusActivityTasks {
 	}
 
 
-	private class EucaDescribeSecurityGroupsTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Eucalyptus, List<SecurityGroupItemType>> {
+	private class EucaDescribeSecurityGroupsTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<SecurityGroupItemType>> {
 		private String vpcId = null;
 		private Collection<String> securityGroupIds = null;
 		private EucaDescribeSecurityGroupsTask( final String vpcId, final Collection<String> securityGroupIds){
@@ -758,7 +766,7 @@ public class EucalyptusActivityTasks {
 		}
 	}
 
-	private class EucaDescribeVpcsTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Eucalyptus, List<VpcType>> {
+	private class EucaDescribeVpcsTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<VpcType>> {
 		private Collection<String> vpcIds;
 		private final Boolean defaultVpc;
 		private EucaDescribeVpcsTask(final Boolean defaultVpc ) {
@@ -790,7 +798,7 @@ public class EucalyptusActivityTasks {
 		}
 	}
 
-	private class EucaDescribeSubnetsTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Eucalyptus, List<SubnetType>> {
+	private class EucaDescribeSubnetsTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<SubnetType>> {
 		private String vpcId = null;
 		private Collection<String> subnetIds = null;
 		private Collection<String> zones = null;
@@ -831,7 +839,7 @@ public class EucalyptusActivityTasks {
 		}
 	}
 
-	private class EucaDescribeInternetGatewaysTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Eucalyptus, List<InternetGatewayType>> {
+	private class EucaDescribeInternetGatewaysTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<InternetGatewayType>> {
 		private Collection<String> vpcIds = null;
 		private EucaDescribeInternetGatewaysTask(final Collection<String> vpcIds){
 			this.vpcIds = vpcIds;
@@ -1403,7 +1411,7 @@ public class EucalyptusActivityTasks {
 		}
 	}
 		
-	private class EucalyptusDescribeInstanceTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Eucalyptus,List<RunningInstancesItemType>> {
+	private class EucalyptusDescribeInstanceTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute,List<RunningInstancesItemType>> {
 		private final List<String> instanceIds;
 		private boolean verbose = false;
 		private EucalyptusDescribeInstanceTask(final List<String> instanceId){
@@ -1517,7 +1525,7 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
-	private class EucalyptusDescribeSecurityGroupTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Eucalyptus, List<SecurityGroupItemType>>{
+	private class EucalyptusDescribeSecurityGroupTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<SecurityGroupItemType>>{
 		@Nullable private List<String> groupIds = null;
 		@Nullable private List<String> groupNames = null;
 		@Nullable private List<String> groupNameFilters = null;

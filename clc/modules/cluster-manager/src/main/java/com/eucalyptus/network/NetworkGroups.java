@@ -85,15 +85,20 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.common.CloudMetadatas;
-import com.eucalyptus.cloud.util.DuplicateMetadataException;
-import com.eucalyptus.cloud.util.MetadataConstraintException;
-import com.eucalyptus.cloud.util.MetadataException;
-import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.compute.common.internal.network.ExtantNetwork;
+import com.eucalyptus.compute.common.internal.network.NetworkGroup;
+import com.eucalyptus.compute.common.internal.network.NetworkGroupTag;
+import com.eucalyptus.compute.common.internal.network.NetworkPeer;
+import com.eucalyptus.compute.common.internal.network.NetworkRule;
+import com.eucalyptus.compute.common.internal.util.DuplicateMetadataException;
+import com.eucalyptus.compute.common.internal.util.MetadataConstraintException;
+import com.eucalyptus.compute.common.internal.util.MetadataException;
+import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
 import com.eucalyptus.compute.common.IpPermissionType;
 import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.compute.common.UserIdGroupPairType;
-import com.eucalyptus.compute.identifier.ResourceIdentifiers;
-import com.eucalyptus.compute.vpc.Vpc;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.common.internal.vpc.Vpc;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Entities;
@@ -103,7 +108,7 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.network.config.NetworkConfigurations;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.tags.FilterSupport;
+import com.eucalyptus.compute.common.internal.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
@@ -127,8 +132,8 @@ import com.google.common.primitives.Longs;
 
 @ConfigurableClass( root = "cloud.network",
                     description = "Default values used to bootstrap networking state discovery." )
-public class NetworkGroups {
-  private static final String DEFAULT_NETWORK_NAME          = "default";
+public class NetworkGroups extends com.eucalyptus.compute.common.internal.network.NetworkGroups {
+
   public static final Pattern VPC_GROUP_NAME_PATTERN       = Pattern.compile( "[a-zA-Z0-9 ._\\-:/()#,@\\[\\]+=&;{}!$*]{1,255}" );
   public static final Pattern VPC_GROUP_DESC_PATTERN       = Pattern.compile( "[a-zA-Z0-9 ._\\-:/()#,@\\[\\]+=&;{}!$*]{0,255}" );
   private static Logger       LOG                           = Logger.getLogger( NetworkGroups.class );
@@ -262,7 +267,7 @@ public class NetworkGroups {
       Logs.extreme( ).error( ex, ex );
     }
     try ( final TransactionResource db = Entities.transactionFor( NetworkGroup.class ) ) {
-      final List<NetworkGroup> ret = Entities.query( new NetworkGroup( ) );
+      final List<NetworkGroup> ret = Entities.query( NetworkGroup.withOwner( null ) );
       for ( NetworkGroup group : ret ) {
         ExtantNetwork exNet = group.getExtantNetwork( );
         if ( exNet != null && ( exNet.getTag( ) > netConfig.getMaxNetworkTag( ) || exNet.getTag( ) < netConfig.getMinNetworkTag( ) ) ) {
@@ -421,88 +426,6 @@ public class NetworkGroups {
     } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       throw new NoSuchMetadataException( "Error looking up extant groups", ex );
-    }
-  }
-
-  public static Function<NetworkGroup,String> groupId() {
-    return FilterFunctions.GROUP_ID;
-  }
-
-  public static Function<NetworkGroup,String> vpcId() {
-    return FilterFunctions.VPC_ID;
-  }
-
-  static void createDefault( final OwnerFullName ownerFullName ) throws MetadataException {
-    try ( final TransactionResource tx = Entities.transactionFor( Vpc.class ) ) {
-      if ( Iterables.tryFind(
-          Entities.query( Vpc.exampleDefault( ownerFullName.getAccountNumber( ) ) ),
-          Predicates.alwaysTrue()
-      ).isPresent( ) ) {
-        return; // skip default security group creation when there is a default VPC
-      }
-    }
-
-    try {
-      try {
-        NetworkGroup net = Transactions.find( NetworkGroup.named( AccountFullName.getInstance( ownerFullName.getAccountNumber() ), DEFAULT_NETWORK_NAME ) );
-        if ( net == null ) {
-          create( ownerFullName, DEFAULT_NETWORK_NAME, "default group" );
-        }
-      } catch ( NoSuchElementException | TransactionException ex ) {
-        try {
-          create( ownerFullName, DEFAULT_NETWORK_NAME, "default group" );
-        } catch ( ConstraintViolationException ex1 ) {}
-      }
-    } catch ( DuplicateMetadataException ex ) {}
-  }
-  
-  public static String defaultNetworkName( ) {
-    return DEFAULT_NETWORK_NAME;
-  }
-
-  public static NetworkGroup create( final OwnerFullName ownerFullName,
-                                     final String groupName,
-                                     final String groupDescription ) throws MetadataException {
-    return create( ownerFullName, null, groupName, groupDescription );
-  }
-
-  public static NetworkGroup create( final OwnerFullName ownerFullName,
-                                     final Vpc vpc,
-                                     final String groupName,
-                                     final String groupDescription ) throws MetadataException {
-    UserFullName userFullName = null;
-    if ( ownerFullName instanceof UserFullName ) {
-      userFullName = ( UserFullName ) ownerFullName;
-    } else {
-      try {
-        User admin = Accounts.lookupAccountById( ownerFullName.getAccountNumber( ) ).lookupAdmin();
-        userFullName = UserFullName.getInstance( admin );
-      } catch ( Exception ex ) {
-        LOG.error( ex, ex );
-        throw new NoSuchMetadataException( "Failed to create group because owning user could not be identified.", ex );
-      }
-    }
-
-    final String resourceDesc = groupName + ( vpc != null ? " in " + vpc.getDisplayName( ) : "" ) +
-        " for " + userFullName.toString( );
-    try ( final TransactionResource db = Entities.transactionFor( NetworkGroup.class ) ) {
-      try {
-        Entities.uniqueResult( NetworkGroup.withUniqueName(
-            userFullName.asAccountFullName( ),
-            CloudMetadatas.toDisplayName().apply( vpc ),
-            groupName ) );
-        throw new DuplicateMetadataException( "Failed to create group: " + resourceDesc );
-      } catch ( final NoSuchElementException ex ) {
-        final NetworkGroup entity = Entities.persist( NetworkGroup.create( userFullName, vpc, ResourceIdentifiers.generateString( NetworkGroup.ID_PREFIX ), groupName, groupDescription ) );
-        db.commit();
-        return entity;
-      }
-    } catch ( final ConstraintViolationException ex ) {
-      Logs.exhaust( ).error( ex );
-      throw new DuplicateMetadataException( "Failed to create group: " + resourceDesc, ex );
-    } catch ( final Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
-      throw new MetadataException( "Failed to create group: " + resourceDesc, PersistenceExceptions.transform( ex ) );
     }
   }
 
@@ -723,9 +646,9 @@ public class NetworkGroups {
     public NetworkGroupFilterSupport() {
       super( builderFor( NetworkGroup.class )
           .withTagFiltering( NetworkGroupTag.class, "networkGroup" )
-          .withStringProperty( "description", FilterFunctions.DESCRIPTION )
-          .withStringProperty( "group-id", FilterFunctions.GROUP_ID )
-          .withStringProperty( "group-name", CloudMetadatas.toDisplayName() )
+          .withStringProperty( "description", NetworkGroup.description( ) )
+          .withStringProperty( "group-id", NetworkGroup.groupId() )
+          .withStringProperty( "group-name", CloudMetadatas.toDisplayName( ) )
           .withStringSetProperty( "ip-permission.cidr", FilterSetFunctions.PERMISSION_CIDR )
           .withStringSetProperty( "ip-permission.from-port", FilterSetFunctions.PERMISSION_FROM_PORT )
           .withStringSetProperty( "ip-permission.group-id", FilterSetFunctions.PERMISSION_GROUP_ID )
@@ -733,8 +656,8 @@ public class NetworkGroups {
           .withStringSetProperty( "ip-permission.protocol", FilterSetFunctions.PERMISSION_PROTOCOL )
           .withStringSetProperty( "ip-permission.to-port", FilterSetFunctions.PERMISSION_TO_PORT )
           .withStringSetProperty( "ip-permission.user-id", FilterSetFunctions.PERMISSION_ACCOUNT_ID )
-          .withStringProperty( "owner-id", FilterFunctions.ACCOUNT_ID )
-          .withStringProperty( "vpc-id", FilterFunctions.VPC_ID )
+          .withStringProperty( "owner-id", NetworkGroup.accountNumber() )
+          .withStringProperty( "vpc-id", NetworkGroup.vpcId() )
           .withPersistenceAlias( "networkRules", "networkRules" )
           .withPersistenceFilter( "description" )
           .withPersistenceFilter( "group-id", "groupId" )
@@ -745,33 +668,6 @@ public class NetworkGroups {
           .withPersistenceFilter( "owner-id", "ownerAccountNumber" )
           .withPersistenceFilter( "vpc-id", "vpcId" )
       );
-    }
-  }
-
-  private enum FilterFunctions implements Function<NetworkGroup,String> {
-    ACCOUNT_ID {
-      @Override
-      public String apply( final NetworkGroup group ) {
-        return group.getOwnerAccountNumber();
-      }
-    },
-    DESCRIPTION {
-      @Override
-      public String apply( final NetworkGroup group ) {
-        return group.getDescription();
-      }
-    },
-    GROUP_ID {
-      @Override
-      public String apply( final NetworkGroup group ) {
-        return group.getGroupId();
-      }
-    },
-    VPC_ID {
-      @Override
-      public String apply( final NetworkGroup group ) {
-        return group.getVpcId( );
-      }
     }
   }
 

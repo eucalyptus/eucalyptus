@@ -28,26 +28,27 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.common.CloudMetadata;
-import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ImageMetadata;
-import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.compute.common.internal.tags.Tag;
+import com.eucalyptus.compute.common.internal.tags.TagSupport;
+import com.eucalyptus.compute.common.internal.tags.Tags;
+import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
 import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.ComputeException;
-import com.eucalyptus.compute.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
-import com.eucalyptus.images.ImageInfo;
+import com.eucalyptus.compute.common.internal.images.ImageInfo;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedType;
 import com.eucalyptus.util.RestrictedTypes;
-import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
@@ -57,17 +58,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
 import edu.ucsb.eucalyptus.cloud.InvalidParameterValueException;
 import com.eucalyptus.compute.common.backend.CreateTagsResponseType;
 import com.eucalyptus.compute.common.backend.CreateTagsType;
 import com.eucalyptus.compute.common.backend.DeleteTagsResponseType;
 import com.eucalyptus.compute.common.backend.DeleteTagsType;
-import com.eucalyptus.compute.common.backend.DescribeTagsResponseType;
-import com.eucalyptus.compute.common.backend.DescribeTagsType;
 import com.eucalyptus.compute.common.DeleteResourceTag;
 import com.eucalyptus.compute.common.ResourceTag;
-import com.eucalyptus.compute.common.TagInfo;
 
 /**
  * Service implementation for Tag operations
@@ -189,30 +186,6 @@ public class TagManager {
         handleException( e );
       }
     }
-
-    return reply;
-  }
-
-  public DescribeTagsResponseType describeTags( final DescribeTagsType request ) throws Exception {
-    final DescribeTagsResponseType reply = request.getReply( );
-    final Context context = Contexts.lookup();
-
-    final Filter filter = Filters.generate( request.getFilterSet(), Tag.class );
-    final Predicate<? super Tag> requestedAndAccessible = CloudMetadatas.filteringFor(Tag.class)
-        .byPredicate( filter.asPredicate( ) )
-        .byPrivileges( )
-        .buildPredicate( );
-    final Ordering<Tag> ordering = Ordering.natural().onResultOf( Tags.resourceId() )
-        .compound( Ordering.natural().onResultOf( Tags.key() ) )
-        .compound( Ordering.natural().onResultOf( Tags.value() ) );
-    Iterables.addAll( reply.getTagSet(), Iterables.transform(
-        ordering.sortedCopy( Tags.list(
-            context.getUserFullName().asAccountFullName(),
-            requestedAndAccessible,
-            filter.asCriterion(),
-            filter.getAliases() ) ),
-        TypeMappers.lookup( Tag.class, TagInfo.class )
-    ) );
 
     return reply;
   }

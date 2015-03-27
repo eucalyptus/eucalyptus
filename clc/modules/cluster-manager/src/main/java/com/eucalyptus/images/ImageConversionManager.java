@@ -46,6 +46,10 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.ImageMetadata;
+import com.eucalyptus.compute.common.internal.images.ImageInfo;
+import com.eucalyptus.compute.common.internal.images.KernelImageInfo;
+import com.eucalyptus.compute.common.internal.images.MachineImageInfo;
+import com.eucalyptus.compute.common.internal.images.RamdiskImageInfo;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.Entities;
@@ -88,9 +92,9 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Callback.Checked;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
-import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
@@ -125,7 +129,7 @@ public class ImageConversionManager implements EventListener<ClockTick> {
     final List<ImageInfo> newConversion = Lists.newArrayList(Collections2.filter(partitionedImages, new Predicate<ImageInfo>(){
       @Override
       public boolean apply(ImageInfo arg0) {
-        if(arg0 instanceof MachineImageInfo){
+        if(arg0 instanceof MachineImageInfo ){
           final MachineImageInfo image = (MachineImageInfo) arg0;
           return ImageMetadata.State.pending_conversion.equals(image.getState()) &&
               (image.getImageConversionId()==null || image.getImageConversionId().length()<=0);

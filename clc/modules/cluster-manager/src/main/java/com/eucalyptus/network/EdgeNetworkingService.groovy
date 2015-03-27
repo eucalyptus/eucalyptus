@@ -20,7 +20,7 @@
 package com.eucalyptus.network
 
 import com.eucalyptus.address.Addresses
-import com.eucalyptus.cloud.util.NotEnoughResourcesException
+import com.eucalyptus.compute.common.internal.util.NotEnoughResourcesException
 import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesResponseType
 import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesResult
 import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesType
@@ -35,7 +35,7 @@ import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType
 import com.eucalyptus.compute.common.network.UpdateInstanceResourcesResponseType
 import com.eucalyptus.compute.common.network.UpdateInstanceResourcesType
 import com.eucalyptus.compute.common.network.VpcNetworkInterfaceResource
-import com.eucalyptus.compute.vpc.Subnet
+import com.eucalyptus.compute.common.internal.vpc.Subnet
 import com.eucalyptus.entities.Entities
 import com.eucalyptus.entities.Transactions
 import com.eucalyptus.network.config.NetworkConfiguration

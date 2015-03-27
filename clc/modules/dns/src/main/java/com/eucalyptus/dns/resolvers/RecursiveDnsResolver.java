@@ -90,7 +90,7 @@ import com.eucalyptus.util.dns.DnsResolvers.DnsResponse;
 import com.eucalyptus.util.dns.DnsResolvers.RequestType;
 import com.eucalyptus.util.dns.DomainNameRecords;
 import com.eucalyptus.util.dns.DomainNames;
-import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.dns.InstanceDomainNames;
 import com.google.common.collect.ImmutableSet;

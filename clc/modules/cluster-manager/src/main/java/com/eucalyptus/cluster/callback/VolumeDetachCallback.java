@@ -68,10 +68,10 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.ConnectionException;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.util.async.MessageCallback;
-import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.vm.VmVolumeAttachment;
-import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
+import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
+import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment.AttachmentState;
 import com.google.common.base.Function;
 import edu.ucsb.eucalyptus.msgs.ClusterDetachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.ClusterDetachVolumeType;
@@ -96,7 +96,7 @@ public class VolumeDetachCallback extends MessageCallback<ClusterDetachVolumeTyp
             throw Exceptions.toUndeclared( "Failed to detach volume which is not currently attached: " + volumeId );
           }
         }
-        vm.updateVolumeAttachment( volumeId, AttachmentState.detaching );
+        VmInstances.updateVolumeAttachment( vm, volumeId, AttachmentState.detaching );
         return vm;
       }
     };
@@ -122,7 +122,7 @@ public class VolumeDetachCallback extends MessageCallback<ClusterDetachVolumeTyp
     final Function<String, VmInstance> failedVolDetach = new Function<String, VmInstance>( ) {
       public VmInstance apply( final String input ) {
         VmInstance vm = VmInstances.lookup( input );
-        vm.updateVolumeAttachment( VolumeDetachCallback.this.getRequest( ).getVolumeId( ), AttachmentState.attached );
+        VmInstances.updateVolumeAttachment( vm, VolumeDetachCallback.this.getRequest( ).getVolumeId( ), AttachmentState.attached );
         return vm;
       }
     };

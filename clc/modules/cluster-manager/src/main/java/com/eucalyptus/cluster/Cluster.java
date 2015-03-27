@@ -151,10 +151,10 @@ import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.util.fsm.StateMachineBuilder;
 import com.eucalyptus.util.fsm.TransitionAction;
 import com.eucalyptus.util.fsm.Transitions;
-import com.eucalyptus.vm.MigrationState;
-import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.MigrationState;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.vmtypes.VmType;
+import com.eucalyptus.compute.common.internal.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.eucalyptus.ws.WebServicesException;
 import com.google.common.base.Function;
@@ -1478,7 +1478,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       
       @Override
       public boolean apply( @Nullable VmInstance input ) {
-        input.abortMigration( );
+        VmInstances.abortMigration( input );
         return true;
       }
     };
@@ -1501,7 +1501,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       
       @Override
       public boolean apply( @Nullable VmInstance input ) {
-        input.startMigration( );
+        VmInstances.startMigration( input );
         return true;
       }
     };
@@ -1515,7 +1515,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       
       @Override
       public boolean apply( @Nullable VmInstance input ) {
-        input.abortMigration( );
+        VmInstances.abortMigration( input );
         return true;
       }
     };
@@ -1529,7 +1529,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       
       @Override
       public boolean apply( @Nullable VmInstance input ) {
-        input.startMigration( );
+        VmInstances.startMigration( input );
         return true;
       }
     };

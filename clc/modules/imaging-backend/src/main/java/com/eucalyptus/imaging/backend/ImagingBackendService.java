@@ -37,8 +37,8 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.images.ImageConversionManager;
-import com.eucalyptus.images.ImageInfo;
-import com.eucalyptus.images.MachineImageInfo;
+import com.eucalyptus.compute.common.internal.images.ImageInfo;
+import com.eucalyptus.compute.common.internal.images.MachineImageInfo;
 import com.eucalyptus.imaging.backend.AbstractTaskScheduler.WorkerTask;
 import com.eucalyptus.imaging.common.backend.msgs.CancelConversionTaskResponseType;
 import com.eucalyptus.imaging.common.backend.msgs.CancelConversionTaskType;
@@ -52,13 +52,12 @@ import com.eucalyptus.imaging.common.backend.msgs.ImportImageType;
 import com.eucalyptus.imaging.common.backend.msgs.PutInstanceImportTaskStatusResponseType;
 import com.eucalyptus.imaging.common.backend.msgs.PutInstanceImportTaskStatusType;
 import com.eucalyptus.imaging.common.ImagingBackend;
-import com.eucalyptus.imaging.worker.ImagingServiceLaunchers;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
-import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.vm.VmInstance.Reason;
-import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.compute.common.internal.vm.VmInstance.Reason;
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
@@ -315,7 +314,7 @@ public class ImagingBackendService {
             if ( imageId != null ) {
               for( VmInstance vm : VmInstances.list( new InstanceByImageId(imageId)) ) {
                 LOG.debug("Shutting down instance: " + vm.getInstanceId());
-                vm.setState( VmState.SHUTTING_DOWN, Reason.FAILED );
+                VmInstances.setState( vm, VmState.SHUTTING_DOWN, Reason.FAILED );
               }
             }
           }

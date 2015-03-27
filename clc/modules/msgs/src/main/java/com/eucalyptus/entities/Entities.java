@@ -82,6 +82,7 @@ import javax.persistence.Query;
 import javax.transaction.Synchronization;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
+import org.hibernate.FlushMode;
 import org.hibernate.Hibernate;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
@@ -209,7 +210,7 @@ public class Entities {
       ret.begin( );
       if ( txRootThreadLocal.get( ) == null ) {
         final String txId = makeTxRootName( ret );
-        LOG.trace( "Creating root entry for transaction tree: " + txId + " at: \n" + Threads.currentStackString( ) );
+        LOG.trace( "Creating root entry for transaction tree: " + txId + " at: \n" + ret.getRecord().getStack() );
         txRootThreadLocal.set( txId );
       }
       txStateThreadLocal.get( ).put( ctx, ret );
@@ -277,6 +278,30 @@ public class Entities {
   }
 
   /**
+   * Create an AutoCloseable read-only transaction for the given object.
+   *
+   * <pre>
+   * try ( TransactionResource transaction = distinctTransactionFor( ... ) ) {
+   *   ...
+   *   transaction.commit( );
+   * }
+   * </pre>
+   *
+   * <p>The transaction will rollback unless committed.</p>
+   *
+   * <p>This will fail if there is already an active transaction for the
+   * requested context.</p>
+   *
+   * @param obj The object used to determine the transaction context
+   * @return the TransactionResource
+   */
+  public static TransactionResource readOnlyDistinctTransactionFor( final Object obj ) {
+    final TransactionResource tx = distinctTransactionFor( obj );
+    readOnly( obj );
+    return tx;
+  }
+
+  /**
    * Call the given closure in a transaction.
    *
    * <p>The closure is passed the related EntityTransaction</p>
@@ -312,6 +337,20 @@ public class Entities {
       throw new IllegalStateException( "Found existing transaction for context " + lookatPersistenceContext( obj ) );
     }
     return transaction( obj, closure );
+  }
+
+  /**
+   * Configure the contextual transaction with optimizations for read-only use.
+   *
+   * WARNING! Transactions can be nested and this will be applied for the
+   * outermost transaction. Read-only distinct transaction methods are
+   * preferred. Use with caution.
+   *
+   * @param object The object used to determine the transaction context
+   *
+   */
+  public static void readOnly( final Object object ) {
+    getTransaction( object ).txState.getSession( ).setFlushMode( FlushMode.MANUAL );
   }
 
   public static <T> void flush( final T object ) {
@@ -940,9 +979,8 @@ public class Entities {
      */
     @SuppressWarnings( "unchecked" )
     CascadingTx( final String ctx ) throws RecoverablePersistenceException {
-      final StackTraceElement ste = Threads.currentStackFrame( 4 );
       final String uuid = UUID.randomUUID( ).toString( );
-      this.record = new TxRecord( ctx, uuid, ste );
+      this.record = new TxRecord( ctx, uuid );
       try {
         this.txState = new TxState( ctx );
       } catch ( final RuntimeException ex ) {
@@ -1206,13 +1244,11 @@ public class Entities {
     private final String            persistenceContext;
     private final String            uuid;
     private final Long              startTime;
-    private final StackTraceElement ste;
     private final String            stack;
     
-    TxRecord( final String persistenceContext, final String uuid, final StackTraceElement ste ) {
+    TxRecord( final String persistenceContext, final String uuid ) {
       this.persistenceContext = persistenceContext;
       this.uuid = uuid;
-      this.ste = ste;
       this.stack = Threads.currentStackString( );
       this.startTime = System.currentTimeMillis( );
     }
@@ -1228,11 +1264,7 @@ public class Entities {
     public String getUuid( ) {
       return this.uuid;
     }
-    
-    public StackTraceElement getSte( ) {
-      return this.ste;
-    }
-    
+
     String getStack( ) {
       return this.stack;
     }

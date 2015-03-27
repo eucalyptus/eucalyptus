@@ -36,7 +36,12 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
+import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.ComputeMessage;
+import com.eucalyptus.compute.common.DescribeInstancesResponseType;
+import com.eucalyptus.compute.common.DescribeInstancesType;
+import com.eucalyptus.compute.common.DescribeSnapshotsResponseType;
+import com.eucalyptus.compute.common.DescribeSnapshotsType;
 import com.eucalyptus.compute.common.EbsDeviceMapping;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.cluster.callback.StartInstanceCallback;
@@ -51,18 +56,19 @@ import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.compute.common.Snapshot;
 import com.eucalyptus.compute.common.backend.CreateSnapshotResponseType;
 import com.eucalyptus.compute.common.backend.CreateSnapshotType;
-import com.eucalyptus.compute.common.backend.DescribeInstancesResponseType;
-import com.eucalyptus.compute.common.backend.DescribeInstancesType;
-import com.eucalyptus.compute.common.backend.DescribeSnapshotsResponseType;
-import com.eucalyptus.compute.common.backend.DescribeSnapshotsType;
+import com.eucalyptus.compute.common.internal.vm.VmCreateImageSnapshot;
+import com.eucalyptus.compute.common.internal.vm.VmCreateImageTask;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmRuntimeState;
+import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
-import com.eucalyptus.images.BlockStorageImageInfo;
-import com.eucalyptus.images.DeviceMapping;
-import com.eucalyptus.images.ImageInfo;
+import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
+import com.eucalyptus.compute.common.internal.images.DeviceMapping;
+import com.eucalyptus.compute.common.internal.images.ImageInfo;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.images.Images.DeviceMappingDetails;
 import com.eucalyptus.util.Callback;
@@ -72,8 +78,8 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Callback.Checked;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
-import com.eucalyptus.vm.VmCreateImageTask.CreateImageState;
-import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.compute.common.internal.vm.VmCreateImageTask.CreateImageState;
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
@@ -684,13 +690,13 @@ public class CreateImageTask {
 	}
 	
 	private void stopInstance() {
-		final VmInstance vm = this.getVmInstance();
-		vm.getRuntimeState().stopVmInstance(new CreateImageStopInstanceCallback());
+		final VmInstance vm = this.getVmInstance( );
+		VmInstances.stopVmInstance( vm, new CreateImageStopInstanceCallback( ) );
 	}
 	
 	private void startInstance() {
-		final VmInstance vm = this.getVmInstance();
-		vm.getRuntimeState().startVmInstance(new CreateImageStartInstanceCallback());
+		final VmInstance vm = this.getVmInstance( );
+    VmInstances.startVmInstance( vm, new CreateImageStartInstanceCallback( ) );
 	}
 
 	private void registerImage(){
@@ -737,7 +743,7 @@ public class CreateImageTask {
 		
 		@Override
 		void dispatchInternal(Checked<ComputeMessage> callback) {
-			final DispatchingClient<ComputeMessage, Eucalyptus> client = this.getClient();
+			final DispatchingClient<ComputeMessage, Compute> client = this.getClient(Compute.class);
 			client.dispatch(describeSnapshots(), callback);				
 		}
 
@@ -769,7 +775,7 @@ public class CreateImageTask {
 		
 		@Override
 		void dispatchInternal(Checked<ComputeMessage> callback) {
-			final DispatchingClient<ComputeMessage, Eucalyptus> client = this.getClient();
+			final DispatchingClient<ComputeMessage, Eucalyptus> client = this.getClient(Eucalyptus.class);
 			client.dispatch(createSnapshot(), callback);				
 		}
 
@@ -784,7 +790,7 @@ public class CreateImageTask {
 		}
 	}
 	
-	private class EucalyptusDescribeInstanceTask extends EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
+	private class EucalyptusDescribeInstanceTask extends EucalyptusActivityTask<ComputeMessage, Compute> {
 		private RunningInstancesItemType result = null;
 		private EucalyptusDescribeInstanceTask(){}
 		private DescribeInstancesType describeInstances(){
@@ -795,7 +801,7 @@ public class CreateImageTask {
 		
 		@Override
 		void dispatchInternal(Checked<ComputeMessage> callback) {
-			final DispatchingClient<ComputeMessage, Eucalyptus> client = this.getClient();
+			final DispatchingClient<ComputeMessage, Compute> client = this.getClient(Compute.class);
 			client.dispatch(describeInstances(), callback);				
 		}
 
@@ -858,10 +864,10 @@ public class CreateImageTask {
 	
 	    abstract void dispatchSuccess(TM response );
 	    
-	    protected DispatchingClient<ComputeMessage, Eucalyptus> getClient() {
+	    protected <T extends ComponentId> DispatchingClient<ComputeMessage, T> getClient( final Class<T> component ) {
 			try{
-				final DispatchingClient<ComputeMessage, Eucalyptus> client =
-					new DispatchingClient<>(AccountFullName.getInstance( CreateImageTask.this.accountNumber ), Eucalyptus.class );
+				final DispatchingClient<ComputeMessage, T> client =
+					new DispatchingClient<>(AccountFullName.getInstance( CreateImageTask.this.accountNumber ), component );
 				client.init();
 				return client;
 			}catch(Exception e){

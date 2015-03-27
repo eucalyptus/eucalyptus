@@ -71,7 +71,7 @@ import javax.annotation.Nullable;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.blockstorage.Volume;
+import com.eucalyptus.compute.common.internal.blockstorage.Volume;
 import com.eucalyptus.compute.common.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cluster.Cluster;
@@ -86,7 +86,7 @@ import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypedContext;
 import com.eucalyptus.util.TypedKey;
-import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.collect.Maps;
