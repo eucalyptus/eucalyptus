@@ -72,6 +72,15 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.compute.common.CloudMetadataLimitedType;
+import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.RestrictedTypes;
+import com.google.common.base.Function;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
@@ -96,6 +105,7 @@ public class ResourceState {
   private NavigableSet<ResourceToken>                        submittedTokens;
   private NavigableSet<ResourceToken>                        redeemedTokens;
   private String                                             clusterName;
+
   public static class NoSuchTokenException extends Exception {
     private static final long serialVersionUID = 1L;
 
@@ -142,7 +152,7 @@ public class ResourceState {
                                         ? maxAmount
                                         : available );
     }
-    
+
     Set<VmTypeAvailability> tailSet = sorted.tailSet( vmTypeStatus );
     Set<VmTypeAvailability> headSet = sorted.headSet( vmTypeStatus );
     LOG.debug( LogUtil.header( "DURING ALLOCATE" ) );
@@ -173,15 +183,66 @@ public class ResourceState {
     return tokenList;
   }
 
+  private static boolean tokenOwnerRepresentsOwnerFullName( final OwnerFullName tokenOwnerFullName, final OwnerFullName ownerFullName ) {
+    if (tokenOwnerFullName == null || ownerFullName == null) return false;
+    if (ownerFullName instanceof AccountFullName) {
+      return tokenOwnerFullName.getAccountNumber().equals( ownerFullName.getAccountNumber( ));
+    } else {
+      return tokenOwnerFullName.getAccountNumber().equals( ownerFullName.getAccountNumber( )) && tokenOwnerFullName.getUserId().equals( ownerFullName.getUserId());
+    }
+  }
   public int countUncommittedPendingInstances( final OwnerFullName ownerFullName ) {
     int count = 0;
     for ( final ResourceToken token : this.pendingTokens ) {
-      if ( !token.isCommitted( ) && token.getOwner( ).isOwner( ownerFullName ) ) {
+      // token.getOwner().isOwner() returns true when token.getOwner() and ownerFullName are UserFullNames with
+      // different users in the same account..  For the sake of user quotas, .equals() works more correctly, but neither
+      // work in both cases.  A new function is necessary.
+      if ( !token.isCommitted( ) && tokenOwnerRepresentsOwnerFullName(token.getOwner(), ownerFullName) ) {
         count += token.getAmount( );
       }
     }
     return count;
   }
+
+  public long measureUncommittedPendingInstanceCpus( final OwnerFullName ownerFullName ) {
+    long amount = 0;
+    for ( final ResourceToken token : this.pendingTokens ) {
+      // token.getOwner().isOwner() returns true when token.getOwner() and ownerFullName are UserFullNames with
+      // different users in the same account..  For the sake of user quotas, .equals() works more correctly, but neither
+      // work in both cases.  A new function is necessary.
+      if ( !token.isCommitted( ) && tokenOwnerRepresentsOwnerFullName(token.getOwner(), ownerFullName) ) {
+        amount += token.getAmount( ) * token.getAllocationInfo().getVmType().getCpu();
+      }
+    }
+    return amount;
+  }
+
+  public long measureUncommittedPendingInstanceMemoryAmount(OwnerFullName ownerFullName) {
+    long amount = 0;
+    for ( final ResourceToken token : this.pendingTokens ) {
+      // token.getOwner().isOwner() returns true when token.getOwner() and ownerFullName are UserFullNames with
+      // different users in the same account..  For the sake of user quotas, .equals() works more correctly, but neither
+      // work in both cases.  A new function is necessary.
+      if ( !token.isCommitted( ) && tokenOwnerRepresentsOwnerFullName(token.getOwner(), ownerFullName) ) {
+        amount += token.getAmount( ) * token.getAllocationInfo().getVmType().getMemory();
+      }
+    }
+    return amount;
+  }
+
+  public long measureUncommittedPendingInstanceDisks(OwnerFullName ownerFullName) {
+    long amount = 0;
+    for ( final ResourceToken token : this.pendingTokens ) {
+      // token.getOwner().isOwner() returns true when token.getOwner() and ownerFullName are UserFullNames with
+      // different users in the same account..  For the sake of user quotas, .equals() works more correctly, but neither
+      // work in both cases.  A new function is necessary.
+      if ( !token.isCommitted( ) && tokenOwnerRepresentsOwnerFullName(token.getOwner(), ownerFullName) ) {
+        amount += token.getAmount( ) * token.getAllocationInfo().getVmType().getDisk();
+      }
+    }
+    return amount;
+  }
+
 
   public synchronized void releaseToken( ResourceToken token ) {
     LOG.debug( EventType.TOKEN_RELEASED.name( ) + ": " + token.toString( ) );

@@ -545,7 +545,7 @@ public class PolicyEngineImpl implements PolicyEngine {
           continue;
         }
         QuotaKey quotaKey = ( QuotaKey ) key;
-        if ( !key.canApply( action ) ) {
+        if ( !quotaKey.canApply( action , resourceType ) ) {
           LOG.debug( "Key " + cond.getKey( ) + " can not apply for action=" + action + ", resourceType=" + resourceType );
           continue;
         }
