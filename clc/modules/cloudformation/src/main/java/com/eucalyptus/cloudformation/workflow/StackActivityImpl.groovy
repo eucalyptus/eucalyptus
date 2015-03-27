@@ -128,7 +128,7 @@ public class StackActivityImpl implements StackActivity {
       JsonNode propertiesJsonNode = JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson());
       List<String> propertyKeys = Lists.newArrayList(propertiesJsonNode.fieldNames());
       for (String propertyKey : propertyKeys) {
-        JsonNode evaluatedPropertyNode = FunctionEvaluation.evaluateFunctions(propertiesJsonNode.get(propertyKey), stackEntity, resourceInfoMap);
+        JsonNode evaluatedPropertyNode = FunctionEvaluation.evaluateFunctions(propertiesJsonNode.get(propertyKey), stackEntity, resourceInfoMap, effectiveUserId);
         if (IntrinsicFunctions.NO_VALUE.evaluateMatch(evaluatedPropertyNode).isMatch()) {
           ((ObjectNode) propertiesJsonNode).remove(propertyKey);
         } else {
@@ -142,7 +142,7 @@ public class StackActivityImpl implements StackActivity {
       JsonNode metadataJsonNode = JsonHelper.getJsonNodeFromString(resourceInfo.getMetadataJson());
       List<String> metadataKeys = Lists.newArrayList(metadataJsonNode.fieldNames());
       for (String metadataKey : metadataKeys) {
-        JsonNode evaluatedMetadataNode = FunctionEvaluation.evaluateFunctions(metadataJsonNode.get(metadataKey), stackEntity, resourceInfoMap);
+        JsonNode evaluatedMetadataNode = FunctionEvaluation.evaluateFunctions(metadataJsonNode.get(metadataKey), stackEntity, resourceInfoMap, effectiveUserId);
         if (IntrinsicFunctions.NO_VALUE.evaluateMatch(evaluatedMetadataNode).isMatch()) {
           ((ObjectNode) metadataJsonNode).remove(metadataKey);
         } else {
@@ -156,7 +156,7 @@ public class StackActivityImpl implements StackActivity {
       JsonNode updatePolicyJsonNode = JsonHelper.getJsonNodeFromString(resourceInfo.getUpdatePolicyJson());
       List<String> updatePolicyKeys = Lists.newArrayList(updatePolicyJsonNode.fieldNames());
       for (String updatePolicyKey : updatePolicyKeys) {
-        JsonNode evaluatedUpdatePolicyNode = FunctionEvaluation.evaluateFunctions(updatePolicyJsonNode.get(updatePolicyKey), stackEntity, resourceInfoMap);
+        JsonNode evaluatedUpdatePolicyNode = FunctionEvaluation.evaluateFunctions(updatePolicyJsonNode.get(updatePolicyKey), stackEntity, resourceInfoMap, effectiveUserId);
         if (IntrinsicFunctions.NO_VALUE.evaluateMatch(evaluatedUpdatePolicyNode).isMatch()) {
           ((ObjectNode) updatePolicyJsonNode).remove(updatePolicyKey);
         } else {
@@ -293,7 +293,7 @@ public class StackActivityImpl implements StackActivity {
   }
 
   @Override
-  public String finalizeCreateStack(String stackId, String accountId) {
+  public String finalizeCreateStack(String stackId, String accountId, String effectiveUserId) {
     LOG.info("Finalizing create stack");
     try {
       StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
@@ -306,7 +306,7 @@ public class StackActivityImpl implements StackActivity {
       for (StackEntity.Output output : outputs) {
         output.setReady(true);
         output.setReady(true);
-        JsonNode outputValue = FunctionEvaluation.evaluateFunctions(JsonHelper.getJsonNodeFromString(output.getJsonValue()), stackEntity, resourceInfoMap);
+        JsonNode outputValue = FunctionEvaluation.evaluateFunctions(JsonHelper.getJsonNodeFromString(output.getJsonValue()), stackEntity, resourceInfoMap, effectiveUserId);
         if (outputValue == null || !outputValue.isValueNode()) {
           throw new ValidationErrorException("Cannot create outputs: All outputs must be strings.")
         }

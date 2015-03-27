@@ -55,11 +55,13 @@ import com.eucalyptus.cloudformation.workflow.MonitorCreateStackWorkflowDescript
 import com.eucalyptus.cloudformation.workflow.StartTimeoutPassableWorkflowClientFactory;
 import com.eucalyptus.cloudformation.workflow.WorkflowClientManager;
 import com.eucalyptus.cloudformation.ws.StackWorkflowTags;
-import com.eucalyptus.component.*;
-import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.ClusterInfoType;
-import com.eucalyptus.compute.common.backend.DescribeAvailabilityZonesResponseType;
-import com.eucalyptus.compute.common.backend.DescribeAvailabilityZonesType;
+import com.eucalyptus.compute.common.Compute;
+import com.eucalyptus.compute.common.DescribeAvailabilityZonesResponseType;
+import com.eucalyptus.compute.common.DescribeAvailabilityZonesType;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.context.Context;
@@ -161,11 +163,6 @@ public class CloudFormationService {
         pseudoParameterValues.setNotificationArns(notificationArns);
       }
       pseudoParameterValues.setRegion(REGION);
-      final List<String> defaultRegionAvailabilityZones = describeAvailabilityZones(userId);
-      final Map<String, List<String>> availabilityZones = Maps.newHashMap();
-      availabilityZones.put(REGION, defaultRegionAvailabilityZones);
-      availabilityZones.put("",defaultRegionAvailabilityZones); // "" defaults to the default region
-      pseudoParameterValues.setAvailabilityZones(availabilityZones);
       final ArrayList<String> capabilities = Lists.newArrayList();
       if (request.getCapabilities() != null && request.getCapabilities().getMember() != null) {
         capabilities.addAll(request.getCapabilities().getMember());
@@ -192,7 +189,7 @@ public class CloudFormationService {
 
       final String templateText = (templateBody != null) ? templateBody : extractTemplateTextFromURL(templateUrl, user);
 
-      final Template template = new TemplateParser().parse(templateText, parameters, capabilities, pseudoParameterValues);
+      final Template template = new TemplateParser().parse(templateText, parameters, capabilities, pseudoParameterValues, userId);
 
 
       final Supplier<StackEntity> allocator = new Supplier<StackEntity>() {
@@ -352,22 +349,6 @@ public class CloudFormationService {
       LOG.debug(ex, ex);
       throw new ValidationErrorException("Template url is an S3 URL to a non-existent or unauthorized bucket/key.  (bucket=" + bucketAndKey.getBucket() + ", key=" + bucketAndKey.getKey());
     }
-  }
-
-
-  private static List<String> describeAvailabilityZones(String userId) throws Exception {
-    ServiceConfiguration configuration = Topology.lookup(Eucalyptus.class);
-    DescribeAvailabilityZonesType describeAvailabilityZonesType = new DescribeAvailabilityZonesType();
-    describeAvailabilityZonesType.setEffectiveUserId(userId);
-    DescribeAvailabilityZonesResponseType describeAvailabilityZonesResponseType =
-      AsyncRequests.<DescribeAvailabilityZonesType,DescribeAvailabilityZonesResponseType>
-        sendSync(configuration, describeAvailabilityZonesType);
-    List<String> availabilityZones = Lists.newArrayList();
-    for (ClusterInfoType clusterInfoType: describeAvailabilityZonesResponseType.getAvailabilityZoneInfo()) {
-      availabilityZones.add(clusterInfoType.getZoneName());
-
-    }
-    return availabilityZones;
   }
 
   public DeleteStackResponseType deleteStack( final DeleteStackType request ) throws CloudFormationException {
@@ -852,13 +833,8 @@ public class CloudFormationService {
       pseudoParameterValues.setStackId(stackId);
       ArrayList<String> notificationArns = Lists.newArrayList();
       pseudoParameterValues.setRegion(REGION);
-      final List<String> defaultRegionAvailabilityZones = describeAvailabilityZones(userId);
-      final Map<String, List<String>> availabilityZones = Maps.newHashMap();
-      availabilityZones.put(REGION, defaultRegionAvailabilityZones);
-      availabilityZones.put("",defaultRegionAvailabilityZones); // "" defaults to the default region
-      pseudoParameterValues.setAvailabilityZones(availabilityZones);
       List<Parameter> parameters = Lists.newArrayList();
-      final ValidateTemplateResult validateTemplateResult = new TemplateParser().validateTemplate(templateText, parameters, pseudoParameterValues);
+      final ValidateTemplateResult validateTemplateResult = new TemplateParser().validateTemplate(templateText, parameters, pseudoParameterValues, userId);
       reply.setValidateTemplateResult(validateTemplateResult);
     } catch (Exception ex) {
       handleException(ex);

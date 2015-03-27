@@ -90,7 +90,7 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
           }
           AndPromise allResourcePromises = new AndPromise(createdResourcePromiseMap.values());
           waitFor(allResourcePromises) {
-            waitFor(promiseFor(activities.finalizeCreateStack(stackId, accountId))) {
+            waitFor(promiseFor(activities.finalizeCreateStack(stackId, accountId, effectiveUserId))) {
               promiseFor(activities.createGlobalStackEvent(stackId, accountId,
                 StackResourceEntity.Status.CREATE_COMPLETE.toString(),
                 "Complete!"));

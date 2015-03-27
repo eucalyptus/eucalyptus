@@ -20,16 +20,27 @@
 
 package com.eucalyptus.cloudformation.template;
 
+import com.eucalyptus.cloudformation.AccessDeniedException;
 import com.eucalyptus.cloudformation.CloudFormationException;
+import com.eucalyptus.cloudformation.CloudFormationService;
+import com.eucalyptus.cloudformation.InternalFailureException;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.entity.StackEntityHelper;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.ClusterInfoType;
+import com.eucalyptus.compute.common.Compute;
+import com.eucalyptus.compute.common.DescribeAvailabilityZonesResponseType;
+import com.eucalyptus.compute.common.DescribeAvailabilityZonesType;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.bouncycastle.util.encoders.Base64;
 
 import java.beans.Introspector;
@@ -55,7 +66,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, Template template) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, Template template, String effectiveUserId) throws CloudFormationException {
       checkState(validateResult, this);
       return validateResult.getJsonNode();
     }
@@ -85,7 +96,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, Template template) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, Template template, String effectiveUserId) throws CloudFormationException {
       checkState(validateResult, this);
       // Already known to be string from validate
       JsonNode keyJsonNode = validateResult.getJsonNode().get(FunctionEvaluation.REF_STR);
@@ -131,7 +142,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       return new ValidateResult(matchResult.getJsonNode(), this);
     }
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, Template template) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, Template template, String effectiveUserId) throws CloudFormationException {
       checkState(validateResult, this);
       // Already known to be string from validate
       JsonNode keyJsonNode = validateResult.getJsonNode().get(FunctionEvaluation.CONDITION_STR);
@@ -171,7 +182,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, Template template) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, Template template, String effectiveUserId) throws CloudFormationException {
       checkState(validateResult, this);
       // We know from validate this is an array of 3 elements
       JsonNode keyJsonNode = validateResult.getJsonNode().get(FunctionEvaluation.FN_IF);
@@ -180,7 +191,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       // Note: We are not evaluating both conditions because AWS does not for dependency purposes.  Don't want
       // to get a non-ready reference if we choose the wrong path
       // But evaluate (as it could be a function) the one we are returning
-      return FunctionEvaluation.evaluateFunctions(keyJsonNode.get(booleanValue ? 1 : 2), template);
+      return FunctionEvaluation.evaluateFunctions(keyJsonNode.get(booleanValue ? 1 : 2), template, effectiveUserId);
     }
     @Override
     public boolean isBooleanFunction() {
@@ -208,13 +219,13 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, Template template) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, Template template, String effectiveUserId) throws CloudFormationException {
       checkState(validateResult, this);
       // Array verified by validate
       JsonNode keyJsonNode = validateResult.getJsonNode().get(FunctionEvaluation.FN_EQUALS);
       // On the other hand, the arguments can be functions
-      JsonNode evaluatedArg0 = FunctionEvaluation.evaluateFunctions(keyJsonNode.get(0), template);
-      JsonNode evaluatedArg1 = FunctionEvaluation.evaluateFunctions(keyJsonNode.get(1), template);
+      JsonNode evaluatedArg0 = FunctionEvaluation.evaluateFunctions(keyJsonNode.get(0), template, effectiveUserId);
+      JsonNode evaluatedArg1 = FunctionEvaluation.evaluateFunctions(keyJsonNode.get(1), template, effectiveUserId);
       // TODO: not sure if this is true
       if (evaluatedArg0 == null || evaluatedArg1 == null) return new TextNode("false");
       return new TextNode(String.valueOf(evaluatedArg0.equals(evaluatedArg1)));
@@ -252,7 +263,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, Template template) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, Template template, String effectiveUserId) throws CloudFormationException {
       checkState(validateResult, this);
       // Args types validated already
       JsonNode keyJsonNode = validateResult.getJsonNode().get(FunctionEvaluation.FN_AND);
@@ -260,7 +271,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       for (int i = 0;i < keyJsonNode.size(); i++) {
         // Evaluate the argument
         JsonNode argNode = keyJsonNode.get(i);
-        JsonNode evaluatedArgNode = FunctionEvaluation.evaluateFunctions(argNode, template);
+        JsonNode evaluatedArgNode = FunctionEvaluation.evaluateFunctions(argNode, template, effectiveUserId);
         boolean boolValueArgNode = FunctionEvaluation.evaluateBoolean(evaluatedArgNode);
         returnValue = returnValue && boolValueArgNode;
       }
@@ -299,7 +310,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, Template template) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, Template template, String effectiveUserId) throws CloudFormationException {
       checkState(validateResult, this);
       // Args types validated already
       JsonNode keyJsonNode = validateResult.getJsonNode().get(FunctionEvaluation.FN_OR);
@@ -307,7 +318,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       for (int i = 0;i < keyJsonNode.size(); i++) {
         // Evaluate the argument
         JsonNode argNode = keyJsonNode.get(i);
-        JsonNode evaluatedArgNode = FunctionEvaluation.evaluateFunctions(argNode, template);
+        JsonNode evaluatedArgNode = FunctionEvaluation.evaluateFunctions(argNode, template, effectiveUserId);
         boolean boolValueArgNode = FunctionEvaluation.evaluateBoolean(evaluatedArgNode);
         returnValue = returnValue || boolValueArgNode;
       }
@@ -344,13 +355,13 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, Template template) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, Template template, String effectiveUserId) throws CloudFormationException {
       checkState(validateResult, this);
       // Args types validated already
       JsonNode keyJsonNode = validateResult.getJsonNode().get(FunctionEvaluation.FN_NOT);
       // Evaluate the argument
       JsonNode arg0Node = keyJsonNode.get(0);
-      JsonNode evaluatedArg0Node = FunctionEvaluation.evaluateFunctions(arg0Node, template);
+      JsonNode evaluatedArg0Node = FunctionEvaluation.evaluateFunctions(arg0Node, template, effectiveUserId);
       boolean boolValueArg0Node = FunctionEvaluation.evaluateBoolean(evaluatedArg0Node);
       return new TextNode(String.valueOf(!boolValueArg0Node));
     }
@@ -380,14 +391,14 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
 
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, Template template) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, Template template, String effectiveUserId) throws CloudFormationException {
       checkState(validateResult, this);
       // Size 3 array verified in validate
       JsonNode key = validateResult.getJsonNode().get(FunctionEvaluation.FN_FIND_IN_MAP);
       // Array elements might be functions so evaluate them
-      JsonNode arg0Node = FunctionEvaluation.evaluateFunctions(key.get(0), template);
-      JsonNode arg1Node = FunctionEvaluation.evaluateFunctions(key.get(1), template);
-      JsonNode arg2Node = FunctionEvaluation.evaluateFunctions(key.get(2), template);
+      JsonNode arg0Node = FunctionEvaluation.evaluateFunctions(key.get(0), template, effectiveUserId);
+      JsonNode arg1Node = FunctionEvaluation.evaluateFunctions(key.get(1), template, effectiveUserId);
+      JsonNode arg2Node = FunctionEvaluation.evaluateFunctions(key.get(2), template, effectiveUserId);
       // Make sure types ok
       if (arg0Node == null || arg1Node == null || arg2Node == null
         || !arg0Node.isValueNode() || !arg1Node.isValueNode() || !arg2Node.isValueNode()
@@ -431,10 +442,10 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, Template template) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, Template template, String effectiveUserId) throws CloudFormationException {
       checkState(validateResult, this);
       // This one could evaluate from a function
-      JsonNode keyJsonNode = FunctionEvaluation.evaluateFunctions(validateResult.getJsonNode().get(FunctionEvaluation.FN_BASE64), template);
+      JsonNode keyJsonNode = FunctionEvaluation.evaluateFunctions(validateResult.getJsonNode().get(FunctionEvaluation.FN_BASE64), template, effectiveUserId);
       if (keyJsonNode == null || !keyJsonNode.isValueNode()) {
         throw new ValidationErrorException("Template error: every Fn::Base64 object must have a String-typed value.");
       }
@@ -470,13 +481,13 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, Template template) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, Template template, String effectiveUserId) throws CloudFormationException {
       checkState(validateResult, this);
       // Top level array validated already
       JsonNode key = validateResult.getJsonNode().get(FunctionEvaluation.FN_SELECT);
       // on the other hand, both fields within this function can be functions (including the second array) so
       // let's evaluate
-      JsonNode evaluatedIndex = FunctionEvaluation.evaluateFunctions(key.get(0), template);
+      JsonNode evaluatedIndex = FunctionEvaluation.evaluateFunctions(key.get(0), template, effectiveUserId);
       if (evaluatedIndex == null || !evaluatedIndex.isValueNode() || evaluatedIndex.asText() == null) {
         throw new ValidationErrorException("Template error: Fn::Select requires a list " +
           "argument with a valid index value as its first element");
@@ -491,7 +502,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
         throw new ValidationErrorException("Template error: Fn::Select requires a list argument with two elements: an integer index and a list");
       }
       // Second argument must be an array but can be one as the result of a function
-      JsonNode argArray = FunctionEvaluation.evaluateFunctions(key.get(1), template);
+      JsonNode argArray = FunctionEvaluation.evaluateFunctions(key.get(1), template, effectiveUserId);
       if (argArray == null || !argArray.isArray()) {
         throw new ValidationErrorException("Template error: Fn::Select requires a list argument with two elements: an integer index and a list");
       }
@@ -526,13 +537,13 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, Template template) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, Template template, String effectiveUserId) throws CloudFormationException {
       checkState(validateResult, this);
       // Top level array validated already
       JsonNode key = validateResult.getJsonNode().get(FunctionEvaluation.FN_JOIN);
       // On the other hand, the delimiter and the list of strings can be functions
-      JsonNode delimiterNode = FunctionEvaluation.evaluateFunctions(key.get(0), template);
-      JsonNode arrayOfStrings = FunctionEvaluation.evaluateFunctions(key.get(1), template);
+      JsonNode delimiterNode = FunctionEvaluation.evaluateFunctions(key.get(0), template, effectiveUserId);
+      JsonNode arrayOfStrings = FunctionEvaluation.evaluateFunctions(key.get(1), template, effectiveUserId);
       if (delimiterNode == null || !delimiterNode.isValueNode() || delimiterNode.asText() == null ||
         arrayOfStrings == null || !arrayOfStrings.isArray()) {
         throw new ValidationErrorException("Template error: every Fn::Join object requires two parameters, "
@@ -573,10 +584,10 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, Template template) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, Template template, String effectiveUserId) throws CloudFormationException {
       checkState(validateResult, this);
       // This one could evaluate from a function
-      JsonNode keyJsonNode = FunctionEvaluation.evaluateFunctions(validateResult.getJsonNode().get(FunctionEvaluation.FN_GET_AZS), template);
+      JsonNode keyJsonNode = FunctionEvaluation.evaluateFunctions(validateResult.getJsonNode().get(FunctionEvaluation.FN_GET_AZS), template, effectiveUserId);
       if (keyJsonNode == null || !keyJsonNode.isValueNode()) {
         throw new ValidationErrorException("Template error: every Fn::GetAZs object must have a String-typed value.");
       }
@@ -585,7 +596,15 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
         throw new ValidationErrorException("Template error: every Fn::GetAZs object must not have a null value.");
       }
       List<String> availabilityZones = Lists.newArrayList();
-      Map<String, List<String>> availabilityZoneMap = template.getAvailabilityZoneMap();
+      final List<String> defaultRegionAvailabilityZones;
+      try {
+        defaultRegionAvailabilityZones = describeAvailabilityZones(effectiveUserId);
+      } catch (Exception e) {
+        throw new InternalFailureException(e.getMessage() != null ? e.getMessage():  "Unable to access availability zones");
+      }
+      final Map<String, List<String>> availabilityZoneMap = Maps.newHashMap();
+      availabilityZoneMap.put(CloudFormationService.REGION, defaultRegionAvailabilityZones);
+      availabilityZoneMap.put("",defaultRegionAvailabilityZones); // "" defaults to the default region
       if (availabilityZoneMap != null && availabilityZoneMap.containsKey(key)) {
         availabilityZones.addAll(availabilityZoneMap.get(key));
       } else {
@@ -601,6 +620,21 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     @Override
     public boolean isBooleanFunction() {
       return false;
+    }
+
+    private List<String> describeAvailabilityZones(String userId) throws Exception {
+      ServiceConfiguration configuration = Topology.lookup(Compute.class);
+      DescribeAvailabilityZonesType describeAvailabilityZonesType = new DescribeAvailabilityZonesType();
+      describeAvailabilityZonesType.setEffectiveUserId(userId);
+      DescribeAvailabilityZonesResponseType describeAvailabilityZonesResponseType =
+        AsyncRequests.<DescribeAvailabilityZonesType,DescribeAvailabilityZonesResponseType>
+          sendSync(configuration, describeAvailabilityZonesType);
+      List<String> availabilityZones = Lists.newArrayList();
+      for (ClusterInfoType clusterInfoType: describeAvailabilityZonesResponseType.getAvailabilityZoneInfo()) {
+        availabilityZones.add(clusterInfoType.getZoneName());
+
+      }
+      return availabilityZones;
     }
   },
   GET_ATT {
@@ -623,7 +657,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, Template template) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, Template template, String effectiveUserId) throws CloudFormationException {
       checkState(validateResult, this);
       JsonNode key = validateResult.getJsonNode().get(FunctionEvaluation.FN_GET_ATT);
       String resourceName = key.get(0).asText();
@@ -667,7 +701,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, Template template) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, Template template, String effectiveUserId) throws CloudFormationException {
       checkState(validateResult, this);
       throw new ValidationErrorException("Template Error: Encountered unsupported function: " +
         validateResult.getJsonNode().fieldNames().next()+" Supported functions are: [Fn::Base64, Fn::GetAtt, " +

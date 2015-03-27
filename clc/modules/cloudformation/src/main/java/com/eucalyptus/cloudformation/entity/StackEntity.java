@@ -60,11 +60,6 @@ public class StackEntity extends AbstractPersistent implements CloudFormationMet
   @Column(name = "account_id", nullable = false)
   String accountId;
 
-  @Column(name = "availability_zone_map_json" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
-  String availabilityZoneMapJson;
-
   @Column(name = "capabilities_json" )
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
@@ -330,14 +325,6 @@ public class StackEntity extends AbstractPersistent implements CloudFormationMet
 
   public void setAccountId(String accountId) {
     this.accountId = accountId;
-  }
-
-  public String getAvailabilityZoneMapJson() {
-    return availabilityZoneMapJson;
-  }
-
-  public void setAvailabilityZoneMapJson(String availabilityZoneMapJson) {
-    this.availabilityZoneMapJson = availabilityZoneMapJson;
   }
 
   public String getCapabilitiesJson() {

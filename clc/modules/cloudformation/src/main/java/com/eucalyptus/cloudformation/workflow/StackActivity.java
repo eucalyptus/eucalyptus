@@ -38,7 +38,7 @@ public interface StackActivity {
   public String determineDeleteResourceFailures(String stackId, String accountId);
   public String initDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId);
   public String createGlobalStackEvent(String stackId, String accountId, String resourceStatus, String resourceStatusReason);
-  public String finalizeCreateStack(String stackId, String accountId);
+  public String finalizeCreateStack(String stackId, String accountId, String effectiveUserId);
   public String deleteAllStackRecords(String stackId, String accountId);
   public String getResourceType(String stackId, String accountId, String resourceId);
   public String finalizeCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId);

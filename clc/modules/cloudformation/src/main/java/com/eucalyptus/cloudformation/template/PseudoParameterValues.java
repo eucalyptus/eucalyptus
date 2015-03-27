@@ -31,7 +31,6 @@ public class PseudoParameterValues {
   String region;
   String stackName;
   String stackId;
-  Map<String, List<String>> availabilityZones = Maps.newHashMap();
 
   public String getAccountId() {
     return accountId;
@@ -73,11 +72,4 @@ public class PseudoParameterValues {
     this.stackId = stackId;
   }
 
-  public Map<String, List<String>> getAvailabilityZones() {
-    return availabilityZones;
-  }
-
-  public void setAvailabilityZones(Map<String, List<String>> availabilityZones) {
-    this.availabilityZones = availabilityZones;
-  }
 }

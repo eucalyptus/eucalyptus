@@ -125,7 +125,7 @@ public class TemplateParser {
   private static final String[] validTemplateVersions = new String[] {DEFAULT_TEMPLATE_VERSION};
   private ObjectMapper objectMapper = new ObjectMapper();
 
-  public Template parse(String templateBody, List<Parameter> userParameters, List<String> capabilities, PseudoParameterValues pseudoParameterValues) throws CloudFormationException {
+  public Template parse(String templateBody, List<Parameter> userParameters, List<String> capabilities, PseudoParameterValues pseudoParameterValues, String effectiveUserId) throws CloudFormationException {
     Template template = new Template();
     template.setResourceInfoMap(Maps.<String, ResourceInfo>newLinkedHashMap());
     JsonNode templateJsonNode = null;
@@ -145,7 +145,7 @@ public class TemplateParser {
     parseDescription(template, templateJsonNode);
     parseMappings(template, templateJsonNode);
     ParameterParser.parseParameters(template, templateJsonNode, userParameters, false);
-    parseConditions(template, templateJsonNode, false);
+    parseConditions(template, templateJsonNode, false, effectiveUserId);
     parseResources(template, templateJsonNode, false);
     List<String> requiredCapabilities = Lists.newArrayList();
     for (ResourceInfo resourceInfo: template.getResourceInfoMap().values()) {
@@ -168,7 +168,7 @@ public class TemplateParser {
     return template;
   }
 
-  public ValidateTemplateResult validateTemplate(String templateBody, List<Parameter> userParameters, PseudoParameterValues pseudoParameterValues) throws CloudFormationException {
+  public ValidateTemplateResult validateTemplate(String templateBody, List<Parameter> userParameters, PseudoParameterValues pseudoParameterValues, String effectiveUserId) throws CloudFormationException {
     Template template = new Template();
     template.setResourceInfoMap(Maps.<String, ResourceInfo>newLinkedHashMap());
     JsonNode templateJsonNode = null;
@@ -188,7 +188,7 @@ public class TemplateParser {
     parseDescription(template, templateJsonNode);
     parseMappings(template, templateJsonNode);
     ParameterParser.parseParameters(template, templateJsonNode, userParameters, true);
-    parseConditions(template, templateJsonNode, true);
+    parseConditions(template, templateJsonNode, true, effectiveUserId);
     parseResources(template, templateJsonNode, true);
     parseOutputs(template, templateJsonNode);
 
@@ -237,8 +237,6 @@ public class TemplateParser {
 
     pseudoParameterMap.put(AWS_STACK_NAME, JsonHelper.getStringFromJsonNode(new TextNode(pseudoParameterValues.getStackName())));
     template.setPseudoParameterMap(pseudoParameterMap);
-    // More like an intrinsic function, but still do it here...
-    template.setAvailabilityZoneMap(pseudoParameterValues.getAvailabilityZones());
   }
 
   private void parseValidTopLevelKeys(JsonNode templateJsonNode) throws CloudFormationException {
@@ -642,7 +640,7 @@ public class TemplateParser {
     }
   }
 
-  private void parseConditions(Template template, JsonNode templateJsonNode, boolean onlyEvaluateTemplate) throws CloudFormationException {
+  private void parseConditions(Template template, JsonNode templateJsonNode, boolean onlyEvaluateTemplate, String effectiveUserId) throws CloudFormationException {
     JsonNode conditionsJsonNode = JsonHelper.checkObject(templateJsonNode, TemplateSection.Conditions.toString());
     if (conditionsJsonNode == null) return;
     Set<String> conditionNames = Sets.newLinkedHashSet(Lists.newArrayList(conditionsJsonNode.fieldNames()));
@@ -678,7 +676,7 @@ public class TemplateParser {
         if (onlyEvaluateTemplate) {
           conditionMap.put(conditionName, Boolean.FALSE);
         } else {
-          conditionMap.put(conditionName, FunctionEvaluation.evaluateBoolean(FunctionEvaluation.evaluateFunctions(conditionJsonNode, template)));
+          conditionMap.put(conditionName, FunctionEvaluation.evaluateBoolean(FunctionEvaluation.evaluateFunctions(conditionJsonNode, template, effectiveUserId)));
         }
         template.setConditionMap(conditionMap);
       }
