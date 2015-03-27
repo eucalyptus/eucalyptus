@@ -22,6 +22,7 @@ package com.eucalyptus.auth.euare.identity;
 import static com.eucalyptus.auth.principal.Certificate.Util.revoked;
 import static com.eucalyptus.util.CollectionUtils.propertyPredicate;
 import java.util.ArrayList;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Named;
 import org.apache.log4j.Logger;
@@ -31,25 +32,37 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.InvalidAccessKeyAuthException;
 import com.eucalyptus.auth.api.IdentityProvider;
 import com.eucalyptus.auth.euare.EuareException;
+import com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileResponseType;
+import com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileResult;
+import com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileType;
 import com.eucalyptus.auth.euare.common.identity.DescribePrincipalResponseType;
 import com.eucalyptus.auth.euare.common.identity.DescribePrincipalResult;
 import com.eucalyptus.auth.euare.common.identity.DescribePrincipalType;
+import com.eucalyptus.auth.euare.common.identity.DescribeRoleResponseType;
+import com.eucalyptus.auth.euare.common.identity.DescribeRoleResult;
+import com.eucalyptus.auth.euare.common.identity.DescribeRoleType;
 import com.eucalyptus.auth.euare.common.identity.Policy;
 import com.eucalyptus.auth.euare.common.identity.Principal;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Certificate;
+import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.PolicyVersions;
+import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.TypeMapper;
+import com.eucalyptus.util.TypeMappers;
+import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 /**
  *
  */
+@SuppressWarnings( "UnusedDeclaration" )
 @ComponentNamed
 public class IdentityService {
 
@@ -118,14 +131,12 @@ public class IdentityService {
         principal.setCertificates( certificates );
 
         final ArrayList<Policy> policies = Lists.newArrayList( );
-        if ( user.isEnabled( ) ) for ( final PolicyVersion policyVersion : user.getPrincipalPolicies() ) {
-          final Policy policy = new Policy();
-          policy.setVersionId( policyVersion.getPolicyVersionId( ) );
-          policy.setName( policyVersion.getPolicyName( ) );
-          policy.setScope( policyVersion.getPolicyScope( ).toString() );
-          policy.setPolicy( policyVersion.getPolicy( ) );
-          policy.setHash( PolicyVersions.hash( policyVersion.getPolicy( ) ) );
-          policies.add( policy );
+        if ( user.isEnabled( ) ) {
+          Iterables.addAll(
+              policies,
+              Iterables.transform(
+                  user.getPrincipalPolicies( ),
+                  TypeMappers.lookup( PolicyVersion.class, Policy.class ) ) );
         }
         principal.setPolicies( policies );
 
@@ -138,6 +149,43 @@ public class IdentityService {
     }
 
     response.setDescribePrincipalResult( result );
+    return response;
+  }
+
+  public DescribeInstanceProfileResponseType describeInstanceProfile(
+      final DescribeInstanceProfileType request
+  ) throws EuareException {
+    final DescribeInstanceProfileResponseType response = request.getReply( );
+    final DescribeInstanceProfileResult result = new DescribeInstanceProfileResult( );
+
+    try {
+      final InstanceProfile instanceProfile =
+          identityProvider.lookupInstanceProfileByName( request.getAccountId( ), request.getInstanceProfileName( ) );
+      result.setInstanceProfile(
+          TypeMappers.transform( instanceProfile, com.eucalyptus.auth.euare.common.identity.InstanceProfile.class ) );
+      result.setRole(
+          TypeMappers.transform( instanceProfile.getRole( ), com.eucalyptus.auth.euare.common.identity.Role.class ) );
+    } catch ( AuthException e ) {
+      throw handleException( e );
+    }
+
+    response.setDescribeInstanceProfileResult( result );
+    return response;
+  }
+
+  public DescribeRoleResponseType describeRole( final DescribeRoleType request ) throws EuareException {
+    final DescribeRoleResponseType response = request.getReply( );
+    final DescribeRoleResult result = new DescribeRoleResult( );
+
+    try {
+      final Role role = identityProvider.lookupRoleByName( request.getAccountId(), request.getRoleName() );
+      result.setRole(
+          TypeMappers.transform( role, com.eucalyptus.auth.euare.common.identity.Role.class ) );
+    } catch ( AuthException e ) {
+      throw handleException( e );
+    }
+
+    response.setDescribeRoleResult( result );
     return response;
   }
 
@@ -158,6 +206,56 @@ public class IdentityService {
       exception.initCause( e );
     }
     throw exception;
+  }
+
+  @TypeMapper
+  public enum PolicyVersionToPolicyTransform implements Function<PolicyVersion,Policy> {
+    INSTANCE;
+
+    @Nullable
+    @Override
+    public Policy apply( final PolicyVersion policyVersion ) {
+      final Policy policy = new Policy();
+      policy.setVersionId( policyVersion.getPolicyVersionId() );
+      policy.setName( policyVersion.getPolicyName() );
+      policy.setScope( policyVersion.getPolicyScope().toString() );
+      policy.setPolicy( policyVersion.getPolicy() );
+      policy.setHash( PolicyVersions.hash( policyVersion.getPolicy( ) ) );
+      return policy;
+    }
+  }
+
+  @TypeMapper
+  public enum InstanceProfileToInstanceProfileTransform
+      implements Function<InstanceProfile,com.eucalyptus.auth.euare.common.identity.InstanceProfile> {
+    INSTANCE;
+
+    @Nullable
+    @Override
+    public com.eucalyptus.auth.euare.common.identity.InstanceProfile apply( final InstanceProfile authProfile ) {
+      final com.eucalyptus.auth.euare.common.identity.InstanceProfile profile =
+          new com.eucalyptus.auth.euare.common.identity.InstanceProfile( );
+      profile.setInstanceProfileArn( authProfile.getInstanceProfileArn( ) );
+      profile.setInstanceProfileId( authProfile.getInstanceProfileId() );
+      return profile;
+    }
+  }
+
+
+  @TypeMapper
+  public enum RoleToRoleTransform implements Function<Role,com.eucalyptus.auth.euare.common.identity.Role> {
+    INSTANCE;
+
+    @Nullable
+    @Override
+    public com.eucalyptus.auth.euare.common.identity.Role apply( final Role authRole ) {
+      final com.eucalyptus.auth.euare.common.identity.Role role = new com.eucalyptus.auth.euare.common.identity.Role( );
+      role.setRoleArn( authRole.getRoleArn( ) );
+      role.setRoleId( authRole.getRoleId( ) );
+      role.setSecret( authRole.getSecret( ) );
+      role.setAssumeRolePolicy( TypeMappers.transform( authRole.getPolicy(), Policy.class ));
+      return role;
+    }
   }
 
 }

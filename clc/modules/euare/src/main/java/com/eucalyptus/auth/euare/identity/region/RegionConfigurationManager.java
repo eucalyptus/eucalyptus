@@ -36,6 +36,7 @@ import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.cache.Cache;
@@ -86,6 +87,30 @@ public class RegionConfigurationManager {
   }
 
   /**
+   * Get information for a region based on an account identifier
+   *
+   * @param accountNumber The account number to use
+   * @return The region info optional
+   */
+  @Nonnull
+  public Optional<RegionInfo> getRegionByAccountNumber( @Nullable final String accountNumber ) {
+    Optional<RegionInfo> regionInfoOptional = Optional.absent( );
+    final Optional<RegionConfiguration> configurationOptional = regionConfigurationSupplier.get( );
+    if ( configurationOptional.isPresent( ) && accountNumber != null && accountNumber.length( ) == 12 ) {
+      final RegionConfiguration configuration = configurationOptional.get( );
+      final String regionIdPartition = accountNumber.substring( 0, 3 );
+      for ( final Region region : configuration ) {
+        if ( Iterables.contains(
+            Iterables.transform( region.getIdentifierPartitions( ), PartitionFunctions.ACCOUNT_NUMBER ),
+            regionIdPartition ) ) {
+          regionInfoOptional = Optional.of( TypeMappers.transform( region, RegionInfo.class ) );
+        }
+      }
+    }
+    return regionInfoOptional;
+  }
+
+  /**
    * Get the region information for the local region (if any)
    *
    * @return The optional region information
@@ -122,16 +147,23 @@ public class RegionConfigurationManager {
     return found;
   }
 
-  private enum PartitionFunctions implements Function<Integer,String> {
+  private enum PartitionFunctions implements NonNullFunction<Integer,String> {
+    ACCOUNT_NUMBER {
+      @Nonnull
+      @Override
+      public String apply( final Integer integer ) {
+        return Strings.padStart( String.valueOf( integer ), 3, '0' );
+      }
+    },
     IDENTIFIER {
       private final char[] characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567".toCharArray( );
 
-      @Nullable
+      @Nonnull
       @Override
       public String apply( final Integer integer ) {
         return new String( new char[ ]{ characters[ integer / 32 ], characters[ integer % 32 ] } );
       }
-    }
+    },
   }
 
   private enum RegionNameTransform implements NonNullFunction<Region,String> {
@@ -187,11 +219,19 @@ public class RegionConfigurationManager {
     private final RegionConfigurationManager regionConfigurationManager = new RegionConfigurationManager( );
 
     @Override
-    public Iterable<String> getPartitions( ) {
+    public Iterable<String> getIdentifierPartitions( ) {
       return Iterables.transform(
           Iterables.concat(
               regionConfigurationManager.getRegionInfo( ).transform( RegionInfoPartitionsTransform.INSTANCE ).asSet( ) ),
           PartitionFunctions.IDENTIFIER );
+    }
+
+    @Override
+    public Iterable<String> getAccountNumberPartitions( ) {
+      return Iterables.transform(
+          Iterables.concat(
+              regionConfigurationManager.getRegionInfo( ).transform( RegionInfoPartitionsTransform.INSTANCE ).asSet( ) ),
+          PartitionFunctions.ACCOUNT_NUMBER );
     }
   }
 }

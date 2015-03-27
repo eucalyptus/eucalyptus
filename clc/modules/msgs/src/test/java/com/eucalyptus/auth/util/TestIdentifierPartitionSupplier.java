@@ -27,7 +27,12 @@ import com.google.common.collect.Lists;
 public class TestIdentifierPartitionSupplier implements Identifiers.IdentifierPartitionSupplier {
 
   @Override
-  public Iterable<String> getPartitions( ) {
+  public Iterable<String> getAccountNumberPartitions() {
+    return Lists.newArrayList( "000" );
+  }
+
+  @Override
+  public Iterable<String> getIdentifierPartitions() {
     return Lists.newArrayList( "AA" );
   }
 }

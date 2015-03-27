@@ -36,9 +36,12 @@ import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.policy.PolicyPolicy;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.InstanceProfile;
+import com.eucalyptus.auth.principal.EuareInstanceProfile;
+import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.Policy;
-import com.eucalyptus.auth.principal.Role;
+import com.eucalyptus.auth.principal.PolicyScope;
+import com.eucalyptus.auth.principal.PolicyVersion;
+import com.eucalyptus.auth.principal.PolicyVersions;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.Callback;
@@ -52,7 +55,7 @@ import com.google.common.collect.Lists;
 /**
  * Role implementation backed by RoleEntity
  */
-public class DatabaseRoleProxy implements Role {
+public class DatabaseRoleProxy implements EuareRole {
 
   private static final long serialVersionUID = 1L;
 
@@ -70,7 +73,7 @@ public class DatabaseRoleProxy implements Role {
 
   @Override
   public String getDisplayName() {
-    return getName();
+    return Accounts.getRoleFullName( this );
   }
 
   @Override
@@ -104,6 +107,11 @@ public class DatabaseRoleProxy implements Role {
   }
 
   @Override
+  public String getRoleArn() throws AuthException {
+    return Accounts.getRoleArn( this );
+  }
+
+  @Override
   public String getName() {
     return this.delegate.getName();
   }
@@ -119,9 +127,9 @@ public class DatabaseRoleProxy implements Role {
   }
 
   @Override
-  public Policy getPolicy() {
+  public PolicyVersion getPolicy() {
     try {
-      return getAssumeRolePolicy();
+      return PolicyVersions.policyVersion( PolicyScope.Resource, getRoleArn( ) ).apply( getAssumeRolePolicy() );
     } catch ( Exception e ) {
       throw Exceptions.toUndeclared( e );
     }
@@ -247,8 +255,8 @@ public class DatabaseRoleProxy implements Role {
   }
 
   @Override
-  public List<InstanceProfile> getInstanceProfiles() throws AuthException {
-    final List<InstanceProfile> results = Lists.newArrayList( );
+  public List<EuareInstanceProfile> getInstanceProfiles() throws AuthException {
+    final List<EuareInstanceProfile> results = Lists.newArrayList( );
     try ( final TransactionResource db = Entities.transactionFor( InstanceProfileEntity.class ) ) {
       @SuppressWarnings( "unchecked" )
       List<InstanceProfileEntity> instanceProfiles = ( List<InstanceProfileEntity> ) Entities

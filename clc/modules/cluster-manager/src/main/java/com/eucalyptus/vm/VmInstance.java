@@ -119,8 +119,9 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.InstanceProfile;
-import com.eucalyptus.auth.principal.Role;
+import com.eucalyptus.auth.principal.BaseInstanceProfile;
+import com.eucalyptus.auth.principal.BaseRole;
+import com.eucalyptus.auth.principal.EuareInstanceProfile;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.State;
 import com.eucalyptus.blockstorage.Volume;
@@ -1470,12 +1471,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private Map<String, String> getIamMetadataMap( ) {
     final Map<String, String> m = new HashMap<>( );
     final String instanceProfileNameOrArn = this.getIamInstanceProfileArn();
-    if ( instanceProfileNameOrArn != null && !instanceProfileNameOrArn.isEmpty() ) {
-      InstanceProfile profile = null;
-      String roleName = null;
+    if ( !Strings.isNullOrEmpty( instanceProfileNameOrArn ) ) {
+      BaseInstanceProfile profile = null;
+      String profileArn = null;
       String roleArn = this.getIamRoleArn();
-      String profileArn = this.getIamInstanceProfileArn( );
-      try {
+      String roleName = null;
+      if ( !Strings.isNullOrEmpty( roleArn ) ) {
+        roleName = roleArn.substring( roleArn.lastIndexOf('/') + 1 );
+      } else try {
         final Account userAccount = Accounts.lookupAccountById(this.getOwnerAccountNumber());
         String profileName;
         if ( instanceProfileNameOrArn.startsWith("arn:") ) {
@@ -1486,7 +1489,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         profile = userAccount.lookupInstanceProfileByName(profileName);
         profileArn = Accounts.getInstanceProfileArn(profile);
         if ( roleArn == null ) {
-          final Role role = profile.getRole();
+          final BaseRole role = profile.getRole();
           if ( role != null ) {
             roleArn = Accounts.getRoleArn( role );
             roleName = role.getName();
@@ -1516,7 +1519,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       }
 
       if ( profile != null ) {
-        m.put("iam/info/last-updated-date", Timestamps.formatIso8601Timestamp(profile.getCreationTimestamp()));  //TODO : Need to collection and display the real last updated date.
+        m.put("iam/info/last-updated-date", Timestamps.formatIso8601Timestamp( new Date( ) ) );
         m.put("iam/info/instance-profile-arn", profileArn );
         m.put("iam/info/instance-profile-id", profile.getInstanceProfileId() );
       }
@@ -2418,10 +2421,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             final int nameIndex = input.getIamInstanceProfileArn().lastIndexOf('/');
             final String name = input.getIamInstanceProfileArn().substring(nameIndex + 1, rawName.length());
 
-            InstanceProfile instanceProfile;
-
             try {
-              instanceProfile = Accounts.lookupAccountById(input.getOwnerAccountNumber())
+              EuareInstanceProfile instanceProfile = Accounts.lookupAccountById(input.getOwnerAccountNumber())
                 .lookupInstanceProfileByName(name);
               final String profileArn = Accounts.getInstanceProfileArn(instanceProfile);
               IamInstanceProfile iamInstanceProfile = new IamInstanceProfile();
@@ -2437,7 +2438,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
               !input.getIamInstanceProfileArn().startsWith("arn:") ) {
 
             try {
-              final InstanceProfile instanceProfile = Accounts.lookupAccountById(input.getOwnerAccountNumber())
+              final EuareInstanceProfile instanceProfile = Accounts.lookupAccountById(input.getOwnerAccountNumber())
                 .lookupInstanceProfileByName(input.getIamInstanceProfileArn());
               final String profileArn = Accounts.getInstanceProfileArn(instanceProfile);
               IamInstanceProfile iamInstanceProfile = new IamInstanceProfile();
@@ -2447,7 +2448,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             } catch (NoSuchElementException nsee ) {
               LOG.debug("profile name : " + input.getIamInstanceProfileArn(),nsee);
             }
-
           }
 
           if (input.getMonitoring()) {

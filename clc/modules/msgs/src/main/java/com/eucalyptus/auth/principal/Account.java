@@ -120,20 +120,20 @@ public interface Account extends BasePrincipal, RestrictedType, Serializable {
   
   public List<Group> getGroups( ) throws AuthException;
 
-  public List<Role> getRoles( ) throws AuthException;
+  public List<EuareRole> getRoles( ) throws AuthException;
 
-  public List<InstanceProfile> getInstanceProfiles() throws AuthException;
+  public List<EuareInstanceProfile> getInstanceProfiles() throws AuthException;
 
   public EuareUser addUser( String userName, String path, boolean enabled, Map<String, String> info ) throws AuthException;
   public void deleteUser( String userName, boolean forceDeleteAdmin, boolean recursive ) throws AuthException;
 
-  public Role addRole( String roleName, String path, String assumeRolePolicy ) throws AuthException, PolicyParseException;
+  public EuareRole addRole( String roleName, String path, String assumeRolePolicy ) throws AuthException, PolicyParseException;
   public void deleteRole( String roleName ) throws AuthException;
 
   public Group addGroup( String groupName, String path ) throws AuthException;
   public void deleteGroup( String groupName, boolean recursive ) throws AuthException;
 
-  public InstanceProfile addInstanceProfile( String instanceProfileName, String path ) throws AuthException;
+  public EuareInstanceProfile addInstanceProfile( String instanceProfileName, String path ) throws AuthException;
   public void deleteInstanceProfile( String instanceProfileName ) throws AuthException;
   
   public ServerCertificate addServerCertificate(String certName, String certBody, String certChain, String path, String pk) throws AuthException;
@@ -143,9 +143,9 @@ public interface Account extends BasePrincipal, RestrictedType, Serializable {
   
   public EuareUser lookupUserByName( String userName ) throws AuthException;
 
-  public Role lookupRoleByName( String roleName ) throws AuthException;
+  public EuareRole lookupRoleByName( String roleName ) throws AuthException;
 
-  public InstanceProfile lookupInstanceProfileByName( String instanceProfileName ) throws AuthException;
+  public EuareInstanceProfile lookupInstanceProfileByName( String instanceProfileName ) throws AuthException;
 
   public EuareUser lookupAdmin() throws AuthException;
   

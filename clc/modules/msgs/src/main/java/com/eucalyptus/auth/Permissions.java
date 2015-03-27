@@ -75,7 +75,6 @@ import com.eucalyptus.auth.policy.key.Key;
 import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
@@ -192,7 +191,7 @@ public class Permissions {
 	public static boolean isAuthorized(
 		final PrincipalType principalType,
 		final String principalName,
-		final Policy resourcePolicy,
+		final PolicyVersion resourcePolicy,
 		final String resourceType,
 		final String resourceName,
 		final AccountFullName resourceAccount,
