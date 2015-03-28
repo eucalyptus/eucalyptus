@@ -43,6 +43,7 @@
 									<listOptionValue builtIn="false" value="_UNIT_TEST"/>
 									<listOptionValue builtIn="false" value="DT_REG=8"/>
 									<listOptionValue builtIn="false" value="_DARWIN_C_SOURCE"/>
+									<listOptionValue builtIn="false" value="USE_EUCA_ARP=1"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1809342783" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>

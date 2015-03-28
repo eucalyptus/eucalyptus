@@ -152,7 +152,7 @@ struct vlan_hdr_t {
 \*----------------------------------------------------------------------------*/
 
 static u_char gArpPkt[ETH_FRAME_LEN] = { 0 };   //!< The ARP packet to send
-static u_char gEthZero[ETH_ALEN] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };  //!< Ethernet Zero Address 00:00:00:00:00:00
+//static u_char gEthZero[ETH_ALEN] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };  //!< Ethernet Zero Address 00:00:00:00:00:00
 static u_char gEthBroadcast[ETH_ALEN] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }; //!< Ethernet Broadcast Address FF:FF:FF:FF:FF:FF
 
 /*----------------------------------------------------------------------------*\

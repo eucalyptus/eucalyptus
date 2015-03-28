@@ -526,7 +526,7 @@ int euca_inst2mac(const char *psMacPrefix, const char *psInstanceId, char **psOu
     (*psOutMac) = NULL;
 
     // The instance identifier should be of 10 characters (e.g. i-xxxxxxxx)
-    if (strlen(psInstanceId) != (INSTANCE_ID_LEN - 1)) {
+    if (strlen(psInstanceId) != 10) {
         return (EUCA_INVALID_ERROR);
     }
     // Make sure the given instance identifier is valid and starts with an "i-"
