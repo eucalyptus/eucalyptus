@@ -87,8 +87,6 @@
 #include <atomic_file.h>
 
 #include "ipt_handler.h"
-#include "ips_handler.h"
-#include "ebt_handler.h"
 #include "ipr_handler.h"
 
 /*----------------------------------------------------------------------------*\

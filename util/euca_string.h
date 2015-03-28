@@ -133,7 +133,7 @@ char *euca_hex2dot(u32 hex);
 //! @{
 //! @name MAC conversion APIs
 u8 *euca_mac2hex(const char *psMacIn, u8 aHexOut[6]);
-void euca_hex2mac(u8 aHexIn[6], char **ppsMacOut);
+void euca_hex2mac(u8 aHexIn[6], char **ppsMacOut, boolean trimVersion);
 int euca_maczero(u8 aMac[6]);
 int euca_machexcmp(const char *psMac, u8 aMac[6]);
 //! @}

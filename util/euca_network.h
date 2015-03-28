@@ -162,7 +162,7 @@
 #define NUMBER_OF_CCS                             8 //!< Maximum number of CC to keep track of in a single cloud
 #define NUMBER_OF_NAME_SERVERS                   32 //!< Number of domain name server to manage for VMs
 #define MAX_ETH_DEV_PATH                         16
-#define MAX_SEC_GROUPS                           NB_VLAN_802_1Q //!< Maximum number of security group supported
+//#define MAX_SEC_GROUPS                           NB_VLAN_802_1Q //!< Maximum number of security group supported
 
 //! @}
 

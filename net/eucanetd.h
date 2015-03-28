@@ -111,6 +111,7 @@
 typedef struct eucanetdConfig_t {
     ipt_handler *ipt;
     ips_handler *ips;
+    ipr_handler *ipr;
     ebt_handler *ebt;
 
     char *eucahome, *eucauser;
@@ -134,7 +135,14 @@ typedef struct eucanetdConfig_t {
     atomic_file global_network_info_file;
 
     // these are flags that can be set by values in eucalyptus.conf
-    int polling_frequency, disable_l2_isolation, nc_router_ip, nc_router, metadata_use_vm_private, metadata_ip;
+    int polling_frequency;
+    int disable_l2_isolation;
+    int nc_router_ip;
+    int nc_router;
+    int metadata_use_vm_private;
+    int metadata_ip;
+
+    boolean nc_proxy;                //!< Set to TRUE to indicate we're using the NC proxy feature
 
     int debug, flushmode;
     char vnetMode[32];
