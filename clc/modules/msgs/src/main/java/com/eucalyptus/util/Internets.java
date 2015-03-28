@@ -468,6 +468,8 @@ public class Internets {
   public static Optional<Cidr> getInterfaceCidr( final InetAddress address ) {
     try {
       final NetworkInterface networkInterface = NetworkInterface.getByInetAddress( address );
+      if(networkInterface==null)
+        return Optional.absent();
       for ( final InterfaceAddress interfaceAddress : networkInterface.getInterfaceAddresses( ) ) {
         if ( address.equals( interfaceAddress.getAddress( ) ) ) {
           final int prefix = interfaceAddress.getNetworkPrefixLength( );
@@ -476,7 +478,7 @@ public class Internets {
       }
     } catch ( SocketException e ) {
       LOG.debug("Error finding interface CIDR for address '"+address+"'", e );
-    }
+    } 
     return Optional.absent( );
   }
 

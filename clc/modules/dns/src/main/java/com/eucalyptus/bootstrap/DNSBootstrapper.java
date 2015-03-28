@@ -62,12 +62,10 @@
 
 package com.eucalyptus.bootstrap;
 
-import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.ws.DNSControl;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.system.Capabilities;
 
 @Provides( Dns.class )
 @RunDuring( Bootstrap.Stage.Final )

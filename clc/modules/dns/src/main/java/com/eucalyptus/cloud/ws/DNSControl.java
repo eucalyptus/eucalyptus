@@ -64,12 +64,17 @@ package com.eucalyptus.cloud.ws;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -77,6 +82,27 @@ import java.util.concurrent.locks.ReentrantLock;
 import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
+
+import com.eucalyptus.system.Capabilities;
+
+import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
+import org.jboss.netty.bootstrap.ServerBootstrap;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.FixedReceiveBufferSizePredictor;
+import org.jboss.netty.channel.group.ChannelGroup;
+import org.jboss.netty.channel.group.DefaultChannelGroup;
+import org.jboss.netty.channel.socket.DatagramChannelFactory;
+import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
+import org.jboss.netty.channel.socket.nio.NioDatagramChannelFactory;
+import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
+import org.jboss.netty.handler.codec.frame.LengthFieldPrepender;
+import org.jboss.netty.handler.execution.ExecutionHandler;
+import org.jboss.netty.handler.execution.MemoryAwareThreadPoolExecutor;
+import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 import org.xbill.DNS.ARecord;
 import org.xbill.DNS.Address;
 import org.xbill.DNS.CNAMERecord;
@@ -98,13 +124,12 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
-import com.eucalyptus.system.Capabilities;
 import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.IO;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.LockResource;
+import com.eucalyptus.ws.WebServices;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Predicates;
 import com.google.common.base.Splitter;
@@ -147,22 +172,24 @@ public class DNSControl {
 
 	private static final AtomicReference<Collection<Cidr>> addressMatchers =
 			new AtomicReference<Collection<Cidr>>( Collections.<Cidr>emptySet( ) );
-
-	private static final AtomicReference<Collection<UDPListener>> udpListenerRef =
-			new AtomicReference<Collection<UDPListener>>( Collections.<UDPListener>emptySet( ) );
-
+	
 	private static final AtomicReference<Collection<TCPListener>> tcpListenerRef =
 			new AtomicReference<Collection<TCPListener>>( Collections.<TCPListener>emptySet( ) );
 
 	private static final Lock listenerLock = new ReentrantLock( );
+	
+  @ConfigurableField( description = "Server worker thread pool max.",
+      changeListener = WebServices.CheckNonNegativeIntegerPropertyChangeListener.class )
+  public static Integer       SERVER_POOL_MAX_THREADS           = 512;
 
+  /// OBSOLETE if/when TCP listener becomes Netty based
 	@ConfigurableField( displayName = "dns_listener_address_match",
 			description = "Additional address patterns to listen on for DNS requests.",
 			initial = "",
 			readonly = false,
 			changeListener = DnsAddressChangeListener.class)
-	public static volatile String dns_listener_address_match = "";
-
+	public static volatile String dns_listener_address_match = ""; 
+	
 	@ConfigurableField( displayName = "server",
 			description = "Comma separated list of nameservers, OS settings used if none specified (change requires restart)",
 			initial = "",
@@ -219,8 +246,6 @@ public class DNSControl {
 		}
 	}
 
-
-
 	public static class DnsAddressChangeListener implements PropertyChangeListener {
 		@Override
 		public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
@@ -245,23 +270,133 @@ public class DNSControl {
 			throw new ConfigurablePropertyException( e.getMessage( ) );
 		}
 	}
+	
+  private static final ChannelGroup udpChannelGroup = new DefaultChannelGroup( 
+      DNSControl.class.getSimpleName( )
+      + ":udp:53");
+  private static final ChannelGroup tcpChannelGroup = new DefaultChannelGroup( 
+      DNSControl.class.getSimpleName( )
+      + ":tcp:53");
+  
+  private static DatagramChannelFactory udpChannelFactory = null;
+  private static ServerSocketChannelFactory tcpChannelFactory = null;
+  private static ExecutionHandler udpExecHandler = null;
+  private static Executor createWorkerPool() {
+     final Executor executor =
+         Executors.newFixedThreadPool(SERVER_POOL_MAX_THREADS);
+     return executor;
+  }
+  
+  private static class UdpChannelPipelineFactory implements ChannelPipelineFactory {
+    private ExecutionHandler execHandler = null;
+    private UdpChannelPipelineFactory(final ExecutionHandler execHandler) {
+      this.execHandler = execHandler;
+    }
+    @Override
+    public ChannelPipeline getPipeline() throws Exception {
+      return Channels.pipeline(this.execHandler, new DnsServerHandler());
+    }
+  }
+  
+	private static void initializeUDP( ) throws Exception{
+	  if(udpChannelFactory == null){
+	    try{
+	      udpChannelFactory = new NioDatagramChannelFactory(Executors.newCachedThreadPool());
+        final ConnectionlessBootstrap b = new ConnectionlessBootstrap(udpChannelFactory);
+	      udpExecHandler = 
+	          new ExecutionHandler(createWorkerPool());
+	      b.setPipelineFactory(new UdpChannelPipelineFactory(udpExecHandler));
+	      b.setOption("receiveBufferSize", 4194304);
+	      b.setOption("broadcast", "false");
+	      b.setOption("receiveBufferSizePredictor", new FixedReceiveBufferSizePredictor(1024));
 
-	private static void initializeUDP( ) {
-		initializeListeners( udpListenerRef, "UDP", new ListenerBuilder<UDPListener>() {
-			@Override
-			public UDPListener build( final InetAddress address, final int port ) throws IOException {
-				return new UDPListener( address, port );
-			}
-		});
+	      b.setOption( "child.tcpNoDelay", true );
+        b.setOption( "child.reuseAddress", true);
+        b.setOption( "child.connectTimeoutMillis", 3000 ); 
+
+        b.setOption("tcpNoDelay", true);
+        b.setOption("reuseAddress", true);
+        b.setOption("connectTimeoutMillis", 3000);
+        
+	      Capabilities.runWithCapabilities( new Callable<Boolean>() {
+	        @Override
+	        public Boolean call() throws Exception {
+	          final Channel udpChannel= b.bind(new InetSocketAddress(53)); // any interfaces
+	          udpChannelGroup.add(udpChannel);
+	          return true;
+	        }}); 
+	    }catch(final Exception ex) {
+	      LOG.debug("Failed initializing DNS udp listener",ex);
+	      udpChannelGroup.close().awaitUninterruptibly();
+	      if(udpChannelFactory!=null) {
+	        udpChannelFactory.releaseExternalResources();
+	        udpChannelFactory = null;
+	      }
+	      if(udpExecHandler!=null){
+	        udpExecHandler.releaseExternalResources();
+	        udpExecHandler = null;
+	      }
+	      throw ex;
+	    }
+	  }
 	}
 
-	private static void initializeTCP( ) {
-		initializeListeners( tcpListenerRef, "TCP", new ListenerBuilder<TCPListener>() {
-			@Override
-			public TCPListener build( final InetAddress address, final int port ) throws IOException {
-				return new TCPListener( address, port );
-			}
-		});
+	private static void initializeTCP() throws Exception{
+	  initializeTCPSocket();
+	}
+	
+	private static void initializeTCPSocket( ) throws Exception{
+	  initializeListeners( tcpListenerRef, "TCP", new ListenerBuilder<TCPListener>() {
+      @Override
+      public TCPListener build( final InetAddress address, final int port ) throws IOException {
+        return new TCPListener( address, port );
+      }
+    });
+	}
+	
+	private static void initializeTCPNetty() throws Exception {
+	  // currently there's an issue with bind() throwing Socket permission exception
+	  // due to the port < 1024
+	  if(tcpChannelFactory == null){
+	    try{
+	      tcpChannelFactory = 
+	          new NioServerSocketChannelFactory(Executors.newCachedThreadPool(), 
+	              createWorkerPool());
+	      final ServerBootstrap b = new ServerBootstrap(tcpChannelFactory);
+	      b.setPipelineFactory(new ChannelPipelineFactory() {
+	        public ChannelPipeline getPipeline() throws Exception {
+	          ChannelPipeline p = Channels.pipeline();
+	          p.addLast("framer", new LengthFieldBasedFrameDecoder(65536, 0, 2, 0, 2));
+	          p.addLast("prepender", new LengthFieldPrepender(2));
+	          p.addLast("dns-server", new DnsServerHandler());
+	          return p;
+	        }
+	      });
+	      b.setOption( "child.tcpNoDelay", true );
+	      b.setOption( "child.keepAlive", false );
+	      b.setOption( "child.reuseAddress", true );
+	      b.setOption( "child.connectTimeoutMillis", 3000 ); 
+	      b.setOption("tcpNoDelay", true);
+	      b.setOption("keepAlive", false);
+	      b.setOption("reuseAddress", true);
+	      b.setOption("connectTimeoutMillis", 3000);
+	      Capabilities.runWithCapabilities( new Callable<Boolean>() {
+	        @Override
+	        public Boolean call() throws Exception {
+	          final Channel tcpChannel = b.bind(new InetSocketAddress(53));
+	          tcpChannelGroup.add(tcpChannel);
+	          return true;
+	        }
+	      });
+	    }catch(final Exception ex) {
+	      LOG.debug(ex,ex);
+	      tcpChannelGroup.close().awaitUninterruptibly();
+	      if(tcpChannelFactory!=null)
+	        tcpChannelFactory.releaseExternalResources();
+	      tcpChannelFactory = null;
+	      throw ex;
+	    }
+	  }
 	}
 
 	private static <T extends Thread> void initializeListeners(
@@ -381,20 +516,32 @@ public class DNSControl {
 
 	public static void initialize() throws Exception {
 		try {
-			initializeUDP();
-			initializeTCP();
+		  initializeUDP();
+      initializeTCP();
 			populateRecords();
 		} catch(Exception ex) {
-			LOG.error("DNS could not be initialized. Is some other service running on port 53?");
+			LOG.error("DNS could not be initialized. Is some other service running on port 53?", ex);
 			throw ex;
 		}
 	}
 
 	public static void stop() throws Exception {
-		try ( final LockResource lock = LockResource.lock( listenerLock ) ) {
-			IO.close( udpListenerRef.getAndSet( Collections.<UDPListener>emptySet( ) ) );
-			IO.close( tcpListenerRef.getAndSet( Collections.<TCPListener>emptySet( ) ) );
-		}
+		  if(udpChannelGroup!=null)
+		    udpChannelGroup.close( ).awaitUninterruptibly();
+		  if(udpExecHandler!=null) {
+		    udpExecHandler.releaseExternalResources();
+		    udpExecHandler = null;
+		  }
+		  if(udpChannelFactory!=null) {
+		    udpChannelFactory.releaseExternalResources( );
+		    udpChannelFactory = null;
+		  }
+		  /* if(tcpChannelGroup!=null)
+		    tcpChannelGroup.close().awaitUninterruptibly();
+		  if(tcpChannelFactory!=null) {
+		    tcpChannelFactory.releaseExternalResources();
+		    tcpChannelFactory = null;
+		  }*/
 	}
 
 	public static void restart()  throws Exception {
