@@ -63,12 +63,12 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-#ifndef _INCLUDE_EUCA_STRING_H_
-#define _INCLUDE_EUCA_STRING_H_
+#ifndef _INCLUDE_IPR_HANDLER_H_
+#define _INCLUDE_IPR_HANDLER_H_
 
 //!
-//! @file util/euca_string.h
-//! Definition of various string utility functions
+//! @file net/ipr_handler.h
+//! Defines the IP Rule Handler API.
 //!
 
 /*----------------------------------------------------------------------------*\
@@ -76,7 +76,6 @@
  |                                  INCLUDES                                  |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-#include "data.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -102,6 +101,21 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//! Individual IP Rule Entry
+typedef struct ipr_rule {
+    char name[EUCA_MAX_PATH];   //!< The IP rule string
+    u32 operation;              //!< The operation bitmask to apply to this rule
+} ipr_rule;
+
+//! The IP Rule structure
+typedef struct ipr_handler_t {
+    boolean initialized;        //!< Set to TRUE if the structure instance has been initialized
+    ipr_rule *pRuleList;        //!< Pointer to the list of IP rules
+    u32 nbRules;                //!< Number of rules in the list
+    char sIpRuleFile[EUCA_MAX_PATH]; //!< The temporary file name for saving the rules
+    char sCmdPrefix[EUCA_MAX_PATH];  //!< The prefix to any command we need to execute (usually path to rootwrap)
+} ipr_handler;
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                             EXPORTED VARIABLES                             |
@@ -114,31 +128,21 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-char *euca_strreplace(char **haystack, char *source, char *value);
-boolean euca_lscanf(const char *haystack, const char *format, void *value);
-char *euca_strestr(const char *haystack, const char *begin, const char *end);
-long long euca_strtoll(const char *string, const char *begin, const char *end);
-char *euca_strduptolower(const char *restrict string);
-char *euca_strdup(const char *s1);
-char *euca_strdupcat(char *restrict s1, const char *restrict s2);
-char *euca_strncat(char *restrict dest, const char *restrict src, size_t size);
-char *euca_strncpy(char *restrict to, const char *restrict from, size_t size);
-
 //! @{
-//! @name IP conversion APIs
-u32 euca_dot2hex(const char *psDot);
-char *euca_hex2dot(u32 hex);
-//! @}
+//! @name IP Rule APIs
+int ipr_handler_init(ipr_handler * pIprh, const char *psCmdPrefix);
 
-//! @{
-//! @name MAC conversion APIs
-u8 *euca_mac2hex(const char *psMacIn, u8 aHexOut[6]);
-void euca_hex2mac(u8 aHexIn[6], char **ppsMacOut);
-int euca_maczero(u8 aMac[6]);
-int euca_machexcmp(const char *psMac, u8 aMac[6]);
-//! @}
+int ipr_handler_repopulate(ipr_handler * pIprh);
+int ipr_handler_flush(ipr_handler * pIprh);
+int ipr_handler_deploy(ipr_handler * pIprh);
 
-int euca_tokenizer(char *list, char *delim, char *tokens[], int nbTokens);
+int ipr_handler_add_rule(ipr_handler * pIprh, const char *psRule);
+int ipr_handler_del_rule(ipr_handler * pIprh, const char *psRule);
+ipr_rule *ipr_handler_find_rule(ipr_handler * pIprh, const char *psRule);
+
+int ipr_handler_free(ipr_handler * pIprh);
+int ipr_handler_print(ipr_handler * pIprh);
+//! @}
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -152,28 +156,10 @@ int euca_tokenizer(char *list, char *delim, char *tokens[], int nbTokens);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-//! @{
-//! @name IP Conversion macros
-
-#define dot2hex(_dot)                            euca_dot2hex((_dot))
-#define hex2dot(_hex)                            euca_hex2dot((_hex))
-
-//! @}
-
-//! @{
-//! @name MAC address macros
-
-#define mac2hex(_macIn, _hexOut)                 euca_mac2hex((_macIn), (_hexOut))
-#define hex2mac(_hexIn, _macOut)                 euca_hex2mac((_hexIn), (_macOut), FALSE)
-#define maczero(_mac)                            euca_maczero((_mac))
-#define machexcmp(_sMac, _aMac)                  euca_machexcmp((_sMac), (_aMac))
-
-//! @}
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                          STATIC INLINE IMPLEMENTATION                      |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#endif /* ! _INCLUDE_EUCA_STRING_H_ */
+#endif /* ! _INCLUDE_IPR_HANDLER_H_ */

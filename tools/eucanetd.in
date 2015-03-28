@@ -130,8 +130,7 @@ do_start() {
 
         apply_sysctl
 
-        for CHECKVAR in /proc/sys/net/ipv4/ip_forward /proc/sys/net/bridge/bridge-nf-call-iptables
-        do
+	for CHECKVAR in /proc/sys/net/ipv4/ip_forward /proc/sys/net/bridge/bridge-nf-call-iptables; do
 	    if [ -e "$CHECKVAR" ]; then
 		if [ -r "$CHECKVAR" ]; then
                     VAL=`cat $CHECKVAR`
@@ -162,6 +161,56 @@ do_start() {
 		mkdir -p $EUCALYPTUS/var/run/eucalyptus/net
 	fi
 
+	# we may have some edge mode specific stuff
+	if [ "$VNET_MODE" = "EDGE" ]; then
+		# if proxy is enabled, then we need to add our routing table
+		if [ -n "$NC_PROXY" ]; then
+			if [ "$NC_PROXY" = "Y" ]; then
+				# add our routing tables
+				echo "100	euca_private" >> /etc/iproute2/rt_tables;
+				echo "101	euca_public" >> /etc/iproute2/rt_tables;
+				
+				# make sure ICMP redirects are disabled on our interfaces
+				echo 0 > /proc/sys/net/ipv4/conf/$VNET_PRIVINTERFACE/send_redirects;
+				echo 0 > /proc/sys/net/ipv4/conf/$VNET_PRIVINTERFACE/accept_redirects;
+				echo 0 > /proc/sys/net/ipv4/conf/$VNET_PUBINTERFACE/send_redirects;
+				echo 0 > /proc/sys/net/ipv4/conf/$VNET_PUBINTERFACE/accept_redirects;
+				echo 0 > /proc/sys/net/ipv4/conf/all/send_redirects;
+				echo 0 > /proc/sys/net/ipv4/conf/all/accept_redirects;
+			else
+				# Remove our routing tables if we used any
+				PRIVATE_ROUTE=`cat /etc/iproute2/rt_tables | grep euca_`;
+				if [ -n "$PRIVATE_ROUTE" ]; then
+					ip route flush table euca_private;
+					ip route flush table euca_public;
+					cat /etc/iproute2/rt_tables | grep -v euca_ > /tmp/euca_tmp_routing_table;
+					cat /tmp/euca_tmp_routing_table > /etc/iproute2/rt_tables;
+					rm -f /tmp/euca_tmp_routing_table;
+				fi
+			fi
+		else
+			# Remove our routing tables if we used any
+			PRIVATE_ROUTE=`cat /etc/iproute2/rt_tables | grep euca_`;
+			if [ -n "$PRIVATE_ROUTE" ]; then
+				ip route flush table euca_private;
+				ip route flush table euca_public;
+				cat /etc/iproute2/rt_tables | grep -v euca_ > /tmp/euca_tmp_routing_table;
+				cat /tmp/euca_tmp_routing_table > /etc/iproute2/rt_tables;
+				rm -f /tmp/euca_tmp_routing_table;
+			fi
+		fi
+	else
+	# Remove our routing tables if we used any
+		PRIVATE_ROUTE=`cat /etc/iproute2/rt_tables | grep euca_`;
+		if [ -n "$PRIVATE_ROUTE" ]; then
+			ip route flush table euca_private;
+			ip route flush table euca_public;
+			cat /etc/iproute2/rt_tables | grep -v euca_ > /tmp/euca_tmp_routing_table;
+			cat /tmp/euca_tmp_routing_table > /etc/iproute2/rt_tables;
+			rm -f /tmp/euca_tmp_routing_table;
+		fi
+	fi
+	
 	chown eucalyptus:dhcpd $EUCALYPTUS/var/run/eucalyptus/net
 
 	ulimit -u 100000
@@ -238,6 +287,16 @@ do_stop() {
             pkill -9 -s $sids >/dev/null 2>&1
         fi
 
+	# Remove our routing tables if we used any
+	PRIVATE_ROUTE=`cat /etc/iproute2/rt_tables | grep euca_`;
+	if [ -n "$PRIVATE_ROUTE" ]; then
+		ip route flush table euca_private;
+		ip route flush table euca_public;
+		cat /etc/iproute2/rt_tables | grep -v euca_ > /tmp/euca_tmp_routing_table;
+		cat /tmp/euca_tmp_routing_table > /etc/iproute2/rt_tables;
+		rm -f /tmp/euca_tmp_routing_table;
+	fi
+	
         rm -f $LOCKFILE
 }
 
