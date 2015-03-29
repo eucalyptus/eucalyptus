@@ -200,7 +200,7 @@ do_start() {
 			fi
 		fi
 	else
-	# Remove our routing tables if we used any
+		# Remove our routing tables if we used any
 		PRIVATE_ROUTE=`cat /etc/iproute2/rt_tables | grep euca_`;
 		if [ -n "$PRIVATE_ROUTE" ]; then
 			ip route flush table euca_private;
