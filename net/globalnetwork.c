@@ -1085,6 +1085,15 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
     }
     EUCA_FREE(results);
 
+    snprintf(expression, 2048, "/network-data/configuration/property[@name='publicGateway']/value");
+    rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+    for (i = 0; i < max_results; i++) {
+        LOGTRACE("after function: %d: %s\n", i, results[i]);
+        gni->publicGateway = dot2hex(results[i]);
+        EUCA_FREE(results[i]);
+    }
+    EUCA_FREE(results);
+
     snprintf(expression, 2048, "/network-data/configuration/property[@name='mido']/property[@name='eucanetdHost']/value");
     rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
@@ -1438,6 +1447,12 @@ int gni_iterate(globalNetworkInfo * gni, int mode)
 
     if (mode == GNI_ITERATE_PRINT)
         LOGTRACE("instanceDNSDomain: %s\n", gni->instanceDNSDomain);
+
+    if (mode == GNI_ITERATE_PRINT) {
+        strptra = hex2dot(gni->publicGateway);
+        LOGTRACE("publicGateway: %s\n", SP(strptra));
+        EUCA_FREE(strptra);
+    }
 
     if (mode == GNI_ITERATE_PRINT)
         LOGTRACE("instanceDNSServers: \n");

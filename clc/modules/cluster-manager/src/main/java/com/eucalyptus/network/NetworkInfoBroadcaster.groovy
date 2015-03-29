@@ -300,6 +300,7 @@ class NetworkInfoBroadcaster {
         new NIProperty( name: 'enabledCLCIp', values: [clcHostSupplier.get()]),
         new NIProperty( name: 'instanceDNSDomain', values: [networkConfiguration.orNull()?.instanceDnsDomain?:EucaStrings.trimPrefix('.',"${VmInstances.INSTANCE_SUBDOMAIN}.internal")]),
         new NIProperty( name: 'instanceDNSServers', values: dnsServers ),
+        new NIProperty( name: 'publicGateway', values: [networkConfiguration.orNull()?.publicGateway] ),
     ]  )
 
     Iterable<VmInstanceNetworkView> instances = Iterables.filter(

@@ -54,6 +54,7 @@ class NetworkConfigurationsTest {
         instanceDnsDomain: 'eucalyptus.internal',
         instanceDnsServers: [ '10.1.1.254' ],
         publicIps: [ '10.111.103.26', '10.111.103.27', '10.111.103.28', '10.111.103.29' ],
+        publicGateway: '10.111.0.1',
         privateIps: [ '10.111.103.30', '10.111.103.36', '10.111.103.38', '10.111.103.42' ],
         subnets: [
             new Subnet(
@@ -112,6 +113,7 @@ class NetworkConfigurationsTest {
             instanceDnsServers: [ '10.1.1.254' ],
             macPrefix: 'ab:cd',
             publicIps: [ '10.111.103.26', '10.111.103.27', '10.111.103.28', '10.111.103.29' ],
+            publicGateway: '10.111.0.1',
             privateIps: [ '10.111.103.30', '10.111.103.36', '10.111.103.38', '10.111.103.42' ],
             subnets: [
                 new Subnet(

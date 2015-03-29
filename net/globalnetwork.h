@@ -146,6 +146,7 @@ typedef struct globalNetworkInfo_t {
     char instanceDNSDomain[HOSTNAME_SIZE];
     u32 *instanceDNSServers;
     int max_instanceDNSServers;
+    u32 publicGateway;                 //!< Public network default gateway
     u32 *public_ips;
     int max_public_ips;
     gni_subnet *subnets;

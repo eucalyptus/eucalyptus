@@ -76,6 +76,7 @@ class NetworkInfoBroadcasterTest {
           instanceDnsDomain: 'eucalyptus.internal',
           instanceDnsServers: [ '1.2.3.4' ],
           publicIps: [ '2.0.0.0-2.0.0.255' ],
+          publicGateway: '10.111.0.1',
           privateIps: [ '10.0.0.0-10.0.0.255' ],
           subnets: [
               new Subnet(

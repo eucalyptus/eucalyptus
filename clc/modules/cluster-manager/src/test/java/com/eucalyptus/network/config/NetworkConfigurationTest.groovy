@@ -79,6 +79,7 @@ class NetworkConfigurationTest {
         instanceDnsServers: [ '1.2.3.4' ],
         macPrefix: 'd0:0d',
         publicIps: [ '10.111.200.1-10.111.200.2' ],
+        publicGateway: '10.111.0.1',
         privateIps: [ '1.0.0.33-1.0.0.34' ],
         subnets: [
           new Subnet(
