@@ -1830,6 +1830,7 @@ int read_config(void)
     cvals[EUCANETD_CVAL_DHCPUSER] = configFileValue("VNET_DHCPUSER");
     cvals[EUCANETD_CVAL_POLLING_FREQUENCY] = configFileValue("POLLING_FREQUENCY");
     cvals[EUCANETD_CVAL_DISABLE_L2_ISOLATION] = configFileValue("DISABLE_L2_ISOLATION");
+    cvals[EUCANETD_CVAL_NC_PROXY] = configFileValue("NC_PROXY");
     cvals[EUCANETD_CVAL_NC_ROUTER] = configFileValue("NC_ROUTER");
     cvals[EUCANETD_CVAL_NC_ROUTER_IP] = configFileValue("NC_ROUTER_IP");
     cvals[EUCANETD_CVAL_METADATA_USE_VM_PRIVATE] = configFileValue("METADATA_USE_VM_PRIVATE");
