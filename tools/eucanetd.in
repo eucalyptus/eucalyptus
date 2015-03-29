@@ -287,16 +287,6 @@ do_stop() {
             pkill -9 -s $sids >/dev/null 2>&1
         fi
 
-	# Remove our routing tables if we used any
-	PRIVATE_ROUTE=`cat /etc/iproute2/rt_tables | grep euca_`;
-	if [ -n "$PRIVATE_ROUTE" ]; then
-		ip route flush table euca_private;
-		ip route flush table euca_public;
-		cat /etc/iproute2/rt_tables | grep -v euca_ > /tmp/euca_tmp_routing_table;
-		cat /tmp/euca_tmp_routing_table > /etc/iproute2/rt_tables;
-		rm -f /tmp/euca_tmp_routing_table;
-	fi
-	
         rm -f $LOCKFILE
 }
 
