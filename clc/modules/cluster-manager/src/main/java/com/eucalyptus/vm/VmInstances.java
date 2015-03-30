@@ -178,7 +178,6 @@ import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.cache.CacheBuilderSpec;
@@ -829,6 +828,7 @@ public class VmInstances {
   }
 
   static void sendTerminate( final String instanceId, final String partition ) {
+    CreateImageTask.cancel( instanceId );
     try {
       final TerminateCallback cb = new TerminateCallback( instanceId );
       AsyncRequests.newRequest(  cb ).dispatch( partition );
