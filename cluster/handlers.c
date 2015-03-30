@@ -1782,8 +1782,17 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
                         } else if (myInstance) {
                             // has a private but not a public IP
                             LOGDEBUG("instance does not have a public IP set (id=%s pub=%s priv=%s)\n", gni->instances[i].name, SP(strptra), SP(strptrb));
-                            rc = ncClientCall(pMeta, OP_TIMEOUT, resourceCacheLocal.resources[myInstance->ncHostIdx].lockidx,
-                                              resourceCacheLocal.resources[myInstance->ncHostIdx].ncURL, "ncAssignAddress", myInstance->instanceId, "0.0.0.0");
+
+                            // unassign the addr from the CC/NC perspective
+                            if (strcmp(myInstance->ccnet.publicIp, "0.0.0.0") && strcmp(myInstance->ccnet.privateIp, "0.0.0.0")) {
+                                rc = doUnassignAddress(pMeta, myInstance->ccnet.publicIp, myInstance->ccnet.privateIp);
+                                if (rc) {
+                                    // LOG ERROR
+                                }
+                            }
+                            
+                        //                            rc = ncClientCall(pMeta, OP_TIMEOUT, resourceCacheLocal.resources[myInstance->ncHostIdx].lockidx,
+                        //                                              resourceCacheLocal.resources[myInstance->ncHostIdx].ncURL, "ncAssignAddress", myInstance->instanceId, "0.0.0.0");
                         }
                         if (myInstance) {
                             EUCA_FREE(myInstance);
@@ -1860,7 +1869,6 @@ int doAssignAddress(ncMetadata * pMeta, char *uuid, char *src, char *dst)
     if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC)) {
         ret = 0;
     } else {
-
         rc = find_instanceCacheIP(dst, &myInstance);
         if (!rc) {
             if (!strcmp(vnetconfig->mode, NETMODE_EDGE) || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
@@ -2001,13 +2009,17 @@ int doUnassignAddress(ncMetadata * pMeta, char *src, char *dst)
 
     ret = 0;
 
-    if ((rc = find_instanceCacheIP(src, &myInstance)) == 0) {
-        LOGDEBUG("found instance %s in cache with IP %s\n", myInstance->instanceId, myInstance->ccnet.publicIp);
-        // found the instance in the cache
-        if (myInstance) {
-            if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC)) {
+    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC)) {
+        ret = 0;
+    } else {
+        rc = find_instanceCacheIP(src, &myInstance);
+        if (!rc) {
+            LOGDEBUG("found instance %s in cache with IP %s\n", myInstance->instanceId, myInstance->ccnet.publicIp);
+            // found the instance in the cache
+            LOGDEBUG("WTF: %s\n", vnetconfig->mode);
+            if (!strcmp(vnetconfig->mode, NETMODE_EDGE) || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
                 ret = 0;
-            } else {
+            } else if (myInstance) {
                 sem_mywait(VNET);
 
                 ret = vnetReassignAddress(vnetconfig, "UNSET", src, "0.0.0.0", myInstance->ccnet.vlan);
@@ -2018,26 +2030,26 @@ int doUnassignAddress(ncMetadata * pMeta, char *src, char *dst)
 
                 sem_mypost(VNET);
             }
-
-            if (!ret) {
-                //timeout = ncGetTimeout(op_start, OP_TIMEOUT, 1, myInstance->ncHostIdx);
-                rc = ncClientCall(pMeta, OP_TIMEOUT, resourceCacheLocal.resources[myInstance->ncHostIdx].lockidx,
-                                  resourceCacheLocal.resources[myInstance->ncHostIdx].ncURL, "ncAssignAddress", myInstance->instanceId, "0.0.0.0");
-                if (rc) {
-                    LOGERROR("could not sync IP with NC\n");
-                    ret = 1;
-                } else {
-                    ret = 0;
-                }
-                // refresh instance cache
-                rc = map_instanceCache(pubIpCmp, src, pubIpSet, "0.0.0.0");
-                if (rc) {
-                    LOGERROR("map_instanceCache() failed to assign %s->%s\n", dst, src);
-                }
-            }
         }
-        EUCA_FREE(myInstance);
     }
+
+    if (!ret) {
+        //timeout = ncGetTimeout(op_start, OP_TIMEOUT, 1, myInstance->ncHostIdx);
+        rc = ncClientCall(pMeta, OP_TIMEOUT, resourceCacheLocal.resources[myInstance->ncHostIdx].lockidx,
+                          resourceCacheLocal.resources[myInstance->ncHostIdx].ncURL, "ncAssignAddress", myInstance->instanceId, "0.0.0.0");
+        if (rc) {
+            LOGERROR("could not sync IP with NC\n");
+            ret = 1;
+        } else {
+            ret = 0;
+        }
+        // refresh instance cache
+        rc = map_instanceCache(pubIpCmp, src, pubIpSet, "0.0.0.0");
+        if (rc) {
+            LOGERROR("map_instanceCache() failed to assign %s->%s\n", dst, src);
+        }
+    }
+    EUCA_FREE(myInstance);
 
     LOGTRACE("done\n");
 
