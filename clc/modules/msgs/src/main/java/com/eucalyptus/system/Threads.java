@@ -666,7 +666,9 @@ public class Threads {
              + this.ownerType.getSimpleName( )
              + ":"
              + this.owner.getFullName( )
-             + "[workers]";
+             + "[workers:"
+             + this.numWorkers
+             +"]";
     }
     
     private void stop( ) {
