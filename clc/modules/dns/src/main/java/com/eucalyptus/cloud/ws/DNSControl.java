@@ -67,6 +67,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -87,11 +88,16 @@ import com.eucalyptus.system.Capabilities;
 
 import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.FixedReceiveBufferSizePredictor;
+import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.DatagramChannelFactory;
@@ -286,6 +292,41 @@ public class DNSControl {
          Executors.newFixedThreadPool(SERVER_POOL_MAX_THREADS);
      return executor;
   }
+
+  public static class TimedDns {
+    private Long receivedTime;
+    private byte[] request;
+    
+    public Long getReceivedTime(){
+      return receivedTime;
+    }
+    
+    public byte[] getRequest(){
+      return request;
+    }
+  }
+  
+  private static class DnsTimestampWrapper implements ChannelUpstreamHandler {
+    @Override
+    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent ce)
+        throws Exception {
+      if (!(ce instanceof MessageEvent)) {
+        return;
+      }
+      try {
+        final MessageEvent me = (MessageEvent) ce;
+        final ChannelBuffer buffer = ((ChannelBuffer) me.getMessage());
+        final TimedDns wrappedRequest = new TimedDns();
+        wrappedRequest.receivedTime = (new Date()).getTime();
+        wrappedRequest.request = new byte[buffer.readableBytes( )];
+        buffer.getBytes(0, wrappedRequest.request);
+        Channels.fireMessageReceived(ctx, wrappedRequest,  
+            ((InetSocketAddress) me.getRemoteAddress()));
+      }catch(final Exception ex) {
+        LOG.debug(ex,ex);
+      }
+    }
+  }
   
   private static class UdpChannelPipelineFactory implements ChannelPipelineFactory {
     private ExecutionHandler execHandler = null;
@@ -294,7 +335,7 @@ public class DNSControl {
     }
     @Override
     public ChannelPipeline getPipeline() throws Exception {
-      return Channels.pipeline(this.execHandler, new DnsServerHandler());
+      return Channels.pipeline(new DnsTimestampWrapper(), this.execHandler, new DnsServerHandler());
     }
   }
   

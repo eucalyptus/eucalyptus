@@ -21,7 +21,7 @@ package com.eucalyptus.cloud.ws;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.Arrays;
+import java.util.Date;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -33,17 +33,31 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.xbill.DNS.Message;
 import org.xbill.DNS.Rcode;
 
+import com.eucalyptus.cloud.ws.DNSControl.TimedDns;
+
 public class DnsServerHandler extends SimpleChannelUpstreamHandler {
   private static Logger LOG = Logger.getLogger( DnsServerHandler.class );
   private static final ConnectionHandler legacyDns = new ConnectionHandler();
   
+  private Long DISCARD_REQUEST_AFTER_MS = 10000L;
+  
   @Override
   public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
     byte[] inbuf = null;
-    try {
-      ChannelBuffer buffer = ((ChannelBuffer) e.getMessage());
-      inbuf = new byte[buffer.readableBytes( )];
-      buffer.getBytes( 0, inbuf );
+    try {   
+      if (e.getMessage() instanceof TimedDns) {
+        final TimedDns request = (TimedDns) e.getMessage();
+        inbuf = request.getRequest();
+        if (request.getReceivedTime() != null 
+            && (new Date()).getTime() - request.getReceivedTime() > DISCARD_REQUEST_AFTER_MS) {
+          throw new Exception("Request timed out");
+        }
+      }else {
+        final ChannelBuffer buffer = ((ChannelBuffer) e.getMessage());
+        inbuf = new byte[buffer.readableBytes( )];
+        buffer.getBytes( 0, inbuf );
+      }
+      
       Message query = new Message(inbuf);
       final InetAddress localAddr = ((InetSocketAddress) e.getChannel( ).getLocalAddress( )).getAddress( );
       final InetAddress remoteAddr = ((InetSocketAddress) e.getRemoteAddress()).getAddress();
