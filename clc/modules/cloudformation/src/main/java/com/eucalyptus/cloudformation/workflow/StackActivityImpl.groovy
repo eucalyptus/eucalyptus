@@ -42,9 +42,11 @@ import com.eucalyptus.cloudformation.resources.ResourceInfo
 import com.eucalyptus.cloudformation.resources.ResourcePropertyResolver
 import com.eucalyptus.cloudformation.resources.ResourceResolverManager
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSCloudFormationWaitConditionProperties
+import com.eucalyptus.cloudformation.template.AWSParameterTypeValidationHelper
 import com.eucalyptus.cloudformation.template.FunctionEvaluation
 import com.eucalyptus.cloudformation.template.IntrinsicFunctions
 import com.eucalyptus.cloudformation.template.JsonHelper
+import com.eucalyptus.cloudformation.template.TemplateParser
 import com.eucalyptus.cloudformation.workflow.steps.Step
 import com.eucalyptus.component.annotation.ComponentPart
 import com.fasterxml.jackson.core.type.TypeReference
@@ -656,4 +658,19 @@ public class StackActivityImpl implements StackActivity {
         throw new ResourceFailureException(rootCause.getClass().getName() + ":" + rootCause.getMessage());
     }
   }
+  @Override
+  public String validateAWSParameterTypes(String stackId, String accountId, String effectiveUserId) {
+    try {
+      StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
+      Map<String, TemplateParser.ParameterType> parameterTypeMap = new TemplateParser().getParameterTypeMap(stackEntity.getTemplateBody());
+      for (StackEntity.Parameter parameter: StackEntityHelper.jsonToParameters(stackEntity.getParametersJson())) {
+        AWSParameterTypeValidationHelper.validateParameter(parameter, parameterTypeMap.get(parameter.getKey()), effectiveUserId);
+      }
+    } catch (Exception e) {
+      LOG.error(e, e);
+      throw e;
+    }
+    return "";
+  }
+
 }

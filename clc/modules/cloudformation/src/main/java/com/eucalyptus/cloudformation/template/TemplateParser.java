@@ -29,7 +29,6 @@ import com.eucalyptus.cloudformation.TemplateParameters;
 import com.eucalyptus.cloudformation.ValidateTemplateResult;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.entity.StackEntity;
-import com.eucalyptus.cloudformation.entity.StackEntityHelper;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceResolverManager;
 import com.eucalyptus.cloudformation.template.dependencies.CyclicDependencyException;
@@ -47,21 +46,56 @@ import org.apache.log4j.Logger;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.regex.PatternSyntaxException;
 
+
 /**
  * Created by ethomas on 12/10/13.
  */
 public class TemplateParser {
   private static final String NO_ECHO_PARAMETER_VALUE = "****";
-  private enum ParameterType {
-    String,
-    Number,
-    CommaDelimitedList
+
+  public enum ParameterType {
+    String("String"),
+    Number("Number"),
+    CommaDelimitedList("CommaDelimitedList"),
+    AWS_EC2_KeyPair_KeyName("AWS::EC2::KeyPair::KeyName"),
+    AWS_EC2_SecurityGroup_Id("AWS::EC2::SecurityGroup::Id"),
+    AWS_EC2_Subnet_Id("AWS::EC2::Subnet::Id"),
+    List_String("List<String>"),
+    List_Number("List<Number>"),
+    List_AWS_EC2_KeyPair_KeyName("List<AWS::EC2::KeyPair::KeyName>"),
+    List_AWS_EC2_SecurityGroup_Id("List<AWS::EC2::SecurityGroup::Id>"),
+    List_AWS_EC2_Subnet_Id("List<AWS::EC2::Subnet::Id>");
+
+    private final String displayValue;
+    ParameterType(String displayValue) {
+      this.displayValue = displayValue;
+    }
+
+    public static ParameterType displayValueOf(String typeStr) {
+      for (ParameterType parameterType: values()) {
+        if (parameterType.displayValue.equals(typeStr)) return parameterType;
+      }
+      throw new IllegalArgumentException("No such ParameterType " + typeStr);
+    }
+
+    public static String[] displayValues() {
+      String[] displayValues = new String[values().length];
+      int ctr = 0;
+
+      for (ParameterType parameterType: values()) {
+        displayValues[ctr++] = parameterType.displayValue;
+      }
+      return displayValues;
+    }
+
+
   }
 
   private static final Logger LOG = Logger.getLogger(TemplateParser.class);
@@ -379,35 +413,78 @@ public class TemplateParser {
 
     private static Parameter parseParameter(String parameterName, JsonNode parameterJsonNode, Map<String, String> userParameterMap) throws CloudFormationException {
       validateParameterKeys(parameterJsonNode);
-      ParameterType type = parseType(parameterJsonNode);
+      ParameterType actualParameterType = parseType(parameterJsonNode);
+      ParameterType parsedIndividualType = null; // String or Number, or CommaDelimitedList.  Other list cases, what the individual elements are.
+      boolean isList = false;
+      switch (actualParameterType) {
+        // intentionally grouping case statements here
+        case String:
+        case AWS_EC2_KeyPair_KeyName:
+        case AWS_EC2_SecurityGroup_Id:
+        case AWS_EC2_Subnet_Id:
+          parsedIndividualType = ParameterType.String;
+          isList = false;
+          break;
+        case Number:
+          parsedIndividualType = ParameterType.Number;
+          isList = false;
+          break;
+        case List_Number:
+          parsedIndividualType = ParameterType.Number;
+          isList = true;
+          break;
+        case List_String:
+        case List_AWS_EC2_KeyPair_KeyName:
+        case List_AWS_EC2_SecurityGroup_Id:
+        case List_AWS_EC2_Subnet_Id:
+          parsedIndividualType = ParameterType.String;
+          isList = true;
+          break;
+        case CommaDelimitedList: // strangely enough this is grandfathered in AWS.  Many parameters which work on List<String> individually do not work here, so this is
+          // treated separately for AWS compatibility
+          parsedIndividualType = ParameterType.CommaDelimitedList;
+          isList = false; // this SHOULD be false, I know it doesn't seem it, but it is a grandfathered case.
+          break;
+        default:
+          throw new ValidationErrorException("Template format error: Unrecognized parameter type: " + actualParameterType +".  Valid values are " + Arrays.toString(ParameterType.displayValues()));
+      }
+
       String[] allowedValues = parseAllowedValues(parameterJsonNode); // type not needed
-      String allowedPattern = parseAllowedPattern(parameterName, parameterJsonNode, type);
+      String allowedPattern = parseAllowedPattern(parameterName, parameterJsonNode, parsedIndividualType);
       String constraintDescription = parseConstraintDescription(parameterName, parameterJsonNode); // type not needed
       String description = parseDescription(parameterName, parameterJsonNode); // type not needed
 
-      Double maxLength = parseMaxLength(parameterName, parameterJsonNode, type);
-      Double minLength = parseMinLength(parameterName, parameterJsonNode, type);
+      Double maxLength = parseMaxLength(parameterName, parameterJsonNode, parsedIndividualType);
+      Double minLength = parseMinLength(parameterName, parameterJsonNode, parsedIndividualType);
       if (maxLength != null && minLength != null && maxLength < minLength) {
         throw new ValidationErrorException("Template error: Parameter '" + parameterName + "' " + ParameterKey.MinLength
           + " must be less than " + ParameterKey.MaxLength + ".");
       }
 
-      Double maxValue = parseMaxValue(parameterName, parameterJsonNode, type);
-      Double minValue = parseMinValue(parameterName, parameterJsonNode, type);
+      Double maxValue = parseMaxValue(parameterName, parameterJsonNode, parsedIndividualType);
+      Double minValue = parseMinValue(parameterName, parameterJsonNode, parsedIndividualType);
       if (maxValue != null && minValue != null && maxValue < minValue) {
         throw new ValidationErrorException("Template error: Parameter '" + parameterName + "' " + ParameterKey.MinValue
           + " must be less than " + ParameterKey.MaxValue + ".");
       }
 
+      List<String> valuesToCheck = Lists.newArrayList();
       String defaultValue = JsonHelper.getString(parameterJsonNode, ParameterKey.Default.toString()); // could be null
       String userDefinedValue = userParameterMap.get(parameterName); // could be null
+      if (isList) {
+        valuesToCheck.addAll(splitAndTrimString(defaultValue, ","));
+        valuesToCheck.addAll(splitAndTrimString(userDefinedValue, ","));
+      } else {
+        valuesToCheck.add(defaultValue);
+        valuesToCheck.add(userDefinedValue);
+      }
       boolean noEcho = "true".equalsIgnoreCase(JsonHelper.getString(parameterJsonNode, ParameterKey.NoEcho.toString()));
       // now check any values that exist
-      for (String value : Lists.newArrayList(defaultValue, userDefinedValue)) {
+      for (String value : valuesToCheck) {
         if (value != null) {
           checkAllowedValues(parameterName, value, allowedValues, constraintDescription);
         }
-        switch (type) {
+        switch (parsedIndividualType) {
           case String:
             if (value != null) {
               parseStringParameter(parameterName, value, allowedPattern, minLength, maxLength, constraintDescription);
@@ -421,31 +498,23 @@ public class TemplateParser {
           case CommaDelimitedList:
             break; // currently nothing to check here
           default:
-            throw new ValidationErrorException("Template format error: Unrecognized parameter type: " + type);
+            throw new ValidationErrorException("Template format error: Unrecognized parameter type: " + parsedIndividualType);
         }
       }
+
       String stringValue = null;
       if (defaultValue != null) stringValue = defaultValue;
       if (userDefinedValue != null) stringValue = userDefinedValue;
       JsonNode jsonValueNode = null;
       if (stringValue != null) {
-        switch (type) {
-          case String:
-            jsonValueNode = new TextNode(stringValue);
-            break;
-          case Number:
-            jsonValueNode = new TextNode(stringValue);
-            break;
-          case CommaDelimitedList:
-            ArrayNode arrayNode = new ObjectMapper().createArrayNode();
-            StringTokenizer stok = new StringTokenizer(stringValue, ",");
-            while (stok.hasMoreTokens()) {
-              arrayNode.add(stok.nextToken());
-            }
-            jsonValueNode = arrayNode;
-            break; // currently nothing to check here
-          default:
-            throw new ValidationErrorException("Template format error: Unrecognized parameter type: " + type);
+        if (isList || actualParameterType == ParameterType.CommaDelimitedList) {
+          ArrayNode arrayNode = new ObjectMapper().createArrayNode();
+          for (String s: splitAndTrimString(stringValue, ",")) {
+            arrayNode.add(s);
+          }
+          jsonValueNode = arrayNode;
+        } else {
+          jsonValueNode = new TextNode(stringValue);
         }
       }
 
@@ -461,6 +530,19 @@ public class TemplateParser {
       templateParameter.setNoEcho(noEcho);
       templateParameter.setParameterKey(parameterName);
       return new Parameter(parameter, templateParameter);
+    }
+
+    private static Collection<String> splitAndTrimString(String stringValue, String delimiter) {
+      List<String> retVal = Lists.newArrayList();
+      if (stringValue == null) {
+        retVal.add(stringValue);
+      } else {
+        StringTokenizer stok = new StringTokenizer(stringValue, delimiter);
+        while (stok.hasMoreTokens()) {
+          retVal.add(stok.nextToken().trim());
+        }
+      }
+      return retVal;
     }
 
     private static void parseNumberParameter(String parameterName, String value, Double minValue, Double maxValue, String constraintDescription) throws ValidationErrorException {
@@ -614,9 +696,9 @@ public class TemplateParser {
       }
       ParameterType type = null;
       try {
-        type = ParameterType.valueOf(typeStr);
+        type = ParameterType.displayValueOf(typeStr);
       } catch (IllegalArgumentException ex) {
-        throw new ValidationErrorException("Template format error: Unrecognized parameter type: " + typeStr +".  Valid values are " + Arrays.toString(ParameterType.values()));
+        throw new ValidationErrorException("Template format error: Unrecognized parameter type: " + typeStr +".  Valid values are " + Arrays.toString(ParameterType.displayValues()));
       }
       return type;
     }
@@ -1133,5 +1215,31 @@ public class TemplateParser {
       validateValidResourcesInOutputs(outputKey, jsonNode.get(fieldName), template, unresolvedResourceDependencies);
     }
   }
+
+  public Map<String,ParameterType> getParameterTypeMap(String templateBody) throws CloudFormationException {
+    Map<String, ParameterType> returnVal = Maps.newHashMap();
+    JsonNode templateJsonNode = null;
+    try {
+      templateJsonNode = objectMapper.readTree(templateBody);
+    } catch (IOException ex) {
+      throw new ValidationErrorException(ex.getMessage());
+    }
+    if (!templateJsonNode.isObject()) {
+      throw new ValidationErrorException("Template body is not a JSON object");
+    }
+    JsonNode parametersJsonNode = JsonHelper.checkObject(templateJsonNode, TemplateParser.TemplateSection.Parameters.toString());
+    if (parametersJsonNode != null) {
+      for (String parameterKey : Lists.newArrayList(parametersJsonNode.fieldNames())) {
+        JsonNode parameterJsonNode = JsonHelper.checkObject(parametersJsonNode, parameterKey, "Any "
+          + TemplateParser.TemplateSection.Parameters + " member must be a JSON object.");
+        if (parameterJsonNode != null) {
+          ParameterParser.validateParameterKeys(parameterJsonNode);
+          returnVal.put(parameterKey, ParameterParser.parseType(parameterJsonNode));
+        }
+      }
+    }
+    return returnVal;
+  }
+
 }
 
