@@ -62,6 +62,7 @@
 
 package com.eucalyptus.blockstorage;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -69,7 +70,6 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import javax.annotation.Nullable;
-import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.compute.ClientUnauthorizedComputeException;
@@ -96,6 +96,7 @@ import com.eucalyptus.compute.common.backend.ModifyVolumeAttributeResponseType;
 import com.eucalyptus.compute.common.backend.ModifyVolumeAttributeType;
 import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.compute.ClientComputeException;
+import com.eucalyptus.util.Pair;
 import com.google.common.base.Predicates;
 
 import org.apache.log4j.Logger;
@@ -146,11 +147,11 @@ import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmVolumeAttachment;
 import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
-import com.eucalyptus.vm.VmVolumeAttachment.NonTransientVolumeException;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 
@@ -311,7 +312,7 @@ public class VolumeManager {
   }
 
   public DescribeVolumesResponseType DescribeVolumes( DescribeVolumesType request ) throws Exception {
-    final DescribeVolumesResponseType reply = ( DescribeVolumesResponseType ) request.getReply( );
+    final DescribeVolumesResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
 
     final boolean showAll = request.getVolumeSet( ).remove( "verbose" );
@@ -325,34 +326,22 @@ public class VolumeManager {
          .byPrivileges()
          .buildPredicate();
     
-    final Function<Set<String>, Set<String>> lookupVolumeIds = new Function<Set<String>, Set<String>>( ) {
-      public Set<String> apply( final Set<String> input ) {
-    	  final List<Volume> volumes = Entities.query( Volume.named( ownerFullName, null ), true, filter.asCriterion(), filter.getAliases() );
-          Set<String> res = Sets.newHashSet( );
-          for ( final Volume foundVol : Iterables.filter(volumes, requestedAndAccessible )) {
-            res.add( foundVol.getDisplayName( ) );
-          }
-          return res;
-      }
-    };
-    Set<String> allowedVolumeIds = Entities.asTransaction( Volume.class, lookupVolumeIds ).apply( volumeIds );
-    final EntityTransaction db = Entities.get( VmInstance.class );
-    try {
-      final List<VmInstance> vms = Entities.query( VmInstance.create( ) );
-    final Function<String, Volume> lookupVolume = new Function<String, Volume>( ) {
-      
-      @Override
-      public Volume apply( String input ) {
-        try {
-          Volume foundVol = Entities.uniqueResult( Volume.named( ownerFullName, input ) );
+    final Function<Set<String>, Pair<Set<String>,ArrayList<com.eucalyptus.compute.common.Volume>>> populateVolumeSet
+        = new Function<Set<String>, Pair<Set<String>,ArrayList<com.eucalyptus.compute.common.Volume>>>( ) {
+      public Pair<Set<String>,ArrayList<com.eucalyptus.compute.common.Volume>> apply( final Set<String> input ) {
+        final Set<String> allowedVolumeIds = Sets.newHashSet();
+        final ArrayList<com.eucalyptus.compute.common.Volume> replyVolumes = Lists.newArrayList( );
+        final List<VmInstance> vms = VmInstances.list( ownerFullName, Predicates.alwaysTrue() );
+        final List<Volume> volumes = Entities.query( Volume.named( ownerFullName, null ), true, filter.asCriterion(), filter.getAliases() );
+        for ( final Volume foundVol : Iterables.filter(volumes, requestedAndAccessible )) {
+          allowedVolumeIds.add( foundVol.getDisplayName( ) );
           if ( State.ANNIHILATED.equals( foundVol.getState( ) ) ) {
             Entities.delete( foundVol );
-            reply.getVolumeSet( ).add( foundVol.morph( new com.eucalyptus.compute.common.Volume( ) ) );
-            return foundVol;
+            replyVolumes.add( foundVol.morph( new com.eucalyptus.compute.common.Volume() ) );
           } else {
             AttachedVolume attachedVolume = null;
             try {
-              VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( input , vms );
+              VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( foundVol.getDisplayName( ) , vms );
               attachedVolume = VmVolumeAttachment.asAttachedVolume( attachment.getVmInstance( ) ).apply( attachment );
             } catch ( NoSuchElementException ex ) {
               if ( State.BUSY.equals( foundVol.getState( ) ) ) {
@@ -364,37 +353,25 @@ public class VolumeManager {
               msgTypeVolume.setStatus( "in-use" );
               msgTypeVolume.getAttachmentSet( ).add( attachedVolume );
             }
-            reply.getVolumeSet( ).add( msgTypeVolume );
-            return foundVol;
+            replyVolumes.add( msgTypeVolume );
           }
-        } catch ( NoSuchElementException ex ) {
-          throw ex;
-        } catch ( TransactionException ex ) {
-          throw Exceptions.toUndeclared( ex );
         }
+        return Pair.pair( allowedVolumeIds, replyVolumes );
       }
-      
     };
-    for ( String volId : allowedVolumeIds ) {
-      try {
-        Entities.asTransaction( Volume.class, lookupVolume ).apply( volId );
-      } catch ( Exception ex ) {
-        Logs.extreme( ).debug( ex, ex );
-      }
-    }
+
+    final Pair<Set<String>,ArrayList<com.eucalyptus.compute.common.Volume>> volumeIdsAndVolumes =
+        Entities.asTransaction( Volume.class, populateVolumeSet ).apply( volumeIds );
+    @SuppressWarnings( "ConstantConditions" )
+    final Set<String> allowedVolumeIds = volumeIdsAndVolumes.getLeft( );
+    reply.setVolumeSet( volumeIdsAndVolumes.getRight() );
 
     final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( Volume.class )
-        .getResourceTagMap( AccountFullName.getInstance( ctx.getAccount( ) ), allowedVolumeIds );
+        .getResourceTagMap( AccountFullName.getInstance( ctx.getAccount() ), allowedVolumeIds );
     for ( final com.eucalyptus.compute.common.Volume volume : reply.getVolumeSet() ) {
       Tags.addFromTags( volume.getTagSet(), ResourceTag.class, tagsMap.get( volume.getVolumeId() ) );
     }
-    db.commit( );
-  } catch (Exception ex) {
-    Logs.extreme( ).error( ex , ex );
-    throw ex;
-  } finally {
-    if ( db.isActive() ) db.rollback();
-  }
+
     return reply;
   }
 
