@@ -491,6 +491,26 @@ public class CreateImageTask {
 		}
 	}
 	
+	/**
+	 * Try to cancel CreateImage task if its exist
+	 * @param instanceId
+	 */
+	public static void cancel(final String instanceId) {
+	  if( createImageTasks.containsKey(instanceId) ) {
+	    try {
+	      CreateImageTask task = createImageTasks.get(instanceId);
+	      if (task != null) {
+	        LOG.info("Cancelling create image task for instance " + instanceId);
+	        task.setVmCreateImageTaskState(CreateImageState.failed);
+	      } else {
+	        LOG.warn("create image task is null");
+	      }
+	    } catch (Exception ex) {
+	      LOG.error("Can't cancel create image task for " + instanceId, ex);
+	    }
+	  }
+	}
+
 	private void setAccountAdmin() throws AuthException{
 		final User requestingUser = Accounts.lookupUserById(this.userId);
 		final Account account = requestingUser.getAccount();
