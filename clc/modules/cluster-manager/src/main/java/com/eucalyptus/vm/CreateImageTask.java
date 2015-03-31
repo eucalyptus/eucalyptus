@@ -288,9 +288,14 @@ public class CreateImageTask {
 			 *   if stopped, then create snapshot;
 			 *   otherwise, wait;
 			 */
-			for(final CreateImageTask task : tasks){
-				final VmInstance vm = task.getVmInstance();
-				if(vm.getRuntimeState()!=null && "poweredOff".equals(vm.getRuntimeState().getGuestState())){
+			for(final CreateImageTask task : tasks) {
+				VmInstance vm = null;
+				try {
+				  vm = task.getVmInstance();
+				} catch (NoSuchElementException ex) {
+				  return;
+				}
+				if(vm.getRuntimeState()!=null && "poweredOff".equals(vm.getRuntimeState().getGuestState())) {
 					try{
 						task.createSnapshot();
 						task.setVmCreateImageTaskState(CreateImageState.creating_snapshot);
@@ -406,18 +411,29 @@ public class CreateImageTask {
 			 throw Exceptions.toUndeclared(ex);
 		 }
 	}
+
+	/*
+	 * Finds VmInstance. Throws NoSuchElementException if instance can't be found
+	 */
 	
-	private VmInstance getVmInstance() {
-		try ( TransactionResource db =
-		          Entities.transactionFor( VmInstance.class ) ) {
-			 final VmInstance vm = Entities.uniqueResult(VmInstance.named(this.instanceId));
-			 db.commit();
-			 return vm;
-		 }catch(NoSuchElementException ex){
-			 throw ex;
-		 }catch(Exception ex){
-			 throw Exceptions.toUndeclared(ex);
-		 }
+	private VmInstance getVmInstance() throws NoSuchElementException {
+	  try ( TransactionResource db =
+        Entities.transactionFor( VmInstance.class ) ) {
+      final VmInstance vm = Entities.uniqueResult(VmInstance.named(this.instanceId));
+      db.commit();
+      return vm;
+    }catch(NoSuchElementException ex){
+      LOG.error("Unable to find the vm instance (terminated?) - " + this.instanceId);
+      try{
+        Images.setImageState(this.getImageId(), ImageMetadata.State.failed);
+      }catch(final Exception innerEx){
+        LOG.error("Unable to set image state as failed", ex);
+      }
+      createImageTasks.remove(this.instanceId);
+      throw ex;
+    }catch(Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
 	}
 	
 	private static List<BlockDeviceMappingItemType> getDeviceMappingsFromImage(final String imageId){

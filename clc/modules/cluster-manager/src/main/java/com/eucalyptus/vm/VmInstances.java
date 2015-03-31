@@ -828,7 +828,6 @@ public class VmInstances {
   }
 
   static void sendTerminate( final String instanceId, final String partition ) {
-    CreateImageTask.cancel( instanceId );
     try {
       final TerminateCallback cb = new TerminateCallback( instanceId );
       AsyncRequests.newRequest(  cb ).dispatch( partition );
