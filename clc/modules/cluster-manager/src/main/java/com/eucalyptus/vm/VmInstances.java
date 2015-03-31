@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -93,6 +93,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.Restrictions;
+import org.hibernate.type.StringType;
 import org.xbill.DNS.Name;
 
 import com.eucalyptus.address.Address;
@@ -130,6 +131,7 @@ import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
@@ -167,13 +169,11 @@ import com.eucalyptus.util.async.RemoteCallback;
 import com.eucalyptus.vm.VmInstance.Transitions;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
-import com.eucalyptus.vm.VmVolumeAttachment.NonTransientVolumeException;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
@@ -192,6 +192,10 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 @ConfigurableClass( root = "cloud.vmstate",
                     description = "Parameters controlling the lifecycle of virtual machines." )
 public class VmInstances {
+
+  private static final String SQL_RESTRICTION_PERSISTENT_VOLUME = "{alias}.id in (select vminstance_id from %smetadata_instances_persistent_volumes where metadata_vm_volume_id=?)";
+  private static final String SQL_RESTRICTION_ATTACHED_VOLUME = "{alias}.id in (select vminstance_id from %smetadata_instances_volume_attachments where metadata_vm_volume_id=?)";
+
   public static class TerminatedInstanceException extends NoSuchElementException {
     
     /**
@@ -585,8 +589,18 @@ public class VmInstances {
 
   public static VmVolumeAttachment lookupVolumeAttachment( final String volumeId ) {
     VmVolumeAttachment ret = null;
-    try ( TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
-      List<VmInstance> vms = Entities.query( VmInstance.create( ) );
+    try ( final TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
+      final String schemaPrefix =
+          Optional.fromNullable( PersistenceContexts.toSchemaName( ).apply( "eucalyptus_cloud" ) )
+              .transform( Strings.append( "." ) )
+              .or( "" );
+      final List<VmInstance> vms = VmInstances.list( null,
+          Restrictions.or(
+              Restrictions.sqlRestriction( String.format( SQL_RESTRICTION_PERSISTENT_VOLUME, schemaPrefix), volumeId, StringType.INSTANCE ),
+              Restrictions.sqlRestriction( String.format( SQL_RESTRICTION_ATTACHED_VOLUME, schemaPrefix), volumeId, StringType.INSTANCE )
+          ),
+          Collections.<String,String>emptyMap( ),
+          null );
       for ( VmInstance vm : vms ) {
         try {
           ret = vm.lookupVolumeAttachment( volumeId );
@@ -606,36 +620,6 @@ public class VmInstances {
       throw new NoSuchElementException( ex.getMessage( ) );
     }
   }
-  
-  /*Commenting out this function as its incorrect and no longer used
-  public static VmVolumeAttachment lookupTransientVolumeAttachment( final String volumeId ) {
-	 VmVolumeAttachment ret = null;
-     try ( TransactionResource db =
-		     Entities.transactionFor( VmInstance.class ) ) {
-	   List<VmInstance> vms = Entities.query( VmInstance.create( ) );
-	   for ( VmInstance vm : vms ) {
-	     try {
-	       ret = vm.lookupTransientVolumeAttachment( volumeId );
-	       if ( ret.getVmInstance( ) == null ) {
-	         ret.setVmInstance( vm );
-	       }
-	     } catch (NonTransientVolumeException nex) {
-	   	   throw nex;
-	     } catch ( NoSuchElementException ex ) {
-	       continue;
-	     }
-	   }
-	   if ( ret == null ) {
-	     throw new NoSuchElementException( "VmVolumeAttachment: no volume attachment for " + volumeId );
-	   }
-	   db.commit( );
-	   return ret;
-	 } catch (NonTransientVolumeException nex) {
-	   throw nex;
-	 } catch ( Exception ex ) {
-	   throw new NoSuchElementException( ex.getMessage( ) );
-	 }
- }*/
   
   public static VmVolumeAttachment lookupVolumeAttachment( final String volumeId , final List<VmInstance> vms ) {
     VmVolumeAttachment ret = null;
