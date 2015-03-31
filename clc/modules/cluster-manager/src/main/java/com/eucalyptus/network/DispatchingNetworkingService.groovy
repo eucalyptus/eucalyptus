@@ -41,7 +41,9 @@ class DispatchingNetworkingService {
   private static ReadWriteLock delegateLock = new ReentrantReadWriteLock( )
   private static String networkingServiceDelegateName
   private static NetworkingService networkingServiceDelegate =
-      networkingServiceProxy{ throw new IllegalStateException( "Networking not initialized" ) }
+      networkingServiceProxy{ Object proxy, Method method, Object[] args ->
+        if ( !method.name.equals( 'update' ) ) throw new IllegalStateException( "Networking not initialized" ); null }
+
   @Delegate
   private static NetworkingService lockingDelegate =
       networkingServiceProxy{ Object proxy, Method method, Object[] args ->
