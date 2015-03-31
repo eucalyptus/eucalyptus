@@ -317,7 +317,11 @@ public class ClusterEndpoint implements Startable {
           } catch ( NoSuchElementException ex ) {
             try {
               clusters.add( clusterRegistry.lookupDisabled( partitionName ) );
-            } catch ( NoSuchElementException ex2 ) { }
+            } catch ( NoSuchElementException ex2 ) {
+              if ( !describeKeywords.containsValue( partitionName ) ) {
+                throw new ComputeException("InvalidParameterValue", "Invalid availability zone: [" + partitionName + "]");
+              }
+            }
           }
         }
       }
