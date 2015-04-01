@@ -152,7 +152,7 @@ struct vlan_hdr_t {
 \*----------------------------------------------------------------------------*/
 
 static u_char gArpPkt[ETH_FRAME_LEN] = { 0 };   //!< The ARP packet to send
-//static u_char gEthZero[ETH_ALEN] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };  //!< Ethernet Zero Address 00:00:00:00:00:00
+static u_char gEthZero[ETH_ALEN] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };  //!< Ethernet Zero Address 00:00:00:00:00:00
 static u_char gEthBroadcast[ETH_ALEN] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }; //!< Ethernet Broadcast Address FF:FF:FF:FF:FF:FF
 
 /*----------------------------------------------------------------------------*\
@@ -242,14 +242,14 @@ static int send_gratuitous_arp(const char *psDevice, const char *psIp, const cha
         pArp->ea_hdr.ar_pro = htons(ETH_P_IP);
         pArp->ea_hdr.ar_hln = ETHER_ADDR_LEN;
         pArp->ea_hdr.ar_pln = sizeof(in_addr_t);
-        pArp->ea_hdr.ar_op = htons(ARPOP_REPLY);
+        pArp->ea_hdr.ar_op = htons(ARPOP_REQUEST);
         memcpy(pArp->arp_sha, aMac, ETH_ALEN);
         memcpy(pArp->arp_spa, &ip, 4);
-        memcpy(pArp->arp_tha, aMac, ETH_ALEN);
+        memcpy(pArp->arp_tha, gEthZero, ETH_ALEN);
         memcpy(pArp->arp_tpa, &ip, 4);
 
         // Calculate the length
-        len = MAX(64, ((u_char *) & pArp->arp_tpa[3]) - ((u_char *) pEth));
+        len = ((u_char *) & pArp->arp_tpa[3]) - ((u_char *) pEth);
 
         // Open a socket to transmit this packet
         if ((sock = socket(PF_PACKET, SOCK_PACKET, htons(ETH_P_ARP))) < 0) {
