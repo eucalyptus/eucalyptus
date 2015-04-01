@@ -472,8 +472,8 @@ public class TemplateParser {
       String defaultValue = JsonHelper.getString(parameterJsonNode, ParameterKey.Default.toString()); // could be null
       String userDefinedValue = userParameterMap.get(parameterName); // could be null
       if (isList) {
-        valuesToCheck.addAll(splitAndTrimString(defaultValue, ","));
-        valuesToCheck.addAll(splitAndTrimString(userDefinedValue, ","));
+        valuesToCheck.addAll(splitAndTrimCSVString(defaultValue));
+        valuesToCheck.addAll(splitAndTrimCSVString(userDefinedValue));
       } else {
         valuesToCheck.add(defaultValue);
         valuesToCheck.add(userDefinedValue);
@@ -509,7 +509,7 @@ public class TemplateParser {
       if (stringValue != null) {
         if (isList || actualParameterType == ParameterType.CommaDelimitedList) {
           ArrayNode arrayNode = new ObjectMapper().createArrayNode();
-          for (String s: splitAndTrimString(stringValue, ",")) {
+          for (String s: splitAndTrimCSVString(stringValue)) {
             arrayNode.add(s);
           }
           jsonValueNode = arrayNode;
@@ -532,15 +532,23 @@ public class TemplateParser {
       return new Parameter(parameter, templateParameter);
     }
 
-    private static Collection<String> splitAndTrimString(String stringValue, String delimiter) {
+    private static Collection<String> splitAndTrimCSVString(String stringValue) {
       List<String> retVal = Lists.newArrayList();
       if (stringValue == null) {
         retVal.add(stringValue);
       } else {
-        StringTokenizer stok = new StringTokenizer(stringValue, delimiter);
-        while (stok.hasMoreTokens()) {
-          retVal.add(stok.nextToken().trim());
+        // this is a special case.  StringTokenizers will often ignore ,, cases
+        StringBuilder currVal = new StringBuilder();
+        char[] cArray = stringValue.toCharArray();
+        for (int i = 0; i < cArray.length; i++) {
+          if (cArray[i] == ',') {
+            retVal.add(currVal.toString().trim());
+            currVal.setLength(0); // reset
+          } else {
+            currVal.append(cArray[i]);
+          }
         }
+        retVal.add(currVal.toString().trim());
       }
       return retVal;
     }

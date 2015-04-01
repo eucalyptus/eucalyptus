@@ -39,6 +39,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.bouncycastle.util.encoders.Base64;
@@ -600,7 +601,8 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       try {
         defaultRegionAvailabilityZones = describeAvailabilityZones(effectiveUserId);
       } catch (Exception e) {
-        throw new AccessDeniedException(e.getMessage() != null ? e.getMessage():  "Unable to access availability zones");
+        Throwable rootCause = Throwables.getRootCause(e);
+        throw new AccessDeniedException("Unable to access availability zones.  " + (rootCause.getMessage() == null ? "" : rootCause.getMessage()));
       }
       final Map<String, List<String>> availabilityZoneMap = Maps.newHashMap();
       availabilityZoneMap.put(CloudFormationService.REGION, defaultRegionAvailabilityZones);
