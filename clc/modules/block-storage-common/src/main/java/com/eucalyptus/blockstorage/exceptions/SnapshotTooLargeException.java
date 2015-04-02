@@ -71,8 +71,13 @@ public class SnapshotTooLargeException extends EucalyptusCloudException {
     super("SnapshotTooLarge");
   }
 
+  public SnapshotTooLargeException(int maxSizeInGB) {
+    this("", maxSizeInGB);
+  }
+
   public SnapshotTooLargeException(String snapshotId, int maxSizeInGB) {
-    super("Snapshot " + snapshotId + " exceeds the maximum allowed snapshot size of " + maxSizeInGB + "GB");
+    super("Snapshot " + snapshotId + " would exceeds the total global size of "
+        + maxSizeInGB + "GB allowed for all snapshots. Please contact your cloud administrator.");
   }
 
   public SnapshotTooLargeException(Throwable ex) {

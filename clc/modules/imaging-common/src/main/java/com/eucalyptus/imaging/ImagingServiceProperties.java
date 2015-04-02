@@ -20,37 +20,34 @@
 package com.eucalyptus.imaging;
 
 import java.net.InetAddress;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.Callable;
 
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.Faults.CheckException;
-import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.resources.client.CloudFormationClient;
+import com.eucalyptus.resources.client.Ec2Client;
+import com.eucalyptus.resources.client.EucalyptusClient;
 
 import org.apache.log4j.Logger;
 import org.springframework.util.StringUtils;
 
-import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupType;
-import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseType;
-import com.eucalyptus.autoscaling.common.msgs.LaunchConfigurationType;
-import com.eucalyptus.autoscaling.common.msgs.TagDescription;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.cloudformation.CloudFormation;
+import com.eucalyptus.cloudformation.Stack;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Faults;
-import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.component.Faults.CheckException;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ClusterInfoType;
-import com.eucalyptus.compute.common.DescribeKeyPairsResponseItemType;
 import com.eucalyptus.compute.common.ImageDetails;
-import com.eucalyptus.compute.common.ResourceTag;
+import com.eucalyptus.compute.common.VmTypeDetails;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
@@ -58,9 +55,7 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.crypto.util.B64;
-import com.eucalyptus.imaging.common.EucalyptusActivityTasks;
 import com.eucalyptus.imaging.common.ImagingBackend;
-import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 import com.google.common.net.HostSpecifier;
@@ -70,37 +65,65 @@ import com.google.common.collect.Sets;
 public class ImagingServiceProperties {
   private static Logger LOG = Logger.getLogger(ImagingServiceProperties.class);
   // CONFIGURED is in the ImagingServiceLaunchers
-  @ConfigurableField(displayName = "image", description = "EMI containing imaging worker", initial = "NULL", readonly = false, type = ConfigurableFieldType.KEYVALUE, changeListener = EmiChangeListener.class)
+  @ConfigurableField(displayName = "image",
+      description = "EMI containing imaging worker",
+      initial = "NULL", readonly = false, type = ConfigurableFieldType.KEYVALUE,
+      changeListener = EmiChangeListener.class)
   public static String IMAGE = "NULL";
 
-  @ConfigurableField(displayName = "instance_type", description = "instance type for imaging worker", initial = "m1.small", readonly = false, type = ConfigurableFieldType.KEYVALUE, changeListener = InstanceTypeChangeListener.class)
+  @ConfigurableField(displayName = "instance_type",
+      description = "instance type for imaging worker",
+      initial = "m1.small", readonly = false, type = ConfigurableFieldType.KEYVALUE,
+      changeListener = InstanceTypeChangeListener.class)
   public static String INSTANCE_TYPE = "m1.small";
 
-  @ConfigurableField(displayName = "availability_zones", description = "availability zones for imaging worker", initial = "", readonly = false, type = ConfigurableFieldType.KEYVALUE, changeListener = AvailabilityZonesChangeListener.class)
+  @ConfigurableField(displayName = "availability_zones",
+      description = "availability zones for imaging worker",
+      initial = "", readonly = false, type = ConfigurableFieldType.KEYVALUE,
+      changeListener = AvailabilityZonesChangeListener.class)
   public static String AVAILABILITY_ZONES = "";
 
-  @ConfigurableField(displayName = "keyname", description = "keyname to use when debugging imaging worker", readonly = false, type = ConfigurableFieldType.KEYVALUE, changeListener = KeyNameChangeListener.class)
+  @ConfigurableField(displayName = "keyname",
+      description = "keyname to use when debugging imaging worker",
+      readonly = false, type = ConfigurableFieldType.KEYVALUE,
+      changeListener = KeyNameChangeListener.class)
   public static String KEYNAME = null;
 
-  @ConfigurableField(displayName = "ntp_server", description = "address of the NTP server used by imaging worker", readonly = false, type = ConfigurableFieldType.KEYVALUE, changeListener = NTPServerChangeListener.class)
+  @ConfigurableField(displayName = "ntp_server",
+      description = "address of the NTP server used by imaging worker",
+      readonly = false, type = ConfigurableFieldType.KEYVALUE,
+      changeListener = NTPServerChangeListener.class)
   public static String NTP_SERVER = null;
 
-  @ConfigurableField(displayName = "log_server", description = "address/ip of the server that collects logs from imaging wokrers", readonly = false, type = ConfigurableFieldType.KEYVALUE, changeListener = LogServerAddressChangeListener.class)
+  @ConfigurableField(displayName = "log_server",
+      description = "address/ip of the server that collects logs from imaging wokrers",
+      readonly = false, type = ConfigurableFieldType.KEYVALUE,
+      changeListener = LogServerAddressChangeListener.class)
   public static String LOG_SERVER = null;
 
-  @ConfigurableField(displayName = "log_server_port", description = "UDP port that log server is listerning to", readonly = false, initial = "514", type = ConfigurableFieldType.KEYVALUE, changeListener = LogServerPortChangeListener.class)
+  @ConfigurableField(displayName = "log_server_port",
+      description = "UDP port that log server is listerning to",
+      readonly = false, initial = "514", type = ConfigurableFieldType.KEYVALUE,
+      changeListener = LogServerPortChangeListener.class)
   public static String LOG_SERVER_PORT = "514";
 
-  @ConfigurableField(displayName = "enabled", description = "enabling imaging worker healthcheck", initial = "true", readonly = false, type = ConfigurableFieldType.BOOLEAN)
+  @ConfigurableField(displayName = "enabled",
+      description = "enabling imaging worker healthcheck", initial = "true",
+      readonly = false, type = ConfigurableFieldType.BOOLEAN)
   public static Boolean HEALTHCHECK = true;
 
-  @ConfigurableField(displayName = "expiration_days", description = "the days after which imaging work VMs expire", initial = "180", readonly = false, type = ConfigurableFieldType.KEYVALUE, changeListener = VmExpirationDaysChangeListener.class)
+  @ConfigurableField(displayName = "expiration_days",
+      description = "the days after which imaging work VMs expire",
+      initial = "180", readonly = false, type = ConfigurableFieldType.KEYVALUE,
+      changeListener = VmExpirationDaysChangeListener.class)
   public static String EXPIRATION_DAYS = "180";
 
-  @ConfigurableField(displayName = "init_script", description = "bash script that will be executed before service configuration and start up", readonly = false, type = ConfigurableFieldType.KEYVALUE, changeListener = InitScriptChangeListener.class)
+  @ConfigurableField(displayName = "init_script",
+      description = "bash script that will be executed before service configuration and start up",
+      readonly = false,
+      type = ConfigurableFieldType.KEYVALUE,
+      changeListener = InitScriptChangeListener.class)
   public static String INIT_SCRIPT = null;
-
-  public static final String DEFAULT_LAUNCHER_TAG = "euca-internal-imaging-workers";
 
   public static String getCredentialsString() {
     final String credStr = String.format("euca-%s:%s",
@@ -108,6 +131,8 @@ public class ImagingServiceProperties {
         EXPIRATION_DAYS);
     return credStr;
   }
+
+  public static final String IMAGING_WORKER_STACK_NAME = "euca-internal-imaging-service";
 
   @Provides(ImagingBackend.class)
   @RunDuring(Bootstrap.Stage.Final)
@@ -132,27 +157,27 @@ public class ImagingServiceProperties {
     }
 
     private static int CheckCounter = 0;
-    private static boolean EmiCheckResult = true;
+    private static boolean StackCheckResult = true;
 
     @Override
     public boolean check() throws Exception {
       if (CloudMetadatas.isMachineImageIdentifier(IMAGE)) {
-        if ( CheckCounter >= 3 && Topology.isEnabled( Eucalyptus.class ) ) {
+        if ( CheckCounter >= 3 && Topology.isEnabled( Eucalyptus.class )
+            && Topology.isEnabled( CloudFormation.class )) {
           try {
-            final List<ImageDetails> emis = EucalyptusActivityTasks
-                .getInstance().describeImages(
-                    Lists.newArrayList(IMAGE), false);
-            if (IMAGE.equals(emis.get(0).getImageId()))
-              EmiCheckResult = true;
+            final Stack stack = CloudFormationClient
+                .getInstance().describeStack(null, IMAGING_WORKER_STACK_NAME);
+            if ("CREATE_COMPLETE".equals(stack.getStackStatus()))
+              StackCheckResult = true;
             else
-              EmiCheckResult = false;
+              StackCheckResult = false;
           } catch (final Exception ex) {
-            EmiCheckResult = false;
+            StackCheckResult = false;
           }
           CheckCounter = 0;
         } else
           CheckCounter++;
-        return EmiCheckResult;
+        return StackCheckResult;
       } else {
         try {
           // GRZE: do this bit in the way that it allows getting the
@@ -179,15 +204,15 @@ public class ImagingServiceProperties {
     }
   }
 
-  public static class AvailabilityZonesChangeListener implements
-      PropertyChangeListener {
+  public static class AvailabilityZonesChangeListener implements PropertyChangeListener<String> {
 
     @Override
-    public void fireChange(ConfigurableProperty t, Object newValue)
+    public void fireChange(ConfigurableProperty t, final String zones)
         throws ConfigurablePropertyException {
+      if(t.getValue()!=null && t.getValue().equals(zones))
+        return;
       try {
-        final String zones = (String) newValue;
-        if (zones.length() == 0) {
+        if (zones == null || zones.length() == 0) {
           return;
         }
 
@@ -203,8 +228,8 @@ public class ImagingServiceProperties {
         }
 
         try {
-          final List<ClusterInfoType> clusters = EucalyptusActivityTasks
-              .getInstance().describeAvailabilityZones(false);
+          final List<ClusterInfoType> clusters = Ec2Client
+              .getInstance().describeAvailabilityZones(null, false);
           final List<String> clusterNames = Lists.newArrayList();
           for (final ClusterInfoType cluster : clusters) {
             clusterNames.add(cluster.getZoneName());
@@ -227,20 +252,18 @@ public class ImagingServiceProperties {
     }
   }
 
-  public static class LogServerAddressChangeListener implements
-      PropertyChangeListener<String> {
+  public static class LogServerAddressChangeListener implements PropertyChangeListener<String> {
     @Override
     public void fireChange(ConfigurableProperty t, String newValue)
         throws ConfigurablePropertyException {
+      if(t.getValue()!=null && t.getValue().equals(newValue))
+        return;
       try {
         // check address
         InetAddress.getByName(newValue);
-        if (t.getValue() != null && !t.getValue().equals(newValue)
-            && newValue.length() > 0)
-          onPropertyChange(null, null, null, null, newValue, null, null);
       } catch (final Exception e) {
         throw new ConfigurablePropertyException(
-            "Could not change log server to " + newValue, e);
+            "Could not change log server to " + newValue + " due to: " + e.getMessage());
       }
     }
   }
@@ -250,16 +273,17 @@ public class ImagingServiceProperties {
     @Override
     public void fireChange(ConfigurableProperty t, String newValue)
         throws ConfigurablePropertyException {
+      if(t.getValue()!=null && t.getValue().equals(newValue))
+        return;
       try {
-        Integer.parseInt(newValue);
-        if (t.getValue() != null && !t.getValue().equals(newValue)
-            && newValue.length() > 0)
-          onPropertyChange(null, null, null, null, null, newValue, null);
+        int i = Integer.parseInt(newValue);
+        if (i<=0 || i>65535)
+          throw new ConfigurablePropertyException("Invalid port number");
       } catch (final NumberFormatException ex) {
         throw new ConfigurablePropertyException("Invalid number");
       } catch (final Exception e) {
         throw new ConfigurablePropertyException(
-            "Could not change log server port to " + newValue, e);
+            "Could not change log server port to " + newValue + " due to: " + e.getMessage());
       }
     }
   }
@@ -268,13 +292,7 @@ public class ImagingServiceProperties {
     @Override
     public void fireChange(ConfigurableProperty t, String newValue)
         throws ConfigurablePropertyException {
-      try {
-        // init script can be empty
-        if (t.getValue() != null && !t.getValue().equals(newValue))
-          onPropertyChange(null, null, null, null, null, null, (String) newValue);
-      } catch (final Exception e) {
-        throw new ConfigurablePropertyException("Could not change init script", e);
-      }
+      //nothing to validate
     }
   }
 
@@ -282,46 +300,62 @@ public class ImagingServiceProperties {
     @Override
     public void fireChange(ConfigurableProperty t, String newValue)
         throws ConfigurablePropertyException {
+      if(t.getValue()!=null && t.getValue().equals(newValue))
+        return;
+      if (newValue == null || !CloudMetadatas.isMachineImageIdentifier(newValue))
+        throw new ConfigurablePropertyException("Invalid EMI ID");
       try {
-        if (t.getValue() != null && !t.getValue().equals(newValue)
-            && ((String) newValue).length() > 0)
-          onPropertyChange((String) newValue, null, null, null, null, null, null);
+          final List<ImageDetails> images = Ec2Client.getInstance()
+              .describeImages(null, Lists.newArrayList(newValue));
+          if (images == null || images.size() <= 0)
+            throw new EucalyptusCloudException(
+                "No such EMI is found in the system");
+          if (!images.get(0).getImageId().toLowerCase().equals(newValue.toLowerCase()))
+            throw new EucalyptusCloudException(
+                "No such EMI is found in the system");
       } catch (final Exception e) {
-        throw new ConfigurablePropertyException("Could not change EMI ID", e);
+        throw new ConfigurablePropertyException("Could not change EMI ID due to: " + e.getMessage());
       }
     }
   }
 
-  public static class InstanceTypeChangeListener implements
-      PropertyChangeListener {
+  public static class InstanceTypeChangeListener implements PropertyChangeListener<String> {
     @Override
-    public void fireChange(ConfigurableProperty t, Object newValue)
+    public void fireChange(ConfigurableProperty t, String newValue)
         throws ConfigurablePropertyException {
+      if(t.getValue()!=null && t.getValue().equals(newValue))
+        return;
       try {
-        if (newValue instanceof String) {
-          if (newValue == null || ((String) newValue).equals(""))
+        if (newValue == null || newValue.isEmpty())
             throw new EucalyptusCloudException("Instance type cannot be unset");
-          if (t.getValue() != null && !t.getValue().equals(newValue))
-            onPropertyChange(null, (String) newValue, null, null, null, null, null);
+        List<VmTypeDetails> types = EucalyptusClient.getInstance().describeVMTypes();
+        boolean found = false;
+        for(VmTypeDetails type:types){
+          if (type.getName().equals(newValue)) {
+            found = true;
+            break;
+          }
         }
+        if (!found)
+          throw new ConfigurablePropertyException("Invalid instance type");
       } catch (final Exception e) {
         throw new ConfigurablePropertyException(
-            "Could not change instance type", e);
+            "Could not change instance type due to: " + e.getMessage());
       }
     }
   }
 
-  public static class KeyNameChangeListener implements PropertyChangeListener {
+  public static class KeyNameChangeListener implements PropertyChangeListener<String> {
     @Override
-    public void fireChange(ConfigurableProperty t, Object newValue)
+    public void fireChange(ConfigurableProperty t, String keyname)
         throws ConfigurablePropertyException {
+      if(t.getValue()!=null && t.getValue().equals(keyname))
+        return;
       try {
-        if (newValue instanceof String) {
-          if (t.getValue() != null && !t.getValue().equals(newValue))
-            onPropertyChange(null, null, (String) newValue, null, null, null, null);
-        }
+        // describeKeyPairs throws an error if keypair not found
+        Ec2Client.getInstance().describeKeyPairs(null, Lists.newArrayList(keyname));
       } catch (final Exception e) {
-        throw new ConfigurablePropertyException("Could not change key name", e);
+        throw new ConfigurablePropertyException("Could not change key name due to: " + e.getMessage());
       }
     }
   }
@@ -331,32 +365,29 @@ public class ImagingServiceProperties {
     @Override
     public void fireChange(ConfigurableProperty t, String newValue)
         throws ConfigurablePropertyException {
+      if(t.getValue()!=null && t.getValue().equals(newValue))
+        return;
       try {
-        if (newValue instanceof String) {
-          if (((String) newValue).contains(",")) {
-            final String[] addresses = ((String) newValue).split(",");
-            if ((addresses.length - 1) != StringUtils.countOccurrencesOf(
-                (String) newValue, ","))
+        if ((newValue).contains(",")) {
+          final String[] addresses = ((String) newValue).split(",");
+          if ((addresses.length - 1) != StringUtils.countOccurrencesOf(
+              (String) newValue, ","))
+            throw new EucalyptusCloudException("Invalid address");
+
+          for (final String address : addresses) {
+            if (!HostSpecifier.isValid(String.format("%s.com", address)))
               throw new EucalyptusCloudException("Invalid address");
-
-            for (final String address : addresses) {
-              if (!HostSpecifier.isValid(String.format("%s.com", address)))
-                throw new EucalyptusCloudException("Invalid address");
-            }
-          } else {
-            final String address = (String) newValue;
-            if (address != null && !address.equals("")) {
-              if (!HostSpecifier.isValid(String.format("%s.com", address)))
-                throw new EucalyptusCloudException("Invalid address");
-            }
           }
-        } else
-          throw new EucalyptusCloudException("Address is not string type");
-
-        onPropertyChange(null, null, null, (String) newValue, null, null, null);
+        } else {
+          final String address = (String) newValue;
+          if (address != null && !address.equals("")) {
+            if (!HostSpecifier.isValid(String.format("%s.com", address)))
+              throw new EucalyptusCloudException("Invalid address");
+          }
+        }
       } catch (final Exception e) {
         throw new ConfigurablePropertyException(
-            "Could not change ntp server address", e);
+            "Could not change ntp server address due to: " + e.getMessage());
       }
     }
   }
@@ -366,6 +397,8 @@ public class ImagingServiceProperties {
     @Override
     public void fireChange(ConfigurableProperty t, String newValue)
         throws ConfigurablePropertyException {
+      if(t.getValue()!=null && t.getValue().equals(newValue))
+        return;
       try {
         final int newExp = Integer.parseInt(newValue);
         if (newExp <= 0)
@@ -377,283 +410,14 @@ public class ImagingServiceProperties {
     }
   }
 
-  public static String getWorkerUserData(String ntpServer, String logServer,
-      String logServerPort, String initScript) {
-    Map<String, String> kvMap = new HashMap<String, String>();
-    if (ntpServer != null)
-      kvMap.put("ntp_server", ntpServer);
-    if (logServer != null)
-      kvMap.put("log_server", logServer);
-    if (logServerPort != null)
-      kvMap.put("log_server_port", logServerPort);
-
-    kvMap.put("imaging_service_url",
-        String.format("imaging.%s", DNSProperties.DOMAIN));
-    kvMap.put("euare_service_url",
-        String.format("euare.%s", DNSProperties.DOMAIN));
-    kvMap.put("compute_service_url",
-        String.format("compute.%s", DNSProperties.DOMAIN));
-
-    final StringBuilder sb = new StringBuilder("#!/bin/bash").append("\n");
-    if (initScript != null && initScript.length()>0)
-      sb.append(initScript);
-    sb.append("\n#System generated Imaging worker config\n");
-    sb.append("mkdir -p /etc/eucalyptus-imaging-worker/\n");
-    sb.append("yum -y --disablerepo \\* --enablerepo eucalyptus-service-image install eucalyptus-imaging-worker\n");
-    sb.append("echo \"");
-    for (String key : kvMap.keySet()) {
-      String value = kvMap.get(key);
-      sb.append(String.format("\n%s=%s", key, value));
-    }
-    sb.append("\" > /etc/eucalyptus-imaging-worker/imaging-worker.conf");
-    sb.append("\ntouch /var/lib/eucalyptus-imaging-worker/ntp.lock");
-    sb.append("\nchown -R imaging-worker:imaging-worker /etc/eucalyptus-imaging-worker");
-    sb.append("\nservice eucalyptus-imaging-worker start");
-    return sb.toString();
-  }
-
-  private static void onPropertyChange(final String emi,
-      final String instanceType, final String keyname, final String ntpServers,
-      String logServer, String logServerPort, String initScript) throws EucalyptusCloudException {
-    if (!(Bootstrap.isFinished() &&
-    // Topology.isEnabledLocally( Imaging.class ) &&
-    Topology.isEnabled(Eucalyptus.class)))
-      return;
-
-    // should validate the parameters
-    if (emi != null) {
-      try {
-        final List<ImageDetails> images = EucalyptusActivityTasks.getInstance()
-            .describeImages(Lists.newArrayList(emi), false);
-        if (images == null || images.size() <= 0)
-          throw new EucalyptusCloudException(
-              "No such EMI is found in the system");
-        if (!images.get(0).getImageId().toLowerCase().equals(emi.toLowerCase()))
-          throw new EucalyptusCloudException(
-              "No such EMI is found in the system");
-      } catch (final EucalyptusCloudException ex) {
-        throw ex;
-      } catch (final Exception ex) {
-        throw new EucalyptusCloudException("Failed to verify EMI in the system");
-      }
-    }
-
-    if (instanceType != null) {
-      ;
-    }
-
-    if (keyname != null && !keyname.equals("")) {
-      try {
-        final List<DescribeKeyPairsResponseItemType> keypairs = EucalyptusActivityTasks
-            .getInstance().describeKeyPairs(Lists.newArrayList(keyname));
-        if (keypairs == null || keypairs.size() <= 0)
-          throw new EucalyptusCloudException(
-              "No such keypair is found in the system");
-        if (!keypairs.get(0).getKeyName().equals(keyname))
-          throw new EucalyptusCloudException(
-              "No such keypair is found in the system");
-      } catch (final EucalyptusCloudException ex) {
-        throw ex;
-      } catch (final Exception ex) {
-        throw new EucalyptusCloudException(
-            "Failed to verify the keyname in the system");
-      }
-    }
-
-    if (ntpServers != null) {
-      ; // already sanitized
-    }
-
-    // should find the asg name using the special TAG
-    // then create a new launch config and replace the old one
-
-    if ((emi != null && emi.length() > 0)
-        || (instanceType != null && instanceType.length() > 0)
-        || (keyname != null && keyname.length() > 0)
-        || (ntpServers != null && ntpServers.length() > 0)
-        || (logServer != null && logServer.length() > 0)
-        || (logServerPort != null && logServerPort.length() > 0)
-        || (initScript != null)) {
-      String asgName = null;
-      LOG.warn("Changing launch configuration");// TODO: remove
-      try {
-        final List<TagDescription> tags = EucalyptusActivityTasks.getInstance()
-            .describeAutoScalingTags();
-        for (final TagDescription tag : tags) {
-          if (DEFAULT_LAUNCHER_TAG.equals(tag.getValue())) {
-            asgName = tag.getResourceId();
-            break;
-          }
-        }
-      } catch (final Exception ex) {
-        return; // ASG not created yet; do nothing.
-      }
-      if (asgName == null)
-        return;
-
-      try {
-        AutoScalingGroupType asgType = null;
-        try {
-          final DescribeAutoScalingGroupsResponseType resp = EucalyptusActivityTasks
-              .getInstance().describeAutoScalingGroups(
-                  Lists.newArrayList(asgName));
-          if (resp.getDescribeAutoScalingGroupsResult() != null
-              && resp.getDescribeAutoScalingGroupsResult()
-                  .getAutoScalingGroups() != null
-              && resp.getDescribeAutoScalingGroupsResult()
-                  .getAutoScalingGroups().getMember() != null
-              && resp.getDescribeAutoScalingGroupsResult()
-                  .getAutoScalingGroups().getMember().size() > 0) {
-            asgType = resp.getDescribeAutoScalingGroupsResult()
-                .getAutoScalingGroups().getMember().get(0);
-          }
-        } catch (final Exception ex) {
-          LOG.warn("can't find autoscaling group named " + asgName);
-          return;
-        }
-
-        // / Replace the parameters but use the same launch config name;
-        // otherwise "disabling" will fail
-        if (asgType != null) {
-          final String lcName = asgType.getLaunchConfigurationName();
-          final LaunchConfigurationType lc = EucalyptusActivityTasks
-              .getInstance().describeLaunchConfiguration(lcName);
-
-          String tmpLaunchConfigName = null;
-          do {
-            tmpLaunchConfigName = String.format("lc-euca-internal-imaging-%s",
-                UUID.randomUUID().toString().substring(0, 8));
-          } while (tmpLaunchConfigName.equals(asgType
-              .getLaunchConfigurationName()));
-
-          final String newEmi = emi != null ? emi : lc.getImageId();
-          final String newType = instanceType != null ? instanceType : lc
-              .getInstanceType();
-          String newKeyname = keyname != null ? keyname : lc.getKeyName();
-          String newUserdata = lc.getUserData();
-          if (ntpServers != null) {
-            newUserdata = B64.standard.encString(String.format(
-                "%s\n%s",
-                getCredentialsString(),
-                getWorkerUserData(ntpServers,
-                    ImagingServiceProperties.LOG_SERVER,
-                    ImagingServiceProperties.LOG_SERVER_PORT,
-                    ImagingServiceProperties.INIT_SCRIPT)));
-          }
-          if (logServer != null) {
-            newUserdata = B64.standard.encString(String.format(
-                "%s\n%s",
-                getCredentialsString(),
-                getWorkerUserData(
-                    ImagingServiceProperties.NTP_SERVER,
-                    logServer,
-                    ImagingServiceProperties.LOG_SERVER_PORT,
-                    ImagingServiceProperties.INIT_SCRIPT)));
-          }
-          if (logServerPort != null) {
-            newUserdata = B64.standard.encString(String.format(
-                "%s\n%s",
-                getCredentialsString(),
-                getWorkerUserData(
-                    ImagingServiceProperties.NTP_SERVER,
-                    ImagingServiceProperties.LOG_SERVER,
-                    logServerPort, ImagingServiceProperties.INIT_SCRIPT)));
-          }
-          if (initScript != null) {
-            newUserdata = B64.standard.encString(String.format(
-                "%s\n%s",
-                getCredentialsString(),
-                getWorkerUserData(
-                    ImagingServiceProperties.NTP_SERVER,
-                    ImagingServiceProperties.LOG_SERVER,
-                    ImagingServiceProperties.LOG_SERVER_PORT,
-                    initScript)));
-          }
-          try {
-            EucalyptusActivityTasks.getInstance().createLaunchConfiguration(
-                newEmi, newType, lc.getIamInstanceProfile(),
-                tmpLaunchConfigName, lc.getSecurityGroups().getMember().get(0),
-                newKeyname, newUserdata);
-          } catch (final Exception ex) {
-            LOG.warn("Failed to create temporary launch config", ex);
-            throw new EucalyptusCloudException(
-                "failed to create temporary launch config", ex);
-          }
-          try {
-            EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(
-                asgName, null, asgType.getDesiredCapacity(),
-                tmpLaunchConfigName);
-          } catch (final Exception ex) {
-            LOG.warn("Failed to update the autoscaling group", ex);
-            throw new EucalyptusCloudException(
-                "failed to update the autoscaling group", ex);
-          }
-          try {
-            EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration(
-                asgType.getLaunchConfigurationName());
-          } catch (final Exception ex) {
-            LOG.warn("unable to delete the old launch configuration", ex);
-          }
-
-          try {// new launch config with the same old name
-            EucalyptusActivityTasks.getInstance().createLaunchConfiguration(
-                newEmi, newType, lc.getIamInstanceProfile(),
-                asgType.getLaunchConfigurationName(),
-                lc.getSecurityGroups().getMember().get(0), newKeyname,
-                newUserdata);
-          } catch (final Exception ex) {
-            throw new EucalyptusCloudException(
-                "unable to create the new launch config", ex);
-          }
-
-          try {
-            EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(
-                asgName, null, asgType.getDesiredCapacity(),
-                asgType.getLaunchConfigurationName());
-          } catch (final Exception ex) {
-            throw new EucalyptusCloudException(
-                "failed to update the autoscaling group", ex);
-          }
-
-          try {
-            EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration(
-                tmpLaunchConfigName);
-          } catch (final Exception ex) {
-            LOG.warn("unable to delete the temporary launch configuration", ex);
-          }
-
-          // copy all tags from new image to ASG
-          if ( emi != null) {
-            try {
-              final List<ImageDetails> images = EucalyptusActivityTasks.getInstance().describeImages(
-                    Lists.newArrayList(newEmi), false);
-              // image should exist at this point
-              for(ResourceTag tag:images.get(0).getTagSet())
-                EucalyptusActivityTasks.getInstance().createOrUpdateAutoscalingTags(tag.getKey(), tag.getValue(), asgName);
-            } catch (final Exception ex) {
-              LOG.warn("unable to propogate tags from image to ASG", ex);
-            }
-          }
-          LOG.debug(String
-              .format("autoscaling group '%s' was updated", asgName));
-        }
-      } catch (final EucalyptusCloudException ex) {
-        throw ex;
-      } catch (final Exception ex) {
-        throw new EucalyptusCloudException(
-            "Unable to update the autoscaling group", ex);
-      }
-    }
-  }
-
   static final Set<String> configuredZones = Sets.newHashSet();
 
   public static List<String> listConfiguredZones() throws Exception {
     if (configuredZones.size() <= 0) {
       List<String> allZones = Lists.newArrayList();
       try {
-        final List<ClusterInfoType> clusters = EucalyptusActivityTasks
-            .getInstance().describeAvailabilityZones(false);
+        final List<ClusterInfoType> clusters = Ec2Client
+            .getInstance().describeAvailabilityZones(null, false);
         for (final ClusterInfoType c : clusters)
           allZones.add(c.getZoneName());
       } catch (final Exception ex) {

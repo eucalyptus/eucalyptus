@@ -73,6 +73,7 @@ import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.blockstorage.Storage;
@@ -211,9 +212,9 @@ public class BlockStorageUtil {
    * failure is followed by a lookup again before exiting the method. This process is repeated for every resource separately as they could be
    * concurrently processed by another SC
    */
-  public static Role checkAndConfigureBlockStorageAccount() throws EucalyptusCloudException {
+  public static EuareRole checkAndConfigureBlockStorageAccount() throws EucalyptusCloudException {
     Account blockStorageAccount = null;
-    Role role = null;
+    EuareRole role = null;
 
     // Lookup blockstorage account. It should have been setup by the database bootstrapper. If not set it up here
     try {

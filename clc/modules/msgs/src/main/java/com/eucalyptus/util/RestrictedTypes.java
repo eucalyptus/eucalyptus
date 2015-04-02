@@ -87,6 +87,7 @@ import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Policy;
+import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.Principal;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
@@ -235,7 +236,7 @@ public class RestrictedTypes {
    * @see RestrictedTypes#allocateUnitlessResources(Integer, Supplier)
    */
   @SuppressWarnings( { "cast", "unchecked" } )
-  public static <T extends RestrictedType> T allocateUnitlessResource( Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+  public static <T extends LimitedType> T allocateUnitlessResource( Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     return allocateUnitlessResources( 1, allocator ).get( 0 );
   }
 
@@ -249,7 +250,7 @@ public class RestrictedTypes {
    * @return List<T> of size {@code quantity} of new allocations of {@code <T>}
    */
   @SuppressWarnings( { "cast", "unchecked" } )
-  public static <T extends RestrictedType> List<T> allocateUnitlessResources( Integer quantity, Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+  public static <T extends LimitedType> List<T> allocateUnitlessResources( Integer quantity, Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     return allocateUnitlessResources( findResourceClass( allocator ), quantity, allocator );
   }
 
@@ -264,7 +265,7 @@ public class RestrictedTypes {
    * @return List<T> of size {@code quantity} of new allocations of {@code <T>}
    */
   @SuppressWarnings( { "cast", "unchecked" } )
-  public static <T extends RestrictedType> List<T> allocateUnitlessResources(
+  public static <T extends LimitedType> List<T> allocateUnitlessResources(
           final Class<?> rscType,
           final Integer quantity,
           final Supplier<T> allocator
@@ -289,7 +290,7 @@ public class RestrictedTypes {
    * @return List<T> of size {@code quantity} of new allocations of {@code <T>}
    */
   @SuppressWarnings( { "cast", "unchecked" } )
-  public static <T extends RestrictedType> List<T> allocateUnitlessResources(
+  public static <T extends LimitedType> List<T> allocateUnitlessResources(
       final Class<?> rscType,
       final int min,
       final int max,
@@ -390,7 +391,7 @@ public class RestrictedTypes {
    * @return List<T> of size {@code quantity} of new allocations of {@code <T>}
    */
   @SuppressWarnings( { "cast", "unchecked" } )
-  public static <T extends RestrictedType> T allocateMeasurableResource( Long amount, Function<Long, T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+  public static <T extends LimitedType> T allocateMeasurableResource( Long amount, Function<Long, T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     String identifier = "";
     Context ctx = Contexts.lookup( );
     if ( !ctx.hasAdministrativePrivileges( ) ) {
@@ -827,7 +828,7 @@ public class RestrictedTypes {
         
         @Override
         public boolean apply( Class arg0 ) {
-          return RestrictedType.class.isAssignableFrom( arg0 );
+          return LimitedType.class.isAssignableFrom( arg0 );
         }
       } );
     } catch ( NoSuchElementException ex1 ) {
@@ -877,10 +878,10 @@ public class RestrictedTypes {
         + msgType.getCanonicalName( ) );
   }
 
-  private static Policy findPolicy( final RestrictedType object,
+  private static PolicyVersion findPolicy( final RestrictedType object,
                                     final String vendor,
                                     final String action ) throws AuthException {
-    Policy policy = null;
+    PolicyVersion policy = null;
     if ( object instanceof PolicyRestrictedType ) {
       final Ats ats = Ats.inClassHierarchy( object.getClass() );
       final PolicyResourceType policyResourceType = ats.get( PolicyResourceType.class );

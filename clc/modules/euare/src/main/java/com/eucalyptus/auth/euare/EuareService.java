@@ -97,11 +97,11 @@ import com.eucalyptus.auth.policy.key.Iso8601DateParser;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
+import com.eucalyptus.auth.principal.EuareInstanceProfile;
+import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.auth.principal.Group;
-import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Policy;
-import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.context.Context;
@@ -1647,7 +1647,7 @@ public class EuareService {
     final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     try {
-      final Role newRole = Privileged.createRole( requestUser, account, request.getRoleName( ), sanitizePath( request.getPath( ) ), request.getAssumeRolePolicyDocument() );
+      final EuareRole newRole = Privileged.createRole( requestUser, account, request.getRoleName( ), sanitizePath( request.getPath( ) ), request.getAssumeRolePolicyDocument() );
       reply.getCreateRoleResult( ).setRole( fillRoleResult( new RoleType(), newRole ) );
     } catch ( PolicyParseException e ) {
       LOG.error( e, e );
@@ -1678,7 +1678,7 @@ public class EuareService {
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    final Role roleFound = lookupRoleByName( account, request.getRoleName() );
+    final EuareRole roleFound = lookupRoleByName( account, request.getRoleName() );
     try {
       Privileged.updateAssumeRolePolicy( requestUser, account, roleFound, request.getPolicyDocument() );
     } catch ( PolicyParseException e ) {
@@ -1702,7 +1702,7 @@ public class EuareService {
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    final Role roleFound = lookupRoleByName( account, request.getRoleName() );
+    final EuareRole roleFound = lookupRoleByName( account, request.getRoleName() );
     try {
       if ( !Privileged.allowReadRole( requestUser, account, roleFound ) ) {
         throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get role " + request.getRoleName() + " by " + ctx.getUser( ).getName( ) );
@@ -1724,7 +1724,7 @@ public class EuareService {
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    final Role roleFound = lookupRoleByName( account, request.getRoleName() );
+    final EuareRole roleFound = lookupRoleByName( account, request.getRoleName() );
     try {
       Privileged.deleteRole( requestUser, account, roleFound );
     } catch ( Exception e ) {
@@ -1757,7 +1757,7 @@ public class EuareService {
     reply.getListRolesResult( ).setIsTruncated( false );
     final ArrayList<RoleType> roles = reply.getListRolesResult( ).getRoles().getMember();
     try {
-      for ( final Role role : account.getRoles() ) {
+      for ( final EuareRole role : account.getRoles() ) {
         if ( role.getPath( ).startsWith( path ) ) {
           if ( Privileged.allowListRole( requestUser, account, role ) ) {
             roles.add( fillRoleResult( new RoleType(), role ) );
@@ -1777,7 +1777,7 @@ public class EuareService {
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    final Role roleFound = lookupRoleByName( account, request.getRoleName() );
+    final EuareRole roleFound = lookupRoleByName( account, request.getRoleName() );
     try {
       Privileged.putRolePolicy( requestUser, account, roleFound, request.getPolicyName( ), request.getPolicyDocument( ) );
     } catch ( PolicyParseException e ) {
@@ -1803,7 +1803,7 @@ public class EuareService {
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    final Role roleFound = lookupRoleByName( account, request.getRoleName() );
+    final EuareRole roleFound = lookupRoleByName( account, request.getRoleName() );
     try {
       final Policy policy = Privileged.getRolePolicy( requestUser, account, roleFound, request.getPolicyName( ) );
       if ( policy != null ) {
@@ -1836,7 +1836,7 @@ public class EuareService {
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    final Role roleFound = lookupRoleByName( account, request.getRoleName() );
+    final EuareRole roleFound = lookupRoleByName( account, request.getRoleName() );
     try {
       Privileged.deleteRolePolicy( requestUser, account, roleFound, request.getPolicyName( ) );
     } catch ( Exception e ) {
@@ -1859,7 +1859,7 @@ public class EuareService {
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    final Role roleFound = lookupRoleByName( account, request.getRoleName() );
+    final EuareRole roleFound = lookupRoleByName( account, request.getRoleName() );
     final ListRolePoliciesResult result = reply.getListRolePoliciesResult( );
     result.setIsTruncated( false );
     final ArrayList<String> policies = result.getPolicyNames().getMemberList( );
@@ -1886,7 +1886,7 @@ public class EuareService {
     final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     try {
-      final InstanceProfile newInstanceProfile = Privileged.createInstanceProfile( requestUser, account, request.getInstanceProfileName(), sanitizePath( request.getPath() ) );
+      final EuareInstanceProfile newInstanceProfile = Privileged.createInstanceProfile( requestUser, account, request.getInstanceProfileName(), sanitizePath( request.getPath() ) );
       reply.getCreateInstanceProfileResult().setInstanceProfile( fillInstanceProfileResult( new InstanceProfileType(), newInstanceProfile ) );
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
@@ -1914,7 +1914,7 @@ public class EuareService {
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    final InstanceProfile instanceProfileFound = lookupInstanceProfileByName( account, request.getInstanceProfileName() );
+    final EuareInstanceProfile instanceProfileFound = lookupInstanceProfileByName( account, request.getInstanceProfileName() );
     try {
       if ( !Privileged.allowReadInstanceProfile( requestUser, account, instanceProfileFound ) ) {
         throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get instance profile " + request.getInstanceProfileName() + " by " + ctx.getUser( ).getName( ) );
@@ -1935,8 +1935,8 @@ public class EuareService {
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    final Role roleFound = lookupRoleByName( account, request.getRoleName() );
-    final InstanceProfile instanceProfileFound = lookupInstanceProfileByName( account, request.getInstanceProfileName() );
+    final EuareRole roleFound = lookupRoleByName( account, request.getRoleName() );
+    final EuareInstanceProfile instanceProfileFound = lookupInstanceProfileByName( account, request.getInstanceProfileName() );
     try {
       Privileged.addRoleToInstanceProfile( requestUser, account, instanceProfileFound, roleFound );
     } catch ( Exception e ) {
@@ -1959,8 +1959,8 @@ public class EuareService {
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    final Role roleFound = lookupRoleByName( account, request.getRoleName() );
-    final InstanceProfile instanceProfileFound = lookupInstanceProfileByName( account, request.getInstanceProfileName() );
+    final EuareRole roleFound = lookupRoleByName( account, request.getRoleName() );
+    final EuareInstanceProfile instanceProfileFound = lookupInstanceProfileByName( account, request.getInstanceProfileName() );
     try {
       Privileged.removeRoleFromInstanceProfile( requestUser, account, instanceProfileFound, roleFound );
     } catch ( Exception e ) {
@@ -1982,11 +1982,11 @@ public class EuareService {
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    final Role roleFound = lookupRoleByName( account, request.getRoleName() );
+    final EuareRole roleFound = lookupRoleByName( account, request.getRoleName() );
     reply.getListInstanceProfilesForRoleResult().setIsTruncated( false );
     final ArrayList<InstanceProfileType> instanceProfiles = reply.getListInstanceProfilesForRoleResult().getInstanceProfiles().getMember();
     try {
-      for ( final InstanceProfile instanceProfile : Privileged.listInstanceProfilesForRole( requestUser, account, roleFound ) ) {
+      for ( final EuareInstanceProfile instanceProfile : Privileged.listInstanceProfilesForRole( requestUser, account, roleFound ) ) {
         if ( Privileged.allowListInstanceProfileForRole( requestUser, account, instanceProfile ) ) {
           instanceProfiles.add( fillInstanceProfileResult( new InstanceProfileType(), instanceProfile ) );
         }
@@ -2004,7 +2004,7 @@ public class EuareService {
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    final InstanceProfile instanceProfileFound = lookupInstanceProfileByName( account, request.getInstanceProfileName() );
+    final EuareInstanceProfile instanceProfileFound = lookupInstanceProfileByName( account, request.getInstanceProfileName() );
     try {
       Privileged.deleteInstanceProfile( requestUser, account, instanceProfileFound );
     } catch ( Exception e ) {
@@ -2035,7 +2035,7 @@ public class EuareService {
     reply.getListInstanceProfilesResult().setIsTruncated( false );
     final ArrayList<InstanceProfileType> instanceProfiles = reply.getListInstanceProfilesResult( ).getInstanceProfiles().getMember();
     try {
-      for ( final InstanceProfile instanceProfile : account.getInstanceProfiles() ) {
+      for ( final EuareInstanceProfile instanceProfile : account.getInstanceProfiles() ) {
         if ( instanceProfile.getPath( ).startsWith( path ) ) {
           if ( Privileged.allowListInstanceProfile( requestUser, account, instanceProfile ) ) {
             instanceProfiles.add( fillInstanceProfileResult( new InstanceProfileType(), instanceProfile ) );
@@ -2218,18 +2218,18 @@ public class EuareService {
     g.setCreateDate( groupFound.getCreateDate( ) );
   }
 
-  private InstanceProfileType fillInstanceProfileResult( InstanceProfileType instanceProfileType, InstanceProfile instanceProfileFound ) throws AuthException {
+  private InstanceProfileType fillInstanceProfileResult( InstanceProfileType instanceProfileType, EuareInstanceProfile instanceProfileFound ) throws AuthException {
     instanceProfileType.setInstanceProfileName( instanceProfileFound.getName() );
     instanceProfileType.setInstanceProfileId( instanceProfileFound.getInstanceProfileId() );
     instanceProfileType.setPath( instanceProfileFound.getPath() );
     instanceProfileType.setArn( Accounts.getInstanceProfileArn( instanceProfileFound ) );
     instanceProfileType.setCreateDate( instanceProfileFound.getCreationTimestamp() );
-    final Role role = instanceProfileFound.getRole();
+    final EuareRole role = instanceProfileFound.getRole();
     instanceProfileType.setRoles( role == null ? new RoleListType() : new RoleListType( fillRoleResult( new RoleType(), role ) ) );
     return instanceProfileType;
   }
 
-  private RoleType fillRoleResult( RoleType roleType, Role roleFound ) throws AuthException {
+  private RoleType fillRoleResult( RoleType roleType, EuareRole roleFound ) throws AuthException {
     roleType.setRoleName( roleFound.getName( ) );
     roleType.setRoleId( roleFound.getRoleId() );
     roleType.setPath( roleFound.getPath() );
@@ -2330,7 +2330,7 @@ public class EuareService {
     }
   }
 
-  private static InstanceProfile lookupInstanceProfileByName( Account account, String instanceProfileName ) throws EucalyptusCloudException {
+  private static EuareInstanceProfile lookupInstanceProfileByName( Account account, String instanceProfileName ) throws EucalyptusCloudException {
     try {
       return account.lookupInstanceProfileByName( instanceProfileName );
     } catch ( Exception e ) {
@@ -2347,7 +2347,7 @@ public class EuareService {
   }
 
 
-  private static Role lookupRoleByName( Account account, String roleName ) throws EucalyptusCloudException {
+  private static EuareRole lookupRoleByName( Account account, String roleName ) throws EucalyptusCloudException {
     try {
       return account.lookupRoleByName( roleName );
     } catch ( Exception e ) {

@@ -20,16 +20,18 @@
 package com.eucalyptus.imaging.backend;
 
 import java.io.ByteArrayInputStream;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
+
+import com.eucalyptus.resources.client.Ec2Client;
 
 import org.apache.commons.httpclient.DefaultHttpMethodRetryHandler;
 import org.apache.commons.httpclient.HttpClient;
@@ -53,17 +55,15 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.images.ImageConfiguration;
-import com.eucalyptus.imaging.common.EucalyptusActivityTasks;
 import com.eucalyptus.imaging.common.Imaging;
+import com.eucalyptus.imaging.common.ImagingBackend;
 import com.eucalyptus.imaging.common.UrlValidator;
 import com.eucalyptus.imaging.manifest.ImportImageManifest;
-import com.eucalyptus.imaging.worker.ImagingServiceLaunchers;
 import com.eucalyptus.util.Dates;
 import com.eucalyptus.util.XMLParser;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 
 /**
  * @author Sang-Min Park
@@ -195,7 +195,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
           final String keyName = Strings.emptyToNull( instanceTask.getLaunchSpecKeyName( ) );
           final String subnetId = Strings.emptyToNull( instanceTask.getLaunchSpecSubnetId( ) );
           final String privateIp = subnetId==null ? null : Strings.emptyToNull( instanceTask.getLaunchSpecPrivateIpAddress( ) );
-          final Set<String> groupNames = Sets.newLinkedHashSet(  );
+          final ArrayList<String> groupNames = new ArrayList<String>();
           if( subnetId == null && instanceTask.getLaunchSpecGroupNames( ) != null ){
             groupNames.addAll( instanceTask.getLaunchSpecGroupNames( ) );
           }
@@ -205,7 +205,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
 
           final Boolean monitoringEnabled = instanceTask.getLaunchSpecMonitoringEnabled();
           final boolean monitoring = monitoringEnabled!=null && monitoringEnabled;
-          instanceId = EucalyptusActivityTasks.getInstance( ).runInstancesAsUser(
+          List<String> instances = Ec2Client.getInstance( ).runInstances(
               instanceTask.getOwnerUserId( ),
               imageId,
               groupNames,
@@ -215,8 +215,12 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
               subnetId,
               privateIp,
               monitoring,
-              keyName
+              keyName,
+              1
           );
+          if (instances.isEmpty())
+            throw new Exception("Failed to run instances after conversion task");
+          instanceId = instances.get(0);
           conversionTask.getImportInstance().setInstanceId(instanceId);
           ImagingTasks.updateTaskInJson(instanceTask);
         }catch(final Exception ex){
@@ -237,7 +241,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
         try{
          // see if the snapshots are ready and register them as images
           final List<Snapshot> snapshots =
-              EucalyptusActivityTasks.getInstance().describeSnapshotsAsUser(instanceTask.getOwnerUserId(), snapshotIds);
+              Ec2Client.getInstance().describeSnapshots(instanceTask.getOwnerUserId(), snapshotIds);
           int numCompleted = 0;
           int numError = 0;
           for(final Snapshot snapshot: snapshots){
@@ -264,7 +268,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
               platform = conversionTask.getImportInstance().getPlatform().toLowerCase();
             try{
               imageId = 
-                  EucalyptusActivityTasks.getInstance().registerEBSImageAsUser(instanceTask.getOwnerUserId(), 
+                  Ec2Client.getInstance().registerEBSImage(instanceTask.getOwnerUserId(), 
                       snapshotId, imageName, architecture, platform, description, false);
               if(imageId==null)
                 throw new Exception("Null image id");
@@ -296,7 +300,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
       for(final String volumeId : volumeIds){
         try{
           final String snapshotId = 
-              EucalyptusActivityTasks.getInstance().createSnapshotAsUser(instanceTask.getOwnerUserId(), volumeId);
+              Ec2Client.getInstance().createSnapshot(instanceTask.getOwnerUserId(), volumeId);
           ImagingTasks.addSnapshotId(instanceTask, snapshotId);
         }catch(final Exception ex){
           ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_SNAPSHOT_FAILURE);
@@ -388,18 +392,8 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
     return expirationTime.before(new Date());
   }
   
-  private void processNewTasks(final List<ImagingTask> tasks){
-    try{
-      if(ImagingServiceLaunchers.getInstance().shouldEnable()){
-        ImagingServiceLaunchers.getInstance().enable();
-        LOG.debug("Imaging service worker launched");
-        return;
-      }
-    }catch(Exception ex){
-      LOG.error("Failed to enable imaging service workers");
-      return;
-    }
-    if(!ImagingServiceLaunchers.getInstance().isWorkedEnabled()){
+  private void processNewTasks(final List<ImagingTask> tasks) {
+    if( !Bootstrap.isFinished() || !Topology.isEnabled( ImagingBackend.class) ) {
       LOG.warn("Imaging worker is not currently enabled");
       return;
     }
@@ -477,7 +471,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
             throw new Exception("Volume size is missing from the volume detail");
           try{
             final String volumeId = 
-                EucalyptusActivityTasks.getInstance().createVolumeAsUser(instanceTask.getOwnerUserId(), zone, size);
+                Ec2Client.getInstance().createVolume(instanceTask.getOwnerUserId(), zone, size);
             volume.getVolume().setId(volumeId);
           }catch(final Exception ex){
             throw new Exception("Failed to create the volume", ex);
@@ -486,7 +480,8 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
           String volumeStatus= null;
           try{
             final List<Volume> eucaVolumes =
-                EucalyptusActivityTasks.getInstance().describeVolumesAsUser(instanceTask.getOwnerUserId(), Lists.newArrayList(volume.getVolume().getId()));
+                Ec2Client.getInstance().describeVolumes(instanceTask.getOwnerUserId(),
+                    Lists.newArrayList(volume.getVolume().getId()));
             final Volume eucaVolume = eucaVolumes.get(0);
             volumeStatus = eucaVolume.getStatus();
           }catch(final Exception ex){
@@ -546,14 +541,14 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
       final int size = volumeTask.getVolumeSize();
       //create volume (already sanitized)
       try{
-        final String volumeId = EucalyptusActivityTasks.getInstance().createVolumeAsUser(volumeTask.getOwnerUserId(), zone, size);
+        final String volumeId = Ec2Client.getInstance().createVolume(volumeTask.getOwnerUserId(), zone, size);
         ImagingTasks.setVolumeId(volumeTask, volumeId);
       }catch(final Exception ex){
         throw new Exception("Failed to create the volume", ex);
       }
     } else { /// check status
       final List<Volume> volumes = 
-          EucalyptusActivityTasks.getInstance().describeVolumesAsUser(volumeTask.getOwnerUserId(), Lists.newArrayList(volumeTask.getVolumeId()));
+          Ec2Client.getInstance().describeVolumes(volumeTask.getOwnerUserId(), Lists.newArrayList(volumeTask.getVolumeId()));
       final Volume volume = volumes.get(0);
       final String volumeStatus = volume.getStatus();
       if("available".equals(volumeStatus)){

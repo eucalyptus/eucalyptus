@@ -70,7 +70,6 @@ import static com.eucalyptus.auth.policy.PolicySpec.EC2_RESOURCE_INSTANCE;
 import static com.eucalyptus.auth.policy.PolicySpec.EC2_RESOURCE_VOLUME;
 import static com.eucalyptus.auth.policy.PolicySpec.VENDOR_EC2;
 
-import java.util.Collection;
 import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
@@ -90,6 +89,7 @@ import com.eucalyptus.compute.common.backend.ImportVolumeResponseType;
 import com.eucalyptus.compute.common.backend.ImportVolumeType;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.imaging.backend.DiskImagingTask;
 import com.eucalyptus.imaging.backend.ImagingServiceException;
 import com.eucalyptus.imaging.backend.ImagingTask;
 import com.eucalyptus.imaging.backend.ImagingTasks;
@@ -97,8 +97,9 @@ import com.eucalyptus.imaging.backend.ImportInstanceImagingTask;
 import com.eucalyptus.imaging.backend.ImportTaskState;
 import com.eucalyptus.imaging.backend.ImportVolumeImagingTask;
 import com.eucalyptus.imaging.backend.VolumeImagingTask;
+import com.eucalyptus.imaging.common.DiskImageConversionTask;
 import com.eucalyptus.imaging.common.Imaging;
-import com.eucalyptus.imaging.worker.ImagingServiceLaunchers;
+import com.eucalyptus.imaging.common.ImagingBackend;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -115,14 +116,7 @@ public class ImportManager {
   public ImportInstanceResponseType ImportInstance( final ImportInstanceType request ) throws Exception {
     final ImportInstanceResponseType reply = request.getReply( );
     final Context context = Contexts.lookup( );
-    try{
-      if (!Bootstrap.isFinished() ||
-           !Topology.isEnabled( Imaging.class )){
-        throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "For import, Imaging service should be enabled");
-      }
-    }catch(final Exception ex){
-      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "For import, Imaging service should be enabled");
-    }
+    checkServices();
     
     try{
       if (! Permissions.isAuthorized(
@@ -139,15 +133,7 @@ public class ImportManager {
     }catch(final Exception ex){
       throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to import instance." );
     }
-    
-    try{
-      if(ImagingServiceLaunchers.getInstance().shouldEnable())
-        ImagingServiceLaunchers.getInstance().enable();
-    }catch(Exception ex){
-      LOG.error("Failed to enable imaging service workers");
-      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "Could not launch imaging service workers");
-    }
-        
+
     ImportInstanceImagingTask task = null;
     try{
       task = ImagingTasks.createImportInstanceTask(request);
@@ -162,6 +148,13 @@ public class ImportManager {
     return reply;
   }
   
+  private static void checkServices() throws ImagingServiceException {
+    if( !Bootstrap.isFinished()
+        || !Topology.isEnabled( Imaging.class)
+        || !Topology.isEnabled( ImagingBackend.class) )
+      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR,
+          "For import, Imaging service should be enabled. Please contact your cloud administrator.");
+  }
   /**
    * <ol>
    * <li>Persist import volume request state
@@ -170,14 +163,7 @@ public class ImportManager {
   public static ImportVolumeResponseType ImportVolume( ImportVolumeType request ) throws Exception {
     final ImportVolumeResponseType reply = request.getReply( );
     final Context context = Contexts.lookup( );
-    try{
-      if (!Bootstrap.isFinished() ||
-           !Topology.isEnabled( Imaging.class )){
-        throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "For import, Imaging service should be enabled");
-      }
-    }catch(final Exception ex){
-      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "For import, Imaging service should be enabled");
-    }
+    checkServices();
     
     try{
       if (! Permissions.isAuthorized(
@@ -195,14 +181,6 @@ public class ImportManager {
       throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to import volume." );
     }
     
-    try{
-      if(ImagingServiceLaunchers.getInstance().shouldEnable())
-        ImagingServiceLaunchers.getInstance().enable();
-    }catch(Exception ex){
-      LOG.error("Failed to enable imaging service workers");
-      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "Could not launch imaging service workers");
-    }
-
     ImportVolumeImagingTask task = null;
     try{
       task = ImagingTasks.createImportVolumeTask(request);
@@ -270,9 +248,6 @@ public class ImportManager {
     DescribeConversionTasksResponseType reply = request.getReply( );
     Context ctx = Contexts.lookup( );
     boolean verbose = request.getConversionTaskIdSet( ).remove( "verbose" );
-    Collection<String> ownerInfo = ( ctx.isAdministrator( ) && verbose )
-        ? Collections.<String> emptyList( )
-            : Collections.singleton( ctx.getAccount( ).getAccountNumber( ) );
     try{
       if (! Permissions.isAuthorized(
           VENDOR_EC2,
@@ -288,17 +263,34 @@ public class ImportManager {
     }catch(final Exception ex){
       throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to describe conversion tasks." );
     }
-
-    final Predicate<? super VolumeImagingTask> requestedAndAccessible = RestrictedTypes.filteringFor( VolumeImagingTask.class )
-        .byId( request.getConversionTaskIdSet( ) )
-        .byOwningAccount( ownerInfo )
-        .byPrivileges()
-        .buildPredicate( );
-    Iterable<VolumeImagingTask> tasksToList = 
-        ImagingTasks.getVolumeImagingTasks();
-    for ( VolumeImagingTask task : Iterables.filter( tasksToList, requestedAndAccessible ) ) {
-      ConversionTask t = task.getTask( );
-      reply.getConversionTasks().add( t );
+    if (ctx.isAdministrator( ) && verbose) {
+      Iterable<ImagingTask> tasksToList = ImagingTasks.getImagingTasks();
+      for ( ImagingTask task : tasksToList ) {
+        if(task instanceof VolumeImagingTask){
+          ConversionTask t = ((VolumeImagingTask)task).getTask();
+          reply.getConversionTasks().add( t );
+        } else if (task instanceof DiskImagingTask){
+          DiskImageConversionTask t = ((DiskImagingTask)task).getTask( );
+          // create transform
+          ConversionTask tt = new ConversionTask();
+          tt.setConversionTaskId(t.getConversionTaskId());
+          tt.setState(t.getState());
+          tt.setStatusMessage(t.getStatusMessage());
+          tt.setImageConversion("true");
+          reply.getConversionTasks().add( tt );
+        }
+      }
+    } else {
+      final Predicate<? super VolumeImagingTask> requestedAndAccessible = RestrictedTypes.filteringFor( VolumeImagingTask.class )
+          .byId( request.getConversionTaskIdSet( ) )
+          .byOwningAccount( Collections.singleton( ctx.getAccount( ).getAccountNumber( ) ) )
+          .byPrivileges()
+          .buildPredicate( );
+      Iterable<VolumeImagingTask> tasksToList = ImagingTasks.getVolumeImagingTasks();
+      for ( VolumeImagingTask task : Iterables.filter( tasksToList, requestedAndAccessible ) ) {
+        ConversionTask t = task.getTask( );
+        reply.getConversionTasks().add( t );
+      }
     }
     return reply;
   }

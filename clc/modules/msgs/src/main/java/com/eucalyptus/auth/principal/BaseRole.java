@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,24 +17,30 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
+package com.eucalyptus.auth.principal;
 
-package com.eucalyptus.imaging.common;
-
-import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.policy.PolicyResourceType;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.component.annotation.PolicyVendor;
+import com.eucalyptus.util.RestrictedType;
 
 /**
- * @author Sang-Min Park (spark@eucalyptus.com)
- * 
+ *
  */
-public class EucalyptusActivityException extends EucalyptusCloudException {
+@PolicyVendor( PolicySpec.VENDOR_IAM )
+@PolicyResourceType( value = PolicySpec.IAM_RESOURCE_ROLE, resourcePolicyActions = "sts:assumerole" )
+public interface BaseRole extends RestrictedType, RestrictedType.PolicyRestrictedType {
 
-  private static final long serialVersionUID = 1L;
+  String getAccountNumber( ) throws AuthException;
 
-  public EucalyptusActivityException(String message) {
-    super(message);
-  }
+  String getRoleId( );
 
-  public EucalyptusActivityException(String message, Throwable cause) {
-    super(message, cause);
-  }
+  String getRoleArn( ) throws AuthException;
+
+  String getPath( );
+
+  String getName( );
+
+  String getSecret( );
 }

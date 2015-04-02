@@ -21,6 +21,7 @@ package com.eucalyptus.database.activities;
 
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
+import java.util.HashMap;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -1225,8 +1226,10 @@ public class EventHandlerChainCreateDbInstance extends
         final String systemUserId = getSystemUserId();
         if(this.taggedSgroupId!=null){
           try{
+            HashMap<String, String> m = new HashMap<String, String>();
+            m.put(this.taggedSgroupId, null);
             Ec2Client.getInstance()
-              .deleteTags(systemUserId, this.tagKey, this.tagValue, Lists.newArrayList(this.taggedSgroupId));
+              .deleteTags(systemUserId, null, m);
           }catch(final Exception ex){
             ;
           }

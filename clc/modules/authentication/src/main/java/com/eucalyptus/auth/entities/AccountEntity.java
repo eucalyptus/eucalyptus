@@ -69,7 +69,6 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
-import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
@@ -78,6 +77,7 @@ import javax.persistence.Transient;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.upgrade.Upgrades;
@@ -127,7 +127,7 @@ public class AccountEntity extends AbstractPersistent implements Serializable {
 
   @PrePersist
   public void generateOnCommit() {
-    this.accountNumber = String.format( "%012d", ( long ) ( Math.pow( 10, 12 ) * Math.random( ) ) );
+    this.accountNumber = Identifiers.generateAccountNumber( );
     populateCanonicalId();
   }
 

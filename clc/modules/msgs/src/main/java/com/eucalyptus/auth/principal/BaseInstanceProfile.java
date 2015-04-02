@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,20 +17,27 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.imaging.backend.worker;
+package com.eucalyptus.auth.principal;
 
-import com.eucalyptus.util.EucalyptusCloudException;
+import javax.annotation.Nullable;
+import com.eucalyptus.auth.AuthException;
 
 /**
- * @author Sang-Min Park
  *
  */
-public class ImagingServiceActionException extends EucalyptusCloudException {
-  private static final long serialVersionUID = 1L;
-  public ImagingServiceActionException(String message){
-    super(message);
-  }
-  public ImagingServiceActionException(String message, Throwable cause){
-    super(message, cause);
-  }
+public interface BaseInstanceProfile {
+
+  String getAccountNumber( ) throws AuthException;
+
+  String getInstanceProfileId( );
+
+  String getInstanceProfileArn( ) throws AuthException;
+
+  String getName( );
+
+  String getPath( );
+
+  @Nullable
+  BaseRole getRole( ) throws AuthException;
+
 }

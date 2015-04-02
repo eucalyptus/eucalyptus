@@ -673,4 +673,27 @@ public class StackActivityImpl implements StackActivity {
     return "";
   }
 
+  public String cancelOutstandingCreateResources(String stackId, String accountId, String cancelMessage) {
+    List<StackResourceEntity> stackResourceEntityList = StackResourceEntityManager.getStackResources(stackId, accountId);
+    for (StackResourceEntity stackResourceEntity: stackResourceEntityList) {
+      if (stackResourceEntity.getResourceStatus() == StackResourceEntity.Status.CREATE_IN_PROGRESS) {
+        stackResourceEntity.setResourceStatus(StackResourceEntity.Status.CREATE_FAILED);
+        stackResourceEntity.setResourceStatusReason(cancelMessage);
+        StackResourceEntityManager.updateStackResource(stackResourceEntity);
+        StackEvent stackEvent = new StackEvent();
+        stackEvent.setStackId(stackId);
+        stackEvent.setStackName(stackResourceEntity.getStackName());
+        stackEvent.setLogicalResourceId(stackResourceEntity.getLogicalResourceId());
+        stackEvent.setPhysicalResourceId(stackResourceEntity.getPhysicalResourceId());
+        stackEvent.setEventId(stackResourceEntity.getLogicalResourceId() + "-" + StackResourceEntity.Status.CREATE_FAILED.toString() + "-" + System.currentTimeMillis());
+        stackEvent.setResourceProperties(stackResourceEntity.getPropertiesJson());
+        stackEvent.setResourceType(stackResourceEntity.getResourceType());
+        stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_FAILED.toString());
+        stackEvent.setResourceStatusReason(cancelMessage);
+        stackEvent.setTimestamp(new Date());
+        StackEventEntityManager.addStackEvent(stackEvent, accountId);
+      }
+    }
+    return "";
+  }
 }

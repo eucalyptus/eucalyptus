@@ -37,9 +37,9 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
-import com.eucalyptus.imaging.common.EucalyptusActivityTasks;
 import com.eucalyptus.imaging.common.Imaging;
 import com.eucalyptus.imaging.ImagingServiceProperties;
+import com.eucalyptus.resources.client.Ec2Client;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -167,15 +167,17 @@ public class ImagingWorkers {
     }
   }
   
+  private static final String DEFAULT_LAUNCHER_TAG = "euca-internal-imaging-workers";
+
   public static void verifyWorker(final String instanceId, final String remoteHost) throws Exception{
     if(!verifiedWorkers.contains(instanceId)){
       try{
         final List<RunningInstancesItemType> instances=
-            EucalyptusActivityTasks.getInstance().describeSystemInstances(Lists.newArrayList(instanceId));
+            Ec2Client.getInstance().describeInstances(null, Lists.newArrayList(instanceId));
         final RunningInstancesItemType workerInstance = instances.get(0);
         boolean tagFound = false;
         for(final ResourceTag tag : workerInstance.getTagSet()){
-          if(ImagingServiceProperties.DEFAULT_LAUNCHER_TAG.equals(tag.getValue())){
+          if(DEFAULT_LAUNCHER_TAG.equals(tag.getValue())){
             tagFound = true;
             break;
           } 
@@ -195,7 +197,7 @@ public class ImagingWorkers {
     String availabilityZone = null;
     try{
       final List<RunningInstancesItemType> instances =
-          EucalyptusActivityTasks.getInstance().describeSystemInstances(Lists.newArrayList(workerId));
+          Ec2Client.getInstance().describeInstances(null, Lists.newArrayList(workerId));
       availabilityZone = instances.get(0).getPlacement();
     }catch(final Exception ex){
       throw Exceptions.toUndeclared("Unable to find the instance named: "+workerId);
@@ -271,7 +273,7 @@ public class ImagingWorkers {
     String instanceId = null;
     try{
       final List<RunningInstancesItemType> instances = 
-          EucalyptusActivityTasks.getInstance().describeSystemInstances(Lists.newArrayList(workerId));
+          Ec2Client.getInstance().describeInstances(null, Lists.newArrayList(workerId));
       if(instances!=null && instances.size()==1)
         instanceId = instances.get(0).getInstanceId();
     }catch(final Exception ex){
@@ -279,8 +281,8 @@ public class ImagingWorkers {
     }
     if(instanceId!=null){
       try{
-        EucalyptusActivityTasks.getInstance().terminateSystemInstance(workerId);
-        LOG.debug("Terminated imaging worker: "+workerId);
+        Ec2Client.getInstance().terminateInstances(null, Lists.newArrayList(workerId));
+        LOG.debug("Terminated imaging worker: " + workerId);
       }catch(final Exception ex){
         throw Exceptions.toUndeclared(ex); 
       }

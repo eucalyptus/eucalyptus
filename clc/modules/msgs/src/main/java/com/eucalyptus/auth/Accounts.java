@@ -67,6 +67,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.ServiceLoader;
 import java.util.Set;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.api.AccountProvider;
@@ -75,7 +76,10 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.BaseInstanceProfile;
+import com.eucalyptus.auth.principal.BaseRole;
 import com.eucalyptus.auth.principal.Certificate;
+import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
@@ -246,28 +250,44 @@ public class Accounts {
     return Accounts.getAccountProvider().resolveAccountNumbersForName( accountNameLike );    
   }
 
+  @Nonnull
   public static UserPrincipal lookupPrincipalByAccountNumber( String accountNumber ) throws AuthException {
     return getIdentityProvider( ).lookupPrincipalByAccountNumber( accountNumber );
   }
 
+  @Nonnull
   public static UserPrincipal lookupPrincipalByCanonicalId( String canonicalId ) throws AuthException {
     return getIdentityProvider( ).lookupPrincipalByCanonicalId( canonicalId );
   }
 
+  @Nonnull
   public static UserPrincipal lookupPrincipalByAccessKeyId( String accessKeyId, String nonce ) throws AuthException {
     return getIdentityProvider( ).lookupPrincipalByAccessKeyId( accessKeyId, nonce );
   }
 
+  @Nonnull
   public static UserPrincipal lookupPrincipalByUserId( String userId, String nonce ) throws AuthException {
     return getIdentityProvider( ).lookupPrincipalByUserId( userId, nonce );
   }
 
+  @Nonnull
   public static UserPrincipal lookupPrincipalByRoleId( String roleId, String nonce ) throws AuthException {
     return getIdentityProvider( ).lookupPrincipalByRoleId( roleId, nonce );
   }
 
+  @Nonnull
   public static UserPrincipal lookupPrincipalByCertificateId( String certificateId ) throws AuthException {
     return getIdentityProvider( ).lookupPrincipalByCertificateId( certificateId );
+  }
+
+  @Nonnull
+  public static InstanceProfile lookupInstanceProfileByName( String accountNumber, String name ) throws AuthException {
+    return getIdentityProvider( ).lookupInstanceProfileByName( accountNumber, name );
+  }
+
+  @Nonnull
+  public static Role lookupRoleByName( String accountNumber, String name ) throws AuthException {
+    return getIdentityProvider( ).lookupRoleByName( accountNumber, name );
   }
 
   public static List<EuareUser> listAllUsers( ) throws AuthException {
@@ -290,7 +310,7 @@ public class Accounts {
     return Accounts.getAccountProvider( ).lookupGroupById( groupId );
   }
 
-  public static Role lookupRoleById( String roleId ) throws AuthException {
+  public static EuareRole lookupRoleById( String roleId ) throws AuthException {
     return Accounts.getAccountProvider( ).lookupRoleById( roleId );
   }
 
@@ -362,7 +382,7 @@ public class Accounts {
     return new UserPrincipalImpl( user );
   }
 
-  public static UserPrincipal roleAsPrincipal( final Role role ) throws AuthException {
+  public static UserPrincipal roleAsPrincipal( final EuareRole role ) throws AuthException {
     return new UserPrincipalImpl( role );
   }
 
@@ -386,7 +406,7 @@ public class Accounts {
     }
   }
 
-  public static String getRoleFullName( Role role ) {
+  public static String getRoleFullName( BaseRole role ) {
     if ( role.getPath( ).endsWith( "/" ) ) {
       return role.getPath( ) + role.getName( );
     } else {
@@ -394,7 +414,7 @@ public class Accounts {
     }
   }
 
-  public static String getInstanceProfileFullName( InstanceProfile instanceProfile ) {
+  public static String getInstanceProfileFullName( BaseInstanceProfile instanceProfile ) {
     if ( instanceProfile.getPath( ).endsWith( "/" ) ) {
       return instanceProfile.getPath( ) + instanceProfile.getName( );
     } else {
@@ -414,12 +434,12 @@ public class Accounts {
     return buildArn( group.getAccountNumber( ), PolicySpec.IAM_RESOURCE_GROUP, group.getPath(), group.getName() );
   }
 
-  public static String getRoleArn( final Role role ) throws AuthException {
+  public static String getRoleArn( final BaseRole role ) throws AuthException {
     return buildArn( role.getAccountNumber( ), PolicySpec.IAM_RESOURCE_ROLE, role.getPath(), role.getName() );
   }
 
-  public static String getInstanceProfileArn( final InstanceProfile instanceProfile ) throws AuthException {
-    return buildArn( instanceProfile.getAccount().getAccountNumber( ), PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, instanceProfile.getPath(), instanceProfile.getName() );
+  public static String getInstanceProfileArn( final BaseInstanceProfile instanceProfile ) throws AuthException {
+    return buildArn( instanceProfile.getAccountNumber( ), PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, instanceProfile.getPath( ), instanceProfile.getName( ) );
   }
 
   private static String buildArn( final String accountNumber,

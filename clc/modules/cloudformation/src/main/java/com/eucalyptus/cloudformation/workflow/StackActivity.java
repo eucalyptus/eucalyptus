@@ -22,6 +22,7 @@ package com.eucalyptus.cloudformation.workflow;
 
 import com.amazonaws.services.simpleworkflow.flow.annotations.Activities;
 import com.amazonaws.services.simpleworkflow.flow.annotations.ActivityRegistrationOptions;
+import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 
 @ActivityRegistrationOptions(
   defaultTaskScheduleToStartTimeoutSeconds = 900,
@@ -51,4 +52,5 @@ public interface StackActivity {
   public String cancelCreateAndMonitorWorkflows(String stackId);
   public String verifyCreateAndMonitorWorkflowsClosed(String stackId);
   public Integer getAWSCloudFormationWaitConditionTimeout(String resourceId, String stackId, String accountId, String effectiveUserId);
+  public String cancelOutstandingCreateResources(String stackId, String accountId, String cancelMessage);
 }

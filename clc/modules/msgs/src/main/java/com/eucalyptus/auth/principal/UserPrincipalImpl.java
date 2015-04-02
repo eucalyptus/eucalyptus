@@ -29,7 +29,6 @@ import javax.annotation.Nullable;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.util.NonNullFunction;
-import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -137,7 +136,7 @@ public class UserPrincipalImpl implements UserPrincipal {
     this.principalPolicies = ImmutableList.copyOf( policies );
   }
 
-  public UserPrincipalImpl( final Role role ) throws AuthException {
+  public UserPrincipalImpl( final EuareRole role ) throws AuthException {
     final Account account = role.getAccount( );
     final EuareUser user = account.lookupAdmin( );
     final List<PolicyVersion> policies = Lists.newArrayList( );

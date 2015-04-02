@@ -115,6 +115,10 @@ public class ScalingActivity extends AbstractOwnedPersistent implements ScalingA
     return getNaturalId();
   }
 
+  public boolean isComplete( ) {
+    return getEndTime( ) != null;
+  }
+
   @Override
   public String getDisplayName() {
     return getNaturalId();

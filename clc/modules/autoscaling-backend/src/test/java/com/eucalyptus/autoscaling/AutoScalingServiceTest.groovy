@@ -25,10 +25,10 @@ import com.eucalyptus.auth.principal.AccessKey
 import com.eucalyptus.auth.principal.Account
 import com.eucalyptus.auth.principal.AccountFullName
 import com.eucalyptus.auth.principal.Certificate
+import com.eucalyptus.auth.principal.EuareRole
 import com.eucalyptus.auth.principal.EuareUser
 import com.eucalyptus.auth.principal.Group
 import com.eucalyptus.auth.principal.Principals
-import com.eucalyptus.auth.principal.Role
 import com.eucalyptus.auth.principal.User
 import com.eucalyptus.autoscaling.activities.ActivityCause
 import com.eucalyptus.autoscaling.activities.ActivityManager
@@ -519,7 +519,7 @@ class AutoScalingServiceTest {
       }
 
       @Override
-      Role lookupRoleById(final String roleId) {
+      EuareRole lookupRoleById(final String roleId) {
         throw new UnsupportedOperationException()
       }
 

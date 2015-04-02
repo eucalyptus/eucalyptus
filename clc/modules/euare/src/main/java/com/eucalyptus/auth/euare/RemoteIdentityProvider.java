@@ -30,21 +30,33 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.DatabaseAuthUtils;
 import com.eucalyptus.auth.api.IdentityProvider;
+import com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileResponseType;
+import com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileResult;
+import com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileType;
 import com.eucalyptus.auth.euare.common.identity.DescribePrincipalResponseType;
 import com.eucalyptus.auth.euare.common.identity.DescribePrincipalType;
+import com.eucalyptus.auth.euare.common.identity.DescribeRoleResponseType;
+import com.eucalyptus.auth.euare.common.identity.DescribeRoleResult;
+import com.eucalyptus.auth.euare.common.identity.DescribeRoleType;
 import com.eucalyptus.auth.euare.common.identity.Identity;
+import com.eucalyptus.auth.euare.common.identity.IdentityMessage;
 import com.eucalyptus.auth.euare.common.identity.Policy;
 import com.eucalyptus.auth.euare.common.identity.Principal;
+import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccessKey;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Certificate;
+import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.PolicyScope;
 import com.eucalyptus.auth.principal.PolicyVersion;
+import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.EphemeralConfiguration;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.util.NonNullFunction;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -110,14 +122,56 @@ public class RemoteIdentityProvider implements IdentityProvider {
     return resultFor( request );
   }
 
+  @Override
+  public InstanceProfile lookupInstanceProfileByName( final String accountNumber, final String name ) throws AuthException {
+    final DescribeInstanceProfileType request = new DescribeInstanceProfileType( );
+    request.setAccountId( accountNumber );
+    request.setInstanceProfileName( name );
+    try {
+      final DescribeInstanceProfileResponseType response = send( request );
+      final DescribeInstanceProfileResult result = response.getDescribeInstanceProfileResult();
+      final EuareResourceName profileErn = (EuareResourceName) Ern.parse( result.getInstanceProfile( ).getInstanceProfileArn( ) );
+      final Role role = TypeMappers.transform( result.getRole( ), Role.class );
+      return new InstanceProfile( ) {
+        @Override public String getAccountNumber( ) { return accountNumber; }
+        @Override public String getInstanceProfileId( ) { return result.getInstanceProfile( ).getInstanceProfileId( ); }
+        @Override public String getInstanceProfileArn( ) { return result.getInstanceProfile( ).getInstanceProfileArn(); }
+        @Nullable
+        @Override public Role getRole( ) { return role; }
+        @Override public String getName( ) { return profileErn.getName( ); }
+        @Override public String getPath( ) { return profileErn.getPath(); }
+      };
+    } catch ( Exception e ) {
+      throw new AuthException( e );
+    }
+  }
+
+  @Override
+  public Role lookupRoleByName( final String accountNumber, final String name ) throws AuthException {
+    final DescribeRoleType request = new DescribeRoleType( );
+    request.setAccountId( accountNumber );
+    request.setRoleName( name );
+    try {
+      final DescribeRoleResponseType response = send( request );
+      final DescribeRoleResult result = response.getDescribeRoleResult( );
+      return TypeMappers.transform( result.getRole( ), Role.class );
+    } catch ( Exception e ) {
+      throw new AuthException( e );
+    }
+  }
+
+  private <R extends IdentityMessage> R send( final IdentityMessage request ) throws Exception {
+    final ServiceConfiguration config = new EphemeralConfiguration(
+        ComponentIds.lookup( Identity.class ),
+        "identity",
+        "identity",
+        URI.create( endpoints.iterator( ).next( ) ) ); //TODO:STEVE: endpoint handling
+    return AsyncRequests.sendSync( config, request );
+  }
+
   private UserPrincipal resultFor( final DescribePrincipalType request ) throws AuthException {
     try {
-      final ServiceConfiguration config = new EphemeralConfiguration(
-          ComponentIds.lookup( Identity.class ),
-          "identity",
-          "identity",
-          URI.create( endpoints.iterator( ).next( ) ) ); //TODO:STEVE: endpoint handling
-      final DescribePrincipalResponseType response = AsyncRequests.sendSync( config, request );
+      final DescribePrincipalResponseType response = send( request );
       final Principal principal = response.getDescribePrincipalResult( ).getPrincipal( );
       if ( principal == null ) {
         throw new AuthException( "Invalid identity" );
@@ -266,6 +320,29 @@ public class RemoteIdentityProvider implements IdentityProvider {
         };
       }
     };
+  }
+
+  @TypeMapper
+  public enum RoleToRoleTransform implements Function<com.eucalyptus.auth.euare.common.identity.Role,Role> {
+    INSTANCE;
+
+    @Nullable
+    @Override
+    public Role apply( final com.eucalyptus.auth.euare.common.identity.Role role ) {
+      final EuareResourceName roleErn = (EuareResourceName) Ern.parse( role.getRoleArn( ) );
+      final PolicyVersion rolePolicy = TypeMappers.transform( role.getAssumeRolePolicy( ), PolicyVersion.class );
+      return new Role( ) {
+        @Override public String getAccountNumber( ) { return roleErn.getNamespace( ); }
+        @Override public String getRoleId( ) { return role.getRoleId( ); }
+        @Override public String getRoleArn( ) { return role.getRoleArn( ); }
+        @Override public String getPath( ) { return roleErn.getPath( ); }
+        @Override public String getName( ) { return roleErn.getName(); }
+        @Override public String getSecret( ) { return role.getSecret(); }
+        @Override public PolicyVersion getPolicy( ) { return rolePolicy; }
+        @Override public String getDisplayName( ) { return Accounts.getRoleFullName( this ); }
+        @Override public OwnerFullName getOwner( ) { return AccountFullName.getInstance( getAccountNumber() ); }
+      };
+    }
   }
 
   @TypeMapper

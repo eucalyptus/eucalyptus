@@ -693,17 +693,17 @@ public class Principals {
     }
 
     @Override
-    public List<Role> getRoles( ) throws AuthException {
+    public List<EuareRole> getRoles( ) throws AuthException {
       return Lists.newArrayList( );
     }
 
     @Override
-    public List<InstanceProfile> getInstanceProfiles() throws AuthException {
+    public List<EuareInstanceProfile> getInstanceProfiles() throws AuthException {
       return Lists.newArrayList( );
     }
 
     @Override
-    public InstanceProfile addInstanceProfile( final String instanceProfileName, final String path ) throws AuthException {
+    public EuareInstanceProfile addInstanceProfile( final String instanceProfileName, final String path ) throws AuthException {
       throw new AuthException( AuthException.SYSTEM_MODIFICATION );
     }
 
@@ -711,7 +711,7 @@ public class Principals {
     public void deleteInstanceProfile( final String instanceProfileName ) throws AuthException { }
 
     @Override
-    public InstanceProfile lookupInstanceProfileByName( final String instanceProfileName ) throws AuthException {
+    public EuareInstanceProfile lookupInstanceProfileByName( final String instanceProfileName ) throws AuthException {
       throw new AuthException( AuthException.SYSTEM_MODIFICATION );
     }
 
@@ -724,7 +724,7 @@ public class Principals {
     public void deleteUser( String userName, boolean forceDeleteAdmin, boolean recursive ) throws AuthException {}
 
     @Override
-    public Role addRole( String roleName, String path, String assumeRolePolicy ) throws AuthException, PolicyParseException {
+    public EuareRole addRole( String roleName, String path, String assumeRolePolicy ) throws AuthException, PolicyParseException {
       throw new AuthException( AuthException.SYSTEM_MODIFICATION );
     }
 
@@ -745,7 +745,7 @@ public class Principals {
     }
 
     @Override
-    public Role lookupRoleByName( String roleName ) throws AuthException {
+    public EuareRole lookupRoleByName( String roleName ) throws AuthException {
       throw new AuthException( AuthException.SYSTEM_MODIFICATION );
     }
 

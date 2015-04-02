@@ -70,6 +70,7 @@ import com.eucalyptus.util.DNSProperties;
 import com.google.common.util.concurrent.SimpleTimeLimiter;
 import com.google.common.util.concurrent.TimeLimiter;
 import com.google.common.util.concurrent.UncheckedTimeoutException;
+
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Message;
 import org.xbill.DNS.Rcode;
@@ -78,6 +79,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 

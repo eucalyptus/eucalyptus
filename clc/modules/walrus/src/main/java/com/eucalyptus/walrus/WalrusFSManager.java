@@ -380,7 +380,9 @@ public class WalrusFSManager extends WalrusManager {
       }
       tr.commit();
     } catch (NoSuchElementException e) {
-      throw new NoSuchBucketException(bucketName);
+      throw new NoSuchBucketException( bucketName );
+    } catch (BucketNotEmptyException e) {
+      throw e;
     } catch (Exception e) {
       LOG.error("Failed to delete bucket=" + bucketName, e);
       throw new InternalErrorException("Failed to delete bucket=" + bucketName, e);

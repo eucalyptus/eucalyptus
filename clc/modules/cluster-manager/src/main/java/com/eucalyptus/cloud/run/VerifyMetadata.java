@@ -112,8 +112,10 @@ import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.images.Emis.LookupMachine;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.Images;
+import com.eucalyptus.imaging.common.ImagingBackend;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
+import com.eucalyptus.resources.client.EucalyptusClient;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.vm.VmInstances;
@@ -257,9 +259,13 @@ public class VerifyMetadata {
                 " size " + vmType.getDisk( ) + " GB." );
           }
           final MachineImageInfo emi = LookupMachine.INSTANCE.apply(imageId);
-          if(ImageMetadata.State.pending_available.equals(emi.getState()) && !verifyImagerCapacity(emi)) {
-            throw new MetadataException("Partition image of this size cannot be deployed without an adequately provisioned Imaging Worker."
-                                        + " Please contact your cloud administrator.");
+          if(ImageMetadata.State.pending_available.equals(emi.getState())) {
+            if ( !Topology.isEnabled( ImagingBackend.class) )
+              throw new MetadataException("Partition image cannot be deployed without an adequately "
+                  + "provisioned Imaging Worker. Please contact your cloud administrator.");
+            if ( !verifyImagerCapacity(emi) )
+              throw new MetadataException("Partition image of this size cannot be deployed without an adequately "
+                  + "provisioned Imaging Worker. Please contact your cloud administrator.");
           }
         }
       } catch ( VerificationException e ) {
@@ -286,7 +292,7 @@ public class VerifyMetadata {
         throw new MetadataException("Partition image cannot be deployed without an enabled Imaging Service."
             + " Please contact your cloud administrator.");
       
-      List<VmTypeDetails> allTypes = com.eucalyptus.imaging.common.EucalyptusActivityTasks.getInstance().describeVMTypes();
+      List<VmTypeDetails> allTypes = EucalyptusClient.getInstance().describeVMTypes();
       long diskSizeBytes = 0;
       for(VmTypeDetails type:allTypes){
         if (type.getName().equalsIgnoreCase(workerType)){
@@ -351,64 +357,68 @@ public class VerifyMetadata {
       if ( !Strings.isNullOrEmpty( instanceProfileArn ) ||
           !Strings.isNullOrEmpty( instanceProfileName ) ) {
 
-        final InstanceProfile profile;
+        final String profileAccount;
+        final String profileName;
         if ( !Strings.isNullOrEmpty( instanceProfileArn ) ) try {
           final Ern name = Ern.parse( instanceProfileArn );
           if ( !( name instanceof EuareResourceName) ) {
             throw new InvalidInstanceProfileMetadataException( "Invalid IAM instance profile ARN: " + instanceProfileArn );
           }
-          profile = Accounts.lookupAccountById( name.getNamespace( ) )
-              .lookupInstanceProfileByName( ((EuareResourceName) name).getName() );
-          if ( !Strings.isNullOrEmpty( instanceProfileName ) &&
-              !instanceProfileName.equals( profile.getName() ) ) {
-            throw new InvalidInstanceProfileMetadataException( String.format(
-                "Invalid IAM instance profile name '%s' for ARN: %s", name, instanceProfileArn) );
-          }
-        } catch ( AuthException|JSONException e ) {
+          profileAccount = name.getNamespace( );
+          profileName = ((EuareResourceName) name).getName( );
+
+        } catch ( JSONException e ) {
           throw new InvalidInstanceProfileMetadataException( "Invalid IAM instance profile ARN: " + instanceProfileArn, e );
-        } else if ( !Strings.isNullOrEmpty( instanceProfileName ) ) try {
-          profile = Accounts.lookupAccountById( ownerFullName.getAccountNumber( ) ).lookupInstanceProfileByName( instanceProfileName );
-        } catch ( AuthException e ) {
-          throw new InvalidInstanceProfileMetadataException( "Invalid IAM instance profile name: " + instanceProfileName, e );
         } else {
-          profile = null;
+          profileAccount = ownerFullName.getAccountNumber( );
+          profileName = instanceProfileName;
         }
 
-        if ( profile != null ) try {
-          final String profileArn = Accounts.getInstanceProfileArn( profile );
+        final InstanceProfile profile;
+        try {
+          profile = Accounts.lookupInstanceProfileByName( profileAccount, profileName );
+        } catch ( AuthException e ) {
+          throw new InvalidInstanceProfileMetadataException( "Invalid IAM instance profile: " + profileAccount + "/" + profileName, e );
+        }
+
+        if ( !Strings.isNullOrEmpty( instanceProfileName ) &&  !instanceProfileName.equals( profile.getName( ) ) ) {
+          throw new InvalidInstanceProfileMetadataException( String.format(
+              "Invalid IAM instance profile name '%s' for ARN: %s", profileName, instanceProfileArn) );
+        }
+
+        try {
           final AuthContextSupplier user = allocInfo.getAuthContext( );
           if ( !Permissions.isAuthorized(
               PolicySpec.VENDOR_IAM,
               PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE,
               Accounts.getInstanceProfileFullName( profile ),
-              AccountFullName.getInstance( profile.getAccount( ).getAccountNumber( ) ),
+              AccountFullName.getInstance( profile.getAccountNumber( ) ),
               PolicySpec.IAM_LISTINSTANCEPROFILES,
               user ) ) {
             throw new IllegalMetadataAccessException( String.format(
                 "Not authorized to access instance profile with ARN %s for %s",
-                profileArn,
+                profile.getInstanceProfileArn( ),
                 ownerFullName ) );
           }
 
           final Role role = profile.getRole( );
-          final String roleArn = role == null ? null : Accounts.getRoleArn( role );
           if ( role != null && !Permissions.isAuthorized(
                   PolicySpec.VENDOR_IAM,
                   PolicySpec.IAM_RESOURCE_ROLE,
                   Accounts.getRoleFullName( role ),
-                  AccountFullName.getInstance( role.getAccount( ).getAccountNumber( ) ),
+                  AccountFullName.getInstance( role.getAccountNumber( ) ),
                   PolicySpec.IAM_PASSROLE,
                   user ) ) {
             throw new IllegalMetadataAccessException( String.format(
                 "Not authorized to pass role with ARN %s for %s",
-                roleArn,
+                role.getRoleArn( ),
                 ownerFullName ) );
           }
 
           if ( role != null ) {
-            allocInfo.setInstanceProfileArn( profileArn );
+            allocInfo.setInstanceProfileArn( profile.getInstanceProfileArn( ) );
             allocInfo.setIamInstanceProfileId( profile.getInstanceProfileId( ) );
-            allocInfo.setIamRoleArn( roleArn );
+            allocInfo.setIamRoleArn( role.getRoleArn( ) );
           } else {
             throw new InvalidInstanceProfileMetadataException( "Role not found for IAM instance profile ARN: " + instanceProfileArn );
           }

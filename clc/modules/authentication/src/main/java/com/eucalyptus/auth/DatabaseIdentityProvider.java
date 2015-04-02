@@ -22,15 +22,21 @@ package com.eucalyptus.auth;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import javax.annotation.Nullable;
 import com.eucalyptus.auth.api.IdentityProvider;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Certificate;
+import com.eucalyptus.auth.principal.EuareInstanceProfile;
+import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.EuareUser;
+import com.eucalyptus.auth.principal.InstanceProfile;
+import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.auth.principal.UserPrincipalImpl;
 import com.eucalyptus.auth.tokens.SecurityTokenManager;
 import com.eucalyptus.component.annotation.ComponentNamed;
+import com.eucalyptus.util.OwnerFullName;
 
 /**
  *
@@ -46,7 +52,7 @@ public class DatabaseIdentityProvider implements IdentityProvider {
 
   @Override
   public UserPrincipal lookupPrincipalByRoleId( final String roleId, final String nonce ) throws AuthException {
-    final Role role = Accounts.lookupRoleById( roleId );
+    final EuareRole role = Accounts.lookupRoleById( roleId );
     return decorateCredentials( Accounts.roleAsPrincipal( role ), nonce, role.getSecret() );
   }
 
@@ -70,12 +76,61 @@ public class DatabaseIdentityProvider implements IdentityProvider {
 
   @Override
   public UserPrincipal lookupPrincipalByCanonicalId( final String canonicalId ) throws AuthException {
-    return Accounts.userAsPrincipal( Accounts.lookupAccountByCanonicalId( canonicalId ).lookupAdmin( ) );
+    return Accounts.userAsPrincipal( Accounts.lookupAccountByCanonicalId( canonicalId ).lookupAdmin() );
   }
 
   @Override
   public UserPrincipal lookupPrincipalByAccountNumber( final String accountNumber ) throws AuthException {
     return Accounts.userAsPrincipal( Accounts.lookupAccountById( accountNumber ).lookupAdmin( ) );
+  }
+
+  @Override
+  public InstanceProfile lookupInstanceProfileByName( final String accountNumber, final String name ) throws AuthException {
+    final EuareInstanceProfile profile = Accounts.lookupAccountById( accountNumber ).lookupInstanceProfileByName( name );
+    final String profileArn = Accounts.getInstanceProfileArn( profile );
+    final EuareRole euareRole = profile.getRole( );
+    final String roleArn = euareRole == null ? null : Accounts.getRoleArn( euareRole );
+    final String roleAccountNumber = euareRole == null ? null : euareRole.getAccountNumber( );
+    final PolicyVersion rolePolicy = euareRole == null ? null : euareRole.getPolicy( );
+    final Role role = euareRole == null ? null : new Role( ) {
+      @Override public String getAccountNumber( ) { return roleAccountNumber; }
+      @Override public String getRoleId( ) { return euareRole.getRoleId( ); }
+      @Override public String getRoleArn( ) { return roleArn; }
+      @Override public String getPath( ) { return euareRole.getPath( ); }
+      @Override public String getName( ) { return euareRole.getName( ); }
+      @Override public String getSecret( ) { return euareRole.getSecret( ); }
+      @Override public PolicyVersion getPolicy( ) { return rolePolicy; }
+      @Override public String getDisplayName( ) { return Accounts.getRoleFullName( this ); }
+      @Override public OwnerFullName getOwner( ) { return euareRole.getOwner( ); }
+    };
+    return new InstanceProfile( ) {
+      @Override public String getAccountNumber( ) { return accountNumber; }
+      @Override public String getInstanceProfileId( ) { return profile.getInstanceProfileId( ); }
+      @Override public String getInstanceProfileArn( ) { return profileArn; }
+      @Nullable
+      @Override public Role getRole( ) { return role; }
+      @Override public String getName( ) { return profile.getName( ); }
+      @Override public String getPath( ) { return profile.getPath(); }
+    };
+  }
+
+  @Override
+  public Role lookupRoleByName( final String accountNumber, final String name ) throws AuthException {
+    final EuareRole euareRole = Accounts.lookupAccountById( accountNumber ).lookupRoleByName( name );
+    final String roleArn = Accounts.getRoleArn( euareRole );
+    final String roleAccountNumber = euareRole.getAccountNumber( );
+    final PolicyVersion assumeRolePolicy = euareRole.getPolicy( );
+    return new Role( ) {
+      @Override public String getAccountNumber( ) { return roleAccountNumber; }
+      @Override public String getRoleId( ) { return euareRole.getRoleId( ); }
+      @Override public String getRoleArn( ) { return roleArn; }
+      @Override public String getPath( ) { return euareRole.getPath( ); }
+      @Override public String getName( ) { return euareRole.getName( ); }
+      @Override public String getSecret( ) { return euareRole.getSecret( ); }
+      @Override public PolicyVersion getPolicy( ) { return assumeRolePolicy; }
+      @Override public String getDisplayName( ) { return Accounts.getRoleFullName( this ); }
+      @Override public OwnerFullName getOwner( ) { return euareRole.getOwner( ); }
+    };
   }
 
   private UserPrincipal decorateCredentials( final UserPrincipal userPrincipal,

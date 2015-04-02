@@ -207,7 +207,7 @@ public class VolumeManager {
         final ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( partition ) );
         final UserFullName owner = ctx.getUserFullName( );
         Function<Long, Volume> allocator = new Function<Long, Volume>( ) {
-          
+
           @Override
           public Volume apply( Long size ) {
             try {
@@ -222,6 +222,9 @@ public class VolumeManager {
         reply.setVolume( newVol.morph( new com.eucalyptus.compute.common.Volume( ) ) );
         return reply;
       } catch ( RuntimeException ex ) {
+        if ( Exceptions.isCausedBy( ex, NoSuchElementException.class ) ) {
+          throw new ClientComputeException( "InvalidZone.NotFound", "The zone '"+partition+"' does not exist." );
+        }
         if ( !( ex.getCause( ) instanceof ExecutionException ) ) {
           throw handleException( ex );
         } else {

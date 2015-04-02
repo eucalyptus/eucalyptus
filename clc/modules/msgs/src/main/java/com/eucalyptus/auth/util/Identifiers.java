@@ -34,12 +34,16 @@ public class Identifiers {
 
   private static final BaseEncoding identifierEncoding = BaseEncoding.base32( );
 
+  public static String generateAccountNumber( ) {
+    return getRegionAccountNumberPartition( ) + String.format( "%09d", ( long ) ( Math.pow( 10, 9 ) * Math.random( ) ) );
+  }
+
   public static String generateIdentifier( final String prefix ) {
-    return prefix + getRegionPartition( ) + getRandomPart( );
+    return prefix + getRegionIdentifierPartition( ) + getRandomPart( );
   }
 
   public static String generateAccessKeyIdentifier( ) {
-    return "AKI" + getRegionPartition( ) + getRandomPart( ).substring( 1 ); // AKI is only 20 characters
+    return "AKI" + getRegionIdentifierPartition( ) + getRandomPart( ).substring( 1 ); // AKI is only 20 characters
   }
 
   public static String generateCertificateIdentifier( final X509Certificate certificate ) throws CertificateEncodingException {
@@ -52,8 +56,12 @@ public class Identifiers {
     return identifierEncoding.encode( random );
   }
 
-  private static String getRegionPartition( ) {
-    return Iterables.getFirst( Partition.supplier.getPartitions( ), "AA" );
+  private static String getRegionAccountNumberPartition( ) {
+    return Iterables.getFirst( Partition.supplier.getAccountNumberPartitions( ), "000" );
+  }
+
+  private static String getRegionIdentifierPartition( ) {
+    return Iterables.getFirst( Partition.supplier.getIdentifierPartitions( ), "AA" );
   }
 
   private static class Partition {
@@ -62,6 +70,7 @@ public class Identifiers {
   }
 
   public static interface IdentifierPartitionSupplier {
-    public Iterable<String> getPartitions( );
+    public Iterable<String> getAccountNumberPartitions( );
+    public Iterable<String> getIdentifierPartitions( );
   }
 }

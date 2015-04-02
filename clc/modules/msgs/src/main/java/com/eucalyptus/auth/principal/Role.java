@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,46 +19,13 @@
  ************************************************************************/
 package com.eucalyptus.auth.principal;
 
-import static com.eucalyptus.util.RestrictedType.PolicyRestrictedType;
-import java.util.Date;
-import java.util.List;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.PolicyParseException;
-import com.eucalyptus.auth.policy.PolicyResourceType;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.component.annotation.PolicyVendor;
-import com.eucalyptus.util.RestrictedType;
-
 /**
  *
  */
-@PolicyVendor( PolicySpec.VENDOR_IAM )
-@PolicyResourceType( value = PolicySpec.IAM_RESOURCE_ROLE, resourcePolicyActions = "sts:assumerole" )
-public interface Role extends AccountScopedPrincipal, RestrictedType, PolicyRestrictedType {
+public interface Role extends BaseRole {
 
-  String getRoleId( );
+  String getAccountNumber( );
 
-  String getPath( );
+  String getRoleArn( );
 
-  String getSecret( );
-
-  Policy getAssumeRolePolicy( ) throws AuthException;
-  Policy setAssumeRolePolicy( String policy ) throws AuthException, PolicyParseException;
-
-  List<InstanceProfile> getInstanceProfiles() throws AuthException;
-
-  Date getCreationTimestamp();
-
-  List<Policy> getPolicies( ) throws AuthException;
-
-  /**
-   * Add a policy, fail if exists.
-   */
-  Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException;
-
-  /**
-   * Add or update the named policy.
-   */
-  Policy putPolicy( String name, String policy ) throws AuthException, PolicyParseException;
-  void removePolicy( String name ) throws AuthException;
 }

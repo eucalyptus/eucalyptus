@@ -68,6 +68,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.ldap.LdapSync;
 import com.eucalyptus.auth.policy.PolicyEngineImpl;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
@@ -202,7 +203,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   private void ensureSystemRolesExist( ) throws Exception {
     try {
       final Account account = Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT );
-      final List<Role> roles = account.getRoles( );
+      final List<EuareRole> roles = account.getRoles( );
       final List<String> roleNames = Lists.transform( roles, RestrictedTypes.toDisplayName( ) );
       for ( final SystemRoleProvider provider : ServiceLoader.load( SystemRoleProvider.class ) ) {
         if ( !roleNames.contains( provider.getName( ) ) ) {
@@ -222,7 +223,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
       final String path = provider.getPath( );
       final String assumeRolePolicy = provider.getAssumeRolePolicy( );
       final String policy = provider.getPolicy( );
-      final Role role = account.addRole( name, path, assumeRolePolicy );
+      final EuareRole role = account.addRole( name, path, assumeRolePolicy );
       role.addPolicy( name, policy );
     } catch ( Exception e ) {
       LOG.error( String.format( "Error adding system role: %s", provider.getName( ) ), e );

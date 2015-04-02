@@ -68,6 +68,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.entities.Entities;
 import org.apache.log4j.Logger;
@@ -87,7 +88,6 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.Group;
-import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.entities.TransactionResource;
@@ -205,7 +205,7 @@ public class DatabaseAuthProvider implements AccountProvider {
   }
 
   @Override
-  public Role lookupRoleById( final String roleId ) throws AuthException {
+  public EuareRole lookupRoleById( final String roleId ) throws AuthException {
     if ( roleId == null ) {
       throw new AuthException( AuthException.EMPTY_ROLE_ID );
     }

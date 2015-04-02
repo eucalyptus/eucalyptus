@@ -497,7 +497,10 @@ public class ConnectionHandler extends Thread {
 	             formerrMessage(byte [] in) {
 		Header header;
 		try {
-			header = new Header(in);
+		  if(in != null)
+		    header = new Header(in);
+		  else
+		    header = new Header();
 		}
 		catch (IOException e) {
 			return null;

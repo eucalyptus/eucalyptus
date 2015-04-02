@@ -27,6 +27,20 @@
       <value name="RequestId" get-method="getCorrelationId" set-method="setCorrelationId" usage="required"/>
     </structure>
   </mapping>
+  <mapping name="DescribeInstanceProfileResponse" class="com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileResponseType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+    <structure name="DescribeInstanceProfileResult" field="describeInstanceProfileResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileResult"/>
+    <structure map-as="IdentityResponseMessage"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileResult" abstract="true">
+    <structure name="InstanceProfile" field="instanceProfile" usage="optional" type="com.eucalyptus.auth.euare.common.identity.InstanceProfile"/>
+    <structure name="Role" field="role" usage="optional" type="com.eucalyptus.auth.euare.common.identity.Role"/>
+  </mapping>
+  <mapping name="DescribeInstanceProfile" class="com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+    <value name="AccountId" field="accountId" usage="optional"/>
+    <value name="InstanceProfileName" field="instanceProfileName" usage="optional"/>
+  </mapping>
   <mapping name="DescribePrincipalResponse" class="com.eucalyptus.auth.euare.common.identity.DescribePrincipalResponseType">
     <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
     <structure name="DescribePrincipalResult" field="describePrincipalResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.DescribePrincipalResult"/>
@@ -45,6 +59,23 @@
     <value name="CanonicalId" field="canonicalId" usage="optional"/>
     <value name="Nonce" field="nonce" usage="optional"/>
   </mapping>
+  <mapping name="DescribeRoleResponse" class="com.eucalyptus.auth.euare.common.identity.DescribeRoleResponseType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+    <structure name="DescribeRoleResult" field="describeRoleResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.DescribeRoleResult"/>
+    <structure map-as="IdentityResponseMessage"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.common.identity.DescribeRoleResult" abstract="true">
+    <structure name="Role" field="role" usage="optional" type="com.eucalyptus.auth.euare.common.identity.Role"/>
+  </mapping>
+  <mapping name="DescribeRole" class="com.eucalyptus.auth.euare.common.identity.DescribeRoleType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+    <value name="AccountId" field="accountId" usage="optional"/>
+    <value name="RoleName" field="roleName" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.common.identity.InstanceProfile" abstract="true">
+    <value name="InstanceProfileId" field="instanceProfileId" usage="optional"/>
+    <value name="InstanceProfileArn" field="instanceProfileArn" usage="optional"/>
+  </mapping>
   <mapping class="com.eucalyptus.auth.euare.common.identity.Principal" abstract="true">
     <value name="Enabled" field="enabled" usage="optional"/>
     <value name="Arn" field="arn" usage="optional"/>
@@ -62,6 +93,12 @@
     <collection name="Policies" field="policies" usage="optional">>
       <structure name="member" type="com.eucalyptus.auth.euare.common.identity.Policy"/>
     </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.common.identity.Role" abstract="true">
+    <value name="RoleId" field="roleId" usage="optional"/>
+    <value name="RoleArn" field="roleArn" usage="optional"/>
+    <value name="Secret" field="secret" usage="optional"/>
+    <structure name="AssumeRolePolicy" field="assumeRolePolicy" usage="optional" type="com.eucalyptus.auth.euare.common.identity.Policy"/>
   </mapping>
   <mapping class="com.eucalyptus.auth.euare.common.identity.AccessKey" abstract="true">
     <value name="AccessKeyId" field="accessKeyId" usage="optional"/>

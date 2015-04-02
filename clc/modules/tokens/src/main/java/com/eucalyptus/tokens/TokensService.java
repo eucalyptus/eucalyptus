@@ -38,7 +38,7 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.Role;
+import com.eucalyptus.auth.principal.BaseRole;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.tokens.SecurityToken;
 import com.eucalyptus.auth.tokens.SecurityTokenManager;
@@ -126,16 +126,16 @@ public class TokensService {
     }
     rejectPasswordCredentials( );
 
-    final Role role = lookupRole( request.getRoleArn() );
+    final BaseRole role = lookupRole( request.getRoleArn() ); //TODO:STEVE: issue token for role on federated cloud
 
     //TODO Should we fail if a policy is supplied? (since we ignore it)
     try {
       ExternalIdContext.doWithExternalId(
           request.getExternalId(),
           EucalyptusCloudException.class,
-          new Callable<Role>() {
+          new Callable<BaseRole>() {
             @Override
-            public Role call() throws EucalyptusCloudException {
+            public BaseRole call() throws EucalyptusCloudException {
               try {
                 return RestrictedTypes.doPrivilegedWithoutOwner(
                     Accounts.getRoleFullName( role ),
@@ -270,12 +270,12 @@ public class TokensService {
     }
   }
 
-  private static String assumedRoleArn( final Role role,
+  private static String assumedRoleArn( final BaseRole role,
                                         final String roleSessionName ) throws AuthException {
-    return "arn:aws:sts::"+role.getAccount().getAccountNumber()+":assumed-role"+Accounts.getRoleFullName( role )+"/"+roleSessionName;
+    return "arn:aws:sts::"+role.getAccountNumber()+":assumed-role"+Accounts.getRoleFullName( role )+"/"+roleSessionName;
   }
 
-  private static Role lookupRole( final String roleArnString ) throws TokensException {
+  private static BaseRole lookupRole( final String roleArnString ) throws TokensException {
     try {
       final Ern roleArn = Ern.parse( roleArnString );
       if ( !(roleArn instanceof EuareResourceName) ||
@@ -283,24 +283,26 @@ public class TokensService {
       final String roleAccountId = roleArn.getNamespace();
       final String roleName = ((EuareResourceName) roleArn).getName();
 
-      final Account account = Account.SYSTEM_ACCOUNT.equals( roleAccountId ) ?
-          Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT ) :
-          Accounts.lookupAccountById( roleAccountId );
-      return account.lookupRoleByName( roleName );
+      if ( Account.SYSTEM_ACCOUNT.equals( roleAccountId ) ) {
+        final Account account = Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT );
+        return account.lookupRoleByName( roleName );
+      } else {
+        return Accounts.lookupRoleByName( roleAccountId, roleName );
+      }
     } catch ( Exception e ) {
       throw new TokensException( TokensException.Code.InvalidParameterValue, "Invalid role: " + roleArnString );
     }
   }
 
-  private static class RoleResolver implements Function<String,Role> {
-    private final Role role;
+  private static class RoleResolver implements Function<String,BaseRole> {
+    private final BaseRole role;
 
-    private RoleResolver( final Role role ) {
+    private RoleResolver( final BaseRole role ) {
       this.role = role;
     }
 
     @Override
-    public Role apply( @Nullable final String roleFullName ) {
+    public BaseRole apply( @Nullable final String roleFullName ) {
       return role;
     }
   }

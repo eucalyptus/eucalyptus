@@ -36,6 +36,7 @@ import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.xbill.DNS.Name;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
@@ -49,9 +50,9 @@ import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMapper;
+import com.eucalyptus.util.dns.DomainNames;
 import com.google.common.base.Function;
 import com.google.common.net.HostSpecifier;
-import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
@@ -142,8 +143,8 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 		dnsPrefix = dnsPrefix.replace(".", "_");
 		
 		final int maxPrefixLength = 253 - 
-				String.format(".%s.%s", DNS_SUBDOMAIN, 
-						SystemConfiguration.getSystemConfiguration().getDnsDomain()).length();
+				String.format(".%s.%s", DNS_SUBDOMAIN,
+            DomainNames.externalSubdomain( ).relativize( Name.root )).length();
 		if(maxPrefixLength < 0 )
 			throw Exceptions.toUndeclared("invalid dns name length");
 		if(dnsPrefix.length() > maxPrefixLength)
@@ -191,8 +192,8 @@ public class LoadBalancerDnsRecord extends AbstractPersistent {
 	}
 	
 	public String getDnsName(){
-		return String.format("%s.%s.%s", this.dnsName, this.dnsZone, 
-				SystemConfiguration.getSystemConfiguration().getDnsDomain());
+		return String.format("%s.%s.%s", this.dnsName, this.dnsZone,
+				DomainNames.externalSubdomain( ).relativize( Name.root ));
 	}
 	
 

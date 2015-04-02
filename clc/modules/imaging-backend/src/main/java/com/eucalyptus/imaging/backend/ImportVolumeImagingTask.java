@@ -43,8 +43,8 @@ import com.eucalyptus.compute.common.backend.ImportVolumeType;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.imaging.common.EucalyptusActivityTasks;
 import com.eucalyptus.imaging.ImportTaskProperties;
+import com.eucalyptus.resources.client.Ec2Client;
 import com.eucalyptus.util.Dates;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
@@ -179,9 +179,9 @@ public class ImportVolumeImagingTask extends VolumeImagingTask {
       try{
         // verify that volume actually exist
         final List<Volume> eucaVolumes =
-        EucalyptusActivityTasks.getInstance().describeVolumesAsUser(this.getOwnerUserId(), Lists.newArrayList(volumeDetails.getVolume().getId()));
+        Ec2Client.getInstance().describeVolumes(this.getOwnerUserId(), Lists.newArrayList(volumeDetails.getVolume().getId()));
         if (eucaVolumes.size() != 0) {
-          EucalyptusActivityTasks.getInstance().deleteVolumeAsUser(this.getOwnerUserId(), volumeDetails.getVolume().getId());
+          Ec2Client.getInstance().deleteVolume(this.getOwnerUserId(), volumeDetails.getVolume().getId());
         }
         setCleanUpDone(true);
       } catch(final Exception ex){

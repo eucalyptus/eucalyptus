@@ -860,6 +860,9 @@ public class DescribeInstanceAttributeResponseType extends VmControlMessage {
   boolean hasUserData() {
     this.userData != null
   }
+  boolean hasNonEmptyUserData() {
+    this.userData != null && !this.userData.empty
+  }
   boolean hasBlockDeviceMapping() {
     !this.blockDeviceMapping.isEmpty( )
   }

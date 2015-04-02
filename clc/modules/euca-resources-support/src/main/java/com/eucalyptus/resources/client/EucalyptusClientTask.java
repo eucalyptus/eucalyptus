@@ -19,10 +19,13 @@
  ************************************************************************/
 package com.eucalyptus.resources.client;
 
+import java.util.NoSuchElementException;
+
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 
@@ -35,7 +38,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 public abstract class EucalyptusClientTask<TM extends BaseMessage, TC extends ComponentId> {
   private static final Logger LOG = Logger.getLogger(EucalyptusClientTask.class);
   private volatile boolean dispatched = false;
-
+  private String errorMessage;
   protected EucalyptusClientTask() {}
 
   final CheckedListenableFuture<Boolean> dispatch(
@@ -65,7 +68,7 @@ public abstract class EucalyptusClientTask<TM extends BaseMessage, TC extends Co
       dispatched = true;
       return future;
     } catch (Exception e) {
-      LOG.error(e, e);
+      LOG.error("Got error", e);
     }
     return Futures.predestinedFuture(false);
   }
@@ -74,7 +77,23 @@ public abstract class EucalyptusClientTask<TM extends BaseMessage, TC extends Co
       Callback.Checked<TM> callback);
 
   void dispatchFailure(ClientContext<TM, TC> context, Throwable throwable) {
+    final Throwable ex1 = Exceptions.findCauseByClassName( throwable,
+        "com.eucalyptus.compute.ClientComputeException" );
+    if (ex1 != null) {
+      errorMessage = ex1.getMessage();
+      return;
+    }
+    final NoSuchElementException ex2 = Exceptions.findCause(throwable,
+        NoSuchElementException.class);
+    if (ex2 != null) {
+      errorMessage = ex2.getMessage();
+      return;
+    }
     LOG.error("Eucalyptus client error", throwable);
+  }
+
+  String getErrorMessage() {
+    return errorMessage;
   }
 
   abstract void dispatchSuccess(ClientContext<TM, TC> context, TM response);

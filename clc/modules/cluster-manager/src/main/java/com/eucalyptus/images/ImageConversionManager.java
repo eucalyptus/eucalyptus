@@ -23,8 +23,10 @@ import java.net.URI;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
@@ -43,14 +45,7 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.compute.common.ComputeMessage;
-import com.eucalyptus.compute.common.DeleteResourceTag;
 import com.eucalyptus.compute.common.ImageMetadata;
-import com.eucalyptus.compute.common.ResourceTag;
-import com.eucalyptus.compute.common.backend.CreateTagsResponseType;
-import com.eucalyptus.compute.common.backend.CreateTagsType;
-import com.eucalyptus.compute.common.backend.DeleteTagsResponseType;
-import com.eucalyptus.compute.common.backend.DeleteTagsType;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.Entities;
@@ -84,6 +79,7 @@ import com.eucalyptus.objectstorage.msgs.ListAllMyBucketsType;
 import com.eucalyptus.objectstorage.msgs.ListBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.ListBucketType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType;
+import com.eucalyptus.resources.client.Ec2Client;
 import com.eucalyptus.storage.msgs.s3.BucketListEntry;
 import com.eucalyptus.storage.msgs.s3.ListEntry;
 import com.eucalyptus.util.Callback;
@@ -268,6 +264,9 @@ public class ImageConversionManager implements EventListener<ClockTick> {
   }
   
   private void cleanupBuckets(final List<ImageInfo> images, boolean deregister){
+    if (!Topology.isEnabled(ObjectStorage.class))
+      return;
+
     Set<String> systemBuckets = null;
     if(images.size()>0){
       try{
@@ -279,8 +278,14 @@ public class ImageConversionManager implements EventListener<ClockTick> {
           systemBuckets.addAll(bucketNames);
         }
       }catch(final Exception ex){
-        ;
+        // probably Object storage is not ready yet
+        LOG.debug("Can't init system buckets.");
+        return;
       }
+    }
+    if (images.size()>0 && systemBuckets == null) {
+      LOG.debug("Can't init system buckets. Skipping clenup up.");
+      return;
     }
     
     for(final ImageInfo image: images) {
@@ -505,13 +510,12 @@ public class ImageConversionManager implements EventListener<ClockTick> {
       }
     }
   }
-  
-  private List<ImageInfo> getPartitionedImages(){
+
+  public static List<ImageInfo> getPartitionedImages(){
     List<ImageInfo> partitionedImages = null;
     try ( final TransactionResource db =
         Entities.transactionFor( ImageInfo.class ) ) {
       partitionedImages = Entities.query(Images.exampleWithImageFormat(ImageMetadata.ImageFormat.partitioned));
-      
     }
     return partitionedImages;
   }
@@ -523,16 +527,6 @@ public class ImageConversionManager implements EventListener<ClockTick> {
       images = Entities.query(Images.exampleWithImageState(ImageMetadata.State.deregistered_cleanup));
     }
     return images;
-  }
-  
-  private List<ImageInfo> getPendingConversionImages(){
-    List<ImageInfo> pendingImages = null;
-    try ( final TransactionResource db =
-        Entities.transactionFor( ImageInfo.class ) ) {
-      pendingImages = Entities.query(Images.exampleWithImageState(ImageMetadata.State.pending_conversion));
-      
-    }
-    return pendingImages;
   }
   
   private static final LoadingCache<String, Optional<DiskImageConversionTask>> conversionTaskCache =
@@ -680,51 +674,30 @@ public class ImageConversionManager implements EventListener<ClockTick> {
   }
   
   private void resetTag(final String userId, final String resourceId, final String tagKey, final String tagValue) throws Exception{
-    /// try deleting tags
+    // try deleting tags
     try{
-      final DeleteTagsTask task = new DeleteTagsTask(userId, Lists.newArrayList(resourceId), Lists.newArrayList(tagKey));
-      final CheckedListenableFuture<Boolean> result = task.dispatch();
-      if(result.get()){
-        ;
-      }
+      HashMap<String, String> tags = Maps.newHashMap();
+      tags.put(tagKey, null);
+      Ec2Client.getInstance().deleteTags(userId, Lists.newArrayList(resourceId), tags);
     }catch(final Exception ex){
       ;
     }
     // create tag
-    final Map<String,String> tag = Maps.newHashMap();
-    tag.put(tagKey, tagValue);
-    final CreateTagsTask task = new CreateTagsTask(userId, Lists.newArrayList(resourceId), tag);
-    final CheckedListenableFuture<Boolean> result = task.dispatch();
-    if(result.get()){
-      ;
-    }else
-      throw new Exception(String.format("Failed to create tag (%s-%s:%s)", resourceId, tagKey,tagValue));
+    Ec2Client.getInstance().createTags(userId, tagKey, tagValue, Lists.newArrayList(resourceId));
   }
   
   private void removeTags(final String imageId) throws Exception{
     final ImageInfo image = Images.lookupImage(imageId);
     final String imageOwnerId = image.getOwnerUserId();
-    
-    DeleteTagsTask task = new DeleteTagsTask(imageOwnerId, Lists.newArrayList(image.getDisplayName()), 
-        Lists.newArrayList(TAG_KEY_STATE, TAG_KEY_MESSAGE));
-    CheckedListenableFuture<Boolean> result = task.dispatch();
-    if(result.get()){
-      ;
-    }
+    HashMap<String, String> m = Maps.newHashMap();
+    m.put(TAG_KEY_STATE, null);
+    m.put(TAG_KEY_MESSAGE, null);
+    Ec2Client.getInstance().deleteTags(imageOwnerId, Lists.newArrayList(image.getDisplayName()), m);
     final List<VmInstance> instances = this.lookupInstances(imageId);
     for(final VmInstance instance : instances){
       final String instanceId = instance.getInstanceId();
       final String instanceOwnerId = instance.getOwnerUserId();
-      try{
-        task = new DeleteTagsTask(instanceOwnerId, Lists.newArrayList(instanceId), 
-            Lists.newArrayList(TAG_KEY_STATE, TAG_KEY_MESSAGE));
-        result = task.dispatch();
-        if(result.get()){
-          ;
-        }
-      }catch(final Exception ex){
-        ;
-      }
+      Ec2Client.getInstance().deleteTags(instanceOwnerId, Lists.newArrayList(instanceId), m);
     }
   }
   
@@ -1029,75 +1002,6 @@ public class ImageConversionManager implements EventListener<ClockTick> {
     }
   }
   
-  
-  private static class CreateTagsTask extends EucalyptusUserActivityTask {
-    private List<String> resourceIds = null;
-    private Map<String,String> tags = null;
-    private CreateTagsTask(final String userId, final List<String> resourceIds, final Map<String,String> tags){
-      super(userId);
-      this.resourceIds = resourceIds;
-      this.tags = tags;
-    }
-    
-    private CreateTagsType createTag(){
-      final CreateTagsType req = new CreateTagsType();
-      req.setResourcesSet(new ArrayList<String>(this.resourceIds));
-      req.setTagSet(new ArrayList<ResourceTag>());
-      for(final String key : this.tags.keySet()){
-        final ResourceTag tag = new ResourceTag();
-        tag.setKey(key);
-        tag.setValue(this.tags.get(key));
-        req.getTagSet().add(tag);
-      }
-      req.markPrivileged();
-      return req;
-    }
-    
-    @Override
-    void dispatchInternal(Checked<ComputeMessage> callback) {
-      final DispatchingClient<ComputeMessage, Eucalyptus> client = this.getClient();
-      client.dispatch(createTag(), callback);             
-    }
-
-    @Override
-    void dispatchSuccess(ComputeMessage response) {
-      final CreateTagsResponseType resp = (CreateTagsResponseType) response;
-    }
-  }
-  
-  private static class DeleteTagsTask extends EucalyptusUserActivityTask {
-    private List<String> resourceIds = null;
-    private List<String> tagKeys = null;
-    private DeleteTagsTask(final String userId, final List<String> resourceIds, final List<String> tagKeys){
-      super(userId);
-      this.resourceIds = resourceIds;
-      this.tagKeys = tagKeys;
-    }
-    
-    private DeleteTagsType deleteTag(){
-      final DeleteTagsType req = new DeleteTagsType();
-      req.setResourcesSet(new ArrayList<String>(resourceIds));
-      req.setTagSet(new ArrayList<DeleteResourceTag>());
-      for(final String tagKey : tagKeys){
-        final DeleteResourceTag tag = new DeleteResourceTag();
-        tag.setKey(tagKey);
-        req.getTagSet().add(tag);
-      }
-      req.markPrivileged();
-      return req;
-    }
-    @Override
-    void dispatchInternal(Checked<ComputeMessage> callback) {
-      final DispatchingClient<ComputeMessage, Eucalyptus> client = this.getClient();
-      client.dispatch(deleteTag(), callback);      
-    }
-
-    @Override
-    void dispatchSuccess(ComputeMessage response) {
-      final DeleteTagsResponseType resp = (DeleteTagsResponseType) response;
-    }
-  }
-  
   private static abstract class ObjectStorageActivityTask extends ActivityTask<ObjectStorageRequestType, ObjectStorage> {
     @Override
     protected DispatchingClient<ObjectStorageRequestType, ObjectStorage> getClient() {
@@ -1126,38 +1030,6 @@ public class ImageConversionManager implements EventListener<ClockTick> {
     }
   }
   
-  private static abstract class EucalyptusUserActivityTask extends ActivityTask<ComputeMessage, Eucalyptus> {
-    private String userId = null;
-    private EucalyptusUserActivityTask(final String userId){
-      this.userId = userId;
-    }
-    @Override
-    protected DispatchingClient<ComputeMessage, Eucalyptus> getClient() {
-      try{
-        final DispatchingClient<ComputeMessage, Eucalyptus> client =
-            new DispatchingClient<>( userId, Eucalyptus.class );
-            client.init();
-            return client;
-      }catch(Exception e){
-        throw Exceptions.toUndeclared(e);
-      }
-    }
-  }
-  
-  private static abstract class EucalyptusActivityTask extends ActivityTask<ComputeMessage, Eucalyptus> {
-    @Override
-    protected DispatchingClient<ComputeMessage, Eucalyptus> getClient() {
-      try{
-        final DispatchingClient<ComputeMessage, Eucalyptus> client =
-            new DispatchingClient<>( Accounts.lookupSystemAdmin().getUserId() , Eucalyptus.class );
-            client.init();
-            return client;
-      }catch(Exception e){
-        throw Exceptions.toUndeclared(e);
-      }
-    }
-  }
-
   private static abstract class ActivityTask <TM extends BaseMessage, TC extends ComponentId>{
     private volatile boolean dispatched = false;
 
@@ -1196,7 +1068,11 @@ public class ImageConversionManager implements EventListener<ClockTick> {
     abstract void dispatchInternal( Callback.Checked<TM> callback );
 
     void dispatchFailure( Throwable throwable ) {
-      LOG.error( "Image conversion task error", throwable );
+      // there is quite possible to have "Failed to lookup ENABLED service of type ObjectStorage"
+      // let's log errors only for other cases
+      final NoSuchElementException exception = Exceptions.findCause( throwable, NoSuchElementException.class );
+      if (exception == null)
+        LOG.error( "Image conversion task error", throwable );
     }
 
     abstract void dispatchSuccess(TM response );
