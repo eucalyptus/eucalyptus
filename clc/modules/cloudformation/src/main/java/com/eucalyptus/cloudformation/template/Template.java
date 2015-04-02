@@ -42,7 +42,6 @@ public class Template {
   // All the below are "object" forms of items in the StackEntity
   private String description;
   private Map<String, String> pseudoParameterMap = Maps.newLinkedHashMap();
-  private Map<String, List<String>> availabilityZoneMap = Maps.newLinkedHashMap();
   private String templateFormatVersion;
   private Map<String, Map<String, Map<String, String>>> mapping = Maps.newLinkedHashMap();
   private ArrayList<StackEntity.Parameter> parameters = Lists.newArrayList();
@@ -91,14 +90,6 @@ public class Template {
 
   public void setPseudoParameterMap(Map<String, String> pseudoParameterMap) {
     this.pseudoParameterMap = pseudoParameterMap;
-  }
-
-  public void setAvailabilityZoneMap(Map<String, List<String>> availabilityZoneMap) {
-    this.availabilityZoneMap = availabilityZoneMap;
-  }
-
-  public Map<String, List<String>> getAvailabilityZoneMap() {
-    return availabilityZoneMap;
   }
 
   public void setTemplateFormatVersion(String templateFormatVersion) {

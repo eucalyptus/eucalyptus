@@ -182,7 +182,6 @@ public class StackEntityManager {
         dbEntity.setLastUpdateOperationTimestamp(stackEntity.getLastUpdateOperationTimestamp());
         dbEntity.setDeleteOperationTimestamp(stackEntity.getDeleteOperationTimestamp());
         dbEntity.setAccountId(stackEntity.getAccountId());
-        dbEntity.setAvailabilityZoneMapJson(stackEntity.getAvailabilityZoneMapJson());
         dbEntity.setResourceDependencyManagerJson(stackEntity.getResourceDependencyManagerJson());
         dbEntity.setCapabilitiesJson(stackEntity.getCapabilitiesJson());
         dbEntity.setDescription(stackEntity.getDescription());
