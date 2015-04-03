@@ -331,6 +331,8 @@ public class StackActivityImpl implements StackActivity {
     LOG.info("Performing creation step " + stepId + " on resource " + resourceId);
     StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
     StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId);
+    // Take a snapshot of the stack resource
+    String stackResourceEntityStrBefore = stackResourceEntity.toString();
     ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
     try {
       ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
@@ -347,19 +349,22 @@ public class StackActivityImpl implements StackActivity {
       stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
       StackResourceEntityManager.updateStackResource(stackResourceEntity);
 
-      // Create a stack event after success
-      StackEvent stackEvent = new StackEvent();
-      stackEvent.setStackId(stackId);
-      stackEvent.setStackName(resourceAction.getStackEntity().getStackName());
-      stackEvent.setLogicalResourceId(resourceInfo.getLogicalResourceId());
-      stackEvent.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
-      stackEvent.setEventId(resourceInfo.getLogicalResourceId() + "-" + StackResourceEntity.Status.CREATE_IN_PROGRESS.toString() + "-" + System.currentTimeMillis());
-      stackEvent.setResourceProperties(resourceInfo.getPropertiesJson());
-      stackEvent.setResourceType(resourceInfo.getType());
-      stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_IN_PROGRESS.toString());
-      stackEvent.setResourceStatusReason(null);
-      stackEvent.setTimestamp(new Date());
-      StackEventEntityManager.addStackEvent(stackEvent, accountId);
+      // Create a stack event after success (if anything changed)
+      String stackResourceEntityStrAfter = stackResourceEntity.toString();
+      if (!stackResourceEntityStrAfter.equals(stackResourceEntityStrBefore)) {
+        StackEvent stackEvent = new StackEvent();
+        stackEvent.setStackId(stackId);
+        stackEvent.setStackName(resourceAction.getStackEntity().getStackName());
+        stackEvent.setLogicalResourceId(resourceInfo.getLogicalResourceId());
+        stackEvent.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
+        stackEvent.setEventId(resourceInfo.getLogicalResourceId() + "-" + StackResourceEntity.Status.CREATE_IN_PROGRESS.toString() + "-" + System.currentTimeMillis());
+        stackEvent.setResourceProperties(resourceInfo.getPropertiesJson());
+        stackEvent.setResourceType(resourceInfo.getType());
+        stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_IN_PROGRESS.toString());
+        stackEvent.setResourceStatusReason(null);
+        stackEvent.setTimestamp(new Date());
+        StackEventEntityManager.addStackEvent(stackEvent, accountId);
+      }
 
     } catch (NotAResourceFailureException ex) {
       LOG.info( "Create step not yet complete: ${ex.message}" );
