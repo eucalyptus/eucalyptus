@@ -102,10 +102,10 @@ EUCA_USER="eucalyptus"
 
 # honor the ENV variable if found otherwise look in root
 if [ -z "$EUCALYPTUS" ] ; then
-       EUCALYPTUS="@prefix@"
-       if [ ! -e ${EUCALYPTUS}/etc/eucalyptus/eucalyptus.conf ] ; then
-              EUCALYPTUS="/"
-       fi
+	EUCALYPTUS="@prefix@"
+	if [ ! -e ${EUCALYPTUS}/etc/eucalyptus/eucalyptus.conf ] ; then
+		EUCALYPTUS="/"
+	fi
 fi
 export EUCALYPTUS
 
@@ -113,57 +113,55 @@ export EUCALYPTUS
 do_start() {
 	# Set kernel parameters for connection tracking (EUCA-5697)
 	$EUCALYPTUS/usr/libexec/eucalyptus/conntrack_kernel_params
-
+	
 	# fixes #469984 (was against NC but CC/eucanetd may have similar issue)
 	IPTABLES="`which iptables 2> /dev/null`"
 	if [ -n "$IPTABLES" ]; then
 		[ -x $IPTABLES ] && $IPTABLES -L -n > /dev/null 2> /dev/null && $IPTABLES -L -n -t nat > /dev/null 2> /dev/null
 	fi
-
-        # logic to detect if required proc parameters will be reset by
-        # a sysctl update: succeed and continue if default values are
-        # correct, succeed but warn the user if the default settings
-        # are incorrect (and set them, and continue), fail if the
-        # values cannot be set
 	
-        # first, apply sysctl settings (set in /etc/sysctl*)
-
-        apply_sysctl
-
-        for CHECKVAR in /proc/sys/net/ipv4/ip_forward /proc/sys/net/bridge/bridge-nf-call-iptables
-        do
-	    if [ -e "$CHECKVAR" ]; then
-		if [ -r "$CHECKVAR" ]; then
-                    VAL=`cat $CHECKVAR`
-		    
-                    # if either the value is disabled after a sysctl reset, WARN the user, set it, and continue
-
-                    if [ "$VAL" = "0" ]; then
-			echo
-			echo "WARN: ${CHECKVAR}=0 (disabled) after a sysctl reset: check /etc/sysctl.conf settings to enable them by default."
-			if [ -w "$CHECKVAR" ]; then
-                            echo "Setting ${CHECKVAR}=1"
-                            echo -n 1 > ${CHECKVAR}
+	# logic to detect if required proc parameters will be reset by
+	# a sysctl update: succeed and continue if default values are
+	# correct, succeed but warn the user if the default settings
+	# are incorrect (and set them, and continue), fail if the
+	# values cannot be set
+	
+	# first, apply sysctl settings (set in /etc/sysctl*)
+	
+	apply_sysctl
+	
+	for CHECKVAR in /proc/sys/net/ipv4/ip_forward /proc/sys/net/bridge/bridge-nf-call-iptables; do
+		if [ -e "$CHECKVAR" ]; then
+			if [ -r "$CHECKVAR" ]; then
+				VAL=`cat $CHECKVAR`
+				    
+				# if either the value is disabled after a sysctl reset, WARN the user, set it, and continue
+				
+				if [ "$VAL" = "0" ]; then
+					echo
+					echo "WARN: ${CHECKVAR}=0 (disabled) after a sysctl reset: check /etc/sysctl.conf settings to enable them by default."
+					if [ -w "$CHECKVAR" ]; then
+						echo "Setting ${CHECKVAR}=1"
+						echo -n 1 > ${CHECKVAR}
+					else
+						echo "Cannot enable (write to) ${CHECKVAR}: check permissions"
+						exit 1
+					fi
+				fi
 			else
-                            echo "Cannot enable (write to) ${CHECKVAR}: check permissions"
-                            exit 1
+				echo
+				echo "Cannot read required proc value ${CHECKVAR}: check permissions"
+				exit 1
 			fi
-                    fi
-		else
-                    echo
-                    echo "Cannot read required proc value ${CHECKVAR}: check permissions"
-                    exit 1
 		fi
-	    fi
-        done
-   
+	done
+	   
 	# Ensure that we have a net directory or dhcp will not start
 	if [ ! -d $EUCALYPTUS/var/run/eucalyptus/net ]; then
 		mkdir -p $EUCALYPTUS/var/run/eucalyptus/net
 	fi
-
 	chown eucalyptus:dhcpd $EUCALYPTUS/var/run/eucalyptus/net
-
+	
 	ulimit -u 100000
 	ulimit -n 10000
 	# now we start the services
@@ -172,7 +170,7 @@ do_start() {
 		echo "Failed to start eucanetd!"
 		exit 1
 	fi
-
+	
 	touch $LOCKFILE
 }
 
@@ -189,56 +187,57 @@ do_status() {
 }
 
 do_stop() {
-        pidfile="$EUCALYPTUS/var/run/eucalyptus/eucanetd.pid"
-
-        # let's be sure we are killing the right process
-        if ! do_status ; then
-                rm -f $pidfile
-                return
-        fi
-        # now kill the services
-        pidfiles="$EUCALYPTUS/var/run/eucalyptus/net/euca-dhcp.pid $EUCALYPTUS/var/run/eucalyptus/eucanetd.pid"
-        pids=""
-        sids=""
-        for pidfile in $pidfiles ; do
-            if [ -s $pidfile ]; then
-                pid=`cat $pidfile 2> /dev/null`
-                sids="$pid $sids"
-                morepids="$pid"
-                for i in `pgrep -P $pid`; do
-                    morepids="$morepids `echo $i`"
-                    morepids="$morepids `pgrep -P $i`"
-                done
-                pids="$pids $morepids"
-                rm -f $pidfile
-            fi
-        done
-        if [ -n "$pids" ]; then
-            kill -15 $pids >/dev/null 2>&1
-            pkill -9 -s $sids >/dev/null 2>&1
-        fi
-
-        dopkill=0
-        for pid in $pids ; do
-            timeout=5
-            while [ $timeout -gt 0 ]; do
-                if ps $pid > /dev/null 2>&1 ; then
-                    sleep 1
-                    timeout=$(($timeout - 1))
-                    dopkill=1
-                else
-                    break
-                fi
-            done
-            if [ $timeout -eq 0 ]; then
-                kill -9 ${pid} >/dev/null 2>&1
-            fi
-        done
-        if [ $dopkill -gt 0 ]; then
-            pkill -9 -s $sids >/dev/null 2>&1
-        fi
-
-        rm -f $LOCKFILE
+	pidfile="$EUCALYPTUS/var/run/eucalyptus/eucanetd.pid"
+	
+	# let's be sure we are killing the right process
+	if ! do_status ; then
+	rm -f $pidfile
+	return
+	fi
+	
+	# now kill the services
+	pidfiles="$EUCALYPTUS/var/run/eucalyptus/net/euca-dhcp.pid $EUCALYPTUS/var/run/eucalyptus/eucanetd.pid"
+	pids=""
+	sids=""
+	for pidfile in $pidfiles ; do
+		if [ -s $pidfile ]; then
+			pid=`cat $pidfile 2> /dev/null`
+			sids="$pid $sids"
+			morepids="$pid"
+			for i in `pgrep -P $pid`; do
+				morepids="$morepids `echo $i`"
+				morepids="$morepids `pgrep -P $i`"
+			done
+			pids="$pids $morepids"
+			rm -f $pidfile
+		fi
+	done
+	if [ -n "$pids" ]; then
+		kill -15 $pids >/dev/null 2>&1
+		pkill -9 -s $sids >/dev/null 2>&1
+	fi
+	
+	dopkill=0
+	for pid in $pids ; do
+		timeout=5
+		while [ $timeout -gt 0 ]; do
+			if ps $pid > /dev/null 2>&1 ; then
+				sleep 1
+				timeout=$(($timeout - 1))
+				dopkill=1
+			else
+				break
+			fi
+		done
+		if [ $timeout -eq 0 ]; then
+			kill -9 ${pid} >/dev/null 2>&1
+		fi
+	done
+	if [ $dopkill -gt 0 ]; then
+		pkill -9 -s $sids >/dev/null 2>&1
+	fi
+	
+	rm -f $LOCKFILE
 }
 
 # Read configuration variable file if it is present
@@ -262,12 +261,12 @@ export EUCA_USER
 # let's try to pick the system apache2
 EUCANETD="$EUCALYPTUS/usr/sbin/eucanetd"
 if [ ! -x  "$EUCANETD" ]; then
-    echo "Failed to locate eucanetd binary: $EUCALYPTUS/usr/sbin/eucanetd"
-    exit 1
+	echo "Failed to locate eucanetd binary: $EUCALYPTUS/usr/sbin/eucanetd"
+	exit 1
 fi
 
 case "$1" in
-  start)
+	start)
 	if [ "$VERBOSE" != no ]; then
 		if [ "$WE_HAVE_LSB" = "Y" ]; then
 			log_daemon_msg "Starting $DESC" "$NAME"
@@ -275,21 +274,51 @@ case "$1" in
 			echo -n "Starting $DESC: "
 		fi
 	fi
-
+	
 	if do_status ; then
 		echo
 		echo "another eucanetd is already running!"
 		if [ "$VERBOSE" != no ]; then
-			 if [ "$WE_HAVE_LSB" = "Y" ]; then
+			if [ "$WE_HAVE_LSB" = "Y" ]; then
 				log_end_msg 1
 			fi
 		fi
 		exit 1
 	fi
-
+	
 	do_start
 	case "$?" in
-	0|1)
+		0|1)
+			if [ "$VERBOSE" != no ]; then
+				if [ "$WE_HAVE_LSB" = "Y" ]; then
+					log_end_msg 0
+				else
+					echo "done."
+				fi
+			fi
+		;;
+		*)
+			if [ "$VERBOSE" != no ]; then
+				if [ "$WE_HAVE_LSB" = "Y" ]; then
+					log_end_msg 1
+				else
+					echo "failed!"
+				fi
+			fi
+		;;
+	esac
+	;;
+	stop)
+		if [ "$VERBOSE" != no ]; then
+			if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_begin_msg "Stopping $DESC"
+			else
+				echo -n "Stopping $DESC: "
+			fi
+		fi
+		
+		do_stop
+		
 		if [ "$VERBOSE" != no ]; then
 			if [ "$WE_HAVE_LSB" = "Y" ]; then
 				log_end_msg 0
@@ -297,72 +326,41 @@ case "$1" in
 				echo "done."
 			fi
 		fi
-		;;
-	*)
+	;;
+	restart)
 		if [ "$VERBOSE" != no ]; then
 			if [ "$WE_HAVE_LSB" = "Y" ]; then
-				log_end_msg 1
+				log_begin_msg "Restarting $DESC"
 			else
-				echo "failed!"
+				echo -n "Restarting $DESC: "
 			fi
 		fi
-		;;
-	esac
-	;;
-  stop)
-	if [ "$VERBOSE" != no ]; then
-       		if [ "$WE_HAVE_LSB" = "Y" ]; then
-			log_begin_msg "Stopping $DESC"
-		else
-			echo -n "Stopping $DESC: "
-                fi
-        fi
-
-	do_stop
-
-	if [ "$VERBOSE" != no ]; then
-		if [ "$WE_HAVE_LSB" = "Y" ]; then
-			log_end_msg 0
-		else
-			echo "done."
+		
+		do_stop
+		do_start
+		
+		if [ "$VERBOSE" != no ]; then
+			if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 0
+			else
+				echo "done."
+			fi
 		fi
-	fi
 	;;
-  restart)
-	if [ "$VERBOSE" != no ]; then
-		if [ "$WE_HAVE_LSB" = "Y" ]; then
-			log_begin_msg "Restarting $DESC"
-		else
-			echo -n "Restarting $DESC: "
-		fi
-	fi
-
-	do_stop
-	do_start
-
-	if [ "$VERBOSE" != no ]; then
-		if [ "$WE_HAVE_LSB" = "Y" ]; then
-			log_end_msg 0
-		else
-			echo "done."
-		fi
-	fi
+	config)
+		echo "EUCALYPTUS=${EUCALYPTUS}"
+		echo "EUCANETD=${EUCANETD}"
 	;;
-  config)
-	echo "EUCALYPTUS=${EUCALYPTUS}"
-	echo "EUCANETD=${EUCANETD}"
-        ;;
-  status)
-	if do_status ; then
-		echo "eucanetd is running"
-	else
+	status)
+		if do_status ; then
+			echo "eucanetd is running"
+		else
+			exit 3
+		fi
+	;;
+	*)
+		echo "Usage: $NAME {start|stop|restart|status}" >&2
 		exit 3
-	fi
-        ;;
-
-  *)
-	echo "Usage: $NAME {start|stop|restart|status}" >&2
-	exit 3
 	;;
 esac
 

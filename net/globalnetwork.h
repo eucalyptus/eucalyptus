@@ -146,6 +146,9 @@ typedef struct globalNetworkInfo_t {
     char instanceDNSDomain[HOSTNAME_SIZE];
     u32 *instanceDNSServers;
     int max_instanceDNSServers;
+#ifdef USE_IP_ROUTE_HANDLER
+    u32 publicGateway;                 //!< Public network default gateway
+#endif /* USE_IP_ROUTE_HANDLER */
     u32 *public_ips;
     int max_public_ips;
     gni_subnet *subnets;

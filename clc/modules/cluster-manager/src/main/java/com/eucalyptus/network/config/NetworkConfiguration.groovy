@@ -48,6 +48,7 @@ class NetworkConfiguration {
   List<String> instanceDnsServers
   String macPrefix
   Midonet mido
+  String publicGateway
   List<String> publicIps  // List of ip address ranges
   List<String> privateIps // List of ip address ranges
   List<Subnet> subnets

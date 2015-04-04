@@ -63,12 +63,12 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-#ifndef _INCLUDE_EUCANETD_H_
-#define _INCLUDE_EUCANETD_H_
-
+#ifndef _INCLUDE_IPR_HANDLER_H_
+#define _INCLUDE_IPR_HANDLER_H_
+#ifdef USE_IP_ROUTE_HANDLER
 //!
-//! @file net/eucanetd.h
-//! This file needs a description
+//! @file net/ipr_handler.h
+//! Defines the IP Rule Handler API.
 //!
 
 /*----------------------------------------------------------------------------*\
@@ -77,18 +77,11 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#include <data.h>
-#include <ipt_handler.h>
-#include <atomic_file.h>
-#include <globalnetwork.h>
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  DEFINES                                   |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-
-#define NUM_EUCANETD_CONFIG                     1
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -108,48 +101,20 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-typedef struct eucanetdConfig_t {
-    ipt_handler *ipt;
-    ips_handler *ips;
-#ifdef USE_IP_ROUTE_HANDLER
-    ipr_handler *ipr;
-#endif /* USE_IP_ROUTE_HANDLER */
-    ebt_handler *ebt;
+//! Individual IP Rule Entry
+typedef struct ipr_rule {
+    char name[EUCA_MAX_PATH];   //!< The IP rule string
+    u32 operation;              //!< The operation bitmask to apply to this rule
+} ipr_rule;
 
-    char *eucahome, *eucauser;
-    char cmdprefix[EUCA_MAX_PATH];
-    char configFiles[NUM_EUCANETD_CONFIG][EUCA_MAX_PATH];
-    char bridgeDev[32];
-    u32 vmGatewayIP, clcMetadataIP;
-    char ncRouterIP[32];
-    char metadataIP[32];
-    char pubInterface[32];
-    char privInterface[32];
-    char dhcpDaemon[EUCA_MAX_PATH];
-    char midoeucanetdhost[HOSTNAME_SIZE];
-    char midosetupcore[32];
-    char midogwhost[HOSTNAME_SIZE];
-    char midogwip[HOSTNAME_SIZE];
-    char midogwiface[HOSTNAME_SIZE];
-    char midopubnw[HOSTNAME_SIZE];
-    char midopubgwip[HOSTNAME_SIZE];
-
-    atomic_file global_network_info_file;
-
-    // these are flags that can be set by values in eucalyptus.conf
-    int polling_frequency;
-    int disable_l2_isolation;
-    int nc_router_ip;
-    int nc_router;
-    int metadata_use_vm_private;
-    int metadata_ip;
-
-    boolean nc_proxy;                //!< Set to TRUE to indicate we're using the NC proxy feature
-
-    int debug, flushmode;
-    char vnetMode[32];
-    int init;
-} eucanetdConfig;
+//! The IP Rule structure
+typedef struct ipr_handler_t {
+    boolean initialized;        //!< Set to TRUE if the structure instance has been initialized
+    ipr_rule *pRuleList;        //!< Pointer to the list of IP rules
+    u32 nbRules;                //!< Number of rules in the list
+    char sIpRuleFile[EUCA_MAX_PATH]; //!< The temporary file name for saving the rules
+    char sCmdPrefix[EUCA_MAX_PATH];  //!< The prefix to any command we need to execute (usually path to rootwrap)
+} ipr_handler;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -163,49 +128,21 @@ typedef struct eucanetdConfig_t {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-int temporary(void);
+//! @{
+//! @name IP Rule APIs
+int ipr_handler_init(ipr_handler * pIprh, const char *psCmdPrefix);
 
-int daemonize(void);
+int ipr_handler_repopulate(ipr_handler * pIprh);
+int ipr_handler_flush(ipr_handler * pIprh);
+int ipr_handler_deploy(ipr_handler * pIprh);
 
-int eucanetdInit(void);
-int logInit(void);
+int ipr_handler_add_rule(ipr_handler * pIprh, const char *psRule);
+int ipr_handler_del_rule(ipr_handler * pIprh, const char *psRule);
+ipr_rule *ipr_handler_find_rule(ipr_handler * pIprh, const char *psRule);
 
-int read_config_bootstrap(void);
-int read_config(void);
-int read_latest_network(void);
-
-int fetch_latest_network(int *update_globalnet);
-int fetch_latest_localconfig(void);
-int fetch_latest_serviceIps(int *);
-int fetch_latest_euca_network(int *update_globalnet);
-
-int parse_network_topology(char *);
-int parse_pubprivmap(char *pubprivmap_file);
-int parse_ccpubprivmap(char *cc_configfile);
-
-//int ruleconvert(char *rulebuf, char *outrule);
-//int check_for_network_update(int *, int *);
-
-int update_private_ips(void);
-int update_public_ips(void);
-int update_sec_groups(void);
-int update_isolation_rules(void);
-
-int flush_all(void);
-
-void sec_groups_print(gni_secgroup * newgroups, int max_newgroups);
-gni_secgroup *find_sec_group_bypriv(gni_secgroup * groups, int max_groups, u32 privip, int *foundidx);
-gni_secgroup *find_sec_group_bypub(gni_secgroup * groups, int max_groups, u32 pubip, int *foundidx);
-
-int check_stderr_already_exists(int rc, char *o, char *e);
-
-char *mac2interface(char *mac);
-char *interface2mac(char *dev);
-
-int kick_dhcpd_server(void);
-int generate_dhcpd_config(void);
-
-// XML parsing stuff
+int ipr_handler_free(ipr_handler * pIprh);
+int ipr_handler_print(ipr_handler * pIprh);
+//! @}
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -225,4 +162,5 @@ int generate_dhcpd_config(void);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#endif /* ! _INCLUDE_EUCANETD_H_ */
+#endif /* USE_IP_ROUTE_HANDLER */
+#endif /* ! _INCLUDE_IPR_HANDLER_H_ */
