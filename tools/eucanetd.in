@@ -162,7 +162,6 @@ do_start() {
 	fi
 	chown eucalyptus:dhcpd $EUCALYPTUS/var/run/eucalyptus/net
 	
-	echo 'NC_PROXY="Y"' >> $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
 	ulimit -u 100000
 	ulimit -n 10000
 	# now we start the services
