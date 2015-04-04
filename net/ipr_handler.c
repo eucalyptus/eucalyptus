@@ -63,6 +63,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+#ifdef USE_IP_ROUTE_HANDLER
 //!
 //! @file net/ipr_handler.h
 //! Implements the IP Rule Handler API.
@@ -698,3 +699,4 @@ int ipr_handler_print(ipr_handler * pIprh)
     }
     return (0);
 }
+#endif /* USE_IP_ROUTE_HANDLER */

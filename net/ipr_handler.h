@@ -65,7 +65,7 @@
 
 #ifndef _INCLUDE_IPR_HANDLER_H_
 #define _INCLUDE_IPR_HANDLER_H_
-
+#ifdef USE_IP_ROUTE_HANDLER
 //!
 //! @file net/ipr_handler.h
 //! Defines the IP Rule Handler API.
@@ -162,4 +162,5 @@ int ipr_handler_print(ipr_handler * pIprh);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+#endif /* USE_IP_ROUTE_HANDLER */
 #endif /* ! _INCLUDE_IPR_HANDLER_H_ */

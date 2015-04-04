@@ -241,8 +241,10 @@ configEntry configKeysNoRestartEUCANETD[] = {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+#ifdef USE_IP_ROUTE_HANDLER
 static int install_public_routes(globalNetworkInfo * pGni);
 static int install_private_routes(globalNetworkInfo * pGni);
+#endif /* USE_IP_ROUTE_HANDLER */
 static int update_host_arp(void);
 
 /*----------------------------------------------------------------------------*\
@@ -639,11 +641,13 @@ int update_isolation_rules(void)
     LOGDEBUG("updating network isolation rules\n");
 
     if (config->nc_proxy) {
+#ifdef USE_IP_ROUTE_HANDLER
         // Populate our IP rules
         ipr_handler_repopulate(config->ipr);
 
         // Flush what we have, we'll re-add if necessary
         ipr_handler_flush(config->ipr);
+#endif /* USE_IP_ROUTE_HANDLER */
 
         // Now update our host information by sending Gratuitous ARP as necessary
         update_host_arp();
@@ -743,6 +747,7 @@ int update_isolation_rules(void)
                             snprintf(cmd, EUCA_MAX_PATH, "-p ARP -i %s -j arpreply --arpreply-mac %s", vnetinterface, brmac);
                             rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
 
+#ifdef USE_IP_ROUTE_HANDLER
                             // If I don't have a public IP, confine the traffic to the private network routes
                             if (!instances[i].publicIp) {
                                 snprintf(cmd, EUCA_MAX_PATH, "from %s lookup euca_private", strptra);
@@ -750,6 +755,7 @@ int update_isolation_rules(void)
                                 snprintf(cmd, EUCA_MAX_PATH, "from %s lookup euca_public", strptra);
                             }
                             rc = ipr_handler_add_rule(config->ipr, cmd);
+#endif /* USE_IP_ROUTE_HANDLER */
                         }
 
                         snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-mac-src ! %s -j DROP", vnetinterface, strptrb);
@@ -863,6 +869,7 @@ int update_isolation_rules(void)
         ret = 1;
     }
 
+#ifdef USE_IP_ROUTE_HANDLER
     if (config->nc_proxy) {
         rc = ipr_handler_print(config->ipr);
         rc = ipr_handler_deploy(config->ipr);
@@ -871,6 +878,7 @@ int update_isolation_rules(void)
             ret = 1;
         }
     }
+#endif /* USE_IP_ROUTE_HANDLER */
 
     return (ret);
 }
@@ -939,6 +947,7 @@ int update_sec_groups(void)
     char *strptra = NULL;
     char rule[1024] = "";
     gni_cluster *mycluster = NULL;
+    gni_cluster *pCluster = NULL;
 
     LOGDEBUG("updating security group membership and rules\n");
 
@@ -991,8 +1000,23 @@ int update_sec_groups(void)
     ips_set_flush(config->ips, "EUCA_ALLNONEUCA");
     ips_set_add_net(config->ips, "EUCA_ALLNONEUCA", "127.0.0.1", 32);
 
-    // add addition of private non-euca subnets to EUCA_ALLPRIVATE, here
+    // add addition of private non-euca subnets to EUCA_ALLPRIVATE, here. and start with our cluster subnet
+    if (config->nc_proxy) {
+        strptra = hex2dot(mycluster->private_subnet.subnet);
+        slashnet = NETMASK_TO_SLASHNET(mycluster->private_subnet.netmask);
+        ips_set_add_net(config->ips, "EUCA_ALLNONEUCA", strptra, slashnet);
+        EUCA_FREE(strptra);
 
+        // Now add all of the other cluster subnets
+        for (i = 0, pCluster = globalnetworkinfo->clusters; i < globalnetworkinfo->max_clusters; i++, pCluster++) {
+            strptra = hex2dot(pCluster->private_subnet.subnet);
+            slashnet = NETMASK_TO_SLASHNET(pCluster->private_subnet.netmask);
+            ips_set_add_net(config->ips, "EUCA_ALLNONEUCA", strptra, slashnet);
+            EUCA_FREE(strptra);
+        }
+    }
+
+    // Finally, add all of our known subnet
     for (i = 0; i < globalnetworkinfo->max_subnets; i++) {
         strptra = hex2dot(globalnetworkinfo->subnets[i].subnet);
         //        strptrb = hex2dot(globalnetworkinfo->subnets[i].netmask);
@@ -1272,6 +1296,16 @@ int update_public_ips(void)
         EUCA_FREE(strptrb);
     }
 
+    // Install the masquerade rules
+    if (config->nc_proxy) {
+        strptra = hex2dot(mycluster->private_subnet.subnet);
+        slashnet = NETMASK_TO_SLASHNET(mycluster->private_subnet.netmask);
+
+        snprintf(rule, EUCA_MAX_PATH, "-A EUCA_NAT_POST -s %s/%u -m mark ! --mark 0x2a -j MASQUERADE", strptra, slashnet);
+        ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_POST", rule);
+        EUCA_FREE(strptra);
+    }
+
     // lastly, install metadata redirect rule
     if (config->metadata_ip) {
         strptra = hex2dot(config->clcMetadataIP);
@@ -1347,6 +1381,7 @@ int update_private_ips(void)
 
     LOGDEBUG("updating private IP and DHCPD handling\n");
 
+#ifdef USE_IP_ROUTE_HANDLER
     // Make sure we can install our private and public subnet routes if NC_PROXY is enabled
     if (config->nc_proxy) {
         if ((rc = install_private_routes(globalnetworkinfo)) != 0) {
@@ -1359,6 +1394,7 @@ int update_private_ips(void)
             return (1);
         }
     }
+#endif /* USE_IP_ROUTE_HANDLER */
 
     rc = kick_dhcpd_server();
     if (rc) {
@@ -1369,6 +1405,7 @@ int update_private_ips(void)
     return (ret);
 }
 
+#ifdef USE_IP_ROUTE_HANDLER
 //!
 //! Checks whether or not we need to install our public routes. We only update this
 //! if the routes have changed.
@@ -1379,9 +1416,13 @@ int update_private_ips(void)
 //!
 //! @see
 //!
-//! @pre The pGni parameter MUST not be NULL
+//! @pre
+//!     - The pGni parameter MUST not be NULL
 //!
-//! @post On success the public routes have been updated
+//! @post
+//!     - On success the public routes have been updated if changed
+//!     - If the routes have not changed, then the routes remain
+//!     - On failure the results are non-deterministic
 //!
 //! @note
 //!
@@ -1588,9 +1629,13 @@ static int install_public_routes(globalNetworkInfo * pGni)
 //!
 //! @see
 //!
-//! @pre The pGni parameter MUST not be NULL
+//! @pre
+//!     - The pGni parameter MUST not be NULL
 //!
-//! @post On success the private routes have been updated
+//! @post
+//!     - On success the public routes have been updated if changed
+//!     - If the routes have not changed, then the routes remain
+//!     - On failure the results are non-deterministic
 //!
 //! @note
 //!
@@ -1712,6 +1757,7 @@ static int install_private_routes(globalNetworkInfo * pGni)
     EUCA_FREE(psGateway);
     return (ret);
 }
+#endif /* USE_IP_ROUTE_HANDLER */
 
 int kick_dhcpd_server()
 {
@@ -2214,6 +2260,7 @@ int read_config(void)
             ret = 1;
         }
 
+#ifdef USE_IP_ROUTE_HANDLER
         if ((config->ipr = EUCA_ZALLOC(1, sizeof(ipr_handler))) == NULL) {
             LOGFATAL("out of memory!\n");
             exit(1);
@@ -2223,6 +2270,7 @@ int read_config(void)
             LOGERROR("could not initialize ipr_handler: check above log errors for details\n");
             ret = 1;
         }
+#endif /* USE_IP_ROUTE_HANDLER */
 
         config->ebt = malloc(sizeof(ebt_handler));
         if (!config->ebt) {
@@ -2726,3 +2774,4 @@ static int update_host_arp(void)
     return (0);
 #endif /* USE_EUCA_ARP */
 }
+

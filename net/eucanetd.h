@@ -111,7 +111,9 @@
 typedef struct eucanetdConfig_t {
     ipt_handler *ipt;
     ips_handler *ips;
+#ifdef USE_IP_ROUTE_HANDLER
     ipr_handler *ipr;
+#endif /* USE_IP_ROUTE_HANDLER */
     ebt_handler *ebt;
 
     char *eucahome, *eucauser;
