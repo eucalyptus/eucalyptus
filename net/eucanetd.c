@@ -205,7 +205,7 @@ configEntry configKeysNoRestartEUCANETD[] = {
     ,
     {"DISABLE_L2_ISOLATION", "N"}
     ,
-    {"NC_PROXY", "Y"}
+    {"NC_PROXY", "N"}
     ,
     {"NC_ROUTER", "Y"}
     ,
