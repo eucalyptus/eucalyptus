@@ -111,7 +111,6 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		this.insert(new IAMRoleSetup(this));
 		this.insert(new InstanceProfileSetup(this));
 		this.insert(new IAMPolicySetup(this));
-		this.insert(new DNSANameSetup(this));
 		this.insert(new SecurityGroupSetup(this));
 		this.insert(new LoadBalancerASGroupCreator(this, EventHandlerChainNew.getCapacityPerZone( )));
 		this.insert(new TagCreator(this));
@@ -415,53 +414,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		public void rollback() throws EventHandlerException {
 		}
 	}
-	
-	static class DNSANameSetup extends AbstractEventHandler<NewLoadbalancerEvent> {
-		private String dnsName = null;
-		private String dnsZone= null;
-		DNSANameSetup(EventHandlerChain<NewLoadbalancerEvent> chain){
-			super(chain);
-		}
 		
-		@Override
-		public void apply(NewLoadbalancerEvent evt) throws EventHandlerException {	
-			LoadBalancer lb;
-			LoadBalancerDnsRecordCoreView dns;
-			try{
-				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
-				dns = lb.getDns();
-			}catch(NoSuchElementException ex){
-				throw new EventHandlerException("Failed to find the loadbalancer "+evt.getLoadBalancer(), ex);
-			}catch(Exception ex){
-				throw new EventHandlerException("Failed due to query exception", ex);
-			}
-			if(dns==null)
-				throw new EventHandlerException("No dns record is found with the loadbalancer "+evt.getLoadBalancer());
-			
-			try{
-				EucalyptusActivityTasks.getInstance().removeMultiARecord(dns.getZone(), dns.getName());
-				EucalyptusActivityTasks.getInstance().createARecord(dns.getZone(), dns.getName());
-				this.dnsName = dns.getName();
-				this.dnsZone = dns.getZone();
-			}catch(Exception ex){
-				throw new EventHandlerException("Failed to create new multiA name record");
-			}
-		}
-		
-
-		@Override
-		public void rollback() 
-				throws EventHandlerException {
-			if(this.dnsName!=null && this.dnsZone!= null){
-				try{
-					EucalyptusActivityTasks.getInstance().removeMultiARecord(this.dnsZone, this.dnsName);
-				}catch(Exception ex){
-					LOG.warn(String.format("failed to remove the multi A record (%s-%s)", this.dnsZone, this.dnsName), ex);
-				}
-			}
-		}
-	}
-	
 	static class SecurityGroupSetup extends AbstractEventHandler<NewLoadbalancerEvent> implements StoredResult<String>{
 		private String createdGroup = null;
 		private String createdGroupId = null;

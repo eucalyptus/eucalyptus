@@ -23,12 +23,15 @@ import static com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGro
 import static com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
 import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
 import static com.eucalyptus.util.dns.DnsResolvers.DnsResponse;
+
 import java.net.InetAddress;
 import java.util.List;
 import java.util.Set;
+
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
+
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -37,11 +40,15 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord;
 import com.eucalyptus.loadbalancing.LoadBalancers;
+import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
+import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.dns.DnsResolvers;
 import com.eucalyptus.util.dns.DomainNameRecords;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -88,12 +95,22 @@ public class LoadBalancerResolver implements DnsResolvers.DnsResolver {
           try ( final TransactionResource tx = Entities.transactionFor( LoadBalancer.class ) ) {
             final LoadBalancer loadBalancer =
                 LoadBalancers.getLoadbalancer( accountNamePair.getLeft( ), accountNamePair.getRight( ) );
+            final Predicate<LoadBalancerServoInstanceCoreView> canResolve = 
+                new Predicate<LoadBalancerServoInstanceCoreView>(){
+                  @Override
+                  public boolean apply(LoadBalancerServoInstanceCoreView arg0) {
+                    return arg0.canResolveDns();
+                  }
+            };
+            
             final Function<LoadBalancerServoInstanceCoreView,String> ipExtractor =
                 loadBalancer.getScheme( ) == LoadBalancer.Scheme.Internal ?
                     LoadBalancerServoInstanceCoreView.privateIp( ) :
                     LoadBalancerServoInstanceCoreView.address( );
             Iterables.addAll( ips, Iterables.transform(
-                INSTANCE.apply( loadBalancer.getAutoScaleGroup() ).getServos(),
+                Collections2.filter(
+                    INSTANCE.apply( loadBalancer.getAutoScaleGroup() ).getServos(),
+                    canResolve),
                 ipExtractor ) );
           }
           final List<Record> records = Lists.newArrayList( );

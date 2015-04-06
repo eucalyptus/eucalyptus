@@ -286,7 +286,12 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 
 		public String getPrivateIp(){
 				return this.entity.getPrivateIp();
-			}
+		}
+
+    public boolean canResolveDns(){
+      return DNS_STATE.Registered.equals(this.entity.getDnsState()) && 
+            STATE.InService.equals(this.entity.getState());
+    }
 
 		public static Function<LoadBalancerServoInstanceCoreView,String> address( ) {
 			return StringFunctions.ADDRESS;
@@ -295,7 +300,7 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 		public static Function<LoadBalancerServoInstanceCoreView,String> privateIp( ) {
 			return StringFunctions.PRIVATE_IP;
 		}
-
+		
 		private enum StringFunctions implements Function<LoadBalancerServoInstanceCoreView,String>{
 			ADDRESS {
 				@Nullable
@@ -431,15 +436,6 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 							privateIpAddr = instance.getPrivateIp();
 						}
 						
-						try{
-							final String zone = instance.getDns().getZone();
-							final String name = instance.getDns().getName();
-							EucalyptusActivityTasks.getInstance().addARecord(zone, name, ipAddr);
-						}catch(Exception ex){
-							LOG.warn("failed to register new ipaddress with dns A record", ex);
-							continue;
-						}
-
 						try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
 							final LoadBalancerServoInstance update = Entities.uniqueResult(instance);
 							update.setAddress(ipAddr);
@@ -457,17 +453,6 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 						LoadBalancerServoInstance.STATE.Error.equals(instance.getState())
 						){
 					if(!LoadBalancerServoInstance.DNS_STATE.Deregistered.equals(instance.getDnsState())){
-						try{
-							final String ipAddr = instance.getAddress();
-							if(ipAddr==null) // IP address not found yet
-								continue;
-							final String zone = instance.getDns().getZone();
-							final String name = instance.getDns().getName();
-							EucalyptusActivityTasks.getInstance().removeARecord(zone, name, ipAddr);
-						}catch(Exception ex){
-							LOG.warn("failed to remove IP address from the dns A record", ex);
-							continue;
-						}
 						try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
 							final LoadBalancerServoInstance update = Entities.uniqueResult(instance);
 							update.setDnsState(LoadBalancerServoInstance.DNS_STATE.Deregistered);

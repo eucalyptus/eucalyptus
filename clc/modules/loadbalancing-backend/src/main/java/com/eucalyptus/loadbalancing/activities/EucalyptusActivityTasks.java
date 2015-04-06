@@ -65,7 +65,6 @@ import com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage;
 import com.eucalyptus.autoscaling.common.msgs.AvailabilityZones;
 import com.eucalyptus.autoscaling.common.msgs.CreateAutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.msgs.CreateLaunchConfigurationType;
-import com.eucalyptus.autoscaling.common.msgs.CreateOrUpdateTagsResponseType;
 import com.eucalyptus.autoscaling.common.msgs.CreateOrUpdateTagsType;
 import com.eucalyptus.autoscaling.common.msgs.DeleteAutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.msgs.DeleteLaunchConfigurationType;
@@ -84,7 +83,6 @@ import com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage;
 import com.eucalyptus.cloudwatch.common.msgs.MetricData;
 import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataType;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.ClusterInfoType;
@@ -134,11 +132,9 @@ import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.EmpyreanMessage;
 import com.eucalyptus.empyrean.ServiceStatusType;
-import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.DispatchingClient;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.Callback.Checked;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.base.Optional;
@@ -146,16 +142,10 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-import edu.ucsb.eucalyptus.msgs.AddMultiARecordType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.CreateMultiARecordType;
-
 import com.eucalyptus.compute.common.backend.CreateTagsType;
 import com.eucalyptus.compute.common.backend.DeleteTagsType;
 
-import edu.ucsb.eucalyptus.msgs.DnsMessage;
-import edu.ucsb.eucalyptus.msgs.RemoveMultiANameType;
-import edu.ucsb.eucalyptus.msgs.RemoveMultiARecordType;
 
 
 /**
@@ -266,10 +256,6 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
-	private class DnsSystemActivity extends SystemActivityContextSupport<DnsMessage, Dns> {
-		private DnsSystemActivity() { super( Dns.class ); }
-	}
-	
 	private class EmpyreanSystemActivity extends SystemActivityContextSupport<EmpyreanMessage, Empyrean>{
 		private EmpyreanSystemActivity() { super( Empyrean.class ); }
 	}
@@ -367,42 +353,6 @@ public class EucalyptusActivityTasks {
 		checkResult( task, new EucalyptusUserActivity( accountFullName ), "failed to create the group "+groupName );
 	}
 
-	public void createARecord(String zone, String name){
-		final DnsCreateNameRecordTask task = new DnsCreateNameRecordTask(zone, name);
-		checkResult(
-				task,
-				new DnsSystemActivity(),
-				"failed to create multi A record "
-		);
-	}
-	
-	public void addARecord(String zone, String name, String address){
-		final DnsAddARecordTask task = new DnsAddARecordTask(zone, name, address);
-		checkResult(
-				task,
-				new DnsSystemActivity(),
-				"failed to add A record "
-		);
-	}
-	
-	public void removeARecord(String zone, String name, String address){
-		final DnsRemoveARecordTask task = new DnsRemoveARecordTask(zone, name, address);
-		checkResult(
-				task,
-				new DnsSystemActivity(),
-				"failed to remove A record "
-		);
-	}
-	
-	public void removeMultiARecord(String zone, String name){
-		final DnsRemoveMultiARecordTask task = new DnsRemoveMultiARecordTask(zone, name);
-		checkResult(
-				task,
-				new DnsSystemActivity(),
-				"failed to remove multi A records "
-		);
-	}
-	
 	public void putCloudWatchMetricData(final String userId, final String namespace, final MetricData data){
 		final CloudWatchPutMetricDataTask task = new CloudWatchPutMetricDataTask(namespace, data);
 		checkResult(
@@ -1453,78 +1403,6 @@ public class EucalyptusActivityTasks {
 		}
 	}
 		
-	/// create new {name - {address1}} mapping
-	private class DnsCreateNameRecordTask extends EucalyptusActivityTask<DnsMessage, Dns>{
-		private String zone = null;
-		private String name = null;
-
-		private DnsCreateNameRecordTask(final String zone, final String name){
-			this.zone = zone;
-			this.name = name;
-		}
-		CreateMultiARecordType getRequest(){
-			final CreateMultiARecordType req = new CreateMultiARecordType();
-			req.setZone(this.zone);
-			req.setName(this.name);
-			req.setTtl(LoadBalancerDnsRecord.getLoadbalancerTTL());
-			return req;
-		}
-	}
-	
-	/// add {name-address} mapping into an existing {name - {addr1, addr2, etc } } map
-	private class DnsAddARecordTask extends EucalyptusActivityTask<DnsMessage, Dns>{
-		private String zone = null;
-		private String name = null;
-		private String address = null;
-		private DnsAddARecordTask(final String zone, final String name, final String address){
-			this.zone = zone;
-			this.name = name;
-			this.address = address;
-		}
-		AddMultiARecordType getRequest(){
-			final AddMultiARecordType req = new AddMultiARecordType();
-			req.setZone(this.zone);
-			req.setName(this.name);
-			req.setAddress(this.address);
-			req.setTtl(LoadBalancerDnsRecord.getLoadbalancerTTL());
-			return req;
-		}
-	}
-	
-	/// delete one name-address mapping from existing {name - {addr1, addr2, etc } } map
-	private class DnsRemoveARecordTask extends EucalyptusActivityTask<DnsMessage, Dns>{
-		private String zone = null;
-		private String name = null;
-		private String address = null;
-		private DnsRemoveARecordTask(final String zone, final String name, final String address){
-			this.zone = zone;
-			this.name = name;
-			this.address = address;
-		}
-		RemoveMultiARecordType getRequest(){
-			final RemoveMultiARecordType req = new RemoveMultiARecordType();
-			req.setZone(this.zone);
-			req.setName(this.name);
-			req.setAddress(this.address);
-			return req;
-		}
-	}
-	
-	/// delete name - {addr1, addr2, addr3, etc} mapping entirely
-	private class DnsRemoveMultiARecordTask extends EucalyptusActivityTask<DnsMessage, Dns>{
-		private String zone = null;
-		private String name = null;
-		private DnsRemoveMultiARecordTask(final String zone, final String name){
-			this.zone = zone;
-			this.name = name;
-		}
-		RemoveMultiANameType getRequest(){
-			final RemoveMultiANameType req = new RemoveMultiANameType();
-			req.setZone(this.zone);
-			req.setName(this.name);
-			return req;
-		}
-	}
 	private class EucalyptusDescribeInstanceTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Eucalyptus,List<RunningInstancesItemType>> {
 		private final List<String> instanceIds;
 		private boolean verbose = false;
