@@ -43,6 +43,12 @@
     },
     "VmExpirationDays": {
       "Type": "String"
+    },
+    "AvailabilityZones" : {
+       "Type": "CommaDelimitedList"
+    },
+    "NumberOfWorkers" : {
+       "Type": "Number"
     }
   },
   "Conditions" : {
@@ -51,16 +57,14 @@
   "Resources": {
     "ASG": {
       "Properties": {
-        "AvailabilityZones": {
-          "Fn::GetAZs": ""
-        },
-        "DesiredCapacity": 1,
+        "AvailabilityZones": { "Ref": "AvailabilityZones" },
+        "DesiredCapacity": { "Ref": "NumberOfWorkers" },
         "HealthCheckType": "EC2",
         "LaunchConfigurationName": {
           "Ref": "LaunchConfiguration"
         },
-        "MaxSize": 1,
-        "MinSize": 1,
+        "MaxSize": { "Ref": "NumberOfWorkers" },
+        "MinSize": { "Ref": "NumberOfWorkers" },
         "Tags": [
           {
             "Key": "Name",

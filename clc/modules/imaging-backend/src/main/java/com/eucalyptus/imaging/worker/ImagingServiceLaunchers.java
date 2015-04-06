@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
@@ -47,6 +48,7 @@ import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Charsets;
+import com.google.common.base.Joiner;
 import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 
@@ -158,6 +160,10 @@ public class ImagingServiceLaunchers {
           .add(new Parameter("LogServer", ImagingServiceProperties.LOG_SERVER));
       params.add(new Parameter("LogServerPort",
           ImagingServiceProperties.LOG_SERVER_PORT));
+      List<String> zones = ImagingServiceProperties.listConfiguredZones();
+      params.add(new Parameter("NumberOfWorkers", Integer.toString( zones.size() )));
+      params.add(new Parameter("AvailabilityZones",
+          Joiner.on(",").join( zones )));
       params.add(new Parameter("ImagingServiceUrl", String.format("imaging.%s",
           DNSProperties.DOMAIN)));
       params.add(new Parameter("EuareServiceUrl", String.format("euare.%s",
@@ -169,7 +175,7 @@ public class ImagingServiceLaunchers {
           ImagingServiceProperties.IMAGING_WORKER_STACK_NAME, template, params);
       LOG.debug("Done creating CF stack for the imaging worker");
     } catch (final Exception ex) {
-      throw ex;
+      throw new EucalyptusCloudException(ex);
     } finally {
       this.releaseLauncher(launcherId);
     }

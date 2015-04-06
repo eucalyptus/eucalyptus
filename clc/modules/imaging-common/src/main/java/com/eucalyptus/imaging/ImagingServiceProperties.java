@@ -241,13 +241,13 @@ public class ImagingServiceProperties {
           }
         } catch (final Exception ex) {
           throw new ConfigurablePropertyException(
-              "Faield to check availability zones", ex);
+              "Faield to change availability zones due to:" + ex.getMessage());
         }
       } catch (final ConfigurablePropertyException ex) {
         throw ex;
       } catch (final Exception ex) {
         throw new ConfigurablePropertyException(
-            "Failed to check availability zones", ex);
+            "Faield to change availability zones due to:" + ex.getMessage());
       }
     }
   }
