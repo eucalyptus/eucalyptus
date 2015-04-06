@@ -307,7 +307,7 @@ public class StackActivityImpl implements StackActivity {
 
       for (StackEntity.Output output : outputs) {
         output.setReady(true);
-        output.setReady(true);
+        if (!output.isAllowedByCondition()) continue; // don't evaluate outputs that won't show up anyway.
         JsonNode outputValue = FunctionEvaluation.evaluateFunctions(JsonHelper.getJsonNodeFromString(output.getJsonValue()), stackEntity, resourceInfoMap, effectiveUserId);
         if (outputValue == null || !outputValue.isValueNode()) {
           throw new ValidationErrorException("Cannot create outputs: All outputs must be strings.")
