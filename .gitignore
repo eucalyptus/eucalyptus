@@ -5,6 +5,7 @@
 *.o
 *.pyc
 *.pyo
+*.egg-info
 */generated
 .DS_Store
 .nbrun
