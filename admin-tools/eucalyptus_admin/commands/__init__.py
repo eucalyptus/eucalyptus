@@ -31,7 +31,7 @@ import sys
 import requestbuilder
 import requests
 
-from euca2ools import __version__
+from eucalyptus_admin import __version__
 
 
 EUCA2OOLS_DATADIR = '/usr/share/euca2ools'
