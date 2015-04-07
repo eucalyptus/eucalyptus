@@ -1,0 +1,93 @@
+#!/usr/bin/python -tt
+#
+# Copyright 2015 Eucalyptus Systems, Inc.
+#
+# Redistribution and use of this software in source and binary forms,
+# with or without modification, are permitted provided that the following
+# conditions are met:
+#
+#   Redistributions of source code must retain the above copyright notice,
+#   this list of conditions and the following disclaimer.
+#
+#   Redistributions in binary form must reproduce the above copyright
+#   notice, this list of conditions and the following disclaimer in the
+#   documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# Note that this script is used for both clusteradmin-register-nodes
+# and clcadmin-deregister-nodes because they are nearly identical and
+# meant to be self-contained.  Its behavior changes based on the name
+# of the executable.  The Makefile thus installs it twice.
+
+import argparse
+import fileinput
+import os.path
+import selinux
+import shutil
+import sys
+
+
+CONFPATH = 'etc/eucalyptus/eucalyptus.conf'
+
+
+def modify_node_list(confpath, nodes, remove=False):
+    if not nodes:
+        return
+    newconfpath = confpath + '.new'
+    try:
+        shutil.copy2(confpath, newconfpath)
+        for line in fileinput.input([newconfpath], inplace=True):
+            if line.startswith('NODES='):
+                # NODES="192.0.2.11 192.0.2.12 192.0.2.13"
+                nodes = set(line.split('=', 1)[1].strip('" ').split())
+                if remove:
+                    nodes.difference_update(nodes)
+                else:
+                    nodes.update(nodes)
+                newline = 'NODES="{0}"'.format(' '.join(nodes))
+                print newline.rstrip()
+            else:
+                print line.rstrip()
+    except IOError as err:
+        if os.path.isfile(newconfpath):
+            os.remove(newconfpath)
+        sys.exit('{0}: cannot access {1}: {2}'.format(
+            os.path.basename(sys.argv[0]), err.filename, err.strerror))
+    shutil.move(newconfpath, confpath)
+    if selinux.is_selinux_enabled():
+        selinux.restorecon(confpath)
+
+
+def main():
+    confpath = os.path.join(os.getenv('EUCALYPTUS') or '/', CONFPATH)
+    if os.path.basename(sys.argv[0]) == 'clusteradmin-deregister-nodes':
+        remove = True
+        parser = argparse.ArgumentParser(
+            description=('Remove node controllers from the availability zone '
+                         'managed by the cluster controller on this system'))
+        parser.add_argument('nodes', metavar='NODE', nargs='*',
+                            help='address of each node controller to remove')
+    else:
+        remove = False
+        parser = argparse.ArgumentParser(
+            description=('Add node controllers to the availability zone '
+                         'managed by the cluster controller on this system'))
+        parser.add_argument('nodes', metavar='NODE', nargs='*',
+                            help='address of each node controller to add')
+    args = parser.parse_args()
+    modify_node_list(confpath, set(args.nodes), remove=remove)
+
+
+if __name__ == '__main__':
+    main()
