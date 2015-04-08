@@ -19,9 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.template;
 
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.cloudformation.AccessDeniedException;
-import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.util.MessageHelper;
@@ -35,14 +33,17 @@ import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
 import com.eucalyptus.compute.common.DescribeSubnetsResponseType;
 import com.eucalyptus.compute.common.DescribeSubnetsType;
+import com.eucalyptus.compute.common.DescribeVpcsResponseType;
+import com.eucalyptus.compute.common.DescribeVpcsType;
 import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.compute.common.SubnetType;
+import com.eucalyptus.compute.common.VpcIdSetType;
+import com.eucalyptus.compute.common.VpcType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 
-import java.util.Arrays;
 import java.util.List;
 
 public class AWSParameterTypeValidationHelper {
@@ -81,6 +82,25 @@ public class AWSParameterTypeValidationHelper {
     }
     return retVal;
   }
+
+  public static List<String> getVPCIds(String effectiveUserId) throws AccessDeniedException {
+    List<String> retVal = Lists.newArrayList();
+    ServiceConfiguration configuration = Topology.lookup(Compute.class);
+    try {
+      DescribeVpcsType describeVpcsType = MessageHelper.createMessage(DescribeVpcsType.class, effectiveUserId);
+      DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.<DescribeVpcsType, DescribeVpcsResponseType>sendSync(configuration, describeVpcsType);
+      if (describeVpcsResponseType != null && describeVpcsResponseType.getVpcSet() != null && describeVpcsResponseType.getVpcSet().getItem() != null) {
+        for (VpcType vpcType:describeVpcsResponseType.getVpcSet().getItem()) {
+          retVal.add(vpcType.getVpcId());
+        }
+      }
+    } catch (Exception e) {
+      Throwable rootCause = Throwables.getRootCause(e);
+      throw new AccessDeniedException("Unable to access VPC ids.  " + (rootCause.getMessage() == null ? "" : rootCause.getMessage()));
+    }
+    return retVal;
+  }
+
 
   public static List<String> getSecurityGroupIds(String effectiveUserId) throws AccessDeniedException {
     List<String> retVal = Lists.newArrayList();
@@ -172,6 +192,30 @@ public class AWSParameterTypeValidationHelper {
       }
       for (String valueToCheck : valuesToCheck) {
         if (!subnetIds.contains(valueToCheck)) {
+          throw new ValidationErrorException("Parameter validation failed: parameter value " + valueToCheck +" for parameter name " + parameter.getKey() + " does not exist." );
+        }
+      }
+    } else if (parameterType == TemplateParser.ParameterType.AWS_EC2_VPC_Id ||
+      parameterType == TemplateParser.ParameterType.List_AWS_EC2_VPC_Id) {
+      List<String> vpcIds = AWSParameterTypeValidationHelper.getVPCIds(effectiveUserId);
+      JsonNode jsonNode = JsonHelper.getJsonNodeFromString(parameter.getJsonValue());
+      List<String> valuesToCheck = Lists.newArrayList();
+      if (parameterType == TemplateParser.ParameterType.AWS_EC2_VPC_Id) {
+        if (!jsonNode.isValueNode())
+          throw new ValidationErrorException("Invalid value for Parameter " + parameter.getKey());
+        valuesToCheck.add(jsonNode.asText());
+      } else {
+        if (!jsonNode.isArray())
+          throw new ValidationErrorException("Invalid value for Parameter " + parameter.getKey());
+        for (int i = 0; i < jsonNode.size(); i++) {
+          JsonNode elementNode = jsonNode.get(i);
+          if (!elementNode.isValueNode())
+            throw new ValidationErrorException("Invalid value for Parameter " + parameter.getKey());
+          valuesToCheck.add(elementNode.asText());
+        }
+      }
+      for (String valueToCheck : valuesToCheck) {
+        if (!vpcIds.contains(valueToCheck)) {
           throw new ValidationErrorException("Parameter validation failed: parameter value " + valueToCheck +" for parameter name " + parameter.getKey() + " does not exist." );
         }
       }

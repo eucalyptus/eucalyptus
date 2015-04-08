@@ -50,7 +50,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.StringTokenizer;
 import java.util.regex.PatternSyntaxException;
 
 
@@ -67,11 +66,13 @@ public class TemplateParser {
     AWS_EC2_KeyPair_KeyName("AWS::EC2::KeyPair::KeyName"),
     AWS_EC2_SecurityGroup_Id("AWS::EC2::SecurityGroup::Id"),
     AWS_EC2_Subnet_Id("AWS::EC2::Subnet::Id"),
+    AWS_EC2_VPC_Id("AWS::EC2::VPC::Id"),
     List_String("List<String>"),
     List_Number("List<Number>"),
     List_AWS_EC2_KeyPair_KeyName("List<AWS::EC2::KeyPair::KeyName>"),
     List_AWS_EC2_SecurityGroup_Id("List<AWS::EC2::SecurityGroup::Id>"),
-    List_AWS_EC2_Subnet_Id("List<AWS::EC2::Subnet::Id>");
+    List_AWS_EC2_Subnet_Id("List<AWS::EC2::Subnet::Id>"),
+    List_AWS_EC2_VPC_Id("List<AWS::EC2::VPC::Id>");
 
     private final String displayValue;
     ParameterType(String displayValue) {
@@ -422,6 +423,7 @@ public class TemplateParser {
         case AWS_EC2_KeyPair_KeyName:
         case AWS_EC2_SecurityGroup_Id:
         case AWS_EC2_Subnet_Id:
+        case AWS_EC2_VPC_Id:
           parsedIndividualType = ParameterType.String;
           isList = false;
           break;
@@ -437,6 +439,7 @@ public class TemplateParser {
         case List_AWS_EC2_KeyPair_KeyName:
         case List_AWS_EC2_SecurityGroup_Id:
         case List_AWS_EC2_Subnet_Id:
+        case List_AWS_EC2_VPC_Id:
           parsedIndividualType = ParameterType.String;
           isList = true;
           break;
