@@ -32,7 +32,3 @@ class DeregisterService(EmpyreanRequest):
     DESCRIPTION = 'De-register an instance of a service'
     ARGS = [Arg('Name', metavar='SVCINSTANCE',
                 help='name of the service instance to de-register')]
-
-    def print_result(self, result):
-        import pprint
-        pprint.pprint(result)
