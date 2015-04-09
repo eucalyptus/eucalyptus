@@ -19,12 +19,13 @@
  ************************************************************************/
 package com.eucalyptus.vm
 
+import com.eucalyptus.compute.common.internal.vm.VmInstance
 import org.junit.Test
 import com.eucalyptus.tags.FilterSupportTest
-import com.eucalyptus.images.ImageInfo
-import com.eucalyptus.images.KernelImageInfo
-import com.eucalyptus.images.MachineImageInfo
-import com.eucalyptus.images.RamdiskImageInfo
+import com.eucalyptus.compute.common.internal.images.ImageInfo
+import com.eucalyptus.compute.common.internal.images.KernelImageInfo
+import com.eucalyptus.compute.common.internal.images.MachineImageInfo
+import com.eucalyptus.compute.common.internal.images.RamdiskImageInfo
 
 /**
  * Unit tests for instance filter support

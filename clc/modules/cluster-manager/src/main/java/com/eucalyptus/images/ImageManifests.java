@@ -82,6 +82,7 @@ import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
 import com.eucalyptus.auth.principal.EuareUser;
+import com.eucalyptus.compute.common.internal.images.ImageInfo;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 

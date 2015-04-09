@@ -78,23 +78,25 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.compute.common.CloudMetadata.VmTypeMetadata;
 import com.eucalyptus.compute.common.ImageMetadata;
-import com.eucalyptus.cloud.util.InvalidMetadataException;
-import com.eucalyptus.cloud.util.MetadataException;
-import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.compute.common.internal.util.InvalidMetadataException;
+import com.eucalyptus.compute.common.internal.util.MetadataException;
+import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.compute.common.VmTypeDetails;
+import com.eucalyptus.compute.common.internal.vmtypes.EphemeralDisk;
+import com.eucalyptus.compute.common.internal.vmtypes.VmType;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.images.BlockStorageImageInfo;
-import com.eucalyptus.images.BootableImageInfo;
+import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
+import com.eucalyptus.compute.common.internal.images.BootableImageInfo;
 import com.eucalyptus.images.ImageManager;
 import com.eucalyptus.images.Images;
-import com.eucalyptus.images.MachineImageInfo;
+import com.eucalyptus.compute.common.internal.images.MachineImageInfo;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.LockResource;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
@@ -190,7 +192,7 @@ public class VmTypes {
       Entities.registerClose( VmType.class );
       try {
         VmType vmType = Entities.uniqueResult( VmType.named( input ) );
-        Iterators.size( vmType.getEpehemeralDisks().iterator() ); // Ensure materialized
+        Iterators.size( vmType.getEphemeralDisks().iterator() ); // Ensure materialized
         return vmType;
       } catch ( Exception ex ) {
         if ( !(ex instanceof NoSuchElementException) ) LOG.error( ex );
@@ -198,7 +200,7 @@ public class VmTypes {
         PredefinedTypes t = PredefinedTypes.valueOf( input.toUpperCase( ).replace( ".", "" ) );
         VmType vmType = VmType.create( input, t.getCpu( ), t.getDisk( ), t.getMemory( ) );
         vmType = Entities.persist( vmType );
-        Iterators.size( vmType.getEpehemeralDisks().iterator() ); // Ensure materialized
+        Iterators.size( vmType.getEphemeralDisks().iterator() ); // Ensure materialized
         return vmType;
       }
     }
@@ -369,25 +371,19 @@ public class VmTypes {
     ephemeral3;
     
     public EphemeralDisk create( String deviceName, Integer size ) {
-      return EphemeralDisk.create( this.name( ), deviceName, size, Format.ext3 );
+      return EphemeralDisk.create( this.name( ), deviceName, size, EphemeralDisk.Format.ext3 );
     }
     
-    public EphemeralDisk create( String deviceName, Integer size, Format format ) {
+    public EphemeralDisk create( String deviceName, Integer size, EphemeralDisk.Format format ) {
       return EphemeralDisk.create( this.name( ), deviceName, size, format );
     }
     
-    private static EphemeralDisk create( Integer ephemeralIndex, String deviceName, Integer size, Format format ) {
+    private static EphemeralDisk create( Integer ephemeralIndex, String deviceName, Integer size, EphemeralDisk.Format format ) {
       return EphemeralDisk.create( "ephemeral" + ephemeralIndex, deviceName, size, format );
     }
     
   }
-  
-  public enum Format {
-    swap,
-    ext3,
-    none
-  }
-  
+
   enum Attribute {
     ssd,
     gpu,
@@ -417,76 +413,76 @@ public class VmTypes {
             Attribute.ebsonly ),
     M1SMALL( "m1.small",
             1, ROOTFS / 2, GB / 4,
-            VirtualDevice.ephemeral0.create( "/dev/sda2", 10, Format.ext3 ),
-            VirtualDevice.ephemeral1.create( "/dev/sda3", 1, Format.swap ) ),
+            VirtualDevice.ephemeral0.create( "/dev/sda2", 10, EphemeralDisk.Format.ext3 ),
+            VirtualDevice.ephemeral1.create( "/dev/sda3", 1, EphemeralDisk.Format.swap ) ),
     M1MEDIUM( "m1.medium",
              1, ROOTFS, GB / 2,
-             VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ) ),
+             VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ) ),
     C1MEDIUM( "c1.medium",
              2, ROOTFS, GB / 2,
-             VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ) ),
+             VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ) ),
     M1LARGE( "m1.large",
             2, ROOTFS, GB / 2,
-            VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ),
-            VirtualDevice.ephemeral1.create( "/dev/sdc", 20, Format.ext3 ) ),
+            VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ),
+            VirtualDevice.ephemeral1.create( "/dev/sdc", 20, EphemeralDisk.Format.ext3 ) ),
     M1XLARGE( "m1.xlarge",
              2, ROOTFS, GB,
-             VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ),
-             VirtualDevice.ephemeral1.create( "/dev/sdc", 20, Format.ext3 ),
-             VirtualDevice.ephemeral2.create( "/dev/sdd", 20, Format.ext3 ),
-             VirtualDevice.ephemeral3.create( "/dev/sde", 20, Format.ext3 ) ),
+             VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ),
+             VirtualDevice.ephemeral1.create( "/dev/sdc", 20, EphemeralDisk.Format.ext3 ),
+             VirtualDevice.ephemeral2.create( "/dev/sdd", 20, EphemeralDisk.Format.ext3 ),
+             VirtualDevice.ephemeral3.create( "/dev/sde", 20, EphemeralDisk.Format.ext3 ) ),
     M2XLARGE( "m2.xlarge",
              2, ROOTFS, 2 * GB,
-             VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ) ),
+             VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ) ),
     C1XLARGE( "c1.xlarge",
              2, ROOTFS, 2 * GB,
-             VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ),
-             VirtualDevice.ephemeral1.create( "/dev/sdc", 20, Format.ext3 ),
-             VirtualDevice.ephemeral2.create( "/dev/sdd", 20, Format.ext3 ),
-             VirtualDevice.ephemeral3.create( "/dev/sde", 20, Format.ext3 ) ),
+             VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ),
+             VirtualDevice.ephemeral1.create( "/dev/sdc", 20, EphemeralDisk.Format.ext3 ),
+             VirtualDevice.ephemeral2.create( "/dev/sdd", 20, EphemeralDisk.Format.ext3 ),
+             VirtualDevice.ephemeral3.create( "/dev/sde", 20, EphemeralDisk.Format.ext3 ) ),
     M3XLARGE( "m3.xlarge",
              4, ROOTFS + ROOTFS / 2, 2 * GB,
              Attribute.ebsonly ),
     M22XLARGE( "m2.2xlarge",
               2, 3 * ROOTFS, 4 * GB,
-              VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ) ),
+              VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ) ),
     M32XLARGE( "m3.2xlarge",
               4, 3 * ROOTFS, 4 * GB,
               Attribute.ebsonly ),
     CC14XLARGE( "cc1.4xlarge",
                8, 6 * ROOTFS, 3 * GB,
-               VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ),
-               VirtualDevice.ephemeral1.create( "/dev/sdc", 20, Format.ext3 ) ),
+               VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ),
+               VirtualDevice.ephemeral1.create( "/dev/sdc", 20, EphemeralDisk.Format.ext3 ) ),
     M24XLARGE( "m2.4xlarge",
               8, 6 * ROOTFS, 4 * GB,
-              VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ),
-              VirtualDevice.ephemeral1.create( "/dev/sdc", 20, Format.ext3 ) ),
+              VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ),
+              VirtualDevice.ephemeral1.create( "/dev/sdc", 20, EphemeralDisk.Format.ext3 ) ),
     HI14XLARGE( "hi1.4xlarge",
                8, 12 * ROOTFS, 6 * GB,
                Attribute.ssd,
-               VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ),
-               VirtualDevice.ephemeral1.create( "/dev/sdc", 20, Format.ext3 ) ),
+               VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ),
+               VirtualDevice.ephemeral1.create( "/dev/sdc", 20, EphemeralDisk.Format.ext3 ) ),
     CC28XLARGE( "cc2.8xlarge",
                16, 12 * ROOTFS, 6 * GB,
-               VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ),
-               VirtualDevice.ephemeral1.create( "/dev/sdc", 20, Format.ext3 ),
-               VirtualDevice.ephemeral2.create( "/dev/sdd", 20, Format.ext3 ),
-               VirtualDevice.ephemeral3.create( "/dev/sde", 20, Format.ext3 ) ),
+               VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ),
+               VirtualDevice.ephemeral1.create( "/dev/sdc", 20, EphemeralDisk.Format.ext3 ),
+               VirtualDevice.ephemeral2.create( "/dev/sdd", 20, EphemeralDisk.Format.ext3 ),
+               VirtualDevice.ephemeral3.create( "/dev/sde", 20, EphemeralDisk.Format.ext3 ) ),
     CG14XLARGE( "cg1.4xlarge",
                16, 20 * ROOTFS, 12 * GB,
                Attribute.gpu,
-               VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ),
-               VirtualDevice.ephemeral1.create( "/dev/sdc", 20, Format.ext3 ) ),
+               VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ),
+               VirtualDevice.ephemeral1.create( "/dev/sdc", 20, EphemeralDisk.Format.ext3 ) ),
     CR18XLARGE( "cr1.8xlarge",
                16, 24 * ROOTFS, 16 * GB,
                Attribute.ssd,
-               VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ),
-               VirtualDevice.ephemeral1.create( "/dev/sdc", 20, Format.ext3 ) ),
+               VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ),
+               VirtualDevice.ephemeral1.create( "/dev/sdc", 20, EphemeralDisk.Format.ext3 ) ),
     HS18XLARGE( "hs1.8xlarge",
                48, 24 * 100 * ROOTFS, 117 * GB ) {
       {
         for ( int i = 0; i < 24; i++ ) {
-          this.getEphemeralDisks( ).add( VirtualDevice.create( i, Images.DEFAULT_EPHEMERAL_DEVICE, 20, Format.ext3 ) );
+          this.getEphemeralDisks( ).add( VirtualDevice.create( i, Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ) );
         }
       }
     };

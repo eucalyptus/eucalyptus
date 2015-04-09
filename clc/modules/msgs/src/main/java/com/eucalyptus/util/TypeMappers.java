@@ -100,27 +100,39 @@ public class TypeMappers {
   
   private static Logger                          LOG          = Logger.getLogger( TypeMappers.class );
   private static SortedSetMultimap<Class, Class> knownMappers = TreeMultimap.create( CompareClasses.INSTANCE, CompareClasses.INSTANCE );
-  private static Map<String, Function>           mappers      = Maps.newHashMap( );
-  
+  private static Map<String, Function>           mappers      = Maps.newConcurrentMap();
+  private static final Joiner                    keyJoiner    = Joiner.on( "=>" );
+
   public static <A, B> B transform( A from, Class<B> to ) {
     Class target = from.getClass( );
-    for ( Class p : Classes.ancestors( from ) ) {
-      if ( knownMappers.containsKey( p ) && knownMappers.get( p ).contains( to ) ) {
-        target = p;
-        break;
+    Function func = lookupUnsafe( target, to );
+    if ( func == null ) {
+      for ( Class p : Classes.ancestors( from ) ) {
+        if ( knownMappers.containsKey( p ) && knownMappers.get( p ).contains( to ) ) {
+          target = p;
+          break;
+        }
       }
+      func = lookup( target, to );
+      recordMapper( from.getClass( ), to, func );
     }
-    Function func = lookup( target, to );
     return ( B ) func.apply( from );
   }
   
   public static <A, B> Function<A, B> lookup( Class<A> a, Class<B> b ) {
-    checkParam( knownMappers.keySet(), hasItem( a ) );
-    checkParam( knownMappers.get( a ), hasItem( b ) );
-    String key = Joiner.on( "=>" ).join( a, b );
+    final Function<A,B> mapper = lookupUnsafe( a, b );
+    if ( mapper == null ) {
+      checkParam( knownMappers.keySet(), hasItem( a ) );
+      checkParam( knownMappers.get( a ), hasItem( b ) );
+    }
+    return mapper;
+  }
+
+  private static <A, B> Function<A, B> lookupUnsafe( Class<A> a, Class<B> b ) {
+    final String key = key( a, b );
     return mappers.get( key );
   }
-  
+
   public static class TypeMapperDiscovery extends ServiceJarDiscovery {
     
     @Override
@@ -156,15 +168,23 @@ public class TypeMappers {
     }
     
   }
+
+  private static String key( final Class<?> from, Class<?> to ) {
+    return keyJoiner.join( from, to );
+  }
   
   private static void registerMapper( Class from, Class to, Function mapper ) {
     EventRecord.here( TypeMapperDiscovery.class, EventType.BOOTSTRAP_INIT_DISCOVERY, "mapper", from.getCanonicalName( ), to.getCanonicalName( ),
                       mapper.getClass( ).getCanonicalName( ) ).info( );
-    String key = Joiner.on( "=>" ).join( from, to );
+    String key = key( from, to );
     checkParam( knownMappers.get( from ), not( hasItem( to ) ) );
     checkParam( mappers, not( hasKey( key ) ) );
     knownMappers.put( from, to );
+    recordMapper( from, to, mapper );
+  }
+
+  private static void recordMapper( Class from, Class to, Function mapper ) {
+    String key = key( from, to );
     mappers.put( key, mapper );
-    
   }
 }

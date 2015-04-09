@@ -19,6 +19,13 @@
  ************************************************************************/
 package com.eucalyptus.images
 
+import com.eucalyptus.compute.common.internal.images.BlockStorageDeviceMapping
+import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo
+import com.eucalyptus.compute.common.internal.images.DeviceMapping
+import com.eucalyptus.compute.common.internal.images.ImageInfo
+import com.eucalyptus.compute.common.internal.images.KernelImageInfo
+import com.eucalyptus.compute.common.internal.images.MachineImageInfo
+import com.eucalyptus.compute.common.internal.images.RamdiskImageInfo
 import org.junit.Test
 import com.eucalyptus.compute.common.ImageMetadata.Architecture
 import com.eucalyptus.compute.common.ImageMetadata.Type

@@ -76,9 +76,8 @@ import org.xbill.DNS.SetResponse;
 
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.dns.DomainNames;
-import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.vm.VmNetworkConfig;
 import com.eucalyptus.ws.StackConfiguration;
 
 
@@ -116,7 +115,7 @@ public class TransientPtrZone extends Zone {
 	      target = new Name( instance.getPublicDnsName( ) + ".");
 	    } catch ( Exception e ) {
 	      if ( VmInstances.privateIpInUse( ipCandidate ) ) try {
-	        target = new Name( VmNetworkConfig.generateDnsName( ipCandidate, DomainNames.internalSubdomain( ) ) + "." );
+	        target = new Name( VmInstances.generateDnsName( ipCandidate, DomainNames.internalSubdomain( ) ) + "." );
 	      } catch ( Exception e1 ) {
           return super.findRecords( name, type, listenerAddress );
         } else {

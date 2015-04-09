@@ -22,8 +22,8 @@ package com.eucalyptus.compute.policy;
 import static com.eucalyptus.compute.policy.ComputePolicyContext.ComputePolicyContextResource;
 import static com.eucalyptus.compute.policy.ComputePolicyContext.ComputePolicyContextResourceSupport;
 import javax.annotation.Nullable;
-import com.eucalyptus.images.BlockStorageImageInfo;
-import com.eucalyptus.images.ImageInfo;
+import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
+import com.eucalyptus.compute.common.internal.images.ImageInfo;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 

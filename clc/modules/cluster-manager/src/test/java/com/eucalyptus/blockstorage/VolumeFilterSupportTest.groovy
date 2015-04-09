@@ -17,9 +17,9 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.blockstorage;
+package com.eucalyptus.blockstorage
 
-
+import com.eucalyptus.compute.common.internal.blockstorage.Volume;
 import com.eucalyptus.tags.FilterSupportTest;
 
 

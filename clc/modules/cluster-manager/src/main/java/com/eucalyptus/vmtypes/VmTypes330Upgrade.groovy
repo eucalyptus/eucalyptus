@@ -62,6 +62,7 @@
 
 package com.eucalyptus.vmtypes
 
+import com.eucalyptus.compute.common.internal.vmtypes.VmType
 import groovy.sql.Sql
 import java.util.concurrent.Callable
 import org.apache.log4j.Logger
@@ -88,9 +89,9 @@ import groovy.transform.CompileStatic
  * <p>
  * <strong>SchemaUpdate</strong>
  * <ol>
- * <li>Rename the {@link VmType} table to be <tt>cloud_vm_type</tt> leaving the old definitions in
+ * <li>Rename the {@link com.eucalyptus.compute.common.internal.vmtypes.VmType} table to be <tt>cloud_vm_type</tt> leaving the old definitions in
  * <tt>cloud_vm_types</tt> (schema update)
- * <li>Rename the {@link JoinColumn} used to reference the {@link VmType} in {@link VmBootRecord}
+ * <li>Rename the {@link JoinColumn} used to reference the {@link com.eucalyptus.compute.common.internal.vmtypes.VmType} in {@link VmBootRecord}
  * from <tt>vmtype_id</tt> to be <tt>metadata_vm_type_id</tt> (schema update)
  * </ol>
  * </p>
@@ -219,11 +220,11 @@ WHERE constraint_type = 'FOREIGN KEY' AND tc.table_name='metadata_instances' AND
   /**
    * <strong>EntityUpgrade</strong>
    * <ol>
-   * <li>Store all of the new {@link VmType}s using the new table <tt>cloud_vm_type</tt>
-   * <li>Update all {@link VmBootRecord} references to the old primary keys.  For each {@link VmType}:
+   * <li>Store all of the new {@link com.eucalyptus.compute.common.internal.vmtypes.VmType}s using the new table <tt>cloud_vm_type</tt>
+   * <li>Update all {@link VmBootRecord} references to the old primary keys.  For each {@link com.eucalyptus.compute.common.internal.vmtypes.VmType}:
    * <ol>
-   * <li>Check to see if we previously had this {@link VmType}
-   * <li>If so, update <tt>metadata_vm_type_id</tt> in {@link VmBootRecord} where ever <tt>vmtype_id</tt> refers to the old {@link VmType#getId()}
+   * <li>Check to see if we previously had this {@link com.eucalyptus.compute.common.internal.vmtypes.VmType}
+   * <li>If so, update <tt>metadata_vm_type_id</tt> in {@link VmBootRecord} where ever <tt>vmtype_id</tt> refers to the old {@link com.eucalyptus.compute.common.internal.vmtypes.VmType#getId()}
    * </ol>
    * </ol>
    * </p>

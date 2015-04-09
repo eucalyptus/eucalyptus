@@ -24,7 +24,8 @@ import java.util.Collections;
 import java.util.Set;
 
 import com.eucalyptus.compute.common.ImageMetadata;
-import com.eucalyptus.compute.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.common.internal.images.BootableImageInfo;
 
 /**
  * BootableImageInfo for use when original info is unavailable

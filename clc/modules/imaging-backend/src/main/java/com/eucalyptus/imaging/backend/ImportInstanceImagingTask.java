@@ -49,7 +49,7 @@ import com.eucalyptus.compute.common.ImportInstanceTaskDetails;
 import com.eucalyptus.compute.common.ImportInstanceType;
 import com.eucalyptus.compute.common.ImportInstanceVolumeDetail;
 import com.eucalyptus.compute.common.Volume;
-import com.eucalyptus.compute.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.imaging.ImportTaskProperties;
 import com.eucalyptus.resources.client.Ec2Client;

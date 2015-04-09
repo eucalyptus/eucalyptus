@@ -19,15 +19,13 @@
  ************************************************************************/
 package com.eucalyptus.compute.vpc.persist;
 
-import java.util.Collections;
 import java.util.NoSuchElementException;
-import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.common.CloudMetadata;
-import com.eucalyptus.compute.vpc.Vpc;
-import com.eucalyptus.compute.vpc.VpcMetadataException;
-import com.eucalyptus.compute.vpc.VpcMetadataNotFoundException;
-import com.eucalyptus.compute.vpc.Vpcs;
+import com.eucalyptus.compute.common.internal.vpc.Vpc;
+import com.eucalyptus.compute.common.internal.vpc.VpcMetadataException;
+import com.eucalyptus.compute.common.internal.vpc.VpcMetadataNotFoundException;
+import com.eucalyptus.compute.common.internal.vpc.Vpcs;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;

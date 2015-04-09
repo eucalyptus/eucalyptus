@@ -27,12 +27,12 @@ import com.eucalyptus.auth.principal.UserFullName
 import com.eucalyptus.cloud.VmRunType.Builder as VmRunBuilder
 import com.eucalyptus.cloud.run.Allocations.Allocation
 import com.eucalyptus.cloud.run.ClusterAllocator.State
-import com.eucalyptus.cloud.util.IllegalMetadataAccessException
-import com.eucalyptus.cloud.util.InvalidMetadataException
-import com.eucalyptus.cloud.util.InvalidParameterCombinationMetadataException
-import com.eucalyptus.cloud.util.MetadataException
-import com.eucalyptus.cloud.util.ResourceAllocationException
-import com.eucalyptus.cloud.util.SecurityGroupLimitMetadataException
+import com.eucalyptus.compute.common.internal.util.IllegalMetadataAccessException
+import com.eucalyptus.compute.common.internal.util.InvalidMetadataException
+import com.eucalyptus.compute.common.internal.util.InvalidParameterCombinationMetadataException
+import com.eucalyptus.compute.common.internal.util.MetadataException
+import com.eucalyptus.compute.common.internal.util.ResourceAllocationException
+import com.eucalyptus.compute.common.internal.util.SecurityGroupLimitMetadataException
 import com.eucalyptus.component.Partition
 import com.eucalyptus.component.Partitions
 import com.eucalyptus.component.id.Eucalyptus
@@ -51,27 +51,27 @@ import com.eucalyptus.compute.common.network.PublicIPResource
 import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType
 import com.eucalyptus.compute.common.network.SecurityGroupResource
 import com.eucalyptus.compute.common.network.VpcNetworkInterfaceResource
-import com.eucalyptus.compute.identifier.ResourceIdentifiers
-import com.eucalyptus.compute.vpc.NetworkInterfaceAttachment
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterfaceAttachment
 import com.eucalyptus.compute.vpc.NetworkInterfaceHelper
-import com.eucalyptus.compute.vpc.NetworkInterfaces
-import com.eucalyptus.compute.vpc.NetworkInterface as VpcNetworkInterface
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterfaces
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterface as VpcNetworkInterface
 import com.eucalyptus.compute.vpc.NoSuchSubnetMetadataException
-import com.eucalyptus.compute.vpc.Subnet
-import com.eucalyptus.compute.vpc.Subnets
+import com.eucalyptus.compute.common.internal.vpc.Subnet
+import com.eucalyptus.compute.common.internal.vpc.Subnets
 import com.eucalyptus.compute.vpc.VpcConfiguration
-import com.eucalyptus.compute.vpc.VpcMetadataNotFoundException
+import com.eucalyptus.compute.common.internal.vpc.VpcMetadataNotFoundException
 import com.eucalyptus.compute.vpc.VpcRequiredMetadataException
-import com.eucalyptus.compute.vpc.Vpcs
+import com.eucalyptus.compute.common.internal.vpc.Vpcs
 import com.eucalyptus.compute.vpc.persist.PersistenceNetworkInterfaces
 import com.eucalyptus.compute.vpc.persist.PersistenceSubnets
 import com.eucalyptus.compute.vpc.persist.PersistenceVpcs
 import com.eucalyptus.entities.Entities
 import com.eucalyptus.entities.Transactions
-import com.eucalyptus.network.NetworkGroup
+import com.eucalyptus.compute.common.internal.network.NetworkGroup
 import com.eucalyptus.network.NetworkGroups
 import com.eucalyptus.network.PrivateAddresses
-import com.eucalyptus.network.PrivateNetworkIndex
+import com.eucalyptus.compute.common.internal.network.PrivateNetworkIndex
 import com.eucalyptus.records.Logs
 import com.eucalyptus.system.Threads
 import com.eucalyptus.util.Callback
@@ -84,11 +84,11 @@ import com.eucalyptus.util.RestrictedTypes
 import com.eucalyptus.util.TypedKey
 import com.eucalyptus.util.async.StatefulMessageSet
 import com.eucalyptus.util.dns.DomainNames
-import com.eucalyptus.vm.VmInstance
-import com.eucalyptus.vm.VmInstance.VmState
-import com.eucalyptus.vm.VmInstance.Builder as VmInstanceBuilder
+import com.eucalyptus.compute.common.internal.vm.VmInstance
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState
+import com.eucalyptus.vm.VmInstances.Builder as VmInstanceBuilder
 import com.eucalyptus.vm.VmInstances
-import com.eucalyptus.vm.VmNetworkConfig
+import com.eucalyptus.compute.common.internal.vm.VmNetworkConfig
 import com.google.common.base.Function
 import com.google.common.base.Optional
 import com.google.common.base.Predicates
@@ -357,7 +357,7 @@ class VmInstanceLifecycleHelpers {
       resource?.with{
         builder.onBuild({ VmInstance instance ->
           instance.updateMacAddress( resource.mac )
-          instance.updatePrivateAddress( resource.value )
+          VmInstances.updatePrivateAddress( instance, resource.value )
           PrivateAddresses.associate( resource.value, instance )
         } as Callback<VmInstance>)
       }
@@ -387,7 +387,7 @@ class VmInstanceLifecycleHelpers {
           resourceToken.getAttribute(NetworkResourcesKey).find{ it instanceof PrivateIPResource }
       resource?.with{
         instance.updateMacAddress( resource.mac )
-        instance.updatePrivateAddress( resource.value )
+        VmInstances.updatePrivateAddress( instance, resource.value )
         PrivateAddresses.associate( resource.value, instance )
       }
     }
@@ -447,7 +447,7 @@ class VmInstanceLifecycleHelpers {
         builder.networkIndex( Transactions.find( PrivateNetworkIndex.named( vlan, networkIndex ) ) )
         builder.onBuild({ VmInstance instance ->
           instance.updateMacAddress( mac )
-          instance.updatePrivateAddress( privateIp )
+          VmInstances.updatePrivateAddress( instance, privateIp )
         } as Callback<VmInstance>)
       }
     }
@@ -480,7 +480,7 @@ class VmInstanceLifecycleHelpers {
             set( instance )
             instance.setNetworkIndex( (PrivateNetworkIndex) getDelegate( ) )
             instance.updateMacAddress( mac )
-            instance.updatePrivateAddress( privateIp )
+            VmInstances.updatePrivateAddress( instance, privateIp )
           }
         }
       }
@@ -576,7 +576,7 @@ class VmInstanceLifecycleHelpers {
           }
 
           Closure<?> updateInstanceAddresses = { Address address ->
-            instance.updateAddresses( input.getNetParams( ).getIpAddress( ), address.getDisplayName( ) )
+            VmInstances.updateAddresses( instance, input.getNetParams( ).getIpAddress( ), address.getDisplayName( ) )
             null
           }
 
@@ -652,11 +652,11 @@ class VmInstanceLifecycleHelpers {
       }
       final AuthContext authContext = allocation.getAuthContext( ).get( )
       for ( String groupId : networkIds ) {
-        if ( !Iterables.tryFind( groups, CollectionUtils.propertyPredicate( groupId, NetworkGroups.groupId() ) ).isPresent() ) {
+        if ( !Iterables.tryFind( groups, CollectionUtils.propertyPredicate( groupId, NetworkGroup.groupId() ) ).isPresent() ) {
           groups.add( NetworkGroups.lookupByGroupId( authContext.isSystemUser( ) ? null : accountFullName, groupId ) )
         }
       }
-      if ( !Collections.singleton( vpcId ).equals( Sets.newHashSet( Iterables.transform( groups, NetworkGroups.vpcId( ) ) ) ) ) {
+      if ( !Collections.singleton( vpcId ).equals( Sets.newHashSet( Iterables.transform( groups, NetworkGroup.vpcId( ) ) ) ) ) {
         throw new InvalidMetadataException( "Invalid security groups (inconsistent VPC)" );
       }
 
@@ -804,13 +804,13 @@ class VmInstanceLifecycleHelpers {
 
         final Set<NetworkGroup> groups = Sets.newHashSet( )
         for ( String groupId : networkIds ) {
-          if ( !Iterables.tryFind( groups, CollectionUtils.propertyPredicate( groupId, NetworkGroups.groupId() ) ).isPresent() ) try {
+          if ( !Iterables.tryFind( groups, CollectionUtils.propertyPredicate( groupId, NetworkGroup.groupId() ) ).isPresent() ) try {
             groups.add( lookup( "security group", groupId, NetworkGroup  ) as NetworkGroup )
           } catch ( Exception e ) {
             throw new InvalidMetadataException( "Security group (${groupId}) not found", e )
           }
         }
-        if ( !groups.empty && !Collections.singleton( subnet.vpc.displayName ).equals( Sets.newHashSet( Iterables.transform( groups, NetworkGroups.vpcId( ) ) ) ) ) {
+        if ( !groups.empty && !Collections.singleton( subnet.vpc.displayName ).equals( Sets.newHashSet( Iterables.transform( groups, NetworkGroup.vpcId( ) ) ) ) ) {
           throw new InvalidMetadataException( "Invalid security groups (inconsistent VPC)" );
         }
         if ( groups.size( ) > VpcConfiguration.getSecurityGroupsPerNetworkInterface( ) ) {
@@ -942,7 +942,7 @@ class VmInstanceLifecycleHelpers {
                   firstNonNull( resource.description, "" )
               ) )
           instance.updateMacAddress( networkInterface.macAddress )
-          instance.updatePrivateAddress( networkInterface.privateIpAddress )
+          VmInstances.updatePrivateAddress( instance, networkInterface.privateIpAddress )
           resource.privateIp = networkInterface.privateIpAddress
           resource.mac = networkInterface.macAddress
           networkInterface.attach( NetworkInterfaceAttachment.create(
@@ -960,7 +960,7 @@ class VmInstanceLifecycleHelpers {
             NetworkInterfaceHelper.associate( address, networkInterface, Optional.of( instance ) )
           } else {
             if ( networkInterface.associated ) {
-              instance.updatePublicAddress( networkInterface.association.publicIp )
+              VmInstances.updatePublicAddress( instance, networkInterface.association.publicIp )
             }
             NetworkInterfaceHelper.start( networkInterface, instance )
           }

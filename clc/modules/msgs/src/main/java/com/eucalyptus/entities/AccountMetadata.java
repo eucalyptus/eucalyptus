@@ -79,6 +79,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedType.AccountRestrictedType;
+import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import groovy.sql.Sql;
 
@@ -201,6 +202,19 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
   @Override
   public int compareTo( AccountMetadata that ) {
     return this.getFullName( ).toString( ).compareTo( that.getFullName( ).toString( ) );
+  }
+
+  public static Function<AccountMetadata,String> accountNumber( ) {
+    return FilterFunctions.ACCOUNT_ID;
+  }
+
+  private enum FilterFunctions implements Function<AccountMetadata,String> {
+    ACCOUNT_ID {
+      @Override
+      public String apply( final AccountMetadata accountMetadata ) {
+        return accountMetadata.getOwnerAccountNumber();
+      }
+    },
   }
 
   public abstract static class AccountName400UpgradeSupport {

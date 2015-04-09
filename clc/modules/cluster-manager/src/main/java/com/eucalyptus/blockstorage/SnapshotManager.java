@@ -66,10 +66,8 @@ import static com.eucalyptus.compute.common.ImageMetadata.State.available;
 import static com.eucalyptus.compute.common.ImageMetadata.State.pending;
 import static com.eucalyptus.images.Images.inState;
 
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -79,23 +77,24 @@ import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotResponseType;
+import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotType;
 import com.eucalyptus.compute.ClientUnauthorizedComputeException;
 import com.eucalyptus.compute.ComputeException;
-import com.eucalyptus.compute.common.CreateVolumePermissionItemType;
-import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.compute.common.backend.CreateSnapshotResponseType;
 import com.eucalyptus.compute.common.backend.CreateSnapshotType;
 import com.eucalyptus.compute.common.backend.DeleteSnapshotResponseType;
 import com.eucalyptus.compute.common.backend.DeleteSnapshotType;
-import com.eucalyptus.compute.common.backend.DescribeSnapshotAttributeResponseType;
-import com.eucalyptus.compute.common.backend.DescribeSnapshotAttributeType;
-import com.eucalyptus.compute.common.backend.DescribeSnapshotsResponseType;
-import com.eucalyptus.compute.common.backend.DescribeSnapshotsType;
 import com.eucalyptus.compute.common.backend.ModifySnapshotAttributeResponseType;
 import com.eucalyptus.compute.common.backend.ModifySnapshotAttributeType;
 import com.eucalyptus.compute.common.backend.ResetSnapshotAttributeResponseType;
 import com.eucalyptus.compute.common.backend.ResetSnapshotAttributeType;
-import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.compute.common.internal.blockstorage.Snapshot;
+import com.eucalyptus.compute.common.internal.blockstorage.Snapshots;
+import com.eucalyptus.compute.common.internal.blockstorage.State;
+import com.eucalyptus.compute.common.internal.blockstorage.Volume;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -103,22 +102,21 @@ import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 
 import org.apache.log4j.Logger;
+import org.hibernate.exception.ConstraintViolationException;
 
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.blockstorage.exceptions.SnapshotTooLargeException;
 import com.eucalyptus.blockstorage.msgs.DeleteStorageSnapshotResponseType;
 import com.eucalyptus.blockstorage.msgs.DeleteStorageSnapshotType;
-import com.eucalyptus.compute.common.CloudMetadatas;
-import com.eucalyptus.cloud.util.DuplicateMetadataException;
+import com.eucalyptus.compute.common.internal.util.DuplicateMetadataException;
 import com.eucalyptus.component.NoSuchComponentException;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.ClientComputeException;
-import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
-import com.eucalyptus.compute.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.common.internal.identifier.InvalidResourceIdentifier;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
@@ -132,11 +130,6 @@ import com.eucalyptus.reporting.event.EventActionInfo;
 import com.eucalyptus.reporting.event.SnapShotEvent;
 import com.eucalyptus.reporting.event.SnapShotEvent.SnapShotAction;
 import com.eucalyptus.system.Threads;
-import com.eucalyptus.tags.Filter;
-import com.eucalyptus.tags.Filters;
-import com.eucalyptus.tags.Tag;
-import com.eucalyptus.tags.TagSupport;
-import com.eucalyptus.tags.Tags;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
@@ -151,8 +144,7 @@ import com.google.common.collect.Sets;
 public class SnapshotManager {
   
   static Logger LOG       = Logger.getLogger( SnapshotManager.class );
-  static String ID_PREFIX = "snap";
-  
+
   public CreateSnapshotResponseType create( final CreateSnapshotType request ) throws EucalyptusCloudException, NoSuchComponentException, DuplicateMetadataException, AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException, TransactionException {
     final Context ctx = Contexts.lookup( );
     final String volumeId = normalizeVolumeIdentifier( request.getVolumeId( ) );
@@ -169,7 +161,7 @@ public class SnapshotManager {
       @Override
       public Snapshot get( ) {
         try {
-          return Snapshots.initializeSnapshot( ctx.getUserFullName( ), volReady, sc, request.getDescription() );
+          return initializeSnapshot( ctx.getUserFullName( ), volReady, sc, request.getDescription() );
         } catch ( EucalyptusCloudException ex ) {
           throw new RuntimeException( ex );
         }
@@ -177,7 +169,7 @@ public class SnapshotManager {
     };
     Snapshot snap = RestrictedTypes.allocateUnitlessResource( allocator );
     try {
-      snap = Snapshots.startCreateSnapshot( volReady, snap );
+      snap = startCreateSnapshot( volReady, snap );
     } catch ( Exception e ) {
       final EntityTransaction db = Entities.get( Snapshot.class );
       try {
@@ -298,51 +290,7 @@ public class SnapshotManager {
     return reply;
   }
   
-  public DescribeSnapshotsResponseType describe( final DescribeSnapshotsType request ) throws EucalyptusCloudException {
-    final DescribeSnapshotsResponseType reply = request.getReply( );
-    final Context ctx = Contexts.lookup( );
-    final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
-    // verbose does not have any special functionality for snapshots, but is ignored when passed as an identifier
-    request.getSnapshotSet().remove( "verbose" );
-    final Set<String> snapshotIds = Sets.newHashSet( normalizeSnapshotIdentifiers( request.getSnapshotSet( ) ) );
-    final List<String> ownersSet = request.getOwnersSet( );
-    if ( ownersSet.remove( Snapshots.SELF ) ) {
-      ownersSet.add( requestAccountId );
-    }
-    final Filter filter = Filters.generate( request.getFilterSet(), Snapshot.class );
-    try ( final TransactionResource tx = Entities.transactionFor( Snapshot.class ) ){
-      final List<Snapshot> unfilteredSnapshots =
-          Entities.query( Snapshot.named( null, null ), true, filter.asCriterion(), filter.getAliases() );
-      final Predicate<? super Snapshot> requestedAndAccessible = CloudMetadatas.filteringFor( Snapshot.class )
-          .byId( snapshotIds )
-          .byOwningAccount( request.getOwnersSet( ) )
-          .byPredicate( Snapshots.filterRestorableBy( request.getRestorableBySet( ), requestAccountId ) )
-          .byPredicate( filter.asPredicate( ) )
-          .byPredicate( Snapshots.FilterPermissions.INSTANCE )
-          .byPrivilegesWithoutOwner( )
-          .buildPredicate( );
-
-      final Iterable<Snapshot> snapshots = Iterables.filter( unfilteredSnapshots, requestedAndAccessible );
-      final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( Snapshot.class )
-          .getResourceTagMap( AccountFullName.getInstance( ctx.getAccountNumber( ) ),
-              Iterables.transform( snapshots, CloudMetadatas.toDisplayName() ) );
-      for ( final Snapshot snap : snapshots ) {
-        try {
-          final com.eucalyptus.compute.common.Snapshot snapReply = snap.morph( new com.eucalyptus.compute.common.Snapshot( ) );
-          Tags.addFromTags( snapReply.getTagSet(), ResourceTag.class, tagsMap.get( snapReply.getSnapshotId() ) );
-          snapReply.setVolumeId( snap.getParentVolume( ) );
-          snapReply.setOwnerId( snap.getOwnerAccountNumber( ) );
-          reply.getSnapshotSet( ).add( snapReply );
-        } catch ( NoSuchElementException e ) {
-          LOG.warn( "Error getting snapshot information from the Storage Controller: " + e );
-          LOG.debug( e, e );
-        }
-      }
-    }
-    return reply;
-  }
-  
-    public ResetSnapshotAttributeResponseType resetSnapshotAttribute( 
+    public ResetSnapshotAttributeResponseType resetSnapshotAttribute(
         final ResetSnapshotAttributeType request 
     ) throws EucalyptusCloudException {
       final ResetSnapshotAttributeResponseType reply = request.getReply( );
@@ -474,43 +422,64 @@ public class SnapshotManager {
         return reply;
     }
 
-    public DescribeSnapshotAttributeResponseType describeSnapshotAttribute( DescribeSnapshotAttributeType request ) throws EucalyptusCloudException {
-        DescribeSnapshotAttributeResponseType reply = request.getReply( );
-        reply.setSnapshotId(request.getSnapshotId());
-        final Context ctx = Contexts.lookup( );
-        final String snapshotId = normalizeSnapshotIdentifier( request.getSnapshotId( ) );
-        try (TransactionResource db = Entities.transactionFor(Snapshot.class)) {
-            Snapshot result = Entities.uniqueResult( Snapshot.named(
-                ctx.isAdministrator( ) ? null : ctx.getUserFullName( ).asAccountFullName( ),
-                snapshotId ) );
-            if( !RestrictedTypes.filterPrivileged( ).apply( result ) ) {
-                throw new EucalyptusCloudException("Not authorized to describe attributes for snapshot " + request.getSnapshotId());
-            }
 
-            ArrayList<CreateVolumePermissionItemType> permissions = Lists.newArrayList();
-            for(String id : result.getPermissions()) {
-                permissions.add(new CreateVolumePermissionItemType(id, null));
-            }
-            if(result.getSnapshotPublic()) {
-                permissions.add(new CreateVolumePermissionItemType(null, "all"));
-            }
-
-            if(result.getProductCodes() != null) {
-                reply.setProductCodes(new ArrayList<String>(result.getProductCodes()));
-            }
-            reply.setCreateVolumePermission(permissions);
-        } catch ( NoSuchElementException ex2 ) {
-            throw new ClientComputeException( "InvalidSnapshot.NotFound", "The snapshot '"+request.getSnapshotId( )+"' does not exist." );
-        } catch ( ExecutionException ex1 ) {
-            throw new EucalyptusCloudException( ex1.getCause( ) );
-        }
-        return reply;
-    }
 
   private static boolean isReservedSnapshot( final String snapshotId ) {
 	// Fix for EUCA-4932. Any snapshot associated with an (available or pending) image as a root/non-root device is a reserved snapshot
 	// and can't be deleted without first unregistering the image
     return Predicates.or( SnapshotInUseVerifier.INSTANCE ).apply( snapshotId );
+  }
+
+  private static Snapshot initializeSnapshot( final UserFullName userFullName,
+                                              final Volume vol,
+                                              final ServiceConfiguration sc,
+                                              final String description ) throws EucalyptusCloudException {
+    final EntityTransaction db = Entities.get( Snapshot.class );
+    try {
+      while ( true ) {
+        final String newId = ResourceIdentifiers.generateString( Snapshot.ID_PREFIX );
+        try {
+          Entities.uniqueResult( Snapshot.named( null, newId ) );
+        } catch ( NoSuchElementException e ) {
+          final Snapshot snap = new Snapshot( userFullName, newId, description, vol.getDisplayName( ), vol.getSize( ), sc.getName( ), sc.getPartition( ) );
+          Entities.persist( snap );
+          db.commit( );
+          return snap;
+        }
+      }
+    } catch ( Exception ex ) {
+      db.rollback( );
+      throw new EucalyptusCloudException( "Failed to initialize snapshot state because of: " + ex.getMessage( ), ex );
+    }
+  }
+
+  private static Snapshot startCreateSnapshot( final Volume vol,
+                                               final Snapshot snap ) throws EucalyptusCloudException, DuplicateMetadataException {
+    final ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( vol.getPartition( ) ) );
+    try {
+      Snapshot snapState = Transactions.save( snap, new Callback<Snapshot>( ) {
+
+        @Override
+        public void fire( Snapshot s ) {
+          String scSnapStatus = null;
+          try {
+            CreateStorageSnapshotType scRequest = new CreateStorageSnapshotType( vol.getDisplayName( ), snap.getDisplayName( ) );
+            CreateStorageSnapshotResponseType scReply = AsyncRequests.sendSync( sc, scRequest );
+            StorageUtil.setMappedState( s, scReply.getStatus( ) );
+            scSnapStatus = scReply.getStatus();
+          } catch ( Exception ex ) {
+            throw Exceptions.toUndeclared( ex );
+          }
+        }
+      } );
+    } catch ( ConstraintViolationException ex ) {
+      throw new DuplicateMetadataException( "Duplicate snapshot creation: " + snap + ": " + ex.getMessage( ), ex );
+    } catch ( ExecutionException ex ) {
+      LOG.error( ex.getCause( ), ex.getCause( ) );
+      throw new EucalyptusCloudException( ex );
+    }
+
+    return snap;
   }
 
   private static String normalizeIdentifier( final String identifier,
@@ -528,22 +497,12 @@ public class SnapshotManager {
 
   private static String normalizeSnapshotIdentifier( final String identifier ) throws EucalyptusCloudException {
     return normalizeIdentifier(
-        identifier, ID_PREFIX, true, "Value (%s) for parameter snapshotId is invalid. Expected: 'snap-...'." );
+        identifier, Snapshot.ID_PREFIX, true, "Value (%s) for parameter snapshotId is invalid. Expected: 'snap-...'." );
   }
 
   private static String normalizeVolumeIdentifier( final String identifier ) throws EucalyptusCloudException {
     return normalizeIdentifier(
-        identifier, Volumes.ID_PREFIX, true, "Value (%s) for parameter volume is invalid. Expected: 'vol-...'." );
-  }
-
-  private static List<String> normalizeSnapshotIdentifiers( final List<String> identifiers ) throws EucalyptusCloudException {
-    try {
-      return ResourceIdentifiers.normalize( ID_PREFIX, identifiers );
-    } catch ( final InvalidResourceIdentifier e ) {
-      throw new ClientComputeException(
-          "InvalidParameterValue",
-          "Value ("+e.getIdentifier()+") for parameter snapshots is invalid. Expected: 'snap-...'." );
-    }
+        identifier, Volume.ID_PREFIX, true, "Value (%s) for parameter volume is invalid. Expected: 'vol-...'." );
   }
 
   private enum ImageSnapshotReservation implements Predicate<String> {

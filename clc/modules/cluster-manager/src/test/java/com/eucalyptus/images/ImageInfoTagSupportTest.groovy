@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.images
 
+import com.eucalyptus.compute.common.internal.images.ImageInfoTag
 import com.eucalyptus.tags.TagTestSupport
 import org.junit.Test
 

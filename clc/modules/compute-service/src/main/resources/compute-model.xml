@@ -50,6 +50,7 @@
             <inbound>
                 <vm:inbound-endpoint ref="ComputeRequestQueueEndpoint" />
             </inbound>
+            <component class="com.eucalyptus.compute.service.ComputeServiceValidator"/>
             <outbound>
                 <filtering-router>
                     <outbound-endpoint ref="ComputeWS" />
@@ -62,7 +63,13 @@
             <inbound>
                 <inbound-endpoint ref="ComputeWS" />
             </inbound>
-            <component class="com.eucalyptus.compute.service.ComputeService" />
+            <component>
+                <entry-point-resolver-set>
+                    <reflection-entry-point-resolver/>
+                    <callable-entry-point-resolver/>
+                </entry-point-resolver-set>
+                <spring-object bean="computeService"/>
+            </component>
             <outbound>
                 <filtering-router>
                     <outbound-endpoint ref="ReplyQueueEndpoint" />
@@ -85,7 +92,13 @@
                 <inbound-endpoint ref="ComputeInternalWS" />
                 <inbound-endpoint ref="ComputeInternalVM" />
             </inbound>
-            <component class="com.eucalyptus.compute.service.ComputeService" />
+            <component>
+                <entry-point-resolver-set>
+                    <reflection-entry-point-resolver/>
+                    <callable-entry-point-resolver/>
+                </entry-point-resolver-set>
+                <spring-object bean="computeService"/>
+            </component>
         </service>
     </model>
 

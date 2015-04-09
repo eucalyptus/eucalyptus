@@ -19,7 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.compute.vpc;
 
-import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
 
 /**
  *

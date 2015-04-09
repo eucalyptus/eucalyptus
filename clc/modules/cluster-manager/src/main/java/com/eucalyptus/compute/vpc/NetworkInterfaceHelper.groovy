@@ -21,7 +21,8 @@ package com.eucalyptus.compute.vpc
 
 import com.eucalyptus.address.Address
 import com.eucalyptus.address.Addresses
-import com.eucalyptus.cloud.util.ResourceAllocationException
+import com.eucalyptus.compute.common.internal.util.ResourceAllocationException
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterfaceAssociation
 import com.eucalyptus.compute.common.network.NetworkResource
 import com.eucalyptus.compute.common.network.Networking
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesResultType
@@ -29,11 +30,11 @@ import com.eucalyptus.compute.common.network.PrepareNetworkResourcesType
 import com.eucalyptus.compute.common.network.PublicIPResource
 import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType
 import com.eucalyptus.compute.common.network.VpcNetworkInterfaceResource
-import com.eucalyptus.compute.vpc.NetworkInterface as VpcNetworkInterface
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterface as VpcNetworkInterface
 import com.eucalyptus.util.dns.DomainNames
-import com.eucalyptus.vm.VmInstance
+import com.eucalyptus.compute.common.internal.vm.VmInstance
 import com.eucalyptus.vm.VmInstances
-import com.eucalyptus.vm.VmNetworkConfig
+import com.eucalyptus.compute.common.internal.vm.VmNetworkConfig
 import com.google.common.base.Optional
 import com.google.common.base.Strings
 import com.google.common.collect.Lists
@@ -111,7 +112,7 @@ class NetworkInterfaceHelper {
             null as String
     ) )
     if ( instanceOption.present ) {
-      instanceOption.get( ).updatePublicAddress( address.displayName )
+      VmInstances.updatePublicAddress( instanceOption.get( ), address.displayName )
     }
   }
 

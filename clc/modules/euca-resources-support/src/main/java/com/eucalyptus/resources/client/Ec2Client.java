@@ -32,8 +32,6 @@ import com.eucalyptus.compute.common.backend.CreateSnapshotType;
 import com.eucalyptus.compute.common.backend.CreateVolumeResponseType;
 import com.eucalyptus.compute.common.backend.CreateVolumeType;
 import com.eucalyptus.compute.common.backend.DeleteVolumeType;
-import com.eucalyptus.compute.common.backend.DescribeSnapshotsResponseType;
-import com.eucalyptus.compute.common.backend.DescribeSnapshotsType;
 import com.eucalyptus.compute.common.backend.RegisterImageResponseType;
 import com.eucalyptus.compute.common.backend.RegisterImageType;
 

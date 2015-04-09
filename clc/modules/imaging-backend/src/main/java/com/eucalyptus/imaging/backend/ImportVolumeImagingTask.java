@@ -40,7 +40,7 @@ import com.eucalyptus.compute.common.DiskImageVolumeDescription;
 import com.eucalyptus.compute.common.ImportVolumeTaskDetails;
 import com.eucalyptus.compute.common.Volume;
 import com.eucalyptus.compute.common.backend.ImportVolumeType;
-import com.eucalyptus.compute.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.imaging.ImportTaskProperties;

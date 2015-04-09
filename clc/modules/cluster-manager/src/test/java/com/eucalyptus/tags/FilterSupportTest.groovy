@@ -19,6 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.tags
 
+import com.eucalyptus.compute.common.internal.tags.Filter
+import com.eucalyptus.compute.common.internal.tags.FilterSupport
 import com.eucalyptus.util.Strings
 import com.google.common.collect.Iterables
 import com.google.common.collect.Sets

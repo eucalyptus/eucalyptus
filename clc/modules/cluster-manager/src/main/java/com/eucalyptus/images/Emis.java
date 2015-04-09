@@ -68,7 +68,13 @@ import javax.annotation.Nonnull;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 
-import com.eucalyptus.cloud.util.NoSuchImageIdException;
+import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
+import com.eucalyptus.compute.common.internal.images.BootableImageInfo;
+import com.eucalyptus.compute.common.internal.images.ImageInfo;
+import com.eucalyptus.compute.common.internal.images.KernelImageInfo;
+import com.eucalyptus.compute.common.internal.images.MachineImageInfo;
+import com.eucalyptus.compute.common.internal.images.RamdiskImageInfo;
+import com.eucalyptus.compute.common.internal.util.NoSuchImageIdException;
 
 import org.apache.log4j.Logger;
 
@@ -77,16 +83,15 @@ import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.ImageMetadata.Platform;
 import com.eucalyptus.compute.common.RunInstancesType;
 import com.eucalyptus.compute.common.StaticDiskImage;
-import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
-import com.eucalyptus.cloud.util.InvalidMetadataException;
-import com.eucalyptus.cloud.util.MetadataException;
-import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.compute.common.internal.util.IllegalMetadataAccessException;
+import com.eucalyptus.compute.common.internal.util.InvalidMetadataException;
+import com.eucalyptus.compute.common.internal.util.MetadataException;
+import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.imaging.manifest.BundleImageManifest;
 import com.eucalyptus.imaging.manifest.DownloadManifestException;
 import com.eucalyptus.imaging.manifest.DownloadManifestFactory;
@@ -97,8 +102,8 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
-import com.eucalyptus.vm.VmInstance;
-import com.eucalyptus.vmtypes.VmType;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -106,7 +111,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 
-import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class Emis {

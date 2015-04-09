@@ -20,6 +20,8 @@
 
 package com.eucalyptus.keys
 
+import com.eucalyptus.compute.common.internal.keys.KeyPairs
+
 import static org.junit.Assert.*
 import org.junit.Test
 import java.security.GeneralSecurityException

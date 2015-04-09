@@ -65,7 +65,7 @@ package com.eucalyptus.vmtypes;
 
 import javax.annotation.Nullable;
 import com.eucalyptus.compute.common.CloudMetadatas;
-import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -78,6 +78,8 @@ import com.eucalyptus.compute.common.backend.ModifyInstanceTypeAttributeType;
 import com.eucalyptus.compute.common.VmTypeDetails;
 import com.eucalyptus.compute.common.VmTypeEphemeralDisk;
 import com.eucalyptus.compute.common.VmTypeZoneStatus;
+import com.eucalyptus.compute.common.internal.vmtypes.EphemeralDisk;
+import com.eucalyptus.compute.common.internal.vmtypes.VmType;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -115,7 +117,7 @@ public class VmTypesManager {
           this.setCpu( v.getCpu( ) );
           this.setMemory( v.getMemory( ) );
           if ( request.getVerbose( ) ) {
-            for ( EphemeralDisk e : v.getEpehemeralDisks( ) ) {
+            for ( EphemeralDisk e : v.getEphemeralDisks() ) {
               this.getEphemeralDisk( ).add( new VmTypeEphemeralDisk( e.getDiskName( ), e.getDeviceName( ), e.getSize( ), e.getFormat( ).name( ) ) );
             }
           }

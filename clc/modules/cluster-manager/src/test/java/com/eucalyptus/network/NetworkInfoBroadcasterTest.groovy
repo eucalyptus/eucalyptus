@@ -40,7 +40,7 @@ import com.eucalyptus.network.config.ManagedSubnet
 import com.eucalyptus.network.config.Midonet
 import com.eucalyptus.network.config.NetworkConfiguration
 import com.eucalyptus.util.TypeMappers
-import com.eucalyptus.vm.VmInstance.VmState
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState
 import com.google.common.base.Function
 import com.google.common.base.Optional
 import com.google.common.base.Supplier

@@ -19,9 +19,11 @@
  ************************************************************************/
 package com.eucalyptus.vm
 
+import com.eucalyptus.compute.common.internal.vm.VmBundleTask
+import com.eucalyptus.compute.common.internal.vm.VmInstance
 import org.junit.Test
 import com.eucalyptus.tags.FilterSupportTest
-import com.eucalyptus.tags.FilterSupport
+import com.eucalyptus.compute.common.internal.tags.FilterSupport
 
 /**
  * Unit tests for bundle task filter support

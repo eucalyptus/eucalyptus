@@ -25,12 +25,12 @@ import org.apache.log4j.Logger;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 
-import com.eucalyptus.blockstorage.Snapshot;
-import com.eucalyptus.blockstorage.State;
-import com.eucalyptus.blockstorage.Volume;
+import com.eucalyptus.compute.common.internal.blockstorage.Snapshot;
+import com.eucalyptus.compute.common.internal.blockstorage.State;
+import com.eucalyptus.compute.common.internal.blockstorage.Volume;
+import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.UserMetadata;
 import com.google.common.base.Objects;
 
 /**
@@ -92,5 +92,19 @@ public class StorageUtil {
       db.rollback();
     }
     return size;
+  }
+
+  static void setMappedState( final Snapshot snapshot, final String state ) {
+    if ( StorageProperties.Status.creating.toString( ).equals( state ) ) {
+      snapshot.setState( State.GENERATING );
+    } else if ( StorageProperties.Status.pending.toString( ).equals( state ) ) {
+      snapshot.setState( State.GENERATING );
+    } else if ( StorageProperties.Status.completed.toString( ).equals( state ) ) {
+      snapshot.setState( State.EXTANT );
+    } else if ( StorageProperties.Status.available.toString( ).equals( state ) ) {
+      snapshot.setState( State.EXTANT );
+    } else if ( StorageProperties.Status.failed.toString( ).equals( state ) ) {
+      snapshot.setState( State.FAIL );
+    }
   }
 }

@@ -70,7 +70,7 @@ import java.util.List;
 import javax.annotation.Nullable;
 import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.compute.common.internal.network.NetworkGroup;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.msgs.CloudClusterMessage;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;

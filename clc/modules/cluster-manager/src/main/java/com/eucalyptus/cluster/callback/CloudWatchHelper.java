@@ -37,10 +37,7 @@ import javax.annotation.Nullable;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloudwatch.common.CloudWatch;
 import com.eucalyptus.cloudwatch.common.msgs.Dimension;
 import com.eucalyptus.cloudwatch.common.msgs.Dimensions;
@@ -57,11 +54,11 @@ import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.vm.VmInstance;
-import com.eucalyptus.vm.VmInstanceTag;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstanceTag;
 import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.vm.VmInstance.VmState;
-import com.eucalyptus.vm.VmRuntimeState;
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState;
+import com.eucalyptus.compute.common.internal.vm.VmRuntimeState;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;

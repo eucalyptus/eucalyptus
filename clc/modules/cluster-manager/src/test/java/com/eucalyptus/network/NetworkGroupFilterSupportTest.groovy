@@ -19,6 +19,9 @@
  ************************************************************************/
 package com.eucalyptus.network
 
+import com.eucalyptus.compute.common.internal.network.NetworkGroup
+import com.eucalyptus.compute.common.internal.network.NetworkPeer
+import com.eucalyptus.compute.common.internal.network.NetworkRule
 import org.junit.Test
 import com.eucalyptus.tags.FilterSupportTest
 

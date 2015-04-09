@@ -23,7 +23,6 @@ import static com.google.common.base.Objects.firstNonNull;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -36,53 +35,60 @@ import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.util.NoSuchMetadataException;
-import com.eucalyptus.cloud.util.ResourceAllocationException;
+import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
+import com.eucalyptus.compute.common.internal.util.ResourceAllocationException;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.ClientUnauthorizedComputeException;
 import com.eucalyptus.compute.ComputeException;
-import com.eucalyptus.compute.common.AccountAttributeSetItemType;
 import com.eucalyptus.compute.common.AttributeBooleanValueType;
-import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.DhcpConfigurationItemType;
 import com.eucalyptus.compute.common.DhcpOptionsType;
-import com.eucalyptus.compute.common.GroupItemType;
-import com.eucalyptus.compute.common.GroupSetType;
 import com.eucalyptus.compute.common.InternetGatewayType;
 import com.eucalyptus.compute.common.NetworkAclType;
-import com.eucalyptus.compute.common.NetworkInterfaceAttachmentType;
 import com.eucalyptus.compute.common.NetworkInterfaceType;
-import com.eucalyptus.compute.common.NullableAttributeValueType;
-import com.eucalyptus.compute.common.ResourceTagSetItemType;
-import com.eucalyptus.compute.common.ResourceTagSetType;
 import com.eucalyptus.compute.common.RouteTableType;
 import com.eucalyptus.compute.common.SubnetType;
-import com.eucalyptus.compute.common.VpcTagged;
 import com.eucalyptus.compute.common.VpcType;
-import com.eucalyptus.compute.common.network.Networking;
-import com.eucalyptus.compute.common.network.NetworkingFeature;
-import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
-import com.eucalyptus.compute.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.common.internal.identifier.InvalidResourceIdentifier;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.common.internal.vpc.DhcpOption;
+import com.eucalyptus.compute.common.internal.vpc.DhcpOptionSet;
+import com.eucalyptus.compute.common.internal.vpc.DhcpOptionSets;
+import com.eucalyptus.compute.common.internal.vpc.InternetGateway;
+import com.eucalyptus.compute.common.internal.vpc.InternetGateways;
+import com.eucalyptus.compute.common.internal.vpc.NetworkAcl;
+import com.eucalyptus.compute.common.internal.vpc.NetworkAclEntry;
+import com.eucalyptus.compute.common.internal.vpc.NetworkAcls;
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterfaces;
+import com.eucalyptus.compute.common.internal.vpc.Route;
+import com.eucalyptus.compute.common.internal.vpc.RouteTable;
+import com.eucalyptus.compute.common.internal.vpc.RouteTableAssociation;
+import com.eucalyptus.compute.common.internal.vpc.RouteTables;
+import com.eucalyptus.compute.common.internal.vpc.SecurityGroups;
+import com.eucalyptus.compute.common.internal.vpc.Subnet;
+import com.eucalyptus.compute.common.internal.vpc.Subnets;
+import com.eucalyptus.compute.common.internal.vpc.Vpc;
+import com.eucalyptus.compute.common.internal.vpc.VpcMetadataNotFoundException;
+import com.eucalyptus.compute.common.internal.vpc.Vpcs;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.network.IPRange;
-import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.compute.common.internal.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
-import com.eucalyptus.network.NetworkPeer;
-import com.eucalyptus.network.NetworkRule;
+import com.eucalyptus.compute.common.internal.network.NetworkPeer;
+import com.eucalyptus.compute.common.internal.network.NetworkRule;
 import com.eucalyptus.network.PrivateAddresses;
-import com.eucalyptus.tags.*;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.RestrictedType;
 import com.eucalyptus.util.RestrictedTypes;
@@ -97,8 +103,6 @@ import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
@@ -338,7 +342,7 @@ public class VpcManager {
             if ( !validValue || values.isEmpty( ) ) {
               throw new ClientComputeException( "InvalidParameterValue", "Value ("+ Joiner.on(',').join( values )+") for parameter value is invalid. Invalid DHCP option value." );
             }
-            dhcpOptionSet.getDhcpOptions( ).add( DhcpOption.create( dhcpOptionSet, item.getKey( ), item.values( ) ) );
+            dhcpOptionSet.getDhcpOptions( ).add( DhcpOption.create( dhcpOptionSet, item.getKey(), item.values() ) );
           }
           return dhcpOptionSets.save( dhcpOptionSet );
         } catch ( Exception ex ) {
@@ -527,7 +531,7 @@ public class VpcManager {
             throw new ClientComputeException( "SecurityGroupsPerInterfaceLimitExceeded", "Security group limit exceeded" );
           }
           if ( !Collections.singleton( vpc.getDisplayName( ) ).equals(
-              Sets.newHashSet( Iterables.transform( groups, NetworkGroups.vpcId( ) ) ) ) ) {
+              Sets.newHashSet( Iterables.transform( groups, NetworkGroup.vpcId( ) ) ) ) ) {
             throw Exceptions.toUndeclared( new ClientComputeException( "InvalidParameterValue", "Invalid security groups (inconsistent VPC)" ) );
           }
           final String identifier = Identifier.eni.generate();
@@ -781,7 +785,10 @@ public class VpcManager {
                   Predicates.alwaysTrue(),
                   Functions.<DhcpOptionSet>identity() );
             } catch ( VpcMetadataNotFoundException e ) {
-              options = dhcpOptionSets.save( DhcpOptionSet.createDefault( vpcOwnerFullName, Identifier.dopt.generate() ) );
+              options = dhcpOptionSets.save( DhcpOptionSet.createDefault(
+                  vpcOwnerFullName,
+                  Identifier.dopt.generate(),
+                  VmInstances.INSTANCE_SUBDOMAIN ) );
             }
             vpc =
                 vpcs.save( Vpc.create( vpcOwnerFullName, Identifier.vpc.generate(), options, vpcCidr, createDefault ) );
@@ -1199,225 +1206,6 @@ public class VpcManager {
     return reply;
   }
 
-  public DescribeAccountAttributesResponseType describeAccountAttributes(final DescribeAccountAttributesType request) throws EucalyptusCloudException {
-    final DescribeAccountAttributesResponseType reply = request.getReply( );
-    final Context ctx = Contexts.lookup( );
-    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
-    final List<String> platforms = Lists.newArrayList( );
-    final Set<NetworkingFeature> features = Networking.getInstance( ).describeFeatures( );
-    if ( features.contains( NetworkingFeature.Classic ) ) platforms.add( "EC2" );
-    if ( features.contains( NetworkingFeature.Vpc ) ) platforms.add( "VPC" );
-    String vpcId = "none";
-    try {
-      vpcId = vpcs.lookupDefault( accountFullName, CloudMetadatas.toDisplayName( ) );
-    } catch ( VpcMetadataNotFoundException e) {
-      // no default vpc
-    } catch ( Exception e ) {
-      throw handleException( e );
-    }
-    final Map<String,List<String>> attributes = ImmutableMap.of(
-        "supported-platforms", platforms,
-        "default-vpc", Lists.newArrayList( vpcId )
-    );
-    final Set<String> requestedAttributes = Sets.newHashSet( request.attributeNames( ) );
-    for ( final Map.Entry<String,List<String>> attributeEntry : attributes.entrySet( ) ) {
-      if ( requestedAttributes.isEmpty( ) || requestedAttributes.contains( attributeEntry.getKey( ) ) ) {
-        reply.getAccountAttributeSet().getItem().add(
-            new AccountAttributeSetItemType( attributeEntry.getKey( ), attributeEntry.getValue( ) ) );
-      }
-    }
-    return reply;
-  }
-
-  public DescribeCustomerGatewaysResponseType describeCustomerGateways(DescribeCustomerGatewaysType request) throws EucalyptusCloudException {
-    DescribeCustomerGatewaysResponseType reply = request.getReply( );
-    return reply;
-  }
-
-  public DescribeDhcpOptionsResponseType describeDhcpOptions( final DescribeDhcpOptionsType request ) throws EucalyptusCloudException {
-    final DescribeDhcpOptionsResponseType reply = request.getReply( );
-    describe(
-        Identifier.dopt,
-        request.dhcpOptionsIds( ),
-        request.getFilterSet( ),
-        DhcpOptionSet.class,
-        DhcpOptionsType.class,
-        reply.getDhcpOptionsSet( ).getItem( ),
-        DhcpOptionsType.id( ),
-        dhcpOptionSets );
-    return reply;
-  }
-
-  public DescribeInternetGatewaysResponseType describeInternetGateways( final DescribeInternetGatewaysType request ) throws EucalyptusCloudException {
-    final DescribeInternetGatewaysResponseType reply = request.getReply( );
-    describe(
-        Identifier.igw,
-        request.internetGatewayIds( ),
-        request.getFilterSet( ),
-        InternetGateway.class,
-        InternetGatewayType.class,
-        reply.getInternetGatewaySet( ).getItem( ),
-        InternetGatewayType.id( ),
-        internetGateways );
-    return reply;
-  }
-
-  public DescribeNetworkAclsResponseType describeNetworkAcls( final DescribeNetworkAclsType request ) throws EucalyptusCloudException {
-    final DescribeNetworkAclsResponseType reply = request.getReply( );
-    describe(
-        Identifier.acl,
-        request.networkAclIds( ),
-        request.getFilterSet( ),
-        NetworkAcl.class,
-        NetworkAclType.class,
-        reply.getNetworkAclSet( ).getItem( ),
-        NetworkAclType.id( ),
-        networkAcls );
-    return reply;
-  }
-
-  public DescribeNetworkInterfaceAttributeResponseType describeNetworkInterfaceAttribute(final DescribeNetworkInterfaceAttributeType request) throws EucalyptusCloudException {
-    final DescribeNetworkInterfaceAttributeResponseType reply = request.getReply( );
-    final Context ctx = Contexts.lookup( );
-    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
-    try {
-      final NetworkInterface networkInterface =
-          networkInterfaces.lookupByName( accountFullName, Identifier.eni.normalize( request.getNetworkInterfaceId() ), new Function<NetworkInterface,NetworkInterface>( ){
-            @Override
-            public NetworkInterface apply( final NetworkInterface networkInterface ) {
-              Entities.initialize( networkInterface.getNetworkGroups( ) );
-              return networkInterface;
-            }
-          } );
-      if ( RestrictedTypes.filterPrivileged( ).apply( networkInterface ) ) {
-        reply.setNetworkInterfaceId( networkInterface.getDisplayName( ) );
-        switch ( request.getAttribute() ) {
-          case "attachment":
-            if ( networkInterface.isAttached( ) )
-            reply.setAttachment( TypeMappers.transform( networkInterface.getAttachment( ), NetworkInterfaceAttachmentType.class ) );
-            break;
-          case "description":
-            reply.setDescription( new NullableAttributeValueType( ) );
-            reply.getDescription().setValue( networkInterface.getDescription( ) );
-            break;
-          case "groupSet":
-            reply.setGroupSet( new GroupSetType( Collections2.transform(
-                networkInterface.getNetworkGroups( ),
-                TypeMappers.lookup( NetworkGroup.class, GroupItemType.class ) ) ) );
-            break;
-          case "sourceDestCheck":
-            reply.setSourceDestCheck( new AttributeBooleanValueType() );
-            reply.getSourceDestCheck().setValue( networkInterface.getSourceDestCheck( ) );
-            break;
-          default:
-            throw new ClientComputeException( "InvalidParameterValue", "Value ("+request.getAttribute( )+") for parameter attribute is invalid. Unknown network interface attribute"  );
-        }
-      }
-    } catch ( final Exception e ) {
-      throw handleException( e );
-    }
-    return reply;
-  }
-
-  public DescribeNetworkInterfacesResponseType describeNetworkInterfaces( final DescribeNetworkInterfacesType request ) throws EucalyptusCloudException {
-    final DescribeNetworkInterfacesResponseType reply = request.getReply( );
-    describe(
-        Identifier.eni,
-        request.networkInterfaceIds( ),
-        request.getFilterSet( ),
-        NetworkInterface.class,
-        NetworkInterfaceType.class,
-        reply.getNetworkInterfaceSet( ).getItem( ),
-        NetworkInterfaceType.id( ),
-        networkInterfaces );
-    return reply;
-  }
-
-  public DescribeRouteTablesResponseType describeRouteTables( final DescribeRouteTablesType request ) throws EucalyptusCloudException {
-    final DescribeRouteTablesResponseType reply = request.getReply( );
-    describe(
-        Identifier.rtb,
-        request.routeTableIds( ),
-        request.getFilterSet( ),
-        RouteTable.class,
-        RouteTableType.class,
-        reply.getRouteTableSet( ).getItem( ),
-        RouteTableType.id( ),
-        routeTables );
-    return reply;
-  }
-
-  public DescribeSubnetsResponseType describeSubnets( final DescribeSubnetsType request ) throws EucalyptusCloudException {
-    final DescribeSubnetsResponseType reply = request.getReply( );
-    describe(
-        Identifier.subnet,
-        request.subnetIds( ),
-        request.getFilterSet( ),
-        Subnet.class,
-        SubnetType.class,
-        reply.getSubnetSet( ).getItem( ),
-        SubnetType.id( ),
-        subnets );
-    return reply;
-  }
-
-  public DescribeVpcAttributeResponseType describeVpcAttribute(final DescribeVpcAttributeType request) throws EucalyptusCloudException {
-    final DescribeVpcAttributeResponseType reply = request.getReply( );
-    final Context ctx = Contexts.lookup( );
-    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
-    try {
-      final Vpc vpc =
-          vpcs.lookupByName( accountFullName, Identifier.vpc.normalize( request.getVpcId( ) ), Functions.<Vpc>identity( ) );
-      if ( RestrictedTypes.filterPrivileged( ).apply( vpc ) ) {
-        reply.setVpcId( vpc.getDisplayName( ) );
-        switch ( request.getAttribute( ) ) {
-          case "enableDnsSupport":
-            reply.setEnableDnsSupport( new AttributeBooleanValueType( ) );
-            reply.getEnableDnsSupport( ).setValue( vpc.getDnsEnabled( ) );
-            break;
-          case "enableDnsHostnames":
-            reply.setEnableDnsHostnames( new AttributeBooleanValueType( ) );
-            reply.getEnableDnsHostnames( ).setValue( vpc.getDnsHostnames( ) );
-            break;
-          default:
-            throw new ClientComputeException( "InvalidParameterValue", "Value ("+request.getAttribute( )+") for parameter attribute is invalid. Unknown vpc attribute"  );
-        }
-      }
-    } catch ( final Exception e ) {
-      throw handleException( e );
-    }
-    return reply;
-  }
-
-  public DescribeVpcPeeringConnectionsResponseType describeVpcPeeringConnections(DescribeVpcPeeringConnectionsType request) throws EucalyptusCloudException {
-    DescribeVpcPeeringConnectionsResponseType reply = request.getReply( );
-    return reply;
-  }
-
-  public DescribeVpcsResponseType describeVpcs( final DescribeVpcsType request ) throws EucalyptusCloudException {
-    final DescribeVpcsResponseType reply = request.getReply( );
-    describe(
-        Identifier.vpc,
-        request.vpcIds( ),
-        request.getFilterSet( ),
-        Vpc.class,
-        VpcType.class,
-        reply.getVpcSet( ).getItem( ),
-        VpcType.id( ),
-        vpcs );
-    return reply;
-  }
-
-  public DescribeVpnConnectionsResponseType describeVpnConnections(DescribeVpnConnectionsType request) throws EucalyptusCloudException {
-    DescribeVpnConnectionsResponseType reply = request.getReply( );
-    return reply;
-  }
-
-  public DescribeVpnGatewaysResponseType describeVpnGateways(DescribeVpnGatewaysType request) throws EucalyptusCloudException {
-    DescribeVpnGatewaysResponseType reply = request.getReply( );
-    return reply;
-  }
-
   public DetachInternetGatewayResponseType detachInternetGateway(final DetachInternetGatewayType request) throws EucalyptusCloudException {
     final DetachInternetGatewayResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
@@ -1542,7 +1330,7 @@ public class VpcManager {
                         request.getGroupSet( ).groupIds( ),
                         RestrictedTypes.resolver( NetworkGroup.class ) ) ) );
                     if ( !Collections.singleton( networkInterface.getVpc( ).getDisplayName( ) ).equals(
-                        Sets.newHashSet( Iterables.transform( networkInterface.getNetworkGroups( ), NetworkGroups.vpcId( ) ) ) ) ) {
+                        Sets.newHashSet( Iterables.transform( networkInterface.getNetworkGroups( ), NetworkGroup.vpcId( ) ) ) ) ) {
                       throw Exceptions.toUndeclared( new ClientComputeException( "InvalidParameterValue", "Invalid security groups (inconsistent VPC)" ) );
                     }
                     if ( networkInterface.getNetworkGroups( ).size( ) > VpcConfiguration.getSecurityGroupsPerNetworkInterface( ) ) {
@@ -2006,61 +1794,12 @@ public class VpcManager {
     }
   }
 
-  private static <AP extends AbstractPersistent & CloudMetadata, AT extends VpcTagged> void describe(
-      final Identifier identifier,
-      final Collection<String> ids,
-      final Collection<com.eucalyptus.compute.common.Filter> filters,
-      final Class<AP> persistent,
-      final Class<AT> api,
-      final List<AT> results,
-      final Function<AT,String> idFunction,
-      final Lister<AP> lister ) throws EucalyptusCloudException {
-    final boolean showAll = ids.remove( "verbose" );
-    final Context ctx = Contexts.lookup( );
-    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
-    final OwnerFullName ownerFullName = ctx.isAdministrator( ) && showAll ? null : accountFullName;
-    final com.eucalyptus.tags.Filter filter = Filters.generate( filters, persistent );
-    final Predicate<? super AP> requestedAndAccessible = CloudMetadatas.filteringFor( persistent )
-        .byId( identifier.normalize( ids ) )
-        .byPredicate( filter.asPredicate( ) )
-        .byPrivileges()
-        .buildPredicate();
-
-    try {
-      results.addAll( lister.list(
-          ownerFullName,
-          filter.asCriterion( ),
-          filter.getAliases( ),
-          requestedAndAccessible,
-          TypeMappers.lookup( persistent, api ) ) );
-
-      populateTags( accountFullName, persistent, results, idFunction );
-    } catch ( Exception e ) {
-      throw handleException( e );
-    }
-  }
-
   protected <E extends AbstractPersistent> Supplier<E> transactional( final Supplier<E> supplier ) {
     return Entities.asTransaction( supplier );
   }
 
   protected <E extends AbstractPersistent,P> Function<P,E> transactional( final Function<P,E> function ) {
     return Entities.asTransaction( function );
-  }
-
-  private static <VT extends VpcTagged> void populateTags( final AccountFullName accountFullName,
-                                                           final Class<? extends CloudMetadata> resourceType,
-                                                           final List<? extends VT> items,
-                                                           final Function<? super VT, String> idFunction ) {
-    final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( resourceType )
-        .getResourceTagMap( accountFullName, Iterables.transform( items, idFunction ) );
-    for ( final VT item : items ) {
-      final ResourceTagSetType tags = new ResourceTagSetType( );
-      Tags.addFromTags( tags.getItem(), ResourceTagSetItemType.class, tagsMap.get( idFunction.apply( item ) ) );
-      if ( !tags.getItem().isEmpty() ) {
-        item.setTagSet( tags );
-      }
-    }
   }
 
   private static Optional<Integer> protocolNumber( final String protocol ) {

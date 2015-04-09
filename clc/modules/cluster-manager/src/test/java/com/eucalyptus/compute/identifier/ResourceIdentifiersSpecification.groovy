@@ -20,6 +20,8 @@
 
 package com.eucalyptus.compute.identifier
 
+import com.eucalyptus.compute.common.internal.identifier.InvalidResourceIdentifier
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers
 import spock.lang.Specification
 
 /**

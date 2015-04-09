@@ -83,35 +83,30 @@ import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.principal.PolicyVersion;
-import com.eucalyptus.auth.principal.PolicyVersions;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ResourceToken;
-import com.eucalyptus.cloud.util.MetadataException;
-import com.eucalyptus.cloud.util.NotEnoughResourcesException;
+import com.eucalyptus.compute.common.internal.util.MetadataException;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.compute.common.backend.RunInstancesType;
-import com.eucalyptus.compute.vpc.Subnet;
+import com.eucalyptus.compute.common.internal.vpc.Subnet;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.images.Emis;
-import com.eucalyptus.images.MachineImageInfo;
+import com.eucalyptus.compute.common.internal.images.MachineImageInfo;
 import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.images.Emis.LookupMachine;
-import com.eucalyptus.keys.KeyPairs;
-import com.eucalyptus.keys.SshKeyPair;
-import com.eucalyptus.network.ExtantNetwork;
-import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.compute.common.internal.keys.KeyPairs;
+import com.eucalyptus.compute.common.internal.keys.SshKeyPair;
+import com.eucalyptus.compute.common.internal.network.NetworkGroup;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.TypedContext;
 import com.eucalyptus.util.TypedKey;
 import com.eucalyptus.util.UniqueIds;
-import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.vm.VmNetworkConfig;
-import com.eucalyptus.vmtypes.VmType;
+import com.eucalyptus.compute.common.internal.vm.VmNetworkConfig;
+import com.eucalyptus.compute.common.internal.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
@@ -311,27 +306,10 @@ public class Allocations {
       return this.primaryNetwork;
     }
 
-    public ExtantNetwork getExtantNetwork() {
-      final EntityTransaction db = Entities.get(ExtantNetwork.class);
-      try {
-        final NetworkGroup net = Entities.merge(this.primaryNetwork);
-        final ExtantNetwork ex = net.extantNetwork();
-        db.commit();
-        return ex;
-      } catch (final TransientEntityException ex) {
-        LOG.error(ex, ex);
-        db.rollback();
-        throw new RuntimeException(ex);
-      } catch (final NotEnoughResourcesException ex) {
-        db.rollback();
-        return ExtantNetwork.bogus(this.getPrimaryNetwork());
-      }
-    }
-
     public void commit() throws Exception {
       if ( !committed.get( ) ) try {
         for (final ResourceToken t : this.getAllocationTokens()) {
-          VmInstance.Create.INSTANCE.apply(t);
+          VmInstances.Create.INSTANCE.apply(t);
         }
         committed.set( true );
       } catch (final Exception ex) {

@@ -23,7 +23,7 @@ import static com.eucalyptus.compute.policy.ComputePolicyContext.ComputePolicyCo
 import static com.eucalyptus.compute.policy.ComputePolicyContext.ComputePolicyContextResourceSupport;
 import java.util.Date;
 import javax.annotation.Nullable;
-import com.eucalyptus.blockstorage.Snapshot;
+import com.eucalyptus.compute.common.internal.blockstorage.Snapshot;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 

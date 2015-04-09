@@ -102,14 +102,6 @@
                 <payload-type-filter expectedType="com.eucalyptus.compute.common.VpcMessage" />
             </filtering-router>
             <filtering-router>
-                <outbound-endpoint ref="SpotWS" />
-                <payload-type-filter expectedType="com.eucalyptus.compute.common.SpotInstanceMessage" />
-            </filtering-router>
-            <filtering-router>
-                <outbound-endpoint ref="ReservedWS" />
-                <payload-type-filter expectedType="com.eucalyptus.compute.common.ReservedInstanceMessage" />
-            </filtering-router>
-            <filtering-router>
                 <outbound-endpoint ref="VmControlWS" />
                 <payload-type-filter expectedType="com.eucalyptus.compute.common.VmControlMessage" />
             </filtering-router>
