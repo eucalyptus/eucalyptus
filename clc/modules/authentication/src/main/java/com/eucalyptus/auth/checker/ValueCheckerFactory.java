@@ -214,6 +214,9 @@ public class ValueCheckerFactory {
         if ( value.contains( "--" ) ) {
           throw new InvalidValueException( "Account name can not have two consecutive hyphens" );
         }
+        if ( value.matches( "^[0-9]{12}$" ) ) {
+          throw new InvalidValueException( "Account name must not be 12 digits" );
+        }
         for ( int i = 0; i < value.length( ); i++ ) {
           char c = value.charAt( i );
           if ( !( Character.isLetterOrDigit( c ) || c == '-' ) || Character.isUpperCase( c ) ) {

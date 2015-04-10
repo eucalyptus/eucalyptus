@@ -115,7 +115,12 @@ public interface Account extends BasePrincipal, RestrictedType, Serializable {
   public static final String OBJECT_STORAGE_WALRUS_ACCOUNT = SYSTEM_ACCOUNT_PREFIX + "objectstorage";
 
   public void setName( String name ) throws AuthException;
-  
+
+  /**
+   * Set name without performing syntax validation
+   */
+  public void setNameUnsafe( String name ) throws AuthException;
+
   public List<EuareUser> getUsers( ) throws AuthException;
   
   public List<Group> getGroups( ) throws AuthException;
@@ -152,7 +157,7 @@ public interface Account extends BasePrincipal, RestrictedType, Serializable {
   public ServerCertificate lookupServerCertificate(String certName) throws AuthException;
   public List<ServerCertificate> listServerCertificates(String pathPrefix) throws AuthException;
   public void updateServerCeritificate(String certName, String newCertName, String newPath) throws AuthException;
-  
+
   public String getAccountNumber( );
   public String getCanonicalId( );
 

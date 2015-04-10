@@ -44,6 +44,10 @@ public class TestAccount implements Account {
     this.name = name;
   }
 
+  public void setNameUnsafe( final String name ) {
+    setName( name );
+  }
+
   @Override
   public String getDisplayName() {
     return Accounts.getAccountFullName( this );

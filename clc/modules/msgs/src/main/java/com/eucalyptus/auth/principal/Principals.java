@@ -673,6 +673,9 @@ public class Principals {
     public void setName( String name ) throws AuthException {}
 
     @Override
+    public void setNameUnsafe( String name ) throws AuthException {}
+
+    @Override
     public String getDisplayName() {
       return Accounts.getAccountFullName( this );
     }

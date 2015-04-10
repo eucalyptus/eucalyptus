@@ -169,7 +169,7 @@ public class DatabaseAccountProxy implements Account {
     return this.delegate.getCanonicalId();
   }
 
-    @Override
+  @Override
   public void setName( final String name ) throws AuthException {
     try {
       ACCOUNT_NAME_CHECKER.check( name );
@@ -177,6 +177,11 @@ public class DatabaseAccountProxy implements Account {
       Debugging.logError( LOG, e, "Invalid account name " + name );
       throw new AuthException( AuthException.INVALID_NAME, e );
     }
+    setNameUnsafe( name );
+  }
+
+  @Override
+  public void setNameUnsafe( final String name ) throws AuthException {
     try {
       // try finding the account with the same name to change to
       ( new DatabaseAuthProvider( ) ).lookupAccountByName( name );

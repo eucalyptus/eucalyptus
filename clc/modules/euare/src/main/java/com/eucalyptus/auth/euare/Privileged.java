@@ -163,7 +163,7 @@ class Privileged {
     }
     // Only one alias is allowed by AWS IAM spec. Overwrite the current alias if matches.
     if ( account.getName( ).equals( alias ) ) {
-      account.setName( account.getAccountNumber( ) );
+      account.setNameUnsafe( account.getAccountNumber( ) );
     }
   }
   
@@ -172,7 +172,9 @@ class Privileged {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     List<String> aliases = Lists.newArrayList( );
-    aliases.add( account.getName( ) );
+    if ( !account.getAccountNumber( ).equals( account.getName( ) ) ) {
+      aliases.add( account.getName( ) );
+    }
     return aliases;
   }
   
