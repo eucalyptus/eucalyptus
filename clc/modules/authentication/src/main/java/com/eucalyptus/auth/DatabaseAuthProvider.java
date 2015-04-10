@@ -68,6 +68,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import com.eucalyptus.auth.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.entities.Entities;
@@ -308,6 +309,14 @@ public class DatabaseAuthProvider implements AccountProvider {
             .list( );
         for ( UserEntity u : users ) {
           Entities.delete( u );
+        }
+
+        List<InstanceProfileEntity> profiles = ( List<InstanceProfileEntity> ) Entities
+            .createCriteria( InstanceProfileEntity.class ).setCacheable( true )
+            .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
+            .list( );
+        for ( InstanceProfileEntity p : profiles ) {
+          Entities.delete( p );
         }
 
         List<RoleEntity> roles = ( List<RoleEntity> ) Entities
