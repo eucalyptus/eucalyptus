@@ -20,8 +20,10 @@
 package com.eucalyptus.auth.api;
 
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
+import com.eucalyptus.auth.principal.SecurityTokenContent;
 import com.eucalyptus.auth.principal.UserPrincipal;
 
 /**
@@ -41,12 +43,26 @@ public interface IdentityProvider {
   UserPrincipal lookupPrincipalByCertificateId( String certificateId ) throws AuthException;
   UserPrincipal lookupPrincipalByCanonicalId( String canonicalId ) throws AuthException;
   UserPrincipal lookupPrincipalByAccountNumber( String accountNumber ) throws AuthException;
+  UserPrincipal lookupPrincipalByAccountNumberAndUsername( String accountNumber, String username ) throws AuthException;
+
+  /**
+   *
+   */
+  AccountIdentifiers lookupAccountIdentifiersByAlias( String alias ) throws AuthException;
+  AccountIdentifiers lookupAccountIdentifiersByCanonicalId( String canonicalId ) throws AuthException;
 
   /**
    *
    */
   InstanceProfile lookupInstanceProfileByName( String accountNumber, String name ) throws AuthException;
+
+  /**
+   *
+   */
   Role lookupRoleByName( String accountNumber, String name ) throws AuthException;
 
-
+  /**
+   *
+   */
+  SecurityTokenContent decodeSecurityToken( String accessKeyIdentifier, String securityToken ) throws AuthException;
 }

@@ -19,11 +19,14 @@
  ************************************************************************/
 package com.eucalyptus.tokens;
 
+import static com.eucalyptus.auth.AccessKeys.accessKeyIdentifier;
 import static com.eucalyptus.auth.login.AccountUsernamePasswordCredentials.AccountUsername;
 import static com.eucalyptus.auth.login.HmacCredentials.QueryIdCredential;
 import static com.eucalyptus.auth.policy.PolicySpec.IAM_RESOURCE_USER;
 import static com.eucalyptus.auth.policy.PolicySpec.VENDOR_STS;
+import static com.eucalyptus.util.CollectionUtils.propertyPredicate;
 import java.util.Collections;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -78,8 +81,8 @@ public class TokensService {
     final String queryId = Iterables.getOnlyElement( queryIdCreds ).getQueryId( );
     final AccessKey accessKey;
     try {
-      accessKey = Accounts.lookupAccessKeyById( queryId );
-    } catch ( final AuthException e ) {
+      accessKey = Iterables.find( requestUser.getKeys( ), propertyPredicate( queryId, accessKeyIdentifier( ) ) );
+    } catch ( final AuthException | NoSuchElementException e ) {
       throw new TokensException( TokensException.Code.MissingAuthenticationToken, "Invalid credential: " + queryId );
     }
 
@@ -126,7 +129,7 @@ public class TokensService {
     }
     rejectPasswordCredentials( );
 
-    final BaseRole role = lookupRole( request.getRoleArn() ); //TODO:STEVE: issue token for role on federated cloud
+    final BaseRole role = lookupRole( request.getRoleArn( ) );
 
     //TODO Should we fail if a policy is supplied? (since we ignore it)
     try {
@@ -219,10 +222,10 @@ public class TokensService {
     final AccountFullName impersonatedAccount;
     try {
       if ( !Strings.isNullOrEmpty( request.getImpersonatedUserId( ) ) ) {
-        impersonated = Accounts.lookupUserById( request.getImpersonatedUserId( ) );
+        impersonated = Accounts.lookupPrincipalByUserId( request.getImpersonatedUserId( ), null );
       } else {
-        Account account = Accounts.lookupAccountByName( request.getAccountAlias( ) );
-        impersonated = account.lookupUserByName( request.getUserName( ) );
+        String accountNumber = Accounts.lookupAccountIdByAlias( request.getAccountAlias( ) );
+        impersonated = Accounts.lookupPrincipalByAccountNumberAndUsername( accountNumber, request.getUserName( ) );
       }
       impersonatedAccount = AccountFullName.getInstance( impersonated.getAccountNumber( ) );
     } catch ( AuthException e ) {

@@ -30,6 +30,12 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.DatabaseAuthUtils;
 import com.eucalyptus.auth.api.IdentityProvider;
+import com.eucalyptus.auth.euare.common.identity.Account;
+import com.eucalyptus.auth.euare.common.identity.DecodeSecurityTokenResponseType;
+import com.eucalyptus.auth.euare.common.identity.DecodeSecurityTokenResult;
+import com.eucalyptus.auth.euare.common.identity.DecodeSecurityTokenType;
+import com.eucalyptus.auth.euare.common.identity.DescribeAccountsResponseType;
+import com.eucalyptus.auth.euare.common.identity.DescribeAccountsType;
 import com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileResponseType;
 import com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileResult;
 import com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileType;
@@ -42,15 +48,20 @@ import com.eucalyptus.auth.euare.common.identity.Identity;
 import com.eucalyptus.auth.euare.common.identity.IdentityMessage;
 import com.eucalyptus.auth.euare.common.identity.Policy;
 import com.eucalyptus.auth.euare.common.identity.Principal;
+import com.eucalyptus.auth.euare.common.identity.SecurityToken;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
+import com.eucalyptus.auth.principal.AccountIdentifiersImpl;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.PolicyScope;
 import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.Role;
+import com.eucalyptus.auth.principal.SecurityTokenContent;
+import com.eucalyptus.auth.principal.SecurityTokenContentImpl;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.EphemeralConfiguration;
@@ -62,6 +73,7 @@ import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -123,6 +135,31 @@ public class RemoteIdentityProvider implements IdentityProvider {
   }
 
   @Override
+  public UserPrincipal lookupPrincipalByAccountNumberAndUsername(
+      final String accountNumber,
+      final String name
+  ) throws AuthException {
+    final DescribePrincipalType request = new DescribePrincipalType( );
+    request.setAccountId( accountNumber );
+    request.setUsername( name );
+    return resultFor( request );
+  }
+
+  @Override
+  public AccountIdentifiers lookupAccountIdentifiersByAlias( final String alias ) throws AuthException {
+    final DescribeAccountsType request = new DescribeAccountsType( );
+    request.setAlias( alias );
+    return resultFor( request );
+  }
+
+  @Override
+  public AccountIdentifiers lookupAccountIdentifiersByCanonicalId( final String canonicalId ) throws AuthException {
+    final DescribeAccountsType request = new DescribeAccountsType( );
+    request.setCanonicalId( canonicalId );
+    return resultFor( request );
+  }
+
+  @Override
   public InstanceProfile lookupInstanceProfileByName( final String accountNumber, final String name ) throws AuthException {
     final DescribeInstanceProfileType request = new DescribeInstanceProfileType( );
     request.setAccountId( accountNumber );
@@ -160,6 +197,21 @@ public class RemoteIdentityProvider implements IdentityProvider {
     }
   }
 
+  @Override
+  public SecurityTokenContent decodeSecurityToken( final String accessKeyIdentifier,
+                                                   final String securityToken ) throws AuthException {
+    final DecodeSecurityTokenType request = new DecodeSecurityTokenType( );
+    request.setAccessKeyId( accessKeyIdentifier );
+    request.setSecurityToken( securityToken );
+    try {
+      final DecodeSecurityTokenResponseType response = send( request );
+      final DecodeSecurityTokenResult result = response.getDecodeSecurityTokenResult();
+      return TypeMappers.transform( result.getSecurityToken(), SecurityTokenContent.class );
+    } catch ( Exception e ) {
+      throw new AuthException( e );
+    }
+  }
+
   private <R extends IdentityMessage> R send( final IdentityMessage request ) throws Exception {
     final ServiceConfiguration config = new EphemeralConfiguration(
         ComponentIds.lookup( Identity.class ),
@@ -167,6 +219,21 @@ public class RemoteIdentityProvider implements IdentityProvider {
         "identity",
         URI.create( endpoints.iterator( ).next( ) ) ); //TODO:STEVE: endpoint handling
     return AsyncRequests.sendSync( config, request );
+  }
+
+  private AccountIdentifiers resultFor( final DescribeAccountsType request ) throws AuthException {
+    try {
+      final DescribeAccountsResponseType response = send( request );
+      final List<Account> accounts = response.getDescribeAccountsResult( ).getAccounts( );
+      if ( accounts.size( ) != 1 ) {
+        throw new AuthException( "Account information not found" );
+      }
+      return TypeMappers.transform( Iterables.getOnlyElement( accounts ), AccountIdentifiers.class );
+    } catch ( AuthException e ) {
+      throw e;
+    } catch ( Exception e ) {
+      throw new AuthException( e );
+    }
   }
 
   private UserPrincipal resultFor( final DescribePrincipalType request ) throws AuthException {
@@ -323,6 +390,21 @@ public class RemoteIdentityProvider implements IdentityProvider {
   }
 
   @TypeMapper
+  public enum AccountToAccountIdentifiersTransform implements Function<Account,AccountIdentifiers> {
+    INSTANCE;
+
+    @Nullable
+    @Override
+    public AccountIdentifiers apply( final Account account ) {
+      return new AccountIdentifiersImpl(
+        account.getAccountNumber( ),
+        account.getAlias( ),
+        account.getCanonicalId( )
+      );
+    }
+  }
+
+  @TypeMapper
   public enum RoleToRoleTransform implements Function<com.eucalyptus.auth.euare.common.identity.Role,Role> {
     INSTANCE;
 
@@ -342,6 +424,24 @@ public class RemoteIdentityProvider implements IdentityProvider {
         @Override public String getDisplayName( ) { return Accounts.getRoleFullName( this ); }
         @Override public OwnerFullName getOwner( ) { return AccountFullName.getInstance( getAccountNumber() ); }
       };
+    }
+  }
+
+  @TypeMapper
+  public enum SecurityTokenToSecurityTokenContentTransform implements Function<SecurityToken,SecurityTokenContent> {
+    INSTANCE;
+
+    @Nullable
+    @Override
+    public SecurityTokenContent apply( final SecurityToken securityToken ) {
+      return new SecurityTokenContentImpl(
+          Optional.fromNullable( securityToken.getOriginatingAccessKeyId( ) ),
+          Optional.fromNullable( securityToken.getOriginatingUserId( ) ),
+          Optional.fromNullable( securityToken.getOriginatingRoleId( ) ),
+          securityToken.getNonce( ),
+          securityToken.getCreated( ),
+          securityToken.getExpires( )
+      );
     }
   }
 

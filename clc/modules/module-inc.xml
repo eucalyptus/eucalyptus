@@ -233,7 +233,7 @@
 			<javac source="1.7" target="1.7" encoding="utf-8" debug="true" />
 		</groovyc>
 	</target>
-	<target name="builder-test" depends="build-groovy,classpaths">
+	<target name="builder-test" depends="classpaths,build-groovy">
 		<antcall target="build-mkdirs" inheritall="true" inheritrefs="true" />
 		<echo message="[COMPILE] test for ${ant.project.name}" />
 		<taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath" />
@@ -244,7 +244,7 @@
 
 	<!--================================== test target ==================================-->
 	<target name="junit" depends="junit-fail-flag"/>
-	<target name="junit-run" depends="builder-test,classpaths">
+	<target name="junit-run" depends="classpaths,builder-test">
                 <delete file="${build.dir}/reports/junit/failure" quiet="true"/>
                 <property name="junit.halt" value="on"/>
                 <property name="junit.reports.dir" value="${build.dir}/reports/junit"/>

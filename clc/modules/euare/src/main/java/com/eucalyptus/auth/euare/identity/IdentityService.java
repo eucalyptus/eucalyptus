@@ -32,6 +32,13 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.InvalidAccessKeyAuthException;
 import com.eucalyptus.auth.api.IdentityProvider;
 import com.eucalyptus.auth.euare.EuareException;
+import com.eucalyptus.auth.euare.common.identity.Account;
+import com.eucalyptus.auth.euare.common.identity.DecodeSecurityTokenResponseType;
+import com.eucalyptus.auth.euare.common.identity.DecodeSecurityTokenResult;
+import com.eucalyptus.auth.euare.common.identity.DecodeSecurityTokenType;
+import com.eucalyptus.auth.euare.common.identity.DescribeAccountsResponseType;
+import com.eucalyptus.auth.euare.common.identity.DescribeAccountsResult;
+import com.eucalyptus.auth.euare.common.identity.DescribeAccountsType;
 import com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileResponseType;
 import com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileResult;
 import com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileType;
@@ -43,12 +50,15 @@ import com.eucalyptus.auth.euare.common.identity.DescribeRoleResult;
 import com.eucalyptus.auth.euare.common.identity.DescribeRoleType;
 import com.eucalyptus.auth.euare.common.identity.Policy;
 import com.eucalyptus.auth.euare.common.identity.Principal;
+import com.eucalyptus.auth.euare.common.identity.SecurityToken;
 import com.eucalyptus.auth.principal.AccessKey;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.PolicyVersions;
 import com.eucalyptus.auth.principal.Role;
+import com.eucalyptus.auth.principal.SecurityTokenContent;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Contexts;
@@ -81,14 +91,17 @@ public class IdentityService {
 
     try {
       final UserPrincipal user;
-      if ( request.getAccessKeyId( ) != null ) {
-        user = identityProvider.lookupPrincipalByAccessKeyId( request.getAccessKeyId( ), request.getNonce( ) );
-      } else if ( request.getCertificateId( ) != null ) {
-        user = identityProvider.lookupPrincipalByCertificateId( request.getCertificateId( ) );
+      if ( request.getAccessKeyId() != null ) {
+        user = identityProvider.lookupPrincipalByAccessKeyId( request.getAccessKeyId(), request.getNonce() );
+      } else if ( request.getCertificateId() != null ) {
+        user = identityProvider.lookupPrincipalByCertificateId( request.getCertificateId() );
       } else if ( request.getUserId( ) != null ) {
         user = identityProvider.lookupPrincipalByUserId( request.getUserId( ), request.getNonce( ) );
       } else if ( request.getRoleId( ) != null ) {
         user = identityProvider.lookupPrincipalByRoleId( request.getRoleId( ), request.getNonce( ) );
+      } else if ( request.getAccountId( ) != null && request.getUsername( ) != null ) {
+        user = identityProvider
+            .lookupPrincipalByAccountNumberAndUsername( request.getAccountId(), request.getUsername() );
       } else if ( request.getAccountId( ) != null ) {
         user = identityProvider.lookupPrincipalByAccountNumber( request.getAccountId( ) );
       } else if ( request.getCanonicalId( ) != null ) {
@@ -152,6 +165,35 @@ public class IdentityService {
     return response;
   }
 
+  public DescribeAccountsResponseType describeAccounts(
+    final DescribeAccountsType request
+  ) throws EuareException {
+    final DescribeAccountsResponseType response = request.getReply( );
+    final DescribeAccountsResult result = new DescribeAccountsResult( );
+
+    try {
+      final AccountIdentifiers accountIdentifiers;
+      if ( request.getAlias( ) != null ) {
+        accountIdentifiers = identityProvider.lookupAccountIdentifiersByAlias( request.getAlias( ) );
+      } else if ( request.getCanonicalId( ) != null ) {
+        accountIdentifiers = identityProvider.lookupAccountIdentifiersByCanonicalId( request.getCanonicalId() );
+      } else {
+        accountIdentifiers = null;
+      }
+
+      final ArrayList<Account> accounts = Lists.newArrayList( );
+      if ( accountIdentifiers != null ) {
+        accounts.add( TypeMappers.transform( accountIdentifiers, Account.class ) );
+      }
+      result.setAccounts( accounts );
+    } catch ( AuthException e ) {
+      throw handleException( e );
+    }
+
+    response.setDescribeAccountsResult( result );
+    return response;
+  }
+
   public DescribeInstanceProfileResponseType describeInstanceProfile(
       final DescribeInstanceProfileType request
   ) throws EuareException {
@@ -186,6 +228,25 @@ public class IdentityService {
     }
 
     response.setDescribeRoleResult( result );
+    return response;
+  }
+
+  public DecodeSecurityTokenResponseType decodeSecurityToken(
+      final DecodeSecurityTokenType request
+  ) throws EuareException {
+    final DecodeSecurityTokenResponseType response = request.getReply( );
+    final DecodeSecurityTokenResult result = new DecodeSecurityTokenResult( );
+
+    try {
+      final SecurityTokenContent securityTokenContent =
+          identityProvider.decodeSecurityToken( request.getAccessKeyId( ), request.getSecurityToken( ) );
+      result.setSecurityToken(
+          TypeMappers.transform( securityTokenContent, SecurityToken.class ) );
+    } catch ( AuthException e ) {
+      throw handleException( e );
+    }
+
+    response.setDecodeSecurityTokenResult( result );
     return response;
   }
 
@@ -226,6 +287,21 @@ public class IdentityService {
   }
 
   @TypeMapper
+  public enum AccountIdentifiersToAccountTransform implements Function<AccountIdentifiers,Account> {
+    INSTANCE;
+
+    @Nullable
+    @Override
+    public Account apply( final AccountIdentifiers accountIdentifiers ) {
+      final Account account = new Account( );
+      account.setAccountNumber( accountIdentifiers.getAccountNumber() );
+      account.setAlias( accountIdentifiers.getAccountAlias() );
+      account.setCanonicalId( accountIdentifiers.getCanonicalId() );
+      return account;
+    }
+  }
+
+  @TypeMapper
   public enum InstanceProfileToInstanceProfileTransform
       implements Function<InstanceProfile,com.eucalyptus.auth.euare.common.identity.InstanceProfile> {
     INSTANCE;
@@ -235,12 +311,11 @@ public class IdentityService {
     public com.eucalyptus.auth.euare.common.identity.InstanceProfile apply( final InstanceProfile authProfile ) {
       final com.eucalyptus.auth.euare.common.identity.InstanceProfile profile =
           new com.eucalyptus.auth.euare.common.identity.InstanceProfile( );
-      profile.setInstanceProfileArn( authProfile.getInstanceProfileArn( ) );
+      profile.setInstanceProfileArn( authProfile.getInstanceProfileArn() );
       profile.setInstanceProfileId( authProfile.getInstanceProfileId() );
       return profile;
     }
   }
-
 
   @TypeMapper
   public enum RoleToRoleTransform implements Function<Role,com.eucalyptus.auth.euare.common.identity.Role> {
@@ -252,10 +327,28 @@ public class IdentityService {
       final com.eucalyptus.auth.euare.common.identity.Role role = new com.eucalyptus.auth.euare.common.identity.Role( );
       role.setRoleArn( authRole.getRoleArn( ) );
       role.setRoleId( authRole.getRoleId( ) );
-      role.setSecret( authRole.getSecret( ) );
-      role.setAssumeRolePolicy( TypeMappers.transform( authRole.getPolicy(), Policy.class ));
+      role.setSecret( authRole.getSecret() );
+      role.setAssumeRolePolicy( TypeMappers.transform( authRole.getPolicy(), Policy.class ) );
       return role;
     }
   }
 
+  @TypeMapper
+  public enum SecurityTokenContentToSecurityTokenTransform implements Function<SecurityTokenContent,SecurityToken> {
+    INSTANCE;
+
+    @Nullable
+    @Override
+    public SecurityToken apply( final SecurityTokenContent securityTokenContent ) {
+      final SecurityToken securityToken = new SecurityToken( );
+      securityToken.setOriginatingAccessKeyId( securityTokenContent.getOriginatingAccessKeyId( ).orNull( ) );
+      securityToken.setOriginatingUserId( securityTokenContent.getOriginatingUserId( ).orNull( ) );
+      securityToken.setOriginatingRoleId( securityTokenContent.getOriginatingRoleId( ).orNull( ) );
+      securityToken.setNonce( securityTokenContent.getNonce( ) );
+      securityToken.setCreated( securityTokenContent.getCreated( ) );
+      securityToken.setExpires( securityTokenContent.getExpires( ) );
+
+      return securityToken;
+    }
+  }
 }

@@ -49,6 +49,8 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.InvalidAccessKeyAuthException;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.BaseRole;
+import com.eucalyptus.auth.principal.SecurityTokenContent;
+import com.eucalyptus.auth.principal.SecurityTokenContentImpl;
 import com.eucalyptus.auth.principal.TemporaryAccessKey;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
@@ -63,6 +65,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Pair;
 import com.google.common.base.Charsets;
 import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.cache.Cache;
@@ -85,7 +88,7 @@ public class SecurityTokenManager {
   private static final int tokenCacheSize = Objects.firstNonNull(
       Ints.tryParse( System.getProperty( "com.eucalyptus.auth.tokens.cache.maximumSize", "500" ) ),
       500 );
-  private static final Cache<Pair<String,String>,EncryptedSecurityToken> tokenCache =
+  private static final Cache<Pair<String,String>,SecurityTokenContent> tokenCache =
       CacheBuilder.newBuilder( ).expireAfterAccess( 5, TimeUnit.MINUTES ).maximumSize( tokenCacheSize ).build( );
 
   /**
@@ -199,6 +202,20 @@ public class SecurityTokenManager {
   }
 
   /**
+   * Decode the given token.
+   *
+   * @param accessKeyId The identifier
+   * @param token The token
+   * @return The decoded token
+   * @throws AuthException if the token cannot be decoded
+   */
+  @Nonnull
+  public static SecurityTokenContent decodeSecurityToken( @Nonnull final String accessKeyId,
+                                                          @Nonnull final String token ) throws AuthException {
+    return instance.doDecode( accessKeyId, token );
+  }
+
+  /**
    *
    */
   @Nonnull
@@ -298,13 +315,13 @@ public class SecurityTokenManager {
     Preconditions.checkNotNull( accessKeyId, "Access key identifier is required" );
     Preconditions.checkNotNull( token, "Token is required" );
 
-    final EncryptedSecurityToken encryptedToken;
+    final SecurityTokenContent securityTokenContent;
     try {
       final Pair<String,String> tokenKey = Pair.pair( accessKeyId, token );
-      encryptedToken = tokenCache.get( tokenKey, new Callable<EncryptedSecurityToken>( ) {
+      securityTokenContent = tokenCache.get( tokenKey, new Callable<SecurityTokenContent>( ) {
         @Override
-        public EncryptedSecurityToken call() throws Exception {
-          return EncryptedSecurityToken.decrypt( accessKeyId, getEncryptionKey( accessKeyId ), token );
+        public SecurityTokenContent call() throws Exception {
+           return doDispatchingDecode( accessKeyId, token );
         }
       } );
     } catch ( ExecutionException e ) {
@@ -312,18 +329,18 @@ public class SecurityTokenManager {
       throw new InvalidAccessKeyAuthException("Invalid security token");
     }
 
-    final String originatingAccessKeyId = encryptedToken.getOriginatingAccessKeyId();
-    final String userId = encryptedToken.getUserId();
+    final String originatingAccessKeyId = securityTokenContent.getOriginatingAccessKeyId( ).orNull( );
+    final String userId = securityTokenContent.getOriginatingUserId().orNull( );
     final UserPrincipal user;
     final TemporaryKeyType type;
     if ( originatingAccessKeyId != null ) {
-      user = lookupByAccessKeyId( originatingAccessKeyId, encryptedToken.getNonce() );
+      user = lookupByAccessKeyId( originatingAccessKeyId, securityTokenContent.getNonce() );
       type = TemporaryKeyType.Session;
     } else if ( userId != null ) {
-      user = lookupByUserById( encryptedToken.getUserId(), encryptedToken.getNonce() );
+      user = lookupByUserById( userId, securityTokenContent.getNonce() );
       type = TemporaryKeyType.Access;
     } else  {
-      user = lookupByRoleById( encryptedToken.getRoleId(), encryptedToken.getNonce() );
+      user = lookupByRoleById( securityTokenContent.getOriginatingRoleId( ).get( ), securityTokenContent.getNonce() );
       type = TemporaryKeyType.Role;
     }
 
@@ -332,11 +349,11 @@ public class SecurityTokenManager {
       private UserPrincipal principal = new UserPrincipalImpl( user, Collections.<AccessKey>singleton( this ) );
 
       @Override public Boolean isActive() {
-        return user.isEnabled() && encryptedToken.isValid();
+        return user.isEnabled() && EncryptedSecurityToken.isValid( securityTokenContent );
       }
 
       @Override public String getAccessKey() {
-        return encryptedToken.getAccessKeyId();
+        return accessKeyId;
       }
 
       @Override public String getSecurityToken() {
@@ -352,11 +369,11 @@ public class SecurityTokenManager {
       }
 
       @Override public Date getCreateDate() {
-        return new Date(encryptedToken.getCreated());
+        return new Date(securityTokenContent.getCreated());
       }
 
       @Override public Date getExpiryDate() {
-        return new Date(encryptedToken.getExpires());
+        return new Date(securityTokenContent.getExpires());
       }
 
       @Override public UserPrincipal getPrincipal() throws AuthException {
@@ -371,6 +388,34 @@ public class SecurityTokenManager {
   protected String doGenerateSecret( @Nonnull final String nonce,
                                      @Nonnull final String secret ) {
     return EncryptedSecurityToken.getSecretKey( nonce, secret );
+  }
+
+  protected SecurityTokenContent doDispatchingDecode(
+      final String accessKeyId,
+      final String token
+  ) throws AuthException {
+    return Accounts.decodeSecurityToken( accessKeyId, token );
+  }
+
+  @Nonnull
+  protected SecurityTokenContent doDecode(
+      final String accessKeyId,
+      final String token
+  ) throws AuthException {
+    final EncryptedSecurityToken encryptedSecurityToken;
+    try {
+      encryptedSecurityToken = EncryptedSecurityToken.decrypt( accessKeyId, getEncryptionKey( accessKeyId ), token );
+    } catch ( GeneralSecurityException e ) {
+      throw new AuthException( "Unable to decode token", e );
+    }
+    return new SecurityTokenContentImpl(
+        Optional.fromNullable( encryptedSecurityToken.getOriginatingAccessKeyId() ),
+        Optional.fromNullable( encryptedSecurityToken.getUserId() ),
+        Optional.fromNullable( encryptedSecurityToken.getRoleId() ),
+        encryptedSecurityToken.getNonce( ),
+        encryptedSecurityToken.getCreated( ),
+        encryptedSecurityToken.getExpires( )
+    );
   }
 
   protected long getCurrentTimeMillis() {
@@ -529,9 +574,9 @@ public class SecurityTokenManager {
     /**
      * Is the token within its validity period.
      */
-    private boolean isValid() {
+    private static boolean isValid( final SecurityTokenContent token ) {
       final long now = System.currentTimeMillis();
-      return ( now + creationSkewMillis ) >= created && now < expires;
+      return ( now + creationSkewMillis ) >= token.getCreated( ) && now < token.getExpires( );
     }
 
     private String getSecretKey( final String secret ) {

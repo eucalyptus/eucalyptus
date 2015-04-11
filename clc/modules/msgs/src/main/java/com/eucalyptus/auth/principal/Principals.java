@@ -665,6 +665,11 @@ public class Principals {
     }
 
     @Override
+    public String getAccountAlias( ) {
+      return getName( );
+    }
+
+    @Override
     public String getName( ) {
       return accountName;
     }
