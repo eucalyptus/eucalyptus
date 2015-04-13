@@ -337,20 +337,13 @@ public class SnapshotManager {
       return reply;
     }
 
-    private boolean validateGroup(String groupName) {
-        return "all".equals(groupName);
-    }
-
-    private static List<String> verifyAccountIds(final List<String> accountIds) throws EucalyptusCloudException {
-        final Set<String> validUserIds = Sets.newHashSet( );
+    private static List<String> verifyAccountIds( final List<String> accountIds ) throws EucalyptusCloudException {
         for ( String userId : accountIds ) {
-            try {
-                validUserIds.add( Accounts.lookupAccountById( userId ).getAccountNumber() );
-            } catch ( final Exception e ) {
+            if ( !Accounts.isAccountNumber( userId ) ) {
                 throw new EucalyptusCloudException( "Not a valid userId : " + userId );
             }
         }
-        return Lists.newArrayList( validUserIds );
+        return Lists.newArrayList( accountIds );
     }
 
     private static boolean canModifySnapshot( final Snapshot snap ) {
@@ -387,7 +380,6 @@ public class SnapshotManager {
                             if (request.addGroupAll()) {
                                 snap.setSnapshotPublic(true);
                             }
-
 
                             //do removes
                             snap.removePermissions(request.removeUserIds());
