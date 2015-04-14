@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare.identity.region
 
+import com.eucalyptus.util.Exceptions
 import groovy.transform.CompileStatic
 import org.junit.Test
 
@@ -37,7 +38,7 @@ class RegionConfigurationTest {
         "Regions": [
             {
                 "Name": "region-1",
-                "Certificate": "-----BEGIN CERTIFICATE-----\\nMIIDQDCCAiigAwIBAgIGEa2aEc4QMA0GCSqGSIb3DQEBDQUAMEcxCzAJBgNVBAYT\\nAlVTMQ4wDAYDVQQKEwVDbG91ZDETMBEGA1UECxMKRXVjYWx5cHR1czETMBEGA1UE\\nAxMKZXVjYWx5cHR1czAeFw0xNTAzMDIwMTIyMjFaFw0yMDAzMDIwMTIyMjFaMEcx\\nCzAJBgNVBAYTAlVTMQ4wDAYDVQQKEwVDbG91ZDETMBEGA1UECxMKRXVjYWx5cHR1\\nczETMBEGA1UEAxMKZXVjYWx5cHR1czCCASIwDQYJKoZIhvcNAQEBBQADggEPADCC\\nAQoCggEBAILQlVZkR+JoJxXqo0KRrkCYwhzTmDQceqe5gwwfq9hY/ziN+rNIcwdK\\nfJD63tbQASaxjrIs8o/yB73c9wbOCN9wBZFMK9mY+K5gb0OxGPkNusnduBQAneVq\\nMf3syjH9ptNWVkzw6P7nPE5b0snYaQXAUe+MmKLYd5o+efz2ls6+IHi22YBz++wm\\nffbaT8R+NKL/ZNlZdL9YP6xhTNMFNMUCibgqmDipLo78U5J/t4oXAj4oJbR+evig\\ntt4x0ZRsVgrQIzQ0hgKH9ardGMBaMWw/3H5ho9fMPuZGzt9UXifZpuOW9aNUUGQt\\nEV1qXG/rVZ/CjGI0TFjzRHDKuacEPRsCAwEAAaMyMDAwDwYDVR0TAQH/BAUwAwEB\\n/zAdBgNVHQ4EFgQUg/yqP65X2nnIeWTqxDCkTqJ2T2MwDQYJKoZIhvcNAQENBQAD\\nggEBAHHJG5iiXy4p2bFtRIS5LEy9mp3OMyxLslHnG0x8yPKH4pGheANk1XRNZyqA\\ne+HUOkX9BpWeWlHOLFiJ1/YERBZvG1TDKf0RuZjTiTvG99njGyTr3cK18y9CSM+0\\nrPP2m45OpBae5p7gPG6Az/LcipEapytMAVkn6v1Ip3BENxD/r/IVnVSEts9GDDbn\\n3Z6g7X98CoG152wT0w7Nw/bl/chBypTzvKkc9cY2U/Eqobci1BbekOk3HOdneaDm\\n4lSHPaLsdCoMDv44lujO09V5zt21fXQF3FeWFv8y0xkg23DHxZr/XysUf7gGEyrd\\n5DQlQ0lUi9rQMcxa2eDYGjQNtLQ=\\n-----END CERTIFICATE-----",
+                "CertificateFingerprint": "EC:E7:3D:DF:97:43:00:9E:FC:F0:2C:6D:98:D2:82:EB:AA:04:75:10:E7:C2:F2:6F:31:F1:F1:CA:A1:61:DE:41",
                 "IdentifierPartitions": [
                   1
                 ],
@@ -45,7 +46,7 @@ class RegionConfigurationTest {
                     {
                       "Type": "identity",
                       "Endpoints": [
-                        "http://identity.example.com:8773/services/Identity"
+                        "https://identity.example.com:8773/services/Identity"
                       ]
                     }
                 ]
@@ -61,32 +62,12 @@ class RegionConfigurationTest {
         regions: [
             new Region(
                 name: 'region-1',
-                certificate: '''\
-    -----BEGIN CERTIFICATE-----
-    MIIDQDCCAiigAwIBAgIGEa2aEc4QMA0GCSqGSIb3DQEBDQUAMEcxCzAJBgNVBAYT
-    AlVTMQ4wDAYDVQQKEwVDbG91ZDETMBEGA1UECxMKRXVjYWx5cHR1czETMBEGA1UE
-    AxMKZXVjYWx5cHR1czAeFw0xNTAzMDIwMTIyMjFaFw0yMDAzMDIwMTIyMjFaMEcx
-    CzAJBgNVBAYTAlVTMQ4wDAYDVQQKEwVDbG91ZDETMBEGA1UECxMKRXVjYWx5cHR1
-    czETMBEGA1UEAxMKZXVjYWx5cHR1czCCASIwDQYJKoZIhvcNAQEBBQADggEPADCC
-    AQoCggEBAILQlVZkR+JoJxXqo0KRrkCYwhzTmDQceqe5gwwfq9hY/ziN+rNIcwdK
-    fJD63tbQASaxjrIs8o/yB73c9wbOCN9wBZFMK9mY+K5gb0OxGPkNusnduBQAneVq
-    Mf3syjH9ptNWVkzw6P7nPE5b0snYaQXAUe+MmKLYd5o+efz2ls6+IHi22YBz++wm
-    ffbaT8R+NKL/ZNlZdL9YP6xhTNMFNMUCibgqmDipLo78U5J/t4oXAj4oJbR+evig
-    tt4x0ZRsVgrQIzQ0hgKH9ardGMBaMWw/3H5ho9fMPuZGzt9UXifZpuOW9aNUUGQt
-    EV1qXG/rVZ/CjGI0TFjzRHDKuacEPRsCAwEAAaMyMDAwDwYDVR0TAQH/BAUwAwEB
-    /zAdBgNVHQ4EFgQUg/yqP65X2nnIeWTqxDCkTqJ2T2MwDQYJKoZIhvcNAQENBQAD
-    ggEBAHHJG5iiXy4p2bFtRIS5LEy9mp3OMyxLslHnG0x8yPKH4pGheANk1XRNZyqA
-    e+HUOkX9BpWeWlHOLFiJ1/YERBZvG1TDKf0RuZjTiTvG99njGyTr3cK18y9CSM+0
-    rPP2m45OpBae5p7gPG6Az/LcipEapytMAVkn6v1Ip3BENxD/r/IVnVSEts9GDDbn
-    3Z6g7X98CoG152wT0w7Nw/bl/chBypTzvKkc9cY2U/Eqobci1BbekOk3HOdneaDm
-    4lSHPaLsdCoMDv44lujO09V5zt21fXQF3FeWFv8y0xkg23DHxZr/XysUf7gGEyrd
-    5DQlQ0lUi9rQMcxa2eDYGjQNtLQ=
-    -----END CERTIFICATE-----'''.stripIndent( ),
+                certificateFingerprint: 'EC:E7:3D:DF:97:43:00:9E:FC:F0:2C:6D:98:D2:82:EB:AA:04:75:10:E7:C2:F2:6F:31:F1:F1:CA:A1:61:DE:41',
                 identifierPartitions: [ 1 ],
                 services: [
                     new Service(
                         type: 'identity',
-                        endpoints: [ 'http://identity.example.com:8773/services/Identity' ]
+                        endpoints: [ 'https://identity.example.com:8773/services/Identity' ]
                     )
                 ]
             )
@@ -94,5 +75,71 @@ class RegionConfigurationTest {
     )
 
     assertEquals( 'Result does not match template', expected, result)
+  }
+
+  @Test( expected = RegionConfigurationException )
+  void testInvalidRegion( ) {
+    String config =  """
+    {
+        "Regions": [
+            {
+                "Name": "%1s",
+                "CertificateFingerprint": "EC:E7:3D:DF:97:43:00:9E:FC:F0:2C:6D:98:D2:82:EB:AA:04:75:10:E7:C2:F2:6F:31:F1:F1:CA:A1:61:DE:41",
+                "IdentifierPartitions": [
+                  1
+                ],
+                "Services": [
+                    {
+                      "Type": "identity",
+                      "Endpoints": [
+                        "https://identity.example.com:8773/services/Identity"
+                      ]
+                    }
+                ]
+            }
+        ]
+    }
+    """
+
+    try {
+      RegionConfigurations.parse( String.format( config, 'region-1' ) )  // ensure pass with valid region name
+    } catch ( Exception e ) {
+      throw Exceptions.toUndeclared( e );
+    }
+
+    RegionConfigurations.parse( String.format( config, 'region 1' ) )  // should fail due to space
+  }
+
+  @Test( expected = RegionConfigurationException )
+  void testInvalidServiceUrl( ) {
+    String config =  """
+    {
+        "Regions": [
+            {
+                "Name": "region-1",
+                "CertificateFingerprint": "EC:E7:3D:DF:97:43:00:9E:FC:F0:2C:6D:98:D2:82:EB:AA:04:75:10:E7:C2:F2:6F:31:F1:F1:CA:A1:61:DE:41",
+                "IdentifierPartitions": [
+                  1
+                ],
+                "Services": [
+                    {
+                      "Type": "identity",
+                      "Endpoints": [
+                        "%1s"
+                      ]
+                    }
+                ]
+            }
+        ]
+    }
+    """
+
+    try {
+      RegionConfigurations.parse( String.format( config, 'https://identity.example.com:8773/services/Identity' ) )  // ensure pass with valid service endpoint
+    } catch ( Exception e ) {
+      throw Exceptions.toUndeclared( e );
+    }
+
+    RegionConfigurations.parse( String.format( config, 'http://identity.example.com:8773/services/Identity' ) )  // should fail due to http scheme
   }
 }

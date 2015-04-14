@@ -24,12 +24,12 @@ import com.eucalyptus.configurable.ConfigurableField
 import com.eucalyptus.configurable.ConfigurableProperty
 import com.eucalyptus.configurable.ConfigurablePropertyException
 import com.eucalyptus.configurable.PropertyChangeListener
-import com.eucalyptus.util.Exceptions
+import com.eucalyptus.records.Logs
 import com.eucalyptus.util.UpperCamelPropertyNamingStrategy
 import com.google.common.base.Optional
 import com.google.common.base.Strings
-import com.google.common.net.InternetDomainName
 import groovy.transform.CompileStatic
+import org.apache.log4j.Logger
 import org.codehaus.jackson.JsonProcessingException
 import org.codehaus.jackson.map.ObjectMapper
 import org.springframework.context.MessageSource
@@ -49,6 +49,8 @@ import javax.annotation.Nonnull
 @CompileStatic
 class RegionConfigurations {
 
+  private static final Logger logger = Logger.getLogger( RegionConfigurations )
+
   private static final boolean validateConfiguration =
       Boolean.valueOf( System.getProperty( 'com.eucalyptus.auth.euare.identity.region.validateRegionConfiguration', 'true' ) )
 
@@ -62,7 +64,7 @@ class RegionConfigurations {
       changeListener = RegionNamePropertyChangeListener )
   public static String REGION_NAME = "";
 
-  static RegionConfiguration parse( final String configuration ) throws Exception {
+  static RegionConfiguration parse( final String configuration ) throws RegionConfigurationException {
     final ObjectMapper mapper = new ObjectMapper( )
     mapper.setPropertyNamingStrategy( new UpperCamelPropertyNamingStrategy( ) )
     final RegionConfiguration regionConfiguration
@@ -71,13 +73,13 @@ class RegionConfigurations {
         @Override String toString() { "property" } // overridden for better source in error message
       }, RegionConfiguration.class )
     } catch ( JsonProcessingException e ) {
-      throw new Exception( e.getMessage( ) )
+      throw new RegionConfigurationException( e.message )
     }
     final BeanPropertyBindingResult errors = new BeanPropertyBindingResult( regionConfiguration, "RegionConfiguration");
     ValidationUtils.invokeValidator( new RegionConfigurationValidator(errors), regionConfiguration, errors )
     if ( validateConfiguration && errors.hasErrors( ) ) {
       MessageSource source = new StaticMessageSource( ) // default messages will be used
-      throw new Exception( source.getMessage( errors.getAllErrors( ).get( 0 ), Locale.getDefault( ) ) )
+      throw new RegionConfigurationException( source.getMessage( errors.getAllErrors( ).get( 0 ), Locale.getDefault( ) ) )
     }
     regionConfiguration
   }
@@ -95,7 +97,8 @@ class RegionConfigurations {
       try {
         configuration = Optional.of( parse( configurationText ) )
       } catch ( Exception e ) {
-        throw Exceptions.toUndeclared( e )
+        Logs.extreme( ).error( e, e )
+        logger.error( "Invalid region configuration: " + e.message )
       }
     }
     configuration
@@ -116,8 +119,7 @@ class RegionConfigurations {
     void fireChange( final ConfigurableProperty property,
                      final String newValue ) throws ConfigurablePropertyException {
       if ( !Strings.isNullOrEmpty( newValue ) ) try {
-        final InternetDomainName name = InternetDomainName.from( String.format( "${newValue}.com" ) )
-        if ( name.parts( ).size( ) != 2 ) {
+        if ( !RegionValidator.REGION_NAME_PATTERN.matcher( newValue ).matches( ) ) {
           throw new ConfigurablePropertyException( "Invalid region name: ${newValue}" );
         }
       } catch ( Exception e ) {
