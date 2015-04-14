@@ -1709,6 +1709,7 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
     char *xmlbuf = NULL;
     char xmlfile[EUCA_MAX_PATH];
     globalNetworkInfo *gni = NULL;
+    gni_hostname_info *host_info = NULL;
     gni_cluster *myself = NULL;
     ccResourceCache resourceCacheLocal;
 
@@ -1732,9 +1733,10 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
             LOGDEBUG("created and populated tmpfile '%s'\n", xmlfile);
 
             gni = gni_init();
-            if (gni) {
+            host_info = gni_init_hostname_info();
+            if (gni && host_info) {
                 // decode/read/parse the globalnetworkinfo, assign any incorrect public/private IP mappings based on global view
-                rc = gni_populate(gni, xmlfile);
+                rc = gni_populate(gni,host_info,xmlfile);
                 LOGDEBUG("done with gni_populate()\n");
 
                 // do any CC actions based on contents of new network view
@@ -1807,6 +1809,7 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
 
                 // free the gni
                 rc = gni_free(gni);
+                rc = gni_hostnames_free(host_info);
             }
 
             unlink(xmlfile);

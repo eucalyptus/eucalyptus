@@ -145,6 +145,7 @@
 //vnetConfig *vnetconfig = NULL;
 eucanetdConfig *config = NULL;
 globalNetworkInfo *globalnetworkinfo = NULL;
+gni_hostname_info *host_info = NULL;
 mido_config *mido = NULL;
 
 configEntry configKeysRestartEUCANETD[] = {
@@ -352,6 +353,7 @@ int main(int argc, char **argv)
        }
      */
 
+
     LOGINFO("eucanetd started\n");
 
     // temporary
@@ -376,6 +378,7 @@ int main(int argc, char **argv)
     }
     // got all config, enter main loop
     //    while(counter<3) {
+
     while (1) {
         update_globalnet = 0;
 
@@ -510,6 +513,8 @@ int main(int argc, char **argv)
     }
 
     //    gni_free(globalnetworkinfo);
+    gni_hostnames_free(host_info);
+
     exit(0);
 }
 
@@ -912,6 +917,14 @@ int eucanetdInit(void)
     if (!globalnetworkinfo) {
         globalnetworkinfo = gni_init();
         if (!globalnetworkinfo) {
+            LOGFATAL("out of memory\n");
+            exit(1);
+        }
+    }
+
+    if (!host_info) {
+        host_info = gni_init_hostname_info();
+        if (!host_info) {
             LOGFATAL("out of memory\n");
             exit(1);
         }
@@ -2068,7 +2081,7 @@ int read_config(void)
         return (1);
     }
 
-    rc = gni_populate(globalnetworkinfo, config->global_network_info_file.dest);
+    rc = gni_populate(globalnetworkinfo, host_info, config->global_network_info_file.dest);
     if (rc) {
         LOGERROR("could not initialize global network info data structures from XML input\n");
         for (i = 0; i < EUCANETD_CVAL_LAST; i++) {
@@ -2077,6 +2090,7 @@ int read_config(void)
         return (1);
     }
     rc = gni_print(globalnetworkinfo);
+    rc = gni_hostnames_print(host_info);
 
     // setup and read local NC eucalyptus.conf file
     snprintf(config->configFiles[0], EUCA_MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
@@ -2415,13 +2429,13 @@ int read_latest_network(void)
 
     LOGDEBUG("reading latest network view into eucanetd\n");
 
-    rc = gni_populate(globalnetworkinfo, config->global_network_info_file.dest);
+    rc = gni_populate(globalnetworkinfo,host_info,config->global_network_info_file.dest);
     if (rc) {
         LOGERROR("failed to initialize global network info data structures from XML file: check network config settings\n");
         ret = 1;
     } else {
         gni_print(globalnetworkinfo);
-
+        gni_hostnames_print(host_info);
         if (!strcmp(config->vnetMode, "VPCMIDO")) {
             // skip for VPCMIDO
             ret = 0;

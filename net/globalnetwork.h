@@ -21,10 +21,13 @@
 #ifndef INCLUDE_GLOBAL_NETWORK_H
 #define INCLUDE_GLOBAL_NETWORK_H
 
+#include <netinet/in.h>
+
 #include <libxml/tree.h>
 #include <libxml/parser.h>
 #include <libxml/xpath.h>
 #include <libxml/xpathInternals.h>
+
 
 #include <eucalyptus.h>
 #include <data.h>
@@ -133,6 +136,16 @@ typedef struct gni_vpc_t {
     int max_internetGateways;
 } gni_vpc;
 
+typedef struct gni_hostname_t {
+    struct in_addr ip_address;
+    char hostname[HOSTNAME_SIZE];
+} gni_hostname;
+
+typedef struct gni_hostname_info_t {
+    gni_hostname *hostnames;
+    int max_hostnames;
+} gni_hostname_info;
+
 typedef struct globalNetworkInfo_t {
     int init;
     char networkInfo[MAX_NETWORK_INFO];
@@ -164,7 +177,7 @@ typedef struct globalNetworkInfo_t {
 } globalNetworkInfo;
 
 globalNetworkInfo *gni_init(void);
-int gni_populate(globalNetworkInfo * gni, char *xmlpath);
+int gni_populate(globalNetworkInfo * gni,gni_hostname_info *host_info, char *xmlpath);
 int gni_print(globalNetworkInfo * gni);
 int gni_clear(globalNetworkInfo * gni);
 int gni_free(globalNetworkInfo * gni);
@@ -205,4 +218,9 @@ int evaluate_xpath_element(xmlXPathContextPtr ctxptr, char *expression, char ***
 
 int ruleconvert(char *rulebuf, char *outrule);
 
+gni_hostname_info *gni_init_hostname_info();
+int gni_hostnames_print(gni_hostname_info *host_info);
+int gni_hostnames_free(gni_hostname_info *host_info);
+int gni_hostnames_get_hostname(gni_hostname_info *host_info, const char *ip_address, char **hostname);
+int cmpipaddr(const void *p1, const void *p2);
 #endif
