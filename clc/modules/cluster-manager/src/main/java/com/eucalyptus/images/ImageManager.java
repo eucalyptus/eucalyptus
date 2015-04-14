@@ -317,23 +317,12 @@ public class ImageManager {
   }
 
   private static List<String> verifyUserIds(final List<String> userIds) throws EucalyptusCloudException {
-    final Set<String> validUserIds = Sets.newHashSet( );
     for ( String userId : userIds ) {
-      try {
-        validUserIds.add( Accounts.lookupAccountById( userId ).getAccountNumber() );
-      } catch ( final Exception e ) {
-        try {
-          validUserIds.add( Accounts.lookupUserById( userId ).getAccount().getAccountNumber() );
-        } catch ( AuthException ex ) {
-          try {
-            validUserIds.add( Accounts.lookupUserByAccessKeyId( userId ).getAccount().getAccountNumber() );
-          } catch ( AuthException ex1 ) {
-            throw new EucalyptusCloudException( "Not a valid userId : " + userId );
-          }
-        }
+      if ( !Accounts.isAccountNumber( userId ) ) {
+        throw new EucalyptusCloudException( "Not a valid userId : " + userId );
       }
     }
-    return Lists.newArrayList( validUserIds );
+    return Lists.newArrayList( userIds );
   }
 
   public ModifyImageAttributeResponseType modifyImageAttribute( final ModifyImageAttributeType request ) throws EucalyptusCloudException {

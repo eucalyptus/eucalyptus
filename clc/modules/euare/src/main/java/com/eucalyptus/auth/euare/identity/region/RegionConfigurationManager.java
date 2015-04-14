@@ -122,6 +122,17 @@ public class RegionConfigurationManager {
       ).transform( RegionToRegionInfoTransform.INSTANCE );
   }
 
+  /**
+   * Get all region information (if any)
+   *
+   * @return The region information
+   */
+  public Iterable<RegionInfo> getRegionInfos( ) {
+    return Iterables.transform(
+        Iterables.concat( regionConfigurationSupplier.get( ).asSet( ) ),
+        RegionToRegionInfoTransform.INSTANCE );
+  }
+
   public boolean isRegionCertificate( final X509Certificate certificate ) {
     boolean found = false;
     final Optional<RegionConfiguration> configurationOptional = regionConfigurationSupplier.get( );

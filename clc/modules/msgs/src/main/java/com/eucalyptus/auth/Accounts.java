@@ -84,6 +84,7 @@ import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.EuareUser;
+import com.eucalyptus.auth.principal.SecurityTokenContent;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.auth.principal.UserPrincipalImpl;
@@ -172,16 +173,20 @@ public class Accounts {
     return null;
   }
 
+  public static String lookupAccountIdByAlias( String alias ) throws AuthException {
+    return getIdentityProvider( ).lookupAccountIdentifiersByAlias( alias ).getAccountNumber( );
+  }
+
   public static String lookupAccountIdByCanonicalId( String canonicalId ) throws AuthException {
-    return lookupAccountByCanonicalId( canonicalId ).getAccountNumber();
+    return getIdentityProvider( ).lookupAccountIdentifiersByCanonicalId( canonicalId ).getAccountNumber( );
   }
 
   public static String lookupCanonicalIdByAccountId( String accountId ) throws AuthException {
-    return lookupAccountById( accountId ).getCanonicalId( );
+    return getIdentityProvider( ).lookupPrincipalByAccountNumber( accountId ).getCanonicalId( );
   }
 
   public static String lookupAccountAliasById( String accountId ) throws AuthException {
-    return lookupAccountById( accountId ).getName( );
+    return getIdentityProvider( ).lookupPrincipalByAccountNumber( accountId ).getAccountAlias( );
   }
 
   public static Account lookupAccountByName( String accountName ) throws AuthException {
@@ -256,6 +261,11 @@ public class Accounts {
   }
 
   @Nonnull
+  public static UserPrincipal lookupPrincipalByAccountNumberAndUsername( String accountNumber, String username ) throws AuthException {
+    return getIdentityProvider( ).lookupPrincipalByAccountNumberAndUsername( accountNumber, username );
+  }
+
+  @Nonnull
   public static UserPrincipal lookupPrincipalByCanonicalId( String canonicalId ) throws AuthException {
     return getIdentityProvider( ).lookupPrincipalByCanonicalId( canonicalId );
   }
@@ -288,6 +298,11 @@ public class Accounts {
   @Nonnull
   public static Role lookupRoleByName( String accountNumber, String name ) throws AuthException {
     return getIdentityProvider( ).lookupRoleByName( accountNumber, name );
+  }
+
+  @Nonnull
+  public static SecurityTokenContent decodeSecurityToken( String accessKeyIdentifier, String securityToken ) throws AuthException {
+    return getIdentityProvider( ).decodeSecurityToken( accessKeyIdentifier, securityToken );
   }
 
   public static List<EuareUser> listAllUsers( ) throws AuthException {

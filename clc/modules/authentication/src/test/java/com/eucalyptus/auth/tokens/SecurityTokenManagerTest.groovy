@@ -20,6 +20,7 @@
 package com.eucalyptus.auth.tokens
 
 import com.eucalyptus.auth.principal.PolicyVersion
+import com.eucalyptus.auth.principal.SecurityTokenContent
 import com.eucalyptus.auth.principal.UserPrincipal
 import com.eucalyptus.auth.principal.UserPrincipalImpl
 import groovy.transform.CompileStatic
@@ -260,6 +261,9 @@ class SecurityTokenManagerTest {
         String secret = generateSecret( nonce, keyForLookup.getSecretKey( ) )
         final Collection<AccessKey> keys = Collections.singleton( accessKey( 0, null, null, secret ) )
         new UserPrincipalImpl( userForLookup, keys )
+      }
+      @Override protected SecurityTokenContent doDispatchingDecode(final String accessKeyId, final String token) throws AuthException {
+        doDecode( accessKeyId, token )
       }
     }
   }

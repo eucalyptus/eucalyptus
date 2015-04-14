@@ -89,7 +89,7 @@ import com.eucalyptus.util.RestrictedType;
  */
 @PolicyVendor( PolicySpec.VENDOR_IAM )
 @PolicyResourceType( PolicySpec.IAM_RESOURCE_ACCOUNT )
-public interface Account extends BasePrincipal, RestrictedType, Serializable {
+public interface Account extends AccountIdentifiers, BasePrincipal, RestrictedType, Serializable {
   public static final String NOBODY_ACCOUNT = "nobody";
   public static final Long NOBODY_ACCOUNT_ID = 1l;
   /**

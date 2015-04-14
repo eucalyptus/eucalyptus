@@ -165,6 +165,11 @@ public class DatabaseAccountProxy implements Account {
   }
 
   @Override
+  public String getAccountAlias( ) {
+    return getName( );
+  }
+
+  @Override
   public String getCanonicalId() {
     return this.delegate.getCanonicalId();
   }

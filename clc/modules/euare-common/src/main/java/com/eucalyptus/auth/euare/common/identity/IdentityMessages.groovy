@@ -33,6 +33,7 @@ class DescribePrincipalType extends IdentityMessage {
   String accessKeyId
   String certificateId
   String userId
+  String username // optionally used with accountId
   String roleId
   String accountId
   String canonicalId
@@ -115,4 +116,46 @@ class DescribeRoleResponseType extends IdentityMessage {
 
 class DescribeRoleResult extends EucalyptusData {
   Role role
+}
+
+class DescribeAccountsType extends IdentityMessage {
+  String alias
+  String aliasLike
+  String canonicalId
+}
+
+class DescribeAccountsResponseType extends IdentityMessage {
+  DescribeAccountsResult describeAccountsResult
+}
+
+class DescribeAccountsResult extends EucalyptusData {
+  ArrayList<Account> accounts
+}
+
+class Account extends EucalyptusData {
+  String accountNumber
+  String alias
+  String canonicalId
+}
+
+class DecodeSecurityTokenType extends IdentityMessage {
+  String accessKeyId
+  String securityToken
+}
+
+class DecodeSecurityTokenResponseType extends IdentityMessage {
+  DecodeSecurityTokenResult decodeSecurityTokenResult
+}
+
+class DecodeSecurityTokenResult extends EucalyptusData {
+  SecurityToken securityToken
+}
+
+class SecurityToken extends EucalyptusData {
+  String originatingAccessKeyId
+  String originatingUserId
+  String originatingRoleId
+  String nonce
+  Long created
+  Long expires
 }

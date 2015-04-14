@@ -66,6 +66,11 @@ public class TestAccount implements Account {
     this.accountNumber = accountNumber;
   }
 
+  @Override
+  public String getAccountAlias( ) {
+    return getName( );
+  }
+
   public String getCanonicalId() {
     return canonicalId;
   }

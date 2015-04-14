@@ -22,9 +22,11 @@ package com.eucalyptus.auth;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.api.IdentityProvider;
 import com.eucalyptus.auth.principal.AccessKey;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.EuareInstanceProfile;
 import com.eucalyptus.auth.principal.EuareRole;
@@ -32,6 +34,7 @@ import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.Role;
+import com.eucalyptus.auth.principal.SecurityTokenContent;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.auth.principal.UserPrincipalImpl;
 import com.eucalyptus.auth.tokens.SecurityTokenManager;
@@ -85,6 +88,24 @@ public class DatabaseIdentityProvider implements IdentityProvider {
   }
 
   @Override
+  public UserPrincipal lookupPrincipalByAccountNumberAndUsername(
+      final String accountNumber,
+      final String name
+  ) throws AuthException {
+    return Accounts.userAsPrincipal( Accounts.lookupAccountById( accountNumber ).lookupUserByName( name ) );
+  }
+
+  @Override
+  public AccountIdentifiers lookupAccountIdentifiersByAlias( final String alias ) throws AuthException {
+    return Accounts.lookupAccountByName( alias );
+  }
+
+  @Override
+  public AccountIdentifiers lookupAccountIdentifiersByCanonicalId( final String canonicalId ) throws AuthException {
+    return Accounts.lookupAccountByCanonicalId( canonicalId );
+  }
+
+  @Override
   public InstanceProfile lookupInstanceProfileByName( final String accountNumber, final String name ) throws AuthException {
     final EuareInstanceProfile profile = Accounts.lookupAccountById( accountNumber ).lookupInstanceProfileByName( name );
     final String profileArn = Accounts.getInstanceProfileArn( profile );
@@ -131,6 +152,12 @@ public class DatabaseIdentityProvider implements IdentityProvider {
       @Override public String getDisplayName( ) { return Accounts.getRoleFullName( this ); }
       @Override public OwnerFullName getOwner( ) { return euareRole.getOwner( ); }
     };
+  }
+
+  @Override
+  public SecurityTokenContent decodeSecurityToken( final String accessKeyIdentifier,
+                                                   final String securityToken ) throws AuthException {
+    return SecurityTokenManager.decodeSecurityToken( accessKeyIdentifier, securityToken );
   }
 
   private UserPrincipal decorateCredentials( final UserPrincipal userPrincipal,
