@@ -64,11 +64,11 @@
  ************************************************************************/
 
 //!
-//! @file net/euca_arp.c
+//! @file net/announce_arp.c
 //! Implements the API necessary to work with ARP
 //!
 
-#ifdef USE_EUCA_ARP
+#ifdef USE_ANNOUNCE_ARP
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  INCLUDES                                  |
@@ -339,4 +339,4 @@ int main(int argc, char *argv[])
 #undef MAC_ARG_INDEX
 #undef VLAN_ARG_INDEX
 }
-#endif /* USE_EUCA_ARP */
+#endif /* USE_ANNOUNCE_ARP */
