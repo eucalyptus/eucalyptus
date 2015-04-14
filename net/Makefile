@@ -92,17 +92,17 @@ distclean: clean
 
 install:
 	@$(INSTALL) -d $(DESTDIR)$(sbindir)
-	@$(INSTALL) -d $(DESTDIR)$(libexecdir)
+	@$(INSTALL) -d $(DESTDIR)$(libexecdir)/eucalyptus
 	@$(INSTALL) -m 755 eucanetd $(DESTDIR)$(sbindir)
-	@$(INSTALL) -m 700 announce-arp $(DESTDIR)$(libexecdir)
+	@$(INSTALL) -m 700 announce-arp $(DESTDIR)$(libexecdir)/eucalyptus
 
 deploy:
 	@$(INSTALL) -d $(DESTDIR)$(sbindir)
-	@$(INSTALL) -d $(DESTDIR)$(libexecdir)
+	@$(INSTALL) -d $(DESTDIR)$(libexecdir)/eucalyptus
 	@$(INSTALL) -m 755 eucanetd $(DESTDIR)$(sbindir)
-	@$(INSTALL) -m 700 announce-arp $(DESTDIR)$(libexecdir)
+	@$(INSTALL) -m 700 announce-arp $(DESTDIR)$(libexecdir)/eucalyptus
 
 uninstall:
 	@$(RM) -f $(DESTDIR)$(sbindir)/eucanetd
-	@$(RM) -f $(DESTDIR)$(libexecdir)/announce-arp
+	@$(RM) -f $(DESTDIR)$(libexecdir)/eucalyptus/announce-arp
 
