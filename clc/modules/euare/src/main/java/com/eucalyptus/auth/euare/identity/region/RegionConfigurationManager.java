@@ -21,7 +21,10 @@ package com.eucalyptus.auth.euare.identity.region;
 
 import static com.eucalyptus.auth.euare.identity.region.RegionInfo.RegionService;
 import static com.eucalyptus.util.CollectionUtils.propertyPredicate;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -30,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.util.Identifiers;
+import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.util.TypeMapper;
@@ -43,6 +47,7 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
+import com.google.common.io.BaseEncoding;
 
 /**
  *
@@ -57,7 +62,7 @@ public class RegionConfigurationManager {
         }
       }, 1, TimeUnit.MINUTES );
 
-  private final Cache<String,X509Certificate> certificateCache = CacheBuilder
+  private final Cache<String,byte[]> certificateDigestCache = CacheBuilder
       .<String,X509Certificate>newBuilder( )
       .expireAfterWrite( 1, TimeUnit.HOURS )
       .build( );
@@ -140,17 +145,18 @@ public class RegionConfigurationManager {
       final RegionConfiguration configuration = configurationOptional.get( );
       for ( final Region region : configuration ) {
         try {
-          final X509Certificate regionCertificate = certificateCache.get(
-              region.getCertificate( ),
-              new Callable<X509Certificate>( ) {
+          final Digest digest = Digest.forAlgorithm( region.getCertificateFingerprintDigest( ) ).or( Digest.SHA256 );
+          final byte[] regionCertificateFingerprint = certificateDigestCache.get(
+              region.getCertificateFingerprint(),
+              new Callable<byte[]>( ) {
                 @Override
-                public X509Certificate call() throws Exception {
-                  return PEMFiles.getCert( region.getCertificate().getBytes( StandardCharsets.UTF_8 ) );
+                public byte[] call( ) throws Exception {
+                  return BaseEncoding.base16( ).withSeparator( ":", 2 ).decode( region.getCertificateFingerprint( ) );
                 }
               } );
-          found = regionCertificate.equals( certificate );
+          found = MessageDigest.isEqual( regionCertificateFingerprint, digest.digestBinary( certificate.getEncoded( ) ) );
           if ( found ) break;
-        } catch ( ExecutionException e ) {
+        } catch ( ExecutionException | CertificateEncodingException e ) {
           // skip the certificate
         }
       }
