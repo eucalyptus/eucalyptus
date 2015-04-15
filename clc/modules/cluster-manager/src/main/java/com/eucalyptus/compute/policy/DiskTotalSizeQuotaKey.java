@@ -95,7 +95,7 @@ public class DiskTotalSizeQuotaKey extends QuotaKey {
       try ( TransactionResource tx = Entities.transactionFor( VmInstance.class ) ){
         Criteria criteria = Entities.createCriteria(VmInstance.class)
           .add(Example.create(VmInstance.named(ownerFullName, null)))
-          .add(Restrictions.not(Restrictions.in("state", VmInstance.VmStateSet.DONE.array())));
+          .add(Restrictions.not(Restrictions.in("state", VmInstance.VmStateSet.TORNDOWN.array())));
         List<VmInstance> result = (List<VmInstance>) criteria.list();
         if (result != null) {
           for (VmInstance instance : result) {

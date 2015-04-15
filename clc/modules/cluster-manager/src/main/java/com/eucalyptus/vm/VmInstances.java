@@ -672,7 +672,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
       try ( TransactionResource tx = Entities.transactionFor( VmInstance.class ) ){
         return Entities.count(
             VmInstance.named( ownerFullName, null ),
-            Restrictions.not( VmInstance.criterion( VmStateSet.DONE.array() ) ),
+            Restrictions.not( VmInstance.criterion( VmStateSet.TORNDOWN.array() ) ),
             Collections.<String,String>emptyMap( ) );
       }
     }
