@@ -1153,7 +1153,7 @@ public class TemplateParser {
           }
         }
 
-
+        output.setDescription(description);
         output.setJsonValue(JsonHelper.getStringFromJsonNode(outputJsonNode.get(OutputKey.Value.toString())));
         output.setReady(false);
         output.setAllowedByCondition(conditionMap.get(conditionKey) != Boolean.FALSE);
