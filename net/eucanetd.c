@@ -1314,7 +1314,7 @@ int update_public_ips(void)
         strptra = hex2dot(mycluster->private_subnet.subnet);
         slashnet = NETMASK_TO_SLASHNET(mycluster->private_subnet.netmask);
 
-        snprintf(rule, EUCA_MAX_PATH, "-A EUCA_NAT_POST -s %s/%u -m mark ! --mark 0x2a -j MASQUERADE", strptra, slashnet);
+        snprintf(rule, 1024, "-A EUCA_NAT_POST -s %s/%u -m mark ! --mark 0x2a -j MASQUERADE", strptra, slashnet);
         ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_POST", rule);
         EUCA_FREE(strptra);
     }
