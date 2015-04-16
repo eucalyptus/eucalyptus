@@ -533,7 +533,7 @@
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
   <mapping name="CreateAccessKeyResult" class="com.eucalyptus.auth.euare.CreateAccessKeyResultType">
-    <structure field="accessKey" usage="required" map-as="com.eucalyptus.auth.euare.AccessKeyType"/>
+    <structure name="AccessKey" field="accessKey" usage="required" map-as="com.eucalyptus.auth.euare.AccessKeyType"/>
   </mapping>
   <mapping name="GetUser" class="com.eucalyptus.auth.euare.GetUserType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
@@ -707,8 +707,7 @@
       <value name="member" type="java.lang.String"/>
     </collection>
   </mapping>
-  <mapping name="AccessKey" class="com.eucalyptus.auth.euare.AccessKeyType" extends="com.eucalyptus.auth.euare.EuareMessage">
-    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+  <mapping class="com.eucalyptus.auth.euare.AccessKeyType" abstract="true">
     <value name="UserName" field="userName" usage="required"/>
     <value name="AccessKeyId" field="accessKeyId" usage="required"/>
     <value name="Status" field="status" usage="required"/>

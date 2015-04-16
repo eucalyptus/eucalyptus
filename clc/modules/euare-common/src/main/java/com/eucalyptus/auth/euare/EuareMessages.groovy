@@ -177,7 +177,7 @@ public class DeleteAccessKeyResponseType extends EuareMessage {
   ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public DeleteAccessKeyResponseType() {  }
 }
-public class AccessKeyType extends EuareMessage {
+public class AccessKeyType extends EucalyptusData {
   String userName;
   String accessKeyId;
   String status;
