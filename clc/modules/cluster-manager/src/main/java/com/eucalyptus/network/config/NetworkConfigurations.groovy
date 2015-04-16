@@ -35,6 +35,7 @@ import com.eucalyptus.event.Listeners
 import com.eucalyptus.event.EventListener as EucaEventListener
 import com.eucalyptus.network.DispatchingNetworkingService
 import com.eucalyptus.network.IPRange
+import com.eucalyptus.network.ManagedSubnets
 import com.eucalyptus.network.NetworkGroups
 import com.eucalyptus.network.NetworkMode
 import com.eucalyptus.network.PrivateAddresses
@@ -127,12 +128,11 @@ class NetworkConfigurations {
           }
 
           if ( managed ) { // cap max vlan based on available networks
-            clusterConfiguration.maxNetworkTag = Math.min(
-                (int) clusterConfiguration.maxNetworkTag,
-                (int) ( IPRange.fromSubnet(
-                    clusterConfiguration.vnetSubnet,
-                    clusterConfiguration.vnetNetmask
-                ).size( ) + 2 ) / clusterConfiguration.addressesPerNetwork
+            clusterConfiguration.maxNetworkTag = ManagedSubnets.restrictToMaximumSegment(
+                clusterConfiguration.vnetSubnet,
+                clusterConfiguration.vnetNetmask,
+                clusterConfiguration.addressesPerNetwork,
+                clusterConfiguration.maxNetworkTag
             )
           }
 

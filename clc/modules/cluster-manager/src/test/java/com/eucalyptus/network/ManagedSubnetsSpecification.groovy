@@ -25,6 +25,8 @@ import spock.lang.Specification
 
 import static com.eucalyptus.network.ManagedSubnets.addressToIndex
 import static com.eucalyptus.network.ManagedSubnets.indexToAddress
+import static com.eucalyptus.network.ManagedSubnets.restrictToMaximumSegment
+import static com.eucalyptus.network.ManagedSubnets.validSegmentForSubnet
 
 /**
  *
@@ -98,6 +100,33 @@ class ManagedSubnetsSpecification extends Specification {
     '0.0.0.0' | 8192 |   3 | 8191l | '0.0.127.255'
   }
 
+  def 'should restrict maximum vlan for subnet settings'() {
+    expect: 'vlan restricted when appropriate'
+    restrictToMaximumSegment( subnet( subnet, netmask, size, 2, maxVlan ), maxVlan ) == restrictedMaxVlan
+
+    where:
+    subnet          |         netmask | size | maxVlan | restrictedMaxVlan
+    '10.0.0.0'      |     '255.0.0.0' |   32 |    4095 |              4095
+    '10.10.10.0'    | '255.255.255.0' |  128 |    4095 |                 1
+    '10.10.10.0'    | '255.255.255.0' |    2 |    4095 |               127
+    '10.10.10.0'    | '255.255.255.0' |    2 |     100 |               100
+  }
+
+  def 'should determine invalid minimum vlan for subnet settings'() {
+    expect: 'invalid minimum vlans identified'
+    validSegmentForSubnet( subnet( subnet, netmask, size, minVlan, 4096 ), minVlan ) == valid
+
+    where:
+    subnet          |         netmask | size | minVlan | valid
+    '10.0.0.0'      |     '255.0.0.0' |   32 |    4095 | true
+    '10.10.10.0'    | '255.255.255.0' |  128 |    4095 | false
+    '10.10.10.0'    | '255.255.255.0' |    2 |     127 | true
+    '10.10.10.0'    | '255.255.255.0' |    2 |     128 | false
+    '10.10.10.0'    | '255.255.255.0' |    2 |     100 | true
+    '10.10.10.0'    | '255.255.255.0' |    2 |       1 | true
+    '172.16.0.0'    |   '255.255.0.0' | 2048 |     512 | false
+  }
+
   private static ManagedSubnet subnet( subnet, size ) {
     new ManagedSubnet(
         name: subnet,
@@ -105,6 +134,17 @@ class ManagedSubnetsSpecification extends Specification {
         segmentSize: size,
         minVlan: 2,
         maxVlan: 4095
+    )
+  }
+
+  private static ManagedSubnet subnet( String subnet, String netmask, Integer size, Integer minVlan, Integer maxVlan ) {
+    new ManagedSubnet(
+        name: subnet,
+        subnet: subnet,
+        netmask: netmask,
+        segmentSize: size,
+        minVlan: minVlan,
+        maxVlan: maxVlan
     )
   }
 
