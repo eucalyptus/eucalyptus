@@ -1801,7 +1801,7 @@ int kick_dhcpd_server()
         snprintf(rootwrap, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
 
         if (stat(pidfile, &mystat) == 0) {
-            if ((pidstr = file2str(pidfile)) != NULL) { 
+            if ((pidstr = file2str(pidfile)) != NULL) {
                 pid = atoi(pidstr);
                 EUCA_FREE(pidstr);
             } else {
@@ -2760,7 +2760,7 @@ static int update_host_arp(void)
                                 snprintf(sRule, EUCA_MAX_PATH, "-p ARP --arp-ip-dst %s -j arpreply --arpreply-mac %s", psPrivateIp, psTrimMac);
                                 if (ebt_chain_find_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", sRule) == NULL) {
                                     LOGDEBUG("Sending gratuitous ARP for instance %s IP %s using MAC %s on %s\n", pInstances[i].name, psPrivateIp, psBridgeMac, config->bridgeDev);
-                                    snprintf(sCommand, EUCA_MAX_PATH, "/usr/sbin/euca_arp %s %s %s", config->bridgeDev, psPrivateIp, psBridgeMac);
+                                    snprintf(sCommand, EUCA_MAX_PATH, "/usr/libexec/eucalyptus/announce-arp %s %s %s", config->bridgeDev, psPrivateIp, psBridgeMac);
                                     if ((rc = se_add(&arpExecutor, sCommand, NULL, ignore_exit2)) != 0) {
                                         LOGWARN("Fail to schedule gratuitous ARP for host '%s' using mac '%s'. rc=%d\n", psPrivateIp, psBridgeMac, rc);
                                     }
