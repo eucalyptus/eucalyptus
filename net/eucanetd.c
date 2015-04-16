@@ -1801,14 +1801,17 @@ int kick_dhcpd_server()
         snprintf(rootwrap, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
 
         if (stat(pidfile, &mystat) == 0) {
-            pidstr = file2str(pidfile);
-            pid = atoi(pidstr);
-            EUCA_FREE(pidstr);
+            if ((pidstr = file2str(pidfile)) != NULL) { 
+                pid = atoi(pidstr);
+                EUCA_FREE(pidstr);
+            } else {
+                LOGWARN("Failed to determine PID from file: %s\n", pidfile);
+            }
 
             if (pid > 1) {
                 LOGDEBUG("attempting to kill old dhcp daemon (pid=%d)\n", pid);
                 if ((rc = safekillfile(pidfile, config->dhcpDaemon, 9, rootwrap)) != 0) {
-                    LOGWARN("failed to kill previous dhcp daemon\n");
+                    LOGWARN("failed to kill previous dhcp daemon, euca_error: %d\n", rc);
                 }
             }
         }
