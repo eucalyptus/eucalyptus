@@ -40,6 +40,7 @@ class NetworkConfigurationTest {
         "PublicIps": [
             "10.111.200.1-10.111.200.2"
         ],
+        "publicGateway": "10.111.0.1",
         "PrivateIps": [
             "1.0.0.33-1.0.0.34"
         ],
@@ -115,6 +116,7 @@ class NetworkConfigurationTest {
         "PublicIps": [
             "10.111.200.1-10.111.200.2"
         ],
+        
         "Clusters": [
             {
                 "Name": "edgecluster0",
