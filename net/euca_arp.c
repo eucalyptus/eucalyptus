@@ -64,7 +64,7 @@
  ************************************************************************/
 
 //!
-//! @file net/euca_arp.c
+//! @file net/announce_arp.c
 //! Implements the API necessary to work with ARP
 //!
 
@@ -258,12 +258,17 @@ static int send_gratuitous_arp(const char *psDevice, const char *psIp, const cha
             return (1);
         }
         // Send out on the given interface
-        strcpy(sa.sa_data, psDevice);
+        bzero(sa.sa_data, sizeof(sa.sa_data));
+        strncpy(sa.sa_data, psDevice, (sizeof(sa.sa_data) - 1));
+
         if ((rc = sendto(sock, gArpPkt, len, (MSG_DONTROUTE | MSG_DONTWAIT), &sa, sizeof(sa))) < len) {
             LOGERROR("Fail to send gratuitous ARP on device %s for IP %s using MAC %s and VLAN %d. rc = %d, len = %d\n", psDevice, psIp, psMac, vlan, rc, len);
+            close(sock);
             return (1);
         }
+
         LOGDEBUG("Sent gratuitous ARP on device %s for IP %s using MAC %s and VLAN %d.\n", psDevice, psIp, psMac, vlan);
+        close(sock);
         return (0);
     }
     LOGERROR("Fail to convert MAC address %s to hexadecimal\n", psMac);

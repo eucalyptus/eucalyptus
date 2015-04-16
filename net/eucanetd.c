@@ -206,11 +206,7 @@ configEntry configKeysNoRestartEUCANETD[] = {
     ,
     {"DISABLE_L2_ISOLATION", "N"}
     ,
-<<<<<<< HEAD
-    {"NC_PROXY", "Y"}
-=======
     {"NC_PROXY", "N"}
->>>>>>> maint-4.1
     ,
     {"NC_ROUTER", "Y"}
     ,
@@ -1805,7 +1801,7 @@ int kick_dhcpd_server()
         snprintf(rootwrap, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
 
         if (stat(pidfile, &mystat) == 0) {
-            if ((pidstr = file2str(pidfile)) != NULL) { 
+            if ((pidstr = file2str(pidfile)) != NULL) {
                 pid = atoi(pidstr);
                 EUCA_FREE(pidstr);
             } else {
