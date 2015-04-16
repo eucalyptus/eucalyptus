@@ -2494,8 +2494,7 @@ int read_latest_network(void)
                             if (!found_ip) {
                                 strptra = hex2dot(mycluster->private_subnet.subnet);
                                 strptrb = hex2dot(mycluster->private_subnet.netmask);
-                                LOGERROR
-                                    ("cannot find an IP assigned to specified bridge device '%s' that falls within this cluster's specified subnet '%s/%s': check your configuration\n",
+                                LOGERROR("cannot find an IP assigned to specified bridge device '%s' that falls within this cluster's specified subnet '%s/%s': check your configuration\n",
                                      config->bridgeDev, strptra, strptrb);
                                 EUCA_FREE(strptra);
                                 EUCA_FREE(strptrb);
@@ -2723,7 +2722,7 @@ int flush_all(void)
 //!
 static int update_host_arp(void)
 {
-#ifdef USE_ANNOUNCE_ARP
+#ifdef USE_EUCA_ARP
     int i = 0;
     int rc = 0;
     u8 aHexOut[ENET_BUF_SIZE] = { 0 };
@@ -2761,7 +2760,7 @@ static int update_host_arp(void)
                                 snprintf(sRule, EUCA_MAX_PATH, "-p ARP --arp-ip-dst %s -j arpreply --arpreply-mac %s", psPrivateIp, psTrimMac);
                                 if (ebt_chain_find_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", sRule) == NULL) {
                                     LOGDEBUG("Sending gratuitous ARP for instance %s IP %s using MAC %s on %s\n", pInstances[i].name, psPrivateIp, psBridgeMac, config->bridgeDev);
-                                    snprintf(sCommand, EUCA_MAX_PATH, "/usr/libexec/eucalyptus/announce-arp %s %s %s", config->bridgeDev, psPrivateIp, psBridgeMac);
+                                    snprintf(sCommand, EUCA_MAX_PATH, "/usr/sbin/euca_arp %s %s %s", config->bridgeDev, psPrivateIp, psBridgeMac);
                                     if ((rc = se_add(&arpExecutor, sCommand, NULL, ignore_exit2)) != 0) {
                                         LOGWARN("Fail to schedule gratuitous ARP for host '%s' using mac '%s'. rc=%d\n", psPrivateIp, psBridgeMac, rc);
                                     }
@@ -2792,8 +2791,8 @@ static int update_host_arp(void)
 
     LOGERROR("cannot find local node in global network view: check network config settings\n");
     return (1);
-#else /* USE_ANNOUNCE_ARP */
+#else /* USE_EUCA_ARP */
     return (0);
-#endif /* USE_ANNOUNCE_ARP */
+#endif /* USE_EUCA_ARP */
 }
 
