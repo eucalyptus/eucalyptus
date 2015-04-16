@@ -1806,11 +1806,11 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
                     EUCA_FREE(strptrb);
 
                 }
-
-                // free the gni
-                rc = gni_free(gni);
-                rc = gni_hostnames_free(host_info);
             }
+
+            // Free up gni and host_info memory
+            rc = gni_free(gni);
+            rc = gni_hostnames_free(host_info);
 
             unlink(xmlfile);
         }

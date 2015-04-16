@@ -64,7 +64,7 @@
  ************************************************************************/
 
 //!
-//! @file net/announce_arp.c
+//! @file net/euca_arp.c
 //! Implements the API necessary to work with ARP
 //!
 
