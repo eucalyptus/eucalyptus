@@ -68,7 +68,7 @@
 //! Implements the API necessary to work with ARP
 //!
 
-#ifdef USE_ANNOUNCE_ARP
+#ifdef USE_EUCA_ARP
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  INCLUDES                                  |
@@ -258,9 +258,12 @@ static int send_gratuitous_arp(const char *psDevice, const char *psIp, const cha
             return (1);
         }
         // Send out on the given interface
-        strncpy(sa.sa_data, psDevice, sizeof(sa.sa_data));
+        bzero(sa.sa_data, sizeof(sa.sa_data));
+        strncpy(sa.sa_data, psDevice, (sizeof(sa.sa_data) - 1));
+
         if ((rc = sendto(sock, gArpPkt, len, (MSG_DONTROUTE | MSG_DONTWAIT), &sa, sizeof(sa))) < len) {
             LOGERROR("Fail to send gratuitous ARP on device %s for IP %s using MAC %s and VLAN %d. rc = %d, len = %d\n", psDevice, psIp, psMac, vlan, rc, len);
+            close(sock);
             return (1);
         }
 
@@ -339,4 +342,4 @@ int main(int argc, char *argv[])
 #undef MAC_ARG_INDEX
 #undef VLAN_ARG_INDEX
 }
-#endif /* USE_ANNOUNCE_ARP */
+#endif /* USE_EUCA_ARP */

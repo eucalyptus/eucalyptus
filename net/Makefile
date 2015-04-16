@@ -62,7 +62,7 @@
 
 include ../Makedefs
 
-all: vnetwork.o ipt_handler.o ipr_handler.o eucanetd.o globalnetwork.o midonet-api.o euca-to-mido.o eucanetd announce-arp
+all: vnetwork.o ipt_handler.o ipr_handler.o eucanetd.o globalnetwork.o midonet-api.o euca-to-mido.o eucanetd euca-arp
 
 build: all
 
@@ -76,13 +76,13 @@ indent:
 	done
 
 eucanetd: vnetwork.o ipt_handler.o ipr_handler.o globalnetwork.o eucanetd.o 
-	$(CC) $(CPPFLAGS) $(CFLAGS) -DUSE_ANNOUNCE_ARP `xslt-config --cflags` $(INCLUDES) eucanetd.c ipt_handler.o ipr_handler.o globalnetwork.o midonet-api.o euca-to-mido.o ../util/euca_network.o ../util/sequence_executor.o ../util/atomic_file.o ../net/vnetwork.o ../util/log.o ../util/ipc.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/hash.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/euca_auth.o ../storage/diskutil.o ../storage/http.o ../util/config.o -I../util -I../net  -lpthread -lm -lssl  -lxml2 -lcurl -lcrypto -lxml2 -ljson -o eucanetd
+	$(CC) $(CPPFLAGS) $(CFLAGS) -DUSE_EUCA_ARP `xslt-config --cflags` $(INCLUDES) eucanetd.c ipt_handler.o ipr_handler.o globalnetwork.o midonet-api.o euca-to-mido.o ../util/euca_network.o ../util/sequence_executor.o ../util/atomic_file.o ../net/vnetwork.o ../util/log.o ../util/ipc.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/hash.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/euca_auth.o ../storage/diskutil.o ../storage/http.o ../util/config.o -I../util -I../net  -lpthread -lm -lssl  -lxml2 -lcurl -lcrypto -lxml2 -ljson -o eucanetd
 
-announce-arp: announce-arp.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) -DUSE_ANNOUNCE_ARP `xslt-config --cflags` $(INCLUDES) announce-arp.c ../util/sequence_executor.o ../util/atomic_file.o ../net/vnetwork.o ../util/log.o ../util/ipc.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/hash.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/euca_auth.o ../storage/diskutil.o ../storage/http.o ../util/config.o -I../util -I../net  -lpthread -lm -lssl  -lxml2 -lcurl -lcrypto -lxml2 -ljson -o announce-arp
+euca-arp: euca-arp.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) -DUSE_EUCA_ARP `xslt-config --cflags` $(INCLUDES) euca-arp.c ../util/sequence_executor.o ../util/atomic_file.o ../net/vnetwork.o ../util/log.o ../util/ipc.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/hash.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/euca_auth.o ../storage/diskutil.o ../storage/http.o ../util/config.o -I../util -I../net  -lpthread -lm -lssl  -lxml2 -lcurl -lcrypto -lxml2 -ljson -o euca-arp
 
 clean:
-	rm -rf *~ *.o eucanetd announce-arp
+	rm -rf *~ *.o eucanetd euca-arp
 
 test:
 	$(CC) $(CPPFLAGS) $(CFLAGS) `xslt-config --cflags` -DEUCANETD_TEST $(INCLUDES) eucanetd.c ipt_handler.o globalnetwork.o ../util/sequence_executor.o ../util/atomic_file.o ../net/vnetwork.o ../util/log.o ../util/ipc.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/hash.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/euca_auth.o ../storage/diskutil.o ../storage/http.o ../util/config.o -I../util -I../net  -lpthread -lm -lssl  -lxml2 -lcurl -lcrypto -lxml2 -o eucanetd
@@ -94,15 +94,15 @@ install:
 	@$(INSTALL) -d $(DESTDIR)$(sbindir)
 	@$(INSTALL) -d $(DESTDIR)$(libexecdir)/eucalyptus
 	@$(INSTALL) -m 755 eucanetd $(DESTDIR)$(sbindir)
-	@$(INSTALL) -m 700 announce-arp $(DESTDIR)$(libexecdir)/eucalyptus
+	@$(INSTALL) -m 700 euca-arp $(DESTDIR)$(libexecdir)/eucalyptus
 
 deploy:
 	@$(INSTALL) -d $(DESTDIR)$(sbindir)
 	@$(INSTALL) -d $(DESTDIR)$(libexecdir)/eucalyptus
 	@$(INSTALL) -m 755 eucanetd $(DESTDIR)$(sbindir)
-	@$(INSTALL) -m 700 announce-arp $(DESTDIR)$(libexecdir)/eucalyptus
+	@$(INSTALL) -m 700 euca-arp $(DESTDIR)$(libexecdir)/eucalyptus
 
 uninstall:
 	@$(RM) -f $(DESTDIR)$(sbindir)/eucanetd
-	@$(RM) -f $(DESTDIR)$(libexecdir)/eucalyptus/announce-arp
+	@$(RM) -f $(DESTDIR)$(libexecdir)/eucalyptus/euca-arp
 
