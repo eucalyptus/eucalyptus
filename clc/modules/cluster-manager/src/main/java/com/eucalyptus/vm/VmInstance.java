@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -2733,7 +2733,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   /**
    *
    */
-  public static VmInstance create( ) {
+  protected static VmInstance create( ) {
     return new VmInstance( );
   }
   

@@ -882,7 +882,7 @@ public class VmRuntimeState {
       Logs.extreme( ).trace( "Unhandle bundle task state update: " + state );
     }
   }
-  
+
   @Override
   public int hashCode( ) {
     final int prime = 31;

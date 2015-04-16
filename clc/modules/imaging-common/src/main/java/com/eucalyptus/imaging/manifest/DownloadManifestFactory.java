@@ -409,12 +409,11 @@ public class DownloadManifestFactory {
    */
   private static void createManifestsBucketIfNeeded(
       @Nonnull EucaS3Client s3Client) throws EucalyptusCloudException {
-    Bucket manifestBucket = null;
     try {
       s3Client.getBucketAcl(DOWNLOAD_MANIFEST_BUCKET_NAME);
     } catch (AmazonServiceException e1) {
       try {
-        manifestBucket = s3Client.createBucket(DOWNLOAD_MANIFEST_BUCKET_NAME);
+        s3Client.createBucket(DOWNLOAD_MANIFEST_BUCKET_NAME);
       } catch (Exception e) {
         LOG.error("Error creating manifest bucket "
             + DOWNLOAD_MANIFEST_BUCKET_NAME, e);
@@ -438,7 +437,7 @@ public class DownloadManifestFactory {
         expireRule.setStatus("Enabled");
         expireRule.setExpirationInDays(1);
         lc = lc.withRules(expireRule);
-        s3Client.setBucketLifecycleConfiguration(manifestBucket.getName(), lc);
+        s3Client.setBucketLifecycleConfiguration(DOWNLOAD_MANIFEST_BUCKET_NAME, lc);
       } catch (Exception e) {
         throw new EucalyptusCloudException(
             "Failed to set bucket lifecycle on bucket "

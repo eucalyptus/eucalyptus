@@ -820,8 +820,15 @@ public class Threads {
   
   private static <T extends HasFullName<T>> Queue<T> queue( final Class<? extends ComponentId> componentId, final T owner, final int numWorkers ) {
     final Queue<T> worker = new Queue<T>( componentId, owner, numWorkers );
-    if ( workers.containsKey( worker.key( ) ) ) {
-      return ( Queue<T> ) workers.get( worker.key( ) );
+    final Queue<T> existingWorker = ( Queue<T> ) workers.get( worker.key( ) );
+    if ( existingWorker != null ) {
+      if(existingWorker.numWorkers != numWorkers && numWorkers > 0){
+        if (workers.remove(worker.key()) != null){
+          existingWorker.stop();
+        }
+        return queue(componentId, owner, numWorkers);
+      }
+      return existingWorker;
     } else {
       if ( !worker.start( ) && workers.containsKey( worker.key( ) ) ) {
         return ( Queue<T> ) workers.get( worker.key( ) );

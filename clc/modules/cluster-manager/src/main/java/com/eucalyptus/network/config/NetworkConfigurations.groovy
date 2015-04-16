@@ -435,7 +435,7 @@ class NetworkConfigurations {
 
     @Override
     public void fireEvent( final ClockTick event ) {
-      if ( Hosts.isCoordinator( ) && !Bootstrap.isShuttingDown( ) && !Databases.isVolatile( ) ) {
+      if ( !Bootstrap.isShuttingDown( ) && !Databases.isVolatile( ) ) {
         try {
           Optional<NetworkConfiguration> configurationOptional = NetworkConfigurations.networkConfigurationFromProperty
           if ( !configurationOptional.isPresent( ) ) {
@@ -446,7 +446,7 @@ class NetworkConfigurations {
           } else {
             EdgeNetworking.configured = true
           }
-          if ( EdgeNetworking.isEnabled( ) ) {
+          if ( EdgeNetworking.isEnabled( ) && Hosts.isCoordinator( ) ) {
             Iterables.all(
                 configurationOptional.or( NetworkConfigurations.networkConfigurationFromEnvironmentSupplier.get( ) ).asSet( ),
                 Entities.asTransaction( ClusterConfiguration.class, { NetworkConfiguration networkConfiguration ->

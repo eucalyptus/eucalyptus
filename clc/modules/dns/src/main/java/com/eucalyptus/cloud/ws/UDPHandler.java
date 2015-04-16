@@ -97,10 +97,12 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.util.Date;
 import java.util.concurrent.Callable;
 
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Message;
 import org.xbill.DNS.Rcode;
@@ -153,14 +155,23 @@ public class UDPHandler extends Thread {
 	  private DatagramSocket socket = null;
 	  private DatagramPacket packet = null;
 	  private byte[] data = null;
+	  private Long requestedTime = null;
+	  private final long DISCARD_AFTER_MS = 10000L;
+	  // Most (if not all) DNS client will timeout after 5 seconds.
 	  private UDPWorker(final DatagramSocket socket, final DatagramPacket dpin, byte[] data){
 	    this.socket = socket;
 	    this.packet = dpin;
 	    this.data = data;
+	    this.requestedTime = (new Date()).getTime();
 	  }
 
 	  @Override
 	  public Boolean call() throws Exception {
+	    // This request already timed-out; don't even try resolving it.
+	    if((new Date()).getTime() - this.requestedTime > DISCARD_AFTER_MS) {
+	      return false;
+	    }
+	    
 	    final byte[] in = this.data;
 	    Message query;
 	    byte [] response = null;

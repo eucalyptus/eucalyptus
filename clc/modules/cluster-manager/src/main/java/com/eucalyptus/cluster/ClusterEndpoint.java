@@ -81,6 +81,7 @@ import org.mule.api.MuleException;
 import org.mule.api.lifecycle.Startable;
 
 import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ClusterInfoType;
@@ -317,7 +318,11 @@ public class ClusterEndpoint implements Startable {
           } catch ( NoSuchElementException ex ) {
             try {
               clusters.add( clusterRegistry.lookupDisabled( partitionName ) );
-            } catch ( NoSuchElementException ex2 ) { }
+            } catch ( NoSuchElementException ex2 ) {
+              if ( !describeKeywords.containsValue( partitionName ) ) {
+                throw new ClientComputeException("InvalidParameterValue", "Invalid availability zone: [" + partitionName + "]");
+              }
+            }
           }
         }
       }

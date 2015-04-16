@@ -1709,7 +1709,9 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
     char *xmlbuf = NULL;
     char xmlfile[EUCA_MAX_PATH];
     globalNetworkInfo *gni = NULL;
+    gni_hostname_info *host_info = NULL;
     gni_cluster *myself = NULL;
+    ccResourceCache resourceCacheLocal;
 
     rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
@@ -1731,9 +1733,10 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
             LOGDEBUG("created and populated tmpfile '%s'\n", xmlfile);
 
             gni = gni_init();
-            if (gni) {
+            host_info = gni_init_hostname_info();
+            if (gni && host_info) {
                 // decode/read/parse the globalnetworkinfo, assign any incorrect public/private IP mappings based on global view
-                rc = gni_populate(gni, xmlfile);
+                rc = gni_populate(gni,host_info,xmlfile);
                 LOGDEBUG("done with gni_populate()\n");
 
                 // do any CC actions based on contents of new network view
@@ -1747,6 +1750,11 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
                     snprintf(vnetconfig->macPrefix, 6, "%s", myself->macPrefix);
                 }
 
+                sem_mywait(RESCACHE);
+                memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
+                sem_mypost(RESCACHE);
+                            
+
                 LOGTRACE("gni->max_instances == %d\n", gni->max_instances);
                 for (i = 0; i < gni->max_instances; i++) {
                     char *strptra = NULL, *strptrb = NULL;
@@ -1754,27 +1762,45 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
                     strptra = hex2dot(gni->instances[i].publicIp);
                     strptrb = hex2dot(gni->instances[i].privateIp);
 
-                    if (gni->instances[i].publicIp && gni->instances[i].privateIp) {
-                        LOGDEBUG("found instance in broadcast network info: %s (%s/%s)\n", gni->instances[i].name, SP(strptra), SP(strptrb));
-                        // here, we should decide if we need to send the mapping, or not
+                    //                    if (gni->instances[i].publicIp && gni->instances[i].privateIp) {
+                    if (gni->instances[i].privateIp) {
+
                         rc = find_instanceCacheIP(strptrb, &myInstance);
-                        if (myInstance && !strcmp(myInstance->ccnet.privateIp, strptrb)) {
-                            if (!strcmp(myInstance->ccnet.publicIp, strptra)) {
-                                LOGTRACE("instance '%s' cached pub/priv IP mappings match input pub/priv IP (publicIp=%s privateIp=%s)\n", myInstance->instanceId,
-                                         myInstance->ccnet.publicIp, myInstance->ccnet.privateIp);
-                            } else {
-                                LOGTRACE("instance '%s' cached pub/priv IP mappings do not match input pub/priv IP, updating ground-truth (cached_publicIp=%s input_publicIp=%s)\n",
-                                         myInstance->instanceId, myInstance->ccnet.publicIp, strptra);
-                                rc = doAssignAddress(pMeta, NULL, strptra, strptrb);
+                        if (gni->instances[i].publicIp) {
+                            LOGDEBUG("found instance in broadcast network info: %s (%s/%s)\n", gni->instances[i].name, SP(strptra), SP(strptrb));
+                            // here, we should decide if we need to send the mapping, or not
+                            if (myInstance && !strcmp(myInstance->ccnet.privateIp, strptrb)) {
+                                if (!strcmp(myInstance->ccnet.publicIp, strptra)) {
+                                    LOGTRACE("instance '%s' cached pub/priv IP mappings match input pub/priv IP (publicIp=%s privateIp=%s)\n", myInstance->instanceId,
+                                             myInstance->ccnet.publicIp, myInstance->ccnet.privateIp);
+                                } else {
+                                    LOGTRACE("instance '%s' cached pub/priv IP mappings do not match input pub/priv IP, updating ground-truth (cached_publicIp=%s input_publicIp=%s)\n",
+                                             myInstance->instanceId, myInstance->ccnet.publicIp, strptra);
+                                    
+                                    rc = doAssignAddress(pMeta, NULL, strptra, strptrb);
+                                }
                             }
+                            LOGDEBUG("instance '%s' has assigned address: (%s -> %s) rc: %d\n", gni->instances[i].name, strptra, strptrb, rc);
+                        } else if (myInstance) {
+                            // has a private but not a public IP
+                            LOGDEBUG("instance does not have a public IP set (id=%s pub=%s priv=%s)\n", gni->instances[i].name, SP(strptra), SP(strptrb));
+
+                            // unassign the addr from the CC/NC perspective
+                            if (strcmp(myInstance->ccnet.publicIp, "0.0.0.0") && strcmp(myInstance->ccnet.privateIp, "0.0.0.0")) {
+                                rc = doUnassignAddress(pMeta, myInstance->ccnet.publicIp, myInstance->ccnet.privateIp);
+                                if (rc) {
+                                    // LOG ERROR
+                                }
+                            }
+                            
+                        //                            rc = ncClientCall(pMeta, OP_TIMEOUT, resourceCacheLocal.resources[myInstance->ncHostIdx].lockidx,
+                        //                                              resourceCacheLocal.resources[myInstance->ncHostIdx].ncURL, "ncAssignAddress", myInstance->instanceId, "0.0.0.0");
                         }
                         if (myInstance) {
                             EUCA_FREE(myInstance);
                         }
-
-                        LOGDEBUG("instance '%s' has assigned address: (%s -> %s) rc: %d\n", gni->instances[i].name, strptra, strptrb, rc);
                     } else {
-                        LOGDEBUG("instance does not have either public or private IP set (id=%s pub=%s priv=%s)\n", gni->instances[i].name, SP(strptra), SP(strptrb));
+
                     }
                     EUCA_FREE(strptra);
                     EUCA_FREE(strptrb);
@@ -1783,6 +1809,7 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
 
                 // free the gni
                 rc = gni_free(gni);
+                rc = gni_hostnames_free(host_info);
             }
 
             unlink(xmlfile);
@@ -1845,7 +1872,6 @@ int doAssignAddress(ncMetadata * pMeta, char *uuid, char *src, char *dst)
     if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC)) {
         ret = 0;
     } else {
-
         rc = find_instanceCacheIP(dst, &myInstance);
         if (!rc) {
             if (!strcmp(vnetconfig->mode, NETMODE_EDGE) || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
@@ -1986,13 +2012,17 @@ int doUnassignAddress(ncMetadata * pMeta, char *src, char *dst)
 
     ret = 0;
 
-    if ((rc = find_instanceCacheIP(src, &myInstance)) == 0) {
-        LOGDEBUG("found instance %s in cache with IP %s\n", myInstance->instanceId, myInstance->ccnet.publicIp);
-        // found the instance in the cache
-        if (myInstance) {
-            if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC)) {
+    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC)) {
+        ret = 0;
+    } else {
+        rc = find_instanceCacheIP(src, &myInstance);
+        if (!rc) {
+            LOGDEBUG("found instance %s in cache with IP %s\n", myInstance->instanceId, myInstance->ccnet.publicIp);
+            // found the instance in the cache
+            LOGDEBUG("WTF: %s\n", vnetconfig->mode);
+            if (!strcmp(vnetconfig->mode, NETMODE_EDGE) || !strcmp(vnetconfig->mode, NETMODE_VPCMIDO)) {
                 ret = 0;
-            } else {
+            } else if (myInstance) {
                 sem_mywait(VNET);
 
                 ret = vnetReassignAddress(vnetconfig, "UNSET", src, "0.0.0.0", myInstance->ccnet.vlan);
@@ -2003,26 +2033,26 @@ int doUnassignAddress(ncMetadata * pMeta, char *src, char *dst)
 
                 sem_mypost(VNET);
             }
-
-            if (!ret) {
-                //timeout = ncGetTimeout(op_start, OP_TIMEOUT, 1, myInstance->ncHostIdx);
-                rc = ncClientCall(pMeta, OP_TIMEOUT, resourceCacheLocal.resources[myInstance->ncHostIdx].lockidx,
-                                  resourceCacheLocal.resources[myInstance->ncHostIdx].ncURL, "ncAssignAddress", myInstance->instanceId, "0.0.0.0");
-                if (rc) {
-                    LOGERROR("could not sync IP with NC\n");
-                    ret = 1;
-                } else {
-                    ret = 0;
-                }
-                // refresh instance cache
-                rc = map_instanceCache(pubIpCmp, src, pubIpSet, "0.0.0.0");
-                if (rc) {
-                    LOGERROR("map_instanceCache() failed to assign %s->%s\n", dst, src);
-                }
-            }
         }
-        EUCA_FREE(myInstance);
     }
+
+    if (!ret) {
+        //timeout = ncGetTimeout(op_start, OP_TIMEOUT, 1, myInstance->ncHostIdx);
+        rc = ncClientCall(pMeta, OP_TIMEOUT, resourceCacheLocal.resources[myInstance->ncHostIdx].lockidx,
+                          resourceCacheLocal.resources[myInstance->ncHostIdx].ncURL, "ncAssignAddress", myInstance->instanceId, "0.0.0.0");
+        if (rc) {
+            LOGERROR("could not sync IP with NC\n");
+            ret = 1;
+        } else {
+            ret = 0;
+        }
+        // refresh instance cache
+        rc = map_instanceCache(pubIpCmp, src, pubIpSet, "0.0.0.0");
+        if (rc) {
+            LOGERROR("map_instanceCache() failed to assign %s->%s\n", dst, src);
+        }
+    }
+    EUCA_FREE(myInstance);
 
     LOGTRACE("done\n");
 

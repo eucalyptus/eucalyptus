@@ -781,7 +781,7 @@ char *file2str(const char *path)
     struct stat mystat = { 0 };
 
     if (stat(path, &mystat) < 0) {
-        LOGERROR("could not stat file %s\n", path);
+        LOGERROR("errno: %d could not stat file %s\n", errno, path);
         return (content);
     }
 
@@ -793,7 +793,7 @@ char *file2str(const char *path)
     }
 
     if ((fp = open(path, O_RDONLY)) < 0) {
-        LOGERROR("failed to open file %s\n", path);
+        LOGERROR("errno: %d failed to open file %s\n", errno, path);
         EUCA_FREE(content);
         return (content);
     }

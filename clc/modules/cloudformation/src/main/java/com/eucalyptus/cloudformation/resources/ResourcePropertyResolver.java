@@ -164,7 +164,15 @@ public class ResourcePropertyResolver {
           throw new ValidationErrorException("Template error: " + name + " must be of type Number");
         } else {
           try {
-            setField(propertyDescriptorMap, field, object, Integer.valueOf(valueNode.asText()));
+            if (valueNode.asText().isEmpty()) {
+              if (required != null) {
+                throw new ValidationErrorException("Template error: " + name + " can not be blank (" + valueNode.asText() + ")");
+              } else {
+                setField(propertyDescriptorMap, field, object, null);
+              }
+            } else {
+                setField(propertyDescriptorMap, field, object, Integer.valueOf(valueNode.asText()));
+            }
           } catch (NumberFormatException ex) {
             throw new ValidationErrorException("Template error: " + name + " must be of type Integer (" + valueNode.asText() + ")");
           }
@@ -174,7 +182,15 @@ public class ResourcePropertyResolver {
           throw new ValidationErrorException("Template error: " + name + " must be of type Number");
         } else {
           try {
-            setField(propertyDescriptorMap, field, object, Double.valueOf(valueNode.asText()));
+            if (valueNode.asText().isEmpty()) {
+              if (required != null) {
+                throw new ValidationErrorException("Template error: " + name + " can not be blank (" + valueNode.asText() + ")");
+              } else {
+                setField(propertyDescriptorMap, field, object, null);
+              }
+            } else {
+                setField(propertyDescriptorMap, field, object, Double.valueOf(valueNode.asText()));
+            }
           } catch (NumberFormatException ex) {
             throw new ValidationErrorException("Template error: " + name + " must be of type Number (" + valueNode.asText() + ")");
 
