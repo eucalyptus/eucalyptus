@@ -93,14 +93,14 @@ distclean: clean
 install:
 	@$(INSTALL) -d $(DESTDIR)$(sbindir)
 	@$(INSTALL) -m 755 eucanetd $(DESTDIR)$(sbindir)
-	@$(INSTALL) -m 700 euca_arp $(DESTDIR)$(sbindir)
+	@$(INSTALL) -m 700 euca_arp $(DESTDIR)$(libexecdir)/eucalyptus
 
 deploy:
 	@$(INSTALL) -d $(DESTDIR)$(sbindir)
 	@$(INSTALL) -m 755 eucanetd $(DESTDIR)$(sbindir)
-	@$(INSTALL) -m 700 euca_arp $(DESTDIR)$(sbindir)
+	@$(INSTALL) -m 700 euca_arp $(DESTDIR)$(libexecdir)/eucalyptus
 
 uninstall:
 	@$(RM) -f $(DESTDIR)$(sbindir)/eucanetd
-	@$(RM) -f $(DESTDIR)$(sbindir)/euca_arp
+	@$(RM) -f $(DESTDIR)$(libexecdir)/eucalyptus/euca_arp
 
