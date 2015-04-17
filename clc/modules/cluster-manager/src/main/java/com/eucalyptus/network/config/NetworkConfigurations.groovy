@@ -358,7 +358,8 @@ class NetworkConfigurations {
   }
 
   private static Iterable<Integer> iterateRanges( Iterable<String> rangeIterable ) {
-    Iterables.concat( Optional.presentInstances( Iterables.transform( rangeIterable, IPRange.parse( ) ) ) )
+    final List<IPRange> ranges = Lists.newArrayList( Optional.presentInstances( Iterables.transform( rangeIterable, IPRange.parse( ) ) ) );
+    Iterables.concat( ranges )
   }
 
   private static Iterable<String> iterateRangesAsString( Iterable<String> rangeIterable ) {
