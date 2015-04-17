@@ -299,9 +299,15 @@ class NetworkInfoBroadcaster {
     info.configuration.properties.addAll( [
         new NIProperty( name: 'enabledCLCIp', values: [clcHostSupplier.get()]),
         new NIProperty( name: 'instanceDNSDomain', values: [networkConfiguration.orNull()?.instanceDnsDomain?:EucaStrings.trimPrefix('.',"${VmInstances.INSTANCE_SUBDOMAIN}.internal")]),
-        new NIProperty( name: 'instanceDNSServers', values: dnsServers ),
-        new NIProperty( name: 'publicGateway', values: [networkConfiguration.orNull()?.publicGateway] ),
+        new NIProperty( name: 'instanceDNSServers', values: dnsServers )
     ]  )
+
+    boolean hasEdgePublicGateway = networkConfiguration.orNull()?.publicGateway != null
+    if ( hasEdgePublicGateway ) {
+      info.configuration.properties.add(
+        new NIProperty( name: 'publicGateway', values: [networkConfiguration.orNull()?.publicGateway] )
+      )
+    }
 
     Iterable<VmInstanceNetworkView> instances = Iterables.filter(
         networkInfoSource.instances,
