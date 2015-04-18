@@ -9,6 +9,7 @@
       <dependency name="eucalyptus-troubleshooting" rev="latest.integration"/>
       <dependency name="eucalyptus-storage-common" rev="latest.integration"/>
       <dependency name="eucalyptus-walrus-common" rev="latest.integration"/>
+      <dependency name="eucalyptus-euare" rev="latest.integration"/>
   </dependencies>
 </ivy-module>
 

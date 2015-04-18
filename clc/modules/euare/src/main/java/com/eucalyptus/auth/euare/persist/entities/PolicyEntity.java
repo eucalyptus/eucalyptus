@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,60 +60,141 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth;
+package com.eucalyptus.auth.euare.persist.entities;
 
-import java.util.List;
-import org.apache.log4j.Logger;
-import com.eucalyptus.auth.entities.PolicyEntity;
-import com.eucalyptus.auth.principal.Group;
-import com.eucalyptus.auth.principal.Policy;
-import com.eucalyptus.entities.Transactions;
-import java.util.concurrent.ExecutionException;
-import com.eucalyptus.util.Tx;
-import com.google.common.collect.Lists;
+import java.io.Serializable;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.JoinColumn;
+import javax.persistence.Lob;
+import javax.persistence.ManyToOne;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
+import javax.persistence.Transient;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Type;
+import com.eucalyptus.entities.AbstractPersistent;
 
-public class DatabasePolicyProxy implements Policy {
+/**
+ * Database policy entity.
+ */
+@Entity
+@PersistenceContext( name = "eucalyptus_auth" )
+@Table( name = "auth_policy" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+public class PolicyEntity extends AbstractPersistent implements Serializable {
 
+  @Transient
   private static final long serialVersionUID = 1L;
   
-  private static Logger LOG = Logger.getLogger( DatabasePolicyProxy.class );
-                                               
-  private PolicyEntity delegate;
+  // The policy name
+  @Column( name = "auth_policy_name" )
+  String name;
   
-  public DatabasePolicyProxy( PolicyEntity delegate ) {
-    this.delegate = delegate;
+  @Column( name = "auth_policy_version" )
+  String policyVersion;
+  
+  // The original policy text in JSON
+  @Column( name = "auth_policy_text" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  String text;
+  
+  // The owning group
+  @ManyToOne
+  @JoinColumn( name = "auth_policy_owning_group" )
+  GroupEntity group;
+
+  // The owning role
+  @ManyToOne
+  @JoinColumn( name = "auth_policy_owning_role" )
+  RoleEntity role;
+
+  public PolicyEntity( ) {
   }
   
-  @Override
-  public String getName( ) {
-    return this.delegate.getName( );
+  public PolicyEntity( String name ) {
+    this.name = name;
+  }
+
+  public PolicyEntity( String name, String version, String text ) {
+    this( name );
+    this.policyVersion = version;
+    this.text = text;
+  }
+
+  public static PolicyEntity create( final String name,
+                                     final String policyVersion,
+                                     final String text ) {
+    return new PolicyEntity( name, policyVersion, text );
+  }
+
+  public static PolicyEntity newInstanceWithId( final String id ) {
+    PolicyEntity p = new PolicyEntity( );
+    p.setId( id );
+    return p;
   }
   
-  @Override
   public String getText( ) {
-    return this.delegate.getText( );
+    return this.text;
+  }
+
+  public void setText( String text ) {
+    this.text = text;
   }
   
-  public String getVersion( ) {
-    return this.delegate.getPolicyVersion( );
+  public String getName( ) {
+    return this.name;
+  }
+  
+  public void setName( String name ) {
+    this.name = name;
+  }
+  
+  public GroupEntity getGroup( ) {
+    return this.group;
+  }
+  
+  public void setGroup( GroupEntity group ) {
+    this.group = group;
   }
 
-  public Integer getPolicyVersion( ) {
-    return this.delegate.getVersion( );
+  public RoleEntity getRole() {
+    return role;
   }
 
-  public Group getGroup( ) throws AuthException {
-    final List<Group> results = Lists.newArrayList( );
-    try {
-      Transactions.one( PolicyEntity.newInstanceWithId( this.delegate.getPolicyId( ) ), new Tx<PolicyEntity>( ) {
-        public void fire( PolicyEntity t ) {
-          results.add( new DatabaseGroupProxy( t.getGroup( ) ) );
-        }
-      } );
-    } catch ( ExecutionException e ) {
-      Debugging.logError( LOG, e, "Failed to getGroup for " + this.delegate );
-      throw new AuthException( e );
-    }
-    return results.get( 0 );
+  public void setRole( RoleEntity role ) {
+    this.role = role;
   }
+
+  public String getPolicyVersion( ) {
+    return this.policyVersion;
+  }
+
+  public void setPolicyVersion( String policyVersion ) {
+    this.policyVersion = policyVersion;
+  }
+  
+  @Override
+  public String toString( ) {
+    StringBuilder sb = new StringBuilder( );
+    sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
+    sb.append( "name=" ).append( this.getName( ) );
+    return sb.toString( );
+  }
+  
+  /**
+   * NOTE:IMPORTANT: this method has default visibility (rather than public) only for the sake of
+   * supporting currently hand-coded proxy classes. Don't share this value with the user.
+   * 
+   * TODO: remove this if possible.
+   * 
+   * @return
+   * @see {@link AbstractPersistent#getId()}
+   */
+  public String getPolicyId( ) {
+    return this.getId( );
+  }
+
 }

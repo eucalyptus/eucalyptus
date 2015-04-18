@@ -28,7 +28,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.DatabaseAuthUtils;
+import com.eucalyptus.auth.euare.persist.DatabaseAuthUtils;
 import com.eucalyptus.auth.api.IdentityProvider;
 import com.eucalyptus.auth.euare.common.identity.Account;
 import com.eucalyptus.auth.euare.common.identity.DecodeSecurityTokenResponseType;

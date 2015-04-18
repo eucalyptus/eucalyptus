@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,21 +60,20 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth;
+package com.eucalyptus.auth.euare.persist;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 
 import org.hibernate.criterion.Restrictions;
-import com.eucalyptus.auth.entities.AccountEntity;
-import com.eucalyptus.auth.entities.GroupEntity;
-import com.eucalyptus.auth.entities.InstanceProfileEntity;
-import com.eucalyptus.auth.entities.PolicyEntity;
-import com.eucalyptus.auth.entities.RoleEntity;
-import com.eucalyptus.auth.entities.UserEntity;
-import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.euare.persist.entities.AccountEntity;
+import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
+import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
+import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
+import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
+import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.principal.AccountScopedPrincipal;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
@@ -221,7 +220,7 @@ public class DatabaseAuthUtils {
    * http://docs.amazonwebservices.com/IAM/latest/UserGuide/index.html?Using_Identifiers.html
    * 
    * @param userName
-   * @throws AuthException
+   * @throws com.eucalyptus.auth.AuthException
    */
   public static void checkUserName( String userName ) throws AuthException {
     if ( userName == null || "".equals( userName ) ) {

@@ -60,7 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth;
+package com.eucalyptus.auth.euare.persist;
 
 import java.security.cert.X509Certificate;
 import java.util.List;
@@ -68,7 +68,11 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
-import com.eucalyptus.auth.entities.InstanceProfileEntity;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.Debugging;
+import com.eucalyptus.auth.InvalidAccessKeyAuthException;
+import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.entities.Entities;
@@ -79,12 +83,12 @@ import com.eucalyptus.auth.api.AccountProvider;
 import com.eucalyptus.auth.checker.InvalidValueException;
 import com.eucalyptus.auth.checker.ValueChecker;
 import com.eucalyptus.auth.checker.ValueCheckerFactory;
-import com.eucalyptus.auth.entities.AccessKeyEntity;
-import com.eucalyptus.auth.entities.AccountEntity;
-import com.eucalyptus.auth.entities.CertificateEntity;
-import com.eucalyptus.auth.entities.GroupEntity;
-import com.eucalyptus.auth.entities.RoleEntity;
-import com.eucalyptus.auth.entities.UserEntity;
+import com.eucalyptus.auth.euare.persist.entities.AccessKeyEntity;
+import com.eucalyptus.auth.euare.persist.entities.AccountEntity;
+import com.eucalyptus.auth.euare.persist.entities.CertificateEntity;
+import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
+import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
+import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;

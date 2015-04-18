@@ -17,7 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.auth;
+package com.eucalyptus.auth.euare;
 
 import java.security.KeyPair;
 import java.security.PrivateKey;
@@ -31,7 +31,9 @@ import javax.crypto.spec.IvParameterSpec;
 
 import org.bouncycastle.util.encoders.Base64;
 
-import com.eucalyptus.auth.entities.ServerCertificateEntity;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.ServerCertificate;
+import com.eucalyptus.auth.euare.persist.entities.ServerCertificateEntity;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Euare;

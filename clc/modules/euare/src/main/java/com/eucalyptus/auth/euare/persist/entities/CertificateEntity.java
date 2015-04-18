@@ -60,96 +60,82 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth.entities;
+package com.eucalyptus.auth.euare.persist.entities;
 
 import java.io.Serializable;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.X509Certificate;
 import java.util.Date;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
+import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
-import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Type;
 import com.eucalyptus.auth.util.Identifiers;
-import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.entities.AbstractPersistent;
 
 /**
- * Database secret key entity.
+ * Database X509 certificate entity.
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_auth" )
-@Table( name = "auth_access_key" )
+@Table( name = "auth_cert" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class AccessKeyEntity extends AbstractPersistent implements Serializable {
-  
+public class CertificateEntity extends AbstractPersistent implements Serializable {
+
   @Transient
   private static final long serialVersionUID = 1L;
-  
-  // If the key is active
-  @Column( name = "auth_access_key_active" )
+
+  // Flag for active or inactive
+  @Column( name = "auth_certificate_active" )
   Boolean active;
   
-  // The Access Key ID
-  @Column( name = "auth_access_key_query_id" )
-  String accessKey;
-  // The SECRET key
-  @Column( name = "auth_access_key_key" )
-  String key;
+  // Flag for revoked certificates
+  @Column( name = "auth_certificate_revoked" )
+  Boolean revoked;
+  
+  // The certificate
+  @Column( name = "auth_certificate_id" )
+  String certificateId;
+
+  // The certificate
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  @Column( name = "auth_certificate_pem" )
+  String pem;
   
   // The create date
-  @Column( name = "auth_access_key_create_date" )
+  @Column( name = "auth_certificate_create_date" )
   Date createDate;
   
   // The owning user
   @ManyToOne( fetch = FetchType.LAZY )
-  @JoinColumn( name = "auth_access_key_owning_user" )
+  @JoinColumn( name = "auth_certificate_owning_user" )
   UserEntity user;
   
-  public AccessKeyEntity( ) {
+  public CertificateEntity( ) {
   }
   
-  public AccessKeyEntity( UserEntity user ) {
-    this.user = user;
-    this.key = Crypto.generateSecretKey();
-    this.createDate = new Date( );
-  }
-
-  @PrePersist
-  public void generateOnCommit() {
-    if( this.accessKey == null && this.key != null ) {/** NOTE: first time that AKey is committed it needs to generate its own ID (i.e., not the database id), do this at commit time and generate if null **/
-      this.accessKey = Identifiers.generateAccessKeyIdentifier( );
-    }
+  public CertificateEntity( final X509Certificate cert ) throws CertificateEncodingException {
+    this.certificateId = Identifiers.generateCertificateIdentifier( cert );
+    this.pem = X509CertHelper.fromCertificate( cert );
   }
   
-  /**
-   * NOTE: should not be needed, replaced by {@link #newInstanceWithAccessKeyId()}
-   */
-//  public static AccessKeyEntity newInstanceWithId( final String id ) {
-//    AccessKeyEntity k = new AccessKeyEntity( );
-//    k.setId( id );
-//    return k;
-//  }
-
-  public static AccessKeyEntity newInstanceWithAccessKeyId( final String accessKeyId ) {
-    AccessKeyEntity k = new AccessKeyEntity( );
-    k.accessKey = accessKeyId;
-    return k;
-  }
-
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;
     if ( o == null || getClass( ) != o.getClass( ) ) return false;
     
-    AccessKeyEntity that = ( AccessKeyEntity ) o;    
-    if ( !this.getAccessKey( ).equals( that.getAccessKey( ) ) ) return false;//NOTE: prefer for equality check to not rely on sensitive data -- e.g., secret key.
-    if ( !this.getSecretKey( ).equals( that.getSecretKey( ) ) ) return false;
+    CertificateEntity that = ( CertificateEntity ) o;    
+    if ( !this.getPem( ).equals( that.getPem( ) ) ) return false;
     
     return true;
   }
@@ -157,28 +143,21 @@ public class AccessKeyEntity extends AbstractPersistent implements Serializable 
   @Override
   public String toString( ) {
     StringBuilder sb = new StringBuilder( );
-    sb.append( "Key(" );
+    sb.append( "Cert(" );
     sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
     sb.append( "active=" ).append( this.isActive( ) ).append( ", " );
-    sb.append( "key=" ).append( this.getSecretKey( ) );
+    sb.append( "revoked=" ).append( this.isRevoked( ) ).append( ", " );
+    sb.append( "pem=" ).append( this.getPem( ) );
     sb.append( ")" );
     return sb.toString( );
   }
-
-  public String getAccessKey( ) {
-    return this.accessKey;
+  
+  public String getPem( ) {
+    return this.pem;
   }
   
-  public void setAccess( String accessKey ) {
-    this.accessKey = accessKey;
-  }
-
-  public String getSecretKey( ) {
-    return this.key;
-  }
-  
-  public void setSecretKey( String key ) {
-    this.key = key;
+  public void setPem( String pem ) {
+    this.pem = pem;
   }
   
   public Boolean isActive( ) {
@@ -187,6 +166,17 @@ public class AccessKeyEntity extends AbstractPersistent implements Serializable 
   
   public void setActive( Boolean active ) {
     this.active = active;
+  }
+  
+  public Boolean isRevoked( ) {
+    return this.revoked;
+  }
+  
+  public void setRevoked( Boolean revoked ) {
+    this.revoked = revoked;
+    if ( this.revoked ) {
+      this.active = false;
+    }
   }
   
   public Date getCreateDate( ) {
@@ -203,6 +193,10 @@ public class AccessKeyEntity extends AbstractPersistent implements Serializable 
   
   public void setUser( UserEntity user ) {
     this.user = user;
+  }
+
+  public String getCertificateId( ) {
+    return this.certificateId;
   }
   
 }

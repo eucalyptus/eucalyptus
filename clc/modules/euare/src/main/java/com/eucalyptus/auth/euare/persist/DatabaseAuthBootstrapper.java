@@ -60,18 +60,21 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth;
+package com.eucalyptus.auth.euare.persist;
 
 import java.util.List;
 import java.util.ServiceLoader;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthenticationProperties;
+import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.ldap.LdapSync;
 import com.eucalyptus.auth.policy.PolicyEngineImpl;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.EuareUser;
-import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.util.SystemRoleProvider;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
@@ -90,9 +93,9 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( DatabaseAuthBootstrapper.class );
     
   public boolean load( ) throws Exception {
-    Permissions.setPolicyEngine( new PolicyEngineImpl( new Supplier<Boolean>( ){
+    Permissions.setPolicyEngine( new PolicyEngineImpl( new Supplier<Boolean>() {
       @Override
-      public Boolean get( ) {
+      public Boolean get() {
         return AuthenticationProperties.SYSTEM_ACCOUNT_QUOTA_ENABLED;
       }
     } ) );
@@ -230,14 +233,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
     }
   }
 
-  public interface SystemRoleProvider {
-    String getName();
-    String getPath();
-    String getAssumeRolePolicy();
-    String getPolicy();
-  }
-  
-  // EUCA-9376 - Workaround to avoid multiple admin users in the blockstorage account due to EUCA-9635  
+  // EUCA-9376 - Workaround to avoid multiple admin users in the blockstorage account due to EUCA-9635
   private void ensureBlockStorageAccountExists( ) throws Exception {
     try {
       Accounts.lookupAccountByName( Account.BLOCKSTORAGE_SYSTEM_ACCOUNT );

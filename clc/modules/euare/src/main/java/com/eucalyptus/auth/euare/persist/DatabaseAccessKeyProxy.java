@@ -60,74 +60,100 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.upgrade;
+package com.eucalyptus.auth.euare.persist;
 
-import java.io.File;
-import java.security.Security;
-import javax.annotation.Nonnull;
+import java.util.Date;
+import java.util.List;
 import org.apache.log4j.Logger;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import com.eucalyptus.component.auth.SystemCredentials;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.Debugging;
+import com.eucalyptus.auth.euare.persist.entities.AccessKeyEntity;
+import com.eucalyptus.auth.principal.AccessKey;
+import com.eucalyptus.auth.principal.UserPrincipal;
+import java.util.concurrent.ExecutionException;
+import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Tx;
+import com.google.common.collect.Lists;
 
-public class StandalonePersistence {
-  private static Logger                     LOG;
-  public static String                      eucaHome, eucaOld, eucaSource, eucaDest;
-  public static File                        oldLibDir, newLibDir;
-  @Nonnull
-  private static DatabaseDestination        dest;
+public class DatabaseAccessKeyProxy implements AccessKey {
 
-  static {
-    Security.addProvider( new BouncyCastleProvider( ) );
-  }
-
-  public static void setupProviders( ) {
-  }
-
-  public static void setupNewDatabase( ) throws Exception {
-    dest = ( DatabaseDestination ) ClassLoader.getSystemClassLoader( ).loadClass( eucaDest ).newInstance( );
-    dest.initialize( );
+  private static final long serialVersionUID = 1L;
+  
+  private static final Logger LOG = Logger.getLogger( DatabaseAccessKeyProxy.class );
+  
+  private AccessKeyEntity delegate;
+  
+  public DatabaseAccessKeyProxy( AccessKeyEntity delegate ) {
+    this.delegate = delegate;
   }
   
-  public static void setupInitProviders( ) throws Exception {
-    if ( !new File( SystemCredentials.getKeyStore( ).getFileName( ) ).exists( ) ) {
-      throw new RuntimeException( "Database upgrade must be preceded by a key upgrade." );
+  @Override
+  public Boolean isActive( ) {
+    return this.delegate.isActive( );
+  }
+  
+  @Override
+  public void setActive( final Boolean active ) throws AuthException {
+    try {
+      DatabaseAuthUtils.invokeUnique( AccessKeyEntity.class, "accessKey", this.delegate.getAccessKey( ), new Tx<AccessKeyEntity>( ) {
+        public void fire( AccessKeyEntity t ) {
+          t.setActive( active );
+        }
+      } );
+    } catch ( ExecutionException e ) {
+      Debugging.logError( LOG, e, "Failed to setActive for " + this.delegate );
+      throw new AuthException( e );
     }
-    SystemCredentials.initialize( );
-    LOG.debug( "Initializing SSL just in case: " + ClassLoader.getSystemClassLoader( ).loadClass( "com.eucalyptus.crypto.util.SslSetup" ) );
-    LOG.debug( "Initializing db password: " + ClassLoader.getSystemClassLoader( ).loadClass( "com.eucalyptus.auth.util.Hashes" ) );
   }
   
-  static void setupSystemProperties( ) {
-    /** Pre-flight configuration for system **/
-    System.setProperty( "euca.home", eucaHome );
-    System.setProperty( "euca.log.appender", "upgrade" );
-    System.setProperty( "euca.log.exhaustive.cc", "FATAL" );
-    System.setProperty( "euca.log.exhaustive.db", "FATAL" );
-    System.setProperty( "euca.log.exhaustive.external", "FATAL" );
-    System.setProperty( "euca.log.exhaustive.user", "FATAL" );
-    System.setProperty( "euca.var.dir", eucaHome + "/var/lib/eucalyptus/" );
-    System.setProperty( "euca.conf.dir", eucaHome + "/etc/eucalyptus/cloud.d/" );
-    System.setProperty( "euca.log.dir", eucaHome + "/var/log/eucalyptus/" );
-    System.setProperty( "euca.lib.dir", eucaHome + "/usr/share/eucalyptus/" );
-
-    // Keep logs off the console
-    // Logger.getRootLogger().removeAllAppenders();
-    LOG = Logger.getLogger( StandalonePersistence.class );
-    LOG.info( String.format( "%-20.20s %s", "New install directory:", eucaHome ) );
-    LOG.info( String.format( "%-20.20s %s", "Old install directory:", eucaOld ) );
-    LOG.info( String.format( "%-20.20s %s", "Upgrade data source:", eucaSource ) );
-    LOG.info( String.format( "%-20.20s %s", "Upgrade data destination:", eucaDest ) );
-    oldLibDir = getAndCheckLibDirectory( eucaOld );
-    newLibDir = getAndCheckLibDirectory( eucaHome );
+  @Override
+  public String getSecretKey( ) {
+    return this.delegate.getSecretKey( );
   }
   
-  private static File getAndCheckLibDirectory( String eucaHome ) {
-    File eucaLibDir;
-    if ( eucaHome == null ) {
-      throw new RuntimeException( "The source directory has not been specified." );
-    } else if ( !( eucaLibDir = new File( eucaHome, "usr/share/eucalyptus" ) ).exists( ) ) {
-      throw new RuntimeException( "The source directory does not exist: " + eucaLibDir.getPath() );
+//  @Override
+  public void setSecretKey( final String key ) throws AuthException {
+    try {
+      DatabaseAuthUtils.invokeUnique( AccessKeyEntity.class, "accessKey", this.delegate.getAccessKey( ), new Tx<AccessKeyEntity>( ) {
+        public void fire( AccessKeyEntity t ) {
+          t.setSecretKey( key );
+        }
+      } );
+    } catch ( ExecutionException e ) {
+      Debugging.logError( LOG, e, "Failed to setKey for " + this.delegate );
+      throw new AuthException( e );
     }
-    return eucaLibDir;
   }
+  
+  @Override
+  public Date getCreateDate( ) {
+    return this.delegate.getCreateDate( );
+  }
+  
+  @Override
+  public UserPrincipal getPrincipal( ) throws AuthException {
+    final List<UserPrincipal> results = Lists.newArrayList( );
+    try {
+      DatabaseAuthUtils.invokeUnique( AccessKeyEntity.class, "accessKey", this.delegate.getAccessKey( ), new Tx<AccessKeyEntity>( ) {
+        public void fire( AccessKeyEntity t ) {
+          try {
+            results.add( Accounts.userAsPrincipal( new DatabaseUserProxy( t.getUser() ) ) );
+          } catch ( AuthException e ) {
+            throw Exceptions.toUndeclared( e );
+          }
+        }
+      } );
+    } catch ( ExecutionException e ) {
+      Debugging.logError( LOG, e, "Failed to getUser for " + this.delegate );
+      throw new AuthException( e );
+    }
+    return results.get( 0 );
+  }
+
+  @Override
+  public String getAccessKey( ) {
+    return this.delegate.getAccessKey( );
+  }
+  
 }

@@ -80,8 +80,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.DatabaseAuthProvider;
-import com.eucalyptus.auth.entities.AccountEntity;
+import com.eucalyptus.auth.euare.persist.entities.AccountEntity;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.Entities;

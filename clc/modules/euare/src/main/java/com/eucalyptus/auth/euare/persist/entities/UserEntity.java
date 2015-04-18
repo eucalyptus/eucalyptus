@@ -60,18 +60,19 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth.entities;
+package com.eucalyptus.auth.euare.persist.entities;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Map;
 import javax.persistence.CascadeType;
+import javax.persistence.CollectionTable;
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
-import javax.persistence.JoinColumn;
-import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
-import javax.persistence.ManyToOne;
+import javax.persistence.MapKeyColumn;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
@@ -82,78 +83,104 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 /**
- * Database group entity.
+ * Database entity for a user.
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_auth" )
-@Table( name = "auth_group" )
+@Table( name = "auth_user" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class GroupEntity extends AbstractPersistent implements Serializable {
+public class UserEntity extends AbstractPersistent implements Serializable {
 
   @Transient
   private static final long serialVersionUID = 1L;
+  
+  // The User ID the user facing group id which conforms to length and character restrictions per spec.
+  @Column( name = "auth_user_id_external" )
+  String userId;
 
-  // The Group ID: the user facing group id which conforms to length and character restrictions per spec.
-  @Column( name = "auth_group_id_external" )
-  String groupId;
-
-  // Group name, not unique since different accounts can have the same group name
-  @Column( name = "auth_group_name" )
+  // User name
+  @Column( name = "auth_user_name" )
   String name;
   
-  // Group path (prefix to organize group name space, see AWS spec)
-  @Column( name = "auth_group_path" )
+  // User path (prefix to organize user name space, see AWS spec)
+  @Column( name = "auth_user_path" )
   String path;
   
-  // Indicates if this group is a special user group
-  @Column( name = "auth_group_user_group" )
-  Boolean userGroup;
+  // Flag to control the activeness of a user.
+  @Column( name = "auth_user_is_enabled" )
+  Boolean enabled;
   
-  // Users in the group
-  @ManyToMany( fetch = FetchType.LAZY )
-  @JoinTable( name = "auth_group_has_users", joinColumns = { @JoinColumn( name = "auth_group_id" ) }, inverseJoinColumns = @JoinColumn( name = "auth_user_id" ) )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  List<UserEntity> users;
+  // Web session token
+  @Column( name = "auth_user_token" )
+  String token;
 
-  // Policies for the group
-  @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "group" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  List<PolicyEntity> policies;
+  // User registration confirmation code
+  @Column( name = "auth_user_confirmation_code" )
+  String confirmationCode;
   
-  // The owning account
-  @ManyToOne( fetch = FetchType.LAZY )
-  @JoinColumn( name = "auth_group_owning_account" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  AccountEntity account;
+  // Web login password
+  @Column( name = "auth_user_password" )
+  String password;
+
+  // Time when password expires
+  @Column( name = "auth_user_password_expires" )
+  Long passwordExpires;
   
-  public GroupEntity( ) {
-    this.users = Lists.newArrayList( );
-    this.policies = Lists.newArrayList( );
+  // List of secret keys
+  @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "user" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  List<AccessKeyEntity> keys;
+  
+  // List of certificates
+  @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "user" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  List<CertificateEntity> certificates;
+  
+  // Customizable user info in key-value pairs
+  @ElementCollection
+  @CollectionTable( name = "auth_user_info_map" )
+  @MapKeyColumn( name = "auth_user_info_key" )
+  @Column( name = "auth_user_info_value" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  Map<String, String> info;
+  
+  // User's groups
+  @ManyToMany( fetch = FetchType.LAZY, mappedBy="users" ) // not owning side
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  List<GroupEntity> groups;
+
+  
+  public UserEntity( ) {
+    this.keys = Lists.newArrayList( );
+    this.certificates = Lists.newArrayList( );
+    this.info = Maps.newHashMap( );
+    this.groups = Lists.newArrayList( );
   }
-  
-  public GroupEntity( String name ) {
+
+  public UserEntity( String name ) {
     this( );
     this.name = name;
   }
   
-  public GroupEntity( Boolean userGroup ) {
+  public UserEntity( Boolean enabled ) {
     this( );
-    this.userGroup = userGroup;
+    this.enabled = enabled;
   }
-
-  public static GroupEntity newInstanceWithGroupId( final String id ) {
-    GroupEntity g = new GroupEntity( );
-    g.groupId = id;
-    return g;
-  }
-
+  
   @PrePersist
   public void generateOnCommit() {
-    if( this.groupId == null ) {
-      this.groupId = Identifiers.generateIdentifier( "AGP" );
+    if( this.userId == null ) {/** NOTE: first time that user is committed it needs to generate its own ID (i.e., not the database id), do this at commit time and generate if null **/
+      this.userId = Identifiers.generateIdentifier( "AID" );
     }
+  }
+  
+  public static UserEntity newInstanceWithUserId( final String userId ) {
+    UserEntity u = new UserEntity( );
+    u.userId = userId;
+    return u;
   }
   
   @Override
@@ -161,7 +188,7 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
     if ( this == o ) return true;
     if ( o == null || getClass( ) != o.getClass( ) ) return false;
     
-    GroupEntity that = ( GroupEntity ) o;    
+    UserEntity that = ( UserEntity ) o;    
     if ( !name.equals( that.name ) ) return false;
     
     return true;
@@ -170,19 +197,21 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
   @Override
   public String toString( ) {
     StringBuilder sb = new StringBuilder( );
-    sb.append( "Group(" );
+    sb.append( "User(" );
     sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
+    sb.append( "UserID=" ).append( this.getUserId( ) ).append( ", " );
     sb.append( "name=" ).append( this.getName( ) ).append( ", " );
     sb.append( "path=" ).append( this.getPath( ) ).append( ", " );
-    sb.append( "userGroup=" ).append( this.isUserGroup( ) );
+    sb.append( "enabled=" ).append( this.isEnabled( ) ).append( ", " );
+    sb.append( "passwordExpires=" ).append( this.getPasswordExpires( ) );
     sb.append( ")" );
     return sb.toString( );
   }
-  
+
   public String getName( ) {
     return this.name;
   }
-
+  
   public void setName( String name ) {
     this.name = name;
   }
@@ -190,37 +219,69 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
   public String getPath( ) {
     return this.path;
   }
-
+  
   public void setPath( String path ) {
     this.path = path;
   }
+  
+  public Boolean isEnabled( ) {
+    return this.enabled;
+  }
+  
+  public void setEnabled( Boolean enabled ) {
+    this.enabled = enabled;
+  }
+  
+  public String getToken( ) {
+    return this.token;
+  }
+  
+  public void setToken( String token ) {
+    this.token = token;
+  }
+  
+  public String getConfirmationCode( ) {
+    return this.confirmationCode;
+  }
+  
+  public void setConfirmationCode( String confirmationCode ) {
+    this.confirmationCode = confirmationCode;
+  }
+  
+  public String getPassword( ) {
+    return this.password;
+  }
+  
+  public void setPassword( String password ) {
+    this.password = password;
+  }
+  
+  public Long getPasswordExpires( ) {
+    return this.passwordExpires;
+  }
+  
+  public void setPasswordExpires( Long passwordExpires ) {
+    this.passwordExpires = passwordExpires;
+  }
+  
+  public List<AccessKeyEntity> getKeys( ) {
+    return this.keys;
+  }
+  
+  public List<CertificateEntity> getCertificates( ) {
+    return this.certificates;
+  }
+  
+  public Map<String, String> getInfo( ) {
+    return this.info;
+  }
+  
+  public List<GroupEntity> getGroups( ) {
+    return this.groups;
+  }
 
-  public AccountEntity getAccount( ) {
-    return this.account;
-  }
-  
-  public void setAccount( AccountEntity account ) {
-    this.account = account;
-  }
-  
-  public Boolean isUserGroup( ) {
-    return this.userGroup;
-  }
-  
-  public void setUserGroup( Boolean userGroup ) {
-    this.userGroup = userGroup;
-  }
-  
-  public List<PolicyEntity> getPolicies( ) {
-    return this.policies;
-  }
-  
-  public List<UserEntity> getUsers( ) {
-    return this.users;
-  }
-
-  public String getGroupId( ) {
-    return this.groupId;
+  public String getUserId( ) {
+    return this.userId;
   }
   
 }

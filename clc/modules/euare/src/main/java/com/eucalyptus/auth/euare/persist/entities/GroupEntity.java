@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,147 +60,167 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth.entities;
+package com.eucalyptus.auth.euare.persist.entities;
 
 import java.io.Serializable;
 import java.util.List;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
-import javax.persistence.Lob;
+import javax.persistence.JoinTable;
+import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Type;
-import com.eucalyptus.auth.policy.PolicyPolicy;
-import com.eucalyptus.auth.principal.Authorization.EffectType;
+import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.google.common.collect.Lists;
 
 /**
- * Database policy entity.
+ * Database group entity.
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_auth" )
-@Table( name = "auth_policy" )
+@Table( name = "auth_group" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class PolicyEntity extends AbstractPersistent implements Serializable {
+public class GroupEntity extends AbstractPersistent implements Serializable {
 
   @Transient
   private static final long serialVersionUID = 1L;
-  
-  // The policy name
-  @Column( name = "auth_policy_name" )
+
+  // The Group ID: the user facing group id which conforms to length and character restrictions per spec.
+  @Column( name = "auth_group_id_external" )
+  String groupId;
+
+  // Group name, not unique since different accounts can have the same group name
+  @Column( name = "auth_group_name" )
   String name;
   
-  @Column( name = "auth_policy_version" )
-  String policyVersion;
+  // Group path (prefix to organize group name space, see AWS spec)
+  @Column( name = "auth_group_path" )
+  String path;
   
-  // The original policy text in JSON
-  @Column( name = "auth_policy_text" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
-  String text;
+  // Indicates if this group is a special user group
+  @Column( name = "auth_group_user_group" )
+  Boolean userGroup;
   
-  // The owning group
-  @ManyToOne
-  @JoinColumn( name = "auth_policy_owning_group" )
-  GroupEntity group;
+  // Users in the group
+  @ManyToMany( fetch = FetchType.LAZY )
+  @JoinTable( name = "auth_group_has_users", joinColumns = { @JoinColumn( name = "auth_group_id" ) }, inverseJoinColumns = @JoinColumn( name = "auth_user_id" ) )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  List<UserEntity> users;
 
-  // The owning role
-  @ManyToOne
-  @JoinColumn( name = "auth_policy_owning_role" )
-  RoleEntity role;
-
-  public PolicyEntity( ) {
+  // Policies for the group
+  @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "group" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  List<PolicyEntity> policies;
+  
+  // The owning account
+  @ManyToOne( fetch = FetchType.LAZY )
+  @JoinColumn( name = "auth_group_owning_account" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  AccountEntity account;
+  
+  public GroupEntity( ) {
+    this.users = Lists.newArrayList( );
+    this.policies = Lists.newArrayList( );
   }
   
-  public PolicyEntity( String name ) {
+  public GroupEntity( String name ) {
+    this( );
     this.name = name;
   }
-
-  public PolicyEntity( String name, String version, String text ) {
-    this( name );
-    this.policyVersion = version;
-    this.text = text;
+  
+  public GroupEntity( Boolean userGroup ) {
+    this( );
+    this.userGroup = userGroup;
   }
 
-  public static PolicyEntity create( final String name,
-                                     final String policyVersion,
-                                     final String text ) {
-    return new PolicyEntity( name, policyVersion, text );
+  public static GroupEntity newInstanceWithGroupId( final String id ) {
+    GroupEntity g = new GroupEntity( );
+    g.groupId = id;
+    return g;
   }
 
-  public static PolicyEntity newInstanceWithId( final String id ) {
-    PolicyEntity p = new PolicyEntity( );
-    p.setId( id );
-    return p;
+  @PrePersist
+  public void generateOnCommit() {
+    if( this.groupId == null ) {
+      this.groupId = Identifiers.generateIdentifier( "AGP" );
+    }
   }
   
-  public String getText( ) {
-    return this.text;
+  @Override
+  public boolean equals( final Object o ) {
+    if ( this == o ) return true;
+    if ( o == null || getClass( ) != o.getClass( ) ) return false;
+    
+    GroupEntity that = ( GroupEntity ) o;    
+    if ( !name.equals( that.name ) ) return false;
+    
+    return true;
   }
 
-  public void setText( String text ) {
-    this.text = text;
+  @Override
+  public String toString( ) {
+    StringBuilder sb = new StringBuilder( );
+    sb.append( "Group(" );
+    sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
+    sb.append( "name=" ).append( this.getName( ) ).append( ", " );
+    sb.append( "path=" ).append( this.getPath( ) ).append( ", " );
+    sb.append( "userGroup=" ).append( this.isUserGroup( ) );
+    sb.append( ")" );
+    return sb.toString( );
   }
   
   public String getName( ) {
     return this.name;
   }
-  
+
   public void setName( String name ) {
     this.name = name;
   }
   
-  public GroupEntity getGroup( ) {
-    return this.group;
+  public String getPath( ) {
+    return this.path;
+  }
+
+  public void setPath( String path ) {
+    this.path = path;
+  }
+
+  public AccountEntity getAccount( ) {
+    return this.account;
   }
   
-  public void setGroup( GroupEntity group ) {
-    this.group = group;
-  }
-
-  public RoleEntity getRole() {
-    return role;
-  }
-
-  public void setRole( RoleEntity role ) {
-    this.role = role;
-  }
-
-  public String getPolicyVersion( ) {
-    return this.policyVersion;
-  }
-
-  public void setPolicyVersion( String policyVersion ) {
-    this.policyVersion = policyVersion;
+  public void setAccount( AccountEntity account ) {
+    this.account = account;
   }
   
-  @Override
-  public String toString( ) {
-    StringBuilder sb = new StringBuilder( );
-    sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
-    sb.append( "name=" ).append( this.getName( ) );
-    return sb.toString( );
+  public Boolean isUserGroup( ) {
+    return this.userGroup;
   }
   
-  /**
-   * NOTE:IMPORTANT: this method has default visibility (rather than public) only for the sake of
-   * supporting currently hand-coded proxy classes. Don't share this value with the user.
-   * 
-   * TODO: remove this if possible.
-   * 
-   * @return
-   * @see {@link AbstractPersistent#getId()}
-   */
-  public String getPolicyId( ) {
-    return this.getId( );
+  public void setUserGroup( Boolean userGroup ) {
+    this.userGroup = userGroup;
+  }
+  
+  public List<PolicyEntity> getPolicies( ) {
+    return this.policies;
+  }
+  
+  public List<UserEntity> getUsers( ) {
+    return this.users;
   }
 
+  public String getGroupId( ) {
+    return this.groupId;
+  }
+  
 }

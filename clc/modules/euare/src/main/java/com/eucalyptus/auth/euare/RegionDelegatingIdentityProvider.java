@@ -22,7 +22,7 @@ package com.eucalyptus.auth.euare;
 import java.util.List;
 import javax.annotation.Nonnull;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.DatabaseIdentityProvider;
+import com.eucalyptus.auth.euare.persist.DatabaseIdentityProvider;
 import com.eucalyptus.auth.api.IdentityProvider;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurationManager;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;

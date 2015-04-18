@@ -17,15 +17,18 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.auth;
+package com.eucalyptus.auth.euare.persist;
 
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.entities.InstanceProfileEntity;
-import com.eucalyptus.auth.entities.RoleEntity;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.Debugging;
+import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
+import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.EuareInstanceProfile;
 import com.eucalyptus.auth.principal.EuareRole;

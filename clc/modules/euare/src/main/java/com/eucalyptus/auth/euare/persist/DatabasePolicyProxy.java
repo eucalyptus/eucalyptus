@@ -60,97 +60,62 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth;
+package com.eucalyptus.auth.euare.persist;
 
-import java.util.Date;
 import java.util.List;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.entities.AccessKeyEntity;
-import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.UserPrincipal;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.Debugging;
+import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
+import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.Policy;
+import com.eucalyptus.entities.Transactions;
 import java.util.concurrent.ExecutionException;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
 
-public class DatabaseAccessKeyProxy implements AccessKey {
+public class DatabasePolicyProxy implements Policy {
 
   private static final long serialVersionUID = 1L;
   
-  private static final Logger LOG = Logger.getLogger( DatabaseAccessKeyProxy.class );
+  private static Logger LOG = Logger.getLogger( DatabasePolicyProxy.class );
+                                               
+  private PolicyEntity delegate;
   
-  private AccessKeyEntity delegate;
-  
-  public DatabaseAccessKeyProxy( AccessKeyEntity delegate ) {
+  public DatabasePolicyProxy( PolicyEntity delegate ) {
     this.delegate = delegate;
   }
   
   @Override
-  public Boolean isActive( ) {
-    return this.delegate.isActive( );
+  public String getName( ) {
+    return this.delegate.getName( );
   }
   
   @Override
-  public void setActive( final Boolean active ) throws AuthException {
+  public String getText( ) {
+    return this.delegate.getText( );
+  }
+  
+  public String getVersion( ) {
+    return this.delegate.getPolicyVersion( );
+  }
+
+  public Integer getPolicyVersion( ) {
+    return this.delegate.getVersion( );
+  }
+
+  public Group getGroup( ) throws AuthException {
+    final List<Group> results = Lists.newArrayList( );
     try {
-      DatabaseAuthUtils.invokeUnique( AccessKeyEntity.class, "accessKey", this.delegate.getAccessKey( ), new Tx<AccessKeyEntity>( ) {
-        public void fire( AccessKeyEntity t ) {
-          t.setActive( active );
+      Transactions.one( PolicyEntity.newInstanceWithId( this.delegate.getPolicyId( ) ), new Tx<PolicyEntity>( ) {
+        public void fire( PolicyEntity t ) {
+          results.add( new DatabaseGroupProxy( t.getGroup( ) ) );
         }
       } );
     } catch ( ExecutionException e ) {
-      Debugging.logError( LOG, e, "Failed to setActive for " + this.delegate );
-      throw new AuthException( e );
-    }
-  }
-  
-  @Override
-  public String getSecretKey( ) {
-    return this.delegate.getSecretKey( );
-  }
-  
-//  @Override
-  public void setSecretKey( final String key ) throws AuthException {
-    try {
-      DatabaseAuthUtils.invokeUnique( AccessKeyEntity.class, "accessKey", this.delegate.getAccessKey( ), new Tx<AccessKeyEntity>( ) {
-        public void fire( AccessKeyEntity t ) {
-          t.setSecretKey( key );
-        }
-      } );
-    } catch ( ExecutionException e ) {
-      Debugging.logError( LOG, e, "Failed to setKey for " + this.delegate );
-      throw new AuthException( e );
-    }
-  }
-  
-  @Override
-  public Date getCreateDate( ) {
-    return this.delegate.getCreateDate( );
-  }
-  
-  @Override
-  public UserPrincipal getPrincipal( ) throws AuthException {
-    final List<UserPrincipal> results = Lists.newArrayList( );
-    try {
-      DatabaseAuthUtils.invokeUnique( AccessKeyEntity.class, "accessKey", this.delegate.getAccessKey( ), new Tx<AccessKeyEntity>( ) {
-        public void fire( AccessKeyEntity t ) {
-          try {
-            results.add( Accounts.userAsPrincipal( new DatabaseUserProxy( t.getUser( ) ) ) );
-          } catch ( AuthException e ) {
-            throw Exceptions.toUndeclared( e );
-          }
-        }
-      } );
-    } catch ( ExecutionException e ) {
-      Debugging.logError( LOG, e, "Failed to getUser for " + this.delegate );
+      Debugging.logError( LOG, e, "Failed to getGroup for " + this.delegate );
       throw new AuthException( e );
     }
     return results.get( 0 );
   }
-
-  @Override
-  public String getAccessKey( ) {
-    return this.delegate.getAccessKey( );
-  }
-  
 }
