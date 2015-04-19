@@ -72,7 +72,6 @@ import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.auth.principal.Group;
-import com.eucalyptus.auth.principal.Role;
 
 public interface AccountProvider {
 

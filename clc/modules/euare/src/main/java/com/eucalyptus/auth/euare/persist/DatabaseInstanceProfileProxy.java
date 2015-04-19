@@ -30,7 +30,7 @@ import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
 import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.EuareInstanceProfile;
+import com.eucalyptus.auth.euare.principal.EuareInstanceProfile;
 import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;

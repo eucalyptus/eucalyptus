@@ -82,6 +82,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.euare.persist.entities.AccountEntity;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;
@@ -490,7 +491,7 @@ public class ObjectStorage400Upgrade {
 
   private static Account getEucalyptusAccount() throws Exception {
     if (eucalyptusAccount == null) {
-      eucalyptusAccount = Accounts.lookupAccountByName(Account.SYSTEM_ACCOUNT);
+      eucalyptusAccount = Accounts.lookupAccountByName(AccountIdentifiers.SYSTEM_ACCOUNT);
     }
     return eucalyptusAccount;
   }
@@ -503,7 +504,7 @@ public class ObjectStorage400Upgrade {
   }
 
   private static void createBlockStorageAccount() throws Exception {
-    blockStorageAccount = Accounts.addSystemAccountWithAdmin(Account.BLOCKSTORAGE_SYSTEM_ACCOUNT);
+    blockStorageAccount = Accounts.addSystemAccountWithAdmin(AccountIdentifiers.BLOCKSTORAGE_SYSTEM_ACCOUNT);
   }
 
   private static Account getBlockStorageAccount() throws Exception {

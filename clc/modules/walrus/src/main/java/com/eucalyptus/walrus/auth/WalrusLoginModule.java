@@ -74,7 +74,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.crypto.Hmac;
 import com.eucalyptus.walrus.exceptions.AccessDeniedException;
@@ -101,8 +101,8 @@ public class WalrusLoginModule extends BaseLoginModule<WalrusWrappedCredentials>
     final String authSig = checkSignature(queryKey, credentials.getLoginData());
     if (authSig.equals(signature)) {
       try {
-        if (!Account.OBJECT_STORAGE_WALRUS_ACCOUNT.equals( Accounts.lookupAccountAliasById( user.getAccountNumber( ) ) )) {
-          throw new AccessDeniedException("walrus only accepts requests from " + Account.OBJECT_STORAGE_WALRUS_ACCOUNT);
+        if (!AccountIdentifiers.OBJECT_STORAGE_WALRUS_ACCOUNT.equals( Accounts.lookupAccountAliasById( user.getAccountNumber( ) ) )) {
+          throw new AccessDeniedException("walrus only accepts requests from " + AccountIdentifiers.OBJECT_STORAGE_WALRUS_ACCOUNT);
         }
       } catch (AuthException e) {
         throw new AccessDeniedException(e.getMessage());

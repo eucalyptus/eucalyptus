@@ -41,6 +41,7 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.BaseRole;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.tokens.SecurityToken;
@@ -286,8 +287,8 @@ public class TokensService {
       final String roleAccountId = roleArn.getNamespace();
       final String roleName = ((EuareResourceName) roleArn).getName();
 
-      if ( Account.SYSTEM_ACCOUNT.equals( roleAccountId ) ) {
-        final Account account = Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT );
+      if ( AccountIdentifiers.SYSTEM_ACCOUNT.equals( roleAccountId ) ) {
+        final Account account = Accounts.lookupAccountByName( AccountIdentifiers.SYSTEM_ACCOUNT );
         return account.lookupRoleByName( roleName );
       } else {
         return Accounts.lookupRoleByName( roleAccountId, roleName );

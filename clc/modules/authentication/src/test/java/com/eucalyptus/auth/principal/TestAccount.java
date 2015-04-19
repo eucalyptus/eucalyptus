@@ -95,7 +95,7 @@ public class TestAccount implements Account {
   }
 
   @Override
-  public List<EuareInstanceProfile> getInstanceProfiles() throws AuthException {
+  public List<BaseInstanceProfile> getInstanceProfiles() throws AuthException {
     throw new AuthException( "Not implemented" );
   }
 
@@ -130,7 +130,7 @@ public class TestAccount implements Account {
   }
 
   @Override
-  public EuareInstanceProfile addInstanceProfile( final String instanceProfileName, final String path ) throws AuthException {
+  public BaseInstanceProfile addInstanceProfile( final String instanceProfileName, final String path ) throws AuthException {
     throw new AuthException( "Not implemented" );
   }
 
@@ -155,7 +155,7 @@ public class TestAccount implements Account {
   }
 
   @Override
-  public EuareInstanceProfile lookupInstanceProfileByName( final String instanceProfileName ) throws AuthException {
+  public BaseInstanceProfile lookupInstanceProfileByName( final String instanceProfileName ) throws AuthException {
     throw new AuthException( "Not implemented" );
   }
 

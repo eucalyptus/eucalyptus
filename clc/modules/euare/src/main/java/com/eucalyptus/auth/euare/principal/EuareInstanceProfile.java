@@ -17,18 +17,18 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.auth.principal;
+package com.eucalyptus.auth.euare.principal;
 
 import java.util.Date;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.BaseInstanceProfile;
+import com.eucalyptus.auth.principal.EuareRole;
 
 /**
- * This will move to the euare module. Use InstanceProfile elsewhere
  *
- * @deprecated This class is temporary, do not use
  */
-@Deprecated
 public interface EuareInstanceProfile extends BaseInstanceProfile {
 
   Account getAccount( ) throws AuthException;

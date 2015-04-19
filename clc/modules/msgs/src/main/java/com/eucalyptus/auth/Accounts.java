@@ -76,6 +76,7 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.BaseInstanceProfile;
 import com.eucalyptus.auth.principal.BaseRole;
 import com.eucalyptus.auth.principal.Certificate;
@@ -352,7 +353,7 @@ public class Accounts {
   }
 
   public static EuareUser lookupAwsExecReadAdmin(boolean ensureActiveKey) throws AuthException {
-	Account system = Accounts.getAccountProvider( ).lookupAccountByName( Account.AWS_EXEC_READ_SYSTEM_ACCOUNT );
+	Account system = Accounts.getAccountProvider( ).lookupAccountByName( AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT );
 	EuareUser user = system.lookupAdmin();
 	if (ensureActiveKey) {
       boolean hasActiveKey = false;
@@ -371,7 +372,7 @@ public class Accounts {
   }
 
   public static EuareUser lookupObjectStorageWalrusAccount(boolean ensureActiveKey) throws AuthException {
-    Account system = Accounts.getAccountProvider( ).lookupAccountByName( Account.OBJECT_STORAGE_WALRUS_ACCOUNT );
+    Account system = Accounts.getAccountProvider( ).lookupAccountByName( AccountIdentifiers.OBJECT_STORAGE_WALRUS_ACCOUNT );
     EuareUser user = system.lookupAdmin();
     if (ensureActiveKey) {
       boolean hasActiveKey = false;

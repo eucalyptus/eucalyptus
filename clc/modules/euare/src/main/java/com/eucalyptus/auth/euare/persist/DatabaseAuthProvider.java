@@ -73,6 +73,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.InvalidAccessKeyAuthException;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.entities.Entities;
@@ -245,7 +246,7 @@ public class DatabaseAuthProvider implements AccountProvider {
    */
   @Override
   public Account addSystemAccount( String accountName ) throws AuthException {
-    if ( !accountName.startsWith( Account.SYSTEM_ACCOUNT_PREFIX ) ) {
+    if ( !accountName.startsWith( AccountIdentifiers.SYSTEM_ACCOUNT_PREFIX ) ) {
       throw new AuthException( AuthException.INVALID_NAME );
     }
     try {

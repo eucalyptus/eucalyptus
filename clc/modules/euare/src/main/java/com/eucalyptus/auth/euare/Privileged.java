@@ -80,8 +80,10 @@ import com.eucalyptus.auth.ServerCertificate;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.BaseInstanceProfile;
+import com.eucalyptus.auth.principal.BaseRole;
 import com.eucalyptus.auth.principal.Certificate;
-import com.eucalyptus.auth.principal.EuareInstanceProfile;
+import com.eucalyptus.auth.euare.principal.EuareInstanceProfile;
 import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.auth.principal.Group;
@@ -351,7 +353,7 @@ class Privileged {
     return account.addRole( roleName, path, assumeRolePolicy );
   }
 
-  public static boolean allowListRole( AuthContext requestUser, Account account, EuareRole role ) throws AuthException {
+  public static boolean allowListRole( AuthContext requestUser, Account account, BaseRole role ) throws AuthException {
     return
         Permissions.isAuthorized(
             requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_ROLE, IAM_LISTROLES ),
@@ -387,7 +389,7 @@ class Privileged {
     return account.addInstanceProfile( instanceProfileName, path );
   }
 
-  public static boolean allowListInstanceProfile( AuthContext requestUser, Account account, EuareInstanceProfile instanceProfile ) throws AuthException {
+  public static boolean allowListInstanceProfile( AuthContext requestUser, Account account, BaseInstanceProfile instanceProfile ) throws AuthException {
     return
         Permissions.isAuthorized(
             requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_INSTANCE_PROFILE, IAM_LISTINSTANCEPROFILES ),
@@ -430,7 +432,7 @@ class Privileged {
     if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, IAM_LISTINSTANCEPROFILESFORROLE, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
-    return role.getInstanceProfiles();
+    return (List<EuareInstanceProfile>)(List)role.getInstanceProfiles();
   }
 
   public static boolean allowListInstanceProfileForRole( AuthContext requestUser, Account account, EuareInstanceProfile instanceProfile ) throws AuthException {

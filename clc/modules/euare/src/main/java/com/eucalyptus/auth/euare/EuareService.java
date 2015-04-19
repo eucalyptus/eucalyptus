@@ -95,8 +95,10 @@ import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.policy.key.Iso8601DateParser;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.BaseInstanceProfile;
+import com.eucalyptus.auth.principal.BaseRole;
 import com.eucalyptus.auth.principal.Certificate;
-import com.eucalyptus.auth.principal.EuareInstanceProfile;
+import com.eucalyptus.auth.euare.principal.EuareInstanceProfile;
 import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.auth.principal.Group;
@@ -2034,7 +2036,7 @@ public class EuareService {
     reply.getListInstanceProfilesResult().setIsTruncated( false );
     final ArrayList<InstanceProfileType> instanceProfiles = reply.getListInstanceProfilesResult( ).getInstanceProfiles().getMember();
     try {
-      for ( final EuareInstanceProfile instanceProfile : account.getInstanceProfiles() ) {
+      for ( final EuareInstanceProfile instanceProfile : (List<EuareInstanceProfile>)(List)account.getInstanceProfiles() ) {
         if ( instanceProfile.getPath( ).startsWith( path ) ) {
           if ( Privileged.allowListInstanceProfile( requestUser, account, instanceProfile ) ) {
             instanceProfiles.add( fillInstanceProfileResult( new InstanceProfileType(), instanceProfile ) );

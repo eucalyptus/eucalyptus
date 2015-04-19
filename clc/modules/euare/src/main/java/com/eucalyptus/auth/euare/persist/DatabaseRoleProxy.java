@@ -40,8 +40,10 @@ import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.policy.PolicyPolicy;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.EuareInstanceProfile;
+import com.eucalyptus.auth.euare.principal.EuareInstanceProfile;
+import com.eucalyptus.auth.principal.BaseInstanceProfile;
 import com.eucalyptus.auth.principal.EuareRole;
+import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.PolicyScope;
 import com.eucalyptus.auth.principal.PolicyVersion;
@@ -259,7 +261,7 @@ public class DatabaseRoleProxy implements EuareRole {
   }
 
   @Override
-  public List<EuareInstanceProfile> getInstanceProfiles() throws AuthException {
+  public List<? extends BaseInstanceProfile> getInstanceProfiles() throws AuthException {
     final List<EuareInstanceProfile> results = Lists.newArrayList( );
     try ( final TransactionResource db = Entities.transactionFor( InstanceProfileEntity.class ) ) {
       @SuppressWarnings( "unchecked" )

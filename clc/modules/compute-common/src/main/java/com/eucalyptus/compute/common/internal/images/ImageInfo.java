@@ -425,37 +425,7 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
    * @param accountIds
    */
   public void addPermissions( final List<String> accountIds ) {
-    final EntityTransaction db = Entities.get( ImageInfo.class );
-    try {
-      final ImageInfo entity = Entities.merge( this );
-      Iterables.all( accountIds, new Predicate<String>( ) {
-        
-        @Override
-        public boolean apply( final String input ) {
-          try {
-            final Account account = Accounts.lookupAccountById( input );
-            ImageInfo.this.getPermissions( ).add( input );
-          } catch ( final Exception e ) {
-            try {
-              final User user = Accounts.lookupUserById( input );
-              ImageInfo.this.getPermissions( ).add( user.getAccountNumber( ) );
-            } catch ( AuthException ex ) {
-              try {
-                final User user = Accounts.lookupUserByAccessKeyId( input );
-                ImageInfo.this.getPermissions( ).add( user.getAccountNumber( ) );
-              } catch ( AuthException ex1 ) {
-                LOG.error( ex1, ex1 );
-              }
-            }
-          }
-          return true;
-        }
-      } );
-      db.commit( );
-    } catch ( final Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
-      db.rollback( );
-    }
+    getPermissions( ).addAll( accountIds );
   }
   
   /**
@@ -465,23 +435,7 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
    */
   public void removePermissions( final List<String> accountIds ) {
     
-    final EntityTransaction db = Entities.get( ImageInfo.class );
-    try {
-      final ImageInfo entity = Entities.merge( this );
-      Iterables.all( accountIds, new Predicate<String>( ) {
-        
-        @Override
-        public boolean apply( final String input ) {
-          ImageInfo.this.getPermissions( ).remove( input );
-          return true;
-        }
-      } );
-      
-      db.commit( );
-    } catch ( final Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
-      db.rollback( );
-    }
+    getPermissions( ).removeAll( accountIds );
   }
   
   public static ImageInfo named( @Nullable final OwnerFullName input,

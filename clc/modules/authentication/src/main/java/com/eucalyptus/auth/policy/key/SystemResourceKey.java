@@ -26,7 +26,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyResourceContext;
 import com.eucalyptus.auth.policy.condition.Bool;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
-import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
@@ -82,10 +82,10 @@ public class SystemResourceKey implements Key {
     @Override
     public Boolean apply( @Nullable final String accountNumber ) {
       try {
-        final Account account = Accounts.lookupAccountById( accountNumber );
+        final String alias = Accounts.lookupAccountAliasById( accountNumber );
         return
-            Accounts.isSystemAccount( account ) &&
-            !Account.SYSTEM_ACCOUNT.equals( account.getName( ) );
+            Accounts.isSystemAccount( alias ) &&
+            !AccountIdentifiers.SYSTEM_ACCOUNT.equals( alias );
       } catch ( AuthException e ) {
         throw Exceptions.toUndeclared( e );
       }
