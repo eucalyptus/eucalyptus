@@ -1,7 +1,11 @@
 {
-  "Description": "Imaging worker stack",
+  "Description": "Database worker stack",
   "Parameters": {
     "CERTARN": {
+      "NoEcho": true,
+      "Type": "String"
+    },
+    "PasswordEncrypted": {
       "NoEcho": true,
       "Type": "String"
     },
@@ -24,16 +28,12 @@
       "Default": "",
       "Type": "String"
     },
-    "LogServer": {
+    "VolumeId": {
       "Default": "",
       "Type": "String"
     },
-    "LogServerPort": {
-      "Default": "514",
-      "Type": "Number"
-    },
-    "ImagingServiceUrl": {
-      "Type": "String"
+    "AvailabilityZones": {
+      "Type": "CommaDelimitedList"
     },
     "EuareServiceUrl": {
       "Type": "String"
@@ -44,11 +44,9 @@
     "VmExpirationDays": {
       "Type": "String"
     },
-    "AvailabilityZones" : {
-       "Type": "CommaDelimitedList"
-    },
-    "NumberOfWorkers" : {
-       "Type": "Number"
+    "DBPort":{
+      "Type": "Number",
+      "Default": "5432"
     }
   },
   "Conditions" : {
@@ -58,23 +56,23 @@
     "ASG": {
       "Properties": {
         "AvailabilityZones": { "Ref": "AvailabilityZones" },
-        "DesiredCapacity": { "Ref": "NumberOfWorkers" },
+        "DesiredCapacity": 1,
         "HealthCheckType": "EC2",
         "LaunchConfigurationName": {
           "Ref": "LaunchConfiguration"
         },
-        "MaxSize": { "Ref": "NumberOfWorkers" },
-        "MinSize": { "Ref": "NumberOfWorkers" },
+        "MaxSize": 1,
+        "MinSize": 1,
         "Tags": [
           {
             "Key": "Name",
             "PropagateAtLaunch": "true",
-            "Value": "euca-internal-imaging-workers"
+            "Value": "euca-internal-db-servers"
           },
           {
             "Key": "service-type",
             "PropagateAtLaunch": "true",
-            "Value": "imaging"
+            "Value": "database"
           }
         ]
       },
@@ -82,7 +80,7 @@
     },
     "InstanceProfile": {
       "Properties": {
-        "Path": "/internal/imaging",
+        "Path": "/internal/database",
         "Roles": [
           {
             "Ref": "Role"
@@ -127,20 +125,20 @@
                   "Ref": "InitScript"
                 },
                 "\n",
-                "#System generated Imaging worker config\n",
-                "mkdir -p /etc/eucalyptus-imaging-worker/\n",
-                "yum -y --disablerepo \\* --enablerepo eucalyptus-service-image install eucalyptus-imaging-worker\n",
+                "#System generated DB worker config\n",
+                "mkdir -p /etc/eucalyptus-database-server/\n",
+                "yum -y --disablerepo \\* --enablerepo eucalyptus-service-image install eucalyptus-database-server\n",
                 "echo \"",
-                "imaging_service_url=", { "Ref" : "ImagingServiceUrl" }, "\n",
+                "master_password_encrypted=", { "Ref" : "PasswordEncrypted" }, "\n",
+                "server_cert_arn=", { "Ref" : "CERTARN" }, "\n",
                 "euare_service_url=", { "Ref" : "EuareServiceUrl" }, "\n",
                 "compute_service_url=", { "Ref" : "ComputeServiceUrl" }, "\n",
                 "ntp_server=", { "Ref" : "NtpServer" }, "\n",
-                "log_server=", { "Ref" : "LogServer" }, "\n",
-                "log_server_port=", { "Ref" : "LogServerPort" }, "\n",
-                "\" > /etc/eucalyptus-imaging-worker/imaging-worker.conf\n",
-                "touch /var/lib/eucalyptus-imaging-worker/ntp.lock\n",
-                "chown -R imaging-worker:imaging-worker /etc/eucalyptus-imaging-worker\n",
-                "service eucalyptus-imaging-worker start"
+                "volume_id=", { "Ref" : "VolumeId" }, "\n",
+                "\" > /etc/eucalyptus-database-server/database-server.conf\n",
+                "touch /var/lib/eucalyptus-database-server/ntp.lock\n",
+                "chown -R eucalyptus:eucalyptus /etc/eucalyptus-database-server\n",
+                "service eucalyptus-database-server start"
               ]
             ]
           }
@@ -165,7 +163,7 @@
             }
           ]
         },
-        "Path": "/internal/imaging",
+        "Path": "/internal/database",
         "Policies": [
           {
             "PolicyDocument": {
@@ -183,7 +181,7 @@
                 }
               ]
             },
-            "PolicyName": "imaging-iam-policy-servercert-worker"
+            "PolicyName": "db-iam-policy-servercert-worker"
           },
           {
             "PolicyDocument": {
@@ -206,6 +204,7 @@
               "Statement": [
                 {
                   "Action": [
+                    "ec2:CreateVolume",
                     "ec2:AttachVolume",
                     "ec2:DetachVolume",
                     "ec2:DescribeVolumes"
@@ -217,24 +216,7 @@
                 }
               ]
             },
-            "PolicyName": "imaging-iam-policy-volumes-worker"
-          },
-          {
-            "PolicyDocument": {
-              "Statement": [
-                {
-                  "Action": [
-                    "eucaimaging:GetInstanceImportTask",
-                    "eucaimaging:PutInstanceImportTaskStatus"
-                  ],
-                  "Effect": "Allow",
-                  "Resource": [
-                    "*"
-                  ]
-                }
-              ]
-            },
-            "PolicyName": "imaging-iam-policy-service-api"
+            "PolicyName": "db-iam-policy-volumes"
           }
         ]
       },
@@ -242,7 +224,15 @@
     },
     "SecurityGroup": {
       "Properties": {
-        "GroupDescription": "Imaging worker's security group"
+        "GroupDescription": "Database worker's security group",
+        "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "CidrIp": "0.0.0.0/0",
+                        "FromPort": { "Ref" : "DBPort" },
+                        "ToPort": { "Ref" : "DBPort" }
+                    }
+                ]
       },
       "Type": "AWS::EC2::SecurityGroup"
     }
