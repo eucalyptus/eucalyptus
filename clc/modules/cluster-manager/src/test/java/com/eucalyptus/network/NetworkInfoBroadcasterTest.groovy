@@ -138,10 +138,10 @@ class NetworkInfoBroadcasterTest {
         configuration: new NIConfiguration(
             properties: [
                 new NIProperty( name: 'publicIps', values: ['2.0.0.2-2.0.0.255'] ),
-                new NIProperty( name: 'publicGateway', values: '2.0.0.1' ),
                 new NIProperty( name: 'enabledCLCIp', values: ['1.1.1.1'] ),
                 new NIProperty( name: 'instanceDNSDomain', values: ['eucalyptus.internal'] ),
                 new NIProperty( name: 'instanceDNSServers', values: ['1.2.3.4'] ),
+                new NIProperty( name: 'publicGateway', values: ['2.0.0.1'] ),
             ],
             subnets: new NISubnets( name: 'subnets', subnets: [
                 new NISubnet(
