@@ -104,6 +104,7 @@ public class ImagingWorkers {
       }
     }
   }
+
   private static long MINUTE=1000*60l;
   private static long timeToRemove(final ImagingWorker worker) {
     final Date lastUpdated = worker.getWorkerUpdateTime();

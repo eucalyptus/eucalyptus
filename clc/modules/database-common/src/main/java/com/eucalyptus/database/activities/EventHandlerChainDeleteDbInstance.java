@@ -21,21 +21,13 @@ package com.eucalyptus.database.activities;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.database.activities.EventHandlerChainCreateDbInstance.AuthorizeServerCertificate;
-import com.eucalyptus.database.activities.EventHandlerChainCreateDbInstance.AuthorizeVolumeOperations;
-import com.eucalyptus.database.activities.EventHandlerChainCreateDbInstance.CreateAutoScalingGroup;
-import com.eucalyptus.database.activities.EventHandlerChainCreateDbInstance.CreateLaunchConfiguration;
-import com.eucalyptus.database.activities.EventHandlerChainCreateDbInstance.CreateTags;
-import com.eucalyptus.database.activities.EventHandlerChainCreateDbInstance.IamInstanceProfileSetup;
-import com.eucalyptus.database.activities.EventHandlerChainCreateDbInstance.IamRoleSetup;
-import com.eucalyptus.database.activities.EventHandlerChainCreateDbInstance.SecurityGroupSetup;
-import com.eucalyptus.database.activities.EventHandlerChainCreateDbInstance.AuthorizePort;
-import com.eucalyptus.database.activities.EventHandlerChainCreateDbInstance.UploadServerCertificate;
-import com.eucalyptus.database.activities.EventHandlerChainCreateDbInstance.UserDataSetup;
+import com.eucalyptus.cloudformation.CloudFormation;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.resources.AbstractEventHandler;
 import com.eucalyptus.resources.EventHandlerChain;
 import com.eucalyptus.resources.EventHandlerException;
+import com.eucalyptus.resources.client.CloudFormationClient;
+import com.eucalyptus.resources.client.EuareClient;
 /**
  * @author Sang-Min Park
  *
@@ -56,44 +48,20 @@ public class EventHandlerChainDeleteDbInstance extends EventHandlerChain<DeleteD
 
     @Override
     public void apply(DeleteDBInstanceEvent evt) throws EventHandlerException {
-      EventHandlerChain<NewDBInstanceEvent> createChain = new EventHandlerChainCreateDbInstance();
-      createChain.append(new SecurityGroupSetup(createChain));
-      createChain.append(new AuthorizePort(createChain));
-      createChain.append(new IamRoleSetup(createChain));
-      createChain.append(new IamInstanceProfileSetup(createChain));
-      createChain.append(new UploadServerCertificate(createChain));
-      createChain.append(new AuthorizeServerCertificate(createChain));
-      createChain.append(new AuthorizeVolumeOperations(createChain));
-      createChain.append(new UserDataSetup(createChain));
-      createChain.append(new CreateLaunchConfiguration(createChain, DatabaseServerProperties.IMAGE, DatabaseServerProperties.INSTANCE_TYPE, 
-            ( DatabaseServerProperties.KEYNAME != null && DatabaseServerProperties.KEYNAME.length()>0) ? DatabaseServerProperties.KEYNAME : null));
-      createChain.append(new CreateAutoScalingGroup(createChain));
-      createChain.append(new CreateTags(createChain));
-      createChain.append(new ExceptionThrower(createChain));
-      try{
-        NewDBInstanceEvent createEvent = new NewDBInstanceEvent(Accounts.lookupSystemAdmin().getUserId());
-        createEvent.setDbInstanceIdentifier( evt.getDbInstanceIdentifier());
-        createChain.execute(createEvent);
-      }catch(final Exception ex) {
-        LOG.debug(ex, ex);
+      // check that CF is ENABLED
+      if (!Topology.isEnabled(CloudFormation.class))
+        throw new EventHandlerException("CloudFormation is not enabled");
+      final String accountId = EventHandlerChainCreateDbInstance.getAccountByUser(evt.getUserId());
+      final String stackName = EventHandlerChainCreateDbInstance.getStackName(accountId);
+
+      try {
+        LOG.info("Removing " + stackName  + " stack");
+        CloudFormationClient.getInstance().deleteStack(evt.getUserId(), stackName);
+        EuareClient.getInstance().deleteServerCertificate(evt.getUserId(),
+            EventHandlerChainCreateDbInstance.getCertificateName(accountId));
+      } catch (final Exception ex) {
+        throw new EventHandlerException(ex.getMessage());
       }
-    }
-
-    @Override
-    public void rollback() throws EventHandlerException {
-      ;
-    }
-  }
-  
-  public static class ExceptionThrower extends AbstractEventHandler<NewDBInstanceEvent> {
-
-    protected ExceptionThrower(EventHandlerChain<NewDBInstanceEvent> chain) {
-      super(chain);
-    }
-
-    @Override
-    public void apply(NewDBInstanceEvent evt) throws EventHandlerException {
-      throw new EventHandlerException("Exception to trigger intentional rollback");
     }
 
     @Override

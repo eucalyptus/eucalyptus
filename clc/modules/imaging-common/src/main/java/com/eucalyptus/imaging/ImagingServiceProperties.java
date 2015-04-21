@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
+import com.eucalyptus.resources.PropertyChangeListeners;
 import com.eucalyptus.resources.client.CloudFormationClient;
 import com.eucalyptus.resources.client.Ec2Client;
 import com.eucalyptus.resources.client.EucalyptusClient;
@@ -68,31 +69,31 @@ public class ImagingServiceProperties {
   @ConfigurableField(displayName = "image",
       description = "EMI containing imaging worker",
       initial = "NULL", readonly = false, type = ConfigurableFieldType.KEYVALUE,
-      changeListener = EmiChangeListener.class)
+      changeListener = PropertyChangeListeners.EmiChangeListener.class)
   public static String IMAGE = "NULL";
 
   @ConfigurableField(displayName = "instance_type",
       description = "instance type for imaging worker",
       initial = "m1.small", readonly = false, type = ConfigurableFieldType.KEYVALUE,
-      changeListener = InstanceTypeChangeListener.class)
+      changeListener = PropertyChangeListeners.InstanceTypeChangeListener.class)
   public static String INSTANCE_TYPE = "m1.small";
 
   @ConfigurableField(displayName = "availability_zones",
       description = "availability zones for imaging worker",
       initial = "", readonly = false, type = ConfigurableFieldType.KEYVALUE,
-      changeListener = AvailabilityZonesChangeListener.class)
+      changeListener = PropertyChangeListeners.AvailabilityZonesChangeListener.class)
   public static String AVAILABILITY_ZONES = "";
 
   @ConfigurableField(displayName = "keyname",
       description = "keyname to use when debugging imaging worker",
       readonly = false, type = ConfigurableFieldType.KEYVALUE,
-      changeListener = KeyNameChangeListener.class)
+      changeListener = PropertyChangeListeners.KeyNameChangeListener.class)
   public static String KEYNAME = null;
 
   @ConfigurableField(displayName = "ntp_server",
       description = "address of the NTP server used by imaging worker",
       readonly = false, type = ConfigurableFieldType.KEYVALUE,
-      changeListener = NTPServerChangeListener.class)
+      changeListener = PropertyChangeListeners.NTPServerChangeListener.class)
   public static String NTP_SERVER = null;
 
   @ConfigurableField(displayName = "log_server",
@@ -115,14 +116,13 @@ public class ImagingServiceProperties {
   @ConfigurableField(displayName = "expiration_days",
       description = "the days after which imaging work VMs expire",
       initial = "180", readonly = false, type = ConfigurableFieldType.KEYVALUE,
-      changeListener = VmExpirationDaysChangeListener.class)
+      changeListener = PropertyChangeListeners.PositiveNumberChangeListener.class)
   public static String EXPIRATION_DAYS = "180";
 
   @ConfigurableField(displayName = "init_script",
       description = "bash script that will be executed before service configuration and start up",
       readonly = false,
-      type = ConfigurableFieldType.KEYVALUE,
-      changeListener = InitScriptChangeListener.class)
+      type = ConfigurableFieldType.KEYVALUE)
   public static String INIT_SCRIPT = null;
 
   public static String getCredentialsString() {
@@ -204,54 +204,6 @@ public class ImagingServiceProperties {
     }
   }
 
-  public static class AvailabilityZonesChangeListener implements PropertyChangeListener<String> {
-
-    @Override
-    public void fireChange(ConfigurableProperty t, final String zones)
-        throws ConfigurablePropertyException {
-      if(t.getValue()!=null && t.getValue().equals(zones))
-        return;
-      try {
-        if (zones == null || zones.length() == 0) {
-          return;
-        }
-
-        final List<String> availabilityZones = Lists.newArrayList();
-        if (zones.contains(",")) {
-          final String[] tokens = zones.split(",");
-          if ((tokens.length - 1) != StringUtils.countOccurrencesOf(zones, ","))
-            throw new EucalyptusCloudException("Invalid availability zones");
-          for (final String zone : tokens)
-            availabilityZones.add(zone);
-        } else {
-          availabilityZones.add(zones);
-        }
-
-        try {
-          final List<ClusterInfoType> clusters = Ec2Client
-              .getInstance().describeAvailabilityZones(null, false);
-          final List<String> clusterNames = Lists.newArrayList();
-          for (final ClusterInfoType cluster : clusters) {
-            clusterNames.add(cluster.getZoneName());
-          }
-          for (final String zone : availabilityZones) {
-            if (!clusterNames.contains(zone))
-              throw new ConfigurablePropertyException(zone
-                  + " is not found in availability zones");
-          }
-        } catch (final Exception ex) {
-          throw new ConfigurablePropertyException(
-              "Faield to change availability zones due to:" + ex.getMessage());
-        }
-      } catch (final ConfigurablePropertyException ex) {
-        throw ex;
-      } catch (final Exception ex) {
-        throw new ConfigurablePropertyException(
-            "Faield to change availability zones due to:" + ex.getMessage());
-      }
-    }
-  }
-
   public static class LogServerAddressChangeListener implements PropertyChangeListener<String> {
     @Override
     public void fireChange(ConfigurableProperty t, String newValue)
@@ -284,128 +236,6 @@ public class ImagingServiceProperties {
       } catch (final Exception e) {
         throw new ConfigurablePropertyException(
             "Could not change log server port to " + newValue + " due to: " + e.getMessage());
-      }
-    }
-  }
-
-  public static class InitScriptChangeListener implements PropertyChangeListener<String> {
-    @Override
-    public void fireChange(ConfigurableProperty t, String newValue)
-        throws ConfigurablePropertyException {
-      //nothing to validate
-    }
-  }
-
-  public static class EmiChangeListener implements PropertyChangeListener<String> {
-    @Override
-    public void fireChange(ConfigurableProperty t, String newValue)
-        throws ConfigurablePropertyException {
-      if(t.getValue()!=null && t.getValue().equals(newValue))
-        return;
-      if (newValue == null || !CloudMetadatas.isMachineImageIdentifier(newValue))
-        throw new ConfigurablePropertyException("Invalid EMI ID");
-      try {
-          final List<ImageDetails> images = Ec2Client.getInstance()
-              .describeImages(null, Lists.newArrayList(newValue));
-          if (images == null || images.size() <= 0)
-            throw new EucalyptusCloudException(
-                "No such EMI is found in the system");
-          if (!images.get(0).getImageId().toLowerCase().equals(newValue.toLowerCase()))
-            throw new EucalyptusCloudException(
-                "No such EMI is found in the system");
-      } catch (final Exception e) {
-        throw new ConfigurablePropertyException("Could not change EMI ID due to: " + e.getMessage());
-      }
-    }
-  }
-
-  public static class InstanceTypeChangeListener implements PropertyChangeListener<String> {
-    @Override
-    public void fireChange(ConfigurableProperty t, String newValue)
-        throws ConfigurablePropertyException {
-      if(t.getValue()!=null && t.getValue().equals(newValue))
-        return;
-      try {
-        if (newValue == null || newValue.isEmpty())
-            throw new EucalyptusCloudException("Instance type cannot be unset");
-        List<VmTypeDetails> types = EucalyptusClient.getInstance().describeVMTypes();
-        boolean found = false;
-        for(VmTypeDetails type:types){
-          if (type.getName().equals(newValue)) {
-            found = true;
-            break;
-          }
-        }
-        if (!found)
-          throw new ConfigurablePropertyException("Invalid instance type");
-      } catch (final Exception e) {
-        throw new ConfigurablePropertyException(
-            "Could not change instance type due to: " + e.getMessage());
-      }
-    }
-  }
-
-  public static class KeyNameChangeListener implements PropertyChangeListener<String> {
-    @Override
-    public void fireChange(ConfigurableProperty t, String keyname)
-        throws ConfigurablePropertyException {
-      if(t.getValue()!=null && t.getValue().equals(keyname))
-        return;
-      try {
-        // describeKeyPairs throws an error if keypair not found
-        Ec2Client.getInstance().describeKeyPairs(null, Lists.newArrayList(keyname));
-      } catch (final Exception e) {
-        throw new ConfigurablePropertyException("Could not change key name due to: " + e.getMessage());
-      }
-    }
-  }
-
-  public static class NTPServerChangeListener implements
-      PropertyChangeListener<String> {
-    @Override
-    public void fireChange(ConfigurableProperty t, String newValue)
-        throws ConfigurablePropertyException {
-      if(t.getValue()!=null && t.getValue().equals(newValue))
-        return;
-      try {
-        if ((newValue).contains(",")) {
-          final String[] addresses = ((String) newValue).split(",");
-          if ((addresses.length - 1) != StringUtils.countOccurrencesOf(
-              (String) newValue, ","))
-            throw new EucalyptusCloudException("Invalid address");
-
-          for (final String address : addresses) {
-            if (!HostSpecifier.isValid(String.format("%s.com", address)))
-              throw new EucalyptusCloudException("Invalid address");
-          }
-        } else {
-          final String address = (String) newValue;
-          if (address != null && !address.equals("")) {
-            if (!HostSpecifier.isValid(String.format("%s.com", address)))
-              throw new EucalyptusCloudException("Invalid address");
-          }
-        }
-      } catch (final Exception e) {
-        throw new ConfigurablePropertyException(
-            "Could not change ntp server address due to: " + e.getMessage());
-      }
-    }
-  }
-
-  public static class VmExpirationDaysChangeListener implements
-      PropertyChangeListener<String> {
-    @Override
-    public void fireChange(ConfigurableProperty t, String newValue)
-        throws ConfigurablePropertyException {
-      if(t.getValue()!=null && t.getValue().equals(newValue))
-        return;
-      try {
-        final int newExp = Integer.parseInt(newValue);
-        if (newExp <= 0)
-          throw new Exception();
-      } catch (final Exception ex) {
-        throw new ConfigurablePropertyException(
-            "The value must be number type and bigger than 0");
       }
     }
   }
