@@ -282,6 +282,8 @@ class SecurityTokenManagerTest {
       @Override String getPath() { "" }
       @Override boolean isEnabled() { true }
       @Override String getToken() { "examplefnBk4b4TfjAjRMhjmu7eBjNmpvR8llmHPfXKzYw1s3vC8tDMCeEk02OKxuXBZJeDMbaynoo6N" }
+      @Override String getPassword() { null }
+      @Override Long getPasswordExpires() { null }
       @Nonnull
       @Override List<AccessKey> getKeys() { [] }
       @Nonnull

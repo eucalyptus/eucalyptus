@@ -17,10 +17,10 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.auth.login;
+package com.eucalyptus.auth.euare.login;
 
-import com.eucalyptus.auth.PasswordAuthentication;
 import com.eucalyptus.auth.api.BaseLoginModule;
+import com.eucalyptus.auth.login.AccountUsernamePasswordCredentials;
 import com.eucalyptus.auth.principal.UserPrincipal;
 
 /**

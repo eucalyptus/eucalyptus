@@ -67,7 +67,6 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -123,6 +122,8 @@ public class IdentityService {
         );
         principal.setCanonicalId( user.getCanonicalId( ) );
         principal.setAccountAlias( user.getAccountAlias() );
+        principal.setPasswordHash( user.getPassword( ) );
+        principal.setPasswordExpiry( user.getPasswordExpires( ) );
 
         final ArrayList<com.eucalyptus.auth.euare.common.identity.AccessKey> accessKeys = Lists.newArrayList( );
         for ( final AccessKey accessKey : user.getKeys( ) ) {

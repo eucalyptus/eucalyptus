@@ -56,6 +56,7 @@ class Principal extends EucalyptusData {
   String canonicalId
   String accountAlias
   String passwordHash
+  Long passwordExpiry
   ArrayList<AccessKey> accessKeys
   ArrayList<Certificate> certificates
   ArrayList<Policy> policies

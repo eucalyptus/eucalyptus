@@ -350,6 +350,18 @@ public class RemoteIdentityProvider implements IdentityProvider {
           return Accounts.isSystemAccount( getAccountAlias( ) );
         }
 
+        @Nullable
+        @Override
+        public String getPassword() {
+          return principal.getPasswordHash( );
+        }
+
+        @Nullable
+        @Override
+        public Long getPasswordExpires() {
+          return principal.getPasswordExpiry( );
+        }
+
         @Nonnull
         @Override
         public List<AccessKey> getKeys( ) {
