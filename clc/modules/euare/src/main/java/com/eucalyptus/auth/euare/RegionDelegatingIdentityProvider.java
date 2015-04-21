@@ -32,7 +32,6 @@ import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.SecurityTokenContent;
 import com.eucalyptus.auth.principal.UserPrincipal;
-import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Either;
 import com.eucalyptus.util.Exceptions;
@@ -97,15 +96,32 @@ public class RegionDelegatingIdentityProvider implements IdentityProvider {
 
   @Override
   public UserPrincipal lookupPrincipalByCertificateId( final String certificateId ) throws AuthException {
-    return localProvider.lookupPrincipalByCertificateId( certificateId ); //TODO:STEVE: remote for certificate lookup
+    return regionDispatchAndReduce( new NonNullFunction<IdentityProvider, Either<AuthException,UserPrincipal>>( ) {
+      @Nonnull
+      @Override
+      public Either<AuthException,UserPrincipal> apply( final IdentityProvider identityProvider ) {
+        try {
+          return Either.right( identityProvider.lookupPrincipalByCertificateId( certificateId ) );
+        } catch ( AuthException e ) {
+          return Either.left( e );
+        }
+      }
+    } );
   }
 
   @Override
   public UserPrincipal lookupPrincipalByCanonicalId( final String canonicalId ) throws AuthException {
-    if ( regionConfigurationManager.getRegionInfo().isPresent() && Contexts.exists( ) && Contexts.lookup( ).getUser( ).getCanonicalId( ).equals( canonicalId ) ) {
-      return Contexts.lookup( ).getUser( ); //TODO:STEVE: remove this temporary lookup hack
-    }
-    return localProvider.lookupPrincipalByCanonicalId( canonicalId ); //TODO:STEVE: remote for canonical id lookup
+    return regionDispatchAndReduce( new NonNullFunction<IdentityProvider, Either<AuthException,UserPrincipal>>( ) {
+      @Nonnull
+      @Override
+      public Either<AuthException,UserPrincipal> apply( final IdentityProvider identityProvider ) {
+        try {
+          return Either.right( identityProvider.lookupPrincipalByCanonicalId( canonicalId ) );
+        } catch ( AuthException e ) {
+          return Either.left( e );
+        }
+      }
+    } );
   }
 
   @Override
