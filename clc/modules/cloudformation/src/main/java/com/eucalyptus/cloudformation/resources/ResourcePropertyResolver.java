@@ -85,6 +85,10 @@ public class ResourcePropertyResolver {
         jsonNode.put(name, (String) objectValue);
       } else if (objectValue instanceof Integer) {
         jsonNode.put(name, String.valueOf((Integer) objectValue));
+      } else if (objectValue instanceof Long) {
+        jsonNode.put(name, String.valueOf((Long) objectValue));
+      } else if (objectValue instanceof Float) {
+        jsonNode.put(name, String.valueOf((Float) objectValue));
       } else if (objectValue instanceof Double) {
         jsonNode.put(name, String.valueOf((Double) objectValue));
       } else if (objectValue instanceof Boolean) {
@@ -111,6 +115,10 @@ public class ResourcePropertyResolver {
         jsonNode.add((String) object);
       } else if (object instanceof Integer) {
         jsonNode.add(String.valueOf((Integer) object));
+      } else if (object instanceof Long) {
+        jsonNode.add(String.valueOf((Long) object));
+      } else if (object instanceof Float) {
+        jsonNode.add(String.valueOf((Float) object));
       } else if (object instanceof Double) {
         jsonNode.add(String.valueOf((Double) object));
       } else if (object instanceof Boolean) {
@@ -175,6 +183,43 @@ public class ResourcePropertyResolver {
             }
           } catch (NumberFormatException ex) {
             throw new ValidationErrorException("Template error: " + name + " must be of type Integer (" + valueNode.asText() + ")");
+          }
+        }
+      } else if (field.getType().equals(Long.class)) {
+        if (!valueNode.isValueNode()) {
+          throw new ValidationErrorException("Template error: " + name + " must be of type Number");
+        } else {
+          try {
+            if (valueNode.asText().isEmpty()) {
+              if (required != null) {
+                throw new ValidationErrorException("Template error: " + name + " can not be blank (" + valueNode.asText() + ")");
+              } else {
+                setField(propertyDescriptorMap, field, object, null);
+              }
+            } else {
+              setField(propertyDescriptorMap, field, object, Long.valueOf(valueNode.asText()));
+            }
+          } catch (NumberFormatException ex) {
+            throw new ValidationErrorException("Template error: " + name + " must be of type Long (" + valueNode.asText() + ")");
+          }
+        }
+      } else if (field.getType().equals(Float.class)) {
+        if (!valueNode.isValueNode()) {
+          throw new ValidationErrorException("Template error: " + name + " must be of type Number");
+        } else {
+          try {
+            if (valueNode.asText().isEmpty()) {
+              if (required != null) {
+                throw new ValidationErrorException("Template error: " + name + " can not be blank (" + valueNode.asText() + ")");
+              } else {
+                setField(propertyDescriptorMap, field, object, null);
+              }
+            } else {
+              setField(propertyDescriptorMap, field, object, Float.valueOf(valueNode.asText()));
+            }
+          } catch (NumberFormatException ex) {
+            throw new ValidationErrorException("Template error: " + name + " must be of type Number (" + valueNode.asText() + ")");
+
           }
         }
       } else if (field.getType().equals(Double.class)) {
@@ -291,6 +336,26 @@ public class ResourcePropertyResolver {
             throw new ValidationErrorException("Template error: " + fieldName + " must have members of type Integer (" + itemNode.asText() + ")");
           }
         }
+      } else if (collectionTypeClass.equals(Long.class)) {
+        if (!itemNode.isValueNode()) {
+          throw new ValidationErrorException("Template error: " + fieldName + " must have members of type Long");
+        } else {
+          try {
+            addToCollection(collection, collectionTypeClass, Long.valueOf(itemNode.asText()));
+          } catch (NumberFormatException ex) {
+            throw new ValidationErrorException("Template error: " + fieldName + " must have members of type Long (" + itemNode.asText() + ")");
+          }
+        }
+      } else if (collectionTypeClass.equals(Float.class)) {
+        if (!itemNode.isValueNode()) {
+          throw new ValidationErrorException("Template error: " + fieldName + " must have members of type Number");
+        } else {
+          try {
+            addToCollection(collection, collectionTypeClass, Float.valueOf(itemNode.asText()));
+          } catch (NumberFormatException ex) {
+            throw new ValidationErrorException("Template error: " + fieldName + " must have members of type Number (" + itemNode.asText() + ")");
+          }
+        }
       } else if (collectionTypeClass.equals(Double.class)) {
         if (!itemNode.isValueNode()) {
           throw new ValidationErrorException("Template error: " + fieldName + " must have members of type Number");
@@ -299,7 +364,6 @@ public class ResourcePropertyResolver {
             addToCollection(collection, collectionTypeClass, Double.valueOf(itemNode.asText()));
           } catch (NumberFormatException ex) {
             throw new ValidationErrorException("Template error: " + fieldName + " must have members of type Number (" + itemNode.asText() + ")");
-
           }
         }
       } else if (collectionTypeClass.equals(Boolean.class)) {
