@@ -1139,7 +1139,7 @@ public class Images extends com.eucalyptus.compute.common.internal.images.Images
       @Override
       public Collection<String> apply( final String accountAliasExpression ) {
         try {
-          return Accounts.resolveAccountNumbersForName( accountAliasExpression );
+          return Accounts.listAccountNumbersForName( accountAliasExpression );
         } catch ( AuthException e ) {
           LOG.error( e, e );
           return Collections.emptySet();

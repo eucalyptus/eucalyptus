@@ -164,7 +164,7 @@ public class Snapshots {
       @Override
       public Collection<String> apply( final String accountAliasExpression ) {
         try {
-          return Accounts.resolveAccountNumbersForName( accountAliasExpression );
+          return Accounts.listAccountNumbersForName( accountAliasExpression );
         } catch ( AuthException e ) {
           LOG.error( e, e );
           return Collections.emptySet();

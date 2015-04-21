@@ -19,6 +19,11 @@
  ************************************************************************/
 package com.eucalyptus.auth.principal;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import com.eucalyptus.util.NonNullFunction;
+import com.google.common.base.Function;
+
 /**
  *
  */
@@ -51,4 +56,20 @@ public interface AccountIdentifiers {
   String getAccountNumber( );
   String getAccountAlias( );
   String getCanonicalId( );
+
+  static class Properties {
+    public static NonNullFunction<AccountIdentifiers,String> accountNumber( ) {
+      return StringProperties.NUMBER;
+    }
+
+    private enum StringProperties implements NonNullFunction<AccountIdentifiers,String> {
+      NUMBER {
+        @Nonnull
+        @Override
+        public String apply( final AccountIdentifiers accountIdentifiers ) {
+          return accountIdentifiers.getAccountNumber( );
+        }
+      },
+    }
+  }
 }

@@ -65,7 +65,7 @@ package com.eucalyptus.auth.euare.persist;
 import java.util.List;
 import java.util.ServiceLoader;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.euare.Accounts;
 import com.eucalyptus.auth.AuthenticationProperties;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.ldap.LdapSync;

@@ -22,6 +22,7 @@ package com.eucalyptus.auth.euare.identity;
 import static com.eucalyptus.auth.principal.Certificate.Util.revoked;
 import static com.eucalyptus.util.CollectionUtils.propertyPredicate;
 import java.util.ArrayList;
+import java.util.Collections;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -66,6 +67,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
+import com.google.common.base.Optional;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -172,18 +174,27 @@ public class IdentityService {
     final DescribeAccountsResult result = new DescribeAccountsResult( );
 
     try {
-      final AccountIdentifiers accountIdentifiers;
+      final Iterable<AccountIdentifiers> accountIdentifiers;
       if ( request.getAlias( ) != null ) {
-        accountIdentifiers = identityProvider.lookupAccountIdentifiersByAlias( request.getAlias( ) );
+        accountIdentifiers =
+            Collections.singleton( identityProvider.lookupAccountIdentifiersByAlias( request.getAlias( ) ) );
       } else if ( request.getCanonicalId( ) != null ) {
-        accountIdentifiers = identityProvider.lookupAccountIdentifiersByCanonicalId( request.getCanonicalId() );
+        accountIdentifiers =
+            Collections.singleton( identityProvider.lookupAccountIdentifiersByCanonicalId( request.getCanonicalId( ) ) );
+      } else if ( request.getEmail() != null ) {
+        accountIdentifiers =
+            Collections.singleton( identityProvider.lookupAccountIdentifiersByEmail( request.getEmail( ) ) );
+      } else if ( request.getAliasLike() != null ) {
+        accountIdentifiers = identityProvider.listAccountIdentifiersByAliasMatch( request.getAliasLike( ) );
       } else {
         accountIdentifiers = null;
       }
 
       final ArrayList<Account> accounts = Lists.newArrayList( );
       if ( accountIdentifiers != null ) {
-        accounts.add( TypeMappers.transform( accountIdentifiers, Account.class ) );
+        Iterables.addAll(
+            accounts,
+            Iterables.transform( accountIdentifiers, TypeMappers.lookup( AccountIdentifiers.class, Account.class ) ) );
       }
       result.setAccounts( accounts );
     } catch ( AuthException e ) {

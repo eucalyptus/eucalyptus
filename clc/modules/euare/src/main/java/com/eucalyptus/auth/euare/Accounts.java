@@ -59,47 +59,45 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
+package com.eucalyptus.auth.euare;
 
-package com.eucalyptus.auth.api;
-
-import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Set;
+import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
-import com.eucalyptus.auth.principal.Certificate;
-import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.EuareUser;
-import com.eucalyptus.auth.principal.Group;
 
-public interface AccountProvider {
+/**
+ *
+ */
+public class Accounts extends com.eucalyptus.auth.Accounts {
 
-  Account lookupAccountByName( String accountName ) throws AuthException;
-  Account lookupAccountById( String accountId ) throws AuthException;
-  Account lookupAccountByCanonicalId(String canonicalId) throws AuthException;
+  private static final Logger LOG = Logger.getLogger( Accounts.class );
 
-  Account addAccount( String accountName ) throws AuthException;
-  Account addSystemAccount( String accountName ) throws AuthException;
-  void deleteAccount( String accountName, boolean forceDeleteSystem, boolean recursive ) throws AuthException;
-  List<Account> listAllAccounts( ) throws AuthException;
-  List<AccountIdentifiers> resolveAccountNumbersForName( String accountNameLike ) throws AuthException;
-  
-  List<EuareUser> listAllUsers( ) throws AuthException;
+  public static List<AccountIdentifiers> resolveAccountNumbersForName( final String accountNameLike ) throws AuthException {
+    return Accounts.getAccountProvider().resolveAccountNumbersForName( accountNameLike );
+  }
 
-  EuareUser lookupUserById( String userId ) throws AuthException;
-  EuareUser lookupUserByAccessKeyId( String keyId ) throws AuthException;
-  EuareUser lookupUserByCertificate( X509Certificate cert ) throws AuthException;
-  EuareUser lookupUserByEmailAddress( String email ) throws AuthException;
+  public static EuareUser lookupUserByEmailAddress( String email ) throws AuthException {
+    return Accounts.getAccountProvider().lookupUserByEmailAddress( email );
+  }
 
-  Group lookupGroupById( String groupId ) throws AuthException;
+  public static List<EuareUser> listAllUsers( ) throws AuthException {
+    return getAccountProvider( ).listAllUsers( );
+  }
 
-  EuareRole lookupRoleById( String roleId ) throws AuthException;
-
-  Certificate lookupCertificate( X509Certificate cert ) throws AuthException;
-  Certificate lookupCertificateById( String certificateId ) throws AuthException;;
-  
-  AccessKey lookupAccessKeyById( String keyId ) throws AuthException;
+  public static void normalizeUserInfo( ) throws AuthException {
+    for ( EuareUser user : listAllUsers( ) ) {
+      try {
+        // In old code the info key is case sensitive
+        // In new code User.setInfo(Map<String,String) converts all keys to lower case
+        user.setInfo( user.getInfo( ) );
+      } catch ( AuthException e ) {
+        LOG.error( e, e );
+        continue;
+      }
+    }
+  }
 
 }

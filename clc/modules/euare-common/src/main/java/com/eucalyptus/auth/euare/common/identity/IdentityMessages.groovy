@@ -122,6 +122,7 @@ class DescribeAccountsType extends IdentityMessage {
   String alias
   String aliasLike
   String canonicalId
+  String email
 }
 
 class DescribeAccountsResponseType extends IdentityMessage {

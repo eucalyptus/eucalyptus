@@ -74,6 +74,7 @@ import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.InvalidAccessKeyAuthException;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
+import com.eucalyptus.auth.principal.AccountIdentifiersImpl;
 import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.entities.Entities;
@@ -97,6 +98,8 @@ import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.util.TypeMappers;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.hibernate.persister.collection.CollectionPropertyNames;
@@ -355,11 +358,15 @@ public class DatabaseAuthProvider implements AccountProvider {
   }
 
   @Override
-  public Set<String> resolveAccountNumbersForName( final String accountNameLike ) throws AuthException {
-    final Set<String> results = Sets.newHashSet( );
+  public List<AccountIdentifiers> resolveAccountNumbersForName( final String accountNameLike ) throws AuthException {
+    final List<AccountIdentifiers> results = Lists.newArrayList( );
     try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
       for ( final AccountEntity account : Entities.query( new AccountEntity( accountNameLike ) ) ) {
-        results.add( account.getAccountNumber() );        
+        results.add( new AccountIdentifiersImpl(
+            account.getAccountNumber( ),
+            account.getName( ),
+            account.getCanonicalId( )
+        ) );
       }
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to resolve account numbers" );

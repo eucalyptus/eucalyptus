@@ -33,9 +33,11 @@ import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.SecurityTokenContent;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Either;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.NonNullFunction;
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -141,10 +143,10 @@ public class RegionDelegatingIdentityProvider implements IdentityProvider {
 
   @Override
   public AccountIdentifiers lookupAccountIdentifiersByAlias( final String alias ) throws AuthException {
-    return regionDispatchAndReduce( new NonNullFunction<IdentityProvider, Either<AuthException,AccountIdentifiers>>( ) {
+    return regionDispatchAndReduce( new NonNullFunction<IdentityProvider, Either<AuthException, AccountIdentifiers>>() {
       @Nonnull
       @Override
-      public Either<AuthException,AccountIdentifiers> apply( final IdentityProvider identityProvider ) {
+      public Either<AuthException, AccountIdentifiers> apply( final IdentityProvider identityProvider ) {
         try {
           return Either.right( identityProvider.lookupAccountIdentifiersByAlias( alias ) );
         } catch ( AuthException e ) {
@@ -167,6 +169,36 @@ public class RegionDelegatingIdentityProvider implements IdentityProvider {
         }
       }
     } );
+  }
+
+  @Override
+  public AccountIdentifiers lookupAccountIdentifiersByEmail( final String email ) throws AuthException {
+    return regionDispatchAndReduce( new NonNullFunction<IdentityProvider, Either<AuthException,AccountIdentifiers>>( ) {
+      @Nonnull
+      @Override
+      public Either<AuthException,AccountIdentifiers> apply( final IdentityProvider identityProvider ) {
+        try {
+          return Either.right( identityProvider.lookupAccountIdentifiersByEmail( email ) );
+        } catch ( AuthException e ) {
+          return Either.left( e );
+        }
+      }
+    } );
+  }
+
+  @Override
+  public List<AccountIdentifiers> listAccountIdentifiersByAliasMatch( final String aliasExpression ) throws AuthException {
+    return regionDispatchAndReduce( new NonNullFunction<IdentityProvider, Either<AuthException,List<AccountIdentifiers>>>( ) {
+      @Nonnull
+      @Override
+      public Either<AuthException,List<AccountIdentifiers>> apply( final IdentityProvider identityProvider ) {
+        try {
+          return Either.right( identityProvider.listAccountIdentifiersByAliasMatch( aliasExpression ) );
+        } catch ( AuthException e ) {
+          return Either.left( e );
+        }
+      }
+    }, Lists.<AccountIdentifiers>newArrayList( ), CollectionUtils.<AccountIdentifiers,List<AccountIdentifiers>>addAll( ) );
   }
 
   @Override
@@ -253,6 +285,14 @@ public class RegionDelegatingIdentityProvider implements IdentityProvider {
   private <R> R regionDispatchAndReduce(
       final NonNullFunction<IdentityProvider, Either<AuthException,R>> invoker
   ) throws AuthException {
+    return regionDispatchAndReduce( invoker, null, CollectionUtils.<R>unique( ) );
+  }
+
+    private <R> R regionDispatchAndReduce(
+      final NonNullFunction<IdentityProvider, Either<AuthException,R>> invoker,
+      final R initial,
+      final Function<R,Function<R,R>> reducer
+  ) throws AuthException {
     try {
       final Iterable<RegionInfo> regionInfos = regionConfigurationManager.getRegionInfos( );
       final List<Either<AuthException,R>> regionResults = Lists.newArrayList( );
@@ -275,8 +315,8 @@ public class RegionDelegatingIdentityProvider implements IdentityProvider {
       final Iterable<R> successResults = Optional.presentInstances( Iterables.transform(
           regionResults,
           Either.<AuthException,R>rightOption( ) ) );
-      if ( Iterables.size( successResults ) == 1 ) {
-        return Iterables.getOnlyElement( successResults );
+      if ( Iterables.size( successResults ) > 0 ) {
+        return CollectionUtils.reduce( successResults, initial, reducer );
       }
       throw Iterables.get(
           Optional.presentInstances( Iterables.transform( regionResults, Either.<AuthException,R>leftOption( ) ) ),

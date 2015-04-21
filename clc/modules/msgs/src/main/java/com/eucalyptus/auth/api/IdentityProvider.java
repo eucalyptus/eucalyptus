@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.auth.api;
 
+import java.util.List;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.InstanceProfile;
@@ -50,6 +51,8 @@ public interface IdentityProvider {
    */
   AccountIdentifiers lookupAccountIdentifiersByAlias( String alias ) throws AuthException;
   AccountIdentifiers lookupAccountIdentifiersByCanonicalId( String canonicalId ) throws AuthException;
+  AccountIdentifiers lookupAccountIdentifiersByEmail( String email ) throws AuthException;
+  List<AccountIdentifiers> listAccountIdentifiersByAliasMatch( String aliasExpression ) throws AuthException;
 
   /**
    *

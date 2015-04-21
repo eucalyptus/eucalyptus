@@ -22,8 +22,9 @@ package com.eucalyptus.auth.euare.persist;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 import javax.annotation.Nullable;
-import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.euare.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.InvalidAccessKeyAuthException;
 import com.eucalyptus.auth.api.IdentityProvider;
@@ -105,6 +106,20 @@ public class DatabaseIdentityProvider implements IdentityProvider {
   @Override
   public AccountIdentifiers lookupAccountIdentifiersByCanonicalId( final String canonicalId ) throws AuthException {
     return Accounts.lookupAccountByCanonicalId( canonicalId );
+  }
+
+  @Override
+  public AccountIdentifiers lookupAccountIdentifiersByEmail( final String email ) throws AuthException {
+    final EuareUser euareUser = Accounts.lookupUserByEmailAddress( email );
+    if ( euareUser.isAccountAdmin( ) ) {
+      return euareUser.getAccount();
+    }
+    throw new AuthException( AuthException.NO_SUCH_USER );
+  }
+
+  @Override
+  public List<AccountIdentifiers> listAccountIdentifiersByAliasMatch( final String aliasExpression ) throws AuthException {
+    return Accounts.resolveAccountNumbersForName( aliasExpression );
   }
 
   @Override

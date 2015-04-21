@@ -77,6 +77,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 /**
  *
@@ -160,6 +161,20 @@ public class RemoteIdentityProvider implements IdentityProvider {
   }
 
   @Override
+  public AccountIdentifiers lookupAccountIdentifiersByEmail( final String email ) throws AuthException {
+    final DescribeAccountsType request = new DescribeAccountsType( );
+    request.setEmail( email );
+    return resultFor( request );
+  }
+
+  @Override
+  public List<AccountIdentifiers> listAccountIdentifiersByAliasMatch( final String aliasExpression ) throws AuthException {
+    final DescribeAccountsType request = new DescribeAccountsType( );
+    request.setAliasLike( aliasExpression );
+    return resultListFor( request );
+  }
+
+  @Override
   public InstanceProfile lookupInstanceProfileByName( final String accountNumber, final String name ) throws AuthException {
     final DescribeInstanceProfileType request = new DescribeInstanceProfileType( );
     request.setAccountId( accountNumber );
@@ -190,7 +205,7 @@ public class RemoteIdentityProvider implements IdentityProvider {
     request.setRoleName( name );
     try {
       final DescribeRoleResponseType response = send( request );
-      final DescribeRoleResult result = response.getDescribeRoleResult( );
+      final DescribeRoleResult result = response.getDescribeRoleResult();
       return TypeMappers.transform( result.getRole( ), Role.class );
     } catch ( Exception e ) {
       throw new AuthException( e );
@@ -229,6 +244,20 @@ public class RemoteIdentityProvider implements IdentityProvider {
         throw new AuthException( "Account information not found" );
       }
       return TypeMappers.transform( Iterables.getOnlyElement( accounts ), AccountIdentifiers.class );
+    } catch ( AuthException e ) {
+      throw e;
+    } catch ( Exception e ) {
+      throw new AuthException( e );
+    }
+  }
+
+  private List<AccountIdentifiers> resultListFor( final DescribeAccountsType request ) throws AuthException {
+    try {
+      final DescribeAccountsResponseType response = send( request );
+      final List<Account> accounts = response.getDescribeAccountsResult( ).getAccounts( );
+      return Lists.newArrayList( Iterables.transform(
+          accounts,
+          TypeMappers.lookup( Account.class, AccountIdentifiers.class ) ) );
     } catch ( AuthException e ) {
       throw e;
     } catch ( Exception e ) {
