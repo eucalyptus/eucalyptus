@@ -84,6 +84,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.eucalyptus.auth.AuthenticationProperties;
 import com.eucalyptus.auth.principal.EuareUser;
+import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloudformation.CloudFormation;
@@ -244,7 +245,7 @@ public class X509Download extends HttpServlet {
         keyPair = Certs.generateKeyPair( );
         x509 = Certs.generateCertificate( keyPair, u.getName( ) );
         x509.checkValidity( );
-        u.addCertificate( x509 );
+        u.addCertificate( Identifiers.generateCertificateIdentifier(x509), x509 );
       }
       cloudCert = SystemCredentials.lookup( Eucalyptus.class ).getCertificate( );
     } catch ( Exception e ) {

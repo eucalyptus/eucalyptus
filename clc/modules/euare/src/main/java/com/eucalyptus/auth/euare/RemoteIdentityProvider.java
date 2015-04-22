@@ -28,6 +28,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.euare.common.identity.ReserveNameType;
 import com.eucalyptus.auth.euare.persist.DatabaseAuthUtils;
 import com.eucalyptus.auth.api.IdentityProvider;
 import com.eucalyptus.auth.euare.common.identity.Account;
@@ -227,6 +228,21 @@ public class RemoteIdentityProvider implements IdentityProvider {
     }
   }
 
+  @Override
+  public void reserveGlobalName( final String namespace,
+                                 final String name,
+                                 final Integer duration ) throws AuthException {
+    final ReserveNameType request = new ReserveNameType( );
+    request.setNamespace( namespace );
+    request.setName( name );
+    request.setDuration( duration );
+    try {
+      send( request );
+    } catch ( Exception e ) {
+      throw new AuthException( e );
+    }
+  }
+
   private <R extends IdentityMessage> R send( final IdentityMessage request ) throws Exception {
     final ServiceConfiguration config = new EphemeralConfiguration(
         ComponentIds.lookup( Identity.class ),
@@ -421,6 +437,7 @@ public class RemoteIdentityProvider implements IdentityProvider {
           @Override public Boolean isActive( ) { return true; }
           @Override public void setActive( final Boolean active ) { }
           @Override public Boolean isRevoked( ) { return false; }
+          @Override public void setRevoked( final Boolean revoked ) { }
           @Override public String getPem( ) { return certificate.getCertificateBody( ); }
           @Override public X509Certificate getX509Certificate( ) { return null; }
           @Override public Date getCreateDate( ) { return null; }

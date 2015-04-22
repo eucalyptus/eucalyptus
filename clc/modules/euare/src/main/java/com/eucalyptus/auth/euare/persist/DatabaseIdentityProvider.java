@@ -23,11 +23,15 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
+import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.euare.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.InvalidAccessKeyAuthException;
 import com.eucalyptus.auth.api.IdentityProvider;
+import com.eucalyptus.auth.euare.persist.entities.ReservedNameEntity;
+import com.eucalyptus.auth.euare.principal.GlobalNamespace;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.Certificate;
@@ -42,6 +46,8 @@ import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.auth.principal.UserPrincipalImpl;
 import com.eucalyptus.auth.tokens.SecurityTokenManager;
 import com.eucalyptus.component.annotation.ComponentNamed;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.OwnerFullName;
 
 /**
@@ -196,5 +202,57 @@ public class DatabaseIdentityProvider implements IdentityProvider {
       decorated = new UserPrincipalImpl( userPrincipal, keys );
     }
     return decorated;
+  }
+
+  @Override
+  public void reserveGlobalName( final String namespace,
+                                 final String name,
+                                 final Integer duration ) throws AuthException {
+    final GlobalNamespace globalNamespace;
+    try {
+      globalNamespace = GlobalNamespace.forNamespace( namespace );
+    } catch ( IllegalArgumentException e ) {
+      throw new AuthException( e );
+    }
+
+    if ( duration == null || duration < 1 || duration > TimeUnit.DAYS.toSeconds( 1 ) ) {
+      throw new AuthException( "Requested duration not supported: " + duration );
+    }
+
+    try ( final TransactionResource tx = Entities.transactionFor( ReservedNameEntity.class ) ) {
+      Entities.persist( ReservedNameEntity.create( namespace, name, duration ) );
+      tx.commit();
+    } catch ( ConstraintViolationException e ) {
+      throw new AuthException( AuthException.CONFLICT );
+    } catch ( final Exception e ) {
+      throw new AuthException( e );
+    }
+
+    switch ( globalNamespace ) {
+      case Account_Alias:
+        try {
+          Accounts.lookupAccountByName( name );
+          throw new AuthException( AuthException.CONFLICT );
+        } catch ( AuthException e ) {
+          if ( !AuthException.NO_SUCH_ACCOUNT.equals(  e.getMessage() ) ) {
+            throw new AuthException( AuthException.CONFLICT );
+          }
+        }
+        break;
+      case Signing_Certificate_Id:
+        try {
+          final Certificate certificate = Accounts.lookupCertificateById( name );
+          if ( !certificate.isRevoked( ) ) {
+            throw new AuthException( AuthException.CONFLICT );
+          }
+        } catch ( AuthException e ) {
+          if ( !AuthException.NO_SUCH_CERTIFICATE.equals(  e.getMessage() ) ) {
+            throw new AuthException( AuthException.CONFLICT );
+          }
+        }
+        break;
+      default:
+        throw new AuthException( AuthException.CONFLICT );
+    }
   }
 }

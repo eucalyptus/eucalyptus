@@ -65,6 +65,7 @@ import java.util.List;
 import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.euare.principal.GlobalNamespace;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.EuareUser;
 
@@ -74,6 +75,12 @@ import com.eucalyptus.auth.principal.EuareUser;
 public class Accounts extends com.eucalyptus.auth.Accounts {
 
   private static final Logger LOG = Logger.getLogger( Accounts.class );
+
+  public static void reserveGlobalName( GlobalNamespace namespace, String name ) throws AuthException {
+    if ( GlobalNamespace.Account_Alias != namespace || !isSystemAccount( name ) ) {
+      getIdentityProvider( ).reserveGlobalName( namespace.getNamespace( ), name, 90 );
+    }
+  }
 
   public static List<AccountIdentifiers> resolveAccountNumbersForName( final String accountNameLike ) throws AuthException {
     return Accounts.getAccountProvider().resolveAccountNumbersForName( accountNameLike );

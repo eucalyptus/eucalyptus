@@ -124,8 +124,8 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
   public CertificateEntity( ) {
   }
   
-  public CertificateEntity( final X509Certificate cert ) throws CertificateEncodingException {
-    this.certificateId = Identifiers.generateCertificateIdentifier( cert );
+  public CertificateEntity( final String certificateId, final X509Certificate cert ) throws CertificateEncodingException {
+    this.certificateId = certificateId;
     this.pem = X509CertHelper.fromCertificate( cert );
   }
   

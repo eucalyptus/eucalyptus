@@ -65,18 +65,20 @@ package com.eucalyptus.auth.euare;
 import static com.eucalyptus.auth.policy.PolicySpec.*;
 
 import java.security.KeyPair;
+import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.euare.Accounts;
 import com.eucalyptus.auth.AuthContext;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.AuthenticationLimitProvider;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.ServerCertificate;
+import com.eucalyptus.auth.euare.principal.GlobalNamespace;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
@@ -89,6 +91,7 @@ import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Crypto;
@@ -108,6 +111,7 @@ class Privileged {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
 
+    Accounts.reserveGlobalName( GlobalNamespace.Account_Alias, accountName );
     Account newAccount = Accounts.addAccount( accountName );
     Map<String, String> info = null;
     if ( email != null ) {
@@ -142,13 +146,13 @@ class Privileged {
     if ( Accounts.isSystemAccount( account.getName( ) ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, Accounts.getAccountFullName(account), account, IAM_CREATEACCOUNTALIAS, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
     try {
-      Accounts.lookupAccountByName( newName );
+      Accounts.reserveGlobalName( GlobalNamespace.Account_Alias, newName );
       throw new AuthException( AuthException.CONFLICT );
     } catch ( AuthException ae ) {
-      if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, Accounts.getAccountFullName(account), account, IAM_CREATEACCOUNTALIAS, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
       account.setName( newName );
     }
   }
@@ -698,12 +702,15 @@ class Privileged {
       throw new AuthException( AuthException.QUOTA_EXCEEDED );
     }
     X509Certificate x509 = Certs.generateCertificate( keyPair, user.getName() );
+    String certificateId;
     try {
       x509.checkValidity( );
+      certificateId = Identifiers.generateCertificateIdentifier( x509 );
     } catch ( Exception e ) {
       throw new AuthException( "Invalid X509 Certificate", e );
     }
-    return user.addCertificate( x509 );
+    Accounts.reserveGlobalName( GlobalNamespace.Signing_Certificate_Id, certificateId );
+    return user.addCertificate( certificateId, x509 );
   }
 
   public static Certificate uploadSigningCertificate( AuthContext requestUser, Account account, EuareUser user, String certBody ) throws AuthException {
@@ -717,21 +724,31 @@ class Privileged {
     if ( Strings.isNullOrEmpty( certBody ) ) {
       throw new AuthException( AuthException.EMPTY_CERT );
     }
-    String encodedPem = B64.url.encString( certBody );
+    final String encodedPem = B64.url.encString( certBody );
+    final X509Certificate x509 = X509CertHelper.toCertificate( encodedPem );
+    if ( x509 == null ) {
+      throw new AuthException( AuthException.INVALID_CERT );
+    }
+    String certificateId;
+    try {
+      certificateId = Identifiers.generateCertificateIdentifier( x509 );
+    } catch ( CertificateEncodingException e ) {
+      throw new AuthException( "Invalid X509 Certificate", e );
+    }
+    Accounts.reserveGlobalName( GlobalNamespace.Signing_Certificate_Id, certificateId );
     for ( Certificate c : user.getCertificates( ) ) {
       if ( c.getPem( ).equals( encodedPem ) ) {
         if ( !c.isRevoked( ) ) {
           throw new AuthException( AuthException.CONFLICT );        
+        } else if ( certificateId.equals( c.getCertificateId( ) ) ) {
+          c.setRevoked( false );
+          return c;
         } else {
           user.removeCertificate( c.getCertificateId( ) );
         }
       }
     }
-    X509Certificate x509 = X509CertHelper.toCertificate( encodedPem );
-    if ( x509 == null ) {
-      throw new AuthException( AuthException.INVALID_CERT );        
-    }
-    return user.addCertificate( x509 );
+    return user.addCertificate( certificateId, x509 );
   }
 
   public static List<Certificate> listSigningCertificates( AuthContext requestUser, Account account, EuareUser user ) throws AuthException {

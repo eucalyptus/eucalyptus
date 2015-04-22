@@ -161,3 +161,17 @@ class SecurityToken extends EucalyptusData {
   Long created
   Long expires
 }
+
+class ReserveNameType extends IdentityMessage {
+  String namespace
+  String name
+  Integer duration // seconds
+}
+
+class ReserveNameResponseType extends IdentityMessage {
+  ReserveNameResult reserveNameResult
+}
+
+class ReserveNameResult extends EucalyptusData {
+}
+

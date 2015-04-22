@@ -95,8 +95,6 @@ import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.policy.key.Iso8601DateParser;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.BaseInstanceProfile;
-import com.eucalyptus.auth.principal.BaseRole;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.euare.principal.EuareInstanceProfile;
 import com.eucalyptus.auth.principal.EuareRole;
@@ -142,7 +140,7 @@ public class EuareService {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create account by " + ctx.getUser( ).getName( ) );
-        } else if ( AuthException.ACCOUNT_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
+        } else if ( AuthException.ACCOUNT_ALREADY_EXISTS.equals( e.getMessage( ) ) || AuthException.CONFLICT.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Account " + request.getAccountName( ) + " already exists." );
         } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid account name " + request.getAccountName( ) );

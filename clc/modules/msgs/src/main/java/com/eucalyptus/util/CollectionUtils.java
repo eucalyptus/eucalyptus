@@ -337,7 +337,7 @@ public class CollectionUtils {
    * @param <I> The evaluated type
    * @return The count function.
    */
-  public static <I> Function<Integer,Function<I,Integer>> count( final Predicate<I> evaluator ) {
+  public static <I> Function<Integer,Function<I,Integer>> count( final Predicate<? super I> evaluator ) {
     return sum( new Function<I,Integer>(){
       @Override
       public Integer apply( @Nullable final I item ) {

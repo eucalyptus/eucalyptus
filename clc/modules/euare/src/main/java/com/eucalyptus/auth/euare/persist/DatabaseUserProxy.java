@@ -467,10 +467,10 @@ public class DatabaseUserProxy implements EuareUser {
   }
 
   @Override
-  public Certificate addCertificate( X509Certificate cert ) throws AuthException {
+  public Certificate addCertificate( String certificateId, X509Certificate cert ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
       UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, "userId", this.delegate.getUserId( ) );
-      CertificateEntity certEntity = new CertificateEntity( cert );
+      CertificateEntity certEntity = new CertificateEntity( certificateId, cert );
       certEntity.setActive( true );
       certEntity.setRevoked( false );
       Entities.persist( certEntity );

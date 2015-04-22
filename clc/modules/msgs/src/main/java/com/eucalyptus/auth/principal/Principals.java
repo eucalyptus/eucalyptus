@@ -103,7 +103,10 @@ public class Principals {
                                                                                         public Boolean isRevoked( ) {
                                                                                           return false;
                                                                                         }
-                                                                                        
+
+                                                                                        @Override
+                                                                                        public void setRevoked( final Boolean revoked ) throws AuthException {}
+
                                                                                         @Override
                                                                                         public String getPem( ) {
                                                                                           return B64.url.encString( PEMFiles.getBytes( getX509Certificate( ) ) );
@@ -222,7 +225,7 @@ public class Principals {
                                                 }
                                                 
                                                 @Override
-                                                public Certificate addCertificate( X509Certificate certificate ) throws AuthException {
+                                                public Certificate addCertificate( String certificateId, X509Certificate certificate ) throws AuthException {
                                                   return cert;
                                                 }
                                                 
@@ -345,7 +348,10 @@ public class Principals {
                                                                                         public Boolean isRevoked( ) {
                                                                                           return null;
                                                                                         }
-                                                                                        
+
+                                                                                        @Override
+                                                                                        public void setRevoked( final Boolean revoked ) throws AuthException {}
+
                                                                                         @Override
                                                                                         public String getPem( ) {
                                                                                           return B64.url.encString( PEMFiles.getBytes( getX509Certificate( ) ) );
@@ -464,7 +470,7 @@ public class Principals {
                                                 }
                                                 
                                                 @Override
-                                                public Certificate addCertificate( X509Certificate certificate ) throws AuthException {
+                                                public Certificate addCertificate( String certificateId, X509Certificate certificate ) throws AuthException {
                                                   return cert;
                                                 }
                                                 

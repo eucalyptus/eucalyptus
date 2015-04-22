@@ -139,6 +139,9 @@ public class DatabaseCertificateProxy implements Certificate {
       DatabaseAuthUtils.invokeUnique( CertificateEntity.class, "certificateId", this.delegate.getCertificateId( ), new Tx<CertificateEntity>( ) {
         public void fire( CertificateEntity t ) {
           t.setRevoked( revoked );
+          if ( !revoked ) {
+            t.setActive( true );
+          }
         }
       } );
     } catch ( ExecutionException e ) {

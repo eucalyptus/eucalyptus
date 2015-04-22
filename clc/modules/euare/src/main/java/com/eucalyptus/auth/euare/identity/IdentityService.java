@@ -51,6 +51,9 @@ import com.eucalyptus.auth.euare.common.identity.DescribeRoleResult;
 import com.eucalyptus.auth.euare.common.identity.DescribeRoleType;
 import com.eucalyptus.auth.euare.common.identity.Policy;
 import com.eucalyptus.auth.euare.common.identity.Principal;
+import com.eucalyptus.auth.euare.common.identity.ReserveNameResponseType;
+import com.eucalyptus.auth.euare.common.identity.ReserveNameResult;
+import com.eucalyptus.auth.euare.common.identity.ReserveNameType;
 import com.eucalyptus.auth.euare.common.identity.SecurityToken;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
@@ -261,6 +264,21 @@ public class IdentityService {
     response.setDecodeSecurityTokenResult( result );
     return response;
   }
+
+  public ReserveNameResponseType reserveName(
+      final ReserveNameType request
+  ) throws EuareException {
+    final ReserveNameResponseType response = request.getReply( );
+    final ReserveNameResult result = new ReserveNameResult( );
+
+    try {
+      identityProvider.reserveGlobalName( request.getNamespace( ), request.getName( ), request.getDuration( ) );
+    } catch ( AuthException e ) {
+      throw handleException( e );
+    }
+
+    response.setReserveNameResult( result );
+    return response;  }
 
   /**
    * Method always throws, signature allows use of "throw handleException ..."

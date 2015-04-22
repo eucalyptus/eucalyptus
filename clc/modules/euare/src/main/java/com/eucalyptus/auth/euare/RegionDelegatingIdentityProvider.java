@@ -38,6 +38,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.NonNullFunction;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -96,10 +97,10 @@ public class RegionDelegatingIdentityProvider implements IdentityProvider {
 
   @Override
   public UserPrincipal lookupPrincipalByCertificateId( final String certificateId ) throws AuthException {
-    return regionDispatchAndReduce( new NonNullFunction<IdentityProvider, Either<AuthException,UserPrincipal>>( ) {
+    return regionDispatchAndReduce( new NonNullFunction<IdentityProvider, Either<AuthException, UserPrincipal>>() {
       @Nonnull
       @Override
-      public Either<AuthException,UserPrincipal> apply( final IdentityProvider identityProvider ) {
+      public Either<AuthException, UserPrincipal> apply( final IdentityProvider identityProvider ) {
         try {
           return Either.right( identityProvider.lookupPrincipalByCertificateId( certificateId ) );
         } catch ( AuthException e ) {
@@ -111,10 +112,10 @@ public class RegionDelegatingIdentityProvider implements IdentityProvider {
 
   @Override
   public UserPrincipal lookupPrincipalByCanonicalId( final String canonicalId ) throws AuthException {
-    return regionDispatchAndReduce( new NonNullFunction<IdentityProvider, Either<AuthException,UserPrincipal>>( ) {
+    return regionDispatchAndReduce( new NonNullFunction<IdentityProvider, Either<AuthException, UserPrincipal>>() {
       @Nonnull
       @Override
-      public Either<AuthException,UserPrincipal> apply( final IdentityProvider identityProvider ) {
+      public Either<AuthException, UserPrincipal> apply( final IdentityProvider identityProvider ) {
         try {
           return Either.right( identityProvider.lookupPrincipalByCanonicalId( canonicalId ) );
         } catch ( AuthException e ) {
@@ -263,6 +264,28 @@ public class RegionDelegatingIdentityProvider implements IdentityProvider {
     } );
   }
 
+  @Override
+  public void reserveGlobalName( final String namespace,
+                                 final String name,
+                                 final Integer duration ) throws AuthException {
+    final Integer successes = regionDispatchAndReduce( new NonNullFunction<IdentityProvider, Either<AuthException,String>>( ) {
+      @Nonnull
+      @Override
+      public Either<AuthException,String> apply( final IdentityProvider identityProvider ) {
+        try {
+          identityProvider.reserveGlobalName( namespace, name, duration );
+          return Either.right( "" );
+        } catch ( AuthException e ) {
+          return Either.left( e );
+        }
+      }
+    }, 0, CollectionUtils.<String>count( Predicates.notNull( ) ) );
+    final int numberOfRegions = Iterables.size( regionConfigurationManager.getRegionInfos( ) );
+    if ( successes < ( 1 + ( numberOfRegions / 2 ) ) ) {
+      throw new AuthException( AuthException.CONFLICT );
+    }
+  }
+
   private <R> R regionDispatchByIdentifier(
       final String identifier,
       final NonNullFunction<IdentityProvider, R> invoker ) throws AuthException {
@@ -304,10 +327,10 @@ public class RegionDelegatingIdentityProvider implements IdentityProvider {
     return regionDispatchAndReduce( invoker, null, CollectionUtils.<R>unique( ) );
   }
 
-    private <R> R regionDispatchAndReduce(
+  private <R,I> I regionDispatchAndReduce(
       final NonNullFunction<IdentityProvider, Either<AuthException,R>> invoker,
-      final R initial,
-      final Function<R,Function<R,R>> reducer
+      final I initial,
+      final Function<I,Function<R,I>> reducer
   ) throws AuthException {
     try {
       final Iterable<RegionInfo> regionInfos = regionConfigurationManager.getRegionInfos( );
