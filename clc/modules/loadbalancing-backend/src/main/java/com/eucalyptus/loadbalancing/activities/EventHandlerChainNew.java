@@ -583,8 +583,8 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	}
 	
 	public static class TagCreator extends AbstractEventHandler<NewLoadbalancerEvent> {
-		public static final String TAG_KEY = "Name";
-		public static final String TAG_VALUE = "loadbalancer-resources";
+		public static final String TAG_KEY = "service-type";
+		public static final String TAG_VALUE = "loadbalancing";
 		
 		private String sgroup = null;
 		protected TagCreator(EventHandlerChain<NewLoadbalancerEvent> chain) {
