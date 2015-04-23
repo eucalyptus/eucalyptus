@@ -21,11 +21,15 @@ package com.eucalyptus.auth.euare.identity;
 
 import static com.eucalyptus.auth.principal.Certificate.Util.revoked;
 import static com.eucalyptus.util.CollectionUtils.propertyPredicate;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Named;
+import org.apache.axiom.om.OMElement;
+import org.apache.axiom.om.OMOutputFormat;
+import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.auth.Accounts;
@@ -55,6 +59,9 @@ import com.eucalyptus.auth.euare.common.identity.ReserveNameResponseType;
 import com.eucalyptus.auth.euare.common.identity.ReserveNameResult;
 import com.eucalyptus.auth.euare.common.identity.ReserveNameType;
 import com.eucalyptus.auth.euare.common.identity.SecurityToken;
+import com.eucalyptus.auth.euare.common.identity.TunnelActionResponseType;
+import com.eucalyptus.auth.euare.common.identity.TunnelActionResult;
+import com.eucalyptus.auth.euare.common.identity.TunnelActionType;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.Certificate;
@@ -64,14 +71,21 @@ import com.eucalyptus.auth.principal.PolicyVersions;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.SecurityTokenContent;
 import com.eucalyptus.auth.principal.UserPrincipal;
+import com.eucalyptus.binding.Binding;
+import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.component.annotation.ComponentNamed;
+import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.LockResource;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 /**
  *
@@ -278,7 +292,39 @@ public class IdentityService {
     }
 
     response.setReserveNameResult( result );
-    return response;  }
+    return response;
+  }
+
+  public TunnelActionResponseType tunnelAction( final TunnelActionType request ) throws EuareException {
+    final TunnelActionResponseType response = request.getReply( );
+    final TunnelActionResult result = new TunnelActionResult( );
+
+    try {
+      final String content = request.getContent( );
+      final Binding binding = BindingManager.getDefaultBinding( );
+      final BaseMessage euareRequest;
+      try ( final LockResource lock = LockResource.lock( HoldMe.canHas ) ) {
+        final StAXOMBuilder omBuilder = HoldMe.getStAXOMBuilder( HoldMe.getXMLStreamReader( content ) );
+        final OMElement message = omBuilder.getDocumentElement( );
+        final Class<?> messageType = binding.getElementClass( message.getLocalName() );
+        euareRequest = (BaseMessage) binding.fromOM( message, messageType ); //TODO:STEVE: allow for (subminor?) version differences
+      }
+      final BaseMessage euareResponse = AsyncRequests.sendSync( Euare.class, euareRequest );
+      final StringWriter writer = new StringWriter( );
+      try ( final LockResource lock = LockResource.lock( HoldMe.canHas ) ) {
+        final OMElement message = binding.toOM( euareResponse );
+        final OMOutputFormat format = new OMOutputFormat( );
+        format.setIgnoreXMLDeclaration( true );
+        message.serialize( writer );
+      }
+      result.setContent( writer.toString( ) );
+    } catch ( Exception e ) {
+      throw handleException( e );
+    }
+
+    response.setTunnelActionResult( result );
+    return response;
+  }
 
   /**
    * Method always throws, signature allows use of "throw handleException ..."

@@ -20,6 +20,7 @@
 package com.eucalyptus.auth.euare;
 
 import java.util.List;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.euare.persist.DatabaseIdentityProvider;
@@ -305,11 +306,10 @@ public class RegionDelegatingIdentityProvider implements IdentityProvider {
     try {
       if ( regionInfo.isPresent( ) &&
           !RegionConfigurations.getRegionName( ).asSet( ).contains( regionInfo.get( ).getName( ) ) ) {
-        for ( final RegionInfo.RegionService service : regionInfo.get( ).getServices( ) ) {
-          if ( "identity".equals( service.getType( ) ) ) {
-            final IdentityProvider remoteProvider = new RemoteIdentityProvider( service.getEndpoints( ) );
-            return invoker.apply( remoteProvider );
-          }
+        final Optional<Set<String>> endpoints = regionInfo.transform( RegionInfo.serviceEndpoints( "identity" ) );
+        if ( endpoints.isPresent( ) && !endpoints.get( ).isEmpty( ) ) {
+          final IdentityProvider remoteProvider = new RemoteIdentityProvider( endpoints.get( ) );
+          return invoker.apply( remoteProvider );
         }
         return invoker.apply( localProvider );
       } else {

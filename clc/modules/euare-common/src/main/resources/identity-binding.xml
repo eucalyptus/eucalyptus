@@ -116,6 +116,18 @@
     <value name="Name" field="name" usage="optional"/>
     <value name="Duration" field="duration" usage="optional"/>
   </mapping>
+  <mapping name="TunnelActionResponse" class="com.eucalyptus.auth.euare.common.identity.TunnelActionResponseType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+    <structure name="TunnelActionResult" field="tunnelActionResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.TunnelActionResult"/>
+    <structure map-as="IdentityResponseMessage"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.common.identity.TunnelActionResult" abstract="true">
+    <value name="Content" field="content" usage="optional"/>
+  </mapping>
+  <mapping name="TunnelAction" class="com.eucalyptus.auth.euare.common.identity.TunnelActionType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+    <value name="Content" field="content" usage="optional"/>
+  </mapping>
   <mapping class="com.eucalyptus.auth.euare.common.identity.Account" abstract="true">
     <value name="AccountNumber" field="accountNumber" usage="optional"/>
     <value name="Alias" field="alias" usage="optional"/>

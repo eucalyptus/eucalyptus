@@ -175,3 +175,15 @@ class ReserveNameResponseType extends IdentityMessage {
 class ReserveNameResult extends EucalyptusData {
 }
 
+class TunnelActionType extends IdentityMessage {
+  String content // internal XML format
+}
+
+class TunnelActionResponseType extends IdentityMessage {
+  TunnelActionResult tunnelActionResult
+}
+
+class TunnelActionResult extends EucalyptusData {
+  String content
+}
+

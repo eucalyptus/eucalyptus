@@ -149,6 +149,9 @@ public class RemoteIdentityProvider implements IdentityProvider {
 
   @Override
   public AccountIdentifiers lookupAccountIdentifiersByAlias( final String alias ) throws AuthException {
+    if ( Accounts.isSystemAccount( alias ) ) {
+      throw new AuthException( AuthException.NO_SUCH_ACCOUNT );
+    }
     final DescribeAccountsType request = new DescribeAccountsType( );
     request.setAlias( alias );
     return resultFor( request );
