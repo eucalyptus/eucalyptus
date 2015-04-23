@@ -27,10 +27,8 @@ import java.util.concurrent.Callable;
 import com.eucalyptus.resources.PropertyChangeListeners;
 import com.eucalyptus.resources.client.CloudFormationClient;
 import com.eucalyptus.resources.client.Ec2Client;
-import com.eucalyptus.resources.client.EucalyptusClient;
 
 import org.apache.log4j.Logger;
-import org.springframework.util.StringUtils;
 
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
@@ -47,8 +45,6 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ClusterInfoType;
-import com.eucalyptus.compute.common.ImageDetails;
-import com.eucalyptus.compute.common.VmTypeDetails;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
@@ -57,9 +53,7 @@ import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.imaging.common.ImagingBackend;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
-import com.google.common.net.HostSpecifier;
 import com.google.common.collect.Sets;
 
 @ConfigurableClass(root = "services.imaging.worker", description = "Parameters controlling image conversion service")
