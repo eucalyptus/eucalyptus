@@ -104,6 +104,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.hibernate.persister.collection.CollectionPropertyNames;
 
+import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
 /**
@@ -231,15 +232,17 @@ public class DatabaseAuthProvider implements AccountProvider {
    * Add account admin user separately.
    */
   @Override
-  public Account addAccount( String accountName ) throws AuthException {
-    try {
-      ACCOUNT_NAME_CHECKER.check( accountName );
-    } catch ( InvalidValueException e ) {
-      Debugging.logError( LOG, e, "Invalid account name " + accountName );
-      throw new AuthException( AuthException.INVALID_NAME, e );
-    }
-    if ( DatabaseAuthUtils.checkAccountExists( accountName ) ) {
-      throw new AuthException( AuthException.ACCOUNT_ALREADY_EXISTS );
+  public Account addAccount( @Nullable String accountName ) throws AuthException {
+    if ( accountName != null ) {
+      try {
+        ACCOUNT_NAME_CHECKER.check( accountName );
+      } catch ( InvalidValueException e ) {
+        Debugging.logError( LOG, e, "Invalid account name " + accountName );
+        throw new AuthException( AuthException.INVALID_NAME, e );
+      }
+      if ( DatabaseAuthUtils.checkAccountExists( accountName ) ) {
+        throw new AuthException( AuthException.ACCOUNT_ALREADY_EXISTS );
+      }
     }
     return doAddAccount( accountName );
   }
@@ -284,7 +287,7 @@ public class DatabaseAuthProvider implements AccountProvider {
   /**
    *
    */
-  private Account doAddAccount( String accountName ) throws AuthException {
+  private Account doAddAccount( @Nullable String accountName ) throws AuthException {
     AccountEntity account = new AccountEntity( accountName );
     try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
       Entities.persist( account );
