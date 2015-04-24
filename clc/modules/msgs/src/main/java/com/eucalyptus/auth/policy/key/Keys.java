@@ -90,6 +90,7 @@ public class Keys {
     
   // Quota keys
   public static final String EC2_QUOTA_VM_INSTANCE_NUMBER = "ec2:quota-vminstancenumber";
+  public static final String EC2_QUOTA_VM_INSTANCE_ACTIVE_NUMBER = "ec2:quota-vminstanceactivenumber";
   public static final String EC2_QUOTA_IMAGE_NUMBER = "ec2:quota-imagenumber";
   public static final String EC2_QUOTA_VOLUME_NUMBER = "ec2:quota-volumenumber";
   public static final String EC2_QUOTA_VOLUME_TOTAL_SIZE = "ec2:quota-volumetotalsize";
@@ -119,7 +120,7 @@ public class Keys {
   public static final String IAM_QUOTA_SIGNING_CERTIFICATE_NUMBER_PER_USER = "iam:quota-signingcertificatenumberperuser";
 
   private static final Map<String, Class<? extends Key>> KEY_MAP = Maps.newHashMap( );
-    
+
   public static Key getKeyInstance( Class<? extends Key> keyClass ) {
     try {
       Key key = keyClass.newInstance( );

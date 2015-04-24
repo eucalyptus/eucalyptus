@@ -62,7 +62,6 @@
 
 package com.eucalyptus.compute.policy;
 
-import net.sf.json.JSONException;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.key.KeyUtils;
@@ -73,20 +72,21 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.PolicyScope;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.common.CloudMetadata.VmInstanceMetadata;
-import com.eucalyptus.component.id.Euare;
+import com.eucalyptus.compute.common.CloudMetadataLimitedType;
 import com.eucalyptus.util.RestrictedTypes;
+import net.sf.json.JSONException;
 
 /**
- * GRZE:NOTE: this class is a {@link Euare} specific type and needs to move as well as not
- * referring to private implementation types. {@link VmInstanceMetadata} should be considered a public
+ * GRZE:NOTE: this class is a {@link com.eucalyptus.component.id.Euare} specific type and needs to move as well as not
+ * referring to private implementation types. {@link com.eucalyptus.compute.common.CloudMetadata.VmInstanceMetadata} should be considered a public
  * type while {@code VmInstance} is implementation specific and will change as needed by the
  * implementation.
  */
-@PolicyKey( Keys.EC2_QUOTA_VM_INSTANCE_NUMBER )
-public class VmInstanceNumberQuotaKey extends QuotaKey {
+@PolicyKey( Keys.EC2_QUOTA_VM_INSTANCE_ACTIVE_NUMBER )
+public class VmInstanceActiveNumberQuotaKey extends QuotaKey {
 
-  private static final String KEY = Keys.EC2_QUOTA_VM_INSTANCE_NUMBER;
-  private static final String POLICY_RESOURCE_TYPE = VmInstanceMetadata.POLICY_RESOURCE_TYPE;
+  private static final String KEY = Keys.EC2_QUOTA_VM_INSTANCE_ACTIVE_NUMBER;
+  private static final String POLICY_RESOURCE_TYPE = CloudMetadataLimitedType.VmInstanceActiveMetadata.POLICY_RESOURCE_TYPE;
   @Override
   public void validateValueType( String value ) throws JSONException {
     KeyUtils.validateIntegerValue(value, KEY);
@@ -98,6 +98,10 @@ public class VmInstanceNumberQuotaKey extends QuotaKey {
       && PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, POLICY_RESOURCE_TYPE).equals(resourceType) ) {
       return true;
     }
+    if ( PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, PolicySpec.EC2_STARTINSTANCES ).equals( action )
+      && PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, POLICY_RESOURCE_TYPE).equals(resourceType) ) {
+      return true;
+    }
     return false;
   }
 
@@ -105,11 +109,11 @@ public class VmInstanceNumberQuotaKey extends QuotaKey {
   public String value( PolicyScope scope, String id, String resource, Long quantity ) throws AuthException {
     switch ( scope ) {
       case Account:
-        return Long.toString( RestrictedTypes.quantityMetricFunction( VmInstanceMetadata.class ).apply( AccountFullName.getInstance( id ) ) + quantity );
+        return Long.toString( RestrictedTypes.usageMetricFunction(CloudMetadataLimitedType.VmInstanceActiveMetadata.class).apply( AccountFullName.getInstance( id ) ) + quantity );
       case Group:
         return NOT_SUPPORTED;
       case User:
-        return Long.toString( RestrictedTypes.quantityMetricFunction( VmInstanceMetadata.class ).apply( UserFullName.getInstance( id ) ) + quantity );
+        return Long.toString( RestrictedTypes.usageMetricFunction(CloudMetadataLimitedType.VmInstanceActiveMetadata.class).apply( UserFullName.getInstance( id ) ) + quantity );
     }
     throw new AuthException( "Invalid scope" );
   }
