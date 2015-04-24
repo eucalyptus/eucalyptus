@@ -269,19 +269,21 @@ public class RegionDelegatingIdentityProvider implements IdentityProvider {
   public void reserveGlobalName( final String namespace,
                                  final String name,
                                  final Integer duration ) throws AuthException {
-    final Integer successes = regionDispatchAndReduce( new NonNullFunction<IdentityProvider, Either<AuthException,String>>( ) {
-      @Nonnull
-      @Override
-      public Either<AuthException,String> apply( final IdentityProvider identityProvider ) {
-        try {
-          identityProvider.reserveGlobalName( namespace, name, duration );
-          return Either.right( "" );
-        } catch ( AuthException e ) {
-          return Either.left( e );
-        }
-      }
-    }, 0, CollectionUtils.<String>count( Predicates.notNull( ) ) );
     final int numberOfRegions = Iterables.size( regionConfigurationManager.getRegionInfos( ) );
+    final Integer successes = numberOfRegions <= 1 ?
+        1 : // skip if only a local region
+        regionDispatchAndReduce( new NonNullFunction<IdentityProvider, Either<AuthException,String>>( ) {
+          @Nonnull
+          @Override
+          public Either<AuthException,String> apply( final IdentityProvider identityProvider ) {
+            try {
+              identityProvider.reserveGlobalName( namespace, name, duration );
+              return Either.right( "" );
+            } catch ( AuthException e ) {
+              return Either.left( e );
+            }
+          }
+        }, 0, CollectionUtils.<String>count( Predicates.notNull( ) ) );
     if ( successes < ( 1 + ( numberOfRegions / 2 ) ) ) {
       throw new AuthException( AuthException.CONFLICT );
     }
