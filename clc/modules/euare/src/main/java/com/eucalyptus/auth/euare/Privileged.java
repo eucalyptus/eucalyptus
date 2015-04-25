@@ -118,7 +118,9 @@ class Privileged {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
 
-    Accounts.reserveGlobalName( GlobalNamespace.Account_Alias, accountName );
+    if ( accountName != null ) {
+      Accounts.reserveGlobalName( GlobalNamespace.Account_Alias, accountName );
+    }
     Account newAccount = Accounts.addAccount( accountName );
     Map<String, String> info = null;
     if ( email != null ) {
