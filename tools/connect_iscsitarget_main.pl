@@ -85,9 +85,9 @@ if (is_null_or_empty($euca_home)) {
   do_exit(1);
 }
 
-if (!is_null_or_empty($protocol) && $protocol eq $PROTOCOL_RBD) {
+if (!is_null_or_empty($protocol) && $protocol eq $PROTOCOL_RBD && !is_null_or_empty($provider) && $provider eq $PROVIDER_CEPH ) {
 	
-  print STDERR "Found rbd as protocol in connection string\n";
+  print STDERR "Found rbd as protocol and ceph as provider in connection string\n";
 
   if (is_null_or_empty($ceph_user)) {
     $ceph_user = "eucalyptus";

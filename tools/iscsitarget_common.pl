@@ -80,6 +80,7 @@ $UDEVADM = "udevadm";
 $PROTOCOL_ISCSI = "iscsi";
 $PROTOCOL_RBD = "rbd";
 $SECRET_TYPE_CEPH = "ceph";
+$PROVIDER_CEPH = "ceph";
 
 sub parse_devstring {
   my ($dev_string) = @_;

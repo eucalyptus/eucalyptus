@@ -79,8 +79,8 @@ if (is_null_or_empty($euca_home)) {
   do_exit(1);
 }
 
-if (!is_null_or_empty($protocol) && $protocol eq $PROTOCOL_RBD) {
-  print STDERR "Found rbd as protocol in connection string, disconnecting is a no-op\n";
+if (!is_null_or_empty($protocol) && $protocol eq $PROTOCOL_RBD && !is_null_or_empty($provider) && $provider eq $PROVIDER_CEPH ) {
+  print STDERR "Found rbd as protocol and ceph as provider in connection string, disconnecting is a no-op\n";
 } else {
   $ISCSIADM = untaint(`which iscsiadm`);
   $MULTIPATH = untaint(`which multipath`);
@@ -98,8 +98,18 @@ if (!is_null_or_empty($protocol) && $protocol eq $PROTOCOL_RBD) {
   # prepare target paths:
   # <netdev0>,<ip0>,<store0>,<netdev1>,<ip1>,<store1>,...
   if ((@paths < 1) || ((@paths % 3) != 0)) {
-    print STDERR "Target paths are not complete:$dev_string\n";
-    do_exit(1);
+    # NC stores connection string input to this script locally. Format of this string is invalid after an upgrade from 4.0.2 to 4.1.1
+    # Parse connection string by excluding protocol and provider - fix for EUCA-10768
+  
+    print STDERR "Input parameters (connection string) may not be in 4.1.x format. Parsing input using 4.0.2 format\n"; 
+    ($euca_home, $volume_id, $target_device, $target_serial, $target_bus, $ceph_user, $ceph_keyring, $ceph_conf, $user, $auth_mode, $lun, $encrypted_password, @paths) = parse_devstring($dev_string);
+    $protocol = $PROTOCOL_ISCSI;
+    $provider = "unknown";
+	
+    if ((@paths < 1) || ((@paths % 3) != 0)) {
+      print STDERR "Target paths are not complete:$dev_string\n";
+      do_exit(1);
+    }
   }
 
   $multipath = 0;
