@@ -63,7 +63,7 @@
 import com.eucalyptus.address.Address
 import com.eucalyptus.address.Addresses
 import com.eucalyptus.scripting.Groovyness
-import com.eucalyptus.vm.VmInstance
+import com.eucalyptus.compute.common.internal.vm.VmInstance
 import com.eucalyptus.vm.VmInstances
 
 

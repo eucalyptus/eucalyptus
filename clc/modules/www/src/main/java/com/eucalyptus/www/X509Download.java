@@ -63,8 +63,7 @@
 package com.eucalyptus.www;
 
 import static com.eucalyptus.auth.AuthenticationProperties.CredentialDownloadGenerateCertificateStrategy;
-import static com.eucalyptus.auth.AuthenticationProperties.CredentialDownloadGenerateCertificateStrategy.Absent;
-import static com.eucalyptus.auth.AuthenticationProperties.CredentialDownloadGenerateCertificateStrategy.Limited;
+import static com.eucalyptus.auth.AuthenticationProperties.CredentialDownloadGenerateCertificateStrategy.*;
 import static com.eucalyptus.auth.principal.Certificate.Util.revoked;
 import static com.eucalyptus.util.CollectionUtils.propertyPredicate;
 import java.io.ByteArrayOutputStream;
@@ -85,6 +84,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.eucalyptus.auth.AuthenticationProperties;
 import com.eucalyptus.auth.principal.EuareUser;
+import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloudformation.CloudFormation;
@@ -218,6 +218,8 @@ public class X509Download extends HttpServlet {
     String userAccessKey = null;
     String userSecretKey = null;
     KeyPair keyPair = null;
+    final CredentialDownloadGenerateCertificateStrategy certificateStrategy =
+        AuthenticationProperties.getCredentialDownloadGenerateCertificateStrategy( );
     try {
       final List<AccessKey> accessKeys = u.getKeys( );
       for ( final AccessKey k : accessKeys ) {
@@ -235,8 +237,6 @@ public class X509Download extends HttpServlet {
       if ( userAccessKey == null ) {
         throw new IllegalStateException( "Access key limit exceeded" );
       }
-      final CredentialDownloadGenerateCertificateStrategy certificateStrategy =
-          AuthenticationProperties.getCredentialDownloadGenerateCertificateStrategy( );
       final int nonRevokedCertificateCount = Iterables.size(
           Iterables.filter( u.getCertificates( ), propertyPredicate( false, revoked( ) ) ) );
       if ( ( certificateStrategy == Absent && nonRevokedCertificateCount == 0 ) ||
@@ -245,7 +245,7 @@ public class X509Download extends HttpServlet {
         keyPair = Certs.generateKeyPair( );
         x509 = Certs.generateCertificate( keyPair, u.getName( ) );
         x509.checkValidity( );
-        u.addCertificate( x509 );
+        u.addCertificate( Identifiers.generateCertificateIdentifier(x509), x509 );
       }
       cloudCert = SystemCredentials.lookup( Eucalyptus.class ).getCertificate( );
     } catch ( Exception e ) {
@@ -301,6 +301,13 @@ public class X509Download extends HttpServlet {
         baseName = X509Download.NAME_SHORT + "-" + u.getName() + "-" + fingerPrint.replaceAll( ":", "" ).toLowerCase().substring( 0, 8 );
         sb.append( "\nexport EC2_PRIVATE_KEY=${EUCA_KEY_DIR}/" + baseName + "-pk.pem" );
         sb.append( "\nexport EC2_CERT=${EUCA_KEY_DIR}/" + baseName + "-cert.pem" );
+      }
+    } else if ( certificateStrategy != Never ) {
+      sb.append( "\necho WARN: Certificate credentials not present. >&2" );
+      if ( u.isSystemUser( ) ) {
+        sb.append( "\necho WARN: Review authentication.credential_download_generate_certificate and >&2" );
+        sb.append( "\necho WARN: authentication.signing_certificates_limit properties for current >&2" );
+        sb.append( "\necho WARN: certificate download limits. >&2" );
       }
     }
     sb.append( "\nexport EC2_JVM_ARGS=-Djavax.net.ssl.trustStore=${EUCA_KEY_DIR}/jssecacerts" );

@@ -76,6 +76,14 @@ public abstract class QuotaKey implements Key {
   
   public static final Long MB = 1024 * 1024L;
   
+  public boolean canApply( String action, String resourceType ) {
+    return canApply( action );
+  }
+
+  @Override
+  public boolean canApply(String action) {
+    throw new RuntimeException( "QuotaKey should not call the default canApply(action) interface.");
+  }
   @Override
   public final String value( ) throws AuthException {
     throw new RuntimeException( "QuotaKey should not call the default value interface." );

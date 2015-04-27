@@ -1,0 +1,117 @@
+#!/usr/bin/python -tt
+#
+# Copyright 2015 Eucalyptus Systems, Inc.
+#
+# Redistribution and use of this software in source and binary forms,
+# with or without modification, are permitted provided that the following
+# conditions are met:
+#
+#   Redistributions of source code must retain the above copyright notice,
+#   this list of conditions and the following disclaimer.
+#
+#   Redistributions in binary form must reproduce the above copyright
+#   notice, this list of conditions and the following disclaimer in the
+#   documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# Note that this script is used for both clusteradmin-copy-keys and
+# clcadmin-copy-keys because they are nearly identical and meant to
+# be self-contained.  Its behavior changes slightly based on the name
+# of the executable.  The Makefile thus installs it twice.
+
+import argparse
+import os
+import shlex
+import subprocess
+import sys
+
+
+KEYPATH = 'var/lib/eucalyptus/keys'
+PUBLIC_KEYS = ('cloud-cert.pem',)  # These go everywhere
+GLOBAL_KEYS = ('euca.p12', 'cloud-pk.pem')
+ZONE_KEYS = ('cluster-cert.pem', 'cluster-pk.pem', 'node-cert.pem',
+             'node-pk.pem')
+
+
+def add_key_paths(keys, path_map, local_keydir, remote_keydir):
+    for key in keys:
+        local_keypath = os.path.join(local_keydir, key)
+        path_map.setdefault(local_keypath, [])
+        path_map[local_keypath].append(os.path.join(remote_keydir, key))
+
+
+def build_key_path_map(local_keydir, remote_keydir, zone=None):
+    path_map = {}
+    add_key_paths(PUBLIC_KEYS, path_map, local_keydir, remote_keydir)
+    if os.path.basename(sys.argv[0]) == 'clusteradmin-copy-keys':
+        # CC to NC (zone keys, keydir -> keydir)
+        add_key_paths(ZONE_KEYS, path_map, local_keydir, remote_keydir)
+    else:
+        # CLC to CLC (global keys, keydir -> keydir)
+        add_key_paths(GLOBAL_KEYS, path_map, local_keydir, remote_keydir)
+    if zone:
+        # CLC to CLC (zone keys, keydir/zone -> keydir/zone)
+        add_key_paths(ZONE_KEYS, path_map, os.path.join(local_keydir, zone),
+                      os.path.join(remote_keydir, zone))
+        # CLC to CC  (zone keys, keydir/zone -> keydir)
+        add_key_paths(ZONE_KEYS, path_map, os.path.join(local_keydir, zone),
+                      remote_keydir)
+    return path_map
+
+
+def copy_keys(desthost, path_map, scp):
+    for srcpath in path_map:
+        try:
+            with open(srcpath):
+                pass  # If we get past here it is accessible
+        except IOError as err:
+            sys.exit('{0}: cannot access {1}: {2}'.format(
+                os.path.basename(sys.argv[0]), err.filename, err.strerror))
+    for srcpath, destpaths in path_map.items():
+        for destpath in destpaths:
+            cmd = shlex.split(scp) + [srcpath, desthost + ':' + destpath]
+            try:
+                subprocess.check_call(cmd)
+            except subprocess.CalledProcessError:
+                sys.exit('{0}: failed to copy {1}; aborting'.format(
+                    os.path.basename(sys.argv[0]), srcpath))
+
+
+def main():
+    keydir = os.path.join(os.getenv('EUCALYPTUS') or '/', KEYPATH)
+    parser = argparse.ArgumentParser(
+        description='copy cloud cryptographic keys to another system')
+    parser.add_argument('hosts', metavar='HOST', nargs='+',
+                        help='the host to copy keys to (required)')
+    parser.add_argument('-z', '--availability-zone', metavar='ZONE',
+                        help=('also copy the keys for the named '
+                              'availability zone'))
+    parser.add_argument('--local-keydir', default=keydir,
+                        help=('the directory on this machine to copy '
+                              'keys from (default: {0})'.format(keydir)))
+    parser.add_argument('--remote-keydir', default=keydir,
+                        help=('the directory on the remote machine to copy '
+                              'keys to (default: {0})'.format(keydir)))
+    parser.add_argument('--scp', default='scp',
+                        help=('OpenSSH scp command to copy key files '
+                              '(default: "scp")'))
+    args = parser.parse_args()
+    path_map = build_key_path_map(args.local_keydir, args.remote_keydir,
+                                  zone=args.availability_zone)
+    for host in args.hosts:
+        copy_keys(host, path_map, args.scp)
+
+
+if __name__ == '__main__':
+    main()

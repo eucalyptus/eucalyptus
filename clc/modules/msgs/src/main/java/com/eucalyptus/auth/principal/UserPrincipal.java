@@ -21,6 +21,8 @@ package com.eucalyptus.auth.principal;
 
 import java.util.List;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import com.eucalyptus.auth.AuthException;
 
 /**
  *
@@ -90,6 +92,18 @@ public interface UserPrincipal extends User {
 
   @Override
   boolean isSystemUser( );
+
+  /**
+   * Get the users crypt password (if any)
+   */
+  @Nullable
+  String getPassword( );
+
+  /**
+   * Get the expiration timestamp for the password (if any)
+   */
+  @Nullable
+  Long getPasswordExpires( );
 
   @Nonnull
   List<AccessKey> getKeys( );   //TODO:STEVE: need an immutable access key

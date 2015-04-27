@@ -77,6 +77,7 @@ public interface Certificate extends Serializable {
   void setActive( Boolean active ) throws AuthException;
   
   Boolean isRevoked( );
+  void setRevoked( Boolean revoked ) throws AuthException;
 
   String getPem( );
 

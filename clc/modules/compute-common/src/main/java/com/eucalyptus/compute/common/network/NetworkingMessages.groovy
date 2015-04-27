@@ -52,12 +52,14 @@ abstract class NetworkResource extends EucalyptusData {
 
 @Canonical class PrivateIPResource extends NetworkResource {
   @Override String getType( ){ "private-ip" }
+  String mac
 }
 
 @Canonical class PrivateNetworkIndexResource extends NetworkResource {
   @Override String getType( ){ "private-network-index" }
   Integer tag
   String privateIp
+  String mac
 }
 
 @Canonical class PublicIPResource extends NetworkResource {

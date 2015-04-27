@@ -115,8 +115,6 @@ public class Keys {
   public static final String IAM_QUOTA_ROLE_NUMBER = "iam:quota-rolenumber";
   public static final String IAM_QUOTA_INSTANCE_PROFILE_NUMBER = "iam:quota-instanceprofilenumber";
   public static final String IAM_QUOTA_SERVER_CERTIFICATE_NUMBER = "iam:quota-servercertificatenumber";
-  public static final String IAM_QUOTA_ACCESS_KEY_NUMBER_PER_USER = "iam:quota-accesskeynumberperuser";
-  public static final String IAM_QUOTA_SIGNING_CERTIFICATE_NUMBER_PER_USER = "iam:quota-signingcertificatenumberperuser";
 
   private static final Map<String, Class<? extends Key>> KEY_MAP = Maps.newHashMap( );
     

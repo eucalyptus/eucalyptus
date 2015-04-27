@@ -60,7 +60,7 @@
     NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
   -->
 
-<project name="eucalyptus-module-import">
+<project name="eucalyptus-module-import" xmlns:ivy="antlib:org.apache.ivy.ant">
 	<!--================================== euca defines ==================================-->
 	<property environment="localenv" />
 	<property name="euca.home.0" value="${localenv.EUCALYPTUS}" />
@@ -103,28 +103,12 @@
 	<property name="jar.build.excludes" value=""/>
 	<property name="jar.resource.includes" value="**/*"/>
 	<property name="jar.resource.excludes" value="**/*.in"/>
-    <!--================================== other properties  ===================================-->
-    <property name="euca.junit.jvmargs" value=""/>
+	<!--================================== other properties  ===================================-->
+	<property name="euca.junit.jvmargs" value=""/>
+	<!--================================== dependencies  ===================================-->
+	<!-- Fix for RHEL bug 810067 -->
+	<taskdef uri="antlib:org.apache.ivy.ant" classpath="${ivy.jar}" />
 	<!--================================== classpaths ==================================-->
-	<path id="classpath">
-		<pathelement path="${conf.dir}" />
-		<dirset dir="${modules.dir}">
-			<include name="**/build" />
-		</dirset>
-		<fileset dir="${lib.dir}">
-			<include name="**/*.jar" />
-			<exclude name="**/openjdk-crypto.jar" />
-		</fileset>
-	</path>
-	<path id="test-classpath">
-		<fileset dir="${lib.dir}/tests">
-		    <include name="**/*.jar" />
-		</fileset>
-        <dirset dir="${modules.dir}">
-            <include name="**/build-test" />
-        </dirset>
-		<path refid="classpath"/>
- 	</path>
 	<path id="runtimeclasspath">
 		<pathelement path="${euca.conf.dir}" />
 		<fileset dir="${euca.lib.dir}">
@@ -179,6 +163,34 @@
 		<mkdir dir="${test.dir}" />
 		<mkdir dir="${src.dir}" />
 	</target>
+	<target name="classpaths" unless="build.notRequired">
+		<ivy:info file="${basedir}/ivy.xml" />
+		<ivy:buildlist reference="buildlist-build-xml-path" onmissingdescriptor="skip" root="${ivy.module}">
+			<fileset dir="${modules.dir}" includes="**/build.xml"/>
+		</ivy:buildlist>
+		<pathconvert property="buildlist-build-path">
+			<mapper type="regexp" from="(.*)\.xml" to="\1"/>
+			<path refid="buildlist-build-xml-path"/>
+		</pathconvert>
+		<echo message="**** MODULECLASSPATH: ${buildlist-build-path}" level="verbose" />
+		<path id="classpath">
+			<pathelement path="${conf.dir}" />
+			<pathelement path="${buildlist-build-path}"/>
+			<fileset dir="${lib.dir}">
+				<include name="**/*.jar" />
+				<exclude name="**/openjdk-crypto.jar" />
+			</fileset>
+		</path>
+		<path id="test-classpath">
+			<fileset dir="${lib.dir}/tests">
+				<include name="**/*.jar" />
+			</fileset>
+			<dirset dir="${modules.dir}">
+				<include name="**/build-test" />
+			</dirset>
+			<path refid="classpath"/>
+	 	</path>
+	</target>
 	<target name="builder" description="--> build the jar file from source.">
 		<condition property="builder.target" value="build-${builder.suffix}" else="build-java">
 			<isset property="builder.suffix" />
@@ -200,7 +212,7 @@
 			<srcfiles dir="${src.dir}" includes="**/*" />
 		</uptodate>
 	</target>
-	<target name="build-java" depends="should-build-java" unless="build.notRequired">
+	<target name="build-java" depends="should-build-java,classpaths" unless="build.notRequired">
 		<echo message="[COMPILE] ${builder.target} for ${ant.project.name}" />
 		<antcall target="clean" />
 		<antcall target="build-mkdirs" inheritall="true" inheritrefs="true" />
@@ -212,7 +224,7 @@
 			<srcfiles dir="${src.dir}" includes="**/*" />
 		</uptodate>
 	</target>
-	<target name="build-groovy" depends="should-build-groovy" unless="build.notRequired">
+	<target name="build-groovy" depends="should-build-groovy,classpaths" unless="build.notRequired">
 		<echo message="[COMPILE] main for ${ant.project.name}" />
 		<antcall target="clean" />
 		<antcall target="build-mkdirs" inheritall="true" inheritrefs="true" />
@@ -221,7 +233,7 @@
 			<javac source="1.7" target="1.7" encoding="utf-8" debug="true" />
 		</groovyc>
 	</target>
-	<target name="builder-test" depends="build-groovy">
+	<target name="builder-test" depends="classpaths,build-groovy">
 		<antcall target="build-mkdirs" inheritall="true" inheritrefs="true" />
 		<echo message="[COMPILE] test for ${ant.project.name}" />
 		<taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath" />
@@ -232,7 +244,7 @@
 
 	<!--================================== test target ==================================-->
 	<target name="junit" depends="junit-fail-flag"/>
-	<target name="junit-run" depends="builder-test">
+	<target name="junit-run" depends="classpaths,builder-test">
                 <delete file="${build.dir}/reports/junit/failure" quiet="true"/>
                 <property name="junit.halt" value="on"/>
                 <property name="junit.reports.dir" value="${build.dir}/reports/junit"/>

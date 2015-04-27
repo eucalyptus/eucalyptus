@@ -30,7 +30,6 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.LoadBalancerDnsRecordCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneEntityTransform;
@@ -55,7 +54,6 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 	@Override
 	public EventHandlerChain<DisabledZoneEvent> build() {
 		this.insert(new CheckAndModifyRequest(this));
-		this.insert(new RemoveDnsRecord(this));
 		this.insert(new PersistUpdatedServoInstances(this));
 		this.insert(new UpdateAutoScalingGroup(this));
 		this.insert(new PersistUpdatedZones(this));
@@ -112,80 +110,6 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 		public void rollback() { }
 	} 
 	
-	// disabling zones will terminate instances.
-	// should remove their IPs from dns service.
-	private static class RemoveDnsRecord extends AbstractEventHandler<DisabledZoneEvent> {
-		protected RemoveDnsRecord(EventHandlerChain<DisabledZoneEvent> chain) {
-			super(chain);
-		}
-
-		private String dnsName = null;
-		private String dnsZone = null;
-		private List<String> ipAddressRemoved = null;
-		@Override
-		public void apply(DisabledZoneEvent evt) throws EventHandlerException {
-			LoadBalancer lb;
-			try{
-				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
-			}catch(NoSuchElementException ex){
-				throw new EventHandlerException("Could not find the loadbalancer with name="+evt.getLoadBalancer(), ex);
-			}catch(Exception ex){
-				throw new EventHandlerException("Error while looking for loadbalancer with name="+evt.getLoadBalancer(), ex);
-			}	
-			
-			final LoadBalancerDnsRecordCoreView dnsRec = lb.getDns();
-			if(dnsRec == null){
-				LOG.warn("failed to find the dns record for the loadbalancer");
-				return;
-			}
-			this.dnsName = dnsRec.getName();
-			this.dnsZone = dnsRec.getZone();
-			final List<String> ipAddressToRemove = Lists.newArrayList();
-			final List<LoadBalancerZoneCoreView> currentZones = Lists.newArrayList(lb.getZones());
-			for(final LoadBalancerZoneCoreView zoneView : currentZones){
-				if(evt.getZones().contains(zoneView.getName())){ // the zone will be disabled
-					LoadBalancerZone zone;
-					try{
-						zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(zoneView);
-					}catch(final Exception ex){
-						LOG.error("unable to transform the zone from its view", ex);
-						continue;
-					}
-					
-					for(final LoadBalancerServoInstanceCoreView instance : zone.getServoInstances()){
-						if(! LoadBalancerServoInstance.STATE.InService.equals(instance.getState()))
-							continue;
-						final String ipAddr = instance.getAddress();
-						ipAddressToRemove.add(ipAddr);
-					}
-				}
-			}
-			this.ipAddressRemoved = Lists.newArrayList();
-			for(final String ipAddr : ipAddressToRemove){
-				try{
-					EucalyptusActivityTasks.getInstance().removeARecord(dnsZone, dnsName, ipAddr);
-					this.ipAddressRemoved.add(ipAddr);
-				}catch(Exception ex){
-					LOG.warn(String.format("failed to remove A record %s-%s-%s", dnsZone, dnsName, ipAddr));
-				}
-			}
-		}
-
-		@Override
-		public void rollback() throws EventHandlerException {
-			if(this.dnsName!= null && this.dnsZone !=null && this.ipAddressRemoved!= null){
-				for(final String ipAddr : ipAddressRemoved){
-					try{
-						EucalyptusActivityTasks.getInstance().addARecord(this.dnsZone, this.dnsName, ipAddr);
-					}catch(final Exception ex){
-						LOG.warn("failed to add A record back to the service", ex);
-					}
-				}
-			}
-		}
-		
-	}
-	
 	// disabling zones will terminate the instances.
 	// mark their state 'Retired'. ServoInstanceCleanup will clean up the record.
 	private static class PersistUpdatedServoInstances extends AbstractEventHandler<DisabledZoneEvent> {
@@ -230,6 +154,7 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 						try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
 							final LoadBalancerServoInstance update = Entities.uniqueResult(instance);
 							update.setState(LoadBalancerServoInstance.STATE.Retired);
+							update.setDnsState(LoadBalancerServoInstance.DNS_STATE.Deregistered);
 							Entities.persist(update);
 							db.commit();
 							retiredInstances.add(update);

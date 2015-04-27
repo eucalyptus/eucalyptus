@@ -31,7 +31,7 @@ import java.util.Map;
 public interface IntrinsicFunction {
   MatchResult evaluateMatch(JsonNode jsonNode);
   ValidateResult validateArgTypesWherePossible(MatchResult matchResult) throws CloudFormationException;
-  JsonNode evaluateFunction(ValidateResult validateResult, Template template)  throws CloudFormationException;
+  JsonNode evaluateFunction(ValidateResult validateResult, Template template, String effectiveUserId)  throws CloudFormationException;
 
   public static class MatchResult {
     boolean match;

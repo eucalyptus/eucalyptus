@@ -22,6 +22,7 @@ package com.eucalyptus.cloudformation.bootstrap;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.tokens.SecurityTokenAWSCredentialsProvider;
 import com.eucalyptus.util.Exceptions;
@@ -41,10 +42,9 @@ public class CloudFormationAWSCredentialsProvider extends SecurityTokenAWSCreden
 
     @Override
     public User get( ) {
-      final Account account;
       try {
-        account = Accounts.lookupAccountByName( Account.CLOUDFORMATION_SYSTEM_ACCOUNT );
-        return account.lookupAdmin( );
+        final String accountNumber = Accounts.lookupAccountIdByAlias( AccountIdentifiers.CLOUDFORMATION_SYSTEM_ACCOUNT );
+        return Accounts.lookupPrincipalByAccountNumber( accountNumber );
       } catch ( AuthException e ) {
         throw Exceptions.toUndeclared( e );
       }

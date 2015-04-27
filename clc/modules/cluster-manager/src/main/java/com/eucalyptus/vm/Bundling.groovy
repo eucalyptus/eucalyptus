@@ -69,7 +69,7 @@ import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import com.eucalyptus.binding.HttpParameterMapping;
-import com.eucalyptus.vm.VmBundleTask.BundleState
+import com.eucalyptus.compute.common.internal.vm.VmBundleTask.BundleState
 import com.eucalyptus.binding.HttpEmbedded;
 
 public class VmBundleMessage extends EucalyptusMessage {

@@ -20,8 +20,12 @@
 package com.eucalyptus.network
 
 import com.eucalyptus.address.Addresses
-import com.eucalyptus.cloud.util.Reference as EReference
-import com.eucalyptus.cloud.util.ResourceAllocationException
+import com.eucalyptus.compute.common.internal.network.ExtantNetwork
+import com.eucalyptus.compute.common.internal.network.NetworkGroup
+import com.eucalyptus.compute.common.internal.network.PrivateNetworkIndex
+import com.eucalyptus.compute.common.internal.util.NotEnoughResourcesException
+import com.eucalyptus.compute.common.internal.util.Reference as EReference
+import com.eucalyptus.compute.common.internal.util.ResourceAllocationException
 import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesResponseType
 import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesResult
 import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesType
@@ -39,14 +43,23 @@ import com.eucalyptus.compute.common.network.SecurityGroupResource
 import com.eucalyptus.compute.common.network.UpdateInstanceResourcesResponseType
 import com.eucalyptus.compute.common.network.UpdateInstanceResourcesType
 import com.eucalyptus.entities.Entities
+import com.eucalyptus.entities.TransactionException
+import com.eucalyptus.entities.TransactionExecutionException
 import com.eucalyptus.entities.TransactionResource
+import com.eucalyptus.entities.TransientEntityException
 import com.eucalyptus.network.config.ManagedSubnet
 import com.eucalyptus.network.config.NetworkConfigurations
+import com.eucalyptus.records.EventRecord
+import com.eucalyptus.records.EventType
+import com.eucalyptus.records.Logs
 import com.eucalyptus.util.EucalyptusCloudException
 import com.eucalyptus.util.Exceptions
+import com.eucalyptus.util.Numbers
 import com.eucalyptus.util.Pair
 import com.google.common.base.Optional
 import com.google.common.collect.Iterables
+import com.google.common.collect.Lists
+import com.google.common.collect.Maps
 import com.google.common.collect.Sets
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
@@ -55,6 +68,8 @@ import org.hibernate.exception.ConstraintViolationException
 
 import javax.persistence.EntityTransaction
 import javax.persistence.OptimisticLockException
+import javax.transaction.Synchronization
+import java.util.concurrent.ConcurrentMap
 import java.util.concurrent.TimeUnit
 
 import static com.eucalyptus.compute.common.network.NetworkingFeature.*
@@ -65,6 +80,8 @@ import static com.eucalyptus.compute.common.network.NetworkingFeature.*
 @CompileStatic(TypeCheckingMode.SKIP)
 class ManagedNetworkingService extends NetworkingServiceSupport {
   private static final Logger logger = Logger.getLogger( ManagedNetworkingService );
+
+  private static final ConcurrentMap<NetworkIndexKey,Long> inFlightNetworkIndexes = Maps.newConcurrentMap();
 
   /**
    * class Constructor
@@ -183,7 +200,7 @@ class ManagedNetworkingService extends NetworkingServiceSupport {
           final NetworkGroup networkGroup =
               Entities.uniqueResult( NetworkGroup.withGroupId( null, securityGroupResource.value ) );
           if ( !networkGroup.hasExtantNetwork( ) ) {
-            networkGroup.extantNetwork( )
+            extantNetwork( networkGroup )
             try {
               Entities.flush( NetworkGroup ) // will fail on conflict
             } catch ( Exception e ) {
@@ -203,19 +220,20 @@ class ManagedNetworkingService extends NetworkingServiceSupport {
               if ( identifiers.add( privateNetworkIndexResource.ownerId ) ) {
                 Integer restoreVlan = privateNetworkIndexResource.tag
                 Long restoreNetworkIndex = Long.valueOf( privateNetworkIndexResource.value )
-                if ( networkGroup.hasExtantNetwork( ) && networkGroup.extantNetwork( ).getTag( ) == restoreVlan ) {
-                  logger.info( "Found matching extant network for ${privateNetworkIndexResource.ownerId}: ${networkGroup.extantNetwork( )}" );
-                  networkGroup.extantNetwork( ).reclaimNetworkIndex( restoreNetworkIndex );
-                } else if ( networkGroup.hasExtantNetwork( ) && networkGroup.extantNetwork( ).getTag( ) != restoreVlan ) {
-                  throw new EucalyptusCloudException( "Found conflicting extant network for ${privateNetworkIndexResource.ownerId}: ${networkGroup.extantNetwork( )}" )
+                if ( networkGroup.hasExtantNetwork( ) && extantNetwork( networkGroup ).getTag( ) == restoreVlan ) {
+                  logger.info( "Found matching extant network for ${privateNetworkIndexResource.ownerId}: ${extantNetwork(networkGroup)}" );
+                  extantNetwork( networkGroup ).reclaimNetworkIndex( restoreNetworkIndex );
+                } else if ( networkGroup.hasExtantNetwork( ) && extantNetwork( networkGroup ).getTag( ) != restoreVlan ) {
+                  throw new EucalyptusCloudException( "Found conflicting extant network for ${privateNetworkIndexResource.ownerId}: ${extantNetwork(networkGroup)}" )
                 } else {
                   logger.info( "Restoring extant network for ${privateNetworkIndexResource.ownerId}: ${restoreVlan}" );
-                  ExtantNetwork exNet = networkGroup.reclaim( restoreVlan );
-                  logger.debug( "Restored extant network for ${privateNetworkIndexResource.ownerId}: ${networkGroup.extantNetwork( )}" );
+                  ExtantNetwork exNet = reclaim( networkGroup, restoreVlan );
+                  logger.debug( "Restored extant network for ${privateNetworkIndexResource.ownerId}: ${extantNetwork( networkGroup )}" );
                   logger.info( "Restoring private network index for ${privateNetworkIndexResource.ownerId}: ${restoreNetworkIndex}" );
                   exNet.reclaimNetworkIndex( restoreNetworkIndex );
                 }
                 resources.add( new PrivateNetworkIndexResource(
+                    mac: mac( privateNetworkIndexResource.ownerId ),
                     privateIp: privateIp( restoreVlan, restoreNetworkIndex ),
                     tag: restoreVlan,
                     value: String.valueOf( restoreNetworkIndex ),
@@ -227,10 +245,11 @@ class ManagedNetworkingService extends NetworkingServiceSupport {
           // regular prepare case
           request.getResources( ).findAll{ it instanceof PrivateIPResource }.each { PrivateIPResource privateIPResource ->
             if ( identifiers.add( privateIPResource.ownerId ) ) {
-              final Long index = networkGroup.extantNetwork( ).allocateNetworkIndex( ).index;
+              final Long index = allocateNetworkIndex( extantNetwork( networkGroup ) ).index;
               resources.add( new PrivateNetworkIndexResource(
-                  privateIp: privateIp( networkGroup.extantNetwork( ).tag, index ),
-                  tag: networkGroup.extantNetwork( ).tag,
+                  mac: mac( privateIPResource.ownerId ),
+                  privateIp: privateIp( extantNetwork( networkGroup ).tag, index ),
+                  tag: extantNetwork( networkGroup ).tag,
                   value: String.valueOf( index ),
                   ownerId: privateIPResource.ownerId
               ) )
@@ -267,7 +286,7 @@ class ManagedNetworkingService extends NetworkingServiceSupport {
         Entities.query( PrivateNetworkIndex.inState( EReference.State.PENDING) ).each { final PrivateNetworkIndex index ->
           if ( isTimedOut(index.lastUpdateMillis(), NetworkGroups.NETWORK_INDEX_PENDING_TIMEOUT ) ) {
             if ( !activeTaggedIndexes.contains( Pair.pair( index.extantNetwork.tag, index.index ) ) &&
-                ( index.reference == null || index.reference.partition == partition ) ) {
+                ( index.instance == null || index.instance.partition == partition ) ) {
               logger.warn( "Pending network index (${index.displayName}) timed out, tearing down" );
               index.release( )
               index.teardown( )
@@ -279,12 +298,116 @@ class ManagedNetworkingService extends NetworkingServiceSupport {
     }
   }
 
+  private static ExtantNetwork reclaim( NetworkGroup group, Integer i ) throws NotEnoughResourcesException, TransientEntityException {
+    if ( !Entities.isPersistent( group ) ) {
+      throw new TransientEntityException( group.toString( ) );
+    } else {
+      ExtantNetwork exNet = Entities.persist( ExtantNetwork.create( group, i ) );
+      group.setExtantNetwork( exNet );
+      return group.getExtantNetwork( );
+    }
+  }
+
+  private static ExtantNetwork extantNetwork( NetworkGroup group ) throws NotEnoughResourcesException, TransientEntityException {
+    if ( !Entities.isPersistent( group ) ) {
+      throw new TransientEntityException( group.toString( ) );
+    } else {
+      ExtantNetwork exNet = group.getExtantNetwork( );
+      if ( exNet == null ) {
+        for ( Integer i : Numbers.shuffled( NetworkGroups.networkTagInterval( ) ) ) {
+          try {
+            Entities.uniqueResult( ExtantNetwork.named( i ) );
+          } catch ( Exception ex ) {
+            exNet = ExtantNetwork.create( group, i );
+            Entities.persist( exNet );
+            group.setExtantNetwork( exNet );
+            EventRecord.here( NetworkGroup.class, EventType.VLAN_ALLOCATED, "VLAN allocated: " + exNet.getTag( ) ).info();
+            return group.getExtantNetwork( );
+          }
+        }
+        throw new NotEnoughResourcesException( "Failed to allocate network tag for network: " + group.getFullName( ) + ": no network tags are free." );
+      } else {
+        if ( !exNet.inUse( ) ) {
+          exNet.updateTimeStamps( );
+        }
+        return exNet;
+      }
+    }
+  }
+
   private static boolean isTimedOut( Long timeSinceUpdateMillis, Integer timeoutMinutes ) {
     timeSinceUpdateMillis != null &&
         timeoutMinutes != null &&
         ( timeSinceUpdateMillis > TimeUnit.MINUTES.toMillis( timeoutMinutes )  );
   }
 
+  private static PrivateNetworkIndex allocateNetworkIndex( ExtantNetwork extantNetwork ) throws TransactionException {
+    if ( !Entities.isPersistent( extantNetwork ) ) {
+      throw new TransientEntityException( extantNetwork.toString( ) );
+    } else {
+      final Integer tag = extantNetwork.tag
+      try {
+        Entities.transaction( PrivateNetworkIndex.class ) { final TransactionResource db ->
+          final List<Long> networkIndexHolder = Lists.newArrayList();
+          Entities.registerSynchronization(ExtantNetwork.class, new Synchronization() {
+            @Override
+            public void beforeCompletion() {}
+
+            @Override
+            public void afterCompletion(final int status) {
+              clearInFlight(tag, networkIndexHolder);
+            }
+          });
+          for (final Long i : Numbers.shuffled(NetworkGroups.networkIndexInterval())) {
+            try {
+              Entities.uniqueResult(PrivateNetworkIndex.named(extantNetwork, i));
+            } catch (final NoSuchElementException ex) {
+              if (ifNotInFlight(tag, i)) try {
+                networkIndexHolder.add(i);
+                PrivateNetworkIndex netIdx = Entities.persist(PrivateNetworkIndex.create(extantNetwork, i));
+                PrivateNetworkIndex ref = netIdx.allocate();
+                db.commit();
+                return ref;
+              } catch (final Exception ex1) {
+                Logs.exhaust().debug(ex1);
+              }
+            }
+          }
+          throw new NoSuchElementException();
+        }
+      } catch ( Exception ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        throw new TransactionExecutionException(
+            "Too many instances running in security group '"+extantNetwork.displayName+"', unable to allocate a private network " +
+            "index. Please either reduce the number of instances in the security group or use another security group.",
+            ex );
+      }
+    }
+  }
+
+  private static void clearInFlight( final Integer tag, final Collection<Long> indexes ) {
+    for ( final Long index: indexes ) {
+      final NetworkIndexKey key = new NetworkIndexKey( tag, index );
+      inFlightNetworkIndexes.remove( key );
+    }
+  }
+
+  private static boolean ifNotInFlight( final Integer tag, final Long index ) {
+    final NetworkIndexKey key = new NetworkIndexKey( tag, index );
+    final Long reservedTime = inFlightNetworkIndexes.putIfAbsent( key, System.currentTimeMillis() );
+    reservedTime == null ||
+        ( reservedTime + TimeUnit.MINUTES.toMillis( 1 ) < System.currentTimeMillis() &&
+            inFlightNetworkIndexes.replace( key, reservedTime, System.currentTimeMillis() ) );
+  }
+
+
   private static class RetryTransactionException extends RuntimeException {
+  }
+
+  private static final class NetworkIndexKey extends Pair<Integer,Long> {
+    private NetworkIndexKey( final Integer tag,
+                             final Long index ) {
+      super( tag, index )
+    }
   }
 }

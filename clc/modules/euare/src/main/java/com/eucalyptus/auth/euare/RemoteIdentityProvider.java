@@ -28,31 +28,57 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.DatabaseAuthUtils;
+import com.eucalyptus.auth.euare.common.identity.ReserveNameType;
+import com.eucalyptus.auth.euare.persist.DatabaseAuthUtils;
 import com.eucalyptus.auth.api.IdentityProvider;
+import com.eucalyptus.auth.euare.common.identity.Account;
+import com.eucalyptus.auth.euare.common.identity.DecodeSecurityTokenResponseType;
+import com.eucalyptus.auth.euare.common.identity.DecodeSecurityTokenResult;
+import com.eucalyptus.auth.euare.common.identity.DecodeSecurityTokenType;
+import com.eucalyptus.auth.euare.common.identity.DescribeAccountsResponseType;
+import com.eucalyptus.auth.euare.common.identity.DescribeAccountsType;
+import com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileResponseType;
+import com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileResult;
+import com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileType;
 import com.eucalyptus.auth.euare.common.identity.DescribePrincipalResponseType;
 import com.eucalyptus.auth.euare.common.identity.DescribePrincipalType;
+import com.eucalyptus.auth.euare.common.identity.DescribeRoleResponseType;
+import com.eucalyptus.auth.euare.common.identity.DescribeRoleResult;
+import com.eucalyptus.auth.euare.common.identity.DescribeRoleType;
 import com.eucalyptus.auth.euare.common.identity.Identity;
+import com.eucalyptus.auth.euare.common.identity.IdentityMessage;
 import com.eucalyptus.auth.euare.common.identity.Policy;
 import com.eucalyptus.auth.euare.common.identity.Principal;
+import com.eucalyptus.auth.euare.common.identity.SecurityToken;
+import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccessKey;
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
+import com.eucalyptus.auth.principal.AccountIdentifiersImpl;
 import com.eucalyptus.auth.principal.Certificate;
+import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.PolicyScope;
 import com.eucalyptus.auth.principal.PolicyVersion;
+import com.eucalyptus.auth.principal.Role;
+import com.eucalyptus.auth.principal.SecurityTokenContent;
+import com.eucalyptus.auth.principal.SecurityTokenContentImpl;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.EphemeralConfiguration;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.util.NonNullFunction;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 /**
  *
@@ -110,14 +136,157 @@ public class RemoteIdentityProvider implements IdentityProvider {
     return resultFor( request );
   }
 
+  @Override
+  public UserPrincipal lookupPrincipalByAccountNumberAndUsername(
+      final String accountNumber,
+      final String name
+  ) throws AuthException {
+    final DescribePrincipalType request = new DescribePrincipalType( );
+    request.setAccountId( accountNumber );
+    request.setUsername( name );
+    return resultFor( request );
+  }
+
+  @Override
+  public AccountIdentifiers lookupAccountIdentifiersByAlias( final String alias ) throws AuthException {
+    if ( Accounts.isSystemAccount( alias ) ) {
+      throw new AuthException( AuthException.NO_SUCH_ACCOUNT );
+    }
+    final DescribeAccountsType request = new DescribeAccountsType( );
+    request.setAlias( alias );
+    return resultFor( request );
+  }
+
+  @Override
+  public AccountIdentifiers lookupAccountIdentifiersByCanonicalId( final String canonicalId ) throws AuthException {
+    final DescribeAccountsType request = new DescribeAccountsType( );
+    request.setCanonicalId( canonicalId );
+    return resultFor( request );
+  }
+
+  @Override
+  public AccountIdentifiers lookupAccountIdentifiersByEmail( final String email ) throws AuthException {
+    final DescribeAccountsType request = new DescribeAccountsType( );
+    request.setEmail( email );
+    return resultFor( request );
+  }
+
+  @Override
+  public List<AccountIdentifiers> listAccountIdentifiersByAliasMatch( final String aliasExpression ) throws AuthException {
+    final DescribeAccountsType request = new DescribeAccountsType( );
+    request.setAliasLike( aliasExpression );
+    return resultListFor( request );
+  }
+
+  @Override
+  public InstanceProfile lookupInstanceProfileByName( final String accountNumber, final String name ) throws AuthException {
+    final DescribeInstanceProfileType request = new DescribeInstanceProfileType( );
+    request.setAccountId( accountNumber );
+    request.setInstanceProfileName( name );
+    try {
+      final DescribeInstanceProfileResponseType response = send( request );
+      final DescribeInstanceProfileResult result = response.getDescribeInstanceProfileResult();
+      final EuareResourceName profileErn = (EuareResourceName) Ern.parse( result.getInstanceProfile( ).getInstanceProfileArn( ) );
+      final Role role = TypeMappers.transform( result.getRole( ), Role.class );
+      return new InstanceProfile( ) {
+        @Override public String getAccountNumber( ) { return accountNumber; }
+        @Override public String getInstanceProfileId( ) { return result.getInstanceProfile( ).getInstanceProfileId( ); }
+        @Override public String getInstanceProfileArn( ) { return result.getInstanceProfile( ).getInstanceProfileArn(); }
+        @Nullable
+        @Override public Role getRole( ) { return role; }
+        @Override public String getName( ) { return profileErn.getName( ); }
+        @Override public String getPath( ) { return profileErn.getPath(); }
+      };
+    } catch ( Exception e ) {
+      throw new AuthException( e );
+    }
+  }
+
+  @Override
+  public Role lookupRoleByName( final String accountNumber, final String name ) throws AuthException {
+    final DescribeRoleType request = new DescribeRoleType( );
+    request.setAccountId( accountNumber );
+    request.setRoleName( name );
+    try {
+      final DescribeRoleResponseType response = send( request );
+      final DescribeRoleResult result = response.getDescribeRoleResult();
+      return TypeMappers.transform( result.getRole( ), Role.class );
+    } catch ( Exception e ) {
+      throw new AuthException( e );
+    }
+  }
+
+  @Override
+  public SecurityTokenContent decodeSecurityToken( final String accessKeyIdentifier,
+                                                   final String securityToken ) throws AuthException {
+    final DecodeSecurityTokenType request = new DecodeSecurityTokenType( );
+    request.setAccessKeyId( accessKeyIdentifier );
+    request.setSecurityToken( securityToken );
+    try {
+      final DecodeSecurityTokenResponseType response = send( request );
+      final DecodeSecurityTokenResult result = response.getDecodeSecurityTokenResult();
+      return TypeMappers.transform( result.getSecurityToken(), SecurityTokenContent.class );
+    } catch ( Exception e ) {
+      throw new AuthException( e );
+    }
+  }
+
+  @Override
+  public void reserveGlobalName( final String namespace,
+                                 final String name,
+                                 final Integer duration ) throws AuthException {
+    final ReserveNameType request = new ReserveNameType( );
+    request.setNamespace( namespace );
+    request.setName( name );
+    request.setDuration( duration );
+    try {
+      send( request );
+    } catch ( Exception e ) {
+      throw new AuthException( e );
+    }
+  }
+
+  private <R extends IdentityMessage> R send( final IdentityMessage request ) throws Exception {
+    final ServiceConfiguration config = new EphemeralConfiguration(
+        ComponentIds.lookup( Identity.class ),
+        "identity",
+        "identity",
+        URI.create( endpoints.iterator( ).next( ) ) ); //TODO:STEVE: endpoint handling
+    return AsyncRequests.sendSync( config, request );
+  }
+
+  private AccountIdentifiers resultFor( final DescribeAccountsType request ) throws AuthException {
+    try {
+      final DescribeAccountsResponseType response = send( request );
+      final List<Account> accounts = response.getDescribeAccountsResult( ).getAccounts( );
+      if ( accounts.size( ) != 1 ) {
+        throw new AuthException( "Account information not found" );
+      }
+      return TypeMappers.transform( Iterables.getOnlyElement( accounts ), AccountIdentifiers.class );
+    } catch ( AuthException e ) {
+      throw e;
+    } catch ( Exception e ) {
+      throw new AuthException( e );
+    }
+  }
+
+  private List<AccountIdentifiers> resultListFor( final DescribeAccountsType request ) throws AuthException {
+    try {
+      final DescribeAccountsResponseType response = send( request );
+      final List<Account> accounts = response.getDescribeAccountsResult( ).getAccounts( );
+      return Lists.newArrayList( Iterables.transform(
+          accounts,
+          TypeMappers.lookup( Account.class, AccountIdentifiers.class ) ) );
+    } catch ( AuthException e ) {
+      throw e;
+    } catch ( Exception e ) {
+      throw new AuthException( e );
+    }
+  }
+
   private UserPrincipal resultFor( final DescribePrincipalType request ) throws AuthException {
     try {
-      final ServiceConfiguration config = new EphemeralConfiguration(
-          ComponentIds.lookup( Identity.class ),
-          "identity",
-          "identity",
-          URI.create( endpoints.iterator( ).next( ) ) ); //TODO:STEVE: endpoint handling
-      final DescribePrincipalResponseType response = AsyncRequests.sendSync( config, request );
+      final DescribePrincipalResponseType response = send( request );
       final Principal principal = response.getDescribePrincipalResult( ).getPrincipal( );
       if ( principal == null ) {
         throw new AuthException( "Invalid identity" );
@@ -200,6 +369,18 @@ public class RemoteIdentityProvider implements IdentityProvider {
           return Accounts.isSystemAccount( getAccountAlias( ) );
         }
 
+        @Nullable
+        @Override
+        public String getPassword() {
+          return principal.getPasswordHash( );
+        }
+
+        @Nullable
+        @Override
+        public Long getPasswordExpires() {
+          return principal.getPasswordExpiry( );
+        }
+
         @Nonnull
         @Override
         public List<AccessKey> getKeys( ) {
@@ -259,6 +440,7 @@ public class RemoteIdentityProvider implements IdentityProvider {
           @Override public Boolean isActive( ) { return true; }
           @Override public void setActive( final Boolean active ) { }
           @Override public Boolean isRevoked( ) { return false; }
+          @Override public void setRevoked( final Boolean revoked ) { }
           @Override public String getPem( ) { return certificate.getCertificateBody( ); }
           @Override public X509Certificate getX509Certificate( ) { return null; }
           @Override public Date getCreateDate( ) { return null; }
@@ -266,6 +448,62 @@ public class RemoteIdentityProvider implements IdentityProvider {
         };
       }
     };
+  }
+
+  @TypeMapper
+  public enum AccountToAccountIdentifiersTransform implements Function<Account,AccountIdentifiers> {
+    INSTANCE;
+
+    @Nullable
+    @Override
+    public AccountIdentifiers apply( final Account account ) {
+      return new AccountIdentifiersImpl(
+        account.getAccountNumber( ),
+        account.getAlias( ),
+        account.getCanonicalId( )
+      );
+    }
+  }
+
+  @TypeMapper
+  public enum RoleToRoleTransform implements Function<com.eucalyptus.auth.euare.common.identity.Role,Role> {
+    INSTANCE;
+
+    @Nullable
+    @Override
+    public Role apply( final com.eucalyptus.auth.euare.common.identity.Role role ) {
+      final EuareResourceName roleErn = (EuareResourceName) Ern.parse( role.getRoleArn( ) );
+      final PolicyVersion rolePolicy = TypeMappers.transform( role.getAssumeRolePolicy( ), PolicyVersion.class );
+      return new Role( ) {
+        @Override public String getAccountNumber( ) { return roleErn.getNamespace( ); }
+        @Override public String getRoleId( ) { return role.getRoleId( ); }
+        @Override public String getRoleArn( ) { return role.getRoleArn( ); }
+        @Override public String getPath( ) { return roleErn.getPath( ); }
+        @Override public String getName( ) { return roleErn.getName(); }
+        @Override public String getSecret( ) { return role.getSecret(); }
+        @Override public PolicyVersion getPolicy( ) { return rolePolicy; }
+        @Override public String getDisplayName( ) { return Accounts.getRoleFullName( this ); }
+        @Override public OwnerFullName getOwner( ) { return AccountFullName.getInstance( getAccountNumber() ); }
+      };
+    }
+  }
+
+  @TypeMapper
+  public enum SecurityTokenToSecurityTokenContentTransform implements Function<SecurityToken,SecurityTokenContent> {
+    INSTANCE;
+
+    @Nullable
+    @Override
+    public SecurityTokenContent apply( final SecurityToken securityToken ) {
+      return new SecurityTokenContentImpl(
+          Optional.fromNullable( securityToken.getOriginatingAccessKeyId( ) ),
+          Optional.fromNullable( securityToken.getOriginatingUserId( ) ),
+          Optional.fromNullable( securityToken.getOriginatingRoleId( ) ),
+          securityToken.getNonce( ),
+          securityToken.getCreated( ),
+          securityToken.getExpires( )
+      );
+    }
   }
 
   @TypeMapper

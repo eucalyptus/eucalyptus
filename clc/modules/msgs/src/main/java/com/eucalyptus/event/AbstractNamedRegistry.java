@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -73,6 +73,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.LockResource;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -97,7 +98,13 @@ public abstract class AbstractNamedRegistry<TYPE extends HasFullName> {
       this.canHas.writeLock( ).unlock( );
     }
   }
-  
+
+  public void deregisterDisabled( String key ) {
+    try ( final LockResource lockResource = LockResource.lock( this.canHas.writeLock( ) ) ) {
+      this.disabledMap.remove( key );
+    }
+  }
+
   public void register( TYPE obj ) {
     TYPE tempObj = null;
     this.canHas.writeLock( ).lock( );
@@ -167,8 +174,8 @@ public abstract class AbstractNamedRegistry<TYPE extends HasFullName> {
       this.canHas.readLock( ).unlock( );
     }
   }
-  
-  public void disable( TYPE that ) throws NoSuchElementException {
+
+  public final void disable( TYPE that ) throws NoSuchElementException {
     this.disable( that.getName( ) );
   }
   

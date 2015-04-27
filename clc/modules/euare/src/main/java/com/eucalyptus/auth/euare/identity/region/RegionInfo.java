@@ -22,11 +22,18 @@ package com.eucalyptus.auth.euare.identity.region;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Set;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import com.eucalyptus.auth.api.IdentityProvider;
+import com.eucalyptus.auth.euare.RemoteIdentityProvider;
+import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.util.Parameters;
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 
@@ -61,6 +68,22 @@ public class RegionInfo {
 
   public Set<RegionService> getServices( ) {
     return services;
+  }
+
+  public static NonNullFunction<RegionInfo,Set<String>> serviceEndpoints( @Nonnull final String serviceType ) {
+    Parameters.checkParam( "serviceType", serviceType, notNullValue( ) );
+    return new NonNullFunction<RegionInfo, Set<String>>() {
+      @Nonnull
+      @Override
+      public Set<String> apply( final RegionInfo regionInfo ) {
+        for ( final RegionInfo.RegionService service : regionInfo.getServices() ) {
+          if ( serviceType.equals( service.getType() ) ) {
+            return service.getEndpoints( );
+          }
+        }
+        return Collections.emptySet( );
+      }
+    };
   }
 
   public static class RegionService implements Comparable<RegionService> {

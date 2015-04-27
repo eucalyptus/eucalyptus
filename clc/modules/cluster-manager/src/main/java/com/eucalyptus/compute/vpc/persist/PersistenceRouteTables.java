@@ -24,16 +24,14 @@ import java.util.Collections;
 import java.util.NoSuchElementException;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.component.annotation.ComponentNamed;
-import com.eucalyptus.compute.vpc.RouteTable;
-import com.eucalyptus.compute.vpc.RouteTables;
-import com.eucalyptus.compute.vpc.VpcMetadataException;
-import com.eucalyptus.compute.vpc.VpcMetadataNotFoundException;
-import com.eucalyptus.util.Callback;
+import com.eucalyptus.compute.common.internal.vpc.RouteTable;
+import com.eucalyptus.compute.common.internal.vpc.RouteTables;
+import com.eucalyptus.compute.common.internal.vpc.VpcMetadataException;
+import com.eucalyptus.compute.common.internal.vpc.VpcMetadataNotFoundException;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 
 /**
  *

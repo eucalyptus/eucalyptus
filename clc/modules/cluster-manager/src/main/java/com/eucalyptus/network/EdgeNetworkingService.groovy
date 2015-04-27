@@ -20,7 +20,7 @@
 package com.eucalyptus.network
 
 import com.eucalyptus.address.Addresses
-import com.eucalyptus.cloud.util.NotEnoughResourcesException
+import com.eucalyptus.compute.common.internal.util.NotEnoughResourcesException
 import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesResponseType
 import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesResult
 import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesType
@@ -35,7 +35,7 @@ import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType
 import com.eucalyptus.compute.common.network.UpdateInstanceResourcesResponseType
 import com.eucalyptus.compute.common.network.UpdateInstanceResourcesType
 import com.eucalyptus.compute.common.network.VpcNetworkInterfaceResource
-import com.eucalyptus.compute.vpc.Subnet
+import com.eucalyptus.compute.common.internal.vpc.Subnet
 import com.eucalyptus.entities.Entities
 import com.eucalyptus.entities.Transactions
 import com.eucalyptus.network.config.NetworkConfiguration
@@ -174,6 +174,7 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
       if ( Iterators.contains( addresses.iterator( ), PrivateAddresses.asInteger( privateIPResource.value ) ) ) {
         try {
           resource = new PrivateIPResource(
+              mac: mac( privateIPResource.ownerId  ),
               value: PrivateAddresses.allocate(
                   vpcId,
                   subnetId,
@@ -182,6 +183,7 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
         } catch ( NotEnoughResourcesException e ) {
           if ( PrivateAddresses.verify( vpcId, privateIPResource.value, privateIPResource.ownerId ) ) {
             resource = new PrivateIPResource(
+                mac: mac( privateIPResource.ownerId  ),
                 value: privateIPResource.value,
                 ownerId: privateIPResource.ownerId )
           } else {
@@ -196,6 +198,7 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
       }
     } else {
       resource = new PrivateIPResource(
+          mac: mac( privateIPResource.ownerId  ),
           value: PrivateAddresses.allocate( vpcId, subnetId, addresses ),
           ownerId: privateIPResource.ownerId )
     }

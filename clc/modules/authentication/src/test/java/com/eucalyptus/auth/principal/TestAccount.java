@@ -44,6 +44,10 @@ public class TestAccount implements Account {
     this.name = name;
   }
 
+  public void setNameUnsafe( final String name ) {
+    setName( name );
+  }
+
   @Override
   public String getDisplayName() {
     return Accounts.getAccountFullName( this );
@@ -60,6 +64,11 @@ public class TestAccount implements Account {
 
   public void setAccountNumber( final String accountNumber ) {
     this.accountNumber = accountNumber;
+  }
+
+  @Override
+  public String getAccountAlias( ) {
+    return getName( );
   }
 
   public String getCanonicalId() {
@@ -81,12 +90,12 @@ public class TestAccount implements Account {
   }
 
   @Override
-  public List<Role> getRoles() throws AuthException {
+  public List<EuareRole> getRoles() throws AuthException {
     throw new AuthException( "Not implemented" );
   }
 
   @Override
-  public List<InstanceProfile> getInstanceProfiles() throws AuthException {
+  public List<BaseInstanceProfile> getInstanceProfiles() throws AuthException {
     throw new AuthException( "Not implemented" );
   }
 
@@ -101,7 +110,7 @@ public class TestAccount implements Account {
   }
 
   @Override
-  public Role addRole( final String roleName, final String path, final String assumeRolePolicy ) throws AuthException, PolicyParseException {
+  public EuareRole addRole( final String roleName, final String path, final String assumeRolePolicy ) throws AuthException, PolicyParseException {
     throw new AuthException( "Not implemented" );
   }
 
@@ -121,7 +130,7 @@ public class TestAccount implements Account {
   }
 
   @Override
-  public InstanceProfile addInstanceProfile( final String instanceProfileName, final String path ) throws AuthException {
+  public BaseInstanceProfile addInstanceProfile( final String instanceProfileName, final String path ) throws AuthException {
     throw new AuthException( "Not implemented" );
   }
 
@@ -141,12 +150,12 @@ public class TestAccount implements Account {
   }
 
   @Override
-  public Role lookupRoleByName( final String roleName ) throws AuthException {
+  public EuareRole lookupRoleByName( final String roleName ) throws AuthException {
     throw new AuthException( "Not implemented" );
   }
 
   @Override
-  public InstanceProfile lookupInstanceProfileByName( final String instanceProfileName ) throws AuthException {
+  public BaseInstanceProfile lookupInstanceProfileByName( final String instanceProfileName ) throws AuthException {
     throw new AuthException( "Not implemented" );
   }
 

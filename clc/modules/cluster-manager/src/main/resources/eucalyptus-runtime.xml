@@ -76,20 +76,6 @@
       <outbound-endpoint ref="ReplyQueueEndpoint"/>
     </default-service-exception-strategy>
 
-    <service name="Spot">
-      <inbound>
-        <inbound-endpoint ref="SpotWS"/>
-      </inbound>
-      <component class="com.eucalyptus.vm.SpotManager"/>
-    </service>
-
-    <service name="Reserved">
-      <inbound>
-        <inbound-endpoint ref="ReservedWS"/>
-      </inbound>
-      <component class="com.eucalyptus.vm.ReservedManager"/>
-    </service>
-
     <service name="VmControl">
       <inbound>
         <inbound-endpoint ref="VmControlWS"/>

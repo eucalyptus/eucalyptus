@@ -110,7 +110,6 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 				if(address==null || address.length()<=0)
 					continue;
 				try{
-				  EucalyptusActivityTasks.getInstance().removeARecord(dns.getZone(), dns.getName(), address);
 				  try ( final TransactionResource db =
 				      Entities.transactionFor(LoadBalancerServoInstance.class)){
 				    try{
@@ -128,12 +127,6 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 					LOG.error(String.format("failed to remove dns a record (zone=%s, name=%s, address=%s)", 
 							dns.getZone(), dns.getName(), address), ex);
 				}
-			}
-			
-			try{
-				EucalyptusActivityTasks.getInstance().removeMultiARecord(dns.getZone(), dns.getName());
-			}catch(Exception ex){
-				LOG.error(String.format("failed to remove dns a record (zone=%s,  name=%s)", dns.getZone(), dns.getName()), ex);
 			}
 		}
 

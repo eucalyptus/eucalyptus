@@ -1,6 +1,6 @@
 # Makefile for eucalyptus/tools
 #
-# Copyright 2009-2013 Eucalyptus Systems, Inc.
+# Copyright 2009-2015 Eucalyptus Systems, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -132,7 +132,12 @@ install: build
 	@$(INSTALL) -m 755 euca-upgrade $(DESTDIR)$(libexecdir)/eucalyptus
 	@$(INSTALL) -m 644 iptables-preload.template $(DESTDIR)$(datarootdir)/eucalyptus/doc/
 	@$(INSTALL) -m 644 nginx_proxy.conf $(DESTDIR)$(datarootdir)/eucalyptus
-	@make -C status install 
+	@$(INSTALL) -m 755 clcadmin-copy-keys $(DESTDIR)$(sbindir)/clcadmin-copy-keys
+	@$(INSTALL) -m 755 clcadmin-copy-keys $(DESTDIR)$(sbindir)/clusteradmin-copy-keys
+	@$(INSTALL) -m 755 clcadmin-initialize-cloud $(DESTDIR)$(sbindir)/clcadmin-initialize-cloud
+	@$(INSTALL) -m 755 clusteradmin-register-nodes $(DESTDIR)$(sbindir)/clusteradmin-register-nodes
+	@$(INSTALL) -m 755 clusteradmin-register-nodes $(DESTDIR)$(sbindir)/clusteradmin-deregister-nodes
+	@make -C status install
 	@make -C imaging install
 
 uninstall:

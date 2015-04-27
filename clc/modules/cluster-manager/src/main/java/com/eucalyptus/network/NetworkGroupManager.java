@@ -62,12 +62,10 @@
 
 package com.eucalyptus.network;
 
-import static com.eucalyptus.tags.Filters.FiltersBuilder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 
 import javax.annotation.Nullable;
@@ -77,39 +75,30 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.ClientUnauthorizedComputeException;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.common.CloudMetadatas;
-import com.eucalyptus.cloud.util.MetadataConstraintException;
-import com.eucalyptus.cloud.util.MetadataException;
-import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.compute.common.internal.network.NetworkGroup;
+import com.eucalyptus.compute.common.internal.network.NetworkRule;
+import com.eucalyptus.compute.common.internal.util.MetadataConstraintException;
+import com.eucalyptus.compute.common.internal.util.MetadataException;
+import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
 import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.common.IpPermissionType;
-import com.eucalyptus.compute.common.ResourceTag;
-import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.compute.common.UserIdGroupPairType;
-import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
-import com.eucalyptus.compute.identifier.ResourceIdentifiers;
-import com.eucalyptus.compute.vpc.Vpc;
+import com.eucalyptus.compute.common.internal.identifier.InvalidResourceIdentifier;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.common.internal.vpc.Vpc;
 import com.eucalyptus.compute.vpc.VpcConfiguration;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.tags.Filter;
-import com.eucalyptus.tags.Filters;
-import com.eucalyptus.tags.Tag;
-import com.eucalyptus.tags.TagSupport;
-import com.eucalyptus.tags.Tags;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.Strings;
-import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.google.common.base.CharMatcher;
-import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
@@ -127,8 +116,6 @@ import com.eucalyptus.compute.common.backend.CreateSecurityGroupResponseType;
 import com.eucalyptus.compute.common.backend.CreateSecurityGroupType;
 import com.eucalyptus.compute.common.backend.DeleteSecurityGroupResponseType;
 import com.eucalyptus.compute.common.backend.DeleteSecurityGroupType;
-import com.eucalyptus.compute.common.backend.DescribeSecurityGroupsResponseType;
-import com.eucalyptus.compute.common.backend.DescribeSecurityGroupsType;
 import com.eucalyptus.compute.common.backend.RevokeSecurityGroupEgressResponseType;
 import com.eucalyptus.compute.common.backend.RevokeSecurityGroupEgressType;
 import com.eucalyptus.compute.common.backend.RevokeSecurityGroupIngressResponseType;
@@ -221,76 +208,6 @@ public class NetworkGroupManager {
           "Specified group cannot be deleted because it is in use." );
     }
     return reply;
-  }
-  
-  public DescribeSecurityGroupsResponseType describe( final DescribeSecurityGroupsType request ) throws EucalyptusCloudException, MetadataException, TransactionException {
-      final DescribeSecurityGroupsResponseType reply = request.getReply();
-      final Context ctx = Contexts.lookup();
-      final boolean showAll =
-          request.getSecurityGroupSet( ).remove( "verbose" ) ||
-          request.getSecurityGroupIdSet( ).remove( "verbose" );
-
-      NetworkGroups.createDefault( ctx.getUserFullName() ); //ensure the default group exists to cover some old broken installs
-
-      final FiltersBuilder builder = Filters.generateFor( request.getFilterSet( ), NetworkGroup.class );
-      if ( ( request.getSecurityGroupSet( ).isEmpty( ) && !request.getSecurityGroupIdSet( ).isEmpty( ) ) ||
-          ( !request.getSecurityGroupSet( ).isEmpty( ) && request.getSecurityGroupIdSet( ).isEmpty( ) )) {
-        builder.withOptionalInternalFilter( "group-name", request.getSecurityGroupSet( ) );
-        builder.withOptionalInternalFilter( "group-id", normalizeGroupIdentifiers( request.getSecurityGroupIdSet( ) ) );
-      }
-      final Filter filter = builder.generate( );
-      final Predicate<? super NetworkGroup> requestedAndAccessible =
-          CloudMetadatas.filteringFor( NetworkGroup.class )
-              .byPredicate( Predicates.or(
-                  request.getSecurityGroupSet( ).isEmpty() && request.getSecurityGroupIdSet( ).isEmpty() ?
-                      Predicates.<NetworkGroup>alwaysTrue() :
-                      Predicates.<NetworkGroup>alwaysFalse(),
-                  request.getSecurityGroupSet( ).isEmpty() ?
-                      Predicates.<NetworkGroup>alwaysFalse() :
-                      CloudMetadatas.<NetworkGroup>filterById( request.getSecurityGroupSet( ) ),
-                  request.getSecurityGroupIdSet( ).isEmpty() ?
-                      Predicates.<NetworkGroup>alwaysFalse() :
-                      CloudMetadatas.filterByProperty( normalizeGroupIdentifiers( request.getSecurityGroupIdSet( ) ), NetworkGroups.groupId() ) ) )
-              .byPredicate( filter.asPredicate( ) )
-              .byPrivileges()
-              .buildPredicate();
-
-      final OwnerFullName ownerFn = Contexts.lookup( ).isAdministrator( ) && showAll ?
-          null :
-          AccountFullName.getInstance( ctx.getAccountNumber( ) );
-
-      final Iterable<SecurityGroupItemType> securityGroupItems = 
-          Entities.asDistinctTransaction( NetworkGroup.class, new Function<Void, Iterable<SecurityGroupItemType>>() {
-        @Nullable
-        @Override
-        public Iterable<SecurityGroupItemType> apply( @Nullable final Void aVoid ) {
-          try {
-            return Transactions.filteredTransform(
-                NetworkGroup.withOwner( ownerFn ),
-                filter.asCriterion(),
-                filter.getAliases(),
-                requestedAndAccessible,
-                TypeMappers.lookup( NetworkGroup.class, SecurityGroupItemType.class ) );
-          } catch ( TransactionException e ) {
-            if ( Exceptions.isCausedBy( e, EntityNotFoundException.class ) ) {
-              // A rule may have been deleted, retry
-              throw new Entities.RetryTransactionException( e, NetworkGroup.class );
-            }
-            throw Exceptions.toUndeclared( e );
-          }
-        }
-      } ).apply( null );
-
-      final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( NetworkGroup.class )
-          .getResourceTagMap( AccountFullName.getInstance( ctx.getAccountNumber( ) ),
-              Iterables.transform( securityGroupItems, SecurityGroupItemToGroupId.INSTANCE ) );
-      for ( final SecurityGroupItemType securityGroupItem : securityGroupItems ) {
-        Tags.addFromTags( securityGroupItem.getTagSet(), ResourceTag.class, tagsMap.get( securityGroupItem.getGroupId() ) );
-      }
-
-      Iterables.addAll( reply.getSecurityGroupInfo( ), securityGroupItems );
-
-      return reply;
   }
 
   public RevokeSecurityGroupIngressResponseType revokeSecurityGroupIngress( final RevokeSecurityGroupIngressType request ) throws EucalyptusCloudException {
@@ -689,23 +606,4 @@ public class NetworkGroupManager {
         identifier, NetworkGroup.ID_PREFIX, true, "Invalid id: \"%s\" (expecting \"sg-...\")" );
   }
 
-
-  private static List<String> normalizeGroupIdentifiers( final List<String> identifiers ) throws EucalyptusCloudException {
-    try {
-      return ResourceIdentifiers.normalize( NetworkGroup.ID_PREFIX, identifiers );
-    } catch ( final InvalidResourceIdentifier e ) {
-      throw new ClientComputeException(
-          "InvalidGroupId.Malformed",
-          "Invalid id: \""+e.getIdentifier()+"\" (expecting \"sg-...\")" );
-    }
-  }
-
-  private enum SecurityGroupItemToGroupId implements Function<SecurityGroupItemType, String> {
-    INSTANCE {
-      @Override
-      public String apply( SecurityGroupItemType securityGroupItemType ) {
-        return securityGroupItemType.getGroupId();
-      }
-    }
-  }
 }

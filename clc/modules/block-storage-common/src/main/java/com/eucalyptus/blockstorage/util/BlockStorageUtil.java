@@ -73,8 +73,10 @@ import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
+import com.eucalyptus.auth.principal.BaseRole;
+import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.Policy;
-import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.Components;
@@ -211,20 +213,20 @@ public class BlockStorageUtil {
    * failure is followed by a lookup again before exiting the method. This process is repeated for every resource separately as they could be
    * concurrently processed by another SC
    */
-  public static Role checkAndConfigureBlockStorageAccount() throws EucalyptusCloudException {
+  public static BaseRole checkAndConfigureBlockStorageAccount() throws EucalyptusCloudException {
     Account blockStorageAccount = null;
-    Role role = null;
+    EuareRole role = null;
 
     // Lookup blockstorage account. It should have been setup by the database bootstrapper. If not set it up here
     try {
-      blockStorageAccount = Accounts.lookupAccountByName(Account.BLOCKSTORAGE_SYSTEM_ACCOUNT);
+      blockStorageAccount = Accounts.lookupAccountByName( AccountIdentifiers.BLOCKSTORAGE_SYSTEM_ACCOUNT);
     } catch (Exception e) {
-      LOG.warn("Could not find account " + Account.BLOCKSTORAGE_SYSTEM_ACCOUNT + ". Account may not exist, trying to create it");
+      LOG.warn("Could not find account " + AccountIdentifiers.BLOCKSTORAGE_SYSTEM_ACCOUNT + ". Account may not exist, trying to create it");
       try {
-        blockStorageAccount = Accounts.addSystemAccountWithAdmin(Account.BLOCKSTORAGE_SYSTEM_ACCOUNT);
+        blockStorageAccount = Accounts.addSystemAccountWithAdmin(AccountIdentifiers.BLOCKSTORAGE_SYSTEM_ACCOUNT);
       } catch (Exception e1) {
-        LOG.warn("Failed to create account " + Account.BLOCKSTORAGE_SYSTEM_ACCOUNT);
-        throw new EucalyptusCloudException("Failed to create account " + Account.BLOCKSTORAGE_SYSTEM_ACCOUNT);
+        LOG.warn("Failed to create account " + AccountIdentifiers.BLOCKSTORAGE_SYSTEM_ACCOUNT);
+        throw new EucalyptusCloudException("Failed to create account " + AccountIdentifiers.BLOCKSTORAGE_SYSTEM_ACCOUNT);
       }
     }
 
@@ -232,7 +234,7 @@ public class BlockStorageUtil {
     try {
       role = blockStorageAccount.lookupRoleByName(StorageProperties.EBS_ROLE_NAME);
     } catch (Exception e) {
-      LOG.debug("Could not find " + StorageProperties.EBS_ROLE_NAME + " role for " + Account.BLOCKSTORAGE_SYSTEM_ACCOUNT
+      LOG.debug("Could not find " + StorageProperties.EBS_ROLE_NAME + " role for " + AccountIdentifiers.BLOCKSTORAGE_SYSTEM_ACCOUNT
           + " account. The role may not exist, trying to add role to the account");
       try {
         role = blockStorageAccount.addRole(StorageProperties.EBS_ROLE_NAME, "/blockstorage", StorageProperties.DEFAULT_ASSUME_ROLE_POLICY);
@@ -241,9 +243,9 @@ public class BlockStorageUtil {
         try {
           role = blockStorageAccount.lookupRoleByName(StorageProperties.EBS_ROLE_NAME);
         } catch (Exception e2) {
-          LOG.warn("Could not find " + StorageProperties.EBS_ROLE_NAME + " role for " + Account.BLOCKSTORAGE_SYSTEM_ACCOUNT
+          LOG.warn("Could not find " + StorageProperties.EBS_ROLE_NAME + " role for " + AccountIdentifiers.BLOCKSTORAGE_SYSTEM_ACCOUNT
               + " account and failed to assign the role to the account", e2);
-          throw new EucalyptusCloudException("Could not find " + StorageProperties.EBS_ROLE_NAME + " role for " + Account.BLOCKSTORAGE_SYSTEM_ACCOUNT
+          throw new EucalyptusCloudException("Could not find " + StorageProperties.EBS_ROLE_NAME + " role for " + AccountIdentifiers.BLOCKSTORAGE_SYSTEM_ACCOUNT
               + " account and failed to assign the role to the account");
         }
       }
@@ -320,10 +322,10 @@ public class BlockStorageUtil {
     } catch (EucalyptusCloudException e) {
       throw e;
     } catch (Exception e) {
-      LOG.warn("Could not fetch the policies for " + StorageProperties.EBS_ROLE_NAME + " role assigned to " + Account.BLOCKSTORAGE_SYSTEM_ACCOUNT
+      LOG.warn("Could not fetch the policies for " + StorageProperties.EBS_ROLE_NAME + " role assigned to " + AccountIdentifiers.BLOCKSTORAGE_SYSTEM_ACCOUNT
           + " account", e);
       throw new EucalyptusCloudException("Could not fetch the policies for " + StorageProperties.EBS_ROLE_NAME + " role assigned to "
-          + Account.BLOCKSTORAGE_SYSTEM_ACCOUNT + " account");
+          + AccountIdentifiers.BLOCKSTORAGE_SYSTEM_ACCOUNT + " account");
     }
   }
 }

@@ -104,7 +104,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 				    		  onPropertyChange((String)newValue, null, null, null);
 				      }
 			    } catch ( final Exception e ) {
-					throw new ConfigurablePropertyException("Could not change EMI ID", e);
+					throw new ConfigurablePropertyException("Could not change EMI ID due to: " + e.getMessage());
 			    }
 			}
 	}
@@ -120,22 +120,20 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 						 onPropertyChange(null, (String)newValue, null, null);
 			      }
 			    } catch ( final Exception e ) {
-					throw new ConfigurablePropertyException("Could not change instance type", e);
+			      throw new ConfigurablePropertyException("Could not change instance type due to: " + e.getMessage());
 			    }
 			}
 	}
 	
-	public static class ElbKeyNameChangeListener implements PropertyChangeListener {
+	public static class ElbKeyNameChangeListener implements PropertyChangeListener<String> {
 		   @Override
-		   public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
-			    try {
-			      if ( newValue instanceof String ) {	  
-			    	  if(t.getValue()!=null && ! t.getValue().equals(newValue))
-			    		  onPropertyChange(null, null, (String)newValue, null);
-			      }
-			    } catch ( final Exception e ) {
-					throw new ConfigurablePropertyException("Could not change key name", e);
-			    }
+		   public void fireChange( ConfigurableProperty t, String newValue ) throws ConfigurablePropertyException {
+			   try {
+			     if(t.getValue()!=null && !t.getValue().equals(newValue))
+			       onPropertyChange(null, null, newValue, null);
+			   } catch ( final Exception e ) {
+			     throw new ConfigurablePropertyException("Could not change key name due to: " + e.getMessage());
+			   }
 			}
 	}
 	
@@ -155,9 +153,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 	
 	private static void onPropertyChange(final String emi, final String instanceType,
 	    final String keyname, String initScript) throws EucalyptusCloudException{
-		if (!( Bootstrap.isFinished() &&
-		          Topology.isEnabledLocally( LoadBalancingBackend.class ) &&
-		          Topology.isEnabled( Eucalyptus.class ) ) )
+	  if (!( Bootstrap.isFinished() && Topology.isEnabled( Eucalyptus.class ) ) )
 			return;
 		
 		// should validate the parameters
@@ -176,13 +172,13 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 			}
 		}
 		
-		if(keyname != null && ! keyname.equals("")){
+		if(keyname != null && !keyname.equals("")){
 			try{
 				final List<DescribeKeyPairsResponseItemType> keypairs =
 						EucalyptusActivityTasks.getInstance().describeKeyPairs(Lists.newArrayList(keyname));
-				if(keypairs ==null || keypairs.size()<=0)
+				if( keypairs==null || keypairs.size()<=0 )
 					throw new EucalyptusCloudException("No such keypair is found in the system");
-				if(! keypairs.get(0).getKeyName().equals(keyname))
+				if( !keypairs.get(0).getKeyName().equals(keyname))
 					throw new EucalyptusCloudException("No such keypair is found in the system");
 			}catch(final EucalyptusCloudException ex){
 				throw ex;
@@ -191,8 +187,12 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 			}
 		}
 		
-		if((emi!=null && emi.length()>0) || (instanceType!=null && instanceType.length()>0) || (keyname!=null && keyname.length()>0) || (initScript != null) ){
-			// 
+		if( !Topology.isEnabledLocally( LoadBalancingBackend.class ) )
+		  return;
+
+		if ((emi!=null && emi.length()>0) ||
+		      (instanceType!=null && instanceType.length()>0) ||
+		      (keyname!=null && keyname.length()>0) || (initScript != null) ){
 			final List<LoadBalancer> lbs = LoadBalancers.listLoadbalancers();
 			for(final LoadBalancer lb : lbs){
 				final LoadBalancerAutoScalingGroupCoreView asg = lb.getAutoScaleGroup();
@@ -656,7 +656,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 	}
 
 	static String getAutoScalingGroupName( final String ownerAccountNumber, final String loadBalancerName ) {
-		String groupName = String.format("asg-euca-internal-elb-%s-%s", ownerAccountNumber, loadBalancerName );
+		String groupName = String.format("euca-internal-elb-%s-%s", ownerAccountNumber, loadBalancerName );
 		if(groupName.length()>255)
 			groupName = groupName.substring(0, 255);
 		return groupName;
@@ -664,9 +664,10 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 
 	public static String getLoadBalancerUserData(String initScript) {
     Map<String, String> kvMap = new HashMap<String, String>();
-    if (NTP_SERVER != null)
-      kvMap.put("ntp_server", NTP_SERVER);
 
+    if (NTP_SERVER != null){
+      kvMap.put("ntp_server", NTP_SERVER);
+    }
     if(APP_COOKIE_DURATION != null){
       kvMap.put("app-cookie-duration", APP_COOKIE_DURATION);
     }

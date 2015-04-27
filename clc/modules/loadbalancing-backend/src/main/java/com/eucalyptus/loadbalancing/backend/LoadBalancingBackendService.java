@@ -33,6 +33,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.EntityNotFoundException;
 import javax.persistence.OptimisticLockException;
@@ -1728,6 +1729,7 @@ public class LoadBalancingBackendService {
     try ( final TransactionResource db = Entities.transactionFor( LoadBalancer.class ) ){
       final LoadBalancer update = Entities.uniqueResult(lb);
       update.setHealthCheck(healthyThreshold, interval, target, timeout, unhealthyThreshold);
+      hc.setTarget( update.getHealthCheckTarget( ) );
       Entities.persist(update);
       db.commit();
     }catch(final IllegalArgumentException ex){
@@ -1743,22 +1745,18 @@ public class LoadBalancingBackendService {
   }
 
   public DescribeInstanceHealthResponseType describeInstanceHealth(DescribeInstanceHealthType request) throws EucalyptusCloudException {
-    DescribeInstanceHealthResponseType reply = request.getReply( );
+    final DescribeInstanceHealthResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
- 	final String lbName = request.getLoadBalancerName();
- 	Instances instances = request.getInstances();
- 	
-	LoadBalancer lb;
-	try{
-		lb= LoadBalancers.getLoadbalancer(ctx, lbName);
-	}catch(NoSuchElementException ex){
-		throw new AccessPointNotFoundException();
-    }catch(Exception ex){
-    	throw new InternalFailure400Exception("Failed to find the loadbalancer");
-    }
- 	
-    if( lb!=null && !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
-	    throw new AccessPointNotFoundException();
+    final String lbName = request.getLoadBalancerName();
+    final Instances instances = request.getInstances();
+
+    LoadBalancer lb;
+    try {
+      lb = lookupAuthorizedByNameOrDnsName( ctx.getUser().getAccountNumber(), lbName );
+    } catch ( final LoadBalancingException e ) {
+      throw e;
+    } catch( Exception ex ){
+      throw new InternalFailureException("Failed to find the loadbalancer");
     }
 
 	List<LoadBalancerBackendInstanceCoreView> lbInstances = Lists.newArrayList(lb.getBackendInstances());
@@ -1915,18 +1913,15 @@ public class LoadBalancingBackendService {
       reply.setDescribeLoadBalancerPoliciesResult(result);
     }else{
       LoadBalancer lb;
-      try{
-        lb= LoadBalancers.getLoadbalancer(ctx, lbName);
-      }catch(NoSuchElementException ex){
-        throw new AccessPointNotFoundException();
-      }catch(final Exception ex){
+      try {
+        lb = lookupAuthorizedByNameOrDnsName( ctx.getUser().getAccountNumber(), lbName );
+      } catch ( final LoadBalancingException e ) {
+        throw e;
+      } catch ( final Exception ex ){
         LOG.error("Failed to find the loadbalancer", ex);
-        throw new InternalFailure400Exception("Failed to find the loadbalancer");
+        throw new InternalFailureException("Failed to find the loadbalancer");
       }
 
-      if( lb!=null && !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
-        throw new AccessPointNotFoundException();
-      }
       List<LoadBalancerPolicyDescription> lbPolicies;
       try{
         if(policyNames != null && policyNames.getMember()!=null && policyNames.getMember().size()>0)
@@ -2688,27 +2683,54 @@ public class LoadBalancingBackendService {
       @Override
       public LoadBalancerAttributes apply( final String identifier ) {
         try {
-          final LoadBalancer example = LoadBalancer.namedByAccountId( accountNumber, identifier );
-          final LoadBalancer loadBalancer = Entities.uniqueResult( example );
-          if ( RestrictedTypes.filterPrivileged( ).apply( loadBalancer ) ) {
-            return TypeMappers.transform( loadBalancer, LoadBalancerAttributes.class );
-          } else {
-            throw new NoSuchElementException( );
-          }
-        } catch ( NoSuchElementException e ) {
-          throw Exceptions.toUndeclared( new AccessPointNotFoundException( ) );
-        } catch ( TransactionException e ) {
+          final LoadBalancer loadBalancer = lookupAuthorizedByNameOrDnsName( accountNumber, identifier );
+          return TypeMappers.transform( loadBalancer, LoadBalancerAttributes.class );
+        } catch ( Exception e ) {
           throw Exceptions.toUndeclared( e );
         }
       }
     };
 
-    final LoadBalancerAttributes attributes =
-        Entities.asTransaction( LoadBalancer.class, lookupAttributes ).apply( request.getLoadBalancerName( ) );
+    try {
+      final LoadBalancerAttributes attributes =
+          Entities.asTransaction( LoadBalancer.class, lookupAttributes ).apply( request.getLoadBalancerName() );
 
-    reply.getDescribeLoadBalancerAttributesResult( ).setLoadBalancerAttributes( attributes );
+      reply.getDescribeLoadBalancerAttributesResult().setLoadBalancerAttributes( attributes );
+    } catch ( RuntimeException e ) {
+      Exceptions.findAndRethrow( e, LoadBalancingException.class );
+      throw e;
+    }
 
     return reply;
+  }
+
+  /**
+   * Lookup by name and verify permissions.
+   */
+  @Nonnull
+  private static LoadBalancer lookupAuthorizedByNameOrDnsName( final String accountNumber, final String name ) throws LoadBalancingException {
+    LoadBalancer loadBalancer;
+    try {
+      loadBalancer = LoadBalancers.getLoadbalancer( accountNumber, name );
+    } catch( final NoSuchElementException e ) {
+      try {
+        loadBalancer = LoadBalancers.getLoadBalancerByDnsName( name );
+      } catch( final NoSuchElementException e2 ) {
+        throw new AccessPointNotFoundException( );
+      } catch( final Exception e2 ){
+        LOG.error( "Failed to find loadbalancer by DNS name" + accountNumber + ":" + name , e2 );
+        throw new InternalFailureException( "Failed to find loadbalancer " + name );
+      }
+    } catch( final Exception e ){
+      LOG.error( "Failed to find loadbalancer " + accountNumber + ":" + name , e );
+      throw new InternalFailureException( "Failed to find loadbalancer " + name );
+    }
+
+    if( !LoadBalancingMetadatas.filterPrivileged( ).apply( loadBalancer ) ) {
+      throw new AccessPointNotFoundException( );
+    }
+
+    return loadBalancer;
   }
 
   private static Predicate<String> isReservedTagPrefix( ) {

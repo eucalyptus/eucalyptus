@@ -21,9 +21,9 @@ package com.eucalyptus.compute.vpc.persist;
 
 import static com.eucalyptus.compute.common.CloudMetadata.NetworkInterfaceMetadata;
 import com.eucalyptus.component.annotation.ComponentNamed;
-import com.eucalyptus.compute.vpc.NetworkInterface;
-import com.eucalyptus.compute.vpc.NetworkInterfaces;
-import com.eucalyptus.compute.vpc.VpcMetadataException;
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterfaces;
+import com.eucalyptus.compute.common.internal.vpc.VpcMetadataException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,27 +19,20 @@
  ************************************************************************/
 package com.eucalyptus.auth.principal;
 
-import java.util.Date;
 import javax.annotation.Nullable;
-import com.eucalyptus.auth.AuthException;
 
 /**
  *
  */
-public interface InstanceProfile {
+public interface InstanceProfile extends BaseInstanceProfile {
 
-  Account getAccount( ) throws AuthException;
+  String getAccountNumber( );
 
   String getInstanceProfileId( );
 
-  String getName( );
-
-  String getPath( );
+  String getInstanceProfileArn( );
 
   @Nullable
-  Role getRole( ) throws AuthException;
-  void setRole( @Nullable Role role ) throws AuthException;
-
-  Date getCreationTimestamp();
+  Role getRole( );
 
 }

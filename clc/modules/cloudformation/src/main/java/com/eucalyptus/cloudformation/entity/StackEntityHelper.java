@@ -41,23 +41,6 @@ public class StackEntityHelper {
 
   private static ObjectMapper mapper = new ObjectMapper();
 
-  public static Map<String, List<String>> jsonToAvailabilityZoneMap(String availabilityZoneMapJson) throws CloudFormationException {
-    try {
-      return availabilityZoneMapJson == null ? Maps.<String, List<String>>newLinkedHashMap() :
-        (Map<String, List<String>>) mapper.readValue(availabilityZoneMapJson, new TypeReference<LinkedHashMap<String, List<String>>>(){});
-    } catch (IOException e) {
-      throw new ValidationErrorException(e.getMessage());
-    }
-  }
-
-  public static String availabilityZoneMapToJson(Map<String, List<String>> availabilityZoneMap) throws CloudFormationException {
-    try {
-      return mapper.writeValueAsString(availabilityZoneMap == null ? Maps.<String, List<String>>newLinkedHashMap() : availabilityZoneMap);
-    } catch (JsonProcessingException e) {
-      throw new ValidationErrorException(e.getMessage());
-    }
-  }
-
   public static ArrayList<String> jsonToCapabilities(String capabilitiesJson) throws CloudFormationException {
     try {
       return capabilitiesJson == null ? Lists.<String>newArrayList() :
@@ -219,7 +202,6 @@ public class StackEntityHelper {
   public static void populateTemplateWithStackEntity(Template template, StackEntity stackEntity) throws CloudFormationException {
     template.setDescription(stackEntity.getDescription());
     template.setPseudoParameterMap(jsonToPseudoParameterMap(stackEntity.getPseudoParameterMapJson()));
-    template.setAvailabilityZoneMap(jsonToAvailabilityZoneMap(stackEntity.getAvailabilityZoneMapJson()));
     template.setTemplateFormatVersion(stackEntity.getTemplateFormatVersion());
     template.setMapping(jsonToMapping(stackEntity.getMappingJson()));
     template.setParameters(jsonToParameters(stackEntity.getParametersJson()));
@@ -231,7 +213,6 @@ public class StackEntityHelper {
   public static void populateStackEntityWithTemplate(StackEntity stackEntity, Template template) throws CloudFormationException {
     stackEntity.setDescription(template.getDescription());
     stackEntity.setPseudoParameterMapJson(pseudoParameterMapToJson(template.getPseudoParameterMap()));
-    stackEntity.setAvailabilityZoneMapJson(availabilityZoneMapToJson(template.getAvailabilityZoneMap()));
     stackEntity.setTemplateFormatVersion(template.getTemplateFormatVersion());
     stackEntity.setMappingJson(mappingToJson(template.getMapping()));
     stackEntity.setParametersJson(parametersToJson(template.getParameters()));

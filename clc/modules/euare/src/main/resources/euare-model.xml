@@ -80,7 +80,10 @@
                  exchange-pattern="request-response"/>
 
   <endpoint name="EuareWS" address="vm://Euare" exchange-pattern="one-way"/>
+  <endpoint name="EuareRemoteWS" address="vm://EuareRemote" exchange-pattern="one-way"/>
   <endpoint name="EuareInternalVM" address="vm://EuareInternal" exchange-pattern="request-response"/>
+  <endpoint name="EuareInternalLocalEndpoint" address="vm://EuareInternalLocal" exchange-pattern="request-response"/>
+  <endpoint name="EuareInternalRemoteEndpoint" address="vm://EuareInternalRemote" exchange-pattern="request-response"/>
   <endpoint name="EuareReplyQueueWS" address="vm://EuareReplyQueue" exchange-pattern="one-way"/>
 	<model name="euare">
 
@@ -93,6 +96,13 @@
 				<vm:inbound-endpoint ref="EuareRequestQueueEndpoint" />
 			</inbound>
 			<outbound>
+				<filtering-router>
+					<outbound-endpoint ref="EuareRemoteWS" />
+					<and-filter>
+						<payload-type-filter expectedType="com.eucalyptus.auth.euare.EuareMessage" />
+						<custom-filter class="com.eucalyptus.auth.euare.EuareRemoteRegionFilter" />
+					</and-filter>
+				</filtering-router>
 				<filtering-router>
 					<outbound-endpoint ref="EuareWS" />
 					<payload-type-filter expectedType="com.eucalyptus.auth.euare.EuareMessage" />
@@ -113,6 +123,21 @@
 			</outbound>
 		</service>
 
+		<service name="EuareRemote">
+			<inbound>
+				<inbound-endpoint ref="EuareRemoteWS" />
+			</inbound>
+			<component>
+				<spring-object bean="euareRemoteRegionService"/>
+			</component>
+			<outbound>
+				<filtering-router>
+					<outbound-endpoint ref="ReplyQueueEndpoint" />
+					<payload-type-filter expectedType="com.eucalyptus.auth.euare.EuareMessage" />
+				</filtering-router>
+			</outbound>
+		</service>
+
 		<service name="EuareReplyQueue">
 			<inbound>
 				<inbound-endpoint ref="EuareReplyQueueWS" />
@@ -122,13 +147,43 @@
 
 	</model>
 	<model name="euare-internal">
-		<service name="EuareInternal">
+
+    <service name="EuareInternal">
+      <inbound>
+        <inbound-endpoint ref="EuareInternalWS"/>
+        <inbound-endpoint ref="EuareInternalVM" />
+      </inbound>
+      <outbound>
+        <filtering-router>
+          <outbound-endpoint ref="EuareInternalRemoteEndpoint" />
+          <and-filter>
+            <payload-type-filter expectedType="com.eucalyptus.auth.euare.EuareMessage" />
+            <custom-filter class="com.eucalyptus.auth.euare.EuareRemoteRegionFilter" />
+          </and-filter>
+        </filtering-router>
+        <filtering-router>
+          <outbound-endpoint ref="EuareInternalLocalEndpoint" />
+          <payload-type-filter expectedType="com.eucalyptus.auth.euare.EuareMessage" />
+        </filtering-router>
+      </outbound>
+    </service>
+
+    <service name="EuareInternalRemote">
+      <inbound>
+        <inbound-endpoint ref="EuareInternalRemoteEndpoint"/>
+      </inbound>
+			<component>
+				<spring-object bean="euareRemoteRegionService"/>
+			</component>
+		</service>
+
+		<service name="EuareInternalLocal">
 			<inbound>
-				<inbound-endpoint ref="EuareInternalWS" />
-				<inbound-endpoint ref="EuareInternalVM" />
+				<inbound-endpoint ref="EuareInternalLocalEndpoint"/>
 			</inbound>
 			<component class="com.eucalyptus.auth.euare.EuareService" />
 		</service>
+
 	</model>
 
 </mule>

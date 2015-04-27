@@ -19,6 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.tags
 
+import com.eucalyptus.compute.common.internal.tags.Tag
+import com.eucalyptus.compute.common.internal.tags.Tags
 import org.junit.Test
 import com.google.common.base.Function
 

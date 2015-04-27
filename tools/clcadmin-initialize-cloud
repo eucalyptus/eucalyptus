@@ -1,0 +1,88 @@
+#!/usr/bin/python -tt
+#
+# Copyright 2015 Eucalyptus Systems, Inc.
+#
+# Redistribution and use of this software in source and binary forms,
+# with or without modification, are permitted provided that the following
+# conditions are met:
+#
+#   Redistributions of source code must retain the above copyright notice,
+#   this list of conditions and the following disclaimer.
+#
+#   Redistributions in binary form must reproduce the above copyright
+#   notice, this list of conditions and the following disclaimer in the
+#   documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import argparse
+import os.path
+import shlex
+import subprocess
+import sys
+
+
+CONF_PATH = 'etc/eucalyptus/eucalyptus.conf'
+CLC_EXE_PATH = 'usr/sbin/eucalyptus-cloud'
+
+
+def get_cloud_opts(confpath):
+    cloud_opts = []
+    try:
+        with open(confpath) as conf:
+            for line in conf:
+                if line.startswith('CLOUD_OPTS='):
+                    cloud_opts = line.split('=', 1)[1].strip()
+                    if cloud_opts.startswith('"'):
+                        cloud_opts = shlex.split(cloud_opts)[0]
+                    cloud_opts = shlex.split(cloud_opts)
+    except IOError as err:
+        sys.exit('{0}: cannot access {1}: {2}'.format(
+            os.path.basename(sys.argv[0]), err.filename, err.strerror))
+    return cloud_opts
+
+
+def initialize_cloud(exepath, opts):
+    if not os.path.isfile(exepath):
+        sys.exit('{0}: {1} does not exist'.format(
+            os.path.basename(sys.argv[0]), exepath))
+    try:
+        subprocess.check_call([exepath, '--initialize'] + opts)
+    except subprocess.CalledProcessError:
+        sys.exit('{0}: cloud initialization failed')
+
+
+def main():
+    confpath = os.path.join(os.getenv('EUCALYPTUS') or '/', CONF_PATH)
+    exepath = os.path.join(os.getenv('EUCALYPTUS') or '/', CLC_EXE_PATH)
+
+    parser = argparse.ArgumentParser(
+        add_help=False,
+        description=('Create a new cloud on this system.  This can '
+                     'take several minutes.\n\nAny unrecognized options '
+                     'passed to this program are passed on to '
+                     'eucalyptus-cloud.'))
+    parser.add_argument('--help', action='help',
+                        help='show this help message and exit')
+    parser.add_argument('--ignore-cloud-opts', action='store_true',
+                        help='ignore the CLOUD_OPTS option in eucalyptus.conf')
+    args, forwarded_args = parser.parse_known_args()
+    if args.ignore_cloud_opts:
+        cloud_opts = []
+    else:
+        cloud_opts = get_cloud_opts(confpath)
+    initialize_cloud(exepath, cloud_opts + forwarded_args)
+
+
+if __name__ == '__main__':
+    main()

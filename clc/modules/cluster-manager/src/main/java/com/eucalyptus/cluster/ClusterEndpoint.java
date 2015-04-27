@@ -63,6 +63,7 @@
 package com.eucalyptus.cluster;
 
 import static com.eucalyptus.auth.policy.PolicySpec.*;
+import static com.eucalyptus.compute.common.internal.vm.VmInstances.TerminatedInstanceException;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -104,16 +105,15 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.node.Nodes;
-import com.eucalyptus.tags.FilterSupport;
-import com.eucalyptus.tags.Filters;
+import com.eucalyptus.compute.common.internal.tags.FilterSupport;
+import com.eucalyptus.compute.common.internal.tags.Filters;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
-import com.eucalyptus.vmtypes.VmType;
+import com.eucalyptus.compute.common.internal.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;

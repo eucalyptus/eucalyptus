@@ -62,7 +62,7 @@
 
 package com.eucalyptus.address;
 
-import static com.eucalyptus.vm.VmInstance.VmStateSet;
+import static com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet;
 import java.util.Collections;
 import java.util.NoSuchElementException;
 import javax.inject.Inject;
@@ -73,28 +73,28 @@ import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.common.AddressInfoType;
 import com.eucalyptus.compute.common.CloudMetadatas;
-import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
-import com.eucalyptus.compute.identifier.ResourceIdentifiers;
-import com.eucalyptus.compute.vpc.InternetGateways;
-import com.eucalyptus.compute.vpc.NetworkInterface;
+import com.eucalyptus.compute.common.internal.identifier.InvalidResourceIdentifier;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.common.internal.vpc.InternetGateways;
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
 import com.eucalyptus.compute.vpc.NetworkInterfaceHelper;
-import com.eucalyptus.compute.vpc.Vpc;
-import com.eucalyptus.compute.vpc.VpcMetadataNotFoundException;
+import com.eucalyptus.compute.common.internal.vpc.Vpc;
+import com.eucalyptus.compute.common.internal.vpc.VpcMetadataNotFoundException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.tags.Filters;
+import com.eucalyptus.compute.common.internal.tags.Filters;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.UnconditionalCallback;
-import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.vm.VmNetworkConfig;
+import com.eucalyptus.compute.common.internal.vm.VmNetworkConfig;
 import com.google.common.base.Enums;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
@@ -330,7 +330,7 @@ public class AddressManager {
             address.unassign( eni );
             eni.disassociate( );
             if ( eni.isAttached( ) ) {
-              eni.getAttachment( ).getInstance( ).updatePublicAddress( VmNetworkConfig.DEFAULT_IP );
+              VmInstances.updatePublicAddress( eni.getAttachment( ).getInstance( ), VmNetworkConfig.DEFAULT_IP );
             }
             tx.commit( );
           }
@@ -347,7 +347,7 @@ public class AddressManager {
             NetworkInterfaceHelper.releasePublic( eni );
             eni.disassociate( );
             if ( eni.isAttached( ) ) {
-              eni.getAttachment( ).getInstance( ).updatePublicAddress( VmNetworkConfig.DEFAULT_IP );
+              VmInstances.updatePublicAddress( eni.getAttachment( ).getInstance( ), VmNetworkConfig.DEFAULT_IP );
             }
           }
 
@@ -422,7 +422,7 @@ public class AddressManager {
         eni.disassociate( );
         if ( eni.isAttached( ) ) {
           final VmInstance vm = eni.getAttachment( ).getInstance( );
-          vm.updatePublicAddress( VmNetworkConfig.DEFAULT_IP );
+          VmInstances.updatePublicAddress( vm, VmNetworkConfig.DEFAULT_IP );
           if( !vm.isUsePrivateAddressing( ) &&
               ( VmInstance.VmState.PENDING.equals( vm.getState( ) ) || VmInstance.VmState.RUNNING.equals( vm.getState( ) ) ) ) {
             NetworkInterfaceHelper.associate( Addresses.allocateSystemAddress( ), eni );

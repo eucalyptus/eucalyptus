@@ -298,6 +298,10 @@ public class Parameter extends EucalyptusData {
   @JsonProperty("ParameterValue")
   String parameterValue;
   public Parameter() {  }
+  public Parameter(String key, String value) {
+    this.parameterKey = key;
+    this.parameterValue = value;
+  }
 }
 public class Stack extends EucalyptusData {
   @JsonProperty("Capabilities")

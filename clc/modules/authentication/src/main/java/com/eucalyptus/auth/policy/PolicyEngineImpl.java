@@ -95,9 +95,9 @@ import com.eucalyptus.auth.policy.key.Key;
 import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Condition;
-import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.PolicyScope;
 import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.Principal;
@@ -240,7 +240,7 @@ public class PolicyEngineImpl implements PolicyEngine {
 
   @Override
   public void evaluateAuthorization( @Nonnull  final AuthEvaluationContext context,
-                                     @Nullable final Policy resourcePolicy,
+                                     @Nullable final PolicyVersion resourcePolicy,
                                      @Nullable final String resourceAccountNumber,
                                      @Nonnull  final String resourceName,
                                      @Nonnull  final Map<Contract.Type, Contract> contracts ) throws AuthException {
@@ -546,7 +546,7 @@ public class PolicyEngineImpl implements PolicyEngine {
           continue;
         }
         QuotaKey quotaKey = ( QuotaKey ) key;
-        if ( !key.canApply( action ) ) {
+        if ( !quotaKey.canApply( action , resourceType ) ) {
           LOG.debug( "Key " + cond.getKey( ) + " can not apply for action=" + action + ", resourceType=" + resourceType );
           continue;
         }
@@ -592,7 +592,6 @@ public class PolicyEngineImpl implements PolicyEngine {
     private final PrincipalType principalType;
     @Nullable
     private final String principalName;
-    private Account requestAccount;
     private Boolean systemAdmin;
     private Boolean systemUser;
     private Map<String,String> evaluatedKeys;
@@ -703,35 +702,6 @@ public class PolicyEngineImpl implements PolicyEngine {
       return authorizations;
     }
 
-    static List<Authorization> authorizations( final Policy policy, final boolean resourcePolicy ) throws AuthException {
-      return authorizations( new PolicyVersion( ) { //TODO:STEVE: conversion via PolicyVersions
-        @Override
-        public String getPolicyVersionId( ) {
-          throw new UnsupportedOperationException( ); //TODO:STEVE: super interface needed - PolicySource?
-        }
-
-        @Override
-        public String getPolicyName() {
-          return policy.getName( );
-        }
-
-        @Override
-        public PolicyScope getPolicyScope() {
-          throw new UnsupportedOperationException( ); //TODO:STEVE: super interface needed - PolicySource?
-        }
-
-        @Override
-        public String getPolicy() {
-          return policy.getText( );
-        }
-
-        @Override
-        public String getPolicyHash( ) {
-          return PolicyUtils.hash( getPolicy( ) );
-        }
-      }, resourcePolicy );
-    }
-
     static List<Authorization> authorizations( final PolicyVersion policy, final boolean resourcePolicy ) throws AuthException {
       try {
         return authorizationCache.get( policy.getPolicyHash( ), new Callable<ImmutableList<Authorization>>() {
@@ -791,7 +761,7 @@ public class PolicyEngineImpl implements PolicyEngine {
     @Override
     public String get() {
       try {
-        return Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT ).getAccountNumber( );
+        return Accounts.lookupAccountIdByAlias( AccountIdentifiers.SYSTEM_ACCOUNT );
       } catch ( AuthException e ) {
         throw Exceptions.toUndeclared( e );
       }
@@ -806,7 +776,7 @@ public class PolicyEngineImpl implements PolicyEngine {
 
     @Override
     public String apply( final String accountNumberOrAlias ) {
-      if ( Account.SYSTEM_ACCOUNT.equals( accountNumberOrAlias ) ) {
+      if ( AccountIdentifiers.SYSTEM_ACCOUNT.equals( accountNumberOrAlias ) ) {
         return eucalyptusAccountNumberSupplier.get( );
       } else {
         return accountNumberOrAlias;

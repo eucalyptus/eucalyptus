@@ -3,6 +3,7 @@
     <dependencies>
         <dependency name="eucalyptus-autoscaling-common" rev="latest.integration"/>
         <dependency name="eucalyptus-cloudwatch-common" rev="latest.integration"/>
+        <dependency name="eucalyptus-cloudformation-common" rev="latest.integration"/>
         <dependency name="eucalyptus-compute-common" rev="latest.integration"/>
         <dependency name="eucalyptus-euare-common" rev="latest.integration"/>
         <dependency name="eucalyptus-msgs" rev="latest.integration"/>

@@ -5,6 +5,7 @@
 *.o
 *.pyc
 *.pyo
+*.egg-info
 */generated
 .DS_Store
 .nbrun
@@ -12,6 +13,9 @@
 .settings/grze_office.launch
 .sw*
 .*.sw*
+admin-tools/MANIFEST
+admin-tools/build
+admin-tools/dist
 console/jstests/node_modules/*
 console/eucaconsole/version.py
 autom4te.cache

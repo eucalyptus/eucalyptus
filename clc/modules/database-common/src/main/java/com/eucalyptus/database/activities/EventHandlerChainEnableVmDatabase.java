@@ -32,6 +32,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.euare.ServerCertificateType;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseType;
+import com.eucalyptus.cloudformation.Stack;
 import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -41,6 +42,7 @@ import com.eucalyptus.resources.EventHandlerChain;
 import com.eucalyptus.resources.EventHandlerException;
 import com.eucalyptus.resources.StoredResult;
 import com.eucalyptus.resources.client.AutoScalingClient;
+import com.eucalyptus.resources.client.CloudFormationClient;
 import com.eucalyptus.resources.client.Ec2Client;
 import com.eucalyptus.resources.client.EuareClient;
 import com.google.common.collect.Lists;
@@ -53,7 +55,7 @@ public class EventHandlerChainEnableVmDatabase extends EventHandlerChain<EnableD
 
   @Override
   public EventHandlerChain<EnableDBInstanceEvent> build() {
-    this.append(new CheckAutoscalingGroup(this));
+    this.append(new CheckDatabaseStack(this));
     this.append(new WaitOnVm(this));
     this.append(new WaitOnDb(this));
     this.append(new UpdateProperties(this));
@@ -68,40 +70,31 @@ public class EventHandlerChainEnableVmDatabase extends EventHandlerChain<EnableD
     }
   }
   
-  public static class CheckAutoscalingGroup extends AbstractEventHandler<EnableDBInstanceEvent> {
+  public static class CheckDatabaseStack extends AbstractEventHandler<EnableDBInstanceEvent> {
 
-    protected CheckAutoscalingGroup(
+    protected CheckDatabaseStack(
         EventHandlerChain<EnableDBInstanceEvent> chain) {
       super(chain);
     }
 
     @Override
     public void apply(EnableDBInstanceEvent evt) throws EventHandlerException {
-      final String userId = evt.getUserId();
-      final String systemUserId = getSystemUserId();
-      String acctNumber = null;
+      boolean stackFound = false;
+      final String accountId = EventHandlerChainCreateDbInstance.getAccountByUser(evt.getUserId());
+      final String stackName = EventHandlerChainCreateDbInstance.getStackName(accountId);
+
       try{
-        acctNumber =  Accounts.lookupUserById(userId).getAccountNumber();
-      }catch(final AuthException ex){
-        throw new EventHandlerException("Failed to lookup account number", ex);
-      }
-      final String asgName = 
-          EventHandlerChainCreateDbInstance.CreateAutoScalingGroup.getAutoscalingGroupName(acctNumber, evt.getDbInstanceIdentifier());
-      boolean asgFound = false;
-      try{
-        final DescribeAutoScalingGroupsResponseType response = 
-            AutoScalingClient.getInstance().describeAutoScalingGroups(systemUserId, Lists.newArrayList(asgName));
-        final List<AutoScalingGroupType> groups =
-            response.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember();
-        if(groups.size()>0 && groups.get(0).getAutoScalingGroupName().equals(asgName)){
-          asgFound =true;
+        Stack stack = CloudFormationClient.getInstance().describeStack(evt.getUserId(),
+            stackName);
+        if (stack != null) {
+          stackFound = true;
         }
       }catch(final Exception ex){
-        asgFound = false;
+        stackFound = false;
       }
       
-      if(!asgFound)
-        throw new EventHandlerException("No such autoscaling group is found: " + asgName);
+      if(!stackFound)
+        throw new EventHandlerException("Could not find stack: " + stackName);
     }
 
     @Override
@@ -119,15 +112,13 @@ public class EventHandlerChainEnableVmDatabase extends EventHandlerChain<EnableD
     public void apply(EnableDBInstanceEvent evt) throws EventHandlerException {
       final String tagKey = "Name";
       final String tagValue = DatabaseServerProperties.DEFAULT_LAUNCHER_TAG;
-      final String userId = evt.getUserId();
-      final String systemUserId = getSystemUserId();
       
       boolean vmFound = false;
       final int MAX_RETRY_SEC = 600;
       for(int i = 1; i<= MAX_RETRY_SEC; i++) {
         try{
           final List<RunningInstancesItemType> instances = 
-              Ec2Client.getInstance().describeInstances(systemUserId, Lists.<String>newArrayList());
+              Ec2Client.getInstance().describeInstances(null, Lists.<String>newArrayList());
 
           for(final RunningInstancesItemType instance : instances) {
             final List<ResourceTag> tags = instance.getTagSet();
@@ -285,12 +276,10 @@ public class EventHandlerChainEnableVmDatabase extends EventHandlerChain<EnableD
         throw new EventHandlerException("Failed to look up database host");
       }
       
+      String accountId = EventHandlerChainCreateDbInstance.getAccountByUser(evt.getUserId());
       try{
-        final String acctNumber = Accounts.lookupUserById(evt.getUserId()).getAccountNumber();
-        final String dbId = evt.getDbInstanceIdentifier();
-        final String certName = 
-            EventHandlerChainCreateDbInstance.UploadServerCertificate.getCertificateName(acctNumber, dbId);
-        final ServerCertificateType serverCert = EuareClient.getInstance().getServerCertificate(null, certName);
+        final ServerCertificateType serverCert = EuareClient.getInstance().getServerCertificate(evt.getUserId(),
+            EventHandlerChainCreateDbInstance.getCertificateName(accountId));
         final String certBody = serverCert.getCertificateBody();
         final String bodyPem = certBody;
 

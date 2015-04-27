@@ -78,9 +78,12 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.bootstrap.Bootstrap.Discovery;
 import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.records.Logs;
@@ -405,6 +408,30 @@ public class Exceptions {
     }
   }
   
+  @SuppressWarnings( "unchecked" )
+  /*
+   * This is not supper efficient method so use it carefully
+   */
+  public static <T extends Throwable> T findCauseByClassName( Throwable ex, final String className ) {
+    MatchByClassName match = new MatchByClassName(className);
+    try {
+      return ( T ) Iterables.find( Exceptions.causes( ex ), match );
+    } catch ( NoSuchElementException ex1 ) {
+      return null;
+    }
+  }
+
+  private static class MatchByClassName implements Predicate<Throwable> {
+    String className = "";
+    MatchByClassName(String className){
+      this.className = className;
+    }
+    @Override
+    public boolean apply(Throwable throwable) {
+      return className.equals(throwable.getClass().getName());
+    }
+  }
+
   /** * @param message * @return */
   public static RuntimeException noSuchElement( String message, Throwable... t ) {
     if ( Logs.isExtrrreeeme( ) && t != null

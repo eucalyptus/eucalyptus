@@ -63,6 +63,7 @@
 package com.eucalyptus.crypto;
 
 import java.security.MessageDigest;
+import com.google.common.base.Optional;
 
 public enum Digest {
   GOST3411,
@@ -80,6 +81,17 @@ public enum Digest {
   SHA256("SHA-256"),
   SHA384("SHA-384"),
   SHA512("SHA-512");
+
+  public static Optional<Digest> forAlgorithm( final String algorithm ) {
+    Optional<Digest> digest = Optional.absent( );
+    for ( final Digest candidateDigest : values( ) ) {
+      if ( candidateDigest.algorithm.equals( algorithm )  ) {
+        digest = Optional.of( candidateDigest );
+        break;
+      }
+    }
+    return digest;
+  }
 
   public byte[] digestBinary( final byte[] data ) {
     return get( ).digest( data );

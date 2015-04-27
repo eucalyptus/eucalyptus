@@ -20,6 +20,7 @@
 package com.eucalyptus.network.config
 
 import com.eucalyptus.network.IPRange
+import com.eucalyptus.network.ManagedSubnets
 import com.eucalyptus.network.NetworkMode
 import com.eucalyptus.network.PrivateAddresses
 import com.eucalyptus.util.Cidr
@@ -486,7 +487,7 @@ class ManagedSubnetValidator extends TypedValidator<ManagedSubnet> {
         if (segSizeInt < ManagedSubnet.MIN_SEGMENT_SIZE) {
           errors.reject("property.invalid.managedsubnet", [pathTranslate(errors.getNestedPath()), subnet.segmentSize] as Object[], 'Invalid managed subnet due to SegmentSize size being less than 16 for subnet "{0}": "{1}"')
         } else if (segSizeInt > ManagedSubnet.MAX_SEGMENT_SIZE) {
-          errors.reject("property.invalid.managedsubnet", [pathTranslate(errors.getNestedPath()), subnet.segmentSize] as Object[], 'Invalid managed subnet due to SegmentSize size being less than 2048 for subnet "{0}": "{1}"')
+          errors.reject("property.invalid.managedsubnet", [pathTranslate(errors.getNestedPath()), subnet.segmentSize] as Object[], 'Invalid managed subnet due to SegmentSize size being more than 2048 for subnet "{0}": "{1}"')
         } else if ((segSizeInt & (segSizeInt - 1)) != 0) {
           errors.reject("property.invalid.managedsubnet", [pathTranslate(errors.getNestedPath()), subnet.segmentSize] as Object[], 'Invalid managed subnet due to SegmentSize not being a power of 2 for subnet "{0}": "{1}"')
         }
@@ -502,7 +503,9 @@ class ManagedSubnetValidator extends TypedValidator<ManagedSubnet> {
           errors.reject( "property.invalid.managedsubnet", [ pathTranslate( errors.getNestedPath( ) ), subnet.minVlan, ManagedSubnet.MIN_VLAN ] as Object[ ], 'Invalid managed subnet due to MinVlan for subnet "{0}": "{1}" < "{2}"' )
         } else if ( minVlanInt > ManagedSubnet.MAX_VLAN ) {
           errors.reject( "property.invalid.managedsubnet", [ pathTranslate( errors.getNestedPath( ) ), subnet.minVlan, ManagedSubnet.MAX_VLAN ] as Object[ ], 'Invalid managed subnet due to MinVlan for subnet "{0}": "{1}" > "{2}"' )
-        }else if ( subnet.maxVlan ) {
+        } else if ( !ManagedSubnets.validSegmentForSubnet( subnet, minVlanInt ) ) {
+          errors.reject( "property.invalid.managedsubnet", [ pathTranslate( errors.getNestedPath( ) ), subnet.minVlan, ManagedSubnets.restrictToMaximumSegment( subnet, minVlanInt ) ] as Object[ ], 'Invalid managed subnet due to MinVlan being greater than the maximum usable vlan for the subnet and segment size "{0}": MinVlan "{1}" > maximum usable min vlan "{2}"' )
+        } else if ( subnet.maxVlan ) {
           int maxVlanInt = subnet.maxVlan
           if ( minVlanInt > maxVlanInt ) {
             errors.reject( "property.invalid.managedsubnet", [ pathTranslate( errors.getNestedPath( ) ), subnet.minVlan, subnet.maxVlan ] as Object[ ], 'Invalid managed subnet due to MinVlan being greater than MaxVlan for subnet "{0}": MinVlan "{1}" > MaxVlan "{2}"' )

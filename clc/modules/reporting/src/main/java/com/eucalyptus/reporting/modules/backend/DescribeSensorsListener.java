@@ -21,7 +21,6 @@
 package com.eucalyptus.reporting.modules.backend;
 
 import com.eucalyptus.component.id.Reporting;
-import com.eucalyptus.reporting.service.ReportingService;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasName;
@@ -40,7 +39,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState;
 
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
@@ -78,11 +77,6 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
 
   @Override
   public void fireEvent( final Hertz event ) {
-    if (!ReportingService.DATA_COLLECTION_ENABLED) {
-      ReportingService.faultDisableReportingServiceIfNecessary();
-      LOG.trace("Reporting service data collection has been disabled....DescribeSensorsEvent discarded");
-      return;
-    }
     final long defaultPollIntervalSeconds = TimeUnit.MINUTES.toSeconds( DEFAULT_POLL_INTERVAL_MINS );
     if (!Bootstrap.isOperational() || !BootstrapArgs.isCloudController() || !event.isAsserted(defaultPollIntervalSeconds)) {
       return;

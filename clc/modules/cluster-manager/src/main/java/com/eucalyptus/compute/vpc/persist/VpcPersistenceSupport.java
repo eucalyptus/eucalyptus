@@ -19,8 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.compute.vpc.persist;
 
-import com.eucalyptus.compute.vpc.VpcMetadataException;
-import com.eucalyptus.compute.vpc.VpcMetadataNotFoundException;
+import com.eucalyptus.compute.common.internal.vpc.VpcMetadataException;
+import com.eucalyptus.compute.common.internal.vpc.VpcMetadataNotFoundException;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.AbstractPersistentSupport;
 import com.eucalyptus.util.RestrictedType;

@@ -89,51 +89,33 @@ import com.eucalyptus.util.RestrictedType;
  */
 @PolicyVendor( PolicySpec.VENDOR_IAM )
 @PolicyResourceType( PolicySpec.IAM_RESOURCE_ACCOUNT )
-public interface Account extends BasePrincipal, RestrictedType, Serializable {
-  public static final String NOBODY_ACCOUNT = "nobody";
-  public static final Long NOBODY_ACCOUNT_ID = 1l;
-  /**
-   * <h2>NOTE:GRZE:</h2> there will <b>always</b> be an account named <tt>eucalyptus</tt>. The name is used
-   * in a variety of ways as an input and identifier during system bootstrap. That is, not local
-   * host bootstrap. So, this is before any other identifier information is created. To support any
-   * simplifications to install, let alone unattended installs, this value MUST be hardcoded -- it
-   * is the account which all system services use to bootstrap, including initial configuration.
-   */
-  public static final String SYSTEM_ACCOUNT = "eucalyptus";
-  public static final String SYSTEM_ACCOUNT_PREFIX = "(eucalyptus)";
-  public static final Long SYSTEM_ACCOUNT_ID = 0l;
-  //EUCA-9376 - Workaround to avoid multiple admin users in the blockstorage account due to EUCA-9635 
-  public static final String BLOCKSTORAGE_SYSTEM_ACCOUNT = SYSTEM_ACCOUNT_PREFIX + "blockstorage";
-
-  //EUCA-9644 - CloudFormation account for buckets and user to launch SWF workflows
-  public static final String CLOUDFORMATION_SYSTEM_ACCOUNT = SYSTEM_ACCOUNT_PREFIX + "cloudformation";
-
-  //EUCA-9533 - System account for pre-signed urls in download manifests
-  public static final String AWS_EXEC_READ_SYSTEM_ACCOUNT = SYSTEM_ACCOUNT_PREFIX + "aws-exec-read";
-
-  // EUCA-8667 - System account for osg <--> walrus
-  public static final String OBJECT_STORAGE_WALRUS_ACCOUNT = SYSTEM_ACCOUNT_PREFIX + "objectstorage";
+public interface Account extends AccountIdentifiers, BasePrincipal, RestrictedType, Serializable {
 
   public void setName( String name ) throws AuthException;
-  
+
+  /**
+   * Set name without performing syntax validation
+   */
+  public void setNameUnsafe( String name ) throws AuthException;
+
   public List<EuareUser> getUsers( ) throws AuthException;
   
   public List<Group> getGroups( ) throws AuthException;
 
-  public List<Role> getRoles( ) throws AuthException;
+  public List<EuareRole> getRoles( ) throws AuthException;
 
-  public List<InstanceProfile> getInstanceProfiles() throws AuthException;
+  public List<? extends BaseInstanceProfile> getInstanceProfiles( ) throws AuthException;
 
   public EuareUser addUser( String userName, String path, boolean enabled, Map<String, String> info ) throws AuthException;
   public void deleteUser( String userName, boolean forceDeleteAdmin, boolean recursive ) throws AuthException;
 
-  public Role addRole( String roleName, String path, String assumeRolePolicy ) throws AuthException, PolicyParseException;
+  public EuareRole addRole( String roleName, String path, String assumeRolePolicy ) throws AuthException, PolicyParseException;
   public void deleteRole( String roleName ) throws AuthException;
 
   public Group addGroup( String groupName, String path ) throws AuthException;
   public void deleteGroup( String groupName, boolean recursive ) throws AuthException;
 
-  public InstanceProfile addInstanceProfile( String instanceProfileName, String path ) throws AuthException;
+  public <IPT extends BaseInstanceProfile> IPT addInstanceProfile( String instanceProfileName, String path ) throws AuthException;
   public void deleteInstanceProfile( String instanceProfileName ) throws AuthException;
   
   public ServerCertificate addServerCertificate(String certName, String certBody, String certChain, String path, String pk) throws AuthException;
@@ -143,16 +125,16 @@ public interface Account extends BasePrincipal, RestrictedType, Serializable {
   
   public EuareUser lookupUserByName( String userName ) throws AuthException;
 
-  public Role lookupRoleByName( String roleName ) throws AuthException;
+  public EuareRole lookupRoleByName( String roleName ) throws AuthException;
 
-  public InstanceProfile lookupInstanceProfileByName( String instanceProfileName ) throws AuthException;
+  public <IPT extends BaseInstanceProfile> IPT lookupInstanceProfileByName( String instanceProfileName ) throws AuthException;
 
   public EuareUser lookupAdmin() throws AuthException;
   
   public ServerCertificate lookupServerCertificate(String certName) throws AuthException;
   public List<ServerCertificate> listServerCertificates(String pathPrefix) throws AuthException;
   public void updateServerCeritificate(String certName, String newCertName, String newPath) throws AuthException;
-  
+
   public String getAccountNumber( );
   public String getCanonicalId( );
 

@@ -19,7 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.address;
 
-import com.eucalyptus.cloud.util.NotEnoughResourcesException;
+import com.eucalyptus.compute.common.internal.util.NotEnoughResourcesException;
 
 /**
  *

@@ -62,14 +62,14 @@
 
 package com.eucalyptus.util;
 
-import com.eucalyptus.auth.principal.Policy;
+import com.eucalyptus.auth.principal.PolicyVersion;
 
 /**
  * {@inheritDoc RestrictedTypes} {@link RestrictedTypes}
  * 
  * @see RestrictedTypes
  */
-public interface RestrictedType {
+public interface RestrictedType extends LimitedType {
   String getDisplayName( );
   
   OwnerFullName getOwner( );
@@ -87,6 +87,6 @@ public interface RestrictedType {
   }
 
   interface PolicyRestrictedType {
-    Policy getPolicy( );
+    PolicyVersion getPolicy( );
   }
 }

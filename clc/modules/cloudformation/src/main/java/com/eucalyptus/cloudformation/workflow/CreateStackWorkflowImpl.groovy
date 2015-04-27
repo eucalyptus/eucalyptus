@@ -59,6 +59,7 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
           "User Initiated"
         )
       );
+
       waitFor(createInitialStackPromise) {
         DependencyManager resourceDependencyManager = StackEntityHelper.jsonToResourceDependencyManager(
           resourceDependencyManagerJson
@@ -69,31 +70,35 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
         }
         doTry {
           // This is in case any part of setting up the stack fails
-          // Now for each resource, set up the promises and the dependencies they have for each other
-          for (String resourceId : resourceDependencyManager.getNodes()) {
-            String resourceIdLocalCopy = new String(resourceId); // passing "resourceId" into a waitFor() uses the for reference pointer after the for loop has expired
-            Collection<Promise<String>> promisesDependedOn = Lists.newArrayList();
-            for (String dependingResourceId : resourceDependencyManager.getReverseDependentNodes(resourceIdLocalCopy)) {
-              promisesDependedOn.add(createdResourcePromiseMap.get(dependingResourceId));
+          // AWS has added some new parameter types whose values are not validated until now, so we do the same.  (Why?)
+          Promise<String> validateAWSParameterTypesPromise = promiseFor(activities.validateAWSParameterTypes(stackId, accountId, effectiveUserId));
+          waitFor(validateAWSParameterTypesPromise) {
+            // Now for each resource, set up the promises and the dependencies they have for each other
+            for (String resourceId : resourceDependencyManager.getNodes()) {
+              String resourceIdLocalCopy = new String(resourceId); // passing "resourceId" into a waitFor() uses the for reference pointer after the for loop has expired
+              Collection<Promise<String>> promisesDependedOn = Lists.newArrayList();
+              for (String dependingResourceId : resourceDependencyManager.getReverseDependentNodes(resourceIdLocalCopy)) {
+                promisesDependedOn.add(createdResourcePromiseMap.get(dependingResourceId));
+              }
+              AndPromise dependentAndPromise = new AndPromise(promisesDependedOn);
+              waitFor(dependentAndPromise) {
+                String reverseDependentResourcesJson = new ObjectMapper().writeValueAsString(
+                  resourceDependencyManager.getReverseDependentNodes(resourceIdLocalCopy) == null ?
+                    Lists.<String>newArrayList() :
+                    resourceDependencyManager.getReverseDependentNodes(resourceIdLocalCopy)
+                );
+                Promise<String> currentResourcePromise = getCreatePromise(resourceIdLocalCopy, stackId, accountId, effectiveUserId, reverseDependentResourcesJson);
+                createdResourcePromiseMap.get(resourceIdLocalCopy).chain(currentResourcePromise);
+                return currentResourcePromise;
+              }
             }
-            AndPromise dependentAndPromise = new AndPromise(promisesDependedOn);
-            waitFor(dependentAndPromise) {
-              String reverseDependentResourcesJson = new ObjectMapper().writeValueAsString(
-                resourceDependencyManager.getReverseDependentNodes(resourceIdLocalCopy) == null ?
-                  Lists.<String>newArrayList() :
-                  resourceDependencyManager.getReverseDependentNodes(resourceIdLocalCopy)
-              );
-              Promise<String> currentResourcePromise = getCreatePromise(resourceIdLocalCopy, stackId, accountId, effectiveUserId, reverseDependentResourcesJson);
-              createdResourcePromiseMap.get(resourceIdLocalCopy).chain(currentResourcePromise);
-              return currentResourcePromise;
-            }
-          }
-          AndPromise allResourcePromises = new AndPromise(createdResourcePromiseMap.values());
-          waitFor(allResourcePromises) {
-            waitFor(promiseFor(activities.finalizeCreateStack(stackId, accountId))) {
-              promiseFor(activities.createGlobalStackEvent(stackId, accountId,
-                StackResourceEntity.Status.CREATE_COMPLETE.toString(),
-                "Complete!"));
+            AndPromise allResourcePromises = new AndPromise(createdResourcePromiseMap.values());
+            waitFor(allResourcePromises) {
+              waitFor(promiseFor(activities.finalizeCreateStack(stackId, accountId, effectiveUserId))) {
+                promiseFor(activities.createGlobalStackEvent(stackId, accountId,
+                  StackResourceEntity.Status.CREATE_COMPLETE.toString(),
+                  "Complete!"));
+              }
             }
           }
         }.withCatch { Throwable t ->

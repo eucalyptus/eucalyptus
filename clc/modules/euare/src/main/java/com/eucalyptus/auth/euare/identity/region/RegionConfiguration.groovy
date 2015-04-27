@@ -19,7 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare.identity.region
 
-import com.eucalyptus.crypto.util.PEMFiles
 import com.google.common.base.CaseFormat
 import com.google.common.base.Strings
 import groovy.transform.Canonical
@@ -31,7 +30,7 @@ import org.springframework.validation.ValidationUtils
 import org.springframework.validation.Validator
 
 import java.lang.reflect.ParameterizedType
-import java.nio.charset.StandardCharsets
+import java.util.regex.Pattern
 
 @CompileStatic
 @Canonical
@@ -50,7 +49,8 @@ class RegionConfiguration implements Iterable<Region> {
 @Canonical
 class Region {
   String name
-  String certificate
+  String certificateFingerprintDigest
+  String certificateFingerprint
   List<Integer> identifierPartitions
   List<Service> services
 }
@@ -150,15 +150,19 @@ class RegionConfigurationValidator extends TypedValidator<RegionConfiguration> {
 @Canonical
 @PackageScope
 class RegionValidator extends TypedValidator<Region> {
+  public static final Pattern REGION_NAME_PATTERN = Pattern.compile( '^(?!-)[a-z0-9-]{1,63}(?<!-)' )
+
   Errors errors
 
   @Override
   void validate( final Region region ) {
     require( region.&getName )
-    require( region.&getCertificate )
+    require( region.&getCertificateFingerprint )
     require( region.&getIdentifierPartitions )
     require( region.&getServices )
-    validate( region.&getCertificate, new CertificateValidator( errors ) )
+    validate( region.&getName, new RegexValidator( errors, REGION_NAME_PATTERN, 'Invalid region name ([a-z0-9-]*) "{0}": "{1}"' ) )
+    validate( region.&getCertificateFingerprint, new CertificateFingerprintValidator( errors ) )
+    validate( region.&getCertificateFingerprintDigest, new CertificateFingerprintDigestValidator( errors ) )
     validateAll( region.&getIdentifierPartitions, new IdentifierPartitionValidator( errors ) )
     validateAll( region.&getServices, new ServiceValidator( errors ) )
     if ( region.identifierPartitions.empty ) {
@@ -173,16 +177,46 @@ class RegionValidator extends TypedValidator<Region> {
 @CompileStatic
 @Canonical
 @PackageScope
-class CertificateValidator extends TypedValidator<String> {
+class RegexValidator extends TypedValidator<String> {
+  Errors errors
+  Pattern pattern
+  String errorMessage
+
+  @Override
+  void validate( final String value ) {
+    if ( value && !pattern.matcher( value ).matches( ) ) {
+      errors.reject( "property.invalid.regex", [pathTranslate( errors.getNestedPath( ) ), value ] as Object[], errorMessage )
+    }
+  }
+}
+
+@CompileStatic
+@Canonical
+@PackageScope
+class CertificateFingerprintValidator extends TypedValidator<String> {
   Errors errors
 
   @Override
-  void validate( final String pem ) {
-    if ( pem ) {
-      try {
-        PEMFiles.getCert( pem.getBytes( StandardCharsets.UTF_8 ) )
-      } catch ( e ) {
-        errors.reject( "property.invalid.certificate", [pathTranslate( errors.getNestedPath( ) )] as Object[], 'Invalid certificate: \"{0}\"' )
+  void validate( final String fingerprint ) {
+    if ( fingerprint ) {
+      if ( !fingerprint.matches( '[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){9,255}' ) ) {
+        errors.reject( "property.invalid.certificateFingerprint", [pathTranslate( errors.getNestedPath( ) )] as Object[], 'Invalid certificate fingerprint (e.g. EC:E7:...): \"{0}\"' )
+      }
+    }
+  }
+}
+
+@CompileStatic
+@Canonical
+@PackageScope
+class CertificateFingerprintDigestValidator extends TypedValidator<String> {
+  Errors errors
+
+  @Override
+  void validate( final String digest ) {
+    if ( digest ) {
+      if ( ![ 'SHA-1', 'SHA-224', 'SHA-256', 'SHA-384', 'SHA-512' ].contains( digest ) ) {
+        errors.reject( "property.invalid.certificateFingerprintDigest", [pathTranslate( errors.getNestedPath( ) )] as Object[], 'Invalid certificate fingerprint digest (e.g. SHA-256): \"{0}\"' )
       }
     }
   }
@@ -211,12 +245,14 @@ class IdentifierPartitionValidator extends TypedValidator<Integer> {
 @Canonical
 @PackageScope
 class ServiceValidator extends TypedValidator<Service> {
+  public static final Pattern SERVICE_TYPE_PATTERN = Pattern.compile( 'identity' )
   Errors errors
 
   @Override
   void validate( final Service service ) {
     require( service.&getType )
     require( service.&getEndpoints )
+    validate( service.&getType, new RegexValidator( errors, SERVICE_TYPE_PATTERN, 'Invalid service type "{0}": "{1}"' ) )
     validateAll( service.&getEndpoints, new EndpointValidator( errors ) )
     if ( service.endpoints.empty ) {
       errors.reject( "property.invalid.endpoints", [pathTranslate(errors.nestedPath,'endpoints')] as Object[], 'No values given for \"{0}\"' )
@@ -233,9 +269,12 @@ class EndpointValidator extends TypedValidator<String> {
   @Override
   void validate( final String endpoint ) {
     try {
-      new URI( endpoint )
+      URI endpointUri = new URI( endpoint )
+      if ( !endpointUri.absolute || !endpointUri.scheme.equalsIgnoreCase( 'https' ) ) {
+        errors.reject( "property.invalid.endpoint", [pathTranslate(errors.nestedPath)] as Object[], 'Invalid service endpoint (e.g. https://...)\"{0}\": \"{1}\"' )
+      }
     } catch ( e ) {
-      errors.reject( "property.invalid.endpoint", [pathTranslate(errors.nestedPath)] as Object[], 'Invalid service endpoint \"{0}\": \"{1}\"' )
+      errors.reject( "property.invalid.endpoint", [pathTranslate(errors.nestedPath)] as Object[], 'Invalid service endpoint (e.g. https://...)\"{0}\": \"{1}\"' )
     }
   }
 }

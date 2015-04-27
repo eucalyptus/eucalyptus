@@ -86,8 +86,8 @@ import com.google.common.collect.Lists;
 
 public class Principals {
   
-  private static final String  SYSTEM_ID      = Account.SYSTEM_ACCOUNT;
-  private static final String  NOBODY_ID      = Account.NOBODY_ACCOUNT;
+  private static final String  SYSTEM_ID      = AccountIdentifiers.SYSTEM_ACCOUNT;
+  private static final String  NOBODY_ID      = AccountIdentifiers.NOBODY_ACCOUNT;
 
   private static final SystemUser SYSTEM_USER = new SystemUser( ) {
                                                 private final Certificate       cert  = new Certificate( ) {
@@ -103,7 +103,10 @@ public class Principals {
                                                                                         public Boolean isRevoked( ) {
                                                                                           return false;
                                                                                         }
-                                                                                        
+
+                                                                                        @Override
+                                                                                        public void setRevoked( final Boolean revoked ) throws AuthException {}
+
                                                                                         @Override
                                                                                         public String getPem( ) {
                                                                                           return B64.url.encString( PEMFiles.getBytes( getX509Certificate( ) ) );
@@ -144,13 +147,13 @@ public class Principals {
                                                 @Nonnull
                                                 @Override
                                                 public String getUserId( ) {
-                                                  return Account.SYSTEM_ACCOUNT;
+                                                  return AccountIdentifiers.SYSTEM_ACCOUNT;
                                                 }
                                                 
                                                 @Nonnull
                                                 @Override
                                                 public String getName( ) {
-                                                  return Account.SYSTEM_ACCOUNT;
+                                                  return AccountIdentifiers.SYSTEM_ACCOUNT;
                                                 }
                                                 
                                                 @Nonnull
@@ -222,7 +225,7 @@ public class Principals {
                                                 }
                                                 
                                                 @Override
-                                                public Certificate addCertificate( X509Certificate certificate ) throws AuthException {
+                                                public Certificate addCertificate( String certificateId, X509Certificate certificate ) throws AuthException {
                                                   return cert;
                                                 }
                                                 
@@ -345,7 +348,10 @@ public class Principals {
                                                                                         public Boolean isRevoked( ) {
                                                                                           return null;
                                                                                         }
-                                                                                        
+
+                                                                                        @Override
+                                                                                        public void setRevoked( final Boolean revoked ) throws AuthException {}
+
                                                                                         @Override
                                                                                         public String getPem( ) {
                                                                                           return B64.url.encString( PEMFiles.getBytes( getX509Certificate( ) ) );
@@ -386,13 +392,13 @@ public class Principals {
                                                 @Nonnull
                                                 @Override
                                                 public String getUserId( ) {
-                                                  return Account.NOBODY_ACCOUNT;
+                                                  return AccountIdentifiers.NOBODY_ACCOUNT;
                                                 }
                                                 
                                                 @Nonnull
                                                 @Override
                                                 public String getName( ) {
-                                                  return Account.NOBODY_ACCOUNT;
+                                                  return AccountIdentifiers.NOBODY_ACCOUNT;
                                                 }
                                                 
                                                 @Nonnull
@@ -464,7 +470,7 @@ public class Principals {
                                                 }
                                                 
                                                 @Override
-                                                public Certificate addCertificate( X509Certificate certificate ) throws AuthException {
+                                                public Certificate addCertificate( String certificateId, X509Certificate certificate ) throws AuthException {
                                                   return cert;
                                                 }
                                                 
@@ -572,8 +578,8 @@ public class Principals {
                                                 public void removeInfo(String key) throws AuthException {}
                                               };
 
-  private static final Account NOBODY_ACCOUNT = new SystemAccount( Account.NOBODY_ACCOUNT_ID, Account.NOBODY_ACCOUNT, nobodyUser( ) );
-  private static final Account SYSTEM_ACCOUNT = new SystemAccount( Account.SYSTEM_ACCOUNT_ID, Account.SYSTEM_ACCOUNT, systemUser( ) );
+  private static final Account NOBODY_ACCOUNT = new SystemAccount( AccountIdentifiers.NOBODY_ACCOUNT_ID, AccountIdentifiers.NOBODY_ACCOUNT, nobodyUser( ) );
+  private static final Account SYSTEM_ACCOUNT = new SystemAccount( AccountIdentifiers.SYSTEM_ACCOUNT_ID, AccountIdentifiers.SYSTEM_ACCOUNT, systemUser( ) );
 
   private static final Set<Account> FAKE_ACCOUNTS        = ImmutableSet.of( systemAccount(), nobodyAccount() );
   private static final Set<String>  FAKE_ACCOUNT_NUMBERS =
@@ -665,12 +671,20 @@ public class Principals {
     }
 
     @Override
+    public String getAccountAlias( ) {
+      return getName( );
+    }
+
+    @Override
     public String getName( ) {
       return accountName;
     }
 
     @Override
     public void setName( String name ) throws AuthException {}
+
+    @Override
+    public void setNameUnsafe( String name ) throws AuthException {}
 
     @Override
     public String getDisplayName() {
@@ -693,17 +707,17 @@ public class Principals {
     }
 
     @Override
-    public List<Role> getRoles( ) throws AuthException {
+    public List<EuareRole> getRoles( ) throws AuthException {
       return Lists.newArrayList( );
     }
 
     @Override
-    public List<InstanceProfile> getInstanceProfiles() throws AuthException {
+    public List<BaseInstanceProfile> getInstanceProfiles() throws AuthException {
       return Lists.newArrayList( );
     }
 
     @Override
-    public InstanceProfile addInstanceProfile( final String instanceProfileName, final String path ) throws AuthException {
+    public BaseInstanceProfile addInstanceProfile( final String instanceProfileName, final String path ) throws AuthException {
       throw new AuthException( AuthException.SYSTEM_MODIFICATION );
     }
 
@@ -711,7 +725,7 @@ public class Principals {
     public void deleteInstanceProfile( final String instanceProfileName ) throws AuthException { }
 
     @Override
-    public InstanceProfile lookupInstanceProfileByName( final String instanceProfileName ) throws AuthException {
+    public BaseInstanceProfile lookupInstanceProfileByName( final String instanceProfileName ) throws AuthException {
       throw new AuthException( AuthException.SYSTEM_MODIFICATION );
     }
 
@@ -724,7 +738,7 @@ public class Principals {
     public void deleteUser( String userName, boolean forceDeleteAdmin, boolean recursive ) throws AuthException {}
 
     @Override
-    public Role addRole( String roleName, String path, String assumeRolePolicy ) throws AuthException, PolicyParseException {
+    public EuareRole addRole( String roleName, String path, String assumeRolePolicy ) throws AuthException, PolicyParseException {
       throw new AuthException( AuthException.SYSTEM_MODIFICATION );
     }
 
@@ -745,7 +759,7 @@ public class Principals {
     }
 
     @Override
-    public Role lookupRoleByName( String roleName ) throws AuthException {
+    public EuareRole lookupRoleByName( String roleName ) throws AuthException {
       throw new AuthException( AuthException.SYSTEM_MODIFICATION );
     }
 

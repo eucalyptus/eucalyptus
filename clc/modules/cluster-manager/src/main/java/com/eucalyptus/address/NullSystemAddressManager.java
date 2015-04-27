@@ -63,8 +63,8 @@
 package com.eucalyptus.address;
 
 import java.util.List;
-import com.eucalyptus.cloud.util.NotEnoughResourcesException;
-import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.util.NotEnoughResourcesException;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.google.common.collect.Lists;
 
 public class NullSystemAddressManager extends AbstractSystemAddressManager {

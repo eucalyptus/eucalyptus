@@ -94,7 +94,6 @@
 package com.eucalyptus.cloud.ws;
 
 import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
@@ -105,7 +104,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.CNAMERecord;
 import org.xbill.DNS.Credibility;
-import org.xbill.DNS.DClass;
 import org.xbill.DNS.DNAMERecord;
 import org.xbill.DNS.ExtendedFlags;
 import org.xbill.DNS.Flags;
@@ -124,7 +122,6 @@ import org.xbill.DNS.TSIG;
 import org.xbill.DNS.TSIGRecord;
 import org.xbill.DNS.Type;
 
-import com.eucalyptus.dns.Zone;
 import com.eucalyptus.dns.Cache;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.dns.DnsResolvers;
@@ -137,7 +134,6 @@ public class ConnectionHandler extends Thread {
 	static final int FLAG_SIGONLY = 2;
 
 	Map caches = new ConcurrentHashMap();
-	//Map TSIGs;
 
 	byte []
 	      generateReply(Message query, byte [] in, int length, Socket s)
@@ -151,8 +147,6 @@ public class ConnectionHandler extends Thread {
 		int flags = 0;
 
 		header = query.getHeader();
-//		if (header.getFlag(Flags.QR))
-//			return null;
 		if (header.getRcode() != Rcode.NOERROR)
 			return errorMessage(query, Rcode.FORMERR);
 		if (header.getOpcode() != Opcode.QUERY)
@@ -162,13 +156,7 @@ public class ConnectionHandler extends Thread {
 
 		TSIGRecord queryTSIG = query.getTSIG();
 		TSIG tsig = null;
-		/*  if (queryTSIG != null) {
-            tsig = (TSIG) TSIGs.get(queryTSIG.getName());
-            if (tsig == null ||
-                    tsig.verify(query, in, length, null) != Rcode.NOERROR)
-                return formerrMessage(in);
-        }*/
-
+	
 		OPTRecord queryOPT = query.getOPT();
 		if (queryOPT != null && queryOPT.getVersion() > 0)
 			badversion = true;
@@ -194,16 +182,12 @@ public class ConnectionHandler extends Thread {
 			int type = queryRecord.getType();
 			int dclass = queryRecord.getDClass();
 
-			/*        if (type == Type.AXFR && s != null)
-            return doAXFR(name, query, tsig, queryTSIG, s);
-			 */    if (!Type.isRR(type) && type != Type.ANY)
-				 return errorMessage(query, Rcode.NOTIMP);
+			if (!Type.isRR(type) && type != Type.ANY)
+			  return errorMessage(query, Rcode.NOTIMP);
 
 			 byte rcode = addAnswer(response, name, type, dclass, 0, flags);
 			 if (rcode != Rcode.NOERROR && rcode != Rcode.NXDOMAIN)
 			   return errorMessage(query, Rcode.SERVFAIL);
-
-			 addAdditional(response, type, flags);
 
 			 if (queryOPT != null) {
 				 int optflags = (flags == FLAG_DNSSECOK) ? ExtendedFlags.DO : 0;
@@ -214,69 +198,11 @@ public class ConnectionHandler extends Thread {
 		response.setTSIG(tsig, Rcode.NOERROR, queryTSIG);
 		return response.toWire(maxLength);
 	}
-
-	public Zone
-	findBestZone(Name name) {
-		Zone foundzone = null;
-		int labels = name.labels();
-		for (int i = 1; i < labels; i++) {
-			Name tname = new Name(name, i);
-			foundzone = (Zone) ZoneManager.getZone(tname);
-			if (foundzone != null)
-				return foundzone;
-		}
-		return null;
-	}
-
-	public RRset
-	findExactMatch(Name name, int type, int dclass, boolean glue) {
-		Zone zone = findBestZone(name);
-		if (zone != null)
-			return zone.findExactMatch(name, type);
-		else {
-			RRset [] rrsets;
-			Cache cache = getCache(dclass);
-			if (glue)
-				rrsets = cache.findAnyRecords(name, type);
-			else
-				rrsets = cache.findRecords(name, type);
-			if (rrsets == null)
-				return null;
-			else
-				return rrsets[0]; /* not quite right */
-		}
-	}
-
-	private void
-	addGlue(Message response, Name name, int type, int flags) {
-		RRset a = findExactMatch(name, type, DClass.IN, true);
-		if (a == null)
-			return;
-		addRRset(name, response, a, Section.ADDITIONAL, flags);
-	}
-
-	private void
-	addAdditional2(Message response, int section, int type, int flags) {
-		Record [] records = response.getSectionArray(section);
-		for (int i = 0; i < records.length; i++) {
-			Record r = records[i];
-			Name glueName = r.getAdditionalName();
-			if (glueName != null)
-				addGlue(response, glueName, type, flags);
-		}
-	}
-
-	private final void
-	addAdditional(Message response, int type, int flags) {
-		addAdditional2(response, Section.ANSWER, type, flags);
-		addAdditional2(response, Section.AUTHORITY, type, flags);
-	}
-
 	byte
 	addAnswer( final Message response, Name name, int type, int dclass,
 			int iterations, int flags)
 	{
-		SetResponse sr;
+		SetResponse sr = null;
 		byte rcode = Rcode.NOERROR;
 
 		if (iterations > 6)
@@ -303,53 +229,25 @@ public class ConnectionHandler extends Thread {
 		} catch ( Exception ex ) {
 			Logger.getLogger( DnsResolvers.class ).error( ex );
 		}
-		Zone zone = findBestZone(name);
-		if (zone != null) {
-			if (type == Type.AAAA) {
-				response.getHeader().setFlag(Flags.AA);
-				return (Rcode.NOERROR);
-			}
-			sr = zone.findRecords(name, type, getLocalInetAddress( ));
-		}
-		else {
-			Cache cache = getCache(dclass);
-			sr = cache.lookupRecords(name, type, Credibility.NORMAL);
-		}
-
-		if (sr.isUnknown()) {
+		
+		// most likely these will be never executed after legacy dns is deprecated
+		if (sr == null || sr.isUnknown()) {
       return (Rcode.SERVFAIL);
 		}
 		if (sr.isNXDOMAIN()) {
 			response.getHeader().setRcode(Rcode.NXDOMAIN);
-			if (zone != null) {
-//EUCA-9995				addSOA(response, zone);
-				if (iterations == 0)
-					response.getHeader().setFlag(Flags.AA);
-			}
 			rcode = Rcode.NXDOMAIN;
-		}
-		else if (sr.isNXRRSET()) {
-			if (zone != null) {
-//				addSOA(response, zone);
-				if (iterations == 0)
-					response.getHeader().setFlag(Flags.AA);
-			}
-		}
-		else if (sr.isDelegation()) {
+		} else if (sr.isNXRRSET()) {
+			;
+		} else if (sr.isDelegation()) {
 			RRset nsRecords = sr.getNS();
 			addRRset(nsRecords.getName(), response, nsRecords,
 					Section.AUTHORITY, flags);
-		}
-		else if (sr.isCNAME()) {
+		} else if (sr.isCNAME()) {
 			CNAMERecord cname = sr.getCNAME();
 			RRset rrset = new RRset(cname);
 			addRRset(name, response, rrset, Section.ANSWER, flags);
-			if (zone != null && iterations == 0)
-				response.getHeader().setFlag(Flags.AA);
-			rcode = addAnswer(response, cname.getTarget(),
-					type, dclass, iterations + 1, flags);
-		}
-		else if (sr.isDNAME()) {
+		} else if (sr.isDNAME()) {
 			DNAMERecord dname = sr.getDNAME();
 			RRset rrset = new RRset(dname);
 			addRRset(name, response, rrset, Section.ANSWER, flags);
@@ -363,37 +261,16 @@ public class ConnectionHandler extends Thread {
 			if(newname != null) {
 				rrset = new RRset(new CNAMERecord(name, dclass, 0, newname));
 				addRRset(name, response, rrset, Section.ANSWER, flags);
-				if (zone != null && iterations == 0)
-					response.getHeader().setFlag(Flags.AA);
-				rcode = addAnswer(response, newname, type, dclass, iterations + 1, flags);
 			}
-		}
-		else if (sr.isSuccessful()) {
+		}	else if (sr.isSuccessful()) {
 			RRset [] rrsets = sr.answers();
 			if(rrsets != null) {
 				for (int i = 0; i < rrsets.length; i++)
 					addRRset(name, response, rrsets[i], Section.ANSWER, flags);
 			}
-			if (zone != null) {
-				if (iterations == 0)
-					response.getHeader().setFlag(Flags.AA);
-			}
-			else
-				addCacheNS(response, getCache(dclass), name);
+			addCacheNS(response, getCache(dclass), name);
 		}
 		return rcode;
-	}
-
-
-	private final void
-	addSOA(Message response, Zone zone) {
-		response.addRecord(zone.getSOA(), Section.AUTHORITY);
-	}
-
-	private final void
-	addNS(Message response, Zone zone, int flags) {
-		RRset nsRecords = zone.getNS();
-		addRRset(nsRecords.getName(), response, nsRecords, Section.AUTHORITY, flags);
 	}
 
 	private final void
@@ -409,46 +286,6 @@ public class ConnectionHandler extends Thread {
 		}
 	}
 
-
-	byte []
-	      doAXFR(Name name, Message query, TSIG tsig, TSIGRecord qtsig, Socket s) {
-		Zone zone = (Zone) ZoneManager.getZone(name);
-		boolean first = true;
-		if (zone == null)
-			return errorMessage(query, Rcode.REFUSED);
-		Iterator it = zone.AXFR();
-		try {
-			DataOutputStream dataOut;
-			dataOut = new DataOutputStream(s.getOutputStream());
-			int id = query.getHeader().getID();
-			while (it.hasNext()) {
-				RRset rrset = (RRset) it.next();
-				Message response = new Message(id);
-				Header header = response.getHeader();
-				header.setFlag(Flags.QR);
-				header.setFlag(Flags.AA);
-				addRRset(rrset.getName(), response, rrset,
-						Section.ANSWER, FLAG_DNSSECOK);
-				if (tsig != null) {
-					tsig.applyStream(response, qtsig, first);
-					qtsig = response.getTSIG();
-				}
-				first = false;
-				byte [] out = response.toWire();
-				dataOut.writeShort(out.length);
-				dataOut.write(out);
-			}
-		}
-		catch (IOException ex) {
-			System.out.println("AXFR failed");
-		}
-		try {
-			s.close();
-		}
-		catch (IOException ex) {
-		}
-		return null;
-	}
 
 	void
 	addRRset(Name name, Message response, RRset rrset, int section, int flags) {
@@ -497,7 +334,10 @@ public class ConnectionHandler extends Thread {
 	             formerrMessage(byte [] in) {
 		Header header;
 		try {
-			header = new Header(in);
+		  if(in != null)
+		    header = new Header(in);
+		  else
+		    header = new Header();
 		}
 		catch (IOException e) {
 			return null;

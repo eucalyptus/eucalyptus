@@ -32,15 +32,15 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.cloud.util.PersistentReference;
-import com.eucalyptus.cloud.util.ResourceAllocationException;
+import com.eucalyptus.compute.common.internal.util.PersistentReference;
+import com.eucalyptus.compute.common.internal.util.ResourceAllocationException;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.upgrade.Upgrades;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.RestrictedType;
-import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.google.common.base.Objects;
 import groovy.sql.Sql;
 

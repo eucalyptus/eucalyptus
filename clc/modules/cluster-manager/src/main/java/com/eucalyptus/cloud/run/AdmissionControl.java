@@ -66,15 +66,20 @@ import static com.eucalyptus.cloud.VmInstanceLifecycleHelpers.NetworkResourceVmI
 import static com.eucalyptus.util.RestrictedTypes.BatchAllocator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
+
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.compute.common.CloudMetadataLimitedType;
+import com.google.common.base.Function;
 import org.apache.log4j.Logger;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.VmInstanceLifecycleHelper;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
-import com.eucalyptus.cloud.util.NotEnoughResourcesException;
+import com.eucalyptus.compute.common.internal.util.IllegalMetadataAccessException;
+import com.eucalyptus.compute.common.internal.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.ResourceState;
@@ -93,8 +98,8 @@ import com.eucalyptus.compute.common.network.PrepareNetworkResourcesResultType;
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesType;
 import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.images.BlockStorageImageInfo;
-import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
+import com.eucalyptus.compute.common.internal.network.NetworkGroup;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
@@ -104,11 +109,10 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.RestrictedTypes;
-import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -257,10 +261,38 @@ public class AdmissionControl {
             @Override
             public List<ResourceToken> allocate( int min, int max ) {
               try {
+              // do quotas for instance specific items (cpu, memory, disk)
+                RestrictedTypes.allocateMeasurableResource(max * Long.valueOf(allocInfo.getVmType().getCpu().longValue()),
+                  new Function<Long, CloudMetadataLimitedType.CpuMetadata>() {
+                    @Nullable
+                    @Override
+                    public CloudMetadataLimitedType.CpuMetadata apply(@Nullable Long amount) {
+                      return new CloudMetadataLimitedType.CpuMetadata() {
+                      }; // kind of a marker for cpu
+                    }
+                  });
+                RestrictedTypes.allocateMeasurableResource(max * Long.valueOf(allocInfo.getVmType().getMemory().longValue()),
+                  new Function<Long, CloudMetadataLimitedType.MemoryMetadata>() {
+                    @Nullable
+                    @Override
+                    public CloudMetadataLimitedType.MemoryMetadata apply(@Nullable Long amount) {
+                      return new CloudMetadataLimitedType.MemoryMetadata() {
+                      }; // kind of a marker for memory
+                    }
+                  });
+                RestrictedTypes.allocateMeasurableResource(max * Long.valueOf(allocInfo.getVmType().getDisk().longValue()),
+                  new Function<Long, CloudMetadataLimitedType.DiskMetadata>() {
+                    @Nullable
+                    @Override
+                    public CloudMetadataLimitedType.DiskMetadata apply(@Nullable Long amount) {
+                      return new CloudMetadataLimitedType.DiskMetadata() {
+                      }; // kind of a marker for disk
+                    }
+                  });
                 final List<ResourceToken> ret = state.requestResourceAllocation( allocInfo, min, max );
                 allocInfo.getAllocationTokens().addAll( ret );
                 return ret;
-              } catch ( final NotEnoughResourcesException e ) {
+              } catch ( final NotEnoughResourcesException | AuthException e ) {
                 throw Exceptions.toUndeclared( e );
               }
             }

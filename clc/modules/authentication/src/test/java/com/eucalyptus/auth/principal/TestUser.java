@@ -39,7 +39,6 @@ public class TestUser implements EuareUser {
   private String path;
   private boolean enabled;
   private String token;
-  private String confirmationCode;
   private String password;
   private Long passwordExpires;
   private List<AccessKey> keys;
@@ -114,14 +113,6 @@ public class TestUser implements EuareUser {
 
   public void setToken( final String token ) {
     this.token = token;
-  }
-
-  public String getConfirmationCode() {
-    return confirmationCode;
-  }
-
-  public void setConfirmationCode( final String confirmationCode ) {
-    this.confirmationCode = confirmationCode;
   }
 
   public String getPassword() {
@@ -247,7 +238,7 @@ public class TestUser implements EuareUser {
   }
 
   @Override
-  public Certificate addCertificate( final X509Certificate certificate ) throws AuthException {
+  public Certificate addCertificate( final String certificateId, final X509Certificate certificate ) throws AuthException {
     throw new AuthException("Not implemented");
   }
 

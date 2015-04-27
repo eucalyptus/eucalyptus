@@ -64,10 +64,11 @@ package com.eucalyptus.address;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.cloud.util.NotEnoughResourcesException;
+import com.eucalyptus.compute.common.internal.util.NotEnoughResourcesException;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.entities.Entities;
@@ -77,15 +78,18 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.vm.VmInstance;
-import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public abstract class AbstractSystemAddressManager {
-  private final static Logger                                              LOG     = Logger.getLogger( AbstractSystemAddressManager.class );
+  private static final Logger                                              LOG     = Logger.getLogger( AbstractSystemAddressManager.class );
   private static final String ERR_SYS_INSUFFICIENT_ADDRESS_CAPACITY                = "InsufficientAddressCapacity";
+
+  private final AtomicReference<Iterable<String>> configuredAddresses              = new AtomicReference<>( );
 
   public Address allocateNext( final OwnerFullName userId, final Address.Domain domain ) throws NotEnoughResourcesException {
 	  int numSystemReserved=0;
@@ -135,12 +139,35 @@ public abstract class AbstractSystemAddressManager {
   protected abstract List<Address> doAllocateSystemAddresses( int count ) throws NotEnoughResourcesException;
 
   /**
+   * Handle notification of an address being disabled.
+   *
+   * <p>The current state of the address may not be disabled, the
+   * notification is for an address that was recently disabled.</p>
+   */
+  public void notifyDisabled( String address ) {
+    checkRemove( address );
+  }
+
+  protected void checkRemove( String address ) {
+    final Iterable<String> configuredAddresses = this.configuredAddresses.get( );
+    if ( configuredAddresses != null &&
+        !Iterables.isEmpty( configuredAddresses ) &&
+        !Iterables.contains( configuredAddresses, address ) ) {
+      Addresses.getInstance( ).deregisterDisabled( address );
+    }
+  }
+
+  /**
    * Update addresses from the list assign (system) to instances if necessary.
    */
   public void update( final Iterable<String> addresses ) {
+    configuredAddresses.set( addresses );
     Helper.loadStoredAddresses( );
     for ( final String address : addresses ) {
       Helper.lookupOrCreate( address );
+    }
+    for ( final Address address : Addresses.getInstance( ).listDisabledValues() ) {
+      checkRemove( address.getName( ) );
     }
   }
 

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,8 +67,6 @@ import java.security.Security;
 import javax.annotation.Nonnull;
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.DatabaseAuthProvider;
 import com.eucalyptus.component.auth.SystemCredentials;
 
 public class StandalonePersistence {
@@ -83,10 +81,8 @@ public class StandalonePersistence {
   }
 
   public static void setupProviders( ) {
-    DatabaseAuthProvider dbAuth = new DatabaseAuthProvider( );
-    Accounts.setAccountProvider( dbAuth );
   }
-  
+
   public static void setupNewDatabase( ) throws Exception {
     dest = ( DatabaseDestination ) ClassLoader.getSystemClassLoader( ).loadClass( eucaDest ).newInstance( );
     dest.initialize( );

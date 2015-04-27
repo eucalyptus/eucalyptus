@@ -78,7 +78,7 @@ import org.xbill.DNS.TextParseException;
 import org.xbill.DNS.Type;
 
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.ws.StackConfiguration;
 

@@ -33,6 +33,7 @@ class DescribePrincipalType extends IdentityMessage {
   String accessKeyId
   String certificateId
   String userId
+  String username // optionally used with accountId
   String roleId
   String accountId
   String canonicalId
@@ -55,6 +56,7 @@ class Principal extends EucalyptusData {
   String canonicalId
   String accountAlias
   String passwordHash
+  Long passwordExpiry
   ArrayList<AccessKey> accessKeys
   ArrayList<Certificate> certificates
   ArrayList<Policy> policies
@@ -76,5 +78,112 @@ class Policy extends EucalyptusData {
   String scope
   String policy
   String hash
+}
+
+class DescribeInstanceProfileType extends IdentityMessage {
+  String accountId
+  String instanceProfileName
+}
+
+class DescribeInstanceProfileResponseType extends IdentityMessage {
+  DescribeInstanceProfileResult describeInstanceProfileResult
+}
+
+class DescribeInstanceProfileResult extends EucalyptusData {
+  InstanceProfile instanceProfile
+  Role role
+}
+
+class InstanceProfile extends EucalyptusData {
+  String instanceProfileId
+  String instanceProfileArn
+}
+
+class Role extends EucalyptusData {
+  String roleId
+  String roleArn
+  String secret
+  Policy assumeRolePolicy
+}
+
+class DescribeRoleType extends IdentityMessage {
+  String accountId
+  String roleName
+}
+
+class DescribeRoleResponseType extends IdentityMessage {
+  DescribeRoleResult describeRoleResult
+}
+
+class DescribeRoleResult extends EucalyptusData {
+  Role role
+}
+
+class DescribeAccountsType extends IdentityMessage {
+  String alias
+  String aliasLike
+  String canonicalId
+  String email
+}
+
+class DescribeAccountsResponseType extends IdentityMessage {
+  DescribeAccountsResult describeAccountsResult
+}
+
+class DescribeAccountsResult extends EucalyptusData {
+  ArrayList<Account> accounts
+}
+
+class Account extends EucalyptusData {
+  String accountNumber
+  String alias
+  String canonicalId
+}
+
+class DecodeSecurityTokenType extends IdentityMessage {
+  String accessKeyId
+  String securityToken
+}
+
+class DecodeSecurityTokenResponseType extends IdentityMessage {
+  DecodeSecurityTokenResult decodeSecurityTokenResult
+}
+
+class DecodeSecurityTokenResult extends EucalyptusData {
+  SecurityToken securityToken
+}
+
+class SecurityToken extends EucalyptusData {
+  String originatingAccessKeyId
+  String originatingUserId
+  String originatingRoleId
+  String nonce
+  Long created
+  Long expires
+}
+
+class ReserveNameType extends IdentityMessage {
+  String namespace
+  String name
+  Integer duration // seconds
+}
+
+class ReserveNameResponseType extends IdentityMessage {
+  ReserveNameResult reserveNameResult
+}
+
+class ReserveNameResult extends EucalyptusData {
+}
+
+class TunnelActionType extends IdentityMessage {
+  String content // internal XML format
+}
+
+class TunnelActionResponseType extends IdentityMessage {
+  TunnelActionResult tunnelActionResult
+}
+
+class TunnelActionResult extends EucalyptusData {
+  String content
 }
 

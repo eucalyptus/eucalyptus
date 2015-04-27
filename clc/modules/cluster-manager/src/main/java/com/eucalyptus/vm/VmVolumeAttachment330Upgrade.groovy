@@ -25,8 +25,6 @@ import groovy.sql.Sql
 import java.util.concurrent.Callable
 
 import org.apache.log4j.Logger
-
-import com.eucalyptus.component.id.Eucalyptus
 import com.eucalyptus.upgrade.Upgrades.DatabaseFilters
 import com.eucalyptus.upgrade.Upgrades.PostUpgrade
 import com.eucalyptus.upgrade.Upgrades.Version
@@ -74,7 +72,7 @@ import com.eucalyptus.upgrade.Upgrades.Version
 
 /**
  * <p>Renamed metadata_vm_volume_remove_device column to metadata_vm_volume_remote_device in 
- * {@link VmVolumeAttachment}. Dropping the incorrectly named column.</p>
+ * {@link com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment}. Dropping the incorrectly named column.</p>
  * 
  * @author Swathi Gangisetty
  */

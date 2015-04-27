@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.vm
 
+import com.eucalyptus.compute.common.internal.vm.VmInstanceTag
 import com.eucalyptus.tags.TagTestSupport
 import org.junit.Test
 

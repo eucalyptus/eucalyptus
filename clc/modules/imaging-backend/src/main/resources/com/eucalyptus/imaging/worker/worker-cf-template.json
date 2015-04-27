@@ -1,0 +1,256 @@
+{
+  "Description": "Imaging worker stack",
+  "Parameters": {
+    "CERTARN": {
+      "NoEcho": true,
+      "Type": "String"
+    },
+    "ImageId": {
+      "Type": "String"
+    },
+    "InitScript": {
+      "Default": "",
+      "Type": "String"
+    },
+    "InstanceType": {
+      "Default": "m1.small",
+      "Type": "String"
+    },
+    "KeyName": {
+      "Default": "",
+      "Type": "String"
+    },
+    "NtpServer": {
+      "Default": "",
+      "Type": "String"
+    },
+    "LogServer": {
+      "Default": "",
+      "Type": "String"
+    },
+    "LogServerPort": {
+      "Default": "514",
+      "Type": "Number"
+    },
+    "ImagingServiceUrl": {
+      "Type": "String"
+    },
+    "EuareServiceUrl": {
+      "Type": "String"
+    },
+    "ComputeServiceUrl": {
+      "Type": "String"
+    },
+    "VmExpirationDays": {
+      "Type": "String"
+    },
+    "AvailabilityZones" : {
+       "Type": "CommaDelimitedList"
+    },
+    "NumberOfWorkers" : {
+       "Type": "Number"
+    }
+  },
+  "Conditions" : {
+    "UseKeypair" : {"Fn::Equals" : [{"Ref" : "KeyName"}, ""]}
+  },
+  "Resources": {
+    "ASG": {
+      "Properties": {
+        "AvailabilityZones": { "Ref": "AvailabilityZones" },
+        "DesiredCapacity": { "Ref": "NumberOfWorkers" },
+        "HealthCheckType": "EC2",
+        "LaunchConfigurationName": {
+          "Ref": "LaunchConfiguration"
+        },
+        "MaxSize": { "Ref": "NumberOfWorkers" },
+        "MinSize": { "Ref": "NumberOfWorkers" },
+        "Tags": [
+          {
+            "Key": "Name",
+            "PropagateAtLaunch": "true",
+            "Value": "euca-internal-imaging-workers"
+          },
+          {
+            "Key": "service-type",
+            "PropagateAtLaunch": "true",
+            "Value": "imaging"
+          }
+        ]
+      },
+      "Type": "AWS::AutoScaling::AutoScalingGroup"
+    },
+    "InstanceProfile": {
+      "Properties": {
+        "Path": "/internal/imaging",
+        "Roles": [
+          {
+            "Ref": "Role"
+          }
+        ]
+      },
+      "Type": "AWS::IAM::InstanceProfile"
+    },
+    "LaunchConfiguration": {
+      "Properties": {
+        "IamInstanceProfile": {
+          "Ref": "InstanceProfile"
+        },
+        "ImageId": {
+          "Ref": "ImageId"
+        },
+        "InstanceType": {
+          "Ref": "InstanceType"
+        },
+        "KeyName": {
+          "Fn::If" : ["UseKeypair",
+            { "Ref": "AWS::NoValue" },
+            { "Ref": "KeyName" }]
+        },
+        "SecurityGroups": [
+          {
+            "Ref": "SecurityGroup"
+          }
+        ],
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Join": [
+              "",
+              [
+                "euca-c2V0dXAtY3JlZGVudGlhbA==:",
+                {
+                  "Ref": "VmExpirationDays"
+                },
+                "\n",
+                "#!/bin/bash\n",
+                {
+                  "Ref": "InitScript"
+                },
+                "\n",
+                "#System generated Imaging worker config\n",
+                "mkdir -p /etc/eucalyptus-imaging-worker/\n",
+                "yum -y --disablerepo \\* --enablerepo eucalyptus-service-image install eucalyptus-imaging-worker\n",
+                "echo \"",
+                "imaging_service_url=", { "Ref" : "ImagingServiceUrl" }, "\n",
+                "euare_service_url=", { "Ref" : "EuareServiceUrl" }, "\n",
+                "compute_service_url=", { "Ref" : "ComputeServiceUrl" }, "\n",
+                "ntp_server=", { "Ref" : "NtpServer" }, "\n",
+                "log_server=", { "Ref" : "LogServer" }, "\n",
+                "log_server_port=", { "Ref" : "LogServerPort" }, "\n",
+                "\" > /etc/eucalyptus-imaging-worker/imaging-worker.conf\n",
+                "touch /var/lib/eucalyptus-imaging-worker/ntp.lock\n",
+                "chown -R imaging-worker:imaging-worker /etc/eucalyptus-imaging-worker\n",
+                "service eucalyptus-imaging-worker start"
+              ]
+            ]
+          }
+        }
+      },
+      "Type": "AWS::AutoScaling::LaunchConfiguration"
+    },
+    "Role": {
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "sts:AssumeRole"
+              ],
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ec2.amazonaws.com"
+                ]
+              }
+            }
+          ]
+        },
+        "Path": "/internal/imaging",
+        "Policies": [
+          {
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Action": [
+                    "iam:DownloadServerCertificate"
+                  ],
+                  "Effect": "Allow",
+                  "Resource": [
+                    {
+                      "Ref": "CERTARN"
+                    }
+                  ]
+                }
+              ]
+            },
+            "PolicyName": "imaging-iam-policy-servercert-worker"
+          },
+          {
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Action": [
+                    "s3:*"
+                  ],
+                  "Effect": "Allow",
+                  "Resource": [
+                    "*"
+                  ]
+                }
+              ]
+            },
+            "PolicyName": "imaging-iam-policy-s3-worker"
+          },
+          {
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Action": [
+                    "ec2:AttachVolume",
+                    "ec2:DetachVolume",
+                    "ec2:DescribeVolumes"
+                  ],
+                  "Effect": "Allow",
+                  "Resource": [
+                    "*"
+                  ]
+                }
+              ]
+            },
+            "PolicyName": "imaging-iam-policy-volumes-worker"
+          },
+          {
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Action": [
+                    "eucaimaging:GetInstanceImportTask",
+                    "eucaimaging:PutInstanceImportTaskStatus"
+                  ],
+                  "Effect": "Allow",
+                  "Resource": [
+                    "*"
+                  ]
+                }
+              ]
+            },
+            "PolicyName": "imaging-iam-policy-service-api"
+          }
+        ]
+      },
+      "Type": "AWS::IAM::Role"
+    },
+    "SecurityGroup": {
+      "Properties": {
+        "GroupDescription": "Imaging worker's security group",
+        "Tags": [
+          {
+            "Key": "service-type",
+            "Value": "imaging"
+          }
+        ]
+      },
+      "Type": "AWS::EC2::SecurityGroup"
+    }
+  }
+}

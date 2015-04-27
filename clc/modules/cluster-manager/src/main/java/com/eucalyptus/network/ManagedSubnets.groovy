@@ -31,8 +31,36 @@ import javax.annotation.Nonnull
 /**
  *
  */
-@PackageScope
 class ManagedSubnets {
+
+  static boolean validSegmentForSubnet(
+      @Nonnull final ManagedSubnet managedSubnet,
+      @Nonnull final Integer segmentId
+  ) {
+    segmentId == restrictToMaximumSegment( managedSubnet, segmentId )
+  }
+
+  static Integer restrictToMaximumSegment(
+      @Nonnull final ManagedSubnet managedSubnet,
+      @Nonnull final Integer segmentId
+  ) {
+    restrictToMaximumSegment(
+        managedSubnet.subnet,
+        managedSubnet.netmask,
+        segmentSize( managedSubnet ).intValue( ),
+        segmentId )
+  }
+
+  static Integer restrictToMaximumSegment(
+      @Nonnull final String subnet,
+      @Nonnull final String netmask,
+      @Nonnull final Integer segmentSize,
+      @Nonnull final Integer segmentId
+  ) {
+    Math.min(
+        (int) segmentId,
+        (int) ( IPRange.fromSubnet( subnet, netmask ).size( ) + 2 ) / segmentSize )
+  }
 
   /**
    * Retrieves a private IP address from a given network segment index and an IP

@@ -19,7 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.compute.vpc;
 
-import com.eucalyptus.cloud.util.InvalidMetadataException;
+import com.eucalyptus.compute.common.internal.util.InvalidMetadataException;
 
 /**
  *

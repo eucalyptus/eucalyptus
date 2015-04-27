@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.blockstorage
 
+import com.eucalyptus.compute.common.internal.blockstorage.SnapshotTag
 import com.eucalyptus.tags.TagTestSupport
 import org.junit.Test
 

@@ -62,6 +62,7 @@
 
 package com.eucalyptus.cluster.callback;
 
+import static com.eucalyptus.compute.common.internal.vm.VmInstances.TerminatedInstanceException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.NoSuchElementException;
@@ -84,22 +85,19 @@ import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.util.async.SubjectMessageCallback;
-import com.eucalyptus.vm.VmBundleTask.BundleState;
-import com.eucalyptus.vm.VmInstance;
-import com.eucalyptus.vm.VmInstance.VmState;
-import com.eucalyptus.vm.VmInstance.VmStateSet;
+import com.eucalyptus.compute.common.internal.vm.VmBundleTask.BundleState;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState;
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet;
+import com.eucalyptus.vm.Bundles;
 import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
-import com.eucalyptus.vm.VmRuntimeState;
-import com.eucalyptus.vmtypes.VmType;
+import com.eucalyptus.compute.common.internal.vm.VmRuntimeState;
+import com.eucalyptus.compute.common.internal.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
-import com.google.common.base.CaseFormat;
-import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.base.Splitter;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Collections2;
@@ -255,10 +253,10 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
           VmStateCallback.handleReportedTeardown( vm, runVm );
           return;
         } else if ( VmStateSet.RUN.apply( vm ) ) {
-          vm.doUpdate( ).apply( runVm );
+          VmInstances.doUpdate( vm ).apply( runVm );
         } else if ( !VmStateSet.RUN.apply( vm ) && VmStateSet.RUN.contains( runVmState )
                     && vm.lastUpdateMillis( ) > ( VmInstances.VOLATILE_STATE_TIMEOUT_SEC * 1000l ) ) {
-          vm.doUpdate( ).apply( runVm );
+          VmInstances.doUpdate( vm ).apply( runVm );
         } else {
           return;
         }
@@ -281,8 +279,8 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
   }
 
   private static void handleUnknown( final VmInfo runVm ) {
-    for ( final Optional<VmInstance.RestoreHandler> restoreHandler :
-        VmInstance.RestoreHandler.parseList( VmInstances.UNKNOWN_INSTANCE_HANDLERS ) ) {
+    for ( final Optional<VmInstances.RestoreHandler> restoreHandler :
+        VmInstances.RestoreHandler.parseList( VmInstances.UNKNOWN_INSTANCE_HANDLERS ) ) {
       if ( restoreHandler.isPresent( ) && handleRestore( runVm, restoreHandler.get( ) ) ) {
         break;
       }
@@ -323,7 +321,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
      **/
     BundleState bundleState = BundleState.mapper.apply( runVm.getBundleTaskStateName( ) );
     if ( !BundleState.none.equals( bundleState ) ) {
-      vm.getRuntimeState( ).updateBundleTaskState( bundleState, 0.0d );
+      Bundles.updateBundleTaskState( vm, bundleState, 0.0d );
       VmInstances.terminated( vm );
     } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
       VmInstances.terminated( vm );

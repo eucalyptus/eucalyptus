@@ -63,6 +63,9 @@
 package com.eucalyptus.vm;
 
 import static com.eucalyptus.cloud.run.VerifyMetadata.ImageInstanceTypeVerificationException;
+import static com.eucalyptus.compute.common.internal.vm.VmInstances.TerminatedInstanceException;
+import static com.eucalyptus.util.Strings.substringAfter;
+import static com.eucalyptus.util.Strings.substringBefore;
 
 import java.security.MessageDigest;
 import java.util.ArrayList;
@@ -80,43 +83,44 @@ import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.blockstorage.Volumes;
-import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
-import com.eucalyptus.cloud.util.InvalidParameterCombinationMetadataException;
-import com.eucalyptus.cloud.util.NoSuchImageIdException;
-import com.eucalyptus.cloud.util.NotEnoughResourcesException;
-import com.eucalyptus.cloud.util.SecurityGroupLimitMetadataException;
+import com.eucalyptus.compute.common.internal.util.IllegalMetadataAccessException;
+import com.eucalyptus.compute.common.internal.util.InvalidParameterCombinationMetadataException;
+import com.eucalyptus.compute.common.internal.util.NoSuchImageIdException;
+import com.eucalyptus.compute.common.internal.util.NotEnoughResourcesException;
+import com.eucalyptus.compute.common.internal.util.SecurityGroupLimitMetadataException;
 import com.eucalyptus.compute.ClientUnauthorizedComputeException;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.common.backend.ReportInstanceStatusResponseType;
 import com.eucalyptus.compute.common.backend.ReportInstanceStatusType;
-import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
+import com.eucalyptus.compute.common.internal.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
-import com.eucalyptus.cloud.util.InvalidMetadataException;
-import com.eucalyptus.cloud.util.NoSuchMetadataException;
-import com.eucalyptus.compute.identifier.ResourceIdentifiers;
-import com.eucalyptus.compute.vpc.NetworkInterface;
+import com.eucalyptus.compute.common.internal.util.InvalidMetadataException;
+import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.common.internal.vm.MigrationState;
+import com.eucalyptus.compute.common.internal.vm.VmBundleTask;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
 import com.eucalyptus.compute.vpc.NoSuchSubnetMetadataException;
 import com.eucalyptus.compute.vpc.VpcRequiredMetadataException;
 import com.eucalyptus.crypto.Hmac;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.images.ImageInfo;
-import com.eucalyptus.images.KernelImageInfo;
-import com.eucalyptus.images.RamdiskImageInfo;
+import com.eucalyptus.compute.common.internal.images.ImageInfo;
+import com.eucalyptus.compute.common.internal.images.KernelImageInfo;
+import com.eucalyptus.compute.common.internal.images.RamdiskImageInfo;
 import com.eucalyptus.images.Images;
-import com.eucalyptus.keys.NoSuchKeyMetadataException;
-import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.compute.common.internal.keys.NoSuchKeyMetadataException;
+import com.eucalyptus.compute.common.internal.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
-import com.eucalyptus.vmtypes.VmType;
+import com.eucalyptus.compute.common.internal.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.eucalyptus.ws.util.HmacUtils;
 import com.google.common.base.Joiner;
 
 import org.apache.log4j.Logger;
-import org.bouncycastle.util.encoders.Base64;
 import org.bouncycastle.util.encoders.DecoderException;
-import org.hibernate.criterion.Criterion;
-import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.AccountFullName;
@@ -140,16 +144,13 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
-import com.eucalyptus.images.BlockStorageImageInfo;
+import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.tracking.MessageContexts;
-import com.eucalyptus.tags.Filter;
-import com.eucalyptus.tags.Filters;
-import com.eucalyptus.tags.Tag;
-import com.eucalyptus.tags.TagSupport;
-import com.eucalyptus.tags.Tags;
+import com.eucalyptus.compute.common.internal.tags.Filter;
+import com.eucalyptus.compute.common.internal.tags.Filters;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
@@ -158,10 +159,9 @@ import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.vm.Bundles.BundleCallback;
-import com.eucalyptus.vm.VmBundleTask.BundleState;
-import com.eucalyptus.vm.VmInstance.VmState;
-import com.eucalyptus.vm.VmInstance.VmStateSet;
-import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
+import com.eucalyptus.compute.common.internal.vm.VmBundleTask.BundleState;
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState;
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
@@ -171,31 +171,17 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
-import com.google.common.collect.TreeMultimap;
 import com.eucalyptus.compute.common.InstanceBlockDeviceMappingItemType;
-import com.eucalyptus.compute.common.InstanceStatusItemType;
 import com.eucalyptus.compute.common.MonitorInstanceState;
 import com.eucalyptus.compute.common.ReservationInfoType;
-import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.compute.common.GroupItemType;
-import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.compute.common.SecurityGroupIdSetItemType;
 import com.eucalyptus.compute.common.TerminateInstancesItemType;
-import com.eucalyptus.compute.common.InstanceBlockDeviceMapping;
 import com.eucalyptus.compute.common.backend.CreatePlacementGroupResponseType;
 import com.eucalyptus.compute.common.backend.CreatePlacementGroupType;
 import com.eucalyptus.compute.common.backend.DeletePlacementGroupResponseType;
 import com.eucalyptus.compute.common.backend.DeletePlacementGroupType;
-import com.eucalyptus.compute.common.backend.DescribeInstanceAttributeResponseType;
-import com.eucalyptus.compute.common.backend.DescribeInstanceAttributeType;
-import com.eucalyptus.compute.common.backend.DescribeInstanceStatusResponseType;
-import com.eucalyptus.compute.common.backend.DescribeInstanceStatusType;
-import com.eucalyptus.compute.common.backend.DescribeInstancesResponseType;
-import com.eucalyptus.compute.common.backend.DescribeInstancesType;
-import com.eucalyptus.compute.common.backend.DescribePlacementGroupsResponseType;
-import com.eucalyptus.compute.common.backend.DescribePlacementGroupsType;
 import com.eucalyptus.compute.common.backend.GetConsoleOutputResponseType;
 import com.eucalyptus.compute.common.backend.GetConsoleOutputType;
 import com.eucalyptus.compute.common.backend.GetPasswordDataResponseType;
@@ -245,7 +231,7 @@ public class VmControl {
           final VmInstance vm = instances.get( 0 );
           final ReservationInfoType reservationInfoType = TypeMappers.transform( vm, ReservationInfoType.class );
           for ( final VmInstance instance : instances ) {
-            reservationInfoType.getInstancesSet().add( VmInstances.transform( instance ) );
+            reservationInfoType.getInstancesSet().add( VmInstance.transform( instance ) );
           }
           reply.setRsvInfo( reservationInfoType );
           return reply;
@@ -267,7 +253,7 @@ public class VmControl {
 
       reply.setRsvInfo( reservation );
       for ( ResourceToken allocToken : allocInfo.getAllocationTokens( ) ) {
-        reservation.getInstancesSet( ).add( VmInstances.transform( allocToken.getVmInstance( ) ) );
+        reservation.getInstancesSet( ).add( VmInstance.transform( allocToken.getVmInstance() ) );
       }
       db.commit( );
     } catch ( Exception ex ) {
@@ -306,91 +292,6 @@ public class VmControl {
     }
     
     ClusterAllocator.get( ).apply( allocInfo );
-    return reply;
-  }
-
-  public DescribeInstancesResponseType describeInstances( final DescribeInstancesType msg ) throws EucalyptusCloudException {
-    final DescribeInstancesResponseType reply = msg.getReply( );
-    Context ctx = Contexts.lookup( );
-    boolean showAll = msg.getInstancesSet( ).remove( "verbose" ) || !msg.getInstancesSet( ).isEmpty( );
-    final Multimap<String, RunningInstancesItemType> instanceMap = TreeMultimap.create();
-    final Map<String, ReservationInfoType> reservations = Maps.newHashMap();
-    final Collection<String> identifiers = normalizeIdentifiers( msg.getInstancesSet() );
-    final Filter filter = Filters.generateFor( msg.getFilterSet(), VmInstance.class )
-        .withOptionalInternalFilter( "instance-id", identifiers )
-        .generate();
-    final Predicate<? super VmInstance> requestedAndAccessible = CloudMetadatas.filteringFor( VmInstance.class )
-        .byId( identifiers ) // filters without wildcard support
-        .byPredicate( filter.asPredicate() )
-        .byPrivileges()
-        .buildPredicate();
-    final Criterion criterion = filter.asCriterionWithConjunction( Restrictions.not( VmInstances.criterion( VmState.BURIED ) ) );
-    final OwnerFullName ownerFullName = ( ctx.isAdministrator( ) && showAll )
-      ? null
-      : ctx.getUserFullName( ).asAccountFullName( );
-    try ( final TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
-      final List<VmInstance> instances =
-          VmInstances.list( ownerFullName, criterion, filter.getAliases(), requestedAndAccessible );
-      final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( VmInstance.class )
-          .getResourceTagMap( AccountFullName.getInstance( ctx.getAccountNumber() ),
-              Iterables.transform( instances, CloudMetadatas.toDisplayName() ) );
-
-      for ( final VmInstance vm : instances ) {
-        if ( instanceMap.put( vm.getReservationId( ), VmInstances.transform( vm ) ) && !reservations.containsKey( vm.getReservationId( ) ) ) {
-          reservations.put( vm.getReservationId( ), TypeMappers.transform( vm, ReservationInfoType.class ) );
-        }
-      }
-      List<ReservationInfoType> replyReservations = reply.getReservationSet( );
-      for ( ReservationInfoType r : reservations.values( ) ) {
-        Collection<RunningInstancesItemType> instanceSet = instanceMap.get( r.getReservationId( ) );
-        if ( !instanceSet.isEmpty( ) ) {
-          for ( final RunningInstancesItemType instancesItemType : instanceSet ) {
-            Tags.addFromTags( instancesItemType.getTagSet(), ResourceTag.class, tagsMap.get( instancesItemType.getInstanceId() ) );
-          }
-          r.getInstancesSet( ).addAll( instanceSet );
-          replyReservations.add( r );
-        }
-      }
-    } catch ( final Exception e ) {
-      LOG.error( e );
-      LOG.debug( e, e );
-      throw new EucalyptusCloudException( e.getMessage( ) );
-    }
-    return reply;
-  }
-
-  public DescribeInstanceStatusResponseType describeInstanceStatus( final DescribeInstanceStatusType msg ) throws EucalyptusCloudException {
-    final DescribeInstanceStatusResponseType reply = msg.getReply( );
-    final Context ctx = Contexts.lookup();
-    final boolean showAll = msg.getInstancesSet( ).remove( "verbose" ) || !msg.getInstancesSet( ).isEmpty( );
-    final boolean includeAllInstances = Objects.firstNonNull( msg.getIncludeAllInstances(), Boolean.FALSE );
-    final Collection<String> identifiers = normalizeIdentifiers( msg.getInstancesSet() );
-    final Filter filter = Filters.generateFor( msg.getFilterSet(), VmInstance.class, "status" )
-        .withOptionalInternalFilter( "instance-id", identifiers )
-        .generate();
-    final Predicate<? super VmInstance> requestedAndAccessible = CloudMetadatas.filteringFor( VmInstance.class )
-        .byId( identifiers ) // filters without wildcard support
-        .byPredicate( includeAllInstances ? Predicates.<VmInstance>alwaysTrue() : VmState.RUNNING )
-        .byPredicate( filter.asPredicate() )
-        .byPrivileges()
-        .buildPredicate();
-    final Criterion criterion = filter.asCriterionWithConjunction( Restrictions.not( VmInstances.criterion( VmState.BURIED ) ) );
-    final OwnerFullName ownerFullName = ( ctx.isAdministrator( ) && showAll )
-        ? null
-        : ctx.getUserFullName( ).asAccountFullName( );
-    try {
-      final List<VmInstance> instances =
-          VmInstances.list( ownerFullName, criterion, filter.getAliases(), requestedAndAccessible );
-
-      Iterables.addAll(
-          reply.getInstanceStatusSet().getItem(),
-          Iterables.transform( instances, TypeMappers.lookup( VmInstance.class, InstanceStatusItemType.class ) ) );
-
-    } catch ( final Exception e ) {
-      LOG.error( e );
-      LOG.debug( e, e );
-      throw new EucalyptusCloudException( e.getMessage( ) );
-    }
     return reply;
   }
 
@@ -935,7 +836,7 @@ public class VmControl {
         } catch ( NoSuchMetadataException e ) {
           throw new ClientComputeException( "InvalidGroup.NotFound", "Security group ("+groupIdItemType.getGroupId( )+") not found" );
         }
-        if ( !Collections.singleton( vm.getVpcId( ) ).equals( Sets.newHashSet( Iterables.transform( groups, NetworkGroups.vpcId( ) ) ) ) ) {
+        if ( !Collections.singleton( vm.getVpcId( ) ).equals( Sets.newHashSet( Iterables.transform( groups, NetworkGroup.vpcId( ) ) ) ) ) {
           throw Exceptions.toUndeclared( new ClientComputeException( "InvalidParameterValue", "Invalid security groups (inconsistent VPC)" ) );
         }
         vm.getNetworkGroups( ).clear( );
@@ -1031,86 +932,6 @@ public class VmControl {
     return reply;
   }
   
-  public DescribePlacementGroupsResponseType describePlacementGroups( final DescribePlacementGroupsType request ) {
-    final DescribePlacementGroupsResponseType reply = request.getReply( );
-    return reply;
-  }
-
-  public DescribeInstanceAttributeResponseType describeInstanceAttribute( final DescribeInstanceAttributeType request )
-          throws EucalyptusCloudException {
-    final DescribeInstanceAttributeResponseType reply = request.getReply( );
-    final String instanceId = normalizeIdentifier( request.getInstanceId( ) );
-    final String attribute = request.getAttribute( );
-    if ( attribute == null ) {
-      throw new ClientComputeException( " MissingParameter", "Attribute parameter is required" );
-    }
-    try ( final TransactionResource tx = Entities.transactionFor( VmInstance.class ) ) {
-      final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
-      reply.setInstanceId( instanceId );
-      switch ( attribute ) {
-        case "blockDeviceMapping":
-          if ( vm.getBootRecord( ).getMachine( ) instanceof BlockStorageImageInfo ) {
-            final BlockStorageImageInfo bfebsInfo = ( BlockStorageImageInfo ) vm.getBootRecord( ).getMachine( );
-            for ( final VmVolumeAttachment volumeAttachment : vm.getBootRecord().getPersistentVolumes( ) ) {
-              reply.getBlockDeviceMapping( ).add( new InstanceBlockDeviceMapping(
-                  volumeAttachment.getIsRootDevice( ) ?
-                      bfebsInfo.getRootDeviceName( ) :
-                      volumeAttachment.getDevice( ),
-                  volumeAttachment.getVolumeId(),
-                  volumeAttachment.getStatus(),
-                  volumeAttachment.getAttachTime(),
-                  volumeAttachment.getDeleteOnTerminate() ) );
-            }
-          }
-          break;
-        case "disableApiTermination":
-          reply.setDisableApiTermination( false );
-          break;
-        case "ebsOptimized":
-          reply.setEbsOptimized( false );
-          break;
-        case "groupSet":
-          Iterables.addAll( reply.getGroupSet( ), Iterables.transform(
-              vm.getNetworkGroupIds( ),
-              TypeMappers.lookup( NetworkGroupId.class, GroupItemType.class ) ) );
-          break;
-        case "instanceInitiatedShutdownBehavior":
-          reply.setInstanceInitiatedShutdownBehavior( "stop" );
-          break;
-        case "instanceType":
-          reply.setInstanceType( vm.getBootRecord( ).getVmType( ).getDisplayName( ) );
-          break;
-        case "kernel":
-          reply.setKernel( vm.getKernelId( ) );
-          break;
-        case "productCodes":
-          reply.setProductCodes( false ); // set some value so an empty wrapper can be included in the response
-          break;
-        case "ramdisk":
-          reply.setRamdisk( vm.getRamdiskId( ) );
-          break;
-        case "rootDeviceName":
-          reply.setRootDeviceName( vm.getBootRecord( ).getMachine( ) == null ? null : vm.getBootRecord( ).getMachine( ).getRootDeviceName( ) );
-          break;
-        case "sourceDestCheck":
-          reply.setSourceDestCheck( true );
-          break;
-        case "sriovNetSupport":
-          reply.setSriovNetSupport( false );
-          break;
-        case "userData":
-          reply.setUserData( vm.getUserData( ) == null ? null : Base64.toBase64String( vm.getUserData( ) ) );
-          break;
-        default:
-          throw new ClientComputeException( " InvalidParameterValue", "Invalid value for attribute ("+attribute+")" );
-      }
-    } catch ( Exception ex ) {
-      LOG.error( ex );
-      throw new ClientComputeException("InvalidInstanceID.NotFound", "The instance ID '" + instanceId + "' does not exist");
-    }
-    return reply;
-  }
-
   public DeletePlacementGroupResponseType deletePlacementGroup( final DeletePlacementGroupType request ) {
     final DeletePlacementGroupResponseType reply = request.getReply( );
     return reply;
@@ -1132,7 +953,7 @@ public class VmControl {
         throw new EucalyptusCloudException( "Can't cancel bundle task when the bundle task is " + bundleState );
       
       if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
-        v.getRuntimeState( ).updateBundleTaskState( BundleState.canceling, 0.0d );
+        Bundles.updateBundleTaskState( v, BundleState.canceling, 0.0d );
         LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, ctx.getUserFullName( ).toString( ),
                                       v.getRuntimeState( ).getBundleTask( ).getBundleId( ),
                                       v.getInstanceId( ) ) );
@@ -1178,7 +999,7 @@ public class VmControl {
             throw new ClientComputeException( "InvalidState", "Failed to bundle requested vm because it is not currently 'running': " + instanceId );
           } else {
             final VmBundleTask bundleTask = Bundles.create( v, request.getBucket(), request.getPrefix(), uploadPolicyJson );
-            if ( v.getRuntimeState( ).startBundleTask( bundleTask ) ) {
+            if ( Bundles.startBundleTask( bundleTask ) ) {
               reply.setTask( Bundles.transform( bundleTask ) );
               reply.markWinning( );
             } else {
@@ -1280,19 +1101,11 @@ public class VmControl {
       throw new EucalyptusCloudException( "Instance " + instanceId + " is not in a running state." );
     }
 
-    if ( !ImageMetadata.Platform.windows.name().equals(v.getPlatform())) {
-      throw new ClientComputeException("OperationNotPermitted", "Instance's platform is not Windows");
-    }
-    
-    if( Strings.isNullOrEmpty( v.getKeyPair( ).getPublicKey( ) ) ){
-      throw new ClientComputeException("OperationNotPermitted", "Keypair is not found for the instance");
-    }
-
-    if ( v.getPasswordData( ) == null ) {
+    if ( v.getPasswordData( ) == null && !Strings.isNullOrEmpty( v.getKeyPair( ).getPublicKey( ) ) ) {
       try {
         final GetConsoleOutputResponseType consoleOutput = getConsoleOutput( new GetConsoleOutputType( instanceId ) );
         final String tempCo = B64.standard.decString( String.valueOf( consoleOutput.getOutput( ) ) ).replaceAll( "[\r\n]*", "" );
-        final String passwordData = tempCo.replaceAll( ".*<Password>", "" ).replaceAll( "</Password>.*", "" );
+        final String passwordData = substringBefore( "</Password>", substringAfter( "<Password>", tempCo ) );
         if ( tempCo.matches( ".*<Password>[\\w=+/]*</Password>.*" ) ) {
           Entities.asTransaction( VmInstance.class, new Predicate<String>() {
             @Override
@@ -1311,7 +1124,7 @@ public class VmControl {
 
     final GetPasswordDataResponseType reply = request.getReply();
     reply.set_return( true );
-    reply.setOutput( v.getPasswordData( ) );
+    reply.setOutput( Strings.nullToEmpty( v.getPasswordData( ) ) );
     reply.setTimestamp( new Date() );
     reply.setInstanceId( v.getInstanceId() );
     return reply;

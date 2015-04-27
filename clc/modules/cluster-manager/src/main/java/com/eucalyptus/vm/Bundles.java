@@ -62,6 +62,7 @@
 
 package com.eucalyptus.vm;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -75,12 +76,20 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.s3.model.VersionListing;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.tokens.SecurityTokenAWSCredentialsProvider;
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.ComputeException;
+import com.eucalyptus.compute.common.internal.vm.VmBundleTask;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmRuntimeState;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.entities.Entities;
@@ -89,7 +98,9 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.MessageCallback;
+import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -120,7 +131,165 @@ public class Bundles {
   public static MessageCallback cancelCallback( CancelBundleTaskType request ) {
     return new CancelBundleCallback( request );
   }
-  
+
+  public static void updateBundleTaskState( final VmInstance vm, String state ) {
+    VmBundleTask.BundleState next = VmBundleTask.BundleState.mapper.apply( state );
+    updateBundleTaskState( vm, next, 0.0d );
+  }
+
+  public static void bundleRestartInstance( VmBundleTask bundleTask ) {
+    VmBundleTask.BundleState state = bundleTask.getState( );
+    if ( VmBundleTask.BundleState.complete.equals( state ) || VmBundleTask.BundleState.failed.equals( state ) || VmBundleTask.BundleState.cancelled.equals( state ) ) {
+      final BundleRestartInstanceType request = new BundleRestartInstanceType( );
+      final BundleRestartInstanceResponseType reply = request.getReply( );
+
+      reply.set_return( true );
+      try {
+        LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_RESTART, bundleTask.getVmInstance().getOwner().getUserName(),
+            bundleTask.getBundleId(),
+            bundleTask.getVmInstance().getInstanceId() ) );
+
+        ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, bundleTask.getVmInstance( ).lookupPartition() );
+        final Cluster cluster = Clusters.lookup( ccConfig );
+
+        request.setInstanceId( bundleTask.getVmInstance( ).getInstanceId() );
+        reply.setTask( transform( bundleTask ) );
+        AsyncRequests.newRequest( bundleRestartInstanceCallback( request ) ).dispatch( cluster.getConfiguration( ) );
+      } catch ( final Exception e ) {
+        Logs.extreme( ).trace( "Failed to find bundle task: " + bundleTask.getBundleId( ) );
+      }
+    }
+  }
+
+  private static void setBundleTaskState( final VmBundleTask task, final VmBundleTask.BundleState state ) {
+    final VmBundleTask.BundleState previousState = task.getState( );
+    if ( previousState != null && previousState != state ) {
+      putPreviousTask( task );
+    }
+    task.setState( state );
+  }
+
+  public static void updateBundleTaskState( VmInstance vm, VmBundleTask.BundleState state, Double progress ) {
+    if ( vm.getRuntimeState( ).getBundleTask() != null ) {
+      final VmBundleTask.BundleState current = vm.getRuntimeState( ).getBundleTask().getState( );
+      VmBundleTask currentTask = vm.getRuntimeState( ).getBundleTask();
+      currentTask.setProgress((int) Math.round(progress * 100D));
+      if ( VmBundleTask.BundleState.complete.equals( state ) && !VmBundleTask.BundleState.complete.equals( current ) && !VmBundleTask.BundleState.none.equals( current ) ) {
+        setBundleTaskState( currentTask, state );
+        // set progress to 100% if complete is reached
+        currentTask.setProgress( 100 );
+        bundleRestartInstance( currentTask );
+      } else if ( VmBundleTask.BundleState.failed.equals( state ) && !VmBundleTask.BundleState.failed.equals( current ) && !VmBundleTask.BundleState.none.equals( current ) ) {
+        try{
+          deleteBucketContent(
+              vm.getOwnerAccountNumber( ),
+              currentTask.getBucket( ),
+              currentTask.getPrefix( ),
+              true );
+        }catch(final Exception ex){
+          LOG.error("After bundle failure, failed to delete the bucket", ex);
+        }
+        setBundleTaskState( currentTask, state );
+        bundleRestartInstance( currentTask );
+      } else if ( VmBundleTask.BundleState.cancelled.equals( state ) && !VmBundleTask.BundleState.cancelled.equals( current ) && !VmBundleTask.BundleState.none.equals( current ) ) {
+        try{
+          deleteBucketContent(
+              vm.getOwnerAccountNumber(),
+              vm.getRuntimeState( ).getBundleTask().getBucket( ),
+              vm.getRuntimeState( ).getBundleTask().getPrefix( ),
+              true );
+        }catch(final Exception ex){
+          LOG.error("After bundle cancellation, failed to delete the bucket", ex);
+        }
+        setBundleTaskState( currentTask, state );
+        bundleRestartInstance( currentTask );
+      } else if ( VmBundleTask.BundleState.canceling.equals( state ) || VmBundleTask.BundleState.canceling.equals( current ) ) {
+        //
+      } else if ( VmBundleTask.BundleState.pending.equals( current ) && !VmBundleTask.BundleState.none.equals( state ) ) {
+        setBundleTaskState( currentTask, state );
+        currentTask.setUpdateTime( new Date( ) );
+        EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_TRANSITION, vm.getOwner( ).toString( ), "" + vm.getRuntimeState( ).getBundleTask() ).info( );
+      } else if ( VmBundleTask.BundleState.storing.equals( state ) ) {
+        setBundleTaskState( currentTask, state );
+        currentTask.setUpdateTime( new Date( ) );
+        EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_TRANSITION, vm.getOwner( ).toString( ), "" + vm.getRuntimeState( ).getBundleTask() ).info( );
+      }
+    } else {
+      putPreviousTask( vm.getRuntimeState( ).getBundleTask( ) );
+      vm.getRuntimeState( ).setBundleTask( new VmBundleTask( vm, state.name(), new Date(), new Date(), 0, "unknown", "unknown", "unknown", "unknown" ) );
+      Logs.extreme( ).trace( "Unhandle bundle task state update: " + state );
+    }
+  }
+
+  public static Boolean cancelBundleTask( VmRuntimeState state ) {
+    if ( state.getBundleTask() != null ) {
+      setBundleTaskState( state.getBundleTask(), VmBundleTask.BundleState.canceling );
+      EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_CANCELING, state.getVmInstance ().getOwner().toString( ), state.getBundleTask().getBundleId( ),
+          state.getVmInstance().getInstanceId( ),
+          "" + state.getBundleTask().getState( ) ).info( );
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  public static Boolean restartBundleTask( VmRuntimeState state ) {
+    if ( state.getBundleTask() != null ) {
+      setBundleTaskState( state.getBundleTask(), VmBundleTask.BundleState.none );
+      EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_RESTART, state.getVmInstance().getOwner().toString( ), state.getBundleTask().getBundleId( ),
+          state.getVmInstance().getInstanceId( ),
+          "" + state.getBundleTask().getState( ) ).info( );
+      return true;
+    }
+    return false;
+  }
+
+  public static Boolean submittedBundleTask( VmRuntimeState state ) {
+    if ( state.getBundleTask() != null ) {
+      if ( VmBundleTask.BundleState.cancelled.equals( state.getBundleTaskState() ) ) {
+        EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_CANCELLED, state.getVmInstance().getOwner().toString( ), state.getBundleTask().getBundleId( ),
+            state.getVmInstance().getInstanceId( ),
+            "" + state.getBundleTask().getState( ) ).info( );
+        resetBundleTask( state );
+        return true;
+      } else if ( state.getBundleTask().getState( ).ordinal( ) >= VmBundleTask.BundleState.storing.ordinal( ) ) {
+        setBundleTaskState( state.getBundleTask(), VmBundleTask.BundleState.storing );
+        EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_STARTING,
+            state.getVmInstance().getOwner( ).toString( ),
+            state.getBundleTask( ).getBundleId(),
+            state.getVmInstance( ).getInstanceId( ),
+            "" + state.getBundleTask( ).getState( ) ).info();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public static Boolean startBundleTask( final VmBundleTask task ) {
+    final VmRuntimeState state = task.getVmInstance( ).getRuntimeState( );
+    if ( !state.isBundling( ) ) {
+      putPreviousTask( state.getBundleTask( ) );
+      state.setBundleTask( task );
+      return true;
+    } else {
+      if ( ( state.getBundleTask() != null )
+          && ( VmBundleTask.BundleState.failed.equals( task.getState( ) ) || VmBundleTask.BundleState.canceling.equals( task.getState( ) ) || VmBundleTask.BundleState.cancelled.equals( task.getState( ) ) ) ) {
+        resetBundleTask( state );
+        state.setBundleTask( task );
+        return true;
+      } else {
+        return false;
+      }
+    }
+  }
+
+  private static VmBundleTask resetBundleTask( final VmRuntimeState state ) {
+    final VmBundleTask oldTask = state.getBundleTask( );
+    putPreviousTask(oldTask);
+    state.setBundleTask( null );
+    return oldTask;
+  }
+
   public static class CancelBundleCallback extends MessageCallback<CancelBundleTaskType, CancelBundleTaskResponseType> {
     private CancelBundleCallback( CancelBundleTaskType request ) {
       super( request );
@@ -134,7 +303,7 @@ public class Bundles {
         EntityTransaction db = Entities.get( VmInstance.class );
         try {
           VmInstance vm = VmInstances.lookupByBundleId( this.getRequest( ).getBundleId( ) );
-          vm.getRuntimeState( ).cancelBundleTask( );
+          cancelBundleTask( vm.getRuntimeState() );
           EventRecord.here( CancelBundleCallback.class, EventType.BUNDLE_CANCELLED, this.getRequest( ).toSimpleString( ), vm.getRuntimeState( ).getBundleTask( ).getBundleId( ),
                             vm.getInstanceId( ) ).info( );
           db.commit( );
@@ -163,7 +332,7 @@ public class Bundles {
         EntityTransaction db = Entities.get( VmInstance.class );
         try {
           VmInstance vm = VmInstances.lookup( this.getRequest( ).getInstanceId( ) );
-          vm.getRuntimeState( ).restartBundleTask( );
+          restartBundleTask( vm.getRuntimeState() );
           EventRecord.here( CancelBundleCallback.class, EventType.BUNDLE_RESTART, this.getRequest( ).toSimpleString( ), vm.getRuntimeState( ).getBundleTask( ).getBundleId( ),
                             vm.getInstanceId( ) ).info( );
           db.commit( );
@@ -188,7 +357,7 @@ public class Bundles {
           LOG.info( "Attempt to bundle instance " + this.getRequest( ).getInstanceId( ) + " has failed." );
         } else {
           VmInstance vm = VmInstances.lookup( this.getRequest( ).getInstanceId( ) );
-          vm.getRuntimeState( ).submittedBundleTask( );
+          submittedBundleTask( vm.getRuntimeState() );
           EventRecord.here( BundleCallback.class, EventType.BUNDLE_STARTED, this.getRequest( ).toSimpleString( ), "" + vm.getRuntimeState( ),
                             vm.getInstanceId( ) ).info( );
         }
@@ -200,9 +369,50 @@ public class Bundles {
     }
     
   }
-  
+
+  public static Function<BundleTask, VmBundleTask> fromBundleTask( final VmInstance vm ) {
+    return new Function<BundleTask, VmBundleTask>( ) {
+
+      @Override
+      public VmBundleTask apply( final BundleTask input ) {
+        return new VmBundleTask( vm,
+            input.getState( ),
+            input.getStartTime( ),
+            input.getUpdateTime( ),
+            input.getProgress( ) != null
+                ? Integer.parseInt( input.getProgress( ).replace( "%", "" ) )
+                : 0,
+            input.getBucket( ),
+            input.getPrefix( ),
+            input.getErrorMessage( ),
+            input.getErrorCode( ) );
+      }
+    };
+  }
+
+  public static Function<VmBundleTask, BundleTask> asBundleTask( ) {
+    return new Function<VmBundleTask, BundleTask>( ) {
+
+      @Override
+      public BundleTask apply( final VmBundleTask input ) {
+        return new BundleTask( input.getInstanceId( ),
+            input.getBundleId( ),
+            input.getState( ).name( ),
+            input.getStartTime( ),
+            input.getUpdateTime( ),
+            "" + input.getProgress( ),
+            input.getBucket( ),
+            input.getPrefix( ),
+            input.getErrorMessage( ),
+            input.getErrorCode( ) );
+      }
+    };
+  }
+
+
+
   public static BundleTask transform( final VmBundleTask bundleTask ) {
-    return VmBundleTask.asBundleTask( ).apply( bundleTask );
+    return asBundleTask( ).apply( bundleTask );
   }
   
   public static VmBundleTask create( VmInstance v, String bucket, String prefix, String policy ) throws AuthException {
@@ -268,12 +478,12 @@ public class Bundles {
     }
   }
 
-  static void deleteBucketContent( final User user,
+  static void deleteBucketContent( final String accountId,
                                    final String bucketName,
                                    final String prefix,
                                    final boolean deleteEmptyBucket ) throws ComputeException {
     try ( final EucaS3Client s3c =
-              EucaS3ClientFactory.getEucaS3Client( new SecurityTokenAWSCredentialsProvider( user ) ) ) {
+              EucaS3ClientFactory.getEucaS3Client( new SecurityTokenAWSCredentialsProvider( AccountFullName.getInstance( accountId ) ) ) ) {
       final List<Bucket> buckets = s3c.listBuckets( );
       boolean bucketFound = false;
       for(final Bucket bucket : buckets){
@@ -296,7 +506,7 @@ public class Bundles {
       }
     } catch( final Exception ex ){
       LOG.debug( "Error deleting bucket ("+bucketName+") " +
-          ( Strings.isNullOrEmpty( prefix ) ? "" : "prefix ("+prefix+") " ) + "for user " + user.getUserId( ), ex );
+          ( Strings.isNullOrEmpty( prefix ) ? "" : "prefix ("+prefix+") " ) + "for account " + accountId, ex );
       throw new ComputeException("InternalError", "Unable to delete the bucket");
     }
   }

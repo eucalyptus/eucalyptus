@@ -85,7 +85,7 @@ import com.eucalyptus.util.dns.DnsResolvers.DnsResolver;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResponse;
 import com.eucalyptus.util.dns.DnsResolvers.RequestType;
 import com.eucalyptus.util.dns.DomainNameRecords;
-import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;

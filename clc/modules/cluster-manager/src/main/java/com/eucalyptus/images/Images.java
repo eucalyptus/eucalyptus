@@ -84,10 +84,9 @@ import org.hibernate.exception.ConstraintViolationException;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.blockstorage.Snapshot;
+import com.eucalyptus.compute.common.internal.blockstorage.Snapshot;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
@@ -98,12 +97,22 @@ import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.ImageMetadata.Architecture;
 import com.eucalyptus.compute.common.ImageMetadata.State;
 import com.eucalyptus.compute.common.StaticDiskImage;
-import com.eucalyptus.cloud.util.MetadataException;
+import com.eucalyptus.compute.common.internal.images.BlockStorageDeviceMapping;
+import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
+import com.eucalyptus.compute.common.internal.images.BootableImageInfo;
+import com.eucalyptus.compute.common.internal.images.DeviceMapping;
+import com.eucalyptus.compute.common.internal.images.EphemeralDeviceMapping;
+import com.eucalyptus.compute.common.internal.images.ImageInfo;
+import com.eucalyptus.compute.common.internal.images.ImageInfoTag;
+import com.eucalyptus.compute.common.internal.images.KernelImageInfo;
+import com.eucalyptus.compute.common.internal.images.MachineImageInfo;
+import com.eucalyptus.compute.common.internal.images.PutGetImageInfo;
+import com.eucalyptus.compute.common.internal.images.RamdiskImageInfo;
+import com.eucalyptus.compute.common.internal.images.SuppressDeviceMappping;
+import com.eucalyptus.compute.common.internal.util.MetadataException;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.compute.identifier.ResourceIdentifiers;
-import com.eucalyptus.context.Context;
-import com.eucalyptus.context.Contexts;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionExecutionException;
@@ -114,7 +123,7 @@ import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.tags.FilterSupport;
+import com.eucalyptus.compute.common.internal.tags.FilterSupport;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
@@ -122,11 +131,11 @@ import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMapper;
-import com.eucalyptus.util.TypeMappers;
-import com.eucalyptus.vm.VmVolumeAttachment;
+import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -136,77 +145,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
-public class Images {
+public class Images extends com.eucalyptus.compute.common.internal.images.Images {
   private static Logger LOG  = Logger.getLogger( Images.class );
-  
-  static final String   SELF = "self";
-  public static final String DEFAULT_ROOT_DEVICE = "/dev/sda";
-  public static final String DEFAULT_PARTITIONED_ROOT_DEVICE = "/dev/sda1";
-  public static final String DEFAULT_EPHEMERAL_DEVICE = "/dev/sdb";
-
-  public static Predicate<ImageInfo> filterExecutableBy( final Collection<String> executableSet ) {
-    final boolean executableSelf = executableSet.remove( SELF );
-    final boolean executableAll = executableSet.remove( "all" );
-    return new Predicate<ImageInfo>( ) {
-      @Override
-      public boolean apply( ImageInfo image ) {
-        if ( executableSet.isEmpty( ) && !executableSelf && !executableAll ) {
-          return true;
-        } else {
-          UserFullName userFullName = Contexts.lookup( ).getUserFullName( );
-          return
-              ( executableAll && image.getImagePublic( ) ) ||
-              ( executableSelf && image.hasPermission( userFullName.getAccountNumber( ) ) ) ||
-              image.hasPermission( executableSet.toArray( new String[ executableSet.size() ] ) );
-        }
-      }
-      
-    };
-  }
-  
-  public enum FilterImageStates implements Predicate<ImageInfo> {
-	  INSTANCE;
-	  @Override
-	  public boolean apply( ImageInfo input ) {
-		  if (ImageMetadata.State.available.name().equals(input.getState().getExternalStateName()))
-			  return true;
-		  else
-			  return false;
-	  }
-  }
-  
-  public enum FilterPermissions implements Predicate<ImageInfo> {
-    INSTANCE;
-    
-    @Override
-    public boolean apply( ImageInfo input ) {
-      try {
-        Context ctx = Contexts.lookup( );
-        if ( ctx.isAdministrator( ) ) {
-          return true;
-        } else {
-          UserFullName luser = ctx.getUserFullName( );
-          /** GRZE: record why this must be so **/
-          if ( input.getImagePublic( ) ) {
-            return true;
-          } else if ( input.getOwnerAccountNumber( ).equals( luser.getAccountNumber( ) ) ) {
-            return true;
-          } else if ( input.hasPermission( luser.getAccountNumber( ), luser.getUserId( ) ) ) {
-            return true;
-          } else {
-            for ( AccessKey key : ctx.getUser( ).getKeys( ) ) {
-              if ( input.hasPermission( key.getAccessKey( ) ) ) {
-                return true;
-              }
-            }
-            return false;
-          }
-        }
-      } catch ( Exception ex ) {
-        return false;
-      }
-    }
-  }
   
   @QuantityMetricFunction( ImageMetadata.class )
   public enum CountImages implements Function<OwnerFullName, Long> {
@@ -584,13 +524,6 @@ public class Images {
 	  return true;
   }
   
-  public static Function<ImageInfo, ImageDetails> TO_IMAGE_DETAILS = new Function<ImageInfo, ImageDetails>( ) {
-                                                                     
-                                                                     @Override
-                                                                     public ImageDetails apply( ImageInfo input ) {
-                                                                       return TypeMappers.transform( input, ImageDetails.class );
-                                                                     }
-                                                                   };
   public static ImageInfo                         ALL              = new ImageInfo( );
   
   public static List<ImageInfo> listAllImages( ) {
@@ -680,30 +613,6 @@ public class Images {
     }
   }
    
-  public static MachineImageInfo exampleMachineWithImageId( final String imageId ) {
-    return new MachineImageInfo( imageId );
-  }
-  
-  public static BlockStorageImageInfo exampleBlockStorageWithImageId( final String imageId ) {
-    return new BlockStorageImageInfo( imageId );
-  }
-
-  public static BlockStorageImageInfo exampleBlockStorageWithSnapshotId( final String snapshotId ) {
-    final BlockStorageImageInfo info = new BlockStorageImageInfo();
-    info.setSnapshotId( snapshotId );
-    return info;
-  }
-  
-  public static BlockStorageDeviceMapping exampleBSDMappingWithSnapshotId( final String snapshotId ) {
-    final BlockStorageDeviceMapping bsdm = new BlockStorageDeviceMapping();
-    bsdm.setSnapshotId(snapshotId);
-    return bsdm;
-  }
-
-  public static KernelImageInfo exampleKernelWithImageId( final String imageId ) {
-    return new KernelImageInfo( imageId );
-  }
-
   public static KernelImageInfo lookupKernel( final String kernelId ) {
     EntityTransaction tx = Entities.get( KernelImageInfo.class );
     KernelImageInfo ret = new KernelImageInfo(  );
@@ -754,34 +663,6 @@ public class Images {
       if(db.isActive())
         db.rollback();
     }
-  }
-  
-  public static ImageInfo exampleWithImageId( final String imageId ) {
-    return new ImageInfo( imageId );
-  }
-  
-  public static ImageInfo exampleWithName( @Nullable final OwnerFullName owner,
-                                           @Nullable final String name ) {
-    final ImageInfo example = new ImageInfo( );
-    example.setOwner( owner );
-    example.setImageName( name );
-    return example;
-  }
-  
-  public static ImageInfo exampleWithImageState( final ImageMetadata.State state ) {
-    final ImageInfo img = new ImageInfo( );
-    img.setState( state );
-    img.setStateChangeStack( null );
-    img.setLastState( null );
-    return img;
-  }
-  
-  public static ImageInfo exampleWithImageFormat( final ImageMetadata.ImageFormat format ) {
-    final ImageInfo img = new ImageInfo( );
-    img.setImageFormat(format.toString());
-    img.setStateChangeStack( null );
-    img.setLastState( null );
-    return img;
   }
   
   public static Predicate<BlockDeviceMappingItemType> findEbsRoot( final String rootDevName ) {
@@ -888,9 +769,10 @@ public class Images {
 
     final boolean mapRoot = DEFAULT_PARTITIONED_ROOT_DEVICE.equals( rootDeviceName );
     BlockStorageImageInfo ret = new BlockStorageImageInfo( userFullName, imageId, imageName, imageDescription, imageSizeBytes,
-                                                           imageArch, imagePlatform,
-                                                           eki, eri,
-                                                           snap.getDisplayName( ), targetDeleteOnTermination, mapRoot ? DEFAULT_ROOT_DEVICE : rootDeviceName );
+                                                           imageArch, imagePlatform, eki, eri, snap.getDisplayName( ),
+                                                           targetDeleteOnTermination,
+                                                           mapRoot ? DEFAULT_ROOT_DEVICE : rootDeviceName,
+                                                           getImagePublicVisibilityDefault( ) );
     final EntityTransaction tx = Entities.get( BlockStorageImageInfo.class );
     try {
       ret = Entities.merge( ret );
@@ -924,7 +806,8 @@ public class Images {
 		  ) throws Exception {
 	  final String imageId = ResourceIdentifiers.generateString( ImageMetadata.Type.machine.getTypePrefix() );
 	  BlockStorageImageInfo ret = new BlockStorageImageInfo( creator, imageId, imageNameArg, imageDescription, 
-			  new Long(-1), requestArch, imagePlatform, null, null, "snap-EUCARESERVED", false, Images.DEFAULT_ROOT_DEVICE ); 
+			  new Long(-1), requestArch, imagePlatform, null, null, "snap-EUCARESERVED", false, Images.DEFAULT_ROOT_DEVICE,
+        getImagePublicVisibilityDefault( ) );
 	  /// device with snap-EUCARESERVED is the placeholder to indicate register is for create-image only
 	  /// actual root device with snapshot is filled in later 
 	  BlockDeviceMappingItemType toRemove = null;
@@ -955,7 +838,7 @@ public class Images {
 
   /***
    * @param imageId: id of an image already registered as pending state
-   * @param userFullName
+   * @param accountFullName
    * @param blockDeviceMappings: the mapping that contains the root device
    * @return
    * @throws EucalyptusCloudException
@@ -1079,12 +962,14 @@ public class Images {
       case kernel:
         ret = new KernelImageInfo( creator, ResourceIdentifiers.generateString( ImageMetadata.Type.kernel.getTypePrefix() ),
                                    imageName, imageDescription, manifest.getSize( ), imageArch, imagePlatform,
-                                    manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ) );
+                                   manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ),
+                                   getImagePublicVisibilityDefault() );
         break;
       case ramdisk:
         ret = new RamdiskImageInfo( creator, ResourceIdentifiers.generateString( ImageMetadata.Type.ramdisk.getTypePrefix() ),
                                     imageName, imageDescription, manifest.getSize( ), imageArch, imagePlatform,
-                                    manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ) );
+                                    manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ),
+                                    getImagePublicVisibilityDefault() );
         break;
       case machine:
     	if(ImageMetadata.Platform.windows.equals(imagePlatform)){
@@ -1094,7 +979,8 @@ public class Images {
     	ret = new MachineImageInfo( creator, ResourceIdentifiers.generateString( ImageMetadata.Type.machine.getTypePrefix() ),
     	    imageName, imageDescription, manifest.getSize( ), imageArch, imagePlatform,
     	    manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ), eki, eri , virtType,
-            manifestAmi, manifest.getRoot());
+            manifestAmi, manifest.getRoot(),
+          getImagePublicVisibilityDefault());
     	ret.setImageFormat(format.toString());
     	if( ImageMetadata.VirtualizationType.hvm.equals(virtType) 
     		|| (!manifestAmi.isEmpty() && !ImageManager.isPathAPartition(manifestAmi) )){
@@ -1253,7 +1139,7 @@ public class Images {
       @Override
       public Collection<String> apply( final String accountAliasExpression ) {
         try {
-          return Accounts.resolveAccountNumbersForName( accountAliasExpression );
+          return Accounts.listAccountNumbersForName( accountAliasExpression );
         } catch ( AuthException e ) {
           LOG.error( e, e );
           return Collections.emptySet();
@@ -1480,22 +1366,8 @@ public class Images {
     }
   }
 
-  /**
-   * Predicate matching images in a standard state.
-   *
-   * @see com.eucalyptus.compute.common.ImageMetadata.State#standardState( )
-   */
-  public static Predicate<ImageInfo> standardStatePredicate( ) {
-    return StandardStatePredicate.INSTANCE;
-  }
-
-  private enum StandardStatePredicate implements Predicate<ImageInfo> {
-    INSTANCE;
-
-    @Override
-    public boolean apply( final com.eucalyptus.images.ImageInfo imageInfo ) {
-      return imageInfo.getState( ).standardState( );
-    }
+  private static boolean getImagePublicVisibilityDefault( ) {
+    return Objects.firstNonNull( ImageConfiguration.getInstance( ).getDefaultVisibility( ), Boolean.FALSE );
   }
 
   public static class ImageCleanupEventListener implements EventListener<Hertz> {

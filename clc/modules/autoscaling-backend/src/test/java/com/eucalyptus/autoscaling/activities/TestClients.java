@@ -35,6 +35,29 @@ public class TestClients {
     BaseMessage handle( BaseMessage request );
   }
 
+  static class TestComputeClient extends ComputeClient {
+    private final RequestHandler handler;
+
+    TestComputeClient( AccountFullName accountFullName, RequestHandler handler ) {
+      super(accountFullName);
+      this.handler = handler;
+    }
+
+    @SuppressWarnings( "unchecked" )
+    @Override
+    public <REQ extends ComputeMessage, RES extends ComputeMessage> void dispatch( REQ request,
+                                                                                   Callback.Checked<RES> callback,
+                                                                                   @Nullable Runnable then ) {
+      try {
+        callback.fire( (RES)handler.handle( request ) );
+      } catch ( Exception e ) {
+        callback.fireException( e );
+      } finally {
+        if ( then != null ) then.run();
+      }
+    }
+  }
+
   static class TestEucalyptusClient extends EucalyptusClient {
     private final RequestHandler handler;
 

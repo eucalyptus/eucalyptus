@@ -19,6 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.blockstorage.util;
 
+import com.eucalyptus.auth.principal.BaseRole;
+import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.Partition;
@@ -70,7 +72,7 @@ public class BlockStorageUtilSvcImpl implements BlockStorageUtilSvc {
   }
 
   @Override
-  public Role checkAndConfigureBlockStorageAccount() throws EucalyptusCloudException {
+  public BaseRole checkAndConfigureBlockStorageAccount() throws EucalyptusCloudException {
     return BlockStorageUtil.checkAndConfigureBlockStorageAccount();
   }
 }

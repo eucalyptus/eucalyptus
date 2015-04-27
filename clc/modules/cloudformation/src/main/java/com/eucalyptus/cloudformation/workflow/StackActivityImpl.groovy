@@ -42,9 +42,11 @@ import com.eucalyptus.cloudformation.resources.ResourceInfo
 import com.eucalyptus.cloudformation.resources.ResourcePropertyResolver
 import com.eucalyptus.cloudformation.resources.ResourceResolverManager
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSCloudFormationWaitConditionProperties
+import com.eucalyptus.cloudformation.template.AWSParameterTypeValidationHelper
 import com.eucalyptus.cloudformation.template.FunctionEvaluation
 import com.eucalyptus.cloudformation.template.IntrinsicFunctions
 import com.eucalyptus.cloudformation.template.JsonHelper
+import com.eucalyptus.cloudformation.template.TemplateParser
 import com.eucalyptus.cloudformation.workflow.steps.Step
 import com.eucalyptus.component.annotation.ComponentPart
 import com.fasterxml.jackson.core.type.TypeReference
@@ -128,7 +130,7 @@ public class StackActivityImpl implements StackActivity {
       JsonNode propertiesJsonNode = JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson());
       List<String> propertyKeys = Lists.newArrayList(propertiesJsonNode.fieldNames());
       for (String propertyKey : propertyKeys) {
-        JsonNode evaluatedPropertyNode = FunctionEvaluation.evaluateFunctions(propertiesJsonNode.get(propertyKey), stackEntity, resourceInfoMap);
+        JsonNode evaluatedPropertyNode = FunctionEvaluation.evaluateFunctions(propertiesJsonNode.get(propertyKey), stackEntity, resourceInfoMap, effectiveUserId);
         if (IntrinsicFunctions.NO_VALUE.evaluateMatch(evaluatedPropertyNode).isMatch()) {
           ((ObjectNode) propertiesJsonNode).remove(propertyKey);
         } else {
@@ -142,7 +144,7 @@ public class StackActivityImpl implements StackActivity {
       JsonNode metadataJsonNode = JsonHelper.getJsonNodeFromString(resourceInfo.getMetadataJson());
       List<String> metadataKeys = Lists.newArrayList(metadataJsonNode.fieldNames());
       for (String metadataKey : metadataKeys) {
-        JsonNode evaluatedMetadataNode = FunctionEvaluation.evaluateFunctions(metadataJsonNode.get(metadataKey), stackEntity, resourceInfoMap);
+        JsonNode evaluatedMetadataNode = FunctionEvaluation.evaluateFunctions(metadataJsonNode.get(metadataKey), stackEntity, resourceInfoMap, effectiveUserId);
         if (IntrinsicFunctions.NO_VALUE.evaluateMatch(evaluatedMetadataNode).isMatch()) {
           ((ObjectNode) metadataJsonNode).remove(metadataKey);
         } else {
@@ -156,7 +158,7 @@ public class StackActivityImpl implements StackActivity {
       JsonNode updatePolicyJsonNode = JsonHelper.getJsonNodeFromString(resourceInfo.getUpdatePolicyJson());
       List<String> updatePolicyKeys = Lists.newArrayList(updatePolicyJsonNode.fieldNames());
       for (String updatePolicyKey : updatePolicyKeys) {
-        JsonNode evaluatedUpdatePolicyNode = FunctionEvaluation.evaluateFunctions(updatePolicyJsonNode.get(updatePolicyKey), stackEntity, resourceInfoMap);
+        JsonNode evaluatedUpdatePolicyNode = FunctionEvaluation.evaluateFunctions(updatePolicyJsonNode.get(updatePolicyKey), stackEntity, resourceInfoMap, effectiveUserId);
         if (IntrinsicFunctions.NO_VALUE.evaluateMatch(evaluatedUpdatePolicyNode).isMatch()) {
           ((ObjectNode) updatePolicyJsonNode).remove(updatePolicyKey);
         } else {
@@ -293,7 +295,7 @@ public class StackActivityImpl implements StackActivity {
   }
 
   @Override
-  public String finalizeCreateStack(String stackId, String accountId) {
+  public String finalizeCreateStack(String stackId, String accountId, String effectiveUserId) {
     LOG.info("Finalizing create stack");
     try {
       StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
@@ -305,8 +307,8 @@ public class StackActivityImpl implements StackActivity {
 
       for (StackEntity.Output output : outputs) {
         output.setReady(true);
-        output.setReady(true);
-        JsonNode outputValue = FunctionEvaluation.evaluateFunctions(JsonHelper.getJsonNodeFromString(output.getJsonValue()), stackEntity, resourceInfoMap);
+        if (!output.isAllowedByCondition()) continue; // don't evaluate outputs that won't show up anyway.
+        JsonNode outputValue = FunctionEvaluation.evaluateFunctions(JsonHelper.getJsonNodeFromString(output.getJsonValue()), stackEntity, resourceInfoMap, effectiveUserId);
         if (outputValue == null || !outputValue.isValueNode()) {
           throw new ValidationErrorException("Cannot create outputs: All outputs must be strings.")
         }
@@ -329,6 +331,8 @@ public class StackActivityImpl implements StackActivity {
     LOG.info("Performing creation step " + stepId + " on resource " + resourceId);
     StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
     StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId);
+    // Take a snapshot of the stack resource
+    String stackResourceEntityStrBefore = stackResourceEntity.toString();
     ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
     try {
       ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
@@ -345,19 +349,22 @@ public class StackActivityImpl implements StackActivity {
       stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
       StackResourceEntityManager.updateStackResource(stackResourceEntity);
 
-      // Create a stack event after success
-      StackEvent stackEvent = new StackEvent();
-      stackEvent.setStackId(stackId);
-      stackEvent.setStackName(resourceAction.getStackEntity().getStackName());
-      stackEvent.setLogicalResourceId(resourceInfo.getLogicalResourceId());
-      stackEvent.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
-      stackEvent.setEventId(resourceInfo.getLogicalResourceId() + "-" + StackResourceEntity.Status.CREATE_IN_PROGRESS.toString() + "-" + System.currentTimeMillis());
-      stackEvent.setResourceProperties(resourceInfo.getPropertiesJson());
-      stackEvent.setResourceType(resourceInfo.getType());
-      stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_IN_PROGRESS.toString());
-      stackEvent.setResourceStatusReason(null);
-      stackEvent.setTimestamp(new Date());
-      StackEventEntityManager.addStackEvent(stackEvent, accountId);
+      // Create a stack event after success (if anything changed)
+      String stackResourceEntityStrAfter = stackResourceEntity.toString();
+      if (!stackResourceEntityStrAfter.equals(stackResourceEntityStrBefore)) {
+        StackEvent stackEvent = new StackEvent();
+        stackEvent.setStackId(stackId);
+        stackEvent.setStackName(resourceAction.getStackEntity().getStackName());
+        stackEvent.setLogicalResourceId(resourceInfo.getLogicalResourceId());
+        stackEvent.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
+        stackEvent.setEventId(resourceInfo.getLogicalResourceId() + "-" + StackResourceEntity.Status.CREATE_IN_PROGRESS.toString() + "-" + System.currentTimeMillis());
+        stackEvent.setResourceProperties(resourceInfo.getPropertiesJson());
+        stackEvent.setResourceType(resourceInfo.getType());
+        stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_IN_PROGRESS.toString());
+        stackEvent.setResourceStatusReason(null);
+        stackEvent.setTimestamp(new Date());
+        StackEventEntityManager.addStackEvent(stackEvent, accountId);
+      }
 
     } catch (NotAResourceFailureException ex) {
       LOG.info( "Create step not yet complete: ${ex.message}" );
@@ -655,5 +662,43 @@ public class StackActivityImpl implements StackActivity {
         LOG.error(ex, ex);
         throw new ResourceFailureException(rootCause.getClass().getName() + ":" + rootCause.getMessage());
     }
+  }
+  @Override
+  public String validateAWSParameterTypes(String stackId, String accountId, String effectiveUserId) {
+    try {
+      StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
+      Map<String, TemplateParser.ParameterType> parameterTypeMap = new TemplateParser().getParameterTypeMap(stackEntity.getTemplateBody());
+      for (StackEntity.Parameter parameter: StackEntityHelper.jsonToParameters(stackEntity.getParametersJson())) {
+        AWSParameterTypeValidationHelper.validateParameter(parameter, parameterTypeMap.get(parameter.getKey()), effectiveUserId);
+      }
+    } catch (Exception e) {
+      LOG.error(e, e);
+      throw e;
+    }
+    return "";
+  }
+
+  public String cancelOutstandingCreateResources(String stackId, String accountId, String cancelMessage) {
+    List<StackResourceEntity> stackResourceEntityList = StackResourceEntityManager.getStackResources(stackId, accountId);
+    for (StackResourceEntity stackResourceEntity: stackResourceEntityList) {
+      if (stackResourceEntity.getResourceStatus() == StackResourceEntity.Status.CREATE_IN_PROGRESS) {
+        stackResourceEntity.setResourceStatus(StackResourceEntity.Status.CREATE_FAILED);
+        stackResourceEntity.setResourceStatusReason(cancelMessage);
+        StackResourceEntityManager.updateStackResource(stackResourceEntity);
+        StackEvent stackEvent = new StackEvent();
+        stackEvent.setStackId(stackId);
+        stackEvent.setStackName(stackResourceEntity.getStackName());
+        stackEvent.setLogicalResourceId(stackResourceEntity.getLogicalResourceId());
+        stackEvent.setPhysicalResourceId(stackResourceEntity.getPhysicalResourceId());
+        stackEvent.setEventId(stackResourceEntity.getLogicalResourceId() + "-" + StackResourceEntity.Status.CREATE_FAILED.toString() + "-" + System.currentTimeMillis());
+        stackEvent.setResourceProperties(stackResourceEntity.getPropertiesJson());
+        stackEvent.setResourceType(stackResourceEntity.getResourceType());
+        stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_FAILED.toString());
+        stackEvent.setResourceStatusReason(cancelMessage);
+        stackEvent.setTimestamp(new Date());
+        StackEventEntityManager.addStackEvent(stackEvent, accountId);
+      }
+    }
+    return "";
   }
 }

@@ -105,14 +105,14 @@ public class FunctionEvaluation {
     }
     // If not an object or array, nothing to validate
   }
-  public static JsonNode evaluateFunctions(JsonNode jsonNode, Template template) throws CloudFormationException {
+  public static JsonNode evaluateFunctions(JsonNode jsonNode, Template template, String effectiveUserId) throws CloudFormationException {
     if (jsonNode == null) return jsonNode;
     if (!jsonNode.isArray() && !jsonNode.isObject()) return jsonNode;
     ObjectMapper objectMapper = new ObjectMapper();
     if (jsonNode.isArray()) {
       ArrayNode arrayCopy = objectMapper.createArrayNode();
       for (int i = 0;i < jsonNode.size(); i++) {
-        JsonNode arrayElement = evaluateFunctions(jsonNode.get(i), template);
+        JsonNode arrayElement = evaluateFunctions(jsonNode.get(i), template, effectiveUserId);
         arrayCopy.add(arrayElement);
       }
       return arrayCopy;
@@ -125,24 +125,24 @@ public class FunctionEvaluation {
       IntrinsicFunction.MatchResult matchResult = intrinsicFunction.evaluateMatch(jsonNode);
       if (matchResult.isMatch()) {
         IntrinsicFunction.ValidateResult validateResult = intrinsicFunction.validateArgTypesWherePossible(matchResult);
-        return intrinsicFunction.evaluateFunction(validateResult, template);
+        return intrinsicFunction.evaluateFunction(validateResult, template, effectiveUserId);
       }
     }
     // Otherwise, not a function, so evaluate functions of values
     ObjectNode objectCopy = objectMapper.createObjectNode();
     List<String> fieldNames = Lists.newArrayList(jsonNode.fieldNames());
     for (String key: fieldNames) {
-      JsonNode objectElement = evaluateFunctions(jsonNode.get(key), template);
+      JsonNode objectElement = evaluateFunctions(jsonNode.get(key), template, effectiveUserId);
       objectCopy.put(key, objectElement);
     }
     return objectCopy;
   }
 
-  public static JsonNode evaluateFunctions(JsonNode jsonNode, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap) throws CloudFormationException {
+  public static JsonNode evaluateFunctions(JsonNode jsonNode, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap, String effectiveUserId) throws CloudFormationException {
     Template template = new Template();
     template.setResourceInfoMap(resourceInfoMap);
     StackEntityHelper.populateTemplateWithStackEntity(template, stackEntity);
-    JsonNode result = evaluateFunctions(jsonNode, template);
+    JsonNode result = evaluateFunctions(jsonNode, template, effectiveUserId);
     // just in case the above function changes the template, put the results back into the stack entity
     StackEntityHelper.populateStackEntityWithTemplate(stackEntity, template);
     return result;

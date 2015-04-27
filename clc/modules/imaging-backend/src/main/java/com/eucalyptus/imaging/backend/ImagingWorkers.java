@@ -37,9 +37,9 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
-import com.eucalyptus.imaging.common.EucalyptusActivityTasks;
 import com.eucalyptus.imaging.common.Imaging;
 import com.eucalyptus.imaging.ImagingServiceProperties;
+import com.eucalyptus.resources.client.Ec2Client;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -76,12 +76,13 @@ public class ImagingWorkers {
             timedout.add(worker);
           if(ImagingWorker.STATE.RETIRING.equals(worker.getState()))
             retiring.add(worker);
-          if(ImagingWorker.STATE.DECOMMISSIONED.equals(worker.getState()) && shouldRemove(worker))
+          if(ImagingWorker.STATE.DECOMMISSIONED.equals(worker.getState()) && timeToRemove(worker) <= 0)
             toRemove.add(worker);
         }
         
         for(final ImagingWorker worker : timedout){
-          LOG.warn(String.format("Imaging service worker %s is not responding", worker.getDisplayName()));
+          LOG.info(String.format("Imaging service worker %s is not responding and might be "
+              + "decommissioned in about %d minutes.", worker.getDisplayName(), timeToRemove(worker)));
           retireWorker(worker.getDisplayName());
         }
         
@@ -103,15 +104,16 @@ public class ImagingWorkers {
       }
     }
   }
-  
-  private static boolean shouldRemove(final ImagingWorker worker) {
+
+  private static long MINUTE=1000*60l;
+  private static long timeToRemove(final ImagingWorker worker) {
     final Date lastUpdated = worker.getWorkerUpdateTime();
     Calendar cal = Calendar.getInstance(); // creates calendar
     cal.setTime(lastUpdated); // sets calendar time/date
     cal.add(Calendar.MINUTE, 60); // remove records after 1 hour
     final Date expirationTime = cal.getTime();
 
-    return expirationTime.before(new Date());
+    return Math.abs((expirationTime.getTime() - new Date().getTime())/MINUTE);
   }
   
   private static boolean isTimedOut(final ImagingWorker worker){
@@ -167,15 +169,17 @@ public class ImagingWorkers {
     }
   }
   
+  private static final String DEFAULT_LAUNCHER_TAG = "euca-internal-imaging-workers";
+
   public static void verifyWorker(final String instanceId, final String remoteHost) throws Exception{
     if(!verifiedWorkers.contains(instanceId)){
       try{
         final List<RunningInstancesItemType> instances=
-            EucalyptusActivityTasks.getInstance().describeSystemInstances(Lists.newArrayList(instanceId));
+            Ec2Client.getInstance().describeInstances(null, Lists.newArrayList(instanceId));
         final RunningInstancesItemType workerInstance = instances.get(0);
         boolean tagFound = false;
         for(final ResourceTag tag : workerInstance.getTagSet()){
-          if(ImagingServiceProperties.DEFAULT_LAUNCHER_TAG.equals(tag.getValue())){
+          if(DEFAULT_LAUNCHER_TAG.equals(tag.getValue())){
             tagFound = true;
             break;
           } 
@@ -195,7 +199,7 @@ public class ImagingWorkers {
     String availabilityZone = null;
     try{
       final List<RunningInstancesItemType> instances =
-          EucalyptusActivityTasks.getInstance().describeSystemInstances(Lists.newArrayList(workerId));
+          Ec2Client.getInstance().describeInstances(null, Lists.newArrayList(workerId));
       availabilityZone = instances.get(0).getPlacement();
     }catch(final Exception ex){
       throw Exceptions.toUndeclared("Unable to find the instance named: "+workerId);
@@ -261,8 +265,16 @@ public class ImagingWorkers {
     }
   }
   
-  public static void retireWorker(final String workerId){
-    setWorkerState(workerId, ImagingWorker.STATE.RETIRING);
+  public static void retireWorker(final String workerId) {
+    // check if system knows about instance
+    final List<RunningInstancesItemType> instances =
+        Ec2Client.getInstance().describeInstances(null, Lists.newArrayList(workerId));
+    if (instances != null && instances.size() == 1) {
+      setWorkerState(workerId, ImagingWorker.STATE.RETIRING);
+    } else {
+      LOG.debug("Forgetting about imaging worker " + workerId);
+      removeWorker(workerId);
+    }
   }
   
   private static void decommisionWorker(final String workerId){
@@ -271,7 +283,7 @@ public class ImagingWorkers {
     String instanceId = null;
     try{
       final List<RunningInstancesItemType> instances = 
-          EucalyptusActivityTasks.getInstance().describeSystemInstances(Lists.newArrayList(workerId));
+          Ec2Client.getInstance().describeInstances(null, Lists.newArrayList(workerId));
       if(instances!=null && instances.size()==1)
         instanceId = instances.get(0).getInstanceId();
     }catch(final Exception ex){
@@ -279,8 +291,8 @@ public class ImagingWorkers {
     }
     if(instanceId!=null){
       try{
-        EucalyptusActivityTasks.getInstance().terminateSystemInstance(workerId);
-        LOG.debug("Terminated imaging worker: "+workerId);
+        Ec2Client.getInstance().terminateInstances(null, Lists.newArrayList(workerId));
+        LOG.debug("Terminated imaging worker: " + workerId);
       }catch(final Exception ex){
         throw Exceptions.toUndeclared(ex); 
       }

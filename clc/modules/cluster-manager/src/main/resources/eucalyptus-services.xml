@@ -82,8 +82,6 @@
   <endpoint name="GroupsWS" address="vm://Groups" exchange-pattern="request-response" />
   <endpoint name="TagsWS" address="vm://Tags" exchange-pattern="request-response" />
   <endpoint name="VpcWS" address="vm://Vpcs" exchange-pattern="request-response" />
-  <endpoint name="SpotWS" address="vm://Spot" exchange-pattern="request-response" />
-  <endpoint name="ReservedWS" address="vm://Reserved" exchange-pattern="request-response" />
   <endpoint name="VmTypesWS" address="vm://VmTypes" exchange-pattern="request-response" />
   <!--  GRZE:WTF: all of these forward references are crap. -->
   <!--run-time system state services-->

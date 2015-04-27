@@ -68,10 +68,11 @@ import java.util.Set;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.Certificate;
+import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.auth.principal.Group;
-import com.eucalyptus.auth.principal.Role;
 
 public interface AccountProvider {
 
@@ -83,7 +84,7 @@ public interface AccountProvider {
   Account addSystemAccount( String accountName ) throws AuthException;
   void deleteAccount( String accountName, boolean forceDeleteSystem, boolean recursive ) throws AuthException;
   List<Account> listAllAccounts( ) throws AuthException;
-  Set<String> resolveAccountNumbersForName( String accountNameLike ) throws AuthException;
+  List<AccountIdentifiers> resolveAccountNumbersForName( String accountNameLike ) throws AuthException;
   
   List<EuareUser> listAllUsers( ) throws AuthException;
 
@@ -94,7 +95,7 @@ public interface AccountProvider {
 
   Group lookupGroupById( String groupId ) throws AuthException;
 
-  Role lookupRoleById( String roleId ) throws AuthException;
+  EuareRole lookupRoleById( String roleId ) throws AuthException;
 
   Certificate lookupCertificate( X509Certificate cert ) throws AuthException;
   Certificate lookupCertificateById( String certificateId ) throws AuthException;;

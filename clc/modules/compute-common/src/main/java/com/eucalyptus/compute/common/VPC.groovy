@@ -886,11 +886,15 @@ class VpcPeeringConnectionStateReasonType extends EucalyptusData {
   String message;
   VpcPeeringConnectionStateReasonType() {  }
 }
-@Canonical
 class ResourceTagSetItemType extends EucalyptusData {
   String key;
   String value;
   ResourceTagSetItemType() {  }
+
+  ResourceTagSetItemType(final String key, final String value) {
+    this.key = key
+    this.value = value
+  }
 }
 class AcceptVpcPeeringConnectionType extends VpcMessage {
   String vpcPeeringConnectionId;

@@ -102,7 +102,12 @@ public class StaticDiskImages {
   
   public static void check( final StaticDiskImage staticImage ) throws Exception {
     if ( staticImage != null ) {
-      ImageManifest manifest = ImageManifests.lookup( staticImage.getRunManifestLocation() );
+      String manifestLocation = staticImage.getRunManifestLocation();
+      if ( manifestLocation == null ) {
+        throw new EucalyptusCloudException( "Manifest could not be found. "
+            + "Are you trying to run paravirtual image which has not been converted?" );
+      }
+      ImageManifest manifest = ImageManifests.lookup( manifestLocation );
       if ( Strings.isNullOrEmpty( manifest.getSignature( ) ) || !manifest.getSignature( ).equals( staticImage.getSignature() ) ) {
         throw new EucalyptusCloudException( "Manifest signature has changed since registration." );
       }

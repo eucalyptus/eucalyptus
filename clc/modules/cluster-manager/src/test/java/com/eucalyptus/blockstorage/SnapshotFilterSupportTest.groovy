@@ -19,6 +19,9 @@
  ************************************************************************/
 package com.eucalyptus.blockstorage
 
+import com.eucalyptus.compute.common.internal.blockstorage.Snapshot
+import com.eucalyptus.compute.common.internal.blockstorage.Snapshots
+import com.eucalyptus.compute.common.internal.blockstorage.State
 import com.eucalyptus.tags.FilterSupportTest
 import org.junit.Test
 

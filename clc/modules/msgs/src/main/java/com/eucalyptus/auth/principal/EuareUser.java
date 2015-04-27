@@ -68,7 +68,7 @@ public interface EuareUser extends User, AccountScopedPrincipal {
 
   List<Certificate> getCertificates( ) throws AuthException;
   Certificate getCertificate( String certificateId ) throws AuthException;
-  Certificate addCertificate( X509Certificate certificate ) throws AuthException;
+  Certificate addCertificate( String certificateId, X509Certificate certificate ) throws AuthException;
   void removeCertificate( String certificateId ) throws AuthException;
 
   List<Group> getGroups( ) throws AuthException;

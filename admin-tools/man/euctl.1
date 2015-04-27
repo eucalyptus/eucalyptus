@@ -1,0 +1,146 @@
+.Dd March 2015
+.Dt EUCTL 1
+.Os Eucalyptus 4.2
+.Sh NAME
+.Nm euctl
+.Nd get or set cloud state
+.Sh SYNOPSIS
+.Nm
+.Op Fl A\&n
+.Ar NAME ...
+.Nm
+.Op Fl nq
+.Ar NAME=VALUE ...
+.Nm
+.Op Fl nq
+.Ar NAME=@FILE ...
+.Nm
+.Fl -dump
+.Op Fl -format Cm {json,yaml}
+.Ar NAME
+.Nm
+.Fl -edit
+.Op Fl -format Cm {json,yaml}
+.Ar NAME
+.Sh DESCRIPTION
+The
+.Nm
+utility retrieves cloud state and allows cloud administrators
+to set cloud state.  The state to be retrieved or set is
+described using a
+.Dq Management Information Base
+.Pq MIB
+style name, described as a dotted set of components.
+.Pp
+When retrieving a variable, a subset of the MIB name may be
+specified to retrieve a list of variables in that subset.
+For example, to list all the dns variables:
+.Pp
+.Dl $ Nm No dns
+.Pp
+When setting a variable, the MIB name should be followed by
+an equal sign and the new value:
+.Pp
+.Dl $ Nm No dns.enabled=true
+.Pp
+To reset a varable to its default value, specify the
+.Fl r
+option:
+.Pp
+.Dl $ Nm No Fl r No dns.enabled
+.Pp
+The information available from euctl consists of integers,
+strings, and structures.  The structured information can
+only be retrieved by specialized programs and, in some
+cases, this program's
+.Fl -edit
+and
+.Fl -dump
+options.
+.Ss Positional arguments:
+.Bl -tag -width Ds
+.It Ar NAME
+Output a variable's value.
+.It Ar NAME=VALUE
+Set a variable to the specified value and then output it.
+.It Ar NAME=@FILE
+Set a variable to that of the specified file's contents,
+then output it.
+.El
+.Ss Optional arguments:
+.Bl -tag -width Ds
+.It Fl A , Fl -all-types
+List all the known variable names, including
+structures.  Those with string or integer values will
+be output; for the structured values, the methods of
+retrieving them are given.
+.It Fl n
+Suppress output of the variable name. This is useful
+for setting shell variables.
+.It Fl q
+Suppress all output when setting a variable. This
+option overrides the behavior of
+.Fl n .
+.It Fl r , Fl -reset
+Reset the given variables to their default values.
+.It Fl -dump
+Output the value of a structured variable in its
+entirety.  The value will be formatted in the manner
+specified by the
+.Fl -format
+option.
+.It Fl -edit
+Edit the value of a structured variable interactively.
+The value will be formatted in the manner specified by the
+.Fl -format
+option.  Only one variable may be edited per
+invocation.  When looking for an editor, the program
+will first try the environment variable
+.Ev VISUAL ,
+then the environment variable
+.Ev EDITOR ,
+and finally the
+default editor,
+.Xr vi 1 .
+.It Fl -format Cm {json,yaml}
+Use the specified format when displaying a structured
+variable.  (default:
+.Cm json Ns )
+.It Fl h , Fl -help
+Show a help message and exit without doing anything.
+.It Fl U Ar URL , Fl -url Ar URL
+The URL of the service to contact.
+.It Fl I Ar KEY_ID , Fl -access-key-id Ar KEY_ID
+The access key ID to use to authenticate requests.
+.It Fl S Ar KEY . Fl -secret-key Ar KEY
+The secret key to use to authenticate requests.
+.It Fl -security-token Ar TOKEN
+The STS security token to use to authenticate requests.
+.It Fl -region Ar USER@REGION
+The user and/or region name to use when looking up
+configuration file data.
+.It Fl -debug
+Show debugging output when running.
+.It Fl -debugger
+Launch an interactive epdb or pdb debugger after
+encountering
+an error.
+.It Fl -version
+show the program's version and exit
+.El
+.Sh ENVIRONMENT
+.Bl -tag -width Ds
+.It Ev VISUAL
+The editor to invoke when using the
+.Fl -edit
+option.
+.It Ev EDITOR
+The editor to invoke when using the
+.Fl -edit
+option when
+.Ev VISUAL is not set.
+.El
+.Sh HISTORY
+The
+.Nm
+command first appeared in Eucalyptus 4.2.

@@ -49,10 +49,10 @@ import com.eucalyptus.compute.common.ImportInstanceTaskDetails;
 import com.eucalyptus.compute.common.ImportInstanceType;
 import com.eucalyptus.compute.common.ImportInstanceVolumeDetail;
 import com.eucalyptus.compute.common.Volume;
-import com.eucalyptus.compute.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.imaging.common.EucalyptusActivityTasks;
 import com.eucalyptus.imaging.ImportTaskProperties;
+import com.eucalyptus.resources.client.Ec2Client;
 import com.eucalyptus.util.Dates;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
@@ -249,9 +249,9 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
       if(volumeDetail.getVolume()!=null && volumeDetail.getVolume().getId()!=null){
         try{
           final List<Volume> eucaVolumes =
-            EucalyptusActivityTasks.getInstance().describeVolumesAsUser(this.getOwnerUserId(), Lists.newArrayList(volumeDetail.getVolume().getId()));
+            Ec2Client.getInstance().describeVolumes(this.getOwnerUserId(), Lists.newArrayList(volumeDetail.getVolume().getId()));
           if (eucaVolumes.size() != 0) {
-            EucalyptusActivityTasks.getInstance().deleteVolumeAsUser(this.getOwnerUserId(), volumeDetail.getVolume().getId());
+            Ec2Client.getInstance().deleteVolume(this.getOwnerUserId(), volumeDetail.getVolume().getId());
           }
         } catch(final Exception ex) {
           LOG.warn(String.format("Failed to delete the volume %s for import task %s", 
