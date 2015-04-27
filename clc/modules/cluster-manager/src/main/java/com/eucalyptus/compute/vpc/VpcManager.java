@@ -32,9 +32,9 @@ import org.hibernate.criterion.Restrictions;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthQuotaException;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
 import com.eucalyptus.compute.common.internal.util.ResourceAllocationException;
 import com.eucalyptus.cluster.Clusters;
@@ -756,11 +756,10 @@ public class VpcManager {
           RouteTable routeTable = null;
           NetworkAcl networkAcl = null;
           if ( createDefault ) {
-            final Account account = Accounts.lookupAccountById( request.getCidrBlock( ) );
+            final UserPrincipal user = Accounts.lookupPrincipalByAccountNumber( request.getCidrBlock( ) );
             vpcCidr = Vpcs.DEFAULT_VPC_CIDR;
-            vpcAccountFullName = AccountFullName.getInstance( account );
-            vpcOwnerFullName =
-                UserFullName.getInstance( account.lookupAdmin( ) );
+            vpcAccountFullName = AccountFullName.getInstance( user.getAccountNumber( ) );
+            vpcOwnerFullName = UserFullName.getInstance( user );
 
             // check for existing vpc
             try {

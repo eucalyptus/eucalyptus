@@ -60,7 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth;
+package com.eucalyptus.auth.euare.persist;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -68,12 +68,15 @@ import java.util.Date;
 import java.util.List;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Restrictions;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.Debugging;
+import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.checker.InvalidValueException;
 import com.eucalyptus.auth.checker.ValueChecker;
 import com.eucalyptus.auth.checker.ValueCheckerFactory;
-import com.eucalyptus.auth.entities.GroupEntity;
-import com.eucalyptus.auth.entities.PolicyEntity;
-import com.eucalyptus.auth.entities.UserEntity;
+import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
+import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
+import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.policy.PolicyPolicy;
 import com.eucalyptus.auth.principal.Account;

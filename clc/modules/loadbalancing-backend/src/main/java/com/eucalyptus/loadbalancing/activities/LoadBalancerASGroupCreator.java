@@ -656,7 +656,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 	}
 
 	static String getAutoScalingGroupName( final String ownerAccountNumber, final String loadBalancerName ) {
-		String groupName = String.format("asg-euca-internal-elb-%s-%s", ownerAccountNumber, loadBalancerName );
+		String groupName = String.format("euca-internal-elb-%s-%s", ownerAccountNumber, loadBalancerName );
 		if(groupName.length()>255)
 			groupName = groupName.substring(0, 255);
 		return groupName;
@@ -664,9 +664,10 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 
 	public static String getLoadBalancerUserData(String initScript) {
     Map<String, String> kvMap = new HashMap<String, String>();
-    if (NTP_SERVER != null)
-      kvMap.put("ntp_server", NTP_SERVER);
 
+    if (NTP_SERVER != null){
+      kvMap.put("ntp_server", NTP_SERVER);
+    }
     if(APP_COOKIE_DURATION != null){
       kvMap.put("app-cookie-duration", APP_COOKIE_DURATION);
     }

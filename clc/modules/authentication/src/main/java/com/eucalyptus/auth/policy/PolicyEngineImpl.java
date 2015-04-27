@@ -95,6 +95,7 @@ import com.eucalyptus.auth.policy.key.Key;
 import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Condition;
 import com.eucalyptus.auth.principal.PolicyScope;
@@ -591,7 +592,6 @@ public class PolicyEngineImpl implements PolicyEngine {
     private final PrincipalType principalType;
     @Nullable
     private final String principalName;
-    private Account requestAccount;
     private Boolean systemAdmin;
     private Boolean systemUser;
     private Map<String,String> evaluatedKeys;
@@ -761,7 +761,7 @@ public class PolicyEngineImpl implements PolicyEngine {
     @Override
     public String get() {
       try {
-        return Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT ).getAccountNumber( );
+        return Accounts.lookupAccountIdByAlias( AccountIdentifiers.SYSTEM_ACCOUNT );
       } catch ( AuthException e ) {
         throw Exceptions.toUndeclared( e );
       }
@@ -776,7 +776,7 @@ public class PolicyEngineImpl implements PolicyEngine {
 
     @Override
     public String apply( final String accountNumberOrAlias ) {
-      if ( Account.SYSTEM_ACCOUNT.equals( accountNumberOrAlias ) ) {
+      if ( AccountIdentifiers.SYSTEM_ACCOUNT.equals( accountNumberOrAlias ) ) {
         return eucalyptusAccountNumberSupplier.get( );
       } else {
         return accountNumberOrAlias;

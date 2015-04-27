@@ -337,7 +337,7 @@ public class CollectionUtils {
    * @param <I> The evaluated type
    * @return The count function.
    */
-  public static <I> Function<Integer,Function<I,Integer>> count( final Predicate<I> evaluator ) {
+  public static <I> Function<Integer,Function<I,Integer>> count( final Predicate<? super I> evaluator ) {
     return sum( new Function<I,Integer>(){
       @Override
       public Integer apply( @Nullable final I item ) {
@@ -361,6 +361,54 @@ public class CollectionUtils {
           @Override
           public Integer apply( final I item ) {
             return sum + evaluator.apply( item );
+          }
+        };
+      }
+    };
+  }
+
+  /**
+   * Function suitable for use with reduce that enforces a single item.
+   *
+   * @param <I> The evaluated type
+   * @return The reduction function.
+   */
+  public static <I> Function<I,Function<I,I>> unique( ) {
+    return new Function<I,Function<I,I>>( ) {
+      @Override
+      public Function<I, I> apply( final I item1 ) {
+        return new Function<I, I>() {
+          @Override
+          public I apply( final I item2 ) {
+            if ( item1 != null && item2 != null ) {
+              throw new IllegalArgumentException( "Not unique" );
+            }
+            return item1 == null ?
+                item2 :
+                item1;
+          }
+        };
+      }
+    };
+  }
+
+  /**
+   * Function suitable for use with reduce that add to the initial collection.
+   *
+   * @param <I> The evaluated type
+   * @return The reduction function.
+   */
+  public static <IT,I extends Collection<IT>> Function<I,Function<I,I>> addAll( ) {
+    return new Function<I,Function<I,I>>( ) {
+      @Override
+      public Function<I, I> apply( final I reduction ) {
+        return new Function<I, I>() {
+          @Override
+          public I apply( final I collection ) {
+            if ( collection != null ) {
+              reduction.addAll( collection );
+            }
+            return reduction;
           }
         };
       }

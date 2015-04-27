@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,37 +17,27 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.cloudformation.bootstrap;
+package com.eucalyptus.auth.euare.principal;
 
-import com.eucalyptus.auth.Accounts;
+import java.util.Date;
+import javax.annotation.Nullable;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.AccountIdentifiers;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.tokens.SecurityTokenAWSCredentialsProvider;
-import com.eucalyptus.util.Exceptions;
-import com.google.common.base.Supplier;
+import com.eucalyptus.auth.principal.BaseInstanceProfile;
+import com.eucalyptus.auth.principal.EuareRole;
 
 /**
- * Created by ethomas on 8/5/14.
+ *
  */
-public class CloudFormationAWSCredentialsProvider extends SecurityTokenAWSCredentialsProvider {
+public interface EuareInstanceProfile extends BaseInstanceProfile {
 
-  public CloudFormationAWSCredentialsProvider( ) {
-    super( CloudFormationUserSupplier.INSTANCE );
-  }
+  Account getAccount( ) throws AuthException;
 
-  public enum CloudFormationUserSupplier implements Supplier<User> {
-    INSTANCE;
+  void setRole( @Nullable EuareRole role ) throws AuthException;
 
-    @Override
-    public User get( ) {
-      try {
-        final String accountNumber = Accounts.lookupAccountIdByAlias( AccountIdentifiers.CLOUDFORMATION_SYSTEM_ACCOUNT );
-        return Accounts.lookupPrincipalByAccountNumber( accountNumber );
-      } catch ( AuthException e ) {
-        throw Exceptions.toUndeclared( e );
-      }
-    }
-  }
+  Date getCreationTimestamp();
+
+  @Nullable
+  EuareRole getRole( ) throws AuthException;
+
 }

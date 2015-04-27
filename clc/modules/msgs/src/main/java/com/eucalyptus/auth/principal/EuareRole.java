@@ -23,10 +23,6 @@ import java.util.Date;
 import java.util.List;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyParseException;
-import com.eucalyptus.auth.policy.PolicyResourceType;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.component.annotation.PolicyVendor;
-import com.eucalyptus.util.RestrictedType;
 
 /**
  * This will move to the euare module. Use Role elsewhere
@@ -39,7 +35,7 @@ public interface EuareRole extends BaseRole, AccountScopedPrincipal {
   Policy getAssumeRolePolicy( ) throws AuthException;
   Policy setAssumeRolePolicy( String policy ) throws AuthException, PolicyParseException;
 
-  List<EuareInstanceProfile> getInstanceProfiles() throws AuthException;
+  List<? extends BaseInstanceProfile> getInstanceProfiles() throws AuthException; //TODO:STEVE: fix this when moved to euare module (use EuareInstanceProfile)
 
   Date getCreationTimestamp( );
 

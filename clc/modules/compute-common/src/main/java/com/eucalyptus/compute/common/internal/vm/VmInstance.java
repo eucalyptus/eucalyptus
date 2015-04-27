@@ -103,14 +103,12 @@ import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.EuareInstanceProfile;
+import com.eucalyptus.auth.principal.BaseInstanceProfile;
 import com.eucalyptus.compute.common.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.compute.common.GroupItemType;
 import com.eucalyptus.compute.common.GroupSetType;
 import com.eucalyptus.compute.common.IamInstanceProfile;
 import com.eucalyptus.compute.common.ImageMetadata.Platform;
-import com.eucalyptus.compute.common.internal.images.BootableImageInfo;
-import com.eucalyptus.compute.common.internal.images.ImageInfo;
 import com.eucalyptus.compute.common.internal.images.Images;
 import com.eucalyptus.compute.common.internal.util.ResourceAllocationException;
 import com.eucalyptus.component.ComponentIds;
@@ -1039,7 +1037,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             final String name = input.getIamInstanceProfileArn().substring(nameIndex + 1, rawName.length());
 
             try {
-              EuareInstanceProfile instanceProfile = Accounts.lookupAccountById(input.getOwnerAccountNumber())
+              BaseInstanceProfile instanceProfile = Accounts.lookupAccountById(input.getOwnerAccountNumber())
                 .lookupInstanceProfileByName(name);
               final String profileArn = Accounts.getInstanceProfileArn(instanceProfile);
               IamInstanceProfile iamInstanceProfile = new IamInstanceProfile();
@@ -1055,7 +1053,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
               !input.getIamInstanceProfileArn().startsWith("arn:") ) {
 
             try {
-              final EuareInstanceProfile instanceProfile = Accounts.lookupAccountById(input.getOwnerAccountNumber())
+              final BaseInstanceProfile instanceProfile = Accounts.lookupAccountById(input.getOwnerAccountNumber())
                 .lookupInstanceProfileByName(input.getIamInstanceProfileArn());
               final String profileArn = Accounts.getInstanceProfileArn(instanceProfile);
               IamInstanceProfile iamInstanceProfile = new IamInstanceProfile();

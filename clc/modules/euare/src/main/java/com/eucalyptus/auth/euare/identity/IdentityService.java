@@ -21,10 +21,15 @@ package com.eucalyptus.auth.euare.identity;
 
 import static com.eucalyptus.auth.principal.Certificate.Util.revoked;
 import static com.eucalyptus.util.CollectionUtils.propertyPredicate;
+import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.Collections;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Named;
+import org.apache.axiom.om.OMElement;
+import org.apache.axiom.om.OMOutputFormat;
+import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.auth.Accounts;
@@ -50,7 +55,13 @@ import com.eucalyptus.auth.euare.common.identity.DescribeRoleResult;
 import com.eucalyptus.auth.euare.common.identity.DescribeRoleType;
 import com.eucalyptus.auth.euare.common.identity.Policy;
 import com.eucalyptus.auth.euare.common.identity.Principal;
+import com.eucalyptus.auth.euare.common.identity.ReserveNameResponseType;
+import com.eucalyptus.auth.euare.common.identity.ReserveNameResult;
+import com.eucalyptus.auth.euare.common.identity.ReserveNameType;
 import com.eucalyptus.auth.euare.common.identity.SecurityToken;
+import com.eucalyptus.auth.euare.common.identity.TunnelActionResponseType;
+import com.eucalyptus.auth.euare.common.identity.TunnelActionResult;
+import com.eucalyptus.auth.euare.common.identity.TunnelActionType;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.Certificate;
@@ -60,14 +71,21 @@ import com.eucalyptus.auth.principal.PolicyVersions;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.SecurityTokenContent;
 import com.eucalyptus.auth.principal.UserPrincipal;
+import com.eucalyptus.binding.Binding;
+import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.component.annotation.ComponentNamed;
+import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.LockResource;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 /**
  *
@@ -121,6 +139,8 @@ public class IdentityService {
         );
         principal.setCanonicalId( user.getCanonicalId( ) );
         principal.setAccountAlias( user.getAccountAlias() );
+        principal.setPasswordHash( user.getPassword( ) );
+        principal.setPasswordExpiry( user.getPasswordExpires( ) );
 
         final ArrayList<com.eucalyptus.auth.euare.common.identity.AccessKey> accessKeys = Lists.newArrayList( );
         for ( final AccessKey accessKey : user.getKeys( ) ) {
@@ -172,18 +192,27 @@ public class IdentityService {
     final DescribeAccountsResult result = new DescribeAccountsResult( );
 
     try {
-      final AccountIdentifiers accountIdentifiers;
+      final Iterable<AccountIdentifiers> accountIdentifiers;
       if ( request.getAlias( ) != null ) {
-        accountIdentifiers = identityProvider.lookupAccountIdentifiersByAlias( request.getAlias( ) );
+        accountIdentifiers =
+            Collections.singleton( identityProvider.lookupAccountIdentifiersByAlias( request.getAlias( ) ) );
       } else if ( request.getCanonicalId( ) != null ) {
-        accountIdentifiers = identityProvider.lookupAccountIdentifiersByCanonicalId( request.getCanonicalId() );
+        accountIdentifiers =
+            Collections.singleton( identityProvider.lookupAccountIdentifiersByCanonicalId( request.getCanonicalId( ) ) );
+      } else if ( request.getEmail() != null ) {
+        accountIdentifiers =
+            Collections.singleton( identityProvider.lookupAccountIdentifiersByEmail( request.getEmail( ) ) );
+      } else if ( request.getAliasLike() != null ) {
+        accountIdentifiers = identityProvider.listAccountIdentifiersByAliasMatch( request.getAliasLike( ) );
       } else {
         accountIdentifiers = null;
       }
 
       final ArrayList<Account> accounts = Lists.newArrayList( );
       if ( accountIdentifiers != null ) {
-        accounts.add( TypeMappers.transform( accountIdentifiers, Account.class ) );
+        Iterables.addAll(
+            accounts,
+            Iterables.transform( accountIdentifiers, TypeMappers.lookup( AccountIdentifiers.class, Account.class ) ) );
       }
       result.setAccounts( accounts );
     } catch ( AuthException e ) {
@@ -247,6 +276,53 @@ public class IdentityService {
     }
 
     response.setDecodeSecurityTokenResult( result );
+    return response;
+  }
+
+  public ReserveNameResponseType reserveName(
+      final ReserveNameType request
+  ) throws EuareException {
+    final ReserveNameResponseType response = request.getReply( );
+    final ReserveNameResult result = new ReserveNameResult( );
+
+    try {
+      identityProvider.reserveGlobalName( request.getNamespace( ), request.getName( ), request.getDuration( ) );
+    } catch ( AuthException e ) {
+      throw handleException( e );
+    }
+
+    response.setReserveNameResult( result );
+    return response;
+  }
+
+  public TunnelActionResponseType tunnelAction( final TunnelActionType request ) throws EuareException {
+    final TunnelActionResponseType response = request.getReply( );
+    final TunnelActionResult result = new TunnelActionResult( );
+
+    try {
+      final String content = request.getContent( );
+      final Binding binding = BindingManager.getDefaultBinding( );
+      final BaseMessage euareRequest;
+      try ( final LockResource lock = LockResource.lock( HoldMe.canHas ) ) {
+        final StAXOMBuilder omBuilder = HoldMe.getStAXOMBuilder( HoldMe.getXMLStreamReader( content ) );
+        final OMElement message = omBuilder.getDocumentElement( );
+        final Class<?> messageType = binding.getElementClass( message.getLocalName() );
+        euareRequest = (BaseMessage) binding.fromOM( message, messageType ); //TODO:STEVE: allow for (subminor?) version differences
+      }
+      final BaseMessage euareResponse = AsyncRequests.sendSync( Euare.class, euareRequest );
+      final StringWriter writer = new StringWriter( );
+      try ( final LockResource lock = LockResource.lock( HoldMe.canHas ) ) {
+        final OMElement message = binding.toOM( euareResponse );
+        final OMOutputFormat format = new OMOutputFormat( );
+        format.setIgnoreXMLDeclaration( true );
+        message.serialize( writer );
+      }
+      result.setContent( writer.toString( ) );
+    } catch ( Exception e ) {
+      throw handleException( e );
+    }
+
+    response.setTunnelActionResult( result );
     return response;
   }
 

@@ -55,6 +55,7 @@
     <value name="Alias" field="alias" usage="optional"/>
     <value name="AliasLike" field="aliasLike" usage="optional"/>
     <value name="CanonicalId" field="canonicalId" usage="optional"/>
+    <value name="Email" field="email" usage="optional"/>
   </mapping>
   <mapping name="DescribeInstanceProfileResponse" class="com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileResponseType">
     <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
@@ -102,6 +103,31 @@
     <value name="AccountId" field="accountId" usage="optional"/>
     <value name="RoleName" field="roleName" usage="optional"/>
   </mapping>
+  <mapping name="ReserveNameResponse" class="com.eucalyptus.auth.euare.common.identity.ReserveNameResponseType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+    <structure name="ReserveNameResult" field="reserveNameResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.ReserveNameResult"/>
+    <structure map-as="IdentityResponseMessage"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.common.identity.ReserveNameResult" abstract="true">
+  </mapping>
+  <mapping name="ReserveName" class="com.eucalyptus.auth.euare.common.identity.ReserveNameType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+    <value name="Namespace" field="namespace" usage="optional"/>
+    <value name="Name" field="name" usage="optional"/>
+    <value name="Duration" field="duration" usage="optional"/>
+  </mapping>
+  <mapping name="TunnelActionResponse" class="com.eucalyptus.auth.euare.common.identity.TunnelActionResponseType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+    <structure name="TunnelActionResult" field="tunnelActionResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.TunnelActionResult"/>
+    <structure map-as="IdentityResponseMessage"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.common.identity.TunnelActionResult" abstract="true">
+    <value name="Content" field="content" usage="optional"/>
+  </mapping>
+  <mapping name="TunnelAction" class="com.eucalyptus.auth.euare.common.identity.TunnelActionType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+    <value name="Content" field="content" usage="optional"/>
+  </mapping>
   <mapping class="com.eucalyptus.auth.euare.common.identity.Account" abstract="true">
     <value name="AccountNumber" field="accountNumber" usage="optional"/>
     <value name="Alias" field="alias" usage="optional"/>
@@ -119,6 +145,7 @@
     <value name="CanonicalId" field="canonicalId" usage="optional"/>
     <value name="AccountAlias" field="accountAlias" usage="optional"/>
     <value name="PasswordHash" field="passwordHash" usage="optional"/>
+    <value name="PasswordExpiry" field="passwordExpiry" usage="optional"/>
     <collection name="AccessKeys" field="accessKeys" usage="optional">>
       <structure name="member" type="com.eucalyptus.auth.euare.common.identity.AccessKey"/>
     </collection>

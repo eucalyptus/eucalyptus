@@ -17,12 +17,17 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.auth;
+package com.eucalyptus.auth.euare.login;
 
 import javax.security.auth.login.CredentialExpiredException;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.AuthenticationLimitProvider;
+import com.eucalyptus.auth.LdapException;
 import com.eucalyptus.auth.ldap.LdapSync;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.EuareUser;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.crypto.Crypto;
 import com.google.common.base.Objects;
@@ -35,23 +40,7 @@ public class PasswordAuthentication {
   public static final String INVALID_USERNAME_OR_PASSWORD = "Invalid username or password";
   public static final String PASSWORD_CHANGE_NOT_SUPPORTED = "Changing password is not supported for this user";
 
-  public static void authenticate( final EuareUser user,
-                                   final String password ) throws AuthException, CredentialExpiredException {
-    boolean checkExpiration = true;
-    if ( authenticateWithLdap( user ) ) try {
-      LdapSync.authenticate(user, password);
-      checkExpiration = false;
-    } catch ( LdapException e ) {
-      throw new AuthException(INVALID_USERNAME_OR_PASSWORD);
-    } else if ( !Crypto.verifyPassword(password, user.getPassword()) ) {
-      throw new AuthException(INVALID_USERNAME_OR_PASSWORD);
-    }
-    if ( checkExpiration ) {
-      checkPasswordExpiration( user );
-    }
-  }
-
-  public static boolean authenticateWithLdap( final EuareUser user ) {
+  private static boolean authenticateWithLdap( final User user ) {
     return LdapSync.enabled( ) && !user.isSystemAdmin( ) && !user.isAccountAdmin( );
   }
 
@@ -65,7 +54,6 @@ public class PasswordAuthentication {
    * @param newPassword - user provided new password, may be null, cannot be given w/ LDAP
    * @throws AuthException
    * @throws CredentialExpiredException 
-   * @see {@link PasswordAuthentication#authenticate(EuareUser, String)}
    */
   public static UserPrincipal authenticate(
       final String accountAlias,
@@ -73,22 +61,35 @@ public class PasswordAuthentication {
       final String password,
       final String newPassword
   ) throws AuthException, CredentialExpiredException {
-    //TODO:STEVE: password auth for federated users
-    final Account account = Accounts.lookupAccountByName( accountAlias );
-    final EuareUser user = account.lookupUserByName( username );
-
-    if ( newPassword == null ) {
-      authenticate( user, password );
-    } else if ( authenticateWithLdap( user ) ) {
-      throw new AuthException( PASSWORD_CHANGE_NOT_SUPPORTED );
-    } else try {
-      authenticate( user, password );
-      updatePassword( user, newPassword );//Authentication suceeded, update password.
-    } catch ( CredentialExpiredException ex ) {
-      updatePassword( user, newPassword );//Password is expired but user is authenticated, allow this update.
+    if ( newPassword != null ) { // password change is for local region
+      final Account account = Accounts.lookupAccountByName( accountAlias );
+      final EuareUser user = account.lookupUserByName( username );
+      if ( authenticateWithLdap( user ) ) {
+        throw new AuthException( PASSWORD_CHANGE_NOT_SUPPORTED );
+      }
+      if ( !Crypto.verifyPassword(password, user.getPassword()) ) {
+        throw new AuthException(INVALID_USERNAME_OR_PASSWORD);
+      } else {
+        updatePassword( user, newPassword );
+        checkPasswordExpiration( user );
+      }
+      return Accounts.lookupPrincipalByUserId( user.getUserId( ), null );
+    } else { // can be remote region if not LDAP
+      final String accountNumber = Accounts.lookupAccountIdByAlias( accountAlias );
+      final UserPrincipal user  = Accounts.lookupPrincipalByAccountNumberAndUsername( accountNumber, username );
+      if ( authenticateWithLdap( user ) ) {
+        try {
+          LdapSync.authenticate( Accounts.lookupUserById( user.getUserId( ) ), password );
+        } catch ( LdapException e ) {
+          throw new AuthException(INVALID_USERNAME_OR_PASSWORD);
+        }
+      } else if ( !Crypto.verifyPassword( password, user.getPassword( ) ) ) {
+        throw new AuthException(INVALID_USERNAME_OR_PASSWORD);
+      } else {
+        checkPasswordExpiration( user );
+      }
+      return user;
     }
-
-    return Accounts.lookupPrincipalByUserId( user.getUserId( ), null );
   }
 
   private static void updatePassword( EuareUser user, String newPassword ) throws AuthException {
@@ -100,7 +101,7 @@ public class PasswordAuthentication {
     user.setPasswordExpires( System.currentTimeMillis( ) + AuthenticationLimitProvider.Values.getDefaultPasswordExpiry( ) );
   }
 
-  private static void checkPasswordExpiration( final EuareUser user ) throws CredentialExpiredException {
+  private static void checkPasswordExpiration( final User user ) throws CredentialExpiredException {
     if ( Objects.firstNonNull( user.getPasswordExpires(), Long.MAX_VALUE )
         < System.currentTimeMillis() ) {
       throw new CredentialExpiredException();

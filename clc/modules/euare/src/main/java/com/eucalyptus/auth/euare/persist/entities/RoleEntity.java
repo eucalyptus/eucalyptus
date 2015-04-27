@@ -17,7 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.auth.entities;
+package com.eucalyptus.auth.euare.persist.entities;
 
 import java.io.Serializable;
 import java.util.List;

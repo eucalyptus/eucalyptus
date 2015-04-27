@@ -17,27 +17,14 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.auth.principal;
-
-import java.util.Date;
-import javax.annotation.Nullable;
-import com.eucalyptus.auth.AuthException;
+package com.eucalyptus.auth.util;
 
 /**
- * This will move to the euare module. Use InstanceProfile elsewhere
  *
- * @deprecated This class is temporary, do not use
  */
-@Deprecated
-public interface EuareInstanceProfile extends BaseInstanceProfile {
-
-  Account getAccount( ) throws AuthException;
-
-  void setRole( @Nullable EuareRole role ) throws AuthException;
-
-  Date getCreationTimestamp();
-
-  @Nullable
-  EuareRole getRole( ) throws AuthException;
-
+public interface SystemRoleProvider {
+  String getName( );
+  String getPath( );
+  String getAssumeRolePolicy( );
+  String getPolicy( );
 }

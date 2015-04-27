@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.auth.api;
 
+import java.util.List;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.InstanceProfile;
@@ -32,10 +33,7 @@ import com.eucalyptus.auth.principal.UserPrincipal;
 public interface IdentityProvider {
 
   /**
-   *
    * @param nonce value used for secret access key generation (optional)
-   * @return
-   * @throws AuthException
    */
   UserPrincipal lookupPrincipalByUserId( String userId, String nonce ) throws AuthException;
   UserPrincipal lookupPrincipalByRoleId( String roleId, String nonce ) throws AuthException;
@@ -50,6 +48,8 @@ public interface IdentityProvider {
    */
   AccountIdentifiers lookupAccountIdentifiersByAlias( String alias ) throws AuthException;
   AccountIdentifiers lookupAccountIdentifiersByCanonicalId( String canonicalId ) throws AuthException;
+  AccountIdentifiers lookupAccountIdentifiersByEmail( String email ) throws AuthException;
+  List<AccountIdentifiers> listAccountIdentifiersByAliasMatch( String aliasExpression ) throws AuthException;
 
   /**
    *
@@ -65,4 +65,13 @@ public interface IdentityProvider {
    *
    */
   SecurityTokenContent decodeSecurityToken( String accessKeyIdentifier, String securityToken ) throws AuthException;
+
+  /**
+   * Reserve a global name for a period of time.
+   *
+   * @param namespace The namespace for the name (qualified policy resource type)
+   * @param name The name to reserve
+   * @param duration The reservation duration in seconds
+   */
+  void reserveGlobalName( String namespace, String name, Integer duration ) throws AuthException;
 }

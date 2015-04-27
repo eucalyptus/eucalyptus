@@ -24,6 +24,7 @@ import com.eucalyptus.auth.api.AccountProvider
 import com.eucalyptus.auth.principal.AccessKey
 import com.eucalyptus.auth.principal.Account
 import com.eucalyptus.auth.principal.AccountFullName
+import com.eucalyptus.auth.principal.AccountIdentifiers
 import com.eucalyptus.auth.principal.Certificate
 import com.eucalyptus.auth.principal.EuareRole
 import com.eucalyptus.auth.principal.EuareUser
@@ -1298,7 +1299,7 @@ class ActivityManagerTest {
       }
 
       @Override
-      Set<String> resolveAccountNumbersForName(final String accountNAmeLike) {
+      List<AccountIdentifiers> resolveAccountNumbersForName(final String accountNAmeLike) {
         [] as Set
       }
 

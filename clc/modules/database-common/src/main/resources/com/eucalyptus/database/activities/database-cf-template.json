@@ -232,7 +232,13 @@
                         "FromPort": { "Ref" : "DBPort" },
                         "ToPort": { "Ref" : "DBPort" }
                     }
-                ]
+                ],
+        "Tags": [
+          {
+            "Key": "service-type",
+            "Value": "database"
+          }
+        ]
       },
       "Type": "AWS::EC2::SecurityGroup"
     }

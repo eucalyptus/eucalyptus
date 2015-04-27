@@ -60,135 +60,122 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth.entities;
+package com.eucalyptus.auth.euare.persist.entities;
 
 import java.io.Serializable;
 import java.util.List;
-import java.util.Map;
-import javax.persistence.CascadeType;
-import javax.persistence.CollectionTable;
+import javax.annotation.Nullable;
 import javax.persistence.Column;
-import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
+import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
-import javax.persistence.ManyToMany;
-import javax.persistence.MapKeyColumn;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.util.Identifiers;
+import com.eucalyptus.component.id.Euare;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.upgrade.Upgrades;
+import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
+import com.eucalyptus.util.Exceptions;
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import com.google.common.base.Predicate;
 
 /**
- * Database entity for a user.
+ * Database account entity.
  */
+
 @Entity
 @PersistenceContext( name = "eucalyptus_auth" )
-@Table( name = "auth_user" )
+@Table( name = "auth_account" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class UserEntity extends AbstractPersistent implements Serializable {
+public class AccountEntity extends AbstractPersistent implements Serializable {
 
   @Transient
   private static final long serialVersionUID = 1L;
-  
-  // The User ID the user facing group id which conforms to length and character restrictions per spec.
-  @Column( name = "auth_user_id_external" )
-  String userId;
 
-  // User name
-  @Column( name = "auth_user_name" )
+  // Account name, it is unique.
+  @Column( name = "auth_account_name", unique = true )
   String name;
-  
-  // User path (prefix to organize user name space, see AWS spec)
-  @Column( name = "auth_user_path" )
-  String path;
-  
-  // Flag to control the activeness of a user.
-  @Column( name = "auth_user_is_enabled" )
-  Boolean enabled;
-  
-  // Web session token
-  @Column( name = "auth_user_token" )
-  String token;
 
-  // User registration confirmation code
-  @Column( name = "auth_user_confirmation_code" )
-  String confirmationCode;
-  
-  // Web login password
-  @Column( name = "auth_user_password" )
-  String password;
+  @Column( name = "auth_account_number", unique = true )
+  String accountNumber;
 
-  // Time when password expires
-  @Column( name = "auth_user_password_expires" )
-  Long passwordExpires;
-  
-  // List of secret keys
-  @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "user" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  List<AccessKeyEntity> keys;
-  
-  // List of certificates
-  @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "user" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  List<CertificateEntity> certificates;
-  
-  // Customizable user info in key-value pairs
-  @ElementCollection
-  @CollectionTable( name = "auth_user_info_map" )
-  @MapKeyColumn( name = "auth_user_info_key" )
-  @Column( name = "auth_user_info_value" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  Map<String, String> info;
-  
-  // User's groups
-  @ManyToMany( fetch = FetchType.LAZY, mappedBy="users" ) // not owning side
+  @Column( name = "auth_account_canonical_id", length = 64, unique = true )
+  String canonicalId;
+
+  // Groups for this account
+  @OneToMany( fetch = FetchType.LAZY, mappedBy = "account" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   List<GroupEntity> groups;
 
-  
-  public UserEntity( ) {
-    this.keys = Lists.newArrayList( );
-    this.certificates = Lists.newArrayList( );
-    this.info = Maps.newHashMap( );
-    this.groups = Lists.newArrayList( );
+  public AccountEntity( ) {
   }
-
-  public UserEntity( String name ) {
+  
+  public AccountEntity( String name ) {
     this( );
     this.name = name;
   }
-  
-  public UserEntity( Boolean enabled ) {
-    this( );
-    this.enabled = enabled;
-  }
-  
+
   @PrePersist
   public void generateOnCommit() {
-    if( this.userId == null ) {/** NOTE: first time that user is committed it needs to generate its own ID (i.e., not the database id), do this at commit time and generate if null **/
-      this.userId = Identifiers.generateIdentifier( "AID" );
+    this.accountNumber = Identifiers.generateAccountNumber( );
+    populateCanonicalId();
+  }
+
+    public void populateCanonicalId() {
+        if (this.canonicalId == null || "".equals(this.canonicalId)) {
+            this.canonicalId = genCanonicalId();
+        }
     }
-  }
-  
-  public static UserEntity newInstanceWithUserId( final String userId ) {
-    UserEntity u = new UserEntity( );
-    u.userId = userId;
-    return u;
-  }
-  
+
+    private static String genCanonicalId( ) {
+        StringBuilder buf = new StringBuilder();
+        boolean notFinished = true;
+        while (notFinished) {
+            int rand = ((int) (Math.pow(10, 4) * Math.random()) ) % 100;
+            buf.append(Integer.toHexString(rand));
+            int len = buf.length();
+            if (len < 64) {
+                notFinished = true;
+            }
+            else if (len == 64) {
+                notFinished = false;
+            }
+            else {
+                buf.delete(64, len + 1); // end is exclusive, but if start == end, nothing is done
+                notFinished = false;
+            }
+            if (! notFinished) {
+                try {
+                    Accounts.lookupAccountByCanonicalId(buf.toString());
+                    // canonical id is a dupe
+                    buf = new StringBuilder();
+                    notFinished = true;
+                }
+                catch (AuthException aex) {
+                    // canonical id is not in use
+                }
+            }
+        }
+
+        return buf.toString();
+    }
+
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;
     if ( o == null || getClass( ) != o.getClass( ) ) return false;
     
-    UserEntity that = ( UserEntity ) o;    
+    AccountEntity that = ( AccountEntity ) o;    
     if ( !name.equals( that.name ) ) return false;
     
     return true;
@@ -197,91 +184,72 @@ public class UserEntity extends AbstractPersistent implements Serializable {
   @Override
   public String toString( ) {
     StringBuilder sb = new StringBuilder( );
-    sb.append( "User(" );
+    sb.append( "Account(" );
     sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
-    sb.append( "UserID=" ).append( this.getUserId( ) ).append( ", " );
     sb.append( "name=" ).append( this.getName( ) ).append( ", " );
-    sb.append( "path=" ).append( this.getPath( ) ).append( ", " );
-    sb.append( "enabled=" ).append( this.isEnabled( ) ).append( ", " );
-    sb.append( "passwordExpires=" ).append( this.getPasswordExpires( ) );
+    sb.append( "canonical ID=").append( this.getCanonicalId());
     sb.append( ")" );
     return sb.toString( );
   }
-
+  
   public String getName( ) {
     return this.name;
   }
-  
+
   public void setName( String name ) {
     this.name = name;
   }
-  
-  public String getPath( ) {
-    return this.path;
-  }
-  
-  public void setPath( String path ) {
-    this.path = path;
-  }
-  
-  public Boolean isEnabled( ) {
-    return this.enabled;
-  }
-  
-  public void setEnabled( Boolean enabled ) {
-    this.enabled = enabled;
-  }
-  
-  public String getToken( ) {
-    return this.token;
-  }
-  
-  public void setToken( String token ) {
-    this.token = token;
-  }
-  
-  public String getConfirmationCode( ) {
-    return this.confirmationCode;
-  }
-  
-  public void setConfirmationCode( String confirmationCode ) {
-    this.confirmationCode = confirmationCode;
-  }
-  
-  public String getPassword( ) {
-    return this.password;
-  }
-  
-  public void setPassword( String password ) {
-    this.password = password;
-  }
-  
-  public Long getPasswordExpires( ) {
-    return this.passwordExpires;
-  }
-  
-  public void setPasswordExpires( Long passwordExpires ) {
-    this.passwordExpires = passwordExpires;
-  }
-  
-  public List<AccessKeyEntity> getKeys( ) {
-    return this.keys;
-  }
-  
-  public List<CertificateEntity> getCertificates( ) {
-    return this.certificates;
-  }
-  
-  public Map<String, String> getInfo( ) {
-    return this.info;
-  }
-  
-  public List<GroupEntity> getGroups( ) {
-    return this.groups;
+
+  public String getAccountNumber( ) {
+    return this.accountNumber;
   }
 
-  public String getUserId( ) {
-    return this.userId;
+  public void setAccountNumber( String accountNumber ) {
+    this.accountNumber = accountNumber;
   }
-  
+
+  public String getCanonicalId() {
+    return canonicalId;
+  }
+
+  public void setCanonicalId(String canonicalId) {
+    this.canonicalId = canonicalId;
+  }
+
+  public static AccountEntity newInstanceWithAccountNumber( String accountNumber ) {
+    AccountEntity a = new AccountEntity( );
+    a.setAccountNumber( accountNumber );
+    return a;
+  }
+
+    @EntityUpgrade( entities = { AccountEntity.class }, since = Upgrades.Version.v3_4_0, value = Euare.class)
+    public enum AccountEntityUpgrade implements Predicate<Class> {
+        INSTANCE;
+        private static Logger LOG = Logger.getLogger(AccountEntity.AccountEntityUpgrade.class);
+
+        @Override
+        public boolean apply(@Nullable Class aClass) {
+            EntityTransaction tran = Entities.get(AccountEntity.class);
+            try {
+                List<AccountEntity> accounts = Entities.query(new AccountEntity());
+                if (accounts != null && accounts.size() > 0) {
+                    for (AccountEntity account : accounts) {
+                        if (account.getCanonicalId() == null || account.getCanonicalId().equals("")) {
+                            account.setCanonicalId( genCanonicalId( ) );
+                            LOG.debug("putting canonical id " + account.getCanonicalId() +
+                                    " on account " + account.getAccountNumber());
+                        }
+                    }
+                }
+                tran.commit();
+            }
+            catch (Exception ex) {
+                tran.rollback();
+                LOG.error("caught exception during upgrade, while attempting to generate and assign canonical ids");
+                Exceptions.toUndeclared(ex);
+            }
+            return true;
+        }
+    }
+
 }

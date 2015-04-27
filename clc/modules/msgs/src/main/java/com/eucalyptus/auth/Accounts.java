@@ -76,6 +76,7 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.BaseInstanceProfile;
 import com.eucalyptus.auth.principal.BaseRole;
 import com.eucalyptus.auth.principal.Certificate;
@@ -93,6 +94,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 /**
  * <h2>Eucalyptus/AWS IDs & Access Keys:</h2>
@@ -156,25 +159,16 @@ public class Accounts {
     }
   }
 
-  static AccountProvider getAccountProvider( ) {
+  protected static AccountProvider getAccountProvider( ) {
     return accounts.get( );
   }
 
-  static IdentityProvider getIdentityProvider( ) {
+  protected static IdentityProvider getIdentityProvider( ) {
     return identities.get( );
   }
 
-  @Nullable
-  public static String lookupCanonicalIdByEmail( String email ) throws AuthException {
-    final EuareUser euareUser = lookupUserByEmailAddress( email );
-    if ( euareUser.isAccountAdmin( ) ) {
-      return euareUser.getAccount( ).getCanonicalId( );
-    }
-    return null;
-  }
-
   public static String lookupAccountIdByAlias( String alias ) throws AuthException {
-    return getIdentityProvider( ).lookupAccountIdentifiersByAlias( alias ).getAccountNumber( );
+    return getIdentityProvider( ).lookupAccountIdentifiersByAlias( alias ).getAccountNumber();
   }
 
   public static String lookupAccountIdByCanonicalId( String canonicalId ) throws AuthException {
@@ -182,7 +176,11 @@ public class Accounts {
   }
 
   public static String lookupCanonicalIdByAccountId( String accountId ) throws AuthException {
-    return getIdentityProvider( ).lookupPrincipalByAccountNumber( accountId ).getCanonicalId( );
+    return getIdentityProvider( ).lookupPrincipalByAccountNumber( accountId ).getCanonicalId();
+  }
+
+  public static String lookupCanonicalIdByEmail( String email ) throws AuthException {
+    return getIdentityProvider( ).lookupAccountIdentifiersByEmail( email ).getCanonicalId( );
   }
 
   public static String lookupAccountAliasById( String accountId ) throws AuthException {
@@ -251,8 +249,16 @@ public class Accounts {
     return account;
   }
 
-  public static Set<String> resolveAccountNumbersForName( final String accountNameLike ) throws AuthException {
-    return Accounts.getAccountProvider().resolveAccountNumbersForName( accountNameLike );    
+  @Nonnull
+  public static List<String> listAccountNumbersForName( final String accountAliasExpression ) throws AuthException {
+    return Lists.newArrayList( Iterables.transform(
+        listAccountIdentifiersForName( accountAliasExpression ),
+        AccountIdentifiers.Properties.accountNumber( ) ) );
+  }
+
+  @Nonnull
+  public static List<AccountIdentifiers> listAccountIdentifiersForName( final String accountAliasExpression ) throws AuthException {
+    return getIdentityProvider( ).listAccountIdentifiersByAliasMatch( accountAliasExpression );
   }
 
   @Nonnull
@@ -305,10 +311,6 @@ public class Accounts {
     return getIdentityProvider( ).decodeSecurityToken( accessKeyIdentifier, securityToken );
   }
 
-  public static List<EuareUser> listAllUsers( ) throws AuthException {
-    return Accounts.getAccountProvider( ).listAllUsers( );
-  }
-
   public static EuareUser lookupUserById( String userId ) throws AuthException {
     return Accounts.getAccountProvider( ).lookupUserById( userId );
   }
@@ -352,7 +354,7 @@ public class Accounts {
   }
 
   public static EuareUser lookupAwsExecReadAdmin(boolean ensureActiveKey) throws AuthException {
-	Account system = Accounts.getAccountProvider( ).lookupAccountByName( Account.AWS_EXEC_READ_SYSTEM_ACCOUNT );
+	Account system = Accounts.getAccountProvider( ).lookupAccountByName( AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT );
 	EuareUser user = system.lookupAdmin();
 	if (ensureActiveKey) {
       boolean hasActiveKey = false;
@@ -371,7 +373,7 @@ public class Accounts {
   }
 
   public static EuareUser lookupObjectStorageWalrusAccount(boolean ensureActiveKey) throws AuthException {
-    Account system = Accounts.getAccountProvider( ).lookupAccountByName( Account.OBJECT_STORAGE_WALRUS_ACCOUNT );
+    Account system = Accounts.getAccountProvider( ).lookupAccountByName( AccountIdentifiers.OBJECT_STORAGE_WALRUS_ACCOUNT );
     EuareUser user = system.lookupAdmin();
     if (ensureActiveKey) {
       boolean hasActiveKey = false;
@@ -387,10 +389,6 @@ public class Accounts {
       }
     }
     return user;
-  }
-
-  public static EuareUser lookupUserByEmailAddress( String email ) throws AuthException {
-    return Accounts.getAccountProvider().lookupUserByEmailAddress( email );
   }
 
   public static UserPrincipal userAsPrincipal( final EuareUser user  ) throws AuthException {
@@ -470,19 +468,6 @@ public class Accounts {
 
   public static boolean isAccountNumber( final String identifier ) {
     return identifier.matches( "[0-9]{12}" );
-  }
-
-  public static void normalizeUserInfo( ) throws AuthException {
-    for ( EuareUser user : listAllUsers( ) ) {
-      try {
-        // In old code the info key is case sensitive
-        // In new code User.setInfo(Map<String,String) converts all keys to lower case
-        user.setInfo( user.getInfo( ) );
-      } catch ( AuthException e ) {
-        LOG.error( e, e );
-        continue;
-      }
-    }
   }
 
   public static Function<Account,String> toAccountNumber() {

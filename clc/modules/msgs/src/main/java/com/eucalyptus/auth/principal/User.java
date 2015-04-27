@@ -93,6 +93,10 @@ public interface User extends BasePrincipal, Serializable {
 
   String getToken( );
 
+  String getPassword( );
+
+  Long getPasswordExpires( );
+
   List<AccessKey> getKeys( ) throws AuthException;
 
   List<Certificate> getCertificates( ) throws AuthException;

@@ -242,7 +242,13 @@
     },
     "SecurityGroup": {
       "Properties": {
-        "GroupDescription": "Imaging worker's security group"
+        "GroupDescription": "Imaging worker's security group",
+        "Tags": [
+          {
+            "Key": "service-type",
+            "Value": "imaging"
+          }
+        ]
       },
       "Type": "AWS::EC2::SecurityGroup"
     }

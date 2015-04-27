@@ -20,9 +20,10 @@
 package com.eucalyptus.auth.euare;
 
 import java.util.List;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.DatabaseIdentityProvider;
+import com.eucalyptus.auth.euare.persist.DatabaseIdentityProvider;
 import com.eucalyptus.auth.api.IdentityProvider;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurationManager;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
@@ -32,11 +33,13 @@ import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.SecurityTokenContent;
 import com.eucalyptus.auth.principal.UserPrincipal;
-import com.eucalyptus.context.Contexts;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Either;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.NonNullFunction;
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -95,15 +98,32 @@ public class RegionDelegatingIdentityProvider implements IdentityProvider {
 
   @Override
   public UserPrincipal lookupPrincipalByCertificateId( final String certificateId ) throws AuthException {
-    return localProvider.lookupPrincipalByCertificateId( certificateId ); //TODO:STEVE: remote for certificate lookup
+    return regionDispatchAndReduce( new NonNullFunction<IdentityProvider, Either<AuthException, UserPrincipal>>() {
+      @Nonnull
+      @Override
+      public Either<AuthException, UserPrincipal> apply( final IdentityProvider identityProvider ) {
+        try {
+          return Either.right( identityProvider.lookupPrincipalByCertificateId( certificateId ) );
+        } catch ( AuthException e ) {
+          return Either.left( e );
+        }
+      }
+    } );
   }
 
   @Override
   public UserPrincipal lookupPrincipalByCanonicalId( final String canonicalId ) throws AuthException {
-    if ( regionConfigurationManager.getRegionInfo().isPresent() && Contexts.exists( ) && Contexts.lookup( ).getUser( ).getCanonicalId( ).equals( canonicalId ) ) {
-      return Contexts.lookup( ).getUser( ); //TODO:STEVE: remove this temporary lookup hack
-    }
-    return localProvider.lookupPrincipalByCanonicalId( canonicalId ); //TODO:STEVE: remote for canonical id lookup
+    return regionDispatchAndReduce( new NonNullFunction<IdentityProvider, Either<AuthException, UserPrincipal>>() {
+      @Nonnull
+      @Override
+      public Either<AuthException, UserPrincipal> apply( final IdentityProvider identityProvider ) {
+        try {
+          return Either.right( identityProvider.lookupPrincipalByCanonicalId( canonicalId ) );
+        } catch ( AuthException e ) {
+          return Either.left( e );
+        }
+      }
+    } );
   }
 
   @Override
@@ -141,10 +161,10 @@ public class RegionDelegatingIdentityProvider implements IdentityProvider {
 
   @Override
   public AccountIdentifiers lookupAccountIdentifiersByAlias( final String alias ) throws AuthException {
-    return regionDispatchAndReduce( new NonNullFunction<IdentityProvider, Either<AuthException,AccountIdentifiers>>( ) {
+    return regionDispatchAndReduce( new NonNullFunction<IdentityProvider, Either<AuthException, AccountIdentifiers>>() {
       @Nonnull
       @Override
-      public Either<AuthException,AccountIdentifiers> apply( final IdentityProvider identityProvider ) {
+      public Either<AuthException, AccountIdentifiers> apply( final IdentityProvider identityProvider ) {
         try {
           return Either.right( identityProvider.lookupAccountIdentifiersByAlias( alias ) );
         } catch ( AuthException e ) {
@@ -167,6 +187,36 @@ public class RegionDelegatingIdentityProvider implements IdentityProvider {
         }
       }
     } );
+  }
+
+  @Override
+  public AccountIdentifiers lookupAccountIdentifiersByEmail( final String email ) throws AuthException {
+    return regionDispatchAndReduce( new NonNullFunction<IdentityProvider, Either<AuthException,AccountIdentifiers>>( ) {
+      @Nonnull
+      @Override
+      public Either<AuthException,AccountIdentifiers> apply( final IdentityProvider identityProvider ) {
+        try {
+          return Either.right( identityProvider.lookupAccountIdentifiersByEmail( email ) );
+        } catch ( AuthException e ) {
+          return Either.left( e );
+        }
+      }
+    } );
+  }
+
+  @Override
+  public List<AccountIdentifiers> listAccountIdentifiersByAliasMatch( final String aliasExpression ) throws AuthException {
+    return regionDispatchAndReduce( new NonNullFunction<IdentityProvider, Either<AuthException,List<AccountIdentifiers>>>( ) {
+      @Nonnull
+      @Override
+      public Either<AuthException,List<AccountIdentifiers>> apply( final IdentityProvider identityProvider ) {
+        try {
+          return Either.right( identityProvider.listAccountIdentifiersByAliasMatch( aliasExpression ) );
+        } catch ( AuthException e ) {
+          return Either.left( e );
+        }
+      }
+    }, Lists.<AccountIdentifiers>newArrayList( ), CollectionUtils.<AccountIdentifiers,List<AccountIdentifiers>>addAll( ) );
   }
 
   @Override
@@ -215,6 +265,30 @@ public class RegionDelegatingIdentityProvider implements IdentityProvider {
     } );
   }
 
+  @Override
+  public void reserveGlobalName( final String namespace,
+                                 final String name,
+                                 final Integer duration ) throws AuthException {
+    final int numberOfRegions = Iterables.size( regionConfigurationManager.getRegionInfos( ) );
+    final Integer successes = numberOfRegions <= 1 ?
+        1 : // skip if only a local region
+        regionDispatchAndReduce( new NonNullFunction<IdentityProvider, Either<AuthException,String>>( ) {
+          @Nonnull
+          @Override
+          public Either<AuthException,String> apply( final IdentityProvider identityProvider ) {
+            try {
+              identityProvider.reserveGlobalName( namespace, name, duration );
+              return Either.right( "" );
+            } catch ( AuthException e ) {
+              return Either.left( e );
+            }
+          }
+        }, 0, CollectionUtils.<String>count( Predicates.notNull( ) ) );
+    if ( successes < ( 1 + ( numberOfRegions / 2 ) ) ) {
+      throw new AuthException( AuthException.CONFLICT );
+    }
+  }
+
   private <R> R regionDispatchByIdentifier(
       final String identifier,
       final NonNullFunction<IdentityProvider, R> invoker ) throws AuthException {
@@ -234,11 +308,10 @@ public class RegionDelegatingIdentityProvider implements IdentityProvider {
     try {
       if ( regionInfo.isPresent( ) &&
           !RegionConfigurations.getRegionName( ).asSet( ).contains( regionInfo.get( ).getName( ) ) ) {
-        for ( final RegionInfo.RegionService service : regionInfo.get( ).getServices( ) ) {
-          if ( "identity".equals( service.getType( ) ) ) {
-            final IdentityProvider remoteProvider = new RemoteIdentityProvider( service.getEndpoints( ) );
-            return invoker.apply( remoteProvider );
-          }
+        final Optional<Set<String>> endpoints = regionInfo.transform( RegionInfo.serviceEndpoints( "identity" ) );
+        if ( endpoints.isPresent( ) && !endpoints.get( ).isEmpty( ) ) {
+          final IdentityProvider remoteProvider = new RemoteIdentityProvider( endpoints.get( ) );
+          return invoker.apply( remoteProvider );
         }
         return invoker.apply( localProvider );
       } else {
@@ -252,6 +325,14 @@ public class RegionDelegatingIdentityProvider implements IdentityProvider {
 
   private <R> R regionDispatchAndReduce(
       final NonNullFunction<IdentityProvider, Either<AuthException,R>> invoker
+  ) throws AuthException {
+    return regionDispatchAndReduce( invoker, null, CollectionUtils.<R>unique( ) );
+  }
+
+  private <R,I> I regionDispatchAndReduce(
+      final NonNullFunction<IdentityProvider, Either<AuthException,R>> invoker,
+      final I initial,
+      final Function<I,Function<R,I>> reducer
   ) throws AuthException {
     try {
       final Iterable<RegionInfo> regionInfos = regionConfigurationManager.getRegionInfos( );
@@ -275,8 +356,8 @@ public class RegionDelegatingIdentityProvider implements IdentityProvider {
       final Iterable<R> successResults = Optional.presentInstances( Iterables.transform(
           regionResults,
           Either.<AuthException,R>rightOption( ) ) );
-      if ( Iterables.size( successResults ) == 1 ) {
-        return Iterables.getOnlyElement( successResults );
+      if ( Iterables.size( successResults ) > 0 ) {
+        return CollectionUtils.reduce( successResults, initial, reducer );
       }
       throw Iterables.get(
           Optional.presentInstances( Iterables.transform( regionResults, Either.<AuthException,R>leftOption( ) ) ),

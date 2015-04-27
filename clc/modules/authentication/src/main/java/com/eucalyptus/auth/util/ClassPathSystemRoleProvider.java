@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +20,6 @@
 package com.eucalyptus.auth.util;
 
 import java.io.IOException;
-import com.eucalyptus.auth.DatabaseAuthBootstrapper;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Charsets;
@@ -33,7 +32,7 @@ import com.google.common.io.Resources;
  *        provider-name-assume-role-policy.json
  *        provider-name-policy.json
  */
-public abstract class ClassPathSystemRoleProvider implements DatabaseAuthBootstrapper.SystemRoleProvider {
+public abstract class ClassPathSystemRoleProvider implements SystemRoleProvider {
 
   @Override
   public String getAssumeRolePolicy( ) {

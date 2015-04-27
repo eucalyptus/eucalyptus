@@ -28,7 +28,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.DatabaseAuthUtils;
+import com.eucalyptus.auth.euare.common.identity.ReserveNameType;
+import com.eucalyptus.auth.euare.persist.DatabaseAuthUtils;
 import com.eucalyptus.auth.api.IdentityProvider;
 import com.eucalyptus.auth.euare.common.identity.Account;
 import com.eucalyptus.auth.euare.common.identity.DecodeSecurityTokenResponseType;
@@ -77,6 +78,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 /**
  *
@@ -147,6 +149,9 @@ public class RemoteIdentityProvider implements IdentityProvider {
 
   @Override
   public AccountIdentifiers lookupAccountIdentifiersByAlias( final String alias ) throws AuthException {
+    if ( Accounts.isSystemAccount( alias ) ) {
+      throw new AuthException( AuthException.NO_SUCH_ACCOUNT );
+    }
     final DescribeAccountsType request = new DescribeAccountsType( );
     request.setAlias( alias );
     return resultFor( request );
@@ -157,6 +162,20 @@ public class RemoteIdentityProvider implements IdentityProvider {
     final DescribeAccountsType request = new DescribeAccountsType( );
     request.setCanonicalId( canonicalId );
     return resultFor( request );
+  }
+
+  @Override
+  public AccountIdentifiers lookupAccountIdentifiersByEmail( final String email ) throws AuthException {
+    final DescribeAccountsType request = new DescribeAccountsType( );
+    request.setEmail( email );
+    return resultFor( request );
+  }
+
+  @Override
+  public List<AccountIdentifiers> listAccountIdentifiersByAliasMatch( final String aliasExpression ) throws AuthException {
+    final DescribeAccountsType request = new DescribeAccountsType( );
+    request.setAliasLike( aliasExpression );
+    return resultListFor( request );
   }
 
   @Override
@@ -190,7 +209,7 @@ public class RemoteIdentityProvider implements IdentityProvider {
     request.setRoleName( name );
     try {
       final DescribeRoleResponseType response = send( request );
-      final DescribeRoleResult result = response.getDescribeRoleResult( );
+      final DescribeRoleResult result = response.getDescribeRoleResult();
       return TypeMappers.transform( result.getRole( ), Role.class );
     } catch ( Exception e ) {
       throw new AuthException( e );
@@ -207,6 +226,21 @@ public class RemoteIdentityProvider implements IdentityProvider {
       final DecodeSecurityTokenResponseType response = send( request );
       final DecodeSecurityTokenResult result = response.getDecodeSecurityTokenResult();
       return TypeMappers.transform( result.getSecurityToken(), SecurityTokenContent.class );
+    } catch ( Exception e ) {
+      throw new AuthException( e );
+    }
+  }
+
+  @Override
+  public void reserveGlobalName( final String namespace,
+                                 final String name,
+                                 final Integer duration ) throws AuthException {
+    final ReserveNameType request = new ReserveNameType( );
+    request.setNamespace( namespace );
+    request.setName( name );
+    request.setDuration( duration );
+    try {
+      send( request );
     } catch ( Exception e ) {
       throw new AuthException( e );
     }
@@ -229,6 +263,20 @@ public class RemoteIdentityProvider implements IdentityProvider {
         throw new AuthException( "Account information not found" );
       }
       return TypeMappers.transform( Iterables.getOnlyElement( accounts ), AccountIdentifiers.class );
+    } catch ( AuthException e ) {
+      throw e;
+    } catch ( Exception e ) {
+      throw new AuthException( e );
+    }
+  }
+
+  private List<AccountIdentifiers> resultListFor( final DescribeAccountsType request ) throws AuthException {
+    try {
+      final DescribeAccountsResponseType response = send( request );
+      final List<Account> accounts = response.getDescribeAccountsResult( ).getAccounts( );
+      return Lists.newArrayList( Iterables.transform(
+          accounts,
+          TypeMappers.lookup( Account.class, AccountIdentifiers.class ) ) );
     } catch ( AuthException e ) {
       throw e;
     } catch ( Exception e ) {
@@ -321,6 +369,18 @@ public class RemoteIdentityProvider implements IdentityProvider {
           return Accounts.isSystemAccount( getAccountAlias( ) );
         }
 
+        @Nullable
+        @Override
+        public String getPassword() {
+          return principal.getPasswordHash( );
+        }
+
+        @Nullable
+        @Override
+        public Long getPasswordExpires() {
+          return principal.getPasswordExpiry( );
+        }
+
         @Nonnull
         @Override
         public List<AccessKey> getKeys( ) {
@@ -380,6 +440,7 @@ public class RemoteIdentityProvider implements IdentityProvider {
           @Override public Boolean isActive( ) { return true; }
           @Override public void setActive( final Boolean active ) { }
           @Override public Boolean isRevoked( ) { return false; }
+          @Override public void setRevoked( final Boolean revoked ) { }
           @Override public String getPem( ) { return certificate.getCertificateBody( ); }
           @Override public X509Certificate getX509Certificate( ) { return null; }
           @Override public Date getCreateDate( ) { return null; }

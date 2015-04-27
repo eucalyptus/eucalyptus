@@ -60,7 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth;
+package com.eucalyptus.auth.euare.persist;
 
 import java.security.cert.X509Certificate;
 import java.util.List;
@@ -68,7 +68,13 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
-import com.eucalyptus.auth.entities.InstanceProfileEntity;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.Debugging;
+import com.eucalyptus.auth.InvalidAccessKeyAuthException;
+import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
+import com.eucalyptus.auth.principal.AccountIdentifiersImpl;
 import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.entities.Entities;
@@ -79,12 +85,12 @@ import com.eucalyptus.auth.api.AccountProvider;
 import com.eucalyptus.auth.checker.InvalidValueException;
 import com.eucalyptus.auth.checker.ValueChecker;
 import com.eucalyptus.auth.checker.ValueCheckerFactory;
-import com.eucalyptus.auth.entities.AccessKeyEntity;
-import com.eucalyptus.auth.entities.AccountEntity;
-import com.eucalyptus.auth.entities.CertificateEntity;
-import com.eucalyptus.auth.entities.GroupEntity;
-import com.eucalyptus.auth.entities.RoleEntity;
-import com.eucalyptus.auth.entities.UserEntity;
+import com.eucalyptus.auth.euare.persist.entities.AccessKeyEntity;
+import com.eucalyptus.auth.euare.persist.entities.AccountEntity;
+import com.eucalyptus.auth.euare.persist.entities.CertificateEntity;
+import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
+import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
+import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
@@ -92,6 +98,8 @@ import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.util.TypeMappers;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.hibernate.persister.collection.CollectionPropertyNames;
@@ -241,7 +249,7 @@ public class DatabaseAuthProvider implements AccountProvider {
    */
   @Override
   public Account addSystemAccount( String accountName ) throws AuthException {
-    if ( !accountName.startsWith( Account.SYSTEM_ACCOUNT_PREFIX ) ) {
+    if ( !accountName.startsWith( AccountIdentifiers.SYSTEM_ACCOUNT_PREFIX ) ) {
       throw new AuthException( AuthException.INVALID_NAME );
     }
     try {
@@ -350,11 +358,15 @@ public class DatabaseAuthProvider implements AccountProvider {
   }
 
   @Override
-  public Set<String> resolveAccountNumbersForName( final String accountNameLike ) throws AuthException {
-    final Set<String> results = Sets.newHashSet( );
+  public List<AccountIdentifiers> resolveAccountNumbersForName( final String accountNameLike ) throws AuthException {
+    final List<AccountIdentifiers> results = Lists.newArrayList( );
     try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
       for ( final AccountEntity account : Entities.query( new AccountEntity( accountNameLike ) ) ) {
-        results.add( account.getAccountNumber() );        
+        results.add( new AccountIdentifiersImpl(
+            account.getAccountNumber( ),
+            account.getName( ),
+            account.getCanonicalId( )
+        ) );
       }
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to resolve account numbers" );

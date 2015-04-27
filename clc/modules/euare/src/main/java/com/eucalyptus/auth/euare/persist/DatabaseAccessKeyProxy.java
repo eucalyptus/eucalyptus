@@ -60,46 +60,100 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth.api;
+package com.eucalyptus.auth.euare.persist;
 
-import java.security.cert.X509Certificate;
+import java.util.Date;
 import java.util.List;
-import java.util.Set;
+import org.apache.log4j.Logger;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.Debugging;
+import com.eucalyptus.auth.euare.persist.entities.AccessKeyEntity;
 import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.AccountIdentifiers;
-import com.eucalyptus.auth.principal.Certificate;
-import com.eucalyptus.auth.principal.EuareRole;
-import com.eucalyptus.auth.principal.EuareUser;
-import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.UserPrincipal;
+import java.util.concurrent.ExecutionException;
+import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Tx;
+import com.google.common.collect.Lists;
 
-public interface AccountProvider {
+public class DatabaseAccessKeyProxy implements AccessKey {
 
-  Account lookupAccountByName( String accountName ) throws AuthException;
-  Account lookupAccountById( String accountId ) throws AuthException;
-  Account lookupAccountByCanonicalId(String canonicalId) throws AuthException;
-
-  Account addAccount( String accountName ) throws AuthException;
-  Account addSystemAccount( String accountName ) throws AuthException;
-  void deleteAccount( String accountName, boolean forceDeleteSystem, boolean recursive ) throws AuthException;
-  List<Account> listAllAccounts( ) throws AuthException;
-  List<AccountIdentifiers> resolveAccountNumbersForName( String accountNameLike ) throws AuthException;
+  private static final long serialVersionUID = 1L;
   
-  List<EuareUser> listAllUsers( ) throws AuthException;
-
-  EuareUser lookupUserById( String userId ) throws AuthException;
-  EuareUser lookupUserByAccessKeyId( String keyId ) throws AuthException;
-  EuareUser lookupUserByCertificate( X509Certificate cert ) throws AuthException;
-  EuareUser lookupUserByEmailAddress( String email ) throws AuthException;
-
-  Group lookupGroupById( String groupId ) throws AuthException;
-
-  EuareRole lookupRoleById( String roleId ) throws AuthException;
-
-  Certificate lookupCertificate( X509Certificate cert ) throws AuthException;
-  Certificate lookupCertificateById( String certificateId ) throws AuthException;;
+  private static final Logger LOG = Logger.getLogger( DatabaseAccessKeyProxy.class );
   
-  AccessKey lookupAccessKeyById( String keyId ) throws AuthException;
+  private AccessKeyEntity delegate;
+  
+  public DatabaseAccessKeyProxy( AccessKeyEntity delegate ) {
+    this.delegate = delegate;
+  }
+  
+  @Override
+  public Boolean isActive( ) {
+    return this.delegate.isActive( );
+  }
+  
+  @Override
+  public void setActive( final Boolean active ) throws AuthException {
+    try {
+      DatabaseAuthUtils.invokeUnique( AccessKeyEntity.class, "accessKey", this.delegate.getAccessKey( ), new Tx<AccessKeyEntity>( ) {
+        public void fire( AccessKeyEntity t ) {
+          t.setActive( active );
+        }
+      } );
+    } catch ( ExecutionException e ) {
+      Debugging.logError( LOG, e, "Failed to setActive for " + this.delegate );
+      throw new AuthException( e );
+    }
+  }
+  
+  @Override
+  public String getSecretKey( ) {
+    return this.delegate.getSecretKey( );
+  }
+  
+//  @Override
+  public void setSecretKey( final String key ) throws AuthException {
+    try {
+      DatabaseAuthUtils.invokeUnique( AccessKeyEntity.class, "accessKey", this.delegate.getAccessKey( ), new Tx<AccessKeyEntity>( ) {
+        public void fire( AccessKeyEntity t ) {
+          t.setSecretKey( key );
+        }
+      } );
+    } catch ( ExecutionException e ) {
+      Debugging.logError( LOG, e, "Failed to setKey for " + this.delegate );
+      throw new AuthException( e );
+    }
+  }
+  
+  @Override
+  public Date getCreateDate( ) {
+    return this.delegate.getCreateDate( );
+  }
+  
+  @Override
+  public UserPrincipal getPrincipal( ) throws AuthException {
+    final List<UserPrincipal> results = Lists.newArrayList( );
+    try {
+      DatabaseAuthUtils.invokeUnique( AccessKeyEntity.class, "accessKey", this.delegate.getAccessKey( ), new Tx<AccessKeyEntity>( ) {
+        public void fire( AccessKeyEntity t ) {
+          try {
+            results.add( Accounts.userAsPrincipal( new DatabaseUserProxy( t.getUser() ) ) );
+          } catch ( AuthException e ) {
+            throw Exceptions.toUndeclared( e );
+          }
+        }
+      } );
+    } catch ( ExecutionException e ) {
+      Debugging.logError( LOG, e, "Failed to getUser for " + this.delegate );
+      throw new AuthException( e );
+    }
+    return results.get( 0 );
+  }
 
+  @Override
+  public String getAccessKey( ) {
+    return this.delegate.getAccessKey( );
+  }
+  
 }

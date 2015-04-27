@@ -29,7 +29,7 @@ import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectResult
 import com.amazonaws.services.s3.model.S3ObjectInputStream
 import com.amazonaws.util.Md5Utils
-import com.eucalyptus.auth.principal.EuareRole
+import com.eucalyptus.auth.principal.BaseRole
 import com.eucalyptus.auth.principal.User
 import com.eucalyptus.auth.tokens.SecurityToken
 import com.eucalyptus.auth.tokens.SecurityTokenManager
@@ -73,7 +73,7 @@ class EucaS3ClientFactory {
     return new EucaS3Client(credentials, https);
   }
 
-  public static EucaS3Client getEucaS3ClientByRole(EuareRole role, int durationInSec) {
+  public static EucaS3Client getEucaS3ClientByRole(BaseRole role, int durationInSec) {
 
     EucaS3Client eucaS3Client;
     try {

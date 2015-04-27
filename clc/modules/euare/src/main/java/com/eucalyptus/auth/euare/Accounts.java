@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -59,61 +59,52 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
-
-package com.eucalyptus.auth;
+package com.eucalyptus.auth.euare;
 
 import java.util.List;
+import java.util.Set;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.entities.PolicyEntity;
-import com.eucalyptus.auth.principal.Group;
-import com.eucalyptus.auth.principal.Policy;
-import com.eucalyptus.entities.Transactions;
-import java.util.concurrent.ExecutionException;
-import com.eucalyptus.util.Tx;
-import com.google.common.collect.Lists;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.euare.principal.GlobalNamespace;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
+import com.eucalyptus.auth.principal.EuareUser;
 
-public class DatabasePolicyProxy implements Policy {
+/**
+ *
+ */
+public class Accounts extends com.eucalyptus.auth.Accounts {
 
-  private static final long serialVersionUID = 1L;
-  
-  private static Logger LOG = Logger.getLogger( DatabasePolicyProxy.class );
-                                               
-  private PolicyEntity delegate;
-  
-  public DatabasePolicyProxy( PolicyEntity delegate ) {
-    this.delegate = delegate;
-  }
-  
-  @Override
-  public String getName( ) {
-    return this.delegate.getName( );
-  }
-  
-  @Override
-  public String getText( ) {
-    return this.delegate.getText( );
-  }
-  
-  public String getVersion( ) {
-    return this.delegate.getPolicyVersion( );
-  }
+  private static final Logger LOG = Logger.getLogger( Accounts.class );
 
-  public Integer getPolicyVersion( ) {
-    return this.delegate.getVersion( );
-  }
-
-  public Group getGroup( ) throws AuthException {
-    final List<Group> results = Lists.newArrayList( );
-    try {
-      Transactions.one( PolicyEntity.newInstanceWithId( this.delegate.getPolicyId( ) ), new Tx<PolicyEntity>( ) {
-        public void fire( PolicyEntity t ) {
-          results.add( new DatabaseGroupProxy( t.getGroup( ) ) );
-        }
-      } );
-    } catch ( ExecutionException e ) {
-      Debugging.logError( LOG, e, "Failed to getGroup for " + this.delegate );
-      throw new AuthException( e );
+  public static void reserveGlobalName( GlobalNamespace namespace, String name ) throws AuthException {
+    if ( GlobalNamespace.Account_Alias != namespace || !isSystemAccount( name ) ) {
+      getIdentityProvider( ).reserveGlobalName( namespace.getNamespace( ), name, 90 );
     }
-    return results.get( 0 );
   }
+
+  public static List<AccountIdentifiers> resolveAccountNumbersForName( final String accountNameLike ) throws AuthException {
+    return Accounts.getAccountProvider().resolveAccountNumbersForName( accountNameLike );
+  }
+
+  public static EuareUser lookupUserByEmailAddress( String email ) throws AuthException {
+    return Accounts.getAccountProvider().lookupUserByEmailAddress( email );
+  }
+
+  public static List<EuareUser> listAllUsers( ) throws AuthException {
+    return getAccountProvider( ).listAllUsers( );
+  }
+
+  public static void normalizeUserInfo( ) throws AuthException {
+    for ( EuareUser user : listAllUsers( ) ) {
+      try {
+        // In old code the info key is case sensitive
+        // In new code User.setInfo(Map<String,String) converts all keys to lower case
+        user.setInfo( user.getInfo( ) );
+      } catch ( AuthException e ) {
+        LOG.error( e, e );
+        continue;
+      }
+    }
+  }
+
 }

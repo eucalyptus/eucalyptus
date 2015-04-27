@@ -56,6 +56,7 @@ class Principal extends EucalyptusData {
   String canonicalId
   String accountAlias
   String passwordHash
+  Long passwordExpiry
   ArrayList<AccessKey> accessKeys
   ArrayList<Certificate> certificates
   ArrayList<Policy> policies
@@ -122,6 +123,7 @@ class DescribeAccountsType extends IdentityMessage {
   String alias
   String aliasLike
   String canonicalId
+  String email
 }
 
 class DescribeAccountsResponseType extends IdentityMessage {
@@ -159,3 +161,29 @@ class SecurityToken extends EucalyptusData {
   Long created
   Long expires
 }
+
+class ReserveNameType extends IdentityMessage {
+  String namespace
+  String name
+  Integer duration // seconds
+}
+
+class ReserveNameResponseType extends IdentityMessage {
+  ReserveNameResult reserveNameResult
+}
+
+class ReserveNameResult extends EucalyptusData {
+}
+
+class TunnelActionType extends IdentityMessage {
+  String content // internal XML format
+}
+
+class TunnelActionResponseType extends IdentityMessage {
+  TunnelActionResult tunnelActionResult
+}
+
+class TunnelActionResult extends EucalyptusData {
+  String content
+}
+

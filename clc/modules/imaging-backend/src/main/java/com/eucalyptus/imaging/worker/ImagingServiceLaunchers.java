@@ -72,9 +72,9 @@ public class ImagingServiceLaunchers {
       description = "Prepare imaging service so a worker can be launched."
           + "If something goes south with the service there is a big chance that setting "
           + "it to false and back to true would solve issues.",
-      initial = "true", readonly = false, type = ConfigurableFieldType.BOOLEAN,
+      initial = "false", readonly = false, type = ConfigurableFieldType.BOOLEAN,
       changeListener = EnabledChangeListener.class)
-  public static Boolean CONFIGURED = true;
+  public static Boolean CONFIGURED = false;
 
   private ImagingServiceLaunchers() {
   }
@@ -264,14 +264,16 @@ public class ImagingServiceLaunchers {
     public void fireChange(ConfigurableProperty t, String newValue)
         throws ConfigurablePropertyException {
       try {
-        if ("false".equals(newValue.toLowerCase())
-            && "true".equals(t.getValue())) {
+        if ("false".equalsIgnoreCase(newValue)
+            && "true".equalsIgnoreCase(t.getValue())) {
           ImagingServiceLaunchers.getInstance().disable();
-        } else if ("true".equals(newValue.toLowerCase())
-            && "false".equals(t.getValue())) {
+        } else if ("true".equalsIgnoreCase(newValue)
+            && ("false".equalsIgnoreCase(t.getValue())
+                || t.getValue()==null
+                || "".equals(t.getValue()) )) {
           ImagingServiceLaunchers.getInstance().enable();
-        } else if (!("true".equals(newValue.toLowerCase()) || "false"
-            .equals(newValue.toLowerCase())))
+        } else if (!("true".equalsIgnoreCase(newValue) || "false"
+            .equalsIgnoreCase(newValue)))
           throw new ConfigurablePropertyException("The '" + newValue
               + "' is not a valid value.");
       } catch (final ConfigurablePropertyException ex) {

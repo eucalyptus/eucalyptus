@@ -312,34 +312,6 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
         }
     }
 
-    @SuppressWarnings( "unchecked" )
-    public Snapshot revokePermission( final Account account ) {
-        EntityTransaction db = Entities.get( Snapshot.class );
-        try {
-            Snapshot entity = Entities.merge( this );
-            entity.getPermissions( ).remove( account.getAccountNumber( ) );
-            db.commit( );
-        } catch ( Exception ex ) {
-            Logs.exhaust( ).error( ex, ex );
-            db.rollback( );
-        }
-        return this;
-    }
-
-    @SuppressWarnings( "unchecked" )
-    public Snapshot grantPermission( final Account account ) {
-        EntityTransaction db = Entities.get( Snapshot.class );
-        try {
-            Snapshot entity = Entities.merge( this );
-            entity.getPermissions( ).add( account.getAccountNumber( ) );
-            db.commit( );
-        } catch ( Exception ex ) {
-            Logs.exhaust( ).error( ex, ex );
-            db.rollback( );
-        }
-        return this;
-    }
-
     public Snapshot resetPermission( ) {
         try {
             Transactions.one(new Snapshot(this.getOwner(), this.displayName), new Callback<Snapshot>() {
@@ -400,35 +372,7 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
      * @param accountIds
      */
     public void addPermissions( final List<String> accountIds ) {
-        try(TransactionResource db = Entities.transactionFor(Snapshot.class)) {
-            final Snapshot entity = Entities.merge( this );
-            Iterables.all(accountIds, new Predicate<String>() {
-
-                @Override
-                public boolean apply(final String input) {
-                    try {
-                        final Account account = Accounts.lookupAccountById(input);
-                        Snapshot.this.getPermissions().add(input);
-                    } catch (final Exception e) {
-                        try {
-                            final User user = Accounts.lookupUserById(input);
-                            Snapshot.this.getPermissions().add(user.getAccountNumber());
-                        } catch (AuthException ex) {
-                            try {
-                                final User user = Accounts.lookupUserByAccessKeyId(input);
-                                Snapshot.this.getPermissions().add(user.getAccountNumber());
-                            } catch (AuthException ex1) {
-                                LOG.error(ex1, ex1);
-                            }
-                        }
-                    }
-                    return true;
-                }
-            });
-            db.commit();
-        } catch ( final Exception ex ) {
-            Logs.exhaust().error( ex, ex );
-        }
+        getPermissions( ).addAll( accountIds );
     }
 
     /**
@@ -437,21 +381,7 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
      * @param accountIds
      */
     public void removePermissions( final List<String> accountIds ) {
-        try(TransactionResource db = Entities.transactionFor(Snapshot.class)) {
-            final Snapshot entity = Entities.merge( this );
-            Iterables.all( accountIds, new Predicate<String>( ) {
-
-                @Override
-                public boolean apply( final String input ) {
-                    Snapshot.this.getPermissions( ).remove( input );
-                    return true;
-                }
-            } );
-
-            db.commit( );
-        } catch ( final Exception ex ) {
-            Logs.exhaust( ).error( ex, ex );
-        }
+        getPermissions( ).removeAll( accountIds );
     }
   
   @EntityUpgrade( entities = { Snapshot.class }, since = Version.v3_2_0, value = Compute.class )

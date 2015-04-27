@@ -60,7 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth;
+package com.eucalyptus.auth.euare.persist;
 
 import java.security.MessageDigest;
 import java.security.PublicKey;
@@ -78,27 +78,32 @@ import org.bouncycastle.util.Arrays;
 import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.criterion.Restrictions;
 
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.AuthenticationLimitProvider;
+import com.eucalyptus.auth.Debugging;
+import com.eucalyptus.auth.PolicyParseException;
+import com.eucalyptus.auth.ServerCertificate;
+import com.eucalyptus.auth.euare.ServerCertificates;
 import com.eucalyptus.auth.checker.InvalidValueException;
 import com.eucalyptus.auth.checker.ValueChecker;
 import com.eucalyptus.auth.checker.ValueCheckerFactory;
-import com.eucalyptus.auth.entities.AccountEntity;
-import com.eucalyptus.auth.entities.CertificateEntity;
-import com.eucalyptus.auth.entities.GroupEntity;
-import com.eucalyptus.auth.entities.InstanceProfileEntity;
-import com.eucalyptus.auth.entities.PolicyEntity;
-import com.eucalyptus.auth.entities.RoleEntity;
-import com.eucalyptus.auth.entities.ServerCertificateEntity;
-import com.eucalyptus.auth.entities.UserEntity;
+import com.eucalyptus.auth.euare.persist.entities.AccountEntity;
+import com.eucalyptus.auth.euare.persist.entities.CertificateEntity;
+import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
+import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
+import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
+import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
+import com.eucalyptus.auth.euare.persist.entities.ServerCertificateEntity;
+import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.policy.PolicyPolicy;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.EuareInstanceProfile;
+import com.eucalyptus.auth.euare.principal.EuareInstanceProfile;
 import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.auth.principal.Group;
-import com.eucalyptus.auth.principal.InstanceProfile;
-import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.util.Identifiers;
@@ -645,7 +650,7 @@ public class DatabaseAccountProxy implements Account {
     if(! ServerCertificateEntity.isCertificatePathValid(certPath))
       throw new AuthException(AuthException.INVALID_SERVER_CERT_PATH);
     
-    if(! ServerCertificates.isCertValid(certBody, pk, certChain)){
+    if(! ServerCertificates.isCertValid( certBody, pk, certChain )){
       throw new AuthException(AuthException.SERVER_CERT_INVALID_FORMAT);
     }
     

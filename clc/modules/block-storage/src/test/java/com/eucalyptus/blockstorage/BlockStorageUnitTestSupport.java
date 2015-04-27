@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,16 +29,15 @@ import java.util.Set;
 import org.hibernate.ejb.Ejb3Configuration;
 
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.DatabaseAuthProvider;
-import com.eucalyptus.auth.entities.AccessKeyEntity;
-import com.eucalyptus.auth.entities.AccountEntity;
-import com.eucalyptus.auth.entities.CertificateEntity;
-import com.eucalyptus.auth.entities.GroupEntity;
-import com.eucalyptus.auth.entities.InstanceProfileEntity;
-import com.eucalyptus.auth.entities.PolicyEntity;
-import com.eucalyptus.auth.entities.RoleEntity;
-import com.eucalyptus.auth.entities.ServerCertificateEntity;
-import com.eucalyptus.auth.entities.UserEntity;
+import com.eucalyptus.auth.euare.persist.entities.AccessKeyEntity;
+import com.eucalyptus.auth.euare.persist.entities.AccountEntity;
+import com.eucalyptus.auth.euare.persist.entities.CertificateEntity;
+import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
+import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
+import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
+import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
+import com.eucalyptus.auth.euare.persist.entities.ServerCertificateEntity;
+import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.blockstorage.entities.BlockStorageGlobalConfiguration;
@@ -124,8 +123,7 @@ public class BlockStorageUnitTestSupport {
             .addAnnotatedClass( RoleEntity.class ).addAnnotatedClass( CertificateEntity.class )
             .addAnnotatedClass( ServerCertificateEntity.class );
 
-    PersistenceContexts.registerPersistenceContext("eucalyptus_auth", config);
-    Accounts.setAccountProvider(new DatabaseAuthProvider());
+    PersistenceContexts.registerPersistenceContext( "eucalyptus_auth", config );
   }
 
   public static void tearDownAuthPersistenceContext() {
