@@ -3788,13 +3788,13 @@ int managed_generate_dhcpd_config(globalNetworkInfo * pGni)
                         euca_ntoa(pClusterInstances[i].privateIp), euca_etoa(pClusterInstances[i].macAddress), euca_ntoa(pClusterInstances[i].privateIp));
             }
         }
-        EUCA_FREE(pClusterInstances);
 
         //
         // Now close the content
         //
         fprintf(pFh, "}\n");
     }
+    EUCA_FREE(pClusterInstances);
     fclose(pFh);
     return (ret);
 }

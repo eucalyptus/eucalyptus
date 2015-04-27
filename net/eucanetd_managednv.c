@@ -1353,7 +1353,7 @@ static int managednv_update_gateway_ips(globalNetworkInfo * pGni)
     // Get the security groups for this cluster only
     if ((rc = gni_cluster_get_secgroup(pGni, pCluster, NULL, 0, NULL, 0, &pSecGroups, &nbGroups)) != 0) {
         LOGERROR("Cannot find security-groups for cluster '%s' in global network view: check network configuration settings\n", pCluster->name);
-        dev_free_ips(pNetworks);
+        dev_free_ips(&pNetworks);
         return (1);
     }
     //
