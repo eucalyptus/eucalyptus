@@ -247,6 +247,7 @@ const char *asPeerRoleName[] = {
     "CLC",
     "CC",
     "NC",
+    "NON-EUCA-HOST",
     "OUT-OF-BOUND",
 };
 
