@@ -71,6 +71,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import com.eucalyptus.auth.euare.Accounts;
 import com.eucalyptus.auth.AuthContext;
 import com.eucalyptus.auth.AuthException;
@@ -105,13 +107,20 @@ import com.google.common.collect.Maps;
 
 class Privileged {
 
-  public static Account createAccount( AuthContext requestUser, String accountName, String password, String email ) throws AuthException {
+  public static Account createAccount(
+      @Nonnull  AuthContext requestUser,
+      @Nullable String accountName,
+      @Nullable String password,
+      @Nullable String email
+  ) throws AuthException {
     if ( !requestUser.isSystemUser( ) ||
         !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, "", (AccountFullName)null, IAM_CREATEACCOUNT, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
 
-    Accounts.reserveGlobalName( GlobalNamespace.Account_Alias, accountName );
+    if ( accountName != null ) {
+      Accounts.reserveGlobalName( GlobalNamespace.Account_Alias, accountName );
+    }
     Account newAccount = Accounts.addAccount( accountName );
     Map<String, String> info = null;
     if ( email != null ) {
@@ -168,7 +177,7 @@ class Privileged {
       throw new AuthException( AuthException.EMPTY_ACCOUNT_NAME );
     }
     // Only one alias is allowed by AWS IAM spec. Overwrite the current alias if matches.
-    if ( account.getName( ).equals( alias ) ) {
+    if ( alias.equals( account.getAccountAlias( ) ) ) {
       account.setNameUnsafe( account.getAccountNumber( ) );
     }
   }
@@ -178,8 +187,8 @@ class Privileged {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     List<String> aliases = Lists.newArrayList( );
-    if ( !account.getAccountNumber( ).equals( account.getName( ) ) ) {
-      aliases.add( account.getName( ) );
+    if ( account.hasAccountAlias( ) ) {
+      aliases.add( account.getAccountAlias( ) );
     }
     return aliases;
   }

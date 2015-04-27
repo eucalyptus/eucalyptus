@@ -779,12 +779,12 @@
   </mapping>  
   
   <mapping class="com.eucalyptus.auth.euare.AccountType" abstract="true">
-    <value name="AccountName" field="accountName" usage="required"/>
+    <value name="AccountName" field="accountName" usage="optional"/>
     <value name="AccountId" field="accountId" usage="required"/>
   </mapping>
   <mapping name="CreateAccount" class="com.eucalyptus.auth.euare.CreateAccountType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <value name="AccountName" field="accountName" usage="required"/>
+    <value name="AccountName" field="accountName" usage="optional"/>
   </mapping>
   <mapping name="CreateAccountResponse" class="com.eucalyptus.auth.euare.CreateAccountResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
