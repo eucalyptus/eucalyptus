@@ -77,6 +77,9 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+#include <unistd.h>
+#include <errno.h>
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  DEFINES                                   |
@@ -189,6 +192,7 @@ typedef struct ebt_handler_t {
 \*----------------------------------------------------------------------------*/
 
 int cidrsplit(char *ipname, char **ippart, int *nmpart);
+int unlink_handler_file(char *filename);
 
 //! @{
 //! @name IP tables API

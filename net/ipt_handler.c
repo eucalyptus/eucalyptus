@@ -1011,6 +1011,40 @@ int ipt_handler_free(ipt_handler * ipth)
 //!
 //! @note
 //!
+int unlink_handler_file(char *filename) {
+    if (filename == NULL) {
+        LOGTRACE("NULL filename passed\n");
+        return (0);
+    }
+
+    if (access(filename, F_OK) == 0) {
+        if (unlink(filename) < 0) {
+            LOGERROR("Unable to unlink handler file: %s errno: %d\n", filename, errno);
+            return (1);
+        } else {
+            LOGTRACE("File %s removed successfully\n",filename);
+        } 
+    } else {
+        LOGWARN("File: %s doesn't exist or is not accessible by user. errno: %d\n",filename, errno);
+    }
+    return (0);
+}
+
+//!
+//! Function description.
+//!
+//! @param[in] ipth pointer to the IP table handler structure
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre List of pre-conditions
+//!
+//! @post List of post conditions
+//!
+//! @note
+//!
 int ipt_handler_print(ipt_handler * ipth)
 {
     int i = 0, j = 0, k = 0, count = 0;

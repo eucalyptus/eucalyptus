@@ -2253,51 +2253,89 @@ int read_config(void)
         if (rc) {
             LOGERROR("cannot locate cluster to which local node belongs in global network view: check network config settings\n");
             ret = 1;
-        }
+        } else {
+            //
+            // Only proceed with handler initialization if we know that we are
+            // part of a cluster.
+            //
+            // This will eliminate /tmp file creation while waiting to be registered with the cloud.
+            //
+            config->ipt = malloc(sizeof(ipt_handler));
+            if (!config->ipt) {
+                LOGFATAL("out of memory!\n");
+                exit(1);
+            }
+            rc = ipt_handler_init(config->ipt, config->cmdprefix);
+            if (rc) {
+                LOGERROR("could not initialize ipt_handler: check above log errors for details\n");
+                ret = 1;
+            }
 
-        config->ipt = malloc(sizeof(ipt_handler));
-        if (!config->ipt) {
-            LOGFATAL("out of memory!\n");
-            exit(1);
-        }
-        rc = ipt_handler_init(config->ipt, config->cmdprefix);
-        if (rc) {
-            LOGERROR("could not initialize ipt_handler: check above log errors for details\n");
-            ret = 1;
-        }
-
-        config->ips = malloc(sizeof(ips_handler));
-        if (!config->ips) {
-            LOGFATAL("out of memory!\n");
-            exit(1);
-        }
-        rc = ips_handler_init(config->ips, config->cmdprefix);
-        if (rc) {
-            LOGERROR("could not initialize ips_handler: check above log errors for details\n");
-            ret = 1;
-        }
+            config->ips = malloc(sizeof(ips_handler));
+            if (!config->ips) {
+                LOGFATAL("out of memory!\n");
+                exit(1);
+            }
+            rc = ips_handler_init(config->ips, config->cmdprefix);
+            if (rc) {
+                LOGERROR("could not initialize ips_handler: check above log errors for details\n");
+                ret = 1;
+            }
 
 #ifdef USE_IP_ROUTE_HANDLER
-        if ((config->ipr = EUCA_ZALLOC(1, sizeof(ipr_handler))) == NULL) {
-            LOGFATAL("out of memory!\n");
-            exit(1);
-        }
+            if ((config->ipr = EUCA_ZALLOC(1, sizeof(ipr_handler))) == NULL) {
+                LOGFATAL("out of memory!\n");
+                exit(1);
+            }
 
-        if ((rc = ipr_handler_init(config->ipr, config->cmdprefix)) != 0) {
-            LOGERROR("could not initialize ipr_handler: check above log errors for details\n");
-            ret = 1;
-        }
+            if ((rc = ipr_handler_init(config->ipr, config->cmdprefix)) != 0) {
+                LOGERROR("could not initialize ipr_handler: check above log errors for details\n");
+                ret = 1;
+            }
 #endif /* USE_IP_ROUTE_HANDLER */
 
-        config->ebt = malloc(sizeof(ebt_handler));
-        if (!config->ebt) {
-            LOGFATAL("out of memory!\n");
-            exit(1);
-        }
-        rc = ebt_handler_init(config->ebt, config->cmdprefix);
-        if (rc) {
-            LOGERROR("could not initialize ebt_handler: check above log errors for details\n");
-            ret = 1;
+            config->ebt = malloc(sizeof(ebt_handler));
+            if (!config->ebt) {
+                LOGFATAL("out of memory!\n");
+                exit(1);
+            }
+            rc = ebt_handler_init(config->ebt, config->cmdprefix);
+            if (rc) {
+                LOGERROR("could not initialize ebt_handler: check above log errors for details\n");
+                ret = 1;
+            }
+
+            //
+            // If an error has occured we need to clean up temporary files 
+            // that were created for the iptables, ebtables, ipset 
+            // and possibly ipr (if compiled)
+            //
+            if (ret) {
+                //
+                // These config handlers could be NULL, unlink_handler_file method call will handle NULL filenames
+                // We need to free the memory as read_config() will get called again until registered with the cloud.
+                //
+                if (config->ips) {
+                    unlink_handler_file(config->ips->ips_file);
+                    EUCA_FREE(config->ips);
+                }
+                if (config->ipt) {
+                    unlink_handler_file(config->ipt->ipt_file);
+                    EUCA_FREE(config->ipt);
+                }
+                if (config->ebt) {
+                    unlink_handler_file(config->ebt->ebt_filter_file);
+                    unlink_handler_file(config->ebt->ebt_nat_file);
+                    unlink_handler_file(config->ebt->ebt_asc_file);
+                    EUCA_FREE(config->ebt);
+                }
+#ifdef USE_IP_ROUTE_HANDLER
+                if (config->ipr) {
+                    unlink_handler_file(config->ipr->sIpRuleFile);
+                    EUCA_FREE(config->ipr);
+                }
+#endif /* USE_IP_ROUTE_HANDLER */
+            }
         }
     } else if (!strcmp(config->vnetMode, "VPCMIDO")) {
         // VPCMIDO mode init
