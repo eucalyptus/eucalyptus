@@ -349,6 +349,7 @@ class VmInstanceLifecycleHelpers {
       PrivateIPResource resource = ( PrivateIPResource ) \
           resourceToken.getAttribute(NetworkResourcesKey).find{ it instanceof PrivateIPResource }
       resource?.with{
+        builder.macAddress( mac ( resourceToken.getInstanceId() ) )
         builder.privateAddress( resource.value )
       }
     }
@@ -361,6 +362,7 @@ class VmInstanceLifecycleHelpers {
           resourceToken.getAttribute(NetworkResourcesKey).find{ it instanceof PrivateIPResource }
       resource?.with{
         builder.onBuild({ VmInstance instance ->
+          instance.updateMacAddress( mac (resourceToken.getInstanceId() ) )
           instance.updatePrivateAddress( resource.value )
           PrivateAddresses.associate( resource.value, instance )
         } as Callback<VmInstance>)
@@ -410,6 +412,14 @@ class VmInstanceLifecycleHelpers {
       } catch ( final Exception ex ) {
         logger.error( "Error releasing private address '${instance.privateAddress}' on instance '${instance.displayName}' clean up.", ex )
       }
+    }
+
+    private String mac( final String identifier ) { 
+      String.format ( "${VmInstances.MAC_PREFIX}:%s:%s:%s:%s",
+              identifier.substring(2,4),
+              identifier.substring(4,6),
+              identifier.substring(6,8),
+              identifier.substring(8,10) ).toLowerCase( );
     }
   }
 
