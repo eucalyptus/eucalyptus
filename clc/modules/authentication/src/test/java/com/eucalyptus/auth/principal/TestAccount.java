@@ -67,6 +67,11 @@ public class TestAccount implements Account {
   }
 
   @Override
+  public boolean hasAccountAlias( ) {
+    return getAccountAlias( ) != null && !getAccountAlias( ).equals( getAccountNumber( ) );
+  }
+
+  @Override
   public String getAccountAlias( ) {
     return getName( );
   }

@@ -88,7 +88,12 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define NUM_EUCANETD_CONFIG                     1
+#define NUM_EUCANETD_CONFIG                      1
+
+/* Defines the bitmask for the flush mode */
+#define EUCANETD_FLUSH_AND_RUN_MASK              0x01  //!< Will only flush and continue running
+#define EUCANETD_FLUSH_ONLY_MASK                 0x02  //!< Will flush and stop running the daemon
+#define EUCANETD_FLUSH_MASK                      0xFF  //!< Mask to see if we need to flush
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

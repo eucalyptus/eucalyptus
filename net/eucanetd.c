@@ -247,6 +247,7 @@ const char *asPeerRoleName[] = {
     "CLC",
     "CC",
     "NC",
+    "NON-EUCA-HOST",
     "OUT-OF-BOUND",
 };
 
@@ -342,23 +343,27 @@ int main(int argc, char **argv)
     eucanetd_initialize();
 
     // parse commandline arguments
-    while ((opt = getopt(argc, argv, "dhF")) != -1) {
+    config->flushmode = 0;
+    while ((opt = getopt(argc, argv, "dhFf")) != -1) {
         switch (opt) {
         case 'd':
             config->debug = 1;
             break;
         case 'F':
-            config->flushmode = 1;
+            config->flushmode |= EUCANETD_FLUSH_ONLY_MASK;
             config->debug = 1;
             break;
+        case 'f':
+            config->flushmode |= EUCANETD_FLUSH_AND_RUN_MASK;
+            break;
         case 'h':
-            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n\t%-12s| flush - clear all iptables/ebtables/ipset rules\n", argv[0],
-                   "-d", "-F");
+            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n\t%-12s| flush - clear all iptables/ebtables/ipset rules and continue\n"
+                   "\t%-12s| flush & stop - clear all iptables/ebtables/ipset rules and return\n", argv[0], "-d", "-F", "-f");
             exit(1);
             break;
         default:
-            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n\t%-12s| flush - clear all iptables/ebtables/ipset rules\n", argv[0],
-                   "-d", "-F");
+            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n\t%-12s| flush - clear all iptables/ebtables/ipset rules and continue\n"
+                   "\t%-12s| flush & stop - clear all iptables/ebtables/ipset rules and return\n", argv[0], "-d", "-F", "-f");
             exit(1);
             break;
         }
@@ -404,7 +409,7 @@ int main(int argc, char **argv)
     }
 
     // got all config, enter main loop
-    while (1) {
+    while (gIsRunning) {
         update_globalnet = FALSE;
 
         counter++;
@@ -465,18 +470,23 @@ int main(int argc, char **argv)
             }
         }
         // Do we need to flush all eucalyptus networking artifacts
-        if (config->flushmode) {
+        if (config->flushmode & EUCANETD_FLUSH_MASK) {
             // Make sure we were given a flush API prior to calling it
             if (pDriverHandler->system_flush) {
                 if (pDriverHandler->system_flush(globalnetworkinfo)) {
                     LOGERROR("manual flushing of all euca networking artifacts (iptables, ebtables, ipset) failed: check above log errors for details\n");
                 }
-            }
-            update_globalnet = TRUE;
-            config->flushmode = FALSE;
 
-            //TODO: Make this work better
-            break;
+                config->flushmode = 0;
+            }
+
+            if(config->flushmode & EUCANETD_FLUSH_ONLY_MASK) {
+                gIsRunning = FALSE;
+                update_globalnet = FALSE;
+            } else {
+                config->flushmode = 0;
+                update_globalnet = TRUE;
+            }
         }
         // if information on sec. group rules/membership has changed, apply
         if (update_globalnet) {
@@ -571,9 +581,11 @@ int main(int argc, char **argv)
     }
 
     LOGINFO("EUCANETD going down.\n");
+
+done:
     if (pDriverHandler->cleanup) {
         LOGINFO("Cleaning up '%s' network driver on termination.\n", pDriverHandler->name);
-        if (pDriverHandler->cleanup(globalnetworkinfo, FALSE) != 0) {
+        if (pDriverHandler->cleanup(globalnetworkinfo, (config->flushmode & EUCANETD_FLUSH_MASK)) != 0) {
             LOGERROR("Failed to cleanup '%s' network driver.\n", pDriverHandler->name);
         }
     }

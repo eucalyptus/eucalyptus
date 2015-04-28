@@ -168,7 +168,11 @@ public class Accounts {
   }
 
   public static String lookupAccountIdByAlias( String alias ) throws AuthException {
-    return getIdentityProvider( ).lookupAccountIdentifiersByAlias( alias ).getAccountNumber();
+    if ( isAccountNumber( alias ) ) {
+      return alias;
+    } else {
+      return getIdentityProvider( ).lookupAccountIdentifiersByAlias( alias ).getAccountNumber( );
+    }
   }
 
   public static String lookupAccountIdByCanonicalId( String canonicalId ) throws AuthException {
@@ -188,7 +192,11 @@ public class Accounts {
   }
 
   public static Account lookupAccountByName( String accountName ) throws AuthException {
-    return Accounts.getAccountProvider( ).lookupAccountByName( accountName );
+    if ( isAccountNumber( accountName ) ) {
+      return getAccountProvider( ).lookupAccountById( accountName );
+    } else {
+      return getAccountProvider( ).lookupAccountByName( accountName );
+    }
   }
   
   public static Account lookupAccountById( String accountId ) throws AuthException {
@@ -199,7 +207,7 @@ public class Accounts {
     return Accounts.getAccountProvider( ).lookupAccountByCanonicalId( canonicalId );
   }
 
-  public static Account addAccount( String accountName ) throws AuthException {
+  public static Account addAccount( @Nullable String accountName ) throws AuthException {
     return Accounts.getAccountProvider( ).addAccount( accountName );
   }
 
