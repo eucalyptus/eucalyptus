@@ -35,6 +35,7 @@ import com.eucalyptus.cloudformation.Parameters;
 import com.eucalyptus.cloudformation.ResourceList;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.entity.StackEntity;
+import com.eucalyptus.cloudformation.entity.StackEntityHelper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
@@ -116,9 +117,12 @@ public class AWSCloudFormationStackResourceAction extends ResourceAction {
           }
         }
         createStackType.setTemplateURL(action.properties.getTemplateURL());
-        // assuming here, we should have an IAM_CAPABILITY item
+        // inherit outer stack capabilities
         ResourceList capabilities = new ResourceList();
-        capabilities.getMember().add("CAPABILITY_IAM");
+        List<String> stackCapabilities = StackEntityHelper.jsonToCapabilities(action.getStackEntity().getCapabilitiesJson());
+        if (stackCapabilities != null) {
+          capabilities.getMember().addAll(stackCapabilities);
+        }
         createStackType.setCapabilities(capabilities);
         CreateStackResponseType createStackResponseType = AsyncRequests.<CreateStackType, CreateStackResponseType>sendSync(configuration, createStackType);
         action.info.setPhysicalResourceId(createStackResponseType.getCreateStackResult().getStackId());

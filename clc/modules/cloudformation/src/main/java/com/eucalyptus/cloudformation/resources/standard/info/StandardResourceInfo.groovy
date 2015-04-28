@@ -55,13 +55,6 @@ public class AWSCloudFormationStackResourceInfo extends ResourceInfo {
     setType("AWS::CloudFormation::Stack");
   }
 
-  @Override
-  public Collection<String> getRequiredCapabilities() {
-    ArrayList<String> capabilities = new ArrayList<String>();
-    capabilities.add("CAPABILITY_IAM");
-    return capabilities;
-  }
-
   Map<String, String> outputAttributes = Maps.newLinkedHashMap();
 
   @Override
