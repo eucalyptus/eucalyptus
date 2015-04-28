@@ -61,8 +61,6 @@ import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerEntityTransform;
-import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.LoadBalancerDnsRecordCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.LoadBalancerDnsRecordEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupEntityTransform;
@@ -745,22 +743,20 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 									final LoadBalancerSecurityGroupCoreView sgroupView = lb.getGroup();
 									if(sgroupView == null && lb.getVpcId()==null)
 										throw new Exception("No security group is found for loadbalancer "+lb.getDisplayName());
-									final LoadBalancerDnsRecordCoreView dnsView = lb.getDns();
-									
+
 									LoadBalancerZone zone;
 									LoadBalancerSecurityGroup sgroup;
 									LoadBalancerDnsRecord dns;
 									try{
 										zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(zoneView);
 										sgroup = sgroupView == null ? null : LoadBalancerSecurityGroupEntityTransform.INSTANCE.apply(sgroupView);
-										dns = LoadBalancerDnsRecordEntityTransform.INSTANCE.apply(dnsView);
 									}catch(final Exception ex){
 										LOG.error("unable to transform entity", ex);
 										throw ex;
 									}
 									
 									final LoadBalancerServoInstance newInstance = 
-											LoadBalancerServoInstance.newInstance(zone, sgroup, dns, group, instanceId);
+											LoadBalancerServoInstance.newInstance(zone, sgroup, group, instanceId);
 									newServos.add(newInstance); /// persist later
 								}catch(Exception ex){
 									LOG.error("Failed to construct new servo instance", ex);

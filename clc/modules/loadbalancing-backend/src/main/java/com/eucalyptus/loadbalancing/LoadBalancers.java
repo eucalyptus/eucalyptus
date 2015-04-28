@@ -20,6 +20,7 @@
 
 package com.eucalyptus.loadbalancing;
 
+import static com.eucalyptus.loadbalancing.LoadBalancer.Scheme;
 import static com.eucalyptus.loadbalancing.common.LoadBalancingMetadata.LoadBalancerMetadata;
 import static com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 
@@ -33,6 +34,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import org.apache.log4j.Logger;
+import org.xbill.DNS.Name;
+import org.xbill.DNS.TextParseException;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.euare.ServerCertificateType;
@@ -42,7 +45,6 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
@@ -63,10 +65,13 @@ import com.eucalyptus.loadbalancing.backend.ListenerNotFoundException;
 import com.eucalyptus.loadbalancing.backend.LoadBalancingException;
 import com.eucalyptus.loadbalancing.backend.UnsupportedParameterException;
 import com.eucalyptus.loadbalancing.common.msgs.Listener;
+import com.eucalyptus.loadbalancing.dns.LoadBalancerDomainName;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.Pair;
 import com.google.common.base.Function;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
@@ -119,32 +124,60 @@ public class LoadBalancers {
 				 throw Exceptions.toUndeclared(ex);
 		 }
 	}
-	
-	///
-	public static LoadBalancer getLoadBalancerByDnsName(final String dnsName) throws NoSuchElementException{
-		 try ( final TransactionResource db = Entities.transactionFor( LoadBalancerDnsRecord.class ) ) {
-			 final List<LoadBalancerDnsRecord> dnsList = Entities.query(LoadBalancerDnsRecord.named());
-			 db.commit();
-			 LoadBalancerCoreView lbView = null;
-			 for(final LoadBalancerDnsRecord dns : dnsList){
-				 if(dns.getDnsName()!=null && dns.getDnsName().equals(dnsName))
-					 lbView= dns.getLoadbalancer();
-			 }
-			 if(lbView == null)
-				 throw new NoSuchElementException();
-			 return LoadBalancerEntityTransform.INSTANCE.apply(lbView);
-		 }catch(NoSuchElementException ex){
-			 throw ex;
-		 }catch(Exception ex){
-			 throw Exceptions.toUndeclared(ex);
-		 }
+
+	public static String getLoadBalancerDnsName( final LoadBalancerCoreView loadBalancer ) {
+		return getLoadBalancerDnsName(
+				loadBalancer.getScheme(),
+				loadBalancer.getDisplayName(),
+				loadBalancer.getOwnerAccountNumber()
+		);
 	}
-	
+
+	public static String getLoadBalancerDnsName( final LoadBalancer loadBalancer ) {
+		return getLoadBalancerDnsName(
+				loadBalancer.getScheme(),
+				loadBalancer.getDisplayName(),
+				loadBalancer.getOwnerAccountNumber()
+		);
+	}
+
+	private static String getLoadBalancerDnsName(
+			@Nullable final Scheme scheme,
+			@Nonnull  final String displayName,
+			@Nonnull  final String accountNumber
+	) {
+		return LoadBalancerDomainName.forScheme( scheme ).generate( displayName, accountNumber );
+	}
+
+	public static LoadBalancer getLoadBalancerByDnsName( final String dnsName ) throws NoSuchElementException {
+		try {
+			final Name hostName = Name.fromString( dnsName, Name.root ).relativize( LoadBalancerDomainName.getLoadBalancerSubdomain() );
+			final Optional<LoadBalancerDomainName> domainName = LoadBalancerDomainName.findMatching( hostName );
+			if ( domainName.isPresent( ) ) {
+				final Pair<String, String> accountNamePair = domainName.get( ).toScopedLoadBalancerName( hostName );
+				try {
+					return LoadBalancers.getLoadbalancer( accountNamePair.getLeft( ), accountNamePair.getRight( ) );
+				} catch ( NoSuchElementException e ) {
+					if ( domainName.get( ) == LoadBalancerDomainName.INTERNAL ) { // perhaps it was an external balancer named "internal-..."
+						final Pair<String, String> externalAccountNamePair = LoadBalancerDomainName.EXTERNAL.toScopedLoadBalancerName( hostName );
+						return LoadBalancers.getLoadbalancer( externalAccountNamePair.getLeft( ), externalAccountNamePair.getRight( ) );
+					} else {
+						throw e;
+					}
+				}
+			} else {
+				throw new NoSuchElementException();
+			}
+		} catch ( TextParseException e ) {
+			throw new NoSuchElementException( );
+		}
+	}
+
   public static LoadBalancer addLoadbalancer(
       final UserFullName user,
       final String lbName,
       final String vpcId,
-      final LoadBalancer.Scheme scheme,
+      final Scheme scheme,
       final Map<String,String> securityGroupIdsToNames,
       final Map<String,String> tags ) throws LoadBalancingException {
     
@@ -349,34 +382,6 @@ public class LoadBalancers {
 		return inService;
 	}
 	
-	public static LoadBalancerDnsRecord getDnsRecord(final LoadBalancer lb) throws LoadBalancingException{
-		/// create the next dns record
-		try ( final TransactionResource db = Entities.transactionFor( LoadBalancerDnsRecord.class ) ) {
-			try {
-				return Entities.uniqueResult( LoadBalancerDnsRecord.named( lb ) );
-			} catch( NoSuchElementException ex ) {
-				final LoadBalancerDnsRecord newRec = LoadBalancerDnsRecord.named( lb );
-				Entities.persist( newRec );
-				db.commit();
-				return newRec;
-			}
-		}catch(Exception ex){
-			throw new LoadBalancingException("failed to query dns record", ex);
-		}
-	}
-	
-	public static void deleteDnsRecord(final LoadBalancerDnsRecord dns) throws LoadBalancingException{
-		try ( final TransactionResource db = Entities.transactionFor( LoadBalancerDnsRecord.class ) ) {
-			LoadBalancerDnsRecord exist = Entities.uniqueResult(dns);
-			Entities.delete(exist);
-			db.commit();
-		}catch(NoSuchElementException ex){
-			// nothing to delete
-		}catch(Exception ex){
-			throw new LoadBalancingException("failed to delete dns record", ex);
-		}
-	}
-	
 	public static LoadBalancerServoInstance lookupServoInstance(final String instanceId) throws LoadBalancingException {
 		try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
 			LoadBalancerServoInstance sample = LoadBalancerServoInstance.named(instanceId);
@@ -421,9 +426,8 @@ public class LoadBalancers {
 				try{
 					final LoadBalancerServoInstance update = Entities.uniqueResult(arg0);
 					//update.setSecurityGroup(null);
-					update.setAvailabilityZone(null);
-					update.setAutoScalingGroup(null);
-					update.setDns(null);
+					update.setAvailabilityZone( null );
+					update.setAutoScalingGroup( null );
 					return true;
 				}catch(final Exception ex){
 					return false;

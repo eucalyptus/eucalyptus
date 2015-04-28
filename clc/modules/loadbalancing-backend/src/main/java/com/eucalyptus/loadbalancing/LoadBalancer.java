@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,7 +64,6 @@ import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBack
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreViewTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreViewTransform;
-import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.LoadBalancerDnsRecordCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreViewTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
@@ -228,10 +227,6 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
 	private LoadBalancerAutoScalingGroup autoscale_group = null;
 	
-	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
-	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
-	private LoadBalancerDnsRecord dns = null;
-	
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerPolicyDescription> policies = null;
@@ -355,13 +350,6 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		return this.relationView.hasListener(lbPort);
 	}
 	
-	public void setDns(final LoadBalancerDnsRecord dns){
-		this.dns = dns;
-	}
-	
-	public LoadBalancerDnsRecordCoreView getDns(){
-		return this.relationView.getDns();
-	}
 	public Collection<LoadBalancerListenerCoreView> getListeners(){
 		return this.relationView.getListeners();
 	}
@@ -565,7 +553,6 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		private LoadBalancer loadbalancer = null;
 		private LoadBalancerSecurityGroupCoreView group = null;
 		private LoadBalancerAutoScalingGroupCoreView autoscale_group = null;
-		private LoadBalancerDnsRecordCoreView dns = null;
 
 		private ImmutableList<LoadBalancerBackendInstanceCoreView> backendInstances = null;
 		private ImmutableList<LoadBalancerListenerCoreView> listeners = null;
@@ -579,8 +566,6 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 				this.group = TypeMappers.transform(lb.group, LoadBalancerSecurityGroupCoreView.class);
 			if(lb.autoscale_group!=null)
 				this.autoscale_group = TypeMappers.transform(lb.autoscale_group, LoadBalancerAutoScalingGroupCoreView.class);
-			if(lb.dns != null)
-				this.dns = TypeMappers.transform(lb.dns,  LoadBalancerDnsRecordCoreView.class);
 			if(lb.backendInstances!=null)
 				this.backendInstances = ImmutableList.copyOf(Collections2.transform(lb.backendInstances, LoadBalancerBackendInstanceCoreViewTransform.INSTANCE));
 			if(lb.listeners!=null)
@@ -638,10 +623,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		public boolean hasListener(final int lbPort){
 			return this.findListener(lbPort)!=null;
 		}
-		
-		public LoadBalancerDnsRecordCoreView getDns(){
-			return this.dns;
-		}
+
 		public Collection<LoadBalancerListenerCoreView> getListeners(){
 			return this.listeners;
 		}
