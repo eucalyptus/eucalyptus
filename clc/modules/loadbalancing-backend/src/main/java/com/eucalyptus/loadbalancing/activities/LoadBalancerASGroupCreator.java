@@ -234,7 +234,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
             final String newUserdata = B64.standard.encString(String.format(
                 "%s\n%s",
                 getCredentialsString(),
-                getLoadBalancerUserData(initScript)));
+                getLoadBalancerUserData(initScript, lb.getOwnerAccountNumber())));
    
 						try{
 							EucalyptusActivityTasks.getInstance().createLaunchConfiguration(newEmi, newType, lc.getIamInstanceProfile(), 
@@ -559,7 +559,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 
 				final String userData = B64.standard.encString(String.format("%s\n%s",
 				    getCredentialsString(),
-				    getLoadBalancerUserData(INIT_SCRIPT)));
+				    getLoadBalancerUserData(INIT_SCRIPT, lb.getOwnerAccountNumber())));
 
 				EucalyptusActivityTasks.getInstance().createLaunchConfiguration(IMAGE, INSTANCE_TYPE, instanceProfileName,
 						launchConfigName, securityGroupNamesOrIds, keyName, userData, !zoneToSubnetIdMap.isEmpty( ) );
@@ -662,7 +662,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 		return groupName;
 	}
 
-	public static String getLoadBalancerUserData(String initScript) {
+	public static String getLoadBalancerUserData(String initScript, final String ownerAccountNumber) {
     Map<String, String> kvMap = new HashMap<String, String>();
 
     if (NTP_SERVER != null){
@@ -674,6 +674,9 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 
     kvMap.put("elb_service_url", String.format("loadbalancing.%s",DNSProperties.DOMAIN));
     kvMap.put("euare_service_url", String.format("euare.%s", DNSProperties.DOMAIN));
+    kvMap.put("objectstorage_service_url", String.format("objectstorage.%s", DNSProperties.DOMAIN));
+    if(ownerAccountNumber!=null)
+      kvMap.put("loadbalancer_owner_account", ownerAccountNumber);
     
     try {
       List<ServiceStatusType> services = 

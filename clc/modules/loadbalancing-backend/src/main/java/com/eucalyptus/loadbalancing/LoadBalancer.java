@@ -196,6 +196,18 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	@Column( name = "loadbalancer_cross_zone_loadbalancing")
 	private Boolean crossZoneLoadbalancing;
 	
+	@Column( name = "loadbalancer_accesslog_enabled", nullable=true)
+	private Boolean accessLogEnabled;
+
+  @Column( name = "loadbalancer_accesslog_emit_interval", nullable=true)
+  private Integer accessLogEmitInterval;
+  
+	@Column( name ="loadbalancer_accesslog_s3bucket_name", nullable=true)
+	private String accessLogS3BucketName;
+	
+	@Column( name = "loadbalancer_accesslog_s3bucket_prefix", nullable=true)
+	private String accessLogS3BucketPrefix;
+	
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, mappedBy = "loadbalancer")
 	@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerBackendInstance> backendInstances = null;
@@ -273,6 +285,38 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	
 	public void setCrossZoneLoadbalancingEnabled(final boolean enabled) {
 	  this.crossZoneLoadbalancing = enabled;
+	}
+	
+	public Boolean getAccessLogEnabled() {
+	  return this.accessLogEnabled;
+	}
+	
+	public void setAccessLogEnabled(final boolean enabled){
+	  this.accessLogEnabled = enabled;
+	}
+	
+	public Integer getAccessLogEmitInterval(){
+	  return this.accessLogEmitInterval;
+	}
+	
+	public void setAccessLogEmitInterval(final Integer interval){
+	  this.accessLogEmitInterval = interval;
+	}
+	
+	public String getAccessLogS3BucketName(){
+	  return this.accessLogS3BucketName;
+	}
+	
+	public void setAccessLogS3BucketName(final String bucketName){
+	  this.accessLogS3BucketName = bucketName;
+	}
+	
+	public String getAccessLogS3BucketPrefix(){
+	  return this.accessLogS3BucketPrefix;
+	}
+	
+	public void setAccessLogS3BucketPrefix(final String bucketPrefix){
+	  this.accessLogS3BucketPrefix = bucketPrefix;
 	}
 
 	public List<LoadBalancerSecurityGroupRef> getSecurityGroupRefs() {
@@ -670,6 +714,22 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		public Boolean getCrossZoneLoadbalancingEnabled( ) {
 		  return this.loadbalancer.getCrossZoneLoadbalancingEnabled();
 		}
+		
+		public Boolean getAccessLogEnabled( ) {
+		  return this.loadbalancer.getAccessLogEnabled();
+		}
+		
+		public String getAccessLogS3BucketName( ) {
+		  return this.loadbalancer.getAccessLogS3BucketName();
+		}
+		
+		public String getAccessLogS3BucketPrefix( ) {
+		  return this.loadbalancer.getAccessLogS3BucketPrefix();
+		}
+		
+		public Integer getAccessLogEmitInterval( ) {
+		  return this.loadbalancer.getAccessLogEmitInterval();
+		}
 
 		public Map<String,String> getSecurityGroupIdsToNames( ) {
 			return this.securityGroupIdsToNames;
@@ -713,11 +773,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 			if ( loadBalancer != null ) {
 				attributes = new LoadBalancerAttributes( );
 
-				final AccessLog accessLog = new AccessLog( );
-				accessLog.setEnabled( false );
-				attributes.setAccessLog( accessLog );
-
-				final ConnectionDraining connectionDraining = new ConnectionDraining( );
+					final ConnectionDraining connectionDraining = new ConnectionDraining( );
 				connectionDraining.setEnabled( false );
 				attributes.setConnectionDraining( connectionDraining );
 
@@ -730,6 +786,13 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 				crossZoneLoadBalancing.setEnabled( 
 				    Objects.firstNonNull(loadBalancer.getCrossZoneLoadbalancingEnabled(), false) );
 				attributes.setCrossZoneLoadBalancing( crossZoneLoadBalancing );
+				
+				final AccessLog accessLog = new AccessLog();
+				accessLog.setEnabled(Objects.firstNonNull(loadBalancer.getAccessLogEnabled(), false));
+				accessLog.setEmitInterval(loadBalancer.getAccessLogEmitInterval());
+				accessLog.setS3BucketName(loadBalancer.getAccessLogS3BucketName());
+				accessLog.setS3BucketPrefix(loadBalancer.getAccessLogS3BucketPrefix());
+				attributes.setAccessLog( accessLog );
 			}
 			return attributes;
 		}

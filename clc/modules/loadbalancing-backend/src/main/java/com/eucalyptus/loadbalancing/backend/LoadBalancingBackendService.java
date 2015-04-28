@@ -144,6 +144,7 @@ import com.eucalyptus.loadbalancing.common.backend.msgs.DisableAvailabilityZones
 import com.eucalyptus.loadbalancing.common.backend.msgs.DisableAvailabilityZonesForLoadBalancerType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.EnableAvailabilityZonesForLoadBalancerResponseType;
 import com.eucalyptus.loadbalancing.common.backend.msgs.EnableAvailabilityZonesForLoadBalancerType;
+import com.eucalyptus.loadbalancing.common.msgs.AccessLog;
 import com.eucalyptus.loadbalancing.common.msgs.AppCookieStickinessPolicies;
 import com.eucalyptus.loadbalancing.common.msgs.AppCookieStickinessPolicy;
 import com.eucalyptus.loadbalancing.common.msgs.AvailabilityZones;
@@ -296,7 +297,6 @@ public class LoadBalancingBackendService {
         /// dns name
         desc.setDnsName(dnsView.getDnsName());
         
-
         // attributes
         desc.setLoadBalancerAttributes( TypeMappers.transform( lb, LoadBalancerAttributes.class ) );
        
@@ -2653,10 +2653,37 @@ public class LoadBalancingBackendService {
                 request.getLoadBalancerAttributes().getCrossZoneLoadBalancing();
             if( crossZoneLb != null)
               loadBalancer.setCrossZoneLoadbalancingEnabled(crossZoneLb.getEnabled());
+            
+            final AccessLog accessLog = request.getLoadBalancerAttributes().getAccessLog();
+            if( accessLog != null ) {
+              final boolean accessLogEnabled = accessLog.getEnabled();
+              String bucketName = null;
+              String bucketPrefix = null;
+              Integer emitInterval = null;
+              if(accessLogEnabled) {
+                bucketName = accessLog.getS3BucketName();
+                bucketPrefix = 
+                  com.google.common.base.Objects.firstNonNull(accessLog.getS3BucketPrefix(), "");
+                emitInterval = 
+                  com.google.common.base.Objects.firstNonNull(accessLog.getEmitInterval(), 60);
+                if(emitInterval < 5 || emitInterval > 60) {
+                  throw new InvalidConfigurationRequestException("Access log's emit interval must be between 5 and 60 minutes");
+                }
+              }
+              loadBalancer.setAccessLogEnabled(accessLogEnabled);
+              loadBalancer.setAccessLogEmitInterval(emitInterval);
+              loadBalancer.setAccessLogS3BucketName(bucketName);
+              loadBalancer.setAccessLogS3BucketPrefix(bucketPrefix);
+            }
+            if(loadBalancer.getAccessLogEnabled() && 
+                (loadBalancer.getAccessLogS3BucketName()==null || loadBalancer.getAccessLogS3BucketName().length()<=0))
+              throw new InvalidConfigurationRequestException("Bucket name to store access logs must be specified");
             return TypeMappers.transform( loadBalancer, LoadBalancerAttributes.class );
           } else {
             throw new NoSuchElementException( );
           }
+        } catch( LoadBalancingException e) {
+          throw Exceptions.toUndeclared(e);
         } catch ( NoSuchElementException e ) {
           throw Exceptions.toUndeclared( new AccessPointNotFoundException( ) );
         } catch ( TransactionException e ) {
