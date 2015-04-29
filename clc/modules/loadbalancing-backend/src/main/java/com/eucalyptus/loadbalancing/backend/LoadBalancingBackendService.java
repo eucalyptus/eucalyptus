@@ -68,8 +68,6 @@ import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription.LoadBal
 import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendServers;
 import com.eucalyptus.loadbalancing.LoadBalancerCwatchMetrics;
-import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord;
-import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.LoadBalancerDnsRecordCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerListener;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerEntityTransform;
@@ -292,11 +290,9 @@ public class LoadBalancingBackendService {
           return Optional.<LoadBalancerServoDescription>absent();
         }
 
-        final LoadBalancerDnsRecordCoreView dnsView = lb.getDns();
-
         /// dns name
-        desc.setDnsName(dnsView.getDnsName());
-        
+        desc.setDnsName( LoadBalancers.getLoadBalancerDnsName( lbView ) );
+
         // attributes
         desc.setLoadBalancerAttributes( TypeMappers.transform( lb, LoadBalancerAttributes.class ) );
        
@@ -817,12 +813,6 @@ public class LoadBalancingBackendService {
       }
     };
 
-    final LoadBalancerDnsRecord dns = LoadBalancers.getDnsRecord(lb);
-    if(dns == null || dns.getName() == null){
-      rollback.apply(lbName);
-      throw new InternalFailure400Exception("Dns name could not be created");
-    }
-
     if(zones != null && zones.size()>0){
       try{
         LoadBalancers.addZone( lbName, ctx, zones, zoneToSubnetIdMap );
@@ -872,7 +862,7 @@ public class LoadBalancingBackendService {
     }
     
     final CreateLoadBalancerResult result = new CreateLoadBalancerResult( );
-    result.setDnsName( dns.getDnsName( ) );
+    result.setDnsName( LoadBalancers.getLoadBalancerDnsName( lb ) );
     reply.setCreateLoadBalancerResult( result );
     reply.set_return( true );
     return reply;
@@ -925,10 +915,7 @@ public class LoadBalancingBackendService {
           desc.setCreatedTime(lb.getCreationTimestamp());
 
           // dns name
-          final LoadBalancerDnsRecordCoreView dns = lb.getDns();
-          if ( dns != null ) {
-            desc.setDnsName( dns.getDnsName() );
-          }
+          desc.setDnsName( LoadBalancers.getLoadBalancerDnsName( lb ) );
 
           // instances
           if(lb.getBackendInstances().size()>0){

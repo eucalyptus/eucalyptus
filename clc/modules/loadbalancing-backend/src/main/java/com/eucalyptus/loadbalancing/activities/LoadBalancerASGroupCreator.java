@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -562,7 +562,8 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 				    getLoadBalancerUserData(INIT_SCRIPT, lb.getOwnerAccountNumber())));
 
 				EucalyptusActivityTasks.getInstance().createLaunchConfiguration(IMAGE, INSTANCE_TYPE, instanceProfileName,
-						launchConfigName, securityGroupNamesOrIds, keyName, userData, !zoneToSubnetIdMap.isEmpty( ) );
+						launchConfigName, securityGroupNamesOrIds, keyName, userData,
+						zoneToSubnetIdMap.isEmpty( ) ? null : lb.getScheme( ) != LoadBalancer.Scheme.Internal );
 				this.launchConfigName = launchConfigName;
 			}catch(Exception ex){
 				throw new EventHandlerException("Failed to create launch configuration", ex);
