@@ -40,17 +40,12 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.EphemeralConfiguration;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.annotation.ComponentNamed;
-import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LockResource;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.google.common.base.Optional;
 import com.google.common.collect.Iterables;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.BaseMessages;
 
 /**
  *
@@ -66,7 +61,7 @@ public class EuareRemoteRegionService implements Callable {
     final String previousUserId = euareRequest.getUserId( );
     final Binding binding = BindingManager.getDefaultBinding( );
     try {
-      euareRequest.setUserId( Contexts.lookup( ).getUser( ).getUserId( ) );
+      euareRequest.setUserId( Contexts.lookup( ).getUser( ).getAuthenticatedId( ) );
       final StringWriter writer = new StringWriter();
       try ( final LockResource lock = LockResource.lock( HoldMe.canHas ) ) {
         final OMElement message = binding.toOM( euareRequest );
