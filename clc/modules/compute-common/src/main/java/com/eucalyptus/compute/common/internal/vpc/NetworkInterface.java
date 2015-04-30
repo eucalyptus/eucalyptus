@@ -216,7 +216,7 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
     this.networkGroups = networkGroups;
   }
 
-  VmInstance getInstance() {
+  public VmInstance getInstance() {
     return instance;
   }
 
