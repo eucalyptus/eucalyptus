@@ -79,7 +79,7 @@ public class DatabaseIdentityProvider implements IdentityProvider {
 
   @Override
   public UserPrincipal lookupPrincipalByCertificateId( final String certificateId ) throws AuthException {
-    final Certificate certificate = Accounts.lookupCertificateById( certificateId );
+    final Certificate certificate = Accounts.lookupCertificateByHashId( certificateId );
     if ( !certificate.isActive( ) ) {
       throw new AuthException( "Certificate is inactive or revoked: " + certificate.getX509Certificate().getSubjectX500Principal( ) );
     }

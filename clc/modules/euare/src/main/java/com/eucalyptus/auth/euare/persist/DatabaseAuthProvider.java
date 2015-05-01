@@ -409,16 +409,16 @@ public class DatabaseAuthProvider implements AccountProvider {
   }
 
   @Override
-  public Certificate lookupCertificate( X509Certificate cert ) throws AuthException {
-    if ( cert == null ) {
-      throw new AuthException( "Empty input cert" );
+  public Certificate lookupCertificateByHashId( String certificateId ) throws AuthException {
+    if ( certificateId == null ) {
+      throw new AuthException( "Certificate identifier required" );
     }
     try ( final TransactionResource db = Entities.transactionFor( CertificateEntity.class ) ) {
-      CertificateEntity certEntity = DatabaseAuthUtils.getUnique( CertificateEntity.class, "pem", X509CertHelper.fromCertificate( cert ) );
+      CertificateEntity certEntity = DatabaseAuthUtils.getUnique( CertificateEntity.class, "certificateHashId", certificateId );
       db.commit( );
       return new DatabaseCertificateProxy( certEntity );
     } catch ( Exception e ) {
-      Debugging.logError( LOG, e, "Failed to lookup cert " + cert );
+      Debugging.logError( LOG, e, "Failed to lookup cert " + certificateId );
       throw new AuthException( AuthException.NO_SUCH_CERTIFICATE, e );
     }
   }
