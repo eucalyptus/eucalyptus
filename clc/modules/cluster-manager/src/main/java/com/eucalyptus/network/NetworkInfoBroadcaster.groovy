@@ -1033,7 +1033,7 @@ class NetworkInfoBroadcaster {
 
       if ( counter++%intervalTicks == 0 &&
           EdgeNetworking.enabled &&
-          Hosts.coordinator &&
+          Hosts.isCoordinator() &&
           !Bootstrap.isShuttingDown() &&
           !Databases.isVolatile() ) {
         requestNetworkInfoBroadcast( )
