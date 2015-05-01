@@ -112,7 +112,7 @@ $(EUCAARPNAME): $(EUCAARPDEPS)
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $<
 
 clean:
-	@rm -rf *~ *.o *.a $(LIBNETNAME) $(EUCANETDNAME)
+	@rm -rf *~ *.o *.a $(LIBNETNAME) $(EUCANETDNAME) $(EUCAARPNAME)
 
 distclean: clean
 
