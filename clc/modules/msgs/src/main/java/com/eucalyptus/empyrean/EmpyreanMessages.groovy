@@ -112,6 +112,7 @@ public class ServiceId extends EucalyptusData {
   String fullName;/** full name of the registration **/
   ArrayList<String> uris = new ArrayList<String>( );
   String uri;
+  String host
   public String getUri( ) {
     return ( uris.isEmpty( ) ? "none" : uris.get( 0 ) );
   }
@@ -119,6 +120,14 @@ public class ServiceId extends EucalyptusData {
     this.uris.remove( uri );
     this.uris.add(0, uri);
     this.uri = uri;
+    this.host = null
+  }
+  public void setServiceUri( URI serviceUri ) {
+    String uri = serviceUri.toASCIIString( )
+    this.uris.remove( uri );
+    this.uris.add(0, uri);
+    this.uri = uri;
+    this.host = serviceUri.host
   }
 }
 public class ServiceStatusType extends EucalyptusData {
