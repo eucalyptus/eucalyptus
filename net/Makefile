@@ -70,7 +70,7 @@ STDDEPS      += ../util/euca_auth.o ../storage/diskutil.o ../storage/http.o ../u
 STDINC       +=
  
 # The Eucalyptus Network Library
-LIBNET       := euca_lni euca_gni ipt_handler ips_handler ebt_handler dev_handler
+LIBNET       := euca_lni euca_gni ipt_handler ips_handler ebt_handler ipr_handler dev_handler
 LIBNETOBJS   := $(LIBNET:=.o)
 LIBNETDEPS   := $(LIBNETOBJS) $(STDDEPS)
 LIBNETNAME   := libeucanet.a
@@ -82,8 +82,14 @@ EUCANETDOBJS := $(EUCANETD:=.o)
 EUCANETDDEPS := $(EUCANETDOBJS) $(LIBNETNAME) $(STDDEPS)
 EUCANETDNAME := eucanetd
 
+# The EUCA_ARP Cloud Component
+EUCAARP      := euca_arp
+EUCAARPOBJS  := $(EUCAARP:=.o)
+EUCAARPDEPS  := $(EUCAARPOBJS) $(STDDEPS) 
+EUCAARPNAME  := euca_arp
+
 # Various global Makefile parameters
-TARGETS      := $(LIBNETNAME) $(EUCANETDNAME)  
+TARGETS      := $(LIBNETNAME) $(EUCANETDNAME) $(EUCAARPNAME)  
 MAJOR        := 0
 AR           := /usr/bin/ar
 ARFLAGS      := -cq
@@ -99,6 +105,9 @@ $(LIBNETNAME): $(LIBNETDEPS)
 $(EUCANETDNAME): $(EUCANETDDEPS)
 	$(CC) -o $@ $(EUCANETDDEPS) $(LIBNETNAME) $(STDLIBS)
 
+$(EUCAARPNAME): $(EUCAARPDEPS)
+	$(CC) -o $@ $(EUCAARPDEPS) $(STDLIBS)
+
 .c.o:
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $<
 
@@ -109,14 +118,19 @@ distclean: clean
 
 install:
 	@$(INSTALL) -d $(DESTDIR)$(sbindir)
-	@$(INSTALL) -m 755 $(EUCANETDNAME) $(DESTDIR)$(sbindir)
+	@$(INSTALL) -d $(DESTDIR)$(libexecdir)/eucalyptus
+	@$(INSTALL) -m 755 eucanetd $(DESTDIR)$(sbindir)
+	@$(INSTALL) -m 700 euca_arp $(DESTDIR)$(libexecdir)/eucalyptus/announce-arp
 
 deploy:
 	@$(INSTALL) -d $(DESTDIR)$(sbindir)
+	@$(INSTALL) -d $(DESTDIR)$(libexecdir)/eucalyptus
 	@$(INSTALL) -m 755 eucanetd $(DESTDIR)$(sbindir)
+	@$(INSTALL) -m 700 euca_arp $(DESTDIR)$(libexecdir)/eucalyptus/announce-arp
 
 uninstall:
-	@$(RM) -f $(DESTDIR)$(sbindir)/$(EUCANETDNAME)
+	@$(RM) -f $(DESTDIR)$(sbindir)/eucanetd
+	@$(RM) -f $(DESTDIR)$(libexecdir)/eucalyptus/announce-arp
 
 indent:
 	@for idfile in *.[ch]; do \

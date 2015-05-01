@@ -95,9 +95,11 @@
 #include <config.h>
 #include <sequence_executor.h>
 #include <atomic_file.h>
+#include <euca_network.h>
 
 #include "ipt_handler.h"
 #include "ips_handler.h"
+#include "ipr_handler.h"
 #include "ebt_handler.h"
 #include "dev_handler.h"
 #include "eucanetd_config.h"
@@ -149,6 +151,7 @@ eucanetdConfig *config = NULL;
 
 //! Global Network Information structure pointer.
 globalNetworkInfo *globalnetworkinfo = NULL;
+gni_hostname_info *host_info = NULL;
 
 //! Role of the component running alongside this eucanetd service
 eucanetd_peer eucanetdPeer = PEER_INVALID;
@@ -218,6 +221,8 @@ configEntry configKeysNoRestartEUCANETD[] = {
     {"POLLING_FREQUENCY", "1"}
     ,
     {"DISABLE_L2_ISOLATION", "N"}
+    ,
+    {"NC_PROXY", "N"}
     ,
     {"NC_ROUTER", "Y"}
     ,
@@ -582,15 +587,17 @@ int main(int argc, char **argv)
 
     LOGINFO("EUCANETD going down.\n");
 
-done:
     if (pDriverHandler->cleanup) {
         LOGINFO("Cleaning up '%s' network driver on termination.\n", pDriverHandler->name);
         if (pDriverHandler->cleanup(globalnetworkinfo, (config->flushmode & EUCANETD_FLUSH_MASK)) != 0) {
             LOGERROR("Failed to cleanup '%s' network driver.\n", pDriverHandler->name);
         }
     }
+
+    gni_hostnames_free(host_info);
     GNI_FREE(globalnetworkinfo);
     LNI_FREE(pLni);
+
     exit(0);
 }
 #endif /* ! EUCANETD_UNIT_TEST */
@@ -793,6 +800,14 @@ static int eucanetd_initialize(void)
         }
     }
 
+
+    if (!host_info) {
+        host_info = gni_init_hostname_info();
+        if (!host_info) {
+            LOGFATAL("out of memory\n");
+            exit(1);
+        }
+    }
     return (0);
 }
 
@@ -997,7 +1012,7 @@ static int eucanetd_read_config(void)
         return (1);
     }
 
-    rc = gni_populate(globalnetworkinfo, config->global_network_info_file.dest);
+    rc = gni_populate(globalnetworkinfo, host_info, config->global_network_info_file.dest);
     if (rc) {
         LOGERROR("could not initialize global network info data structures from XML input\n");
         for (i = 0; i < EUCANETD_CVAL_LAST; i++) {
@@ -1006,6 +1021,7 @@ static int eucanetd_read_config(void)
         return (1);
     }
     rc = gni_print(globalnetworkinfo);
+    rc = gni_hostnames_print(host_info);
 
     // setup and read local NC eucalyptus.conf file
     snprintf(config->configFiles[0], EUCA_MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
@@ -1023,6 +1039,7 @@ static int eucanetd_read_config(void)
     cvals[EUCANETD_CVAL_POLLING_FREQUENCY] = configFileValue("POLLING_FREQUENCY");
     cvals[EUCANETD_CVAL_DISABLE_L2_ISOLATION] = configFileValue("DISABLE_L2_ISOLATION");
     cvals[EUCANETD_CVAL_DISABLE_TUNNELING] = configFileValue("DISABLE_TUNNELING");
+    cvals[EUCANETD_CVAL_NC_PROXY] = configFileValue("NC_PROXY");
     cvals[EUCANETD_CVAL_NC_ROUTER] = configFileValue("NC_ROUTER");
     cvals[EUCANETD_CVAL_NC_ROUTER_IP] = configFileValue("NC_ROUTER_IP");
     cvals[EUCANETD_CVAL_METADATA_USE_VM_PRIVATE] = configFileValue("METADATA_USE_VM_PRIVATE");
@@ -1105,6 +1122,12 @@ static int eucanetd_read_config(void)
         }
     } else {
         config->metadata_ip = 0;
+    }
+
+    if (!strcmp(cvals[EUCANETD_CVAL_NC_PROXY], "Y")) {
+        config->nc_proxy = TRUE;
+    } else {
+        config->nc_proxy = FALSE;
     }
 
     if (!strcmp(cvals[EUCANETD_CVAL_NC_ROUTER], "Y")) {
@@ -1194,6 +1217,18 @@ static int eucanetd_read_config(void)
         ret = 1;
     }
 
+#ifdef USE_IP_ROUTE_HANDLER
+    if ((config->ipr = EUCA_ZALLOC(1, sizeof(ipr_handler))) == NULL) {
+        LOGFATAL("out of memory!\n");
+        exit(1);
+    }
+
+    if ((rc = ipr_handler_init(config->ipr, config->cmdprefix)) != 0) {
+        LOGERROR("could not initialize ipr_handler: check above log errors for details\n");
+        ret = 1;
+    }
+#endif /* USE_IP_ROUTE_HANDLER */
+
     config->ebt = EUCA_ZALLOC(1, sizeof(ebt_handler));
     if (!config->ebt) {
         LOGFATAL("out of memory!\n");
@@ -1204,6 +1239,38 @@ static int eucanetd_read_config(void)
     if (rc) {
         LOGERROR("could not initialize ebt_handler: check above log errors for details\n");
         ret = 1;
+    }
+
+    //
+    // If an error has occured we need to clean up temporary files
+    // that were created for the iptables, ebtables, ipset
+    // and possibly ipr (if compiled)
+    //
+    if (ret) {
+        //
+        // These config handlers could be NULL, unlink_handler_file method call will handle NULL filenames
+        // We need to free the memory as read_config() will get called again until registered with the cloud.
+        //
+        if (config->ips) {
+            unlink_handler_file(config->ips->ips_file);
+            EUCA_FREE(config->ips);
+        }
+        if (config->ipt) {
+            unlink_handler_file(config->ipt->ipt_file);
+            EUCA_FREE(config->ipt);
+        }
+        if (config->ebt) {
+            unlink_handler_file(config->ebt->ebt_filter_file);
+            unlink_handler_file(config->ebt->ebt_nat_file);
+            unlink_handler_file(config->ebt->ebt_asc_file);
+            EUCA_FREE(config->ebt);
+        }
+#ifdef USE_IP_ROUTE_HANDLER
+        if (config->ipr) {
+            unlink_handler_file(config->ipr->sIpRuleFile);
+            EUCA_FREE(config->ipr);
+        }
+#endif /* USE_IP_ROUTE_HANDLER */
     }
 
     for (i = 0; i < EUCANETD_CVAL_LAST; i++) {
@@ -1350,13 +1417,14 @@ static int eucanetd_read_latest_network(void)
 
     LOGDEBUG("reading latest network view into eucanetd\n");
 
-    rc = gni_populate(globalnetworkinfo, config->global_network_info_file.dest);
+    rc = gni_populate(globalnetworkinfo,host_info,config->global_network_info_file.dest);
     if (rc) {
         LOGERROR("failed to initialize global network info data structures from XML file: check network config settings\n");
         ret = 1;
     } else {
         gni_print(globalnetworkinfo);
 
+        gni_hostnames_print(host_info);
         if (!strcmp(config->netMode, NETMODE_VPCMIDO)) {
             // skip for VPCMIDO
             ret = 0;
@@ -1432,8 +1500,7 @@ static int eucanetd_read_latest_network(void)
                             if (!found_ip) {
                                 strptra = hex2dot(mycluster->private_subnet.subnet);
                                 strptrb = hex2dot(mycluster->private_subnet.netmask);
-                                LOGERROR
-                                    ("cannot find an IP assigned to specified bridge device '%s' that falls within this cluster's specified subnet '%s/%s': check your configuration\n",
+                                LOGERROR("cannot find an IP assigned to specified bridge device '%s' that falls within this cluster's specified subnet '%s/%s': check your configuration\n",
                                      config->bridgeDev, strptra, strptrb);
                                 EUCA_FREE(strptra);
                                 EUCA_FREE(strptrb);
@@ -1487,3 +1554,5 @@ static int eucanetd_detect_peer(globalNetworkInfo * pGni)
 
     return (PEER_NONE);
 }
+
+

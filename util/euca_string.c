@@ -583,7 +583,7 @@ char *euca_strncpy(char *restrict to, const char *restrict from, size_t size)
 //!
 //! @pre The \p psDotIn field must not be NULL and must be a valid IP address value in dot notation.
 //!
-u32 euca_dot2hex(char *psDot)
+u32 euca_dot2hex(const char *psDot)
 {
     int a = 127;
     int b = 0;
@@ -642,7 +642,7 @@ char *euca_hex2dot(u32 hex)
 //!
 //! @note if \p psMacIn is NULL or if its of an invalid format, \p aHexOut will remain unchanged
 //!
-u8 *euca_mac2hex(char *psMacIn, u8 aHexOut[6])
+u8 *euca_mac2hex(const char *psMacIn, u8 aHexOut[6])
 {
     int rc = 0;
     u32 aTmp[ENET_BUF_SIZE] = { 0 };
@@ -667,16 +667,19 @@ u8 *euca_mac2hex(char *psMacIn, u8 aHexOut[6])
 //!
 //! @param[in]  aHexIn the array of hexadecimal value making the MAC address.
 //! @param[out] ppsMacOut the returned readable value corresponding to \p in
+//! @param[in]  trimVersion set to TRUE if we do not print the leading 0s (e.g. 0:2:20:aa:bb:cc)
 //!
 //! @pre \p ppsMacOut must not be NULL.
 //!
 //! @note The \p (*ppsMacOut) field should be NULL.
 //!
-void euca_hex2mac(u8 aHexIn[ENET_BUF_SIZE], char **ppsMacOut)
+void euca_hex2mac(u8 aHexIn[6], char **ppsMacOut, boolean trimVersion)
 {
+    const char *sFormat = ((trimVersion) ? "%2X:%2X:%2X:%2X:%2X:%2X" : "%02X:%02X:%02X:%02X:%02X:%02X");
+
     if (ppsMacOut != NULL) {
         if ((*ppsMacOut = EUCA_ALLOC(ENET_ADDR_LEN, sizeof(char))) != NULL) {
-            snprintf(*ppsMacOut, ENET_ADDR_LEN, "%02X:%02X:%02X:%02X:%02X:%02X", aHexIn[0], aHexIn[1], aHexIn[2], aHexIn[3], aHexIn[4], aHexIn[5]);
+            snprintf(*ppsMacOut, ENET_ADDR_LEN, sFormat, aHexIn[0], aHexIn[1], aHexIn[2], aHexIn[3], aHexIn[4], aHexIn[5]);
         }
     }
 }
@@ -711,7 +714,7 @@ int euca_maczero(u8 aMac[ENET_BUF_SIZE])
 //!
 //! @note if psMac is NULL, this will result in comparing aMac with "00:00:00:00:00:00".
 //!
-int euca_machexcmp(char *psMac, u8 aMac[6])
+int euca_machexcmp(const char *psMac, u8 aMac[6])
 {
     u8 aMacConv[ENET_BUF_SIZE] = { 0 };
     if (mac2hex(psMac, aMacConv) != NULL)

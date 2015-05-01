@@ -848,7 +848,7 @@ char *euca_intfc2mac(const char *psDevName)
 
     // remove the '\n' character.
     if ((pNewLine = strchr(psMac, '\n')) != NULL)
-        *pNewLine = '\0';
+        (*pNewLine) = '\0';
 
     return (psMac);
 }

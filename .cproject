@@ -48,6 +48,8 @@
 									<listOptionValue builtIn="false" value="PF_PACKET=17"/>
 									<listOptionValue builtIn="false" value="AF_PACKET=PF_PACKET"/>
 									<listOptionValue builtIn="false" value="EUCANETD_MANAGED_SUPPORT"/>
+									<listOptionValue builtIn="false" value="SOCK_PACKET=10"/>
+									<listOptionValue builtIn="false" value="USE_EUCA_ARP=1"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1809342783" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
