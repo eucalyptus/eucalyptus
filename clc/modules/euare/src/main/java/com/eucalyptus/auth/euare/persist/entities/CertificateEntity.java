@@ -66,6 +66,7 @@ import java.io.Serializable;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.Date;
+import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -75,12 +76,20 @@ import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
+import org.hibernate.criterion.Restrictions;
+import com.eucalyptus.auth.euare.common.identity.Certificate;
 import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.auth.util.X509CertHelper;
+import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.upgrade.Upgrades;
+import com.google.common.base.Predicate;
 
 /**
  * Database X509 certificate entity.
@@ -102,9 +111,13 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
   @Column( name = "auth_certificate_revoked" )
   Boolean revoked;
   
-  // The certificate
+  // The certificate identifier, random for certificate generated pre 4.2
   @Column( name = "auth_certificate_id" )
   String certificateId;
+
+  // The certificate identifier derived from the certificate content.
+  @Column( name = "auth_certificate_hash_id" )
+  String certificateHashId;
 
   // The certificate
   @Lob
@@ -126,6 +139,7 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
   
   public CertificateEntity( final String certificateId, final X509Certificate cert ) throws CertificateEncodingException {
     this.certificateId = certificateId;
+    this.certificateHashId = certificateId;
     this.pem = X509CertHelper.fromCertificate( cert );
   }
   
@@ -198,5 +212,27 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
   public String getCertificateId( ) {
     return this.certificateId;
   }
-  
+
+  @Upgrades.EntityUpgrade(entities = Certificate.class,  since = Upgrades.Version.v4_2_0, value = Euare.class)
+  public enum CertificateEntityUpgrade420 implements Predicate<Class> {
+    INSTANCE;
+    private static Logger logger = Logger.getLogger( CertificateEntityUpgrade420.class );
+    @SuppressWarnings( "unchecked" )
+    @Override
+    public boolean apply( Class arg0 ) {
+      try ( final TransactionResource tx = Entities.transactionFor( CertificateEntity.class ) ) {
+        final List<CertificateEntity> entities = (List<CertificateEntity>)
+            Entities.createCriteria( CertificateEntity.class ).add( Restrictions.isNull( "certificateHashId" ) ).list( );
+        for ( final CertificateEntity entity : entities ) {
+          try {
+            entity.certificateHashId = Identifiers.generateCertificateIdentifier( X509CertHelper.toCertificate( entity.getPem() ) );
+          } catch ( Exception e ) {
+            logger.error( "Error generating fingerprint identifier for certificate", e );
+          }
+        }
+        tx.commit( );
+      }
+      return true;
+    }
+  }
 }

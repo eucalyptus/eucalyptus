@@ -64,7 +64,6 @@ package com.eucalyptus.auth.api;
 
 import java.security.cert.X509Certificate;
 import java.util.List;
-import java.util.Set;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
@@ -97,9 +96,9 @@ public interface AccountProvider {
 
   EuareRole lookupRoleById( String roleId ) throws AuthException;
 
-  Certificate lookupCertificate( X509Certificate cert ) throws AuthException;
   Certificate lookupCertificateById( String certificateId ) throws AuthException;;
-  
+  Certificate lookupCertificateByHashId( String certificateId ) throws AuthException;;
+
   AccessKey lookupAccessKeyById( String keyId ) throws AuthException;
 
 }

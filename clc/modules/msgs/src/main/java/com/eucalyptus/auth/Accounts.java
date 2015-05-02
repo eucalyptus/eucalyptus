@@ -66,7 +66,6 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Objects;
 import java.util.ServiceLoader;
-import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
@@ -339,8 +338,8 @@ public class Accounts {
     return Accounts.getAccountProvider( ).lookupRoleById( roleId );
   }
 
-  public static Certificate lookupCertificate( X509Certificate cert ) throws AuthException {
-    return Accounts.getAccountProvider( ).lookupCertificate( cert );
+  public static Certificate lookupCertificateByHashId( String certificateId ) throws AuthException {
+    return Accounts.getAccountProvider( ).lookupCertificateByHashId( certificateId );
   }
 
   public static Certificate lookupCertificateById( String certificateId ) throws AuthException {

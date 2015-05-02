@@ -1334,7 +1334,7 @@ class ActivityManagerTest {
       }
 
       @Override
-      Certificate lookupCertificate(final X509Certificate cert) {
+      Certificate lookupCertificateByHashId(final String certificateId) {
         throw new UnsupportedOperationException()
       }
 
