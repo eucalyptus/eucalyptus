@@ -36,6 +36,7 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 
+import com.eucalyptus.blockstorage.async.VolumeCreator;
 import com.eucalyptus.blockstorage.entities.SnapshotInfo;
 import com.eucalyptus.blockstorage.entities.VolumeInfo;
 import com.eucalyptus.blockstorage.util.StorageProperties;
@@ -45,7 +46,7 @@ import com.eucalyptus.entities.TransactionResource;
 /**
  * Created by wesw on 6/20/14.
  */
-public class BlockStorageController_VolumeCreatorTaskTest {
+public class VolumeCreatorTest {
 
   @Rule
   public JUnitRuleMockery context = new JUnitRuleMockery();
@@ -101,8 +102,7 @@ public class BlockStorageController_VolumeCreatorTaskTest {
       }
     });
 
-    BlockStorageController bsc = new BlockStorageController(storageManager);
-    BlockStorageController.VolumeCreator bscvc = new BlockStorageController.VolumeCreator("vol-0000", null, "snap-0000", null, 1);
+    VolumeCreator bscvc = new VolumeCreator("vol-0000", null, "snap-0000", null, 1, storageManager);
     bscvc.run();
 
     List<VolumeInfo> remaining;
@@ -142,8 +142,7 @@ public class BlockStorageController_VolumeCreatorTaskTest {
       }
     });
 
-    BlockStorageController bsc = new BlockStorageController(storageManager);
-    BlockStorageController.VolumeCreator bscvc = new BlockStorageController.VolumeCreator("vol-0001", null, null, "vol-0000", 1);
+    VolumeCreator bscvc = new VolumeCreator("vol-0001", null, null, "vol-0000", 1, storageManager);
     bscvc.run();
 
     List<VolumeInfo> remaining;
@@ -167,8 +166,7 @@ public class BlockStorageController_VolumeCreatorTaskTest {
       }
     });
 
-    BlockStorageController bsc = new BlockStorageController(storageManager);
-    BlockStorageController.VolumeCreator bscvc = new BlockStorageController.VolumeCreator("vol-0001", null, null, null, 1);
+    VolumeCreator bscvc = new VolumeCreator("vol-0001", null, null, null, 1, storageManager);
     bscvc.run();
 
     List<VolumeInfo> remaining;

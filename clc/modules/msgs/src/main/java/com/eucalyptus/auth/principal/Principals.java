@@ -660,14 +660,19 @@ public class Principals {
       this.systemUser = systemUser;
     }
 
-      @Override
-      public String getCanonicalId() {
+    @Override
+    public String getCanonicalId() {
           return ""; // TODO need to calculate a canonical ID
       }
 
-      @Override
+    @Override
     public String getAccountNumber( ) {
       return String.format( "%012d", accountId );
+    }
+
+    @Override
+    public boolean hasAccountAlias( ) {
+      return getAccountAlias( ) != null && !getAccountAlias( ).equals( getAccountNumber( ) );
     }
 
     @Override

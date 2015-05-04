@@ -87,6 +87,7 @@ import javax.persistence.EntityTransaction;
 import javax.transaction.Status;
 import javax.transaction.Synchronization;
 
+import com.eucalyptus.compute.common.CloudMetadataLimitedType;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.criterion.Example;
@@ -672,8 +673,8 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
       try ( TransactionResource tx = Entities.transactionFor( VmInstance.class ) ){
         return Entities.count(
             VmInstance.named( ownerFullName, null ),
-            Restrictions.not( VmInstance.criterion( VmStateSet.DONE.array() ) ),
-            Collections.<String,String>emptyMap( ) );
+            Restrictions.not(VmInstance.criterion(VmStateSet.DONE.array())),
+            Collections.<String,String>emptyMap() );
       }
     }
 
@@ -685,7 +686,37 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
       return pending;
     }
   }
-  
+
+  @RestrictedTypes.UsageMetricFunction( CloudMetadataLimitedType.VmInstanceActiveMetadata.class )
+  public enum CountVmInstanceActiveNum implements Function<OwnerFullName, Long> {
+    INSTANCE;
+
+    @Override
+    public Long apply( final OwnerFullName ownerFullName ) {
+      return
+        countPersistentInstances( ownerFullName ) +
+          countPendingInstances( ownerFullName );
+    }
+
+    private long countPersistentInstances( final OwnerFullName ownerFullName ) {
+      try ( TransactionResource tx = Entities.transactionFor( VmInstance.class ) ){
+        return Entities.count(
+          VmInstance.named( ownerFullName, null ),
+          Restrictions.not( VmInstance.criterion( VmStateSet.TORNDOWN.array() ) ),
+          Collections.<String,String>emptyMap( ) );
+      }
+    }
+
+    private long countPendingInstances( final OwnerFullName ownerFullName ) {
+      long pending = 0;
+      for ( final Cluster cluster : Clusters.getInstance( ).listValues( ) ) {
+        pending += cluster.getNodeState( ).countUncommittedPendingInstances( ownerFullName );
+      }
+      return pending;
+    }
+  }
+
+
   public static String getId( final Long rsvId, final int launchIndex ) {
     String vmId;
     do {

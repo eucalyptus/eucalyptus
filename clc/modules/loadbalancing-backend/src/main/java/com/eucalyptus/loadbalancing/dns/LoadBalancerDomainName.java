@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.dns;
 
+import static com.eucalyptus.loadbalancing.LoadBalancer.Scheme;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
@@ -26,6 +27,7 @@ import org.xbill.DNS.Name;
 import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.dns.DomainNames;
+import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 
@@ -34,8 +36,8 @@ import com.google.common.base.Predicate;
  */
 public enum LoadBalancerDomainName implements Predicate<Name> {
 
+  INTERNAL( "internal-([a-zA-Z0-9-]{1,255})-([0-9]{12})", "internal-%s-%s" ), // most specific first for matching
   EXTERNAL( "([a-zA-Z0-9-]{1,255})-([0-9]{12})", "%s-%s" ),
-  INTERNAL( "internal-([a-zA-Z0-9-]{1,255})-([0-9]{12})", "internal-%s-%s" ),
   ;
 
   private final Pattern hostPattern;
@@ -52,6 +54,13 @@ public enum LoadBalancerDomainName implements Predicate<Name> {
         DomainNames.externalSubdomain( ) );
   }
 
+  public static LoadBalancerDomainName forScheme( @Nullable final Scheme scheme ) {
+    if ( Scheme.Internal == scheme ) {
+      return INTERNAL;
+    }
+    return EXTERNAL;
+  }
+
   public static Optional<LoadBalancerDomainName> findMatching( final Name name ) {
     for ( final LoadBalancerDomainName domainName : values( ) ) {
       if ( domainName.apply( name ) ) {
@@ -59,6 +68,11 @@ public enum LoadBalancerDomainName implements Predicate<Name> {
       }
     }
     return Optional.absent( );
+  }
+
+  public String generate( String loadBalancerName, String accountNumber ) {
+    final String dnsPrefix = String.format( hostFormat, loadBalancerName, accountNumber );
+    return Joiner.on('.').join( dnsPrefix, getLoadBalancerSubdomain( ).relativize( Name.root ) );
   }
 
   private Matcher matcher( final Name name ) {

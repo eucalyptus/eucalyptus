@@ -381,7 +381,7 @@ public class VolumeInfo extends AbstractPersistent {
   public boolean cleanupOnDeletion() {
     if (deletionTime != null) {
       if (System.currentTimeMillis() > (deletionTime.getTime() + TimeUnit.MILLISECONDS.convert(
-          StorageInfo.getStorageInfo().getDeletedVolExpiration(), TimeUnit.HOURS))) {
+          StorageInfo.getStorageInfo().getVolExpiration(), TimeUnit.HOURS))) {
         return true;
       }
     }

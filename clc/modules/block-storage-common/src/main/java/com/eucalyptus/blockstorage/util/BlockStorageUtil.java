@@ -64,12 +64,16 @@ package com.eucalyptus.blockstorage.util;
 
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.Date;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import javax.crypto.Cipher;
 
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
+import org.hibernate.criterion.Criterion;
+import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.Account;
@@ -327,5 +331,14 @@ public class BlockStorageUtil {
       throw new EucalyptusCloudException("Could not fetch the policies for " + StorageProperties.EBS_ROLE_NAME + " role assigned to "
           + AccountIdentifiers.BLOCKSTORAGE_SYSTEM_ACCOUNT + " account");
     }
+  }
+
+  public static final Criterion getFailedCriterion() {
+    return Restrictions.and(Restrictions.like("status", StorageProperties.Status.failed.toString()), Restrictions.isNull("deletionTime"));
+  }
+
+  public static final Criterion getExpriedCriterion(Integer deletedResourceExpiration) {
+    return Restrictions.lt("deletionTime",
+        new Date(System.currentTimeMillis() - TimeUnit.MILLISECONDS.convert(deletedResourceExpiration, TimeUnit.MINUTES)));
   }
 }

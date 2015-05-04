@@ -62,9 +62,11 @@
 
 package com.eucalyptus.auth.euare.persist.entities;
 
+import static com.eucalyptus.upgrade.Upgrades.Version.v4_2_0;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
@@ -78,12 +80,16 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.util.Identifiers;
+import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.upgrade.Upgrades;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import groovy.sql.Sql;
 
 /**
  * Database entity for a user.
@@ -283,5 +289,32 @@ public class UserEntity extends AbstractPersistent implements Serializable {
   public String getUserId( ) {
     return this.userId;
   }
-  
+
+  @Upgrades.PreUpgrade( value = Euare.class, since = v4_2_0 )
+  public static class UserPreUpgrade420 implements Callable<Boolean> {
+    private static final Logger logger = Logger.getLogger( UserPreUpgrade420.class );
+
+    @Override
+    public Boolean call( ) throws Exception {
+      Sql sql = null;
+      try {
+        sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection("eucalyptus_auth");
+        sql.execute( "update auth_user set auth_user_is_enabled = false where auth_user_name = 'admin' and not auth_user_reg_stat = 'CONFIRMED'" );
+        sql.execute( "alter table auth_user drop column if exists auth_user_reg_stat" );
+        return true;
+      } catch (Exception ex) {
+        if ( ex.getMessage( ) != null && ex.getMessage( ).contains( "auth_user_reg_stat" ) ) {
+          logger.info( "Skipping account status cleanup, changes already applied" );
+          return true;
+        } else {
+          logger.error( ex, ex );
+          return false;
+        }
+      } finally {
+        if (sql != null) {
+          sql.close();
+        }
+      }
+    }
+  }
 }

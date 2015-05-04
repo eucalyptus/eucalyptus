@@ -164,6 +164,10 @@ public class DatabaseAccountProxy implements Account {
     return this.delegate.toString( );
   }
 
+  public boolean hasAccountAlias( ) {
+    return !getAccountNumber( ).equals( getName( ) );
+  }
+
   @Override
   public String getAccountNumber( ) {
     return this.delegate.getAccountNumber( );

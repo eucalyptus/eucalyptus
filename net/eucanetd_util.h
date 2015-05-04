@@ -142,6 +142,8 @@ int eucanetd_run_program(const char *psPidFilePath, const char *psRootWrap, bool
 //! Safely terminate a program executed by eucanetd_run_program()
 int eucanetd_kill_program(pid_t pid, const char *psProgramName, const char *psRootwrap);
 
+int unlink_handler_file(char *filename);
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                           STATIC INLINE PROTOTYPES                         |

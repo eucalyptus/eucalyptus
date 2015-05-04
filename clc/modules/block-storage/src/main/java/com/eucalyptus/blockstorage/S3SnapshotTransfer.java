@@ -111,8 +111,7 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import com.eucalyptus.auth.principal.BaseRole;
-import com.eucalyptus.auth.principal.EuareRole;
-import com.eucalyptus.auth.principal.Role;
+import com.eucalyptus.blockstorage.async.SnapshotTransferCleaner;
 import com.eucalyptus.blockstorage.entities.SnapshotInfo;
 import com.eucalyptus.blockstorage.entities.SnapshotPart;
 import com.eucalyptus.blockstorage.entities.SnapshotPart.SnapshotPartState;
@@ -124,6 +123,7 @@ import com.eucalyptus.blockstorage.exceptions.SnapshotFinalizeMpuException;
 import com.eucalyptus.blockstorage.exceptions.SnapshotInitializeMpuException;
 import com.eucalyptus.blockstorage.exceptions.SnapshotTransferException;
 import com.eucalyptus.blockstorage.exceptions.SnapshotUploadPartException;
+import com.eucalyptus.blockstorage.threadpool.SnapshotTransferThreadPool;
 import com.eucalyptus.blockstorage.util.BlockStorageUtil;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.component.Components;
@@ -133,7 +133,6 @@ import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
-import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
@@ -256,6 +255,7 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
   public void upload(StorageResource storageResource) throws SnapshotTransferException {
     validateInput(); // Validate input
     loadTransferConfig(); // Load the transfer configuration parameters from database
+
     SnapshotProgressCallback progressCallback = new SnapshotProgressCallback(snapshotId); // Setup the progress callback
 
     Boolean error = Boolean.FALSE;
@@ -312,7 +312,8 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
               snapUploadInfo = snapUploadInfo.updateUploadId(uploadId);
               part = part.updateStateCreated(uploadId, bytesWritten, bytesRead, Boolean.FALSE);
               partQueue = new ArrayBlockingQueue<SnapshotPart>(queueSize);
-              uploadPartsFuture = Threads.enqueue(serviceConfig, UploadPartTask.class, poolSize, new UploadPartTask(partQueue, progressCallback));
+              // uploadPartsFuture = Threads.enqueue(serviceConfig, UploadPartTask.class, poolSize, new UploadPartTask(partQueue, progressCallback));
+              uploadPartsFuture = SnapshotTransferThreadPool.add(new UploadPartTask(partQueue, progressCallback));
             }
 
             // Check for the future task before adding part to the queue.
@@ -390,8 +391,9 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
         // Add the last part to the queue
         partQueue.put(part);
         // Kick off the completion task
-        completeUploadFuture =
-            Threads.enqueue(serviceConfig, CompleteMpuTask.class, poolSize, new CompleteMpuTask(uploadPartsFuture, snapUploadInfo, partNumber));
+        // completeUploadFuture =
+        // Threads.enqueue(serviceConfig, CompleteMpuTask.class, poolSize, new CompleteMpuTask(uploadPartsFuture, snapUploadInfo, partNumber));
+        completeUploadFuture = SnapshotTransferThreadPool.add(new CompleteMpuTask(uploadPartsFuture, snapUploadInfo, partNumber));
       } else {
         try {
           LOG.info("Uploading snapshot " + snapshotId + " to objectstorage as a single object. Compressed size of snapshot (" + bytesWritten
@@ -435,7 +437,7 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 
   /**
    * Cancel the snapshot upload. Checks if a multipart upload is in progress and aborts the upload. Marks the upload as aborted for
-   * {@link SnapshotUploadCheckerTask} to clean up on its duty cycles
+   * {@link SnapshotTransferCleaner} to clean up on its duty cycles
    */
   @Override
   public void cancelUpload() throws SnapshotTransferException {
@@ -443,8 +445,10 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
     try (TransactionResource db = Entities.transactionFor(SnapshotUploadInfo.class)) {
       SnapshotUploadInfo snapUploadInfo = Entities.uniqueResult(new SnapshotUploadInfo(snapshotId, bucketName, keyName));
       uploadId = snapUploadInfo.getUploadId();
-      abortMultipartUpload();
-      snapUploadInfo.setState(SnapshotUploadState.aborted);
+      if (!snapUploadInfo.getState().equals(SnapshotUploadState.aborted)) {
+        abortMultipartUpload();
+        snapUploadInfo.setState(SnapshotUploadState.aborted);
+      }
       db.commit();
     } catch (Exception e) {
       LOG.debug("Failed to cancel upload for snapshot " + snapshotId, e);
@@ -500,8 +504,9 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
           }
         } else { // Download and unzip snpashot to disk in parts and write the parts to storage backend in parallel
           ArrayBlockingQueue<SnapshotPart> partQueue = new ArrayBlockingQueue<SnapshotPart>(queueSize);
-          Future<String> storageWriterFuture =
-              Threads.enqueue(serviceConfig, StorageWriterTask.class, poolSize, new StorageWriterTask(partQueue, storageResource));
+          // Future<String> storageWriterFuture =
+          // Threads.enqueue(serviceConfig, StorageWriterTask.class, poolSize, new StorageWriterTask(partQueue, storageResource));
+          Future<String> storageWriterFuture = SnapshotTransferThreadPool.add(new StorageWriterTask(partQueue, storageResource));
 
           FileOutputStream fileOutputStream = null;
           long bytesWritten = 0;
@@ -1036,7 +1041,10 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
     return output;
   }
 
-  class UploadPartTask implements Callable<List<PartETag>> {
+  public static abstract class UploadPart implements Callable<List<PartETag>> {
+  }
+
+  class UploadPartTask extends UploadPart {
 
     private ArrayBlockingQueue<SnapshotPart> partQueue;
     private SnapshotProgressCallback progressCallback;
@@ -1083,7 +1091,10 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
     }
   }
 
-  class CompleteMpuTask implements Callable<String> {
+  public static abstract class CompleteMpu implements Callable<String> {
+  }
+
+  class CompleteMpuTask extends CompleteMpu {
 
     private Future<List<PartETag>> uploadTaskFuture;
     private SnapshotUploadInfo snapUploadInfo;
@@ -1136,7 +1147,10 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
     }
   }
 
-  class StorageWriterTask implements Callable<String> {
+  public static abstract class StorageWriter implements Callable<String> {
+  }
+
+  class StorageWriterTask extends StorageWriter {
 
     private ArrayBlockingQueue<SnapshotPart> partQueue;
     private StorageResource storageResource;

@@ -210,6 +210,12 @@ static int update_private_ips(globalNetworkInfo * pGni);
 static int update_elastic_ips(globalNetworkInfo * pGni);
 static int update_l2_addressing(globalNetworkInfo * pGni);
 
+#ifdef USE_IP_ROUTE_HANDLER
+static int install_public_routes(globalNetworkInfo * pGni);
+static int install_private_routes(globalNetworkInfo * pGni);
+#endif /* USE_IP_ROUTE_HANDLER */
+static int update_host_arp(void);
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                   MACROS                                   |
@@ -912,6 +918,20 @@ static int update_private_ips(globalNetworkInfo * pGni)
         LOGERROR("Failed to update private IP addressing. Invalid parameters provided.\n");
         return (1);
     }
+#ifdef USE_IP_ROUTE_HANDLER
+    // Make sure we can install our private and public subnet routes if NC_PROXY is enabled
+    if (config->nc_proxy) {
+        if ((rc = install_private_routes(globalnetworkinfo)) != 0) {
+            LOGERROR("unable to generate private IP routes: check above log errors for details\n");
+            return (1);
+        }
+
+        if ((rc = install_public_routes(globalnetworkinfo)) != 0) {
+            LOGERROR("unable to generate private IP routes: check above log errors for details\n");
+            return (1);
+        }
+    }
+#endif /* USE_IP_ROUTE_HANDLER */
     // Generate the DHCP configuration so instances can get their network config
     if ((rc = generate_dhcpd_config(pGni)) != 0) {
         LOGERROR("unable to generate new dhcp configuration file: check above log errors for details\n");
@@ -1094,6 +1114,16 @@ static int update_elastic_ips(globalNetworkInfo * pGni)
         EUCA_FREE(strptrb);
     }
 
+    // Install the masquerade rules
+    if (config->nc_proxy) {
+        strptra = hex2dot(mycluster->private_subnet.subnet);
+        slashnet = NETMASK_TO_SLASHNET(mycluster->private_subnet.netmask);
+
+        snprintf(rule, 1024, "-A EUCA_NAT_POST -s %s/%u -m mark ! --mark 0x2a -j MASQUERADE", strptra, slashnet);
+        ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_POST", rule);
+        EUCA_FREE(strptra);
+    }
+
     // lastly, install metadata redirect rule
     if (config->metadata_ip) {
         strptra = hex2dot(config->clcMetadataIP);
@@ -1190,6 +1220,20 @@ static int update_l2_addressing(globalNetworkInfo * pGni)
         LOGERROR("Failed to update IP/MAC pairing. Invalid parameters provided.\n");
         return (1);
     }
+
+    if (config->nc_proxy) {
+#ifdef USE_IP_ROUTE_HANDLER
+        // Populate our IP rules
+        ipr_handler_repopulate(config->ipr);
+
+        // Flush what we have, we'll re-add if necessary
+        ipr_handler_flush(config->ipr);
+#endif /* USE_IP_ROUTE_HANDLER */
+
+        // Now update our host information by sending Gratuitous ARP as necessary
+        update_host_arp();
+    }
+
     // Find our associated cluster
     rc = gni_find_self_cluster(pGni, &mycluster);
     if (rc) {
@@ -1228,12 +1272,23 @@ static int update_l2_addressing(globalNetworkInfo * pGni)
         snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -o vn_i+ -s %s -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT", brmac);
         rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
 
-        // If we're using the "fake" router option and have some instance running,
-        // we need to respond for out of network ARP request.
-        if (config->nc_router && !config->nc_router_ip && (max_instances > 0)) {
-            snprintf(cmd, EUCA_MAX_PATH, "-i vn_i+ -p ARP --arp-ip-dst %s -j arpreply --arpreply-mac %s", gwip, brmac);
+        if (!config->nc_proxy) {
+            // If we're using the "fake" router option and have some instance running,
+            // we need to respond for out of network ARP request.
+            if (config->nc_router && !config->nc_router_ip && (max_instances > 0)) {
+                snprintf(cmd, EUCA_MAX_PATH, "-i vn_i+ -p ARP --arp-ip-dst %s -j arpreply --arpreply-mac %s", gwip, brmac);
+                rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+            }
+        } else {
+            // Only allow ARP Reply to our bridge MAC
+            snprintf(cmd, EUCA_MAX_PATH, "-p ARP -i vn_i+ -d ! %s --arp-op Reply -j DROP ", brmac);
             rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+            // Ensures only our Bridge can send ARP request to our VMs
+            snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o vn_i+ --arp-mac-src ! %s -j DROP", brmac);
+            rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
         }
+
 
         for (i = 0; i < max_instances; i++) {
             if (instances[i].privateIp && maczero(instances[i].macAddress)) {
@@ -1263,6 +1318,28 @@ static int update_l2_addressing(globalNetworkInfo * pGni)
 
                         snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -i %s -j ACCEPT", vnetinterface);
                         rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                        if (config->nc_proxy) {
+                            snprintf(cmd, EUCA_MAX_PATH, "-p ARP -i %s --arp-ip-dst %s -j DROP", vnetinterface, strptra);
+                            rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                            snprintf(cmd, EUCA_MAX_PATH, "-p ARP --arp-ip-dst %s -j arpreply --arpreply-mac %s", strptra, brmac);
+                            rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                            // Forces all ARP from VM to get replied with our Bridge MAC (Force forward to the bridge)
+                            snprintf(cmd, EUCA_MAX_PATH, "-p ARP -i %s -j arpreply --arpreply-mac %s", vnetinterface, brmac);
+                            rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+#ifdef USE_IP_ROUTE_HANDLER
+                            // If I don't have a public IP, confine the traffic to the private network routes
+                            if (!instances[i].publicIp) {
+                                snprintf(cmd, EUCA_MAX_PATH, "from %s lookup euca_private", strptra);
+                            } else {
+                                snprintf(cmd, EUCA_MAX_PATH, "from %s lookup euca_public", strptra);
+                            }
+                            rc = ipr_handler_add_rule(config->ipr, cmd);
+#endif /* USE_IP_ROUTE_HANDLER */
+                        }
 
                         snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-mac-src ! %s -j DROP", vnetinterface, strptrb);
                         rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
@@ -1366,5 +1443,460 @@ static int update_l2_addressing(globalNetworkInfo * pGni)
         ret = 1;
     }
 
+#ifdef USE_IP_ROUTE_HANDLER
+    if (config->nc_proxy) {
+        rc = ipr_handler_print(config->ipr);
+        rc = ipr_handler_deploy(config->ipr);
+        if (rc) {
+            LOGERROR("could not install ip rules: check above log errors for details\n");
+            ret = 1;
+        }
+    }
+#endif /* USE_IP_ROUTE_HANDLER */
+
     return (ret);
+}
+
+#ifdef USE_IP_ROUTE_HANDLER
+//!
+//! Checks whether or not we need to install our public routes. We only update this
+//! if the routes have changed.
+//!
+//! @param[in] pGni a pointer to the Global Network Information structure
+//!
+//! @return 0 on success or 1 if any failure occured
+//!
+//! @see
+//!
+//! @pre
+//!     - The pGni parameter MUST not be NULL
+//!
+//! @post
+//!     - On success the public routes have been updated if changed
+//!     - If the routes have not changed, then the routes remain
+//!     - On failure the results are non-deterministic
+//!
+//! @note
+//!
+static int install_public_routes(globalNetworkInfo * pGni)
+{
+    int i = 0;
+    int fd = 0;
+    int rc = 0;
+    int ret = 0;
+    u32 slashnet = 0;
+    char *psTmpStr = NULL;
+    char *psFileContent = NULL;
+    char *psPublicGateway = NULL;
+    char *psPrivateSubnet = NULL;
+    char *psPrivateGateway = NULL;
+    char sCommand[EUCA_MAX_PATH] = "";
+    char sPublicRouteFile[EUCA_MAX_PATH] = "";
+    boolean found = TRUE;
+    gni_subnet *pSubnet = NULL;
+    gni_subnet *pMySubnet = NULL;
+    gni_cluster *pCluster = NULL;
+    gni_cluster *pMyCluster = NULL;
+    sequence_executor routeExecutor = { {0} };
+
+    // Make sure the given pointer is valid
+    if (!pGni) {
+        LOGERROR("Cannot configure public routes. Invalid parameter provided.\n");
+        return (1);
+    }
+    // Find our associated cluster
+    if ((rc = gni_find_self_cluster(pGni, &pMyCluster)) != 0) {
+        LOGERROR("cannot find the cluster to which the local node belongs: check network config settings\n");
+        return (1);
+    }
+    // Retrieve our subnet
+    pMySubnet = &pMyCluster->private_subnet;
+
+    // Create our temporary file to dump the rules when we work them
+    snprintf(sPublicRouteFile, EUCA_MAX_PATH, "/tmp/euca_public_route-XXXXXX");
+    if ((fd = safe_mkstemp(sPublicRouteFile)) < 0) {
+        LOGERROR("cannot create tmpfile '%s': check permissions\n", sPublicRouteFile);
+        return (1);
+    }
+    // Change the permissions on that temporary file
+    if (chmod(sPublicRouteFile, 0600)) {
+        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", sPublicRouteFile);
+    }
+    // Now close this file descriptor
+    close(fd);
+
+    // Now save our route table for analysis
+    snprintf(sCommand, EUCA_MAX_PATH, "%s ip route list table euca_public > %s", config->cmdprefix, sPublicRouteFile);
+    rc = system(sCommand);
+    rc = rc >> 8;
+    if (rc) {
+        LOGERROR("ip public route save failed '%s'\n", sCommand);
+        unlink(sPublicRouteFile);
+        return (1);
+    }
+
+    // Now load the file content
+    if ((psFileContent = file2str(sPublicRouteFile)) == NULL) {
+        LOGERROR("Loading public route file '%s' failed.\n", sPublicRouteFile);
+        unlink(sPublicRouteFile);
+        return (1);
+    }
+
+    // We're done with the file now
+    unlink(sPublicRouteFile);
+
+    // Convert our public gateway
+    if ((psPublicGateway = hex2dot(pGni->publicGateway)) == NULL) {
+        LOGERROR("Failed to converd public gateway 0x%08x to string.\n", pGni->publicGateway);
+        return (1);
+    }
+
+    // Convert our private subnet
+    if ((psPrivateSubnet = hex2dot(pMySubnet->subnet)) == NULL) {
+        LOGERROR("Failed to converd private subnet 0x%08x to string.\n", pMySubnet->subnet);
+        EUCA_FREE(psPublicGateway);
+        return (1);
+    }
+
+    // Convert our private gateway
+    if ((psPrivateGateway = hex2dot(pMySubnet->gateway)) == NULL) {
+        LOGERROR("Failed to converd private gateway 0x%08x to string.\n", pMySubnet->gateway);
+        EUCA_FREE(psPublicGateway);
+        EUCA_FREE(psPrivateSubnet);
+        return (1);
+    }
+
+    // First check if we have our default gateway
+    if (strstr(psFileContent, psPublicGateway) != NULL) {
+        // Now check if we have all of the cluster's subnet present
+        for (i = 0, pCluster = pGni->clusters; ((i < pGni->max_clusters) && found); i++, pCluster++) {
+            if ((psTmpStr = hex2dot(pCluster->private_subnet.subnet)) != NULL) {
+                if (strstr(psFileContent, psTmpStr) == NULL) {
+                    found = FALSE;
+                }
+
+                EUCA_FREE(psTmpStr);
+            }
+        }
+
+        // Now check for the global subnet's presence if all other cluster subnets were present
+        if (found) {
+            for (i = 0, pSubnet = pGni->subnets; ((i < pGni->max_subnets) && found); i++, pSubnet++) {
+                if ((psTmpStr = hex2dot(pSubnet->subnet)) != NULL) {
+                    if (strstr(psFileContent, psTmpStr) == NULL) {
+                        found = FALSE;
+                    }
+
+                    EUCA_FREE(psTmpStr);
+                }
+            }
+        }
+    } else {
+        found = FALSE;
+    }
+
+    // We're now done with our old routes
+    EUCA_FREE(psFileContent);
+
+    // If we did not find any of the subnet's gateway, flush and rebuild
+    if (!found) {
+        // Initialize our sequence
+        se_init(&routeExecutor, config->cmdprefix, 2, 1);
+
+        // First, flush our routing table
+        snprintf(sCommand, EUCA_MAX_PATH, "%s ip route flush table euca_public", config->cmdprefix);
+        se_add(&routeExecutor, sCommand, NULL, ignore_exit2);
+
+        // Add our default gateway
+        snprintf(sCommand, EUCA_MAX_PATH, "%s ip route add default via %s dev %s table euca_public", config->cmdprefix, psPublicGateway, config->pubInterface);
+        se_add(&routeExecutor, sCommand, NULL, ignore_exit2);
+
+        // Take care of our own subnet
+        slashnet = NETMASK_TO_SLASHNET(pMySubnet->netmask);
+        snprintf(sCommand, EUCA_MAX_PATH, "%s ip route add %s/%u dev %s table euca_public", config->cmdprefix, psPrivateSubnet, slashnet, config->privInterface);
+        se_add(&routeExecutor, sCommand, NULL, ignore_exit2);
+
+        // Then add our known subnets
+        for (i = 0, pSubnet = pGni->subnets; i < pGni->max_subnets; i++, pSubnet++) {
+            // Turn the subnet to string
+            if ((psTmpStr = hex2dot(pSubnet->subnet)) != NULL) {
+                // Retrieve our slashnet
+                slashnet = NETMASK_TO_SLASHNET(pSubnet->netmask);
+
+                // Now add the rule
+                snprintf(sCommand, EUCA_MAX_PATH, "%s ip route add %s/%u via %s dev %s table euca_public", config->cmdprefix, psTmpStr, slashnet, psPrivateGateway, config->privInterface);
+                se_add(&routeExecutor, sCommand, NULL, ignore_exit2);
+                EUCA_FREE(psTmpStr);
+            } else {
+                LOGWARN("Fail to convert subnet '0x%08x'!", pSubnet->subnet);
+                ret = 1;
+            }
+        }
+
+        // Finally add our clusters subnet
+        for (i = 0, pCluster = pGni->clusters; i < pGni->max_clusters; i++, pCluster++) {
+            // We already took care of ourselves
+            if (pCluster == pMyCluster) {
+                continue;
+            }
+
+            // Turn the subnet to string
+            if ((psTmpStr = hex2dot(pCluster->private_subnet.subnet)) != NULL) {
+                // Retrieve our slashnet
+                slashnet = NETMASK_TO_SLASHNET(pCluster->private_subnet.netmask);
+
+                // Now add the rule
+                snprintf(sCommand, EUCA_MAX_PATH, "%s ip route add %s/%u via %s dev %s table euca_public", config->cmdprefix, psTmpStr, slashnet, psPrivateGateway, config->privInterface);
+                se_add(&routeExecutor, sCommand, NULL, ignore_exit2);
+                EUCA_FREE(psTmpStr);
+            } else {
+                LOGWARN("Fail to convert subnet '0x%08x'!", pSubnet->subnet);
+                ret = 1;
+            }
+        }
+
+        // Now try pushing what we have
+        se_print(&routeExecutor);
+        if ((rc = se_execute(&routeExecutor)) != 0) {
+            LOGERROR("could not execute command sequence (check above log errors for details): ip public route.\n");
+            ret = 1;
+        }
+        se_free(&routeExecutor);
+
+    }
+
+    EUCA_FREE(psPublicGateway);
+    EUCA_FREE(psPrivateSubnet);
+    EUCA_FREE(psPrivateGateway);
+    return (ret);
+}
+
+//!
+//! Checks whether or not we need to install our private routes. We only update this
+//! if the routes have changed.
+//!
+//! @param[in] pGni a pointer to the Global Network Information structure
+//!
+//! @return 0 on success or 1 if any failure occured
+//!
+//! @see
+//!
+//! @pre
+//!     - The pGni parameter MUST not be NULL
+//!
+//! @post
+//!     - On success the public routes have been updated if changed
+//!     - If the routes have not changed, then the routes remain
+//!     - On failure the results are non-deterministic
+//!
+//! @note
+//!
+static int install_private_routes(globalNetworkInfo * pGni)
+{
+    int fd = 0;
+    int rc = 0;
+    int ret = 0;
+    u32 slashnet = 0;
+    char *psSubnet = NULL;
+    char *psGateway = NULL;
+    char *psFileContent = NULL;
+    char sCommand[EUCA_MAX_PATH] = "";
+    char sPrivateRouteFile[EUCA_MAX_PATH] = "";
+    boolean found = TRUE;
+    gni_subnet *pSubnet = NULL;
+    gni_cluster *pCluster = NULL;
+    sequence_executor routeExecutor = { {0} };
+
+    // Make sure the given pointer is valid
+    if (!pGni) {
+        LOGERROR("Cannot configure private routes. Invalid parameter provided.\n");
+        return (1);
+    }
+    // Find our associated cluster
+    if ((rc = gni_find_self_cluster(pGni, &pCluster)) != 0) {
+        LOGERROR("cannot find the cluster to which the local node belongs: check network config settings\n");
+        return (1);
+    }
+    // Retrieve our subnet
+    pSubnet = &pCluster->private_subnet;
+
+    // Create our temporary file to dump the rules when we work them
+    snprintf(sPrivateRouteFile, EUCA_MAX_PATH, "/tmp/euca_private_route-XXXXXX");
+    if ((fd = safe_mkstemp(sPrivateRouteFile)) < 0) {
+        LOGERROR("cannot create tmpfile '%s': check permissions\n", sPrivateRouteFile);
+        return (1);
+    }
+    // Change the permissions on that temporary file
+    if (chmod(sPrivateRouteFile, 0600)) {
+        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", sPrivateRouteFile);
+    }
+    // Now close this file descriptor
+    close(fd);
+
+    // Now save our route table for analysis
+    snprintf(sCommand, EUCA_MAX_PATH, "%s ip route list table euca_private > %s", config->cmdprefix, sPrivateRouteFile);
+    rc = system(sCommand);
+    rc = rc >> 8;
+    if (rc) {
+        LOGERROR("ip private route save failed '%s'\n", sCommand);
+        unlink(sPrivateRouteFile);
+        return (1);
+    }
+
+    // Now load the file content
+    if ((psFileContent = file2str(sPrivateRouteFile)) == NULL) {
+        LOGERROR("Loading private route file '%s' failed.\n", sPrivateRouteFile);
+        unlink(sPrivateRouteFile);
+        return (1);
+    }
+
+    // We're done with the file now
+    unlink(sPrivateRouteFile);
+
+    // Convert our gateway IP address to string representation
+    if ((psGateway = hex2dot(pSubnet->gateway)) == NULL) {
+        LOGERROR("invalid gateway IP '%u' for cluster '%s'.\n", pSubnet->gateway, pCluster->name);
+        return (1);
+    }
+
+    // Convert our subnet IP address to string representation
+    if ((psSubnet = hex2dot(pSubnet->subnet)) == NULL) {
+        LOGERROR("invalid subnet '%u' for cluster '%s'.\n", pSubnet->subnet, pCluster->name);
+        EUCA_FREE(psGateway);
+        return (1);
+    }
+
+    // First check if we can find our default private gateway and then check for our private subnet declaration
+    if (strstr(psFileContent, psGateway) == NULL) {
+        found = FALSE;
+    } else if (strstr(psFileContent, psSubnet) == NULL) {
+        found = FALSE;
+    }
+
+    // We're now done with our old routes
+    EUCA_FREE(psFileContent);
+
+    // If we didn't find it, then flush and add this default gateway
+    if (!found) {
+        // Retrieve our slashnet
+        slashnet = NETMASK_TO_SLASHNET(pSubnet->netmask);
+
+        // Initialize our sequence
+        se_init(&routeExecutor, config->cmdprefix, 2, 1);
+
+        // flush our routing table first
+        snprintf(sCommand, EUCA_MAX_PATH, "%s ip route flush table euca_private", config->cmdprefix);
+        se_add(&routeExecutor, sCommand, NULL, ignore_exit2);
+
+        // Add our default gateway
+        snprintf(sCommand, EUCA_MAX_PATH, "%s ip route add default via %s dev %s table euca_private", config->cmdprefix, psGateway, config->privInterface);
+        se_add(&routeExecutor, sCommand, NULL, ignore_exit2);
+
+        // finally add our subnet to the mix so we can ping from one VM to another on the same bridge
+        snprintf(sCommand, EUCA_MAX_PATH, "%s ip route add %s/%u dev %s table euca_private", config->cmdprefix, psSubnet, slashnet, config->privInterface);
+        se_add(&routeExecutor, sCommand, NULL, ignore_exit2);
+
+        // Now try pushing what we have
+        se_print(&routeExecutor);
+        if ((rc = se_execute(&routeExecutor)) != 0) {
+            LOGERROR("could not execute command sequence (check above log errors for details): ip private route.\n");
+            ret = 1;
+        }
+        se_free(&routeExecutor);
+    }
+
+    EUCA_FREE(psSubnet);
+    EUCA_FREE(psGateway);
+    return (ret);
+}
+#endif /* USE_IP_ROUTE_HANDLER */
+
+//!
+//! Go through the list of instances that we are managing on this node and
+//! send a gratuitous ARP for the newly created instances only
+//!
+//! @return 0 on success or 1 if a failure occured
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+static int update_host_arp(void)
+{
+#ifdef USE_EUCA_ARP
+    int i = 0;
+    int rc = 0;
+    u8 aHexOut[ENET_BUF_SIZE] = { 0 };
+    int bridgeMacLen = 0;
+    int maxInstances = 0;
+    char *psTrimMac = NULL;
+    char *psBridgeMac = NULL;
+    char *psPrivateIp = NULL;
+    char sRule[EUCA_MAX_PATH] = "";
+    char sCommand[EUCA_MAX_PATH] = "";
+    gni_node *pNode = NULL;
+    gni_instance *pInstances = NULL;
+    sequence_executor arpExecutor = { {0} };
+
+    LOGDEBUG("updating ARP rules for peers\n");
+
+    rc = ebt_handler_repopulate(config->ebt);
+    if ((rc = gni_find_self_node(globalnetworkinfo, &pNode)) == 0) {
+        if ((rc = se_init(&arpExecutor, config->cmdprefix, 2, 1)) != 0) {
+            LOGERROR("Failed to initialize our sequence executor!\n");
+            return (1);
+        }
+
+        if ((rc = gni_node_get_instances(globalnetworkinfo, pNode, NULL, 0, NULL, 0, &pInstances, &maxInstances)) == 0) {
+            if ((psBridgeMac = INTFC2MAC(config->bridgeDev)) != NULL) {
+                if ((bridgeMacLen = strlen(psBridgeMac)) > 0) {
+                    // Conver the MAC to a trimmed down version for EB table comparison
+                    if (mac2hex(psBridgeMac, aHexOut)) {
+                        euca_hex2mac(aHexOut, &psTrimMac, TRUE);
+
+                        // Not sent the gratuitous ARP for each instance with a private IP
+                        for (i = 0; i < maxInstances; i++) {
+                            if (pInstances[i].privateIp && maczero(pInstances[i].macAddress)) {
+                                psPrivateIp = hex2dot(pInstances[i].privateIp);
+                                snprintf(sRule, EUCA_MAX_PATH, "-p ARP --arp-ip-dst %s -j arpreply --arpreply-mac %s", psPrivateIp, psTrimMac);
+                                if (ebt_chain_find_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", sRule) == NULL) {
+                                    LOGDEBUG("Sending gratuitous ARP for instance %s IP %s using MAC %s on %s\n", pInstances[i].name, psPrivateIp, psBridgeMac, config->bridgeDev);
+                                    snprintf(sCommand, EUCA_MAX_PATH, "/usr/libexec/eucalyptus/announce-arp %s %s %s", config->bridgeDev, psPrivateIp, psBridgeMac);
+                                    if ((rc = se_add(&arpExecutor, sCommand, NULL, ignore_exit2)) != 0) {
+                                        LOGWARN("Fail to schedule gratuitous ARP for host '%s' using mac '%s'. rc=%d\n", psPrivateIp, psBridgeMac, rc);
+                                    }
+                                }
+                                EUCA_FREE(psPrivateIp);
+                            }
+                        }
+                        // Done with the MAC
+                        EUCA_FREE(psTrimMac);
+                    }
+                }
+                EUCA_FREE(psBridgeMac);
+            }
+        }
+
+        // Free our instances
+        EUCA_FREE(pInstances);
+
+        // Now try to push what we have
+        se_print(&arpExecutor);
+        if ((rc = se_execute(&arpExecutor)) != 0) {
+            LOGERROR("could not execute command sequence (check above log errors for details): gratuitous ARP.\n");
+        }
+        se_free(&arpExecutor);
+
+        return (0);
+    }
+
+    LOGERROR("cannot find local node in global network view: check network config settings\n");
+    return (1);
+#else /* USE_EUCA_ARP */
+    return (0);
+#endif /* USE_EUCA_ARP */
 }

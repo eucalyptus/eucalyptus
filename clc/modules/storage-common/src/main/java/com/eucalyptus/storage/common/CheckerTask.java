@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,10 +62,28 @@
 
 package com.eucalyptus.storage.common;
 
+import java.util.concurrent.TimeUnit;
+
 public abstract class CheckerTask implements Runnable {
   protected String name;
+  protected Integer runInterval = 60; // time interval between executions
+  protected TimeUnit runIntervalUnit = TimeUnit.SECONDS; // unit of time interval
+  protected Boolean isFixedDelay = Boolean.TRUE; // true means run with fixed delay between executions, false means run at fixed rate regardless of
+                                                 // time taken to execute
 
   public String getName() {
     return name;
+  }
+
+  public Integer getRunInterval() {
+    return runInterval;
+  }
+
+  public TimeUnit getRunIntervalUnit() {
+    return runIntervalUnit;
+  }
+
+  public Boolean getIsFixedDelay() {
+    return isFixedDelay;
   }
 }

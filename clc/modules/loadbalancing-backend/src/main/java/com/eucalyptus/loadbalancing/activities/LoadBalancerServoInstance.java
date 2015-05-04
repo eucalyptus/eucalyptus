@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,9 +46,6 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerEntityTransform;
-import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord;
-import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.LoadBalancerDnsRecordCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.LoadBalancerDnsRecordEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
@@ -96,11 +93,7 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     @ManyToOne
     @JoinColumn( name = "metadata_group_fk", nullable=true)
     private LoadBalancerSecurityGroup security_group = null;
-    
-    @ManyToOne
-    @JoinColumn( name = "metadata_dns_fk", nullable=true)
-    private LoadBalancerDnsRecord dns = null; 
-    
+
     @ManyToOne
     @JoinColumn( name = "metadata_asg_fk", nullable=true)
     private LoadBalancerAutoScalingGroup autoscaling_group = null; 
@@ -131,7 +124,6 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     	this.zone = lbzone;
     	try{
 	    	this.loadbalancer = LoadBalancerEntityTransform.INSTANCE.apply(zone.getLoadbalancer());
-	    	this.dns = LoadBalancerDnsRecordEntityTransform.INSTANCE.apply(this.loadbalancer.getDns());
     	}catch(final Exception ex){
     		throw Exceptions.toUndeclared(ex);
     	}
@@ -141,27 +133,15 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     	this.zone = lbzone;
     	try{
 	    	this.loadbalancer = LoadBalancerEntityTransform.INSTANCE.apply(zone.getLoadbalancer());
-	    	this.dns = LoadBalancerDnsRecordEntityTransform.INSTANCE.apply(this.loadbalancer.getDns());
     	}catch(final Exception ex){
     		throw Exceptions.toUndeclared(ex);
     	}
     	this.security_group = group;
-    }
-    private LoadBalancerServoInstance(final LoadBalancerZone lbzone, final LoadBalancerSecurityGroup group, final LoadBalancerDnsRecord dns){
-    	this.state = STATE.Pending.name();
-    	this.zone = lbzone;
-    	try{
-    		this.loadbalancer = LoadBalancerEntityTransform.INSTANCE.apply(zone.getLoadbalancer());
-    	}catch(final Exception ex){
-    		throw Exceptions.toUndeclared(ex);
-    	}
-    	this.security_group = group;
-    	this.dns = dns;
     }
     
-    public static LoadBalancerServoInstance newInstance(final LoadBalancerZone lbzone, final LoadBalancerSecurityGroup group, final LoadBalancerDnsRecord dns, final LoadBalancerAutoScalingGroup as_group, String instanceId)
+    public static LoadBalancerServoInstance newInstance(final LoadBalancerZone lbzone, final LoadBalancerSecurityGroup group, final LoadBalancerAutoScalingGroup as_group, String instanceId)
     {
-    	final LoadBalancerServoInstance instance = new LoadBalancerServoInstance(lbzone, group, dns);
+    	final LoadBalancerServoInstance instance = new LoadBalancerServoInstance(lbzone, group);
     	instance.setInstanceId(instanceId);
     	instance.setAutoScalingGroup(as_group);
     	instance.dnsState = DNS_STATE.None.name();
@@ -188,14 +168,6 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     	final LoadBalancerServoInstance sample = new LoadBalancerServoInstance();
     	sample.state = state;
     	return sample;
-    }
-    
-    public void leaveZone(){
-    	this.zone = null;
-    }
-    
-    public void unmapDns(){
-    	this.dns = null;
     }
     
     public void setInstanceId(String id){
@@ -226,13 +198,6 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     	this.security_group=group;
     }
     
-    public void setDns(final LoadBalancerDnsRecord dns){
-    	this.dns = dns;
-    }
-
-    public LoadBalancerDnsRecordCoreView getDns(){
-    	return this.view.getDns();
-    }
     public void setAutoScalingGroup(LoadBalancerAutoScalingGroup group){
     	this.autoscaling_group = group;
     }
@@ -347,20 +312,13 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 	
 	public static class LoadBalancerServoInstanceRelationView {
 	    private LoadBalancerZoneCoreView zone = null;
-	    private LoadBalancerDnsRecordCoreView dns = null;
-	    private LoadBalancerAutoScalingGroupCoreView autoscaling_group = null; 
+	    private LoadBalancerAutoScalingGroupCoreView autoscaling_group = null;
 	    
 		private LoadBalancerServoInstanceRelationView(final LoadBalancerServoInstance servo){
 			if(servo.zone!=null)
 				this.zone = TypeMappers.transform(servo.zone, LoadBalancerZoneCoreView.class);
-			if(servo.dns!=null)
-				this.dns = TypeMappers.transform(servo.dns, LoadBalancerDnsRecordCoreView.class);
 			if(servo.autoscaling_group!=null)
 				this.autoscaling_group = TypeMappers.transform(servo.autoscaling_group, LoadBalancerAutoScalingGroupCoreView.class);
-		}
-		
-		public LoadBalancerDnsRecordCoreView getDns(){
-			return this.dns;
 		}
 		
 		public LoadBalancerZoneCoreView getZone(){

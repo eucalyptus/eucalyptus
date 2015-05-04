@@ -128,6 +128,9 @@ public class AccountEntity extends AbstractPersistent implements Serializable {
   @PrePersist
   public void generateOnCommit() {
     this.accountNumber = Identifiers.generateAccountNumber( );
+    if ( this.name == null ) {
+      this.name = this.accountNumber;
+    }
     populateCanonicalId();
   }
 

@@ -127,16 +127,16 @@ char *euca_strncpy(char *restrict to, const char *restrict from, size_t size);
 
 //! @{
 //! @name IP conversion APIs
-u32 euca_dot2hex(char *psDot);
+u32 euca_dot2hex(const char *psDot);
 char *euca_hex2dot(u32 hex);
 //! @}
 
 //! @{
 //! @name MAC conversion APIs
-u8 *euca_mac2hex(char *psMacIn, u8 aHexOut[ENET_BUF_SIZE]);
-void euca_hex2mac(u8 aHexIn[ENET_BUF_SIZE], char **ppsMacOut);
-int euca_maczero(u8 aMac[ENET_BUF_SIZE]);
-int euca_machexcmp(char *psMac, u8 aMac[ENET_BUF_SIZE]);
+u8 *euca_mac2hex(const char *psMacIn, u8 aHexOut[6]);
+void euca_hex2mac(u8 aHexIn[6], char **ppsMacOut, boolean trimVersion);
+int euca_maczero(u8 aMac[6]);
+int euca_machexcmp(const char *psMac, u8 aMac[6]);
 //! @}
 
 int euca_tokenizer(char *list, char *delim, char *tokens[], int nbTokens);
@@ -165,7 +165,7 @@ int euca_tokenizer(char *list, char *delim, char *tokens[], int nbTokens);
 //! @name MAC address macros
 
 #define mac2hex(_macIn, _hexOut)                 euca_mac2hex((_macIn), (_hexOut))
-#define hex2mac(_hexIn, _macOut)                 euca_hex2mac((_hexIn), (_macOut))
+#define hex2mac(_hexIn, _macOut)                 euca_hex2mac((_hexIn), (_macOut), FALSE)
 #define maczero(_mac)                            euca_maczero((_mac))
 #define machexcmp(_sMac, _aMac)                  euca_machexcmp((_sMac), (_aMac))
 

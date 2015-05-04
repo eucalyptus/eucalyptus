@@ -30,6 +30,7 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 
+import com.eucalyptus.blockstorage.async.VolumesConvertor;
 import com.eucalyptus.blockstorage.entities.SnapshotInfo;
 import com.eucalyptus.blockstorage.entities.VolumeInfo;
 import com.eucalyptus.blockstorage.util.StorageProperties;
@@ -179,8 +180,7 @@ public class BlockStorageController_VolumeConverterTest {
       }
     });
 
-    BlockStorageController bsc = new BlockStorageController(storageManager);
-    BlockStorageController.VolumesConvertor bscvc = new BlockStorageController.VolumesConvertor(storageManager);
+    VolumesConvertor bscvc = new VolumesConvertor(storageManager, storageManager);
     bscvc.run();
   }
 

@@ -38,7 +38,6 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.loadbalancing.LoadBalancer;
-import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.LoadBalancerDnsRecordCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupEntityTransform;
@@ -102,8 +101,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 				LOG.warn("Failed to find the loadbalancer", ex);
 				return;
 			}
-			final LoadBalancerDnsRecordCoreView dns = lb.getDns();
-			
+
 			// find ServoInstance
 			for(LoadBalancerServoInstanceCoreView instance: servos){
 				String	address = instance.getAddress();
@@ -124,8 +122,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 				    }
 				  }
 				}catch(Exception ex){
-					LOG.error(String.format("failed to remove dns a record (zone=%s, name=%s, address=%s)", 
-							dns.getZone(), dns.getName(), address), ex);
+					LOG.error("Error updating DNS registration state for balancer " + evt.getLoadBalancer( ), ex);
 				}
 			}
 		}
@@ -223,7 +220,6 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 						continue;
 					}
 					final LoadBalancerServoInstance found = Entities.uniqueResult(instance);
-					found.setDns(null);
 					found.setAvailabilityZone(null);
 					found.setAutoScalingGroup(null);
 					// InService --> Retired

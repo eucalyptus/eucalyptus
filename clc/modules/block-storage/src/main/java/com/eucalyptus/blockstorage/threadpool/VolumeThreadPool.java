@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,30 +60,58 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage;
+package com.eucalyptus.blockstorage.threadpool;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.blockstorage.BlockStorageController.VolumeTask;
+import com.eucalyptus.blockstorage.Storage;
+import com.eucalyptus.blockstorage.async.VolumeCreator;
+import com.eucalyptus.blockstorage.exceptions.ThreadPoolNotInitializedException;
+import com.eucalyptus.system.Threads;
 
-public class VolumeService {
-  private Logger LOG = Logger.getLogger(VolumeService.class);
+public class VolumeThreadPool {
+  private static Logger LOG = Logger.getLogger(VolumeThreadPool.class);
+  private static ExecutorService pool;
+  private static final int NUM_THREADS = 10; // TODO make this configurable?
 
-  private final ExecutorService pool;
-  private final int NUM_THREADS = 10;
+  private static final ReentrantLock RLOCK = new ReentrantLock();
 
-  public VolumeService() {
-    pool = Executors.newFixedThreadPool(NUM_THREADS);
+  private VolumeThreadPool() {}
+
+  public static void initialize() {
+    RLOCK.lock();
+    try {
+      shutdown();
+      LOG.info("Initializing SC thread pool catering to volume creation");
+      pool = Executors.newFixedThreadPool(NUM_THREADS, Threads.lookup(Storage.class, VolumeCreator.class).limitTo(NUM_THREADS));
+    } finally {
+      RLOCK.unlock();
+    }
   }
 
-  public void add(VolumeTask creator) {
-    pool.execute(creator);
+  public static void add(VolumeCreator volumeCreator) throws ThreadPoolNotInitializedException {
+    if (pool != null && !pool.isShutdown()) {
+      pool.execute(volumeCreator);
+    } else {
+      LOG.warn("SC thread pool catering to volume creation is either not initalized or shut down");
+      throw new ThreadPoolNotInitializedException("SC thread pool catering to volume creation is either not initalized or shut down");
+    }
   }
 
-  public void shutdown() {
-    pool.shutdownNow();
+  public static void shutdown() {
+    RLOCK.lock();
+    try {
+      if (pool != null) {
+        LOG.info("Shutting down SC thread pool catering to volume creation");
+        pool.shutdownNow();
+        pool = null;
+      }
+    } finally {
+      RLOCK.unlock();
+    }
   }
 }

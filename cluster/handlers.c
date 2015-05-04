@@ -1631,6 +1631,7 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
     char *xmlbuf = NULL;
     char xmlfile[EUCA_MAX_PATH] = "";
     globalNetworkInfo *gni = NULL;
+    gni_hostname_info *host_info = NULL;
     gni_cluster *myself = NULL;
 
     rc = initialize(pMeta, FALSE);
@@ -1654,9 +1655,10 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
             LOGDEBUG("created and populated tmpfile '%s'\n", xmlfile);
 
             gni = gni_init();
-            if (gni) {
+            host_info = gni_init_hostname_info();
+            if (gni && host_info) {
                 // decode/read/parse the globalnetworkinfo, assign any incorrect public/private IP mappings based on global view
-                rc = gni_populate(gni, xmlfile);
+                rc = gni_populate(gni,host_info,xmlfile);
                 LOGDEBUG("done with gni_populate()\n");
 
                 // do any CC actions based on contents of new network view
@@ -1708,9 +1710,11 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
                     EUCA_FREE(strptrb);
                 }
 
-                // free the gni
-                rc = gni_free(gni);
             }
+
+            // Free up gni and host_info memory
+            rc = gni_free(gni);
+            rc = gni_hostnames_free(host_info);
 
             unlink(xmlfile);
         }
@@ -3158,6 +3162,7 @@ static int schedule_instance_migration(ncInstance * instance, char **includeNode
 
     if (includeNodes && excludeNodes) {
         LOGERROR("[%s] migration scheduler cannot be called with both nodes to include and nodes to exclude; the options are mutually exclusive.\n", instance->instanceId);
+        *replyString = strdup("migration scheduler cannot be called with both nodes to include and nodes to exclude");
         ret = 1;
         goto out;
     }
@@ -3240,7 +3245,6 @@ static int schedule_instance_migration(ncInstance * instance, char **includeNode
 out:
     if (ret) {
         LOGERROR("[%s] migration scheduler could not schedule destination node\n", instance->instanceId);
-        *replyString = strdup("not enough resources available for migration");
         *outresid = -1;
     }
 

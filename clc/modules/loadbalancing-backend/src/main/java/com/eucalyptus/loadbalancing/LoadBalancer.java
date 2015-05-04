@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,7 +64,6 @@ import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBack
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreViewTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreViewTransform;
-import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.LoadBalancerDnsRecordCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreViewTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
@@ -196,6 +195,18 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	@Column( name = "loadbalancer_cross_zone_loadbalancing")
 	private Boolean crossZoneLoadbalancing;
 	
+	@Column( name = "loadbalancer_accesslog_enabled", nullable=true)
+	private Boolean accessLogEnabled;
+
+  @Column( name = "loadbalancer_accesslog_emit_interval", nullable=true)
+  private Integer accessLogEmitInterval;
+  
+	@Column( name ="loadbalancer_accesslog_s3bucket_name", nullable=true)
+	private String accessLogS3BucketName;
+	
+	@Column( name = "loadbalancer_accesslog_s3bucket_prefix", nullable=true)
+	private String accessLogS3BucketPrefix;
+	
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, mappedBy = "loadbalancer")
 	@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerBackendInstance> backendInstances = null;
@@ -215,10 +226,6 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
 	private LoadBalancerAutoScalingGroup autoscale_group = null;
-	
-	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
-	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
-	private LoadBalancerDnsRecord dns = null;
 	
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -274,6 +281,38 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	public void setCrossZoneLoadbalancingEnabled(final boolean enabled) {
 	  this.crossZoneLoadbalancing = enabled;
 	}
+	
+	public Boolean getAccessLogEnabled() {
+	  return this.accessLogEnabled;
+	}
+	
+	public void setAccessLogEnabled(final boolean enabled){
+	  this.accessLogEnabled = enabled;
+	}
+	
+	public Integer getAccessLogEmitInterval(){
+	  return this.accessLogEmitInterval;
+	}
+	
+	public void setAccessLogEmitInterval(final Integer interval){
+	  this.accessLogEmitInterval = interval;
+	}
+	
+	public String getAccessLogS3BucketName(){
+	  return this.accessLogS3BucketName;
+	}
+	
+	public void setAccessLogS3BucketName(final String bucketName){
+	  this.accessLogS3BucketName = bucketName;
+	}
+	
+	public String getAccessLogS3BucketPrefix(){
+	  return this.accessLogS3BucketPrefix;
+	}
+	
+	public void setAccessLogS3BucketPrefix(final String bucketPrefix){
+	  this.accessLogS3BucketPrefix = bucketPrefix;
+	}
 
 	public List<LoadBalancerSecurityGroupRef> getSecurityGroupRefs() {
     return securityGroupRefs;
@@ -311,13 +350,6 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		return this.relationView.hasListener(lbPort);
 	}
 	
-	public void setDns(final LoadBalancerDnsRecord dns){
-		this.dns = dns;
-	}
-	
-	public LoadBalancerDnsRecordCoreView getDns(){
-		return this.relationView.getDns();
-	}
 	public Collection<LoadBalancerListenerCoreView> getListeners(){
 		return this.relationView.getListeners();
 	}
@@ -521,7 +553,6 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		private LoadBalancer loadbalancer = null;
 		private LoadBalancerSecurityGroupCoreView group = null;
 		private LoadBalancerAutoScalingGroupCoreView autoscale_group = null;
-		private LoadBalancerDnsRecordCoreView dns = null;
 
 		private ImmutableList<LoadBalancerBackendInstanceCoreView> backendInstances = null;
 		private ImmutableList<LoadBalancerListenerCoreView> listeners = null;
@@ -535,8 +566,6 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 				this.group = TypeMappers.transform(lb.group, LoadBalancerSecurityGroupCoreView.class);
 			if(lb.autoscale_group!=null)
 				this.autoscale_group = TypeMappers.transform(lb.autoscale_group, LoadBalancerAutoScalingGroupCoreView.class);
-			if(lb.dns != null)
-				this.dns = TypeMappers.transform(lb.dns,  LoadBalancerDnsRecordCoreView.class);
 			if(lb.backendInstances!=null)
 				this.backendInstances = ImmutableList.copyOf(Collections2.transform(lb.backendInstances, LoadBalancerBackendInstanceCoreViewTransform.INSTANCE));
 			if(lb.listeners!=null)
@@ -594,10 +623,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		public boolean hasListener(final int lbPort){
 			return this.findListener(lbPort)!=null;
 		}
-		
-		public LoadBalancerDnsRecordCoreView getDns(){
-			return this.dns;
-		}
+
 		public Collection<LoadBalancerListenerCoreView> getListeners(){
 			return this.listeners;
 		}
@@ -670,6 +696,22 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		public Boolean getCrossZoneLoadbalancingEnabled( ) {
 		  return this.loadbalancer.getCrossZoneLoadbalancingEnabled();
 		}
+		
+		public Boolean getAccessLogEnabled( ) {
+		  return this.loadbalancer.getAccessLogEnabled();
+		}
+		
+		public String getAccessLogS3BucketName( ) {
+		  return this.loadbalancer.getAccessLogS3BucketName();
+		}
+		
+		public String getAccessLogS3BucketPrefix( ) {
+		  return this.loadbalancer.getAccessLogS3BucketPrefix();
+		}
+		
+		public Integer getAccessLogEmitInterval( ) {
+		  return this.loadbalancer.getAccessLogEmitInterval();
+		}
 
 		public Map<String,String> getSecurityGroupIdsToNames( ) {
 			return this.securityGroupIdsToNames;
@@ -713,11 +755,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 			if ( loadBalancer != null ) {
 				attributes = new LoadBalancerAttributes( );
 
-				final AccessLog accessLog = new AccessLog( );
-				accessLog.setEnabled( false );
-				attributes.setAccessLog( accessLog );
-
-				final ConnectionDraining connectionDraining = new ConnectionDraining( );
+					final ConnectionDraining connectionDraining = new ConnectionDraining( );
 				connectionDraining.setEnabled( false );
 				attributes.setConnectionDraining( connectionDraining );
 
@@ -730,6 +768,13 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 				crossZoneLoadBalancing.setEnabled( 
 				    Objects.firstNonNull(loadBalancer.getCrossZoneLoadbalancingEnabled(), false) );
 				attributes.setCrossZoneLoadBalancing( crossZoneLoadBalancing );
+				
+				final AccessLog accessLog = new AccessLog();
+				accessLog.setEnabled(Objects.firstNonNull(loadBalancer.getAccessLogEnabled(), false));
+				accessLog.setEmitInterval(loadBalancer.getAccessLogEmitInterval());
+				accessLog.setS3BucketName(loadBalancer.getAccessLogS3BucketName());
+				accessLog.setS3BucketPrefix(loadBalancer.getAccessLogS3BucketPrefix());
+				attributes.setAccessLog( accessLog );
 			}
 			return attributes;
 		}

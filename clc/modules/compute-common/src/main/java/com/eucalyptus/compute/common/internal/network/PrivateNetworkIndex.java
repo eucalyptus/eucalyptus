@@ -62,6 +62,7 @@
 
 package com.eucalyptus.compute.common.internal.network;
 
+import java.util.concurrent.Callable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -70,6 +71,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.NotFound;
@@ -81,8 +83,10 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.entities.AccountMetadata;
+import com.eucalyptus.upgrade.Upgrades;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
+import groovy.sql.Sql;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
@@ -272,5 +276,26 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
     }
     return super.release( );
   }
-  
+
+  @Upgrades.PreUpgrade( value = Eucalyptus.class, since = Upgrades.Version.v4_2_0 )
+  public static class PrivateNetworkIndexPreUpgrade420 implements Callable<Boolean> {
+    private static final Logger logger  = Logger.getLogger( PrivateNetworkIndexPreUpgrade420.class );
+
+    @Override
+    public Boolean call( ) throws Exception {
+      Sql sql = null;
+      try {
+        sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection( "eucalyptus_cloud" );
+        sql.execute( "alter table metadata_network_indices drop column if exists metadata_extant_network_index_fk" );
+        return true;
+      } catch ( Exception ex ) {
+        logger.error( "Error deleting column metadata_extant_network_index_fk for metadata_network_indices", ex );
+        return false;
+      } finally {
+        if ( sql != null ) {
+          sql.close( );
+        }
+      }
+    }
+  }
 }

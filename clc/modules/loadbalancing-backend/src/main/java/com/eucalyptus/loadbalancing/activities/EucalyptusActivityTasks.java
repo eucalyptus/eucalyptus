@@ -148,7 +148,6 @@ import com.eucalyptus.compute.common.backend.CreateTagsType;
 import com.eucalyptus.compute.common.backend.DeleteTagsType;
 
 
-
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
  *
@@ -173,11 +172,18 @@ public class EucalyptusActivityTasks {
 
 		abstract String getUserId( );
 
+		/**
+		 * Account to use if user identifier not set, should not be called otherwise.
+		 */
+		abstract AccountFullName getAccount( );
+
 		@Override
 		public DispatchingClient<TM, TC> getClient() {
 			try{
 				final DispatchingClient<TM, TC> client =
-						new DispatchingClient<>( this.getUserId(), this.componentIdClass );
+						getUserId( ) != null ?
+								new DispatchingClient<TM, TC>( this.getUserId( ), this.componentIdClass ) :
+								new DispatchingClient<TM, TC>( this.getAccount(), this.componentIdClass );
 				client.init();
 				return client;
 			}catch(Exception ex){
@@ -199,7 +205,12 @@ public class EucalyptusActivityTasks {
 				throw Exceptions.toUndeclared(ex);
 			}
 		}
-	}
+
+		@Override
+		AccountFullName getAccount() {
+			throw new RuntimeException( "Context for user, not account" );
+		}
+  }
 
 	private abstract class UserActivityContextSupport<TM extends BaseMessage, TC extends ComponentId> extends ActivityContextSupport<TM, TC>{
 		private final String userId;
@@ -378,7 +389,7 @@ public class EucalyptusActivityTasks {
 		final Collection<String> securityGroupNamesOrIds,
 		final String keyName,
 		final String userData,
-		final boolean associatePublicIp
+		final Boolean associatePublicIp
 	){
 		final AutoScalingCreateLaunchConfigTask task = 
 				new AutoScalingCreateLaunchConfigTask(imageId, instanceType, instanceProfileName, launchConfigName, securityGroupNamesOrIds, keyName, userData, associatePublicIp);
@@ -1326,10 +1337,10 @@ public class EucalyptusActivityTasks {
 		private final Collection<String> securityGroupNamesOrIds;
 		private final String keyName;
 		private final String userData;
-		private final boolean associatePublicIp;
+		private final Boolean associatePublicIp;
 		private AutoScalingCreateLaunchConfigTask(final String imageId, final String instanceType, String instanceProfileName,
 				final String launchConfigName, final Collection<String> securityGroupNamesOrIds, final String keyName, final String userData,
-				final boolean associatePublicIp){
+				final Boolean associatePublicIp){
 			this.imageId = imageId;
 			this.instanceType = instanceType;
 			this.instanceProfileName = instanceProfileName;
@@ -1349,7 +1360,7 @@ public class EucalyptusActivityTasks {
 			req.setLaunchConfigurationName(this.launchConfigName);
 			req.setSecurityGroups( new SecurityGroups( this.securityGroupNamesOrIds ) );
 			req.setUserData(userData);
-			req.setAssociatePublicIpAddress( associatePublicIp ? Boolean.TRUE : null );
+			req.setAssociatePublicIpAddress( associatePublicIp );
 			return req;
 		}
 	}

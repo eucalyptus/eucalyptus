@@ -231,6 +231,16 @@ typedef struct gni_vpc_t {
     int max_internetGateways;
 } gni_vpc;
 
+typedef struct gni_hostname_t {
+    struct in_addr ip_address;
+    char hostname[HOSTNAME_SIZE];
+} gni_hostname;
+
+typedef struct gni_hostname_info_t {
+    gni_hostname *hostnames;
+    int max_hostnames;
+} gni_hostname_info;
+
 //! Global GNI Information Structure
 typedef struct globalNetworkInfo_t {
     boolean init;                      //!< has the structure been initialized successfully?
@@ -246,6 +256,9 @@ typedef struct globalNetworkInfo_t {
     char instanceDNSDomain[HOSTNAME_LEN];   //!< The DNS domain name to use for the instances
     u32 *instanceDNSServers;           //!< List of DNS servers
     int max_instanceDNSServers;        //!< Number of DNS servers in the list
+#ifdef USE_IP_ROUTE_HANDLER
+    u32 publicGateway;                 //!< Public network default gateway
+#endif /* USE_IP_ROUTE_HANDLER */
     u32 *public_ips;                   //!< List of associated public IPs
     int max_public_ips;                //!< Number of associated public IPs in the list
     gni_subnet *subnets;               //!< List of global subnet information
@@ -279,7 +292,7 @@ int gni_free(globalNetworkInfo * gni);
 int gni_clear(globalNetworkInfo * gni);
 int gni_print(globalNetworkInfo * gni);
 int gni_iterate(globalNetworkInfo * gni, int mode);
-int gni_populate(globalNetworkInfo * gni, char *xmlpath);
+int gni_populate(globalNetworkInfo * gni, gni_hostname_info *host_info, char *xmlpath);
 
 int gni_is_self(const char *test_ip);
 
@@ -325,6 +338,12 @@ int gni_secgroup_validate(gni_secgroup * secgroup);
 int gni_serialize_iprange_list(char **inlist, int inmax, u32 ** outlist, int *outmax);
 int evaluate_xpath_property(xmlXPathContextPtr ctxptr, char *expression, char ***results, int *max_results);
 int evaluate_xpath_element(xmlXPathContextPtr ctxptr, char *expression, char ***results, int *max_results);
+
+gni_hostname_info *gni_init_hostname_info(void);
+int gni_hostnames_print(gni_hostname_info *host_info);
+int gni_hostnames_free(gni_hostname_info *host_info);
+int gni_hostnames_get_hostname(gni_hostname_info *host_info, const char *ip_address, char **hostname);
+int cmpipaddr(const void *p1, const void *p2);
 
 int ruleconvert(char *rulebuf, char *outrule);
 

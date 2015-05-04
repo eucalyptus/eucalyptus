@@ -91,6 +91,8 @@ import com.eucalyptus.util.RestrictedType;
 @PolicyResourceType( PolicySpec.IAM_RESOURCE_ACCOUNT )
 public interface Account extends AccountIdentifiers, BasePrincipal, RestrictedType, Serializable {
 
+  public boolean hasAccountAlias( );
+
   public void setName( String name ) throws AuthException;
 
   /**

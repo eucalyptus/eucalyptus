@@ -60,46 +60,62 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage;
+package com.eucalyptus.compute.policy;
 
-import java.util.List;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.policy.key.KeyUtils;
+import com.eucalyptus.auth.policy.key.Keys;
+import com.eucalyptus.auth.policy.key.PolicyKey;
+import com.eucalyptus.auth.policy.key.QuotaKey;
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.PolicyScope;
+import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.compute.common.CloudMetadata.VmInstanceMetadata;
+import com.eucalyptus.compute.common.CloudMetadataLimitedType;
+import com.eucalyptus.util.RestrictedTypes;
+import net.sf.json.JSONException;
 
-import org.apache.log4j.Logger;
+/**
+ * GRZE:NOTE: this class is a {@link com.eucalyptus.component.id.Euare} specific type and needs to move as well as not
+ * referring to private implementation types. {@link com.eucalyptus.compute.common.CloudMetadata.VmInstanceMetadata} should be considered a public
+ * type while {@code VmInstance} is implementation specific and will change as needed by the
+ * implementation.
+ */
+@PolicyKey( Keys.EC2_QUOTA_VM_INSTANCE_ACTIVE_NUMBER )
+public class VmInstanceActiveNumberQuotaKey extends QuotaKey {
 
-import com.eucalyptus.blockstorage.entities.VolumeInfo;
-import com.eucalyptus.blockstorage.util.StorageProperties;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.storage.common.CheckerTask;
-import com.eucalyptus.util.EucalyptusCloudException;
-
-public class VolumeStateChecker extends CheckerTask {
-  private static Logger LOG = Logger.getLogger(VolumeStateChecker.class);
-
-  LogicalStorageManager blockManager;
-
-  public VolumeStateChecker(LogicalStorageManager blockManager) {
-    this.name = "VolumeStatusChecker";
-    this.blockManager = blockManager;
+  private static final String KEY = Keys.EC2_QUOTA_VM_INSTANCE_ACTIVE_NUMBER;
+  private static final String POLICY_RESOURCE_TYPE = CloudMetadataLimitedType.VmInstanceActiveMetadata.POLICY_RESOURCE_TYPE;
+  @Override
+  public void validateValueType( String value ) throws JSONException {
+    KeyUtils.validateIntegerValue(value, KEY);
   }
 
   @Override
-  public void run() {
-    try (TransactionResource tran = Entities.transactionFor(VolumeInfo.class)) {
-      VolumeInfo volumeInfo = new VolumeInfo();
-      volumeInfo.setStatus(StorageProperties.Status.available.toString());
-      List<VolumeInfo> volumes = Entities.query(volumeInfo);
-      for (VolumeInfo volume : volumes) {
-        try {
-          blockManager.checkVolume(volume.getVolumeId());
-        } catch (EucalyptusCloudException ex) {
-          // volume.setStatus(StorageProperties.Status.error.toString());
-          LOG.error(ex);
-        }
-      }
-      tran.commit();
-    } catch (Exception ex) {
-      LOG.error(ex, ex);
+  public boolean canApply( String action, String resourceType) {
+    if ( PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RUNINSTANCES ).equals( action )
+      && PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, POLICY_RESOURCE_TYPE).equals(resourceType) ) {
+      return true;
     }
+    if ( PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, PolicySpec.EC2_STARTINSTANCES ).equals( action )
+      && PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, POLICY_RESOURCE_TYPE).equals(resourceType) ) {
+      return true;
+    }
+    return false;
   }
+
+  @Override
+  public String value( PolicyScope scope, String id, String resource, Long quantity ) throws AuthException {
+    switch ( scope ) {
+      case Account:
+        return Long.toString( RestrictedTypes.usageMetricFunction(CloudMetadataLimitedType.VmInstanceActiveMetadata.class).apply( AccountFullName.getInstance( id ) ) + quantity );
+      case Group:
+        return NOT_SUPPORTED;
+      case User:
+        return Long.toString( RestrictedTypes.usageMetricFunction(CloudMetadataLimitedType.VmInstanceActiveMetadata.class).apply( UserFullName.getInstance( id ) ) + quantity );
+    }
+    throw new AuthException( "Invalid scope" );
+  }
+  
 }

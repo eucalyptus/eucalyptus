@@ -514,3 +514,39 @@ int eucanetd_kill_program(pid_t pid, const char *psProgramName, const char *psRo
 
     return (0);
 }
+
+//!
+//! Function description.
+//!
+//! @param[in] ipth pointer to the IP table handler structure
+//!
+//! @return 0 on success or 1 if any failure occured
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int unlink_handler_file(char *filename)
+{
+    if (filename == NULL) {
+        LOGTRACE("NULL filename passed\n");
+        return (0);
+    }
+
+    if (access(filename, F_OK) == 0) {
+        if (unlink(filename) < 0) {
+            LOGERROR("Unable to unlink handler file: %s errno: %d\n", filename, errno);
+            return (1);
+        } else {
+            LOGTRACE("File %s removed successfully\n",filename);
+        }
+    } else {
+        LOGWARN("File: %s doesn't exist or is not accessible by user. errno: %d\n",filename, errno);
+    }
+    return (0);
+}
+

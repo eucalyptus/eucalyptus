@@ -349,9 +349,9 @@ public class ServiceConfigurations {
           this.setType( config.getComponentId( ).name( ) );
           this.setFullName( config.getFullName().toString() );
           if ( config.isVmLocal( ) ) {
-            this.setUri( ServiceUris.remote( config.getComponentId( ), maphost( Internets.localHostInetAddress( ) ) ).toASCIIString( ) );
+            this.setServiceUri( ServiceUris.remote( config.getComponentId( ), maphost( Internets.localHostInetAddress( ) ) ) );
           } else {
-            this.setUri( ServiceUris.remote( config.getComponentId( ), maphost( config.getInetAddress( ) ), config.getPort( ) ).toASCIIString() );
+            this.setServiceUri( ServiceUris.remote( config.getComponentId( ), maphost( config.getInetAddress( ) ), config.getPort( ) ) );
           }
         }
       };

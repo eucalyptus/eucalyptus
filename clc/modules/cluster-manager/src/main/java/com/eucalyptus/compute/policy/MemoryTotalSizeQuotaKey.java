@@ -62,6 +62,10 @@ public class MemoryTotalSizeQuotaKey extends QuotaKey {
       && PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, POLICY_RESOURCE_TYPE).equals(resourceType) ) {
       return true;
     }
+    if ( PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, PolicySpec.EC2_STARTINSTANCES ).equals( action )
+      && PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, POLICY_RESOURCE_TYPE).equals(resourceType) ) {
+      return true;
+    }
     return false;
   }
 
@@ -94,7 +98,7 @@ public class MemoryTotalSizeQuotaKey extends QuotaKey {
       try ( TransactionResource tx = Entities.transactionFor( VmInstance.class ) ){
         Criteria criteria = Entities.createCriteria(VmInstance.class)
           .add(Example.create(VmInstance.named(ownerFullName, null)))
-          .add(Restrictions.not(Restrictions.in("state", VmInstance.VmStateSet.DONE.array())));
+          .add(Restrictions.not(Restrictions.in("state", VmInstance.VmStateSet.TORNDOWN.array())));
         List<VmInstance> result = (List<VmInstance>) criteria.list();
         if (result != null) {
           for (VmInstance instance : result) {

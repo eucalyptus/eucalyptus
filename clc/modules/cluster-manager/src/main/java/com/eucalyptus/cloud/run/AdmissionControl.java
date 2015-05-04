@@ -261,7 +261,17 @@ public class AdmissionControl {
             @Override
             public List<ResourceToken> allocate( int min, int max ) {
               try {
-              // do quotas for instance specific items (cpu, memory, disk)
+              // do quotas for "active" instances
+                RestrictedTypes.allocateMeasurableResource(Long.valueOf(1L*max),
+                  new Function<Long, CloudMetadataLimitedType.VmInstanceActiveMetadata>() {
+                    @Nullable
+                    @Override
+                    public CloudMetadataLimitedType.VmInstanceActiveMetadata apply(@Nullable Long amount) {
+                      return new CloudMetadataLimitedType.VmInstanceActiveMetadata() {
+                      }; // kind of a marker for active instances
+                    }
+                  });
+               // do quotas for instance specific items (cpu, memory, disk)
                 RestrictedTypes.allocateMeasurableResource(max * Long.valueOf(allocInfo.getVmType().getCpu().longValue()),
                   new Function<Long, CloudMetadataLimitedType.CpuMetadata>() {
                     @Nullable

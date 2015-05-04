@@ -288,7 +288,6 @@ public class Pipelines {
   
   private static class InternalQueryPipeline extends FilteredPipeline.InternalPipeline {
     public enum RequiredQueryParams {
-      SignatureVersion,
       Version
     }
     

@@ -1681,7 +1681,7 @@ globalNetworkInfo *gni_init()
 //!
 //! @note
 //!
-int gni_populate(globalNetworkInfo * gni, char *xmlpath)
+int gni_populate(globalNetworkInfo * gni, gni_hostname_info *host_info, char *xmlpath)
 {
     int rc;
     xmlDocPtr docptr;
@@ -1689,6 +1689,8 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
     char expression[2048], *strptra = NULL;
     char **results = NULL;
     int max_results = 0, i, j, k, l;
+    gni_hostname *gni_hostname_ptr = NULL;
+    int hostnames_need_reset = 0;
 
     if (!gni) {
         LOGERROR("invalid input\n");
@@ -2076,6 +2078,17 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
     }
     EUCA_FREE(results);
 
+#ifdef USE_IP_ROUTE_HANDLER
+    snprintf(expression, 2048, "/network-data/configuration/property[@name='publicGateway']/value");
+    rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+    for (i = 0; i < max_results; i++) {
+        LOGTRACE("after function: %d: %s\n", i, results[i]);
+        gni->publicGateway = dot2hex(results[i]);
+        EUCA_FREE(results[i]);
+    }
+    EUCA_FREE(results);
+#endif /* USE_IP_ROUTE_HANDLER */
+
     snprintf(expression, 2048, "/network-data/configuration/property[@name='mido']/property[@name='eucanetdHost']/value");
     rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
@@ -2248,6 +2261,65 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
         EUCA_FREE(results);
     }
 
+    // Process Node Controller names to populate the ip->hostname 'cache'
+    snprintf(expression, 2048, "/network-data/configuration/property[@name='clusters']/*/property[@name='nodes']/node");
+    rc = evaluate_xpath_element(ctxptr, expression, &results, &max_results);
+    LOGTRACE("Found %d Nodes in the config\n", max_results);
+
+    //
+    // Create a temp list so we can detect if we need to refresh the cached names or not.
+    //
+    gni_hostname_ptr = EUCA_ZALLOC(max_results, sizeof(gni_hostname));
+
+    for (i = 0; i < max_results; i++) {
+	LOGTRACE("after function: %d: %s\n", i, results[i]);
+	{
+	    struct hostent *hent;
+	    struct in_addr addr;
+	    char *tmp_hostname;
+
+	    if ( inet_aton(results[i],&addr) ) {
+		gni_hostname_ptr[i].ip_address.s_addr = addr.s_addr;
+
+		rc = gni_hostnames_get_hostname(host_info,results[i], &tmp_hostname);
+		if (rc) {
+		    hostnames_need_reset = 1;
+		    if ((hent = gethostbyaddr((char *)&(addr.s_addr), sizeof(addr.s_addr), AF_INET))) {
+			LOGTRACE("Found hostname via reverse lookup: %s\n",hent->h_name);
+			snprintf(gni_hostname_ptr[i].hostname,HOSTNAME_SIZE, "%s", hent->h_name);
+		    } else {
+			LOGTRACE("Hostname not found for ip: %s using name: %s\n",results[i],results[i]);
+			snprintf(gni_hostname_ptr[i].hostname,HOSTNAME_SIZE, "%s", results[i]);
+		    }
+		} else {
+		    LOGTRACE("Found cached hostname storing: %s\n", tmp_hostname);
+		    snprintf(gni_hostname_ptr[i].hostname,HOSTNAME_SIZE, "%s", tmp_hostname); // store the name
+		    EUCA_FREE(tmp_hostname);
+		}
+	    }
+	}
+	EUCA_FREE(results[i]);
+    }
+    EUCA_FREE(results);
+
+    //
+    // If we've added an entry that didn't exist previously, we need to set a new
+    // hostname cache and free up the orignal, then re-sort.
+    //
+    if (hostnames_need_reset) {
+        LOGTRACE("Hostname cache reset needed\n");
+
+        EUCA_FREE(host_info->hostnames);
+        host_info->hostnames = gni_hostname_ptr;
+        host_info->max_hostnames = max_results;
+
+        qsort(host_info->hostnames,host_info->max_hostnames, sizeof(gni_hostname),cmpipaddr);
+        hostnames_need_reset = 0;
+    } else {
+        LOGTRACE("No hostname cache change, freeing up temp cache\n");
+        EUCA_FREE(gni_hostname_ptr);
+    }
+
     snprintf(expression, 2048, "/network-data/configuration/property[@name='clusters']/cluster");
     rc = evaluate_xpath_element(ctxptr, expression, &results, &max_results);
     gni->clusters = EUCA_ZALLOC(max_results, sizeof(gni_cluster));
@@ -2352,20 +2424,17 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
                     if (!strcmp(gni->instances[l].name, gni->clusters[j].nodes[k].instance_names[i].name)) {
                         snprintf(gni->instances[l].node, HOSTNAME_LEN, "%s", gni->clusters[j].nodes[k].name);
                         {
-                            struct hostent *hent;
-                            struct in_addr addr;
-                            char *ip = NULL;
+                            char *hostname = NULL;
 
-                            ip = strdup(gni->instances[l].node);
-
-                            if (!inet_aton(ip, &addr)) {
-                                snprintf(gni->instances[l].nodehostname, HOSTNAME_LEN, "%s", ip);
-                            } else if ((hent = gethostbyaddr((char *)&(addr.s_addr), sizeof(addr.s_addr), AF_INET))) {
-                                snprintf(gni->instances[l].nodehostname, HOSTNAME_LEN, "%s", hent->h_name);
+                            rc = gni_hostnames_get_hostname(host_info,gni->instances[l].node, &hostname);
+                            if (rc) {
+                                LOGTRACE("Failed to find cached hostname for IP: %s\n",gni->instances[l].node);
+                                snprintf(gni->instances[l].nodehostname, HOSTNAME_SIZE, "%s", gni->instances[l].node);
                             } else {
-                                snprintf(gni->instances[l].nodehostname, HOSTNAME_LEN, "%s", gni->instances[l].node);
+                                LOGTRACE("Found cached hostname: %s for IP: %s\n",hostname,gni->instances[l].node);
+                                snprintf(gni->instances[l].nodehostname, HOSTNAME_SIZE, "%s", hostname);
+                                EUCA_FREE(hostname);
                             }
-                            EUCA_FREE(ip);
                         }
                     }
                 }
@@ -2521,6 +2590,14 @@ int gni_iterate(globalNetworkInfo * gni, int mode)
 
     if (mode == GNI_ITERATE_PRINT)
         LOGTRACE("instanceDNSDomain: %s\n", gni->instanceDNSDomain);
+
+#ifdef USE_IP_ROUTE_HANDLER
+    if (mode == GNI_ITERATE_PRINT) {
+        strptra = hex2dot(gni->publicGateway);
+        LOGTRACE("publicGateway: %s\n", SP(strptra));
+        EUCA_FREE(strptra);
+    }
+#endif /* USE_IP_ROUTE_HANDLER */
 
     if (mode == GNI_ITERATE_PRINT)
         LOGTRACE("instanceDNSServers: \n");
@@ -3513,4 +3590,74 @@ int gni_secgroup_validate(gni_secgroup * secgroup)
     }
 
     return (0);
+}
+
+gni_hostname_info *gni_init_hostname_info(void)
+{
+    gni_hostname_info *hni = EUCA_ZALLOC(1,sizeof(gni_hostname_info));
+    hni->max_hostnames = 0;
+    return (hni);
+}
+
+int gni_hostnames_print(gni_hostname_info *host_info)
+{
+    int i;
+
+    LOGTRACE("Cached Hostname Info: \n");
+    for (i = 0; i < host_info->max_hostnames; i++) {
+        LOGTRACE("IP Address: %s Hostname: %s\n",inet_ntoa(host_info->hostnames[i].ip_address),host_info->hostnames[i].hostname);
+    }
+    return (0);
+}
+
+int gni_hostnames_free(gni_hostname_info *host_info)
+{
+    if (!host_info) {
+        return (0);
+    }
+
+    EUCA_FREE(host_info->hostnames);
+    EUCA_FREE(host_info);
+    return (0);
+}
+
+int gni_hostnames_get_hostname(gni_hostname_info  *hostinfo, const char *ip_address, char **hostname)
+{
+    struct in_addr addr;
+    gni_hostname key;
+    gni_hostname *bsearch_result;
+
+    if (!hostinfo) {
+        return (1);
+    }
+
+    if (inet_aton(ip_address, &addr)) {
+        key.ip_address.s_addr = addr.s_addr; // search by ip
+        bsearch_result = bsearch(&key, hostinfo->hostnames, hostinfo->max_hostnames,sizeof(gni_hostname), cmpipaddr);
+
+        if (bsearch_result) {
+            *hostname = strdup(bsearch_result->hostname);
+            LOGTRACE("bsearch hit: %s\n",*hostname);
+            return (0);
+        }
+    } else {
+        LOGTRACE("INET_ATON FAILED FOR: %s\n",ip_address); // we were passed a hostname
+    }
+    return (1);
+}
+
+//
+// Used for qsort and bsearch methods against gni_hostname_info
+//
+int cmpipaddr(const void *p1, const void *p2)
+{
+    gni_hostname *hp1 = (gni_hostname *) p1;
+    gni_hostname *hp2 = (gni_hostname *) p2;
+
+    if (hp1->ip_address.s_addr == hp2->ip_address.s_addr)
+        return 0;
+    if (hp1->ip_address.s_addr < hp2->ip_address.s_addr)
+        return -1;
+    else
+        return 1;
 }

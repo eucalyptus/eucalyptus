@@ -1092,13 +1092,13 @@ int ipt_handler_free(ipt_handler * ipth)
 //!
 //! @param[in] ipth pointer to the IP table handler structure
 //!
-//! @return 0 on success or 1 if any failure occured
+//! @return
 //!
 //! @see
 //!
-//! @pre
+//! @pre List of pre-conditions
 //!
-//! @post
+//! @post List of post conditions
 //!
 //! @note
 //!

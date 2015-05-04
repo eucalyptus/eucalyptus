@@ -118,6 +118,7 @@ enum {
     EUCANETD_CVAL_DHCPUSER,
     EUCANETD_CVAL_POLLING_FREQUENCY,
     EUCANETD_CVAL_DISABLE_L2_ISOLATION,
+    EUCANETD_CVAL_NC_PROXY,
     EUCANETD_CVAL_NC_ROUTER,
     EUCANETD_CVAL_NC_ROUTER_IP,
     EUCANETD_CVAL_METADATA_USE_VM_PRIVATE,
@@ -189,6 +190,8 @@ typedef struct eucanetdConfig_t {
 
     in_addr_t localIp;                 //!< Local address to use for this system
     boolean disableTunnel;             //!< Set to FALSE if we need to make use of L2 tunnels (DISABLE_TUNNELING).
+
+    boolean nc_proxy;                //!< Set to TRUE to indicate we're using the NC proxy feature
 
     int debug;
     int flushmode;

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,45 +60,86 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage;
+package com.eucalyptus.blockstorage.async;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.blockstorage.LogicalStorageManager;
+import com.eucalyptus.blockstorage.entities.VolumeInfo;
+import com.eucalyptus.blockstorage.util.BlockStorageUtil;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.storage.common.CheckerTask;
-import com.eucalyptus.system.Threads;
 
-public class StorageCheckerService {
-  private Logger LOG = Logger.getLogger(StorageCheckerService.class);
+/**
+ * Checker task for cleaning volumes marked in failed status
+ * 
+ * @author Swathi Gangisetty
+ *
+ */
+public class FailedVolumeCleaner extends CheckerTask {
+  private static Logger LOG = Logger.getLogger(FailedVolumeCleaner.class);
 
-  private final ScheduledExecutorService exec;
+  private LogicalStorageManager blockManager;
 
-  private ConcurrentHashMap<String, CheckerTask> checkers;
+  public FailedVolumeCleaner(LogicalStorageManager blockManager) {
+    this.name = FailedVolumeCleaner.class.getSimpleName();
+    this.runInterval = 2 * 60; // runs every 2 minutes, make this configurable?
+    this.blockManager = blockManager;
+  }
 
-  public StorageCheckerService() {
-    checkers = new ConcurrentHashMap<String, CheckerTask>();
-    exec = Executors.newSingleThreadScheduledExecutor();
-    exec.scheduleAtFixedRate(new Runnable() {
-      @Override
-      public void run() {
-        for (CheckerTask checker : checkers.values()) {
-          Threads.lookup(Storage.class).submit(checker);
-        }
+  @Override
+  public void run() {
+    try {
+      List<VolumeInfo> volumeInfos = null;
+      try (TransactionResource tr = Entities.transactionFor(VolumeInfo.class)) {
+        volumeInfos = Entities.query(new VolumeInfo(), Boolean.TRUE, BlockStorageUtil.getFailedCriterion(), Collections.EMPTY_MAP);
+        tr.commit();
+      } catch (Exception e) {
+        LOG.warn("Failed to query database for failed volumes", e);
+        return;
       }
-    }, 1, 1, TimeUnit.MINUTES);
 
+      if (volumeInfos != null && !volumeInfos.isEmpty()) {
+        for (VolumeInfo volumeInfo : volumeInfos) {
+          cleanVolume(volumeInfo);
+        }
+      } else {
+        LOG.trace("No failed volumes to clean");
+      }
+    } catch (Exception e) { // could catch InterruptedException
+      LOG.warn("Unable to clean failed volumes", e);
+      return;
+    }
   }
 
-  public void add(CheckerTask checker) {
-    checkers.putIfAbsent(checker.getName(), checker);
-  }
+  private void cleanVolume(VolumeInfo volumeInfo) {
+    String volumeId = volumeInfo.getVolumeId();
+    LOG.debug("Cleaning failed volume " + volumeInfo.getVolumeId());
 
-  public void shutdown() {
-    exec.shutdownNow();
-    checkers.clear();
+    try {
+      blockManager.cleanVolume(volumeId);
+    } catch (Exception e) {
+      LOG.debug("Attempt to clean volume " + volumeId + " on storage backend failed because: " + e.getMessage());
+    }
+
+    // Update deleted time
+    try (TransactionResource tr = Entities.transactionFor(VolumeInfo.class)) {
+      try {
+        VolumeInfo lookup = Entities.uniqueResult(volumeInfo);
+        if (lookup.getDeletionTime() == null) {
+          lookup.setDeletionTime(new Date());
+        }
+        tr.commit();
+      } catch (TransactionException | NoSuchElementException e) {
+        LOG.debug("Failed to update deletion time for " + volumeId, e);
+      }
+    }
   }
 }

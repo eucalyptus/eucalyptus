@@ -33,6 +33,7 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 
+import com.eucalyptus.blockstorage.async.VolumeStateChecker;
 import com.eucalyptus.blockstorage.entities.VolumeInfo;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.Entities;

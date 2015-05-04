@@ -39,4 +39,10 @@ public interface CloudMetadataLimitedType extends LimitedType {
   public interface DiskMetadata extends CloudMetadataLimitedType {
     public static String POLICY_RESOURCE_TYPE = "disk";
   }
+
+  @PolicyResourceType( VmInstanceActiveMetadata.POLICY_RESOURCE_TYPE )
+  public interface VmInstanceActiveMetadata extends CloudMetadataLimitedType {
+    public static String POLICY_RESOURCE_TYPE = CloudMetadata.VmInstanceMetadata.POLICY_RESOURCE_TYPE;
+  }
+
 }
