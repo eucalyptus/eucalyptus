@@ -19,9 +19,9 @@
  ************************************************************************/
 package com.eucalyptus.blockstorage.util;
 
+import org.hibernate.criterion.Criterion;
+
 import com.eucalyptus.auth.principal.BaseRole;
-import com.eucalyptus.auth.principal.EuareRole;
-import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -49,4 +49,7 @@ public interface BlockStorageUtilSvc {
 
   public BaseRole checkAndConfigureBlockStorageAccount() throws EucalyptusCloudException;
 
+  public Criterion getFailedCriterion();
+
+  public Criterion getExpriedCriterion(Integer deletedResourceExpiration);
 }

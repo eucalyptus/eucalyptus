@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,46 +60,58 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage;
+package com.eucalyptus.blockstorage.threadpool;
 
-import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.blockstorage.entities.VolumeInfo;
-import com.eucalyptus.blockstorage.util.StorageProperties;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.storage.common.CheckerTask;
-import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.blockstorage.Storage;
+import com.eucalyptus.blockstorage.async.VolumeCreator;
+import com.eucalyptus.blockstorage.exceptions.ThreadPoolNotInitializedException;
+import com.eucalyptus.system.Threads;
 
-public class VolumeStateChecker extends CheckerTask {
-  private static Logger LOG = Logger.getLogger(VolumeStateChecker.class);
+public class VolumeThreadPool {
+  private static Logger LOG = Logger.getLogger(VolumeThreadPool.class);
+  private static ExecutorService pool;
+  private static final int NUM_THREADS = 10; // TODO make this configurable?
 
-  LogicalStorageManager blockManager;
+  private static final ReentrantLock RLOCK = new ReentrantLock();
 
-  public VolumeStateChecker(LogicalStorageManager blockManager) {
-    this.name = "VolumeStatusChecker";
-    this.blockManager = blockManager;
+  private VolumeThreadPool() {}
+
+  public static void initialize() {
+    RLOCK.lock();
+    try {
+      shutdown();
+      LOG.info("Initializing SC thread pool catering to volume creation");
+      pool = Executors.newFixedThreadPool(NUM_THREADS, Threads.lookup(Storage.class, VolumeCreator.class).limitTo(NUM_THREADS));
+    } finally {
+      RLOCK.unlock();
+    }
   }
 
-  @Override
-  public void run() {
-    try (TransactionResource tran = Entities.transactionFor(VolumeInfo.class)) {
-      VolumeInfo volumeInfo = new VolumeInfo();
-      volumeInfo.setStatus(StorageProperties.Status.available.toString());
-      List<VolumeInfo> volumes = Entities.query(volumeInfo);
-      for (VolumeInfo volume : volumes) {
-        try {
-          blockManager.checkVolume(volume.getVolumeId());
-        } catch (EucalyptusCloudException ex) {
-          // volume.setStatus(StorageProperties.Status.error.toString());
-          LOG.error(ex);
-        }
+  public static void add(VolumeCreator volumeCreator) throws ThreadPoolNotInitializedException {
+    if (pool != null && !pool.isShutdown()) {
+      pool.execute(volumeCreator);
+    } else {
+      LOG.warn("SC thread pool catering to volume creation is either not initalized or shut down");
+      throw new ThreadPoolNotInitializedException("SC thread pool catering to volume creation is either not initalized or shut down");
+    }
+  }
+
+  public static void shutdown() {
+    RLOCK.lock();
+    try {
+      if (pool != null) {
+        LOG.info("Shutting down SC thread pool catering to volume creation");
+        pool.shutdownNow();
+        pool = null;
       }
-      tran.commit();
-    } catch (Exception ex) {
-      LOG.error(ex, ex);
+    } finally {
+      RLOCK.unlock();
     }
   }
 }

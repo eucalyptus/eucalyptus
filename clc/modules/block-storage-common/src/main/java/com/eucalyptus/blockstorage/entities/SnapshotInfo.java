@@ -123,6 +123,8 @@ public class SnapshotInfo extends AbstractPersistent {
   // Location of the snapshot in URI format storagebackend://bucket#key
   @Column(name = "snapshot_location")
   private String snapshotLocation;
+  @Column(name = "deletion_time")
+  private Date deletionTime;
 
   public SnapshotInfo() {
     this.scName = StorageProperties.NAME;
@@ -219,6 +221,14 @@ public class SnapshotInfo extends AbstractPersistent {
 
   public void setSnapshotLocation(String snapshotLocation) {
     this.snapshotLocation = snapshotLocation;
+  }
+
+  public Date getDeletionTime() {
+    return deletionTime;
+  }
+
+  public void setDeletionTime(Date deletionTime) {
+    this.deletionTime = deletionTime;
   }
 
   /**

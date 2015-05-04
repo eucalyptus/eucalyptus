@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,30 +60,26 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.storage.common;
+package com.eucalyptus.blockstorage.exceptions;
 
-import java.util.concurrent.TimeUnit;
+import com.eucalyptus.util.EucalyptusCloudException;
 
-public abstract class CheckerTask implements Runnable {
-  protected String name;
-  protected Integer runInterval = 60; // time interval between executions
-  protected TimeUnit runIntervalUnit = TimeUnit.SECONDS; // unit of time interval
-  protected Boolean isFixedDelay = Boolean.TRUE; // true means run with fixed delay between executions, false means run at fixed rate regardless of
-                                                 // time taken to execute
+@SuppressWarnings("serial")
+public class ThreadPoolNotInitializedException extends EucalyptusCloudException {
 
-  public String getName() {
-    return name;
+  public ThreadPoolNotInitializedException() {
+    super("Thread pool not initialized or shutdown");
   }
 
-  public Integer getRunInterval() {
-    return runInterval;
+  public ThreadPoolNotInitializedException(String message) {
+    super(message);
   }
 
-  public TimeUnit getRunIntervalUnit() {
-    return runIntervalUnit;
+  public ThreadPoolNotInitializedException(Throwable ex) {
+    super("Thread pool not initialized or shutdown", ex);
   }
 
-  public Boolean getIsFixedDelay() {
-    return isFixedDelay;
+  public ThreadPoolNotInitializedException(String message, Throwable ex) {
+    super(message, ex);
   }
 }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,7 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage;
+package com.eucalyptus.blockstorage.async;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -88,12 +88,13 @@ import com.google.common.collect.Maps;
  * 
  * @author Swathi Gangisetty
  */
-public class SnapshotUploadCheckerTask extends CheckerTask {
+public class SnapshotTransferCleaner extends CheckerTask {
 
-  private Logger LOG = Logger.getLogger(SnapshotUploadCheckerTask.class);
+  private static Logger LOG = Logger.getLogger(SnapshotTransferCleaner.class);
 
-  public SnapshotUploadCheckerTask() {
-    this.name = SnapshotUploadCheckerTask.class.getName();
+  public SnapshotTransferCleaner() {
+    this.name = SnapshotTransferCleaner.class.getSimpleName();
+    this.runInterval = 2 * 60; // runs every 2 minutes, make this configurable?
   }
 
   @Override

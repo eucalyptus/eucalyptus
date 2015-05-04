@@ -210,13 +210,10 @@ public class SANManager implements LogicalStorageManager {
     try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
       // make sure it exists
       SANVolumeInfo volumeInfo = Entities.uniqueResult(new SANVolumeInfo(snapshotId));
-      if (volumeInfo == null || StringUtils.isBlank(volumeInfo.getSanVolumeId())) {
-        throw new EucalyptusCloudException(snapshotId + ": Backend ID not found");
-      }
       sanSnapshotId = volumeInfo.getSanVolumeId();
       tran.commit();
-    } catch (TransactionException | NoSuchElementException | EucalyptusCloudException ex) {
-      LOG.debug(snapshotId + ": Snapshot not found", ex);
+    } catch (TransactionException | NoSuchElementException ex) {
+      LOG.debug("Blockstorage backend record for " + snapshotId + " not found, skipping clean up");
       return;
     }
 
@@ -661,7 +658,9 @@ public class SANManager implements LogicalStorageManager {
       String sanVolumeId = snapInfo.getSanVolumeId();
       tran.commit();
       connectionManager.disconnectTarget(sanVolumeId, iqn);
-    } catch (TransactionException | NoSuchElementException ex) {
+    } catch (NoSuchElementException e) {
+      LOG.debug("Blockstorage backend record for " + snapshotId + " not found, skipping finish up");
+    } catch (TransactionException ex) {
       LOG.error(ex);
       throw new EucalyptusCloudException("Unable to finalize snapshot: " + snapshotId);
     }

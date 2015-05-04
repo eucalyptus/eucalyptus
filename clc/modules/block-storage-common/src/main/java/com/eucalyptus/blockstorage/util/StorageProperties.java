@@ -125,8 +125,6 @@ public class StorageProperties {
   public static final String S3_SNAPSHOT_OBJECT_ACCESS_POLICY = "{\"Statement\":[" + "{" + "\"Effect\":\"Allow\"," + "\"Action\": [\"s3:*\"],"
       + "\"Resource\": \"arn:aws:s3:::*/*\"" + "}" + "]}";
 
-  public static final Integer DELETED_VOLUME_EXPIRATION_TIME = 24;// hours
-
   /**
    * <p>
    * Perl connection script returns xml output for libvirt usage. Use this pattern for parsing the block device name from the output.

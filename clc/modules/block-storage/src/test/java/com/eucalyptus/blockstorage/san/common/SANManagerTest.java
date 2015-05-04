@@ -407,7 +407,7 @@ public class SANManagerTest {
 
   }
 
-  @Test(expected = EucalyptusCloudException.class)
+  @Test
   public void finishVolume_NoVolumeTest() throws Exception {
     final SANProvider sanProvider = context.mock(SANProvider.class);
     SANManager test = new SANManager(sanProvider);

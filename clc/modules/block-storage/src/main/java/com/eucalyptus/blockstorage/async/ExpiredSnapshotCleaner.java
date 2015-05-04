@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,45 +60,53 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage;
+package com.eucalyptus.blockstorage.async;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.Collections;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.blockstorage.entities.SnapshotInfo;
+import com.eucalyptus.blockstorage.entities.StorageInfo;
+import com.eucalyptus.blockstorage.util.BlockStorageUtil;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.storage.common.CheckerTask;
-import com.eucalyptus.system.Threads;
 
-public class StorageCheckerService {
-  private Logger LOG = Logger.getLogger(StorageCheckerService.class);
+/**
+ * Checker task for removing metadata of expired snapshots
+ * 
+ * @author Swathi Gangisetty
+ *
+ */
+public class ExpiredSnapshotCleaner extends CheckerTask {
 
-  private final ScheduledExecutorService exec;
+  private static Logger LOG = Logger.getLogger(ExpiredSnapshotCleaner.class);
 
-  private ConcurrentHashMap<String, CheckerTask> checkers;
+  public ExpiredSnapshotCleaner() {
+    this.name = ExpiredSnapshotCleaner.class.getSimpleName();
+    this.runInterval = 2 * 60; // runs every 2 minutes, make this configurable?
+  }
 
-  public StorageCheckerService() {
-    checkers = new ConcurrentHashMap<String, CheckerTask>();
-    exec = Executors.newSingleThreadScheduledExecutor();
-    exec.scheduleAtFixedRate(new Runnable() {
-      @Override
-      public void run() {
-        for (CheckerTask checker : checkers.values()) {
-          Threads.lookup(Storage.class).submit(checker);
+  @Override
+  public void run() {
+    try (TransactionResource tr = Entities.transactionFor(SnapshotInfo.class)) {
+      List<SnapshotInfo> snapshotInfos =
+          Entities.query(new SnapshotInfo(), Boolean.FALSE,
+              BlockStorageUtil.getExpriedCriterion(StorageInfo.getStorageInfo().getSnapExpiration()), Collections.EMPTY_MAP);
+      if (snapshotInfos != null && !snapshotInfos.isEmpty()) {
+        for (SnapshotInfo snapshotInfo : snapshotInfos) {
+          LOG.debug("Deleting metadata for expired snapshot " + snapshotInfo.getSnapshotId());
+          Entities.delete(snapshotInfo);
         }
+      } else {
+        LOG.trace("No expired snapshots found to delete");
       }
-    }, 1, 1, TimeUnit.MINUTES);
-
-  }
-
-  public void add(CheckerTask checker) {
-    checkers.putIfAbsent(checker.getName(), checker);
-  }
-
-  public void shutdown() {
-    exec.shutdownNow();
-    checkers.clear();
+      tr.commit();
+    } catch (Exception e) {
+      LOG.warn("Unable to remove database records for expired snapshots", e);
+      return;
+    }
   }
 }

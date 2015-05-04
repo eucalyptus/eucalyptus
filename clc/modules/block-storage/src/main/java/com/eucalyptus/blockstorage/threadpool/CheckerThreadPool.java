@@ -60,30 +60,87 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.storage.common;
+package com.eucalyptus.blockstorage.threadpool;
 
-import java.util.concurrent.TimeUnit;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.locks.ReentrantLock;
 
-public abstract class CheckerTask implements Runnable {
-  protected String name;
-  protected Integer runInterval = 60; // time interval between executions
-  protected TimeUnit runIntervalUnit = TimeUnit.SECONDS; // unit of time interval
-  protected Boolean isFixedDelay = Boolean.TRUE; // true means run with fixed delay between executions, false means run at fixed rate regardless of
-                                                 // time taken to execute
+import org.apache.log4j.Logger;
 
-  public String getName() {
-    return name;
+import com.eucalyptus.blockstorage.Storage;
+import com.eucalyptus.blockstorage.exceptions.ThreadPoolNotInitializedException;
+import com.eucalyptus.storage.common.CheckerTask;
+import com.eucalyptus.system.Threads;
+
+public class CheckerThreadPool {
+  private static Logger LOG = Logger.getLogger(CheckerThreadPool.class);
+  private static ScheduledExecutorService executor;
+  private static ConcurrentHashMap<String, CheckerTask> checkers;
+  private static Map<String, ScheduledFuture<?>> futures;
+
+  private static final ReentrantLock RLOCK = new ReentrantLock();
+
+  private CheckerThreadPool() {}
+
+  public static void initialize() { // synchronizing at the class level
+    RLOCK.lock();
+    try {
+      shutdown();
+      LOG.info("Initializing SC thread pool catering to blockstorage checker service");
+      executor = Executors.newSingleThreadScheduledExecutor(Threads.lookup(Storage.class, CheckerThreadPool.class).limitTo(1));
+      checkers = new ConcurrentHashMap<String, CheckerTask>();
+      futures = new HashMap<String, ScheduledFuture<?>>();
+    } finally {
+      RLOCK.unlock();
+    }
   }
 
-  public Integer getRunInterval() {
-    return runInterval;
+  public static void add(CheckerTask checker) throws ThreadPoolNotInitializedException {
+    if (executor != null && !executor.isShutdown()) {
+      if (checkers.putIfAbsent(checker.getName(), checker) == null) {
+        LOG.info("Adding task " + checker.getName() + " to blockstorage checker service");
+        ScheduledFuture<?> future = null;
+        if (checker.getIsFixedDelay()) {
+          future = executor.scheduleWithFixedDelay(checker, checker.getRunInterval(), checker.getRunInterval(), checker.getRunIntervalUnit());
+        } else {
+          future = executor.scheduleAtFixedRate(checker, checker.getRunInterval(), checker.getRunInterval(), checker.getRunIntervalUnit());
+        }
+        futures.put(checker.getName(), future);
+      } else {
+        LOG.info("Checker " + checker.getName() + " has already been added to Storage Checker Service");
+      }
+    } else {
+      LOG.warn("SC thread pool catering to blockstorage checker service is either not initalized or shut down");
+      throw new ThreadPoolNotInitializedException("SC thread pool catering to blockstorage checker service is either not initalized or shut down");
+    }
   }
 
-  public TimeUnit getRunIntervalUnit() {
-    return runIntervalUnit;
-  }
-
-  public Boolean getIsFixedDelay() {
-    return isFixedDelay;
+  public static void shutdown() {
+    RLOCK.lock();
+    try {
+      if (checkers != null) {
+        checkers.clear();
+        checkers = null;
+      }
+      if (futures != null) {
+        for (ScheduledFuture<?> future : futures.values()) {
+          future.cancel(true);
+        }
+        futures.clear();
+        futures = null;
+      }
+      if (executor != null) {
+        LOG.info("Shutting down SC thread pool catering to blockstorage checker service");
+        executor.shutdownNow();
+        executor = null;
+      }
+    } finally {
+      RLOCK.unlock();
+    }
   }
 }

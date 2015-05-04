@@ -60,30 +60,47 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.storage.common;
+package com.eucalyptus.blockstorage.async;
 
-import java.util.concurrent.TimeUnit;
+import java.util.List;
 
-public abstract class CheckerTask implements Runnable {
-  protected String name;
-  protected Integer runInterval = 60; // time interval between executions
-  protected TimeUnit runIntervalUnit = TimeUnit.SECONDS; // unit of time interval
-  protected Boolean isFixedDelay = Boolean.TRUE; // true means run with fixed delay between executions, false means run at fixed rate regardless of
-                                                 // time taken to execute
+import org.apache.log4j.Logger;
 
-  public String getName() {
-    return name;
+import com.eucalyptus.blockstorage.LogicalStorageManager;
+import com.eucalyptus.blockstorage.entities.VolumeInfo;
+import com.eucalyptus.blockstorage.util.StorageProperties;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.storage.common.CheckerTask;
+import com.eucalyptus.util.EucalyptusCloudException;
+
+public class VolumeStateChecker extends CheckerTask {
+  private static Logger LOG = Logger.getLogger(VolumeStateChecker.class);
+
+  LogicalStorageManager blockManager;
+
+  public VolumeStateChecker(LogicalStorageManager blockManager) {
+    this.name = VolumeStateChecker.class.getSimpleName();
+    this.blockManager = blockManager;
   }
 
-  public Integer getRunInterval() {
-    return runInterval;
-  }
-
-  public TimeUnit getRunIntervalUnit() {
-    return runIntervalUnit;
-  }
-
-  public Boolean getIsFixedDelay() {
-    return isFixedDelay;
+  @Override
+  public void run() {
+    try (TransactionResource tran = Entities.transactionFor(VolumeInfo.class)) {
+      VolumeInfo volumeInfo = new VolumeInfo();
+      volumeInfo.setStatus(StorageProperties.Status.available.toString());
+      List<VolumeInfo> volumes = Entities.query(volumeInfo);
+      for (VolumeInfo volume : volumes) {
+        try {
+          blockManager.checkVolume(volume.getVolumeId());
+        } catch (EucalyptusCloudException ex) {
+          // volume.setStatus(StorageProperties.Status.error.toString());
+          LOG.error(ex);
+        }
+      }
+      tran.commit();
+    } catch (Exception ex) {
+      LOG.warn("Unable to run VolumeStateChecker", ex);
+    }
   }
 }

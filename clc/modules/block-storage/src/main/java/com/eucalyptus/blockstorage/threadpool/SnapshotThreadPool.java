@@ -60,30 +60,58 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.storage.common;
+package com.eucalyptus.blockstorage.threadpool;
 
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.locks.ReentrantLock;
 
-public abstract class CheckerTask implements Runnable {
-  protected String name;
-  protected Integer runInterval = 60; // time interval between executions
-  protected TimeUnit runIntervalUnit = TimeUnit.SECONDS; // unit of time interval
-  protected Boolean isFixedDelay = Boolean.TRUE; // true means run with fixed delay between executions, false means run at fixed rate regardless of
-                                                 // time taken to execute
+import org.apache.log4j.Logger;
 
-  public String getName() {
-    return name;
+import com.eucalyptus.blockstorage.Storage;
+import com.eucalyptus.blockstorage.async.SnapshotCreator;
+import com.eucalyptus.blockstorage.exceptions.ThreadPoolNotInitializedException;
+import com.eucalyptus.system.Threads;
+
+public class SnapshotThreadPool {
+  private static Logger LOG = Logger.getLogger(SnapshotThreadPool.class);
+  private static ExecutorService pool;
+  private static final int NUM_THREADS = 3; // TODO get this from configuration
+
+  private static final ReentrantLock RLOCK = new ReentrantLock();
+
+  private SnapshotThreadPool() {}
+
+  public static void initialize() {
+    RLOCK.lock();
+    try {
+      shutdown();
+      LOG.info("Initializing SC thread pool catering to snapshot creation");
+      pool = Executors.newFixedThreadPool(NUM_THREADS, Threads.lookup(Storage.class, SnapshotCreator.class).limitTo(NUM_THREADS));
+    } finally {
+      RLOCK.unlock();
+    }
   }
 
-  public Integer getRunInterval() {
-    return runInterval;
+  public static void add(SnapshotCreator task) throws ThreadPoolNotInitializedException {
+    if (pool != null && !pool.isShutdown()) {
+      pool.execute(task);
+    } else {
+      LOG.warn("SC thread pool catering to snapshot creation is either not initalized or shut down");
+      throw new ThreadPoolNotInitializedException("SC thread pool catering to snapshot creation is either not initalized or shut down");
+    }
   }
 
-  public TimeUnit getRunIntervalUnit() {
-    return runIntervalUnit;
-  }
-
-  public Boolean getIsFixedDelay() {
-    return isFixedDelay;
+  public static void shutdown() {
+    RLOCK.lock();
+    try {
+      if (pool != null) {
+        LOG.info("Shutting down SC thread pool catering to snapshot creation");
+        pool.shutdownNow();
+        pool = null;
+      }
+    } finally {
+      RLOCK.unlock();
+    }
   }
 }
