@@ -19,13 +19,14 @@
  ************************************************************************/
 package com.eucalyptus.cluster
 
+import com.eucalyptus.auth.RegionService
 import org.junit.Test
 import com.eucalyptus.tags.FilterSupportTest
 
 /**
  * Unit tests for snapshot filter support
  */
-class RegionFilterSupportTest extends FilterSupportTest.InstanceTestSupport<ClusterEndpoint.Region> {
+class RegionFilterSupportTest extends FilterSupportTest.InstanceTestSupport<RegionService> {
 
   @Test
   void testFilteringSupport() {
@@ -34,22 +35,20 @@ class RegionFilterSupportTest extends FilterSupportTest.InstanceTestSupport<Clus
 
   @Test
   void testPredicateFilters() {
-    assertMatch( true, "region-name", "eucalyptus", new ClusterEndpoint.Region( "eucalyptus", "http://eucalyptus.com" ) )
-    assertMatch( false, "region-name", "eucalyptus", new ClusterEndpoint.Region( "eucalyptus-west", "http://eucalyptus.com" ) )
-    assertMatch( false, "region-name", "eucalyptus", new ClusterEndpoint.Region( null, null ) )
+    assertMatch( true, "region-name", "eucalyptus", new RegionService( "eucalyptus", "ec2", "http://eucalyptus.com" ) )
+    assertMatch( false, "region-name", "eucalyptus", new RegionService( "eucalyptus-west", "ec2", "http://eucalyptus.com" ) )
 
-    assertMatch( true, "endpoint", "http://eucalyptus.com", new ClusterEndpoint.Region( "eucalyptus", "http://eucalyptus.com" ) )
-    assertMatch( false, "endpoint", "http://eucalyptus.com", new ClusterEndpoint.Region( "eucalyptus", "http://eucalyptus.com/foo" ) )
-    assertMatch( false, "endpoint", "http://eucalyptus.com", new ClusterEndpoint.Region( null, null ) )
+    assertMatch( true, "endpoint", "http://eucalyptus.com", new RegionService( "eucalyptus", "ec2", "http://eucalyptus.com" ) )
+    assertMatch( false, "endpoint", "http://eucalyptus.com", new RegionService( "eucalyptus", "ec2", "http://eucalyptus.com/foo" ) )
   }
 
   @Test
   void testWildcardPredicateFilter() {
-    assertMatch( true, "region-name", "eu*", new ClusterEndpoint.Region( "eucalyptus", "http://eucalyptus.com" ) )
-    assertMatch( false, "region-name", "eur*", new ClusterEndpoint.Region( "eucalyptus", "http://eucalyptus.com" ) )
+    assertMatch( true, "region-name", "eu*", new RegionService( "eucalyptus", "ec2", "http://eucalyptus.com" ) )
+    assertMatch( false, "region-name", "eur*", new RegionService( "eucalyptus", "ec2", "http://eucalyptus.com" ) )
   }
 
-  void assertMatch( final boolean expectedMatch, final String filterKey, final String filterValue, final ClusterEndpoint.Region target ) {
+  void assertMatch( final boolean expectedMatch, final String filterKey, final String filterValue, final RegionService target ) {
     super.assertMatch( new ClusterEndpoint.RegionFilterSupport(), expectedMatch, filterKey, filterValue, target )
   }
 

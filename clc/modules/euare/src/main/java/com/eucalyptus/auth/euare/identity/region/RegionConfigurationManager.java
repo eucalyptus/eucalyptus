@@ -19,22 +19,33 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare.identity.region;
 
+import static com.eucalyptus.auth.RegionService.regionName;
+import static com.eucalyptus.auth.RegionService.serviceType;
 import static com.eucalyptus.auth.euare.identity.region.RegionInfo.RegionService;
 import static com.eucalyptus.util.CollectionUtils.propertyPredicate;
-import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import com.eucalyptus.auth.*;
 import com.eucalyptus.auth.util.Identifiers;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.ServiceUris;
+import com.eucalyptus.component.groups.ApiEndpointServicesGroup;
 import com.eucalyptus.crypto.Digest;
-import com.eucalyptus.crypto.util.PEMFiles;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
@@ -47,6 +58,9 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.google.common.io.BaseEncoding;
 
 /**
@@ -54,7 +68,7 @@ import com.google.common.io.BaseEncoding;
  */
 public class RegionConfigurationManager {
 
-  private final Supplier<Optional<RegionConfiguration>> regionConfigurationSupplier =
+  private static final Supplier<Optional<RegionConfiguration>> regionConfigurationSupplier =
       Suppliers.memoizeWithExpiration( new Supplier<Optional<RegionConfiguration>>( ) {
         @Override
         public Optional<RegionConfiguration> get( ) {
@@ -62,7 +76,7 @@ public class RegionConfigurationManager {
         }
       }, 1, TimeUnit.MINUTES );
 
-  private final Cache<String,byte[]> certificateDigestCache = CacheBuilder
+  private static final Cache<String,byte[]> certificateDigestCache = CacheBuilder
       .<String,X509Certificate>newBuilder( )
       .expireAfterWrite( 1, TimeUnit.HOURS )
       .build( );
@@ -199,7 +213,7 @@ public class RegionConfigurationManager {
     @Nonnull
     @Override
     public Set<Integer> apply(final RegionInfo region ) {
-      return region.getPartitions( );
+      return region.getPartitions();
     }
   }
 
@@ -228,7 +242,27 @@ public class RegionConfigurationManager {
     public RegionService apply( @Nullable final Service service ) {
       return service == null ?
           null :
-          new RegionService( service.getType( ), service.getEndpoints( ) );
+          new RegionService( service.getType(), service.getEndpoints() );
+    }
+  }
+
+  private enum RegionInfoToRegionServiceTransform implements NonNullFunction<RegionInfo, Iterable<com.eucalyptus.auth.RegionService>> {
+    INSTANCE;
+
+    @Nonnull
+    @Override
+    public Iterable<com.eucalyptus.auth.RegionService> apply( final RegionInfo region ) {
+      final Collection<com.eucalyptus.auth.RegionService> services = Lists.newArrayList( );
+      for ( final RegionService service : region.getServices( ) ) {
+        for ( final String endpoint : service.getEndpoints( ) ) {
+          services.add( new com.eucalyptus.auth.RegionService(
+            region.getName( ),
+            service.getType( ),
+            endpoint
+          ) );
+        }
+      }
+      return services;
     }
   }
 
@@ -249,6 +283,60 @@ public class RegionConfigurationManager {
           Iterables.concat(
               regionConfigurationManager.getRegionInfo( ).transform( RegionInfoPartitionsTransform.INSTANCE ).asSet( ) ),
           PartitionFunctions.ACCOUNT_NUMBER );
+    }
+  }
+
+  public static class ConfiguredRegionProvider implements Regions.RegionProvider {
+    private final RegionConfigurationManager regionConfigurationManager = new RegionConfigurationManager( );
+    private final Supplier<RegionInfo> generatedRegionInfo = regionGeneratingSupplier( );
+
+    @Override
+    public List<com.eucalyptus.auth.RegionService> getRegionServicesByType( final String serviceType ) {
+      final Optional<RegionInfo> configuredRegionInfo = regionConfigurationManager.getRegionInfo( );
+      final RegionInfo localRegionInfo = configuredRegionInfo.or( generatedRegionInfo );
+      final Ordering<com.eucalyptus.auth.RegionService> ordering =
+          Ordering.natural().onResultOf( regionName( ) ).compound( Ordering.natural( ).onResultOf( serviceType( ) ) );
+      final NonNullFunction<RegionInfo, Iterable<com.eucalyptus.auth.RegionService>> transformer =
+          RegionInfoToRegionServiceTransform.INSTANCE;
+      final Set<com.eucalyptus.auth.RegionService> services = Sets.newTreeSet( ordering );
+      Iterables.addAll( services, transformer.apply( localRegionInfo ) );
+      Iterables.addAll( services, Iterables.concat(
+          Iterables.transform( regionConfigurationManager.getRegionInfos( ), transformer ) ) );
+      return Lists.newArrayList( Iterables.filter(
+          services,
+          CollectionUtils.propertyPredicate( serviceType, serviceType( ) ) ) );
+    }
+
+    private static Supplier<RegionInfo> regionGeneratingSupplier( ) {
+      return new Supplier<RegionInfo>( ) {
+        @Override
+        public RegionInfo get( ) {
+          return new RegionInfo(
+              RegionConfigurations.getRegionName( ).or( "eucalyptus" ),
+              Collections.singleton( 0 ),
+              Lists.newArrayList( Optional.presentInstances( Iterables.transform(
+                  Iterables.filter( ComponentIds.list( ), ComponentIds.lookup( ApiEndpointServicesGroup.class ) ),
+                  ComponentIdToRegionServiceTransform.INSTANCE ) ) )
+          );
+        }
+      };
+    }
+
+    private enum ComponentIdToRegionServiceTransform implements NonNullFunction<ComponentId,Optional<RegionService>> {
+      INSTANCE;
+
+      @Nonnull
+      @Override
+      public Optional<RegionService> apply( final ComponentId componentId ) {
+        final Iterable<ServiceConfiguration> serviceConfigurations = Components.lookup( componentId ).services( );
+        return serviceConfigurations == null || Iterables.isEmpty( serviceConfigurations ) ?
+            Optional.<RegionService>absent( ) :
+            Optional.of( new RegionService(
+                componentId.name( ),
+                Sets.newTreeSet( Iterables.transform(
+                    serviceConfigurations,
+                    ServiceConfigurations.remotePublicify( ) ) ) ) );
+      }
     }
   }
 }

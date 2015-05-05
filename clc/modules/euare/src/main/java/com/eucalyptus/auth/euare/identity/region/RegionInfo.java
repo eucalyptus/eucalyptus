@@ -28,12 +28,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import com.eucalyptus.auth.api.IdentityProvider;
-import com.eucalyptus.auth.euare.RemoteIdentityProvider;
 import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.util.Parameters;
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 

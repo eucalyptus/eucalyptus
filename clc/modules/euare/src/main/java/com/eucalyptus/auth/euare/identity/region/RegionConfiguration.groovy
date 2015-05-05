@@ -19,8 +19,12 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare.identity.region
 
+import com.eucalyptus.component.ComponentIds
+import com.eucalyptus.component.groups.ApiEndpointServicesGroup
 import com.google.common.base.CaseFormat
+import com.google.common.base.Joiner
 import com.google.common.base.Strings
+import com.google.common.collect.Iterables
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -245,7 +249,7 @@ class IdentifierPartitionValidator extends TypedValidator<Integer> {
 @Canonical
 @PackageScope
 class ServiceValidator extends TypedValidator<Service> {
-  public static final Pattern SERVICE_TYPE_PATTERN = Pattern.compile( 'identity' )
+  public static final Pattern SERVICE_TYPE_PATTERN = Pattern.compile( '[a-z][0-9a-z-]{0,62}' );
   Errors errors
 
   @Override
@@ -270,11 +274,12 @@ class EndpointValidator extends TypedValidator<String> {
   void validate( final String endpoint ) {
     try {
       URI endpointUri = new URI( endpoint )
-      if ( !endpointUri.absolute || !endpointUri.scheme.equalsIgnoreCase( 'https' ) ) {
-        errors.reject( "property.invalid.endpoint", [pathTranslate(errors.nestedPath)] as Object[], 'Invalid service endpoint (e.g. https://...)\"{0}\": \"{1}\"' )
+      if ( !endpointUri.absolute ||
+          ( !endpointUri.scheme.equalsIgnoreCase( 'https' ) && !endpointUri.scheme.equalsIgnoreCase( 'http' ) ) ) {
+        errors.reject( "property.invalid.endpoint", [pathTranslate(errors.nestedPath), endpoint] as Object[], 'Invalid service endpoint (e.g. https://...)\"{0}\": \"{1}\"' )
       }
     } catch ( e ) {
-      errors.reject( "property.invalid.endpoint", [pathTranslate(errors.nestedPath)] as Object[], 'Invalid service endpoint (e.g. https://...)\"{0}\": \"{1}\"' )
+      errors.reject( "property.invalid.endpoint", [pathTranslate(errors.nestedPath), endpoint] as Object[], 'Invalid service endpoint (e.g. https://...)\"{0}\": \"{1}\"' )
     }
   }
 }

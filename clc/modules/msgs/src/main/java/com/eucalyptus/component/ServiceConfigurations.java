@@ -70,6 +70,8 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 
@@ -78,6 +80,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.CollectionUtils;
+import com.eucalyptus.util.NonNullFunction;
 import com.google.common.base.*;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Hosts;
@@ -378,7 +381,7 @@ public class ServiceConfigurations {
       return result;
     }
   }
-  
+
   public static ServiceConfiguration createEphemeral( final ComponentId compId, final String partition, final String name, final URI remoteUri ) {
     return new EphemeralConfiguration( compId, partition, name, remoteUri );
   }
@@ -552,7 +555,21 @@ public class ServiceConfigurations {
       }
     };
   }
-  
+
+  enum ServiceConfigurationToPublicEndpoint implements NonNullFunction<ServiceConfiguration,String> {
+    INSTANCE;
+
+    @Nonnull
+    @Override
+    public String apply( final ServiceConfiguration serviceConfiguration ) {
+      return ServiceUris.remotePublicify( serviceConfiguration ).toASCIIString( );
+    }
+  }
+
+  public static NonNullFunction<ServiceConfiguration,String> remotePublicify( ) {
+    return ServiceConfigurationToPublicEndpoint.INSTANCE;
+  }
+
   @TypeMapper
   public enum CheckExceptionRecordMapper implements Function<CheckException, ServiceStatusDetail> {
     INSTANCE;
