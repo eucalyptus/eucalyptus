@@ -140,6 +140,6 @@ class RegionConfigurationTest {
       throw Exceptions.toUndeclared( e );
     }
 
-    RegionConfigurations.parse( String.format( config, 'http://identity.example.com:8773/services/Identity' ) )  // should fail due to http scheme
+    RegionConfigurations.parse( String.format( config, 'ftp://identity.example.com:8773/services/Identity' ) )  // should fail due to invalid scheme
   }
 }
