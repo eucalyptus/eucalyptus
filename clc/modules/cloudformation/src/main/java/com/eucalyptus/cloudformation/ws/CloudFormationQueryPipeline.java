@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,6 @@ import org.jboss.netty.channel.ChannelPipeline;
 
 import com.eucalyptus.cloudformation.CloudFormation;
 import com.eucalyptus.component.annotation.ComponentPart;
-import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import com.eucalyptus.ws.server.QueryPipeline;
 
 
@@ -37,8 +36,7 @@ public class CloudFormationQueryPipeline extends QueryPipeline {
     super(
         "cloudformation-query-pipeline",
         "/services/CloudFormation",
-        EnumSet.allOf( TemporaryKeyType.class ),
-        EnumSet.of( RequiredQueryParams.Version ) );
+        EnumSet.allOf( TemporaryKeyType.class ) );
   } 
     
   @Override
