@@ -80,19 +80,18 @@ import org.mule.api.MuleException;
 import org.mule.api.lifecycle.Startable;
 
 import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.Regions;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ClusterInfoType;
+import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.ImageMetadata.Platform;
 import com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
-import com.eucalyptus.component.Component;
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.RegionInfoType;
 import com.eucalyptus.compute.common.backend.DescribeAvailabilityZonesResponseType;
 import com.eucalyptus.compute.common.backend.DescribeAvailabilityZonesType;
@@ -120,7 +119,6 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.collect.Collections2;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -345,70 +343,32 @@ public class ClusterEndpoint implements Startable {
                                                                                }
                                                                              };
   
-  public DescribeRegionsResponseType DescribeRegions( final DescribeRegionsType request ) throws EucalyptusCloudException {//TODO:GRZE:URGENT fix the behaviour here.
+  public DescribeRegionsResponseType DescribeRegions(
+      final DescribeRegionsType request
+  ) throws EucalyptusCloudException {
     final DescribeRegionsResponseType reply = request.getReply( );
-    for ( final Class<? extends ComponentId> componentIdClass : ImmutableList.of(Eucalyptus.class) ) {
-      try {
-        final Component component = Components.lookup( componentIdClass );
-        final String region = component.getComponentId( ).name();
-        final List<Region> regions = Lists.newArrayList();
-        final NavigableSet<ServiceConfiguration> configs = component.services( );
-        if ( !configs.isEmpty( ) && Component.State.ENABLED.equals( configs.first( ).lookupState( ) ) ) {
-          regions.add( new Region( region, ServiceUris.remotePublicify( configs.first() ).toASCIIString() ) );
-        }
-
-        final Predicate<Object>  filterPredicate = Filters.generateFor( request.getFilterSet(), Region.class )
-            .withOptionalInternalFilter( "region-name", request.getRegions() )
-            .generate()
-            .asPredicate();
-        for ( final Region item : Iterables.filter( regions, filterPredicate ) ) {
-          reply.getRegionInfo( ).add( new RegionInfoType( item.getDisplayName(), item.getEndpointUrl() ) );
-        }
-      } catch ( NoSuchElementException ex ) {
-        LOG.error( ex, ex );
+    try {
+      final List<com.eucalyptus.auth.RegionService> regions =
+          Regions.getRegionServicesByType( ComponentIds.lookup( Compute.class ).name( ) );
+      final Predicate<Object>  filterPredicate =
+          Filters.generateFor( request.getFilterSet(), com.eucalyptus.auth.RegionService.class )
+          .withOptionalInternalFilter( "region-name", request.getRegions() )
+          .generate()
+          .asPredicate();
+      for ( final com.eucalyptus.auth.RegionService item : Iterables.filter( regions, filterPredicate ) ) {
+        reply.getRegionInfo( ).add( new RegionInfoType( item.getRegionName( ), item.getServiceEndpoint( ) ) );
       }
+    } catch ( Exception ex ) {
+      LOG.error( "Error describing regions: " + ex.getMessage( ), ex );
     }
     return reply;
   }
 
-  protected static class Region {
-    private final String displayName;
-    private final String endpointUrl;
-
-    protected Region( final String displayName, final String endpointUrl ) {
-      this.displayName = displayName;
-      this.endpointUrl = endpointUrl;
-    }
-
-    public String getDisplayName() {
-      return displayName;
-    }
-
-    public String getEndpointUrl() {
-      return endpointUrl;
-    }
-  }
-
-  private enum RegionFunctions implements Function<Region,String> {
-    REGION_NAME {
-      @Override
-      public String apply( final Region region ) {
-        return region.getDisplayName();
-      }
-    },
-    ENDPOINT_URL {
-      @Override
-      public String apply( final Region region ) {
-        return region.getEndpointUrl();
-      }
-    }
-  }
-
-  public static class RegionFilterSupport extends FilterSupport<Region> {
+  public static class RegionFilterSupport extends FilterSupport<com.eucalyptus.auth.RegionService> {
     public RegionFilterSupport() {
-      super( builderFor( Region.class )
-          .withStringProperty( "endpoint", RegionFunctions.ENDPOINT_URL )
-          .withStringProperty( "region-name", RegionFunctions.REGION_NAME ) );
+      super( builderFor( com.eucalyptus.auth.RegionService.class )
+          .withStringProperty( "endpoint", com.eucalyptus.auth.RegionService.serviceEndpoint( ) )
+          .withStringProperty( "region-name", com.eucalyptus.auth.RegionService.regionName( ) ) );
     }
   }
 
