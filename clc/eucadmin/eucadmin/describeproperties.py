@@ -38,6 +38,13 @@ class DescribeProperties(eucadmin.describerequest.DescribeRequest):
                     default=False,
                     optional=True,
                     doc='Include description information for properties in the returned response.'),
+	      Param(name='show-default',
+                    short_name='d',
+                    long_name='show-default',
+                    ptype='boolean',
+                    default=False,
+                    optional=True,
+                    doc='Include property default value for properties in the returned response.'),
               ]
     Args = [Param(name='properties',
               long_name='property prefix',
@@ -50,7 +57,8 @@ class DescribeProperties(eucadmin.describerequest.DescribeRequest):
         eucadmin.describerequest.DescribeRequest.__init__(self, **args)
         self.list_markers = ['euca:properties']
         self.item_markers = ['euca:item']
-        self.verbose = False 
+        self.verbose = False
+        self.show_default = False
 
     def get_connection(self, **args):
         if self.connection is None:
@@ -58,6 +66,8 @@ class DescribeProperties(eucadmin.describerequest.DescribeRequest):
             self.connection = self.ServiceClass(**args)
         if 'verbose' in self.request_params and self.request_params.pop('verbose') == 'true':
           self.verbose = True
+        if 'show-default' in self.request_params and self.request_params.pop('show-default') == 'true':
+          self.show_default = True
         if 'properties' in self.request_params:
           for i, value in enumerate(self.request_params.pop('properties', [])):
               self.request_params['Property.%s' % (i + 1)] = value
@@ -66,6 +76,7 @@ class DescribeProperties(eucadmin.describerequest.DescribeRequest):
     def cli_formatter(self, data):
         props = getattr(data, 'euca:properties')
         for prop in props:
-            print 'PROPERTY\t%s\t%s' % (prop['euca:name'], prop['euca:value'])
+            print 'PROPERTY\t{0}\t{1}\t{2}'.format(prop['euca:name'], prop['euca:value'],
+                                                   prop['euca:defaultValue'] if self.show_default else '')
             if self.verbose and prop['euca:description']:
-              print 'DESCRIPTION\t%s\t%s' % (prop['euca:name'], prop['euca:description'])
+              print 'DESCRIPTION\t{0}\t{1}'.format(prop['euca:name'], prop['euca:description'])

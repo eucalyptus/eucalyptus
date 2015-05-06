@@ -75,11 +75,13 @@ public class Property extends EucalyptusData {
   String name;
   String value;
   String description;
-  public Property( String name, String value, String description ) {
+  String defaultValue;
+  public Property( String name, String value, String description,  String defaultValue ) {
     super( );
     this.name = name;
     this.value = value;
     this.description = description;
+    this.defaultValue = defaultValue;
   }
 }
 @ComponentMessage(PropertiesService.class)

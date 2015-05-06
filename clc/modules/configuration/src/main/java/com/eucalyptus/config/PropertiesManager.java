@@ -135,7 +135,7 @@ public class PropertiesManager {
         String value = "********";
         if ( !entry.getWidgetType( ).equals( ConfigurableFieldType.KEYVALUEHIDDEN ) )
           value = entry.getValue( );
-        props.add( new Property( entry.getQualifiedName( ), value, entry.getDescription( ) ) );
+        props.add( new Property( entry.getQualifiedName( ), value, entry.getDescription( ), entry.getDefaultValue() ) );
       }
     }
     return reply;
