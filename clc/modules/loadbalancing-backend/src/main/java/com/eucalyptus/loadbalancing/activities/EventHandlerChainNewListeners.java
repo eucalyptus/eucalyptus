@@ -20,6 +20,7 @@
 package com.eucalyptus.loadbalancing.activities;
 
 import static com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.SecurityGroupSetup.generateDefaultVPCSecurityGroupName;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -66,6 +67,13 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
     public void apply(CreateListenerEvent evt) throws EventHandlerException {
       final Collection<Listener> listeners = evt.getListeners();
       final String acctNumber = evt.getContext().getAccount().getAccountNumber();
+      LoadBalancer lb;
+      try{
+        lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
+      }catch(Exception ex){
+        throw new EventHandlerException("could not find the loadbalancer", ex);
+      }
+      
       for(Listener listener : listeners){
         final PROTOCOL protocol = PROTOCOL.valueOf(listener.getProtocol().toUpperCase());
         if(protocol.equals(PROTOCOL.HTTPS) || protocol.equals(PROTOCOL.SSL)) {
@@ -79,6 +87,7 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
           try{
             final String pathAndName = certArn.replace(prefix, "");
             final String certName = pathAndName.substring(pathAndName.lastIndexOf("/")+1);
+            
             final ServerCertificateType cert = EucalyptusActivityTasks.getInstance().getServerCertificate(evt.getContext().getUser().getUserId(), certName);
             if(cert==null)
               throw new EventHandlerException("No SSL certificate is found with the ARN"); 
@@ -129,7 +138,7 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 				for ( Listener listener : listeners ) {
 					int port = listener.getLoadBalancerPort();
 					try {
-						EucalyptusActivityTasks.getInstance().authorizeSystemSecurityGroup( groupName, protocol, port );
+					  EucalyptusActivityTasks.getInstance().authorizeSystemSecurityGroup( groupName, protocol, port, lb.useSystemAccount() );
 					} catch ( Exception ex ) {
 						throw new EventHandlerException( String.format( "failed to authorize %s, %s, %d", groupName, protocol, port ), ex );
 					}
@@ -140,7 +149,7 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 					for ( Listener listener : listeners ) {
 						int port = listener.getLoadBalancerPort();
 						try {
-							EucalyptusActivityTasks.getInstance().authorizeSystemSecurityGroup( groupId, protocol, port );
+						  EucalyptusActivityTasks.getInstance().authorizeSystemSecurityGroup( groupId, protocol, port, lb.useSystemAccount());
 						} catch ( Exception ex ) {
 							throw new EventHandlerException( String.format( "failed to authorize %s, %s, %d", groupId, protocol, port ), ex );
 						}
@@ -155,7 +164,7 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 				return;
 			
 			final Collection<Listener> listeners = this.event.getListeners();
-			LoadBalancer lb;
+			LoadBalancer lb = null;
 			String groupName = null;
 			try{
 				lb = LoadBalancers.getLoadbalancer(this.event.getContext(), this.event.getLoadBalancer());
@@ -173,8 +182,8 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 				protocol = protocol.toLowerCase();
 				
 				try{
-					EucalyptusActivityTasks.getInstance().revokeSystemSecurityGroup( groupName, protocol, port );
-				}catch(Exception ex){
+				  EucalyptusActivityTasks.getInstance().revokeSystemSecurityGroup( groupName, protocol, port, lb.useSystemAccount() );
+       }catch(Exception ex){
 				}
 			}
 		}
@@ -183,6 +192,7 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 	public static class AuthorizeSSLCertificate extends AbstractEventHandler<CreateListenerEvent> {
 	  private String roleName = null;
 	  private List<String> policyNames = Lists.newArrayList();
+	   private CreateListenerEvent event = null;
     protected AuthorizeSSLCertificate(
         EventHandlerChain<CreateListenerEvent> chain) {
       super(chain);
@@ -194,6 +204,7 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 
     @Override
     public void apply(CreateListenerEvent evt) throws EventHandlerException {
+      this.event = evt;
       final Collection<Listener> listeners = evt.getListeners();
       final Set<String> certArns = Sets.newHashSet();
       
@@ -205,6 +216,13 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
       }
       if(certArns.size() <= 0)
         return;
+      
+      LoadBalancer lb = null;
+      try{
+        lb = LoadBalancers.getLoadbalancer(event.getContext(), event.getLoadBalancer());
+      }catch(Exception ex){
+        throw new EventHandlerException("could not find the loadbalancer", ex);
+      }
       
       roleName = String.format("%s-%s-%s", EventHandlerChainNew.IAMRoleSetup.ROLE_NAME_PREFIX, 
           evt.getContext().getAccount().getAccountNumber(), evt.getLoadBalancer());
@@ -220,7 +238,7 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
             evt.getContext().getAccount().getAccountNumber(), evt.getLoadBalancer(), certName);
         final String rolePolicyDoc = ROLE_SERVER_CERT_POLICY_DOCUMENT.replace("CERT_ARN_PLACEHOLDER", arn);
         try{
-          EucalyptusActivityTasks.getInstance().putRolePolicy(roleName, policyName, rolePolicyDoc);
+          EucalyptusActivityTasks.getInstance().putRolePolicy(roleName, policyName, rolePolicyDoc, lb.useSystemAccount());
           policyNames.add(policyName);
         }catch(final Exception ex){
           throw new EventHandlerException("failed to authorize server certificate for SSL listener", ex);
@@ -230,10 +248,20 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 
     @Override
     public void rollback() throws EventHandlerException {
+      if (this.event == null)
+        return;
+
       if(roleName!=null && policyNames.size()>0){
+        LoadBalancer lb = null;
+        try{
+          lb = LoadBalancers.getLoadbalancer(event.getContext(), event.getLoadBalancer());
+        }catch(Exception ex){
+          return;
+        }
+
         for(final String policyName : policyNames){
           try{
-            EucalyptusActivityTasks.getInstance().deleteRolePolicy(roleName, policyName);
+            EucalyptusActivityTasks.getInstance().deleteRolePolicy(roleName, policyName, lb.useSystemAccount());
           }catch(final Exception ex){
             LOG.warn("Failed to delete role policy during listener creation rollback", ex);
           }

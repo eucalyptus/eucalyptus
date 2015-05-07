@@ -21,6 +21,7 @@ package com.eucalyptus.loadbalancing.activities;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+
 import javax.annotation.Nullable;
 
 import org.apache.log4j.Logger;
@@ -199,9 +200,10 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 		private String groupName = null;
 		private List<String> beforeUpdate = null;
 		private List<String> afterUpdate = null;
-
+		private DisabledZoneEvent event = null;
 		@Override
 		public void apply(DisabledZoneEvent evt) throws EventHandlerException {
+		  this.event = evt;
 			LoadBalancer lb;
 			try{
 				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
@@ -245,8 +247,7 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 					if(capacityPerZone <= 0)
 						capacityPerZone = 1;
 					final int newCapacity = capacityPerZone * updatedZones.size();
-					
-					EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(this.groupName, updatedZones, newCapacity);
+					EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(this.groupName, updatedZones, newCapacity, lb.useSystemAccount());
 					this.beforeUpdate = availableZones;
 					this.afterUpdate = updatedZones;
 					
@@ -276,6 +277,8 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 
 		@Override
 		public void rollback() throws EventHandlerException {
+		  if(this.event == null)
+		    return;
 			if(this.groupName!=null && this.beforeUpdate != null){
 				try{
 					int capacityPerZone = Integer.parseInt(EventHandlerChainNew.VM_PER_ZONE);
@@ -283,9 +286,16 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 						capacityPerZone = 1;
 					final int oldCapacity = capacityPerZone * this.beforeUpdate.size();
 				
-					EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(this.groupName, this.beforeUpdate, oldCapacity);
-					
-					LoadBalancerAutoScalingGroup scaleGroup;
+				  LoadBalancer lb = null;
+		      try{
+		        lb = LoadBalancers.getLoadbalancer(this.event.getContext(), this.event.getLoadBalancer());
+		      }catch(final Exception ex){
+		        LOG.error("Could not find the loadbalancer with name="+event.getLoadBalancer(), ex);
+		        throw ex;
+		      }
+		      
+				  EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(this.groupName, this.beforeUpdate, oldCapacity, lb.useSystemAccount());
+				  LoadBalancerAutoScalingGroup scaleGroup;
 					try{
 						scaleGroup = LoadBalancerAutoScalingGroupEntityTransform.INSTANCE.apply(this.group);
 					}catch(final Exception ex){

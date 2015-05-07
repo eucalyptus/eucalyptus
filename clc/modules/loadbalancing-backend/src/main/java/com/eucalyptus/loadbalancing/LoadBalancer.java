@@ -71,6 +71,7 @@ import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPo
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreViewTransform;
+import com.eucalyptus.loadbalancing.LoadBalancers.DeploymentVersion;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
 import com.eucalyptus.loadbalancing.common.msgs.AccessLog;
@@ -207,6 +208,9 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	@Column( name = "loadbalancer_accesslog_s3bucket_prefix", nullable=true)
 	private String accessLogS3BucketPrefix;
 	
+	@Column( name = "loadbalancer_deployment_version", nullable=true)
+	private String loadbalancerDeploymentVersion;
+	
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, mappedBy = "loadbalancer")
 	@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerBackendInstance> backendInstances = null;
@@ -310,6 +314,14 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	  return this.accessLogS3BucketPrefix;
 	}
 	
+	public void setLoadbalancerDeploymentVersion(final String version){
+	  this.loadbalancerDeploymentVersion = version;
+	}
+	
+	public String getLoadbalancerDeploymentVersion(){
+	  return this.loadbalancerDeploymentVersion;
+	}
+	
 	public void setAccessLogS3BucketPrefix(final String bucketPrefix){
 	  this.accessLogS3BucketPrefix = bucketPrefix;
 	}
@@ -390,6 +402,11 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	  if(this.backendServers == null)
 	    return;
 	  this.backendServers.remove(desc);
+	}
+	
+	public boolean useSystemAccount(){
+    return this.getLoadbalancerDeploymentVersion() != null &&
+        DeploymentVersion.getVersion(this.getLoadbalancerDeploymentVersion()).isEqualOrLaterThan(DeploymentVersion.v4_2_0);
 	}
 
 	public LoadBalancerCoreView getCoreView( ) {
@@ -491,6 +508,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		else
 			throw new IllegalStateException("health check is not configured");
 	}
+	
 	@Override 
 	public String toString(){
 		return String.format("loadbalancer %s",  this.displayName);
@@ -712,6 +730,10 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		public Integer getAccessLogEmitInterval( ) {
 		  return this.loadbalancer.getAccessLogEmitInterval();
 		}
+		
+		public String getLoadbalancerDeploymentVersion() {
+		  return this.loadbalancer.getLoadbalancerDeploymentVersion();
+		}
 
 		public Map<String,String> getSecurityGroupIdsToNames( ) {
 			return this.securityGroupIdsToNames;
@@ -741,6 +763,9 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 			return this.loadbalancer.getHealthCheckUnhealthyThreshold();
 		}
 		
+		public boolean useSystemAccount(){
+		  return this.loadbalancer.useSystemAccount();
+		}
 	}
 
 	@TypeMapper

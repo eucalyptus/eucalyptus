@@ -31,7 +31,6 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
 
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Faults.CheckException;
@@ -39,6 +38,9 @@ import com.eucalyptus.component.Faults.CheckException;
 import org.apache.log4j.Logger;
 import org.springframework.util.StringUtils;
 
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseType;
 import com.eucalyptus.autoscaling.common.msgs.LaunchConfigurationType;
@@ -160,7 +162,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 		if(emi!=null){
 			try{
 				final List<ImageDetails> images =
-					EucalyptusActivityTasks.getInstance().describeImages(Lists.newArrayList(emi));
+					EucalyptusActivityTasks.getInstance().describeImagesWithVerbose(Lists.newArrayList(emi));
 				if(images == null || images.size()<=0)
 					throw new EucalyptusCloudException("No such EMI is found in the system");
 				if(! images.get(0).getImageId().toLowerCase().equals(emi.toLowerCase()))
@@ -203,8 +205,10 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 				try{
 					AutoScalingGroupType asgType = null;
 					try{
-						final DescribeAutoScalingGroupsResponseType resp = EucalyptusActivityTasks.getInstance().describeAutoScalingGroups(Lists.newArrayList(asgName));
-						if(resp.getDescribeAutoScalingGroupsResult() != null && 
+						final DescribeAutoScalingGroupsResponseType resp = 
+						    EucalyptusActivityTasks.getInstance().describeAutoScalingGroups(Lists.newArrayList(asgName), lb.useSystemAccount());
+	           
+	           if(resp.getDescribeAutoScalingGroupsResult() != null && 
 								resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups()!=null &&
 								resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember()!=null &&
 								resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember().size()>0){
@@ -216,7 +220,8 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 					}
 					if(asgType!=null){
 						final String lcName = asgType.getLaunchConfigurationName();
-						final LaunchConfigurationType lc = EucalyptusActivityTasks.getInstance().describeLaunchConfiguration(lcName);
+						final LaunchConfigurationType lc = 					
+						    EucalyptusActivityTasks.getInstance().describeLaunchConfiguration(lcName, lb.useSystemAccount());
 
 						String launchConfigName;
 						do{
@@ -237,19 +242,19 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
                 getLoadBalancerUserData(initScript, lb.getOwnerAccountNumber())));
    
 						try{
-							EucalyptusActivityTasks.getInstance().createLaunchConfiguration(newEmi, newType, lc.getIamInstanceProfile(), 
+						    EucalyptusActivityTasks.getInstance().createLaunchConfiguration(newEmi, newType, lc.getIamInstanceProfile(), 
 									launchConfigName, lc.getSecurityGroups().getMember(), newKeyname, newUserdata,
-									Boolean.TRUE.equals( lc.getAssociatePublicIpAddress( ) ) );
+									Boolean.TRUE.equals( lc.getAssociatePublicIpAddress( ) ), lb.useSystemAccount() );
 						}catch(final Exception ex){
 							throw new EucalyptusCloudException("failed to create new launch config", ex);
 						}
 						try{
-							EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(asgName, null,asgType.getDesiredCapacity(), launchConfigName);
-						}catch(final Exception ex){
+						  EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(asgName, null,asgType.getDesiredCapacity(), launchConfigName, lb.useSystemAccount());
+           }catch(final Exception ex){
 							throw new EucalyptusCloudException("failed to update the autoscaling group", ex);
 						}
 						try{
-							EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration(asgType.getLaunchConfigurationName());
+						  EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration(asgType.getLaunchConfigurationName(), lb.useSystemAccount());
 						}catch(final Exception ex){
 							LOG.warn("unable to delete the old launch configuration", ex);
 						}	
@@ -257,10 +262,11 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
             if ( emi != null) {
               try {
                 final List<ImageDetails> images =
-                  EucalyptusActivityTasks.getInstance().describeImages(Lists.newArrayList(emi));
+                  EucalyptusActivityTasks.getInstance().describeImagesWithVerbose(Lists.newArrayList(emi));
                 // image should exist at this point
-                for(ResourceTag tag:images.get(0).getTagSet())
-                  EucalyptusActivityTasks.getInstance().createOrUpdateAutoscalingTags(tag.getKey(), tag.getValue(), asgName);
+                for(ResourceTag tag:images.get(0).getTagSet()){
+                  EucalyptusActivityTasks.getInstance().createOrUpdateAutoscalingTags(tag.getKey(), tag.getValue(), asgName, lb.useSystemAccount());
+                }
               } catch (final Exception ex) {
                 LOG.warn("unable to propogate tags from image to ASG", ex);
               }
@@ -409,7 +415,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
         if( CheckCounter >= 3 && Topology.isEnabled( Eucalyptus.class ) ){
           try{
             final List<ImageDetails> emis =
-                EucalyptusActivityTasks.getInstance().describeImages(Lists.newArrayList(LoadBalancerASGroupCreator.IMAGE));
+                EucalyptusActivityTasks.getInstance().describeImagesWithVerbose(Lists.newArrayList(LoadBalancerASGroupCreator.IMAGE));
             EmiCheckResult = LoadBalancerASGroupCreator.IMAGE.equals( emis.get( 0 ).getImageId() );
           }catch(final Exception ex){
             EmiCheckResult=false;
@@ -431,10 +437,17 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
        }
     }
 	  
+	  
 	  @Override
 	  public boolean enable( ) throws Exception {
 	    if (!super.enable())
 	      return false;
+	    try{
+	      this.configureSystemAccount();
+	    }catch(final Exception ex){
+	      LOG.error("Unable to configure ELB system account", ex);
+	      return false;
+	    }
 	    try{
 	      LoadBalancerPolicies.initialize();
 	    }catch(final Exception ex){
@@ -443,12 +456,27 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 	    }
 	    return true;
 	  }
-	}
 
+	  private void configureSystemAccount( ) throws Exception {
+	    Account elbAccount = null;
+	    try {
+	      elbAccount = Accounts.lookupAccountByName( AccountIdentifiers.ELB_SYSTEM_ACCOUNT);
+	    } catch (Exception e) {
+	      LOG.warn("Could not find account " + AccountIdentifiers.ELB_SYSTEM_ACCOUNT + ". Account may not exist, trying to create it");
+	      try {
+	        elbAccount = Accounts.addSystemAccountWithAdmin(AccountIdentifiers.ELB_SYSTEM_ACCOUNT);
+	      } catch (Exception e1) {
+	        LOG.warn("Failed to create account " + AccountIdentifiers.ELB_SYSTEM_ACCOUNT);
+	        throw new EucalyptusCloudException("Failed to create account " + AccountIdentifiers.ELB_SYSTEM_ACCOUNT);
+	      }
+	    }
+	  }
+	}
 		
 	private int capacityPerZone = 1;
 	private String launchConfigName = null;
 	private String asgName = null;
+	private LoadbalancingEvent event = null;
 	public LoadBalancerASGroupCreator(EventHandlerChain<? extends LoadbalancingEvent> chain, int capacityPerZone){
 		super(chain);
 		this.capacityPerZone = capacityPerZone;
@@ -465,7 +493,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 	public void apply( LoadbalancingEvent evt) throws EventHandlerException {
 		if(IMAGE == null)
 			throw new EventHandlerException("Loadbalancer's EMI is not configured");
-
+		this.event = evt;
 		Collection<String> eventZones = null;
 		Collection<String> eventSecurityGroupIds = Collections.emptySet( );
 		Map<String,String> zoneToSubnetIdMap = null;
@@ -518,14 +546,17 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 		boolean updateLaunchConfig = false;
 		try{
 			final DescribeAutoScalingGroupsResponseType response = 
-					EucalyptusActivityTasks.getInstance().describeAutoScalingGroups(Lists.newArrayList(groupName));
+			    EucalyptusActivityTasks.getInstance().describeAutoScalingGroups(Lists.newArrayList(groupName), lb.useSystemAccount());
+
 			final List<AutoScalingGroupType> groups =
-					response.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember();
+			    response.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember();
 			if(groups.size()>0 && groups.get(0).getAutoScalingGroupName().equals(groupName)){
 				asgFound =true;
 				launchConfigName = groups.get(0).getLaunchConfigurationName();
 				if ( !eventSecurityGroupIds.isEmpty( ) ) {
-					final LaunchConfigurationType lc = EucalyptusActivityTasks.getInstance().describeLaunchConfiguration( launchConfigName );
+				  final LaunchConfigurationType lc = 
+					    EucalyptusActivityTasks.getInstance().describeLaunchConfiguration( launchConfigName, lb.useSystemAccount() );
+					     
 					updateLaunchConfig = lc == null ||
 							lc.getSecurityGroups( ) == null ||
 							!Sets.newHashSet( lc.getSecurityGroups( ).getMember( ) ).equals( Sets.newHashSet( eventSecurityGroupIds ) );
@@ -563,7 +594,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 
 				EucalyptusActivityTasks.getInstance().createLaunchConfiguration(IMAGE, INSTANCE_TYPE, instanceProfileName,
 						launchConfigName, securityGroupNamesOrIds, keyName, userData,
-						zoneToSubnetIdMap.isEmpty( ) ? null : lb.getScheme( ) != LoadBalancer.Scheme.Internal );
+						zoneToSubnetIdMap.isEmpty( ) ? null : lb.getScheme( ) != LoadBalancer.Scheme.Internal, lb.useSystemAccount() );
 				this.launchConfigName = launchConfigName;
 			}catch(Exception ex){
 				throw new EventHandlerException("Failed to create launch configuration", ex);
@@ -585,21 +616,21 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 								Functions.forMap( zoneToSubnetIdMap ) ) ) );
 				capacity = availabilityZones.size() * this.capacityPerZone;
 				EucalyptusActivityTasks.getInstance().createAutoScalingGroup(groupName, availabilityZones, vpcZoneIdentifier,
-						capacity, launchConfigName, TagCreator.TAG_KEY, TagCreator.TAG_VALUE);
+				    capacity, launchConfigName, TagCreator.TAG_KEY, TagCreator.TAG_VALUE, lb.useSystemAccount());
 				this.asgName = groupName;
 			}catch(Exception ex){
 				throw new EventHandlerException("Failed to create autoscaling group", ex);
 			}
 		}else{
 			try{
-				final List<String> availabilityZones = eventZones == null ? null : Lists.newArrayList( eventZones );
-				capacity = availabilityZones == null ? null : availabilityZones.size() * this.capacityPerZone;
-				EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(groupName, availabilityZones, capacity, launchConfigName);
+			  final List<String> availabilityZones = eventZones == null ? null : Lists.newArrayList( eventZones );
+			  capacity = availabilityZones == null ? null : availabilityZones.size() * this.capacityPerZone;
+			  EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(groupName, availabilityZones, capacity, launchConfigName, lb.useSystemAccount());
 			}catch(Exception ex){
 				throw new EventHandlerException("Failed to update the autoscaling group", ex);
 			}
 			if ( launchConfigToDelete != null ) try {
-				EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration( launchConfigToDelete );
+			  EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration( launchConfigToDelete, lb.useSystemAccount());
 			}catch(final Exception ex) {
 				LOG.warn( "unable to delete launch configuration (" + launchConfigToDelete + ")", ex );
 			}
@@ -625,12 +656,18 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 
 	@Override
 	public void rollback() throws EventHandlerException {
-		
+		LoadBalancer lb;
+    try{
+      lb = LoadBalancers.getLoadbalancer(this.event.getContext(), this.event.getLoadBalancer());
+    }catch(Exception ex){
+      throw new EventHandlerException("Could not find the loadbalancer with name="+this.event.getLoadBalancer(), ex);
+    }
+    
 		// delete autoscaling group
 		if(this.asgName != null){
 			try{
 				// terminate all instances
-				EucalyptusActivityTasks.getInstance().deleteAutoScalingGroup(this.asgName, true);
+			  EucalyptusActivityTasks.getInstance().deleteAutoScalingGroup(this.asgName, true, lb.useSystemAccount());
 			}catch(Exception ex){
 				LOG.error("failed to delete autoscaling group - "+this.asgName);
 			}
@@ -639,7 +676,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 		// delete launch config
 		if(this.launchConfigName != null){
 			try{
-				EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration(this.launchConfigName);
+			  EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration(this.launchConfigName, lb.useSystemAccount());
 			}catch(Exception ex){
 				LOG.error("failed to delete launch configuration - "+this.launchConfigName);
 			}

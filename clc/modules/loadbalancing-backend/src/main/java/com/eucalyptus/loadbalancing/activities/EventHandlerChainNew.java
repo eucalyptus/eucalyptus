@@ -126,7 +126,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			final String emi = LoadBalancerASGroupCreator.IMAGE;
 			List<ImageDetails> images;
 			try{
-				images = EucalyptusActivityTasks.getInstance().describeImages(Lists.newArrayList(emi));
+				images = EucalyptusActivityTasks.getInstance().describeImagesWithVerbose(Lists.newArrayList(emi));
 				if(images==null || images.size()<=0 ||! images.get(0).getImageId().toLowerCase().equals(emi.toLowerCase()))
 					throw new EventHandlerException("No loadbalancer EMI is found");
 			}catch(final EventHandlerException ex){
@@ -140,7 +140,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			final List<String> requestedZones = Lists.newArrayList(evt.getZones());
 			List<ClusterInfoType> clusters;
 			try{
-				clusters = EucalyptusActivityTasks.getInstance().describeAvailabilityZones(true);
+				clusters = EucalyptusActivityTasks.getInstance().describeAvailabilityZonesWithVerbose();
 				for(final ClusterInfoType cc : clusters){
 					requestedZones.remove(cc.getZoneName());
 				}
@@ -686,7 +686,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 				List<AutoScalingGroupType> queriedGroups;
 				try{
 					DescribeAutoScalingGroupsResponseType response = 
-							EucalyptusActivityTasks.getInstance().describeAutoScalingGroups(Lists.newArrayList(groupToQuery.keySet()));
+							EucalyptusActivityTasks.getInstance().describeAutoScalingGroupsWithVerbose(Lists.newArrayList(groupToQuery.keySet()));
 					DescribeAutoScalingGroupsResult result = response.getDescribeAutoScalingGroupsResult();
 					AutoScalingGroupsType asgroups = result.getAutoScalingGroups();
 					queriedGroups = asgroups.getMember();

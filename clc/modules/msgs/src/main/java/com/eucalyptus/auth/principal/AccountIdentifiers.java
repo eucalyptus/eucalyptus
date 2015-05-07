@@ -52,6 +52,9 @@ public interface AccountIdentifiers {
 
   // EUCA-8667 - System account for osg <--> walrus
   String OBJECT_STORAGE_WALRUS_ACCOUNT = SYSTEM_ACCOUNT_PREFIX + "objectstorage";
+  
+  // EUCA-10790 - System account for elb
+  String ELB_SYSTEM_ACCOUNT = SYSTEM_ACCOUNT_PREFIX + "loadbalancing";
 
   String getAccountNumber( );
   String getAccountAlias( );

@@ -38,6 +38,7 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.loadbalancing.LoadBalancer;
+import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupEntityTransform;
@@ -159,7 +160,8 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 			String launchConfigName = null;
 			
 			try{
-				final DescribeAutoScalingGroupsResponseType resp = EucalyptusActivityTasks.getInstance().describeAutoScalingGroups(Lists.newArrayList(groupName));
+				final DescribeAutoScalingGroupsResponseType resp = 
+				    EucalyptusActivityTasks.getInstance().describeAutoScalingGroups(Lists.newArrayList(groupName), lb.useSystemAccount());
 				final AutoScalingGroupType asgType = resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember().get(0);
 				launchConfigName = asgType.getLaunchConfigurationName();
 			}catch(final Exception ex){
@@ -167,7 +169,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 			}
 			
 			try{
-			  EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(groupName, null, 0);
+			  EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(groupName, null, 0, lb.useSystemAccount());
 			}catch(final Exception ex){
 			  LOG.warn(String.format("Unable to set desired capacity for %s", groupName), ex);
 			}
@@ -176,7 +178,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 			final int NUM_DELETE_ASG_RETRY = 4;
 			for(int i=0; i<NUM_DELETE_ASG_RETRY; i++){
 			  try{
-			    EucalyptusActivityTasks.getInstance().deleteAutoScalingGroup(groupName, true);
+			    EucalyptusActivityTasks.getInstance().deleteAutoScalingGroup(groupName, true, lb.useSystemAccount());
 			    error = false;
 			    // willl terminate all instances
 			  }catch(final Exception ex){
@@ -193,8 +195,8 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 			}
 			
 			if(launchConfigName!=null){
-				try{
-					EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration(launchConfigName);
+				try{ 
+				  EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration(launchConfigName, lb.useSystemAccount());
 				}catch(Exception ex){
 					LOG.warn("Failed to delete launch configuration " + launchConfigName, ex);
 				}
@@ -254,16 +256,26 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 	      final String instanceProfileName = String.format("%s-%s-%s", EventHandlerChainNew.InstanceProfileSetup.INSTANCE_PROFILE_NAME_PREFIX,
 	          evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
 	      final String roleName = String.format("%s-%s-%s", EventHandlerChainNew.IAMRoleSetup.ROLE_NAME_PREFIX, evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
+	   
+	      LoadBalancer lb = null;
+	      try{ 
+	        lb= LoadBalancers.getLoadbalancer(evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
+	      }catch(NoSuchElementException ex){
+	        return;
+	      }catch(Exception ex){
+	        LOG.warn("Failed to find the loadbalancer named " + evt.getLoadBalancer(), ex);
+	        return;
+	      } 
 	      
 	      try{
-	        EucalyptusActivityTasks.getInstance().removeRoleFromInstanceProfile(instanceProfileName, roleName);
+	         EucalyptusActivityTasks.getInstance().removeRoleFromInstanceProfile(instanceProfileName, roleName, lb.useSystemAccount());
 	      }catch(final Exception ex){
 	        LOG.error(String.format("Failed to remove role(%s) from the instance profile(%s)", roleName, instanceProfileName), ex);
 	      }
 	      
 	      // remove instance profile
 	      try{
-	        EucalyptusActivityTasks.getInstance().deleteInstanceProfile(instanceProfileName);
+	         EucalyptusActivityTasks.getInstance().deleteInstanceProfile(instanceProfileName, lb.useSystemAccount());
 	      }catch(final Exception ex){
 	        LOG.error(String.format("Failed to delete instance profile (%s)", instanceProfileName), ex);
 	      }
@@ -283,17 +295,26 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
     @Override
     public void apply(DeleteLoadbalancerEvent evt) throws EventHandlerException {
       final String roleName = String.format("%s-%s-%s", EventHandlerChainNew.IAMRoleSetup.ROLE_NAME_PREFIX, evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
+      LoadBalancer lb = null;
+      try{ 
+        lb= LoadBalancers.getLoadbalancer(evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
+      }catch(NoSuchElementException ex){
+        return;
+      }catch(Exception ex){
+        LOG.warn("Failed to find the loadbalancer named " + evt.getLoadBalancer(), ex);
+        return;
+      } 
       // delete role policy
       try{
         EucalyptusActivityTasks.getInstance().deleteRolePolicy(roleName, 
-            EventHandlerChainNew.IAMPolicySetup.SERVO_ROLE_POLICY_NAME);
+            EventHandlerChainNew.IAMPolicySetup.SERVO_ROLE_POLICY_NAME, lb.useSystemAccount());
       }catch(final Exception ex){
         LOG.error("failed to delete role policy", ex);
       }
       
       // delete role
       try{
-        EucalyptusActivityTasks.getInstance().deleteRole(roleName);
+        EucalyptusActivityTasks.getInstance().deleteRole(roleName, lb.useSystemAccount());
       }catch(final Exception ex){
         LOG.error("failed to delete role", ex);
       }
@@ -384,10 +405,15 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 			/// delete them from euca
 			for(LoadBalancerSecurityGroup group : toDelete){
 				try{
-					EucalyptusActivityTasks.getInstance().deleteSystemSecurityGroup( group.getName() );
+				  EucalyptusActivityTasks.getInstance().deleteSystemSecurityGroup( group.getName(), true);
 					LOG.info("deleted security group: "+group.getName());
-				}catch(Exception ex){
-					LOG.warn("failed to delete the security group from eucalyptus",ex);
+				}catch(final Exception ex){
+				  try{
+	          EucalyptusActivityTasks.getInstance().deleteSystemSecurityGroup( group.getName(), false);
+	          LOG.info("deleted security group: "+group.getName());
+				  }catch(final Exception ex2) {
+	          LOG.warn("failed to delete the security group from eucalyptus",ex2);
+				  }				  
 				}
 			}
 			try ( final TransactionResource db2 = Entities.transactionFor( LoadBalancerSecurityGroup.class ) ) {
@@ -452,9 +478,9 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 			  param.add(instanceId);
 			  String instanceState;
 			  try{
-			    final List<RunningInstancesItemType> result =
-			        EucalyptusActivityTasks.getInstance().describeSystemInstances(param);
-			    if (result.isEmpty())
+			    List<RunningInstancesItemType> result =null;
+			    result = EucalyptusActivityTasks.getInstance().describeSystemInstancesWithVerbose(param);
+	        if (result.isEmpty())
 			      instanceState= "terminated";
 			    else
 			      instanceState = result.get(0).getStateName();

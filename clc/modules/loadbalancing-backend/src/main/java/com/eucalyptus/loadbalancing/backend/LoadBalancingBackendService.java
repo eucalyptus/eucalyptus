@@ -663,7 +663,7 @@ public class LoadBalancingBackendService {
         Iterables.addAll(
             validZones,
             Iterables.transform(
-                EucalyptusActivityTasks.getInstance().describeAvailabilityZones( false ),
+                EucalyptusActivityTasks.getInstance().describeAvailabilityZones(),
                 ClusterInfoType.zoneName() ) );
       } catch( Exception ex ){
         throw new InternalFailure400Exception("Unable to verify the requested zones");
@@ -1380,8 +1380,9 @@ public class LoadBalancingBackendService {
 
     if ( lb.getVpcId( ) != null ) {
       final List<RunningInstancesItemType> instanceItems =
-          EucalyptusActivityTasks.getInstance( ).describeSystemInstances(
-              Lists.newArrayList( Iterables.transform( instances, Instance.instanceId( ) ) ) );
+          EucalyptusActivityTasks.getInstance( ).describeUserInstances(ownerFullName.getUserId(), 
+              Lists.newArrayList( Iterables.transform( instances, Instance.instanceId())));
+
       for ( final RunningInstancesItemType instanceItem : instanceItems ) {
         if ( !lb.getVpcId( ).equals( instanceItem.getVpcId( ) ) ) {
           throw new InvalidConfigurationRequestException( "Invalid instance(s) for load balancer." );

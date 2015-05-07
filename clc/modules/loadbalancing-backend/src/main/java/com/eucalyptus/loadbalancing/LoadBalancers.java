@@ -172,6 +172,42 @@ public class LoadBalancers {
 			throw new NoSuchElementException( );
 		}
 	}
+	
+	public enum DeploymentVersion {
+	 v4_2_0;
+	 
+	 public String toVersionString(){
+	   return this.name( ).substring( 1 ).replace( "_", "." );
+	 }
+	 
+	 public static DeploymentVersion getVersion(final String version) {
+	   return DeploymentVersion.valueOf( "v" + version.replace( ".", "_" ) );
+	 }
+	 
+	 public boolean isLaterThan(final DeploymentVersion other) {
+	   if(other==null)
+	     return false;
+	   String[] thisVersionDigits = this.name().substring(1).split("_");
+	   String[] otherVersionDigits = other.name().substring(1).split("_");
+	   
+	   for(int i=0; i<thisVersionDigits.length; i++){
+	     int thisDigit = Integer.parseInt(thisVersionDigits[i]);
+	     int otherDigit = 0;
+	     if(i < otherVersionDigits.length)
+	       otherDigit = Integer.parseInt(otherVersionDigits[i]);
+	     
+	     if(thisDigit > otherDigit)
+	       return true;
+	     else if(thisDigit < otherDigit)
+	       return false;
+	   }
+	   return false;
+	 }
+	 
+	 public boolean isEqualOrLaterThan(final DeploymentVersion other) {
+	   return this.equals(other) || this.isLaterThan(other);
+	 }
+	}
 
   public static LoadBalancer addLoadbalancer(
       final UserFullName user,
@@ -203,6 +239,7 @@ public class LoadBalancers {
         lb.setScheme( scheme );
         lb.setSecurityGroupRefs( refs );
         lb.setTags( tags );
+        lb.setLoadbalancerDeploymentVersion(DeploymentVersion.v4_2_0.toVersionString());
         Entities.persist( lb );
         db.commit( );
         return lb;
@@ -506,8 +543,15 @@ public class LoadBalancers {
      final String oldPolicyName = String.format("%s-%s-%s-%s", 
 	      EventHandlerChainNewListeners.AuthorizeSSLCertificate.SERVER_CERT_ROLE_POLICY_NAME_PREFIX,
           accountId, lbName, oldCertName);  
+     LoadBalancer lb;
+     try{ 
+       lb= LoadBalancers.getLoadbalancer(accountId, lbName);
+     }catch(Exception ex){
+       throw new LoadBalancingException("Failed to find the loadbalancer named " + lbName, ex);
+     } 
+     
      try{
-         EucalyptusActivityTasks.getInstance().deleteRolePolicy(roleName, oldPolicyName);
+         EucalyptusActivityTasks.getInstance().deleteRolePolicy(roleName, oldPolicyName, lb.useSystemAccount());
       }catch(final Exception ex){
         throw new LoadBalancingException("Failed to delete old role policy "+oldPolicyName, ex);
      }
@@ -518,7 +562,7 @@ public class LoadBalancers {
          .AuthorizeSSLCertificate.ROLE_SERVER_CERT_POLICY_DOCUMENT
          .replace("CERT_ARN_PLACEHOLDER", newCertArn);
      try{
-       EucalyptusActivityTasks.getInstance().putRolePolicy(roleName, newPolicyName, newPolicyDoc);
+       EucalyptusActivityTasks.getInstance().putRolePolicy(roleName, newPolicyName, newPolicyDoc, lb.useSystemAccount());
       }catch(final Exception ex){
        throw new LoadBalancingException("Failed to add new role policy "+newPolicyName, ex);
      }

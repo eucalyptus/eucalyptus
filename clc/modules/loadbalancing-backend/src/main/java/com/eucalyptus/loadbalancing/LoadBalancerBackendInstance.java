@@ -399,7 +399,7 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 			List<RunningInstancesItemType> result  = null;
 			try{
 				result =
-						EucalyptusActivityTasks.getInstance().describeSystemInstances(instancesToCheck, true);
+						EucalyptusActivityTasks.getInstance().describeSystemInstancesWithVerbose(instancesToCheck);
 				if(result==null)
 					throw new Exception();
 			}catch(final Exception ex){

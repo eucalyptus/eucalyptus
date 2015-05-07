@@ -20,7 +20,9 @@
 package com.eucalyptus.loadbalancing.activities;
 
 import static com.eucalyptus.loadbalancing.activities.LoadBalancerASGroupCreator.getAutoScalingGroupName;
+
 import java.util.NoSuchElementException;
+
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupsType;
 import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseType;
 import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResult;
@@ -59,10 +61,8 @@ public class EventHandlerChainApplySecurityGroups extends EventHandlerChain<Appl
       }
 
       final String groupName = getAutoScalingGroupName( lb.getOwnerAccountNumber(), lb.getDisplayName() );
-
-      final DescribeAutoScalingGroupsResponseType response =
-          EucalyptusActivityTasks.getInstance().describeAutoScalingGroups( Lists.newArrayList( groupName ) );
-
+      final DescribeAutoScalingGroupsResponseType response = EucalyptusActivityTasks.getInstance().describeAutoScalingGroups( Lists.newArrayList( groupName ), lb.useSystemAccount() );
+      
       final DescribeAutoScalingGroupsResult describeAutoScalingGroupsResult =
           response.getDescribeAutoScalingGroupsResult();
       if ( describeAutoScalingGroupsResult != null ) {
@@ -72,9 +72,9 @@ public class EventHandlerChainApplySecurityGroups extends EventHandlerChain<Appl
             !autoScalingGroupsType.getMember( ).isEmpty( ) &&
             autoScalingGroupsType.getMember( ).get( 0 ).getInstances( ) != null ) {
           for ( final Instance instance : autoScalingGroupsType.getMember( ).get( 0 ).getInstances( ).getMember( ) ) {
-            EucalyptusActivityTasks.getInstance( ).modifySecurityGroups(
+              EucalyptusActivityTasks.getInstance( ).modifySecurityGroups(
                 instance.getInstanceId( ),
-                evt.getSecurityGroupIdsToNames( ).keySet( ) );
+                evt.getSecurityGroupIdsToNames( ).keySet( ), lb.useSystemAccount() );
           }
         }
       }

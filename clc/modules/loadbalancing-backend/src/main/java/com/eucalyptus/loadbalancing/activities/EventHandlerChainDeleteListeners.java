@@ -91,7 +91,7 @@ public class EventHandlerChainDeleteListeners extends EventHandlerChain<DeleteLi
             evt.getLoadBalancerAccountNumber( ),
             evt.getLoadBalancer( ), certName);
         try{
-          EucalyptusActivityTasks.getInstance().deleteRolePolicy(roleName, policyName);
+          EucalyptusActivityTasks.getInstance().deleteRolePolicy(roleName, policyName, lb.useSystemAccount());
         }catch(final Exception ex){
           LOG.warn(String.format("Failed to delete role (%s) policy (%s)", roleName, policyName), ex); 
         }
@@ -131,7 +131,7 @@ public class EventHandlerChainDeleteListeners extends EventHandlerChain<DeleteLi
 			for(String protocol : protocols){
 				for(Integer port : ports){
 					try{
-						EucalyptusActivityTasks.getInstance().revokeSystemSecurityGroup( groupName, protocol, port );
+					  EucalyptusActivityTasks.getInstance().revokeSystemSecurityGroup( groupName, protocol, port, lb.useSystemAccount());
 						LOG.debug(String.format("rule revoked (%s-%d)", groupName, port));
 					}catch(Exception ex){
 						LOG.warn("Unable to revoke the security group", ex);

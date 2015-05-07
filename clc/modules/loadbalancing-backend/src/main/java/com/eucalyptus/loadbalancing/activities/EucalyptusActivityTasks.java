@@ -58,7 +58,9 @@ import com.eucalyptus.auth.euare.PutRolePolicyType;
 import com.eucalyptus.auth.euare.RemoveRoleFromInstanceProfileType;
 import com.eucalyptus.auth.euare.RoleType;
 import com.eucalyptus.auth.euare.ServerCertificateType;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupNames;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage;
@@ -144,6 +146,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+
 import com.eucalyptus.compute.common.backend.CreateTagsType;
 import com.eucalyptus.compute.common.backend.DeleteTagsType;
 
@@ -193,16 +196,27 @@ public class EucalyptusActivityTasks {
 	}
 
 	private abstract class SystemActivityContextSupport<TM extends BaseMessage, TC extends ComponentId> extends ActivityContextSupport<TM, TC>{
-		private SystemActivityContextSupport( final Class<TC> componentIdClass ) {
+	  boolean useSystemAccount = true;
+	  private SystemActivityContextSupport( final Class<TC> componentIdClass ) {
 			super( componentIdClass );
 		}
-
+		
+		private SystemActivityContextSupport( final Class<TC> componentIdClass, final boolean useSystemAccount ) {
+      super( componentIdClass );
+      this.useSystemAccount = useSystemAccount;
+		}
+    
 		@Override
 		public final String getUserId() {
-			try{
-				return Accounts.lookupSystemAdmin().getUserId();
+		 try{
+			  if(this.useSystemAccount) {
+			    Account elbAccount = Accounts.lookupAccountByName( AccountIdentifiers.ELB_SYSTEM_ACCOUNT );
+			    return elbAccount.lookupAdmin().getUserId();
+			  } else {
+			    return Accounts.lookupSystemAdmin().getUserId();
+			  }
 			}catch(AuthException ex){
-				throw Exceptions.toUndeclared(ex);
+	       throw Exceptions.toUndeclared(ex);
 			}
 		}
 
@@ -245,6 +259,9 @@ public class EucalyptusActivityTasks {
 
 	private class EuareSystemActivity extends SystemActivityContextSupport<EuareMessage, Euare>{
 		private EuareSystemActivity( ){ super( Euare.class ); }
+		private EuareSystemActivity( final boolean useSystemAccount ){ 
+		  super( Euare.class, useSystemAccount ); 
+		}
 	}
 	
 	private class EuareUserActivity extends UserActivityContextSupport<EuareMessage, Euare> {
@@ -253,6 +270,9 @@ public class EucalyptusActivityTasks {
 	
 	private class AutoScalingSystemActivity extends SystemActivityContextSupport<AutoScalingMessage, AutoScaling>{
 		private AutoScalingSystemActivity(){ super( AutoScaling.class ); }
+		private AutoScalingSystemActivity(final boolean useSystemAccount){ 
+		  super( AutoScaling.class, useSystemAccount ); 
+		}
 	}
 	
 	private class CloudWatchUserActivity extends UserActivityContextSupport<CloudWatchMessage, CloudWatch>{
@@ -262,11 +282,14 @@ public class EucalyptusActivityTasks {
 	}
 	
 	private class EmpyreanSystemActivity extends SystemActivityContextSupport<EmpyreanMessage, Empyrean>{
-		private EmpyreanSystemActivity() { super( Empyrean.class ); }
+		private EmpyreanSystemActivity() { super( Empyrean.class, false ); }
 	}
 	
-	private class EucalyptusSystemActivity extends SystemActivityContextSupport<ComputeMessage, Eucalyptus>{
-		private EucalyptusSystemActivity() { super( Eucalyptus.class ); }
+	public class EucalyptusSystemActivity extends SystemActivityContextSupport<ComputeMessage, Eucalyptus>{
+    public EucalyptusSystemActivity() { super( Eucalyptus.class ); }
+	  public EucalyptusSystemActivity(final boolean useSystemAccount) {
+	    super(Eucalyptus.class, useSystemAccount);
+	  }
 	}
 
 	private class EucalyptusUserActivity extends UserActivityContextSupport<ComputeMessage, Eucalyptus>{
@@ -281,7 +304,8 @@ public class EucalyptusActivityTasks {
 	
 	private class ComputeSystemActivity extends SystemActivityContextSupport<ComputeMessage, Compute>{
 		private ComputeSystemActivity() { super( Compute.class ); }
-	}
+		private ComputeSystemActivity(final boolean useSystemAccount) { super( Compute.class , useSystemAccount); }
+ }
 
 	private class ComputeUserActivity extends UserActivityContextSupport<ComputeMessage, Compute>{
 		private ComputeUserActivity(final String userId){
@@ -293,18 +317,25 @@ public class EucalyptusActivityTasks {
 		}
 	}
 
-	public List<RunningInstancesItemType> describeSystemInstances(final List<String> instances, boolean verbose){
+	public List<RunningInstancesItemType> describeSystemInstancesWithVerbose(final List<String> instances){
     if(instances.size() <=0)
       return Lists.newArrayList();
-    final EucalyptusDescribeInstanceTask describeTask = new EucalyptusDescribeInstanceTask(instances, verbose);
-    return resultOf( describeTask, new ComputeSystemActivity(), "failed to describe the instances" );
+    final EucalyptusDescribeInstanceTask describeTask = new EucalyptusDescribeInstanceTask(instances, true);
+    return resultOf( describeTask, new ComputeSystemActivity(false), "failed to describe the instances" );
   }
-	
+
 	public List<RunningInstancesItemType> describeSystemInstances(final List<String> instances){
-		if(instances.size() <=0)
-			return Lists.newArrayList();
-		final EucalyptusDescribeInstanceTask describeTask = new EucalyptusDescribeInstanceTask(instances);
-		return resultOf( describeTask, new ComputeSystemActivity(), "failed to describe the instances" );
+	  return describeSystemInstancesImpl(instances, true);
+	}
+
+	public List<RunningInstancesItemType> describeSystemInstances(final List<String> instances, final boolean useSystemAccount){
+	  return describeSystemInstancesImpl(instances, useSystemAccount);
+	}
+	private List<RunningInstancesItemType> describeSystemInstancesImpl(final List<String> instances, final boolean useSystemAccount){
+	  if(instances.size() <=0)
+	    return Lists.newArrayList();
+	  final EucalyptusDescribeInstanceTask describeTask = new EucalyptusDescribeInstanceTask(instances);
+	  return resultOf( describeTask, new ComputeSystemActivity(useSystemAccount), "failed to describe the instances" );
 	}
 
 	public List<RunningInstancesItemType> describeUserInstances(final String userId, final List<String> instances){
@@ -320,10 +351,24 @@ public class EucalyptusActivityTasks {
 		return resultOf( serviceTask, new EmpyreanSystemActivity(), "failed to describe services" );
 	}
 	
-	public List<ClusterInfoType> describeAvailabilityZones(boolean verbose){
+  public List<ClusterInfoType> describeAvailabilityZonesWithVerbose(){
+    return resultOf(
+        new EucalyptusDescribeAvailabilityZonesTask(true),
+        new EucalyptusSystemActivity(false),
+        "failed to describe the availability zones"
+    );
+  }
+  
+  public List<ClusterInfoType> describeAvailabilityZones() {
+    return describeAvailabilityZonesImpl(true);
+  }
+  public List<ClusterInfoType> describeAvailabilityZones(final boolean useSystemAccount) {
+    return describeAvailabilityZonesImpl(useSystemAccount);
+  }
+	private List<ClusterInfoType> describeAvailabilityZonesImpl(final boolean useSystemAccount){
 		return resultOf(
-				new EucalyptusDescribeAvailabilityZonesTask(verbose),
-				new EucalyptusSystemActivity(),
+				new EucalyptusDescribeAvailabilityZonesTask(false),
+				new EucalyptusSystemActivity(useSystemAccount),
 				"failed to describe the availability zones"
 		);
 	}
@@ -332,10 +377,16 @@ public class EucalyptusActivityTasks {
 		final EucalyptusCreateGroupTask task = new EucalyptusCreateGroupTask(groupName, groupDesc);
 		checkResult( task, new EucalyptusSystemActivity(), "failed to create the group "+groupName );
 	}
-	
+
 	public void deleteSystemSecurityGroup( String groupName ){
-		final EucalyptusDeleteGroupTask task = new EucalyptusDeleteGroupTask(groupName);
-		checkResult( task, new EucalyptusSystemActivity(), "failed to delete the group "+groupName );
+	  deleteSystemSecurityGroupImpl(groupName, true);
+	}
+	public void deleteSystemSecurityGroup( String groupName , boolean useSystemAccount){
+	  deleteSystemSecurityGroupImpl(groupName, useSystemAccount);
+	}
+	private void deleteSystemSecurityGroupImpl( String groupName, boolean useSystemAccount ){
+	  final EucalyptusDeleteGroupTask task = new EucalyptusDeleteGroupTask(groupName);
+	  checkResult( task, new EucalyptusSystemActivity(useSystemAccount), "failed to delete the group "+groupName );
 	}
 	
 	public List<SecurityGroupItemType> describeSystemSecurityGroups( List<String> groupNames ){
@@ -344,19 +395,35 @@ public class EucalyptusActivityTasks {
 	}
 	
 	public void authorizeSystemSecurityGroup( String groupNameOrId, String protocol, int portNum ){
-		final EucalyptusAuthorizeIngressRuleTask task = new EucalyptusAuthorizeIngressRuleTask(groupNameOrId, protocol, portNum);
-		checkResult(
-				task,
-				new EucalyptusSystemActivity(),
-				String.format("failed to authorize:%s, %s, %d ", groupNameOrId, protocol, portNum)
-		);
+	  this.authorizeSystemSecurityGroupImpl( groupNameOrId, protocol, portNum,  new EucalyptusSystemActivity());
 	}
 	
-	public void revokeSystemSecurityGroup( String groupName, String protocol, int portNum ){
+  public void authorizeSystemSecurityGroup( String groupNameOrId, String protocol, int portNum, boolean useSystemAccount ){
+    this.authorizeSystemSecurityGroupImpl( groupNameOrId, protocol, portNum,  new EucalyptusSystemActivity(useSystemAccount));
+  }
+  
+  private void authorizeSystemSecurityGroupImpl( String groupNameOrId, String protocol, int portNum, EucalyptusSystemActivity context){
+    final EucalyptusAuthorizeIngressRuleTask task = new EucalyptusAuthorizeIngressRuleTask(groupNameOrId, protocol, portNum);
+    checkResult(
+        task,
+        context,
+        String.format("failed to authorize:%s, %s, %d ", groupNameOrId, protocol, portNum)
+    );
+  }
+  
+  public void revokeSystemSecurityGroup( String groupName, String protocol, int portNum) {
+    revokeSystemSecurityGroupImpl(groupName, protocol, portNum, true);
+  }
+	
+  public void revokeSystemSecurityGroup( String groupName, String protocol, int portNum, boolean useSystemAccount ){
+    revokeSystemSecurityGroupImpl(groupName, protocol, portNum, useSystemAccount);
+  }
+
+	private void revokeSystemSecurityGroupImpl( String groupName, String protocol, int portNum, boolean useSystemAccount ){
 		final EucalyptusRevokeIngressRuleTask task = new EucalyptusRevokeIngressRuleTask(groupName, protocol, portNum);
 		checkResult(
 				task,
-				new EucalyptusSystemActivity(),
+				new EucalyptusSystemActivity(useSystemAccount),
 				String.format("failed to revoke:%s, %s, %d ", groupName, protocol, portNum)
 		);
 	}
@@ -381,7 +448,36 @@ public class EucalyptusActivityTasks {
 		);
 	}
 	
-	public void createLaunchConfiguration(
+
+  public void createLaunchConfiguration(
+    final String imageId,
+    final String instanceType,
+    final String instanceProfileName,
+    final String launchConfigName,
+    final Collection<String> securityGroupNamesOrIds,
+    final String keyName,
+    final String userData,
+    final Boolean associatePublicIp){
+    createLaunchConfigurationImpl(imageId, instanceType, instanceProfileName, launchConfigName, securityGroupNamesOrIds,
+        keyName, userData, associatePublicIp, true);
+  }
+	
+
+  public void createLaunchConfiguration(
+    final String imageId,
+    final String instanceType,
+    final String instanceProfileName,
+    final String launchConfigName,
+    final Collection<String> securityGroupNamesOrIds,
+    final String keyName,
+    final String userData,
+    final Boolean associatePublicIp,
+    final boolean useSystemAccount) {
+    createLaunchConfigurationImpl(imageId, instanceType, instanceProfileName, launchConfigName, securityGroupNamesOrIds,
+        keyName, userData, associatePublicIp, useSystemAccount);
+  }
+  
+	private void createLaunchConfigurationImpl(
 		final String imageId,
 		final String instanceType,
 		final String instanceProfileName,
@@ -389,81 +485,139 @@ public class EucalyptusActivityTasks {
 		final Collection<String> securityGroupNamesOrIds,
 		final String keyName,
 		final String userData,
-		final Boolean associatePublicIp
+		final Boolean associatePublicIp,
+		final boolean useSystemAccount
 	){
 		final AutoScalingCreateLaunchConfigTask task = 
 				new AutoScalingCreateLaunchConfigTask(imageId, instanceType, instanceProfileName, launchConfigName, securityGroupNamesOrIds, keyName, userData, associatePublicIp);
 		checkResult(
 				task,
-				new AutoScalingSystemActivity( ),
+				new AutoScalingSystemActivity( useSystemAccount ),
 				"failed to create launch configuration"
 		);
 	}
 	
 	public void createAutoScalingGroup(final String groupName, final List<String> availabilityZones, final String vpcZoneIdentifier,
-			final int capacity, final String launchConfigName, final String tagKey, final String tagValue){
-		final AutoScalingCreateGroupTask task =
-				new AutoScalingCreateGroupTask(groupName, availabilityZones, vpcZoneIdentifier, capacity, launchConfigName, tagKey, tagValue);
-		checkResult(
-				task,
-				new AutoScalingSystemActivity( ),
-				"failed to create autoscaling group"
-		);
+	    final int capacity, final String launchConfigName, final String tagKey, final String tagValue){
+	  createAutoScalingGroupImpl(groupName, availabilityZones, vpcZoneIdentifier, capacity, launchConfigName, tagKey, tagValue, true);
+	}
+	public void createAutoScalingGroup(final String groupName, final List<String> availabilityZones, final String vpcZoneIdentifier,
+	    final int capacity, final String launchConfigName, final String tagKey, final String tagValue, final boolean useSystemAccount){
+	  createAutoScalingGroupImpl(groupName, availabilityZones, vpcZoneIdentifier, capacity, launchConfigName, tagKey, tagValue, useSystemAccount);
+	}
+	private void createAutoScalingGroupImpl(final String groupName, final List<String> availabilityZones, final String vpcZoneIdentifier,
+	    final int capacity, final String launchConfigName, final String tagKey, final String tagValue, final boolean useSystemAccount){
+	  final AutoScalingCreateGroupTask task =
+	      new AutoScalingCreateGroupTask(groupName, availabilityZones, vpcZoneIdentifier, capacity, launchConfigName, tagKey, tagValue);
+	  checkResult(
+	      task,
+	      new AutoScalingSystemActivity( useSystemAccount ),
+	      "failed to create autoscaling group"
+	      );
 	}
 
-  public void createOrUpdateAutoscalingTags(final String tagKey,
-      final String tagValue, final String asgName) {
+	public void createOrUpdateAutoscalingTags(final String tagKey,
+      final String tagValue, final String asgName){ 
+	  createOrUpdateAutoscalingTagsImpl(tagKey, tagValue, asgName, true);
+	}
+	
+	public void createOrUpdateAutoscalingTags(final String tagKey,
+      final String tagValue, final String asgName, final boolean useSystemAccount){
+	  createOrUpdateAutoscalingTagsImpl(tagKey, tagValue, asgName, useSystemAccount);
+	}
+	
+  public void createOrUpdateAutoscalingTagsImpl(final String tagKey,
+      final String tagValue, final String asgName, final boolean useSystemAccount) {
     final AutoscalingCreateOrUpdateTagsTask task = new AutoscalingCreateOrUpdateTagsTask(
         tagKey, tagValue, asgName);
     checkResult(
         task,
-        new AutoScalingSystemActivity(),
+        new AutoScalingSystemActivity(useSystemAccount),
         "failed to create/update autoscaling tags"
     );
   }
-  
-	public LaunchConfigurationType describeLaunchConfiguration(final String launchConfigName){
-		return resultOf(
-				new AutoScalingDescribeLaunchConfigsTask(launchConfigName),
-				new AutoScalingSystemActivity(),
-				"failed to describe launch configuration"
-		);
-	}
+
+  public LaunchConfigurationType describeLaunchConfiguration(final String launchConfigName){
+    return describeLaunchConfigurationImpl(launchConfigName, true);
+  }
+  public LaunchConfigurationType describeLaunchConfiguration(final String launchConfigName, boolean useSystemAccount){
+    return describeLaunchConfigurationImpl(launchConfigName, useSystemAccount);
+  }
+  private LaunchConfigurationType describeLaunchConfigurationImpl(final String launchConfigName, final boolean useSystemAccount){
+    return resultOf(
+        new AutoScalingDescribeLaunchConfigsTask(launchConfigName),
+        new AutoScalingSystemActivity(useSystemAccount),
+        "failed to describe launch configuration"
+        );
+  }
 	
-	public void deleteLaunchConfiguration(final String launchConfigName){
+  public void deleteLaunchConfiguration(final String launchConfigName){
+    deleteLaunchConfigurationImpl(launchConfigName, true);
+  }
+  public void deleteLaunchConfiguration(final String launchConfigName, final boolean useSystemAccount){
+    deleteLaunchConfigurationImpl(launchConfigName, useSystemAccount);
+  }
+	private void deleteLaunchConfigurationImpl(final String launchConfigName, final boolean useSystemAccount){
 		checkResult(
 				new AutoScalingDeleteLaunchConfigTask(launchConfigName),
-				new AutoScalingSystemActivity( ),
+				new AutoScalingSystemActivity( useSystemAccount ),
 				"failed to delete launch configuration"
 		);
 	}
 	
-	public void deleteAutoScalingGroup(final String groupName, final boolean terminateInstances){
+  public void deleteAutoScalingGroup(final String groupName, final boolean terminateInstances){
+    deleteAutoScalingGroupImpl(groupName, terminateInstances, true);
+  }
+  public void deleteAutoScalingGroup(final String groupName, final boolean terminateInstances, final boolean useSystemAccount){
+    deleteAutoScalingGroupImpl(groupName, terminateInstances, useSystemAccount);
+  }
+	private void deleteAutoScalingGroupImpl(final String groupName, final boolean terminateInstances, final boolean useSystemAccount){
 		checkResult(
 				new AutoScalingDeleteGroupTask(groupName, terminateInstances),
-				new AutoScalingSystemActivity( ),
+				new AutoScalingSystemActivity( useSystemAccount ),
 				"failed to delete autoscaling group"
 		);
 	}
 	
+	public DescribeAutoScalingGroupsResponseType describeAutoScalingGroupsWithVerbose(final List<String> groupNames){
+	  final List<String> namesWithVerbose = Lists.newArrayList();
+	  namesWithVerbose.addAll(groupNames);
+	  namesWithVerbose.add("verbose");
+	  return describeAutoScalingGroupsImpl(namesWithVerbose, false);
+  }
 	public DescribeAutoScalingGroupsResponseType describeAutoScalingGroups(final List<String> groupNames){
+	  return describeAutoScalingGroupsImpl(groupNames, true);
+	}
+	public DescribeAutoScalingGroupsResponseType describeAutoScalingGroups(final List<String> groupNames, final boolean useSystemAccount){
+	  return describeAutoScalingGroupsImpl(groupNames, useSystemAccount);
+	}
+	private DescribeAutoScalingGroupsResponseType describeAutoScalingGroupsImpl(final List<String> groupNames, final boolean useSystemAccount){
 		return resultOf(
 				new AutoScalingDescribeGroupsTask(groupNames),
-				new AutoScalingSystemActivity(),
+				new AutoScalingSystemActivity(useSystemAccount),
 				"failed to describe autoscaling groups"
 		);
 	}
 
 	public void updateAutoScalingGroup(final String groupName, final List<String> zones, final int capacity){
-		updateAutoScalingGroup(groupName, zones, capacity, null);
+	  updateAutoScalingGroup(groupName, zones, capacity, null, true);
 	}
-	
+	public void updateAutoScalingGroup(final String groupName, final List<String> zones, final int capacity, final boolean useSystemAccount){
+	  updateAutoScalingGroup(groupName, zones, capacity, null, useSystemAccount);
+	}
+
 	public void updateAutoScalingGroup(final String groupName, final List<String> zones, final Integer capacity, final String launchConfigName){
-		checkResult(
-				new AutoScalingUpdateGroupTask(groupName, zones, capacity, launchConfigName),
-				new AutoScalingSystemActivity( ),
-				"failed to update autoscaling group"
-		);
+	  updateAutoScalingGroupImpl(groupName, zones, capacity, launchConfigName, true);
+	}
+	public void updateAutoScalingGroup(final String groupName, final List<String> zones, final Integer capacity, final String launchConfigName, final boolean useSystemAccount){
+	  updateAutoScalingGroupImpl(groupName, zones, capacity, launchConfigName, useSystemAccount);
+	}   
+	private void updateAutoScalingGroupImpl(final String groupName, final List<String> zones, final Integer capacity, final String launchConfigName, final boolean useSystemAccount){
+	  checkResult(
+	      new AutoScalingUpdateGroupTask(groupName, zones, capacity, launchConfigName),
+	      new AutoScalingSystemActivity( useSystemAccount ),
+	      "failed to update autoscaling group"
+	      );
 	}
 	
 	public List<RoleType> listRoles(final String pathPrefix){
@@ -502,22 +656,28 @@ public class EucalyptusActivityTasks {
 	}
 
 	public void modifySecurityGroups(
-			final String instanceId,
-			final Collection<String> securityGroupIds
-	) {
-		checkResult(
-				new EucalyptusModifySecurityGroupsTask( instanceId, securityGroupIds ),
-				new EucalyptusSystemActivity( ),
-				"failed to modify security groups"
-		);
+	    final String instanceId,
+	    final Collection<String> securityGroupIds
+	    ) {
+	  modifySecurityGroupsImpl(instanceId, securityGroupIds, true);
 	}
-
-	public List<VpcType> describeVpcs(final Collection<String> vpcIds ){
-		return resultOf(
-				new EucaDescribeVpcsTask( vpcIds ),
-				new ComputeSystemActivity( ),
-				"failed to describe vpcs"
-		);
+	public void modifySecurityGroups(
+	    final String instanceId,
+	    final Collection<String> securityGroupIds,
+	    final boolean useSystemAccount
+	    ){
+	  modifySecurityGroupsImpl(instanceId, securityGroupIds, useSystemAccount);
+	}
+	private void modifySecurityGroupsImpl(
+	    final String instanceId,
+	    final Collection<String> securityGroupIds,
+	    final boolean useSystemAccount
+	    ) {
+	  checkResult(
+	      new EucalyptusModifySecurityGroupsTask( instanceId, securityGroupIds ),
+	      new EucalyptusSystemActivity( useSystemAccount ),
+	      "failed to modify security groups"
+	      );
 	}
 
 	public Optional<VpcType> defaultVpc( final AccountFullName accountFullName ) {
@@ -531,11 +691,10 @@ public class EucalyptusActivityTasks {
 	public List<SubnetType> describeSubnets(final Collection<String> subnetIds ){
 		return resultOf(
 				new EucaDescribeSubnetsTask( subnetIds ),
-				new ComputeSystemActivity(),
+				new ComputeSystemActivity(false),
 				"failed to describe subnets"
 		);
 	}
-
 
 	public List<SubnetType> describeSubnetsByZone(
 			final String vpcId,
@@ -543,7 +702,7 @@ public class EucalyptusActivityTasks {
 			final Collection<String> zones ){
 		return resultOf(
 				new EucaDescribeSubnetsTask( vpcId, defaultSubnet, zones ),
-				new ComputeSystemActivity(),
+				new ComputeSystemActivity(false),
 				"failed to describe subnets"
 		);
 	}
@@ -551,7 +710,7 @@ public class EucalyptusActivityTasks {
 	public List<InternetGatewayType> describeInternetGateways(final Collection<String> vpcIds ){
 		return resultOf(
 				new EucaDescribeInternetGatewaysTask(vpcIds),
-				new ComputeSystemActivity( ),
+				new ComputeSystemActivity(false),
 				"failed to describe internet gateways"
 		);
 	}
@@ -563,11 +722,17 @@ public class EucalyptusActivityTasks {
 				"failed to get server certificate"
 		);
 	}
-	
-	public void deleteRole(final String roleName){
+
+  public void deleteRole(final String roleName){
+    deleteRoleImpl(roleName, true);
+  }
+  public void deleteRole(final String roleName, boolean useSystemAccount){
+    deleteRoleImpl(roleName, useSystemAccount);
+  }
+	private void deleteRoleImpl(final String roleName, boolean useSystemAccount){
 		checkResult(
 				new EuareDeleteRoleTask(roleName),
-				new EuareSystemActivity( ),
+				new EuareSystemActivity(useSystemAccount),
 				"failed to delete IAM role"
 		);
 	}
@@ -588,10 +753,16 @@ public class EucalyptusActivityTasks {
 		);
 	}
 	
-	public void deleteInstanceProfile(String profileName){
+  public void deleteInstanceProfile(String profileName){
+    deleteInstanceProfileImpl(profileName, true);
+  }
+  public void deleteInstanceProfile(String profileName, boolean useSystemAccount){
+    deleteInstanceProfileImpl(profileName, useSystemAccount);
+  }
+	private void deleteInstanceProfileImpl(String profileName, boolean useSystemAccount){
 		checkResult(
 				new EuareDeleteInstanceProfileTask(profileName),
-				new EuareSystemActivity( ),
+				new EuareSystemActivity( useSystemAccount ),
 				"failed to delete IAM instance profile"
 		);
 	}
@@ -603,13 +774,19 @@ public class EucalyptusActivityTasks {
 				"failed to add role to the instance profile"
 		);
 	}
-	
+
 	public void removeRoleFromInstanceProfile(String instanceProfileName, String roleName){
-		checkResult(
-				new EuareRemoveRoleFromInstanceProfileTask(instanceProfileName, roleName),
-				new EuareSystemActivity( ),
-				"failed to remove role from the instance profile"
-		);
+	  removeRoleFromInstanceProfileImpl(instanceProfileName, roleName, true);
+	}
+	public void removeRoleFromInstanceProfile(String instanceProfileName, String roleName, boolean useSystemAccount){
+	  removeRoleFromInstanceProfileImpl(instanceProfileName, roleName, useSystemAccount);
+	}
+	private void removeRoleFromInstanceProfileImpl(String instanceProfileName, String roleName, boolean useSystemAccount){
+	  checkResult(
+	      new EuareRemoveRoleFromInstanceProfileTask(instanceProfileName, roleName),
+	      new EuareSystemActivity( useSystemAccount ),
+	      "failed to remove role from the instance profile"
+	      );
 	}
 	
 	public List<String> listRolePolicies(final String roleName){
@@ -629,19 +806,33 @@ public class EucalyptusActivityTasks {
 	}
 	
 	public void putRolePolicy(String roleName, String policyName, String policyDocument){
+	  putRolePolicyImpl(roleName, policyName, policyDocument, true);
+	}
+
+	public void putRolePolicy(String roleName, String policyName, String policyDocument, boolean useSystemAccount){
+    putRolePolicyImpl(roleName, policyName, policyDocument, useSystemAccount);
+	}
+	
+	private void putRolePolicyImpl(String roleName, String policyName, String policyDocument, boolean useSystemAccount){
 		checkResult(
 				new EuarePutRolePolicyTask(roleName, policyName, policyDocument),
-				new EuareSystemActivity( ),
+				new EuareSystemActivity( useSystemAccount ),
 				"failed to put role's policy"
 		);
 	}
-	
+
 	public void deleteRolePolicy(String roleName, String policyName){
-		checkResult(
-				new EuareDeleteRolePolicyTask(roleName, policyName),
-				new EuareSystemActivity( ),
-				"failed to delete role's policy"
-		);
+	  deleteRolePolicyImpl(roleName, policyName, true);
+	}
+	public void deleteRolePolicy(String roleName, String policyName, boolean useSystemAccount){
+	  deleteRolePolicyImpl(roleName, policyName, useSystemAccount);
+	}
+	private void deleteRolePolicyImpl(String roleName, String policyName, boolean useSystemAccount){
+	  checkResult(
+	      new EuareDeleteRolePolicyTask(roleName, policyName),
+	      new EuareSystemActivity( useSystemAccount ),
+	      "failed to delete role's policy"
+	      );
 	}
 	
 	public List<ImageDetails> describeImages(final List<String> imageIds){
@@ -651,6 +842,16 @@ public class EucalyptusActivityTasks {
 				"failed to describe images"
 		);
 	}
+	
+	public List<ImageDetails> describeImagesWithVerbose(final List<String> imageIds){
+	  final List<String> idsWithVerbose = Lists.newArrayList(imageIds);
+	  idsWithVerbose.add("verbose");
+    return resultOf(
+        new EucaDescribeImagesTask(idsWithVerbose),
+        new ComputeSystemActivity(false),
+        "failed to describe images"
+    );
+  }
 	
 	public void createTags(final String tagKey, final String tagValue, final List<String> resources){
 		checkResult(

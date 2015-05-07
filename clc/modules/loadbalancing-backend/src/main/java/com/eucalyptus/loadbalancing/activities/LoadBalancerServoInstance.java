@@ -22,6 +22,7 @@ package com.eucalyptus.loadbalancing.activities;
 import java.util.Date;
 import java.util.List;
 import java.util.NoSuchElementException;
+
 import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -31,9 +32,11 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.PostLoad;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -45,10 +48,12 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.loadbalancing.LoadBalancer;
+import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneEntityTransform;
 import com.eucalyptus.loadbalancing.common.LoadBalancingBackend;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
 import com.eucalyptus.util.Exceptions;
@@ -375,11 +380,14 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 						String privateIpAddr = null;
 						if(instance.getAddress()==null){
 							try{
-								List<RunningInstancesItemType> result =
-										EucalyptusActivityTasks.getInstance().describeSystemInstances(Lists.newArrayList(instance.getInstanceId()));
+								List<RunningInstancesItemType> result = null;
+								
+								final LoadBalancerZone lbZone = LoadBalancerZoneEntityTransform.INSTANCE.apply(instance.getAvailabilityZone());
+								final LoadBalancerCoreView lb = lbZone.getLoadbalancer();
+								result = EucalyptusActivityTasks.getInstance().describeSystemInstancesWithVerbose(Lists.newArrayList(instance.getInstanceId()));
 								if(result!=null && result.size()>0){
-									ipAddr = result.get(0).getIpAddress();
-									privateIpAddr = result.get(0).getPrivateIpAddress();
+								  ipAddr = result.get(0).getIpAddress();
+								  privateIpAddr = result.get(0).getPrivateIpAddress();
 								}
 							}catch(Exception ex){
 								LOG.warn("failed to run describe-instances", ex);
