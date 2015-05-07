@@ -22,9 +22,11 @@ package com.eucalyptus.compute.service;
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 import java.util.Map;
 import com.eucalyptus.auth.AuthContextSupplier;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.compute.common.ComputeMessage;
+import com.eucalyptus.compute.common.internal.account.ComputeAccounts;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.MessageValidation;
@@ -48,6 +50,13 @@ public class ComputeServiceValidator {
         final String error = validationErrorsByField.values().iterator().next();
         throw new ComputeServiceClientException( "InvalidParameterValue", error );
       }
+    }
+
+    // Account setup
+    try {
+      ComputeAccounts.ensureInitialized( user.get( ).getAccountNumber( ) );
+    } catch ( AuthException e ) {
+      throw new EucalyptusCloudException( e );
     }
 
     return request;

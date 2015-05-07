@@ -88,7 +88,6 @@ import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.ServerCertificate;
 import com.eucalyptus.auth.euare.persist.entities.ServerCertificateEntity;
-import com.eucalyptus.auth.euare.events.AccountEventUtils;
 import com.eucalyptus.auth.ldap.LdapSync;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
@@ -135,7 +134,6 @@ public class EuareService {
       AccountType account = reply.getCreateAccountResult( ).getAccount( );
       account.setAccountName( newAccount.getName( ) );
       account.setAccountId( newAccount.getAccountNumber( ) );
-      AccountEventUtils.fireCreated( newAccount.getAccountNumber( ) );
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
@@ -161,7 +159,6 @@ public class EuareService {
     try {
       boolean recursive = ( request.getRecursive( ) != null && request.getRecursive( ) );
       Privileged.deleteAccount( requestUser, accountFound, recursive );
-      AccountEventUtils.fireDeleted( accountFound.getAccountNumber( ) );
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
