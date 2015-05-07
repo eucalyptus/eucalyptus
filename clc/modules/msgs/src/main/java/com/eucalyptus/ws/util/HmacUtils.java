@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -81,7 +81,6 @@ import com.eucalyptus.crypto.util.SecurityHeader;
 import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.util.Strings;
-import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -96,12 +95,12 @@ public class HmacUtils {
   private static final Logger LOG = Logger.getLogger( HmacUtils.class );
   
   private static final List<String> PARAMETERS_V1 = ImmutableList.of(
-      RequiredQueryParams.SignatureVersion.toString( ), 
+      SecurityParameter.SignatureVersion.parameter( ),
       SecurityParameter.Signature.parameter(),
       SecurityParameter.AWSAccessKeyId.parameter() );
 
   private static final List<String> PARAMETERS_V2 = ImmutableList.of(
-      RequiredQueryParams.SignatureVersion.toString(),
+      SecurityParameter.SignatureVersion.parameter(),
       SecurityParameter.SignatureMethod.parameter(),
       SecurityParameter.Signature.parameter(),
       SecurityParameter.AWSAccessKeyId.parameter() );
@@ -440,7 +439,7 @@ public class HmacUtils {
         || lookupUnique( parameterLookup, "parameter", SecurityParameter.X_Amz_Date.parameter() ) != null ) {
       variant = SignatureVariant.SignatureV4Query;
     } else {
-      String signatureVersion = lookupUnique( parameterLookup, "parameter", RequiredQueryParams.SignatureVersion.toString() );  
+      String signatureVersion = lookupUnique( parameterLookup, "parameter", SecurityParameter.SignatureVersion.parameter() );
       if ( "1".equals( signatureVersion ) ) {
         variant = SignatureVariant.SignatureV1Standard;  
       } else if ( "2".equals( signatureVersion ) || signatureVersion == null ) {

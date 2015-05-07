@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,12 +32,10 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Strings;
 import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import com.eucalyptus.ws.stages.HmacUserAuthenticationStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -60,15 +58,6 @@ public abstract class QueryPipeline extends FilteredPipeline {
           EnumSet.allOf( RequiredQueryParams.class ) );
   }
 
-  protected QueryPipeline( final String name,
-                           final String servicePathPrefix,
-                           final Set<TemporaryKeyType> allowedTemporaryCredentials,
-                           final Set<RequiredQueryParams> requiredQueryParams ) {
-    this( name,
-          ImmutableSet.of( servicePathPrefix ),
-          allowedTemporaryCredentials,
-          requiredQueryParams );
-  }
   protected QueryPipeline( final String name,
                            final Set<String> servicePathPrefixes,
                            final Set<TemporaryKeyType> allowedTemporaryCredentials,

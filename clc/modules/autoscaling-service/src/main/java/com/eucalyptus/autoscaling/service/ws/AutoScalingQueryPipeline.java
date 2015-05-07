@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,7 +25,6 @@ import com.eucalyptus.auth.principal.TemporaryAccessKey;
 import com.eucalyptus.autoscaling.service.config.AutoScalingConfiguration;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.autoscaling.common.AutoScaling;
-import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import com.eucalyptus.ws.server.QueryPipeline;
 
 /**
@@ -38,8 +37,7 @@ public class AutoScalingQueryPipeline extends QueryPipeline {
     super(
         "autoscaling-query",
         AutoScalingConfiguration.SERVICE_PATH,
-        EnumSet.allOf( TemporaryAccessKey.TemporaryKeyType.class ),
-        EnumSet.of( RequiredQueryParams.Version ) );
+        EnumSet.allOf( TemporaryAccessKey.TemporaryKeyType.class ) );
   }
 
   @Override

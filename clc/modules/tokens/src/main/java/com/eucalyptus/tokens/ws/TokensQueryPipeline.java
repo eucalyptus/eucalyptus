@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +20,6 @@
 package com.eucalyptus.tokens.ws;
 
 import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Map;
 import javax.security.auth.login.CredentialExpiredException;
@@ -48,7 +47,6 @@ import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.eucalyptus.crypto.util.SecurityHeader;
-import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import com.eucalyptus.ws.server.NioServerHandler;
 import com.eucalyptus.ws.server.QueryPipeline;
 import com.eucalyptus.ws.stages.UnrollableStage;
@@ -65,8 +63,7 @@ public class TokensQueryPipeline extends QueryPipeline {
     super(
         "tokens-query-pipeline",
         "/services/Tokens",
-        EnumSet.of( TemporaryKeyType.Role ),
-        EnumSet.of( RequiredQueryParams.Version ) );
+        EnumSet.of( TemporaryKeyType.Role ) );
   }
 
   @Override
@@ -120,7 +117,7 @@ public class TokensQueryPipeline extends QueryPipeline {
       if ( event.getMessage( ) instanceof MappingHttpRequest) {
         final MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
         usePasswordAuth =
-            !httpRequest.getParameters().containsKey( RequiredQueryParams.SignatureVersion.toString() ) &&
+            !httpRequest.getParameters().containsKey( SecurityParameter.SignatureVersion.parameter() ) &&
             !httpRequest.getParameters().containsKey( SecurityParameter.X_Amz_Algorithm.parameter() ) &&
             !SecurityHeader.Value.AWS4_HMAC_SHA256.matches( httpRequest.getHeader( HttpHeaders.Names.AUTHORIZATION ) ) ;
       }
