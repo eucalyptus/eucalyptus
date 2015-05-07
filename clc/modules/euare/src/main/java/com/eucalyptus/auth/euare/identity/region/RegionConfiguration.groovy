@@ -19,12 +19,9 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare.identity.region
 
-import com.eucalyptus.component.ComponentIds
-import com.eucalyptus.component.groups.ApiEndpointServicesGroup
+import com.eucalyptus.util.Cidr
 import com.google.common.base.CaseFormat
-import com.google.common.base.Joiner
 import com.google.common.base.Strings
-import com.google.common.collect.Iterables
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -40,6 +37,8 @@ import java.util.regex.Pattern
 @Canonical
 class RegionConfiguration implements Iterable<Region> {
   List<Region> regions
+  List<String> remoteCidrs
+  List<String> forwardedForCidrs
 
   @Override
   Iterator<Region> iterator( ) {
@@ -55,8 +54,12 @@ class Region {
   String name
   String certificateFingerprintDigest
   String certificateFingerprint
+  String sslCertificateFingerprintDigest
+  String sslCertificateFingerprint
   List<Integer> identifierPartitions
   List<Service> services
+  List<String> remoteCidrs
+  List<String> forwardedForCidrs
 }
 
 @CompileStatic
@@ -147,6 +150,8 @@ class RegionConfigurationValidator extends TypedValidator<RegionConfiguration> {
   @Override
   void validate( final RegionConfiguration configuration ) {
     validateAll( configuration.&getRegions, new RegionValidator(errors) )
+    validateAll( configuration.&getRemoteCidrs, new CidrValidator(errors) )
+    validateAll( configuration.&getForwardedForCidrs, new CidrValidator(errors) )
   }
 }
 
@@ -167,13 +172,31 @@ class RegionValidator extends TypedValidator<Region> {
     validate( region.&getName, new RegexValidator( errors, REGION_NAME_PATTERN, 'Invalid region name ([a-z0-9-]*) "{0}": "{1}"' ) )
     validate( region.&getCertificateFingerprint, new CertificateFingerprintValidator( errors ) )
     validate( region.&getCertificateFingerprintDigest, new CertificateFingerprintDigestValidator( errors ) )
+    validate( region.&getSslCertificateFingerprint, new CertificateFingerprintValidator( errors ) )
+    validate( region.&getSslCertificateFingerprintDigest, new CertificateFingerprintDigestValidator( errors ) )
     validateAll( region.&getIdentifierPartitions, new IdentifierPartitionValidator( errors ) )
     validateAll( region.&getServices, new ServiceValidator( errors ) )
+    validateAll( region.&getRemoteCidrs, new CidrValidator( errors ) )
+    validateAll( region.&getForwardedForCidrs, new CidrValidator( errors ) )
     if ( region.identifierPartitions.empty ) {
       errors.reject( "property.invalid.identifier", [pathTranslate(errors.nestedPath,'identifierPartitions')] as Object[], 'No values given for \"{0}\"' )
     }
     if ( region.services.empty ) {
       errors.reject( "property.invalid.services", [pathTranslate(errors.nestedPath,'services')] as Object[], 'No values given for \"{0}\"' )
+    }
+  }
+}
+
+@CompileStatic
+@Canonical
+@PackageScope
+class CidrValidator extends TypedValidator<String> {
+  Errors errors
+
+  @Override
+  void validate( final String cidr ) {
+    if ( !Cidr.parse( ).apply( cidr ).isPresent( ) ) {
+      errors.reject( "property.invalid.cidr", [pathTranslate( errors.getNestedPath( ) ), cidr ] as Object[], 'Invalid CIDR for \"{0}\": \"{1}\"' )
     }
   }
 }

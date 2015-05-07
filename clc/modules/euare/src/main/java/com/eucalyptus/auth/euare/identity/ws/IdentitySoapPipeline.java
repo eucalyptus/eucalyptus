@@ -19,9 +19,16 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare.identity.ws;
 
+import java.net.InetSocketAddress;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.auth.euare.common.identity.Identity;
 import com.eucalyptus.auth.euare.identity.config.IdentityConfiguration;
+import com.eucalyptus.auth.euare.identity.region.RegionConfigurationManager;
 import com.eucalyptus.component.annotation.ComponentPart;
+import com.eucalyptus.ws.WebServicesException;
+import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.eucalyptus.ws.server.SoapPipeline;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
@@ -30,6 +37,8 @@ import com.eucalyptus.ws.stages.UnrollableStage;
  */
 @ComponentPart( Identity.class )
 public class IdentitySoapPipeline extends SoapPipeline {
+
+  private static RegionConfigurationManager regionConfigurationManager = new RegionConfigurationManager( );
 
   private final UnrollableStage auth = new IdentitySoapAuthenticationStage( );
 
@@ -40,6 +49,20 @@ public class IdentitySoapPipeline extends SoapPipeline {
         IdentityConfiguration.SERVICE_PATH,
         "http://www.eucalyptus.com/ns/identity/2015-03-01/",
         "http://www.eucalyptus.com/ns/identity/\\d\\d\\d\\d-\\d\\d-\\d\\d/" );
+  }
+
+  @Override
+  public ChannelPipeline addHandlers( final ChannelPipeline pipeline ) {
+    pipeline.addLast( "source-ip-restriction-soap-fault", new MessageStackHandler( ){
+      @Override
+      public void incomingMessage( final MessageEvent event ) throws Exception {
+        final InetSocketAddress remoteAddress = (InetSocketAddress) event.getChannel( ).getRemoteAddress( );
+        if ( !regionConfigurationManager.isValidRemoteAddress( remoteAddress.getAddress( ) ) ) {
+          throw new WebServicesException( "Forbidden", HttpResponseStatus.FORBIDDEN );
+        }
+      }
+    } );
+    return super.addHandlers( pipeline );
   }
 
   @Override

@@ -24,8 +24,10 @@ import com.eucalyptus.configurable.ConfigurableField
 import com.eucalyptus.configurable.ConfigurableProperty
 import com.eucalyptus.configurable.ConfigurablePropertyException
 import com.eucalyptus.configurable.PropertyChangeListener
+import com.eucalyptus.configurable.PropertyChangeListeners
 import com.eucalyptus.records.Logs
 import com.eucalyptus.util.UpperCamelPropertyNamingStrategy
+import com.google.common.base.Objects
 import com.google.common.base.Optional
 import com.google.common.base.Strings
 import groovy.transform.CompileStatic
@@ -38,6 +40,7 @@ import org.springframework.validation.BeanPropertyBindingResult
 import org.springframework.validation.ValidationUtils
 
 import javax.annotation.Nonnull
+
 
 /**
  *
@@ -54,6 +57,10 @@ class RegionConfigurations {
   private static final boolean validateConfiguration =
       Boolean.valueOf( System.getProperty( 'com.eucalyptus.auth.euare.identity.region.validateRegionConfiguration', 'true' ) )
 
+  private static final String REGION_DEFAULT_SSL_PROTOCOLS = "TLSv1.2";
+
+  private static final String REGION_DEFAULT_SSL_CIPHERS = "RSA:DSS:ECDSA:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES";
+
   @ConfigurableField(
       description = "Region configuration document.",
       changeListener = RegionConfigurationPropertyChangeListener )
@@ -63,6 +70,28 @@ class RegionConfigurations {
       description = "Region name.",
       changeListener = RegionNamePropertyChangeListener )
   public static String REGION_NAME = "";
+
+  @ConfigurableField(
+      description = "Enable SSL (HTTPS) for regions.",
+      initial = "true",
+      changeListener = PropertyChangeListeners.IsBoolean.class )
+  public static Boolean REGION_ENABLE_SSL = true
+
+  @ConfigurableField(
+      description = "Verify hostnames for region SSL connections.",
+      initial = "true",
+      changeListener = PropertyChangeListeners.IsBoolean.class )
+  public static Boolean REGION_SSL_VERIFY_HOSTNAMES = true
+
+  @ConfigurableField(
+      description = "Protocols to use for region SSL",
+      initial = RegionConfigurations.REGION_DEFAULT_SSL_PROTOCOLS )
+  public static String REGION_SSL_PROTOCOLS = REGION_DEFAULT_SSL_PROTOCOLS;
+
+  @ConfigurableField(
+      description = "Ciphers to use for region SSL",
+      initial = RegionConfigurations.REGION_DEFAULT_SSL_CIPHERS )
+  public static String REGION_SSL_CIPHERS = REGION_DEFAULT_SSL_CIPHERS;
 
   static RegionConfiguration parse( final String configuration ) throws RegionConfigurationException {
     final ObjectMapper mapper = new ObjectMapper( )
@@ -112,6 +141,22 @@ class RegionConfigurations {
   @Nonnull
   static Optional<String> getRegionName( ) {
     return Optional.fromNullable( Strings.emptyToNull( REGION_NAME ) )
+  }
+
+  public static boolean isUseSsl( ) {
+    return Objects.firstNonNull( REGION_ENABLE_SSL, Boolean.TRUE );
+  }
+
+  public static boolean isVerifyHostnames( ) {
+    return Objects.firstNonNull( REGION_SSL_VERIFY_HOSTNAMES, Boolean.TRUE );
+  }
+
+  public static String getSslProtocols( ) {
+    return Objects.firstNonNull( REGION_SSL_PROTOCOLS, REGION_DEFAULT_SSL_PROTOCOLS );
+  }
+
+  public static String getSslCiphers( ) {
+    return Objects.firstNonNull( REGION_SSL_CIPHERS, REGION_DEFAULT_SSL_CIPHERS );
   }
 
   static class RegionNamePropertyChangeListener implements PropertyChangeListener<String> {

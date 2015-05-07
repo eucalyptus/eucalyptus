@@ -22,7 +22,10 @@ package com.eucalyptus.auth.euare.identity.region;
 import static com.eucalyptus.auth.RegionService.regionName;
 import static com.eucalyptus.auth.RegionService.serviceType;
 import static com.eucalyptus.auth.euare.identity.region.RegionInfo.RegionService;
+import static com.eucalyptus.util.CollectionUtils.propertyContainsPredicate;
 import static com.eucalyptus.util.CollectionUtils.propertyPredicate;
+import java.net.InetAddress;
+import java.net.URI;
 import java.security.MessageDigest;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
@@ -42,15 +45,17 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.groups.ApiEndpointServicesGroup;
 import com.eucalyptus.crypto.Digest;
+import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -62,6 +67,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.io.BaseEncoding;
+import com.google.common.net.InetAddresses;
 
 /**
  *
@@ -98,7 +104,7 @@ public class RegionConfigurationManager {
         if ( Iterables.contains(
             Iterables.transform( region.getIdentifierPartitions( ), PartitionFunctions.IDENTIFIER ),
             regionIdPartition ) ) {
-          regionInfoOptional = Optional.of( TypeMappers.transform( region, RegionInfo.class ) );
+          regionInfoOptional = Optional.of( regionToRegionInfoTransform( configurationOptional ).apply( region ) );
         }
       }
     }
@@ -122,7 +128,7 @@ public class RegionConfigurationManager {
         if ( Iterables.contains(
             Iterables.transform( region.getIdentifierPartitions( ), PartitionFunctions.ACCOUNT_NUMBER ),
             regionIdPartition ) ) {
-          regionInfoOptional = Optional.of( TypeMappers.transform( region, RegionInfo.class ) );
+          regionInfoOptional = Optional.of( regionToRegionInfoTransform( configurationOptional ).apply( region ) );
         }
       }
     }
@@ -135,10 +141,24 @@ public class RegionConfigurationManager {
    * @return The optional region information
    */
   public Optional<RegionInfo> getRegionInfo( ) {
+    final Optional<RegionConfiguration> regionConfigurationOptional = regionConfigurationSupplier.get();
     return Iterables.tryFind(
-          Iterables.concat( regionConfigurationSupplier.get( ).asSet() ),
+          Iterables.concat( regionConfigurationOptional.asSet() ),
           propertyPredicate( RegionConfigurations.getRegionName( ).asSet(), RegionNameTransform.INSTANCE )
-      ).transform( RegionToRegionInfoTransform.INSTANCE );
+      ).transform( regionToRegionInfoTransform( regionConfigurationOptional ) );
+  }
+
+  /**
+   * Get the region information for the local region (if any)
+   *
+   * @return The optional region information
+   */
+  public Optional<RegionInfo> getRegionInfoByHost( final String host ) {
+    final Optional<RegionConfiguration> regionConfigurationOptional = regionConfigurationSupplier.get( );
+    return Iterables.tryFind(
+        Iterables.concat( regionConfigurationOptional.asSet() ),
+        propertyContainsPredicate( host, RegionServiceHostTransform.INSTANCE )
+    ).transform( regionToRegionInfoTransform( regionConfigurationOptional ) );
   }
 
   /**
@@ -147,9 +167,29 @@ public class RegionConfigurationManager {
    * @return The region information
    */
   public Iterable<RegionInfo> getRegionInfos( ) {
+    final Optional<RegionConfiguration> regionConfigurationOptional = regionConfigurationSupplier.get( );
     return Iterables.transform(
-        Iterables.concat( regionConfigurationSupplier.get( ).asSet( ) ),
-        RegionToRegionInfoTransform.INSTANCE );
+        Iterables.concat( regionConfigurationOptional.asSet( ) ),
+        regionToRegionInfoTransform( regionConfigurationOptional ) );
+  }
+
+  public boolean isRegionSSLCertificate( final String host, final X509Certificate certificate ) {
+    boolean valid = false;
+    final Optional<RegionInfo> hostRegion = getRegionInfoByHost( host );
+    if ( hostRegion.isPresent( ) ) {
+      if ( hostRegion.get( ).getSslCertificateFingerprint( ) != null ) {
+        valid = digestMatches(
+            hostRegion.get( ).getSslCertificateFingerprintDigest( ),
+            hostRegion.get( ).getSslCertificateFingerprint( ),
+            certificate );
+      } else {
+        valid = digestMatches(
+            hostRegion.get( ).getCertificateFingerprintDigest( ),
+            hostRegion.get( ).getCertificateFingerprint( ),
+            certificate );
+      }
+    }
+    return valid;
   }
 
   public boolean isRegionCertificate( final X509Certificate certificate ) {
@@ -158,24 +198,57 @@ public class RegionConfigurationManager {
     if ( configurationOptional.isPresent( ) ) {
       final RegionConfiguration configuration = configurationOptional.get( );
       for ( final Region region : configuration ) {
-        try {
-          final Digest digest = Digest.forAlgorithm( region.getCertificateFingerprintDigest( ) ).or( Digest.SHA256 );
-          final byte[] regionCertificateFingerprint = certificateDigestCache.get(
-              region.getCertificateFingerprint(),
-              new Callable<byte[]>( ) {
-                @Override
-                public byte[] call( ) throws Exception {
-                  return BaseEncoding.base16( ).withSeparator( ":", 2 ).decode( region.getCertificateFingerprint( ) );
-                }
-              } );
-          found = MessageDigest.isEqual( regionCertificateFingerprint, digest.digestBinary( certificate.getEncoded( ) ) );
-          if ( found ) break;
-        } catch ( ExecutionException | CertificateEncodingException e ) {
-          // skip the certificate
+        if ( digestMatches( region.getCertificateFingerprintDigest( ), region.getCertificateFingerprint( ), certificate ) ) {
+          found = true;
+          break;
         }
       }
     }
     return found;
+  }
+
+  private boolean digestMatches(
+      final String fingerprintDigest,
+      final String fingerprint,
+      final X509Certificate certificate
+  ) {
+    try {
+      final Digest digest = Digest.forAlgorithm( fingerprintDigest ).or( Digest.SHA256 );
+      final byte[] regionCertificateFingerprint = certificateDigestCache.get(
+          fingerprint,
+          new Callable<byte[]>( ) {
+            @Override
+            public byte[] call( ) throws Exception {
+              return BaseEncoding.base16( ).withSeparator( ":", 2 ).decode( fingerprint );
+            }
+          } );
+      return MessageDigest.isEqual( regionCertificateFingerprint, digest.digestBinary( certificate.getEncoded( ) ) );
+    } catch ( ExecutionException | CertificateEncodingException e ) {
+      // skip the certificate
+      return false;
+    }
+  }
+
+  public boolean isValidRemoteAddress( final InetAddress inetAddress ) {
+    return isValidAddress( inetAddress, RegionInfoToCidrSetTransform.REMOTE );
+  }
+
+  public boolean isValidForwardedForAddress( final String address ) {
+    boolean valid = false;
+    try {
+      valid = isValidAddress( InetAddresses.forString( address ), RegionInfoToCidrSetTransform.FORWARDED_FOR );
+    } catch ( final IllegalArgumentException e ) {
+      // invalid
+    }
+    return valid;
+  }
+
+  private boolean isValidAddress( final InetAddress inetAddress,
+                                  final NonNullFunction<RegionInfo,Set<Cidr>> cidrTransform ) {
+    final Optional<RegionInfo> regionInfoOptional = getRegionInfo( );
+    final Predicate<InetAddress> addressPredicate =
+        Predicates.or( Iterables.concat( regionInfoOptional.transform( cidrTransform ).asSet( ) ) );
+    return addressPredicate.apply( inetAddress );
   }
 
   private enum PartitionFunctions implements NonNullFunction<Integer,String> {
@@ -197,6 +270,46 @@ public class RegionConfigurationManager {
     },
   }
 
+  private enum RegionInfoToCidrSetTransform implements NonNullFunction<RegionInfo,Set<Cidr>> {
+    FORWARDED_FOR {
+      @Nonnull
+      @Override
+      public Set<Cidr> apply( final RegionInfo regionInfo ) {
+        return regionInfo.getForwardedForCidrs( );
+      }
+    },
+    REMOTE {
+      @Nonnull
+      @Override
+      public Set<Cidr> apply( final RegionInfo regionInfo ) {
+        return regionInfo.getRemoteCidrs( );
+      }
+    },
+  }
+
+  private enum RegionConfigurationToCidrListTransform implements NonNullFunction<RegionConfiguration,List<String>> {
+    FORWARDED_FOR {
+      @Nonnull
+      @Override
+      public List<String>  apply( final RegionConfiguration regionConfiguration ) {
+        final List<String> cidrs = regionConfiguration.getForwardedForCidrs( );
+        return cidrs == null ?
+            Collections.<String>emptyList( ) :
+            cidrs;
+      }
+    },
+    REMOTE {
+      @Nonnull
+      @Override
+      public List<String> apply( final RegionConfiguration regionConfiguration ) {
+        final List<String> cidrs = regionConfiguration.getRemoteCidrs( );
+        return cidrs == null ?
+            Collections.<String>emptyList( ) :
+            cidrs;
+      }
+    },
+  }
+
   private enum RegionNameTransform implements NonNullFunction<Region,String> {
     INSTANCE;
 
@@ -204,6 +317,22 @@ public class RegionConfigurationManager {
     @Override
     public String apply( final Region region ) {
       return region.getName( );
+    }
+  }
+
+  private enum RegionServiceHostTransform implements NonNullFunction<Region,Set<String>> {
+    INSTANCE;
+
+    @Nonnull
+    @Override
+    public Set<String> apply( final Region region ) {
+      final Set<String> hosts = Sets.newHashSet( );
+      if ( region.getServices( ) != null ) for ( final Service service : region.getServices( ) ) {
+        if ( service.getEndpoints( ) != null ) for ( final String uri : service.getEndpoints( ) ) {
+          hosts.add( URI.create( uri ).getHost( ) );
+        }
+      }
+      return hosts;
     }
   }
 
@@ -217,20 +346,38 @@ public class RegionConfigurationManager {
     }
   }
 
-  @TypeMapper
-  private enum RegionToRegionInfoTransform implements Function<Region,RegionInfo> {
-    INSTANCE;
+  private static NonNullFunction<Region,RegionInfo> regionToRegionInfoTransform(
+      final Optional<RegionConfiguration> regionConfigurationOptional
+  ) {
+    return new NonNullFunction<Region,RegionInfo>( ) {
+      @Nonnull
+      @Override
+      public RegionInfo apply( final Region region ) {
+        return new RegionInfo(
+            region.getName( ),
+            region.getIdentifierPartitions( ),
+            Collections2.transform( region.getServices( ), TypeMappers.lookup( Service.class, RegionService.class ) ),
+            buildCidrs(
+                regionConfigurationOptional.transform( RegionConfigurationToCidrListTransform.REMOTE ).orNull( ),
+                region.getRemoteCidrs( ) ),
+            buildCidrs(
+                regionConfigurationOptional.transform( RegionConfigurationToCidrListTransform.FORWARDED_FOR ).orNull( ),
+                region.getForwardedForCidrs( ) ),
+            region.getCertificateFingerprintDigest( ),
+            region.getCertificateFingerprint( ),
+            region.getSslCertificateFingerprintDigest( ),
+            region.getSslCertificateFingerprint( )
+        );
+      }
+    };
+  }
 
-    @Nullable
-    @Override
-    public RegionInfo apply( @Nullable final Region region ) {
-      return region == null ?
-          null :
-          new RegionInfo(
-              region.getName( ),
-              region.getIdentifierPartitions( ),
-              Collections2.transform( region.getServices( ), TypeMappers.lookup( Service.class, RegionService.class ) ) );
-    }
+  private static Set<Cidr> buildCidrs( final List<String> cidrList, final List<String> regionCidrList ) {
+    final Set<String> cidrs = Sets.newLinkedHashSet( );
+    if ( cidrList != null ) cidrs.addAll( cidrList );
+    if ( regionCidrList != null ) cidrs.addAll( regionCidrList );
+    if ( cidrs.isEmpty( ) ) cidrs.add( "0.0.0.0/0" );
+    return Sets.newLinkedHashSet( Iterables.transform( cidrs, Cidr.parseUnsafe( ) ) );
   }
 
   @TypeMapper
@@ -316,7 +463,13 @@ public class RegionConfigurationManager {
               Collections.singleton( 0 ),
               Lists.newArrayList( Optional.presentInstances( Iterables.transform(
                   Iterables.filter( ComponentIds.list( ), ComponentIds.lookup( ApiEndpointServicesGroup.class ) ),
-                  ComponentIdToRegionServiceTransform.INSTANCE ) ) )
+                  ComponentIdToRegionServiceTransform.INSTANCE ) ) ),
+              Collections.<Cidr>emptySet( ),
+              Collections.<Cidr>emptySet( ),
+              null,
+              null,
+              null,
+              null
           );
         }
       };
