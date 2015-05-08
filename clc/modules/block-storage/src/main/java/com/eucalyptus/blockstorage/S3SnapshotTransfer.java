@@ -77,7 +77,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
@@ -112,7 +111,6 @@ import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import com.eucalyptus.auth.principal.BaseRole;
 import com.eucalyptus.blockstorage.async.SnapshotTransferCleaner;
-import com.eucalyptus.blockstorage.entities.SnapshotInfo;
 import com.eucalyptus.blockstorage.entities.SnapshotPart;
 import com.eucalyptus.blockstorage.entities.SnapshotPart.SnapshotPartState;
 import com.eucalyptus.blockstorage.entities.SnapshotTransferConfiguration;
@@ -122,14 +120,12 @@ import com.eucalyptus.blockstorage.entities.StorageInfo;
 import com.eucalyptus.blockstorage.exceptions.SnapshotFinalizeMpuException;
 import com.eucalyptus.blockstorage.exceptions.SnapshotInitializeMpuException;
 import com.eucalyptus.blockstorage.exceptions.SnapshotTransferException;
+import com.eucalyptus.blockstorage.exceptions.SnapshotUploadObjectException;
 import com.eucalyptus.blockstorage.exceptions.SnapshotUploadPartException;
 import com.eucalyptus.blockstorage.threadpool.SnapshotTransferThreadPool;
 import com.eucalyptus.blockstorage.util.BlockStorageUtil;
 import com.eucalyptus.blockstorage.util.StorageProperties;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
@@ -164,10 +160,8 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
   private Integer queueSize;
   private Integer transferRetries;
   private Integer transferTimeout;
-  private Integer poolSize;
   private Integer readBufferSize;
   private Integer writeBufferSize;
-  private ServiceConfiguration serviceConfig;
 
   // Static parameters
   private static BaseRole role;
@@ -234,7 +228,7 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
   /**
    * Preparation for upload involves looking up the bucket from the database and creating it in objectstorage gateway. If the bucket is already
    * created, objectstorage gateway should still respond back with 200 OK. Invoke this method before uploading the snapshot using
-   * {@link #upload(String)} or set the bucket name explicitly using {@link #setBucketName(String)}
+   * {@link #upload(String, SnapshotProgressCallback)} or set the bucket name explicitly using {@link #setBucketName(String)}
    * 
    * @return Name of the bucket that holds snapshots in objectstorage gateway
    */
@@ -252,11 +246,9 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
    * @param sourceFileName absolute path to the snapshot on the file system
    */
   @Override
-  public void upload(StorageResource storageResource) throws SnapshotTransferException {
+  public Future<String> upload(StorageResource storageResource, SnapshotProgressCallback progressCallback) throws SnapshotTransferException {
     validateInput(); // Validate input
     loadTransferConfig(); // Load the transfer configuration parameters from database
-
-    SnapshotProgressCallback progressCallback = new SnapshotProgressCallback(snapshotId); // Setup the progress callback
 
     Boolean error = Boolean.FALSE;
     ArrayBlockingQueue<SnapshotPart> partQueue = null;
@@ -309,10 +301,9 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
               LOG.info("Uploading snapshot " + snapshotId + " to objectstorage using multipart upload");
               progressCallback.setUploadSize(uncompressedSize);
               uploadId = initiateMulitpartUpload(uncompressedSize);
-              snapUploadInfo = snapUploadInfo.updateUploadId(uploadId);
+              snapUploadInfo = snapUploadInfo.updateUploadId(uploadId); // update uploadId so its available for future parts
               part = part.updateStateCreated(uploadId, bytesWritten, bytesRead, Boolean.FALSE);
               partQueue = new ArrayBlockingQueue<SnapshotPart>(queueSize);
-              // uploadPartsFuture = Threads.enqueue(serviceConfig, UploadPartTask.class, poolSize, new UploadPartTask(partQueue, progressCallback));
               uploadPartsFuture = SnapshotTransferThreadPool.add(new UploadPartTask(partQueue, progressCallback));
             }
 
@@ -391,30 +382,21 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
         // Add the last part to the queue
         partQueue.put(part);
         // Kick off the completion task
-        // completeUploadFuture =
-        // Threads.enqueue(serviceConfig, CompleteMpuTask.class, poolSize, new CompleteMpuTask(uploadPartsFuture, snapUploadInfo, partNumber));
         completeUploadFuture = SnapshotTransferThreadPool.add(new CompleteMpuTask(uploadPartsFuture, snapUploadInfo, partNumber));
       } else {
         try {
           LOG.info("Uploading snapshot " + snapshotId + " to objectstorage as a single object. Compressed size of snapshot (" + bytesWritten
               + " bytes) is less than minimum part size (" + partSize + " bytes) for multipart upload");
-          PutObjectResult putResult = uploadSnapshotAsSingleObject(zipFilePath.toString(), bytesWritten, uncompressedSize, progressCallback);
-          markSnapshotAvailable();
-          try {
-            part = part.updateStateUploaded(putResult.getETag());
-            snapUploadInfo = snapUploadInfo.updateStateUploaded(putResult.getETag());
-          } catch (Exception e) {
-            LOG.debug("Failed to update status in DB for " + snapUploadInfo);
-          }
-          LOG.info("Uploaded snapshot " + snapshotId + " to objectstorage");
+          completeUploadFuture =
+              SnapshotTransferThreadPool.add(new UploadObjectTask(part, snapUploadInfo, zipFilePath.toString(), bytesWritten, uncompressedSize,
+                  progressCallback));
         } catch (Exception e) {
           error = Boolean.TRUE;
-          LOG.error("Failed to upload snapshot " + snapshotId + " due to: ", e);
-          throw new SnapshotTransferException("Failed to upload snapshot " + snapshotId + " due to: ", e);
-        } finally {
-          deleteFile(zipFilePath);
+          LOG.error("Failed to add async task for uploading " + snapshotId + " due to: ", e);
+          throw new SnapshotUploadObjectException("Failed to add async task for uploading " + snapshotId + " due to: ", e);
         }
       }
+      return completeUploadFuture;
     } catch (SnapshotTransferException e) {
       error = Boolean.TRUE;
       throw e;
@@ -504,8 +486,6 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
           }
         } else { // Download and unzip snpashot to disk in parts and write the parts to storage backend in parallel
           ArrayBlockingQueue<SnapshotPart> partQueue = new ArrayBlockingQueue<SnapshotPart>(queueSize);
-          // Future<String> storageWriterFuture =
-          // Threads.enqueue(serviceConfig, StorageWriterTask.class, poolSize, new StorageWriterTask(partQueue, storageResource));
           Future<String> storageWriterFuture = SnapshotTransferThreadPool.add(new StorageWriterTask(partQueue, storageResource));
 
           FileOutputStream fileOutputStream = null;
@@ -698,8 +678,6 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
     this.queueSize = info.getMaxSnapshotPartsQueueSize();
     this.transferRetries = info.getMaxSnapTransferRetries();
     this.transferTimeout = info.getSnapshotTransferTimeoutInHours();
-    this.serviceConfig = Components.lookup(Storage.class).getLocalServiceConfiguration();
-    this.poolSize = info.getMaxConcurrentSnapshotTransfers();
     this.readBufferSize = info.getReadBufferSizeInMB() * 1024 * 1024;
     this.writeBufferSize = info.getWriteBufferSizeInMB() * 1024 * 1024;
   }
@@ -797,8 +775,8 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
     }
   }
 
-  private PutObjectResult uploadSnapshotAsSingleObject(final String compressedSnapFileName, Long actualSize, Long uncompressedSize,
-      final SnapshotProgressCallback callback) throws Exception {
+  private String uploadSnapshotAsSingleObject(final String compressedSnapFileName, Long actualSize, Long uncompressedSize,
+      final SnapshotProgressCallback callback) throws SnapshotUploadObjectException {
     callback.setUploadSize(actualSize);
     ObjectMetadata objectMetadata = new ObjectMetadata();
     Map<String, String> userMetadataMap = new HashMap<String, String>();
@@ -806,24 +784,34 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
     objectMetadata.setUserMetadata(userMetadataMap);
     objectMetadata.setContentLength(actualSize);
 
-    return retryAfterRefresh(new Function<PutObjectRequest, PutObjectResult>() {
+    try {
+      LOG.debug("Uploading " + compressedSnapFileName);
+      PutObjectResult putResult = retryAfterRefresh(new Function<PutObjectRequest, PutObjectResult>() {
 
-      @Override
-      @Nullable
-      public PutObjectResult apply(@Nullable PutObjectRequest arg0) {
-        eucaS3Client.refreshEndpoint();
-        // EUCA-10311 Set the input stream in put request. Doing it here to ensure that input stream is set before every attempt to put object
-        try {
-          arg0.setInputStream(new FileInputStreamWithCallback(new File(compressedSnapFileName), callback));
-        } catch (Exception e) {
-          LOG.warn("Failed to upload snapshot to objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName
-              + ", reason: unable to initialize FileInputStreamWithCallback for file " + compressedSnapFileName, e);
-          Exceptions.toUndeclared(e);
+        @Override
+        @Nullable
+        public PutObjectResult apply(@Nullable PutObjectRequest arg0) {
+          eucaS3Client.refreshEndpoint();
+          // EUCA-10311 Set the input stream in put request. Doing it here to ensure that input stream is set before every attempt to put object
+          try {
+            arg0.setInputStream(new FileInputStreamWithCallback(new File(compressedSnapFileName), callback));
+          } catch (Exception e) {
+            LOG.warn("Failed to upload snapshot to objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName
+                + ", reason: unable to initialize FileInputStreamWithCallback for file " + compressedSnapFileName, e);
+            Exceptions.toUndeclared(e);
+          }
+          return eucaS3Client.putObject(arg0);
         }
-        return eucaS3Client.putObject(arg0);
-      }
 
-    }, new PutObjectRequest(bucketName, keyName, null, objectMetadata), REFRESH_TOKEN_RETRIES);
+      }, new PutObjectRequest(bucketName, keyName, null, objectMetadata), REFRESH_TOKEN_RETRIES);
+
+      return putResult.getETag();
+    } catch (Exception e) {
+      LOG.warn("Failed to upload object " + compressedSnapFileName, e);
+      throw new SnapshotUploadObjectException("Failed to upload object " + compressedSnapFileName, e);
+    } finally {
+      deleteFile(compressedSnapFileName);
+    }
   }
 
   private String initiateMulitpartUpload(Long uncompressedSize) throws SnapshotInitializeMpuException {
@@ -836,7 +824,7 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
     initRequest.setObjectMetadata(objectMetadata);
 
     try {
-      LOG.info("Inititating multipart upload: snapshotId=" + snapshotId + ", bucketName=" + bucketName + ", keyName=" + keyName);
+      LOG.debug("Inititating multipart upload: snapshotId=" + snapshotId + ", bucketName=" + bucketName + ", keyName=" + keyName);
       initResponse = retryAfterRefresh(new Function<InitiateMultipartUploadRequest, InitiateMultipartUploadResult>() {
 
         @Override
@@ -859,7 +847,7 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
     return initResponse.getUploadId();
   }
 
-  private PartETag uploadPart(SnapshotPart part, SnapshotProgressCallback progressCallback) throws SnapshotUploadPartException {
+  private PartETag uploadPart(SnapshotPart part) throws SnapshotUploadPartException {
     try {
       part = part.updateStateUploading();
     } catch (Exception e) {
@@ -881,22 +869,9 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
               new UploadPartRequest().withBucketName(part.getBucketName()).withKey(part.getKeyName()).withUploadId(part.getUploadId())
                   .withPartNumber(part.getPartNumber()).withPartSize(part.getSize()).withFile(new File(part.getFileName())), REFRESH_TOKEN_RETRIES);
 
-      progressCallback.update(part.getInputFileBytesRead());
-
-      try {
-        part = part.updateStateUploaded(uploadPartResult.getPartETag().getETag());
-      } catch (Exception e) {
-        LOG.debug("Failed to update part status in DB. Moving on. " + part);
-      }
-      LOG.debug("Uploaded " + part);
       return uploadPartResult.getPartETag();
     } catch (Exception e) {
-      LOG.error("Failed to upload part " + part, e);
-      try {
-        part = part.updateStateFailed();
-      } catch (Exception ie) {
-        LOG.debug("Failed to update part status in DB. Moving on. " + part);
-      }
+      LOG.warn("Failed to upload part " + part, e);
       throw new SnapshotUploadPartException("Failed to upload part " + part, e);
     } finally {
       deleteFile(part.getFileName());
@@ -906,7 +881,7 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
   private String finalizeMultipartUpload(List<PartETag> partETags) throws SnapshotFinalizeMpuException {
     CompleteMultipartUploadResult result;
     try {
-      LOG.info("Finalizing multipart upload: snapshotId=" + snapshotId + ", bucketName=" + bucketName + ", keyName=" + keyName + ", uploadId="
+      LOG.debug("Finalizing multipart upload: snapshotId=" + snapshotId + ", bucketName=" + bucketName + ", keyName=" + keyName + ", uploadId="
           + uploadId);
       result = retryAfterRefresh(new Function<CompleteMultipartUploadRequest, CompleteMultipartUploadResult>() {
 
@@ -974,49 +949,6 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
     }
   }
 
-  private void markSnapshotAvailable() throws TransactionException, NoSuchElementException {
-    Function<String, SnapshotInfo> updateFunction = new Function<String, SnapshotInfo>() {
-
-      @Override
-      public SnapshotInfo apply(String arg0) {
-        SnapshotInfo snap;
-        try {
-          snap = Entities.uniqueResult(new SnapshotInfo(arg0));
-          snap.setStatus(StorageProperties.Status.available.toString());
-          snap.setProgress("100");
-          snap.setSnapPointId(null);
-          return snap;
-        } catch (TransactionException | NoSuchElementException e) {
-          LOG.error("Failed to retrieve snapshot entity from DB for " + arg0, e);
-        }
-        return null;
-      }
-    };
-
-    Entities.asTransaction(SnapshotInfo.class, updateFunction, TX_RETRIES).apply(snapshotId);
-  }
-
-  private void markSnapshotFailed() throws TransactionException, NoSuchElementException {
-    Function<String, SnapshotInfo> updateFunction = new Function<String, SnapshotInfo>() {
-
-      @Override
-      public SnapshotInfo apply(String arg0) {
-        SnapshotInfo snap;
-        try {
-          snap = Entities.uniqueResult(new SnapshotInfo(arg0));
-          snap.setStatus(StorageProperties.Status.failed.toString());
-          snap.setProgress("0");
-          return snap;
-        } catch (TransactionException | NoSuchElementException e) {
-          LOG.error("Failed to retrieve snapshot entity from DB for " + arg0, e);
-        }
-        return null;
-      }
-    };
-
-    Entities.asTransaction(SnapshotInfo.class, updateFunction, TX_RETRIES).apply(snapshotId);
-  }
-
   private <F, T> T retryAfterRefresh(Function<F, T> function, F input, int retries) throws SnapshotTransferException {
     int failedAttempts = 0;
     T output = null;
@@ -1077,9 +1009,24 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
         if (part.getState().equals(SnapshotPartState.created) || part.getState().equals(SnapshotPartState.uploading)
             || part.getState().equals(SnapshotPartState.failed)) {
           try {
-            partETags.add(uploadPart(part, progressCallback));
+            PartETag partEtag = uploadPart(part);
+            partETags.add(partEtag);
+
+            progressCallback.updateUploadProgress(part.getInputFileBytesRead());
+            try {
+              part = part.updateStateUploaded(partEtag.getETag());
+            } catch (Exception e) {
+              LOG.debug("Failed to update part status in DB. Moving on. " + part);
+            }
+
+            LOG.debug("Uploaded " + part);
           } catch (Exception e) {
-            LOG.error("Failed to upload a part for " + snapshotId + ". Aborting the part upload process");
+            LOG.warn("Failed to upload a part for " + snapshotId + ". Aborting the part upload process");
+            try {
+              part = part.updateStateFailed();
+            } catch (Exception ie) {
+              LOG.debug("Failed to update part status in DB. Moving on. " + part);
+            }
             return null;
           }
         } else {
@@ -1091,10 +1038,10 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
     }
   }
 
-  public static abstract class CompleteMpu implements Callable<String> {
+  public static abstract class CompleteUpload implements Callable<String> {
   }
 
-  class CompleteMpuTask extends CompleteMpu {
+  class CompleteMpuTask extends CompleteUpload {
 
     private Future<List<PartETag>> uploadTaskFuture;
     private SnapshotUploadInfo snapUploadInfo;
@@ -1115,13 +1062,13 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
         if (partETags != null && partETags.size() == totalParts) {
           try {
             etag = finalizeMultipartUpload(partETags);
-            markSnapshotAvailable();
+            // markSnapshotAvailable();
             try {
               snapUploadInfo = snapUploadInfo.updateStateUploaded(etag);
             } catch (Exception e) {
               LOG.debug("Failed to update status in DB for " + snapUploadInfo);
             }
-            LOG.info("Uploaded snapshot " + snapUploadInfo.getSnapshotId() + " to objectstorage");
+            LOG.debug("Uploaded snapshot " + snapUploadInfo.getSnapshotId() + " to objectstorage");
           } catch (Exception e) {
             error = Boolean.TRUE;
             LOG.error("Failed to upload " + snapshotId + " due to an error completing the upload", e);
@@ -1139,9 +1086,48 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
         LOG.error("Failed to upload " + snapshotId, ex);
       } finally {
         if (error) {
-          markSnapshotFailed();
           abortUpload(snapUploadInfo);
+          etag = null;
         }
+      }
+      return etag;
+    }
+  }
+
+  class UploadObjectTask extends CompleteUpload {
+
+    private SnapshotPart part;
+    private SnapshotUploadInfo snapUploadInfo;
+    private String pathToFile;
+    private Long actualSize;
+    private Long uncompressedSize;
+    private SnapshotProgressCallback callback;
+
+    public UploadObjectTask(SnapshotPart part, SnapshotUploadInfo snapUploadInfo, String pathToFile, Long actualSize, Long uncompressedSize,
+        SnapshotProgressCallback callback) {
+      this.part = part;
+      this.snapUploadInfo = snapUploadInfo;
+      this.pathToFile = pathToFile;
+      this.actualSize = actualSize;
+      this.uncompressedSize = uncompressedSize;
+      this.callback = callback;
+    }
+
+    @Override
+    public String call() throws Exception {
+      String etag = null;
+      try {
+        etag = uploadSnapshotAsSingleObject(pathToFile, actualSize, uncompressedSize, callback);
+        try {
+          part = part.updateStateUploaded(etag);
+          snapUploadInfo = snapUploadInfo.updateStateUploaded(etag);
+        } catch (Exception e) {
+          LOG.debug("Failed to update status in DB for " + snapUploadInfo);
+        }
+        LOG.debug("Uploaded " + pathToFile + " to objectstorage");
+      } catch (Exception e) {
+        LOG.warn("Failed to upload " + snapshotId, e);
+        abortUpload(snapUploadInfo);
       }
       return etag;
     }

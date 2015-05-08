@@ -71,7 +71,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
 
 import com.amazonaws.services.s3.model.PartETag;
-import com.eucalyptus.blockstorage.S3SnapshotTransfer.CompleteMpu;
+import com.eucalyptus.blockstorage.S3SnapshotTransfer.CompleteUpload;
 import com.eucalyptus.blockstorage.S3SnapshotTransfer.StorageWriter;
 import com.eucalyptus.blockstorage.S3SnapshotTransfer.UploadPart;
 import com.eucalyptus.blockstorage.Storage;
@@ -99,7 +99,7 @@ public class SnapshotTransferThreadPool {
       Integer size = info.getMaxConcurrentSnapshotTransfers();
 
       uploadPartPool = Executors.newFixedThreadPool(size, Threads.lookup(Storage.class, UploadPart.class).limitTo(size));
-      completeMpuPool = Executors.newFixedThreadPool(size, Threads.lookup(Storage.class, CompleteMpu.class).limitTo(size));
+      completeMpuPool = Executors.newFixedThreadPool(size, Threads.lookup(Storage.class, CompleteUpload.class).limitTo(size));
       backendWriterPool = Executors.newFixedThreadPool(size, Threads.lookup(Storage.class, StorageWriter.class).limitTo(size));
     } finally {
       RLOCK.unlock();
@@ -116,7 +116,7 @@ public class SnapshotTransferThreadPool {
     }
   }
 
-  public static Future<String> add(CompleteMpu task) throws ThreadPoolNotInitializedException {
+  public static Future<String> add(CompleteUpload task) throws ThreadPoolNotInitializedException {
     if (completeMpuPool != null && !completeMpuPool.isShutdown()) {
       return completeMpuPool.submit(task);
     } else {

@@ -129,14 +129,15 @@ public interface SANProvider {
    * </p>
    * 
    * <p>
-   * See {@link #disconnectTarget(String, String)}
+   * See {@link #disconnectTarget(String, String, String)}
    * </p>
    * 
    * @param iqn
+   * @param lun
    * @return
    * @throws EucalyptusCloudException
    */
-  public StorageResource connectTarget(String iqn) throws EucalyptusCloudException;
+  public StorageResource connectTarget(String iqn, String lun) throws EucalyptusCloudException;
 
   /**
    * Returns a string that contains a list of volume metadata concatanated together. The returned string has the format: <san host>,<volume
@@ -213,14 +214,15 @@ public interface SANProvider {
    * </p>
    * 
    * <p>
-   * See {@link #connectTarget(String)}
+   * See {@link #connectTarget(String, String)}
    * </p>
    * 
    * @param snapshotId
    * @param iqn
+   * @param lun
    * @throws EucalyptusCloudException
    */
-  public void disconnectTarget(String snapshotId, String iqn) throws EucalyptusCloudException;
+  public void disconnectTarget(String snapshotId, String iqn, String lun) throws EucalyptusCloudException;
 
   public void checkPreconditions() throws EucalyptusCloudException;
 
@@ -233,7 +235,7 @@ public interface SANProvider {
    * @return Integer id of the lun exported
    * @throws EucalyptusCloudException
    */
-  public String addInitiatorRule(String volumeId, String nodeIqn) throws EucalyptusCloudException;
+  public String exportResource(String volumeId, String nodeIqn) throws EucalyptusCloudException;
 
   /**
    * Removes the node permission for the volume for the specified iqn. After this operation a node should not be able to connect to the volume
@@ -242,7 +244,7 @@ public interface SANProvider {
    * @param nodeIqn
    * @throws EucalyptusCloudException
    */
-  public void removeInitiatorRule(String volumeId, String nodeIqn) throws EucalyptusCloudException;
+  public void unexportResource(String volumeId, String nodeIqn) throws EucalyptusCloudException;
 
   /**
    * Removes permission for the volume for all hosts. After this operation no node should be able to connect to the volume
@@ -251,7 +253,7 @@ public interface SANProvider {
    * @param nodeIqn
    * @throws EucalyptusCloudException
    */
-  public void removeAllInitiatorRules(String volumeId) throws EucalyptusCloudException;
+  public void unexportResourceFromAll(String volumeId) throws EucalyptusCloudException;
 
   public void getStorageProps(ArrayList<ComponentProperty> componentProperties);
 
@@ -323,7 +325,23 @@ public interface SANProvider {
    */
   public boolean volumeExists(String volumeId) throws EucalyptusCloudException;
 
+  /**
+   * Returns the protocol to be used for data transfers with the storage backend
+   * 
+   * @return string representing protocol such as iscsi or rbd
+   */
   public String getProtocol();
 
+  /**
+   * 
+   * @return string representing block storage provider name
+   */
   public String getProviderName();
+
+  /**
+   * 
+   * @param snapshotId
+   * @throws EucalyptusCloudException
+   */
+  public void waitAndComplete(String snapshotId) throws EucalyptusCloudException;
 }

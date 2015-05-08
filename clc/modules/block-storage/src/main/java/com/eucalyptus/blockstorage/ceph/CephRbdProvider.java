@@ -173,15 +173,19 @@ public class CephRbdProvider implements SANProvider {
   }
 
   @Override
-  public StorageResource connectTarget(String iqn) throws EucalyptusCloudException {
+  public StorageResource connectTarget(String iqn, String lun) throws EucalyptusCloudException {
+    // iqn and lun are be the same, use one of them
+    // SANManager changes the ID, so dont bother setting the volume ID (first parameter) here
+    return new CephRbdResource(lun, lun);
+
     // iqn here is in the format pool/image or pool/image,pool/image
     // SANManager changes the ID, so dont bother setting the volume ID (first parameter) here
-    if (iqn.contains(",")) {
-      String[] parts = iqn.split(",");
-      return new CephRbdResource(parts[0], parts[0]);
-    } else {
-      return new CephRbdResource(iqn, iqn);
-    }
+    // if (iqn.contains(",")) {
+    // String[] parts = iqn.split(",");
+    // return new CephRbdResource(parts[0], parts[0]);
+    // } else {
+    // return new CephRbdResource(iqn, iqn);
+    // }
   }
 
   @Override
@@ -237,13 +241,8 @@ public class CephRbdProvider implements SANProvider {
   }
 
   @Override
-  public void disconnectTarget(String snapshotId, String iqn) throws EucalyptusCloudException {
-    if (iqn.contains(",")) { // iqn is in format "image/pool,image/pool"
-      // This could be the case when EBS snapshot from another cluster is being setup on this cluster for the first time
-      // Create a snapshot on the image as one might not exist
-      String snapshotPoint = CephRbdInfo.SNAPSHOT_ON_PREFIX + snapshotId;
-      rbdService.createSnapshot(snapshotId, snapshotPoint);
-    }
+  public void disconnectTarget(String snapshotId, String iqn, String lun) throws EucalyptusCloudException {
+    // Nothing to do here
   }
 
   @Override
@@ -265,7 +264,7 @@ public class CephRbdProvider implements SANProvider {
   }
 
   @Override
-  public String addInitiatorRule(String volumeId, String nodeIqn) throws EucalyptusCloudException {
+  public String exportResource(String volumeId, String nodeIqn) throws EucalyptusCloudException {
     try {
       String pool = rbdService.getImagePool(volumeId);
       return pool + '/' + volumeId;
@@ -275,12 +274,12 @@ public class CephRbdProvider implements SANProvider {
   }
 
   @Override
-  public void removeInitiatorRule(String volumeId, String nodeIqn) throws EucalyptusCloudException {
+  public void unexportResource(String volumeId, String nodeIqn) throws EucalyptusCloudException {
 
   }
 
   @Override
-  public void removeAllInitiatorRules(String volumeId) throws EucalyptusCloudException {
+  public void unexportResourceFromAll(String volumeId) throws EucalyptusCloudException {
 
   }
 
@@ -392,5 +391,12 @@ public class CephRbdProvider implements SANProvider {
         LOG.warn("Caught error during clean up of deleted images", e);
       }
     }
+  }
+
+  @Override
+  public void waitAndComplete(String snapshotId) throws EucalyptusCloudException {
+    // Create a snapshot on the image for future use as one might not exist
+    String snapshotPoint = CephRbdInfo.SNAPSHOT_ON_PREFIX + snapshotId;
+    rbdService.createSnapshot(snapshotId, snapshotPoint);
   }
 }

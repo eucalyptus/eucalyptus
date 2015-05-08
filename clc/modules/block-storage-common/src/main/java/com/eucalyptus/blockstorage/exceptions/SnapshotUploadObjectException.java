@@ -60,30 +60,16 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage;
+package com.eucalyptus.blockstorage.exceptions;
 
-import java.util.concurrent.Future;
+@SuppressWarnings("serial")
+public class SnapshotUploadObjectException extends SnapshotTransferException {
 
-import com.eucalyptus.blockstorage.exceptions.SnapshotTransferException;
+  public SnapshotUploadObjectException(String message) {
+    super(message);
+  }
 
-/**
- * Interface for snapshot transfer between SC and any storage system
- * 
- * @author Swathi Gangisetty
- */
-public interface SnapshotTransfer {
-
-  public String prepareForUpload() throws SnapshotTransferException;
-
-  public Future<String> upload(StorageResource storageResource, SnapshotProgressCallback progressCallback) throws SnapshotTransferException;
-
-  public void resumeUpload(StorageResource storageResource) throws SnapshotTransferException;
-
-  public void cancelUpload() throws SnapshotTransferException;
-
-  public void download(StorageResource storageResource) throws SnapshotTransferException;
-
-  public void delete() throws SnapshotTransferException;
-
-  public Long getSizeInBytes() throws SnapshotTransferException;
+  public SnapshotUploadObjectException(String message, Throwable ex) {
+    super(message, ex);
+  }
 }
