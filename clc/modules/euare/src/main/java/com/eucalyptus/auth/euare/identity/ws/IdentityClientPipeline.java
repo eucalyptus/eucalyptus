@@ -19,16 +19,27 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare.identity.ws;
 
+import static java.lang.System.getProperty;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 import org.apache.http.conn.ssl.BrowserCompatHostnameVerifier;
 import org.jboss.netty.channel.ChannelHandler;
@@ -43,15 +54,21 @@ import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.crypto.util.DelegatingX509ExtendedTrustManager;
 import com.eucalyptus.crypto.util.SslUtils;
 import com.eucalyptus.crypto.util.X509ExtendedTrustManagerSupport;
 import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.util.CollectionUtils;
+import com.eucalyptus.util.IO;
+import com.eucalyptus.util.Pair;
 import com.eucalyptus.ws.Handlers;
 import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
-import com.google.common.base.Objects;
+import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 /**
  *
@@ -59,20 +76,37 @@ import com.google.common.base.Suppliers;
 @ComponentPart( Identity.class )
 public class IdentityClientPipeline implements ChannelPipelineFactory {
   private static final String PROTOCOL = "TLS";
-  private static final Supplier<Boolean> validateHostnames = new Supplier<Boolean>() {
+  private static final String PROP_SSL_TRUSTSTORE_PASSWORD = "com.eucalyptus.auth.euare.identity.regionSslTrustStorePassword";
+  private static final String PROP_SSL_TRUSTSTORE_TYPE = "com.eucalyptus.auth.euare.identity.regionSslTrustStoreType";
+  private static final String PROP_SSL_TRUSTSTORE_PATH = "com.eucalyptus.auth.euare.identity.regionSslTrustStorePath";
+  private static final String DEFAULT_TRUSTSTORE_PASSWORD = "changeit";
+  private static final String DEFAULT_TRUSTSTORE_PATH = "lib/security/cacerts";
+
+  private static final AtomicReference<Pair<Long,KeyStore>> sslTrustStore = new AtomicReference<>( );
+  private static final Supplier<Boolean> useDefaultCAs = new Supplier<Boolean>() {
     @Override
     public Boolean get() {
-      return RegionConfigurations.isVerifyHostnames( );
+      return RegionConfigurations.isUseDefaultCAs();
     }
   };
   private static final Supplier<SSLContext> contextSupplier = Suppliers.memoizeWithExpiration( new Supplier<SSLContext>( ){
     @Override
     public SSLContext get() {
+      final String trustStorePath = getProperty( PROP_SSL_TRUSTSTORE_PATH, DEFAULT_TRUSTSTORE_PATH );
       try {
+        final List<TrustManager> trustManagers = Lists.newArrayList();
+        trustManagers.add( regionTrustManager );
+        final File trustStore = new File( System.getProperty( "java.home" ), trustStorePath );
+        if ( trustStore.isFile( ) ) {
+          trustManagers.add( buildDelegatingTrustManager(
+              trustManagersForStore( getTrustStore( trustStore ) ),
+              useDefaultCAs ) );
+        }
+
         final SSLContext clientContext = SSLContext.getInstance( PROTOCOL );
         clientContext.init(
             null,
-            new TrustManager[ ]{ regionTrustManager },
+            new TrustManager[]{ buildDelegatingTrustManager( trustManagers, Suppliers.ofInstance( true ) ) },
             Crypto.getSecureRandomSupplier( ).get( )
         );
         return clientContext;
@@ -81,7 +115,21 @@ public class IdentityClientPipeline implements ChannelPipelineFactory {
       }
     }
   }, 15, TimeUnit.MINUTES );
-  private static final X509TrustManager regionTrustManager = new RegionTrustManager( validateHostnames );
+  private static final X509TrustManager regionTrustManager = new RegionTrustManager( );
+
+  private static TrustManager buildDelegatingTrustManager(
+      final List<TrustManager> trustManagers,
+      final Supplier<Boolean> enable
+  ) {
+    return new DelegatingX509ExtendedTrustManager(
+        Iterables.transform(
+            Iterables.filter(
+                trustManagers,
+                Predicates.instanceOf( javax.net.ssl.X509ExtendedTrustManager.class ) ),
+            CollectionUtils.cast( javax.net.ssl.X509ExtendedTrustManager.class ) ),
+        enable
+    );
+  }
 
   @Override
   public ChannelPipeline getPipeline( ) throws Exception {
@@ -131,7 +179,9 @@ public class IdentityClientPipeline implements ChannelPipelineFactory {
   public static SSLEngine getSSLEngine( final String peerHost, final int peerPort ) {
     try {
       final SSLParameters sslParams = new SSLParameters( );
-      sslParams.setEndpointIdentificationAlgorithm( "HTTPS" );
+      if ( RegionConfigurations.isVerifyHostnames( ) ) {
+        sslParams.setEndpointIdentificationAlgorithm( "HTTPS" );
+      }
       final SSLContext clientContext = getSSLContext( );
       final SSLEngine engine = clientContext.createSSLEngine( peerHost, peerPort );
       engine.setSSLParameters( sslParams );
@@ -150,17 +200,13 @@ public class IdentityClientPipeline implements ChannelPipelineFactory {
 
   public static final class RegionTrustManager extends X509ExtendedTrustManagerSupport {
     private final RegionConfigurationManager regionConfigurationManager = new RegionConfigurationManager( );
-    private final Supplier<Boolean> validateHostnames;
-
-    public RegionTrustManager( final Supplier<Boolean> validateHostnames ) {
-      this.validateHostnames = validateHostnames;
-    }
 
     @Override
     public void checkServerTrusted( final X509Certificate[] x509Certificates, final String s, final SSLEngine sslEngine ) throws CertificateException {
       final X509Certificate serverCertificate = x509Certificates[0];
       final String hostname = sslEngine.getHandshakeSession( ).getPeerHost( );
-      if ( Objects.firstNonNull( validateHostnames.get( ), Boolean.TRUE ) ) try {
+      final SSLParameters sslParameters = sslEngine.getSSLParameters( );
+      if ( sslParameters != null && "HTTPS".equals( sslParameters.getEndpointIdentificationAlgorithm( ) ) ) try {
         new BrowserCompatHostnameVerifier( ).verify( hostname, serverCertificate );
       } catch ( SSLException e ) {
         throw new CertificateException( "Server cert not valid for host" );
@@ -169,5 +215,28 @@ public class IdentityClientPipeline implements ChannelPipelineFactory {
         throw new CertificateException( "Server cert not trusted" );
       }
     }
+  }
+
+  private static KeyStore getTrustStore( final File trustStore ) throws GeneralSecurityException, IOException {
+    final Pair<Long,KeyStore> currentTrustStore = sslTrustStore.get( );
+    InputStream trustStoreIn = null;
+    if ( currentTrustStore != null && currentTrustStore.getLeft( ) == trustStore.lastModified( ) ) {
+      return currentTrustStore.getRight( );
+    } else try {
+      final String trustStoreType = getProperty( PROP_SSL_TRUSTSTORE_TYPE, KeyStore.getDefaultType( ) );
+      final String trustStorePassword = getProperty( PROP_SSL_TRUSTSTORE_PASSWORD, DEFAULT_TRUSTSTORE_PASSWORD );
+      final KeyStore userTrustStore = KeyStore.getInstance( trustStoreType );
+      userTrustStore.load( trustStoreIn = new FileInputStream( trustStore ), trustStorePassword.toCharArray() );
+      sslTrustStore.set( Pair.pair( trustStore.lastModified( ), userTrustStore ) );
+      return userTrustStore;
+    } finally {
+      IO.close( trustStoreIn );
+    }
+  }
+
+  private static List<TrustManager> trustManagersForStore( final KeyStore trustStore ) throws GeneralSecurityException {
+    final TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance( "PKIX", "SunJSSE" );
+    trustManagerFactory.init( trustStore );
+    return Arrays.asList( trustManagerFactory.getTrustManagers() );
   }
 }

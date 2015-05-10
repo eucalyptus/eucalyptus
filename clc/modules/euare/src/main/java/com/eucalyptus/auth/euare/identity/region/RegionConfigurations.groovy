@@ -78,6 +78,12 @@ class RegionConfigurations {
   public static Boolean REGION_ENABLE_SSL = true
 
   @ConfigurableField(
+      description = "Use default CAs for region SSL connections.",
+      initial = "true",
+      changeListener = PropertyChangeListeners.IsBoolean.class )
+  public static Boolean REGION_SSL_DEFAULT_CAS = true
+
+  @ConfigurableField(
       description = "Verify hostnames for region SSL connections.",
       initial = "true",
       changeListener = PropertyChangeListeners.IsBoolean.class )
@@ -145,6 +151,10 @@ class RegionConfigurations {
 
   public static boolean isUseSsl( ) {
     return Objects.firstNonNull( REGION_ENABLE_SSL, Boolean.TRUE );
+  }
+
+  public static boolean isUseDefaultCAs( ) {
+    return Objects.firstNonNull( REGION_SSL_DEFAULT_CAS, Boolean.FALSE );
   }
 
   public static boolean isVerifyHostnames( ) {

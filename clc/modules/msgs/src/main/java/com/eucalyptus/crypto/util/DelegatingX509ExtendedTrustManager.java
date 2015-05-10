@@ -30,6 +30,8 @@ import javax.net.ssl.X509ExtendedTrustManager;
 import com.eucalyptus.util.CollectionUtils;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 
@@ -39,9 +41,18 @@ import com.google.common.collect.Sets;
 public class DelegatingX509ExtendedTrustManager extends X509ExtendedTrustManager {
 
   private final List<X509ExtendedTrustManager> delegates;
+  private final Supplier<Boolean> enabled;
 
   public DelegatingX509ExtendedTrustManager( final Iterable<X509ExtendedTrustManager> delegates ) {
+    this( delegates, Suppliers.ofInstance( true ) );
+  }
+
+  public DelegatingX509ExtendedTrustManager(
+      final Iterable<X509ExtendedTrustManager> delegates,
+      final Supplier<Boolean> enabled
+  ) {
     this.delegates = ImmutableList.copyOf( delegates );
+    this.enabled = enabled;
   }
 
   @Override
@@ -128,7 +139,7 @@ public class DelegatingX509ExtendedTrustManager extends X509ExtendedTrustManager
   @Override
   public X509Certificate[] getAcceptedIssuers( ) {
     final Set<X509Certificate> issuers = Sets.newLinkedHashSet( );
-    for ( final X509ExtendedTrustManager delegate : delegates ) {
+    if ( enabled.get( ) ) for ( final X509ExtendedTrustManager delegate : delegates ) {
       issuers.addAll( Arrays.asList( delegate.getAcceptedIssuers( ) ) );
     }
     return issuers.toArray( new X509Certificate[ issuers.size( ) ] );
@@ -139,6 +150,9 @@ public class DelegatingX509ExtendedTrustManager extends X509ExtendedTrustManager
   }
 
   private void checkTrusted( final DelegatedTrustChecker checker ) throws CertificateException {
+    if ( !enabled.get( ) ) {
+      throw new CertificateException( "Delegates disabled" );
+    }
     final Optional<CertificateException> resultException = CollectionUtils.reduce(
       delegates,
       Optional.of( new CertificateException( "No delegates" ) ),
