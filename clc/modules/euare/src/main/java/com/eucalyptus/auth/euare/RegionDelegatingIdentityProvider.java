@@ -19,6 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare;
 
+import java.security.cert.X509Certificate;
+import java.security.interfaces.RSAPublicKey;
 import java.util.List;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -287,6 +289,41 @@ public class RegionDelegatingIdentityProvider implements IdentityProvider {
     if ( successes < ( 1 + ( numberOfRegions / 2 ) ) ) {
       throw new AuthException( AuthException.CONFLICT );
     }
+  }
+
+  @Override
+  public X509Certificate getCertificateByAccountNumber( final String accountNumber ) throws AuthException {
+    return regionDispatchByAccountNumber( accountNumber, new NonNullFunction<IdentityProvider, X509Certificate>() {
+      @Nonnull
+      @Override
+      public X509Certificate apply( final IdentityProvider identityProvider ) {
+        try {
+          return identityProvider.getCertificateByAccountNumber( accountNumber );
+        } catch ( AuthException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      }
+    } );
+  }
+
+  @Override
+  public X509Certificate signCertificate(
+      final String accountNumber,
+      final RSAPublicKey publicKey,
+      final String principal,
+      final int expiryInDays
+  ) throws AuthException {
+    return regionDispatchByAccountNumber( accountNumber, new NonNullFunction<IdentityProvider, X509Certificate>() {
+      @Nonnull
+      @Override
+      public X509Certificate apply( final IdentityProvider identityProvider ) {
+        try {
+          return identityProvider.signCertificate( accountNumber, publicKey, principal, expiryInDays );
+        } catch ( AuthException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      }
+    } );
   }
 
   private <R> R regionDispatchByIdentifier(

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,14 +19,12 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare;
 
-import java.security.KeyFactory;
 import java.security.MessageDigest;
 import java.security.Principal;
 import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
-import java.security.spec.X509EncodedKeySpec;
+import java.security.interfaces.RSAPublicKey;
 import java.util.Calendar;
 import java.util.Date;
 
@@ -40,7 +38,6 @@ import org.apache.commons.lang.time.DateUtils;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.Arrays;
 import org.bouncycastle.util.encoders.Base64;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
@@ -106,28 +103,25 @@ public class EuareServerCertificateUtil {
     }
   }
   
-  public static X509Certificate generateVMCertificate( final String b64PubKey, final String instanceId, int expirationDays ) 
-      throws EuareException {
-    try{
-      KeyFactory keyFactory = KeyFactory.getInstance( "RSA", "BC");
-      X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(B64.standard.dec(b64PubKey));
-      PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
-      X500Principal subjectDn = 
-          new X500Principal( String.format( "CN=%s, OU=Eucalyptus, O=Cloud, C=US", instanceId) ); 
+  public static X509Certificate generateVMCertificate(
+      final RSAPublicKey publicKey,
+      final String principal,
+      final int expirationDays
+  ) throws AuthException {
+    try {
+      final X500Principal subjectDn =  new X500Principal( principal );
       final Credentials euareCred = SystemCredentials.lookup( Euare.class );
-      final Principal signer = 
-         (Principal) euareCred.getCertificate().getSubjectDN();
+      final Principal signer = euareCred.getCertificate().getSubjectDN();
       final PrivateKey signingKey = euareCred.getPrivateKey();
       final Date notAfter = DateUtils.addDays(Calendar.getInstance().getTime(), expirationDays);
-      
       final X509Certificate cert = 
-          Certs.generateCertificate(publicKey, subjectDn, new X500Principal(signer.getName()), signingKey, notAfter);
-      if(cert==null)
-        throw new Exception("Null returned");
+          Certs.generateCertificate( publicKey, subjectDn, new X500Principal( signer.getName( ) ), signingKey, notAfter );
+      if( cert == null ) {
+        throw new Exception( "Null returned" );
+      }
       return cert;
-    }catch(final Exception ex){
-      LOG.error("failed to generate VM certificate", ex);
-      throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
+    } catch( final Exception ex ) {
+      throw new AuthException( "failed to generate VM certificate", ex);
     }
   }
   

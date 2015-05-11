@@ -175,6 +175,31 @@ class ReserveNameResponseType extends IdentityMessage {
 class ReserveNameResult extends EucalyptusData {
 }
 
+class DescribeCertificateType extends IdentityMessage {
+}
+
+class DescribeCertificateResponseType extends IdentityMessage {
+  DescribeCertificateResult describeCertificateResult
+}
+
+class DescribeCertificateResult extends EucalyptusData {
+  String pem
+}
+
+class SignCertificateType extends IdentityMessage {
+  String key
+  String principal
+  Integer expirationDays
+}
+
+class SignCertificateResponseType extends IdentityMessage {
+  SignCertificateResult signCertificateResult
+}
+
+class SignCertificateResult extends EucalyptusData {
+  String pem
+}
+
 class TunnelActionType extends IdentityMessage {
   String content // internal XML format
 }

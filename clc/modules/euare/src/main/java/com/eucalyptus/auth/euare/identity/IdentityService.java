@@ -22,6 +22,12 @@ package com.eucalyptus.auth.euare.identity;
 import static com.eucalyptus.auth.principal.Certificate.Util.revoked;
 import static com.eucalyptus.util.CollectionUtils.propertyPredicate;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.cert.X509Certificate;
+import java.security.interfaces.RSAPublicKey;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.Collections;
 import javax.annotation.Nullable;
@@ -37,6 +43,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.InvalidAccessKeyAuthException;
 import com.eucalyptus.auth.api.IdentityProvider;
 import com.eucalyptus.auth.euare.EuareException;
+import com.eucalyptus.auth.euare.EuareServerCertificateUtil;
 import com.eucalyptus.auth.euare.common.identity.Account;
 import com.eucalyptus.auth.euare.common.identity.DecodeSecurityTokenResponseType;
 import com.eucalyptus.auth.euare.common.identity.DecodeSecurityTokenResult;
@@ -44,6 +51,9 @@ import com.eucalyptus.auth.euare.common.identity.DecodeSecurityTokenType;
 import com.eucalyptus.auth.euare.common.identity.DescribeAccountsResponseType;
 import com.eucalyptus.auth.euare.common.identity.DescribeAccountsResult;
 import com.eucalyptus.auth.euare.common.identity.DescribeAccountsType;
+import com.eucalyptus.auth.euare.common.identity.DescribeCertificateResponseType;
+import com.eucalyptus.auth.euare.common.identity.DescribeCertificateResult;
+import com.eucalyptus.auth.euare.common.identity.DescribeCertificateType;
 import com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileResponseType;
 import com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileResult;
 import com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileType;
@@ -59,6 +69,9 @@ import com.eucalyptus.auth.euare.common.identity.ReserveNameResponseType;
 import com.eucalyptus.auth.euare.common.identity.ReserveNameResult;
 import com.eucalyptus.auth.euare.common.identity.ReserveNameType;
 import com.eucalyptus.auth.euare.common.identity.SecurityToken;
+import com.eucalyptus.auth.euare.common.identity.SignCertificateResponseType;
+import com.eucalyptus.auth.euare.common.identity.SignCertificateResult;
+import com.eucalyptus.auth.euare.common.identity.SignCertificateType;
 import com.eucalyptus.auth.euare.common.identity.TunnelActionResponseType;
 import com.eucalyptus.auth.euare.common.identity.TunnelActionResult;
 import com.eucalyptus.auth.euare.common.identity.TunnelActionType;
@@ -75,14 +88,19 @@ import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.component.annotation.ComponentNamed;
+import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LockResource;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Function;
+import com.google.common.base.Objects;
+import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -294,6 +312,47 @@ public class IdentityService {
     response.setReserveNameResult( result );
     return response;
   }
+
+  public DescribeCertificateResponseType describeCertificate( final DescribeCertificateType request ) {
+    final DescribeCertificateResponseType response = request.getReply( );
+    final DescribeCertificateResult result = new DescribeCertificateResult( );
+    result.setPem( new String(
+        PEMFiles.getBytes( SystemCredentials.lookup( Euare.class ).getCertificate( ) ),
+        StandardCharsets.UTF_8 ) );
+    response.setDescribeCertificateResult( result );
+    return response;
+  }
+
+  public SignCertificateResponseType signCertificate( final SignCertificateType request ) throws EuareException {
+    final SignCertificateResponseType response = request.getReply( );
+    final SignCertificateResult result = new SignCertificateResult( );
+    final String pubkey = request.getKey( );
+    final String principal = request.getPrincipal( );
+    final Integer expirationDays = request.getExpirationDays( );
+
+    if( Strings.isNullOrEmpty( pubkey ) )
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "No public key is provided");
+    if( Strings.isNullOrEmpty( principal ) )
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "No principal is provided");
+
+    try {
+      final KeyFactory keyFactory = KeyFactory.getInstance( "RSA", "BC");
+      final X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec( B64.standard.dec( pubkey ) );
+      final PublicKey publicKey = keyFactory.generatePublic( publicKeySpec );
+      final X509Certificate vmCert = EuareServerCertificateUtil.generateVMCertificate(
+          (RSAPublicKey) publicKey,
+          principal,
+          Objects.firstNonNull( expirationDays, 180 )
+      );
+      final String certPem = new String( PEMFiles.getBytes(  vmCert ) );
+      result.setPem( certPem );
+    } catch( final Exception ex ) {
+      throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
+    }
+    response.setSignCertificateResult( result );
+    return response;
+  }
+
 
   public TunnelActionResponseType tunnelAction( final TunnelActionType request ) throws EuareException {
     final TunnelActionResponseType response = request.getReply( );

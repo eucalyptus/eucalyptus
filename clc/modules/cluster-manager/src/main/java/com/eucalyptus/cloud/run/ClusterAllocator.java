@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,10 +63,12 @@
 package com.eucalyptus.cloud.run;
 
 import static com.eucalyptus.images.Images.findEbsRootOptionalSnapshot;
+import static com.eucalyptus.util.Strings.regexReplace;
 
 import java.security.KeyPair;
 import java.security.MessageDigest;
 import java.security.cert.X509Certificate;
+import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -89,6 +91,8 @@ import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
 import com.eucalyptus.compute.common.backend.RunInstancesType;
 import com.eucalyptus.compute.common.backend.StartInstancesType;
 import com.google.common.base.Objects;
+import com.google.common.base.Optional;
+import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -101,8 +105,6 @@ import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.euare.SignCertificateResponseType;
-import com.eucalyptus.auth.euare.SignCertificateType;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.compute.common.internal.blockstorage.Snapshot;
 import com.eucalyptus.compute.common.internal.blockstorage.Snapshots;
@@ -130,7 +132,6 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Ciphers;
@@ -165,6 +166,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
@@ -173,7 +175,10 @@ import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class ClusterAllocator implements Runnable {
   private static final long BYTES_PER_GB = ( 1024L * 1024L * 1024L );
-  
+  private static final Pattern SERVER_CERT_ACCOUNT_PATTERN = Pattern.compile( System.getProperty(
+      "com.eucalyptus.cloud.run.serverCertAccountRegex",
+      "(?s).*loadbalancer_owner_account\\s*=\\s*([0-9]{12}).*" ) );
+
   private static Logger     LOG          = Logger.getLogger( ClusterAllocator.class );
   
   public enum State {
@@ -349,17 +354,12 @@ public class ClusterAllocator implements Runnable {
 
     // create rsa keypair
     try{
+      final String endUserAccountNumber = Objects.firstNonNull(
+          Strings.emptyToNull( Optional.of( payload ).transform( regexReplace( SERVER_CERT_ACCOUNT_PATTERN, "$1", "" ) ).orNull( ) ),
+          allocInfo.getOwnerFullName( ).getAccountNumber( ) );
       final KeyPair kp = Certs.generateKeyPair();
-      final ServiceConfiguration euare = Topology.lookup(Euare.class);
-      final SignCertificateType req = new SignCertificateType();
-      final String pubkey =B64.standard.encString( kp.getPublic().getEncoded());
-      
-      req.setKey(pubkey);
-      req.setInstance(allocInfo.getInstanceId(0));
-      req.setExpirationDays(expirationDays);
-      final SignCertificateResponseType resp= AsyncRequests.sendSync( euare, req );
-      final X509Certificate kpCert = 
-          PEMFiles.getCert( B64.standard.dec( resp.getSignCertificateResult().getCertificate() ) );
+      final String principal = String.format( "CN=%s, OU=Eucalyptus, O=Cloud, C=US", allocInfo.getInstanceId( 0 ) );
+      final X509Certificate kpCert = Accounts.signCertificate( endUserAccountNumber, (RSAPublicKey) kp.getPublic(), principal, expirationDays );
       final String b64PubKey = B64.standard.encString( PEMFiles.getBytes( kpCert ) );
       
       // use NODECERT to encrypt the pk
@@ -393,7 +393,7 @@ public class ClusterAllocator implements Runnable {
       byte[] symmkey = cipher.doFinal(symmKey.getEncoded());
       final String encSymmKey = new String(Base64.encode(symmkey));
       
-      X509Certificate euareCert = SystemCredentials.lookup(Euare.class).getCertificate();
+      X509Certificate euareCert = Accounts.getEuareCertificate( endUserAccountNumber );
       final String b64EuarePubkey = B64.standard.encString( PEMFiles.getBytes( euareCert ) );
     
       X509Certificate eucalyptusCert = SystemCredentials.lookup(Eucalyptus.class).getCertificate();

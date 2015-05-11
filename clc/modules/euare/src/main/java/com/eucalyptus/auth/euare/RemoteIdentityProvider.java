@@ -20,7 +20,9 @@
 package com.eucalyptus.auth.euare;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
+import java.security.interfaces.RSAPublicKey;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -28,7 +30,13 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.euare.common.identity.DescribeCertificateResponseType;
+import com.eucalyptus.auth.euare.common.identity.DescribeCertificateResult;
+import com.eucalyptus.auth.euare.common.identity.DescribeCertificateType;
 import com.eucalyptus.auth.euare.common.identity.ReserveNameType;
+import com.eucalyptus.auth.euare.common.identity.SignCertificateResponseType;
+import com.eucalyptus.auth.euare.common.identity.SignCertificateResult;
+import com.eucalyptus.auth.euare.common.identity.SignCertificateType;
 import com.eucalyptus.auth.euare.persist.DatabaseAuthUtils;
 import com.eucalyptus.auth.api.IdentityProvider;
 import com.eucalyptus.auth.euare.common.identity.Account;
@@ -67,6 +75,8 @@ import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.EphemeralConfiguration;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
@@ -241,6 +251,37 @@ public class RemoteIdentityProvider implements IdentityProvider {
     request.setDuration( duration );
     try {
       send( request );
+    } catch ( Exception e ) {
+      throw new AuthException( e );
+    }
+  }
+
+  @Override
+  public X509Certificate getCertificateByAccountNumber( final String accountNumber ) throws AuthException {
+    try {
+      final DescribeCertificateResponseType response = send( new DescribeCertificateType( ) );
+      final DescribeCertificateResult result = response.getDescribeCertificateResult( );
+      return PEMFiles.getCert( result.getPem( ).getBytes( StandardCharsets.UTF_8 ) );
+    } catch ( Exception e ) {
+      throw new AuthException( e );
+    }
+  }
+
+  @Override
+  public X509Certificate signCertificate(
+      final String accountNumber,
+      final RSAPublicKey publicKey,
+      final String principal,
+      final int expiryInDays
+  ) throws AuthException {
+    try {
+      final SignCertificateType signCertificateType = new SignCertificateType( );
+      signCertificateType.setKey( B64.standard.encString( publicKey.getEncoded( ) ) );
+      signCertificateType.setPrincipal( principal );
+      signCertificateType.setExpirationDays( expiryInDays );
+      final SignCertificateResponseType response = send( signCertificateType );
+      final SignCertificateResult result = response.getSignCertificateResult( );
+      return PEMFiles.getCert( result.getPem().getBytes( StandardCharsets.UTF_8 ) );
     } catch ( Exception e ) {
       throw new AuthException( e );
     }

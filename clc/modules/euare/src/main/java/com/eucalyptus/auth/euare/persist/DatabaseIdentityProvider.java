@@ -19,6 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare.persist;
 
+import java.security.cert.X509Certificate;
+import java.security.interfaces.RSAPublicKey;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -30,6 +32,7 @@ import com.eucalyptus.auth.euare.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.InvalidAccessKeyAuthException;
 import com.eucalyptus.auth.api.IdentityProvider;
+import com.eucalyptus.auth.euare.EuareServerCertificateUtil;
 import com.eucalyptus.auth.euare.persist.entities.ReservedNameEntity;
 import com.eucalyptus.auth.euare.principal.GlobalNamespace;
 import com.eucalyptus.auth.principal.AccessKey;
@@ -46,6 +49,8 @@ import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.auth.principal.UserPrincipalImpl;
 import com.eucalyptus.auth.tokens.SecurityTokenManager;
 import com.eucalyptus.component.annotation.ComponentNamed;
+import com.eucalyptus.component.auth.SystemCredentials;
+import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.OwnerFullName;
@@ -254,5 +259,20 @@ public class DatabaseIdentityProvider implements IdentityProvider {
       default:
         throw new AuthException( AuthException.CONFLICT );
     }
+  }
+
+  @Override
+  public X509Certificate getCertificateByAccountNumber( final String accountNumber ) {
+    return SystemCredentials.lookup( Euare.class ).getCertificate( );
+  }
+
+  @Override
+  public X509Certificate signCertificate(
+      final String accountNumber,
+      final RSAPublicKey publicKey,
+      final String principal,
+      final int expiryInDays
+  ) throws AuthException {
+    return EuareServerCertificateUtil.generateVMCertificate( publicKey, principal, expiryInDays );
   }
 }
