@@ -308,7 +308,7 @@ int gni_find_secgroup(globalNetworkInfo * gni, const char *psGroupId, gni_secgro
 
 int gni_cloud_get_clusters(globalNetworkInfo * gni, char **cluster_names, int max_cluster_names, char ***out_cluster_names, int *out_max_cluster_names, gni_cluster ** out_clusters,
                            int *out_max_clusters);
-int gni_cloud_get_secgroup(globalNetworkInfo * pGni, char **psSecGroupNames, int nbSecGroupNames, char ***psOutSecGroupNames, int *pOutNbSecGroupNames,
+int gni_cloud_get_secgroups(globalNetworkInfo * pGni, char **psSecGroupNames, int nbSecGroupNames, char ***psOutSecGroupNames, int *pOutNbSecGroupNames,
                            gni_secgroup ** pOutSecGroups, int *pOutNbSecGroups);
 int gni_cluster_get_nodes(globalNetworkInfo * gni, gni_cluster * cluster, char **node_names, int max_node_names, char ***out_node_names, int *out_max_node_names,
                           gni_node ** out_nodes, int *out_max_nodes);

@@ -481,17 +481,15 @@ int main(int argc, char **argv)
                 if (pDriverHandler->system_flush(globalnetworkinfo)) {
                     LOGERROR("manual flushing of all euca networking artifacts (iptables, ebtables, ipset) failed: check above log errors for details\n");
                 }
-
-                config->flushmode = 0;
             }
 
             if(config->flushmode & EUCANETD_FLUSH_ONLY_MASK) {
                 gIsRunning = FALSE;
                 update_globalnet = FALSE;
             } else {
-                config->flushmode = 0;
                 update_globalnet = TRUE;
             }
+            config->flushmode = 0;
         }
         // if information on sec. group rules/membership has changed, apply
         if (update_globalnet) {
@@ -582,10 +580,12 @@ int main(int argc, char **argv)
             sleep(config->polling_frequency);
         }
 
-        epoch_timer += config->polling_frequency;
+        epoch_timer += config->polling_frequency;        
     }
 
     LOGINFO("EUCANETD going down.\n");
+
+    exit(0);
 
     if (pDriverHandler->cleanup) {
         LOGINFO("Cleaning up '%s' network driver on termination.\n", pDriverHandler->name);
@@ -999,6 +999,10 @@ static int eucanetd_read_config(void)
         snprintf(destfile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/eucanetd_global_network_info.xml", home);
         LOGDEBUG("found global_network_info.xml state file: setting source URI to '%s'\n", sourceuri);
     }
+
+    // TODO: tmp
+    //    snprintf(sourceuri, EUCA_MAX_PATH, "file:///tmp/meh.xml");
+
 
     // initialize and populate data from global_network_info.xml file
     atomic_file_init(&(config->global_network_info_file), sourceuri, destfile, 0);

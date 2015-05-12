@@ -3658,6 +3658,8 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
 
     done = 0;
     for (i = 0; i < maxCount && !done; i++) {
+        mac = EUCA_ZALLOC(32, sizeof(char)); 
+
         snprintf(instId, 16, "%s", instIds[i]);
         if (uuidsLen > i) {
             snprintf(uuid, 48, "%s", uuids[i]);

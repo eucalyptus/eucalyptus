@@ -530,8 +530,8 @@ int gni_cloud_get_clusters(globalNetworkInfo * gni, char **cluster_names, int ma
 //!
 //! @note
 //!
-int gni_cloud_get_secgroup(globalNetworkInfo * pGni, char **psSecGroupNames, int nbSecGroupNames, char ***psOutSecGroupNames, int *pOutNbSecGroupNames,
-                           gni_secgroup ** pOutSecGroups, int *pOutNbSecGroups)
+int gni_cloud_get_secgroups(globalNetworkInfo * pGni, char **psSecGroupNames, int nbSecGroupNames, char ***psOutSecGroupNames, int *pOutNbSecGroupNames,
+                            gni_secgroup ** pOutSecGroups, int *pOutNbSecGroups)
 {
     int ret = 0;
     int i = 0;
