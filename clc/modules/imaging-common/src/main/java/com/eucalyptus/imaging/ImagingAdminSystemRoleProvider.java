@@ -17,12 +17,25 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.auth.util;
+package com.eucalyptus.imaging;
 
-public interface SystemRoleProvider {
-  String getName( );
-  String getPath( );
-  String getAssumeRolePolicy( );
-  String getPolicy( );
-  String getAccountName();
+import com.eucalyptus.auth.principal.AccountIdentifiers;
+import com.eucalyptus.auth.util.ClassPathSystemRoleProvider;
+
+public class ImagingAdminSystemRoleProvider extends ClassPathSystemRoleProvider {
+
+  @Override
+  public String getName() {
+    return "ImagingServiceAdministrator";
+  }
+
+  @Override
+  public String getPath() {
+    return "/imaging";
+  }
+
+  @Override
+  public String getAccountName() {
+    return AccountIdentifiers.IMAGING_SYSTEM_ACCOUNT;
+  }
 }

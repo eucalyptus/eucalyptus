@@ -1,0 +1,14 @@
+{
+  "Statement":[ {
+    "Effect": "Allow",
+    "Action": [
+      "ec2:*KeyPair*",
+      "ec2:*SecurityGroup*",
+      "ec2:*Instances",
+      "ec2:*Volume*",
+      "ec2:*Snapshot*",
+      "cloudformation:*"
+    ],
+    "Resource": "*"
+  }]
+}

@@ -28,6 +28,7 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.euare.ServerCertificateMetadataType;
 import com.eucalyptus.cloudformation.CloudFormation;
 import com.eucalyptus.cloudformation.Parameter;
@@ -41,7 +42,9 @@ import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.PEMFiles;
+import com.eucalyptus.imaging.ImagingAdminSystemRoleProvider;
 import com.eucalyptus.imaging.ImagingServiceProperties;
+import com.eucalyptus.imaging.common.ImagingBackend;
 import com.eucalyptus.resources.client.CloudFormationClient;
 import com.eucalyptus.resources.client.EuareClient;
 import com.eucalyptus.util.DNSProperties;
@@ -110,7 +113,8 @@ public class ImagingServiceLaunchers {
 
   private boolean stackExists() {
     try {
-      Stack stack = CloudFormationClient.getInstance().describeStack(null,
+      Stack stack = CloudFormationClient.getInstance().describeStack(
+          Accounts.lookupImagingAccount().getUserId(),
           ImagingServiceProperties.IMAGING_WORKER_STACK_NAME);
       if (stack != null) {
         LOG.debug("Found stack " + ImagingServiceProperties.IMAGING_WORKER_STACK_NAME);
@@ -132,6 +136,13 @@ public class ImagingServiceLaunchers {
 
     this.lockLauncher(launcherId);
     try {
+      // check that imaging backend is ENABLED
+      if (!Topology.isEnabled(ImagingBackend.class)) {
+        // if it is not enabled there is a chance that roles and policies were not created
+        ImagingAdminSystemRoleProvider roleProvider = new ImagingAdminSystemRoleProvider();
+        roleProvider.ensureAccountAndRoleExists();
+      }
+
       // check that CF is ENABLED
       if (!Topology.isEnabled(CloudFormation.class))
         throw new EucalyptusCloudException("CloudFormation is not enabled");
@@ -171,7 +182,7 @@ public class ImagingServiceLaunchers {
       params.add(new Parameter("ComputeServiceUrl", String.format("compute.%s",
           DNSProperties.DOMAIN)));
       LOG.debug("Creating CF stack for the imaging worker");
-      CloudFormationClient.getInstance().createStack(null,
+      CloudFormationClient.getInstance().createStack(Accounts.lookupImagingAccount().getUserId(),
           ImagingServiceProperties.IMAGING_WORKER_STACK_NAME, template, params);
       LOG.debug("Done creating CF stack for the imaging worker");
     } catch (final Exception ex) {
@@ -184,7 +195,8 @@ public class ImagingServiceLaunchers {
   private ServerCertificateMetadataType findCertificate()
       throws EucalyptusCloudException {
     try {
-      return EuareClient.getInstance().describeServerCertificate(null,
+      return EuareClient.getInstance().describeServerCertificate(
+          Accounts.lookupImagingAccount().getUserId(),
           SERVER_CERTIFICATE_NAME, DEFAULT_SERVER_CERT_PATH);
     } catch (Exception ex) {
       throw new EucalyptusCloudException("failed to describe server cert", ex);
@@ -212,7 +224,8 @@ public class ImagingServiceLaunchers {
     }
     ServerCertificateMetadataType res;
     try {
-      res = EuareClient.getInstance().uploadServerCertificate(null,
+      res = EuareClient.getInstance().uploadServerCertificate(
+          Accounts.lookupImagingAccount().getUserId(),
           SERVER_CERTIFICATE_NAME, DEFAULT_SERVER_CERT_PATH, certPem, pkPem,
           null);
     } catch (final Exception ex) {
@@ -221,7 +234,7 @@ public class ImagingServiceLaunchers {
     return res;
   }
 
-  public void disable() throws EucalyptusCloudException {
+  public void disable() throws Exception {
     if (!this.shouldDisable()) {
       LOG.warn("Imaging service instances are not found in the system");
       return;
@@ -229,9 +242,11 @@ public class ImagingServiceLaunchers {
     this.lockLauncher(launcherId);
 
     try {
-      CloudFormationClient.getInstance().deleteStack(null,
+      CloudFormationClient.getInstance().deleteStack(
+          Accounts.lookupImagingAccount().getUserId(),
           ImagingServiceProperties.IMAGING_WORKER_STACK_NAME);
-      EuareClient.getInstance().deleteServerCertificate(null,
+      EuareClient.getInstance().deleteServerCertificate(
+          Accounts.lookupImagingAccount().getUserId(),
           SERVER_CERTIFICATE_NAME);
     } catch (final Exception ex) {
       throw ex;

@@ -1,0 +1,9 @@
+{
+  "Statement": [ {
+    "Effect": "Allow",
+    "Principal": {
+      "AWS": [ "arn:aws:iam::eucalyptus:user/admin" ]
+    },
+    "Action": [ "sts:AssumeRole" ]
+  } ]
+}
