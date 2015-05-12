@@ -73,6 +73,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.SSLEngine;
 
 import com.google.common.base.*;
 import com.google.common.base.Objects;
@@ -350,7 +351,37 @@ public class Handlers {
         super.handleUpstream( ctx, e );
       }
     }
+  }
 
+  public abstract static class ClientSslHandler extends SimpleChannelDownstreamHandler {
+    private final String sslHandlerName;
+
+    public ClientSslHandler( final String sslHandlerName ) {
+      this.sslHandlerName = sslHandlerName;
+    }
+
+    protected abstract SSLEngine createSSLEngine( final String peerHost, final int peerPort );
+
+    @Override
+    public void writeRequested( final ChannelHandlerContext ctx, final MessageEvent messageEvent ) throws Exception {
+      if ( messageEvent.getMessage( ) instanceof MappingHttpRequest ) {
+        ctx.getPipeline( ).remove( this );
+        if ( isHttps( (MappingHttpRequest) messageEvent.getMessage( ) ) ) {
+          final URI uri = URI.create( ( (MappingHttpRequest) messageEvent.getMessage( ) ).getUri( ) );
+          final SslHandler sslHandler =
+              new SslHandler( createSSLEngine( uri.getHost( ), uri.getPort( )==-1?443:uri.getPort( ) ) );
+          sslHandler.setIssueHandshake( true );
+          ctx.getPipeline( ).addFirst( sslHandlerName, sslHandler );
+        }
+        Channels.write( ctx, messageEvent.getFuture( ), messageEvent.getMessage( ), messageEvent.getRemoteAddress( ) );
+      } else {
+        super.writeRequested( ctx, messageEvent );
+      }
+    }
+
+    private boolean isHttps( final MappingHttpRequest o ) {
+      return !o.getUri( ).startsWith( "http://" );
+    }
   }
 
   public static ChannelHandler internalServiceStateHandler( ) {

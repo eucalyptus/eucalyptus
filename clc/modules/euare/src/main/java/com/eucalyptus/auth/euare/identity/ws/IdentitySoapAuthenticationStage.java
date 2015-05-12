@@ -21,6 +21,7 @@ package com.eucalyptus.auth.euare.identity.ws;
 
 import java.security.cert.X509Certificate;
 import java.util.Collection;
+import java.util.List;
 import org.apache.axiom.soap.SOAP11Constants;
 import org.apache.axiom.soap.SOAPConstants;
 import org.apache.axiom.soap.SOAPEnvelope;
@@ -29,6 +30,7 @@ import org.apache.ws.security.WSEncryptionPart;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurationManager;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -40,6 +42,8 @@ import com.eucalyptus.ws.WebServicesException;
 import com.eucalyptus.ws.handlers.WsSecHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
 import com.eucalyptus.ws.util.CredentialProxy;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 /**
@@ -89,10 +93,19 @@ public class IdentitySoapAuthenticationStage implements UnrollableStage {
       final Object o = event.getMessage( );
       if ( o instanceof MappingHttpRequest ) {
         final MappingHttpMessage httpRequest = ( MappingHttpMessage ) o;
+        final List<String> forwardedForValues = httpRequest.getHeaders( "X-Forwarded-For" );
+        if ( forwardedForValues != null && !forwardedForValues.isEmpty( ) ) {
+          final String clientIp = Iterables.get( Splitter.on(',').split( Iterables.get( forwardedForValues, 0 ) ), 0 );
+          if ( !regionConfigurationManager.isValidForwardedForAddress( clientIp ) ) {
+            throw new WebServicesException( "Forbidden", HttpResponseStatus.FORBIDDEN );
+          }
+        }
         final SOAPEnvelope envelope = httpRequest.getSoapEnvelope( );
         final X509Certificate cert = WSSecurity.verifyWSSec( envelope );
         if ( cert == null || !regionConfigurationManager.isRegionCertificate( cert ) ) {
-          throw new WebServicesException( "Authentication failed: The following certificate is not trusted:\n " + cert );
+          throw new WebServicesException(
+              "Authentication failed: The following certificate is not trusted:\n " + cert,
+              HttpResponseStatus.FORBIDDEN );
         }
         Contexts.lookup( ( (MappingHttpMessage) o ).getCorrelationId() ).setUser( Principals.systemUser() );
       }

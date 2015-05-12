@@ -49,8 +49,20 @@ class RegionConfigurationTest {
                         "https://identity.example.com:8773/services/Identity"
                       ]
                     }
+                ],
+                "RemoteCidrs": [
+                    "1.0.0.0/32"
+                ],
+                "ForwardedForCidrs": [
+                    "1.0.0.0/32"
                 ]
             }
+        ],
+        "RemoteCidrs": [
+            "1.0.0.0/32"
+        ],
+        "ForwardedForCidrs": [
+            "1.0.0.0/32"
         ]
     }
     """.stripIndent()
@@ -69,9 +81,13 @@ class RegionConfigurationTest {
                         type: 'identity',
                         endpoints: [ 'https://identity.example.com:8773/services/Identity' ]
                     )
-                ]
+                ],
+                remoteCidrs: [ "1.0.0.0/32" ],
+                forwardedForCidrs: [ "1.0.0.0/32" ]
             )
-        ]
+        ],
+        remoteCidrs: [ "1.0.0.0/32" ],
+        forwardedForCidrs: [ "1.0.0.0/32" ]
     )
 
     assertEquals( 'Result does not match template', expected, result)
@@ -142,4 +158,39 @@ class RegionConfigurationTest {
 
     RegionConfigurations.parse( String.format( config, 'ftp://identity.example.com:8773/services/Identity' ) )  // should fail due to invalid scheme
   }
+
+  @Test( expected = RegionConfigurationException )
+  void testInvalidRemoteCidr( ) {
+    String config =  """
+    {
+        "Regions": [
+            {
+                "Name": "region-1",
+                "CertificateFingerprint": "EC:E7:3D:DF:97:43:00:9E:FC:F0:2C:6D:98:D2:82:EB:AA:04:75:10:E7:C2:F2:6F:31:F1:F1:CA:A1:61:DE:41",
+                "IdentifierPartitions": [
+                  1
+                ],
+                "Services": [
+                    {
+                      "Type": "identity",
+                      "Endpoints": [
+                        "http://foo/identity"
+                      ]
+                    }
+                ],
+                "RemoteCidrs": [ "%1s" ]
+            }
+        ]
+    }
+    """
+
+    try {
+      RegionConfigurations.parse( String.format( config, '0.0.0.0/0' ) )  // ensure pass with valid remote cidr
+    } catch ( Exception e ) {
+      throw Exceptions.toUndeclared( e );
+    }
+
+    RegionConfigurations.parse( String.format( config, '0.0.0.0/a' ) )
+  }
+
 }

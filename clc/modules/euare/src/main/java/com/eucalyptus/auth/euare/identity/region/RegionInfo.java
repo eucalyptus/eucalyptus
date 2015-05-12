@@ -28,6 +28,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
 import javax.annotation.Nonnull;
+import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.util.Parameters;
 import com.google.common.collect.ImmutableSet;
@@ -40,11 +41,23 @@ public class RegionInfo {
   private final String name;
   private final Set<Integer> partitions;
   private final Set<RegionService> services;
+  private final Set<Cidr> remoteCidrs;
+  private final Set<Cidr> forwardedForCidrs;
+  private final String certificateFingerprintDigest;
+  private final String certificateFingerprint;
+  private final String sslCertificateFingerprintDigest;
+  private final String sslCertificateFingerprint;
 
   public RegionInfo(
       final String name,
       final Collection<Integer> partitions,
-      final Collection<RegionService> services
+      final Collection<RegionService> services,
+      final Set<Cidr> remoteCidrs,
+      final Set<Cidr> forwardedForCidrs,
+      final String certificateFingerprintDigest,
+      final String certificateFingerprint,
+      final String sslCertificateFingerprintDigest,
+      final String sslCertificateFingerprint
   ) {
     Parameters.checkParam( "name", name, not( isEmptyOrNullString( ) ) );
     Parameters.checkParam( "partitions", partitions, hasSize( greaterThan( 0 ) ) );
@@ -52,6 +65,12 @@ public class RegionInfo {
     this.name = name;
     this.partitions = ImmutableSet.copyOf( Sets.newTreeSet( partitions ) );
     this.services = ImmutableSet.copyOf( Sets.newTreeSet( services ) );
+    this.remoteCidrs = remoteCidrs;
+    this.forwardedForCidrs = forwardedForCidrs;
+    this.certificateFingerprintDigest = certificateFingerprintDigest;
+    this.certificateFingerprint = certificateFingerprint;
+    this.sslCertificateFingerprintDigest = sslCertificateFingerprintDigest;
+    this.sslCertificateFingerprint = sslCertificateFingerprint;
   }
 
   public String getName( ) {
@@ -64,6 +83,30 @@ public class RegionInfo {
 
   public Set<RegionService> getServices( ) {
     return services;
+  }
+
+  public Set<Cidr> getRemoteCidrs( ) {
+    return remoteCidrs;
+  }
+
+  public Set<Cidr> getForwardedForCidrs( ) {
+    return forwardedForCidrs;
+  }
+
+  public String getCertificateFingerprintDigest() {
+    return certificateFingerprintDigest;
+  }
+
+  public String getCertificateFingerprint() {
+    return certificateFingerprint;
+  }
+
+  public String getSslCertificateFingerprintDigest() {
+    return sslCertificateFingerprintDigest;
+  }
+
+  public String getSslCertificateFingerprint() {
+    return sslCertificateFingerprint;
   }
 
   public static NonNullFunction<RegionInfo,Set<String>> serviceEndpoints( @Nonnull final String serviceType ) {
