@@ -25,9 +25,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.ResourceTag;
@@ -170,12 +172,17 @@ public class ImagingWorkers {
   }
   
   private static final String DEFAULT_LAUNCHER_TAG = "euca-internal-imaging-workers";
+  private static final Pattern INSTANCE_ID = Pattern.compile( "i-[0-9a-fA-F]{8}" );
 
-  public static void verifyWorker(final String instanceId, final String remoteHost) throws Exception{
+  public static void verifyWorker(final String instanceId, final String remoteHost) throws Exception {
+    if (instanceId == null || !INSTANCE_ID.matcher(instanceId).matches())
+      throw new Exception("Failed to verify imaging worker. The '" + instanceId + "' can't be an instance ID");
+
     if(!verifiedWorkers.contains(instanceId)){
       try{
         final List<RunningInstancesItemType> instances=
-            Ec2Client.getInstance().describeInstances(null, Lists.newArrayList(instanceId));
+            Ec2Client.getInstance().describeInstances(Accounts.lookupImagingAccount().getUserId(),
+                Lists.newArrayList(instanceId));
         final RunningInstancesItemType workerInstance = instances.get(0);
         boolean tagFound = false;
         for(final ResourceTag tag : workerInstance.getTagSet()){
@@ -199,7 +206,8 @@ public class ImagingWorkers {
     String availabilityZone = null;
     try{
       final List<RunningInstancesItemType> instances =
-          Ec2Client.getInstance().describeInstances(null, Lists.newArrayList(workerId));
+          Ec2Client.getInstance().describeInstances(Accounts.lookupImagingAccount().getUserId(),
+              Lists.newArrayList(workerId));
       availabilityZone = instances.get(0).getPlacement();
     }catch(final Exception ex){
       throw Exceptions.toUndeclared("Unable to find the instance named: "+workerId);
@@ -267,8 +275,13 @@ public class ImagingWorkers {
   
   public static void retireWorker(final String workerId) {
     // check if system knows about instance
-    final List<RunningInstancesItemType> instances =
-        Ec2Client.getInstance().describeInstances(null, Lists.newArrayList(workerId));
+    List<RunningInstancesItemType> instances = null;
+    try {
+      instances = Ec2Client.getInstance().describeInstances(Accounts.lookupImagingAccount().getUserId(),
+            Lists.newArrayList(workerId));
+    } catch(final Exception ex) {
+      LOG.error("Can't list instances", ex);
+    }
     if (instances != null && instances.size() == 1) {
       setWorkerState(workerId, ImagingWorker.STATE.RETIRING);
     } else {
@@ -283,15 +296,17 @@ public class ImagingWorkers {
     String instanceId = null;
     try{
       final List<RunningInstancesItemType> instances = 
-          Ec2Client.getInstance().describeInstances(null, Lists.newArrayList(workerId));
+          Ec2Client.getInstance().describeInstances(Accounts.lookupImagingAccount().getUserId(),
+              Lists.newArrayList(workerId));
       if(instances!=null && instances.size()==1)
         instanceId = instances.get(0).getInstanceId();
     }catch(final Exception ex){
-      ;
+      LOG.error("Can't list instances", ex);
     }
     if(instanceId!=null){
       try{
-        Ec2Client.getInstance().terminateInstances(null, Lists.newArrayList(workerId));
+        Ec2Client.getInstance().terminateInstances(Accounts.lookupImagingAccount().getUserId(),
+            Lists.newArrayList(workerId));
         LOG.debug("Terminated imaging worker: " + workerId);
       }catch(final Exception ex){
         throw Exceptions.toUndeclared(ex); 

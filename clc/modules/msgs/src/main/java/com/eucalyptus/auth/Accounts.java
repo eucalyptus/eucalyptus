@@ -398,6 +398,21 @@ public class Accounts {
     return user;
   }
 
+  public static EuareUser lookupImagingAccount( ) throws AuthException {
+    Account system = Accounts.getAccountProvider( ).lookupAccountByName( Account.IMAGING_SYSTEM_ACCOUNT );
+    return system.lookupAdmin();
+  }
+
+  public static EuareUser lookupLoadbalancingAccount( ) throws AuthException {
+    Account system = Accounts.getAccountProvider( ).lookupAccountByName( Account.ELB_SYSTEM_ACCOUNT );
+    return system.lookupAdmin();
+  }
+
+  public static EuareUser lookupDatabaseAccount( ) throws AuthException {
+    Account system = Accounts.getAccountProvider( ).lookupAccountByName( Account.DATABASE_SYSTEM_ACCOUNT );
+    return system.lookupAdmin();
+  }
+
   public static UserPrincipal userAsPrincipal( final EuareUser user  ) throws AuthException {
     return new UserPrincipalImpl( user );
   }

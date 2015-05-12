@@ -17,12 +17,25 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.auth.util;
+package com.eucalyptus.database;
 
-public interface SystemRoleProvider {
-  String getName( );
-  String getPath( );
-  String getAssumeRolePolicy( );
-  String getPolicy( );
-  String getAccountName();
+import com.eucalyptus.auth.principal.AccountIdentifiers;
+import com.eucalyptus.auth.util.ClassPathSystemRoleProvider;
+
+public class DatabaseAdminSystemRoleProvider extends ClassPathSystemRoleProvider {
+
+  @Override
+  public String getName() {
+    return "DatabaseServiceAdministrator";
+  }
+
+  @Override
+  public String getPath() {
+    return "/database";
+  }
+
+  @Override
+  public String getAccountName() {
+    return AccountIdentifiers.DATABASE_SYSTEM_ACCOUNT;
+  }
 }

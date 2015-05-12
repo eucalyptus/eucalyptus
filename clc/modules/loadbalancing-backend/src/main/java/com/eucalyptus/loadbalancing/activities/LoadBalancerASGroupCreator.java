@@ -69,6 +69,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancers;
+import com.eucalyptus.loadbalancing.LoadbalancingAdminSystemRoleProvider;
 import com.eucalyptus.loadbalancing.common.LoadBalancingBackend;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicies;
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.InstanceProfileSetup;
@@ -176,8 +177,9 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 		
 		if(keyname != null && !keyname.equals("")){
 			try{
+			  // validate keypair as system admin
 				final List<DescribeKeyPairsResponseItemType> keypairs =
-						EucalyptusActivityTasks.getInstance().describeKeyPairs(Lists.newArrayList(keyname));
+				    EucalyptusActivityTasks.getInstance().describeKeyPairs(Lists.newArrayList(keyname));
 				if( keypairs==null || keypairs.size()<=0 )
 					throw new EucalyptusCloudException("No such keypair is found in the system");
 				if( !keypairs.get(0).getKeyName().equals(keyname))
@@ -436,14 +438,14 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
         return false;
        }
     }
-	  
-	  
+
 	  @Override
 	  public boolean enable( ) throws Exception {
 	    if (!super.enable())
 	      return false;
 	    try{
-	      this.configureSystemAccount();
+	      LoadbalancingAdminSystemRoleProvider provider = new LoadbalancingAdminSystemRoleProvider();
+	      provider.ensureAccountAndRoleExists();
 	    }catch(final Exception ex){
 	      LOG.error("Unable to configure ELB system account", ex);
 	      return false;
@@ -455,21 +457,6 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 	      return false;
 	    }
 	    return true;
-	  }
-
-	  private void configureSystemAccount( ) throws Exception {
-	    Account elbAccount = null;
-	    try {
-	      elbAccount = Accounts.lookupAccountByName( AccountIdentifiers.ELB_SYSTEM_ACCOUNT);
-	    } catch (Exception e) {
-	      LOG.warn("Could not find account " + AccountIdentifiers.ELB_SYSTEM_ACCOUNT + ". Account may not exist, trying to create it");
-	      try {
-	        elbAccount = Accounts.addSystemAccountWithAdmin(AccountIdentifiers.ELB_SYSTEM_ACCOUNT);
-	      } catch (Exception e1) {
-	        LOG.warn("Failed to create account " + AccountIdentifiers.ELB_SYSTEM_ACCOUNT);
-	        throw new EucalyptusCloudException("Failed to create account " + AccountIdentifiers.ELB_SYSTEM_ACCOUNT);
-	      }
-	    }
 	  }
 	}
 		

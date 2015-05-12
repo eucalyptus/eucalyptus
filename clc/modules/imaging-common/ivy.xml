@@ -6,6 +6,7 @@
         <dependency name="eucalyptus-msgs" rev="latest.integration"/>
         <dependency name="eucalyptus-object-storage-common" rev="latest.integration"/>
         <dependency name="eucalyptus-resources-support" rev="latest.integration"/>
+        <dependency name="eucalyptus-authentication" rev="latest.integration"/>
     </dependencies>
 </ivy-module>
 
