@@ -909,6 +909,7 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
         LOGERROR("could not populate prior to update: see above log entries for details\n");
         return (1);
     }
+
     // temporary print
     LOGDEBUG("TOTAL SEC. GROUPS: %d\n", mido->max_vpcsecgroups);
     for (i = 0; i < mido->max_vpcsecgroups; i++) {
@@ -927,6 +928,100 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                 vpcinstance = &(vpcsubnet->instances[k]);
                 print_mido_vpc_instance(vpcinstance);
             }
+        }
+    }
+
+    // new thing: pass1 - tag everything that is both in GNI and in MIDO
+    for (i = 0; i < gni->max_vpcs; i++) {
+        gni_vpc *gnivpc = NULL;
+        gnivpc = &(gni->vpcs[i]);
+        rc = find_mido_vpc(mido, gnivpc->name, &vpc);
+
+        if (rc) {
+            LOGDEBUG("pass1: global VPC %s in mido: N\n", gnivpc->name);
+        } else {
+            LOGDEBUG("pass1: global VPC %s in mido: Y\n", gnivpc->name);
+            vpc->gnipresent = 1;
+        }
+
+        for (j = 0; j < gnivpc->max_subnets; j++) {
+            gni_vpcsubnet *gnivpcsubnet = NULL;
+            gnivpcsubnet = &(gnivpc->subnets[j]);
+            rc = find_mido_vpc_subnet(vpc, gnivpcsubnet->name, &vpcsubnet);
+            if (rc) {
+                LOGDEBUG("pass1: global VPC SUBNET %s in mido: N\n", gnivpcsubnet->name);
+            } else {
+                LOGDEBUG("pass1: global VPC SUBNET %s in mido: Y\n", gnivpcsubnet->name);
+                vpcsubnet->gnipresent = 1;
+            }
+            
+        }
+    }
+    for (i = 0; i < gni->max_instances; i++) {
+        gni_instance *gniinstance = NULL;
+        gniinstance = &(gni->instances[i]);
+        rc = find_mido_vpc_instance(vpcsubnet, gniinstance->name, &vpcinstance);
+        if (rc) {
+            LOGDEBUG("pass1: global VPC INSTANCE %s in mido: N\n", gniinstance->name);
+        } else {
+            LOGDEBUG("pass1: global VPC INSTANCE %s in mido: Y\n", gniinstance->name);
+            vpcinstance->gnipresent = 1;
+        }
+    }
+    for (i = 0; i < gni->max_secgroups; i++) {
+        gni_secgroup *gnisecgroup = NULL;
+        gnisecgroup = &(gni->secgroups[i]);
+        rc = find_mido_vpc_secgroup(mido, gnisecgroup->name, &vpcsecgroup);
+        if (rc) {
+            LOGDEBUG("pass1: global VPC SECGROUP %s in mido: N\n", gnisecgroup->name);
+        } else {
+            LOGDEBUG("pass1: global VPC SECGROUP %s in mido: Y\n", gnisecgroup->name);
+            vpcsecgroup->gnipresent = 1;
+        }
+    }
+
+
+    // new thing: pass2 - remove anything in MIDO that is not in GNI
+
+    for (i = 0; i < mido->max_vpcsecgroups; i++) {
+        vpcsecgroup = &(mido->vpcsecgroups[i]);
+        if (!vpcsecgroup->gnipresent) {
+            LOGDEBUG("pass2: mido VPC SECGROUP %s in global: N (deleting)\n", vpcsecgroup->name);
+            rc = delete_mido_vpc_secgroup(vpcsecgroup);
+        } else {
+            LOGDEBUG("pass2: mido VPC SECGROUP %s in global: Y\n", vpcsecgroup->name);
+        }
+    }
+    
+    for (i = 0; i < mido->max_vpcs; i++) {
+        vpc = &(mido->vpcs[i]);        
+        for (j = 0; j < vpc->max_subnets; j++) {
+            vpcsubnet = &(vpc->subnets[j]);
+            for (k = 0; k < vpcsubnet->max_instances; k++) {
+                vpcinstance = &(vpcsubnet->instances[k]);
+                if (!vpc->gnipresent || !vpcsubnet->gnipresent || !vpcinstance->gnipresent) {
+                    LOGDEBUG("pass2: mido VPC INSTANCE %s in global: N (deleting)\n", vpcinstance->name);
+                    rc = delete_mido_vpc_instance(vpcinstance);
+                } else {
+                    LOGDEBUG("pass2: mido VPC INSTANCE %s in global: Y\n", vpcinstance->name);
+                }
+            }
+            if (!vpc->gnipresent || !vpcsubnet->gnipresent) {
+                LOGDEBUG("pass2: mido VPC SUBNET %s in global: N (deleting)\n", vpcsubnet->name);
+                rc = delete_mido_vpc_subnet(mido, vpcsubnet);
+            } else {
+                LOGDEBUG("pass2: mido VPC SUBNET %s in global: Y\n", vpcsubnet->name);
+            }
+        }
+        if (!vpc->gnipresent) {
+            LOGDEBUG("pass2: mido VPC %s in global: N (deleting)\n", vpc->name);
+            rc = do_metaproxy_teardown(mido);
+            if (rc) {
+                LOGERROR("cannot teardown metadata proxies: see above log for details\n");
+            }
+            rc = delete_mido_vpc(mido, vpc);
+        } else {
+            LOGDEBUG("pass2: mido VPC %s in global: Y\n", vpc->name);
         }
     }
 
@@ -1352,9 +1447,7 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
         }
     }
 
-    // check and clear VPCs/subnets/instances
-
-    // TODO clear sec. group chains
+    // check and clear VPCs/subnets/instances/sgs
     LOGDEBUG("TOTAL SECGROUPS: %d\n", mido->max_vpcsecgroups);
     for (i = 0; i < mido->max_vpcsecgroups; i++) {
         vpcsecgroup = &(mido->vpcsecgroups[i]);
