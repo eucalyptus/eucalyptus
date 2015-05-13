@@ -27,8 +27,10 @@ import com.eucalyptus.reporting.event_store.ReportingElasticIpCreateEvent
 import com.eucalyptus.reporting.event_store.ReportingElasticIpDeleteEvent
 import com.eucalyptus.reporting.event_store.ReportingElasticIpAttachEvent
 import com.eucalyptus.reporting.event_store.ReportingElasticIpDetachEvent
+import com.eucalyptus.reporting.service.ReportingService
 import com.eucalyptus.util.OwnerFullName
 import com.google.common.base.Charsets
+import org.junit.BeforeClass
 
 import static org.junit.Assert.*
 import org.junit.Test
@@ -37,6 +39,11 @@ import org.junit.Test
  * Unit test for AddressUsageEventListener
  */
 class AddressUsageEventListenerTest {
+
+  @BeforeClass
+  static void beforeClass( ) {
+    ReportingService.DATA_COLLECTION_ENABLED = true
+  }
 
   @Test
   void testInstantiable() {
