@@ -515,7 +515,7 @@ public class LoadBalancers {
 	  if(!(PROTOCOL.HTTPS.equals(listener.getProtocol()) || PROTOCOL.SSL.equals(listener.getProtocol())))
 	    throw new InvalidConfigurationRequestException("Listener's protocol is not HTTPS or SSL");
 	      
-	  checkSSLCertificate(lb.getOwnerUserId(), certArn);
+	  checkSSLCertificate(lb.getOwnerAccountNumber(), certArn);
 	  updateIAMRolePolicy(lb.getOwnerAccountNumber(), lb.getDisplayName(), listener.getCertificateId(), certArn);
 	  try ( final TransactionResource db = Entities.transactionFor( LoadBalancerListener.class ) ) {
 	    final LoadBalancerListener update = Entities.uniqueResult(LoadBalancerListener.named(lb, lbPort));
@@ -569,24 +569,17 @@ public class LoadBalancers {
 	}
 	
 	
-	public static void checkSSLCertificate(final String userId, final String certArn)  
+	public static void checkSSLCertificate(final String accountNumber, final String certArn)
 	    throws LoadBalancingException {
-	  String acctNumber;
 	  try{
-  	  User user = Accounts.lookupUserById(userId);
-  	  acctNumber = user.getAccountNumber();
-	  }catch(final Exception ex){
-	    throw new InternalFailure400Exception("Unable to check ssl certificate Id", ex);
-	  }
-	  try{
-      final String prefix = String.format("arn:aws:iam::%s:server-certificate", acctNumber);
+      final String prefix = String.format("arn:aws:iam::%s:server-certificate", accountNumber);
       if(!certArn.startsWith(prefix))
         throw new CertificateNotFoundException();
       
       final String pathAndName = certArn.replace(prefix, "");
       final String certName = pathAndName.substring(pathAndName.lastIndexOf("/")+1);
       final ServerCertificateType cert = 
-          EucalyptusActivityTasks.getInstance().getServerCertificate(userId, certName);
+          EucalyptusActivityTasks.getInstance().getServerCertificate(accountNumber, certName);
       if(cert==null)
         throw new CertificateNotFoundException();
       if(!certArn.equals(cert.getServerCertificateMetadata().getArn()))

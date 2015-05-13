@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,9 @@ package com.eucalyptus.util
 
 import spock.lang.Specification
 
+import java.util.regex.Pattern
+
+import static com.eucalyptus.util.Strings.regexReplace
 import static com.eucalyptus.util.Strings.substringAfter
 import static com.eucalyptus.util.Strings.substringBefore
 
@@ -64,5 +67,20 @@ class StringsSpecification extends Specification {
     text         | match
     '0.0.0.0/0'  | 'x'
     '0.0.0.0/0'  | ' '
+  }
+
+  def 'should support regular expression replacement'() {
+    expect: 'replacement or default text'
+    regexReplace( Pattern.compile( regex), replacement, defaultValue ).apply( text ) == result
+
+    where:
+    text      | regex         | replacement | defaultValue | result
+    'a=b'     | 'a=([a-z]+)'  | '$1'        | ''           | 'b'
+    'a=b'     | 'a=([a-z]+)'  | '\\$1'      | ''           | '$1'
+    'a='      | 'a=([a-z]+)'  | '$1'        | 'def'        | 'def'
+    null      | 'a=([a-z]+)'  | '$1'        | 'def'        | 'def'
+    null      | 'a=([a-z]+)'  | '$1'        | null         | null
+    'aaa'     | 'a(.*)'       | 'b$1'       | null         | 'baa'
+    'a\nb\nc' | '(?s).*(b).*' | '$1'        | null         | 'b'
   }
 }

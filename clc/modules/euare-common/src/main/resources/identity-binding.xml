@@ -57,6 +57,17 @@
     <value name="CanonicalId" field="canonicalId" usage="optional"/>
     <value name="Email" field="email" usage="optional"/>
   </mapping>
+  <mapping name="DescribeCertificateResponse" class="com.eucalyptus.auth.euare.common.identity.DescribeCertificateResponseType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+    <structure name="DescribeCertificateResult" field="describeCertificateResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.DescribeCertificateResult"/>
+    <structure map-as="IdentityResponseMessage"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.common.identity.DescribeCertificateResult" abstract="true">
+    <value name="Pem" field="pem" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeCertificate" class="com.eucalyptus.auth.euare.common.identity.DescribeCertificateType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+  </mapping>
   <mapping name="DescribeInstanceProfileResponse" class="com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileResponseType">
     <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
     <structure name="DescribeInstanceProfileResult" field="describeInstanceProfileResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileResult"/>
@@ -115,6 +126,20 @@
     <value name="Namespace" field="namespace" usage="optional"/>
     <value name="Name" field="name" usage="optional"/>
     <value name="Duration" field="duration" usage="optional"/>
+  </mapping>
+  <mapping name="SignCertificateResponse" class="com.eucalyptus.auth.euare.common.identity.SignCertificateResponseType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+    <structure name="SignCertificateResult" field="signCertificateResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.SignCertificateResult"/>
+    <structure map-as="IdentityResponseMessage"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.common.identity.SignCertificateResult" abstract="true">
+    <value name="Pem" field="pem" usage="optional"/>
+  </mapping>
+  <mapping name="SignCertificate" class="com.eucalyptus.auth.euare.common.identity.SignCertificateType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+    <value name="Key" field="key" usage="optional"/>
+    <value name="Principal" field="principal" usage="optional"/>
+    <value name="ExpirationDays" field="expirationDays" usage="optional"/>
   </mapping>
   <mapping name="TunnelActionResponse" class="com.eucalyptus.auth.euare.common.identity.TunnelActionResponseType">
     <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>

@@ -1162,20 +1162,6 @@
       <structure name="member" type="com.eucalyptus.auth.euare.InstanceProfileType"/>
     </collection>
   </mapping>
-  <mapping name="SignCertificate" class="com.eucalyptus.auth.euare.SignCertificateType" extends="com.eucalyptus.auth.euare.EuareMessage">
-    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <value name="Instance" field="instance" usage="required"/>
-    <value name="Key" field="key" usage="required"/>
-    <value name="ExpirationDays" field="expirationDays" usage="optional"/>
-  </mapping>
-  <mapping name="SignCertificateResponse" class="com.eucalyptus.auth.euare.SignCertificateResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
-    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure field="signCertificateResult" usage="required" map-as="com.eucalyptus.auth.euare.SignCertificateResultType"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
-  </mapping>
-  <mapping name="SignCertificateResult" class="com.eucalyptus.auth.euare.SignCertificateResultType">
-    <value name="Certificate" field="certificate" usage="required"/>
-  </mapping>
   <mapping name="DownloadServerCertificate" class="com.eucalyptus.auth.euare.DownloadServerCertificateType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="CertificateArn" field="certificateArn" usage="required"/>

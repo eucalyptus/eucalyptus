@@ -26,6 +26,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurationManager;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
 import com.eucalyptus.auth.euare.identity.region.RegionInfo;
+import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.records.Logs;
@@ -59,7 +60,14 @@ public class EuareRemoteRegionFilter implements Filter {
         }
       }
 
-      if ( !region.isPresent( ) && request.getUserId( ) != null ) {
+      if ( !region.isPresent( ) && request instanceof DownloadServerCertificateType ) {
+        final DownloadServerCertificateType downloadServerCertificateType = (DownloadServerCertificateType) request;
+        final String certArn = downloadServerCertificateType.getCertificateArn( );
+        if ( certArn != null ) {
+          final String accountNumber = Ern.parse( certArn ).getNamespace( );
+          region = regionConfigurationManager.getRegionByAccountNumber( accountNumber );
+        }
+      } else if ( !region.isPresent( ) && request.getUserId( ) != null ) {
         if ( Accounts.isAccountNumber( request.getUserId( ) ) ) {
           region = regionConfigurationManager.getRegionByAccountNumber( request.getUserId( ) );
         } else {

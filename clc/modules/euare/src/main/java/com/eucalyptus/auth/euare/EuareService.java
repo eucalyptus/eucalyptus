@@ -67,7 +67,6 @@ import com.eucalyptus.auth.AuthContext;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
-import java.security.cert.X509Certificate;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -106,7 +105,6 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.B64;
-import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
@@ -2055,42 +2053,6 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     reply.getGetLdapSyncStatusResult( ).setSyncEnabled( LdapSync.getLic( ).isSyncEnabled( ) );
     reply.getGetLdapSyncStatusResult( ).setInSync( LdapSync.inSync( ) );
-    return reply;
-  }
-  
-  /* Euca-only API for ELB SSL termination */
-  public SignCertificateResponseType signCertificate(SignCertificateType request) throws EucalyptusCloudException {
-    final SignCertificateResponseType reply = request.getReply();
-    final Context ctx = Contexts.lookup( );
-    final AuthContext requestUser = getAuthContext( ctx );
-    final String pubkey = request.getKey();
-    final String instanceId = request.getInstance();
-    Integer expirationDays = request.getExpirationDays();
-   
-    if(pubkey == null || pubkey.length()<=0)
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "No public key is provided");
-    if(instanceId == null || instanceId.length()<=0)
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "No instance ID is provided");
-    if (expirationDays == null)
-      expirationDays = 180;
-    if (! requestUser.isSystemAdmin()){
-      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "SignCertificate can be called by only system admin");
-    }
-   
-    final X509Certificate vmCert;
-    try{
-      vmCert = EuareServerCertificateUtil.generateVMCertificate(pubkey, instanceId, expirationDays);
-    }catch(final EuareException ex) {
-      throw ex;
-    }catch(final Exception ex) {
-      throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
-    }
-    final String certPem = B64.standard.encString( PEMFiles.getBytes( vmCert ) );
-    final SignCertificateResultType result = new SignCertificateResultType();
-    result.setCertificate(certPem);
-    reply.setSignCertificateResult(result);
-    
-    reply.set_return(true);
     return reply;
   }
   

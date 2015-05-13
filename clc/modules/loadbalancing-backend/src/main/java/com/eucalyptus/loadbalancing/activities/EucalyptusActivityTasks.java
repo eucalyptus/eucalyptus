@@ -262,11 +262,12 @@ public class EucalyptusActivityTasks {
 	}
 	
 	private class EuareUserActivity extends UserActivityContextSupport<EuareMessage, Euare> {
-	  private EuareUserActivity(final String userId){ super( Euare.class, userId ); }
+	  private EuareUserActivity(final AccountFullName accountFullName){
+	    super( Euare.class, accountFullName );
+	  }
 	}
 	
 	private class AutoScalingSystemActivity extends SystemActivityContextSupport<AutoScalingMessage, AutoScaling>{
-		private AutoScalingSystemActivity(){ super( AutoScaling.class ); }
 		private AutoScalingSystemActivity(final boolean useELBSystemAccount){
 		  super( AutoScaling.class, useELBSystemAccount );
 		}
@@ -290,10 +291,6 @@ public class EucalyptusActivityTasks {
 	}
 
 	private class EucalyptusUserActivity extends UserActivityContextSupport<ComputeMessage, Eucalyptus>{
-		private EucalyptusUserActivity(final String userId){
-			super( Eucalyptus.class, userId );
-		}
-
 		private EucalyptusUserActivity(final AccountFullName accountFullName){
 			super( Eucalyptus.class, accountFullName );
 		}
@@ -305,10 +302,6 @@ public class EucalyptusActivityTasks {
  }
 
 	private class ComputeUserActivity extends UserActivityContextSupport<ComputeMessage, Compute>{
-		private ComputeUserActivity(final String userId){
-			super( Compute.class, userId );
-		}
-
 		private ComputeUserActivity(final AccountFullName accountFullName){
 			super( Compute.class, accountFullName );
 		}
@@ -335,11 +328,11 @@ public class EucalyptusActivityTasks {
 	  return resultOf( describeTask, new ComputeSystemActivity(useELBSystemAccount), "failed to describe the instances" );
 	}
 
-	public List<RunningInstancesItemType> describeUserInstances(final String userId, final List<String> instances){
+	public List<RunningInstancesItemType> describeUserInstances(final String accountNumber, final List<String> instances){
 		if(instances.size() <=0)
 			return Lists.newArrayList();
 		final EucalyptusDescribeInstanceTask describeTask = new EucalyptusDescribeInstanceTask(instances);
-		return resultOf( describeTask, new ComputeUserActivity(userId), "failed to describe the instances" );
+		return resultOf( describeTask, new ComputeUserActivity( AccountFullName.getInstance( accountNumber )), "failed to describe the instances" );
 	}
 	
 	public List<ServiceStatusType> describeServices(final String componentType){
@@ -712,10 +705,10 @@ public class EucalyptusActivityTasks {
 		);
 	}
 
-  public ServerCertificateType getServerCertificate(final String userId, final String certName){
+  public ServerCertificateType getServerCertificate(final String accountNumber, final String certName){
 		return resultOf(
 				new EuareGetServerCertificateTask(certName),
-				new EuareUserActivity(userId),
+				new EuareUserActivity( AccountFullName.getInstance( accountNumber ) ),
 				"failed to get server certificate"
 		);
 	}
