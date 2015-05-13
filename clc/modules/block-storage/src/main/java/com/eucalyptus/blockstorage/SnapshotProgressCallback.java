@@ -133,7 +133,7 @@ public class SnapshotProgressCallback {
       // Don't update. Either not enough change or snapshot is 100% complete
       return;
     } else {
-      this.backendProgress = percentComplete;
+      this.backendProgress = progress;
       this.lastProgress = this.backendProgress + this.uploadProgress;
       Threads.enqueue(scConfig, SnapshotProgressCallback.class, 1, new ProgressSetter(this.snapshotId, this.lastProgress));
     }
