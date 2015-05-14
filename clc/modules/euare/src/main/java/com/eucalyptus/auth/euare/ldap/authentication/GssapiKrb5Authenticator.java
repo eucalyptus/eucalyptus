@@ -60,7 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth.ldap.authentication;
+package com.eucalyptus.auth.euare.ldap.authentication;
 
 import java.io.IOException;
 import java.security.PrivilegedAction;
@@ -83,8 +83,7 @@ import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.LdapException;
-import com.eucalyptus.auth.ldap.LdapIntegrationConfiguration;
-import com.eucalyptus.auth.ldap.LicParser;
+import com.eucalyptus.auth.euare.ldap.LicParser;
 import com.google.common.base.Strings;
 
 /**
@@ -103,7 +102,7 @@ public class GssapiKrb5Authenticator implements LdapAuthenticator {
   }
   
   /**
-   * See {@link com.eucalyptus.auth.ldap.authentication.LdapAuthenticator}
+   * See {@link com.eucalyptus.auth.euare.ldap.authentication.LdapAuthenticator}
    * <p>
    *  extraArgs[0] is the path of krb5.conf
    * </p>

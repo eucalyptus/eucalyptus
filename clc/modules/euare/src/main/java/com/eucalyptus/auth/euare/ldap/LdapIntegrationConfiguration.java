@@ -60,12 +60,11 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth.ldap;
+package com.eucalyptus.auth.euare.ldap;
 
 import java.util.Map;
 import java.util.Set;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 
 /**
  * An in-memory cache of the parsed ldap integration configuration.

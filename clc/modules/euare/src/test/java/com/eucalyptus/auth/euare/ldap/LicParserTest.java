@@ -60,26 +60,40 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth.checker;
+package com.eucalyptus.auth.euare.ldap;
 
-public class InvalidValueException extends Exception {
+import java.io.FileInputStream;
+import java.io.InputStream;
+import org.apache.commons.io.output.ByteArrayOutputStream;
+import org.junit.Ignore;
 
-  private static final long serialVersionUID = 1L;
+@Ignore("Manual development test")
+public class LicParserTest {
+  
+  public static void main( String[] args ) throws Exception {
+    if ( args.length < 1 ) {
+      System.err.println( "Requires input lic file" );
+      System.exit( 1 ); 
+    }
+    InputStream input = new FileInputStream( args[0] );
+    
+    String licText = readInputAsString( input );
+    
+    LdapIntegrationConfiguration lic = LicParser.getInstance( ).parse( licText );
 
-  public InvalidValueException( ) {
-    super( );
+    System.out.println( lic );
   }
   
-  public InvalidValueException( String message ) {
-    super( message );
-  }
+  private static String readInputAsString( InputStream in ) throws Exception {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream( );
+    
+    byte[] buf = new byte[512];
+    int nRead = 0;
+    while ( ( nRead = in.read( buf ) ) >= 0 ) {
+      baos.write( buf, 0, nRead );
+    }
   
-  public InvalidValueException( Throwable cause ) {
-    super( cause );
-  }
-  
-  public InvalidValueException( String message, Throwable cause ) {
-    super( message, cause );
+    return new String( baos.toByteArray( ), "UTF-8" );
   }
   
 }

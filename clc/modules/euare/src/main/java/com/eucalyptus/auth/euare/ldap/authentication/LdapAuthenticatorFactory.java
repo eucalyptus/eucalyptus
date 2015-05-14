@@ -60,33 +60,21 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth.ldap;
+package com.eucalyptus.auth.euare.ldap.authentication;
 
-import javax.naming.NamingEnumeration;
-import javax.naming.directory.SearchResult;
-import org.junit.Ignore;
+import com.eucalyptus.auth.LdapException;
+import com.eucalyptus.auth.euare.ldap.LicParser;
 
-@Ignore("Manual development test")
-public class LdapClientTest {
+public class LdapAuthenticatorFactory {
 
-  public static void main( String[] args ) throws Exception {
-    LdapIntegrationConfiguration lic = new LdapIntegrationConfiguration( );
-    lic.setServerUrl( "" );
-    lic.setAuthMethod( "GSSAPI" );
-    //lic.setAuthPrincipal( "cn=admin,dc=test-eucalyptus,dc=com" );
-    lic.setAuthPrincipal( "peter" );
-    lic.setAuthCredentials( "" );
-    lic.setUseSsl( false );
-    lic.setIgnoreSslCertValidation( true );
-    lic.setKrb5Conf( "/home/wenye/workspace/jndi-gssapi/src/krb5.conf" );
-    lic.setGroupBaseDn( "ou=Groups,dc=test-eucalyptus,dc=com" );
-    lic.setUserBaseDn( "ou=People,dc=test-eucalyptus,dc=com" );
-    
-    LdapClient client = LdapClient.authenticateClient( lic );
-    NamingEnumeration<SearchResult> results = client.search( "dc=test-eucalyptus,dc=com", "objectClass=inetOrgPerson", new String[]{ "displayName" } );
-    while ( results.hasMore( ) ) {
-      SearchResult r = results.next( );
-      System.out.println( r.getName( ) + " " + r.getNameInNamespace( ) + " -- " + r.getAttributes( ) );
+  public static LdapAuthenticator getLdapAuthenticator( String authMethod ) throws LdapException {
+    if ( authMethod == null ) {
+      throw new LdapException( "Can not find LDAP authenticator for empty authentication method" );
+    }
+    if ( LicParser.LDAP_AUTH_METHOD_SASL_GSSAPI.equals( authMethod ) ) {
+      return new GssapiKrb5Authenticator( );
+    } else {
+      return new DefaultAuthenticator( );
     }
   }
   

@@ -71,9 +71,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.Nonnull;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.ldap.LdapIntegrationConfiguration;
-import com.eucalyptus.auth.ldap.LdapSync;
-import com.eucalyptus.auth.ldap.LicParser;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -95,13 +92,8 @@ public class AuthenticationProperties {
 
   private static final Logger LOG = Logger.getLogger( AuthenticationProperties.class );
 
-  private static final String LDAP_SYNC_DISABLED = "{ 'sync': { 'enable':'false' } }";
-
   private static final String DEFAULT_CREDENTIAL_DOWNLOAD_GENERATE_CERTIFICATE = "Absent";
   
-  @ConfigurableField( description = "LDAP integration configuration, in JSON", initial = LDAP_SYNC_DISABLED, changeListener = LicChangeListener.class, displayName = "lic" )
-  public static volatile String LDAP_INTEGRATION_CONFIGURATION;
-
   @ConfigurableField( description = "CIDR to match against for host address selection", initial = "", changeListener = CidrChangeListener.class )
   public static volatile String CREDENTIAL_DOWNLOAD_HOST_MATCH = "";
 
@@ -156,23 +148,6 @@ public class AuthenticationProperties {
     return com.google.common.base.Objects.firstNonNull(
         credentialDownloadGenerateCertificateStrategy,
         CredentialDownloadGenerateCertificateStrategy.Never );
-  }
-
-  public static class LicChangeListener implements PropertyChangeListener {
-    @Override
-    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
-      LOG.debug( "LDAP integration configuration changed to " + newValue );
-      
-      String licText = ( String ) newValue;
-      try {
-        LdapIntegrationConfiguration lic = LicParser.getInstance( ).parse( licText );
-        LdapSync.setLic( lic );
-      } catch ( LicParseException e ) {
-        LOG.error( e, e );
-        throw new ConfigurablePropertyException( "Failed to parse LDAP integration configuration: " + licText + " due to " + e, e );
-      }
-      
-    }
   }
 
   public static final class CidrChangeListener implements PropertyChangeListener {

@@ -87,7 +87,7 @@ import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.ServerCertificate;
 import com.eucalyptus.auth.euare.persist.entities.ServerCertificateEntity;
-import com.eucalyptus.auth.ldap.LdapSync;
+import com.eucalyptus.auth.euare.ldap.LdapSync;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.policy.key.Iso8601DateParser;

@@ -60,22 +60,31 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth.checker;
+package com.eucalyptus.auth.euare.ldap.authentication;
 
-public interface ValueChecker {
+import javax.naming.ldap.LdapContext;
+import com.eucalyptus.auth.LdapException;
 
-  public static final String WEAK = "weak";
-  public static final String MEDIUM = "medium";
-  public static final String STRONG = "strong";
-  public static final String STRONGER = "stronger";
+public interface LdapAuthenticator {
+
+  public static final String LDAP_CONTEXT_FACTORY = "com.sun.jndi.ldap.LdapCtxFactory";
+  public static final String SSL_PROTOCOL = "ssl";
+  public static final String SOCKET_FACTORY = "java.naming.ldap.factory.socket";
   
+
   /**
-   * Check a value's validity.
+   * Authenticate LDAP service.
    * 
-   * @param value
-   * @return the original value
-   * @throws InvalidValueException
+   * @param serverUrl The LDAP service URL
+   * @param method The authentication method
+   * @param useSsl Whether to use SSL
+   * @param ignoreSslCert Whether to ignore SSL certificate validation
+   * @param login The login name
+   * @param password The password
+   * @param extraArgs Extra arguments.
+   * @return An authenticated LDAP context.
+   * @throws LdapException If there is any error.
    */
-  String check( String value ) throws InvalidValueException;
+  public LdapContext authenticate( String serverUrl, String method, boolean useSsl, boolean ignoreSslCert, String login, String password, Object... extraArgs ) throws LdapException;
   
 }

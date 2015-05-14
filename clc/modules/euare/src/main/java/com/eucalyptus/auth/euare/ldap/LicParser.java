@@ -60,7 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth.ldap;
+package com.eucalyptus.auth.euare.ldap;
 
 import java.util.Set;
 import javax.naming.InvalidNameException;
@@ -71,7 +71,6 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.LicParseException;
 import com.eucalyptus.auth.json.JsonUtils;
-import com.eucalyptus.auth.lic.LicSpec;
 import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 

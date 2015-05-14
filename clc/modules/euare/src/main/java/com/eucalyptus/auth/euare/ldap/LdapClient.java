@@ -60,7 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth.ldap;
+package com.eucalyptus.auth.euare.ldap;
 
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
@@ -70,8 +70,8 @@ import javax.naming.directory.SearchResult;
 import javax.naming.ldap.LdapContext;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.LdapException;
-import com.eucalyptus.auth.ldap.authentication.AuthenticationUtil;
-import com.eucalyptus.auth.ldap.authentication.LdapAuthenticatorFactory;
+import com.eucalyptus.auth.euare.ldap.authentication.AuthenticationUtil;
+import com.eucalyptus.auth.euare.ldap.authentication.LdapAuthenticatorFactory;
 
 public class LdapClient {
   

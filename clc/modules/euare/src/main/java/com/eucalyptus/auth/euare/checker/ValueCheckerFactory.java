@@ -60,7 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth.checker;
+package com.eucalyptus.auth.euare.checker;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -69,7 +69,7 @@ import com.google.common.base.Strings;
 
 /**
  * Various minimal input field checkers. Update both of the identical files at the same time!!!
- * {@link com.eucalyptus.auth.checker.ValueCheckerFactory}
+ * {@link ValueCheckerFactory}
  * {@link com.eucalyptus.webui.shared.checker.ValueCheckerFactory}
  */
 public class ValueCheckerFactory {

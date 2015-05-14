@@ -60,45 +60,59 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth.ldap;
+package com.eucalyptus.auth.euare.ldap.authentication;
 
-import java.util.Set;
-import com.google.common.collect.Sets;
+import java.util.Properties;
+import javax.naming.Context;
+import javax.naming.NamingException;
+import javax.naming.ldap.InitialLdapContext;
+import javax.naming.ldap.LdapContext;
+import org.apache.log4j.Logger;
+import com.eucalyptus.auth.LdapException;
+import com.google.common.base.Strings;
 
-public class Selection {
-
-  private String searchFilter;
-  private Set<String> selected = Sets.newHashSet( );
-  private Set<String> notSelected = Sets.newHashSet( );
+/**
+ * The default authenticator.
+ * 
+ * Supports:
+ *   simple
+ *   SASL/DIGEST-MD5
+ *
+ * SSL is also supported.
+ */
+public class DefaultAuthenticator implements LdapAuthenticator {
   
-  public Selection( ) {
-  }
+  private static Logger LOG = Logger.getLogger( DefaultAuthenticator.class ); 
   
-  public void setSearchFilter( String searchFilter ) {
-    this.searchFilter = searchFilter;
-  }
-  public String getSearchFilter( ) {
-    return searchFilter;
-  }
-  public void setSelected( Set<String> selected ) {
-    this.selected = selected;
-  }
-  public Set<String> getSelected( ) {
-    return selected;
-  }
-  public void setNotSelected( Set<String> notSelected ) {
-    this.notSelected = notSelected;
-  }
-  public Set<String> getNotSelected( ) {
-    return notSelected;
+  public DefaultAuthenticator( ) {
   }
   
-  public String toString( ) {
-    StringBuilder sb = new StringBuilder( );
-    sb.append( "filter='" ).append( this.searchFilter ).append( "';" );
-    sb.append( "select='" ).append( this.selected ).append( "';" );
-    sb.append( "not-select='" ).append( this.notSelected ).append( "'" );
-    return sb.toString( );
+  @Override
+  public LdapContext authenticate( String serverUrl, String method, boolean useSsl, boolean ignoreSslCert, String login, String password, Object... extraArgs ) throws LdapException {
+    if ( Strings.isNullOrEmpty( login ) || Strings.isNullOrEmpty( password ) ) {
+      throw new LdapException( "LDAP login failed: empty login name or password" );
+    }    
+    Properties env = new Properties( );
+    env.put( Context.INITIAL_CONTEXT_FACTORY, LDAP_CONTEXT_FACTORY );
+    env.put( Context.REFERRAL, "follow" );
+    env.put( Context.PROVIDER_URL, serverUrl );
+    env.put( Context.SECURITY_AUTHENTICATION, method );
+    env.put( Context.SECURITY_PRINCIPAL, login );
+    env.put( Context.SECURITY_CREDENTIALS, password );
+    if ( useSsl ) {
+      env.put( Context.SECURITY_PROTOCOL, SSL_PROTOCOL );
+      if ( ignoreSslCert ) {
+        env.put( SOCKET_FACTORY, EasySSLSocketFactory.class.getCanonicalName( ) );
+      }
+    }
+    LdapContext ldapContext = null;
+    try {
+      ldapContext = new InitialLdapContext( env, null );
+    } catch ( NamingException e ) {
+      LOG.error( e, e );
+      throw new LdapException( "LDAP login failure", e );
+    }
+    return ldapContext;
   }
   
 }

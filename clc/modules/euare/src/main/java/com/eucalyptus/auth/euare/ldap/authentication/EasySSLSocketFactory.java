@@ -60,32 +60,96 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth.ldap.authentication;
+package com.eucalyptus.auth.euare.ldap.authentication;
 
-import javax.naming.ldap.LdapContext;
-import com.eucalyptus.auth.LdapException;
-import com.eucalyptus.auth.ldap.LdapIntegrationConfiguration;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.security.SecureRandom;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import javax.net.SocketFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import org.apache.log4j.Logger;
 
-public interface LdapAuthenticator {
-
-  public static final String LDAP_CONTEXT_FACTORY = "com.sun.jndi.ldap.LdapCtxFactory";
-  public static final String SSL_PROTOCOL = "ssl";
-  public static final String SOCKET_FACTORY = "java.naming.ldap.factory.socket";
+/**
+ * An SSLSocketFactory that ignores certificate validation.
+ */
+public class EasySSLSocketFactory extends SSLSocketFactory {
   
+  public static class DummyTrustManager implements X509TrustManager {
 
-  /**
-   * Authenticate LDAP service.
-   * 
-   * @param serverUrl The LDAP service URL
-   * @param method The authentication method
-   * @param useSsl Whether to use SSL
-   * @param ignoreSslCert Whether to ignore SSL certificate validation
-   * @param login The login name
-   * @param password The password
-   * @param extraArgs Extra arguments.
-   * @return An authenticated LDAP context.
-   * @throws LdapException If there is any error.
-   */
-  public LdapContext authenticate( String serverUrl, String method, boolean useSsl, boolean ignoreSslCert, String login, String password, Object... extraArgs ) throws LdapException;
+    @Override
+    public void checkClientTrusted( X509Certificate[] arg0, String arg1 ) throws CertificateException {
+      // do nothing
+    }
+
+    @Override
+    public void checkServerTrusted( X509Certificate[] arg0, String arg1 ) throws CertificateException {
+      // do nothing
+    }
+
+    @Override
+    public X509Certificate[] getAcceptedIssuers( ) {
+      return new X509Certificate[0];
+    }
+    
+  }
+  
+  public static SocketFactory getDefault( ) {
+    return new EasySSLSocketFactory( );
+  }
+  
+  private static final Logger LOG = Logger.getLogger( EasySSLSocketFactory.class );
+  
+  private SSLSocketFactory socketFactory;
+  
+  public EasySSLSocketFactory( ) {
+    try {
+      SSLContext ctx = SSLContext.getInstance( "TLS" );
+      ctx.init( null, new TrustManager[]{ new DummyTrustManager( ) }, new SecureRandom( ) );
+      socketFactory = ctx.getSocketFactory( );
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+    }
+  }
+  @Override
+  public Socket createSocket( Socket socket, String host, int port, boolean autoClose ) throws IOException {
+    return socketFactory != null ? socketFactory.createSocket( socket, host, port, autoClose ) : null;
+  }
+  
+  @Override
+  public String[] getDefaultCipherSuites( ) {
+    return socketFactory != null ? socketFactory.getDefaultCipherSuites( ) : null;
+  }
+  
+  @Override
+  public String[] getSupportedCipherSuites( ) {
+    return socketFactory != null ? socketFactory.getSupportedCipherSuites( ) : null;
+  }
+  
+  @Override
+  public Socket createSocket( String host, int port ) throws IOException, UnknownHostException {
+    return socketFactory != null ? socketFactory.createSocket( host, port ) : null;
+  }
+  
+  @Override
+  public Socket createSocket( InetAddress host, int port ) throws IOException {
+    return socketFactory != null ? socketFactory.createSocket( host, port ) : null;
+  }
+  
+  @Override
+  public Socket createSocket( String host, int port, InetAddress localHost, int localPort ) throws IOException, UnknownHostException {
+    return socketFactory != null ? socketFactory.createSocket( host, port, localHost, localPort ) : null;
+  }
+  
+  @Override
+  public Socket createSocket( InetAddress address, int port, InetAddress localAddress, int localPort ) throws IOException {
+    return socketFactory != null ? socketFactory.createSocket( address, port, localAddress, localPort ) : null;
+  }
   
 }

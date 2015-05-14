@@ -24,7 +24,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.AuthenticationLimitProvider;
 import com.eucalyptus.auth.LdapException;
-import com.eucalyptus.auth.ldap.LdapSync;
+import com.eucalyptus.auth.euare.ldap.LdapSync;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.auth.principal.User;
