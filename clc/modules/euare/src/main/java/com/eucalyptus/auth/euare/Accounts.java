@@ -66,6 +66,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.euare.principal.GlobalNamespace;
+import com.eucalyptus.auth.euare.principal.Account;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.EuareUser;
 
@@ -84,6 +85,10 @@ public class Accounts extends com.eucalyptus.auth.Accounts {
 
   public static List<AccountIdentifiers> resolveAccountNumbersForName( final String accountNameLike ) throws AuthException {
     return Accounts.getAccountProvider().resolveAccountNumbersForName( accountNameLike );
+  }
+
+  public static Account lookupAccountByName( String accountName ) throws AuthException {
+    return (Account) com.eucalyptus.auth.Accounts.lookupAccountByName( accountName );
   }
 
   public static EuareUser lookupUserByEmailAddress( String email ) throws AuthException {
