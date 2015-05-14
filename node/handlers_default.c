@@ -1259,10 +1259,14 @@ int create_vol_xml(const char *instanceId, const char *volumeId, const char *xml
 {
     int ret = EUCA_OK;
 
-    char ipath[EUCA_MAX_PATH];
-    get_instance_path(instanceId, ipath, sizeof(ipath));
+    char ipath[EUCA_MAX_PATH] = { 0 };
 
-    char lpath[EUCA_MAX_PATH];
+    if(get_instance_path(instanceId, ipath, sizeof(ipath)) != EUCA_OK || strlen(ipath) <= 0) {
+        LOGERROR("Failed to find instance path for instance %s\n", instanceId);
+        return EUCA_ERROR;
+    }
+
+    char lpath[EUCA_MAX_PATH] = { 0 };
     snprintf(lpath, (sizeof(lpath) - 1), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, ipath, volumeId);  // vol-XXX-libvirt.xml
     lpath[sizeof(lpath) - 1] = '\0';
 
