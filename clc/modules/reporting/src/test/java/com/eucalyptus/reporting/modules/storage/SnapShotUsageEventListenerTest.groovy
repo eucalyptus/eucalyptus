@@ -20,6 +20,8 @@
 package com.eucalyptus.reporting.modules.storage
 
 import com.eucalyptus.auth.AuthException
+import com.eucalyptus.reporting.service.ReportingService
+import org.junit.BeforeClass
 import org.junit.Test
 import com.eucalyptus.auth.principal.Principals
 
@@ -37,6 +39,11 @@ import com.eucalyptus.reporting.event_store.ReportingVolumeSnapshotDeleteEvent
  * 
  */
 class SnapShotUsageEventListenerTest {
+
+  @BeforeClass
+  static void beforeClass( ) {
+    ReportingService.DATA_COLLECTION_ENABLED = true
+  }
 
   @Test
   void testInstantiable() {

@@ -19,11 +19,9 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare;
 
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.util.ClassPathSystemRoleProvider;
 
-/**
- *
- */
 public class InfrastructureAdminSystemRoleProvider extends ClassPathSystemRoleProvider {
 
   @Override
@@ -34,5 +32,10 @@ public class InfrastructureAdminSystemRoleProvider extends ClassPathSystemRolePr
   @Override
   public String getPath() {
     return "/eucalyptus";
+  }
+
+  @Override
+  public String getAccountName() {
+    return AccountIdentifiers.SYSTEM_ACCOUNT;
   }
 }

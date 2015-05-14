@@ -646,7 +646,7 @@ public class LoadBalancingBackendService {
           final String certArn = l.getSSLCertificateId();
           if(certArn==null || certArn.length()<=0)
             throw new InvalidConfigurationRequestException("SSLCertificateId is required for HTTPS or SSL protocol");
-          LoadBalancers.checkSSLCertificate(ctx.getUser().getUserId(), certArn);
+          LoadBalancers.checkSSLCertificate(ctx.getAccountNumber(), certArn);
         }
       }
     }catch(Exception ex){
@@ -1232,7 +1232,7 @@ public class LoadBalancingBackendService {
           final String certArn = l.getSSLCertificateId();
           if(certArn==null || certArn.length()<=0)
             throw new InvalidConfigurationRequestException("SSLCertificateId is required for HTTPS or SSL protocol");
-          LoadBalancers.checkSSLCertificate(ctx.getUser().getUserId(), certArn);
+          LoadBalancers.checkSSLCertificate(ctx.getAccountNumber(), certArn);
         }
       }
     }catch(Exception ex){
@@ -1380,7 +1380,7 @@ public class LoadBalancingBackendService {
 
     if ( lb.getVpcId( ) != null ) {
       final List<RunningInstancesItemType> instanceItems =
-          EucalyptusActivityTasks.getInstance( ).describeUserInstances(ownerFullName.getUserId(), 
+          EucalyptusActivityTasks.getInstance( ).describeUserInstances(ctx.getAccountNumber( ),
               Lists.newArrayList( Iterables.transform( instances, Instance.instanceId())));
 
       for ( final RunningInstancesItemType instanceItem : instanceItems ) {
@@ -1740,7 +1740,7 @@ public class LoadBalancingBackendService {
 
     LoadBalancer lb;
     try {
-      lb = lookupAuthorizedByNameOrDnsName( ctx.getUser().getAccountNumber(), lbName );
+      lb = lookupAuthorizedByNameOrDnsName( ctx.getAccountNumber(), lbName );
     } catch ( final LoadBalancingException e ) {
       throw e;
     } catch( Exception ex ){
@@ -1902,7 +1902,7 @@ public class LoadBalancingBackendService {
     }else{
       LoadBalancer lb;
       try {
-        lb = lookupAuthorizedByNameOrDnsName( ctx.getUser().getAccountNumber(), lbName );
+        lb = lookupAuthorizedByNameOrDnsName( ctx.getAccountNumber(), lbName );
       } catch ( final LoadBalancingException e ) {
         throw e;
       } catch ( final Exception ex ){

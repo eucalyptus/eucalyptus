@@ -58,8 +58,8 @@ import com.google.common.base.Objects;
 public class ReportingService {
 
   private static final Logger logger = Logger.getLogger( ReportingService.class );
-  @ConfigurableField(initial = "true", description = "Set this to false to stop reporting from populating new data")
-  public static Boolean DATA_COLLECTION_ENABLED = true;
+  @ConfigurableField(initial = "false", description = "Set this to false to stop reporting from populating new data")
+  public static Boolean DATA_COLLECTION_ENABLED = false;
   private static final int DISABLED_SERVICE_FAULT_ID = 1501;
   private static boolean alreadyFaulted = false;
   public synchronized static void faultDisableReportingServiceIfNecessary() {

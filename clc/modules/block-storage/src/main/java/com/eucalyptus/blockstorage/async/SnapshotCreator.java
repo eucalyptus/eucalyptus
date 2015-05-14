@@ -63,12 +63,14 @@
 package com.eucalyptus.blockstorage.async;
 
 import java.util.NoSuchElementException;
+import java.util.concurrent.Future;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.blockstorage.LogicalStorageManager;
 import com.eucalyptus.blockstorage.S3SnapshotTransfer;
+import com.eucalyptus.blockstorage.SnapshotProgressCallback;
 import com.eucalyptus.blockstorage.SnapshotTransfer;
 import com.eucalyptus.blockstorage.StorageResource;
 import com.eucalyptus.blockstorage.entities.SnapshotInfo;
@@ -115,6 +117,7 @@ public class SnapshotCreator implements Runnable {
       StorageResource snapshotResource = null;
       SnapshotTransfer snapshotTransfer = null;
       String bucket = null;
+      SnapshotProgressCallback progressCallback = null;
 
       // Check whether the snapshot needs to be uploaded
       shouldTransferSnapshots = StorageInfo.getStorageInfo().getShouldTransferSnapshots();
@@ -140,7 +143,9 @@ public class SnapshotCreator implements Runnable {
 
         // Check to ensure that a failed/cancellation has not be set
         if (!isSnapshotMarkedFailed(snapshotId)) {
+          progressCallback = new SnapshotProgressCallback(snapshotId); // Setup the progress callback, that should start the progress
           snapshotResource = blockManager.createSnapshot(this.volumeId, this.snapshotId, this.snapPointId, shouldTransferSnapshots);
+          progressCallback.updateBackendProgress(50); // to indicate that backend snapshot process is 50% done
         } else {
           throw new EucalyptusCloudException("Snapshot " + this.snapshotId + " marked as failed by another thread");
         }
@@ -148,6 +153,7 @@ public class SnapshotCreator implements Runnable {
         semaphore.release();
       }
 
+      Future<String> uploadFuture = null;
       if (shouldTransferSnapshots) {
         if (snapshotResource == null) {
           throw new EucalyptusCloudException("Snapshot file unknown. Cannot transfer snapshot");
@@ -155,82 +161,66 @@ public class SnapshotCreator implements Runnable {
 
         // Update snapshot location in database
         String snapshotLocation = SnapshotInfo.generateSnapshotLocationURI(SnapshotTransferConfiguration.OSG, bucket, snapshotId);
-        SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
-        SnapshotInfo snapshotInfo = null;
-        try (TransactionResource tran = Entities.transactionFor(SnapshotInfo.class)) {
-          snapshotInfo = Entities.uniqueResult(snapInfo);
-          snapshotInfo.setSnapshotLocation(snapshotLocation);
-          tran.commit();
-        } catch (TransactionException | NoSuchElementException e) {
-          LOG.debug("Failed to update upload location for snapshot " + snapshotId, e);
-        }
+        Entities.asTransaction(SnapshotInfo.class, new Function<String, SnapshotInfo>() {
+
+          @Override
+          public SnapshotInfo apply(String arg0) {
+            SnapshotInfo snapshotInfo = null;
+            try {
+              snapshotInfo = Entities.uniqueResult(new SnapshotInfo(snapshotId));
+              snapshotInfo.setSnapshotLocation(arg0);
+            } catch (TransactionException | NoSuchElementException e) {
+              LOG.debug("Failed to update upload location for snapshot " + snapshotId + ". Skipping it and moving on", e);
+            }
+            return snapshotInfo;
+          }
+        }).apply(snapshotLocation);
 
         if (!isSnapshotMarkedFailed(snapshotId)) {
           try {
-            snapshotTransfer.upload(snapshotResource);
+            uploadFuture = snapshotTransfer.upload(snapshotResource, progressCallback);
           } catch (Exception e) {
             throw new EucalyptusCloudException("Failed to upload snapshot " + snapshotId + " to objectstorage", e);
           }
         } else {
           throw new EucalyptusCloudException("Snapshot " + this.snapshotId + " marked as failed by another thread");
         }
-
-        try {
-          LOG.debug("Finalizing snapshot " + snapshotId + " post upload");
-          blockManager.finishVolume(snapshotId);
-        } catch (EucalyptusCloudException ex) {
-          LOG.error("Failed to finalize snapshot " + snapshotId, ex);
-        }
       } else {
-        // Snapshot does not have to be transferred. Mark it as available.
-        Function<String, SnapshotInfo> updateFunction = new Function<String, SnapshotInfo>() {
-
-          @Override
-          public SnapshotInfo apply(String arg0) {
-            SnapshotInfo snap;
-            try {
-              snap = Entities.uniqueResult(new SnapshotInfo(arg0));
-              snap.setStatus(StorageProperties.Status.available.toString());
-              snap.setProgress("100");
-              snap.setSnapPointId(null);
-              return snap;
-            } catch (TransactionException | NoSuchElementException e) {
-              LOG.error("Failed to retrieve snapshot entity from DB for " + arg0, e);
-            }
-            return null;
-          }
-        };
-
-        Entities.asTransaction(SnapshotInfo.class, updateFunction).apply(snapshotId);
+        // Snapshot does not have to be transferred
       }
+
+      // finish the snapshot on backend - sever iscsi connection, disconnect and wait for it to complete
+      try {
+        LOG.debug("Finishing up " + snapshotId + " on block storage backend");
+        blockManager.finishVolume(snapshotId);
+        LOG.info("Finished creating " + snapshotId + " on block storage backend");
+        progressCallback.updateBackendProgress(50); // to indicate that backend snapshot process is 100% done
+      } catch (EucalyptusCloudException ex) {
+        LOG.warn("Failed to complete snapshot " + snapshotId + " on backend", ex);
+        throw ex;
+      }
+
+      // If uploading, wait for upload to complete
+      if (uploadFuture != null) {
+        LOG.debug("Waiting for upload of " + snapshotId + " to complete");
+        if (uploadFuture.get() != null) {
+          LOG.info("Uploaded " + snapshotId + " to object storage gateway, etag result - " + uploadFuture.get());
+        } else {
+          LOG.warn("Failed to upload " + snapshotId + " to object storage gateway failed. Check prior logs for exact errors");
+          throw new EucalyptusCloudException("Failed to upload " + snapshotId + " to object storage gateway");
+        }
+      }
+
+      // Mark snapshot as available
+      markSnapshotAvailable();
     } catch (Exception ex) {
       LOG.error("Failed to create snapshot " + snapshotId, ex);
+
       try {
-        LOG.debug("Disconnecting snapshot " + snapshotId + " on failed snapshot attempt");
-        blockManager.finishVolume(snapshotId);
-      } catch (EucalyptusCloudException e1) {
-        LOG.debug("Deleting snapshot " + snapshotId + " on failed snapshot attempt", e1);
-        blockManager.cleanSnapshot(snapshotId);
+        markSnapshotFailed();
+      } catch (TransactionException | NoSuchElementException e) {
+        LOG.warn("Cannot update " + snapshotId + " status to failed on SC", e);
       }
-
-      Function<String, SnapshotInfo> updateFunction = new Function<String, SnapshotInfo>() {
-
-        @Override
-        public SnapshotInfo apply(String arg0) {
-          SnapshotInfo snap;
-          try {
-            snap = Entities.uniqueResult(new SnapshotInfo(arg0));
-            snap.setStatus(StorageProperties.Status.failed.toString());
-            snap.setProgress("0");
-            return snap;
-          } catch (TransactionException | NoSuchElementException e) {
-            LOG.error("Failed to retrieve snapshot entity from DB for " + arg0, e);
-          }
-          return null;
-        }
-      };
-
-      Entities.asTransaction(SnapshotInfo.class, updateFunction).apply(snapshotId);
     }
   }
 
@@ -248,5 +238,48 @@ public class SnapshotCreator implements Runnable {
       LOG.error("Error determining status of snapshot " + snapshotId);
     }
     return false;
+  }
+
+  private void markSnapshotAvailable() throws TransactionException, NoSuchElementException {
+    Function<String, SnapshotInfo> updateFunction = new Function<String, SnapshotInfo>() {
+
+      @Override
+      public SnapshotInfo apply(String arg0) {
+        SnapshotInfo snap;
+        try {
+          snap = Entities.uniqueResult(new SnapshotInfo(arg0));
+          snap.setStatus(StorageProperties.Status.available.toString());
+          snap.setProgress("100");
+          snap.setSnapPointId(null);
+          return snap;
+        } catch (TransactionException | NoSuchElementException e) {
+          LOG.error("Failed to retrieve snapshot entity from DB for " + arg0, e);
+        }
+        return null;
+      }
+    };
+
+    Entities.asTransaction(SnapshotInfo.class, updateFunction).apply(snapshotId);
+  }
+
+  private void markSnapshotFailed() throws TransactionException, NoSuchElementException {
+    Function<String, SnapshotInfo> updateFunction = new Function<String, SnapshotInfo>() {
+
+      @Override
+      public SnapshotInfo apply(String arg0) {
+        SnapshotInfo snap;
+        try {
+          snap = Entities.uniqueResult(new SnapshotInfo(arg0));
+          snap.setStatus(StorageProperties.Status.failed.toString());
+          snap.setProgress("0");
+          return snap;
+        } catch (TransactionException | NoSuchElementException e) {
+          LOG.error("Failed to retrieve snapshot entity from DB for " + arg0, e);
+        }
+        return null;
+      }
+    };
+
+    Entities.asTransaction(SnapshotInfo.class, updateFunction).apply(snapshotId);
   }
 }

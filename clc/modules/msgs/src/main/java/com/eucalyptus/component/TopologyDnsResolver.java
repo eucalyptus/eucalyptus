@@ -63,7 +63,11 @@
 package com.eucalyptus.component;
 
 import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
+
 import java.net.InetAddress;
+import java.net.InterfaceAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -71,8 +75,11 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+
+import org.apache.log4j.Logger;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
+
 import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -85,6 +92,7 @@ import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResolver;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResponse;
 import com.eucalyptus.util.dns.DnsResolvers.RequestType;
+import com.eucalyptus.util.dns.DnsResolvers;
 import com.eucalyptus.util.dns.DomainNameRecords;
 import com.eucalyptus.util.dns.DomainNames;
 import com.google.common.base.CharMatcher;
@@ -127,19 +135,10 @@ import com.google.common.collect.Maps;
 @ConfigurableClass( root = "dns.services",
                     description = "Options controlling DNS name resolution for Eucalyptus services." )
 public class TopologyDnsResolver implements DnsResolver {
+  private static Logger LOG = Logger.getLogger( TopologyDnsResolver.class );
+
   @ConfigurableField( description = "Enable the service topology resolver.  Note: dns.enable must also be 'true'" )
   public static Boolean enabled = Boolean.TRUE;
-
-  @ConfigurableField(
-      description = "Comma separated list of listener address CIDRs to desired host address CIDRS for services",
-      initial = "",
-      changeListener = HostMappingPropertyChangeListener.class
-  )
-  public static String hostMapping = "";
-
-  private static final Function<String,Map<Cidr,Cidr>> hostMappings = // A function memoizing the last invocation
-      CacheBuilder.newBuilder().maximumSize( 1 ).build( CacheLoader.from( CidrMapTransform.INSTANCE ) );
-
   enum ResolverSupport implements Predicate<Name> {
     COMPONENT {
       
@@ -342,18 +341,25 @@ public class TopologyDnsResolver implements DnsResolver {
   @SuppressWarnings( "ConstantConditions" )
   public static InetAddress maphost( final InetAddress listenerAddress,
                                      final InetAddress hostAddress ) {
-    final Map<Cidr,Cidr> mappings = hostMappings.apply( hostMapping );
-
     InetAddress result = hostAddress;
-    for ( final Map.Entry<Cidr,Cidr> mapping : mappings.entrySet( ) ) {
-      if ( mapping.getKey( ).apply( listenerAddress ) ) {
-        final Host host = Hosts.lookup( hostAddress );
-        if ( host != null ) {
-          result = Iterables.tryFind( host.getHostAddresses( ), mapping.getValue( ) ).or( result );
+    try{
+      final NetworkInterface networkInterface = NetworkInterface.getByInetAddress(listenerAddress);
+      short prefix = networkInterface.getInterfaceAddresses().get(0).getNetworkPrefixLength();
+      for(final InterfaceAddress ifaddr : networkInterface.getInterfaceAddresses()){
+        if (listenerAddress.equals(ifaddr.getAddress())) {
+          prefix= ifaddr.getNetworkPrefixLength();
+          break;
         }
       }
+      final Cidr listenerCidr = Cidr.fromAddress(listenerAddress, prefix);
+      final Host host = Hosts.lookup(hostAddress);
+      if( host != null ) {
+        result = Iterables.tryFind(host.getHostAddresses(), listenerCidr).or(result);
+      }
     }
-
+    catch(final Exception ex){
+      LOG.error("failed to map the host address: " + ex.getMessage());
+    }
     return result;
   }
 
@@ -368,17 +374,6 @@ public class TopologyDnsResolver implements DnsResolver {
         Maps.<Cidr,Cidr>newHashMap( ),
         cidrTransform,
         cidrTransform );
-  }
-
-  public static final class HostMappingPropertyChangeListener implements PropertyChangeListener {
-    @Override
-    public void fireChange( final ConfigurableProperty t, final Object newValue ) throws ConfigurablePropertyException {
-      try {
-        parse( Cidr.parseUnsafe(), Objects.toString( newValue, "" ) );
-      } catch ( Exception e ) {
-        throw new ConfigurablePropertyException( e.getMessage( ) );
-      }
-    }
   }
 
   private static enum CidrMapTransform implements Function<String,Map<Cidr,Cidr>> {

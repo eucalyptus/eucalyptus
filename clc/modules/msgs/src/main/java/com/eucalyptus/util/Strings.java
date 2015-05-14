@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,8 @@
 package com.eucalyptus.util;
 
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.google.common.base.Function;
@@ -105,6 +107,22 @@ public class Strings {
   }
 
   /**
+   * Get a function returning the substring of text that precedes the match, empty if not found.
+   *
+   * @param match The boundary string to search for
+   * @return The substring function, returns null if text was null
+   */
+  public static Function<String,String> substringBefore( @Nonnull final String match ) {
+    return new Function<String,String>( ) {
+      @Nullable
+      @Override
+      public String apply( @Nullable final String text ) {
+        return substringBefore( match, text );
+      }
+    };
+  }
+
+  /**
    * Get the substring of text that follows the match, empty if not found.
    *
    * @param match The boundary string to search for
@@ -123,6 +141,22 @@ public class Strings {
     } else {
       return null;
     }
+  }
+
+  /**
+   * Get a function returning the substring of text that follows the match, empty if not found.
+   *
+   * @param match The boundary string to search for
+   * @return The substring function, returns null if text was null
+   */
+  public static Function<String,String> substringAfter( @Nonnull  final String match ) {
+    return new Function<String,String>( ) {
+      @Nullable
+      @Override
+      public String apply( @Nullable final String text ) {
+        return substringAfter( match, text );
+      }
+    };
   }
 
   /**
@@ -259,6 +293,31 @@ public class Strings {
       @Override
       public Function<String,String> apply( @Nullable final String prefix ) {
         return prepend( prefix );
+      }
+    };
+  }
+
+  /**
+   *
+   * @see java.util.regex.Matcher#quoteReplacement(String)
+   */
+  public static Function<String,String> regexReplace(
+      final Pattern pattern,
+      final String replacement,
+      final String defaultValue
+  ) {
+    return new Function<String,String>( ) {
+      @Nullable
+      @Override
+      public String apply( @Nullable final String text ) {
+        if ( text == null ) {
+          return defaultValue;
+        } else {
+          final Matcher matcher = pattern.matcher( text );
+          return matcher.matches( ) ?
+              matcher.replaceFirst( replacement ) :
+              defaultValue;
+        }
       }
     };
   }

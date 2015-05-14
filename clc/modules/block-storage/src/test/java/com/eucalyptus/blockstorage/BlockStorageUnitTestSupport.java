@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.Future;
 
 import org.hibernate.ejb.Ejb3Configuration;
 
@@ -117,13 +118,12 @@ public class BlockStorageUnitTestSupport {
     props.put("hibernate.connection.url", "jdbc:derby:memory:test;create=true");
 
     Ejb3Configuration config =
-        (new Ejb3Configuration()).configure( props ).addAnnotatedClass( AccessKeyEntity.class ).addAnnotatedClass( AccountEntity.class )
-            .addAnnotatedClass( InstanceProfileEntity.class ).addAnnotatedClass( GroupEntity.class )
-            .addAnnotatedClass( PolicyEntity.class ).addAnnotatedClass( UserEntity.class )
-            .addAnnotatedClass( RoleEntity.class ).addAnnotatedClass( CertificateEntity.class )
-            .addAnnotatedClass( ServerCertificateEntity.class );
+        (new Ejb3Configuration()).configure(props).addAnnotatedClass(AccessKeyEntity.class).addAnnotatedClass(AccountEntity.class)
+            .addAnnotatedClass(InstanceProfileEntity.class).addAnnotatedClass(GroupEntity.class).addAnnotatedClass(PolicyEntity.class)
+            .addAnnotatedClass(UserEntity.class).addAnnotatedClass(RoleEntity.class).addAnnotatedClass(CertificateEntity.class)
+            .addAnnotatedClass(ServerCertificateEntity.class);
 
-    PersistenceContexts.registerPersistenceContext( "eucalyptus_auth", config );
+    PersistenceContexts.registerPersistenceContext("eucalyptus_auth", config);
   }
 
   public static void tearDownAuthPersistenceContext() {
@@ -276,8 +276,8 @@ public class BlockStorageUnitTestSupport {
       }
 
       @Override
-      public void upload(StorageResource storageResource) throws SnapshotTransferException {
-
+      public Future<String> upload(StorageResource storageResource, SnapshotProgressCallback progressCallback) throws SnapshotTransferException {
+        return null;
       }
 
       @Override

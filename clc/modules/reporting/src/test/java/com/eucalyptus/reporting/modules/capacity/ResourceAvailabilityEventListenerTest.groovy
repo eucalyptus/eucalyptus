@@ -19,6 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.reporting.modules.capacity
 
+import com.eucalyptus.reporting.service.ReportingService
+import org.junit.BeforeClass
 import org.junit.Test
 import com.eucalyptus.reporting.event.ResourceAvailabilityEvent
 import com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Availability
@@ -38,6 +40,11 @@ import com.google.common.collect.Sets
  * Unit test for ResourceAvailabilityEventListener
  */
 class ResourceAvailabilityEventListenerTest {
+
+  @BeforeClass
+  static void beforeClass( ) {
+    ReportingService.DATA_COLLECTION_ENABLED = true
+  }
 
   @Test
   void testInstantiable() {

@@ -192,7 +192,7 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		try{
 			if(this.vmInstance==null){
 				List<RunningInstancesItemType> instanceIds = 
-					EucalyptusActivityTasks.getInstance().describeUserInstances(this.getOwnerUserId(), Lists.newArrayList(this.displayName));
+					EucalyptusActivityTasks.getInstance().describeUserInstances(this.getOwnerAccountNumber(), Lists.newArrayList(this.displayName));
 				for(RunningInstancesItemType instance : instanceIds ) {
 				      if(instance.getInstanceId().equals(this.getDisplayName()) && instance.getStateName().equals("running")){
 				        this.vmInstance = instance;

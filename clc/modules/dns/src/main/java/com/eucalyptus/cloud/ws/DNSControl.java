@@ -125,26 +125,25 @@ import com.google.common.collect.Sets;
 public class DNSControl {
 	private static Logger LOG = Logger.getLogger( DNSControl.class );
 
-	private static final AtomicReference<Collection<Cidr>> addressMatchers =
-			new AtomicReference<Collection<Cidr>>( Collections.<Cidr>emptySet( ) );
-	
+  private static final AtomicReference<Collection<Cidr>> addressMatchers =
+      new AtomicReference<Collection<Cidr>>( Collections.<Cidr>emptySet( ) );
+
 	private static final AtomicReference<Collection<TCPListener>> tcpListenerRef =
 			new AtomicReference<Collection<TCPListener>>( Collections.<TCPListener>emptySet( ) );
 
 	private static final Lock listenerLock = new ReentrantLock( );
+
+  @ConfigurableField( displayName = "dns_listener_address_match",
+      description = "Additional address patterns to listen on for DNS requests.",
+      initial = "",
+      readonly = false,
+      changeListener = DnsAddressChangeListener.class)
+  public static volatile String dns_listener_address_match = ""; 
 	
   @ConfigurableField( description = "Server worker thread pool max.",
       changeListener = WebServices.CheckNonNegativeIntegerPropertyChangeListener.class )
   public static Integer       SERVER_POOL_MAX_THREADS           = 512;
 
-  /// OBSOLETE if/when TCP listener becomes Netty based
-	@ConfigurableField( displayName = "dns_listener_address_match",
-			description = "Additional address patterns to listen on for DNS requests.",
-			initial = "",
-			readonly = false,
-			changeListener = DnsAddressChangeListener.class)
-	public static volatile String dns_listener_address_match = ""; 
-	
 	@ConfigurableField( displayName = "server",
 			description = "Comma separated list of nameservers, OS settings used if none specified (change requires restart)",
 			initial = "",
@@ -201,32 +200,26 @@ public class DNSControl {
 		}
 	}
 
-	public static class DnsAddressChangeListener implements PropertyChangeListener {
-		@Override
-		public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
-			if ( newValue instanceof String  ) {
-				updateAddressMatchers( (String) newValue );
-				try {
-					restart( );
-				} catch ( final Exception e ) {
-					throw new ConfigurablePropertyException( e.getMessage( ) );
-				}
-			}
-		}
-	}
+	 public static class DnsAddressChangeListener implements PropertyChangeListener {
+	    @Override
+	    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+	      if ( newValue instanceof String  ) {
+	        updateAddressMatchers( (String) newValue );
+	      }
+	    }
+	  }
 
-	private static void updateAddressMatchers( final String addressCidrs ) throws ConfigurablePropertyException {
-		try {
-			addressMatchers.set( ImmutableList.copyOf( Iterables.transform(
-					Splitter.on( CharMatcher.anyOf(", ;:") ).trimResults( ).omitEmptyStrings( ).split( addressCidrs ),
-					Cidr.parseUnsafe( )
-			) ) );
-		} catch ( IllegalArgumentException e ) {
-			throw new ConfigurablePropertyException( e.getMessage( ) );
-		}
-	}
-	
-  private static final ChannelGroup udpChannelGroup = new DefaultChannelGroup( 
+	  private static void updateAddressMatchers( final String addressCidrs ) throws ConfigurablePropertyException {
+	    try {
+	      addressMatchers.set( ImmutableList.copyOf( Iterables.transform(
+	          Splitter.on( CharMatcher.anyOf(", ;:") ).trimResults( ).omitEmptyStrings( ).split( addressCidrs ),
+	          Cidr.parseUnsafe( )
+	      ) ) );
+	    } catch ( IllegalArgumentException e ) {
+	      throw new ConfigurablePropertyException( e.getMessage( ) );
+	    }
+	  }
+	private static final ChannelGroup udpChannelGroup = new DefaultChannelGroup( 
       DNSControl.class.getSimpleName( )
       + ":udp:53");
   private static final ChannelGroup tcpChannelGroup = new DefaultChannelGroup( 
@@ -308,13 +301,32 @@ public class DNSControl {
         b.setOption("reuseAddress", true);
         b.setOption("connectTimeoutMillis", 3000);
         
-	      Capabilities.runWithCapabilities( new Callable<Boolean>() {
-	        @Override
-	        public Boolean call() throws Exception {
-	          final Channel udpChannel= b.bind(new InetSocketAddress(53)); // any interfaces
-	          udpChannelGroup.add(udpChannel);
-	          return true;
-	        }}); 
+        final Set<InetAddress> listenAddresses = Sets.newLinkedHashSet( );
+        listenAddresses.add( Internets.localHostInetAddress( ) );
+        
+        if(addressMatchers.get().size()>0) {
+          Iterables.addAll(
+              listenAddresses,
+              Iterables.filter( Internets.getAllInetAddresses( ), Predicates.or( addressMatchers.get( ) ) ) );
+        }else{
+          Iterables.addAll(
+              listenAddresses,
+              Internets.getAllInetAddresses( ));
+        }
+        Capabilities.runWithCapabilities( new Callable<Boolean>() {
+          @Override
+          public Boolean call() throws Exception {
+            Channel udpChannel=  null; 
+            for(final InetAddress listenAddr : listenAddresses) {
+              try{
+                udpChannel = b.bind(new InetSocketAddress(listenAddr, 53));
+                udpChannelGroup.add(udpChannel);
+              }catch(final Exception ex){
+                continue;	           
+              }
+            }
+            return true;
+          }}); 
 	    }catch(final Exception ex) {
 	      LOG.debug("Failed initializing DNS udp listener",ex);
 	      udpChannelGroup.close().awaitUninterruptibly();
@@ -399,9 +411,16 @@ public class DNSControl {
 				final int listenPort = DNSProperties.PORT;
 				final Set<InetAddress> listenAddresses = Sets.newLinkedHashSet( );
 				listenAddresses.add( Internets.localHostInetAddress( ) );
-				Iterables.addAll(
-						listenAddresses,
-						Iterables.filter( Internets.getAllInetAddresses( ), Predicates.or( addressMatchers.get( ) ) ) );
+				
+			  if(addressMatchers.get().size()>0) {
+          Iterables.addAll(
+              listenAddresses,
+              Iterables.filter( Internets.getAllInetAddresses( ), Predicates.or( addressMatchers.get( ) ) ) );
+        }else{
+          Iterables.addAll(
+              listenAddresses,
+              Internets.getAllInetAddresses( ));
+        }
 				LOG.info( "Starting DNS " + description + " listeners on " + listenAddresses + ":" + listenPort );
 
 				// Configured listeners

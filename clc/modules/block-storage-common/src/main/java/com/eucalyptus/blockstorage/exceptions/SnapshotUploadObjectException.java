@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,14 +60,16 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-//###########################################################
-//# Eucalyptus VM State Options
-//###########################################################
-//# Each option is listed with its default value indicated.  
-//# Only key-value pair options are honored at this time
-//###########################################################
-//# TODO: descriptions and split vanished from teardown
-//#
-//# SHUT_DOWN_TIME      = 10 * 60 * 1000;
-//#
-//# BURY_TIME           = 60 * 60 * 1000;
+package com.eucalyptus.blockstorage.exceptions;
+
+@SuppressWarnings("serial")
+public class SnapshotUploadObjectException extends SnapshotTransferException {
+
+  public SnapshotUploadObjectException(String message) {
+    super(message);
+  }
+
+  public SnapshotUploadObjectException(String message, Throwable ex) {
+    super(message, ex);
+  }
+}

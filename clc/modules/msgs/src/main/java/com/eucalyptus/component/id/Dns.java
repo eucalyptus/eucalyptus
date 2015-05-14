@@ -68,7 +68,7 @@ import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PublicService;
 
-@Partition( Eucalyptus.class )
+@Partition( value = {Dns.class}, manyToOne = true )
 @PublicService
 @FaultLogPrefix( "cloud" )
 @Description( "Eucalyptus DNS server" )

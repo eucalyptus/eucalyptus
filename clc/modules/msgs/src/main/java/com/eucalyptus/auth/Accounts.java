@@ -63,6 +63,7 @@
 package com.eucalyptus.auth;
 
 import java.security.cert.X509Certificate;
+import java.security.interfaces.RSAPublicKey;
 import java.util.List;
 import java.util.Objects;
 import java.util.ServiceLoader;
@@ -164,6 +165,19 @@ public class Accounts {
 
   protected static IdentityProvider getIdentityProvider( ) {
     return identities.get( );
+  }
+
+  public static X509Certificate getEuareCertificate( final String accountNumber ) throws AuthException {
+    return getIdentityProvider( ).getCertificateByAccountNumber( accountNumber );
+  }
+
+  public static X509Certificate signCertificate(
+      final String accountNumber,
+      final RSAPublicKey publicKey,
+      final String principal,
+      final int expiryInDays
+  ) throws AuthException {
+    return getIdentityProvider( ).signCertificate( accountNumber, publicKey, principal, expiryInDays );
   }
 
   public static String lookupAccountIdByAlias( String alias ) throws AuthException {
@@ -396,6 +410,21 @@ public class Accounts {
       }
     }
     return user;
+  }
+
+  public static EuareUser lookupImagingAccount( ) throws AuthException {
+    Account system = Accounts.getAccountProvider( ).lookupAccountByName( Account.IMAGING_SYSTEM_ACCOUNT );
+    return system.lookupAdmin();
+  }
+
+  public static EuareUser lookupLoadbalancingAccount( ) throws AuthException {
+    Account system = Accounts.getAccountProvider( ).lookupAccountByName( Account.ELB_SYSTEM_ACCOUNT );
+    return system.lookupAdmin();
+  }
+
+  public static EuareUser lookupDatabaseAccount( ) throws AuthException {
+    Account system = Accounts.getAccountProvider( ).lookupAccountByName( Account.DATABASE_SYSTEM_ACCOUNT );
+    return system.lookupAdmin();
   }
 
   public static UserPrincipal userAsPrincipal( final EuareUser user  ) throws AuthException {

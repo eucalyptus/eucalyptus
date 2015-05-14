@@ -62,6 +62,7 @@
 
 package com.eucalyptus.blockstorage;
 
+import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 
 import org.apache.log4j.Logger;
@@ -71,9 +72,9 @@ import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.storage.common.CallBack;
+import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.system.Threads;
+import com.google.common.base.Function;
 
 /**
  * Callback that updates snapshot upload info in the db after at least N percent upload change. Currently set at 3%
@@ -83,7 +84,7 @@ import com.eucalyptus.system.Threads;
  * The finish and fail operations are no-ops.
  * 
  */
-public class SnapshotProgressCallback implements CallBack {
+public class SnapshotProgressCallback {
   private static Logger LOG = Logger.getLogger(SnapshotProgressCallback.class);
   private static final int PROGRESS_TICK = 3; // Percent between updates
 
@@ -91,6 +92,8 @@ public class SnapshotProgressCallback implements CallBack {
   private long uploadSize;
   private long bytesTransferred;
   private int lastProgress;
+  private int uploadProgress;
+  private int backendProgress;
   private ServiceConfiguration scConfig;
 
   public SnapshotProgressCallback(String snapshotId) {
@@ -98,7 +101,9 @@ public class SnapshotProgressCallback implements CallBack {
     this.uploadSize = 0L;
     this.bytesTransferred = 0L;
     this.scConfig = Components.lookup(Storage.class).getLocalServiceConfiguration();
-    this.lastProgress = 1; // to indicate that some amount of snapshot in in progress
+    this.backendProgress = 1;// to indicate that some amount of snapshot in in progress
+    this.uploadProgress = 0;
+    this.lastProgress = this.backendProgress + this.uploadProgress;
     Threads.enqueue(scConfig, SnapshotProgressCallback.class, 1, new ProgressSetter(this.snapshotId, this.lastProgress));
   }
 
@@ -107,55 +112,85 @@ public class SnapshotProgressCallback implements CallBack {
     this.uploadSize = uploadSize;
   }
 
-  @Override
-  public void update(final long bytesTransferred) {
+  public synchronized void updateUploadProgress(final long bytesTransferred) {
     if (this.uploadSize > 0) {
       this.bytesTransferred += bytesTransferred;
-      int progress = (int) ((this.bytesTransferred * 100) / uploadSize);
-      if (progress >= 100 || (progress - this.lastProgress < PROGRESS_TICK)) {
-        // Don't update. Either not enough change or snapshot is 100% complete
+      int progress = (int) ((this.bytesTransferred * 50) / uploadSize); // halving the progress as upload is one half of snapshot creation process
+      if (progress >= 50 || (progress - this.uploadProgress < PROGRESS_TICK)) {
+        // Don't update. Either not enough change or snapshot transfer is complete
         return;
       } else {
-        this.lastProgress = progress;
+        this.uploadProgress = progress;
+        this.lastProgress = this.backendProgress + this.uploadProgress;
         Threads.enqueue(scConfig, SnapshotProgressCallback.class, 1, new ProgressSetter(this.snapshotId, this.lastProgress));
       }
     }
   }
 
-  @Override
-  public void finish() {
-    // Nothing to do here
-  }
-
-  @Override
-  public void failed() {
-    // Nothing to do here
+  public synchronized void updateBackendProgress(final int percentComplete) {
+    int progress = (int) percentComplete / 2; // halving the progress as backend stuff is one half of snapshot creation process
+    if (progress >= 50 || (progress - this.backendProgress < PROGRESS_TICK)) {
+      // Don't update. Either not enough change or snapshot is 100% complete
+      return;
+    } else {
+      this.backendProgress = progress;
+      this.lastProgress = this.backendProgress + this.uploadProgress;
+      Threads.enqueue(scConfig, SnapshotProgressCallback.class, 1, new ProgressSetter(this.snapshotId, this.lastProgress));
+    }
   }
 
   class ProgressSetter implements Callable<Boolean> {
-    private String snapshotId;
+    private String snapshot;
     private int progress;
 
     public ProgressSetter(String snapshotId, int progress) {
-      this.snapshotId = snapshotId;
+      this.snapshot = snapshotId;
       this.progress = progress;
     }
 
     @Override
     public Boolean call() throws Exception {
-      try (TransactionResource db = Entities.transactionFor(SnapshotInfo.class)) {
-        SnapshotInfo snap = Entities.uniqueResult(new SnapshotInfo(this.snapshotId));
-        StorageProperties.Status snapStatus = StorageProperties.Status.valueOf(snap.getStatus());
-        if (StorageProperties.Status.pending.equals(snapStatus) || StorageProperties.Status.creating.equals(snapStatus)) {
-          // Only update in 'pending' or 'creating' state.
-          snap.setProgress(String.valueOf(this.progress));
+      if (this.progress < 100) { // set the progress only if its under 100
+        try {
+          Entities.asTransaction(SnapshotInfo.class, new Function<String, SnapshotInfo>() {
+
+            @Override
+            public SnapshotInfo apply(String arg0) {
+              SnapshotInfo snap = null;
+              try {
+                snap = Entities.uniqueResult(new SnapshotInfo(snapshot));
+                if (StorageProperties.Status.pending.toString().equals(snap.getStatus())
+                    || StorageProperties.Status.creating.toString().equals(snap.getStatus())) {
+                  if (snap.getProgress() != null) {
+                    try {
+                      if (progress > Integer.valueOf(snap.getProgress())) { // set progress only if its greater than current value
+                        snap.setProgress(String.valueOf(progress));
+                      } else {
+                        // don't set progress if its lower than last progress
+                      }
+                    } catch (NumberFormatException e) { // error parsing progress?
+                      LOG.debug("Encountered issue while parsing snapshot progress: " + snap.getProgress());
+                      snap.setProgress(String.valueOf(progress));
+                    }
+                  } else { // probably setting progress for the first time, go ahead and set it
+                    snap.setProgress(String.valueOf(progress));
+                  }
+                } else { // probably setting progress for the first time, go ahead and set it
+                  snap.setProgress(String.valueOf(progress));
+                }
+              } catch (TransactionException | NoSuchElementException e) {
+                LOG.debug("Could not find the SC database entity for " + snapshot + ". Skipping progress update");
+              }
+              return snap;
+            }
+          }).apply(this.snapshot);
+        } catch (Exception e) {
+          LOG.debug("Could not update snapshot progress in DB for " + snapshot + " to " + lastProgress + "% due to " + e.getMessage());
         }
-        db.commit();
-        return true;
-      } catch (Exception e) {
-        LOG.debug("Could not update snapshot progress in DB for " + snapshotId + " to " + lastProgress + "% due to " + e.getMessage());
-        return false;
+      } else {
+        // not setting progress since its greater than 100 and it does not make sense
       }
+      return true;
     }
   }
 }

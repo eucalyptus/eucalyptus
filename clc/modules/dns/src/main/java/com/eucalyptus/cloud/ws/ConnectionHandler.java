@@ -230,9 +230,13 @@ public class ConnectionHandler extends Thread {
 			Logger.getLogger( DnsResolvers.class ).error( ex );
 		}
 		
-		// most likely these will be never executed after legacy dns is deprecated
+			// most likely these will be never executed after legacy dns is deprecated
 		if (sr == null || sr.isUnknown()) {
-      return (Rcode.SERVFAIL);
+		  if (type == Type.AAAA) {
+	      response.getHeader().setFlag(Flags.AA);
+	      return (Rcode.NOERROR);
+	    }
+	    return (Rcode.SERVFAIL);
 		}
 		if (sr.isNXDOMAIN()) {
 			response.getHeader().setRcode(Rcode.NXDOMAIN);

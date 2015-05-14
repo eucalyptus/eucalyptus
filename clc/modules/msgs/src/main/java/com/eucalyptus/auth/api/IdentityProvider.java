@@ -19,6 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.auth.api;
 
+import java.security.cert.X509Certificate;
+import java.security.interfaces.RSAPublicKey;
 import java.util.List;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
@@ -74,4 +76,8 @@ public interface IdentityProvider {
    * @param duration The reservation duration in seconds
    */
   void reserveGlobalName( String namespace, String name, Integer duration ) throws AuthException;
+
+  X509Certificate getCertificateByAccountNumber( String accountNumber ) throws AuthException;
+
+  X509Certificate signCertificate( String accountNumber, RSAPublicKey publicKey, String principal, int expiryInDays ) throws AuthException;
 }

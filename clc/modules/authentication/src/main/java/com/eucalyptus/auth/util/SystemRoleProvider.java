@@ -19,12 +19,10 @@
  ************************************************************************/
 package com.eucalyptus.auth.util;
 
-/**
- *
- */
 public interface SystemRoleProvider {
   String getName( );
   String getPath( );
   String getAssumeRolePolicy( );
   String getPolicy( );
+  String getAccountName();
 }

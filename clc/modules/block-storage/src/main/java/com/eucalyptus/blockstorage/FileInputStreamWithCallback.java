@@ -86,14 +86,14 @@ public class FileInputStreamWithCallback extends FileInputStream {
   @Override
   public int read(byte[] b, int off, int len) throws IOException {
     int bytesRead = super.read(b, off, len);
-    callback.update(bytesRead);
+    callback.updateUploadProgress(bytesRead);
     return bytesRead;
   }
 
   @Override
   public int read(byte[] b) throws IOException {
     int bytesRead = super.read(b);
-    callback.update(bytesRead);
+    callback.updateUploadProgress(bytesRead);
     return bytesRead;
   }
 }

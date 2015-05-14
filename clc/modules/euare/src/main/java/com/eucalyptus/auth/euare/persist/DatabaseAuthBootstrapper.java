@@ -64,7 +64,10 @@ package com.eucalyptus.auth.euare.persist;
 
 import java.util.List;
 import java.util.ServiceLoader;
+import java.util.Set;
+
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.auth.euare.Accounts;
 import com.eucalyptus.auth.AuthenticationProperties;
 import com.eucalyptus.auth.Permissions;
@@ -106,19 +109,19 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   public boolean start( ) throws Exception {
     if(ComponentIds.lookup( Eucalyptus.class ).isAvailableLocally()) {
       this.ensureSystemAdminExists( );
-      this.ensureSystemRolesExist( );
+      this.ensureSystemRolesExist( AccountIdentifiers.SYSTEM_ACCOUNT );
       // User info map key is case insensitive.
       // Older code may produce non-lowercase keys.
       // Normalize them if there is any.
       this.ensureUserInfoNormalized( );
       // EUCA-9376 - Workaround to avoid multiple admin users in the blockstorage account due to EUCA-9635  
-      this.ensureBlockStorageAccountExists();
+      this.ensureAccountExists( AccountIdentifiers.BLOCKSTORAGE_SYSTEM_ACCOUNT );
       //EUCA-9644 - CloudFormation account for buckets and user to launch SWF workflows
-      this.ensureCloudFormationAccountExists();
+      this.ensureAccountExists( AccountIdentifiers.CLOUDFORMATION_SYSTEM_ACCOUNT );
       //EUCA-9533 - System account for pre-signed urls in download manifests
-      this.ensureExecReadAccountExists();
+      this.ensureAccountExists( AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT );
       //EUCA-8667 - System account for osg <--> walrus
-      this.ensureObjectStorageWalrusAccountExists();
+      this.ensureAccountExists( AccountIdentifiers.OBJECT_STORAGE_WALRUS_ACCOUNT );
       LdapSync.start( );
     }
     return true;
@@ -204,13 +207,22 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
     }
   }
 
-  private void ensureSystemRolesExist( ) throws Exception {
+  // for some reason ServiceLoader does not want reliably load all classes listed for load
+  // so let's have this list here and instantiate classes manually
+  final static String[] policyProviders = { "com.eucalyptus.auth.euare.AccountAdminSystemRoleProvider",
+                                  "com.eucalyptus.auth.euare.InfrastructureAdminSystemRoleProvider",
+                                  "com.eucalyptus.auth.euare.ResourceAdminSystemRoleProvider" };
+
+  private void ensureSystemRolesExist( final String accountName ) throws Exception {
     try {
-      final Account account = Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT );
+      final Account account = Accounts.lookupAccountByName( accountName );
       final List<EuareRole> roles = account.getRoles( );
       final List<String> roleNames = Lists.transform( roles, RestrictedTypes.toDisplayName( ) );
-      for ( final SystemRoleProvider provider : ServiceLoader.load( SystemRoleProvider.class ) ) {
-        if ( !roleNames.contains( provider.getName( ) ) ) {
+      // toDisplayName would return names like "/eucalyptus/AccountAdministrator"
+      for ( String providerName : policyProviders ) {
+        SystemRoleProvider provider = (SystemRoleProvider) Class.forName(providerName).newInstance();
+        if ( provider.getAccountName().equals(accountName) && !roleNames.contains(
+            String.format("%s/%s", provider.getPath(), provider.getName( )) ) ) {
           addSystemRole( account, provider );
         }
       }
@@ -234,58 +246,15 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
     }
   }
 
-  // EUCA-9376 - Workaround to avoid multiple admin users in the blockstorage account due to EUCA-9635
-  private void ensureBlockStorageAccountExists( ) throws Exception {
+  private void ensureAccountExists( String accountName ) throws Exception {
     try {
-      Accounts.lookupAccountByName( AccountIdentifiers.BLOCKSTORAGE_SYSTEM_ACCOUNT );
+      Accounts.lookupAccountByName( accountName );
     } catch ( Exception e ) {
       try {
-    	Accounts.addSystemAccountWithAdmin( AccountIdentifiers.BLOCKSTORAGE_SYSTEM_ACCOUNT );
+        Accounts.addSystemAccountWithAdmin( accountName );
       } catch (Exception e1) {
-    	LOG.error("Error during account creation for " + AccountIdentifiers.BLOCKSTORAGE_SYSTEM_ACCOUNT, e1);
+        LOG.error("Error during account creation for " + accountName, e1);
       }
     }
   }
-
-  //EUCA-9644 - CloudFormation account for buckets and user to launch SWF workflows
-  private void ensureCloudFormationAccountExists( ) throws Exception {
-    try {
-      Accounts.lookupAccountByName( AccountIdentifiers.CLOUDFORMATION_SYSTEM_ACCOUNT );
-    } catch ( Exception e ) {
-      try {
-        Accounts.addSystemAccountWithAdmin( AccountIdentifiers.CLOUDFORMATION_SYSTEM_ACCOUNT );
-      } catch (Exception e1) {
-        LOG.error("Error during account creation for " + AccountIdentifiers.CLOUDFORMATION_SYSTEM_ACCOUNT, e1);
-      }
-    }
-  }
-
-  //EUCA-9533 - System account for pre-signed urls in download manifests
-  private void ensureExecReadAccountExists( ) throws Exception {
-    try {
-      Accounts.lookupAccountByName( AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT );
-    } catch ( Exception e ) {
-      try {
-        Accounts.addSystemAccountWithAdmin( AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT );
-        LOG.info("Created " + AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT + " account");
-      } catch (Exception e1) {
-        LOG.error("Error during account creation for " + AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT, e1);
-      }
-    }
-  }
-
-  //EUCA-8667 - System account for osg <--> walrus
-  private void ensureObjectStorageWalrusAccountExists() throws Exception {
-    try {
-      Accounts.lookupAccountByName( AccountIdentifiers.OBJECT_STORAGE_WALRUS_ACCOUNT );
-    } catch ( Exception e ) {
-      try {
-        Accounts.addSystemAccountWithAdmin( AccountIdentifiers.OBJECT_STORAGE_WALRUS_ACCOUNT );
-        LOG.info("Created " + AccountIdentifiers.OBJECT_STORAGE_WALRUS_ACCOUNT + " account");
-      } catch (Exception e1) {
-        LOG.error("Error during account creation for " + AccountIdentifiers.OBJECT_STORAGE_WALRUS_ACCOUNT, e1);
-      }
-    }
-  }
-
 }

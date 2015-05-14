@@ -1048,23 +1048,6 @@ public class GetLdapSyncStatusResultType extends EucalyptusData {
   public GetLdapSyncStatusResultType() {  }
 }
 
-public class SignCertificateType extends EuareMessage {
-  String instance;
-  String key;
-  Integer expirationDays;
-  public SignCertificateType(){ }
-}
-
-public class SignCertificateResponseType extends EuareMessage {
-  SignCertificateResultType signCertificateResult = new SignCertificateResultType();
-  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
-  public SignCertificateResponseType() { }
-}
-
-public class SignCertificateResultType extends EucalyptusData {
-  String certificate;
-}
-
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_DOWNLOADSERVERCERTIFICATE )
 public class DownloadServerCertificateType extends EuareMessage {
   String certificateArn;  // ARN of the server certificate

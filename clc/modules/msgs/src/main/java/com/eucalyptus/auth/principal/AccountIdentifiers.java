@@ -56,6 +56,10 @@ public interface AccountIdentifiers {
   // EUCA-10790 - System account for elb
   String ELB_SYSTEM_ACCOUNT = SYSTEM_ACCOUNT_PREFIX + "loadbalancing";
 
+  // EUCA-10102
+  String IMAGING_SYSTEM_ACCOUNT = SYSTEM_ACCOUNT_PREFIX + "imaging";
+  String DATABASE_SYSTEM_ACCOUNT = SYSTEM_ACCOUNT_PREFIX + "database";
+
   String getAccountNumber( );
   String getAccountAlias( );
   String getCanonicalId( );

@@ -62,6 +62,8 @@
 
 package com.eucalyptus.blockstorage;
 
+import java.util.concurrent.Future;
+
 import com.eucalyptus.blockstorage.exceptions.SnapshotTransferException;
 
 /**
@@ -73,7 +75,7 @@ public interface SnapshotTransfer {
 
   public String prepareForUpload() throws SnapshotTransferException;
 
-  public void upload(StorageResource storageResource) throws SnapshotTransferException;
+  public Future<String> upload(StorageResource storageResource, SnapshotProgressCallback progressCallback) throws SnapshotTransferException;
 
   public void resumeUpload(StorageResource storageResource) throws SnapshotTransferException;
 
