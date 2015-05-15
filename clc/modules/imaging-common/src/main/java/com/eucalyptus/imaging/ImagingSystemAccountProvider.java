@@ -17,25 +17,31 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.loadbalancing;
+package com.eucalyptus.imaging;
 
 import com.eucalyptus.auth.principal.AccountIdentifiers;
-import com.eucalyptus.auth.util.ClassPathSystemRoleProvider;
+import com.eucalyptus.auth.util.ClassPathSystemAccountProvider;
+import com.google.common.collect.ImmutableList;
 
-public class LoadbalancingAdminSystemRoleProvider extends ClassPathSystemRoleProvider {
+/**
+ *
+ */
+public class ImagingSystemAccountProvider extends ClassPathSystemAccountProvider {
 
-  @Override
-  public String getName() {
-    return "LoadbalancingServiceAdministrator";
-  }
-
-  @Override
-  public String getPath() {
-    return "/loadbalancing";
-  }
-
-  @Override
-  public String getAccountName() {
-    return AccountIdentifiers.ELB_SYSTEM_ACCOUNT;
+  public ImagingSystemAccountProvider( ) {
+    super(
+        AccountIdentifiers.IMAGING_SYSTEM_ACCOUNT,
+        false,
+        ImmutableList.<SystemAccountRole>of(
+            newSystemAccountRole(
+                "ImagingServiceAdministrator",
+                "/imaging",
+                ImmutableList.<AttachedPolicy>of(
+                    newAttachedPolicy( "ImagingServiceAdministrator" )
+                )
+            )
+        )
+    );
   }
 }
+

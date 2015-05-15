@@ -32,6 +32,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidArgumentException;
@@ -130,7 +131,7 @@ public class AclUtils {
 
     boolean isAWSExecReadUser = false;
     try {
-      isAWSExecReadUser = Accounts.lookupAwsExecReadAdmin(false).getUserId().equals(userId);
+      isAWSExecReadUser = Accounts.lookupSystemAccountByAlias( AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT ).getUserId( ).equals( userId );
     } catch (AuthException e) {
       // Fall through
       LOG.debug("Got auth exception trying to lookup aws-exec-read admin user for group membership check in ec2-bundle-read", e);
@@ -199,7 +200,7 @@ public class AclUtils {
       }
 
       try {
-        displayName = Accounts.lookupAccountByCanonicalId(ownerCanonicalId).getName();
+        displayName = Accounts.lookupAccountIdentifiersByCanonicalId(ownerCanonicalId).getAccountAlias();
       } catch (AuthException e) {
         displayName = "";
       }
@@ -321,7 +322,7 @@ public class AclUtils {
       String canonicalId = ownerIds.getBucketOwnerCanonicalId();
       String displayName = "";
       try {
-        displayName = Accounts.lookupAccountByCanonicalId(canonicalId).getName();
+        displayName = Accounts.lookupAccountIdentifiersByCanonicalId(canonicalId).getAccountAlias();
       } catch (AuthException e) {
         displayName = "";
       }
@@ -347,7 +348,7 @@ public class AclUtils {
       String canonicalId = ownerIds.getBucketOwnerCanonicalId();
       String displayName = "";
       try {
-        displayName = Accounts.lookupAccountByCanonicalId(canonicalId).getName();
+        displayName = Accounts.lookupAccountIdentifiersByCanonicalId(canonicalId).getAccountAlias();
       } catch (AuthException e) {
         displayName = "";
       }

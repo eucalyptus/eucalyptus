@@ -37,7 +37,6 @@ class BucketTest  {
   @BeforeClass
   static void setUp() {
     UnitTestSupport.setupAuthPersistenceContext();
-    Accounts.addSystemAccount().addUser("admin", "/", true, null);
   }
 
   @AfterClass

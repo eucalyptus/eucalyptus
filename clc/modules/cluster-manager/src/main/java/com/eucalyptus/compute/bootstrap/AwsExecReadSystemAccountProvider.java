@@ -17,12 +17,30 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.auth.util;
+package com.eucalyptus.compute.bootstrap;
 
-public interface SystemRoleProvider {
-  String getName( );
-  String getPath( );
-  String getAssumeRolePolicy( );
-  String getPolicy( );
-  String getAccountName();
+import java.util.Collections;
+import java.util.List;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
+import com.eucalyptus.auth.util.SystemAccountProvider;
+
+/**
+ *
+ */
+public class AwsExecReadSystemAccountProvider implements SystemAccountProvider {
+
+  @Override
+  public String getAlias( ) {
+    return AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT;
+  }
+
+  @Override
+  public boolean isCreateAdminAccessKey( ) {
+    return false;
+  }
+
+  @Override
+  public List<SystemAccountRole> getRoles( ) {
+    return Collections.emptyList();
+  }
 }

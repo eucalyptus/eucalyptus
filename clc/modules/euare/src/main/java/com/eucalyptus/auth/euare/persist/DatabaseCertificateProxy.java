@@ -66,7 +66,6 @@ import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.List;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.euare.persist.entities.CertificateEntity;
@@ -175,7 +174,7 @@ public class DatabaseCertificateProxy implements Certificate {
       DatabaseAuthUtils.invokeUnique( CertificateEntity.class, "certificateId", this.delegate.getCertificateId( ), new Tx<CertificateEntity>( ) {
         public void fire( CertificateEntity t ) {
           try {
-            results.add( Accounts.userAsPrincipal( new DatabaseUserProxy( t.getUser() ) ) );
+            results.add( com.eucalyptus.auth.euare.Accounts.userAsPrincipal( new DatabaseUserProxy( t.getUser() ) ) );
           } catch ( AuthException e ) {
             throw Exceptions.toUndeclared( e );
           }

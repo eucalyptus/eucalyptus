@@ -1038,8 +1038,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             final String name = input.getIamInstanceProfileArn().substring(nameIndex + 1, rawName.length());
 
             try {
-              BaseInstanceProfile instanceProfile = Accounts.lookupAccountById(input.getOwnerAccountNumber())
-                .lookupInstanceProfileByName(name);
+              BaseInstanceProfile instanceProfile = Accounts.lookupInstanceProfileByName( input.getOwnerAccountNumber( ), name);
               final String profileArn = Accounts.getInstanceProfileArn(instanceProfile);
               IamInstanceProfile iamInstanceProfile = new IamInstanceProfile();
               iamInstanceProfile.setArn(profileArn);
@@ -1054,8 +1053,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
               !input.getIamInstanceProfileArn().startsWith("arn:") ) {
 
             try {
-              final BaseInstanceProfile instanceProfile = Accounts.lookupAccountById(input.getOwnerAccountNumber())
-                .lookupInstanceProfileByName(input.getIamInstanceProfileArn());
+              final BaseInstanceProfile instanceProfile = Accounts.lookupInstanceProfileByName(input.getOwnerAccountNumber(), input.getIamInstanceProfileArn());
               final String profileArn = Accounts.getInstanceProfileArn(instanceProfile);
               IamInstanceProfile iamInstanceProfile = new IamInstanceProfile();
               iamInstanceProfile.setArn(profileArn);

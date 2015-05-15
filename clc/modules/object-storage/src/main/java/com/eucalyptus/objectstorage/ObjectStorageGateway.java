@@ -459,7 +459,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         return Contexts.lookup().getUser();
       } else {
         if (Principals.systemFullName().getUserId().equals(requestUserId)) {
-          return Accounts.lookupSystemAdminAsPrincipal();
+          return Accounts.lookupSystemAdmin();
         } else {
           return Accounts.lookupPrincipalByUserId(requestUserId, null);
         }
@@ -2176,7 +2176,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         reply.setKey(objectKey);
         reply.setUploadId(request.getUploadId());
         reply.setIsTruncated(result.getIsTruncated());
-        reply.setInitiator(new Initiator(Accounts.getUserArn(Accounts.lookupUserById(objectEntity.getOwnerIamUserId())), objectEntity
+        reply.setInitiator(new Initiator(Accounts.getUserArn(Accounts.lookupPrincipalByUserId(objectEntity.getOwnerIamUserId())), objectEntity
             .getOwnerIamUserDisplayName()));
         reply.setOwner(new CanonicalUser(objectEntity.getOwnerCanonicalId(), objectEntity.getOwnerDisplayName()));
 
@@ -2238,7 +2238,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
         for (ObjectEntity obj : result.getEntityList()) {
           reply.getUploads().add(
-              new Upload(obj.getObjectKey(), obj.getUploadId(), new Initiator(Accounts.getUserArn(Accounts.lookupUserById(obj.getOwnerIamUserId())),
+              new Upload(obj.getObjectKey(), obj.getUploadId(), new Initiator(Accounts.getUserArn(Accounts.lookupPrincipalByUserId(obj.getOwnerIamUserId())),
                   obj.getOwnerIamUserDisplayName()), new CanonicalUser(obj.getOwnerCanonicalId(), obj.getOwnerDisplayName()), obj.getStorageClass(),
                   obj.getCreationTimestamp()));
         }

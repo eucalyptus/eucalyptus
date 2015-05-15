@@ -20,7 +20,6 @@
 package com.eucalyptus.auth.euare.policy;
 
 import javax.annotation.Nullable;
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
@@ -60,7 +59,7 @@ public class EuarePolicyContext {
         @Nullable
         @Override
         public Boolean isSystemAccount( ) {
-          return Accounts.isSystemAccount( account );
+          return com.eucalyptus.auth.euare.Accounts.isSystemAccount( account );
         }
       };
     }

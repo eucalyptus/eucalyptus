@@ -318,7 +318,7 @@ public abstract class S3AccessControlledEntity<STATE extends Enum<STATE>> extend
           grantee.setType("Group");
         } else {
           try {
-            displayName = Accounts.lookupAccountByCanonicalId(entry.getKey()).getName();
+            displayName = Accounts.lookupAccountIdentifiersByCanonicalId(entry.getKey()).getAccountAlias();
           } catch (AuthException e) {
             // Not found
             displayName = "";

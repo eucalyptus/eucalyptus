@@ -24,6 +24,7 @@ import java.security.PublicKey;
 import java.security.cert.X509Certificate;
 import java.util.List;
 
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.resources.client.EuareClient;
 
 import org.apache.log4j.Logger;
@@ -105,7 +106,8 @@ public abstract class AbstractTaskScheduler {
   private void loadImagingServiceKey() throws Exception{
     try{
       final ServerCertificateType cert = 
-          EuareClient.getInstance().getServerCertificate(Accounts.lookupImagingAccount().getUserId(),
+          EuareClient.getInstance().getServerCertificate(
+              Accounts.lookupSystemAccountByAlias( AccountIdentifiers.IMAGING_SYSTEM_ACCOUNT ).getUserId( ),
               ImagingServiceLaunchers.SERVER_CERTIFICATE_NAME);
       final String certBody = cert.getCertificateBody();
       final X509Certificate x509 = PEMFiles.toCertificate(B64.url.encString(certBody));

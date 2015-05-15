@@ -94,7 +94,7 @@ public class AWSEC2InternetGatewayResourceAction extends ResourceAction {
         AWSEC2InternetGatewayResourceAction action = (AWSEC2InternetGatewayResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         // Create 'system' tags as admin user
-        String effectiveAdminUserId = Accounts.lookupUserById(action.info.getEffectiveUserId()).getAccount().lookupAdmin().getUserId();
+        String effectiveAdminUserId = Accounts.lookupPrincipalByAccountNumber( Accounts.lookupPrincipalByUserId(action.info.getEffectiveUserId()).getAccountNumber( ) ).getUserId();
         CreateTagsType createSystemTagsType = MessageHelper.createPrivilegedMessage(CreateTagsType.class, effectiveAdminUserId);
         createSystemTagsType.setResourcesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
         createSystemTagsType.setTagSet(EC2Helper.createTagSet(TagHelper.getEC2SystemTags(action.info, action.getStackEntity())));

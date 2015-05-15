@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,28 +17,30 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.auth.euare;
+package com.eucalyptus.objectstorage.bootstrap;
 
+import java.util.Collections;
+import java.util.List;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
-import com.eucalyptus.auth.util.ClassPathSystemRoleProvider;
+import com.eucalyptus.auth.util.SystemAccountProvider;
 
 /**
  *
  */
-public class AccountAdminSystemRoleProvider extends ClassPathSystemRoleProvider {
+public class ObjectStorageSystemAccountProvider implements SystemAccountProvider {
 
   @Override
-  public String getName() {
-    return "AccountAdministrator";
+  public String getAlias( ) {
+    return AccountIdentifiers.OBJECT_STORAGE_WALRUS_ACCOUNT;
   }
 
   @Override
-  public String getPath() {
-    return "/eucalyptus";
+  public boolean isCreateAdminAccessKey( ) {
+    return true;
   }
 
   @Override
-  public String getAccountName() {
-    return AccountIdentifiers.SYSTEM_ACCOUNT;
+  public List<SystemAccountRole> getRoles( ) {
+    return Collections.emptyList( );
   }
 }

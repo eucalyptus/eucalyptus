@@ -60,9 +60,8 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth.api;
+package com.eucalyptus.auth.euare;
 
-import java.security.cert.X509Certificate;
 import java.util.List;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccessKey;
@@ -71,7 +70,6 @@ import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.EuareUser;
-import com.eucalyptus.auth.principal.Group;
 
 public interface AccountProvider {
 
@@ -88,16 +86,12 @@ public interface AccountProvider {
   List<EuareUser> listAllUsers( ) throws AuthException;
 
   EuareUser lookupUserById( String userId ) throws AuthException;
-  EuareUser lookupUserByAccessKeyId( String keyId ) throws AuthException;
-  EuareUser lookupUserByCertificate( X509Certificate cert ) throws AuthException;
   EuareUser lookupUserByEmailAddress( String email ) throws AuthException;
-
-  Group lookupGroupById( String groupId ) throws AuthException;
 
   EuareRole lookupRoleById( String roleId ) throws AuthException;
 
-  Certificate lookupCertificateById( String certificateId ) throws AuthException;;
-  Certificate lookupCertificateByHashId( String certificateId ) throws AuthException;;
+  Certificate lookupCertificateById( String certificateId ) throws AuthException;
+  Certificate lookupCertificateByHashId( String certificateId ) throws AuthException;
 
   AccessKey lookupAccessKeyById( String keyId ) throws AuthException;
 

@@ -104,7 +104,7 @@ public class DatabaseIdentityProvider implements IdentityProvider {
 
   @Override
   public UserPrincipal lookupPrincipalByAccountNumber( final String accountNumber ) throws AuthException {
-    return Accounts.userAsPrincipal( Accounts.lookupAccountById( accountNumber ).lookupAdmin( ) );
+    return Accounts.userAsPrincipal( Accounts.lookupAccountById( accountNumber ).lookupAdmin() );
   }
 
   @Override
@@ -180,11 +180,11 @@ public class DatabaseIdentityProvider implements IdentityProvider {
       @Override public String getRoleId( ) { return euareRole.getRoleId( ); }
       @Override public String getRoleArn( ) { return roleArn; }
       @Override public String getPath( ) { return euareRole.getPath( ); }
-      @Override public String getName( ) { return euareRole.getName( ); }
+      @Override public String getName( ) { return euareRole.getName(); }
       @Override public String getSecret( ) { return euareRole.getSecret( ); }
       @Override public PolicyVersion getPolicy( ) { return assumeRolePolicy; }
       @Override public String getDisplayName( ) { return Accounts.getRoleFullName( this ); }
-      @Override public OwnerFullName getOwner( ) { return euareRole.getOwner( ); }
+      @Override public OwnerFullName getOwner( ) { return euareRole.getOwner(); }
     };
   }
 

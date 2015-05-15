@@ -20,7 +20,7 @@
 package com.eucalyptus.auth.euare.login;
 
 import javax.security.auth.login.CredentialExpiredException;
-import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.euare.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.AuthenticationLimitProvider;
 import com.eucalyptus.auth.LdapException;

@@ -39,7 +39,6 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.Arrays;
 import org.bouncycastle.util.encoders.Base64;
 
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.ServerCertificate;
 import com.eucalyptus.auth.principal.Account;
@@ -186,7 +185,7 @@ public class EuareServerCertificateUtil {
     }
     final String acctId = arn.substring(0, idx);
     
-    final Account owner = Accounts.lookupAccountById(acctId);
+    final Account owner = com.eucalyptus.auth.euare.Accounts.lookupAccountById( acctId );
     final String prefix = String.format("arn:aws:iam::%s:server-certificate", acctId);
     if(!certArn.startsWith(prefix))
       throw new AuthException(AuthException.SERVER_CERT_NO_SUCH_ENTITY);

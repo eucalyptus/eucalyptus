@@ -99,7 +99,7 @@ public class BrokerWsSecHandler extends MessageStackHandler implements ChannelHa
         if( !found ) {
         	throw new WebServiceException("Authentication failure: cert is not trusted");
         }
-        UserPrincipal admin = Accounts.lookupSystemAdminAsPrincipal( );
+        UserPrincipal admin = Accounts.lookupSystemAdmin( );
         Contexts.lookup( ( ( MappingHttpMessage ) o ).getCorrelationId( ) ).setUser( admin );
     }
   }

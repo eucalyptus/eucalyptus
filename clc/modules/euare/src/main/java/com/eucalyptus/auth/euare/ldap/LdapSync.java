@@ -73,7 +73,7 @@ import javax.naming.directory.SearchResult;
 import javax.naming.ldap.LdapName;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.euare.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.LdapException;
 import com.eucalyptus.auth.euare.checker.ValueCheckerFactory;
@@ -357,7 +357,7 @@ public class LdapSync {
   private static void addNewAccount( String accountName, Set<String> accountMembers, Map<String, Set<String>> groups, Map<String, Map<String, String>> users ) {
     LOG.debug( "Adding new account " + accountName );
     try {
-      Account account = Accounts.addAccount( accountName );
+      Account account = com.eucalyptus.auth.euare.Accounts.addAccount( accountName );
       account.addUser( User.ACCOUNT_ADMIN, "/", true, null );
       for ( String user : getAccountUserSet( accountMembers, groups ) ) {
         try {
@@ -574,7 +574,7 @@ public class LdapSync {
     LOG.debug( "Removing obsolete accounts: " + oldAccountSet );
     for ( final String account : oldAccountSet ) {
       try {
-        Accounts.deleteAccount( account, false /* forceDeleteSystem */, true /* recursive */ );
+        com.eucalyptus.auth.euare.Accounts.deleteAccount( account, false /* forceDeleteSystem */, true /* recursive */ );
       } catch ( final AuthException e ) {
         if ( !AuthException.DELETE_SYSTEM_ACCOUNT.equals( e.getMessage( ) ) ) {
           LOG.error( e, e );
@@ -586,7 +586,7 @@ public class LdapSync {
   
   private static Set<String> getLocalAccountSet( ) throws AuthException {
     Set<String> accountSet = Sets.newHashSet( );
-    for ( Account account : Accounts.listAllAccounts( ) ) {
+    for ( Account account : com.eucalyptus.auth.euare.Accounts.listAllAccounts() ) {
       accountSet.add( account.getName( ) );
     }
     return accountSet;

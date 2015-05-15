@@ -134,7 +134,7 @@ public class NetworkGroups {
       userFullName = ( UserFullName ) ownerFullName;
     } else {
       try {
-        User admin = Accounts.lookupAccountById( ownerFullName.getAccountNumber() ).lookupAdmin();
+        User admin = Accounts.lookupPrincipalByAccountNumber( ownerFullName.getAccountNumber( ) );
         userFullName = UserFullName.getInstance( admin );
       } catch ( Exception ex ) {
         LOG.error( ex, ex );

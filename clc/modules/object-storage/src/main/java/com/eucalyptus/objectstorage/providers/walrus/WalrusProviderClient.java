@@ -72,6 +72,7 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccessKey;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.ServiceDispatchException;
@@ -199,7 +200,7 @@ public class WalrusProviderClient extends S3ProviderClient {
   public void initialize() throws EucalyptusCloudException {
     super.initialize();
     try {
-      osgUser = Accounts.lookupObjectStorageWalrusAccount(true);
+      osgUser = Accounts.lookupSystemAccountByAlias( AccountIdentifiers.OBJECT_STORAGE_WALRUS_ACCOUNT );
     } catch (AuthException e) {
       LOG.error("Failed to lookup system admin account. Cannot initialize Walrus provider client.", e);
       throw new EucalyptusCloudException(e);

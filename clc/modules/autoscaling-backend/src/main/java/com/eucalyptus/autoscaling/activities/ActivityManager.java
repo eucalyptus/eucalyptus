@@ -582,7 +582,7 @@ public class ActivityManager {
         }
       }
       if ( instanceProfileName != null ) {
-        Accounts.lookupAccountById( accountNumber ).lookupInstanceProfileByName( instanceProfileName );
+        Accounts.lookupInstanceProfileByName( accountNumber, instanceProfileName );
       }
     } catch ( Exception e ) {
       errors.add( "Invalid instance profile: " + iamInstanceProfile );

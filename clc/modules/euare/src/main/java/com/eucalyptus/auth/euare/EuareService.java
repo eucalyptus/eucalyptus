@@ -81,7 +81,6 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.springframework.web.util.UriUtils;
 
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.PolicyParseException;
@@ -184,7 +183,7 @@ public class EuareService {
     }
     ArrayList<AccountType> accounts = reply.getListAccountsResult( ).getAccounts( ).getMemberList( );
     try {
-      for ( final Account account : Iterables.filter( Accounts.listAllAccounts( ), RestrictedTypes.filterPrivileged( ) ) ) {
+      for ( final Account account : Iterables.filter( com.eucalyptus.auth.euare.Accounts.listAllAccounts(), RestrictedTypes.filterPrivileged( ) ) ) {
         AccountType at = new AccountType( );
         at.setAccountName( account.getName( ) );
         at.setAccountId( account.getAccountNumber( ) );
@@ -2224,7 +2223,7 @@ public class EuareService {
       }
     } else {
       try {
-        requestAccount = Accounts.lookupAccountById( ctx.getAccountNumber( ) );
+        requestAccount = com.eucalyptus.auth.euare.Accounts.lookupAccountById( ctx.getAccountNumber() );
       } catch ( AuthException e ) {
         throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Request account error " + ctx.getAccountNumber( ) );
       }
@@ -2328,7 +2327,7 @@ public class EuareService {
     } catch ( Exception e1 ) {
       try {
         // Try using ID
-        return Accounts.lookupAccountById( accountName );
+        return com.eucalyptus.auth.euare.Accounts.lookupAccountById( accountName );
       } catch ( Exception e ) {
         if ( e instanceof AuthException ) {
           if ( AuthException.NO_SUCH_ACCOUNT.equals( e.getMessage( ) ) ) {

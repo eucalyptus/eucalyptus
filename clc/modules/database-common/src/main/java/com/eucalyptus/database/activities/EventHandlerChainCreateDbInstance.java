@@ -211,7 +211,7 @@ public class EventHandlerChainCreateDbInstance extends
 
   public static String getAccountByUser(String userId) throws EventHandlerException {
     try{
-      return Accounts.lookupUserById(userId).getAccountNumber();
+      return Accounts.lookupPrincipalByUserId(userId).getAccountNumber();
     }catch(final AuthException ex){
       throw new EventHandlerException("Failed to lookup user's account", ex);
     }

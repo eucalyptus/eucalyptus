@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,25 +17,31 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.auth.euare;
+package com.eucalyptus.loadbalancing;
 
 import com.eucalyptus.auth.principal.AccountIdentifiers;
-import com.eucalyptus.auth.util.ClassPathSystemRoleProvider;
+import com.eucalyptus.auth.util.ClassPathSystemAccountProvider;
+import com.google.common.collect.ImmutableList;
 
-public class ResourceAdminSystemRoleProvider extends ClassPathSystemRoleProvider {
+/**
+ *
+ */
+public class LoadBalancingSystemAccountProvider extends ClassPathSystemAccountProvider {
 
-  @Override
-  public String getName() {
-    return "ResourceAdministrator";
-  }
-
-  @Override
-  public String getPath() {
-    return "/eucalyptus";
-  }
-
-  @Override
-  public String getAccountName() {
-    return AccountIdentifiers.SYSTEM_ACCOUNT;
+  public LoadBalancingSystemAccountProvider( ) {
+    super(
+        AccountIdentifiers.ELB_SYSTEM_ACCOUNT,
+        false,
+        ImmutableList.<SystemAccountRole>of(
+            newSystemAccountRole(
+                "LoadbalancingServiceAdministrator",
+                "/loadbalancing",
+                ImmutableList.<AttachedPolicy>of(
+                    newAttachedPolicy( "LoadbalancingServiceAdministrator" )
+                )
+            )
+        )
+    );
   }
 }
+

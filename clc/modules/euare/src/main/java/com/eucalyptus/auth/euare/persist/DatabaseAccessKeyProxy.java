@@ -65,7 +65,6 @@ package com.eucalyptus.auth.euare.persist;
 import java.util.Date;
 import java.util.List;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.euare.persist.entities.AccessKeyEntity;
@@ -138,7 +137,7 @@ public class DatabaseAccessKeyProxy implements AccessKey {
       DatabaseAuthUtils.invokeUnique( AccessKeyEntity.class, "accessKey", this.delegate.getAccessKey( ), new Tx<AccessKeyEntity>( ) {
         public void fire( AccessKeyEntity t ) {
           try {
-            results.add( Accounts.userAsPrincipal( new DatabaseUserProxy( t.getUser() ) ) );
+            results.add( com.eucalyptus.auth.euare.Accounts.userAsPrincipal( new DatabaseUserProxy( t.getUser() ) ) );
           } catch ( AuthException e ) {
             throw Exceptions.toUndeclared( e );
           }

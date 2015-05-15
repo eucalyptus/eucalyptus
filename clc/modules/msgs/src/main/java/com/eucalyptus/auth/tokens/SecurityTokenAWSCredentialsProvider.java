@@ -44,11 +44,11 @@ public class SecurityTokenAWSCredentialsProvider implements AWSCredentialsProvid
   private final Supplier<User> user;
 
   public SecurityTokenAWSCredentialsProvider( final AccountFullName accountFullName ) {
-    this( new Supplier<User>() { //TODO:STEVE: remove user lookup
+    this( new Supplier<User>() {
       @Override
       public User get() {
         try {
-          return Accounts.lookupAccountById( accountFullName.getAccountNumber( ) ).lookupAdmin( );
+          return Accounts.lookupPrincipalByAccountNumber( accountFullName.getAccountNumber( ) );
         } catch ( AuthException e ) {
           throw Exceptions.toUndeclared( e );
         }

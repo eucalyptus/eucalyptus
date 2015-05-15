@@ -47,8 +47,6 @@ public interface BlockStorageUtilSvc {
 
   public String decryptWithCloud(String data) throws EucalyptusCloudException;
 
-  public BaseRole checkAndConfigureBlockStorageAccount() throws EucalyptusCloudException;
-
   public Criterion getFailedCriterion();
 
   public Criterion getExpriedCriterion(Integer deletedResourceExpiration);

@@ -17,25 +17,31 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.imaging;
+package com.eucalyptus.database;
 
 import com.eucalyptus.auth.principal.AccountIdentifiers;
-import com.eucalyptus.auth.util.ClassPathSystemRoleProvider;
+import com.eucalyptus.auth.util.ClassPathSystemAccountProvider;
+import com.google.common.collect.ImmutableList;
 
-public class ImagingAdminSystemRoleProvider extends ClassPathSystemRoleProvider {
+/**
+ *
+ */
+public class DatabaseSystemAccountProvider extends ClassPathSystemAccountProvider {
 
-  @Override
-  public String getName() {
-    return "ImagingServiceAdministrator";
-  }
-
-  @Override
-  public String getPath() {
-    return "/imaging";
-  }
-
-  @Override
-  public String getAccountName() {
-    return AccountIdentifiers.IMAGING_SYSTEM_ACCOUNT;
+  public DatabaseSystemAccountProvider( ) {
+    super(
+        AccountIdentifiers.DATABASE_SYSTEM_ACCOUNT,
+        false,
+        ImmutableList.<SystemAccountRole>of(
+            newSystemAccountRole(
+                "DatabaseServiceAdministrator",
+                "/database",
+                ImmutableList.<AttachedPolicy>of(
+                    newAttachedPolicy( "DatabaseServiceAdministrator" )
+                )
+            )
+        )
+    );
   }
 }
+

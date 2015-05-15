@@ -24,23 +24,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 import java.util.concurrent.Future;
 
 import org.hibernate.ejb.Ejb3Configuration;
 
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.euare.persist.entities.AccessKeyEntity;
-import com.eucalyptus.auth.euare.persist.entities.AccountEntity;
-import com.eucalyptus.auth.euare.persist.entities.CertificateEntity;
-import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
-import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
-import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
-import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
-import com.eucalyptus.auth.euare.persist.entities.ServerCertificateEntity;
-import com.eucalyptus.auth.euare.persist.entities.UserEntity;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.blockstorage.entities.BlockStorageGlobalConfiguration;
 import com.eucalyptus.blockstorage.entities.CHAPUserInfo;
 import com.eucalyptus.blockstorage.entities.DASInfo;
@@ -102,32 +89,9 @@ public class BlockStorageUnitTestSupport {
   }
 
   public static void setupAuthPersistenceContext() {
-    Properties props = new Properties();
-    props.put("hibernate.archive.autodetection", "jar, class, hbm");
-    props.put("hibernate.ejb.interceptor.session_scoped", "com.eucalyptus.entities.DelegatingInterceptor");
-    props.put("hibernate.show_sql", "false");
-    props.put("hibernate.format_sql", "false");
-    props.put("hibernate.generate_statistics", "false");
-    props.put("hibernate.bytecode.use_reflection_optimizer", "true");
-    props.put("javax.persistence.jdbc.driver", "org.apache.derby.jdbc.EmbeddedDriver");
-    props.put("javax.persistence.jdbc.user", "root");
-    props.put("javax.persistence.jdbc.password", "root");
-    props.put("hibernate.hbm2ddl.auto", "create");
-    props.put("hibernate.cache.use_second_level_cache", "false");
-    props.put("hibernate.dialect", "org.hibernate.dialect.DerbyDialect");
-    props.put("hibernate.connection.url", "jdbc:derby:memory:test;create=true");
-
-    Ejb3Configuration config =
-        (new Ejb3Configuration()).configure(props).addAnnotatedClass(AccessKeyEntity.class).addAnnotatedClass(AccountEntity.class)
-            .addAnnotatedClass(InstanceProfileEntity.class).addAnnotatedClass(GroupEntity.class).addAnnotatedClass(PolicyEntity.class)
-            .addAnnotatedClass(UserEntity.class).addAnnotatedClass(RoleEntity.class).addAnnotatedClass(CertificateEntity.class)
-            .addAnnotatedClass(ServerCertificateEntity.class);
-
-    PersistenceContexts.registerPersistenceContext("eucalyptus_auth", config);
   }
 
   public static void tearDownAuthPersistenceContext() {
-    PersistenceContexts.shutdown();
   }
 
   /**
@@ -138,30 +102,6 @@ public class BlockStorageUnitTestSupport {
    * @throws Exception
    */
   public static void initializeAuth(int numAccounts, int usersPerAccount) throws Exception {
-    String accountName;
-    String userName;
-    Account accnt;
-    HashMap<String, String> props = null;
-    for (int i = 0; i < numAccounts; i++) {
-      accountName = "unittestaccount" + i;
-      userMap.put(accountName, new ArrayList<String>());
-      accnt = Accounts.addAccount(accountName);
-      for (int j = 0; j < usersPerAccount; j++) {
-        props = new HashMap<>();
-        userName = "unittestuser" + j;
-        props.put("email", userName + "@unit-test.com");
-        User usr = accnt.addUser(userName, "/", true, props);
-        userMap.get(accountName).add(usr.getUserId());
-      }
-    }
-  }
-
-  public static Set<String> getTestAccounts() {
-    return userMap.keySet();
-  }
-
-  public static List<String> getUsersByAccountName(String accountName) {
-    return userMap.get(accountName);
   }
 
   public static void flushSnapshotInfos() {

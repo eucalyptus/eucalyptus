@@ -21,8 +21,7 @@
 package com.eucalyptus.objectstorage
 
 import com.eucalyptus.auth.Accounts
-import com.eucalyptus.auth.principal.Account
-import com.eucalyptus.auth.principal.User
+import com.eucalyptus.auth.principal.AccountIdentifiers
 import com.eucalyptus.auth.principal.UserPrincipal
 import com.eucalyptus.objectstorage.entities.Bucket
 import com.eucalyptus.objectstorage.entities.ObjectEntity
@@ -49,11 +48,11 @@ public class TestUtils {
   static Grant TEST_ACCOUNT2_FULLCONTROL_GRANT;
 
   public static initTestAccountsAndAcls() {
-    Account accnt = Accounts.lookupAccountByName(UnitTestSupport.getTestAccounts().getAt(0))
-    TEST_CANONICALUSER_1 = new CanonicalUser(accnt.getCanonicalId(), accnt.getUsers().get(0).getInfo("email"))
+    AccountIdentifiers accnt1 = Accounts.lookupAccountIdentifiersByAlias(UnitTestSupport.getTestAccounts().getAt(0))
+    TEST_CANONICALUSER_1 = new CanonicalUser(accnt1.getCanonicalId(), accnt1.accountAlias)
 
-    accnt = Accounts.lookupAccountByName(UnitTestSupport.getTestAccounts().getAt(1))
-    TEST_CANONICALUSER_2 = new CanonicalUser(accnt.getCanonicalId(), accnt.getUsers().get(0).getInfo("email"))
+    AccountIdentifiers accnt2 = Accounts.lookupAccountIdentifiersByAlias(UnitTestSupport.getTestAccounts().getAt(1))
+    TEST_CANONICALUSER_2 = new CanonicalUser(accnt2.getCanonicalId(), accnt2.accountAlias)
 
     TEST_ACCOUNT1_FULLCONTROL_GRANT = new Grant(new Grantee(TEST_CANONICALUSER_1), ObjectStorageProperties.Permission.FULL_CONTROL.toString());
     TEST_ACCOUNT1_PRIVATE_ACL.setGrants(new ArrayList<Grant>());
@@ -78,7 +77,8 @@ public class TestUtils {
 
   public static Bucket initializeBucket(BucketMetadataManager mgr, String name, String accountName) {
     AccessControlPolicy acp = new AccessControlPolicy()
-    CanonicalUser owner = new CanonicalUser(Accounts.lookupAccountByName(accountName).getCanonicalId(), Accounts.lookupAccountByName(accountName).getName())
+    AccountIdentifiers accountIdentifiers = Accounts.lookupAccountIdentifiersByAlias(accountName)
+    CanonicalUser owner = new CanonicalUser(accountIdentifiers.getCanonicalId(), accountIdentifiers.getAccountAlias())
     acp.setOwner(owner)
     acp.setAccessControlList(new AccessControlList())
     acp.getAccessControlList().setGrants(new ArrayList<Grant>())

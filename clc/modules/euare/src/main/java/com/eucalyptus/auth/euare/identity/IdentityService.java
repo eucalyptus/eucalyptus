@@ -216,17 +216,17 @@ public class IdentityService {
 
     try {
       final Iterable<AccountIdentifiers> accountIdentifiers;
-      if ( request.getAlias( ) != null ) {
+      if ( request.getAlias() != null ) {
         accountIdentifiers =
-            Collections.singleton( identityProvider.lookupAccountIdentifiersByAlias( request.getAlias( ) ) );
-      } else if ( request.getCanonicalId( ) != null ) {
+            Collections.singleton( identityProvider.lookupAccountIdentifiersByAlias( request.getAlias() ) );
+      } else if ( request.getCanonicalId() != null ) {
         accountIdentifiers =
-            Collections.singleton( identityProvider.lookupAccountIdentifiersByCanonicalId( request.getCanonicalId( ) ) );
+            Collections.singleton( identityProvider.lookupAccountIdentifiersByCanonicalId( request.getCanonicalId() ) );
       } else if ( request.getEmail() != null ) {
         accountIdentifiers =
-            Collections.singleton( identityProvider.lookupAccountIdentifiersByEmail( request.getEmail( ) ) );
+            Collections.singleton( identityProvider.lookupAccountIdentifiersByEmail( request.getEmail() ) );
       } else if ( request.getAliasLike() != null ) {
-        accountIdentifiers = identityProvider.listAccountIdentifiersByAliasMatch( request.getAliasLike( ) );
+        accountIdentifiers = identityProvider.listAccountIdentifiersByAliasMatch( request.getAliasLike() );
       } else {
         accountIdentifiers = null;
       }
@@ -258,7 +258,7 @@ public class IdentityService {
       result.setInstanceProfile(
           TypeMappers.transform( instanceProfile, com.eucalyptus.auth.euare.common.identity.InstanceProfile.class ) );
       result.setRole(
-          TypeMappers.transform( instanceProfile.getRole( ), com.eucalyptus.auth.euare.common.identity.Role.class ) );
+          TypeMappers.transform( instanceProfile.getRole(), com.eucalyptus.auth.euare.common.identity.Role.class ) );
     } catch ( AuthException e ) {
       throw handleException( e );
     }
@@ -291,7 +291,7 @@ public class IdentityService {
 
     try {
       final SecurityTokenContent securityTokenContent =
-          identityProvider.decodeSecurityToken( request.getAccessKeyId( ), request.getSecurityToken( ) );
+          identityProvider.decodeSecurityToken( request.getAccessKeyId(), request.getSecurityToken() );
       result.setSecurityToken(
           TypeMappers.transform( securityTokenContent, SecurityToken.class ) );
     } catch ( AuthException e ) {
@@ -309,7 +309,7 @@ public class IdentityService {
     final ReserveNameResult result = new ReserveNameResult( );
 
     try {
-      identityProvider.reserveGlobalName( request.getNamespace( ), request.getName( ), request.getDuration( ) );
+      identityProvider.reserveGlobalName( request.getNamespace(), request.getName(), request.getDuration() );
     } catch ( AuthException e ) {
       throw handleException( e );
     }
@@ -323,7 +323,7 @@ public class IdentityService {
     final LookupCertificatesResult result = new LookupCertificatesResult( );
     final ArrayList<String> pemCertificates = Lists.newArrayList( );
     try {
-      for ( final User user : Accounts.lookupAccountById( request.getAccountNumber( ) ).getUsers( ) ) {
+      for ( final User user : com.eucalyptus.auth.euare.Accounts.lookupAccountById( request.getAccountNumber() ).getUsers( ) ) {
         Iterables.addAll( pemCertificates, Iterables.transform(
             Iterables.filter(
                 user.getCertificates( ),

@@ -288,8 +288,8 @@ public class TokensService {
       final String roleName = ((EuareResourceName) roleArn).getName();
 
       if ( AccountIdentifiers.SYSTEM_ACCOUNT.equals( roleAccountId ) ) {
-        final Account account = Accounts.lookupAccountByName( AccountIdentifiers.SYSTEM_ACCOUNT );
-        return account.lookupRoleByName( roleName );
+        final AccountIdentifiers account = Accounts.lookupAccountIdentifiersByAlias( AccountIdentifiers.SYSTEM_ACCOUNT );
+        return Accounts.lookupRoleByName( account.getAccountNumber( ), roleName );
       } else {
         return Accounts.lookupRoleByName( roleAccountId, roleName );
       }

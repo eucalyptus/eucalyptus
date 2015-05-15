@@ -101,7 +101,7 @@ public class UserFullName implements OwnerFullName {
       return userIdMap.getIfPresent( userId );
     } else {
       try {
-        userIdMap.put( userId, getInstance( Accounts.lookupUserById( userId ), relativePath ) );
+        userIdMap.put( userId, getInstance( Accounts.lookupPrincipalByUserId( userId ), relativePath ) );
         return userIdMap.getIfPresent( userId );
       } catch ( final AuthException ex ) {
         userIdMap.put( userId, getInstance( Principals.systemUser( ), relativePath ) );
