@@ -546,6 +546,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       try {
         final OwnerFullName owner = this.getOwner();
         final String userId = owner.getUserId();
+        final String userName = owner.getUserName();
         final String accountId = owner.getAccountNumber();
 
         ListenerRegistry.getInstance( ).fireEvent( new InstanceCreationEvent(
@@ -553,7 +554,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             getDisplayName(),
             this.bootRecord.getVmType().getName(),
             userId,
-            Accounts.lookupUserById(userId).getName(),
+            userName,
             accountId,
             Accounts.lookupAccountAliasById(accountId),
             this.placement.getPartitionName()));

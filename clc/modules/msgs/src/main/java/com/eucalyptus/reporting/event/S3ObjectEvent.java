@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -56,19 +56,23 @@ public class S3ObjectEvent extends S3EventSupport<S3ObjectEvent.S3ObjectAction> 
                                     @Nonnull  final String bucketName,
                                     @Nonnull  final String objectKey,
                                     @Nullable final String version,
-                                    @Nonnull  final String ownerUserId,
+                                    @Nonnull  final String userId,
+                                    @Nonnull  final String userName,
+                                    @Nonnull  final String accountNumber,
                                     @Nonnull  final Long size ) {
 
-    return new S3ObjectEvent( action, bucketName, objectKey, version, ownerUserId, size );
+    return new S3ObjectEvent( action, bucketName, objectKey, version, userId, userName, accountNumber, size );
   }
 
   S3ObjectEvent( @Nonnull  final S3ObjectAction action,
                  @Nonnull  final String bucketName,
                  @Nonnull  final String objectKey,
                  @Nullable final String version,
-                 @Nonnull  final String ownerUserId,
+                 @Nonnull  final String userId,
+                 @Nonnull  final String userName,
+                 @Nonnull  final String accountNumber,
                  @Nonnull  final Long size ) {
-    super( action, bucketName, ownerUserId, size );
+    super( action, bucketName, userId, userName, accountNumber, size );
     checkParam( objectKey, not( isEmptyOrNullString() ) );
     this.objectKey = objectKey;
     this.version = version;
@@ -86,7 +90,7 @@ public class S3ObjectEvent extends S3EventSupport<S3ObjectEvent.S3ObjectAction> 
   @Override
   public String toString() {
     return "S3ObjectEvent [action=" + getAction()
-        + ", ownerUserId=" + getOwnerUserId()
+        + ", userId=" + getUserId()
         + ", size=" + getSize() + ", bucketName=" + getBucketName()
         + ", objectKey=" + getObjectKey() + ", version=" + getVersion() + "]";
   }

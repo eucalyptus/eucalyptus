@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@ import com.eucalyptus.reporting.event_store.ReportingElasticIpDetachEvent
 import com.eucalyptus.reporting.service.ReportingService
 import com.eucalyptus.util.OwnerFullName
 import com.google.common.base.Charsets
+import groovy.transform.CompileStatic
 import org.junit.BeforeClass
 
 import static org.junit.Assert.*
@@ -38,6 +39,7 @@ import org.junit.Test
 /**
  * Unit test for AddressUsageEventListener
  */
+@CompileStatic
 class AddressUsageEventListenerTest {
 
   @BeforeClass
@@ -62,7 +64,7 @@ class AddressUsageEventListenerTest {
     ), timestamp )
 
     assertTrue( "Persisted event is ReportingElasticIpCreateEvent", persisted instanceof ReportingElasticIpCreateEvent )
-    ReportingElasticIpCreateEvent event = persisted
+    ReportingElasticIpCreateEvent event = (ReportingElasticIpCreateEvent) persisted
     assertEquals( "Event user id", "testaccount", event.getUserId() )
     assertEquals( "Event ip", "127.0.0.1", event.getIp() )
     assertEquals( "Event timestamp", timestamp, event.getTimestampMs() )
@@ -80,7 +82,7 @@ class AddressUsageEventListenerTest {
     ), timestamp )
 
     assertTrue( "Persisted event is ReportingElasticIpDeleteEvent", persisted instanceof ReportingElasticIpDeleteEvent )
-    ReportingElasticIpDeleteEvent event = persisted
+    ReportingElasticIpDeleteEvent event = (ReportingElasticIpDeleteEvent) persisted
     assertEquals( "Event address uuid", "127.0.0.1", event.getIp() )
     assertEquals( "Event timestamp", timestamp, event.getTimestampMs() )
   }
@@ -97,7 +99,7 @@ class AddressUsageEventListenerTest {
     ), timestamp )
 
     assertTrue( "Persisted event is ReportingElasticIpAttachEvent", persisted instanceof ReportingElasticIpAttachEvent )
-    ReportingElasticIpAttachEvent event = persisted
+    ReportingElasticIpAttachEvent event = (ReportingElasticIpAttachEvent) persisted
     assertEquals( "Event address uuid", "127.0.0.1", event.getIp() )
     assertEquals( "Event instance uuid", uuid("instance"), event.getInstanceUuid() )
     assertEquals( "Event timestamp", timestamp, event.getTimestampMs() )
@@ -115,7 +117,7 @@ class AddressUsageEventListenerTest {
     ), timestamp )
 
     assertTrue( "Persisted event is ReportingElasticIpDetachEvent", persisted instanceof ReportingElasticIpDetachEvent )
-    ReportingElasticIpDetachEvent event = persisted
+    ReportingElasticIpDetachEvent event = (ReportingElasticIpDetachEvent) persisted
     assertEquals( "Event address ip", "127.0.0.1", event.getIp() )
     assertEquals( "Event instance uuid", uuid("instance2"), event.getInstanceUuid() )
     assertEquals( "Event timestamp", timestamp, event.getTimestampMs() )
@@ -168,7 +170,6 @@ class AddressUsageEventListenerTest {
 
   private OwnerFullName userFullName( final String name ) {
     return new OwnerFullName() {
-      @Override public String getAccountName() { return name; }
       @Override public String getAccountNumber() { return "100000000000";  }
       @Override public String getUserId() { return name; }
       @Override public String getUserName() { return name; }

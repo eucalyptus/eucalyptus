@@ -27,7 +27,6 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.reporting.domain.ReportingAccountCrud;
@@ -57,12 +56,10 @@ public class S3ObjectUsageEventListener implements EventListener<S3ObjectEvent>{
       final long timeInMs = getCurrentTimeMillis();
 
       try {
-        final User user = lookupUser( event.getOwnerUserId() );
-
-        getReportingAccountCrud().createOrUpdateAccount(user.getAccountNumber(),
-            lookupAccountAliasById(user.getAccountNumber()));
-        getReportingUserCrud().createOrUpdateUser(user.getUserId(), user
-            .getAccountNumber(), user.getName());
+        getReportingAccountCrud().createOrUpdateAccount(event.getAccountNumber(),
+            lookupAccountAliasById(event.getAccountNumber()));
+        getReportingUserCrud().createOrUpdateUser(event.getUserId(), event
+            .getAccountNumber(), event.getUserName());
 
         final ReportingS3ObjectEventStore eventStore = getReportingS3ObjectEventStore();
         switch (event.getAction()) {
@@ -73,7 +70,7 @@ public class S3ObjectUsageEventListener implements EventListener<S3ObjectEvent>{
                 toReportingVersion( event.getVersion() ),
                 event.getSize(),
                 timeInMs,
-                event.getOwnerUserId());
+                event.getUserId());
             break;
           case OBJECTDELETE:
             eventStore.insertS3ObjectDeleteEvent(
@@ -102,10 +99,6 @@ public class S3ObjectUsageEventListener implements EventListener<S3ObjectEvent>{
 
     protected long getCurrentTimeMillis() {
       return System.currentTimeMillis();
-    }
-
-    protected User lookupUser( final String userId ) throws AuthException {
-      return Accounts.lookupUserById( userId );
     }
 
     protected String lookupAccountAliasById( final String accountNumber ) throws AuthException {

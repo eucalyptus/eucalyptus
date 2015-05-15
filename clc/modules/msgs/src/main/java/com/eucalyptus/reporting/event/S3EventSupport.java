@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,21 +33,29 @@ class S3EventSupport<E extends Enum<E>> implements Event {
   private static final long serialVersionUID = 1L;
 
   private final E action;
-  private final String ownerUserId;
+  private final String userId;
+  private final String userName;
+  private final String accountNumber;
   private final Long size;
   private final String bucketName;
 
   S3EventSupport( @Nonnull final E action,
                   @Nonnull final String bucketName,
-                  @Nonnull final String ownerUserId,
+                  @Nonnull final String userId,
+                  @Nonnull final String userName,
+                  @Nonnull final String accountNumber,
                   @Nonnull final Long size ) {
     checkParam( action, notNullValue() );
     checkParam( bucketName, not( isEmptyOrNullString() ) );
-    checkParam( ownerUserId, not( isEmptyOrNullString() ) );
+    checkParam( userId, not( isEmptyOrNullString() ) );
+    checkParam( userName, not( isEmptyOrNullString() ) );
+    checkParam( accountNumber, not( isEmptyOrNullString() ) );
     checkParam( size, notNullValue() );
 
     this.action = action;
-    this.ownerUserId = ownerUserId;
+    this.userId = userId;
+    this.userName = userName;
+    this.accountNumber = accountNumber;
     this.size = size;
     this.bucketName = bucketName;
   }
@@ -58,8 +66,18 @@ class S3EventSupport<E extends Enum<E>> implements Event {
   }
 
   @Nonnull
-  public String getOwnerUserId() {
-    return ownerUserId;
+  public String getUserId() {
+    return userId;
+  }
+
+  @Nonnull
+  public String getUserName() {
+    return userName;
+  }
+
+  @Nonnull
+  public String getAccountNumber() {
+    return accountNumber;
   }
 
   @Nonnull

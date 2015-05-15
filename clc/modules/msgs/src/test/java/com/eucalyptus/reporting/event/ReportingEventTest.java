@@ -203,6 +203,8 @@ public class ReportingEventTest {
         "object1",
         null,
         Principals.systemFullName().getUserId(),
+        Principals.systemFullName().getUserName(),
+        Principals.systemFullName().getAccountNumber(),
         12L
     );
 
@@ -210,9 +212,9 @@ public class ReportingEventTest {
     assertEquals("bucket name", "bucket1", putEvent.getBucketName());
     assertEquals("object key", "object1", putEvent.getObjectKey());
     assertNull("version", putEvent.getVersion());
-    assertEquals("owner", Principals.systemFullName().getUserId(), putEvent.getOwnerUserId());
+    assertEquals("owner", Principals.systemFullName().getUserId(), putEvent.getUserId());
     assertEquals("size", (Long) 12L, putEvent.getSize());
-    assertEquals("get event string", "S3ObjectEvent [action=OBJECTCREATE, ownerUserId=eucalyptus, size=12, bucketName=bucket1, objectKey=object1, version=null]", putEvent.toString());
+    assertEquals("get event string", "S3ObjectEvent [action=OBJECTCREATE, userId=eucalyptus, size=12, bucketName=bucket1, objectKey=object1, version=null]", putEvent.toString());
 
     final S3ObjectEvent deleteEvent = S3ObjectEvent.with(
         S3ObjectEvent.forS3ObjectDelete(),
@@ -220,15 +222,17 @@ public class ReportingEventTest {
         "object1",
         "version1",
         Principals.systemFullName().getUserId(),
+        Principals.systemFullName().getUserName(),
+        Principals.systemFullName().getAccountNumber(),
         12L
     );
 
     assertEquals("action", S3ObjectEvent.S3ObjectAction.OBJECTDELETE, deleteEvent.getAction());
     assertEquals("bucket name", "bucket1", deleteEvent.getBucketName());
     assertEquals("version", "version1", deleteEvent.getVersion());
-    assertEquals("owner", Principals.systemFullName().getUserId(), deleteEvent.getOwnerUserId());
+    assertEquals("owner", Principals.systemFullName().getUserId(), deleteEvent.getUserId());
     assertEquals("size", (Long) 12L, deleteEvent.getSize());
-    assertEquals("get event string", "S3ObjectEvent [action=OBJECTDELETE, ownerUserId=eucalyptus, size=12, bucketName=bucket1, objectKey=object1, version=version1]", deleteEvent.toString());
+    assertEquals("get event string", "S3ObjectEvent [action=OBJECTDELETE, userId=eucalyptus, size=12, bucketName=bucket1, objectKey=object1, version=version1]", deleteEvent.toString());
   }
 
   @Test
@@ -245,11 +249,13 @@ public class ReportingEventTest {
     assertEquals( "uuid", uuid("vol-00000001"), event.getUuid() );
     assertEquals( "id", "vol-00000001", event.getVolumeId() );
     assertEquals( "size", 123, event.getSizeGB() );
-    assertEquals( "owner", Principals.systemFullName(), event.getOwner() );
+    assertEquals( "userId", Principals.systemFullName().getUserId(), event.getUserId() );
+    assertEquals( "userName", Principals.systemFullName().getUserName(), event.getUserName() );
+    assertEquals( "accountNumber", Principals.systemFullName().getAccountNumber(), event.getAccountNumber() );
     assertEquals( "Availability zone", "PARTI001", event.getAvailabilityZone() );
     assertEquals( "action info type", EventActionInfo.class, event.getActionInfo().getClass() );
     assertEquals( "action info action", VolumeEvent.VolumeAction.VOLUMECREATE, event.getActionInfo().getAction() );
-    assertEquals( "event string", "VolumeEvent [actionInfo=[action:VOLUMECREATE], uuid=ed5fb9b5-225a-387a-936c-0032cf2afdca, sizeGB=123, ownerName=eucalyptus, volumeId=vol-00000001, availabilityZone=PARTI001]", event.toString() );
+    assertEquals( "event string", "VolumeEvent [actionInfo=[action:VOLUMECREATE], uuid=ed5fb9b5-225a-387a-936c-0032cf2afdca, sizeGB=123, userId=eucalyptus, volumeId=vol-00000001, availabilityZone=PARTI001]", event.toString() );
   }
 
   @Test
@@ -266,11 +272,13 @@ public class ReportingEventTest {
     assertEquals( "uuid", uuid("vol-00000001"), event.getUuid() );
     assertEquals( "id", "vol-00000001", event.getVolumeId() );
     assertEquals( "size", 123, event.getSizeGB() );
-    assertEquals( "owner", Principals.systemFullName(), event.getOwner() );
+    assertEquals( "userId", Principals.systemFullName().getUserId(), event.getUserId() );
+    assertEquals( "userName", Principals.systemFullName().getUserName(), event.getUserName() );
+    assertEquals( "accountNumber", Principals.systemFullName().getAccountNumber(), event.getAccountNumber() );
     assertEquals( "Availability zone", "PARTI001", event.getAvailabilityZone() );
     assertEquals( "action info type", EventActionInfo.class, event.getActionInfo().getClass() );
     assertEquals( "action info action", VolumeEvent.VolumeAction.VOLUMEDELETE, event.getActionInfo().getAction() );
-    assertEquals( "event string", "VolumeEvent [actionInfo=[action:VOLUMEDELETE], uuid=ed5fb9b5-225a-387a-936c-0032cf2afdca, sizeGB=123, ownerName=eucalyptus, volumeId=vol-00000001, availabilityZone=PARTI001]", event.toString() );
+    assertEquals( "event string", "VolumeEvent [actionInfo=[action:VOLUMEDELETE], uuid=ed5fb9b5-225a-387a-936c-0032cf2afdca, sizeGB=123, userId=eucalyptus, volumeId=vol-00000001, availabilityZone=PARTI001]", event.toString() );
   }
 
   @Test
@@ -287,13 +295,15 @@ public class ReportingEventTest {
     assertEquals( "uuid", uuid("vol-00000001"), event.getUuid() );
     assertEquals( "id", "vol-00000001", event.getVolumeId() );
     assertEquals( "size", 123, event.getSizeGB() );
-    assertEquals( "owner", Principals.systemFullName(), event.getOwner() );
+    assertEquals( "userId", Principals.systemFullName().getUserId(), event.getUserId() );
+    assertEquals( "userName", Principals.systemFullName().getUserName(), event.getUserName() );
+    assertEquals( "accountNumber", Principals.systemFullName().getAccountNumber(), event.getAccountNumber() );
     assertEquals( "Availability zone", "PARTI001", event.getAvailabilityZone() );
     assertEquals( "action info type", InstanceEventActionInfo.class, event.getActionInfo().getClass() );
     assertEquals( "action info action", VolumeEvent.VolumeAction.VOLUMEATTACH, event.getActionInfo().getAction() );
     assertEquals( "action info instance uuid", uuid("i-00000001"), ((InstanceEventActionInfo)event.getActionInfo()).getInstanceUuid() );
     assertEquals( "action info instance id", "i-00000001", ((InstanceEventActionInfo)event.getActionInfo()).getInstanceId() );
-    assertEquals( "event string", "VolumeEvent [actionInfo=[action:VOLUMEATTACH,instanceUuid:51b56c1f-8c0d-3096-8c5e-e78ae6c8f4c0,instanceId:i-00000001], uuid=ed5fb9b5-225a-387a-936c-0032cf2afdca, sizeGB=123, ownerName=eucalyptus, volumeId=vol-00000001, availabilityZone=PARTI001]", event.toString() );
+    assertEquals( "event string", "VolumeEvent [actionInfo=[action:VOLUMEATTACH,instanceUuid:51b56c1f-8c0d-3096-8c5e-e78ae6c8f4c0,instanceId:i-00000001], uuid=ed5fb9b5-225a-387a-936c-0032cf2afdca, sizeGB=123, userId=eucalyptus, volumeId=vol-00000001, availabilityZone=PARTI001]", event.toString() );
   }
 
   @Test
@@ -310,18 +320,20 @@ public class ReportingEventTest {
     assertEquals( "uuid", uuid("vol-00000001"), event.getUuid() );
     assertEquals( "id", "vol-00000001", event.getVolumeId() );
     assertEquals( "size", 123, event.getSizeGB() );
-    assertEquals( "owner", Principals.systemFullName(), event.getOwner() );
+    assertEquals( "userId", Principals.systemFullName().getUserId(), event.getUserId() );
+    assertEquals( "userName", Principals.systemFullName().getUserName(), event.getUserName() );
+    assertEquals( "accountNumber", Principals.systemFullName().getAccountNumber(), event.getAccountNumber() );
     assertEquals( "Availability zone", "PARTI001", event.getAvailabilityZone() );
     assertEquals( "action info type", InstanceEventActionInfo.class, event.getActionInfo().getClass() );
     assertEquals( "action info action", VolumeEvent.VolumeAction.VOLUMEDETACH, event.getActionInfo().getAction() );
     assertEquals( "action info instance uuid", uuid("i-00000001"), ((InstanceEventActionInfo)event.getActionInfo()).getInstanceUuid() );
     assertEquals( "action info instance id", "i-00000001", ((InstanceEventActionInfo)event.getActionInfo()).getInstanceId() );
-    assertEquals( "event string", "VolumeEvent [actionInfo=[action:VOLUMEDETACH,instanceUuid:51b56c1f-8c0d-3096-8c5e-e78ae6c8f4c0,instanceId:i-00000001], uuid=ed5fb9b5-225a-387a-936c-0032cf2afdca, sizeGB=123, ownerName=eucalyptus, volumeId=vol-00000001, availabilityZone=PARTI001]", event.toString() );
+    assertEquals( "event string", "VolumeEvent [actionInfo=[action:VOLUMEDETACH,instanceUuid:51b56c1f-8c0d-3096-8c5e-e78ae6c8f4c0,instanceId:i-00000001], uuid=ed5fb9b5-225a-387a-936c-0032cf2afdca, sizeGB=123, userId=eucalyptus, volumeId=vol-00000001, availabilityZone=PARTI001]", event.toString() );
   }
 
   @Test
   public void testSnapshotCreateEvent() {
-    final SnapShotEvent event = SnapShotEvent.with( SnapShotEvent.forSnapShotCreate(4, uuid("vol-00000001"), "vol-00000001" ), uuid("snap-00000001"), "snap-00000001", Principals.systemFullName().getUserId() );
+    final SnapShotEvent event = SnapShotEvent.with( SnapShotEvent.forSnapShotCreate(4, uuid("vol-00000001"), "vol-00000001" ), uuid("snap-00000001"), "snap-00000001", Principals.systemFullName().getUserId(), Principals.systemFullName().getUserName(), Principals.systemFullName().getAccountNumber() );
 
     assertEquals( "uuid", uuid("snap-00000001"), event.getUuid() );
     assertEquals( "id", "snap-00000001", event.getSnapshotId() );
@@ -336,7 +348,7 @@ public class ReportingEventTest {
 
   @Test
   public void testSnapshotDeleteEvent() {
-    final SnapShotEvent event = SnapShotEvent.with( SnapShotEvent.forSnapShotDelete(), uuid("snap-00000001"), "snap-00000001", Principals.systemFullName().getUserId() );
+    final SnapShotEvent event = SnapShotEvent.with( SnapShotEvent.forSnapShotDelete(), uuid("snap-00000001"), "snap-00000001", Principals.systemFullName().getUserId(), Principals.systemFullName().getUserName(), Principals.systemFullName().getAccountNumber() );
 
     assertEquals( "uuid", uuid("snap-00000001"), event.getUuid() );
     assertEquals( "id", "snap-00000001", event.getSnapshotId() );

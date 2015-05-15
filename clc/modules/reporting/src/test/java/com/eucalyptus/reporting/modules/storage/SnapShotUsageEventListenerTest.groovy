@@ -21,6 +21,7 @@ package com.eucalyptus.reporting.modules.storage
 
 import com.eucalyptus.auth.AuthException
 import com.eucalyptus.reporting.service.ReportingService
+import groovy.transform.CompileStatic
 import org.junit.BeforeClass
 import org.junit.Test
 import com.eucalyptus.auth.principal.Principals
@@ -28,7 +29,6 @@ import com.eucalyptus.auth.principal.Principals
 import static org.junit.Assert.*
 import com.eucalyptus.reporting.domain.ReportingAccountCrud
 import com.eucalyptus.reporting.domain.ReportingUserCrud
-import com.eucalyptus.auth.principal.User
 import com.google.common.base.Charsets
 import com.eucalyptus.reporting.event.SnapShotEvent
 import com.eucalyptus.reporting.event_store.ReportingVolumeSnapshotEventStore
@@ -38,6 +38,7 @@ import com.eucalyptus.reporting.event_store.ReportingVolumeSnapshotDeleteEvent
 /**
  * 
  */
+@CompileStatic
 class SnapShotUsageEventListenerTest {
 
   @BeforeClass
@@ -58,11 +59,13 @@ class SnapShotUsageEventListenerTest {
         SnapShotEvent.forSnapShotCreate(Integer.MAX_VALUE, uuid("vol-00000001"), "vol-00000001"),
         uuid("snap-00000001"),
         "snap-00000001",
-        Principals.systemFullName().getUserId()
+        Principals.systemFullName().getUserId(),
+        Principals.systemFullName().getUserName(),
+        Principals.systemFullName().getAccountNumber()
     ), timestamp )
 
     assertTrue( "Persisted event is ReportingVolumeSnapshotCreateEvent", persisted instanceof ReportingVolumeSnapshotCreateEvent )
-    ReportingVolumeSnapshotCreateEvent event = persisted
+    ReportingVolumeSnapshotCreateEvent event = (ReportingVolumeSnapshotCreateEvent) persisted
     assertEquals( "Persisted event uuid", uuid("snap-00000001"), event.getUuid() )
     assertEquals( "Persisted event name", "snap-00000001", event.getVolumeSnapshotId() )
     assertEquals( "Persisted event size", Integer.MAX_VALUE, event.getSizeGB() )
@@ -78,11 +81,13 @@ class SnapShotUsageEventListenerTest {
         SnapShotEvent.forSnapShotDelete(),
         uuid("snap-00000001"),
         "snap-00000001",
-        Principals.systemFullName().getUserId()
+        Principals.systemFullName().getUserId(),
+        Principals.systemFullName().getUserName(),
+        Principals.systemFullName().getAccountNumber()
     ), timestamp )
 
     assertTrue( "Persisted event is ReportingVolumeSnapshotDeleteEvent", persisted instanceof ReportingVolumeSnapshotDeleteEvent )
-    ReportingVolumeSnapshotDeleteEvent event = persisted
+    ReportingVolumeSnapshotDeleteEvent event = (ReportingVolumeSnapshotDeleteEvent) persisted
     assertEquals( "Persisted event uuid", uuid("snap-00000001"), event.getUuid() )
     assertEquals( "Persisted event timestamp", timestamp, event.getTimestampMs() )
   }
@@ -115,10 +120,6 @@ class SnapShotUsageEventListenerTest {
       @Override protected ReportingUserCrud getReportingUserCrud() { return userCrud }
       @Override protected ReportingVolumeSnapshotEventStore getReportingVolumeSnapshotEventStore() { eventStore }
       @Override protected long getCurrentTimeMillis() { timestamp }
-      @Override protected User lookupUser( final String userId ) {
-        assertEquals( "Looked up user", "eucalyptus", userId )
-        Principals.systemUser()
-      }
       @Override protected String lookupAccountAliasById(final String accountNumber) throws AuthException {
         assertEquals( "Account Id", "000000000000", accountNumber  )
         'eucalyptus'
