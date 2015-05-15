@@ -33,6 +33,9 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.euare.common.identity.DescribeCertificateResponseType;
 import com.eucalyptus.auth.euare.common.identity.DescribeCertificateResult;
 import com.eucalyptus.auth.euare.common.identity.DescribeCertificateType;
+import com.eucalyptus.auth.euare.common.identity.LookupCertificatesResponseType;
+import com.eucalyptus.auth.euare.common.identity.LookupCertificatesResult;
+import com.eucalyptus.auth.euare.common.identity.LookupCertificatesType;
 import com.eucalyptus.auth.euare.common.identity.ReserveNameType;
 import com.eucalyptus.auth.euare.common.identity.SignCertificateResponseType;
 import com.eucalyptus.auth.euare.common.identity.SignCertificateResult;
@@ -262,6 +265,25 @@ public class RemoteIdentityProvider implements IdentityProvider {
       final DescribeCertificateResponseType response = send( new DescribeCertificateType( ) );
       final DescribeCertificateResult result = response.getDescribeCertificateResult( );
       return PEMFiles.getCert( result.getPem( ).getBytes( StandardCharsets.UTF_8 ) );
+    } catch ( Exception e ) {
+      throw new AuthException( e );
+    }
+  }
+
+  @Override
+  public List<X509Certificate> lookupAccountCertificatesByAccountNumber( final String accountNumber ) throws AuthException {
+    try {
+      final LookupCertificatesType request = new LookupCertificatesType( );
+      request.setAccountNumber( accountNumber );
+      final LookupCertificatesResponseType response = send( request );
+      final LookupCertificatesResult result = response.getLookupCertificatesResult( );
+      return Lists.newArrayList( Iterables.transform( result.getPem( ), new Function<String,X509Certificate>( ){
+        @Nullable
+        @Override
+        public X509Certificate apply( final String pem ) {
+          return  PEMFiles.getCert( pem.getBytes( StandardCharsets.UTF_8 ) );
+        }
+      } ) );
     } catch ( Exception e ) {
       throw new AuthException( e );
     }

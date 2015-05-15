@@ -63,6 +63,9 @@ import com.eucalyptus.auth.euare.common.identity.DescribePrincipalType;
 import com.eucalyptus.auth.euare.common.identity.DescribeRoleResponseType;
 import com.eucalyptus.auth.euare.common.identity.DescribeRoleResult;
 import com.eucalyptus.auth.euare.common.identity.DescribeRoleType;
+import com.eucalyptus.auth.euare.common.identity.LookupCertificatesResponseType;
+import com.eucalyptus.auth.euare.common.identity.LookupCertificatesResult;
+import com.eucalyptus.auth.euare.common.identity.LookupCertificatesType;
 import com.eucalyptus.auth.euare.common.identity.Policy;
 import com.eucalyptus.auth.euare.common.identity.Principal;
 import com.eucalyptus.auth.euare.common.identity.ReserveNameResponseType;
@@ -83,6 +86,7 @@ import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.PolicyVersions;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.SecurityTokenContent;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingManager;
@@ -93,6 +97,7 @@ import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LockResource;
 import com.eucalyptus.util.TypeMapper;
@@ -310,6 +315,32 @@ public class IdentityService {
     }
 
     response.setReserveNameResult( result );
+    return response;
+  }
+
+  public LookupCertificatesResponseType lookupCertificates( final LookupCertificatesType request ) throws EuareException {
+    final LookupCertificatesResponseType response = request.getReply( );
+    final LookupCertificatesResult result = new LookupCertificatesResult( );
+    final ArrayList<String> pemCertificates = Lists.newArrayList( );
+    try {
+      for ( final User user : Accounts.lookupAccountById( request.getAccountNumber( ) ).getUsers( ) ) {
+        Iterables.addAll( pemCertificates, Iterables.transform(
+            Iterables.filter(
+                user.getCertificates( ),
+                CollectionUtils.propertyPredicate( false, revoked() ) ),
+            new Function<Certificate, String>( ) {
+              @Nullable
+              @Override
+              public String apply( final Certificate certificate ) {
+                return B64.url.decString( certificate.getPem( ) );
+              }
+            } ) );
+      }
+    } catch ( AuthException e ) {
+      throw handleException( e );
+    }
+    result.setPem( pemCertificates );
+    response.setLookupCertificatesResult( result );
     return response;
   }
 

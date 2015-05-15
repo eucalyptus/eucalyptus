@@ -81,7 +81,6 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
-import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.compute.common.internal.images.ImageInfo;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
@@ -348,7 +347,7 @@ public class ImageManifests {
       }
     }
     
-    public boolean checkManifestSignature( EuareUser user ) throws EucalyptusCloudException {
+    public boolean checkManifestSignature( User user ) throws EucalyptusCloudException {
       int idxImgOpen = this.manifest.indexOf("<image>");
       int idxImgClose = this.manifest.lastIndexOf("</image>");
       if (idxImgOpen < 0 || idxImgClose < 0 || idxImgOpen > idxImgClose)
@@ -398,8 +397,7 @@ public class ImageManifests {
           return true;
         } else {
           // check other users from the same account
-          for ( User u : user.getAccount().getUsers() ) {
-            if ( Iterables.any( Lists.transform( u.getCertificates( ), activeEuareToX509 ), tryVerifyWithCert ) )
+          if ( Iterables.any( Accounts.lookupAccountCertificatesByAccountNumber( user.getAccountNumber( ) ), tryVerifyWithCert ) ) {
               return true;
           }
           // check bundle cases (use NC's certificates)

@@ -77,6 +77,8 @@ public interface IdentityProvider {
    */
   void reserveGlobalName( String namespace, String name, Integer duration ) throws AuthException;
 
+  List<X509Certificate> lookupAccountCertificatesByAccountNumber( String accountNumber ) throws AuthException;
+
   X509Certificate getCertificateByAccountNumber( String accountNumber ) throws AuthException;
 
   X509Certificate signCertificate( String accountNumber, RSAPublicKey publicKey, String principal, int expiryInDays ) throws AuthException;

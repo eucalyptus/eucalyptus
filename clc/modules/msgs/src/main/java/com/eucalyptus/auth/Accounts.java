@@ -328,6 +328,11 @@ public class Accounts {
   }
 
   @Nonnull
+  public static List<X509Certificate> lookupAccountCertificatesByAccountNumber( String accountNumber ) throws AuthException {
+    return getIdentityProvider( ).lookupAccountCertificatesByAccountNumber( accountNumber );
+  }
+
+  @Nonnull
   public static SecurityTokenContent decodeSecurityToken( String accessKeyIdentifier, String securityToken ) throws AuthException {
     return getIdentityProvider( ).decodeSecurityToken( accessKeyIdentifier, securityToken );
   }

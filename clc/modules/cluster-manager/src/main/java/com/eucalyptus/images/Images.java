@@ -999,7 +999,7 @@ public class Images extends com.eucalyptus.compute.common.internal.images.Images
   
   private static PutGetImageInfo persistRegistration( UserFullName creator, ImageManifest manifest, PutGetImageInfo ret ) throws Exception {
     // check manifest's signature
-    if ( !manifest.checkManifestSignature( Accounts.lookupUserById(creator.getUserId()) ) )
+    if ( !manifest.checkManifestSignature( Accounts.lookupPrincipalByUserId( creator.getUserId(), null ) ) )
       throw new EucalyptusCloudException("Manifest has invalid signature");
     try(TransactionResource tx = Entities.transactionFor( PutGetImageInfo.class  )) {
       ret = Entities.merge( ret );

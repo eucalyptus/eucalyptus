@@ -292,6 +292,21 @@ public class RegionDelegatingIdentityProvider implements IdentityProvider {
   }
 
   @Override
+  public List<X509Certificate> lookupAccountCertificatesByAccountNumber( final String accountNumber ) throws AuthException {
+    return regionDispatchByAccountNumber( accountNumber, new NonNullFunction<IdentityProvider, List<X509Certificate>>() {
+      @Nonnull
+      @Override
+      public List<X509Certificate> apply( final IdentityProvider identityProvider ) {
+        try {
+          return identityProvider.lookupAccountCertificatesByAccountNumber( accountNumber );
+        } catch ( AuthException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      }
+    } );
+  }
+
+  @Override
   public X509Certificate getCertificateByAccountNumber( final String accountNumber ) throws AuthException {
     return regionDispatchByAccountNumber( accountNumber, new NonNullFunction<IdentityProvider, X509Certificate>() {
       @Nonnull
