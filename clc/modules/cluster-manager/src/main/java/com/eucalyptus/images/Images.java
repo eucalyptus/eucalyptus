@@ -368,7 +368,7 @@ public class Images extends com.eucalyptus.compute.common.internal.images.Images
   
   // Utility method (and refactored code) for figuring out if a device mapping is an ebs mapping 
   public static Boolean isEbsMapping( BlockDeviceMappingItemType input ) {
-	if( input.getEbs( ) != null && input.getVirtualName() == null && ( input.getNoDevice() == null || !input.getNoDevice() ) ) {
+	if( input.getEbs( ) != null && input.getVirtualName() == null && input.getNoDevice() == null ) {
 	  return Boolean.TRUE;
 	} 
 	return Boolean.FALSE;

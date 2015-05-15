@@ -459,7 +459,7 @@ public class ImageManager {
     for(final BlockDeviceMappingItemType device : blockDevices){
 		if(rootDeviceName!=null && rootDeviceName.equals(device.getDeviceName()))
 			throw new ClientComputeException("InvalidBlockDeviceMapping", "The device names should not contain root device");
-		if(device.getNoDevice() != null && device.getNoDevice())
+		if(device.getNoDevice() != null)
 			suppressedDevice.add(device.getDeviceName());
 		if(device.getEbs() != null) {
 			if ( existingNames.contains(device.getDeviceName()) )

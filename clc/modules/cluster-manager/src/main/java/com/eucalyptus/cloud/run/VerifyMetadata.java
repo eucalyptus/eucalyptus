@@ -478,7 +478,7 @@ public class VerifyMetadata {
             } else if ( StringUtils.isNotBlank(rootBlockDevice.getVirtualName()) ) {
               throw new InvalidMetadataException( "Logical type cannot be modified for the root device. " +
              		"Source snapshot from the image registration will be used for creating the root device" );
-            } else if ( rootBlockDevice.getNoDevice() != null && rootBlockDevice.getNoDevice() ) {
+            } else if ( rootBlockDevice.getNoDevice() != null ) {
               throw new InvalidMetadataException( "Root device cannot be suppressed. " + 
               		"Source snapshot from the image registration will be used for creating the root device" );
             } else if ( (userRequestedSizeGB = rootBlockDevice.getEbs().getVolumeSize() ) != null && userRequestedSizeGB < imageSizeGB ) {
