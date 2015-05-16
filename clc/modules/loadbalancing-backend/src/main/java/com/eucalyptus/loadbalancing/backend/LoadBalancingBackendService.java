@@ -2277,6 +2277,9 @@ public class LoadBalancingBackendService {
           final LoadBalancer example = LoadBalancer.namedByAccountId( accountNumber, identifier );
           final LoadBalancer loadBalancer = Entities.uniqueResult( example );
           if ( RestrictedTypes.filterPrivileged( ).apply( loadBalancer ) ) {
+            if ( loadBalancer.getVpcId( ) == null ) {
+              throw Exceptions.toUndeclared( new InvalidConfigurationRequestException( "VPC only" ) );
+            }
             final List<SecurityGroupItemType> sortedGroups =
                 Ordering.natural( ).onResultOf( SecurityGroupItemType.groupId( ) ).sortedCopy( groups );
             loadBalancer.setSecurityGroupRefs( Lists.newArrayList( Iterables.transform(

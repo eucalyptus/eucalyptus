@@ -1366,7 +1366,9 @@ public class ActivityManager {
                                  @Nonnull  final List<ActivityCause> activityCauses,
                                  @Nullable final ActivityStatusCode activityStatusCode ) {
       final List<ActivityCause> causes = Lists.newArrayList();
-      Iterables.addAll( causes, Iterables.transform( group.getScalingCauses(), CauseTransform.INSTANCE ) );
+      if ( shouldAddScalingCauses( ) ) {
+        Iterables.addAll( causes, Iterables.transform( group.getScalingCauses(), CauseTransform.INSTANCE ) );
+      }
       Iterables.addAll( causes, activityCauses );
       final ScalingActivity scalingActivity = getGroup().createActivity( clientToken, causes );
       if ( description != null ) {
@@ -1377,6 +1379,10 @@ public class ActivityManager {
         scalingActivity.setStatusCode( activityStatusCode );
       }
       return scalingActivity;
+    }
+
+    boolean shouldAddScalingCauses( ) {
+      return true;
     }
 
     abstract boolean shouldRun();
@@ -1983,6 +1989,11 @@ public class ActivityManager {
     }
 
     @Override
+    boolean shouldAddScalingCauses( ) {
+      return scaling;
+    }
+
+    @Override
     boolean shouldRun() {
       return !instanceIds.isEmpty() && (scalingProcessEnabled( ScalingProcessType.Terminate, getGroup() ) || !scaling);
     }
@@ -2114,7 +2125,7 @@ public class ActivityManager {
 
     UserTerminateInstancesScalingProcessTask( final AutoScalingGroupCoreView group,
                                               final List<String> instanceIds ) {
-      super( group, "UserTermination", instanceIds, Collections.singletonList( new ActivityCause("instance was taken out of service in response to a user request.") ), true, false );
+      super( group, "UserTermination", instanceIds, Collections.singletonList( new ActivityCause("instance was taken out of service in response to a user request") ), true, false );
     }
   }
 

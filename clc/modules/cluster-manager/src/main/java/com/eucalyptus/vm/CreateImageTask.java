@@ -595,7 +595,7 @@ public class CreateImageTask {
 		// first check if there are any volumes that should be suppressed
 		List<String> suppressedDevice = new ArrayList<String>();
 		for(BlockDeviceMappingItemType device : blockDevices){
-			if(device.getNoDevice() != null && device.getNoDevice())
+			if(device.getNoDevice() != null)
 				suppressedDevice.add(device.getDeviceName());
 		}
 

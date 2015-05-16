@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,7 +38,12 @@ public class EventHandlerChainApplySecurityGroups extends EventHandlerChain<Appl
 
   @Override
   public EventHandlerChain<ApplySecurityGroupsEvent> build( ) {
-    this.insert( new LoadBalancerASGroupCreator( this, EventHandlerChainNew.getCapacityPerZone( ) ) );
+    this.insert( new LoadBalancerASGroupCreator( this, EventHandlerChainNew.getCapacityPerZone( ) ){
+      @Override
+      public void rollback() throws EventHandlerException {
+        // do not rollback on failures, leave any existing autoscaling resources in place
+      }
+    } );
     this.insert( new LoadBalancerSecurityGroupUpdate( this ) );
     return this;
   }

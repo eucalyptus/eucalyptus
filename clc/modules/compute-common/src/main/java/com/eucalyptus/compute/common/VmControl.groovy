@@ -650,7 +650,7 @@ public class BlockDeviceMappingItemType extends EucalyptusData {  //** added 200
   String deviceName;
   Integer size; // in megabytes //TODO:GRZE: maybe remove
   String format; // optional, defaults to none (none, ext3, ntfs, swap) //TODO:GRZE: maybe remove
-  Boolean noDevice; // suppress mapping, added 2013-03
+  Boolean noDevice; // suppress mapping, added 2013-03. This should be a string, any value means there is no device (!= null)
   @HttpEmbedded (multiple = true)
   EbsDeviceMapping ebs;
   def BlockDeviceMappingItemType(final virtualName, final deviceName) {
