@@ -386,31 +386,24 @@ public class DatabaseAuthProvider implements AccountProvider {
   }
 
     @Override
-    public Account lookupAccountByCanonicalId(String canonicalId) throws AuthException {
-        if ( canonicalId == null || "".equals(canonicalId) ) {
-            throw new AuthException( AuthException.EMPTY_CANONICAL_ID );
+    public Account lookupAccountByCanonicalId( final String canonicalId ) throws AuthException {
+      if ( canonicalId == null || "".equals(canonicalId) ) {
+          throw new AuthException( AuthException.EMPTY_CANONICAL_ID );
+      }
+      try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
+        AccountEntity example = new AccountEntity();
+        example.setCanonicalId(canonicalId);
+        List<AccountEntity> results = Entities.query(example);
+        if (results != null && results.size() > 0) {
+          AccountEntity found = results.get(0);
+          return new DatabaseAccountProxy(found);
+        } else {
+          throw new AuthException( AuthException.NO_SUCH_USER );
         }
-        EntityTransaction tran = Entities.get(AccountEntity.class);
-        try {
-            AccountEntity example = new AccountEntity();
-            example.setCanonicalId(canonicalId);
-            List<AccountEntity> results = Entities.query(example);
-            if (results != null && results.size() > 0) {
-                AccountEntity found = results.get(0);
-                tran.commit();
-                return new DatabaseAccountProxy(found);
-            }
-            else {
-                tran.rollback( );
-                LOG.warn("Failed to find account by canonical ID " + canonicalId );
-                throw new AuthException( AuthException.NO_SUCH_USER );
-            }
-        }
-        catch ( Exception e ) {
-            tran.rollback( );
-            Debugging.logError( LOG, e, "Error occurred looking for account by canonical ID " + canonicalId );
-            throw new AuthException( AuthException.NO_SUCH_USER, e );
-        }
+      } catch ( Exception e ) {
+          Debugging.logError( LOG, e, "Error occurred looking for account by canonical ID " + canonicalId );
+          throw new AuthException( AuthException.NO_SUCH_USER, e );
+      }
     }
 
     @Override
