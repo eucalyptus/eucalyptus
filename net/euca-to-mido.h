@@ -164,7 +164,7 @@ enum {
 
 typedef struct mido_vpc_secgroup_t {
     gni_secgroup *gniSecgroup;
-    char name[SECURITY_GROUP_ID_LEN];
+    char name[16];
     midoname midos[VPCSG_END];
     int gnipresent;
 
@@ -172,7 +172,7 @@ typedef struct mido_vpc_secgroup_t {
 
 typedef struct mido_vpc_instance_t {
     gni_instance *gniInst;
-    char name[INSTANCE_ID_LEN];
+    char name[16];
     midoname midos[VPCINSTANCEEND];
     int gnipresent;
 } mido_vpc_instance;
