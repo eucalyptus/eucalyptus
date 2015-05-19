@@ -765,11 +765,6 @@ public class HmacLoginModuleTest {
       }
 
       @Override
-      public void setActive(final Boolean active) throws AuthException {
-        throw new IllegalStateException();
-      }
-
-      @Override
       public String getAccessKey() {
         throw new IllegalStateException();
       }

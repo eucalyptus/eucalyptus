@@ -34,12 +34,12 @@ import javax.annotation.Nullable;
 import javax.security.auth.Subject;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.BaseRole;
@@ -93,7 +93,7 @@ public class TokensService {
       final SecurityToken token = SecurityTokenManager.issueSecurityToken(
           requestUser,
           accessKey,
-          requestUser.isAccountAdmin( ) ? (int)TimeUnit.HOURS.toSeconds( 1 ) : 0,
+          requestUser.isAccountAdmin() ? (int) TimeUnit.HOURS.toSeconds( 1 ) : 0,
           durationSeconds );
 
       reply.setResult( GetSessionTokenResultType.forCredentials(
@@ -152,7 +152,7 @@ public class TokensService {
 
       final SecurityToken token = SecurityTokenManager.issueSecurityToken(
           role,
-          Objects.firstNonNull( request.getDurationSeconds(), (int)TimeUnit.HOURS.toSeconds(1)) );
+          Objects.firstNonNull( request.getDurationSeconds(), (int) TimeUnit.HOURS.toSeconds( 1 ) ) );
       reply.getAssumeRoleResult().setCredentials( new CredentialsType(
           token.getAccessKeyId(),
           token.getSecretKey(),
@@ -192,7 +192,7 @@ public class TokensService {
 
       final SecurityToken token = SecurityTokenManager.issueSecurityToken(
           requestUser,
-          requestUser.isAccountAdmin( ) ? (int) TimeUnit.DAYS.toSeconds( 1 ) : 0,
+          requestUser.isAccountAdmin() ? (int) TimeUnit.DAYS.toSeconds( 1 ) : 0,
           Objects.firstNonNull( request.getDurationSeconds(), (int) TimeUnit.HOURS.toSeconds( 12 ) ) );
       reply.setResult( GetAccessTokenResultType.forCredentials(
           token.getAccessKeyId(),
@@ -246,8 +246,8 @@ public class TokensService {
 
       final SecurityToken token = SecurityTokenManager.issueSecurityToken(
           impersonated,
-          impersonated.isAccountAdmin( ) ? (int)TimeUnit.DAYS.toSeconds( 1 ) : 0,
-          Objects.firstNonNull( request.getDurationSeconds(), (int)TimeUnit.HOURS.toSeconds(12)));
+          impersonated.isAccountAdmin() ? (int) TimeUnit.DAYS.toSeconds( 1 ) : 0,
+          Objects.firstNonNull( request.getDurationSeconds(), (int) TimeUnit.HOURS.toSeconds( 12 ) ) );
       reply.setResult( GetImpersonationTokenResultType.forCredentials(
           token.getAccessKeyId(),
           token.getSecretKey(),

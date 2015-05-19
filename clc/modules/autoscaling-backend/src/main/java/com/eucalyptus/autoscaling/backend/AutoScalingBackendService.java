@@ -177,7 +177,7 @@ import com.eucalyptus.util.Consumers;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Numbers;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMappers;

@@ -25,7 +25,7 @@ import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterfaces;
 import com.eucalyptus.compute.common.internal.vpc.VpcMetadataException;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;

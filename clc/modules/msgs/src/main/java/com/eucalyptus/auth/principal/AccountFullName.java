@@ -63,8 +63,6 @@
 package com.eucalyptus.auth.principal;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.OwnerFullName;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -85,7 +83,6 @@ public class AccountFullName implements OwnerFullName {
     this.qName = this.authority + this.relativeId;
   }
 
-  //TODO:STEVE: need to preserve the old (validating) constructor?
   protected AccountFullName( String accountNumber, String... relativePath ) {
     this.accountNumber = accountNumber;
     checkParam( this.accountNumber, notNullValue() );
@@ -172,16 +169,6 @@ public class AccountFullName implements OwnerFullName {
     return new AccountFullName( accountId, relativePath );
   }
   
-  public static AccountFullName getInstance( Account account, String... relativePath ) {
-    if ( account == null ) {
-      return new AccountFullName( Principals.nobodyAccount( ).getAccountNumber( ), relativePath );
-    } else if ( account == Principals.systemAccount( ) ) {
-      return new AccountFullName( Principals.systemAccount( ).getAccountNumber( ), relativePath );
-    } else {
-      return new AccountFullName( account.getAccountNumber( ), relativePath );
-    }
-  }
-  
   @Override
   public String getUserId( ) {
     return null;
@@ -193,7 +180,7 @@ public class AccountFullName implements OwnerFullName {
   }
   
   /**
-   * @see com.eucalyptus.util.OwnerFullName#isOwner(java.lang.String)
+   * @see OwnerFullName#isOwner(java.lang.String)
    */
   @Override
   public boolean isOwner( String ownerId ) {
@@ -201,7 +188,7 @@ public class AccountFullName implements OwnerFullName {
   }
   
   /**
-   * @see com.eucalyptus.util.OwnerFullName#isOwner(com.eucalyptus.util.OwnerFullName)
+   * @see OwnerFullName#isOwner(OwnerFullName)
    */
   @Override
   public boolean isOwner( OwnerFullName ownerFullName ) {

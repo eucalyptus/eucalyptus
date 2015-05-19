@@ -23,7 +23,7 @@ package com.eucalyptus.tokens
 import com.eucalyptus.binding.HttpParameterMapping
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
-import com.eucalyptus.auth.policy.PolicyAction
+import com.eucalyptus.auth.policy.annotation.PolicyAction
 import com.eucalyptus.auth.policy.PolicySpec
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
 import com.eucalyptus.component.annotation.ComponentMessage;

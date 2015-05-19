@@ -34,7 +34,7 @@ import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 

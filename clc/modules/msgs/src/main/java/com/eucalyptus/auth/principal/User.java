@@ -71,7 +71,7 @@ import com.eucalyptus.auth.AuthException;
  * 
  * @author decker
  */
-public interface User extends BasePrincipal, Serializable {
+public interface User extends AccountScopedPrincipal, Serializable {
   
   String USER_GROUP_PREFIX = "_";  
   String ACCOUNT_ADMIN = "admin";

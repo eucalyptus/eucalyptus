@@ -28,7 +28,7 @@ import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
 import static com.eucalyptus.reporting.event.EventActionInfo.InstanceEventActionInfo;
 
 import com.eucalyptus.event.Event;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 
 public class VolumeEvent implements Event {
   private static final long serialVersionUID = 1L;

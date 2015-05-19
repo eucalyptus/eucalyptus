@@ -82,14 +82,16 @@ import com.eucalyptus.auth.euare.persist.entities.CertificateEntity;
 import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity;
+import com.eucalyptus.auth.euare.principal.EuareAccessKey;
+import com.eucalyptus.auth.euare.principal.EuareAccount;
+import com.eucalyptus.auth.euare.principal.EuareCertificate;
+import com.eucalyptus.auth.euare.principal.EuareGroup;
 import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.policy.PolicyPolicy;
 import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Certificate;
-import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.Entities;
@@ -391,7 +393,7 @@ public class DatabaseUserProxy implements EuareUser {
   }
   
   @Override
-  public AccessKey getKey( final String keyId ) throws AuthException {
+  public EuareAccessKey getKey( final String keyId ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( AccessKeyEntity.class ) ) {
       AccessKeyEntity key = DatabaseAuthUtils.getUnique( AccessKeyEntity.class, "accessKey", keyId );
       db.commit( );
@@ -420,7 +422,7 @@ public class DatabaseUserProxy implements EuareUser {
   }
 
   @Override
-  public AccessKey createKey( ) throws AuthException {
+  public EuareAccessKey createKey( ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
       UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, "userId", this.delegate.getUserId( ) );
       AccessKeyEntity keyEntity = new AccessKeyEntity( user );
@@ -455,7 +457,7 @@ public class DatabaseUserProxy implements EuareUser {
   
 
   @Override
-  public Certificate getCertificate( final String certificateId ) throws AuthException {
+  public EuareCertificate getCertificate( final String certificateId ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( CertificateEntity.class ) ) {
       CertificateEntity cert = DatabaseAuthUtils.getUnique( CertificateEntity.class, "certificateId", certificateId );
       db.commit( );
@@ -467,7 +469,7 @@ public class DatabaseUserProxy implements EuareUser {
   }
 
   @Override
-  public Certificate addCertificate( String certificateId, X509Certificate cert ) throws AuthException {
+  public EuareCertificate addCertificate( String certificateId, X509Certificate cert ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
       UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, "userId", this.delegate.getUserId( ) );
       CertificateEntity certEntity = new CertificateEntity( certificateId, cert );
@@ -500,8 +502,8 @@ public class DatabaseUserProxy implements EuareUser {
   }
   
   @Override
-  public List<Group> getGroups( ) throws AuthException {
-    final List<Group> results = Lists.newArrayList( );
+  public List<EuareGroup> getGroups( ) throws AuthException {
+    final List<EuareGroup> results = Lists.newArrayList( );
     try {
       DatabaseAuthUtils.invokeUnique( UserEntity.class, "userId", this.delegate.getUserId( ), new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) {
@@ -523,8 +525,8 @@ public class DatabaseUserProxy implements EuareUser {
   }
 
   @Override
-  public Account getAccount( ) throws AuthException {
-    final List<Account> results = Lists.newArrayList( );
+  public EuareAccount getAccount( ) throws AuthException {
+    final List<EuareAccount> results = Lists.newArrayList( );
     try {
       DatabaseAuthUtils.invokeUnique( UserEntity.class, "userId", this.delegate.getUserId( ), new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) {
@@ -551,7 +553,7 @@ public class DatabaseUserProxy implements EuareUser {
       return isSystemAdmin;
     }
     try {
-      final Account account = this.getAccount( );
+      final EuareAccount account = this.getAccount( );
       accountNumberSupplier = Suppliers.ofInstance( account.getAccountNumber( ) );
       return isSystemAdmin = Accounts.isSystemAccount( account.getName() );
     } catch ( AuthException e ) {

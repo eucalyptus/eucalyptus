@@ -25,7 +25,7 @@ import static com.eucalyptus.auth.PolicyResourceContext.PolicyResourceIntercepto
 import java.util.Set;
 import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.RestrictedType;
+import com.eucalyptus.auth.type.RestrictedType;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.collect.Sets;
 

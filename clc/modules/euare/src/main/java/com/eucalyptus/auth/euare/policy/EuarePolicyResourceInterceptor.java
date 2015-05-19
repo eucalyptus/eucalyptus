@@ -23,9 +23,9 @@ import static com.eucalyptus.auth.PolicyResourceContext.PolicyResourceInfo;
 import static com.eucalyptus.auth.euare.policy.EuarePolicyContext.EuarePolicyContextResource;
 import java.util.Set;
 import com.eucalyptus.auth.PolicyResourceContext;
-import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.RestrictedType;
+import com.eucalyptus.auth.type.RestrictedType;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.collect.Sets;
 
@@ -44,7 +44,7 @@ public class EuarePolicyResourceInterceptor implements PolicyResourceContext.Pol
     if ( resource != null && RestrictedType.class.isAssignableFrom( resource.getResourceClass( ) ) ) {
       if ( accepted.contains( resource.getResourceClass( ) ) ||
           (!rejected.contains( resource.getResourceClass( ) ) &&
-              Account.class.isAssignableFrom( resource.getResourceClass( ) ) ) ) try {
+              EuareAccount.class.isAssignableFrom( resource.getResourceClass( ) ) ) ) try {
         EuarePolicyContext.setEuarePolicyContextResource(
             TypeMappers.transform( resource.getResourceObject( ), EuarePolicyContextResource.class ) );
         accepted.add( (Class<? extends RestrictedType>) resource.getResourceClass( ) );

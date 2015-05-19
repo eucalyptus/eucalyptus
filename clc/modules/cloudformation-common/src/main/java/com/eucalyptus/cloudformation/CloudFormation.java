@@ -25,7 +25,7 @@ import com.eucalyptus.component.annotation.AwsServiceName;
 import com.eucalyptus.component.annotation.Description;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
-import com.eucalyptus.component.annotation.PolicyVendor;
+import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.component.annotation.PublicService;
 
 @PublicService

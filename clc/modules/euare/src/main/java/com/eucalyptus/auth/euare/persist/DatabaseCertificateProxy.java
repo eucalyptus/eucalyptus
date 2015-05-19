@@ -69,6 +69,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.euare.persist.entities.CertificateEntity;
+import com.eucalyptus.auth.euare.principal.EuareCertificate;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.auth.util.X509CertHelper;
@@ -77,7 +78,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
 
-public class DatabaseCertificateProxy implements Certificate {
+public class DatabaseCertificateProxy implements EuareCertificate {
 
   private static final long serialVersionUID = 1L;
 

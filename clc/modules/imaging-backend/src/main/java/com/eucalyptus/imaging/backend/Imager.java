@@ -24,7 +24,7 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.imaging.common.ImagingMetadata;
-import com.eucalyptus.util.FullName;
+import com.eucalyptus.auth.principal.FullName;
 
 public class Imager extends UserMetadata<Imager.STATE> implements ImagingMetadata{
 	public enum STATE {

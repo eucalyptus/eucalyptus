@@ -41,7 +41,7 @@ import com.eucalyptus.cloudwatch.domain.DimensionEntity;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmHistory;
 import com.eucalyptus.cloudwatch.domain.listmetrics.ListMetric;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;

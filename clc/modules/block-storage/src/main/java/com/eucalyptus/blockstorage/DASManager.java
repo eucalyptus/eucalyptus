@@ -84,7 +84,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
-import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.blockstorage.StorageManagers.StorageManagerProperty;
 import com.eucalyptus.blockstorage.entities.DASInfo;
 import com.eucalyptus.blockstorage.entities.DirectStorageInfo;
@@ -203,7 +202,7 @@ public class DASManager implements LogicalStorageManager {
                 volumeGroup = m.group(1).trim();
               }
               if ((volumeGroup == null) || (volumeGroup.length() == 0)) {
-                volumeGroup = generateVGName(Hashes.getRandom(10));
+                volumeGroup = generateVGName( Crypto.getRandom( 10 ));
                 returnValue = LVMWrapper.createVolumeGroup(dasDevice, volumeGroup);
                 if (returnValue.length() == 0) {
                   throw new EucalyptusCloudException("Unable to create volume group: " + volumeGroup + " physical volume: " + dasDevice);

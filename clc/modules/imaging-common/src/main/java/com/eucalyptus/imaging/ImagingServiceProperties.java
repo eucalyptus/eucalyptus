@@ -32,9 +32,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
-import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;

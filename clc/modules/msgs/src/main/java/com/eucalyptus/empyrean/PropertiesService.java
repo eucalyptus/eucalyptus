@@ -23,7 +23,7 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.AdminService;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
-import com.eucalyptus.component.annotation.PolicyVendor;
+import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 
 @Partition( Empyrean.class )
 @AdminService

@@ -23,17 +23,13 @@ import java.util.Date;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.auth.policy.PolicyResourceType;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.component.annotation.PolicyVendor;
-import com.eucalyptus.util.RestrictedType;
-
 /**
  * @author Sang-Min Park
  *
  */
 public class ServerCertificate {
   private static Logger LOG = Logger.getLogger(ServerCertificate.class);
+
   private String owningAccountNumber = null;
   private String certName = null;
   private String certId = null;

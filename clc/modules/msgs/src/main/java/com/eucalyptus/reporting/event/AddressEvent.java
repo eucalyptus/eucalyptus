@@ -26,7 +26,7 @@ import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
 import static com.eucalyptus.reporting.event.EventActionInfo.InstanceEventActionInfo;
 
 import com.eucalyptus.event.Event;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 
 /**
  * AddressEvent is an event indicating address resource activity in the CLC.

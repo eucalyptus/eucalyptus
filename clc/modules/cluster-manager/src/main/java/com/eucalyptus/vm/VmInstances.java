@@ -198,7 +198,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.Intervals;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.Strings;

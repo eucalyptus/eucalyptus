@@ -67,7 +67,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.LdapException;
-import com.eucalyptus.auth.crypto.StringCrypto;
+import com.eucalyptus.crypto.StringCrypto;
 
 public class AuthenticationUtil {
 

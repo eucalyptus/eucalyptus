@@ -31,7 +31,7 @@ import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Tag;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Type;
 import org.junit.Test;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Iterables;
 

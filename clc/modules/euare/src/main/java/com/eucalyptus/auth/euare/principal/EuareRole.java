@@ -19,8 +19,38 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare.principal;
 
+import java.util.Date;
+import java.util.List;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.PolicyParseException;
+import com.eucalyptus.auth.principal.AccountScopedPrincipal;
+import com.eucalyptus.auth.principal.Policy;
+import com.eucalyptus.auth.principal.BaseRole;
+
 /**
  *
  */
-public interface EuareRole extends com.eucalyptus.auth.principal.EuareRole {
+public interface EuareRole extends BaseRole, EuareAccountScopedPrincipal {
+
+  EuareAccount getAccount( ) throws AuthException;
+
+  Policy getAssumeRolePolicy( ) throws AuthException;
+  Policy setAssumeRolePolicy( String policy ) throws AuthException, PolicyParseException;
+
+  List<EuareInstanceProfile> getInstanceProfiles() throws AuthException;
+
+  Date getCreationTimestamp( );
+
+  List<Policy> getPolicies( ) throws AuthException;
+
+  /**
+   * Add a policy, fail if exists.
+   */
+  Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException;
+
+  /**
+   * Add or update the named policy.
+   */
+  Policy putPolicy( String name, String policy ) throws AuthException, PolicyParseException;
+  void removePolicy( String name ) throws AuthException;
 }

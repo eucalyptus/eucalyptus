@@ -71,7 +71,7 @@ import java.io.IOException;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.walrus.util.WalrusProperties;
 
@@ -118,7 +118,7 @@ public class TorrentCreator {
 
   private void changeName() throws Exception {
     File inFile = new File(torrentFilePath);
-    File outFile = new File(torrentFilePath + Hashes.getRandom(6));
+    File outFile = new File(torrentFilePath + Crypto.getRandom( 6 ));
     BufferedInputStream inStream = new BufferedInputStream(new FileInputStream(inFile));
     BufferedOutputStream outStream = new BufferedOutputStream(new FileOutputStream(outFile));
 

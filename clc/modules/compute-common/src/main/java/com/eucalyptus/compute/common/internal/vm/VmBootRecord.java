@@ -94,7 +94,7 @@ import com.eucalyptus.compute.common.internal.images.KernelImageInfo;
 import com.eucalyptus.compute.common.internal.images.RamdiskImageInfo;
 import com.eucalyptus.compute.common.internal.keys.KeyPairs;
 import com.eucalyptus.compute.common.internal.keys.SshKeyPair;
-import com.eucalyptus.util.RestrictedType;
+import com.eucalyptus.auth.type.RestrictedType;
 import com.eucalyptus.compute.common.internal.vmtypes.VmType;
 import com.google.common.base.Objects;
 import com.google.common.collect.Sets;

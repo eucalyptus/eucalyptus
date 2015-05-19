@@ -65,16 +65,18 @@ import java.util.List;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.euare.principal.Account;
+import com.eucalyptus.auth.euare.principal.EuareAccount;
+import com.eucalyptus.auth.euare.principal.EuareGroup;
+import com.eucalyptus.auth.euare.principal.EuareRole;
+import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.euare.principal.GlobalNamespace;
+import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.Certificate;
-import com.eucalyptus.auth.principal.EuareRole;
-import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
-import com.eucalyptus.auth.principal.UserPrincipalImpl;
+import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 
@@ -96,11 +98,11 @@ public class Accounts extends com.eucalyptus.auth.Accounts {
     return getAccountProvider().resolveAccountNumbersForName( accountNameLike );
   }
 
-  public static Account lookupAccountByName( String accountName ) throws AuthException {
+  public static EuareAccount lookupAccountByName( String accountName ) throws AuthException {
     if ( isAccountNumber( accountName ) ) {
-      return (Account) getAccountProvider( ).lookupAccountById( accountName );
+      return (EuareAccount) getAccountProvider( ).lookupAccountById( accountName );
     } else {
-      return (Account) getAccountProvider( ).lookupAccountByName( accountName );
+      return (EuareAccount) getAccountProvider( ).lookupAccountByName( accountName );
     }
   }
 
@@ -129,11 +131,11 @@ public class Accounts extends com.eucalyptus.auth.Accounts {
     }
   }
 
-  public static com.eucalyptus.auth.principal.Account lookupAccountById( String accountId ) throws AuthException {
+  public static EuareAccount lookupAccountById( String accountId ) throws AuthException {
     return getAccountProvider().lookupAccountById( accountId );
   }
 
-  public static com.eucalyptus.auth.principal.Account lookupAccountByCanonicalId(String canonicalId) throws AuthException {
+  public static EuareAccount lookupAccountByCanonicalId(String canonicalId) throws AuthException {
     return getAccountProvider().lookupAccountByCanonicalId( canonicalId );
   }
 
@@ -141,7 +143,7 @@ public class Accounts extends com.eucalyptus.auth.Accounts {
     getAccountProvider().deleteAccount( accountName, forceDeleteSystem, recursive );
   }
 
-  public static List<com.eucalyptus.auth.principal.Account> listAllAccounts( ) throws AuthException {
+  public static List<EuareAccount> listAllAccounts( ) throws AuthException {
     return getAccountProvider().listAllAccounts( );
   }
 
@@ -165,7 +167,7 @@ public class Accounts extends com.eucalyptus.auth.Accounts {
     return new UserPrincipalImpl( role );
   }
 
-  public static boolean isSystemAccount( com.eucalyptus.auth.principal.Account account ) {
+  public static boolean isSystemAccount( EuareAccount account ) {
     return isSystemAccount( account == null ? null : account.getName() );
   }
 
@@ -173,11 +175,11 @@ public class Accounts extends com.eucalyptus.auth.Accounts {
     return new UserPrincipalImpl( user );
   }
 
-  public static com.eucalyptus.auth.principal.Account addSystemAccount( ) throws AuthException {
-    return getAccountProvider().addAccount( com.eucalyptus.auth.principal.Account.SYSTEM_ACCOUNT );
+  public static EuareAccount addSystemAccount( ) throws AuthException {
+    return getAccountProvider().addAccount( EuareAccount.SYSTEM_ACCOUNT );
   }
 
-  public static com.eucalyptus.auth.principal.Account addAccount( @Nullable String accountName ) throws AuthException {
+  public static EuareAccount addAccount( @Nullable String accountName ) throws AuthException {
     return getAccountProvider().addAccount( accountName );
   }
 
@@ -186,8 +188,8 @@ public class Accounts extends com.eucalyptus.auth.Accounts {
    *
    * @return The new account or an existing account with the specified name.
    */
-  public static com.eucalyptus.auth.principal.Account addSystemAccountWithAdmin( final String accountName ) throws AuthException {
-    final com.eucalyptus.auth.principal.Account account = getAccountProvider().addSystemAccount( accountName );
+  public static EuareAccount addSystemAccountWithAdmin( final String accountName ) throws AuthException {
+    final EuareAccount account = getAccountProvider().addSystemAccount( accountName );
     try {
       account.lookupUserByName( User.ACCOUNT_ADMIN );
     } catch ( final AuthException e ) {
@@ -205,5 +207,30 @@ public class Accounts extends com.eucalyptus.auth.Accounts {
 
   protected static AccountProvider getAccountProvider( ) {
     return accounts.get();
+  }
+
+  public static String getGroupFullName( EuareGroup group ) {
+    if ( group.getPath( ).endsWith( "/" ) ) {
+      return group.getPath( ) + group.getName( );
+    } else {
+      return group.getPath( ) + "/" + group.getName( );
+    }
+  }
+
+  public static String getGroupArn( final EuareGroup group ) throws AuthException {
+    return buildArn( group.getAccountNumber( ), PolicySpec.IAM_RESOURCE_GROUP, group.getPath(), group.getName() );
+  }
+
+  public static Predicate<EuareGroup> isUserGroup( ) {
+    return GroupFilters.USER_GROUP;
+  }
+
+  private enum GroupFilters implements Predicate<EuareGroup> {
+    USER_GROUP {
+      @Override
+      public boolean apply( @Nullable final EuareGroup group ) {
+        return group != null && group.isUserGroup( );
+      }
+    }
   }
 }

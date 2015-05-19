@@ -24,7 +24,7 @@ import java.util.List;
 import com.eucalyptus.autoscaling.activities.ActivityCause;
 import com.eucalyptus.autoscaling.activities.ScalingActivity;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 
 /**
  * Immutable minimum view of an auto scaling group.

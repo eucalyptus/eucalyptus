@@ -44,8 +44,8 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.internal.network.NetworkGroup;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.entities.UserMetadata;
-import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.FullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.collect.Sets;
 
 /**

@@ -30,7 +30,7 @@ import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.simpleworkflow.SwfMetadataException;
 import com.eucalyptus.simpleworkflow.WorkflowExecution;
 import com.eucalyptus.simpleworkflow.WorkflowExecutions;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 

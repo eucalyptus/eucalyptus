@@ -67,7 +67,6 @@ import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.blockstorage.entities.CHAPUserInfo;
 import com.eucalyptus.blockstorage.entities.DirectStorageInfo;
 import com.eucalyptus.blockstorage.entities.ISCSIMetaInfo;
@@ -76,6 +75,7 @@ import com.eucalyptus.blockstorage.entities.LVMVolumeInfo;
 import com.eucalyptus.blockstorage.util.BlockStorageUtilSvc;
 import com.eucalyptus.blockstorage.util.BlockStorageUtilSvcImpl;
 import com.eucalyptus.blockstorage.util.StorageProperties;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
@@ -288,7 +288,7 @@ public class ISCSIManager implements StorageExportManager {
 
         if (addUser) {
           // Windows iscsi initiator requires the password length to be 12-16 bytes
-          String password = Hashes.getRandom(16);
+          String password = Crypto.getRandom( 16 );
           password = password.substring(0, 16);
           try {
             addUser("eucalyptus", password);

@@ -20,10 +20,10 @@
 package com.eucalyptus.auth.principal;
 
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.component.annotation.PolicyVendor;
-import com.eucalyptus.util.RestrictedType;
+import com.eucalyptus.auth.policy.annotation.PolicyResourceType;
+import com.eucalyptus.auth.policy.annotation.PolicyVendor;
+import com.eucalyptus.auth.type.RestrictedType;
 
 /**
  *

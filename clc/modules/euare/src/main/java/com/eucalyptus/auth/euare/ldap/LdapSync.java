@@ -77,9 +77,10 @@ import com.eucalyptus.auth.euare.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.LdapException;
 import com.eucalyptus.auth.euare.checker.ValueCheckerFactory;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.EuareUser;
-import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.euare.principal.EuareAccount;
+import com.eucalyptus.auth.euare.principal.EuareGroup;
+import com.eucalyptus.auth.euare.principal.EuareUser;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
@@ -313,9 +314,9 @@ public class LdapSync {
   }
   
   private static void checkConflictingIdentities( Map<String, Set<String>> accountingGroups, Map<String, Set<String>> groups, Map<String, Map<String, String>> users ) {
-    if ( accountingGroups.containsKey( Account.SYSTEM_ACCOUNT ) ) {
-      LOG.error( "Account " + Account.SYSTEM_ACCOUNT + " is reserved for Eucalyptus only. Sync will skip this account from LDAP." );
-      accountingGroups.remove( Account.SYSTEM_ACCOUNT );
+    if ( accountingGroups.containsKey( AccountIdentifiers.SYSTEM_ACCOUNT ) ) {
+      LOG.error( "Account " + AccountIdentifiers.SYSTEM_ACCOUNT + " is reserved for Eucalyptus only. Sync will skip this account from LDAP." );
+      accountingGroups.remove( AccountIdentifiers.SYSTEM_ACCOUNT );
     }
     if ( users.containsKey( User.ACCOUNT_ADMIN ) ) {
       LOG.error( "User " + User.ACCOUNT_ADMIN + " is reserved for Eucalyptus only. Sync will skip this user from LDAP." );
@@ -357,7 +358,7 @@ public class LdapSync {
   private static void addNewAccount( String accountName, Set<String> accountMembers, Map<String, Set<String>> groups, Map<String, Map<String, String>> users ) {
     LOG.debug( "Adding new account " + accountName );
     try {
-      Account account = com.eucalyptus.auth.euare.Accounts.addAccount( accountName );
+      EuareAccount account = com.eucalyptus.auth.euare.Accounts.addAccount( accountName );
       account.addUser( User.ACCOUNT_ADMIN, "/", true, null );
       for ( String user : getAccountUserSet( accountMembers, groups ) ) {
         try {
@@ -373,7 +374,7 @@ public class LdapSync {
         }
       }
       for ( String group : accountMembers ) {
-        Group dbGroup = null;
+        EuareGroup dbGroup = null;
         try {
           LOG.debug( "Adding new group " + group );
           dbGroup = account.addGroup( group, "/" );
@@ -412,7 +413,7 @@ public class LdapSync {
   
   private static void updateAccount( LdapIntegrationConfiguration lic, String accountName, Set<String> accountMembers, Map<String, Set<String>> groups, Map<String, Map<String, String>> users ) {
     LOG.debug( "Updating account " + accountName );
-    Account account = null;
+    EuareAccount account = null;
     try {
       account = Accounts.lookupAccountByName( accountName );
       // Update users first
@@ -458,7 +459,7 @@ public class LdapSync {
     }
   }
   
-  private static void removeObsoleteGroups( Account account, Set<String> oldGroupSet ) {
+  private static void removeObsoleteGroups( EuareAccount account, Set<String> oldGroupSet ) {
     for ( String group : oldGroupSet ) {
       try {
         account.deleteGroup( group, true/* recursive */ );
@@ -469,14 +470,14 @@ public class LdapSync {
     }
   }
 
-  private static void addNewGroup( Account account, String group, Set<String> users ) {
+  private static void addNewGroup( EuareAccount account, String group, Set<String> users ) {
     LOG.debug( "Adding new group " + group + " in account " + account.getName( ) );
     if ( users == null ) {
       LOG.error( "Empty new user set of group " + group );
       return;
     }
     try {
-      Group g = account.addGroup( group, "/" );
+      EuareGroup g = account.addGroup( group, "/" );
       for ( String user : users ) {
         LOG.debug( "Adding " + user + " to " + group );
         g.addUserByName( user );
@@ -487,7 +488,7 @@ public class LdapSync {
     }
   }
 
-  private static void updateGroup( Account account, String group, Set<String> users ) {
+  private static void updateGroup( EuareAccount account, String group, Set<String> users ) {
     LOG.debug( "Updating group " + group + " in account " + account.getName( ) );
     if ( users == null ) {
       LOG.error( "Empty new user set of group " + group );
@@ -496,7 +497,7 @@ public class LdapSync {
     try {
       // Get local user set of the group
       Set<String> localUserSet = Sets.newHashSet( );
-      Group g = account.lookupGroupByName( group );
+      EuareGroup g = account.lookupGroupByName( group );
       for ( User u : g.getUsers( ) ) {
         localUserSet.add( u.getName( ) );
       }
@@ -519,15 +520,15 @@ public class LdapSync {
     }
   }
 
-  private static Set<String> getLocalGroupSet( Account account ) throws AuthException {
+  private static Set<String> getLocalGroupSet( EuareAccount account ) throws AuthException {
     Set<String> groupSet = Sets.newHashSet( );
-    for ( Group group : account.getGroups( ) ) {
+    for ( EuareGroup group : account.getGroups( ) ) {
       groupSet.add( group.getName( ) );
     }
     return groupSet;
   }
 
-  private static void removeObsoleteUsers( Account account, Set<String> oldUserSet ) {
+  private static void removeObsoleteUsers( EuareAccount account, Set<String> oldUserSet ) {
     // We don't want to remove account admin when updating an account
     oldUserSet.remove( User.ACCOUNT_ADMIN );
     
@@ -542,7 +543,7 @@ public class LdapSync {
     }
   }
 
-  private static void addNewUser( Account account, String user, Map<String, String> info ) throws AuthException {
+  private static void addNewUser( EuareAccount account, String user, Map<String, String> info ) throws AuthException {
     LOG.debug( "Adding new user " + user + " in account " + account.getName( ) );
     if ( info == null ) {
       LOG.warn( "Empty user info for user " + user );
@@ -550,7 +551,7 @@ public class LdapSync {
     account.addUser( user, "/", true/* enabled */, info );
   }
 
-  private static void updateUser( Account account, String user, Map<String, String> map ) throws AuthException {
+  private static void updateUser( EuareAccount account, String user, Map<String, String> map ) throws AuthException {
     LOG.debug( "Updating user " + user + " in account " + account.getName( ) );
     if ( map == null ) {
       LOG.error( "Empty info map of user " + user );
@@ -559,7 +560,7 @@ public class LdapSync {
     }
   }
 
-  private static Set<String> getLocalUserSet( Account account ) throws AuthException {
+  private static Set<String> getLocalUserSet( EuareAccount account ) throws AuthException {
     Set<String> userSet = Sets.newHashSet( );
     for ( User user : account.getUsers( ) ) {
       userSet.add( user.getName( ) );
@@ -569,7 +570,7 @@ public class LdapSync {
   
   private static void removeObsoleteAccounts( Set<String> oldAccountSet ) {
     // We don't want to remove system account
-    oldAccountSet.remove( Account.SYSTEM_ACCOUNT );
+    oldAccountSet.remove( EuareAccount.SYSTEM_ACCOUNT );
 
     LOG.debug( "Removing obsolete accounts: " + oldAccountSet );
     for ( final String account : oldAccountSet ) {
@@ -586,7 +587,7 @@ public class LdapSync {
   
   private static Set<String> getLocalAccountSet( ) throws AuthException {
     Set<String> accountSet = Sets.newHashSet( );
-    for ( Account account : com.eucalyptus.auth.euare.Accounts.listAllAccounts() ) {
+    for ( EuareAccount account : com.eucalyptus.auth.euare.Accounts.listAllAccounts() ) {
       accountSet.add( account.getName( ) );
     }
     return accountSet;

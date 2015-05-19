@@ -38,7 +38,7 @@ package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
 import javax.annotation.Nonnull;
-import com.eucalyptus.auth.policy.PolicyAction;
+import com.eucalyptus.auth.policy.annotation.PolicyAction;
 
 
 /**

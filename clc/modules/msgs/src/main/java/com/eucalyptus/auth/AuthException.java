@@ -62,12 +62,10 @@
 
 package com.eucalyptus.auth;
 
-import com.eucalyptus.BaseException;
-
 /**
  * Exception for auth operations.
  */
-public class AuthException extends BaseException {
+public class AuthException extends Exception {
 
   private static final long serialVersionUID = 1L;
   

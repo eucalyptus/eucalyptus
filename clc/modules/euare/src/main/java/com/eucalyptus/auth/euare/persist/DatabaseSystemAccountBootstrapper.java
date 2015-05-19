@@ -25,9 +25,9 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.euare.Accounts;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.EuareRole;
-import com.eucalyptus.auth.principal.EuareUser;
+import com.eucalyptus.auth.euare.principal.EuareAccount;
+import com.eucalyptus.auth.euare.principal.EuareRole;
+import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.util.SystemAccountProvider;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -102,7 +102,7 @@ public class DatabaseSystemAccountBootstrapper extends Bootstrapper {
 
   private static void ensureSystemAccountExists( final SystemAccountProvider provider ) {
     try {
-      Account account;
+      EuareAccount account;
       try {
         account = Accounts.lookupAccountByName( provider.getAlias( ) );
       } catch ( final AuthException e ) {
@@ -132,7 +132,7 @@ public class DatabaseSystemAccountBootstrapper extends Bootstrapper {
     }
   }
 
-  private static void addSystemRole( final Account account,
+  private static void addSystemRole( final EuareAccount account,
                                      final SystemAccountProvider.SystemAccountRole systemAccountRole ) {
     LOG.info( String.format( "Creating system role: %s", systemAccountRole.getName( ) ) );
     try {

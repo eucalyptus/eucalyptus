@@ -103,7 +103,7 @@ public class NetworkInterfaceAssociation implements Serializable {
 
   public String getDisplayIpOwnerId( ) {
     return Principals.isFakeIdentityAccountNumber( ipOwnerId ) ?
-        Principals.systemAccount( ).getName( ) :
+        Principals.systemAccount( ).getAccountAlias( ) :
         ipOwnerId;
   }
 

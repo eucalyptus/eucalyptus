@@ -41,7 +41,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.InvalidAccessKeyAuthException;
-import com.eucalyptus.auth.api.IdentityProvider;
+import com.eucalyptus.auth.api.PrincipalProvider;
 import com.eucalyptus.auth.euare.EuareException;
 import com.eucalyptus.auth.euare.EuareServerCertificateUtil;
 import com.eucalyptus.auth.euare.common.identity.Account;
@@ -119,11 +119,11 @@ public class IdentityService {
 
   private static final Logger logger = Logger.getLogger( IdentityService.class );
 
-  private IdentityProvider identityProvider;
+  private PrincipalProvider principalProvider;
 
   @Inject
-  public IdentityService( @Named( "localIdentityProvider" ) final IdentityProvider identityProvider ) {
-    this.identityProvider = identityProvider;
+  public IdentityService( @Named( "localPrincipalProvider" ) final PrincipalProvider principalProvider ) {
+    this.principalProvider = principalProvider;
   }
 
   public DescribePrincipalResponseType describePrincipal( final DescribePrincipalType request ) throws EuareException {
@@ -133,20 +133,20 @@ public class IdentityService {
     try {
       final UserPrincipal user;
       if ( request.getAccessKeyId() != null ) {
-        user = identityProvider.lookupPrincipalByAccessKeyId( request.getAccessKeyId(), request.getNonce() );
+        user = principalProvider.lookupPrincipalByAccessKeyId( request.getAccessKeyId(), request.getNonce() );
       } else if ( request.getCertificateId() != null ) {
-        user = identityProvider.lookupPrincipalByCertificateId( request.getCertificateId() );
+        user = principalProvider.lookupPrincipalByCertificateId( request.getCertificateId() );
       } else if ( request.getUserId( ) != null ) {
-        user = identityProvider.lookupPrincipalByUserId( request.getUserId( ), request.getNonce( ) );
+        user = principalProvider.lookupPrincipalByUserId( request.getUserId( ), request.getNonce( ) );
       } else if ( request.getRoleId( ) != null ) {
-        user = identityProvider.lookupPrincipalByRoleId( request.getRoleId( ), request.getNonce( ) );
+        user = principalProvider.lookupPrincipalByRoleId( request.getRoleId( ), request.getNonce( ) );
       } else if ( request.getAccountId( ) != null && request.getUsername( ) != null ) {
-        user = identityProvider
+        user = principalProvider
             .lookupPrincipalByAccountNumberAndUsername( request.getAccountId(), request.getUsername() );
       } else if ( request.getAccountId( ) != null ) {
-        user = identityProvider.lookupPrincipalByAccountNumber( request.getAccountId( ) );
+        user = principalProvider.lookupPrincipalByAccountNumber( request.getAccountId( ) );
       } else if ( request.getCanonicalId( ) != null ) {
-        user = identityProvider.lookupPrincipalByCanonicalId( request.getCanonicalId( ) );
+        user = principalProvider.lookupPrincipalByCanonicalId( request.getCanonicalId( ) );
       } else {
         user = null;
       }
@@ -218,15 +218,15 @@ public class IdentityService {
       final Iterable<AccountIdentifiers> accountIdentifiers;
       if ( request.getAlias() != null ) {
         accountIdentifiers =
-            Collections.singleton( identityProvider.lookupAccountIdentifiersByAlias( request.getAlias() ) );
+            Collections.singleton( principalProvider.lookupAccountIdentifiersByAlias( request.getAlias() ) );
       } else if ( request.getCanonicalId() != null ) {
         accountIdentifiers =
-            Collections.singleton( identityProvider.lookupAccountIdentifiersByCanonicalId( request.getCanonicalId() ) );
+            Collections.singleton( principalProvider.lookupAccountIdentifiersByCanonicalId( request.getCanonicalId() ) );
       } else if ( request.getEmail() != null ) {
         accountIdentifiers =
-            Collections.singleton( identityProvider.lookupAccountIdentifiersByEmail( request.getEmail() ) );
+            Collections.singleton( principalProvider.lookupAccountIdentifiersByEmail( request.getEmail() ) );
       } else if ( request.getAliasLike() != null ) {
-        accountIdentifiers = identityProvider.listAccountIdentifiersByAliasMatch( request.getAliasLike() );
+        accountIdentifiers = principalProvider.listAccountIdentifiersByAliasMatch( request.getAliasLike() );
       } else {
         accountIdentifiers = null;
       }
@@ -254,7 +254,7 @@ public class IdentityService {
 
     try {
       final InstanceProfile instanceProfile =
-          identityProvider.lookupInstanceProfileByName( request.getAccountId( ), request.getInstanceProfileName( ) );
+          principalProvider.lookupInstanceProfileByName( request.getAccountId( ), request.getInstanceProfileName( ) );
       result.setInstanceProfile(
           TypeMappers.transform( instanceProfile, com.eucalyptus.auth.euare.common.identity.InstanceProfile.class ) );
       result.setRole(
@@ -272,7 +272,7 @@ public class IdentityService {
     final DescribeRoleResult result = new DescribeRoleResult( );
 
     try {
-      final Role role = identityProvider.lookupRoleByName( request.getAccountId(), request.getRoleName() );
+      final Role role = principalProvider.lookupRoleByName( request.getAccountId(), request.getRoleName() );
       result.setRole(
           TypeMappers.transform( role, com.eucalyptus.auth.euare.common.identity.Role.class ) );
     } catch ( AuthException e ) {
@@ -291,7 +291,7 @@ public class IdentityService {
 
     try {
       final SecurityTokenContent securityTokenContent =
-          identityProvider.decodeSecurityToken( request.getAccessKeyId(), request.getSecurityToken() );
+          principalProvider.decodeSecurityToken( request.getAccessKeyId(), request.getSecurityToken() );
       result.setSecurityToken(
           TypeMappers.transform( securityTokenContent, SecurityToken.class ) );
     } catch ( AuthException e ) {
@@ -309,7 +309,7 @@ public class IdentityService {
     final ReserveNameResult result = new ReserveNameResult( );
 
     try {
-      identityProvider.reserveGlobalName( request.getNamespace(), request.getName(), request.getDuration() );
+      principalProvider.reserveGlobalName( request.getNamespace(), request.getName(), request.getDuration() );
     } catch ( AuthException e ) {
       throw handleException( e );
     }

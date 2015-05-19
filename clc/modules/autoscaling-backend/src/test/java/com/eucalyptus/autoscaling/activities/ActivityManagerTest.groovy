@@ -20,17 +20,9 @@
 package com.eucalyptus.autoscaling.activities
 
 import com.eucalyptus.auth.Accounts
-import com.eucalyptus.auth.api.IdentityProvider
-import com.eucalyptus.auth.principal.AccessKey
-import com.eucalyptus.auth.principal.Account
+import com.eucalyptus.auth.api.PrincipalProvider
 import com.eucalyptus.auth.principal.AccountFullName
-import com.eucalyptus.auth.principal.AccountIdentifiers
-import com.eucalyptus.auth.principal.Certificate
-import com.eucalyptus.auth.principal.EuareRole
-import com.eucalyptus.auth.principal.EuareUser
-import com.eucalyptus.auth.principal.Principals
 import com.eucalyptus.auth.principal.TestProvider
-import com.eucalyptus.auth.principal.User
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration
 import com.eucalyptus.autoscaling.configurations.LaunchConfigurations
@@ -74,7 +66,7 @@ import com.eucalyptus.loadbalancing.common.msgs.RegisterInstancesWithLoadBalance
 import com.eucalyptus.loadbalancing.common.msgs.RegisterInstancesWithLoadBalancerResult
 import com.eucalyptus.loadbalancing.common.msgs.RegisterInstancesWithLoadBalancerType
 import com.eucalyptus.util.Callback
-import com.eucalyptus.util.OwnerFullName
+import com.eucalyptus.auth.principal.OwnerFullName
 import com.eucalyptus.util.TypeMappers
 import com.eucalyptus.ws.WebServicesException
 import com.google.common.base.Function
@@ -1265,7 +1257,7 @@ class ActivityManagerTest {
     manager
   }
 
-  IdentityProvider identityProvider() {
+  PrincipalProvider identityProvider() {
     new TestProvider( )
   }
 

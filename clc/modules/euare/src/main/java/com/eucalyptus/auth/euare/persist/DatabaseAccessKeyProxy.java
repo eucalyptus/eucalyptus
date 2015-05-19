@@ -68,6 +68,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.euare.persist.entities.AccessKeyEntity;
+import com.eucalyptus.auth.euare.principal.EuareAccessKey;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import java.util.concurrent.ExecutionException;
@@ -75,7 +76,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
 
-public class DatabaseAccessKeyProxy implements AccessKey {
+public class DatabaseAccessKeyProxy implements EuareAccessKey {
 
   private static final long serialVersionUID = 1L;
   

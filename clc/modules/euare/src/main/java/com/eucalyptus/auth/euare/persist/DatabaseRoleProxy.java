@@ -36,13 +36,12 @@ import com.eucalyptus.auth.euare.checker.ValueCheckerFactory;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
+import com.eucalyptus.auth.euare.principal.EuareAccount;
+import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.policy.PolicyPolicy;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.euare.principal.EuareInstanceProfile;
-import com.eucalyptus.auth.principal.BaseInstanceProfile;
-import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.PolicyScope;
 import com.eucalyptus.auth.principal.PolicyVersion;
@@ -51,7 +50,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.Tx;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
@@ -112,7 +111,7 @@ public class DatabaseRoleProxy implements EuareRole {
   }
 
   @Override
-  public String getRoleArn() throws AuthException {
+  public String getRoleArn( ) throws AuthException {
     return Accounts.getRoleArn( this );
   }
 
@@ -181,9 +180,8 @@ public class DatabaseRoleProxy implements EuareRole {
     return DatabaseAuthUtils.extract( accountNumberSupplier );
   }
 
-  @Override
-  public Account getAccount() throws AuthException {
-    final List<Account> results = Lists.newArrayList();
+  public EuareAccount getAccount() throws AuthException {
+    final List<EuareAccount> results = Lists.newArrayList();
     dbCallback( "getAccount", new Callback<RoleEntity>() {
       @Override
       public void fire( final RoleEntity roleEntity ) {
@@ -260,7 +258,7 @@ public class DatabaseRoleProxy implements EuareRole {
   }
 
   @Override
-  public List<? extends BaseInstanceProfile> getInstanceProfiles() throws AuthException {
+  public List<EuareInstanceProfile> getInstanceProfiles() throws AuthException {
     final List<EuareInstanceProfile> results = Lists.newArrayList( );
     try ( final TransactionResource db = Entities.transactionFor( InstanceProfileEntity.class ) ) {
       @SuppressWarnings( "unchecked" )

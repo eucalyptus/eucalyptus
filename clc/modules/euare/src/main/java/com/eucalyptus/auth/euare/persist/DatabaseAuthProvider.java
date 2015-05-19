@@ -71,10 +71,11 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.InvalidAccessKeyAuthException;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
+import com.eucalyptus.auth.euare.principal.EuareAccount;
+import com.eucalyptus.auth.euare.principal.EuareRole;
+import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.AccountIdentifiersImpl;
-import com.eucalyptus.auth.principal.EuareRole;
-import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.entities.Entities;
 import org.apache.log4j.Logger;
 import org.hibernate.FetchMode;
@@ -90,7 +91,6 @@ import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.TransactionResource;
@@ -146,7 +146,7 @@ public class DatabaseAuthProvider implements AccountProvider {
    * Add account admin user separately.
    */
   @Override
-  public Account addAccount( @Nullable String accountName ) throws AuthException {
+  public EuareAccount addAccount( @Nullable String accountName ) throws AuthException {
     if ( accountName != null ) {
       try {
         ACCOUNT_NAME_CHECKER.check( accountName );
@@ -165,10 +165,10 @@ public class DatabaseAuthProvider implements AccountProvider {
    *
    */
   @Override
-  public Account addSystemAccount( String accountName ) throws AuthException {
+  public EuareAccount addSystemAccount( String accountName ) throws AuthException {
     if ( accountName.startsWith( AccountIdentifiers.SYSTEM_ACCOUNT_PREFIX ) ) {
       try {
-        ACCOUNT_NAME_CHECKER.check( accountName.substring( Account.SYSTEM_ACCOUNT_PREFIX.length( ) ) );
+        ACCOUNT_NAME_CHECKER.check( accountName.substring( EuareAccount.SYSTEM_ACCOUNT_PREFIX.length( ) ) );
       } catch ( InvalidValueException e ) {
         Debugging.logError( LOG, e, "Invalid account name " + accountName );
         throw new AuthException( AuthException.INVALID_NAME, e );
@@ -177,7 +177,7 @@ public class DatabaseAuthProvider implements AccountProvider {
       throw new AuthException( AuthException.INVALID_NAME );
     }
 
-    Account account = null;
+    EuareAccount account = null;
     try {
       account = lookupAccountByName( accountName );
     } catch ( AuthException e ) {
@@ -194,7 +194,7 @@ public class DatabaseAuthProvider implements AccountProvider {
   /**
    *
    */
-  private Account doAddAccount( @Nullable String accountName ) throws AuthException {
+  private EuareAccount doAddAccount( @Nullable String accountName ) throws AuthException {
     AccountEntity account = new AccountEntity( accountName );
     try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
       Entities.persist( account );
@@ -302,8 +302,8 @@ public class DatabaseAuthProvider implements AccountProvider {
   }
 
   @Override
-  public List<Account> listAllAccounts( ) throws AuthException {
-    List<Account> results = Lists.newArrayList( );
+  public List<EuareAccount> listAllAccounts( ) throws AuthException {
+    List<EuareAccount> results = Lists.newArrayList( );
     try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
       for ( AccountEntity account : Entities.query( new AccountEntity( ), true ) ) {
         results.add( new DatabaseAccountProxy( account ) );
@@ -346,7 +346,7 @@ public class DatabaseAuthProvider implements AccountProvider {
   }
 
   @Override
-  public Account lookupAccountByName( String accountName ) throws AuthException {
+  public EuareAccount lookupAccountByName( String accountName ) throws AuthException {
     if ( accountName == null ) {
       throw new AuthException( AuthException.EMPTY_ACCOUNT_NAME );
     }
@@ -371,7 +371,7 @@ public class DatabaseAuthProvider implements AccountProvider {
   }
 
   @Override
-  public Account lookupAccountById( final String accountId ) throws AuthException {
+  public EuareAccount lookupAccountById( final String accountId ) throws AuthException {
     if ( accountId == null ) {
       throw new AuthException( AuthException.EMPTY_ACCOUNT_ID );
     }
@@ -386,7 +386,7 @@ public class DatabaseAuthProvider implements AccountProvider {
   }
 
     @Override
-    public Account lookupAccountByCanonicalId( final String canonicalId ) throws AuthException {
+    public EuareAccount lookupAccountByCanonicalId( final String canonicalId ) throws AuthException {
       if ( canonicalId == null || "".equals(canonicalId) ) {
           throw new AuthException( AuthException.EMPTY_CANONICAL_ID );
       }

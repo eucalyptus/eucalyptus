@@ -23,7 +23,7 @@ import static com.eucalyptus.compute.common.CloudMetadata.DhcpOptionSetMetadata;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.common.internal.vpc.DhcpOptionSet;
 import com.eucalyptus.compute.common.internal.vpc.DhcpOptionSets;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 
 /**
  *

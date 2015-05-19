@@ -22,7 +22,7 @@ package com.eucalyptus.autoscaling.groups;
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.ScalingProcessTypeMetadata;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.base.Predicate;
 
 /**

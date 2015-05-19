@@ -82,20 +82,22 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.PolicyResourceContext;
-import com.eucalyptus.auth.policy.PolicyAction;
-import com.eucalyptus.auth.policy.PolicyResourceType;
+import com.eucalyptus.auth.policy.annotation.PolicyAction;
+import com.eucalyptus.auth.policy.annotation.PolicyResourceType;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.Policy;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.Principal;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.auth.type.LimitedType;
+import com.eucalyptus.auth.type.RestrictedType;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.ComponentMessage;
-import com.eucalyptus.component.annotation.PolicyVendor;
+import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
@@ -116,16 +118,32 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import com.eucalyptus.auth.AuthContextSupplier;
 import static com.eucalyptus.auth.PolicyResourceContext.PolicyResourceInfo;
 import static com.eucalyptus.util.Parameters.checkParam;
-import static com.eucalyptus.util.RestrictedType.AccountRestrictedType;
-import static com.eucalyptus.util.RestrictedType.PolicyRestrictedType;
-import static com.eucalyptus.util.RestrictedType.UserRestrictedType;
+import static com.eucalyptus.auth.type.RestrictedType.AccountRestrictedType;
+import static com.eucalyptus.auth.type.RestrictedType.PolicyRestrictedType;
+import static com.eucalyptus.auth.type.RestrictedType.UserRestrictedType;
 import static org.hamcrest.Matchers.notNullValue;
 
 public class RestrictedTypes {
   static Logger LOG = Logger.getLogger( RestrictedTypes.class );
 
   private static final Interner<AllocationScope> allocationInterner = Interners.newWeakInterner( );
-  
+
+  /**
+   * Map request to policy language's action string.
+   *
+   * @param request The request message
+   * @return The IAM ARN action string.
+   */
+  public static String requestToAction( BaseMessage request ) {
+    if ( request != null ) {
+      PolicyAction action = Ats.from( request ).get( PolicyAction.class );
+      if ( action != null ) {
+        return action.action( );
+      }
+    }
+    return null;
+  }
+
   /**
    * Annotation for use on a Class implementing Function<String,T extends RestrictedType>,
    * that is, one which converts a string reference into a type reference for the object T
@@ -158,7 +176,7 @@ public class RestrictedTypes {
   
   /**
    * Implementations <strong>measure</strong> the quantity of {@code T}, the <i>resource type</i>,
-   * currently ascribed to a user, via {@link OwnerFullName}. In other words, types annotated with
+   * currently ascribed to a user, via {@link com.eucalyptus.auth.principal.OwnerFullName}. In other words, types annotated with
    * this encapsulate a service and resource-specific method for computing the current
    * {@code quantity} of {@code resource type} ascribed to {@code ownerFullName}.
    */
@@ -804,7 +822,7 @@ public class RestrictedTypes {
   }
 
   public static String getIamActionByMessageType( final BaseMessage request ) {
-    String action = PolicySpec.requestToAction( request );
+    String action = requestToAction( request );
     if ( action == null ) {
       if ( request != null ) {
         return request.getClass( ).getSimpleName( ).replaceAll( "(ResponseType|Type)$", "" ).toLowerCase( );

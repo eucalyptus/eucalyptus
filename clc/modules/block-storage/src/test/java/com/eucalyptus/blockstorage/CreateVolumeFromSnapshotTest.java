@@ -66,9 +66,9 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.blockstorage.msgs.CreateStorageVolumeResponseType;
 import com.eucalyptus.blockstorage.msgs.CreateStorageVolumeType;
+import com.eucalyptus.crypto.Crypto;
 
 @Ignore("Manual development test")
 public class CreateVolumeFromSnapshotTest {
@@ -81,7 +81,7 @@ public class CreateVolumeFromSnapshotTest {
     String userId = "admin";
 
     String snapshotId = "snap-ApSNO9uFwfdlYw..";
-    String volumeId = "vol-" + Hashes.getRandom(10);
+    String volumeId = "vol-" + Crypto.getRandom( 10 );
     CreateStorageVolumeType createVolumeFromSnapshotRequest = new CreateStorageVolumeType();
     createVolumeFromSnapshotRequest.setVolumeId(volumeId);
     createVolumeFromSnapshotRequest.setUserId(userId);

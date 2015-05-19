@@ -34,8 +34,8 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
-import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.FullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.base.Predicate;
 
 /**

@@ -74,6 +74,7 @@ import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity;
+import com.eucalyptus.auth.euare.principal.EuareAccountScopedPrincipal;
 import com.eucalyptus.auth.principal.AccountScopedPrincipal;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
@@ -420,7 +421,7 @@ public class DatabaseAuthUtils {
     }
   }
 
-  static Supplier<String> getAccountNumberSupplier( final AccountScopedPrincipal principal ){
+  static Supplier<String> getAccountNumberSupplier( final EuareAccountScopedPrincipal principal ){
     return Suppliers.memoize( new Supplier<String>() {
       @Override
       public String get() {

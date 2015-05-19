@@ -43,7 +43,7 @@ import com.eucalyptus.imaging.common.ImportDiskImage;
 import com.eucalyptus.imaging.common.backend.msgs.ImportImageType;
 import com.eucalyptus.imaging.ImportTaskProperties;
 import com.eucalyptus.util.Dates;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 /**

@@ -20,17 +20,9 @@
 package com.eucalyptus.autoscaling
 
 import com.eucalyptus.auth.Accounts
-import com.eucalyptus.auth.api.IdentityProvider
-import com.eucalyptus.auth.principal.AccessKey
-import com.eucalyptus.auth.principal.Account
+import com.eucalyptus.auth.api.PrincipalProvider
 import com.eucalyptus.auth.principal.AccountFullName
-import com.eucalyptus.auth.principal.AccountIdentifiers
-import com.eucalyptus.auth.principal.Certificate
-import com.eucalyptus.auth.principal.EuareRole
-import com.eucalyptus.auth.principal.EuareUser
-import com.eucalyptus.auth.principal.Principals
 import com.eucalyptus.auth.principal.TestProvider
-import com.eucalyptus.auth.principal.User
 import com.eucalyptus.autoscaling.activities.ActivityCause
 import com.eucalyptus.autoscaling.activities.ActivityManager
 import com.eucalyptus.autoscaling.activities.ActivityStatusCode
@@ -98,7 +90,7 @@ import com.eucalyptus.context.Contexts
 import com.eucalyptus.crypto.util.Timestamps
 import com.eucalyptus.util.Callback
 import com.eucalyptus.util.Consumer
-import com.eucalyptus.util.OwnerFullName
+import com.eucalyptus.auth.principal.OwnerFullName
 import com.eucalyptus.util.TypeMappers
 import com.google.common.base.Function
 import com.google.common.base.Predicate
@@ -457,7 +449,7 @@ class AutoScalingServiceTest {
         scalingActivities )
   }
 
-  IdentityProvider identityProvider() {
+  PrincipalProvider identityProvider() {
     new TestProvider( )
   }
 

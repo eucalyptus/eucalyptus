@@ -62,10 +62,9 @@
 
 package com.eucalyptus.compute.common;
 
-import com.eucalyptus.auth.policy.PolicyResourceType;
-import com.eucalyptus.component.annotation.PolicyVendor;
-import com.eucalyptus.util.LimitedType;
-import com.eucalyptus.util.RestrictedType;
+import com.eucalyptus.auth.policy.annotation.PolicyResourceType;
+import com.eucalyptus.auth.policy.annotation.PolicyVendor;
+import com.eucalyptus.auth.type.RestrictedType;
 
 /**
  * GRZE:WARN: values are intentionally opaque strings and /not/ a symbolic reference. do not change

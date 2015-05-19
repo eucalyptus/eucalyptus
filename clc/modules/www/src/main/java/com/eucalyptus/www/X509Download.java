@@ -84,7 +84,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.eucalyptus.auth.AuthenticationProperties;
 import com.eucalyptus.auth.euare.Accounts;
-import com.eucalyptus.auth.euare.principal.Account;
+import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.bootstrap.Host;
@@ -154,7 +154,7 @@ public class X509Download extends HttpServlet {
     
     EuareUser user = null; // Use the internal Euare API as X.509 download will be removed soon.
     try {
-      Account account = Accounts.lookupAccountByName( accountName );
+      EuareAccount account = Accounts.lookupAccountByName( accountName );
       user = (EuareUser) account.lookupUserByName( userName );
       if ( !user.isEnabled( ) ) {
         hasError( HttpServletResponse.SC_FORBIDDEN, "Access is not authorized", response );

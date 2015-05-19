@@ -80,7 +80,7 @@ public class SecurityTokenAWSCredentialsProvider implements AWSCredentialsProvid
       @Override
       public AWSCredentials get() {
         try {
-          final SecurityToken securityToken = SecurityTokenManager.issueSecurityToken( user.get( ), EXPIRATION_SECS );
+          final SecurityToken securityToken = SecurityTokenManager.issueSecurityToken( user.get(), EXPIRATION_SECS );
           return new BasicSessionCredentials(
               securityToken.getAccessKeyId( ),
               securityToken.getSecretKey( ),

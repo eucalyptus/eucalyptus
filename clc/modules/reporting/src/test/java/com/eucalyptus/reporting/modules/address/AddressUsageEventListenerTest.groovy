@@ -28,7 +28,7 @@ import com.eucalyptus.reporting.event_store.ReportingElasticIpDeleteEvent
 import com.eucalyptus.reporting.event_store.ReportingElasticIpAttachEvent
 import com.eucalyptus.reporting.event_store.ReportingElasticIpDetachEvent
 import com.eucalyptus.reporting.service.ReportingService
-import com.eucalyptus.util.OwnerFullName
+import com.eucalyptus.auth.principal.OwnerFullName
 import com.google.common.base.Charsets
 import groovy.transform.CompileStatic
 import org.junit.BeforeClass

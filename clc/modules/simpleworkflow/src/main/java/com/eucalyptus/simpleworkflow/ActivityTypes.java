@@ -28,7 +28,7 @@ import com.eucalyptus.simpleworkflow.common.model.ActivityTypeDetail;
 import com.eucalyptus.simpleworkflow.common.model.ActivityTypeInfo;
 import com.eucalyptus.simpleworkflow.common.model.TaskList;
 import com.eucalyptus.util.Callback;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;

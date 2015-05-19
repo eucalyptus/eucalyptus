@@ -351,9 +351,9 @@ public class Context {
           if ( Accounts.isAccountNumber( userId ) ) {
             user = Accounts.lookupPrincipalByAccountNumber( userId );
           } else if ( Accounts.isRoleIdentifier( userId ) ) {
-            user = Accounts.lookupPrincipalByRoleId( userId, null );
+            user = Accounts.lookupPrincipalByRoleId( userId );
           } else {
-            user = Accounts.lookupPrincipalByUserId( userId, null );
+            user = Accounts.lookupPrincipalByUserId( userId );
           }
           return createImpersona( ctx, user );
         } catch ( AuthException ex ) {

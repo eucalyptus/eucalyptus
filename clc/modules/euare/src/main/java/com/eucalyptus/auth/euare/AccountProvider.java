@@ -64,23 +64,23 @@ package com.eucalyptus.auth.euare;
 
 import java.util.List;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.euare.principal.EuareAccount;
+import com.eucalyptus.auth.euare.principal.EuareRole;
+import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.Certificate;
-import com.eucalyptus.auth.principal.EuareRole;
-import com.eucalyptus.auth.principal.EuareUser;
 
 public interface AccountProvider {
 
-  Account lookupAccountByName( String accountName ) throws AuthException;
-  Account lookupAccountById( String accountId ) throws AuthException;
-  Account lookupAccountByCanonicalId(String canonicalId) throws AuthException;
+  EuareAccount lookupAccountByName( String accountName ) throws AuthException;
+  EuareAccount lookupAccountById( String accountId ) throws AuthException;
+  EuareAccount lookupAccountByCanonicalId(String canonicalId) throws AuthException;
 
-  Account addAccount( String accountName ) throws AuthException;
-  Account addSystemAccount( String accountName ) throws AuthException;
+  EuareAccount addAccount( String accountName ) throws AuthException;
+  EuareAccount addSystemAccount( String accountName ) throws AuthException;
   void deleteAccount( String accountName, boolean forceDeleteSystem, boolean recursive ) throws AuthException;
-  List<Account> listAllAccounts( ) throws AuthException;
+  List<EuareAccount> listAllAccounts( ) throws AuthException;
   List<AccountIdentifiers> resolveAccountNumbersForName( String accountNameLike ) throws AuthException;
   
   List<EuareUser> listAllUsers( ) throws AuthException;

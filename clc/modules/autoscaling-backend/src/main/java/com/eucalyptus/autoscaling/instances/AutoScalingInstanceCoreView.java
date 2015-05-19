@@ -20,7 +20,7 @@
 package com.eucalyptus.autoscaling.instances;
 
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingInstanceMetadata;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 
 /**
  * Immutable core view of an auto scaling instance.

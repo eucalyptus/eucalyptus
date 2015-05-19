@@ -63,9 +63,6 @@
 package com.eucalyptus.ws.client;
 
 import java.net.URI;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -78,25 +75,16 @@ import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Dispatcher;
-import com.eucalyptus.component.NoSuchServiceException;
-import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.ServiceContext;
-import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.FullName;
+import com.eucalyptus.auth.principal.FullName;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
-import com.google.common.base.Throwables;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public abstract class ServiceDispatcher implements Dispatcher {

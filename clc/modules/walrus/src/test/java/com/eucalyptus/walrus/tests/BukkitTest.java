@@ -66,7 +66,7 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.walrus.WalrusControl;
 import com.eucalyptus.walrus.msgs.CreateBucketResponseType;
@@ -86,7 +86,7 @@ public class BukkitTest {
   @Test
   public void testWalrusControl() throws Exception {
 
-    String bucketName = "halo" + Hashes.getRandom(6);
+    String bucketName = "halo" + Crypto.getRandom( 6 );
     String userId = "admin";
 
     CreateBucketType createBucketRequest = new CreateBucketType(bucketName);

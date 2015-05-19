@@ -68,17 +68,14 @@ import java.util.List;
 import java.util.Objects;
 import java.util.ServiceLoader;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.api.IdentityProvider;
+import com.eucalyptus.auth.api.PrincipalProvider;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.AccountIdentifiersImpl;
 import com.eucalyptus.auth.principal.BaseInstanceProfile;
 import com.eucalyptus.auth.principal.BaseRole;
-import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.SecurityTokenContent;
@@ -86,7 +83,6 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterables;
@@ -127,7 +123,7 @@ import com.google.common.collect.Lists;
 public class Accounts {
   private static final Logger LOG = Logger.getLogger( Accounts.class );
 
-  private static Supplier<IdentityProvider> identities = serviceLoaderSupplier( IdentityProvider.class );
+  private static Supplier<PrincipalProvider> identities = serviceLoaderSupplier( PrincipalProvider.class );
 
   protected static <T> Supplier<T> serviceLoaderSupplier( final Class<T> serviceClass ) {
     return Suppliers.memoize( new Supplier<T>() {
@@ -138,21 +134,38 @@ public class Accounts {
     } );
   }
 
-  public static void setIdentityProvider( IdentityProvider provider ) {
+  public static void setIdentityProvider( PrincipalProvider provider ) {
     synchronized ( Accounts.class ) {
       LOG.info( "Setting the identity provider to: " + provider.getClass( ) );
       identities = Suppliers.ofInstance( provider );
     }
   }
 
-  protected static IdentityProvider getIdentityProvider( ) {
+  protected static PrincipalProvider getIdentityProvider( ) {
     return identities.get();
   }
 
+  /**
+   * Get the euare service certificate for a region, locate by account number.
+   *
+   * @param accountNumber The account number used to identify the region
+   * @return The euare certificate for the accounts region
+   * @throws AuthException On error
+   */
   public static X509Certificate getEuareCertificate( final String accountNumber ) throws AuthException {
     return getIdentityProvider( ).getCertificateByAccountNumber( accountNumber );
   }
 
+  /**
+   * Create a certificate signed by the euare certificate for a region, locate by account number.
+   *
+   * @param accountNumber The account number used to identify the region
+   * @param publicKey The public key for the certificate
+   * @param principal The principal for the certificate subject
+   * @param expiryInDays The certificate expiry
+   * @return The ne certificate
+   * @throws AuthException On error
+   */
   public static X509Certificate signCertificate(
       final String accountNumber,
       final RSAPublicKey publicKey,
@@ -252,6 +265,11 @@ public class Accounts {
   }
 
   @Nonnull
+  public static UserPrincipal lookupPrincipalByRoleId( String roleId ) throws AuthException {
+    return getIdentityProvider( ).lookupPrincipalByRoleId( roleId, null );
+  }
+
+  @Nonnull
   public static UserPrincipal lookupPrincipalByRoleId( String roleId, String nonce ) throws AuthException {
     return getIdentityProvider( ).lookupPrincipalByRoleId( roleId, nonce );
   }
@@ -271,6 +289,13 @@ public class Accounts {
     return getIdentityProvider( ).lookupRoleByName( accountNumber, name );
   }
 
+  /**
+   * Lookup all enabled user certificates for an account.
+   *
+   * @param accountNumber The account number for the users
+   * @return The list of certificates
+   * @throws AuthException On error
+   */
   @Nonnull
   public static List<X509Certificate> lookupAccountCertificatesByAccountNumber( String accountNumber ) throws AuthException {
     return getIdentityProvider( ).lookupAccountCertificatesByAccountNumber( accountNumber );
@@ -281,6 +306,13 @@ public class Accounts {
     return getIdentityProvider().decodeSecurityToken( accessKeyIdentifier, securityToken );
   }
 
+  /**
+   * Lookup a system account by alias
+   *
+   * @param alias The alias for the account
+   * @return The principal representing the accounts admin user
+   * @throws AuthException If the alias does not represent a system account or on other error
+   */
   public static UserPrincipal lookupSystemAccountByAlias( final String alias ) throws AuthException {
     if ( !isSystemAccount( alias ) ) {
       throw new AuthException( "Not a system account: " + alias );
@@ -289,12 +321,18 @@ public class Accounts {
     return lookupPrincipalByAccountNumber( accountNumber );
   }
 
+  /**
+   * Lookup the admin use for the eucalyptus account.
+   *
+   * @return The principal representing the eucalyptus admin user
+   * @throws AuthException
+   */
   public static UserPrincipal lookupSystemAdmin( ) throws AuthException {
     return lookupSystemAccountByAlias( AccountIdentifiers.SYSTEM_ACCOUNT );
   }
 
-  public static String getAccountFullName( Account account ) {
-    return "/" + account.getName( );
+  public static String getAccountFullName( AccountIdentifiers account ) {
+    return "/" + account.getAccountAlias();
   }
 
   public static String getUserFullName( User user ) {
@@ -302,14 +340,6 @@ public class Accounts {
       return user.getPath( ) + user.getName( );
     } else {
       return user.getPath( ) + "/" + user.getName( );
-    }
-  }
-  
-  public static String getGroupFullName( Group group ) {
-    if ( group.getPath( ).endsWith( "/" ) ) {
-      return group.getPath( ) + group.getName( );
-    } else {
-      return group.getPath( ) + "/" + group.getName( );
     }
   }
 
@@ -337,10 +367,6 @@ public class Accounts {
     return buildArn( user.getAccountNumber( ), PolicySpec.IAM_RESOURCE_USER, user.getPath(), user.getName() );
   }
 
-  public static String getGroupArn( final Group group ) throws AuthException {
-    return buildArn( group.getAccountNumber( ), PolicySpec.IAM_RESOURCE_GROUP, group.getPath(), group.getName() );
-  }
-
   public static String getRoleArn( final BaseRole role ) throws AuthException {
     return buildArn( role.getAccountNumber( ), PolicySpec.IAM_RESOURCE_ROLE, role.getPath(), role.getName() );
   }
@@ -349,10 +375,10 @@ public class Accounts {
     return buildArn( instanceProfile.getAccountNumber( ), PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, instanceProfile.getPath( ), instanceProfile.getName( ) );
   }
 
-  private static String buildArn( final String accountNumber,
-                                  final String type,
-                                  final String path,
-                                  final String name ) throws AuthException {
+  protected static String buildArn( final String accountNumber,
+                                    final String type,
+                                    final String path,
+                                    final String name ) throws AuthException {
     return new EuareResourceName( accountNumber, type, path, name ).toString( );
   }
 
@@ -364,25 +390,8 @@ public class Accounts {
     return identifier.matches( "[0-9]{12}" );
   }
 
-  public static Function<Account,String> toAccountNumber() {
-    return AccountStringProperties.ACCOUNT_NUMBER;
-  }
-
   public static Function<User,String> toUserId() {
     return UserStringProperties.USER_ID;
-  }
-
-  public static Predicate<Group> isUserGroup( ) {
-    return GroupFilters.USER_GROUP;
-  }
-
-  private enum AccountStringProperties implements Function<Account,String> {
-    ACCOUNT_NUMBER {
-      @Override
-      public String apply( final Account account ) {
-        return account.getAccountNumber();
-      }
-    }
   }
 
   private enum UserStringProperties implements Function<User,String> {
@@ -404,12 +413,4 @@ public class Accounts {
     }
   }
 
-  private enum GroupFilters implements Predicate<Group> {
-    USER_GROUP {
-      @Override
-      public boolean apply( @Nullable final Group group ) {
-        return group != null && group.isUserGroup( );
-      }
-    }
-  }
 }

@@ -68,9 +68,9 @@ import com.eucalyptus.auth.euare.Accounts;
 import com.eucalyptus.auth.AuthenticationProperties;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.euare.ldap.LdapSync;
+import com.eucalyptus.auth.euare.principal.EuareAccount;
+import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.policy.PolicyEngineImpl;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
@@ -109,7 +109,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   
   private void ensureUserInfoNormalized() {
     try {
-      Account account = Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT );
+      EuareAccount account = Accounts.lookupAccountByName( EuareAccount.SYSTEM_ACCOUNT );
       EuareUser sysadmin = account.lookupUserByName( EuareUser.ACCOUNT_ADMIN );
       if ( sysadmin.getInfo( ).containsKey( "Email" ) ) {
         Threads.newThread( new Runnable( ) {

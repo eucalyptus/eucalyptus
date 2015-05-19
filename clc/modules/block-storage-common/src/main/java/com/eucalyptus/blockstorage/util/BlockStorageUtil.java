@@ -76,10 +76,8 @@ import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.BaseRole;
-import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.component.ComponentId;

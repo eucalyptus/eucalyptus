@@ -19,7 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.common;
 
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.CloudControllerColocatingBootstrapper;
 import com.eucalyptus.bootstrap.Provides;
@@ -27,7 +26,7 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
-import com.eucalyptus.component.annotation.PolicyVendor;
+import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.loadbalancing.common.policy.LoadBalancingPolicySpec;
 

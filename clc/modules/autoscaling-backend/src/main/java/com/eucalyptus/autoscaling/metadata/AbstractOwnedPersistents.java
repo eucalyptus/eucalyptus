@@ -24,7 +24,7 @@ import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.entities.AbstractPersistentSupport;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.RestrictedType;
+import com.eucalyptus.auth.type.RestrictedType;
 import com.google.common.base.Function;
 
 /**

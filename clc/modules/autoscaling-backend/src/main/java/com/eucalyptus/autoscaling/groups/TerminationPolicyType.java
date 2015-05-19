@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstanceCoreView;
 import com.eucalyptus.util.CollectionUtils;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicates;

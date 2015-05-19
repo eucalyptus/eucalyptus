@@ -69,7 +69,7 @@ import com.eucalyptus.compute.common.ImageDetails;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;

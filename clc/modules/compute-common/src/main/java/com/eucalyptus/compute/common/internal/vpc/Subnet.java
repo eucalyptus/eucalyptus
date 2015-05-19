@@ -38,8 +38,8 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.Cidr;
-import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.FullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 
 /**
  *
