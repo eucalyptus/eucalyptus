@@ -66,12 +66,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
-import com.eucalyptus.system.Ats;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 /**
  * NOTE: Please do not add service specific IAM policy details here.
@@ -566,23 +564,7 @@ public class PolicySpec {
         vendor.equals( resourceVendor ) :
         resourceVendors.contains( resourceVendor );
   }
-  
-  /**
-   * Map request to policy language's action string.
-   * 
-   * @param request The request message
-   * @return The IAM ARN action string.
-   */
-  public static String requestToAction( BaseMessage request ) {
-    if ( request != null ) {
-      PolicyAction action = Ats.from( request ).get( PolicyAction.class );
-      if ( action != null ) {
-        return action.action( );
-      }
-    }
-    return null;
-  }
-  
+
   public static String describeAction( final String vendor, final String resource ) {
     return "describe" + resource + "s";
   }

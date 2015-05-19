@@ -28,7 +28,7 @@ import com.eucalyptus.compute.common.internal.vpc.NetworkAcl;
 import com.eucalyptus.compute.common.internal.vpc.NetworkAcls;
 import com.eucalyptus.compute.common.internal.vpc.VpcMetadataException;
 import com.eucalyptus.compute.common.internal.vpc.VpcMetadataNotFoundException;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;

@@ -22,16 +22,14 @@ package com.eucalyptus.auth.euare.principal;
 import java.util.Date;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.BaseInstanceProfile;
-import com.eucalyptus.auth.principal.EuareRole;
 
 /**
  *
  */
 public interface EuareInstanceProfile extends BaseInstanceProfile {
 
-  Account getAccount( ) throws AuthException;
+  EuareAccount getAccount( ) throws AuthException;
 
   void setRole( @Nullable EuareRole role ) throws AuthException;
 

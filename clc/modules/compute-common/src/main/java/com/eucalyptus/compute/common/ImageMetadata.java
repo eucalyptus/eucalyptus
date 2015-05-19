@@ -63,7 +63,7 @@
 package com.eucalyptus.compute.common;
 
 import javax.annotation.Nullable;
-import com.eucalyptus.auth.policy.PolicyResourceType;
+import com.eucalyptus.auth.policy.annotation.PolicyResourceType;
 import com.eucalyptus.bootstrap.SystemIds;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;

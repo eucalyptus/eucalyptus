@@ -39,7 +39,7 @@ import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.util.Classes;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.cache.CacheBuilder;

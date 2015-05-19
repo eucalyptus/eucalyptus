@@ -28,7 +28,7 @@ import com.eucalyptus.autoscaling.common.backend.msgs.ScalingPolicyType;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.Callback;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMapper;

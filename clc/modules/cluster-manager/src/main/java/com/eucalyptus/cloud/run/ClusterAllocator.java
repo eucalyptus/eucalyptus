@@ -314,7 +314,7 @@ public class ClusterAllocator implements Runnable {
 
   private void setupCredentialMessages( ) {
     try{
-      final User owner = Accounts.lookupUserById(this.allocInfo.getOwnerFullName().getUserId());
+      final User owner = Accounts.lookupPrincipalByUserId(this.allocInfo.getOwnerFullName().getUserId());
       if(! owner.isSystemAdmin())
         return;
     }catch(final AuthException ex){

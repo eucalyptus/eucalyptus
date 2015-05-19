@@ -32,7 +32,7 @@ import com.eucalyptus.entities.AbstractPersistentSupport;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata;
 import com.eucalyptus.simpleworkflow.common.model.*;
 import com.eucalyptus.simpleworkflow.common.model.WorkflowType;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;

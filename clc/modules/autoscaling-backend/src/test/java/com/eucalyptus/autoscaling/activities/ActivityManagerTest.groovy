@@ -20,17 +20,9 @@
 package com.eucalyptus.autoscaling.activities
 
 import com.eucalyptus.auth.Accounts
-import com.eucalyptus.auth.api.AccountProvider
-import com.eucalyptus.auth.principal.AccessKey
-import com.eucalyptus.auth.principal.Account
+import com.eucalyptus.auth.api.PrincipalProvider
 import com.eucalyptus.auth.principal.AccountFullName
-import com.eucalyptus.auth.principal.AccountIdentifiers
-import com.eucalyptus.auth.principal.Certificate
-import com.eucalyptus.auth.principal.EuareRole
-import com.eucalyptus.auth.principal.EuareUser
-import com.eucalyptus.auth.principal.Group
-import com.eucalyptus.auth.principal.Principals
-import com.eucalyptus.auth.principal.User
+import com.eucalyptus.auth.principal.TestProvider
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration
 import com.eucalyptus.autoscaling.configurations.LaunchConfigurations
@@ -74,7 +66,7 @@ import com.eucalyptus.loadbalancing.common.msgs.RegisterInstancesWithLoadBalance
 import com.eucalyptus.loadbalancing.common.msgs.RegisterInstancesWithLoadBalancerResult
 import com.eucalyptus.loadbalancing.common.msgs.RegisterInstancesWithLoadBalancerType
 import com.eucalyptus.util.Callback
-import com.eucalyptus.util.OwnerFullName
+import com.eucalyptus.auth.principal.OwnerFullName
 import com.eucalyptus.util.TypeMappers
 import com.eucalyptus.ws.WebServicesException
 import com.google.common.base.Function
@@ -89,7 +81,6 @@ import org.junit.BeforeClass
 import org.junit.Test
 
 import java.lang.reflect.Method
-import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
 
 import javax.annotation.Nonnull
@@ -118,7 +109,7 @@ class ActivityManagerTest {
 
   @Test
   void testLaunchInstances() {
-    Accounts.setAccountProvider( accountProvider() )
+    Accounts.setIdentityProvider( identityProvider( ) )
 
     AutoScalingGroup group = new AutoScalingGroup(
         id: "1",
@@ -167,7 +158,7 @@ class ActivityManagerTest {
 
   @Test
   void testRegisterInstances() {
-    Accounts.setAccountProvider( accountProvider() )
+    Accounts.setIdentityProvider( identityProvider( ) )
 
     AutoScalingGroup group = new AutoScalingGroup(
         id: "1",
@@ -250,7 +241,7 @@ class ActivityManagerTest {
 
   @Test
   void testHealthCheckSuccess() {
-    Accounts.setAccountProvider( accountProvider() )
+    Accounts.setIdentityProvider( identityProvider( ) )
 
     AutoScalingGroup group = new AutoScalingGroup(
         id: "1",
@@ -328,7 +319,7 @@ class ActivityManagerTest {
 
   @Test
   void testEC2HealthCheckFailure() {
-    Accounts.setAccountProvider( accountProvider() )
+    Accounts.setIdentityProvider( identityProvider( ) )
 
     AutoScalingGroup group = new AutoScalingGroup(
         id: "1",
@@ -407,7 +398,7 @@ class ActivityManagerTest {
   @Test
   void testELBHealthCheckFailure() {
     for ( HealthCheckType type : HealthCheckType.values() ) {
-      Accounts.setAccountProvider( accountProvider() )
+      Accounts.setIdentityProvider( identityProvider( ) )
 
       AutoScalingGroup group = new AutoScalingGroup(
           id: "1",
@@ -486,7 +477,7 @@ class ActivityManagerTest {
 
   @Test
   void testTerminateInstances() {
-    Accounts.setAccountProvider( accountProvider() )
+    Accounts.setIdentityProvider( identityProvider( ) )
 
     AutoScalingGroup group = new AutoScalingGroup(
         id: "1",
@@ -558,7 +549,7 @@ class ActivityManagerTest {
 
   @Test
   void testTerminateRegisteredInstances() {
-    Accounts.setAccountProvider( accountProvider() )
+    Accounts.setIdentityProvider( identityProvider( ) )
 
     AutoScalingGroup group = new AutoScalingGroup(
         id: "1",
@@ -635,7 +626,7 @@ class ActivityManagerTest {
 
   @Test
   void testLaunchInstancesMultipleAvailabilityZones() {
-    Accounts.setAccountProvider( accountProvider() )
+    Accounts.setIdentityProvider( identityProvider( ) )
 
     AutoScalingGroup group = new AutoScalingGroup(
         id: "1",
@@ -696,7 +687,7 @@ class ActivityManagerTest {
 
   @Test
   void testLaunchInstancesMultipleAvailabilityZonesSkipsUnavailable() {
-    Accounts.setAccountProvider( accountProvider() )
+    Accounts.setIdentityProvider( identityProvider( ) )
 
     AutoScalingGroup group = new AutoScalingGroup(
         id: "1",
@@ -753,7 +744,7 @@ class ActivityManagerTest {
 
   @Test
   void testAvailabilityZoneFailover() {
-    Accounts.setAccountProvider( accountProvider() )
+    Accounts.setIdentityProvider( identityProvider( ) )
 
     AutoScalingGroup group = new AutoScalingGroup(
         id: "1",
@@ -857,7 +848,7 @@ class ActivityManagerTest {
 
   @Test
   void testTerminateInstancesMultipleAvailabilityZones() {
-    Accounts.setAccountProvider( accountProvider() )
+    Accounts.setIdentityProvider( identityProvider( ) )
 
     AutoScalingGroup group = new AutoScalingGroup(
         id: "1",
@@ -984,7 +975,7 @@ class ActivityManagerTest {
 
   @Test
   void testTerminateFromUnwantedAvailabilityZones() {
-    Accounts.setAccountProvider( accountProvider() )
+    Accounts.setIdentityProvider( identityProvider( ) )
 
     AutoScalingGroup group = new AutoScalingGroup(
         id: "1",
@@ -1037,7 +1028,7 @@ class ActivityManagerTest {
 
   @Test
   void testAdministrativeSuspension() {
-    Accounts.setAccountProvider( accountProvider() )
+    Accounts.setIdentityProvider( identityProvider( ) )
 
     AutoScalingGroup group = new AutoScalingGroup(
         id: "1",
@@ -1266,98 +1257,8 @@ class ActivityManagerTest {
     manager
   }
 
-  AccountProvider accountProvider() {
-    new AccountProvider() {
-      @Override
-      Account lookupAccountByName(final String accountName) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      Account lookupAccountById(final String accountId) {
-        Principals.systemAccount( )
-      }
-
-      @Override
-      Account addAccount(final String accountName) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      Account addSystemAccount(final String accountName) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      void deleteAccount(final String accountName, final boolean forceDeleteSystem, final boolean recursive) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      List<Account> listAllAccounts() {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      List<AccountIdentifiers> resolveAccountNumbersForName(final String accountNAmeLike) {
-        [] as Set
-      }
-
-      @Override
-      List<User> listAllUsers() {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      EuareUser lookupUserById(final String userId) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      EuareUser lookupUserByAccessKeyId(final String keyId) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      EuareUser lookupUserByCertificate(final X509Certificate cert) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      Group lookupGroupById(final String groupId) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      EuareRole lookupRoleById(final String roleId) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      Certificate lookupCertificateByHashId(final String certificateId) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      Certificate lookupCertificateById(final String certificateId) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      AccessKey lookupAccessKeyById(final String keyId) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      Account lookupAccountByCanonicalId(String canonicalId) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      EuareUser lookupUserByEmailAddress(String email) {
-        throw new UnsupportedOperationException()
-      }
-    }
+  PrincipalProvider identityProvider() {
+    new TestProvider( )
   }
 
   ScalingActivities autoScalingActivitiesStore( List<ScalingActivity> activities = [] ) {

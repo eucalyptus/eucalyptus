@@ -74,10 +74,8 @@ public interface Certificate extends Serializable {
   String getCertificateId( );
 
   Boolean isActive( );
-  void setActive( Boolean active ) throws AuthException;
-  
+
   Boolean isRevoked( );
-  void setRevoked( Boolean revoked ) throws AuthException;
 
   String getPem( );
 
@@ -92,6 +90,10 @@ public interface Certificate extends Serializable {
       return CertificateToRevokedFlag.INSTANCE;
     }
 
+    public static Function<Certificate,X509Certificate> x509Certificate( ) {
+      return CertificateToX509Certificate.INSTANCE;
+    }
+
     private enum CertificateToRevokedFlag implements Function<Certificate,Boolean> {
       INSTANCE;
 
@@ -99,6 +101,16 @@ public interface Certificate extends Serializable {
       @Override
       public Boolean apply( @Nullable final Certificate certificate ) {
         return certificate == null ? null : certificate.isRevoked( );
+      }
+    }
+
+    private enum CertificateToX509Certificate implements Function<Certificate,X509Certificate> {
+      INSTANCE;
+
+      @Nullable
+      @Override
+      public X509Certificate apply( @Nullable final Certificate certificate ) {
+        return certificate == null ? null : certificate.getX509Certificate( );
       }
     }
   }

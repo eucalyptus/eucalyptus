@@ -149,7 +149,7 @@ import com.eucalyptus.util.Consumers;
 import com.eucalyptus.util.DispatchingClient;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.CheckedListenableFuture;
@@ -582,7 +582,7 @@ public class ActivityManager {
         }
       }
       if ( instanceProfileName != null ) {
-        Accounts.lookupAccountById( accountNumber ).lookupInstanceProfileByName( instanceProfileName );
+        Accounts.lookupInstanceProfileByName( accountNumber, instanceProfileName );
       }
     } catch ( Exception e ) {
       errors.add( "Invalid instance profile: " + iamInstanceProfile );

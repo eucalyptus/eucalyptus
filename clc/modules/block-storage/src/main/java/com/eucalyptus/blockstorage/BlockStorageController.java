@@ -192,12 +192,6 @@ public class BlockStorageController {
     } catch (Exception e) {
       throw new EucalyptusCloudException(e);
     }
-
-    try {
-      BlockStorageUtil.checkAndConfigureBlockStorageAccount();
-    } catch (Exception e) {
-      LOG.warn("Error checking and or configuring blockstorage account during bootstrap. Moving on with the SC bootstrap process");
-    }
   }
 
   public BlockStorageController() {}

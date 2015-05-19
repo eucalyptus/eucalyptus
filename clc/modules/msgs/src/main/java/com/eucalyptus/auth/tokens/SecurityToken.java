@@ -31,10 +31,10 @@ public class SecurityToken {
   private final String token;
   private final long expires;
 
-  SecurityToken( final String accessKeyId,
-                 final String secretKey,
-                 final String token,
-                 final long expires ) {
+  public SecurityToken( final String accessKeyId,
+                        final String secretKey,
+                        final String token,
+                        final long expires ) {
     Preconditions.checkNotNull( accessKeyId, "Access key identifier is required" );
     Preconditions.checkNotNull( secretKey, "Secret key is required" );
     Preconditions.checkNotNull( token, "Token is required" );

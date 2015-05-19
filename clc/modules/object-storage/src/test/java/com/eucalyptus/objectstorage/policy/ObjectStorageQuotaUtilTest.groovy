@@ -21,7 +21,7 @@
 package com.eucalyptus.objectstorage.policy
 
 import com.eucalyptus.auth.Accounts
-import com.eucalyptus.auth.principal.Account
+import com.eucalyptus.auth.principal.AccountIdentifiers
 import com.eucalyptus.auth.principal.UserPrincipal
 import com.eucalyptus.objectstorage.BucketMetadataManagers
 import com.eucalyptus.objectstorage.BucketState
@@ -48,8 +48,8 @@ public class ObjectStorageQuotaUtilTest {
   static int bucketCount = 3
   static int objectCount = 5
   static int size = 1024 * 1024
-  static Account account1
-  static Account account2
+  static AccountIdentifiers account1
+  static AccountIdentifiers account2
   static UserPrincipal a1u1
   static UserPrincipal a1u2
   static UserPrincipal a2u1
@@ -57,11 +57,11 @@ public class ObjectStorageQuotaUtilTest {
 
   private static void initMetaData() {
     def name = "bucket"
-    account1 = Accounts.lookupAccountByName(UnitTestSupport.getTestAccounts().first())
+    account1 = Accounts.lookupAccountIdentifiersByAlias(UnitTestSupport.getTestAccounts().first())
     a1u1 = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
     a1u2 = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).getAt(1), null)
 
-    account2 = Accounts.lookupAccountByName(UnitTestSupport.getTestAccounts().getAt(1))
+    account2 = Accounts.lookupAccountIdentifiersByAlias(UnitTestSupport.getTestAccounts().getAt(1))
     a2u1 = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().getAt(1)).first(), null)
     a2u2 = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().getAt(1)).getAt(1), null)
 
@@ -70,7 +70,7 @@ public class ObjectStorageQuotaUtilTest {
     def b
 
     for (int i = 0; i < bucketCount ; i++) {
-      b = Bucket.getInitializedBucket(name + i, account1.getCanonicalId(), account1.getName(), a1u1.getUserId(), acl, location)
+      b = Bucket.getInitializedBucket(name + i, account1.getCanonicalId(), account1.getAccountAlias(), a1u1.getUserId(), acl, location)
       b = BucketMetadataManagers.getInstance().transitionBucketToState(b, BucketState.creating)
       b = BucketMetadataManagers.getInstance().transitionBucketToState(b, BucketState.extant)
       buckets.add(b)

@@ -102,7 +102,6 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
-import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
@@ -111,6 +110,7 @@ import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.Logs;
@@ -522,7 +522,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
             operationParams.put("ContentType", formFields.get(WalrusProperties.CONTENT_TYPE));
           }
           key = target[0] + "." + objectKey;
-          randomKey = key + "." + Hashes.getRandom(10);
+          randomKey = key + "." + Crypto.getRandom( 10 );
           if (contentLengthString != null)
             operationParams.put("ContentLength", (new Long(contentLength).toString()));
           operationParams.put(WalrusProperties.Headers.RandomKey.toString(), randomKey);
@@ -608,7 +608,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
           } else {
             // handle PUTs
             key = target[0] + "." + objectKey;
-            randomKey = key + "." + Hashes.getRandom(10);
+            randomKey = key + "." + Crypto.getRandom( 10 );
             String contentType = httpRequest.getHeader(WalrusProperties.CONTENT_TYPE);
             if (contentType != null)
               operationParams.put("ContentType", contentType);

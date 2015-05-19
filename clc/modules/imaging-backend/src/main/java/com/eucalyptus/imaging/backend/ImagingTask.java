@@ -48,8 +48,8 @@ import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.imaging.common.ImagingMetadata;
 import com.eucalyptus.imaging.ImportTaskProperties;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.FullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 
 /**
  * @author Sang-Min Park

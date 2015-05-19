@@ -27,7 +27,7 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
-import com.eucalyptus.component.annotation.PolicyVendor;
+import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.component.id.Eucalyptus;
 
 @PolicyVendor( PolicySpec.VENDOR_CLOUDWATCH )

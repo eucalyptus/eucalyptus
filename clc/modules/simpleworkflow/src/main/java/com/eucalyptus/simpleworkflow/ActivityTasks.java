@@ -22,7 +22,7 @@ package com.eucalyptus.simpleworkflow;
 import java.util.List;
 import com.eucalyptus.entities.AbstractPersistentSupport;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 

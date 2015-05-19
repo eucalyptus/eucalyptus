@@ -81,23 +81,22 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.springframework.web.util.UriUtils;
 
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.ServerCertificate;
 import com.eucalyptus.auth.euare.persist.entities.ServerCertificateEntity;
-import com.eucalyptus.auth.ldap.LdapSync;
+import com.eucalyptus.auth.euare.ldap.LdapSync;
+import com.eucalyptus.auth.euare.principal.EuareAccount;
+import com.eucalyptus.auth.euare.principal.EuareGroup;
+import com.eucalyptus.auth.euare.principal.EuareRole;
+import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.policy.key.Iso8601DateParser;
 import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.euare.principal.EuareInstanceProfile;
-import com.eucalyptus.auth.principal.EuareRole;
-import com.eucalyptus.auth.principal.EuareUser;
-import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.X509CertHelper;
@@ -128,7 +127,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
     try {
-      Account newAccount = Privileged.createAccount( requestUser, request.getAccountName( ), null/*password*/, null/*email*/ );
+      EuareAccount newAccount = Privileged.createAccount( requestUser, request.getAccountName( ), null/*password*/, null/*email*/ );
       AccountType account = reply.getCreateAccountResult( ).getAccount( );
       account.setAccountName( newAccount.getName( ) );
       account.setAccountId( newAccount.getAccountNumber( ) );
@@ -153,7 +152,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account accountFound = lookupAccountByName( request.getAccountName( ) );
+    EuareAccount accountFound = lookupAccountByName( request.getAccountName( ) );
     try {
       boolean recursive = ( request.getRecursive( ) != null && request.getRecursive( ) );
       Privileged.deleteAccount( requestUser, accountFound, recursive );
@@ -184,7 +183,7 @@ public class EuareService {
     }
     ArrayList<AccountType> accounts = reply.getListAccountsResult( ).getAccounts( ).getMemberList( );
     try {
-      for ( final Account account : Iterables.filter( Accounts.listAllAccounts( ), RestrictedTypes.filterPrivileged( ) ) ) {
+      for ( final EuareAccount account : Iterables.filter( com.eucalyptus.auth.euare.Accounts.listAllAccounts(), RestrictedTypes.filterPrivileged( ) ) ) {
         AccountType at = new AccountType( );
         at.setAccountName( account.getName( ) );
         at.setAccountId( account.getAccountNumber( ) );
@@ -202,7 +201,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     String path = "/";
     if ( !Strings.isNullOrEmpty( request.getPathPrefix( ) ) ) {
       path = request.getPathPrefix( );
@@ -213,7 +212,7 @@ public class EuareService {
     reply.getListGroupsResult( ).setIsTruncated( false );
     ArrayList<GroupType> groups = reply.getListGroupsResult( ).getGroups( ).getMemberList( );
     try {
-      for ( final Group group : account.getGroups( ) ) {
+      for ( final EuareGroup group : account.getGroups( ) ) {
         if ( group.getPath( ).startsWith( path ) ) {
           if ( Privileged.allowListGroup( requestUser, account, group ) ) {
             GroupType g = new GroupType( );
@@ -234,7 +233,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     EuareUser userFound = lookupUser( ctx );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
@@ -260,7 +259,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     EuareUser userFound = lookupUser( ctx );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) || request.getDelegateAccount( ) != null ) {
       userFound = lookupUserByName( account, Objects.firstNonNull(
@@ -297,7 +296,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     EuareUser userFound = lookupUser( ctx );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
@@ -335,7 +334,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     EuareUser userFound = lookupUserByName( account, request.getUserName( ) );
     try {
       Privileged.deleteUserPolicy( requestUser, account, userFound, request.getPolicyName( ) );
@@ -358,7 +357,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     EuareUser userFound = lookupUserByName( account, request.getUserName( ) );
     try {
       Privileged.putUserPolicy( requestUser, account, userFound, request.getPolicyName( ), request.getPolicyDocument( ) );
@@ -384,7 +383,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
-    final Account account = getRealAccount( ctx, request );
+    final EuareAccount account = getRealAccount( ctx, request );
     String pathPrefix = request.getPathPrefix();
     if(pathPrefix == null || pathPrefix.isEmpty())
       pathPrefix = "/";
@@ -421,7 +420,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     EuareUser userFound = lookupUserByName( account, request.getUserName( ) );
     try {
       Policy policy = Privileged.getUserPolicy( requestUser, account, userFound, request.getPolicyName( ) );
@@ -454,7 +453,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     EuareUser userFound = lookupUserByName( account, request.getUserName( ) );
     try {
       Privileged.updateLoginProfile( requestUser, account, userFound, request.getPassword( ) );
@@ -477,7 +476,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
-    final Account account = getRealAccount( ctx, request );
+    final EuareAccount account = getRealAccount( ctx, request );
     final String certName = request.getServerCertificateName();
     if(certName == null || certName.length()<=0)
       throw new EuareException(HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Certificate name is empty");
@@ -512,7 +511,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     EuareUser userFound = lookupUserByName( account, request.getUserName( ) );
     try {
       Boolean enabled = request.getEnabled( ) != null ? "true".equalsIgnoreCase( request.getEnabled( ) ) : null;
@@ -544,7 +543,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     EuareUser userFound = lookupUserByName( account, request.getUserName( ) );
     try {
       Privileged.deleteLoginProfile( requestUser, account, userFound );
@@ -565,7 +564,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     EuareUser userFound = lookupUser( ctx );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
@@ -595,8 +594,8 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
-    Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
+    EuareAccount account = getRealAccount( ctx, request );
+    EuareGroup groupFound = lookupGroupByName( account, request.getGroupName( ) );
     try {
       Privileged.deleteGroupPolicy( requestUser, account, groupFound, request.getPolicyName( ) );
     } catch ( Exception e ) {
@@ -618,7 +617,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     String path = "/";
     if ( !Strings.isNullOrEmpty( request.getPathPrefix( ) ) ) {
       path = request.getPathPrefix( );
@@ -651,8 +650,8 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
-    Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
+    EuareAccount account = getRealAccount( ctx, request );
+    EuareGroup groupFound = lookupGroupByName( account, request.getGroupName( ) );
     try {
       Privileged.modifyGroup( requestUser, account, groupFound, request.getNewGroupName( ), request.getNewPath( ) );
     } catch ( Exception e ) {
@@ -678,7 +677,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
-    final Account account = getRealAccount( ctx, request );
+    final EuareAccount account = getRealAccount( ctx, request );
     final String certName = request.getServerCertificateName();
     if(certName == null || certName.length()<=0)
       throw new EuareException(HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Certificate name is empty");
@@ -714,8 +713,8 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
-    Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
+    EuareAccount account = getRealAccount( ctx, request );
+    EuareGroup groupFound = lookupGroupByName( account, request.getGroupName( ) );
     try {
       Privileged.putGroupPolicy( requestUser, account, groupFound, request.getPolicyName( ), request.getPolicyDocument( ) );
     } catch ( PolicyParseException e ) {
@@ -740,7 +739,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     try {
       EuareUser newUser = Privileged.createUser( requestUser, account, request.getUserName( ), sanitizePath( request.getPath( ) ) );
       UserType u = reply.getCreateUserResult( ).getUser( );
@@ -770,7 +769,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     EuareUser userFound = lookupUser( ctx );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
@@ -802,7 +801,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     EuareUser userFound = lookupUserByName( account, request.getUserName( ) );
     ListUserPoliciesResultType result = reply.getListUserPoliciesResult( );
     result.setIsTruncated( false );
@@ -828,7 +827,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     EuareUser userFound = lookupUser( ctx );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) || request.getDelegateAccount( ) != null ) {
       userFound = lookupUserByName( account, Objects.firstNonNull(
@@ -863,7 +862,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     EuareUser userFound = lookupUserByName( account, request.getUserName( ) );
     if ( userFound.getPassword( ) == null ) {
       throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find login profile for " + request.getUserName( ) );
@@ -888,12 +887,12 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     EuareUser userFound = lookupUserByName( account, request.getUserName( ) );
     reply.getListGroupsForUserResult( ).setIsTruncated( false );
     ArrayList<GroupType> groups = reply.getListGroupsForUserResult( ).getGroups( ).getMemberList( );
     try {
-      for ( Group group : Privileged.listGroupsForUser( requestUser, account, userFound ) ) {
+      for ( EuareGroup group : Privileged.listGroupsForUser( requestUser, account, userFound ) ) {
         // TODO(Ye Wen, 01/16/2011): do we need to check permission here?
         GroupType g = new GroupType( );
         fillGroupResult( g, group, account );
@@ -916,9 +915,9 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     try {
-      Group newGroup = Privileged.createGroup( requestUser, account, request.getGroupName( ), sanitizePath( request.getPath( ) ) );
+      EuareGroup newGroup = Privileged.createGroup( requestUser, account, request.getGroupName( ), sanitizePath( request.getPath( ) ) );
       GroupType g = reply.getCreateGroupResult( ).getGroup( );
       fillGroupResult( g, newGroup, account );
     } catch ( Exception e ) {
@@ -946,7 +945,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
-    final Account account = getRealAccount( ctx, request );
+    final EuareAccount account = getRealAccount( ctx, request );
     final String pemCertBody = request.getCertificateBody();
     final String pemCertChain = request.getCertificateChain();
     final String path = Objects.firstNonNull( request.getPath(), "/" );
@@ -993,8 +992,8 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
-    Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
+    EuareAccount account = getRealAccount( ctx, request );
+    EuareGroup groupFound = lookupGroupByName( account, request.getGroupName( ) );
     try {
       Policy policy = Privileged.getGroupPolicy( requestUser, account, groupFound, request.getPolicyName( ) );
       if ( policy != null ) {
@@ -1026,7 +1025,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     EuareUser userToDelete = lookupUserByName( account, request.getUserName( ) );
     try {
       boolean recursive = request.getIsRecursive( ) != null && request.getIsRecursive( );
@@ -1056,9 +1055,9 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     User userFound = lookupUserByName( account, request.getUserName( ) );
-    Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
+    EuareGroup groupFound = lookupGroupByName( account, request.getGroupName( ) );
     try {
       Privileged.removeUserFromGroup( requestUser, account, userFound, groupFound );
     } catch ( Exception e ) {
@@ -1080,7 +1079,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
-    final Account account = getRealAccount( ctx, request );
+    final EuareAccount account = getRealAccount( ctx, request );
     String certName = request.getServerCertificateName();
     if(certName == null || certName.length()<=0)
       throw new EuareException(HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Certificate name is empty");
@@ -1112,8 +1111,8 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
-    Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
+    EuareAccount account = getRealAccount( ctx, request );
+    EuareGroup groupFound = lookupGroupByName( account, request.getGroupName( ) );
     ListGroupPoliciesResultType result = reply.getListGroupPoliciesResult( );
     result.setIsTruncated( false );
     ArrayList<String> policies = result.getPolicyNames( ).getMemberList( );
@@ -1138,7 +1137,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     EuareUser userFound = lookupUserByName( account, request.getUserName( ) );
     if ( userFound.getPassword( ) != null ) {
       throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "User " + userFound.getName( ) + " already has a login profile" );
@@ -1165,7 +1164,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     EuareUser userFound = lookupUser( ctx );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
@@ -1197,7 +1196,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     EuareUser userFound = lookupUser( ctx );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
@@ -1237,7 +1236,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     EuareUser userFound = lookupUser( ctx );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
@@ -1265,9 +1264,9 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     User userFound = lookupUserByName( account, request.getUserName( ) );
-    Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
+    EuareGroup groupFound = lookupGroupByName( account, request.getGroupName( ) );
     // TODO(Ye Wen, 01/22/2011): add group level quota?
     try {
       Privileged.addUserToGroup( requestUser, account, userFound, groupFound );
@@ -1290,8 +1289,8 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
-    Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
+    EuareAccount account = getRealAccount( ctx, request );
+    EuareGroup groupFound = lookupGroupByName( account, request.getGroupName( ) );
     try {
       if ( !Privileged.allowReadGroup( requestUser, account, groupFound ) ) {
         throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get group " + request.getGroupName( ) + " by " + ctx.getUser( ).getName( ) );
@@ -1319,8 +1318,8 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
-    Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
+    EuareAccount account = getRealAccount( ctx, request );
+    EuareGroup groupFound = lookupGroupByName( account, request.getGroupName( ) );
     try {
       boolean recursive = request.getIsRecursive( ) != null && request.getIsRecursive( );
       Privileged.deleteGroup( requestUser, account, groupFound, recursive );
@@ -1343,7 +1342,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     try {
       Privileged.modifyAccount( requestUser, account, request.getAccountAlias( ) );
       return reply;
@@ -1369,7 +1368,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     try {
       Privileged.deleteAccountAlias( requestUser, account, request.getAccountAlias( ) );
       return reply;
@@ -1391,7 +1390,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     try {
       reply.getListAccountAliasesResult( ).getAccountAliases( ).getMemberList( ).addAll( Privileged.listAccountAliases( requestUser, account ) );
       return reply;
@@ -1411,7 +1410,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     try {
       account = Privileged.getAccountSummary( requestUser, account );
       List<SummaryMapTypeEntryType> map = reply.getGetAccountSummaryResult( ).getSummaryMap( ).getEntryList( );
@@ -1437,7 +1436,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     EuareUser userFound = lookupUser( ctx );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
@@ -1471,7 +1470,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     EuareUser userFound = lookupUser( ctx );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
@@ -1511,7 +1510,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account account = getRealAccount( ctx, request );
+    EuareAccount account = getRealAccount( ctx, request );
     EuareUser userFound = lookupUserByName( account, request.getUserName( ) );
     if ( Strings.isNullOrEmpty( request.getInfoKey( ) ) ) {
       throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty key name" );
@@ -1535,7 +1534,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account accountFound = lookupAccountByName( request.getAccountName( ) );
+    EuareAccount accountFound = lookupAccountByName( request.getAccountName( ) );
     try {
       Privileged.putAccountPolicy( requestUser, accountFound, request.getPolicyName( ), request.getPolicyDocument( ) );
     } catch ( PolicyParseException e ) {
@@ -1560,7 +1559,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account accountFound = lookupAccountByName( request.getAccountName( ) );
+    EuareAccount accountFound = lookupAccountByName( request.getAccountName( ) );
     ListAccountPoliciesResultType result = reply.getListAccountPoliciesResult( );
     result.setIsTruncated( false );
     ArrayList<String> policies = result.getPolicyNames( ).getMemberList( );
@@ -1585,7 +1584,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account accountFound = lookupAccountByName( request.getAccountName( ) );
+    EuareAccount accountFound = lookupAccountByName( request.getAccountName( ) );
     try {
       Policy policy = Privileged.getAccountPolicy( requestUser, accountFound, request.getPolicyName( ) );
       if ( policy != null ) {
@@ -1617,7 +1616,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     AuthContext requestUser = getAuthContext( ctx );
-    Account accountFound = lookupAccountByName( request.getAccountName( ) );
+    EuareAccount accountFound = lookupAccountByName( request.getAccountName( ) );
     try {
       Privileged.deleteAccountPolicy( requestUser, accountFound, request.getPolicyName( ) );
     } catch ( Exception e ) {
@@ -1639,7 +1638,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
-    final Account account = getRealAccount( ctx, request );
+    final EuareAccount account = getRealAccount( ctx, request );
     try {
       final EuareRole newRole = Privileged.createRole( requestUser, account, request.getRoleName( ), sanitizePath( request.getPath( ) ), request.getAssumeRolePolicyDocument() );
       reply.getCreateRoleResult( ).setRole( fillRoleResult( new RoleType(), newRole ) );
@@ -1671,7 +1670,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
-    final Account account = getRealAccount( ctx, request );
+    final EuareAccount account = getRealAccount( ctx, request );
     final EuareRole roleFound = lookupRoleByName( account, request.getRoleName() );
     try {
       Privileged.updateAssumeRolePolicy( requestUser, account, roleFound, request.getPolicyDocument() );
@@ -1695,7 +1694,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
-    final Account account = getRealAccount( ctx, request );
+    final EuareAccount account = getRealAccount( ctx, request );
     final EuareRole roleFound = lookupRoleByName( account, request.getRoleName() );
     try {
       if ( !Privileged.allowReadRole( requestUser, account, roleFound ) ) {
@@ -1717,7 +1716,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
-    final Account account = getRealAccount( ctx, request );
+    final EuareAccount account = getRealAccount( ctx, request );
     final EuareRole roleFound = lookupRoleByName( account, request.getRoleName() );
     try {
       Privileged.deleteRole( requestUser, account, roleFound );
@@ -1740,7 +1739,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
-    final Account account = getRealAccount( ctx, request );
+    final EuareAccount account = getRealAccount( ctx, request );
     String path = "/";
     if ( !Strings.isNullOrEmpty( request.getPathPrefix( ) ) ) {
       path = request.getPathPrefix( );
@@ -1770,7 +1769,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
-    final Account account = getRealAccount( ctx, request );
+    final EuareAccount account = getRealAccount( ctx, request );
     final EuareRole roleFound = lookupRoleByName( account, request.getRoleName() );
     try {
       Privileged.putRolePolicy( requestUser, account, roleFound, request.getPolicyName( ), request.getPolicyDocument( ) );
@@ -1796,7 +1795,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
-    final Account account = getRealAccount( ctx, request );
+    final EuareAccount account = getRealAccount( ctx, request );
     final EuareRole roleFound = lookupRoleByName( account, request.getRoleName() );
     try {
       final Policy policy = Privileged.getRolePolicy( requestUser, account, roleFound, request.getPolicyName( ) );
@@ -1829,7 +1828,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
-    final Account account = getRealAccount( ctx, request );
+    final EuareAccount account = getRealAccount( ctx, request );
     final EuareRole roleFound = lookupRoleByName( account, request.getRoleName() );
     try {
       Privileged.deleteRolePolicy( requestUser, account, roleFound, request.getPolicyName( ) );
@@ -1852,7 +1851,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
-    final Account account = getRealAccount( ctx, request );
+    final EuareAccount account = getRealAccount( ctx, request );
     final EuareRole roleFound = lookupRoleByName( account, request.getRoleName() );
     final ListRolePoliciesResult result = reply.getListRolePoliciesResult( );
     result.setIsTruncated( false );
@@ -1878,7 +1877,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
-    final Account account = getRealAccount( ctx, request );
+    final EuareAccount account = getRealAccount( ctx, request );
     try {
       final EuareInstanceProfile newInstanceProfile = Privileged.createInstanceProfile( requestUser, account, request.getInstanceProfileName(), sanitizePath( request.getPath() ) );
       reply.getCreateInstanceProfileResult().setInstanceProfile( fillInstanceProfileResult( new InstanceProfileType(), newInstanceProfile ) );
@@ -1907,7 +1906,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
-    final Account account = getRealAccount( ctx, request );
+    final EuareAccount account = getRealAccount( ctx, request );
     final EuareInstanceProfile instanceProfileFound = lookupInstanceProfileByName( account, request.getInstanceProfileName() );
     try {
       if ( !Privileged.allowReadInstanceProfile( requestUser, account, instanceProfileFound ) ) {
@@ -1928,7 +1927,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
-    final Account account = getRealAccount( ctx, request );
+    final EuareAccount account = getRealAccount( ctx, request );
     final EuareRole roleFound = lookupRoleByName( account, request.getRoleName() );
     final EuareInstanceProfile instanceProfileFound = lookupInstanceProfileByName( account, request.getInstanceProfileName() );
     try {
@@ -1952,7 +1951,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
-    final Account account = getRealAccount( ctx, request );
+    final EuareAccount account = getRealAccount( ctx, request );
     final EuareRole roleFound = lookupRoleByName( account, request.getRoleName() );
     final EuareInstanceProfile instanceProfileFound = lookupInstanceProfileByName( account, request.getInstanceProfileName() );
     try {
@@ -1975,7 +1974,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
-    final Account account = getRealAccount( ctx, request );
+    final EuareAccount account = getRealAccount( ctx, request );
     final EuareRole roleFound = lookupRoleByName( account, request.getRoleName() );
     reply.getListInstanceProfilesForRoleResult().setIsTruncated( false );
     final ArrayList<InstanceProfileType> instanceProfiles = reply.getListInstanceProfilesForRoleResult().getInstanceProfiles().getMember();
@@ -1997,7 +1996,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
-    final Account account = getRealAccount( ctx, request );
+    final EuareAccount account = getRealAccount( ctx, request );
     final EuareInstanceProfile instanceProfileFound = lookupInstanceProfileByName( account, request.getInstanceProfileName() );
     try {
       Privileged.deleteInstanceProfile( requestUser, account, instanceProfileFound );
@@ -2018,7 +2017,7 @@ public class EuareService {
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
-    final Account account = getRealAccount( ctx, request );
+    final EuareAccount account = getRealAccount( ctx, request );
     String path = "/";
     if ( !Strings.isNullOrEmpty( request.getPathPrefix( ) ) ) {
       path = request.getPathPrefix( );
@@ -2155,7 +2154,7 @@ public class EuareService {
     return reply;
   }
   
-  private void fillUserResult( UserType u, EuareUser userFound, Account account ) {
+  private void fillUserResult( UserType u, EuareUser userFound, EuareAccount account ) {
     u.setUserName( userFound.getName( ) );
     u.setUserId( userFound.getUserId( ) );
     u.setPath( userFound.getPath( ) );
@@ -2168,7 +2167,7 @@ public class EuareService {
     u.setPasswordExpiration( new Date( userFound.getPasswordExpires() ).toString() );
   }
   
-  private void fillGroupResult( GroupType g, Group groupFound, Account account ) {
+  private void fillGroupResult( GroupType g, EuareGroup groupFound, EuareAccount account ) {
     g.setPath( groupFound.getPath( ) );
     g.setGroupName( groupFound.getName() );
     g.setGroupId( groupFound.getGroupId() );
@@ -2205,13 +2204,13 @@ public class EuareService {
     }
   }
 
-  private Account getRealAccount( Context ctx, EuareMessageWithDelegate request ) throws EuareException {
-    final Account requestAccount;
+  private EuareAccount getRealAccount( Context ctx, EuareMessageWithDelegate request ) throws EuareException {
+    final EuareAccount requestAccount;
     final String delegateAccount = request.getDelegateAccount( );
     if ( delegateAccount != null ) {
       if ( ctx.hasAdministrativePrivileges( ) ) {
         try {
-          Account account = Accounts.lookupAccountByName( delegateAccount );
+          EuareAccount account = Accounts.lookupAccountByName( delegateAccount );
           if ( !RestrictedTypes.filterPrivileged( ).apply( account ) ) {
             throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Delegation access not authorized for " + delegateAccount );
           }
@@ -2224,7 +2223,7 @@ public class EuareService {
       }
     } else {
       try {
-        requestAccount = Accounts.lookupAccountById( ctx.getAccountNumber( ) );
+        requestAccount = com.eucalyptus.auth.euare.Accounts.lookupAccountById( ctx.getAccountNumber() );
       } catch ( AuthException e ) {
         throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Request account error " + ctx.getAccountNumber( ) );
       }
@@ -2257,7 +2256,7 @@ public class EuareService {
     }
   }
 
-  private static EuareUser lookupUserByName( Account account, String userName ) throws EucalyptusCloudException  {
+  private static EuareUser lookupUserByName( EuareAccount account, String userName ) throws EucalyptusCloudException  {
     try {
       return account.lookupUserByName( userName );
     } catch ( Exception e ) {
@@ -2273,7 +2272,7 @@ public class EuareService {
     }
   }
 
-  private static Group lookupGroupByName( Account account, String groupName ) throws EucalyptusCloudException {
+  private static EuareGroup lookupGroupByName( EuareAccount account, String groupName ) throws EucalyptusCloudException {
     try {
       return account.lookupGroupByName( groupName );
     } catch ( Exception e ) {
@@ -2289,7 +2288,7 @@ public class EuareService {
     }
   }
 
-  private static EuareInstanceProfile lookupInstanceProfileByName( Account account, String instanceProfileName ) throws EucalyptusCloudException {
+  private static EuareInstanceProfile lookupInstanceProfileByName( EuareAccount account, String instanceProfileName ) throws EucalyptusCloudException {
     try {
       return account.lookupInstanceProfileByName( instanceProfileName );
     } catch ( Exception e ) {
@@ -2306,7 +2305,7 @@ public class EuareService {
   }
 
 
-  private static EuareRole lookupRoleByName( Account account, String roleName ) throws EucalyptusCloudException {
+  private static EuareRole lookupRoleByName( EuareAccount account, String roleName ) throws EucalyptusCloudException {
     try {
       return account.lookupRoleByName( roleName );
     } catch ( Exception e ) {
@@ -2322,13 +2321,13 @@ public class EuareService {
     }
   }
 
-  private static Account lookupAccountByName( String accountName ) throws EucalyptusCloudException {
+  private static EuareAccount lookupAccountByName( String accountName ) throws EucalyptusCloudException {
     try {
       return Accounts.lookupAccountByName( accountName );
     } catch ( Exception e1 ) {
       try {
         // Try using ID
-        return Accounts.lookupAccountById( accountName );
+        return com.eucalyptus.auth.euare.Accounts.lookupAccountById( accountName );
       } catch ( Exception e ) {
         if ( e instanceof AuthException ) {
           if ( AuthException.NO_SUCH_ACCOUNT.equals( e.getMessage( ) ) ) {

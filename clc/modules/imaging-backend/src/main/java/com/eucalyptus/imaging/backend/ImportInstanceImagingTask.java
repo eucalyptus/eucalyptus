@@ -54,7 +54,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.imaging.ImportTaskProperties;
 import com.eucalyptus.resources.client.Ec2Client;
 import com.eucalyptus.util.Dates;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Strings;

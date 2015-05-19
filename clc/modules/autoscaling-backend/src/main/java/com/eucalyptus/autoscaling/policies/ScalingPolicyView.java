@@ -21,7 +21,7 @@ package com.eucalyptus.autoscaling.policies;
 
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 
 /**
  * Immutable view of a scaling policy

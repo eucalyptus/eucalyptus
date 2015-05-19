@@ -21,6 +21,7 @@
 package com.eucalyptus.objectstorage
 
 import com.eucalyptus.auth.Accounts
+import com.eucalyptus.auth.principal.AccountIdentifiers
 import com.eucalyptus.entities.Transactions
 import com.eucalyptus.objectstorage.entities.Bucket
 import com.eucalyptus.objectstorage.entities.S3AccessControlledEntity
@@ -87,7 +88,7 @@ public class BucketMetadataManagerTest {
 
     println 'Testing basic start-create operation'
 
-    Bucket bucket = mgr.persistBucketInCreatingState(bucketName, acp, Accounts.lookupAccountByName(UnitTestSupport.getTestAccounts().first()).getUsers().get(0).getUserId(), location)
+    Bucket bucket = mgr.persistBucketInCreatingState(bucketName, acp, UnitTestSupport.getTestUsers(0).first().getUserId(), location)
 
     assert (bucket.getBucketName().equals(bucketName))
     assert (bucket.getBucketUuid().length() > ('-' + bucketName).length())
@@ -135,7 +136,7 @@ public class BucketMetadataManagerTest {
     acp.setAccessControlList(TestUtils.TEST_ACCOUNT1_PRIVATE_ACL)
 
     println 'Testing basic start-create operation without pre-built uuid'
-    Bucket bucket = mgr.persistBucketInCreatingState(bucketName, acp, Accounts.lookupAccountByName(UnitTestSupport.getTestAccounts().first()).getUsers().get(0).getUserId(), location)
+    Bucket bucket = mgr.persistBucketInCreatingState(bucketName, acp, UnitTestSupport.getTestUsers(0).first().getUserId(), location)
 
     assert (bucket.getBucketName().equals(bucketName))
     assert (bucket.getBucketUuid() != null)
@@ -144,7 +145,7 @@ public class BucketMetadataManagerTest {
 
     println 'Initiating creation of bucket with same name'
     try {
-      Bucket bucket2 = mgr.persistBucketInCreatingState(bucketName, acp, Accounts.lookupAccountByName(UnitTestSupport.getTestAccounts().first()).getUsers().get(0).getUserId(), location)
+      Bucket bucket2 = mgr.persistBucketInCreatingState(bucketName, acp, UnitTestSupport.getTestUsers(0).first().getUserId(), location)
       println 'Error: should have failed 2nd create due to name conflict'
       fail('2nd bucket should fail $bucket2')
     } catch (Exception e) {
@@ -183,7 +184,7 @@ public class BucketMetadataManagerTest {
     acp.setAccessControlList(TestUtils.TEST_ACCOUNT1_PRIVATE_ACL)
 
     println 'Testing basic start-create operation without pre-built uuid'
-    Bucket bucket = mgr.persistBucketInCreatingState(bucketName, acp, Accounts.lookupAccountByName(UnitTestSupport.getTestAccounts().first()).getUsers().get(0).getUserId(), location)
+    Bucket bucket = mgr.persistBucketInCreatingState(bucketName, acp, UnitTestSupport.getTestUsers(0).first().getUserId(), location)
 
     assert (bucket.getBucketName().equals(bucketName))
     assert (bucket.getBucketUuid() != null)
@@ -195,7 +196,7 @@ public class BucketMetadataManagerTest {
 
     println 'Initiating creation of bucket with same name'
     try {
-      Bucket bucket2 = mgr.persistBucketInCreatingState(bucketName, acp, Accounts.lookupAccountByName(UnitTestSupport.getTestAccounts().first()).getUsers().get(0).getUserId(), location)
+      Bucket bucket2 = mgr.persistBucketInCreatingState(bucketName, acp, UnitTestSupport.getTestUsers(0).get(0).getUserId(), location)
       println 'Error: should have failed 2nd create due to name conflict'
       fail('2nd bucket should fail $bucket2')
     } catch (Exception e) {
@@ -267,7 +268,7 @@ public class BucketMetadataManagerTest {
     for (int i = 0; i < count; i++) {
       TestUtils.createTestBucket(mgr, 'test' + i)
     }
-    String id1 = Accounts.lookupAccountByName(UnitTestSupport.getTestAccounts().first()).getCanonicalId()
+    String id1 = Accounts.lookupAccountIdentifiersByAlias(UnitTestSupport.getTestAccounts().first()).getCanonicalId()
     assert (mgr.lookupBucketsByOwner(id1).size() == count)
 
     Bucket[] buckets = (Bucket[]) mgr.lookupBucketsByOwner(id1).toArray(new Bucket[0])
@@ -297,7 +298,8 @@ public class BucketMetadataManagerTest {
 
   private Bucket initializeBucket(String name, String accountName) {
     AccessControlPolicy acp = new AccessControlPolicy()
-    CanonicalUser owner = new CanonicalUser(Accounts.lookupAccountByName(accountName).getCanonicalId(), "")
+    AccountIdentifiers accountIdentifiers = Accounts.lookupAccountIdentifiersByAlias(accountName)
+    CanonicalUser owner = new CanonicalUser(accountIdentifiers.getCanonicalId(), "")
     acp.setOwner(owner)
     acp.setAccessControlList(new AccessControlList())
     acp.getAccessControlList().setGrants(new ArrayList<Grant>())
@@ -320,7 +322,7 @@ public class BucketMetadataManagerTest {
   public void testCountByAccount() {
     Bucket b;
     String account = UnitTestSupport.getTestAccounts().first()
-    String canonicalId = Accounts.lookupAccountByName(account).getCanonicalId();
+    String canonicalId = Accounts.lookupAccountIdentifiersByAlias(account).getCanonicalId();
     for (int i = 0; i < 10; i++) {
       b = TestUtils.createTestBucket(mgr, 'bucket' + i, account)
       println 'Created bucket owned by ' + b.getOwnerCanonicalId()

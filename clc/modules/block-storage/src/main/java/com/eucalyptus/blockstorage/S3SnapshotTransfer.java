@@ -657,7 +657,7 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
   private void initializeEucaS3Client() throws SnapshotTransferException {
     if (role == null) {
       try {
-        role = BlockStorageUtil.checkAndConfigureBlockStorageAccount();
+        role = BlockStorageUtil.getBlockStorageRole( );
       } catch (Exception e) {
         LOG.error("Failed to initialize account for snapshot transfers due to " + e);
         throw new SnapshotTransferException("Failed to initialize eucalyptus account for snapshot transfers", e);

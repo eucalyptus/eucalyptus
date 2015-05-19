@@ -83,7 +83,7 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.network.Networking;
 import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.TypedContext;
 import com.eucalyptus.util.TypedKey;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;

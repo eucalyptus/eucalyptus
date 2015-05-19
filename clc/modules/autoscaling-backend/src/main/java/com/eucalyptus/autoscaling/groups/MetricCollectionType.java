@@ -24,7 +24,7 @@ import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstanceCoreView;
 import com.eucalyptus.autoscaling.instances.LifecycleState;
 import com.eucalyptus.util.CollectionUtils;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.collect.Iterables;
 
 /**

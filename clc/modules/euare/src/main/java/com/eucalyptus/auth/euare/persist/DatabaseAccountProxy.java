@@ -85,9 +85,9 @@ import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.ServerCertificate;
 import com.eucalyptus.auth.euare.ServerCertificates;
-import com.eucalyptus.auth.checker.InvalidValueException;
-import com.eucalyptus.auth.checker.ValueChecker;
-import com.eucalyptus.auth.checker.ValueCheckerFactory;
+import com.eucalyptus.auth.euare.checker.InvalidValueException;
+import com.eucalyptus.auth.euare.checker.ValueChecker;
+import com.eucalyptus.auth.euare.checker.ValueCheckerFactory;
 import com.eucalyptus.auth.euare.persist.entities.AccountEntity;
 import com.eucalyptus.auth.euare.persist.entities.CertificateEntity;
 import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
@@ -96,14 +96,14 @@ import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
 import com.eucalyptus.auth.euare.persist.entities.ServerCertificateEntity;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity;
+import com.eucalyptus.auth.euare.principal.EuareAccount;
+import com.eucalyptus.auth.euare.principal.EuareGroup;
+import com.eucalyptus.auth.euare.principal.EuareRole;
+import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.policy.PolicyPolicy;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.euare.principal.EuareInstanceProfile;
-import com.eucalyptus.auth.principal.EuareRole;
-import com.eucalyptus.auth.principal.EuareUser;
-import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.util.Identifiers;
@@ -115,7 +115,7 @@ import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.Tx;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -123,7 +123,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 
-public class DatabaseAccountProxy implements Account {
+public class DatabaseAccountProxy implements EuareAccount {
 
   private static final long serialVersionUID = 1L;
 
@@ -156,7 +156,7 @@ public class DatabaseAccountProxy implements Account {
 
   @Override
   public OwnerFullName getOwner( ) {
-    return AccountFullName.getInstance( this );
+    return AccountFullName.getInstance( getAccountNumber( ) );
   }
 
   @Override
@@ -239,8 +239,8 @@ public class DatabaseAccountProxy implements Account {
   }
 
   @Override
-  public List<Group> getGroups( ) throws AuthException {
-    List<Group> results = Lists.newArrayList( );
+  public List<EuareGroup> getGroups( ) throws AuthException {
+    List<EuareGroup> results = Lists.newArrayList( );
     try ( final TransactionResource db = Entities.transactionFor( GroupEntity.class ) ) {
       @SuppressWarnings( "unchecked" )
       List<GroupEntity> groups = ( List<GroupEntity> ) Entities
@@ -464,7 +464,7 @@ public class DatabaseAccountProxy implements Account {
   }
 
   @Override
-  public Group addGroup( String groupName, String path ) throws AuthException {
+  public EuareGroup addGroup( String groupName, String path ) throws AuthException {
     try {
       USER_GROUP_NAME_CHECKER.check( groupName );
     } catch ( InvalidValueException e ) {
@@ -578,7 +578,7 @@ public class DatabaseAccountProxy implements Account {
   }
 
   @Override
-  public Group lookupGroupByName( String groupName ) throws AuthException {
+  public EuareGroup lookupGroupByName( String groupName ) throws AuthException {
     String accountName = this.delegate.getName( );
     if ( groupName == null ) {
       throw new AuthException( AuthException.EMPTY_GROUP_NAME );

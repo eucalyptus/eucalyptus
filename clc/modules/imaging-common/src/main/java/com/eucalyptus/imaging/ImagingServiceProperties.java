@@ -32,9 +32,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
-import com.eucalyptus.auth.principal.EuareRole;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
@@ -166,7 +164,8 @@ public class ImagingServiceProperties {
             && Topology.isEnabled( CloudFormation.class )) {
           try {
             final Stack stack = CloudFormationClient
-                .getInstance().describeStack(Accounts.lookupImagingAccount().getUserId(),
+                .getInstance().describeStack(
+                    Accounts.lookupSystemAccountByAlias( AccountIdentifiers.IMAGING_SYSTEM_ACCOUNT ).getUserId( ),
                     IMAGING_WORKER_STACK_NAME);
             if ("CREATE_COMPLETE".equals(stack.getStackStatus()))
               StackCheckResult = true;
@@ -194,16 +193,6 @@ public class ImagingServiceProperties {
         }
         return false;
       }
-    }
-
-    @Override
-    public boolean enable() throws Exception {
-      if (!super.enable())
-        return false;
-      // create roles and policies
-      ImagingAdminSystemRoleProvider roleProvider = new ImagingAdminSystemRoleProvider();
-      roleProvider.ensureAccountAndRoleExists();
-      return true;
     }
   }
 

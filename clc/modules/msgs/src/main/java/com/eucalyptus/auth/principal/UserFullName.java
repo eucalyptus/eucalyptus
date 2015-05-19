@@ -68,8 +68,6 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.OwnerFullName;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 
@@ -101,7 +99,7 @@ public class UserFullName implements OwnerFullName {
       return userIdMap.getIfPresent( userId );
     } else {
       try {
-        userIdMap.put( userId, getInstance( Accounts.lookupUserById( userId ), relativePath ) );
+        userIdMap.put( userId, getInstance( Accounts.lookupPrincipalByUserId( userId ), relativePath ) );
         return userIdMap.getIfPresent( userId );
       } catch ( final AuthException ex ) {
         userIdMap.put( userId, getInstance( Principals.systemUser( ), relativePath ) );
@@ -230,7 +228,7 @@ public class UserFullName implements OwnerFullName {
   }
   
   /**
-   * @see com.eucalyptus.util.OwnerFullName#isOwner(java.lang.String)
+   * @see OwnerFullName#isOwner(java.lang.String)
    */
   @Override
   public boolean isOwner( final String ownerId ) {
@@ -238,7 +236,7 @@ public class UserFullName implements OwnerFullName {
   }
   
   /**
-   * @see com.eucalyptus.util.OwnerFullName#isOwner(com.eucalyptus.util.OwnerFullName)
+   * @see OwnerFullName#isOwner(OwnerFullName)
    */
   @Override
   public boolean isOwner( final OwnerFullName ownerFullName ) {

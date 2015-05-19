@@ -81,9 +81,9 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.euare.persist.entities.AccountEntity;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.util.SystemAccountProvider;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.objectstorage.BucketState;
@@ -123,7 +123,7 @@ import com.google.common.collect.Sets;
 public class ObjectStorage400Upgrade {
 
   private static Logger LOG = Logger.getLogger(ObjectStorage400Upgrade.class);
-  private static Map<String, Account> accountIdAccountMap = Maps.newHashMap(); // Cache account ID -> account info
+  private static Map<String, AccountIdentifiers> accountIdAccountMap = Maps.newHashMap(); // Cache account ID -> account info
   private static Map<String, User> accountIdAdminMap = Maps.newHashMap(); // Cache account ID -> admin user info
   private static Map<String, User> userIdUserMap = Maps.newHashMap(); // Cache user ID -> user info
   private static Set<String> deletedAccountIds = Sets.newHashSet(); // Cache deleted account IDs
@@ -133,9 +133,9 @@ public class ObjectStorage400Upgrade {
   private static Map<String, Bucket> bucketMap = Maps.newHashMap(); // Cache bucket name -> bucket object
   private static Set<String> walrusSnapshotBuckets = Sets.newHashSet(); // Cache all snapshot buckets
   private static Set<String> walrusSnapshotObjects = Sets.newHashSet(); // Cache all snapshot objects
-  private static Account eucalyptusAccount = null;
+  private static AccountIdentifiers eucalyptusAccount = null;
   private static User eucalyptusAdmin = null;
-  private static Account blockStorageAccount = null;
+  private static AccountIdentifiers blockStorageAccount = null;
   private static User blockStorageAdmin = null;
 
   public interface UpgradeTask {
@@ -489,34 +489,36 @@ public class ObjectStorage400Upgrade {
     }
   }
 
-  private static Account getEucalyptusAccount() throws Exception {
+  private static AccountIdentifiers getEucalyptusAccount() throws Exception {
     if (eucalyptusAccount == null) {
-      eucalyptusAccount = Accounts.lookupAccountByName(AccountIdentifiers.SYSTEM_ACCOUNT);
+      eucalyptusAccount = Accounts.lookupAccountIdentifiersByAlias( AccountIdentifiers.SYSTEM_ACCOUNT );
     }
     return eucalyptusAccount;
   }
 
   private static User getEucalyptusAdmin() throws Exception {
     if (eucalyptusAdmin == null) {
-      eucalyptusAdmin = getEucalyptusAccount().lookupAdmin();
+      eucalyptusAdmin = Accounts.lookupPrincipalByAccountNumber( getEucalyptusAccount( ).getAccountNumber( ) );
     }
     return eucalyptusAdmin;
   }
 
-  private static void createBlockStorageAccount() throws Exception {
-    blockStorageAccount = Accounts.addSystemAccountWithAdmin(AccountIdentifiers.BLOCKSTORAGE_SYSTEM_ACCOUNT);
+  private static void createBlockStorageAccount () throws Exception {
+    SystemAccountProvider.Init.initialize( (SystemAccountProvider)
+        Class.forName( "com.eucalyptus.blockstorage.BlockStorageSystemAccountProvider" ).newInstance( ) );
   }
 
-  private static Account getBlockStorageAccount() throws Exception {
+  private static AccountIdentifiers getBlockStorageAccount() throws Exception {
     if (blockStorageAccount == null) {
-      createBlockStorageAccount();
+      createBlockStorageAccount( );
+      blockStorageAccount = Accounts.lookupAccountIdentifiersByAlias( AccountIdentifiers.BLOCKSTORAGE_SYSTEM_ACCOUNT );
     }
     return blockStorageAccount;
   }
 
   private static User getBlockStorageAdmin() throws Exception {
     if (blockStorageAdmin == null) {
-      blockStorageAdmin = getBlockStorageAccount().lookupAdmin();
+      blockStorageAdmin = Accounts.lookupPrincipalByAccountNumber( getBlockStorageAccount().getAccountNumber() );
     }
     return blockStorageAdmin;
   }
@@ -595,7 +597,7 @@ public class ObjectStorage400Upgrade {
         transferPermissions(grants, grantInfo, new Grantee(group));
       } else {
         // Assume it's a user/account
-        Account account = null;
+        AccountIdentifiers account = null;
         if (accountIdAccountMap.containsKey(grantInfo.getUserId())) {
           account = accountIdAccountMap.get(grantInfo.getUserId());
         } else if (deletedAccountIds.contains(grantInfo.getUserId())) {// In case the account is deleted, skip the grant
@@ -607,7 +609,7 @@ public class ObjectStorage400Upgrade {
         } else {
           try {
             // Lookup owning account
-            account = Accounts.lookupAccountById(grantInfo.getUserId());
+            account = Accounts.lookupAccountIdentifiersById( grantInfo.getUserId() );
             if (StringUtils.isBlank(grantInfo.getUserId())) { // If canonical ID is missing, use the eucalyptus admin account
               LOG.warn("Account ID " + grantInfo.getUserId() + " does not not have a canonical ID. Skipping this grant");
               noCanonicalIdAccountIds.add(grantInfo.getUserId());
@@ -623,7 +625,7 @@ public class ObjectStorage400Upgrade {
           }
         }
 
-        CanonicalUser user = new CanonicalUser(account.getCanonicalId(), account.getName());
+        CanonicalUser user = new CanonicalUser(account.getCanonicalId(), account.getAccountAlias());
         transferPermissions(grants, grantInfo, new Grantee(user));
       }
     }
@@ -677,7 +679,7 @@ public class ObjectStorage400Upgrade {
       public Bucket apply(@Nonnull BucketInfo walrusBucket) {
         Bucket osgBucket = null;
         try {
-          Account owningAccount = null;
+          AccountIdentifiers owningAccount = null;
           User owningUser = null;
 
           // Get the owning account
@@ -699,7 +701,7 @@ public class ObjectStorage400Upgrade {
             owningUser = getEucalyptusAdmin();
           } else { // If none of the above conditions match, lookup for the account
             try {
-              owningAccount = Accounts.lookupAccountById(walrusBucket.getOwnerId());
+              owningAccount = Accounts.lookupAccountIdentifiersById( walrusBucket.getOwnerId() );
               if (StringUtils.isBlank(owningAccount.getCanonicalId())) { // If canonical ID is missing, use eucalyptus admin account
                 LOG.warn("Account ID " + walrusBucket.getOwnerId() + " does not have a canonical ID. Changing the ownership of bucket "
                     + walrusBucket.getBucketName() + " to eucalyptus admin account");
@@ -736,12 +738,12 @@ public class ObjectStorage400Upgrade {
             } else { // If none of the above conditions match, lookup for the user
               if (walrusBucket.getUserId() != null) {
                 try {
-                  owningUser = Accounts.lookupUserById(walrusBucket.getUserId());
+                  owningUser = Accounts.lookupPrincipalByUserId( walrusBucket.getUserId(), null );
                   userIdUserMap.put(walrusBucket.getUserId(), owningUser);
                 } catch (AuthException e) { // User is deleted, lookup for the account admin
                   deletedUserIds.add(walrusBucket.getUserId());
                   try {
-                    owningUser = owningAccount.lookupAdmin();
+                    owningUser = Accounts.lookupPrincipalByAccountNumber( owningAccount.getAccountNumber( ) );
                     accountIdAdminMap.put(walrusBucket.getOwnerId(), owningUser);
                     LOG.warn("User ID " + walrusBucket.getUserId() + " does not exist. Changing the IAM ownership of bucket "
                         + walrusBucket.getBucketName() + " to the account admin");
@@ -761,7 +763,7 @@ public class ObjectStorage400Upgrade {
                   owningUser = accountIdAdminMap.get(walrusBucket.getBucketName());
                 } else { // Lookup up the admin if its not available in the map
                   try {
-                    owningUser = owningAccount.lookupAdmin();
+                    owningUser = Accounts.lookupPrincipalByAccountNumber( owningAccount.getAccountNumber( ) );
                     accountIdAdminMap.put(walrusBucket.getOwnerId(), owningUser);
                     LOG.warn("No user ID listed for bucket " + walrusBucket.getBucketName()
                         + ". Changing the IAM ownership of bucket to the account admin");
@@ -790,7 +792,7 @@ public class ObjectStorage400Upgrade {
 
           // Set the owner and IAM user fields
           osgBucket.setOwnerCanonicalId(owningAccount.getCanonicalId());
-          osgBucket.setOwnerDisplayName(owningAccount.getName());
+          osgBucket.setOwnerDisplayName(owningAccount.getAccountAlias());
           osgBucket.setOwnerIamUserId(owningUser.getUserId());
           osgBucket.setOwnerIamUserDisplayName(owningUser.getName());
 
@@ -801,7 +803,7 @@ public class ObjectStorage400Upgrade {
           } else {
             acl.setGrants(getBucketGrants(walrusBucket));
           }
-          AccessControlPolicy acp = new AccessControlPolicy(new CanonicalUser(owningAccount.getCanonicalId(), owningAccount.getName()), acl);
+          AccessControlPolicy acp = new AccessControlPolicy(new CanonicalUser(owningAccount.getCanonicalId(), owningAccount.getAccountAlias()), acl);
           osgBucket.setAcl(acp);
         } catch (Exception e) {
           LOG.error("Failed to transform Walrus bucket " + walrusBucket.getBucketName() + " to objectstorage bucket", e);
@@ -872,7 +874,7 @@ public class ObjectStorage400Upgrade {
 
           } else { // not a delete marker
 
-            Account owningAccount = null;
+            AccountIdentifiers owningAccount = null;
             User adminUser = null;
 
             // Get the owning account
@@ -895,7 +897,7 @@ public class ObjectStorage400Upgrade {
               adminUser = getEucalyptusAdmin();
             } else { // If none of the above conditions match, lookup for the account
               try {
-                owningAccount = Accounts.lookupAccountById(walrusObject.getOwnerId());
+                owningAccount = Accounts.lookupAccountIdentifiersById( walrusObject.getOwnerId() );
                 if (StringUtils.isBlank(owningAccount.getCanonicalId())) {
                   LOG.warn("Account ID " + walrusObject.getOwnerId() + " does not have a canonical ID. Changing the ownership of object "
                       + walrusObject.getObjectKey() + " in bucket " + walrusObject.getBucketName() + " to eucalyptus admin account");
@@ -926,7 +928,7 @@ public class ObjectStorage400Upgrade {
                 adminUser = getEucalyptusAdmin();
               } else { // If none of the above conditions match, lookup for the admin
                 try {
-                  adminUser = owningAccount.lookupAdmin();
+                  adminUser = Accounts.lookupPrincipalByAccountNumber( owningAccount.getAccountNumber( ) );
                   accountIdAdminMap.put(walrusObject.getOwnerId(), adminUser);
                 } catch (AuthException e) {
                   LOG.warn("Admin for account ID " + walrusObject.getOwnerId() + " does not exist. Changing the IAM ownership of object "
@@ -949,7 +951,7 @@ public class ObjectStorage400Upgrade {
 
             // Set the owner and IAM user fields
             osgObject.setOwnerCanonicalId(owningAccount.getCanonicalId());
-            osgObject.setOwnerDisplayName(owningAccount.getName());
+            osgObject.setOwnerDisplayName(owningAccount.getAccountAlias());
             osgObject.setOwnerIamUserId(adminUser.getUserId());
             osgObject.setOwnerIamUserDisplayName(adminUser.getName());
 
@@ -960,7 +962,7 @@ public class ObjectStorage400Upgrade {
             } else {
               acl.setGrants(getObjectGrants(walrusObject));
             }
-            AccessControlPolicy acp = new AccessControlPolicy(new CanonicalUser(owningAccount.getCanonicalId(), owningAccount.getName()), acl);
+            AccessControlPolicy acp = new AccessControlPolicy(new CanonicalUser(owningAccount.getCanonicalId(), owningAccount.getAccountAlias()), acl);
             osgObject.setAcl(acp);
           }
         } catch (Exception e) {
@@ -1001,7 +1003,7 @@ public class ObjectStorage400Upgrade {
 
           // Set the owner and IAM user fields
           osgObject.setOwnerCanonicalId(getEucalyptusAccount().getCanonicalId());
-          osgObject.setOwnerDisplayName(getEucalyptusAccount().getName());
+          osgObject.setOwnerDisplayName(getEucalyptusAccount().getAccountAlias());
           osgObject.setOwnerIamUserDisplayName(getEucalyptusAdmin().getName());
           osgObject.setOwnerIamUserId(getEucalyptusAdmin().getUserId());
 

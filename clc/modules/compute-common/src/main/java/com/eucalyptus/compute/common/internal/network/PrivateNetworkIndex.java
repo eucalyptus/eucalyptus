@@ -84,7 +84,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.entities.AccountMetadata;
 import com.eucalyptus.upgrade.Upgrades;
-import com.eucalyptus.util.FullName;
+import com.eucalyptus.auth.principal.FullName;
 import com.eucalyptus.util.HasFullName;
 import groovy.sql.Sql;
 

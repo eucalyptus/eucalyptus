@@ -438,5 +438,40 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       }
     }
   }
+
+  @EntityUpgrade( entities = StaticPropertyEntry.class, since = Version.v4_2_0, value = Empyrean.class )
+  public enum StaticPropertyEntryUpgrade42 implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( StaticPropertyEntryUpgrade40.class );
+
+    private void updateLdapConfiguration( ) {
+      try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
+        try {
+          final StaticDatabasePropertyEntry property = Entities.uniqueResult( new StaticDatabasePropertyEntry( null, "authentication.ldap_integration_configuration", null ) );
+          LOG.info( "Updating field and default value for authentication.ldap_integration_configuration" );
+          if ( "{ 'sync': { 'enable':'false' } }".equals( property.getValue( ) ) ) {
+            property.setValue( "{ \"sync\": { \"enable\":\"false\" } }" );
+          }
+          property.setFieldName( "com.eucalyptus.auth.euare.ldap.LdapProperties.ldap_integration_configuration" );
+        } catch ( NoSuchElementException e ) {
+          LOG.info( "Creating resource identifier canonicalizer property with value 'upper' for upgraded system." );
+          Entities.persist( new StaticDatabasePropertyEntry(
+              "com.eucalyptus.compute.identifier.ResourceIdentifiers.identifier_canonicalizer",
+              "cloud.identifier_canonicalizer",
+              "upper"
+          ) );
+        }
+        db.commit( );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+
+    @Override
+    public boolean apply( Class arg0 ) {
+      updateLdapConfiguration( );
+      return true;
+    }
+  }
 }
 

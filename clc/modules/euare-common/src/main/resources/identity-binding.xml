@@ -114,6 +114,20 @@
     <value name="AccountId" field="accountId" usage="optional"/>
     <value name="RoleName" field="roleName" usage="optional"/>
   </mapping>
+  <mapping name="LookupCertificatesResponse" class="com.eucalyptus.auth.euare.common.identity.LookupCertificatesResponseType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+    <structure name="LookupCertificatesResult" field="lookupCertificatesResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.LookupCertificatesResult"/>
+    <structure map-as="IdentityResponseMessage"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.common.identity.LookupCertificatesResult" abstract="true">
+    <collection name="Pem" field="pem" usage="optional">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping name="LookupCertificates" class="com.eucalyptus.auth.euare.common.identity.LookupCertificatesType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+    <value name="AccountNumber" field="accountNumber" usage="optional"/>
+  </mapping>
   <mapping name="ReserveNameResponse" class="com.eucalyptus.auth.euare.common.identity.ReserveNameResponseType">
     <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
     <structure name="ReserveNameResult" field="reserveNameResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.ReserveNameResult"/>

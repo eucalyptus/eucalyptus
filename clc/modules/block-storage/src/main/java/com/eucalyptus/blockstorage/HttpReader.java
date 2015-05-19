@@ -74,8 +74,8 @@ import org.apache.commons.httpclient.Header;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.blockstorage.util.StorageProperties;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataMessage;
 
 import edu.ucsb.eucalyptus.util.StreamConsumer;
@@ -141,7 +141,7 @@ public class HttpReader extends HttpTransfer {
       File outFile = null;
       File outFileUncompressed = null;
       if (compressed) {
-        String outFileNameUncompressed = tempPath + File.pathSeparator + file.getName() + Hashes.getRandom(16);
+        String outFileNameUncompressed = tempPath + File.pathSeparator + file.getName() + Crypto.getRandom( 16 );
         outFileUncompressed = new File(outFileNameUncompressed);
         outFile = new File(outFileNameUncompressed + ".gz");
       } else {

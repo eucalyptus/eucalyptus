@@ -30,11 +30,11 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
-import com.eucalyptus.auth.policy.PolicyResourceType;
-import com.eucalyptus.component.annotation.PolicyVendor;
+import com.eucalyptus.auth.policy.annotation.PolicyResourceType;
+import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
-import com.eucalyptus.util.OwnerFullName;
-import com.eucalyptus.util.RestrictedType;
+import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.auth.type.RestrictedType;
 
 /**
  * @author Sang-Min Park

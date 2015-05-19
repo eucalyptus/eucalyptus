@@ -43,7 +43,7 @@ import com.eucalyptus.resources.EucalyptusActivityException;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.DispatchingClient;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.Callback.Checked;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.google.common.base.Function;
@@ -360,8 +360,7 @@ public class Ec2Client {
     }
 
     private RunInstancesType runInstances() {
-      OwnerFullName systemAcct = AccountFullName.getInstance(Principals
-          .systemAccount());
+      OwnerFullName systemAcct = AccountFullName.getInstance(Principals.systemAccount( ).getAccountNumber( ));
       LOG.debug("runInstances with zone=" + availabilityZone + ", account="
           + systemAcct);
       final RunInstancesType req = new RunInstancesType();

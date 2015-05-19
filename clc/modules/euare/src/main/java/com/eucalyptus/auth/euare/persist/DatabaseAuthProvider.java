@@ -62,29 +62,28 @@
 
 package com.eucalyptus.auth.euare.persist;
 
-import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.InvalidAccessKeyAuthException;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
+import com.eucalyptus.auth.euare.principal.EuareAccount;
+import com.eucalyptus.auth.euare.principal.EuareRole;
+import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.AccountIdentifiersImpl;
-import com.eucalyptus.auth.principal.EuareRole;
-import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.entities.Entities;
 import org.apache.log4j.Logger;
 import org.hibernate.FetchMode;
 import org.hibernate.criterion.Restrictions;
-import com.eucalyptus.auth.api.AccountProvider;
-import com.eucalyptus.auth.checker.InvalidValueException;
-import com.eucalyptus.auth.checker.ValueChecker;
-import com.eucalyptus.auth.checker.ValueCheckerFactory;
+import com.eucalyptus.auth.euare.AccountProvider;
+import com.eucalyptus.auth.euare.checker.InvalidValueException;
+import com.eucalyptus.auth.euare.checker.ValueChecker;
+import com.eucalyptus.auth.euare.checker.ValueCheckerFactory;
 import com.eucalyptus.auth.euare.persist.entities.AccessKeyEntity;
 import com.eucalyptus.auth.euare.persist.entities.AccountEntity;
 import com.eucalyptus.auth.euare.persist.entities.CertificateEntity;
@@ -92,16 +91,10 @@ import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
-import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.util.TypeMappers;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import org.hibernate.persister.collection.CollectionPropertyNames;
 
 import javax.annotation.Nullable;
@@ -135,85 +128,6 @@ public class DatabaseAuthProvider implements AccountProvider {
     }
   }
 
-  /**
-   * Lookup enabled user by its access key ID. Only return the user if the key is active.
-   * 
-   * @param keyId
-   * @return
-   * @throws AuthException
-   */
-  @Override
-  public EuareUser lookupUserByAccessKeyId( String keyId ) throws AuthException {
-    if ( keyId == null || "".equals( keyId) ) {
-      throw new AuthException( "Empty key ID" );
-    }
-    try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      UserEntity result = ( UserEntity ) Entities
-          .createCriteria( UserEntity.class ).setCacheable( true ).add( Restrictions.eq( "enabled", true ) )
-          .createCriteria( "keys" ).setCacheable( true ).add( 
-              Restrictions.and( Restrictions.eq( "accessKey", keyId ), Restrictions.eq( "active", true ) ) )
-          .setReadOnly( true )
-          .uniqueResult( );
-      if ( result == null ) {
-        throw new NoSuchElementException( "Can not find user with key " + keyId );
-      }
-      return new DatabaseUserProxy( result );
-    } catch ( Exception e ) {
-      Debugging.logError( LOG, e, "Failed to find user with access key ID : " + keyId );
-      throw new AuthException( AuthException.NO_SUCH_USER, e );
-    }
-  }
-  
-  /**
-   * Lookup enabled user by its certificate. Only return the user if the certificate is active and not revoked.
-   * 
-   * @param cert
-   * @return
-   * @throws AuthException
-   */
-  @Override
-  public EuareUser lookupUserByCertificate( X509Certificate cert ) throws AuthException {
-    if ( cert == null ) {
-      throw new AuthException( "Empty input cert" );
-    }
-    try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      UserEntity result = ( UserEntity ) Entities
-          .createCriteria( UserEntity.class ).setCacheable( true ).add( Restrictions.eq( "enabled", true ) )
-          .createCriteria( "certificates" ).setCacheable( true ).add( 
-              Restrictions.and( 
-                  Restrictions.eq( "pem", X509CertHelper.fromCertificate( cert ) ), 
-                  Restrictions.and(
-                      Restrictions.eq( "active", true ),
-                      Restrictions.eq( "revoked", false ) ) ) )
-          .setReadOnly( true )
-          .uniqueResult( );
-      if ( result == null ) {
-        throw new NoSuchElementException( "Can not find user with specific cert" );
-      }
-      return new DatabaseUserProxy( result );
-    } catch ( Exception e ) {
-      Debugging.logError( LOG, e, "Failed to find user with certificate : " + cert );
-      throw new AuthException( AuthException.NO_SUCH_USER, e );
-    }
-  }
-  
-  @Override
-  public Group lookupGroupById( final String groupId ) throws AuthException {
-    if ( groupId == null ) {
-      throw new AuthException( AuthException.EMPTY_GROUP_ID );
-    }
-    try ( final TransactionResource db = Entities.transactionFor( GroupEntity.class ) ) {
-      GroupEntity group = DatabaseAuthUtils.getUnique( GroupEntity.class, "groupId", groupId );
-      db.commit( );
-      return new DatabaseGroupProxy( group );
-    } catch ( Exception e ) {
-      Debugging.logError( LOG, e, "Failed to find group by ID " + groupId );
-      throw new AuthException( AuthException.NO_SUCH_GROUP, e );
-    }
-  }
-
   @Override
   public EuareRole lookupRoleById( final String roleId ) throws AuthException {
     if ( roleId == null ) {
@@ -232,7 +146,7 @@ public class DatabaseAuthProvider implements AccountProvider {
    * Add account admin user separately.
    */
   @Override
-  public Account addAccount( @Nullable String accountName ) throws AuthException {
+  public EuareAccount addAccount( @Nullable String accountName ) throws AuthException {
     if ( accountName != null ) {
       try {
         ACCOUNT_NAME_CHECKER.check( accountName );
@@ -251,18 +165,19 @@ public class DatabaseAuthProvider implements AccountProvider {
    *
    */
   @Override
-  public Account addSystemAccount( String accountName ) throws AuthException {
-    if ( !accountName.startsWith( AccountIdentifiers.SYSTEM_ACCOUNT_PREFIX ) ) {
+  public EuareAccount addSystemAccount( String accountName ) throws AuthException {
+    if ( accountName.startsWith( AccountIdentifiers.SYSTEM_ACCOUNT_PREFIX ) ) {
+      try {
+        ACCOUNT_NAME_CHECKER.check( accountName.substring( EuareAccount.SYSTEM_ACCOUNT_PREFIX.length( ) ) );
+      } catch ( InvalidValueException e ) {
+        Debugging.logError( LOG, e, "Invalid account name " + accountName );
+        throw new AuthException( AuthException.INVALID_NAME, e );
+      }
+    } else if ( !AccountIdentifiers.SYSTEM_ACCOUNT.equals( accountName ) ) {
       throw new AuthException( AuthException.INVALID_NAME );
     }
-    try {
-      ACCOUNT_NAME_CHECKER.check( accountName.substring( Account.SYSTEM_ACCOUNT_PREFIX.length( ) ) );
-    } catch ( InvalidValueException e ) {
-      Debugging.logError( LOG, e, "Invalid account name " + accountName );
-      throw new AuthException( AuthException.INVALID_NAME, e );
-    }
 
-    Account account = null;
+    EuareAccount account = null;
     try {
       account = lookupAccountByName( accountName );
     } catch ( AuthException e ) {
@@ -270,15 +185,7 @@ public class DatabaseAuthProvider implements AccountProvider {
     }
 
     if ( account == null ) {
-      final AccountEntity accountEntity = new AccountEntity( accountName );
-      try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
-        Entities.persist( accountEntity );
-        db.commit( );
-        account = new DatabaseAccountProxy( accountEntity );
-      } catch ( Exception e ) {
-        Debugging.logError( LOG, e, "Failed to add account " + accountName );
-        throw new AuthException( AuthException.ACCOUNT_CREATE_FAILURE, e );
-      }
+      account = doAddAccount( accountName );
     }
 
     return account;
@@ -287,7 +194,7 @@ public class DatabaseAuthProvider implements AccountProvider {
   /**
    *
    */
-  private Account doAddAccount( @Nullable String accountName ) throws AuthException {
+  private EuareAccount doAddAccount( @Nullable String accountName ) throws AuthException {
     AccountEntity account = new AccountEntity( accountName );
     try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
       Entities.persist( account );
@@ -395,8 +302,8 @@ public class DatabaseAuthProvider implements AccountProvider {
   }
 
   @Override
-  public List<Account> listAllAccounts( ) throws AuthException {
-    List<Account> results = Lists.newArrayList( );
+  public List<EuareAccount> listAllAccounts( ) throws AuthException {
+    List<EuareAccount> results = Lists.newArrayList( );
     try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
       for ( AccountEntity account : Entities.query( new AccountEntity( ), true ) ) {
         results.add( new DatabaseAccountProxy( account ) );
@@ -439,7 +346,7 @@ public class DatabaseAuthProvider implements AccountProvider {
   }
 
   @Override
-  public Account lookupAccountByName( String accountName ) throws AuthException {
+  public EuareAccount lookupAccountByName( String accountName ) throws AuthException {
     if ( accountName == null ) {
       throw new AuthException( AuthException.EMPTY_ACCOUNT_NAME );
     }
@@ -464,7 +371,7 @@ public class DatabaseAuthProvider implements AccountProvider {
   }
 
   @Override
-  public Account lookupAccountById( final String accountId ) throws AuthException {
+  public EuareAccount lookupAccountById( final String accountId ) throws AuthException {
     if ( accountId == null ) {
       throw new AuthException( AuthException.EMPTY_ACCOUNT_ID );
     }
@@ -479,31 +386,24 @@ public class DatabaseAuthProvider implements AccountProvider {
   }
 
     @Override
-    public Account lookupAccountByCanonicalId(String canonicalId) throws AuthException {
-        if ( canonicalId == null || "".equals(canonicalId) ) {
-            throw new AuthException( AuthException.EMPTY_CANONICAL_ID );
+    public EuareAccount lookupAccountByCanonicalId( final String canonicalId ) throws AuthException {
+      if ( canonicalId == null || "".equals(canonicalId) ) {
+          throw new AuthException( AuthException.EMPTY_CANONICAL_ID );
+      }
+      try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
+        AccountEntity example = new AccountEntity();
+        example.setCanonicalId(canonicalId);
+        List<AccountEntity> results = Entities.query(example);
+        if (results != null && results.size() > 0) {
+          AccountEntity found = results.get(0);
+          return new DatabaseAccountProxy(found);
+        } else {
+          throw new AuthException( AuthException.NO_SUCH_USER );
         }
-        EntityTransaction tran = Entities.get(AccountEntity.class);
-        try {
-            AccountEntity example = new AccountEntity();
-            example.setCanonicalId(canonicalId);
-            List<AccountEntity> results = Entities.query(example);
-            if (results != null && results.size() > 0) {
-                AccountEntity found = results.get(0);
-                tran.commit();
-                return new DatabaseAccountProxy(found);
-            }
-            else {
-                tran.rollback( );
-                LOG.warn("Failed to find account by canonical ID " + canonicalId );
-                throw new AuthException( AuthException.NO_SUCH_USER );
-            }
-        }
-        catch ( Exception e ) {
-            tran.rollback( );
-            Debugging.logError( LOG, e, "Error occurred looking for account by canonical ID " + canonicalId );
-            throw new AuthException( AuthException.NO_SUCH_USER, e );
-        }
+      } catch ( Exception e ) {
+          Debugging.logError( LOG, e, "Error occurred looking for account by canonical ID " + canonicalId );
+          throw new AuthException( AuthException.NO_SUCH_USER, e );
+      }
     }
 
     @Override

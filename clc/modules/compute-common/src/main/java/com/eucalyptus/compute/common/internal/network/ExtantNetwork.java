@@ -86,7 +86,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.AccountMetadata;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.util.FullName;
+import com.eucalyptus.auth.principal.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;

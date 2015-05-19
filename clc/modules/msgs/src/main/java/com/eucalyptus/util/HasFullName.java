@@ -62,6 +62,7 @@
 
 package com.eucalyptus.util;
 
+import com.eucalyptus.auth.principal.FullName;
 import com.google.common.base.Function;
 
 public interface HasFullName<T> extends HasName<T> {

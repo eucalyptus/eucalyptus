@@ -80,7 +80,7 @@ import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 
@@ -134,7 +134,7 @@ public class NetworkGroups {
       userFullName = ( UserFullName ) ownerFullName;
     } else {
       try {
-        User admin = Accounts.lookupAccountById( ownerFullName.getAccountNumber() ).lookupAdmin();
+        User admin = Accounts.lookupPrincipalByAccountNumber( ownerFullName.getAccountNumber( ) );
         userFullName = UserFullName.getInstance( admin );
       } catch ( Exception ex ) {
         LOG.error( ex, ex );

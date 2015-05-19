@@ -68,30 +68,21 @@ import java.util.List;
 import java.util.Objects;
 import java.util.ServiceLoader;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.api.AccountProvider;
-import com.eucalyptus.auth.api.IdentityProvider;
+import com.eucalyptus.auth.api.PrincipalProvider;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
-import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
+import com.eucalyptus.auth.principal.AccountIdentifiersImpl;
 import com.eucalyptus.auth.principal.BaseInstanceProfile;
 import com.eucalyptus.auth.principal.BaseRole;
-import com.eucalyptus.auth.principal.Certificate;
-import com.eucalyptus.auth.principal.EuareRole;
-import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
-import com.eucalyptus.auth.principal.EuareUser;
 import com.eucalyptus.auth.principal.SecurityTokenContent;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
-import com.eucalyptus.auth.principal.UserPrincipalImpl;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterables;
@@ -131,12 +122,10 @@ import com.google.common.collect.Lists;
  */
 public class Accounts {
   private static final Logger LOG = Logger.getLogger( Accounts.class );
-  
-  private static Supplier<AccountProvider> accounts = serviceLoaderSupplier( AccountProvider.class );
 
-  private static Supplier<IdentityProvider> identities = serviceLoaderSupplier( IdentityProvider.class );
+  private static Supplier<PrincipalProvider> identities = serviceLoaderSupplier( PrincipalProvider.class );
 
-  private static <T> Supplier<T> serviceLoaderSupplier( final Class<T> serviceClass ) {
+  protected static <T> Supplier<T> serviceLoaderSupplier( final Class<T> serviceClass ) {
     return Suppliers.memoize( new Supplier<T>() {
       @Override
       public T get( ) {
@@ -145,39 +134,45 @@ public class Accounts {
     } );
   }
 
-  public static void setAccountProvider( AccountProvider provider ) {
-    synchronized ( Accounts.class ) {
-      LOG.info( "Setting the account provider to: " + provider.getClass( ) );
-      accounts = Suppliers.ofInstance( provider );
-    }
-  }
-
-  public static void setIdentityProvider( IdentityProvider provider ) {
+  public static void setIdentityProvider( PrincipalProvider provider ) {
     synchronized ( Accounts.class ) {
       LOG.info( "Setting the identity provider to: " + provider.getClass( ) );
       identities = Suppliers.ofInstance( provider );
     }
   }
 
-  protected static AccountProvider getAccountProvider( ) {
-    return accounts.get( );
+  protected static PrincipalProvider getIdentityProvider( ) {
+    return identities.get();
   }
 
-  protected static IdentityProvider getIdentityProvider( ) {
-    return identities.get( );
-  }
-
+  /**
+   * Get the euare service certificate for a region, locate by account number.
+   *
+   * @param accountNumber The account number used to identify the region
+   * @return The euare certificate for the accounts region
+   * @throws AuthException On error
+   */
   public static X509Certificate getEuareCertificate( final String accountNumber ) throws AuthException {
     return getIdentityProvider( ).getCertificateByAccountNumber( accountNumber );
   }
 
+  /**
+   * Create a certificate signed by the euare certificate for a region, locate by account number.
+   *
+   * @param accountNumber The account number used to identify the region
+   * @param publicKey The public key for the certificate
+   * @param principal The principal for the certificate subject
+   * @param expiryInDays The certificate expiry
+   * @return The ne certificate
+   * @throws AuthException On error
+   */
   public static X509Certificate signCertificate(
       final String accountNumber,
       final RSAPublicKey publicKey,
       final String principal,
       final int expiryInDays
   ) throws AuthException {
-    return getIdentityProvider( ).signCertificate( accountNumber, publicKey, principal, expiryInDays );
+    return getIdentityProvider().signCertificate( accountNumber, publicKey, principal, expiryInDays );
   }
 
   public static String lookupAccountIdByAlias( String alias ) throws AuthException {
@@ -189,7 +184,7 @@ public class Accounts {
   }
 
   public static String lookupAccountIdByCanonicalId( String canonicalId ) throws AuthException {
-    return getIdentityProvider( ).lookupAccountIdentifiersByCanonicalId( canonicalId ).getAccountNumber( );
+    return getIdentityProvider( ).lookupAccountIdentifiersByCanonicalId( canonicalId ).getAccountNumber();
   }
 
   public static String lookupCanonicalIdByAccountId( String accountId ) throws AuthException {
@@ -197,84 +192,41 @@ public class Accounts {
   }
 
   public static String lookupCanonicalIdByEmail( String email ) throws AuthException {
-    return getIdentityProvider( ).lookupAccountIdentifiersByEmail( email ).getCanonicalId( );
+    return getIdentityProvider( ).lookupAccountIdentifiersByEmail( email ).getCanonicalId();
   }
 
   public static String lookupAccountAliasById( String accountId ) throws AuthException {
-    return getIdentityProvider( ).lookupPrincipalByAccountNumber( accountId ).getAccountAlias( );
+    return getIdentityProvider( ).lookupPrincipalByAccountNumber( accountId ).getAccountAlias();
   }
 
-  public static Account lookupAccountByName( String accountName ) throws AuthException {
-    if ( isAccountNumber( accountName ) ) {
-      return getAccountProvider( ).lookupAccountById( accountName );
-    } else {
-      return getAccountProvider( ).lookupAccountByName( accountName );
-    }
-  }
-  
-  public static Account lookupAccountById( String accountId ) throws AuthException {
-    return Accounts.getAccountProvider( ).lookupAccountById( accountId );
+  public static AccountIdentifiers lookupAccountIdentifiersByAlias( final String alias ) throws AuthException {
+    return Accounts.getIdentityProvider( ).lookupAccountIdentifiersByAlias( alias );
   }
 
-  public static Account lookupAccountByCanonicalId(String canonicalId) throws AuthException {
-    return Accounts.getAccountProvider( ).lookupAccountByCanonicalId( canonicalId );
+  public static AccountIdentifiers lookupAccountIdentifiersByCanonicalId( final String canonicalId ) throws AuthException {
+    return Accounts.getIdentityProvider( ).lookupAccountIdentifiersByCanonicalId( canonicalId );
   }
 
-  public static Account addAccount( @Nullable String accountName ) throws AuthException {
-    return Accounts.getAccountProvider( ).addAccount( accountName );
-  }
-
-  public static void deleteAccount( String accountName, boolean forceDeleteSystem, boolean recursive ) throws AuthException {
-    Accounts.getAccountProvider( ).deleteAccount( accountName, forceDeleteSystem, recursive );
-  }
-
-  public static List<Account> listAllAccounts( ) throws AuthException {
-    return Accounts.getAccountProvider( ).listAllAccounts( );
+  public static AccountIdentifiers lookupAccountIdentifiersById( final String accountId ) throws AuthException {
+    final UserPrincipal user = Accounts.getIdentityProvider( ).lookupPrincipalByAccountNumber( accountId );
+    return new AccountIdentifiersImpl(
+        user.getAccountNumber( ),
+        user.getAccountAlias(),
+        user.getCanonicalId( )
+    );
   }
 
   public static boolean isSystemAccount( String accountName ) {
     return
-        Account.SYSTEM_ACCOUNT.equals( accountName ) ||
-        Objects.toString( accountName, "" ).startsWith( Account.SYSTEM_ACCOUNT_PREFIX );
-  }
-
-  public static boolean isSystemAccount( Account account ) {
-    return isSystemAccount( account == null ? null : account.getName( ) );
-  }
-
-  public static Account addSystemAccount( ) throws AuthException {
-    return Accounts.getAccountProvider( ).addAccount( Account.SYSTEM_ACCOUNT );
-  }
-
-  /**
-   * Add a system account.
-   *
-   * @return The new account or an existing account with the specified name.
-   */
-  public static Account addSystemAccount( final String accountName ) throws AuthException {
-    return Accounts.getAccountProvider( ).addSystemAccount( accountName );
-  }
-
-  /**
-   * Add a system account with an admin user.
-   *
-   * @return The new account or an existing account with the specified name.
-   */
-  public static Account addSystemAccountWithAdmin( final String accountName ) throws AuthException {
-    final Account account = addSystemAccount( accountName );
-    try {
-      account.lookupUserByName( EuareUser.ACCOUNT_ADMIN );
-    } catch ( final AuthException e ) {
-      account.addUser( EuareUser.ACCOUNT_ADMIN, "/", true, null );
-    }
-    return account;
+        AccountIdentifiers.SYSTEM_ACCOUNT.equals( accountName ) ||
+        Objects.toString( accountName, "" ).startsWith( AccountIdentifiers.SYSTEM_ACCOUNT_PREFIX );
   }
 
   @Nonnull
   public static List<String> listAccountNumbersForName( final String accountAliasExpression ) throws AuthException {
     return Lists.newArrayList( Iterables.transform(
         listAccountIdentifiersForName( accountAliasExpression ),
-        AccountIdentifiers.Properties.accountNumber( ) ) );
+        AccountIdentifiers.Properties.accountNumber() ) );
   }
 
   @Nonnull
@@ -303,8 +255,18 @@ public class Accounts {
   }
 
   @Nonnull
+  public static UserPrincipal lookupPrincipalByUserId( String userId ) throws AuthException {
+    return getIdentityProvider( ).lookupPrincipalByUserId( userId, null );
+  }
+
+  @Nonnull
   public static UserPrincipal lookupPrincipalByUserId( String userId, String nonce ) throws AuthException {
     return getIdentityProvider( ).lookupPrincipalByUserId( userId, nonce );
+  }
+
+  @Nonnull
+  public static UserPrincipal lookupPrincipalByRoleId( String roleId ) throws AuthException {
+    return getIdentityProvider( ).lookupPrincipalByRoleId( roleId, null );
   }
 
   @Nonnull
@@ -327,116 +289,50 @@ public class Accounts {
     return getIdentityProvider( ).lookupRoleByName( accountNumber, name );
   }
 
+  /**
+   * Lookup all enabled user certificates for an account.
+   *
+   * @param accountNumber The account number for the users
+   * @return The list of certificates
+   * @throws AuthException On error
+   */
+  @Nonnull
+  public static List<X509Certificate> lookupAccountCertificatesByAccountNumber( String accountNumber ) throws AuthException {
+    return getIdentityProvider( ).lookupAccountCertificatesByAccountNumber( accountNumber );
+  }
+
   @Nonnull
   public static SecurityTokenContent decodeSecurityToken( String accessKeyIdentifier, String securityToken ) throws AuthException {
-    return getIdentityProvider( ).decodeSecurityToken( accessKeyIdentifier, securityToken );
+    return getIdentityProvider().decodeSecurityToken( accessKeyIdentifier, securityToken );
   }
 
-  public static EuareUser lookupUserById( String userId ) throws AuthException {
-    return Accounts.getAccountProvider( ).lookupUserById( userId );
-  }
-
-  public static EuareUser lookupUserByAccessKeyId( String keyId ) throws AuthException {
-    return Accounts.getAccountProvider( ).lookupUserByAccessKeyId( keyId );
-  }
-  
-  public static EuareUser lookupUserByCertificate( X509Certificate cert ) throws AuthException {
-    return Accounts.getAccountProvider( ).lookupUserByCertificate( cert );
-  }
-
-  public static Group lookupGroupById( String groupId ) throws AuthException {
-    return Accounts.getAccountProvider( ).lookupGroupById( groupId );
-  }
-
-  public static EuareRole lookupRoleById( String roleId ) throws AuthException {
-    return Accounts.getAccountProvider( ).lookupRoleById( roleId );
-  }
-
-  public static Certificate lookupCertificateByHashId( String certificateId ) throws AuthException {
-    return Accounts.getAccountProvider( ).lookupCertificateByHashId( certificateId );
-  }
-
-  public static Certificate lookupCertificateById( String certificateId ) throws AuthException {
-    return Accounts.getAccountProvider( ).lookupCertificateById( certificateId );
-  }
-
-  public static AccessKey lookupAccessKeyById( String keyId ) throws AuthException {
-    return Accounts.getAccountProvider( ).lookupAccessKeyById( keyId );
-  }
-  
-  public static EuareUser lookupSystemAdmin( ) throws AuthException {
-    Account system = Accounts.getAccountProvider( ).lookupAccountByName( Account.SYSTEM_ACCOUNT );
-    return system.lookupAdmin();
-  }
-
-  public static UserPrincipal lookupSystemAdminAsPrincipal( ) throws AuthException {
-    Account system = Accounts.getAccountProvider( ).lookupAccountByName( Account.SYSTEM_ACCOUNT );
-    return userAsPrincipal( system.lookupAdmin() );
-  }
-
-  public static EuareUser lookupAwsExecReadAdmin(boolean ensureActiveKey) throws AuthException {
-	Account system = Accounts.getAccountProvider( ).lookupAccountByName( AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT );
-	EuareUser user = system.lookupAdmin();
-	if (ensureActiveKey) {
-      boolean hasActiveKey = false;
-      for (AccessKey k:user.getKeys()) {
-	    if ( k.isActive() ) {
-          hasActiveKey = true;
-          break;
-	    }
-      }
-      if (!hasActiveKey) {
-        user.createKey();
-	    LOG.debug("Created new user key for " + user.getName());
-      }
-	}
-	return user;
-  }
-
-  public static EuareUser lookupObjectStorageWalrusAccount(boolean ensureActiveKey) throws AuthException {
-    Account system = Accounts.getAccountProvider( ).lookupAccountByName( AccountIdentifiers.OBJECT_STORAGE_WALRUS_ACCOUNT );
-    EuareUser user = system.lookupAdmin();
-    if (ensureActiveKey) {
-      boolean hasActiveKey = false;
-      for (AccessKey k:user.getKeys()) {
-        if ( k.isActive() ) {
-          hasActiveKey = true;
-          break;
-        }
-      }
-      if (!hasActiveKey) {
-        user.createKey();
-        LOG.debug("Created new user key for " + user.getName());
-      }
+  /**
+   * Lookup a system account by alias
+   *
+   * @param alias The alias for the account
+   * @return The principal representing the accounts admin user
+   * @throws AuthException If the alias does not represent a system account or on other error
+   */
+  public static UserPrincipal lookupSystemAccountByAlias( final String alias ) throws AuthException {
+    if ( !isSystemAccount( alias ) ) {
+      throw new AuthException( "Not a system account: " + alias );
     }
-    return user;
+    final String accountNumber = lookupAccountIdentifiersByAlias( alias ).getAccountNumber( );
+    return lookupPrincipalByAccountNumber( accountNumber );
   }
 
-  public static EuareUser lookupImagingAccount( ) throws AuthException {
-    Account system = Accounts.getAccountProvider( ).lookupAccountByName( Account.IMAGING_SYSTEM_ACCOUNT );
-    return system.lookupAdmin();
+  /**
+   * Lookup the admin use for the eucalyptus account.
+   *
+   * @return The principal representing the eucalyptus admin user
+   * @throws AuthException
+   */
+  public static UserPrincipal lookupSystemAdmin( ) throws AuthException {
+    return lookupSystemAccountByAlias( AccountIdentifiers.SYSTEM_ACCOUNT );
   }
 
-  public static EuareUser lookupLoadbalancingAccount( ) throws AuthException {
-    Account system = Accounts.getAccountProvider( ).lookupAccountByName( Account.ELB_SYSTEM_ACCOUNT );
-    return system.lookupAdmin();
-  }
-
-  public static EuareUser lookupDatabaseAccount( ) throws AuthException {
-    Account system = Accounts.getAccountProvider( ).lookupAccountByName( Account.DATABASE_SYSTEM_ACCOUNT );
-    return system.lookupAdmin();
-  }
-
-  public static UserPrincipal userAsPrincipal( final EuareUser user  ) throws AuthException {
-    return new UserPrincipalImpl( user );
-  }
-
-  public static UserPrincipal roleAsPrincipal( final EuareRole role ) throws AuthException {
-    return new UserPrincipalImpl( role );
-  }
-
-  public static String getAccountFullName( Account account ) {
-    return "/" + account.getName( );
+  public static String getAccountFullName( AccountIdentifiers account ) {
+    return "/" + account.getAccountAlias();
   }
 
   public static String getUserFullName( User user ) {
@@ -444,14 +340,6 @@ public class Accounts {
       return user.getPath( ) + user.getName( );
     } else {
       return user.getPath( ) + "/" + user.getName( );
-    }
-  }
-  
-  public static String getGroupFullName( Group group ) {
-    if ( group.getPath( ).endsWith( "/" ) ) {
-      return group.getPath( ) + group.getName( );
-    } else {
-      return group.getPath( ) + "/" + group.getName( );
     }
   }
 
@@ -479,10 +367,6 @@ public class Accounts {
     return buildArn( user.getAccountNumber( ), PolicySpec.IAM_RESOURCE_USER, user.getPath(), user.getName() );
   }
 
-  public static String getGroupArn( final Group group ) throws AuthException {
-    return buildArn( group.getAccountNumber( ), PolicySpec.IAM_RESOURCE_GROUP, group.getPath(), group.getName() );
-  }
-
   public static String getRoleArn( final BaseRole role ) throws AuthException {
     return buildArn( role.getAccountNumber( ), PolicySpec.IAM_RESOURCE_ROLE, role.getPath(), role.getName() );
   }
@@ -491,10 +375,10 @@ public class Accounts {
     return buildArn( instanceProfile.getAccountNumber( ), PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, instanceProfile.getPath( ), instanceProfile.getName( ) );
   }
 
-  private static String buildArn( final String accountNumber,
-                                  final String type,
-                                  final String path,
-                                  final String name ) throws AuthException {
+  protected static String buildArn( final String accountNumber,
+                                    final String type,
+                                    final String path,
+                                    final String name ) throws AuthException {
     return new EuareResourceName( accountNumber, type, path, name ).toString( );
   }
 
@@ -506,37 +390,8 @@ public class Accounts {
     return identifier.matches( "[0-9]{12}" );
   }
 
-  public static Function<Account,String> toAccountNumber() {
-    return AccountStringProperties.ACCOUNT_NUMBER;
-  }
-
-  public static Function<User,String> toUserAccountNumber() {
-    return UserStringProperties.ACCOUNT_NUMBER;
-  }
-
   public static Function<User,String> toUserId() {
     return UserStringProperties.USER_ID;
-  }
-
-  public static Function<Group,String> toGroupAccountNumber() {
-    return GroupStringProperties.ACCOUNT_NUMBER;
-  }
-
-  public static Function<Group,String> toGroupId() {
-    return GroupStringProperties.GROUP_ID;
-  }
-
-  public static Predicate<Group> isUserGroup( ) {
-    return GroupFilters.USER_GROUP;
-  }
-
-  private enum AccountStringProperties implements Function<Account,String> {
-    ACCOUNT_NUMBER {
-      @Override
-      public String apply( final Account account ) {
-        return account.getAccountNumber();
-      }
-    }
   }
 
   private enum UserStringProperties implements Function<User,String> {
@@ -558,31 +413,4 @@ public class Accounts {
     }
   }
 
-  private enum GroupStringProperties implements Function<Group,String> {
-    ACCOUNT_NUMBER {
-      @Override
-      public String apply( final Group group ) {
-        try {
-          return group.getAccountNumber( );
-        } catch ( AuthException e ) {
-          throw Exceptions.toUndeclared( e );
-        }
-      }
-    },
-    GROUP_ID {
-      @Override
-      public String apply( final Group group ) {
-        return group.getGroupId( );
-      }
-    }
-  }
-
-  private enum GroupFilters implements Predicate<Group> {
-    USER_GROUP {
-      @Override
-      public boolean apply( @Nullable final Group group ) {
-        return group != null && group.isUserGroup( );
-      }
-    }
-  }
 }

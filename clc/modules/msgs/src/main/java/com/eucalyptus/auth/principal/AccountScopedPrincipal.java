@@ -27,6 +27,5 @@ import com.eucalyptus.auth.AuthException;
 public interface AccountScopedPrincipal extends BasePrincipal {
 
   String getAccountNumber( ) throws AuthException;
-  Account getAccount( ) throws AuthException;
 
 }

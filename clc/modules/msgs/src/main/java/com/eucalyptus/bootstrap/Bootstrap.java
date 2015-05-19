@@ -228,6 +228,7 @@ public class Bootstrap {
     PoolInit,
     PersistenceInit,
     RemoteDbPoolInit,
+    SystemAccountsInit,
     RemoteServicesInit,
     UserCredentialsInit,
     CloudServiceInit,

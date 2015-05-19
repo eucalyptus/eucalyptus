@@ -29,7 +29,7 @@ import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.DhcpConfigurationItemType;
 import com.eucalyptus.compute.common.DhcpOptionsType;
 import com.eucalyptus.compute.common.internal.tags.FilterSupport;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;

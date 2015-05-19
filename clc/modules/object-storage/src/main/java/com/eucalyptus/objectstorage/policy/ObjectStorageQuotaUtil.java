@@ -77,7 +77,7 @@ public class ObjectStorageQuotaUtil {
 
   public static long countBucketsByAccount(String accountId) throws AuthException {
     try {
-      return BucketMetadataManagers.getInstance().countBucketsByAccount(Accounts.lookupAccountById(accountId).getCanonicalId());
+      return BucketMetadataManagers.getInstance().countBucketsByAccount(Accounts.lookupCanonicalIdByAccountId(accountId));
     } catch (Exception e) {
       throw new AuthException("Failed to search bucket", e);
     }
@@ -111,7 +111,7 @@ public class ObjectStorageQuotaUtil {
   }
 
   public static long getTotalObjectsSizeByAccount(String accountId) throws AuthException {
-    String canonicalId = Accounts.lookupAccountById(accountId).getCanonicalId();
+    String canonicalId = Accounts.lookupCanonicalIdByAccountId(accountId);
     try (TransactionResource db = Entities.transactionFor(Bucket.class)) {
       List<Bucket> bucketList = BucketMetadataManagers.getInstance().lookupBucketsByOwner(canonicalId);
       long size = 0;

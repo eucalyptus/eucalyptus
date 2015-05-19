@@ -22,11 +22,7 @@
 package com.eucalyptus.compute.common
 
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
-import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID;
-
-import java.util.ArrayList;
-import com.eucalyptus.auth.policy.PolicyAction;
-import com.eucalyptus.auth.policy.PolicySpec
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 import com.eucalyptus.binding.HttpParameterMapping
 import com.eucalyptus.binding.HttpEmbedded;
 

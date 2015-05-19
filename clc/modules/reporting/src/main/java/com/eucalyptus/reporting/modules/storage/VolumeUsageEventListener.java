@@ -30,7 +30,6 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.reporting.event.EventActionInfo;
@@ -63,19 +62,16 @@ public class VolumeUsageEventListener implements EventListener<VolumeEvent> {
 
     final long timeInMs = getCurrentTimeMillis();
     try {
-      final User user = lookupUser(event.getOwner().getUserId());
-
-      getReportingAccountCrud().createOrUpdateAccount(user.getAccountNumber(),
-          lookupAccountAliasById( user.getAccountNumber( ) ) );
-      getReportingUserCrud().createOrUpdateUser(user.getUserId(), user
-          .getAccountNumber(), user.getName());
+      getReportingAccountCrud().createOrUpdateAccount( event.getAccountNumber(),
+          lookupAccountAliasById( event.getAccountNumber( ) ) );
+      getReportingUserCrud().createOrUpdateUser( event.getUserId(), event
+          .getAccountNumber(), event.getUserName());
 
       final ReportingVolumeEventStore eventStore = getReportingVolumeEventStore();
       switch (event.getActionInfo().getAction()) {
         case VOLUMECREATE:
           eventStore.insertCreateEvent(event.getUuid(), event
-              .getVolumeId(), timeInMs, event.getOwner()
-              .getUserId(), event.getAvailabilityZone(), event
+              .getVolumeId(), timeInMs, event.getUserId(), event.getAvailabilityZone(), event
               .getSizeGB());
           break;
         case VOLUMEDELETE:
@@ -115,10 +111,6 @@ public class VolumeUsageEventListener implements EventListener<VolumeEvent> {
 
   protected long getCurrentTimeMillis() {
     return System.currentTimeMillis();
-  }
-
-  protected User lookupUser( final String userId ) throws AuthException {
-    return Accounts.lookupUserById( userId );
   }
 
   protected String lookupAccountAliasById( final String accountNumber ) throws AuthException {

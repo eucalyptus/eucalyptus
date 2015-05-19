@@ -21,6 +21,7 @@ package com.eucalyptus.reporting.modules.s3
 
 import com.eucalyptus.auth.AuthException
 import com.eucalyptus.reporting.service.ReportingService
+import groovy.transform.CompileStatic
 import org.junit.BeforeClass
 import org.junit.Test
 import com.eucalyptus.auth.principal.Principals
@@ -28,7 +29,6 @@ import com.eucalyptus.auth.principal.Principals
 import static org.junit.Assert.*
 import com.eucalyptus.reporting.domain.ReportingAccountCrud
 import com.eucalyptus.reporting.domain.ReportingUserCrud
-import com.eucalyptus.auth.principal.User
 import com.eucalyptus.reporting.event.S3ObjectEvent
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectEventStore
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectCreateEvent
@@ -37,6 +37,7 @@ import com.eucalyptus.reporting.event_store.ReportingS3ObjectDeleteEvent
 /**
  * 
  */
+@CompileStatic
 class S3ObjectUsageEventListenerTest {
 
   @BeforeClass
@@ -59,11 +60,13 @@ class S3ObjectUsageEventListenerTest {
         "object34",
         "version1",
         Principals.systemFullName().getUserId(),
+        Principals.systemFullName().getUserName(),
+        Principals.systemFullName().getAccountNumber(),
         Integer.MAX_VALUE.toLong() + 1L
     ), timestamp )
 
     assertTrue( "Persisted event is ReportingS3BucketCreateEvent", persisted instanceof ReportingS3ObjectCreateEvent )
-    ReportingS3ObjectCreateEvent event = persisted
+    ReportingS3ObjectCreateEvent event = (ReportingS3ObjectCreateEvent) persisted
     assertEquals( "Persisted event bucket name", "bucket15", event.getS3BucketName() )
     assertEquals( "Persisted event object name", "object34", event.getS3ObjectKey() )
     assertEquals( "Persisted event object version", "version1", event.getObjectVersion() )
@@ -82,11 +85,13 @@ class S3ObjectUsageEventListenerTest {
         "object34",
         null,
         Principals.systemFullName().getUserId(),
+        Principals.systemFullName().getUserName(),
+        Principals.systemFullName().getAccountNumber(),
         Integer.MAX_VALUE.toLong() + 1L
     ), timestamp )
 
     assertTrue( "Persisted event is ReportingS3BucketDeleteEvent", persisted instanceof ReportingS3ObjectDeleteEvent )
-    ReportingS3ObjectDeleteEvent event = persisted
+    ReportingS3ObjectDeleteEvent event = (ReportingS3ObjectDeleteEvent) persisted
     assertEquals( "Persisted event bucket name", "bucket15", event.getS3BucketName() )
     assertEquals( "Persisted event object name", "object34", event.getS3ObjectKey() )
     assertNull( "Persisted event object version", event.getObjectVersion() )
@@ -103,11 +108,13 @@ class S3ObjectUsageEventListenerTest {
         "object34",
         "null",
         Principals.systemFullName().getUserId(),
+        Principals.systemFullName().getUserName(),
+        Principals.systemFullName().getAccountNumber(),
         Integer.MAX_VALUE.toLong() + 1L
     ), timestamp )
 
     assertTrue( "Persisted event is ReportingS3BucketDeleteEvent", persisted instanceof ReportingS3ObjectDeleteEvent )
-    ReportingS3ObjectDeleteEvent event = persisted
+    ReportingS3ObjectDeleteEvent event = (ReportingS3ObjectDeleteEvent) persisted
     assertEquals( "Persisted event bucket name", "bucket15", event.getS3BucketName() )
     assertEquals( "Persisted event object name", "object34", event.getS3ObjectKey() )
     assertNull( "Persisted event object version", event.getObjectVersion() )
@@ -142,10 +149,6 @@ class S3ObjectUsageEventListenerTest {
       @Override protected ReportingUserCrud getReportingUserCrud() { return userCrud }
       @Override protected ReportingS3ObjectEventStore getReportingS3ObjectEventStore() { eventStore }
       @Override protected long getCurrentTimeMillis() { timestamp }
-      @Override protected User lookupUser( final String userId ) {
-        assertEquals( "Looked up user", "eucalyptus", userId )
-        Principals.systemUser()
-      }
       @Override protected String lookupAccountAliasById(final String accountNumber) throws AuthException {
         assertEquals( "Account Id", "000000000000", accountNumber  )
         'eucalyptus'

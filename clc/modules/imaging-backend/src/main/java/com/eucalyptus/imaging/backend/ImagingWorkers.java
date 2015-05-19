@@ -30,6 +30,7 @@ import java.util.regex.Pattern;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.ResourceTag;
@@ -181,7 +182,8 @@ public class ImagingWorkers {
     if(!verifiedWorkers.contains(instanceId)){
       try{
         final List<RunningInstancesItemType> instances=
-            Ec2Client.getInstance().describeInstances(Accounts.lookupImagingAccount().getUserId(),
+            Ec2Client.getInstance().describeInstances(
+                Accounts.lookupSystemAccountByAlias( AccountIdentifiers.IMAGING_SYSTEM_ACCOUNT ).getUserId( ),
                 Lists.newArrayList(instanceId));
         final RunningInstancesItemType workerInstance = instances.get(0);
         boolean tagFound = false;
@@ -206,7 +208,8 @@ public class ImagingWorkers {
     String availabilityZone = null;
     try{
       final List<RunningInstancesItemType> instances =
-          Ec2Client.getInstance().describeInstances(Accounts.lookupImagingAccount().getUserId(),
+          Ec2Client.getInstance().describeInstances(
+              Accounts.lookupSystemAccountByAlias( AccountIdentifiers.IMAGING_SYSTEM_ACCOUNT ).getUserId( ),
               Lists.newArrayList(workerId));
       availabilityZone = instances.get(0).getPlacement();
     }catch(final Exception ex){
@@ -277,8 +280,9 @@ public class ImagingWorkers {
     // check if system knows about instance
     List<RunningInstancesItemType> instances = null;
     try {
-      instances = Ec2Client.getInstance().describeInstances(Accounts.lookupImagingAccount().getUserId(),
-            Lists.newArrayList(workerId));
+      instances = Ec2Client.getInstance().describeInstances(
+          Accounts.lookupSystemAccountByAlias( AccountIdentifiers.IMAGING_SYSTEM_ACCOUNT ).getUserId( ),
+          Lists.newArrayList(workerId));
     } catch(final Exception ex) {
       LOG.error("Can't list instances", ex);
     }
@@ -296,7 +300,8 @@ public class ImagingWorkers {
     String instanceId = null;
     try{
       final List<RunningInstancesItemType> instances = 
-          Ec2Client.getInstance().describeInstances(Accounts.lookupImagingAccount().getUserId(),
+          Ec2Client.getInstance().describeInstances(
+              Accounts.lookupSystemAccountByAlias( AccountIdentifiers.IMAGING_SYSTEM_ACCOUNT ).getUserId( ),
               Lists.newArrayList(workerId));
       if(instances!=null && instances.size()==1)
         instanceId = instances.get(0).getInstanceId();
@@ -305,7 +310,8 @@ public class ImagingWorkers {
     }
     if(instanceId!=null){
       try{
-        Ec2Client.getInstance().terminateInstances(Accounts.lookupImagingAccount().getUserId(),
+        Ec2Client.getInstance().terminateInstances(
+            Accounts.lookupSystemAccountByAlias( AccountIdentifiers.IMAGING_SYSTEM_ACCOUNT ).getUserId( ),
             Lists.newArrayList(workerId));
         LOG.debug("Terminated imaging worker: " + workerId);
       }catch(final Exception ex){

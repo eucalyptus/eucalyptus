@@ -31,6 +31,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
@@ -79,8 +80,9 @@ public class AclTests {
     UnitTestSupport.initializeAuth(2, 2);
 
     Iterator<String> accountNameIterator = UnitTestSupport.getTestAccounts().iterator();
-    account1CanonicalId = Accounts.lookupAccountByName(accountNameIterator.next()).getCanonicalId();
-    canonicalUser1 = new CanonicalUser(account1CanonicalId, Accounts.lookupAccountByCanonicalId(account1CanonicalId).getName());
+    final AccountIdentifiers account1Identifiers = Accounts.lookupAccountIdentifiersByAlias(accountNameIterator.next());
+    account1CanonicalId = account1Identifiers.getCanonicalId( );
+    canonicalUser1 = new CanonicalUser(account1CanonicalId, account1Identifiers.getAccountAlias());
     account1 = new Grantee(canonicalUser1);
     account1Read = new Grant(account1, Permission.READ.toString());
     account1Write = new Grant(account1, Permission.WRITE.toString());
@@ -88,16 +90,15 @@ public class AclTests {
     account1ReadAcp = new Grant(account1, Permission.READ_ACP.toString());
     account1WriteAcp = new Grant(account1, Permission.WRITE_ACP.toString());
 
-    account2CanonicalId = Accounts.lookupAccountByName(accountNameIterator.next()).getCanonicalId();
-    canonicalUser2 = new CanonicalUser(account2CanonicalId, Accounts.lookupAccountByCanonicalId(account2CanonicalId).getName());
+    final AccountIdentifiers account2Identifiers = Accounts.lookupAccountIdentifiersByAlias(accountNameIterator.next());
+    account2CanonicalId = account2Identifiers.getCanonicalId();
+    canonicalUser2 = new CanonicalUser(account2CanonicalId, account2Identifiers.getAccountAlias());
     account2 = new Grantee(canonicalUser2);
     account2Read = new Grant(account2, Permission.READ.toString());
     account2Write = new Grant(account2, Permission.WRITE.toString());
     account2FullControl = new Grant(account2, Permission.FULL_CONTROL.toString());
     account2ReadAcp = new Grant(account2, Permission.READ_ACP.toString());
     account2WriteAcp = new Grant(account2, Permission.WRITE_ACP.toString());
-
-    Accounts.addSystemAccount().addUser(User.ACCOUNT_ADMIN, "/", true, null);
   }
 
   @Test

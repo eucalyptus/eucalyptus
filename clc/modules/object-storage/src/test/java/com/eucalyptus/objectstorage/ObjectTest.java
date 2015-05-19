@@ -69,7 +69,7 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.objectstorage.msgs.CreateBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.CreateBucketType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketResponseType;
@@ -95,8 +95,8 @@ public class ObjectTest {
   @Test
   public void testObject() throws Exception {
 
-    String bucketName = "halo" + Hashes.getRandom(6);
-    String objectName = "key" + Hashes.getRandom(6);
+    String bucketName = "halo" + Crypto.getRandom( 6 );
+    String objectName = "key" + Crypto.getRandom( 6 );
     String userId = "admin";
 
     CreateBucketType createBucketRequest = new CreateBucketType(bucketName);

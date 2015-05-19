@@ -75,7 +75,6 @@ import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.component.id.Euare;
@@ -159,7 +158,7 @@ public class AccountEntity extends AbstractPersistent implements Serializable {
             }
             if (! notFinished) {
                 try {
-                    Accounts.lookupAccountByCanonicalId(buf.toString());
+                    com.eucalyptus.auth.euare.Accounts.lookupAccountByCanonicalId( buf.toString() );
                     // canonical id is a dupe
                     buf = new StringBuilder();
                     notFinished = true;

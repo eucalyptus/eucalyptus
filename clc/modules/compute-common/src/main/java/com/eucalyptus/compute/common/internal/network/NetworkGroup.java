@@ -105,8 +105,8 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.upgrade.Upgrades;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.FullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -226,7 +226,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   /**
    * Example for finding a group by name in a VPC
    *
-   * @see #withUniqueName(com.eucalyptus.util.OwnerFullName, String, String) withUniqueName - For use when owner is specified
+   * @see #withUniqueName(com.eucalyptus.auth.principal.OwnerFullName, String, String) withUniqueName - For use when owner is specified
    */
   public static NetworkGroup namedForVpc( final String vpcId,
                                           final String groupName ) {

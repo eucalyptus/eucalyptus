@@ -21,18 +21,15 @@ package com.eucalyptus.autoscaling.metadata;
 
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingMetadataWithResourceName;
 
-import java.util.NoSuchElementException;
-
 import javax.annotation.Nullable;
 
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
 import com.eucalyptus.autoscaling.common.AutoScalingResourceName;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
-import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.Callback;
-import com.eucalyptus.util.OwnerFullName;
-import com.eucalyptus.util.RestrictedType;
+import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.auth.type.RestrictedType;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;

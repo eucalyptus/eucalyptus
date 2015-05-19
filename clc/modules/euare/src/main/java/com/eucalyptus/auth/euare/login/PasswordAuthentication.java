@@ -20,13 +20,13 @@
 package com.eucalyptus.auth.euare.login;
 
 import javax.security.auth.login.CredentialExpiredException;
-import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.euare.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.AuthenticationLimitProvider;
 import com.eucalyptus.auth.LdapException;
-import com.eucalyptus.auth.ldap.LdapSync;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.EuareUser;
+import com.eucalyptus.auth.euare.ldap.LdapSync;
+import com.eucalyptus.auth.euare.principal.EuareAccount;
+import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.crypto.Crypto;
@@ -62,7 +62,7 @@ public class PasswordAuthentication {
       final String newPassword
   ) throws AuthException, CredentialExpiredException {
     if ( newPassword != null ) { // password change is for local region
-      final Account account = Accounts.lookupAccountByName( accountAlias );
+      final EuareAccount account = Accounts.lookupAccountByName( accountAlias );
       final EuareUser user = account.lookupUserByName( username );
       if ( authenticateWithLdap( user ) ) {
         throw new AuthException( PASSWORD_CHANGE_NOT_SUPPORTED );

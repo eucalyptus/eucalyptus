@@ -20,17 +20,9 @@
 package com.eucalyptus.autoscaling
 
 import com.eucalyptus.auth.Accounts
-import com.eucalyptus.auth.api.AccountProvider
-import com.eucalyptus.auth.principal.AccessKey
-import com.eucalyptus.auth.principal.Account
+import com.eucalyptus.auth.api.PrincipalProvider
 import com.eucalyptus.auth.principal.AccountFullName
-import com.eucalyptus.auth.principal.AccountIdentifiers
-import com.eucalyptus.auth.principal.Certificate
-import com.eucalyptus.auth.principal.EuareRole
-import com.eucalyptus.auth.principal.EuareUser
-import com.eucalyptus.auth.principal.Group
-import com.eucalyptus.auth.principal.Principals
-import com.eucalyptus.auth.principal.User
+import com.eucalyptus.auth.principal.TestProvider
 import com.eucalyptus.autoscaling.activities.ActivityCause
 import com.eucalyptus.autoscaling.activities.ActivityManager
 import com.eucalyptus.autoscaling.activities.ActivityStatusCode
@@ -98,7 +90,7 @@ import com.eucalyptus.context.Contexts
 import com.eucalyptus.crypto.util.Timestamps
 import com.eucalyptus.util.Callback
 import com.eucalyptus.util.Consumer
-import com.eucalyptus.util.OwnerFullName
+import com.eucalyptus.auth.principal.OwnerFullName
 import com.eucalyptus.util.TypeMappers
 import com.google.common.base.Function
 import com.google.common.base.Predicate
@@ -110,7 +102,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage
 import static org.junit.Assert.*
 import org.junit.BeforeClass
 import org.junit.Test
-import java.security.cert.X509Certificate
+
 import javax.annotation.Nonnull
 import javax.annotation.Nullable
 import com.eucalyptus.auth.Permissions
@@ -149,7 +141,7 @@ class AutoScalingServiceTest {
 
   @Test
   void testLaunchConfigurations() {
-    Accounts.setAccountProvider( accountProvider() )
+    Accounts.setIdentityProvider( identityProvider() )
     AutoScalingBackendService service = service()
     Contexts.threadLocal(  new Context( "", new BaseMessage() ) )
 
@@ -206,7 +198,7 @@ class AutoScalingServiceTest {
 
   @Test
   void testAutoScalingGroups() {
-    Accounts.setAccountProvider( accountProvider() )
+    Accounts.setIdentityProvider( identityProvider() )
     AutoScalingBackendService service = service()
     Contexts.threadLocal(  new Context( "", new BaseMessage() ) )
 
@@ -276,7 +268,7 @@ class AutoScalingServiceTest {
 
   @Test
   void testScalingPolicies() {
-    Accounts.setAccountProvider( accountProvider() )
+    Accounts.setIdentityProvider( identityProvider() )
     AutoScalingBackendService service = service()
     Contexts.threadLocal(  new Context( "", new BaseMessage() ) )
 
@@ -357,7 +349,7 @@ class AutoScalingServiceTest {
   @SuppressWarnings("GroovyAssignabilityCheck")
   @Test
   void testDescribeInstances() {
-    Accounts.setAccountProvider( accountProvider() )
+    Accounts.setIdentityProvider( identityProvider() )
     AutoScalingBackendService service = service( launchConfigurationStore(), autoScalingGroupStore(), autoScalingInstanceStore( [
       new AutoScalingInstance(
           ownerAccountNumber: '000000000000',
@@ -389,7 +381,7 @@ class AutoScalingServiceTest {
   @SuppressWarnings("GroovyAssignabilityCheck")
   @Test
   void testTerminateInstances() {
-    Accounts.setAccountProvider( accountProvider() )
+    Accounts.setIdentityProvider( identityProvider() )
     AutoScalingGroup group
     AutoScalingBackendService service = service( launchConfigurationStore(), autoScalingGroupStore( [
         group = new AutoScalingGroup(
@@ -457,98 +449,8 @@ class AutoScalingServiceTest {
         scalingActivities )
   }
 
-  AccountProvider accountProvider() {
-    new AccountProvider() {
-      @Override
-      Account lookupAccountByName(final String accountName) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      Account lookupAccountById(final String accountId) {
-        Principals.systemAccount( )
-      }
-
-      @Override
-      Account addAccount(final String accountName) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      Account addSystemAccount(final String accountName) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      void deleteAccount(final String accountName, final boolean forceDeleteSystem, final boolean recursive) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      List<Account> listAllAccounts() {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      List<AccountIdentifiers> resolveAccountNumbersForName(final String accountNameLike) {
-        [] as Set
-      }
-
-      @Override
-      List<User> listAllUsers() {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      EuareUser lookupUserById(final String userId) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      EuareUser lookupUserByAccessKeyId(final String keyId) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      EuareUser lookupUserByCertificate(final X509Certificate cert) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      Group lookupGroupById(final String groupId) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      EuareRole lookupRoleById(final String roleId) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      Certificate lookupCertificateByHashId(final String certificateId) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      Certificate lookupCertificateById(final String certificateId) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      AccessKey lookupAccessKeyById(final String keyId) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      Account lookupAccountByCanonicalId(final String userName) {
-        throw new UnsupportedOperationException()
-      }
-
-      @Override
-      EuareUser lookupUserByEmailAddress(String email) {
-        throw new UnsupportedOperationException()
-      }
-    }
+  PrincipalProvider identityProvider() {
+    new TestProvider( )
   }
 
   LaunchConfigurations launchConfigurationStore() {

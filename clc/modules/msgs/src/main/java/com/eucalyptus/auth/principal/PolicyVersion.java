@@ -32,5 +32,5 @@ public interface PolicyVersion {
 
   String getPolicy( );
 
-  String getPolicyHash( ); // SHA-256 hash useful for content based caching  //TODO:STEVE: B64? B32? hex?
+  String getPolicyHash( ); // SHA-256 hash useful for content based caching
 }

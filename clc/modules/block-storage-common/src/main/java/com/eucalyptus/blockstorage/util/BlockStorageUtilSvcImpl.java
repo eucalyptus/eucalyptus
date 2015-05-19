@@ -72,11 +72,6 @@ public class BlockStorageUtilSvcImpl implements BlockStorageUtilSvc {
   }
 
   @Override
-  public BaseRole checkAndConfigureBlockStorageAccount() throws EucalyptusCloudException {
-    return BlockStorageUtil.checkAndConfigureBlockStorageAccount();
-  }
-
-  @Override
   public Criterion getFailedCriterion() {
     return BlockStorageUtil.getFailedCriterion();
   }
