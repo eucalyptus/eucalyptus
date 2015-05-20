@@ -4,7 +4,7 @@
     "Action": [
       "ec2:*KeyPair*",
       "ec2:*SecurityGroup*",
-      "ec2:*Instances",
+      "ec2:*Instances"
     ],
     "Resource": "*"
   }]
