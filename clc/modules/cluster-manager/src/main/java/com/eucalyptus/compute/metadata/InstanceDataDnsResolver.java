@@ -65,9 +65,12 @@
 package com.eucalyptus.compute.metadata;
 
 import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
+
 import java.net.InetAddress;
+
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
+
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -79,6 +82,7 @@ import com.eucalyptus.util.dns.DnsResolvers.RequestType;
 import com.eucalyptus.util.dns.DomainNameRecords;
 import com.eucalyptus.util.dns.DomainNames;
 import com.eucalyptus.vm.dns.InstanceDomainNames;
+import com.google.common.collect.Lists;
 
 @ConfigurableClass( root = "dns.instancedata",
                     description = "Options controlling DNS name resolution for the instance metadata service." )
@@ -99,7 +103,9 @@ public class InstanceDataDnsResolver implements DnsResolver {
     final Name name = query.getName( );
     if ( !Bootstrap.isOperational( ) || !enabled || !Subnets.isSystemManagedAddress( source ) ) {
       return false;
-    } else if ( RequestType.A.apply( query ) ) {
+    } else if ( RequestType.PTR.apply( query ) ) {
+      return name.equals( INSTANCE_PTR );
+    } else {
       if ( INSTANCE_DATA.equals( name ) ) {
         return true;
       } else if ( name.subdomain( DomainNames.internalSubdomain( ) )
@@ -112,9 +118,7 @@ public class InstanceDataDnsResolver implements DnsResolver {
                   && RELATIVE_INSTANCE_DATA.equals( DomainNames.relativize( name, InstanceDomainNames.lookupInstanceDomain( name ) ) ) ) {
         return true;
       }
-    } else if ( RequestType.PTR.apply( query ) ) {
-      return name.equals( INSTANCE_PTR );
-    }
+    }       
     return false;
   }
   
@@ -131,6 +135,8 @@ public class InstanceDataDnsResolver implements DnsResolver {
     } else if ( RequestType.PTR.apply( query ) && INSTANCE_PTR.equals( query.getName( ) ) ) {
       return DnsResponse.forName( name )
                         .answer( PTR_RECORD );
+    } else {
+      return DnsResponse.forName( name ).answer( Lists.<Record>newArrayList());
     }
     return null;
   }

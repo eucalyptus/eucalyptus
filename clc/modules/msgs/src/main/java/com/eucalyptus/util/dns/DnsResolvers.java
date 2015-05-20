@@ -473,6 +473,8 @@ public class DnsResolvers extends ServiceJarDiscovery {
             }
           }
           return SetResponse.ofType( SetResponse.SUCCESSFUL );
+        } else {
+          return SetResponse.ofType( SetResponse.SUCCESSFUL );
         }
       } catch ( final Exception ex ) {
         LOG.debug( "DnsResolver: failed for " + name + " using " + r + " because of: " + ex.getMessage( ), ex );
@@ -513,7 +515,7 @@ public class DnsResolvers extends ServiceJarDiscovery {
       } else {
         final Iterable<DnsResolver> resolverList = DnsResolvers.resolversFor( request );
         if ( Iterables.isEmpty( resolverList ) ) {
-          return SetResponse.ofType( SetResponse.UNKNOWN );
+          return SetResponse.ofType( SetResponse.NXDOMAIN );
         } else {
           return DnsResolvers.lookupRecords( response, request );
         }

@@ -73,9 +73,7 @@ public class LoadBalancerResolver implements DnsResolvers.DnsResolver {
     final Record query = request.getQuery( );
     if ( !Bootstrap.isOperational( ) || !dns_resolver_enabled ) {
       return false;
-    } else if (
-        DnsResolvers.RequestType.A.apply( query ) &&
-        query.getName( ).subdomain( LoadBalancerDomainName.getLoadBalancerSubdomain() ) ) {
+    } else if ( query.getName( ).subdomain( LoadBalancerDomainName.getLoadBalancerSubdomain() ) ) {
       return true;
     }
     return false;
@@ -84,48 +82,49 @@ public class LoadBalancerResolver implements DnsResolvers.DnsResolver {
   @Override
   public DnsResponse lookupRecords( final DnsRequest request ) {
     final Record query = request.getQuery( );
-    if ( DnsResolvers.RequestType.A.apply( query ) ) {
-      try {
-        final Name name = query.getName( );
-        final Name hostName = name.relativize( LoadBalancerDomainName.getLoadBalancerSubdomain( ) );
-        final Optional<LoadBalancerDomainName> domainName = LoadBalancerDomainName.findMatching( hostName );
-        if ( domainName.isPresent( ) ) {
-          final Pair<String,String> accountNamePair = domainName.get( ).toScopedLoadBalancerName( hostName );
-          final Set<String> ips = Sets.newTreeSet( );
-          try ( final TransactionResource tx = Entities.transactionFor( LoadBalancer.class ) ) {
-            final LoadBalancer loadBalancer =
-                LoadBalancers.getLoadbalancer( accountNamePair.getLeft( ), accountNamePair.getRight( ) );
-            final Predicate<LoadBalancerServoInstanceCoreView> canResolve = 
-                new Predicate<LoadBalancerServoInstanceCoreView>(){
-                  @Override
-                  public boolean apply(LoadBalancerServoInstanceCoreView arg0) {
-                    return arg0.canResolveDns();
-                  }
-            };
-            
-            final Function<LoadBalancerServoInstanceCoreView,String> ipExtractor =
-                loadBalancer.getScheme( ) == LoadBalancer.Scheme.Internal ?
-                    LoadBalancerServoInstanceCoreView.privateIp( ) :
+    try {
+      final Name name = query.getName( );
+      final Name hostName = name.relativize( LoadBalancerDomainName.getLoadBalancerSubdomain( ) );
+      final Optional<LoadBalancerDomainName> domainName = LoadBalancerDomainName.findMatching( hostName );
+      if ( domainName.isPresent( ) ) {
+        final Pair<String,String> accountNamePair = domainName.get( ).toScopedLoadBalancerName( hostName );
+        final Set<String> ips = Sets.newTreeSet( );
+        try ( final TransactionResource tx = Entities.transactionFor( LoadBalancer.class ) ) {
+          final LoadBalancer loadBalancer =
+              LoadBalancers.getLoadbalancer( accountNamePair.getLeft( ), accountNamePair.getRight( ) );
+          final Predicate<LoadBalancerServoInstanceCoreView> canResolve = 
+              new Predicate<LoadBalancerServoInstanceCoreView>(){
+            @Override
+            public boolean apply(LoadBalancerServoInstanceCoreView arg0) {
+              return arg0.canResolveDns();
+            }
+          };
+
+          final Function<LoadBalancerServoInstanceCoreView,String> ipExtractor =
+              loadBalancer.getScheme( ) == LoadBalancer.Scheme.Internal ?
+                  LoadBalancerServoInstanceCoreView.privateIp( ) :
                     LoadBalancerServoInstanceCoreView.address( );
-            Iterables.addAll( ips, Iterables.transform(
-                Collections2.filter(
-                    INSTANCE.apply( loadBalancer.getAutoScaleGroup() ).getServos(),
-                    canResolve),
-                ipExtractor ) );
-          }
-          final List<Record> records = Lists.newArrayList( );
-          for ( String ip : ips ) {
-            final InetAddress inetAddress = InetAddresses.forString( ip );
-            records.add( DomainNameRecords.addressRecord(
-                name,
-                inetAddress,
-                LoadBalancerDnsRecord.getLoadbalancerTTL( ) ) );
-          }
-          return DnsResponse.forName( name ).answer( records );
+                  Iterables.addAll( ips, Iterables.transform(
+                      Collections2.filter(
+                          INSTANCE.apply( loadBalancer.getAutoScaleGroup() ).getServos(),
+                          canResolve),
+                          ipExtractor ) );
         }
-      } catch ( Exception ex ) {
-        logger.debug( ex );
+        final List<Record> records = Lists.newArrayList( );
+        for ( String ip : ips ) {
+          final InetAddress inetAddress = InetAddresses.forString( ip );
+          records.add( DomainNameRecords.addressRecord(
+              name,
+              inetAddress,
+              LoadBalancerDnsRecord.getLoadbalancerTTL( ) ) );
+        }
+        if(DnsResolvers.RequestType.A.apply( query ))
+          return DnsResponse.forName( name ).answer( records );
+        else
+          return DnsResponse.forName( name ).answer(Lists.<Record>newArrayList());
       }
+    } catch ( Exception ex ) {
+      logger.debug( ex );
     }
     return DnsResponse.forName( query.getName( ) ).nxdomain( );
   }

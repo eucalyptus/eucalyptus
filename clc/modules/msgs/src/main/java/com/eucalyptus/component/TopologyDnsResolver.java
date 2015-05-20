@@ -256,7 +256,7 @@ public class TopologyDnsResolver implements DnsResolver {
   @Override
   public boolean checkAccepts( DnsRequest request ) {
     final Record query = request.getQuery( );
-    if ( enabled && ( RequestType.A.apply( query ) || RequestType.AAAA.apply( query ) ) ) {
+    if ( enabled ) {
       if ( DomainNames.isSystemSubdomain( query.getName( ) ) ) {
         return ( ResolverSupport.COMPONENT.apply( query.getName( ) )
              || ResolverSupport.SERVICE.apply( query.getName( ) ) );
@@ -319,15 +319,15 @@ public class TopologyDnsResolver implements DnsResolver {
         }
       }
       return DnsResponse.forName( query.getName( ) )
-                        .answer( RequestType.AAAA.apply( query ) ? null : answers );
+                        .answer( RequestType.A.apply( query ) ? answers : null);
     } else if ( ResolverSupport.SERVICE.apply( name ) ) {
       ServiceConfiguration config = ResolverSupport.SERVICE_FUNCTION.apply( name );
       return DnsResponse.forName( query.getName( ) )
-                        .answer( RequestType.AAAA.apply( query ) ? 
-                            null : 
+                        .answer( RequestType.A.apply( query ) ? 
                             DomainNameRecords.addressRecord(
                                 name,
-                                maphost( request.getLocalAddress( ), config.getInetAddress( ) ) ) );
+                                maphost( request.getLocalAddress( ), config.getInetAddress( ) ) ) 
+                                : null );
     } else {
       throw new NoSuchElementException( "Failed to lookup name: " + name );
     }
