@@ -173,6 +173,7 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.PersistenceContexts;
@@ -224,7 +225,6 @@ import com.google.common.base.Predicates;
 
 import com.google.common.base.Splitter;
 import com.google.common.base.Suppliers;
-import com.google.common.cache.CacheBuilderSpec;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -602,29 +602,18 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
 
   @ConfigurableField( description = "Instance metadata user data cache configuration.",
       initial = "maximumSize=50, expireAfterWrite=5s, softValues",
-      changeListener = CacheSpecListener.class )
+      changeListener = PropertyChangeListeners.CacheSpecListener.class )
   public static volatile String VM_METADATA_USER_DATA_CACHE   = "maximumSize=50, expireAfterWrite=5s, softValues";
 
   @ConfigurableField( description = "Instance metadata cache configuration.",
       initial = "maximumSize=250, expireAfterWrite=5s",
-      changeListener = CacheSpecListener.class )
+      changeListener = PropertyChangeListeners.CacheSpecListener.class )
   public static volatile String VM_METADATA_INSTANCE_CACHE    = "maximumSize=250, expireAfterWrite=5s";
 
   @ConfigurableField( description = "Instance metadata instance resolution cache configuration.",
       initial = "maximumSize=250, expireAfterWrite=1s",
-      changeListener = CacheSpecListener.class )
+      changeListener = PropertyChangeListeners.CacheSpecListener.class )
   public static volatile String VM_METADATA_REQUEST_CACHE     = "maximumSize=250, expireAfterWrite=1s";
-
-  public static class CacheSpecListener implements PropertyChangeListener {
-    @Override
-    public void fireChange( final ConfigurableProperty t, final Object newValue ) throws ConfigurablePropertyException {
-      try {
-        CacheBuilderSpec.parse( String.valueOf( newValue ) );
-      } catch ( Exception e ) {
-        throw new ConfigurablePropertyException( e.getMessage( ) );
-      }
-    }
-  }
 
   public static class SubdomainListener implements PropertyChangeListener {
     @Override

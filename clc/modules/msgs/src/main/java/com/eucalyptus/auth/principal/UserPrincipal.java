@@ -22,7 +22,6 @@ package com.eucalyptus.auth.principal;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import com.eucalyptus.auth.AuthException;
 
 /**
  *
@@ -106,10 +105,10 @@ public interface UserPrincipal extends User {
   Long getPasswordExpires( );
 
   @Nonnull
-  List<AccessKey> getKeys( );   //TODO:STEVE: need an immutable access key
+  List<AccessKey> getKeys( );
 
   @Nonnull
-  List<Certificate> getCertificates( );   //TODO:STEVE: need an immutable certificate
+  List<Certificate> getCertificates( );
 
   @Nonnull
   List<PolicyVersion> getPrincipalPolicies( );

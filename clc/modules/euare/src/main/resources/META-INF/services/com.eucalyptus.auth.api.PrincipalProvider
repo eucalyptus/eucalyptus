@@ -1,1 +1,1 @@
-com.eucalyptus.auth.euare.RegionDelegatingPrincipalProvider
+com.eucalyptus.auth.euare.CachingPrincipalProvider

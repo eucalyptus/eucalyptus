@@ -125,6 +125,31 @@ class TestProvider implements PrincipalProvider {
   }
 
   @Override
+  UserPrincipal lookupCachedPrincipalByUserId( final String userId, final String nonce ) throws AuthException {
+    return lookupPrincipalByUserId( userId, nonce );
+  }
+
+  @Override
+  UserPrincipal lookupCachedPrincipalByRoleId( final String roleId, final String nonce ) throws AuthException {
+    return lookupPrincipalByRoleId( roleId, nonce );
+  }
+
+  @Override
+  UserPrincipal lookupCachedPrincipalByAccessKeyId( final String keyId, final String nonce ) throws AuthException {
+    return lookupPrincipalByAccessKeyId( keyId, nonce );
+  }
+
+  @Override
+  UserPrincipal lookupCachedPrincipalByCertificateId( final String certificateId ) throws AuthException {
+    return lookupPrincipalByCertificateId( certificateId );
+  }
+
+  @Override
+  UserPrincipal lookupCachedPrincipalByAccountNumber( final String accountNumber ) throws AuthException {
+    return lookupPrincipalByAccountNumber( accountNumber );
+  }
+
+  @Override
   AccountIdentifiers lookupAccountIdentifiersByAlias(final String alias) throws AuthException {
     check( accounts.find{ AccountInfo info -> info.accountAlias == alias } )
   }

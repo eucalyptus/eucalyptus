@@ -301,15 +301,15 @@ public class SecurityTokenManagerImpl implements SecurityTokenManager.SecurityTo
   }
 
   protected UserPrincipal lookupByUserById( final String userId, final String nonce ) throws AuthException {
-    return Accounts.lookupPrincipalByUserId( userId, nonce );
+    return Accounts.lookupCachedPrincipalByUserId( userId, nonce );
   }
 
   protected UserPrincipal lookupByRoleById( final String roleId, final String nonce ) throws AuthException {
-    return Accounts.lookupPrincipalByRoleId( roleId, nonce );
+    return Accounts.lookupCachedPrincipalByRoleId( roleId, nonce );
   }
 
   protected UserPrincipal lookupByAccessKeyId( final String accessKeyId, final String nonce ) throws AuthException {
-    return Accounts.lookupPrincipalByAccessKeyId( accessKeyId, nonce );
+    return Accounts.lookupCachedPrincipalByAccessKeyId( accessKeyId, nonce );
   }
 
   protected String getSecurityTokenPassword() {

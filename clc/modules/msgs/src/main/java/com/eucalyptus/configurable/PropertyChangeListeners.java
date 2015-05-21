@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,6 +63,7 @@
 package com.eucalyptus.configurable;
 
 import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
+import com.google.common.cache.CacheBuilderSpec;
 import com.google.common.collect.Constraint;
 import org.apache.log4j.Logger;
 
@@ -80,7 +81,7 @@ public class PropertyChangeListeners {
       }
     }
   }
-  
+
   public static PropertyChangeListener withConstraint( final Constraint<Object> testNewValue ) {
     return new PropertyChangeListener( ) {
       
@@ -124,7 +125,18 @@ public class PropertyChangeListeners {
             }
         }
     }
-  
+
+  public static class CacheSpecListener implements PropertyChangeListener {
+    @Override
+    public void fireChange( final ConfigurableProperty t, final Object newValue ) throws ConfigurablePropertyException {
+      try {
+        CacheBuilderSpec.parse( String.valueOf( newValue ) );
+      } catch ( Exception e ) {
+        throw new ConfigurablePropertyException( e.getMessage( ) );
+      }
+    }
+  }
+
   public static PropertyChangeListener getListenerFromClass( Class<? extends PropertyChangeListener> changeListenerClass ) {
     PropertyChangeListener changeListener;
     if ( !changeListenerClass.equals( NoopEventListener.class ) ) {
