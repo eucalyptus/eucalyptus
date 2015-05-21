@@ -95,7 +95,8 @@ public class WsSecLoginModule extends BaseLoginModule<WsSecCredentials> {
       SecurityContext.enqueueSignature( sigValue );
       
       final X509Certificate cert = WSSecurity.verifySignature( secNode, sig );
-      final UserPrincipal user = Accounts.lookupPrincipalByCertificateId( Identifiers.generateCertificateIdentifier( cert) );
+      final UserPrincipal user =
+          Accounts.lookupCachedPrincipalByCertificateId( Identifiers.generateCertificateIdentifier( cert) );
       super.setCredential( cert );
       super.setPrincipal( user );
     } finally {

@@ -46,6 +46,15 @@ public interface PrincipalProvider {
   UserPrincipal lookupPrincipalByAccountNumberAndUsername( String accountNumber, String username ) throws AuthException;
 
   /**
+   * Principal lookup that may be cached
+   */
+  UserPrincipal lookupCachedPrincipalByUserId( String userId, String nonce ) throws AuthException;
+  UserPrincipal lookupCachedPrincipalByRoleId( String roleId, String nonce ) throws AuthException;
+  UserPrincipal lookupCachedPrincipalByAccessKeyId( String keyId, String nonce ) throws AuthException;
+  UserPrincipal lookupCachedPrincipalByCertificateId( String certificateId ) throws AuthException;
+  UserPrincipal lookupCachedPrincipalByAccountNumber( String accountNumber ) throws AuthException;
+
+  /**
    *
    */
   AccountIdentifiers lookupAccountIdentifiersByAlias( String alias ) throws AuthException;

@@ -280,6 +280,31 @@ public class Accounts {
   }
 
   @Nonnull
+  public static UserPrincipal lookupCachedPrincipalByAccountNumber( String accountNumber ) throws AuthException {
+    return getIdentityProvider( ).lookupCachedPrincipalByAccountNumber( accountNumber );
+  }
+
+  @Nonnull
+  public static UserPrincipal lookupCachedPrincipalByAccessKeyId( String accessKeyId, String nonce ) throws AuthException {
+    return getIdentityProvider( ).lookupCachedPrincipalByAccessKeyId( accessKeyId, nonce );
+  }
+
+  @Nonnull
+  public static UserPrincipal lookupCachedPrincipalByUserId( String userId, String nonce ) throws AuthException {
+    return getIdentityProvider( ).lookupCachedPrincipalByUserId( userId, nonce );
+  }
+
+  @Nonnull
+  public static UserPrincipal lookupCachedPrincipalByRoleId( String roleId, String nonce ) throws AuthException {
+    return getIdentityProvider( ).lookupCachedPrincipalByRoleId( roleId, nonce );
+  }
+
+  @Nonnull
+  public static UserPrincipal lookupCachedPrincipalByCertificateId( String certificateId ) throws AuthException {
+    return getIdentityProvider( ).lookupCachedPrincipalByCertificateId( certificateId );
+  }
+
+  @Nonnull
   public static InstanceProfile lookupInstanceProfileByName( String accountNumber, String name ) throws AuthException {
     return getIdentityProvider( ).lookupInstanceProfileByName( accountNumber, name );
   }

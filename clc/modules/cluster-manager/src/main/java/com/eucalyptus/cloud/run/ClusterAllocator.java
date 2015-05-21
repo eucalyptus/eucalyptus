@@ -84,6 +84,7 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import javax.persistence.EntityTransaction;
 
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.callback.ResourceStateCallback;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -105,7 +106,6 @@ import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.compute.common.internal.blockstorage.Snapshot;
 import com.eucalyptus.compute.common.internal.blockstorage.Snapshots;
 import com.eucalyptus.blockstorage.Storage;
@@ -314,8 +314,9 @@ public class ClusterAllocator implements Runnable {
 
   private void setupCredentialMessages( ) {
     try{
-      final User owner = Accounts.lookupPrincipalByUserId(this.allocInfo.getOwnerFullName().getUserId());
-      if(! owner.isSystemAdmin())
+      final AccountIdentifiers accountIdentifiers =
+          Accounts.lookupAccountIdentifiersById( allocInfo.getOwnerFullName( ).getAccountNumber( ) );
+      if( !Accounts.isSystemAccount( accountIdentifiers.getAccountAlias() ) )
         return;
     }catch(final AuthException ex){
       return;

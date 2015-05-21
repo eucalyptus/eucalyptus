@@ -68,7 +68,6 @@ import com.eucalyptus.auth.AuthContextSupplier;
 import static com.google.common.collect.Maps.newHashMap;
 
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.ws.server.MessageStatistics;
 import edu.ucsb.eucalyptus.msgs.EvaluatedIamConditionKey;
@@ -76,7 +75,6 @@ import java.lang.ref.WeakReference;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import javax.annotation.Nullable;
@@ -93,7 +91,6 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Contract;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.EventRecord;
@@ -349,11 +346,11 @@ public class Context {
         try {
           final UserPrincipal user;
           if ( Accounts.isAccountNumber( userId ) ) {
-            user = Accounts.lookupPrincipalByAccountNumber( userId );
+            user = Accounts.lookupCachedPrincipalByAccountNumber( userId );
           } else if ( Accounts.isRoleIdentifier( userId ) ) {
-            user = Accounts.lookupPrincipalByRoleId( userId );
+            user = Accounts.lookupCachedPrincipalByRoleId( userId, null );
           } else {
-            user = Accounts.lookupPrincipalByUserId( userId );
+            user = Accounts.lookupCachedPrincipalByUserId( userId, null );
           }
           return createImpersona( ctx, user );
         } catch ( AuthException ex ) {

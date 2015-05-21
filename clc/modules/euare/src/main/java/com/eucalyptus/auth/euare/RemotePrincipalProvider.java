@@ -161,6 +161,31 @@ public class RemotePrincipalProvider implements PrincipalProvider {
   }
 
   @Override
+  public UserPrincipal lookupCachedPrincipalByUserId( final String userId, final String nonce ) throws AuthException {
+    return lookupPrincipalByUserId( userId, nonce );
+  }
+
+  @Override
+  public UserPrincipal lookupCachedPrincipalByRoleId( final String roleId, final String nonce ) throws AuthException {
+    return lookupPrincipalByRoleId( roleId, nonce );
+  }
+
+  @Override
+  public UserPrincipal lookupCachedPrincipalByAccessKeyId( final String keyId, final String nonce ) throws AuthException {
+    return lookupPrincipalByAccessKeyId( keyId, nonce );
+  }
+
+  @Override
+  public UserPrincipal lookupCachedPrincipalByCertificateId( final String certificateId ) throws AuthException {
+    return lookupPrincipalByCertificateId( certificateId );
+  }
+
+  @Override
+  public UserPrincipal lookupCachedPrincipalByAccountNumber( final String accountNumber ) throws AuthException {
+    return lookupPrincipalByAccountNumber( accountNumber );
+  }
+
+  @Override
   public AccountIdentifiers lookupAccountIdentifiersByAlias( final String alias ) throws AuthException {
     if ( Accounts.isSystemAccount( alias ) ) {
       throw new AuthException( AuthException.NO_SUCH_ACCOUNT );
