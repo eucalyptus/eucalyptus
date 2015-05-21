@@ -187,9 +187,7 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
   }
   
   public String getValue( ) {	  
-	try {
-      EntityTransaction trans = Entities.get( this.getDefiningClass( ) );
-      try {
+    try ( final TransactionResource trans = Entities.transactionFor( this.getDefiningClass( ) ) ) {
     	//Unique result gets first found value if multiple exist, should work if all are kept in sync
         Object o = Entities.uniqueResult( this.getQueryObject( ) );
         Object prop = this.getter.invoke( o );
@@ -198,15 +196,10 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
           : "<unset>";
         trans.commit( );
         return result;
-      } catch ( Exception e ) {
-        Logs.exhaust( ).error( e, e );
-        trans.rollback( );
-        return "<unset>";
-      }
-	} catch (Exception e) {
-		Logs.exhaust().error(e, e);
-        return "<unset>";
-	}
+    } catch (Exception e) {
+      Logs.exhaust().error(e, e);
+         return "<unset>";
+    }
   }
   
   public String setValue( String s ) throws ConfigurablePropertyException {
@@ -260,6 +253,7 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
     }
   }
   
+  @Override
   public Boolean getReadOnly( ) {
     return this.readOnly;
   }

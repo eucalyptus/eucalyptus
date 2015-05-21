@@ -101,7 +101,8 @@ public class SingletonDatabasePropertyEntry extends AbstractConfigurableProperty
         PropertyChangeListener listener = PropertyChangeListeners.getListenerFromClass( annote.changeListener( ) );
         try {
           if ( !Modifier.isStatic( f.getModifiers( ) ) && !f.isAnnotationPresent( Transient.class ) ) {
-            ConfigurableProperty prop = new SingletonDatabasePropertyEntry( c, fqPrefix, f, description, defaultValue, p, annote.readonly( ),
+            boolean readOnly = Modifier.isFinal( f.getModifiers( ) ) || annote.readonly( );
+            ConfigurableProperty prop = new SingletonDatabasePropertyEntry( c, fqPrefix, f, description, defaultValue, p, readOnly,
                                                                             annote.displayName( ), annote.type( ), alias, listener );
             return prop;
           }

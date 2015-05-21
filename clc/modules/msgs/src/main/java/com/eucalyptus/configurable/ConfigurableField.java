@@ -79,7 +79,7 @@ public @interface ConfigurableField {
    * @deprecated Mark field as "final"
    */
   @Deprecated()
-  boolean readonly( ) default true;
+  boolean readonly( ) default false;
   
   String displayName( ) default "None";
   

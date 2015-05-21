@@ -67,6 +67,8 @@ import java.lang.reflect.Field;
 public interface ConfigurableProperty extends Comparable<ConfigurableProperty> {
   boolean isDeferred( );
   
+  Boolean getReadOnly( );
+
   String getFieldName( );
 
   Field getField( );

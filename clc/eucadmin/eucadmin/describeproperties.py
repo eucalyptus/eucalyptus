@@ -27,31 +27,39 @@ import eucadmin.describerequest
 
 from boto.roboto.param import Param
 
+
 class DescribeProperties(eucadmin.describerequest.DescribeRequest):
     ServiceName = 'Property'
     Description = "Show the cloud's properties or settings"
     Params = [
-              Param(name='verbose',
-                    short_name='v',
-                    long_name='verbose',
-                    ptype='boolean',
-                    default=False,
-                    optional=True,
-                    doc='Include description information for properties in the returned response.'),
-	      Param(name='show-default',
-                    short_name='d',
-                    long_name='show-default',
-                    ptype='boolean',
-                    default=False,
-                    optional=True,
-                    doc='Include property default value for properties in the returned response.'),
-              ]
-    Args = [Param(name='properties',
-              long_name='property prefix',
-              ptype='string',
-              cardinality='+',
+        Param(name='verbose',
+              short_name='v',
+              long_name='verbose',
+              ptype='boolean',
+              default=False,
               optional=True,
-              doc='[PROPERTY-PREFIX] ...')]
+              doc='Include description information for properties in the returned response.'),
+        Param(name='show-default',
+              short_name='d',
+              long_name='show-default',
+              ptype='boolean',
+              default=False,
+              optional=True,
+              doc='Include property default value for properties in the returned response.'),
+        Param(name='show-readonly',
+              short_name='r',
+              long_name='show-readonly',
+              ptype='boolean',
+              default=False,
+              optional=True,
+              doc='Include property Read Only status in the returned response.'),
+    ]
+    Args = [Param(name='properties',
+                  long_name='property prefix',
+                  ptype='string',
+                  cardinality='+',
+                  optional=True,
+                  doc='[PROPERTY-PREFIX] ...')]
 
     def __init__(self, **args):
         eucadmin.describerequest.DescribeRequest.__init__(self, **args)
@@ -59,24 +67,28 @@ class DescribeProperties(eucadmin.describerequest.DescribeRequest):
         self.item_markers = ['euca:item']
         self.verbose = False
         self.show_default = False
+        self.show_readonly = False
 
     def get_connection(self, **args):
         if self.connection is None:
             args['path'] = self.ServicePath
             self.connection = self.ServiceClass(**args)
         if 'verbose' in self.request_params and self.request_params.pop('verbose') == 'true':
-          self.verbose = True
+            self.verbose = True
         if 'show-default' in self.request_params and self.request_params.pop('show-default') == 'true':
-          self.show_default = True
+            self.show_default = True
+        if 'show-readonly' in self.request_params and self.request_params.pop('show-readonly') == 'true':
+            self.show_readonly = True
         if 'properties' in self.request_params:
-          for i, value in enumerate(self.request_params.pop('properties', [])):
-              self.request_params['Property.%s' % (i + 1)] = value
+            for i, value in enumerate(self.request_params.pop('properties', [])):
+                self.request_params['Property.%s' % (i + 1)] = value
         return self.connection
 
     def cli_formatter(self, data):
         props = getattr(data, 'euca:properties')
         for prop in props:
-            print 'PROPERTY\t{0}\t{1}\t{2}'.format(prop['euca:name'], prop['euca:value'],
-                                                   prop['euca:defaultValue'] if self.show_default else '')
+            print 'PROPERTY\t{0}\t{1}\t{2}\t{3}'.format(prop['euca:name'], prop['euca:value'],
+                                                        prop['euca:defaultValue'] if self.show_default else '',
+                                                        prop['euca:readOnly'] if self.show_readonly else '')
             if self.verbose and prop['euca:description']:
-              print 'DESCRIPTION\t{0}\t{1}'.format(prop['euca:name'], prop['euca:description'])
+                print 'DESCRIPTION\t{0}\t{1}'.format(prop['euca:name'], prop['euca:description'])
