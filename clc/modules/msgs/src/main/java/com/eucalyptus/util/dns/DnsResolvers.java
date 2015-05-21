@@ -308,7 +308,7 @@ public class DnsResolvers extends ServiceJarDiscovery {
     private final Name                name;
     private boolean                   recursive = false;
     private boolean                   nxdomain  = false;
-    
+    private boolean                   refused = false;
     public static class Builder {
       private final DnsResponse response;
       
@@ -353,6 +353,11 @@ public class DnsResolvers extends ServiceJarDiscovery {
       
       public DnsResponse nxdomain( ) {
         this.response.nxdomain = true;
+        return this.response;
+      }
+      
+      public DnsResponse refused( ) {
+        this.response.refused = true;
         return this.response;
       }
       
@@ -403,6 +408,10 @@ public class DnsResolvers extends ServiceJarDiscovery {
     
     public boolean isRecursive( ) {
       return this.recursive;
+    }
+    
+    public boolean isRefused( ) {
+      return this.refused;
     }
   }
 
@@ -465,6 +474,9 @@ public class DnsResolvers extends ServiceJarDiscovery {
           }
           response.getHeader( ).setRcode( Rcode.NXDOMAIN );
           return SetResponse.ofType( SetResponse.NXDOMAIN );
+        } else if (reply.isRefused()) {
+          response.getHeader().setRcode( Rcode.REFUSED );
+          return SetResponse.ofType( SetResponse.UNKNOWN );
         } else if ( reply.hasAnswer( ) ) {
           for ( ResponseSection s : ResponseSection.values( ) ) {
             Record[] records = reply.section( s );

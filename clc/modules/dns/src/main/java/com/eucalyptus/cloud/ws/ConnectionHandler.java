@@ -94,6 +94,7 @@
 package com.eucalyptus.cloud.ws;
 
 import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
@@ -129,6 +130,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 
 public class ConnectionHandler extends Thread {
+
+  private static Logger LOG = Logger.getLogger( ConnectionHandler.class );
 
 	static final int FLAG_DNSSECOK = 1;
 	static final int FLAG_SIGONLY = 2;
@@ -186,8 +189,12 @@ public class ConnectionHandler extends Thread {
 			  return errorMessage(query, Rcode.NOTIMP);
 
 			 byte rcode = addAnswer(response, name, type, dclass, 0, flags);
-			 if (rcode != Rcode.NOERROR && rcode != Rcode.NXDOMAIN)
-			   return errorMessage(query, Rcode.SERVFAIL);
+			 if (rcode != Rcode.NOERROR && rcode != Rcode.NXDOMAIN) {
+			   if(rcode == Rcode.REFUSED)
+			     return errorMessage(query, Rcode.REFUSED);
+			   else
+			     return errorMessage(query, Rcode.SERVFAIL);
+			 }
 
 			 if (queryOPT != null) {
 				 int optflags = (flags == FLAG_DNSSECOK) ? ExtendedFlags.DO : 0;
@@ -223,12 +230,6 @@ public class ConnectionHandler extends Thread {
 		  if ( sr == null ) {
 		    return Rcode.SERVFAIL;
 		  } else {
-		    /// EUCA-10719
-		 /* if (type == Type.AAAA) {
-		      response.getHeader().setFlag(Flags.AA);
-		      return (Rcode.NOERROR);
-		    }  */
-		    ///
 		    if (sr.isDelegation()) {
 		      RRset nsRecords = sr.getNS();
 		      addRRset(nsRecords.getName(), response, nsRecords,
@@ -253,15 +254,16 @@ public class ConnectionHandler extends Thread {
 		        addRRset(name, response, rrset, Section.ANSWER, flags);
 		      }
 		    }
-
+		    
 		    if ( sr.isSuccessful( ) ) {
 		      if (type == Type.AAAA)
 	          response.getHeader().setFlag(Flags.AA);
-	       
-		      return Rcode.NOERROR;
+	        return Rcode.NOERROR;
 		    } else if ( sr.isNXDOMAIN( )) {
 		      response.getHeader().setRcode(Rcode.NXDOMAIN);
 		      return Rcode.NXDOMAIN;
+		    } else if (response.getHeader().getRcode() == Rcode.REFUSED) {
+		      return Rcode.REFUSED;
 		    } else
 		      return Rcode.SERVFAIL;
 		  }
