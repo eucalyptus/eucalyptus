@@ -79,7 +79,7 @@ import com.eucalyptus.util.Cidr
 import com.eucalyptus.util.CollectionUtils
 import com.eucalyptus.util.LockResource
 import com.eucalyptus.util.Ordered
-import com.eucalyptus.util.RestrictedType
+import com.eucalyptus.auth.type.RestrictedType
 import com.eucalyptus.util.RestrictedTypes
 import com.eucalyptus.util.TypedKey
 import com.eucalyptus.util.async.StatefulMessageSet

@@ -40,7 +40,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.util.CollectionUtils;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.Pair;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;

@@ -20,8 +20,7 @@
 package com.eucalyptus.auth.euare.policy;
 
 import javax.annotation.Nullable;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 
@@ -51,16 +50,16 @@ public class EuarePolicyContext {
   }
 
   @TypeMapper
-  public enum AccountEuarePolicyContextTransform implements Function<Account,EuarePolicyContextResource> {
+  public enum AccountEuarePolicyContextTransform implements Function<EuareAccount,EuarePolicyContextResource> {
     INSTANCE;
 
     @Override
-    public EuarePolicyContextResource apply( final Account account ) {
+    public EuarePolicyContextResource apply( final EuareAccount account ) {
       return new EuarePolicyContextResource( ) {
         @Nullable
         @Override
         public Boolean isSystemAccount( ) {
-          return Accounts.isSystemAccount( account );
+          return com.eucalyptus.auth.euare.Accounts.isSystemAccount( account );
         }
       };
     }

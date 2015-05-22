@@ -128,7 +128,7 @@ public class Hmacv2LoginModule extends HmacLoginModuleSupport {
     StringBuilder sb = new StringBuilder( );
     sb.append( httpMethod );
     sb.append( "\n" );
-    sb.append( host );
+    sb.append( Strings.nullToEmpty( host ).toLowerCase( ) );
     sb.append( "\n" );
     sb.append( path );
     sb.append( "\n" );

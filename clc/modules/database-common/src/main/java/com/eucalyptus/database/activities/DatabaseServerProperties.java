@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseType;
 import com.eucalyptus.autoscaling.common.msgs.Instance;
@@ -53,7 +54,6 @@ import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.crypto.Crypto;
-import com.eucalyptus.database.DatabaseAdminSystemRoleProvider;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
@@ -167,8 +167,6 @@ public class DatabaseServerProperties {
     @Override
     public boolean enable() throws Exception {
       synchronized (DatabaseServerPropertyBootstrapper.class) {
-        DatabaseAdminSystemRoleProvider roleProvider = new DatabaseAdminSystemRoleProvider();
-        roleProvider.ensureAccountAndRoleExists();
         if (PersistenceContexts.remoteConnected())
           return true;
         try {
@@ -202,7 +200,7 @@ public class DatabaseServerProperties {
         try {
           // creates a random password for master db user
           final NewDBInstanceEvent evt = new NewDBInstanceEvent(Accounts
-              .lookupDatabaseAccount().getUserId());
+              .lookupSystemAccountByAlias(AccountIdentifiers.DATABASE_SYSTEM_ACCOUNT).getUserId());
           evt.setMasterUserName(masterUserName);
           evt.setMasterUserPassword(masterPassword);
           evt.setDbInstanceIdentifier(DB_INSTANCE_IDENTIFIER);
@@ -220,7 +218,7 @@ public class DatabaseServerProperties {
 
         try {
           final EnableDBInstanceEvent evt = new EnableDBInstanceEvent(Accounts
-              .lookupDatabaseAccount().getUserId());
+              .lookupSystemAccountByAlias(AccountIdentifiers.DATABASE_SYSTEM_ACCOUNT).getUserId());
           evt.setMasterUserName(masterUserName);
           evt.setMasterUserPassword(masterPassword);
           evt.setDbInstanceIdentifier(DB_INSTANCE_IDENTIFIER);
@@ -245,7 +243,7 @@ public class DatabaseServerProperties {
     public Boolean call() throws Exception {
       try {
         final DisableDBInstanceEvent evt = new DisableDBInstanceEvent(Accounts
-            .lookupDatabaseAccount().getUserId());
+            .lookupSystemAccountByAlias(AccountIdentifiers.DATABASE_SYSTEM_ACCOUNT).getUserId());
         evt.setDbInstanceIdentifier(DB_INSTANCE_IDENTIFIER);
         DatabaseEventListeners.getInstance().fire(evt);
       } catch (final Exception e) {
@@ -255,7 +253,7 @@ public class DatabaseServerProperties {
       LOG.info("Remote database is disabled");
       try {
         final DeleteDBInstanceEvent evt = new DeleteDBInstanceEvent(Accounts
-            .lookupDatabaseAccount().getUserId());
+            .lookupSystemAccountByAlias(AccountIdentifiers.DATABASE_SYSTEM_ACCOUNT).getUserId());
         evt.setDbInstanceIdentifier(DB_INSTANCE_IDENTIFIER);
         DatabaseEventListeners.getInstance().fire(evt);
       } catch (final Exception e) {

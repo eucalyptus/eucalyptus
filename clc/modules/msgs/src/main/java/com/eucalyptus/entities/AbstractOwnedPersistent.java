@@ -28,8 +28,8 @@ import javax.persistence.Transient;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.util.OwnerFullName;
-import com.eucalyptus.util.RestrictedType;
+import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.auth.type.RestrictedType;
 
 /**
  *

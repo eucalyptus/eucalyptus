@@ -37,7 +37,7 @@ import com.google.common.collect.Iterables;
 public class AccessKeys {
 
   /**
-   * Lookup an ephemeral or persistent access key.
+   * Lookup an ephemeral or persistent access key with caching.
    *
    * @param accessKeyId Required access key identifier
    * @param securityToken Optional security token
@@ -48,7 +48,7 @@ public class AccessKeys {
                                            @Nullable final String securityToken ) throws AuthException {
     return securityToken == null ?
         Iterables.tryFind(
-            Accounts.lookupPrincipalByAccessKeyId( accessKeyId, null ).getKeys( ),
+            Accounts.lookupCachedPrincipalByAccessKeyId( accessKeyId, null ).getKeys( ),
             CollectionUtils.propertyPredicate( accessKeyId, accessKeyIdentifier( ) ) ).get( ) :
         SecurityTokenManager.lookupAccessKey( accessKeyId, securityToken );
   }

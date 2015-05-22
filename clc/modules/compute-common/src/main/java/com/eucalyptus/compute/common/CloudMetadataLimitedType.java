@@ -19,9 +19,9 @@
  ************************************************************************/
 package com.eucalyptus.compute.common;
 
-import com.eucalyptus.auth.policy.PolicyResourceType;
-import com.eucalyptus.component.annotation.PolicyVendor;
-import com.eucalyptus.util.LimitedType;
+import com.eucalyptus.auth.policy.annotation.PolicyResourceType;
+import com.eucalyptus.auth.policy.annotation.PolicyVendor;
+import com.eucalyptus.auth.type.LimitedType;
 
 @PolicyVendor( "ec2" )
 public interface CloudMetadataLimitedType extends LimitedType {

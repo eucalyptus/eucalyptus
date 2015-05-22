@@ -63,12 +63,12 @@
 package com.eucalyptus.entities;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.policy.PolicyResourceType;
+import com.eucalyptus.auth.policy.annotation.PolicyResourceType;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.system.Ats;
-import com.eucalyptus.util.FullName;
+import com.eucalyptus.auth.principal.FullName;
 
 /**
  * A convenient parent class for entity types which are cloud-global in scope, owned by a user, and

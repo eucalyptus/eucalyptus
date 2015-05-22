@@ -23,7 +23,7 @@ import com.eucalyptus.compute.common.internal.vpc.VpcMetadataException;
 import com.eucalyptus.compute.common.internal.vpc.VpcMetadataNotFoundException;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.AbstractPersistentSupport;
-import com.eucalyptus.util.RestrictedType;
+import com.eucalyptus.auth.type.RestrictedType;
 
 /**
  *

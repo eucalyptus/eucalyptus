@@ -29,9 +29,9 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
-import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareInstanceProfile;
-import com.eucalyptus.auth.principal.EuareRole;
+import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.Callback;
@@ -73,8 +73,8 @@ public class DatabaseInstanceProfileProxy implements EuareInstanceProfile {
   }
 
   @Override
-  public Account getAccount() throws AuthException {
-    final List<Account> results = Lists.newArrayList();
+  public EuareAccount getAccount() throws AuthException {
+    final List<EuareAccount> results = Lists.newArrayList();
     dbCallback( "getAccount", new Callback<InstanceProfileEntity>() {
       @Override
       public void fire( final InstanceProfileEntity instanceProfileEntity ) {

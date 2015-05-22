@@ -36,7 +36,7 @@ import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.util.Classes;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.base.Predicates;
 import com.google.common.base.Splitter;
 import com.google.common.cache.CacheBuilder;

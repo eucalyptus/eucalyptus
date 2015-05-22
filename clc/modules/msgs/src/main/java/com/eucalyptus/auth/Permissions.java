@@ -73,8 +73,8 @@ import com.eucalyptus.auth.api.PolicyEngine;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.key.Key;
 import com.eucalyptus.auth.policy.key.Keys;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
@@ -148,7 +148,7 @@ public class Permissions {
 		@Nonnull  final String vendor,
 		@Nonnull  final String resourceType,
 		@Nonnull  final String resourceName,
-		@Nullable final Account resourceAccount,
+		@Nullable final AccountIdentifiers resourceAccount,
 		@Nonnull  final String action,
 		@Nonnull  final AuthContext requestUser
 	) {

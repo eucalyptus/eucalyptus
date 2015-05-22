@@ -63,7 +63,7 @@
 @GroovyAddClassUUID
 package com.eucalyptus.auth.euare;
 
-import com.eucalyptus.auth.policy.PolicyAction;
+import com.eucalyptus.auth.policy.annotation.PolicyAction;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.component.annotation.ComponentMessage;
 import com.eucalyptus.component.id.Euare;
@@ -72,7 +72,6 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
-import com.eucalyptus.binding.HttpEmbedded
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID;
 
 @ComponentMessage(Euare.class)

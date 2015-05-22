@@ -74,12 +74,6 @@ public class DescribeSensorCallback extends
     final DescribeSensorsType msg =
         new DescribeSensorsType(this.historySize, this.collectionIntervalTimeMs, this.instanceIds);
 
-    try {
-      msg.setUser(Accounts.lookupSystemAdmin());
-    } catch (AuthException e) {
-      LOG.error("Unable to find the system user", e);
-    }
-
     this.setRequest(msg);
   }
 

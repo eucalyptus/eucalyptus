@@ -71,8 +71,8 @@ import javax.persistence.PreUpdate;
 import javax.persistence.Transient;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.util.OwnerFullName;
-import com.eucalyptus.util.RestrictedType.UserRestrictedType;
+import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.auth.type.RestrictedType.UserRestrictedType;
 
 @MappedSuperclass
 public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMetadata<STATE> implements UserRestrictedType {

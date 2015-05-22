@@ -139,7 +139,8 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
           PropertyChangeListener listener = PropertyChangeListeners.getListenerFromClass( annote.changeListener( ) );
           try {
             if ( !Modifier.isStatic( f.getModifiers( ) ) && !f.isAnnotationPresent( Transient.class ) ) {
-              ConfigurableProperty prop = new MultiDatabasePropertyEntry( c, fqPrefix, f, identifierField, description, defaultValue, p, annote.readonly( ),
+              boolean readOnly = Modifier.isFinal( f.getModifiers( ) ) || annote.readonly( );
+              ConfigurableProperty prop = new MultiDatabasePropertyEntry( c, fqPrefix, f, identifierField, description, defaultValue, p, readOnly,
                                                                           annote.displayName( ), annote.type( ), alias, null, listener );
               return prop;
             }

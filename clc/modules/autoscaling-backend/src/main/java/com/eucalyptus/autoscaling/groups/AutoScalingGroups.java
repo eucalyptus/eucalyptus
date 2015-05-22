@@ -43,7 +43,7 @@ import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.autoscaling.tags.AutoScalingGroupTag;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.Callback;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMapper;

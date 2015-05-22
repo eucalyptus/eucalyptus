@@ -68,7 +68,7 @@ import javax.persistence.MappedSuperclass;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.HasNaturalId;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 
 @MappedSuperclass
 public abstract class PersistentReference<T extends PersistentReference<T, R>, R extends HasNaturalId> extends UserMetadata<Reference.State> implements Reference<T, R> {

@@ -20,6 +20,7 @@
 package com.eucalyptus.imaging.manifest;
 
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -62,7 +63,8 @@ public enum BundleImageManifest implements ImageManifest {
     String bucketName = cleanLocation.substring(0, index);
     String manifestKey = cleanLocation.substring(index + 1);
     try (final EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3ClientForUser(
-            Accounts.lookupAwsExecReadAdmin(true), (int)TimeUnit.MINUTES.toSeconds( 15 ))) {
+        Accounts.lookupSystemAccountByAlias( AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT ),
+        (int)TimeUnit.MINUTES.toSeconds( 15 ))) {
       return s3Client.getObjectContent(bucketName, manifestKey, maximumSize);
     } catch (Exception e) {
       throw new EucalyptusCloudException("Failed to read manifest file: "

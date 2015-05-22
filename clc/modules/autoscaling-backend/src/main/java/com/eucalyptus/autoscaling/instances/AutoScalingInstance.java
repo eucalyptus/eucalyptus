@@ -44,7 +44,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.base.Objects;
 
 /**

@@ -21,7 +21,7 @@ package com.eucalyptus.autoscaling.policies;
 
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AdjustmentTypeMetadata;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 
 /**
  *

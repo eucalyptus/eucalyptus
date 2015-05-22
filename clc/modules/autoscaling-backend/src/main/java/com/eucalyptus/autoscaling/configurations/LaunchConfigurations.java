@@ -34,7 +34,7 @@ import com.eucalyptus.compute.common.EbsDeviceMapping;
 import com.eucalyptus.compute.common.InstanceNetworkInterfaceSetItemRequestType;
 import com.eucalyptus.compute.common.backend.RunInstancesType;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;

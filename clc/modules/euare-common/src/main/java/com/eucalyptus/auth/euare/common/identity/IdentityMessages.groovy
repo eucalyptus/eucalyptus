@@ -175,6 +175,18 @@ class ReserveNameResponseType extends IdentityMessage {
 class ReserveNameResult extends EucalyptusData {
 }
 
+class LookupCertificatesType extends IdentityMessage {
+  String accountNumber
+}
+
+class LookupCertificatesResponseType extends IdentityMessage {
+  LookupCertificatesResult lookupCertificatesResult
+}
+
+class LookupCertificatesResult extends EucalyptusData {
+  ArrayList<String> pem
+}
+
 class DescribeCertificateType extends IdentityMessage {
 }
 

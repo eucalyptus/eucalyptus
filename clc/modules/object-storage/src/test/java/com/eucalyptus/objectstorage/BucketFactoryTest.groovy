@@ -21,8 +21,8 @@
 package com.eucalyptus.objectstorage
 
 import com.eucalyptus.auth.Accounts
-import com.eucalyptus.auth.principal.Account
-import com.eucalyptus.auth.principal.User
+import com.eucalyptus.auth.principal.AccountIdentifiers
+import com.eucalyptus.auth.principal.TestProvider
 import com.eucalyptus.auth.principal.UserPrincipal
 import com.eucalyptus.objectstorage.entities.Bucket
 import com.eucalyptus.objectstorage.exceptions.s3.BucketAlreadyExistsException
@@ -77,27 +77,19 @@ public class BucketFactoryTest {
   }
 
   static void initUsers() {
-    Account accnt = Accounts.lookupAccountByName(UnitTestSupport.getTestAccounts().first())
-    TEST_CANONICALUSER_1 = new CanonicalUser(accnt.getCanonicalId(), accnt.getUsers().get(0).getInfo("email"))
+    AccountIdentifiers accnt1 = Accounts.lookupAccountIdentifiersByAlias(UnitTestSupport.getTestAccounts().first())
+    TEST_CANONICALUSER_1 = new CanonicalUser(accnt1.getCanonicalId(), accnt1.getAccountAlias())
 
-    accnt = Accounts.lookupAccountByName(UnitTestSupport.getTestAccounts()[1])
-    TEST_CANONICALUSER_2 = new CanonicalUser(accnt.getCanonicalId(), accnt.getUsers().get(0).getInfo("email"))
+    AccountIdentifiers accnt2 = Accounts.lookupAccountIdentifiersByAlias(UnitTestSupport.getTestAccounts()[1])
+    TEST_CANONICALUSER_2 = new CanonicalUser(accnt2.getCanonicalId(), accnt2.getAccountAlias())
 
     TEST_ACCOUNT1_FULLCONTROL_GRANT = new Grant(new Grantee(TEST_CANONICALUSER_1), ObjectStorageProperties.Permission.FULL_CONTROL.toString());
     TEST_ACCOUNT1_PRIVATE_ACL.setGrants(new ArrayList<Grant>());
     TEST_ACCOUNT1_PRIVATE_ACL.getGrants().add(TEST_ACCOUNT1_FULLCONTROL_GRANT);
 
-
     TEST_ACCOUNT2_FULLCONTROL_GRANT = new Grant(new Grantee(TEST_CANONICALUSER_2), ObjectStorageProperties.Permission.FULL_CONTROL.toString());
     TEST_ACCOUNT2_PRIVATE_ACL.setGrants(new ArrayList<Grant>());
     TEST_ACCOUNT2_PRIVATE_ACL.getGrants().add(TEST_ACCOUNT2_FULLCONTROL_GRANT);
-
-    //Ensure there are accesskeys for each user
-    UnitTestSupport.getTestAccounts().each { account ->
-      UnitTestSupport.getUsersByAccountName((String) account).each { userId ->
-        Accounts.lookupUserById((String) userId).createKey()
-      }
-    }
   }
 
   static void initProvider() {
@@ -166,7 +158,7 @@ public class BucketFactoryTest {
     Bucket createdBucket = OsgBucketFactory.getFactory().createBucket(provider,
         initializedBucket,
         correlationId,
-        Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first()));
+        Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first()));
 
     //Verify on the backend directly
     ListAllMyBucketsType listRequest = new ListAllMyBucketsType();
@@ -200,7 +192,7 @@ public class BucketFactoryTest {
     Bucket createdBucket = OsgBucketFactory.getFactory().createBucket(provider,
         initializedBucket,
         correlationId,
-        Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first()));
+        Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first()));
 
     //Verify on the backend directly
     ListAllMyBucketsType listRequest = new ListAllMyBucketsType();
@@ -223,7 +215,7 @@ public class BucketFactoryTest {
       Bucket createdDuplicateBucket = OsgBucketFactory.getFactory().createBucket(provider,
           initializedDuplicateBucket,
           correlationId,
-          Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first()));
+          Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first()));
       fail('Should have had exception')
     } catch (BucketAlreadyExistsException e) {
       //Correct exception
@@ -238,7 +230,7 @@ public class BucketFactoryTest {
       Bucket createdDuplicateBucket = OsgBucketFactory.getFactory().createBucket(provider,
           initializedDuplicateBucket,
           correlationId,
-          Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first()));
+          Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first()));
       //Should be okay
       Bucket newBucket = BucketMetadataManagers.getInstance().lookupExtantBucket(bucket.getBucketName())
       assert (newBucket.getBucketUuid().equals(createdDuplicateBucket.getBucketUuid()))

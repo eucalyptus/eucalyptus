@@ -81,7 +81,7 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
-import com.eucalyptus.auth.principal.EuareUser;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.compute.common.internal.images.ImageInfo;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
@@ -131,7 +131,8 @@ public class ImageManifests {
   static String requestManifestData( String bucketName, String objectName ) throws EucalyptusCloudException {
     try {
       try ( final EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3ClientForUser(
-              Accounts.lookupAwsExecReadAdmin(true), (int)TimeUnit.MINUTES.toSeconds( 15 )) ) {
+          Accounts.lookupSystemAccountByAlias( AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT ),
+          (int)TimeUnit.MINUTES.toSeconds( 15 )) ) {
         return s3Client.getObjectContent(
             bucketName,
             objectName,
@@ -348,7 +349,7 @@ public class ImageManifests {
       }
     }
     
-    public boolean checkManifestSignature( EuareUser user ) throws EucalyptusCloudException {
+    public boolean checkManifestSignature( User user ) throws EucalyptusCloudException {
       int idxImgOpen = this.manifest.indexOf("<image>");
       int idxImgClose = this.manifest.lastIndexOf("</image>");
       if (idxImgOpen < 0 || idxImgClose < 0 || idxImgOpen > idxImgClose)
@@ -398,8 +399,7 @@ public class ImageManifests {
           return true;
         } else {
           // check other users from the same account
-          for ( User u : user.getAccount().getUsers() ) {
-            if ( Iterables.any( Lists.transform( u.getCertificates( ), activeEuareToX509 ), tryVerifyWithCert ) )
+          if ( Iterables.any( Accounts.lookupAccountCertificatesByAccountNumber( user.getAccountNumber( ) ), tryVerifyWithCert ) ) {
               return true;
           }
           // check bundle cases (use NC's certificates)

@@ -65,10 +65,10 @@ package com.eucalyptus.auth.euare.persist;
 import java.util.Date;
 import java.util.List;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.euare.persist.entities.AccessKeyEntity;
+import com.eucalyptus.auth.euare.principal.EuareAccessKey;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import java.util.concurrent.ExecutionException;
@@ -76,7 +76,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
 
-public class DatabaseAccessKeyProxy implements AccessKey {
+public class DatabaseAccessKeyProxy implements EuareAccessKey {
 
   private static final long serialVersionUID = 1L;
   
@@ -138,7 +138,7 @@ public class DatabaseAccessKeyProxy implements AccessKey {
       DatabaseAuthUtils.invokeUnique( AccessKeyEntity.class, "accessKey", this.delegate.getAccessKey( ), new Tx<AccessKeyEntity>( ) {
         public void fire( AccessKeyEntity t ) {
           try {
-            results.add( Accounts.userAsPrincipal( new DatabaseUserProxy( t.getUser() ) ) );
+            results.add( com.eucalyptus.auth.euare.Accounts.userAsPrincipal( new DatabaseUserProxy( t.getUser() ) ) );
           } catch ( AuthException e ) {
             throw Exceptions.toUndeclared( e );
           }

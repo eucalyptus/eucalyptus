@@ -66,7 +66,7 @@ import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.util.FullName;
+import com.eucalyptus.auth.principal.FullName;
 import com.google.common.base.Joiner;
 
 public class ComponentFullName implements FullName {

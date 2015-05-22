@@ -37,9 +37,7 @@ import org.apache.log4j.Logger;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.TextParseException;
 
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.euare.ServerCertificateType;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.entities.Entities;
@@ -68,7 +66,7 @@ import com.eucalyptus.loadbalancing.common.msgs.Listener;
 import com.eucalyptus.loadbalancing.dns.LoadBalancerDomainName;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.Pair;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;

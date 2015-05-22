@@ -72,9 +72,9 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotResponseType;
 import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotType;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 @Ignore("Manual development test")
@@ -88,7 +88,7 @@ public class CreateSnapshotTest {
     String userId = "admin";
 
     String volumeId = "vol-Xj-6F2zFUTOAYQxx";
-    String snapshotId = "snap-" + Hashes.getRandom(10);
+    String snapshotId = "snap-" + Crypto.getRandom( 10 );
 
     CreateStorageSnapshotType createSnapshotRequest = new CreateStorageSnapshotType();
 

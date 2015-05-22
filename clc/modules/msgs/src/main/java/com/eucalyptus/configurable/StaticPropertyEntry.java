@@ -196,7 +196,8 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
         PropertyChangeListener changeListener = PropertyChangeListeners.getListenerFromClass(changeListenerClass);
         int modifiers = field.getModifiers( );
         if ( Modifier.isPublic( modifiers ) && Modifier.isStatic( modifiers ) ) {
-          entry = new StaticPropertyEntry( c, fqPrefix, field, description, defaultValue, p, annote.readonly( ), annote.displayName( ), annote.type( ), alias,
+          boolean readOnly = Modifier.isFinal( modifiers ) || annote.readonly( );
+          entry = new StaticPropertyEntry( c, fqPrefix, field, description, defaultValue, p, readOnly, annote.displayName( ), annote.type( ), alias,
                                            changeListener );
           return entry;
         }

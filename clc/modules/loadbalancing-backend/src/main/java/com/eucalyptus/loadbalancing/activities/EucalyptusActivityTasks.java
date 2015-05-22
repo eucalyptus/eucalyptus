@@ -59,6 +59,7 @@ import com.eucalyptus.auth.euare.RemoveRoleFromInstanceProfileType;
 import com.eucalyptus.auth.euare.RoleType;
 import com.eucalyptus.auth.euare.ServerCertificateType;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupNames;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage;
@@ -205,21 +206,20 @@ public class EucalyptusActivityTasks {
 		}
     
 		@Override
-		public final String getUserId() {
-		 try{
-			  if(this.useELBSystemAccount) {
-			    return Accounts.lookupLoadbalancingAccount().getUserId();
-			  } else {
-			    return Accounts.lookupSystemAdmin().getUserId();
-			  }
-			}catch(AuthException ex){
-	       throw Exceptions.toUndeclared(ex);
-			}
+		final String getUserId() {
+			return null;
 		}
 
 		@Override
 		AccountFullName getAccount() {
-			throw new RuntimeException( "Context for user, not account" );
+			try{
+				return AccountFullName.getInstance( Accounts.lookupAccountIdByAlias( this.useELBSystemAccount ?
+						AccountIdentifiers.ELB_SYSTEM_ACCOUNT :
+						AccountIdentifiers.SYSTEM_ACCOUNT
+				) );
+			}catch(AuthException ex){
+				throw Exceptions.toUndeclared(ex);
+			}
 		}
   }
 

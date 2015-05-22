@@ -70,7 +70,6 @@ public interface Policy extends Serializable {
   
   String getText( );
 
-  //TODO:STEVE: remove this
   Integer getPolicyVersion( );
 
 }

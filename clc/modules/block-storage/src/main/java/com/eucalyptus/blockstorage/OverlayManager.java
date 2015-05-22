@@ -75,7 +75,6 @@ import javax.persistence.EntityNotFoundException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.blockstorage.StorageManagers.StorageManagerProperty;
 import com.eucalyptus.blockstorage.entities.DirectStorageInfo;
 import com.eucalyptus.blockstorage.entities.ISCSIVolumeInfo;
@@ -86,6 +85,7 @@ import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyDirectory;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.storage.common.CheckerTask;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Joiner;
@@ -769,7 +769,7 @@ public class OverlayManager extends DASManager {
 
       int size = foundLVMVolumeInfo.getSize();
       long snapshotSize = (size * StorageProperties.GB) / 2;
-      String rawFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + volumeId + Hashes.getRandom(6);
+      String rawFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + volumeId + Crypto.getRandom( 6 );
       // create file and attach to loopback device
       volumeManager.finish();
       try {

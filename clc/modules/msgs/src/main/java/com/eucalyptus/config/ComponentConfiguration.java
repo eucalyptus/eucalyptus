@@ -94,7 +94,7 @@ import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.system.Ats;
-import com.eucalyptus.util.FullName;
+import com.eucalyptus.auth.principal.FullName;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.fsm.StateMachine;
 

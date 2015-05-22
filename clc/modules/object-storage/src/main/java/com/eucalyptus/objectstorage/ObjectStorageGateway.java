@@ -429,8 +429,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
       Map<String, String> storedHeaders = objectEntity.getStoredHeaders();
       populateStoredHeaders(response, storedHeaders);
       try {
-        fireObjectCreationEvent(bucket.getBucketName(), objectEntity.getObjectKey(), objectEntity.getVersionId(), requestUser.getUserId(),
-            objectEntity.getSize(), null);
+        fireObjectCreationEvent(bucket.getBucketName(), objectEntity.getObjectKey(), objectEntity.getVersionId(),
+            requestUser.getUserId(), requestUser.getName(), requestUser.getAccountNumber(), objectEntity.getSize(), null);
       } catch (Exception ex) {
         LOG.debug("Failed to fire reporting event for OSG object creation", ex);
       }
@@ -459,7 +459,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         return Contexts.lookup().getUser();
       } else {
         if (Principals.systemFullName().getUserId().equals(requestUserId)) {
-          return Accounts.lookupSystemAdminAsPrincipal();
+          return Accounts.lookupSystemAdmin();
         } else {
           return Accounts.lookupPrincipalByUserId(requestUserId, null);
         }
@@ -849,8 +849,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
     try {
       ObjectEntity responseEntity = OsgObjectFactory.getFactory().logicallyDeleteObject(ospClient, objectEntity, Contexts.lookup().getUser());
       try {
+        final User user = Contexts.lookup().getUser();
         fireObjectUsageEvent(S3ObjectEvent.S3ObjectAction.OBJECTDELETE, objectEntity.getBucket().getBucketName(), objectEntity.getObjectKey(),
-            objectEntity.getVersionId(), Contexts.lookup().getUser().getUserId(), objectEntity.getSize());
+            objectEntity.getVersionId(), user.getUserId(), user.getName(), user.getAccountNumber(), objectEntity.getSize());
       } catch (Exception e) {
         LOG.warn("caught exception while attempting to fire reporting event, exception message - " + e.getMessage());
       }
@@ -1464,7 +1465,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
           try {
             // send the event if we aren't doing a metadata update only
             if (!updateMetadataOnly) {
-              fireObjectCreationEvent(destinationBucket, destinationKey, destObject.getVersionId(), requestUser.getUserId(), destObject.getSize(),
+              fireObjectCreationEvent(destinationBucket, destinationKey, destObject.getVersionId(),
+                  requestUser.getUserId(), requestUser.getName(), requestUser.getAccountNumber(), destObject.getSize(),
                   null);
             }
           } catch (Exception ex) {
@@ -2048,8 +2050,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
         ObjectEntity completedEntity =
             OsgObjectFactory.getFactory().completeMultipartUpload(ospClient, objectEntity, request.getParts(), requestUser);
         try {
-          fireObjectCreationEvent(bucket.getBucketName(), completedEntity.getObjectKey(), completedEntity.getVersionId(), requestUser.getUserId(),
-              completedEntity.getSize(), null);
+          fireObjectCreationEvent(bucket.getBucketName(), completedEntity.getObjectKey(), completedEntity.getVersionId(),
+              requestUser.getUserId(), requestUser.getName(), requestUser.getAccountNumber(), completedEntity.getSize(), null);
         } catch (Exception ex) {
           LOG.debug("Failed to fire reporting event for OSG object creation while completing multipart upload", ex);
         }
@@ -2174,7 +2176,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         reply.setKey(objectKey);
         reply.setUploadId(request.getUploadId());
         reply.setIsTruncated(result.getIsTruncated());
-        reply.setInitiator(new Initiator(Accounts.getUserArn(Accounts.lookupUserById(objectEntity.getOwnerIamUserId())), objectEntity
+        reply.setInitiator(new Initiator(Accounts.getUserArn(Accounts.lookupPrincipalByUserId(objectEntity.getOwnerIamUserId())), objectEntity
             .getOwnerIamUserDisplayName()));
         reply.setOwner(new CanonicalUser(objectEntity.getOwnerCanonicalId(), objectEntity.getOwnerDisplayName()));
 
@@ -2236,7 +2238,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
         for (ObjectEntity obj : result.getEntityList()) {
           reply.getUploads().add(
-              new Upload(obj.getObjectKey(), obj.getUploadId(), new Initiator(Accounts.getUserArn(Accounts.lookupUserById(obj.getOwnerIamUserId())),
+              new Upload(obj.getObjectKey(), obj.getUploadId(), new Initiator(Accounts.getUserArn(Accounts.lookupPrincipalByUserId(obj.getOwnerIamUserId())),
                   obj.getOwnerIamUserDisplayName()), new CanonicalUser(obj.getOwnerCanonicalId(), obj.getOwnerDisplayName()), obj.getStorageClass(),
                   obj.getCreationTimestamp()));
         }
@@ -2269,26 +2271,30 @@ public class ObjectStorageGateway implements ObjectStorageService {
    *
    * If an object (version) is being overwritten then there will not be a corresponding delete event so we fire one prior to the create event.
    */
-  private void fireObjectCreationEvent(final String bucketName, final String objectKey, final String version, final String userId, final Long size,
+  private void fireObjectCreationEvent(final String bucketName, final String objectKey, final String version,
+                                       final String ownerUserId, final String ownerUserName,
+                                       final String ownerAccountNumber, final Long size,
       final Long oldSize) {
     try {
       if (oldSize != null && oldSize > 0) {
-        fireObjectUsageEvent(S3ObjectEvent.S3ObjectAction.OBJECTDELETE, bucketName, objectKey, version, userId, oldSize);
+        fireObjectUsageEvent(S3ObjectEvent.S3ObjectAction.OBJECTDELETE, bucketName, objectKey, version, ownerUserId, ownerUserName, ownerAccountNumber, oldSize);
       }
 
       /* Send an event to reporting to report this S3 usage. */
       if (size != null && size > 0) {
-        fireObjectUsageEvent(S3ObjectEvent.S3ObjectAction.OBJECTCREATE, bucketName, objectKey, version, userId, size);
+        fireObjectUsageEvent(S3ObjectEvent.S3ObjectAction.OBJECTCREATE, bucketName, objectKey, version, ownerUserId, ownerUserName, ownerAccountNumber, size);
       }
     } catch (final Exception e) {
       LOG.error(e, e);
     }
   }
 
-  private void fireObjectUsageEvent(S3ObjectEvent.S3ObjectAction actionInfo, String bucketName, String objectKey, String version, String ownerUserId,
-      Long sizeInBytes) {
+  private void fireObjectUsageEvent(S3ObjectEvent.S3ObjectAction actionInfo, String bucketName, String objectKey,
+                                    String version, String ownerUserId, String ownerUserName, String ownerAccountNumber,
+                                    Long sizeInBytes) {
     try {
-      ListenerRegistry.getInstance().fireEvent(S3ObjectEvent.with(actionInfo, bucketName, objectKey, version, ownerUserId, sizeInBytes));
+      ListenerRegistry.getInstance().fireEvent(
+          S3ObjectEvent.with(actionInfo, bucketName, objectKey, version, ownerUserId, ownerUserName, ownerAccountNumber, sizeInBytes));
     } catch (final Exception e) {
       LOG.error(e, e);
     }
@@ -2341,8 +2347,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
             if (object != null) {
               responseEntity = OsgObjectFactory.getFactory().logicallyDeleteObject(ospClient, object, currentUser);
               try {
+                final User user = Contexts.lookup().getUser();
                 fireObjectUsageEvent(S3ObjectEvent.S3ObjectAction.OBJECTDELETE, bucket.getBucketName(), key, versionId,
-                                     Contexts.lookup().getUser().getUserId(), object.getSize());
+                                     user.getUserId(), user.getName(), user.getAccountNumber(), object.getSize());
               } catch (Exception e) {
                 LOG.warn("caught exception while attempting to fire reporting event, exception message - " + e.getMessage());
               }

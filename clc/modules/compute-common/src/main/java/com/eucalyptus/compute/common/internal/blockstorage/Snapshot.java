@@ -80,16 +80,11 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
@@ -102,8 +97,8 @@ import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.upgrade.Upgrades.Version;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.FullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.base.Predicate;
 
 @Entity

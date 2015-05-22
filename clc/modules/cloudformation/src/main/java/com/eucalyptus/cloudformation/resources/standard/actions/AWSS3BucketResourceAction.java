@@ -102,7 +102,7 @@ public class AWSS3BucketResourceAction extends ResourceAction {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSS3BucketResourceAction action = (AWSS3BucketResourceAction) resourceAction;
-        User user = Accounts.lookupUserById(action.getResourceInfo().getEffectiveUserId());
+        User user = Accounts.lookupPrincipalByUserId(action.getResourceInfo().getEffectiveUserId());
         try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client( new SecurityTokenAWSCredentialsProvider( user ) ) ) {
           String bucketName = action.properties.getBucketName() != null ? action.properties.getBucketName() : action.getDefaultPhysicalResourceId(63).toLowerCase();
           if (s3c.doesBucketExist(bucketName)) {
@@ -119,7 +119,7 @@ public class AWSS3BucketResourceAction extends ResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSS3BucketResourceAction action = (AWSS3BucketResourceAction) resourceAction;
         URI serviceURI = ServiceUris.remotePublicify(ObjectStorage.class);
-        User user = Accounts.lookupUserById(action.getResourceInfo().getEffectiveUserId());
+        User user = Accounts.lookupPrincipalByUserId(action.getResourceInfo().getEffectiveUserId());
         String bucketName = action.info.getPhysicalResourceId();
         try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client( new SecurityTokenAWSCredentialsProvider( user ) ) ) {
           if ( action.properties.getAccessControl() != null ) {
@@ -194,7 +194,7 @@ public class AWSS3BucketResourceAction extends ResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSS3BucketResourceAction action = (AWSS3BucketResourceAction) resourceAction;
         if (action.info.getPhysicalResourceId() == null) return action;
-        User user = Accounts.lookupUserById(action.getResourceInfo().getEffectiveUserId());
+        User user = Accounts.lookupPrincipalByUserId(action.getResourceInfo().getEffectiveUserId());
         try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client( new SecurityTokenAWSCredentialsProvider( user ) ) ) {
           s3c.deleteBucket(action.info.getPhysicalResourceId());
         } catch (AmazonS3Exception ex) {

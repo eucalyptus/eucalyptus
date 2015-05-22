@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -79,6 +79,8 @@ public class SnapShotEvent implements Event {
 
   private final EventActionInfo<SnapShotAction> actionInfo;
   private final String userId;
+  private final String userName;
+  private final String accountNumber;
   private final String snapshotId;
   private final String uuid;
 
@@ -105,21 +107,29 @@ public class SnapShotEvent implements Event {
   public static SnapShotEvent with( final EventActionInfo<SnapShotAction> actionInfo,
                                     final String snapShotUUID,
                                     final String snapshotId,
-                                    final String userId ) {
+                                    final String userId,
+                                    final String userName,
+                                    final String accountNumber ) {
 
-    return new SnapShotEvent( actionInfo, snapShotUUID, snapshotId, userId );
+    return new SnapShotEvent( actionInfo, snapShotUUID, snapshotId, userId, userName, accountNumber );
   }
 
   private SnapShotEvent( final EventActionInfo<SnapShotAction> actionInfo,
                          final String uuid,
                          final String snapshotId,
-                         final String userId ) {
+                         final String userId,
+                         final String userName,
+                         final String accountNumber ) {
     checkParam( actionInfo, notNullValue() );
     checkParam( uuid, not( isEmptyOrNullString() ) );
     checkParam( userId, not( isEmptyOrNullString() ) );
+    checkParam( userName, not( isEmptyOrNullString() ) );
+    checkParam( accountNumber, not( isEmptyOrNullString() ) );
     checkParam( snapshotId, not( isEmptyOrNullString() ) );
     this.actionInfo = actionInfo;
     this.userId = userId;
+    this.userName = userName;
+    this.accountNumber = accountNumber;
     this.snapshotId = snapshotId;
     this.uuid = uuid;
   }
@@ -130,6 +140,12 @@ public class SnapShotEvent implements Event {
 
   public String getUserId() {
     return userId;
+  }
+
+  public String getUserName() { return userName; }
+
+  public String getAccountNumber() {
+    return accountNumber;
   }
 
   public EventActionInfo<SnapShotAction> getActionInfo() {

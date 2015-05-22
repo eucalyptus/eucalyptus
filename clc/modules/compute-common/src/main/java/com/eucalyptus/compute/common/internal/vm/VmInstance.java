@@ -147,8 +147,8 @@ import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.upgrade.Upgrades.Version;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.FullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
@@ -546,6 +546,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       try {
         final OwnerFullName owner = this.getOwner();
         final String userId = owner.getUserId();
+        final String userName = owner.getUserName();
         final String accountId = owner.getAccountNumber();
 
         ListenerRegistry.getInstance( ).fireEvent( new InstanceCreationEvent(
@@ -553,7 +554,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             getDisplayName(),
             this.bootRecord.getVmType().getName(),
             userId,
-            Accounts.lookupUserById(userId).getName(),
+            userName,
             accountId,
             Accounts.lookupAccountAliasById(accountId),
             this.placement.getPartitionName()));
@@ -1037,8 +1038,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             final String name = input.getIamInstanceProfileArn().substring(nameIndex + 1, rawName.length());
 
             try {
-              BaseInstanceProfile instanceProfile = Accounts.lookupAccountById(input.getOwnerAccountNumber())
-                .lookupInstanceProfileByName(name);
+              BaseInstanceProfile instanceProfile = Accounts.lookupInstanceProfileByName( input.getOwnerAccountNumber( ), name);
               final String profileArn = Accounts.getInstanceProfileArn(instanceProfile);
               IamInstanceProfile iamInstanceProfile = new IamInstanceProfile();
               iamInstanceProfile.setArn(profileArn);
@@ -1053,8 +1053,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
               !input.getIamInstanceProfileArn().startsWith("arn:") ) {
 
             try {
-              final BaseInstanceProfile instanceProfile = Accounts.lookupAccountById(input.getOwnerAccountNumber())
-                .lookupInstanceProfileByName(input.getIamInstanceProfileArn());
+              final BaseInstanceProfile instanceProfile = Accounts.lookupInstanceProfileByName(input.getOwnerAccountNumber(), input.getIamInstanceProfileArn());
               final String profileArn = Accounts.getInstanceProfileArn(instanceProfile);
               IamInstanceProfile iamInstanceProfile = new IamInstanceProfile();
               iamInstanceProfile.setArn(profileArn);

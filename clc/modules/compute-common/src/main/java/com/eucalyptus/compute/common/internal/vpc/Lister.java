@@ -23,8 +23,8 @@ import java.util.List;
 import java.util.Map;
 import org.hibernate.criterion.Criterion;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.util.OwnerFullName;
-import com.eucalyptus.util.RestrictedType;
+import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.auth.type.RestrictedType;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 

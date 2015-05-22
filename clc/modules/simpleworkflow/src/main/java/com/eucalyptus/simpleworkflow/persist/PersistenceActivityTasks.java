@@ -28,7 +28,7 @@ import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.simpleworkflow.ActivityTask;
 import com.eucalyptus.simpleworkflow.ActivityTasks;
 import com.eucalyptus.simpleworkflow.SwfMetadataException;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 

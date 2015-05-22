@@ -63,12 +63,15 @@
 package com.eucalyptus.vm.dns;
 
 import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
+
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.NoSuchElementException;
+
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
+
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cluster.ClusterConfiguration;
@@ -89,6 +92,7 @@ import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Lists;
 import com.google.common.net.InetAddresses;
 
 @ConfigurableClass( root = "dns.split_horizon",
@@ -159,40 +163,47 @@ public abstract class SplitHorizonResolver implements DnsResolver {
   @Override
   public DnsResponse lookupRecords( DnsRequest request ) {
     final Record query = request.getQuery( );
-    if ( RequestType.PTR.apply( query ) ) {
-      final InetAddress ip = DomainNameRecords.inAddrArpaToInetAddress( query.getName( ) );
-      if ( InstanceDomainNames.isInstance( ip ) ) {
-        final String hostAddress = ip.getHostAddress( );
-        if ( Addresses.getInstance( ).contains( hostAddress ) ) {
-          VmInstances.lookupByPublicIp( hostAddress );//existence check
-          final Name dnsName = InstanceDomainNames.fromInetAddress( InstanceDomainNames.EXTERNAL, ip );
-          return DnsResponse.forName( query.getName( ) ).answer( DomainNameRecords.ptrRecord( dnsName, ip ) );
-        } else if ( VmInstances.privateIpInUse( hostAddress ) ) {
-          final Name dnsName = InstanceDomainNames.fromInetAddress( InstanceDomainNames.INTERNAL, ip );
-          return DnsResponse.forName( query.getName( ) ).answer( DomainNameRecords.ptrRecord( dnsName, ip ) );
+    try{
+      if ( RequestType.PTR.apply( query ) ) {
+        final InetAddress ip = DomainNameRecords.inAddrArpaToInetAddress( query.getName( ) );
+        if ( InstanceDomainNames.isInstance( ip ) ) {
+          final String hostAddress = ip.getHostAddress( );
+          if ( VmInstances.privateIpInUse( hostAddress ) ) {
+            final Name dnsName = InstanceDomainNames.fromInetAddress( InstanceDomainNames.INTERNAL, ip );
+            return DnsResponse.forName( query.getName( ) ).answer( DomainNameRecords.ptrRecord( dnsName, ip ) );
+          }else if ( VmInstances.lookupByPublicIp( hostAddress ) != null ) {
+            final Name dnsName = InstanceDomainNames.fromInetAddress( InstanceDomainNames.EXTERNAL, ip );
+            return DnsResponse.forName( query.getName( ) ).answer( DomainNameRecords.ptrRecord( dnsName, ip ) );
+          }
         }
-      }
+      } 
+    }catch(final Exception ex){
+      LOG.debug(ex);
     }
     return DnsResponse.forName( query.getName( ) ).nxdomain( );
   }
-  
+
   public static class InternalARecordResolver extends SplitHorizonResolver implements DnsResolver {
     
     @Override
     public DnsResponse lookupRecords( DnsRequest request ) {
       final Record query = request.getQuery( );
-      if ( RequestType.A.apply( query ) ) {
-        try {
-          final Name name = query.getName( );
-          final Name instanceDomain = InstanceDomainNames.lookupInstanceDomain( name );
-          final InetAddress ip = InstanceDomainNames.toInetAddress( name.relativize( instanceDomain ) );
-          if ( VmInstances.privateIpInUse( ip.getHostAddress( ) ) ) {
-            final Record aRecord = DomainNameRecords.addressRecord( name, ip );
-            return DnsResponse.forName( name ).answer( aRecord );
+      if(RequestType.PTR.apply(query))
+        return super.lookupRecords(request);
+      try {
+        final Name name = query.getName( );
+        final Name instanceDomain = InstanceDomainNames.lookupInstanceDomain( name );
+        final InetAddress ip = InstanceDomainNames.toInetAddress( name.relativize( instanceDomain ) );
+        if ( VmInstances.privateIpInUse( ip.getHostAddress( ) ) ) {
+          if ( RequestType.A.apply( query ) ) {
+            final Record rec = DomainNameRecords.addressRecord( name, ip );
+            return DnsResponse.forName( name ).answer( rec );
+          } else {
+            return DnsResponse.forName( name ).answer( Lists.<Record>newArrayList() );
           }
-        } catch ( Exception ex ) {
-          LOG.debug( ex );
         }
+      } catch ( Exception ex ) {
+        LOG.debug( ex );
       }
       return super.lookupRecords( request );
     }
@@ -225,18 +236,22 @@ public abstract class SplitHorizonResolver implements DnsResolver {
     @Override
     public DnsResponse lookupRecords( DnsRequest request ) {
       final Record query = request.getQuery( );
-      if ( RequestType.A.apply( query ) ) {
-        try {
-          final Name name = query.getName( );
-          final InetAddress requestIp = InstanceDomainNames.toInetAddress( name.relativize( InstanceDomainNames.EXTERNAL.get( ) ) );
-          //GRZE: here it is not necessary to lookup the instance -- they public address assignment must have the needed information
-          final VmInstance vm = VmInstances.lookupByPublicIp( requestIp.getHostAddress( ) );
-          final InetAddress instanceAddress = InetAddresses.forString( vm.getPrivateAddress( ) );
-          final Record instanceARecord = DomainNameRecords.addressRecord( name, instanceAddress );
-          return DnsResponse.forName( name ).answer( instanceARecord );
-        } catch ( Exception ex ) {
-          LOG.debug( ex );
+      if(RequestType.PTR.apply(query))
+        return super.lookupRecords(request);
+      try {
+        final Name name = query.getName( );
+        final InetAddress requestIp = InstanceDomainNames.toInetAddress( name.relativize( InstanceDomainNames.EXTERNAL.get( ) ) );
+        //GRZE: here it is not necessary to lookup the instance -- they public address assignment must have the needed information
+        final VmInstance vm = VmInstances.lookupByPublicIp( requestIp.getHostAddress( ) );
+        final InetAddress instanceAddress = InetAddresses.forString( vm.getPrivateAddress( ) );
+        if (RequestType.A.apply(query)) {
+          final Record rec = DomainNameRecords.addressRecord( name, instanceAddress );
+          return DnsResponse.forName( name ).answer( rec );
+        } else { 
+          return DnsResponse.forName( name ).answer( Lists.<Record>newArrayList() );
         }
+      } catch ( Exception ex ) {
+        LOG.debug( ex );
       }
       return super.lookupRecords( request );
     }
@@ -258,16 +273,20 @@ public abstract class SplitHorizonResolver implements DnsResolver {
     @Override
     public DnsResponse lookupRecords( DnsRequest request ) {
       final Record query = request.getQuery( );
-      if ( RequestType.A.apply( query ) ) {
-        try {
-          final Name name = query.getName( );
-          final InetAddress requestIp = InstanceDomainNames.toInetAddress( name.relativize( InstanceDomainNames.EXTERNAL.get( ) ) );
-          VmInstances.lookupByPublicIp( requestIp.getHostAddress( ) ); // Ensure used by instance
-          final Record instanceARecord = DomainNameRecords.addressRecord( name, requestIp );
-          return DnsResponse.forName( name ).answer( instanceARecord );
-        } catch ( Exception ex ) {
-          LOG.debug( ex );
+      if(RequestType.PTR.apply(query))
+        return super.lookupRecords(request);
+      try {
+        final Name name = query.getName( );
+        final InetAddress requestIp = InstanceDomainNames.toInetAddress( name.relativize( InstanceDomainNames.EXTERNAL.get( ) ) );
+        VmInstances.lookupByPublicIp( requestIp.getHostAddress( ) ); // Ensure used by instance
+        if ( RequestType.A.apply( query ) ) {
+          final Record rec = DomainNameRecords.addressRecord( name, requestIp );
+          return DnsResponse.forName( name ).answer( rec );
+        } else {
+          return DnsResponse.forName( name ).answer( Lists.<Record>newArrayList() );
         }
+      } catch ( Exception ex ) {
+        LOG.debug( ex );
       }
       return super.lookupRecords( request );
     }
@@ -287,7 +306,7 @@ public abstract class SplitHorizonResolver implements DnsResolver {
     final Record query = request.getQuery( );
     if ( !Bootstrap.isOperational( ) || !enabled ) {
       return false;
-    } else if ( RequestType.A.apply( query ) && InstanceDomainNames.isInstanceDomainName( query.getName( ) ) ) {
+    } else if ( InstanceDomainNames.isInstanceDomainName( query.getName( ) ) ) {
       return true;
     } else if ( RequestType.PTR.apply( query )
                 && Subnets.isSystemManagedAddress( DomainNameRecords.inAddrArpaToInetAddress( query.getName( ) ) ) ) {

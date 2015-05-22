@@ -94,6 +94,7 @@
 package com.eucalyptus.cloud.ws;
 
 import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
@@ -129,6 +130,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 
 public class ConnectionHandler extends Thread {
+
+  private static Logger LOG = Logger.getLogger( ConnectionHandler.class );
 
 	static final int FLAG_DNSSECOK = 1;
 	static final int FLAG_SIGONLY = 2;
@@ -186,8 +189,12 @@ public class ConnectionHandler extends Thread {
 			  return errorMessage(query, Rcode.NOTIMP);
 
 			 byte rcode = addAnswer(response, name, type, dclass, 0, flags);
-			 if (rcode != Rcode.NOERROR && rcode != Rcode.NXDOMAIN)
-			   return errorMessage(query, Rcode.SERVFAIL);
+			 if (rcode != Rcode.NOERROR && rcode != Rcode.NXDOMAIN) {
+			   if(rcode == Rcode.REFUSED)
+			     return errorMessage(query, Rcode.REFUSED);
+			   else
+			     return errorMessage(query, Rcode.SERVFAIL);
+			 }
 
 			 if (queryOPT != null) {
 				 int optflags = (flags == FLAG_DNSSECOK) ? ExtendedFlags.DO : 0;
@@ -214,67 +221,56 @@ public class ConnectionHandler extends Thread {
 		}
 
 		try {
-			sr = DnsResolvers.findRecords( response, new DnsRequest() {
-				@Override public Record getQuery() { return response.getQuestion( ); }
-				@Override public InetAddress getLocalAddress() { return ConnectionHandler.getLocalInetAddress(); }
-				@Override public InetAddress getRemoteAddress() { return ConnectionHandler.getRemoteInetAddress(); }
-			} );
-			if ( sr != null ) {
-				if ( sr.isSuccessful( ) ) {
-					return Rcode.NOERROR;
-				} else if ( sr.isNXDOMAIN( ) ) {
-					return Rcode.NXDOMAIN;
-				}
-			}
+		  sr = DnsResolvers.findRecords( response, new DnsRequest() {
+		    @Override public Record getQuery() { return response.getQuestion( ); }
+		    @Override public InetAddress getLocalAddress() { return ConnectionHandler.getLocalInetAddress(); }
+		    @Override public InetAddress getRemoteAddress() { return ConnectionHandler.getRemoteInetAddress(); }
+		  } );
+
+		  if ( sr == null ) {
+		    return Rcode.SERVFAIL;
+		  } else {
+		    if (sr.isDelegation()) {
+		      RRset nsRecords = sr.getNS();
+		      addRRset(nsRecords.getName(), response, nsRecords,
+		          Section.AUTHORITY, flags);
+		    }else if (sr.isCNAME()) {
+		      CNAMERecord cname = sr.getCNAME();
+		      RRset rrset = new RRset(cname);
+		      addRRset(name, response, rrset, Section.ANSWER, flags);
+		    } else if (sr.isDNAME()) {
+		      DNAMERecord dname = sr.getDNAME();
+		      RRset rrset = new RRset(dname);
+		      addRRset(name, response, rrset, Section.ANSWER, flags);
+		      Name newname;
+		      try {
+		        newname = name.fromDNAME(dname);
+		      }
+		      catch (NameTooLongException e) {
+		        return Rcode.YXDOMAIN;
+		      }
+		      if(newname != null) {
+		        rrset = new RRset(new CNAMERecord(name, dclass, 0, newname));
+		        addRRset(name, response, rrset, Section.ANSWER, flags);
+		      }
+		    }
+		    
+		    if ( sr.isSuccessful( ) ) {
+		      if (type == Type.AAAA)
+	          response.getHeader().setFlag(Flags.AA);
+	        return Rcode.NOERROR;
+		    } else if ( sr.isNXDOMAIN( )) {
+		      response.getHeader().setRcode(Rcode.NXDOMAIN);
+		      return Rcode.NXDOMAIN;
+		    } else if (response.getHeader().getRcode() == Rcode.REFUSED) {
+		      return Rcode.REFUSED;
+		    } else
+		      return Rcode.SERVFAIL;
+		  }
 		} catch ( Exception ex ) {
-			Logger.getLogger( DnsResolvers.class ).error( ex );
+		  Logger.getLogger( DnsResolvers.class ).error( ex );
+		  return Rcode.SERVFAIL;
 		}
-		
-			// most likely these will be never executed after legacy dns is deprecated
-		if (sr == null || sr.isUnknown()) {
-		  if (type == Type.AAAA) {
-	      response.getHeader().setFlag(Flags.AA);
-	      return (Rcode.NOERROR);
-	    }
-	    return (Rcode.SERVFAIL);
-		}
-		if (sr.isNXDOMAIN()) {
-			response.getHeader().setRcode(Rcode.NXDOMAIN);
-			rcode = Rcode.NXDOMAIN;
-		} else if (sr.isNXRRSET()) {
-			;
-		} else if (sr.isDelegation()) {
-			RRset nsRecords = sr.getNS();
-			addRRset(nsRecords.getName(), response, nsRecords,
-					Section.AUTHORITY, flags);
-		} else if (sr.isCNAME()) {
-			CNAMERecord cname = sr.getCNAME();
-			RRset rrset = new RRset(cname);
-			addRRset(name, response, rrset, Section.ANSWER, flags);
-		} else if (sr.isDNAME()) {
-			DNAMERecord dname = sr.getDNAME();
-			RRset rrset = new RRset(dname);
-			addRRset(name, response, rrset, Section.ANSWER, flags);
-			Name newname;
-			try {
-				newname = name.fromDNAME(dname);
-			}
-			catch (NameTooLongException e) {
-				return Rcode.YXDOMAIN;
-			}
-			if(newname != null) {
-				rrset = new RRset(new CNAMERecord(name, dclass, 0, newname));
-				addRRset(name, response, rrset, Section.ANSWER, flags);
-			}
-		}	else if (sr.isSuccessful()) {
-			RRset [] rrsets = sr.answers();
-			if(rrsets != null) {
-				for (int i = 0; i < rrsets.length; i++)
-					addRRset(name, response, rrsets[i], Section.ANSWER, flags);
-			}
-			addCacheNS(response, getCache(dclass), name);
-		}
-		return rcode;
 	}
 
 	private final void

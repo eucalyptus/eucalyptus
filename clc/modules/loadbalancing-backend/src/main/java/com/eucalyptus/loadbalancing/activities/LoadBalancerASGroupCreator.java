@@ -38,9 +38,6 @@ import com.eucalyptus.component.Faults.CheckException;
 import org.apache.log4j.Logger;
 import org.springframework.util.StringUtils;
 
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseType;
 import com.eucalyptus.autoscaling.common.msgs.LaunchConfigurationType;
@@ -69,7 +66,6 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancers;
-import com.eucalyptus.loadbalancing.LoadbalancingAdminSystemRoleProvider;
 import com.eucalyptus.loadbalancing.common.LoadBalancingBackend;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicies;
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.InstanceProfileSetup;
@@ -443,13 +439,6 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 	  public boolean enable( ) throws Exception {
 	    if (!super.enable())
 	      return false;
-	    try{
-	      LoadbalancingAdminSystemRoleProvider provider = new LoadbalancingAdminSystemRoleProvider();
-	      provider.ensureAccountAndRoleExists();
-	    }catch(final Exception ex){
-	      LOG.error("Unable to configure ELB system account", ex);
-	      return false;
-	    }
 	    try{
 	      LoadBalancerPolicies.initialize();
 	    }catch(final Exception ex){

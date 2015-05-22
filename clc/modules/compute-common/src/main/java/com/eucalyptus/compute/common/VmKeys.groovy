@@ -21,7 +21,7 @@
 @GroovyAddClassUUID
 package com.eucalyptus.compute.common;
 
-import com.eucalyptus.auth.policy.PolicyResourceType
+import com.eucalyptus.auth.policy.annotation.PolicyResourceType
 import com.eucalyptus.binding.HttpParameterMapping
 import com.eucalyptus.binding.HttpEmbedded
 import edu.ucsb.eucalyptus.msgs.EucalyptusData

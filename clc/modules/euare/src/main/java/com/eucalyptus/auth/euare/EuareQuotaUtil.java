@@ -62,28 +62,27 @@
 
 package com.eucalyptus.auth.euare;
 
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 
 class EuareQuotaUtil {
 
   public static long countUserByAccount( String accountId ) throws AuthException {
-    return Accounts.lookupAccountById( accountId ).getUsers( ).size( );
+    return com.eucalyptus.auth.euare.Accounts.lookupAccountById( accountId ).getUsers( ).size( );
   }
 
   public static long countGroupByAccount( String accountId ) throws AuthException {
-    return Accounts.lookupAccountById( accountId ).getGroups( ).size( );
+    return com.eucalyptus.auth.euare.Accounts.lookupAccountById( accountId ).getGroups( ).size( );
   }
 
   public static long countRoleByAccount( String accountId ) throws AuthException {
-    return Accounts.lookupAccountById( accountId ).getRoles( ).size( );
+    return com.eucalyptus.auth.euare.Accounts.lookupAccountById( accountId ).getRoles( ).size( );
   }
 
   public static long countInstanceProfileByAccount( String accountId ) throws AuthException {
-    return Accounts.lookupAccountById( accountId ).getInstanceProfiles( ).size( );
+    return com.eucalyptus.auth.euare.Accounts.lookupAccountById( accountId ).getInstanceProfiles( ).size( );
   }
 
   public static long countServerCertificatesByAccount( String accountId ) throws AuthException {
-    return Accounts.lookupAccountById( accountId ).listServerCertificates( "/" ).size( );
+    return com.eucalyptus.auth.euare.Accounts.lookupAccountById( accountId ).listServerCertificates( "/" ).size( );
   }
 }

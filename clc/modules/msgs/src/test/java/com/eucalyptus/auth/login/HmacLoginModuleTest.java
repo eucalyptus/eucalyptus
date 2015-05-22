@@ -66,6 +66,7 @@ import static org.junit.Assert.*;
 import java.io.File;
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -120,22 +121,22 @@ public class HmacLoginModuleTest {
     testNormalize( "Truncated input 2", "BBBBAw", "BBBBAw==" );
     testNormalize( "URL encoded", "A%2bY=", "A+Y=" );
     testNormalize( "Sanitized embedded", "=A=+=Y=", "A+Y=" );
-    testNormalize( "Sanitized trailing", "A+Y=====", "A+Y=");
+    testNormalize( "Sanitized trailing", "A+Y=====", "A+Y=" );
   }
 
   private void testNormalize( final String desc, final String signature, final String expectedNormalized )  {
     final String normalized = loginModule().normalize( signature );
-    assertEquals(desc, expectedNormalized, normalized);
+    assertEquals( desc, expectedNormalized, normalized );
   }
 
   @Test
   public void testAcceptanceHmacV2() throws Exception {
     final HmacCredentials credsV2 = creds(
         "MrFSyGZ44/Oe4nOfXQImKmq8oRABMrmNk2mJIWz1dCA=",
-        Maps.newHashMap(ImmutableMap.of(
+        Maps.newHashMap( ImmutableMap.of(
             "AWSAccessKeyId", "1234567890",
             "SignatureVersion", "2"
-        )),
+        ) ),
         "GET",
         "/path",
         "localhost:8773",
@@ -158,7 +159,7 @@ public class HmacLoginModuleTest {
         Hmac.HmacSHA256 );
     loginModule.reset();
     loginModule.initialize( new Subject(), credsV1, Collections.<String,String>emptyMap(), Collections.<String,String>emptyMap() );
-    assertFalse("Module rejects credentials", loginModule.accepts());
+    assertFalse( "Module rejects credentials", loginModule.accepts() );
   }
 
   @Test
@@ -174,7 +175,7 @@ public class HmacLoginModuleTest {
         "localhost:8773",
         2,
         Hmac.HmacSHA256);
-    assertTrue("Authentication successful", hmacV2LoginModule().authenticate(creds));
+    assertTrue( "Authentication successful", hmacV2LoginModule().authenticate( creds ) );
   }
 
   @Test
@@ -316,6 +317,26 @@ public class HmacLoginModuleTest {
         2,
         Hmac.HmacSHA256 );
     assertTrue("Authentication successful", hmacV2LoginModule().authenticate(creds));
+  }
+
+  @Test
+  public void testBasicHmacV2HostCanonicalization() throws Exception {
+    final HmacCredentials creds = creds(
+        "1Y44avkQ78kH7ryAElD9ZpJmzbytRinIclJJZUNgvwE=",
+        Maps.newHashMap(ImmutableMap.<String,String>builder( )
+            .put( "AWSAccessKeyId", "AKIAAFOSB6X4B4FC52B3" )
+            .put( "Action", "DescribeLoadBalancerPolicyTypes" )
+            .put( "SignatureMethod", "HmacSHA256" )
+            .put( "SignatureVersion", "2" )
+            .put( "Timestamp", "2015-05-20T05:17:48Z" )
+            .put( "Version", "2012-06-01" )
+            .build( ) ),
+        "POST",
+        "/services/LoadBalancing",
+        "LOCALHOST:8773",
+        2,
+        Hmac.HmacSHA256 );
+    assertTrue("Authentication successful", hmacV2LoginModule( "xBPMQG8zlU6zWHO3kvXnosnVxKdGROK2BDHOOMZw" ).authenticate(creds));
   }
 
   @Test
@@ -762,11 +783,6 @@ public class HmacLoginModuleTest {
       @Override
       public Boolean isActive() {
         return true;
-      }
-
-      @Override
-      public void setActive(final Boolean active) throws AuthException {
-        throw new IllegalStateException();
       }
 
       @Override

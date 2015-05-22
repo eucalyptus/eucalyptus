@@ -83,7 +83,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import com.eucalyptus.auth.AuthenticationProperties;
-import com.eucalyptus.auth.principal.EuareUser;
+import com.eucalyptus.auth.euare.Accounts;
+import com.eucalyptus.auth.euare.principal.EuareAccount;
+import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.bootstrap.Hosts;
@@ -92,10 +94,8 @@ import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
 import com.eucalyptus.cloudwatch.common.CloudWatch;
@@ -152,10 +152,10 @@ public class X509Download extends HttpServlet {
       return;
     }
     
-    EuareUser user = null;
+    EuareUser user = null; // Use the internal Euare API as X.509 download will be removed soon.
     try {
-      Account account = Accounts.lookupAccountByName( accountName );
-      user = account.lookupUserByName( userName );
+      EuareAccount account = Accounts.lookupAccountByName( accountName );
+      user = (EuareUser) account.lookupUserByName( userName );
       if ( !user.isEnabled( ) ) {
         hasError( HttpServletResponse.SC_FORBIDDEN, "Access is not authorized", response );
         return;
@@ -258,7 +258,7 @@ public class X509Download extends HttpServlet {
     zipOut.setComment( "To setup the environment run: source /path/to/eucarc" );
     StringBuilder sb = new StringBuilder( );
     //TODO:GRZE:FIXME velocity
-    final String userNumber = u.getAccount( ).getAccountNumber( );
+    final String userNumber = u.getAccountNumber( );
     sb.append( "EUCA_KEY_DIR=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd -P)" );
     final Optional<String> computeUrl = remotePublicify( Compute.class );
     if ( computeUrl.isPresent( ) ) {
@@ -312,7 +312,7 @@ public class X509Download extends HttpServlet {
     }
     sb.append( "\nexport EC2_JVM_ARGS=-Djavax.net.ssl.trustStore=${EUCA_KEY_DIR}/jssecacerts" );
     sb.append( "\nexport EUCALYPTUS_CERT=${EUCA_KEY_DIR}/cloud-cert.pem" );
-    sb.append( "\nexport EC2_ACCOUNT_NUMBER='" + u.getAccount( ).getAccountNumber( ) + "'" );
+    sb.append( "\nexport EC2_ACCOUNT_NUMBER='" + u.getAccountNumber( ) + "'" );
     sb.append( "\nexport EC2_ACCESS_KEY='" + userAccessKey + "'" );
     sb.append( "\nexport EC2_SECRET_KEY='" + userSecretKey + "'" );
     sb.append( "\nexport AWS_ACCESS_KEY='" + userAccessKey + "'" );

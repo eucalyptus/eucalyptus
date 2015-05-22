@@ -67,7 +67,7 @@ import com.eucalyptus.component.annotation.ComponentDatabase;
 import com.eucalyptus.component.annotation.DatabaseNamingStrategy;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
-import com.eucalyptus.component.annotation.PolicyVendor;
+import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.component.annotation.PublicService;
 import com.eucalyptus.empyrean.Empyrean;
 

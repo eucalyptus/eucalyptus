@@ -29,7 +29,7 @@ import com.eucalyptus.autoscaling.common.backend.msgs.Activity;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.util.Callback;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;

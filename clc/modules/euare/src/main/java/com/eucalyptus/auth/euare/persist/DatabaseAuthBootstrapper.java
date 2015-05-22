@@ -62,23 +62,15 @@
 
 package com.eucalyptus.auth.euare.persist;
 
-import java.util.List;
-import java.util.ServiceLoader;
-import java.util.Set;
-
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.euare.Accounts;
 import com.eucalyptus.auth.AuthenticationProperties;
 import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.ldap.LdapSync;
+import com.eucalyptus.auth.euare.ldap.LdapSync;
+import com.eucalyptus.auth.euare.principal.EuareAccount;
+import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.policy.PolicyEngineImpl;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.AccountIdentifiers;
-import com.eucalyptus.auth.principal.EuareRole;
-import com.eucalyptus.auth.principal.EuareUser;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.util.SystemRoleProvider;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
@@ -87,9 +79,7 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.Threads;
-import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
 
 @Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.UserCredentialsInit )
@@ -108,20 +98,10 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   
   public boolean start( ) throws Exception {
     if(ComponentIds.lookup( Eucalyptus.class ).isAvailableLocally()) {
-      this.ensureSystemAdminExists( );
-      this.ensureSystemRolesExist( AccountIdentifiers.SYSTEM_ACCOUNT );
       // User info map key is case insensitive.
       // Older code may produce non-lowercase keys.
       // Normalize them if there is any.
-      this.ensureUserInfoNormalized( );
-      // EUCA-9376 - Workaround to avoid multiple admin users in the blockstorage account due to EUCA-9635  
-      this.ensureAccountExists( AccountIdentifiers.BLOCKSTORAGE_SYSTEM_ACCOUNT );
-      //EUCA-9644 - CloudFormation account for buckets and user to launch SWF workflows
-      this.ensureAccountExists( AccountIdentifiers.CLOUDFORMATION_SYSTEM_ACCOUNT );
-      //EUCA-9533 - System account for pre-signed urls in download manifests
-      this.ensureAccountExists( AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT );
-      //EUCA-8667 - System account for osg <--> walrus
-      this.ensureAccountExists( AccountIdentifiers.OBJECT_STORAGE_WALRUS_ACCOUNT );
+      this.ensureUserInfoNormalized();
       LdapSync.start( );
     }
     return true;
@@ -129,8 +109,8 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   
   private void ensureUserInfoNormalized() {
     try {
-      Account account = Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT );
-      EuareUser sysadmin = account.lookupUserByName( User.ACCOUNT_ADMIN );
+      EuareAccount account = Accounts.lookupAccountByName( EuareAccount.SYSTEM_ACCOUNT );
+      EuareUser sysadmin = account.lookupUserByName( EuareUser.ACCOUNT_ADMIN );
       if ( sysadmin.getInfo( ).containsKey( "Email" ) ) {
         Threads.newThread( new Runnable( ) {
 
@@ -189,72 +169,5 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   public boolean check( ) throws Exception {
     return LdapSync.check( );
   }
-  
-  private void ensureSystemAdminExists( ) throws Exception {
-    try {
-      Account account = Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT );
-      account.lookupUserByName( User.ACCOUNT_ADMIN );
-    } catch ( Exception e ) {
-      LOG.debug( "System admin does not exist. Adding it now." );
-      // Order matters.
-      try {
-        Account system = Accounts.addSystemAccount( );
-        EuareUser admin = system.addUser( User.ACCOUNT_ADMIN, "/", true, null );
-        admin.createKey( );
-      } catch ( Exception ex ) {
-        LOG.error( ex , ex );
-      }
-    }
-  }
 
-  // for some reason ServiceLoader does not want reliably load all classes listed for load
-  // so let's have this list here and instantiate classes manually
-  final static String[] policyProviders = { "com.eucalyptus.auth.euare.AccountAdminSystemRoleProvider",
-                                  "com.eucalyptus.auth.euare.InfrastructureAdminSystemRoleProvider",
-                                  "com.eucalyptus.auth.euare.ResourceAdminSystemRoleProvider" };
-
-  private void ensureSystemRolesExist( final String accountName ) throws Exception {
-    try {
-      final Account account = Accounts.lookupAccountByName( accountName );
-      final List<EuareRole> roles = account.getRoles( );
-      final List<String> roleNames = Lists.transform( roles, RestrictedTypes.toDisplayName( ) );
-      // toDisplayName would return names like "/eucalyptus/AccountAdministrator"
-      for ( String providerName : policyProviders ) {
-        SystemRoleProvider provider = (SystemRoleProvider) Class.forName(providerName).newInstance();
-        if ( provider.getAccountName().equals(accountName) && !roleNames.contains(
-            String.format("%s/%s", provider.getPath(), provider.getName( )) ) ) {
-          addSystemRole( account, provider );
-        }
-      }
-    } catch ( Exception e ) {
-      LOG.error( "Error checking system roles.", e );
-    }
-  }
-
-  private void addSystemRole( final Account account,
-                              final SystemRoleProvider provider ) {
-    LOG.info( String.format( "Creating system role: %s", provider.getName( ) ) );
-    try {
-      final String name = provider.getName( );
-      final String path = provider.getPath( );
-      final String assumeRolePolicy = provider.getAssumeRolePolicy( );
-      final String policy = provider.getPolicy( );
-      final EuareRole role = account.addRole( name, path, assumeRolePolicy );
-      role.addPolicy( name, policy );
-    } catch ( Exception e ) {
-      LOG.error( String.format( "Error adding system role: %s", provider.getName( ) ), e );
-    }
-  }
-
-  private void ensureAccountExists( String accountName ) throws Exception {
-    try {
-      Accounts.lookupAccountByName( accountName );
-    } catch ( Exception e ) {
-      try {
-        Accounts.addSystemAccountWithAdmin( accountName );
-      } catch (Exception e1) {
-        LOG.error("Error during account creation for " + accountName, e1);
-      }
-    }
-  }
 }

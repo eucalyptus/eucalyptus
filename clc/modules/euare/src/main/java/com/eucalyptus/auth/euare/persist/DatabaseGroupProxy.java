@@ -71,17 +71,17 @@ import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.PolicyParseException;
-import com.eucalyptus.auth.checker.InvalidValueException;
-import com.eucalyptus.auth.checker.ValueChecker;
-import com.eucalyptus.auth.checker.ValueCheckerFactory;
+import com.eucalyptus.auth.euare.checker.InvalidValueException;
+import com.eucalyptus.auth.euare.checker.ValueChecker;
+import com.eucalyptus.auth.euare.checker.ValueCheckerFactory;
 import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity;
+import com.eucalyptus.auth.euare.principal.EuareAccount;
+import com.eucalyptus.auth.euare.principal.EuareGroup;
+import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.policy.PolicyPolicy;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.EuareUser;
-import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.entities.Entities;
 import java.util.concurrent.ExecutionException;
@@ -90,7 +90,7 @@ import com.eucalyptus.util.Tx;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
-public class DatabaseGroupProxy implements Group {
+public class DatabaseGroupProxy implements EuareGroup {
   
   private static final long serialVersionUID = 1L;
 
@@ -354,7 +354,7 @@ public class DatabaseGroupProxy implements Group {
   }
 
   @Override
-  public Account getAccount( ) {
+  public EuareAccount getAccount( ) {
     final List<DatabaseAccountProxy> results = Lists.newArrayList( );
     try {
       DatabaseAuthUtils.invokeUnique( GroupEntity.class, "groupId", this.delegate.getGroupId( ), new Tx<GroupEntity>( ) {

@@ -69,7 +69,6 @@ import static com.eucalyptus.images.Images.inState;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 
@@ -527,7 +526,7 @@ public class SnapshotManager {
                                       final EventActionInfo<SnapShotAction> actionInfo ) {
     try {
       ListenerRegistry.getInstance().fireEvent(
-          SnapShotEvent.with(actionInfo, snap.getNaturalId(), snap.getDisplayName(), snap.getOwner().getUserId() ));
+          SnapShotEvent.with( actionInfo, snap.getNaturalId( ), snap.getDisplayName( ), snap.getOwnerUserId( ), snap.getOwnerUserName( ), snap.getOwnerAccountNumber( ) ) );
     } catch (final Throwable e) {
       LOG.error(e, e);
     }

@@ -126,7 +126,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.compute.common.internal.tags.FilterSupport;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.Strings;
@@ -999,7 +999,7 @@ public class Images extends com.eucalyptus.compute.common.internal.images.Images
   
   private static PutGetImageInfo persistRegistration( UserFullName creator, ImageManifest manifest, PutGetImageInfo ret ) throws Exception {
     // check manifest's signature
-    if ( !manifest.checkManifestSignature( Accounts.lookupUserById(creator.getUserId()) ) )
+    if ( !manifest.checkManifestSignature( Accounts.lookupPrincipalByUserId( creator.getUserId(), null ) ) )
       throw new EucalyptusCloudException("Manifest has invalid signature");
     try(TransactionResource tx = Entities.transactionFor( PutGetImageInfo.class  )) {
       ret = Entities.merge( ret );

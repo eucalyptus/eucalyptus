@@ -69,6 +69,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.UrlBase64;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
@@ -84,7 +85,7 @@ public class Crypto {
   static {
     BaseSecurityProvider provider;
     try {
-      Class provClass = ClassLoader.getSystemClassLoader().loadClass( "com.eucalyptus.auth.crypto.DefaultCryptoProvider" );
+      Class provClass = ClassLoader.getSystemClassLoader().loadClass( "com.eucalyptus.crypto.DefaultCryptoProvider" );
       provider = ( BaseSecurityProvider ) provClass.newInstance( );
     } catch ( Exception t ) {
       LOG.debug( t, t );
@@ -208,5 +209,12 @@ public class Crypto {
   @Nonnull
   public static Supplier<SecureRandom> getSecureRandomSupplier() {
     return secureRandomSupplier;
+  }
+
+  public static String getRandom( int size ) {
+    SecureRandom random = getSecureRandomSupplier( ).get( );
+    byte[] randomBytes = new byte[size];
+    random.nextBytes( randomBytes );
+    return new String( UrlBase64.encode( randomBytes ) );
   }
 }

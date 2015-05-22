@@ -81,7 +81,6 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.BaseInstanceProfile;
 import com.eucalyptus.auth.principal.BaseRole;
 import com.eucalyptus.component.ComponentIds;
@@ -260,15 +259,14 @@ public class VmInstanceMetadata {
       if ( !Strings.isNullOrEmpty( roleArn ) ) {
         roleName = roleArn.substring( roleArn.lastIndexOf('/') + 1 );
       } else try {
-        final Account userAccount = Accounts.lookupAccountById( vm.getOwnerAccountNumber() );
         String profileName;
         if ( instanceProfileNameOrArn.startsWith("arn:") ) {
           profileName = instanceProfileNameOrArn.substring( instanceProfileNameOrArn.lastIndexOf('/') + 1 );
         } else {
           profileName = instanceProfileNameOrArn;
         }
-        profile = userAccount.lookupInstanceProfileByName(profileName);
-        profileArn = Accounts.getInstanceProfileArn(profile);
+        profile = Accounts.lookupInstanceProfileByName( vm.getOwnerAccountNumber( ), profileName );
+        profileArn = Accounts.getInstanceProfileArn( profile );
         if ( roleArn == null ) {
           final BaseRole role = profile.getRole();
           if ( role != null ) {

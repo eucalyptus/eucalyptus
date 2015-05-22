@@ -68,12 +68,12 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.blockstorage.msgs.CreateStorageVolumeResponseType;
 import com.eucalyptus.blockstorage.msgs.CreateStorageVolumeType;
 import com.eucalyptus.blockstorage.msgs.DescribeStorageVolumesResponseType;
 import com.eucalyptus.blockstorage.msgs.DescribeStorageVolumesType;
 import com.eucalyptus.blockstorage.msgs.StorageVolume;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 @Ignore("Manual development test")
@@ -85,7 +85,7 @@ public class VolumeTest {
   public void testVolume() throws Exception {
 
     String userId = "admin";
-    String volumeId = "vol-" + Hashes.getRandom(10);
+    String volumeId = "vol-" + Crypto.getRandom( 10 );
     volumeId = volumeId.replaceAll("\\.", "x");
 
     CreateStorageVolumeType createVolumeRequest = new CreateStorageVolumeType();

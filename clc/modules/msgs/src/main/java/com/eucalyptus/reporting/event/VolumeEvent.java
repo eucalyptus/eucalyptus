@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
 import static com.eucalyptus.reporting.event.EventActionInfo.InstanceEventActionInfo;
 
 import com.eucalyptus.event.Event;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 
 public class VolumeEvent implements Event {
   private static final long serialVersionUID = 1L;
@@ -41,7 +41,9 @@ public class VolumeEvent implements Event {
   private final String uuid;
   private final String volumeId;
   private final int sizeGB;
-  private final OwnerFullName ownerFullName;
+  private final String userId;
+  private final String userName;
+  private final String accountNumber;
   private final String availabilityZone;
 
   public static EventActionInfo<VolumeAction> forVolumeCreate() {
@@ -85,7 +87,9 @@ public class VolumeEvent implements Event {
     checkParam( ownerFullName.getUserId(), not( isEmptyOrNullString() ) );
     checkParam( ownerFullName.getAccountNumber(), not( isEmptyOrNullString() ) );
     checkParam( ownerFullName.getUserName(), not( isEmptyOrNullString() ) );
-    this.ownerFullName = ownerFullName;
+    this.userId = ownerFullName.getUserId( );
+    this.userName = ownerFullName.getUserName( );
+    this.accountNumber = ownerFullName.getAccountNumber( );
     this.actionInfo = actionInfo;
     this.uuid = uuid;
     this.sizeGB = sizeGB;
@@ -101,8 +105,16 @@ public class VolumeEvent implements Event {
     return sizeGB;
   }
 
-  public OwnerFullName getOwner() {
-    return ownerFullName;
+  public String getUserId() {
+    return userId;
+  }
+
+  public String getUserName() {
+    return userName;
+  }
+
+  public String getAccountNumber() {
+    return accountNumber;
   }
 
   public EventActionInfo<VolumeAction> getActionInfo() {
@@ -121,7 +133,7 @@ public class VolumeEvent implements Event {
   public String toString() {
     return "VolumeEvent [actionInfo=" + actionInfo + ", uuid=" + uuid
         + ", sizeGB=" + sizeGB
-        + ", ownerName=" + ownerFullName.getUserName() + ", volumeId="
+        + ", userId=" + userId + ", volumeId="
         + volumeId + ", availabilityZone=" + availabilityZone + "]";
   }
 

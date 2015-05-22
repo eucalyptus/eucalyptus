@@ -98,10 +98,6 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -111,11 +107,9 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
-import com.eucalyptus.util.FullName;
+import com.eucalyptus.auth.principal.FullName;
 import com.eucalyptus.util.Mappable;
-import com.eucalyptus.util.OwnerFullName;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.collect.Sets;
 
 @Entity

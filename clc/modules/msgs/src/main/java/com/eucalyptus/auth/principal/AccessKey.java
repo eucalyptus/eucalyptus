@@ -69,9 +69,9 @@ import com.eucalyptus.auth.AuthException;
 public interface AccessKey extends Serializable {
 
   Boolean isActive( );
-  void setActive( Boolean active ) throws AuthException;
-  
+
   String getAccessKey( );
+
   String getSecretKey( );
   
   Date getCreateDate( );

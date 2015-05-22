@@ -164,6 +164,12 @@ public class RecursiveDnsResolver implements DnsResolver {
     final Set<Record> answer = Sets.newLinkedHashSet( );
     final Set<Record> authority = Sets.newLinkedHashSet( );
     final Set<Record> additional = Sets.newLinkedHashSet( );
+    final InetAddress source = request.getRemoteAddress( );
+
+    if (!Subnets.isSystemManagedAddress( source ))
+      return DnsResponse.forName( query.getName( ) )
+      .recursive( )
+      .refused();
     
     boolean iamAuthority = false;
     for ( Record aRec : queriedrrs ) {
@@ -262,7 +268,7 @@ public class RecursiveDnsResolver implements DnsResolver {
   public boolean checkAccepts( final DnsRequest request ) {
     final Record query = request.getQuery( );
     final InetAddress source = request.getRemoteAddress( );
-    if ( !Bootstrap.isOperational( ) || !enabled || !Subnets.isSystemManagedAddress( source )) {
+    if ( !Bootstrap.isOperational( ) || !enabled ) {
       return false;
     } else if ( ( RequestType.A.apply( query ) || RequestType.AAAA.apply( query ) || RequestType.MX.apply(query))
                 && query.getName( ).isAbsolute( )

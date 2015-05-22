@@ -189,7 +189,9 @@ public class SnapshotUpdateEventListener implements EventListener<ClockTick>, Ca
                       entity.getParentVolume() ),
                   entity.getNaturalId(),
                   entity.getDisplayName(),
-                  entity.getOwnerUserId() ) ); // snapshot info user name is user id
+                  entity.getOwnerUserId(),
+                  entity.getOwnerUserName(),
+                  entity.getOwnerAccountNumber()) );
             } catch ( final Throwable e ) {
               LOG.error( "Error inserting/creating reporting event for snapshot creation of snapshot: " + entity.getDisplayName(), e  );
             }

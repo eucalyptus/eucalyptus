@@ -21,6 +21,7 @@ package com.eucalyptus.reporting.modules.storage
 
 import com.eucalyptus.auth.AuthException
 import com.eucalyptus.reporting.service.ReportingService
+import groovy.transform.CompileStatic
 import org.junit.BeforeClass
 import org.junit.Test
 import com.eucalyptus.auth.principal.Principals
@@ -28,7 +29,6 @@ import com.eucalyptus.auth.principal.Principals
 import static org.junit.Assert.*
 import com.eucalyptus.reporting.domain.ReportingAccountCrud
 import com.eucalyptus.reporting.domain.ReportingUserCrud
-import com.eucalyptus.auth.principal.User
 import com.google.common.base.Charsets
 import com.eucalyptus.reporting.event.VolumeEvent
 import com.eucalyptus.reporting.event_store.ReportingVolumeEventStore
@@ -40,6 +40,7 @@ import com.eucalyptus.reporting.event_store.ReportingVolumeDetachEvent
 /**
  * 
  */
+@CompileStatic
 class VolumeUsageEventListenerTest {
 
   @BeforeClass
@@ -66,7 +67,7 @@ class VolumeUsageEventListenerTest {
     ), timestamp )
 
     assertTrue( "Persisted event is ReportingVolumeCreateEvent", persisted instanceof ReportingVolumeCreateEvent )
-    ReportingVolumeCreateEvent event = persisted
+    ReportingVolumeCreateEvent event = (ReportingVolumeCreateEvent) persisted
     assertEquals( "Persisted event uuid", uuid("vol-00000001"), event.getUuid() )
     assertEquals( "Persisted event name", "vol-00000001", event.getVolumeId() )
     assertEquals( "Persisted event zone", "PARTI00", event.getAvailabilityZone() )
@@ -89,7 +90,7 @@ class VolumeUsageEventListenerTest {
     ), timestamp )
 
     assertTrue( "Persisted event is ReportingVolumeDeleteEvent", persisted instanceof ReportingVolumeDeleteEvent )
-    ReportingVolumeDeleteEvent event = persisted
+    ReportingVolumeDeleteEvent event = (ReportingVolumeDeleteEvent) persisted
     assertEquals( "Persisted event uuid", uuid("vol-00000001"), event.getUuid() )
     assertEquals( "Persisted event timestamp", timestamp, event.getTimestampMs() )
   }
@@ -108,7 +109,7 @@ class VolumeUsageEventListenerTest {
     ), timestamp )
 
     assertTrue( "Persisted event is ReportingVolumeAttachEvent", persisted instanceof ReportingVolumeAttachEvent )
-    ReportingVolumeAttachEvent event = persisted
+    ReportingVolumeAttachEvent event = (ReportingVolumeAttachEvent) persisted
     assertEquals( "Persisted event volume uuid", uuid("vol-00000001"), event.getVolumeUuid() )
     assertEquals( "Persisted event instance uuid", uuid("i-00000002"), event.getInstanceUuid() )
     assertEquals( "Persisted event size", 12345, event.getSizeGB() )
@@ -129,7 +130,7 @@ class VolumeUsageEventListenerTest {
     ), timestamp )
 
     assertTrue( "Persisted event is ReportingVolumeAttachEvent", persisted instanceof ReportingVolumeDetachEvent )
-    ReportingVolumeDetachEvent event = persisted
+    ReportingVolumeDetachEvent event = (ReportingVolumeDetachEvent) persisted
     assertEquals( "Persisted event volume uuid", uuid("vol-00000001"), event.getVolumeUuid() )
     assertEquals( "Persisted event instance uuid", uuid("i-00000002"), event.getInstanceUuid() )
     assertEquals( "Persisted event timestamp", timestamp, event.getTimestampMs() )
@@ -163,10 +164,6 @@ class VolumeUsageEventListenerTest {
       @Override protected ReportingUserCrud getReportingUserCrud() { return userCrud }
       @Override protected ReportingVolumeEventStore getReportingVolumeEventStore() { eventStore }
       @Override protected long getCurrentTimeMillis() { timestamp }
-      @Override protected User lookupUser( final String userId ) {
-        assertEquals( "Looked up user", "eucalyptus", userId )
-        Principals.systemUser()
-      }
       @Override protected String lookupAccountAliasById(final String accountNumber) throws AuthException {
         assertEquals( "Account Id", "000000000000", accountNumber  )
         'eucalyptus'

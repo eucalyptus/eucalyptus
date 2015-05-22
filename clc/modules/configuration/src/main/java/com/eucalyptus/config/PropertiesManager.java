@@ -135,7 +135,7 @@ public class PropertiesManager {
         String value = "********";
         if ( !entry.getWidgetType( ).equals( ConfigurableFieldType.KEYVALUEHIDDEN ) )
           value = entry.getValue( );
-        props.add( new Property( entry.getQualifiedName( ), value, entry.getDescription( ), entry.getDefaultValue() ) );
+        props.add( new Property( entry.getQualifiedName( ), value, entry.getDescription( ), entry.getDefaultValue(), entry.getReadOnly() ) );
       }
     }
     return reply;
@@ -171,14 +171,17 @@ public class PropertiesManager {
           if (Boolean.TRUE.equals( reset )) {
             entry.setValue(entry.getDefaultValue());
           }
-        } else { 
-          try {
-            String inValue = request.getValue( );
-            entry.setValue( ( inValue == null ) ? "" : inValue );
-          } catch ( Exception e ) {
-            entry.setValue( oldValue );
-            Exceptions.findAndRethrow( e, EucalyptusCloudException.class );
-            throw e;
+        } else {
+          // if property is ReadOnly it should not be set by user
+          if ( !entry.getReadOnly() ) {
+            try {
+              String inValue = request.getValue( );
+              entry.setValue( ( inValue == null ) ? "" : inValue );
+            } catch ( Exception e ) {
+              entry.setValue( oldValue );
+              Exceptions.findAndRethrow( e, EucalyptusCloudException.class );
+              throw e;
+            }
           }
         }
         reply.setValue( entry.getValue( ) );
