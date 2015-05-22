@@ -174,10 +174,10 @@ public abstract class AbstractTaskScheduler {
           ist.setServiceCertArn(this.imagingServiceCertArn);
           final ServiceConfiguration osg = Topology.lookup( ObjectStorage.class );
           final URI osgUri = osg.getUri();
-          if ( DNSProperties.LOCALHOST_DOMAIN.equals(DNSProperties.DOMAIN) )
+          if ( DNSProperties.LOCALHOST_DOMAIN.equals(DNSProperties.getDomain()) )
             ist.setS3Url(String.format("%s://%s:%d%s", osgUri.getScheme(), osgUri.getHost(), osgUri.getPort(), osgUri.getPath())); 
           else
-            ist.setS3Url(String.format("%s://objectstorage.%s:%d", osgUri.getScheme(), DNSProperties.DOMAIN, osgUri.getPort()));
+            ist.setS3Url(String.format("%s://objectstorage.%s:%d", osgUri.getScheme(), DNSProperties.getDomain(), osgUri.getPort()));
           newTask.setInstanceStoreTask(ist);
         }else if(nextTask instanceof ImportVolumeImagingTask){
           final ImportVolumeImagingTask volumeTask = (ImportVolumeImagingTask) nextTask;

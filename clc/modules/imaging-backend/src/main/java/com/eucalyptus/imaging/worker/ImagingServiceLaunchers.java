@@ -168,11 +168,11 @@ public class ImagingServiceLaunchers {
       params.add(new Parameter("AvailabilityZones",
           Joiner.on(",").join( zones )));
       params.add(new Parameter("ImagingServiceUrl", String.format("imaging.%s",
-          DNSProperties.DOMAIN)));
+          DNSProperties.getDomain())));
       params.add(new Parameter("EuareServiceUrl", String.format("euare.%s",
-          DNSProperties.DOMAIN)));
+          DNSProperties.getDomain())));
       params.add(new Parameter("ComputeServiceUrl", String.format("compute.%s",
-          DNSProperties.DOMAIN)));
+          DNSProperties.getDomain())));
       LOG.debug("Creating CF stack for the imaging worker");
       CloudFormationClient.getInstance().createStack(
           Accounts.lookupSystemAccountByAlias( AccountIdentifiers.IMAGING_SYSTEM_ACCOUNT ).getUserId( ),

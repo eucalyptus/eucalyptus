@@ -686,9 +686,9 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
       kvMap.put("app-cookie-duration", APP_COOKIE_DURATION);
     }
 
-    kvMap.put("elb_service_url", String.format("loadbalancing.%s",DNSProperties.DOMAIN));
-    kvMap.put("euare_service_url", String.format("euare.%s", DNSProperties.DOMAIN));
-    kvMap.put("objectstorage_service_url", String.format("objectstorage.%s", DNSProperties.DOMAIN));
+    kvMap.put("elb_service_url", String.format("loadbalancing.%s",DNSProperties.getDomain()));
+    kvMap.put("euare_service_url", String.format("euare.%s", DNSProperties.getDomain()));
+    kvMap.put("objectstorage_service_url", String.format("objectstorage.%s", DNSProperties.getDomain()));
     if(ownerAccountNumber!=null)
       kvMap.put("loadbalancer_owner_account", ownerAccountNumber);
     
