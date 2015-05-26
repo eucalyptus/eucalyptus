@@ -29,13 +29,22 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
+import org.hibernate.FlushMode;
+import org.hibernate.criterion.Restrictions;
 import org.hibernate.exception.ConstraintViolationException;
+import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.euare.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.InvalidAccessKeyAuthException;
 import com.eucalyptus.auth.api.PrincipalProvider;
 import com.eucalyptus.auth.euare.EuareServerCertificateUtil;
+import com.eucalyptus.auth.euare.persist.entities.AccessKeyEntity;
+import com.eucalyptus.auth.euare.persist.entities.AccountEntity;
+import com.eucalyptus.auth.euare.persist.entities.CertificateEntity;
+import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.euare.persist.entities.ReservedNameEntity;
+import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
+import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.euare.principal.GlobalNamespace;
@@ -58,6 +67,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.auth.principal.OwnerFullName;
+import com.google.common.base.Optional;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -69,42 +79,71 @@ public class DatabasePrincipalProvider implements PrincipalProvider {
 
   @Override
   public UserPrincipal lookupPrincipalByUserId( final String userId, final String nonce ) throws AuthException {
-    final EuareUser user = Accounts.lookupUserById( userId );
-    return decorateCredentials( Accounts.userAsPrincipal( user ), nonce, user.getToken( ) );
+    try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( UserEntity.class ) ) {
+      try {
+        final UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, "userId", userId );
+        return decorateCredentials( new UserPrincipalImpl( user ), nonce, user.getToken( ) );
+      } catch ( Exception e ) {
+        throw new AuthException( AuthException.NO_SUCH_USER, e );
+      }
+    }
   }
 
   @Override
   public UserPrincipal lookupPrincipalByRoleId( final String roleId, final String nonce ) throws AuthException {
-    final EuareRole role = Accounts.lookupRoleById( roleId );
-    return decorateCredentials( Accounts.roleAsPrincipal( role ), nonce, role.getSecret() );
+    try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( RoleEntity.class ) ) {
+      final EuareRole role = Accounts.lookupRoleById( roleId );
+      return decorateCredentials( Accounts.roleAsPrincipal( role ), nonce, role.getSecret() );
+    }
   }
 
   @Override
   public UserPrincipal lookupPrincipalByAccessKeyId( final String keyId, final String nonce ) throws AuthException {
-    final AccessKey accessKey = Accounts.lookupAccessKeyById( keyId );
-    if ( !accessKey.isActive( ) ) {
-      throw new InvalidAccessKeyAuthException( "Invalid access key or token" );
+    try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( AccessKeyEntity.class ) ) {
+      final UserEntity user;
+      try {
+        user = (UserEntity) Entities.createCriteria( UserEntity.class )
+            .createCriteria( "keys" ).add( Restrictions.eq( "accessKey", keyId ) )
+            .setFlushMode( FlushMode.MANUAL )
+            .setReadOnly( true )
+            .uniqueResult( );
+      } catch ( Exception e ) {
+        throw new InvalidAccessKeyAuthException( "Failed to find access key", e );
+      }
+      final UserPrincipal principal = new UserPrincipalImpl( user );
+      final Optional<AccessKey> accessKey = Iterables.tryFind(
+          principal.getKeys( ),
+          CollectionUtils.propertyPredicate( keyId, AccessKeys.accessKeyIdentifier( ) ) );
+      if ( !Iterables.any( accessKey.asSet( ), AccessKeys.isActive( ) ) ) {
+        throw new InvalidAccessKeyAuthException( "Invalid access key or token" );
+      }
+      return decorateCredentials( principal, nonce, accessKey.get( ).getSecretKey() );
     }
-    return decorateCredentials( accessKey.getPrincipal(), nonce, accessKey.getSecretKey() );
   }
 
   @Override
   public UserPrincipal lookupPrincipalByCertificateId( final String certificateId ) throws AuthException {
-    final Certificate certificate = Accounts.lookupCertificateByHashId( certificateId );
-    if ( !certificate.isActive( ) ) {
-      throw new AuthException( "Certificate is inactive or revoked: " + certificate.getX509Certificate().getSubjectX500Principal( ) );
+    try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( CertificateEntity.class ) ) {
+      final Certificate certificate = Accounts.lookupCertificateByHashId( certificateId );
+      if ( !certificate.isActive( ) ) {
+        throw new AuthException( "Certificate is inactive or revoked: " + certificate.getX509Certificate( ).getSubjectX500Principal( ) );
+      }
+      return certificate.getPrincipal();
     }
-    return certificate.getPrincipal();
   }
 
   @Override
   public UserPrincipal lookupPrincipalByCanonicalId( final String canonicalId ) throws AuthException {
-    return Accounts.userAsPrincipal( Accounts.lookupAccountByCanonicalId( canonicalId ).lookupAdmin() );
+    try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( UserEntity.class ) ) {
+      return Accounts.userAsPrincipal( Accounts.lookupAccountByCanonicalId( canonicalId ).lookupAdmin() );
+    }
   }
 
   @Override
   public UserPrincipal lookupPrincipalByAccountNumber( final String accountNumber ) throws AuthException {
-    return Accounts.userAsPrincipal( Accounts.lookupAccountById( accountNumber ).lookupAdmin() );
+    try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( UserEntity.class ) ) {
+      return Accounts.userAsPrincipal( Accounts.lookupAccountById( accountNumber ).lookupAdmin() );
+    }
   }
 
   @Override
@@ -112,7 +151,9 @@ public class DatabasePrincipalProvider implements PrincipalProvider {
       final String accountNumber,
       final String name
   ) throws AuthException {
-    return Accounts.userAsPrincipal( Accounts.lookupAccountById( accountNumber ).lookupUserByName( name ) );
+    try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( UserEntity.class ) ) {
+      return Accounts.userAsPrincipal( Accounts.lookupAccountById( accountNumber ).lookupUserByName( name ) );
+    }
   }
 
   @Override
@@ -142,75 +183,87 @@ public class DatabasePrincipalProvider implements PrincipalProvider {
 
   @Override
   public AccountIdentifiers lookupAccountIdentifiersByAlias( final String alias ) throws AuthException {
-    return Accounts.lookupAccountByName( alias );
+    try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( AccountEntity.class ) ) {
+      return Accounts.lookupAccountByName( alias );
+    }
   }
 
   @Override
   public AccountIdentifiers lookupAccountIdentifiersByCanonicalId( final String canonicalId ) throws AuthException {
-    return Accounts.lookupAccountByCanonicalId( canonicalId );
+    try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( AccountEntity.class ) ) {
+      return Accounts.lookupAccountByCanonicalId( canonicalId );
+    }
   }
 
   @Override
   public AccountIdentifiers lookupAccountIdentifiersByEmail( final String email ) throws AuthException {
-    final EuareUser euareUser = Accounts.lookupUserByEmailAddress( email );
-    if ( euareUser.isAccountAdmin( ) ) {
-      return euareUser.getAccount();
+    try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( UserEntity.class ) ) {
+      final EuareUser euareUser = Accounts.lookupUserByEmailAddress( email );
+      if ( euareUser.isAccountAdmin( ) ) {
+        return euareUser.getAccount();
+      }
+      throw new AuthException( AuthException.NO_SUCH_USER );
     }
-    throw new AuthException( AuthException.NO_SUCH_USER );
   }
 
   @Override
   public List<AccountIdentifiers> listAccountIdentifiersByAliasMatch( final String aliasExpression ) throws AuthException {
-    return Accounts.resolveAccountNumbersForName( aliasExpression );
+    try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( AccountEntity.class ) ) {
+      return Accounts.resolveAccountNumbersForName( aliasExpression );
+    }
   }
 
   @Override
   public InstanceProfile lookupInstanceProfileByName( final String accountNumber, final String name ) throws AuthException {
-    final EuareInstanceProfile profile = Accounts.lookupAccountById( accountNumber ).lookupInstanceProfileByName( name );
-    final String profileArn = Accounts.getInstanceProfileArn( profile );
-    final EuareRole euareRole = profile.getRole( );
-    final String roleArn = euareRole == null ? null : Accounts.getRoleArn( euareRole );
-    final String roleAccountNumber = euareRole == null ? null : euareRole.getAccountNumber( );
-    final PolicyVersion rolePolicy = euareRole == null ? null : euareRole.getPolicy( );
-    final Role role = euareRole == null ? null : new Role( ) {
-      @Override public String getAccountNumber( ) { return roleAccountNumber; }
-      @Override public String getRoleId( ) { return euareRole.getRoleId( ); }
-      @Override public String getRoleArn( ) { return roleArn; }
-      @Override public String getPath( ) { return euareRole.getPath( ); }
-      @Override public String getName( ) { return euareRole.getName( ); }
-      @Override public String getSecret( ) { return euareRole.getSecret( ); }
-      @Override public PolicyVersion getPolicy( ) { return rolePolicy; }
-      @Override public String getDisplayName( ) { return Accounts.getRoleFullName( this ); }
-      @Override public OwnerFullName getOwner( ) { return euareRole.getOwner( ); }
-    };
-    return new InstanceProfile( ) {
-      @Override public String getAccountNumber( ) { return accountNumber; }
-      @Override public String getInstanceProfileId( ) { return profile.getInstanceProfileId( ); }
-      @Override public String getInstanceProfileArn( ) { return profileArn; }
-      @Nullable
-      @Override public Role getRole( ) { return role; }
-      @Override public String getName( ) { return profile.getName( ); }
-      @Override public String getPath( ) { return profile.getPath(); }
-    };
+    try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( InstanceProfileEntity.class ) ) {
+      final EuareInstanceProfile profile = Accounts.lookupAccountById( accountNumber ).lookupInstanceProfileByName( name );
+      final String profileArn = Accounts.getInstanceProfileArn( profile );
+      final EuareRole euareRole = profile.getRole( );
+      final String roleArn = euareRole == null ? null : Accounts.getRoleArn( euareRole );
+      final String roleAccountNumber = euareRole == null ? null : euareRole.getAccountNumber( );
+      final PolicyVersion rolePolicy = euareRole == null ? null : euareRole.getPolicy( );
+      final Role role = euareRole == null ? null : new Role( ) {
+        @Override public String getAccountNumber( ) { return roleAccountNumber; }
+        @Override public String getRoleId( ) { return euareRole.getRoleId( ); }
+        @Override public String getRoleArn( ) { return roleArn; }
+        @Override public String getPath( ) { return euareRole.getPath( ); }
+        @Override public String getName( ) { return euareRole.getName( ); }
+        @Override public String getSecret( ) { return euareRole.getSecret( ); }
+        @Override public PolicyVersion getPolicy( ) { return rolePolicy; }
+        @Override public String getDisplayName( ) { return Accounts.getRoleFullName( this ); }
+        @Override public OwnerFullName getOwner( ) { return euareRole.getOwner( ); }
+      };
+      return new InstanceProfile( ) {
+        @Override public String getAccountNumber( ) { return accountNumber; }
+        @Override public String getInstanceProfileId( ) { return profile.getInstanceProfileId( ); }
+        @Override public String getInstanceProfileArn( ) { return profileArn; }
+        @Nullable
+        @Override public Role getRole( ) { return role; }
+        @Override public String getName( ) { return profile.getName( ); }
+        @Override public String getPath( ) { return profile.getPath(); }
+      };
+    }
   }
 
   @Override
   public Role lookupRoleByName( final String accountNumber, final String name ) throws AuthException {
-    final EuareRole euareRole = Accounts.lookupAccountById( accountNumber ).lookupRoleByName( name );
-    final String roleArn = Accounts.getRoleArn( euareRole );
-    final String roleAccountNumber = euareRole.getAccountNumber( );
-    final PolicyVersion assumeRolePolicy = euareRole.getPolicy( );
-    return new Role( ) {
-      @Override public String getAccountNumber( ) { return roleAccountNumber; }
-      @Override public String getRoleId( ) { return euareRole.getRoleId( ); }
-      @Override public String getRoleArn( ) { return roleArn; }
-      @Override public String getPath( ) { return euareRole.getPath( ); }
-      @Override public String getName( ) { return euareRole.getName(); }
-      @Override public String getSecret( ) { return euareRole.getSecret( ); }
-      @Override public PolicyVersion getPolicy( ) { return assumeRolePolicy; }
-      @Override public String getDisplayName( ) { return Accounts.getRoleFullName( this ); }
-      @Override public OwnerFullName getOwner( ) { return euareRole.getOwner(); }
-    };
+    try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( RoleEntity.class ) ) {
+      final EuareRole euareRole = Accounts.lookupAccountById( accountNumber ).lookupRoleByName( name );
+      final String roleArn = Accounts.getRoleArn( euareRole );
+      final String roleAccountNumber = euareRole.getAccountNumber( );
+      final PolicyVersion assumeRolePolicy = euareRole.getPolicy( );
+      return new Role( ) {
+        @Override public String getAccountNumber( ) { return roleAccountNumber; }
+        @Override public String getRoleId( ) { return euareRole.getRoleId( ); }
+        @Override public String getRoleArn( ) { return roleArn; }
+        @Override public String getPath( ) { return euareRole.getPath( ); }
+        @Override public String getName( ) { return euareRole.getName(); }
+        @Override public String getSecret( ) { return euareRole.getSecret( ); }
+        @Override public PolicyVersion getPolicy( ) { return assumeRolePolicy; }
+        @Override public String getDisplayName( ) { return Accounts.getRoleFullName( this ); }
+        @Override public OwnerFullName getOwner( ) { return euareRole.getOwner(); }
+      };
+    }
   }
 
   @Override
@@ -293,15 +346,17 @@ public class DatabasePrincipalProvider implements PrincipalProvider {
 
   @Override
   public List<X509Certificate> lookupAccountCertificatesByAccountNumber( final String accountNumber ) throws AuthException {
-    final List<X509Certificate> certificates = Lists.newArrayList( );
-    for ( final User user : Accounts.lookupAccountById( accountNumber ).getUsers( ) ) {
-      Iterables.addAll( certificates, Iterables.transform(
-          Iterables.filter(
-              user.getCertificates(),
-              CollectionUtils.propertyPredicate( false, revoked( ) ) ),
-          x509Certificate( ) ) );
+    try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( CertificateEntity.class ) ) {
+      final List<X509Certificate> certificates = Lists.newArrayList( );
+      for ( final User user : Accounts.lookupAccountById( accountNumber ).getUsers( ) ) {
+        Iterables.addAll( certificates, Iterables.transform(
+            Iterables.filter(
+                user.getCertificates(),
+                CollectionUtils.propertyPredicate( false, revoked( ) ) ),
+            x509Certificate( ) ) );
+      }
+      return certificates;
     }
-    return certificates;
   }
 
   @Override

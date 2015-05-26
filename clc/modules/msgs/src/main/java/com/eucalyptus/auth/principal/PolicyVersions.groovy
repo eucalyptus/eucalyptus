@@ -22,6 +22,7 @@ package com.eucalyptus.auth.principal
 import com.eucalyptus.crypto.Digest
 import com.eucalyptus.crypto.util.B64
 import com.google.common.base.Function
+import com.google.common.io.BaseEncoding
 import groovy.transform.CompileStatic
 import groovy.transform.Immutable
 
@@ -70,7 +71,7 @@ class PolicyVersions {
   }
 
   public static String hash( String text ) {
-    return B64.standard.encString( Digest.SHA256.digestBinary( text.getBytes( StandardCharsets.UTF_8 ) ) ); //TODO:STEVE: B64? B32? hex?
+    return BaseEncoding.base64( ).encode( Digest.SHA256.digestBinary( text.getBytes( StandardCharsets.UTF_8 ) ) );
   }
 
 

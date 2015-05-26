@@ -21,24 +21,39 @@ package com.eucalyptus.auth.euare;
 
 import static com.eucalyptus.auth.principal.Certificate.Util.revoked;
 import static com.eucalyptus.util.CollectionUtils.propertyPredicate;
+import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import com.eucalyptus.auth.Accounts;
+import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.euare.persist.DatabaseAuthUtils;
+import com.eucalyptus.auth.euare.persist.entities.AccessKeyEntity;
+import com.eucalyptus.auth.euare.persist.entities.AccountEntity;
+import com.eucalyptus.auth.euare.persist.entities.CertificateEntity;
+import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
+import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
+import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareGroup;
 import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.euare.principal.EuareUser;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Certificate;
+import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.PolicyScope;
 import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.PolicyVersions;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
+import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.util.NonNullFunction;
+import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
@@ -99,8 +114,76 @@ public class UserPrincipalImpl implements UserPrincipal {
   @Nonnull
   private final ImmutableList<PolicyVersion> principalPolicies;
 
+  public UserPrincipalImpl( final UserEntity user ) throws AuthException {
+    final List<GroupEntity> groups = user.getGroups();
+    final AccountEntity account = groups.get( 0 ).getAccount( );
+
+    final List<PolicyVersion> policies = Lists.newArrayList( );
+    if ( user.isEnabled( ) ) {
+      if ( DatabaseAuthUtils.isAccountAdmin( user.getName( ) ) ) {
+        policies.add( PolicyVersions.getAdministratorPolicy( ) );
+      } else {
+        for ( final GroupEntity group : groups ) {
+          if ( group.isUserGroup( ) ) {
+            Iterables.addAll(
+                policies,
+                Iterables.transform(
+                    group.getPolicies( ),
+                    Functions.compose( PolicyVersions.policyVersion( PolicyScope.User, new EuareResourceName( account.getAccountNumber( ), PolicySpec.IAM_RESOURCE_USER, user.getPath( ), user.getName( ) ).toString( ) ), PolicyTransform.INSTANCE ) ) );
+          }
+        }
+
+        for ( final GroupEntity group : groups ) {
+          if ( !group.isUserGroup( ) ) {
+            Iterables.addAll(
+                policies,
+                Iterables.transform(
+                    group.getPolicies( ),
+                    Functions.compose( PolicyVersions.policyVersion( PolicyScope.Group, new EuareResourceName( account.getAccountNumber( ), PolicySpec.IAM_RESOURCE_GROUP, group.getPath( ), group.getName( ) ).toString( ) ), PolicyTransform.INSTANCE ) ) );
+          }
+        }
+      }
+      UserEntity admin;
+      try {
+        admin = DatabaseAuthUtils.getUniqueUser( User.ACCOUNT_ADMIN, account.getName( ) );
+      } catch ( Exception e ) {
+        throw new AuthException( e );
+      }
+      if ( admin != null ) {
+        for ( final GroupEntity group : admin.getGroups( ) ) {
+          if ( group.isUserGroup( ) ) {
+            Iterables.addAll(
+                policies,
+                Iterables.transform(
+                    group.getPolicies( ),
+                    Functions.compose( PolicyVersions.policyVersion( PolicyScope.Account, account.getAccountNumber( ) ), PolicyTransform.INSTANCE ) ) ); //TODO:STEVE: ARN for account?
+          }
+        }
+      }
+    }
+
+    this.name = user.getName( );
+    this.path = user.getPath();
+    this.userId = user.getUserId();
+    this.authenticatedId = user.getUserId();
+    this.canonicalId = account.getCanonicalId();
+    this.token = user.getToken();
+    this.accountAlias = account.getName();
+    this.accountNumber = account.getAccountNumber();
+    this.enabled = user.isEnabled();
+    this.accountAdmin = DatabaseAuthUtils.isAccountAdmin( user.getName( ) );
+    this.systemAdmin = com.eucalyptus.auth.Accounts.isSystemAccount( account.getName() );
+    this.systemUser = systemAdmin;
+    this.password = user.getPassword();
+    this.passwordExpires = password == null ? null : Objects.firstNonNull( user.getPasswordExpires( ), Long.MAX_VALUE );
+    this.keys = ImmutableList.copyOf( Iterables.transform( user.getKeys( ), ekeyWrapper( this )) );
+    this.certificates = ImmutableList.copyOf(
+        Iterables.filter( Iterables.transform( user.getCertificates( ), ecertWrapper( this ) ), propertyPredicate( false, revoked() ) ) );
+    this.principalPolicies = ImmutableList.copyOf( policies );
+  }
+
   public UserPrincipalImpl( final EuareUser user ) throws AuthException {
-    final EuareAccount account = user.getAccount( );
+    final EuareAccount account = user.getAccount();
 
     final List<PolicyVersion> policies = Lists.newArrayList( );
     if ( user.isEnabled( ) ) {
@@ -112,19 +195,19 @@ public class UserPrincipalImpl implements UserPrincipal {
             Iterables.transform(
                 user.getPolicies( ),
                 PolicyVersions.policyVersion( PolicyScope.User, Accounts.getUserArn( user ) ) ) );
-        for ( final EuareGroup group : Iterables.filter( user.getGroups(), Predicates.not( com.eucalyptus.auth.euare.Accounts.isUserGroup() ) ) ) {
+        for ( final EuareGroup group : Iterables.filter( user.getGroups(), Predicates.not( Accounts.isUserGroup() ) ) ) {
           Iterables.addAll(
               policies,
               Iterables.transform(
                   group.getPolicies( ),
-                  PolicyVersions.policyVersion( PolicyScope.Group, com.eucalyptus.auth.euare.Accounts.getGroupArn( group ) ) ) );
+                  PolicyVersions.policyVersion( PolicyScope.Group, Accounts.getGroupArn( group ) ) ) );
         }
       }
-      EuareUser admin = null;
+      EuareUser admin;
       try {
-        admin = account.lookupAdmin( );
+        admin = account.lookupAdmin();
       } catch ( AuthException e ) {
-        //
+        throw new AuthException( e );
       }
       if ( admin != null ) {
         Iterables.addAll(
@@ -157,7 +240,7 @@ public class UserPrincipalImpl implements UserPrincipal {
 
   public UserPrincipalImpl( final EuareRole role ) throws AuthException {
     final EuareAccount account = role.getAccount( );
-    final EuareUser user = account.lookupAdmin( );
+    final EuareUser user = account.lookupAdmin();
     final List<PolicyVersion> policies = Lists.newArrayList( );
     Iterables.addAll(
         policies,
@@ -312,5 +395,63 @@ public class UserPrincipalImpl implements UserPrincipal {
         };
       }
     };
+  }
+
+  private static NonNullFunction<AccessKeyEntity,AccessKey> ekeyWrapper( final UserPrincipal userPrincipal ) {
+    return new NonNullFunction<AccessKeyEntity, AccessKey>() {
+      @Nonnull
+      @Override
+      public AccessKey apply( final AccessKeyEntity accessKey ) {
+        return new AccessKey( ){
+          @Override public Boolean isActive( ) { return accessKey.isActive( ); }
+          @Override public String getAccessKey() { return accessKey.getAccessKey( ); }
+          @Override public String getSecretKey( ) { return accessKey.getSecretKey( ); }
+          @Override public Date getCreateDate( ) { return accessKey.getCreateDate( ); }
+          @Override public UserPrincipal getPrincipal( ) { return userPrincipal; }
+        };
+      }
+    };
+  }
+
+  private static NonNullFunction<CertificateEntity,Certificate> ecertWrapper( final UserPrincipal userPrincipal ) {
+    return new NonNullFunction<CertificateEntity, Certificate>( ) {
+      @Nonnull
+      @Override
+      public Certificate apply( final CertificateEntity accessKey ) {
+        return new Certificate( ){
+          @Override public String getCertificateId( ) { return accessKey.getCertificateId( ); }
+          @Override public Boolean isActive( ) { return accessKey.isActive(); }
+          @Override public Boolean isRevoked( ) { return accessKey.isRevoked( ); }
+          @Override public String getPem( ) { return accessKey.getPem( ); }
+          @Override public X509Certificate getX509Certificate( ) { return X509CertHelper.toCertificate( getPem() ); }
+          @Override public Date getCreateDate( ) { return accessKey.getCreateDate( ); }
+          @Override public UserPrincipal getPrincipal( ) { return userPrincipal; }
+        };
+      }
+    };
+  }
+
+  private enum PolicyTransform implements Function<PolicyEntity,Policy> {
+    INSTANCE {
+      @Override
+      public Policy apply( final PolicyEntity policyEntity ) {
+        return new Policy( ) {
+          @Override
+          public String getName() {
+            return policyEntity.getName( );
+          }
+
+          @Override
+          public String getText() {
+            return policyEntity.getText( );
+          }
+
+          @Override
+          public Integer getPolicyVersion() {
+            return policyEntity.getVersion( );
+          }
+        };
+      }
+    }
   }
 }

@@ -69,6 +69,7 @@ import static com.google.common.collect.Maps.newHashMap;
 
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserPrincipal;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.server.MessageStatistics;
 import edu.ucsb.eucalyptus.msgs.EvaluatedIamConditionKey;
 import java.lang.ref.WeakReference;
@@ -344,9 +345,15 @@ public class Context {
            !Principals.isFakeIdentify(userId) &&
            ctx.hasAdministrativePrivileges( ) ) {
         try {
+          final String originalContextId = ctx.request.hasRequestId( ) ?
+              ctx.request.getCorrelationId( ).substring( 0, ctx.request.getCorrelationId( ).indexOf( "::" ) ) :
+              null;
           final UserPrincipal user;
           if ( Accounts.isAccountNumber( userId ) ) {
             user = Accounts.lookupCachedPrincipalByAccountNumber( userId );
+          } else if ( Contexts.exists( originalContextId ) &&
+              Contexts.lookup( originalContextId ).getUser( ).getAuthenticatedId( ).equals( userId ) ) {
+            user = Contexts.lookup( originalContextId ).getUser( );
           } else if ( Accounts.isRoleIdentifier( userId ) ) {
             user = Accounts.lookupCachedPrincipalByRoleId( userId, null );
           } else {
@@ -355,6 +362,8 @@ public class Context {
           return createImpersona( ctx, user );
         } catch ( AuthException ex ) {
           return ctx;
+        } catch ( NoSuchContextException e ) {
+          throw Exceptions.toUndeclared( new AuthException( e ) );
         }
       }
     }
