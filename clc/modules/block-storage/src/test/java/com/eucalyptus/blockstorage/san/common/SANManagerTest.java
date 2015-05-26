@@ -874,6 +874,17 @@ public class SANManagerTest {
 
   @Test(expected = EucalyptusCloudException.class)
   public void createSnapshotPoint_VolumeDoesNotExistTest() throws Exception {
+    final String rezPrefix = "fooprefix";
+    final String rezSuffix = "foosuffix";
+    SANInfo sanInfo = new SANInfo(StorageProperties.NAME, "foohost", "foouser", "foopassword");
+    sanInfo.setResourcePrefix(rezPrefix);
+    sanInfo.setResourceSuffix(rezSuffix);
+
+    try (TransactionResource tran = Entities.transactionFor(SANInfo.class)) {
+      Entities.persist(sanInfo);
+      tran.commit();
+    }
+
     final SANProvider sanProvider = context.mock(SANProvider.class);
     SANManager test = new SANManager(sanProvider);
     test.createSnapshotPoint("fooparent", "foo");
