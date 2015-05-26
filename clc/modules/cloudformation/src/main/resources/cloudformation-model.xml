@@ -50,7 +50,9 @@
             <inbound>
                 <vm:inbound-endpoint ref="CloudFormationRequestQueueEndpoint" />
             </inbound>
-            <component class="com.eucalyptus.cloudformation.CloudFormationValidator" />
+            <component>
+                <singleton-object class="com.eucalyptus.cloudformation.CloudFormationValidator" />
+            </component>
             <outbound>
                 <filtering-router>
                     <outbound-endpoint ref="CloudFormationWS" />
@@ -63,7 +65,9 @@
             <inbound>
                 <inbound-endpoint ref="CloudFormationWS" />
             </inbound>
-            <component class="com.eucalyptus.cloudformation.CloudFormationService" />
+            <component>
+                <singleton-object class="com.eucalyptus.cloudformation.CloudFormationService" />
+            </component>
             <outbound>
                 <filtering-router>
                     <outbound-endpoint ref="ReplyQueueEndpoint" />
@@ -76,7 +80,9 @@
             <inbound>
                 <inbound-endpoint ref="CloudFormationErrorQueueWS" />
             </inbound>
-            <component class="com.eucalyptus.cloudformation.ws.CloudFormationErrorHandler" />
+            <component>
+                <singleton-object class="com.eucalyptus.cloudformation.ws.CloudFormationErrorHandler" />
+            </component>
         </service>
 
     </model>
@@ -86,7 +92,9 @@
                 <inbound-endpoint ref="CloudFormationInternalWS" />
                 <inbound-endpoint ref="CloudFormationInternalVM" />
             </inbound>
-            <component class="com.eucalyptus.cloudformation.CloudFormationService" />
+            <component>
+                <singleton-object class="com.eucalyptus.cloudformation.CloudFormationService" />
+            </component>
         </service>
     </model>
 

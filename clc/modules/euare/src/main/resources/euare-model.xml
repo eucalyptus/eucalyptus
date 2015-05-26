@@ -114,7 +114,9 @@
 			<inbound>
 				<inbound-endpoint ref="EuareWS" />
 			</inbound>
-			<component class="com.eucalyptus.auth.euare.EuareService" />
+			<component>
+				<singleton-object class="com.eucalyptus.auth.euare.EuareService" />
+			</component>
 			<outbound>
 				<filtering-router>
 					<outbound-endpoint ref="ReplyQueueEndpoint" />
@@ -142,7 +144,9 @@
 			<inbound>
 				<inbound-endpoint ref="EuareReplyQueueWS" />
 			</inbound>
-			<component class="com.eucalyptus.auth.ws.EuareReplyQueue" />
+			<component>
+				<singleton-object class="com.eucalyptus.auth.ws.EuareReplyQueue" />
+			</component>
 		</service>
 
 	</model>
@@ -181,7 +185,9 @@
 			<inbound>
 				<inbound-endpoint ref="EuareInternalLocalEndpoint"/>
 			</inbound>
-			<component class="com.eucalyptus.auth.euare.EuareService" />
+			<component>
+				<singleton-object class="com.eucalyptus.auth.euare.EuareService" />
+			</component>
 		</service>
 
 	</model>

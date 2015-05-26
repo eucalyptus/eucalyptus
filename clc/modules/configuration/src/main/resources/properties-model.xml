@@ -94,7 +94,9 @@
         <inbound-endpoint ref="PropertiesVMEndpoint" />
         <inbound-endpoint ref="PropertiesWS" />
       </inbound>
-      <component class="com.eucalyptus.config.PropertiesManager" />
+      <component>
+        <singleton-object class="com.eucalyptus.config.PropertiesManager" />
+      </component>
       <outbound>
         <pass-through-router>
           <outbound-endpoint ref="ReplyQueueEndpoint" />

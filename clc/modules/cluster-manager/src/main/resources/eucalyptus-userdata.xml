@@ -1,5 +1,5 @@
 <!--
-  Copyright 2009-2013 Eucalyptus Systems, Inc.
+  Copyright 2009-2015 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -80,21 +80,27 @@
             <inbound>
                 <inbound-endpoint ref="KeyPairWS"/>
             </inbound>
-            <component class="com.eucalyptus.keys.KeyPairManager"/>
+            <component>
+                <singleton-object class="com.eucalyptus.keys.KeyPairManager"/>
+            </component>
         </service>
 
         <service name="Groups">
             <inbound>
                 <inbound-endpoint ref="GroupsWS"/>
             </inbound>
-            <component class="com.eucalyptus.network.NetworkGroupManager"/>
+            <component>
+                <singleton-object class="com.eucalyptus.network.NetworkGroupManager"/>
+            </component>
         </service>
 
         <service name="Tags">
             <inbound>
                 <inbound-endpoint ref="TagsWS"/>
             </inbound>
-            <component class="com.eucalyptus.tags.TagManager"/>
+            <component>
+                <singleton-object class="com.eucalyptus.tags.TagManager"/>
+            </component>
         </service>
 
         <service name="Vpcs">

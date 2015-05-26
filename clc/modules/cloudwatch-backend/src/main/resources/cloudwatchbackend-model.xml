@@ -62,7 +62,9 @@
             <inbound>
                 <inbound-endpoint ref="CloudWatchBackendWS" />
             </inbound>
-            <component class="com.eucalyptus.cloudwatch.backend.CloudWatchBackendService" />
+            <component>
+                <singleton-object class="com.eucalyptus.cloudwatch.backend.CloudWatchBackendService" />
+            </component>
             <outbound>
                 <filtering-router>
                     <outbound-endpoint ref="ReplyQueueEndpoint" />
@@ -75,7 +77,9 @@
             <inbound>
                 <inbound-endpoint ref="CloudWatchBackendErrorQueueWS" />
             </inbound>
-            <component class="com.eucalyptus.ws.util.ReplyQueue" />
+            <component>
+                <singleton-object class="com.eucalyptus.ws.util.ReplyQueue" />
+            </component>
         </service>
 
     </model>
@@ -85,7 +89,9 @@
                 <inbound-endpoint ref="CloudWatchBackendInternalWS" />
                 <inbound-endpoint ref="CloudWatchBackendInternalVM" />
             </inbound>
-            <component class="com.eucalyptus.cloudwatch.backend.CloudWatchBackendService" />
+            <component>
+                <singleton-object class="com.eucalyptus.cloudwatch.backend.CloudWatchBackendService" />
+            </component>
         </service>
     </model>
 

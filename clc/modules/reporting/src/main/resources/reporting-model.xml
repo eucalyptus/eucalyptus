@@ -62,7 +62,9 @@
             <inbound>
                 <inbound-endpoint ref="ReportingWS" />
             </inbound>
-            <component class="com.eucalyptus.reporting.service.ReportingService" />
+            <component>
+                <singleton-object class="com.eucalyptus.reporting.service.ReportingService" />
+            </component>
             <outbound>
                 <filtering-router>
                     <outbound-endpoint ref="ReplyQueueEndpoint" />
@@ -75,7 +77,9 @@
             <inbound>
                 <inbound-endpoint ref="ReportingErrorQueueWS" />
             </inbound>
-            <component class="com.eucalyptus.reporting.service.ws.ReportingErrorHandler" />
+            <component>
+                <singleton-object class="com.eucalyptus.reporting.service.ws.ReportingErrorHandler" />
+            </component>
         </service>
 
     </model>
@@ -85,7 +89,9 @@
                 <inbound-endpoint ref="ReportingInternalWS" />
                 <inbound-endpoint ref="ReportingInternalVM" />
             </inbound>
-            <component class="com.eucalyptus.reporting.service.ReportingService" />
+            <component>
+                <singleton-object class="com.eucalyptus.reporting.service.ReportingService" />
+            </component>
         </service>
     </model>
 

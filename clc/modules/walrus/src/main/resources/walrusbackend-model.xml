@@ -100,7 +100,9 @@
             <inbound>
                 <inbound-endpoint ref="BukkitWS"/>
             </inbound>
-            <component class="com.eucalyptus.walrus.WalrusControl"/>
+            <component>
+                <singleton-object class="com.eucalyptus.walrus.WalrusControl"/>
+            </component>
             <outbound>
                 <pass-through-router>
                     <outbound-endpoint ref="WalrusBackendReplyQueueWS"/>
@@ -112,7 +114,9 @@
             <inbound>
                 <inbound-endpoint ref="WalrusBackendReplyQueueWS"/>
             </inbound>
-            <component class="com.eucalyptus.ws.util.ReplyQueue"/>
+            <component>
+                <singleton-object class="com.eucalyptus.ws.util.ReplyQueue" />
+            </component>
         </service>
 
     </model>
@@ -122,7 +126,9 @@
                 <inbound-endpoint ref="BukkitInternalWS"/>
                 <inbound-endpoint ref="BukkitInternalVM"/>
             </inbound>
-            <component class="com.eucalyptus.walrus.WalrusControl"/>
+            <component>
+                <singleton-object class="com.eucalyptus.walrus.WalrusControl"/>
+            </component>
         </service>
 
     </model>

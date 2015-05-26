@@ -96,7 +96,9 @@
         <inbound-endpoint ref="ConfigurationVMEndpoint" />
         <inbound-endpoint ref="ConfigurationWS" />
       </inbound>
-      <component class="com.eucalyptus.config.ConfigurationManager" />
+      <component>
+        <singleton-object class="com.eucalyptus.config.ConfigurationManager" />
+      </component>
       <outbound>
         <pass-through-router>
           <outbound-endpoint ref="ReplyQueueEndpoint" />

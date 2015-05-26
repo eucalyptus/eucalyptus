@@ -1,5 +1,5 @@
 <!--
-  Copyright 2009-2013 Eucalyptus Systems, Inc.
+  Copyright 2009-2015 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -73,13 +73,15 @@
         http://www.eucalyptus.com/schema/cloud/3.4 http://www.eucalyptus.com/schema/cloud/3.4/euca.xsd">
   <configuration>
     <default-threading-profile 
-            doThreading="true" 
+            doThreading="true"
             maxThreadsActive="256"
             poolExhaustedAction="RUN" />
   </configuration>
   <management:jmx-server/>
   <euca:connector name="eucaws" />
   <vm:connector name="internal-async">
+    <service-overrides
+        sessionHandler="org.mule.session.NullSessionHandler"/>
     <vm:queue-profile maxOutstandingMessages="1024" />
   </vm:connector>
   <endpoint name="ReplyQueueEndpoint" address="vm://ReplyQueue" exchange-pattern="one-way" />
@@ -99,13 +101,17 @@
       <inbound>
         <inbound-endpoint ref="ReplyQueueEndpoint" />
       </inbound>
-      <component class="com.eucalyptus.ws.util.ReplyQueue" />
+      <component>
+        <singleton-object class="com.eucalyptus.ws.util.ReplyQueue"/>
+      </component>
     </service>
     <service name="RequestQueue">
       <inbound>
         <inbound-endpoint ref="RequestQueueEndpoint" />
       </inbound>
-      <component class="com.eucalyptus.ws.util.RequestQueue" />
+      <component>
+        <singleton-object class="com.eucalyptus.ws.util.RequestQueue"/>
+      </component>
       <outbound>
         <filtering-router>
           <outbound-endpoint ref="EmpyreanRequestQueueEndpoint" 
