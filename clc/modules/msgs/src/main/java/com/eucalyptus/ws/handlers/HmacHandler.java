@@ -64,12 +64,10 @@ package com.eucalyptus.ws.handlers;
 
 import static com.eucalyptus.auth.login.HmacCredentials.QueryIdCredential;
 import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javax.security.auth.Subject;
-import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.MessageEvent;
 import com.eucalyptus.auth.login.AuthenticationException;
@@ -98,12 +96,7 @@ public class HmacHandler extends MessageStackHandler {
     if ( event.getMessage( ) instanceof MappingHttpRequest ) {
       final MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
       final Map<String,String> parameters = httpRequest.getParameters();
-      final ByteArrayOutputStream bos = new ByteArrayOutputStream( );
-      httpRequest.getContent( ).markReaderIndex( );
-      httpRequest.getContent( ).readBytes( bos, httpRequest.getContent( ).readableBytes( ) );
-      httpRequest.getContent( ).resetReaderIndex( );
-      final String body = bos.toString();
-      bos.close( );
+      final String body = httpRequest.getContentAsString( );
       final Function<String,List<String>> headerLookup = SignatureHandlerUtils.headerLookup( httpRequest );
       final Function<String,List<String>> parameterLookup = SignatureHandlerUtils.parameterLookup( httpRequest );
       final HmacUtils.SignatureVariant variant = HmacUtils.detectSignatureVariant( headerLookup, parameterLookup );

@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.net.URLCodec;
-import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -85,12 +84,7 @@ public abstract class QueryPipeline extends FilteredPipeline {
       if ( httpRequest.getMethod( ).equals( HttpMethod.POST ) ) {
         Map<String,String> parameters = new HashMap<String,String>( httpRequest.getParameters( ) );
         Set<String> nonQueryParameters = Sets.newHashSet();
-        ChannelBuffer buffer = httpRequest.getContent( );
-        buffer.markReaderIndex( );
-        byte[] read = new byte[buffer.readableBytes( )];
-        buffer.readBytes( read );
-        String query = new String( read );
-        buffer.resetReaderIndex( );
+        final String query = httpRequest.getContentAsString( );
         for ( String p : query.split( "&" ) ) {
           String[] splitParam = p.split( "=", 2 );
           String lhs = splitParam[0];

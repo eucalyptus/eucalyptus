@@ -48,7 +48,6 @@ import com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.handlers.ExceptionMarshallerHandler;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
-import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -165,13 +164,7 @@ public class SimpleWorkflowBinding extends MessageStackHandler implements Except
     }
 
     // parse message
-    final ChannelBuffer buffer = httpRequest.getContent( );
-    buffer.markReaderIndex( );
-    byte[] read = new byte[ buffer.readableBytes( ) ];
-    buffer.readBytes( read );
-    final String content = new String( read, Charsets.UTF_8 );
-    buffer.resetReaderIndex( );
-
+    final String content = httpRequest.getContentAsString( );
     final BaseMessage message;
     try {
       message = SwfJsonUtils.readObject(

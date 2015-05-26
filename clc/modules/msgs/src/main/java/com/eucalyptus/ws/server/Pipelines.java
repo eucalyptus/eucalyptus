@@ -71,7 +71,6 @@ import java.util.Set;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.net.URLCodec;
 import org.apache.log4j.Logger;
-import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
@@ -308,12 +307,7 @@ public class Pipelines {
         final MappingHttpRequest httpRequest = ( MappingHttpRequest ) message;
         if ( httpRequest.getMethod( ).equals( HttpMethod.POST ) ) {
           final Map<String, String> parameters = new HashMap<String, String>( httpRequest.getParameters( ) );
-          final ChannelBuffer buffer = httpRequest.getContent( );
-          buffer.markReaderIndex( );
-          final byte[] read = new byte[buffer.readableBytes( )];
-          buffer.readBytes( read );
-          final String query = new String( read );
-          buffer.resetReaderIndex( );
+          final String query = httpRequest.getContentAsString( );
           for ( final String p : query.split( "&" ) ) {
             final String[] splitParam = p.split( "=" );
             String lhs = splitParam[0];
