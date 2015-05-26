@@ -179,9 +179,7 @@ public class WalrusPOSTAuthenticationHandler extends MessageStackHandler {
   protected String checkSignature(final String queryKey, final String subject) throws AuthenticationException {
     SecretKeySpec signingKey = new SecretKeySpec(queryKey.getBytes(), Hmac.HmacSHA1.toString());
     try {
-      Mac mac = Hmac.HmacSHA1.getInstance();
-      mac.init(signingKey);
-      byte[] rawHmac = mac.doFinal(subject.getBytes());
+      byte[] rawHmac = Hmac.HmacSHA1.digestBinary(signingKey,subject.getBytes());
       return new String(Base64.encode(rawHmac)).replaceAll("=", "");
     } catch (Exception e) {
       LOG.error(e, e);

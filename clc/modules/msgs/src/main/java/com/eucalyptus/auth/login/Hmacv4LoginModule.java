@@ -22,19 +22,20 @@ package com.eucalyptus.auth.login;
 import static com.eucalyptus.ws.util.HmacUtils.headerLookup;
 import static com.eucalyptus.ws.util.HmacUtils.parameterLookup;
 import static com.eucalyptus.ws.util.HmacUtils.SignatureCredential;
-import java.math.BigInteger;
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.Nonnull;
-import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.log4j.Logger;
-import org.bouncycastle.util.encoders.Hex;
 import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.InvalidSignatureAuthException;
 import com.eucalyptus.auth.principal.AccessKey;
@@ -45,12 +46,11 @@ import com.eucalyptus.crypto.util.SecurityHeader;
 import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.ws.util.HmacUtils;
-import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import com.google.common.io.BaseEncoding;
 
 public class Hmacv4LoginModule extends HmacLoginModuleSupport {
   private static final Logger LOG = Logger.getLogger( Hmacv4LoginModule.class );
@@ -78,11 +78,11 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
     final UserPrincipal user = accessKey.getPrincipal( );
     final String secretKey = accessKey.getSecretKey( );
     final byte[] signatureKey = getSignatureKey( secretKey, signatureCredential );
-    final String canonicalString = this.makeSubjectString( credentials, signatureCredential, authorizationParameters, date, false );
+    final CharSequence canonicalString = this.makeSubjectString( credentials, signatureCredential, authorizationParameters, date, false );
     final byte[] computedSig = this.getHmacSHA256( signatureKey, canonicalString );
-    final byte[] providedSig = Hex.decode( sig );
+    final byte[] providedSig = BaseEncoding.base16( ).lowerCase( ).decode( sig );
     if ( !MessageDigest.isEqual( computedSig, providedSig ) ) {
-      final String canonicalStringNoPath = this.makeSubjectString( credentials, signatureCredential, authorizationParameters, date, true );
+      final CharSequence canonicalStringNoPath = this.makeSubjectString( credentials, signatureCredential, authorizationParameters, date, true );
       final byte[] computedSigNoPath = this.getHmacSHA256( signatureKey, canonicalStringNoPath );
       if( !MessageDigest.isEqual( computedSigNoPath, providedSig ) ) {
         throw new InvalidSignatureAuthException( "Signature validation failed" );
@@ -94,30 +94,29 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
     return true;
   }
 
-  private String makeSubjectString( @Nonnull final HmacCredentials credentials,
-                                    @Nonnull final SignatureCredential signatureCredential,
-                                    @Nonnull final Map<String,String> authorizationParameters,
-                                    @Nonnull final Date date,
-                                    final boolean skipPath ) throws Exception {
+  private CharSequence makeSubjectString( @Nonnull final HmacCredentials credentials,
+                                          @Nonnull final SignatureCredential signatureCredential,
+                                          @Nonnull final Map<String,String> authorizationParameters,
+                                          @Nonnull final Date date,
+                                          final boolean skipPath ) throws Exception {
     final String timestamp = Timestamps.formatShortIso8601Timestamp( date );
-    final StringBuilder sb = new StringBuilder();
-    sb.append( SecurityHeader.Value.AWS4_HMAC_SHA256.value() ).append( "\n" );
-    sb.append( timestamp ).append( "\n" );
-    sb.append( signatureCredential.getCredentialScope() ).append("\n");
+    final StringBuilder sb = new StringBuilder( 256 );
+    sb.append( SecurityHeader.Value.AWS4_HMAC_SHA256.value() ).append( '\n' );
+    sb.append( timestamp ).append( '\n' );
+    sb.append( signatureCredential.getCredentialScope() ).append( '\n' );
     sb.append( digestUTF8( makeCanonicalRequest( credentials, authorizationParameters, skipPath ) ) );
-    final String subject = sb.toString( );
-    signatureLogger.trace( "VERSION4: " + subject );
-    return subject;
+    if ( signatureLogger.isTraceEnabled( ) ) signatureLogger.trace( "VERSION4: " + sb.toString( ) );
+    return sb;
   }
 
-  private String makeCanonicalRequest( @Nonnull final HmacCredentials credentials,
-                                       @Nonnull final Map<String,String> authorizationParameters,
-                                       final boolean skipPath ) throws Exception {
-    final StringBuilder sb = new StringBuilder();
-    sb.append(credentials.getVerb());
-    sb.append( "\n" );
-    sb.append( skipPath ? "/" : canonicalizePath( credentials.getServicePath() ) ); // AWS Java SDK always uses "/"
-    sb.append( "\n" );
+  private CharSequence makeCanonicalRequest( @Nonnull final HmacCredentials credentials,
+                                             @Nonnull final Map<String,String> authorizationParameters,
+                                             final boolean skipPath ) throws Exception {
+    final StringBuilder sb = new StringBuilder( 512 );
+    sb.append( credentials.getVerb( ) );
+    sb.append( '\n' );
+    sb.append( skipPath ? "/" : canonicalizePath( credentials.getServicePath( ) ) ); // AWS Java SDK always uses "/"
+    sb.append( '\n' );
     boolean addedParam = false;
     for ( final String parameter : Ordering.natural( ).sortedCopy( credentials.getParameters().keySet() ) ) {
       if ( credentials.getVariant() == HmacUtils.SignatureVariant.SignatureV4Query && SecurityParameter.X_Amz_Signature.parameter().equals( parameter ) ) {
@@ -125,14 +124,14 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
       }
       for ( final String value : Ordering.natural().sortedCopy( credentials.getParameters().get( parameter ) ) ) {
         sb.append( urlencode(parameter) );
-        sb.append( "=" );
+        sb.append( '=' );
         sb.append( urlencode(value) );
-        sb.append( "&" );
+        sb.append( '&' );
         addedParam = true;
       }
     }
     if ( addedParam ) sb.setLength( sb.length()-1 );
-    sb.append( "\n" );
+    sb.append( '\n' );
     for ( final String header : authorizationParameters.get("SignedHeaders").split(";") ) {
       final List<String> values = Lists.transform( credentials.getHeaders().get( header ), new Function<String, String>() {
         @Override
@@ -141,21 +140,21 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
         }
       } );
       sb.append( header );
-      sb.append( ":" );
-      sb.append( Joiner.on( "," ).join( Ordering.<String>natural().sortedCopy( values ) ) );
-      sb.append( "\n" );
+      sb.append( ':' );
+      sb.append( Joiner.on( ',' ).join( Ordering.<String>natural().sortedCopy( values ) ) );
+      sb.append( '\n' );
     }
-    sb.append( "\n" );
+    sb.append( '\n' );
     sb.append( authorizationParameters.get("SignedHeaders") );
-    sb.append( "\n" );
+    sb.append( '\n' );
     sb.append( digestUTF8( credentials.getBody() ) );
-    final String request = sb.toString( );
-    signatureLogger.trace( "VERSION4: " + request );
-    return request;
+    if ( signatureLogger.isTraceEnabled( ) ) signatureLogger.trace( "VERSION4: " + sb.toString( ) );
+    return sb;
   }
 
-  private String digestUTF8( final String text ) {
-    return Strings.padStart( new BigInteger( 1, Digest.SHA256.get().digest( text.getBytes( Charsets.UTF_8 ) ) ).toString( 16 ), 64, '0' );  
+  private String digestUTF8( final CharSequence text ) throws IOException {
+    final ByteBuffer byteBuffer = StandardCharsets.UTF_8.encode( CharBuffer.wrap( text ) );
+    return BaseEncoding.base16( ).lowerCase( ).encode( Digest.SHA256.digestBinary( byteBuffer ) );
   }
   
   private String canonicalizePath( final String servicePath ) throws URISyntaxException {
@@ -163,12 +162,11 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
   }
 
   private byte[] getHmacSHA256( final byte[] signatureKey,
-                                final String data ) throws AuthenticationException {
+                                final CharSequence data ) throws AuthenticationException {
     final SecretKeySpec signingKey = new SecretKeySpec( signatureKey, Hmac.HmacSHA256.toString( ) );
     try {
-      final Mac digest = Hmac.HmacSHA256.getInstance( );
-      digest.init( signingKey );
-      return digest.doFinal( data.getBytes( Charsets.UTF_8 ) );
+      final ByteBuffer byteBuffer = StandardCharsets.UTF_8.encode( CharBuffer.wrap( data ) );
+      return Hmac.HmacSHA256.digestBinary( signingKey, byteBuffer );
     } catch ( Exception e ) {
       LOG.error( e, e );
       throw new AuthenticationException( "Failed to compute signature" );
@@ -180,7 +178,7 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
     return getHmacSHA256(
         getHmacSHA256(
             getHmacSHA256(
-                getHmacSHA256( ("AWS4" + key).getBytes( Charsets.UTF_8 ), credential.getDate() ),
+                getHmacSHA256( ("AWS4" + key).getBytes( StandardCharsets.UTF_8 ), credential.getDate() ),
                 credential.getRegion() ),
             credential.getServiceName() ),
         credential.getTerminator() );

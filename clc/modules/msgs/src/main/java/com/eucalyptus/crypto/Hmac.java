@@ -62,6 +62,9 @@
 
 package com.eucalyptus.crypto;
 
+import java.nio.ByteBuffer;
+import java.security.InvalidKeyException;
+import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import javax.crypto.Mac;
 import org.apache.log4j.Logger;
@@ -71,6 +74,29 @@ public enum Hmac {
   HmacSHA256;
 
   private static Logger LOG = Logger.getLogger( Hmac.class );
+
+  private final ThreadLocal<Mac> threadLocalMac = new ThreadLocal<Mac>() {
+    @Override
+    protected Mac initialValue( ) {
+      final Mac mac = getInstance( );
+      mac.reset( );
+      return mac;
+    }
+  };
+
+  public byte[] digestBinary( final Key key, final byte[] data ) throws InvalidKeyException {
+    final Mac mac = threadLocalMac.get( );
+    mac.init( key );
+    return mac.doFinal( data );
+  }
+
+  public byte[] digestBinary( final Key key, final ByteBuffer data ) throws InvalidKeyException {
+    final Mac mac = threadLocalMac.get( );
+    mac.init( key );
+    mac.update( data );
+    return mac.doFinal( );
+  }
+
   public Mac getInstance() {
     try {
       return Mac.getInstance( this.toString( ) );

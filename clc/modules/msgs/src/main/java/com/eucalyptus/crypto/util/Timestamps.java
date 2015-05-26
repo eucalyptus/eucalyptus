@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -71,6 +71,8 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
@@ -151,12 +153,6 @@ public class Timestamps {
     return format.format(date);
   }
 
-  private static SimpleDateFormat sdf( final String pattern ) {
-    final SimpleDateFormat format = new SimpleDateFormat( pattern );
-    format.setTimeZone( TimeZone.getTimeZone( "UTC" ) ); 
-    return format;
-  }
-
   /**
    * RFC 822 timestamp format suitable for HTTP headers
    */
@@ -229,7 +225,25 @@ public class Timestamps {
     
     iso8601 = ImmutableList.copyOf( generatedPatterns );  
   }
-  
+
+  private static ThreadLocal<Cache<String,SimpleDateFormat>> patternLocal =
+      new ThreadLocal<Cache<String,SimpleDateFormat>>(  ) {
+        @Override
+        protected Cache<String,SimpleDateFormat> initialValue( ) {
+          return CacheBuilder.newBuilder( ).softValues( ).build( );
+        }
+      };
+
+  private static SimpleDateFormat sdf( final String pattern ) {
+    SimpleDateFormat format = patternLocal.get( ).getIfPresent( pattern );
+    if ( format == null ) {
+      format = new SimpleDateFormat( pattern );
+      format.setTimeZone( TimeZone.getTimeZone( "UTC" ) );
+      patternLocal.get( ).put( pattern, format );
+    }
+    return format;
+  }
+
   private static final class PatternHolder {
     private final String pattern;
     private final int length; // length of the text that can match the pattern if known
