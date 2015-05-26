@@ -149,7 +149,7 @@ public class Emis {
         try {
           return LookupMachine.INSTANCE.apply( input );
         } catch ( final Exception ex ) {
-          return LookupBlockStorage.INSTANCE.apply( input );
+          return LookupAvailableBlockStorage.INSTANCE.apply( input );
         }
       } else {
         throw new NoSuchElementException( "Failed to lookup image: " + input );
@@ -158,6 +158,26 @@ public class Emis {
   }
   
   public enum LookupBlockStorage implements Function<String, BlockStorageImageInfo> {
+    INSTANCE;
+    @Override
+    public BlockStorageImageInfo apply( final String identifier ) {
+      final EntityTransaction db = Entities.get( BlockStorageImageInfo.class );
+      try {
+        final BlockStorageImageInfo ret = Entities.uniqueResult( Images.exampleBlockStorageWithImageId( identifier ) );
+        if ( Platform.windows.name( ).equals( ret.getKernelId( ) ) || ret.getImageName( ).startsWith( Platform.windows.name( ) ) ) {
+          ret.setPlatform( Platform.windows );
+        }
+        db.rollback( );
+        return ret;
+      } catch ( final Exception ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        db.rollback( );
+        throw new NoSuchElementException( "Failed to lookup image: " + identifier + " because of " + ex.getMessage( ) );
+      }
+    }
+  }
+  
+  public enum LookupAvailableBlockStorage implements Function<String, BlockStorageImageInfo> {
     INSTANCE;
     @Override
     public BlockStorageImageInfo apply( final String identifier ) {
@@ -564,7 +584,7 @@ public class Emis {
         throw Exceptions.toUndeclared( ex );
       } catch ( final Exception e ) {
         try {
-          bootSet = new BootableSet( resolveDiskImage( input, LookupBlockStorage.INSTANCE ) );
+          bootSet = new BootableSet( resolveDiskImage( input, LookupAvailableBlockStorage.INSTANCE ) );
         } catch ( final IllegalContextAccessException ex ) {
           throw Exceptions.toUndeclared( new IllegalMetadataAccessException( ex ) );
         } catch ( final IllegalMetadataAccessException ex ) {

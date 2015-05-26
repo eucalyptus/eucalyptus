@@ -397,6 +397,11 @@ public class LoadBalancerPolicies {
     if(listeners!=null && listeners.size()>0)
       throw new InvalidConfigurationRequestException("The policy is enabled for listeners");
     
+    // check policy - backend association
+    final List<LoadBalancerBackendServerDescriptionCoreView> backends = toDelete.getBackendServers();
+    if(backends!=null && backends.size()>0)
+      throw new InvalidConfigurationRequestException("The policy is enabled for backend servers");
+    
     try ( final TransactionResource db = Entities.transactionFor( LoadBalancerPolicyAttributeDescription.class ) ) {
       Entities.deleteAllMatching(LoadBalancerPolicyAttributeDescription.class,
           "WHERE metadata_policy_desc_fk = :metadata_policy_desc_fk",
