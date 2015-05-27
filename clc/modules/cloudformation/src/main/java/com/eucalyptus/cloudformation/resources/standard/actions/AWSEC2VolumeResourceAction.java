@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,8 +20,11 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import static com.eucalyptus.util.async.AsyncExceptions.asWebServiceErrorMessage;
+import static com.eucalyptus.util.async.AsyncExceptions.isWebServiceErrorCode;
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -131,7 +134,15 @@ public class AWSEC2VolumeResourceAction extends ResourceAction {
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
         describeVolumesType.setVolumeSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
-        DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.<DescribeVolumesType,DescribeVolumesResponseType> sendSync(configuration, describeVolumesType);
+        DescribeVolumesResponseType describeVolumesResponseType;
+        try {
+          describeVolumesResponseType = AsyncRequests.sendSync( configuration, describeVolumesType);
+        } catch ( final Exception e ) {
+          if ( isWebServiceErrorCode( e, "InvalidVolume.NotFound" ) ) {
+            throw new ValidationFailedException( "Volume " + action.info.getPhysicalResourceId() + " not yet available." );
+          }
+          throw new ValidationErrorException("Error describing volume " + action.info.getPhysicalResourceId() + ":" + asWebServiceErrorMessage( e, e.getMessage() ) );
+        }
         if (describeVolumesResponseType.getVolumeSet().size()==0) {
           throw new ValidationFailedException("Volume " + action.info.getPhysicalResourceId() + " not yet available");
         }
@@ -296,7 +307,15 @@ public class AWSEC2VolumeResourceAction extends ResourceAction {
       if (action.info.getPhysicalResourceId() == null) return true;
       DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
       describeVolumesType.setVolumeSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
-      DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.<DescribeVolumesType,DescribeVolumesResponseType> sendSync(configuration, describeVolumesType);
+      DescribeVolumesResponseType describeVolumesResponseType;
+      try {
+        describeVolumesResponseType = AsyncRequests.sendSync(configuration, describeVolumesType);
+      } catch ( final Exception e ) {
+        if ( isWebServiceErrorCode( e, "InvalidVolume.NotFound" ) ) {
+          return true; // already deleted
+        }
+        throw new ValidationErrorException("Error describing volume " + action.info.getPhysicalResourceId() + ":" + asWebServiceErrorMessage( e, e.getMessage() ) );
+      }
       if (describeVolumesResponseType.getVolumeSet().size() == 0) {
         return true; // already deleted
       }

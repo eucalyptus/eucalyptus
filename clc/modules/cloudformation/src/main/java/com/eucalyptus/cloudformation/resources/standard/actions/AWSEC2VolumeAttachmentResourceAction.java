@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,8 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import static com.eucalyptus.util.async.AsyncExceptions.asWebServiceErrorMessage;
+import static com.eucalyptus.util.async.AsyncExceptions.isWebServiceErrorCode;
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
@@ -97,7 +99,12 @@ public class AWSEC2VolumeAttachmentResourceAction extends ResourceAction {
         }
         DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
         describeVolumesType.setVolumeSet(Lists.newArrayList(action.properties.getVolumeId()));
-        DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.<DescribeVolumesType,DescribeVolumesResponseType> sendSync(configuration, describeVolumesType);
+        DescribeVolumesResponseType describeVolumesResponseType;
+        try {
+          describeVolumesResponseType = AsyncRequests.sendSync( configuration, describeVolumesType );
+        } catch ( Exception e ) {
+          throw new ValidationErrorException("Error describing volume " + action.properties.getVolumeId() + ":" + asWebServiceErrorMessage( e, e.getMessage() ) );
+        }
         if (describeVolumesResponseType.getVolumeSet().size()==0) throw new ValidationErrorException("No such volume " + action.properties.getVolumeId());
         if (!"available".equals(describeVolumesResponseType.getVolumeSet().get(0).getStatus())) {
           throw new ValidationErrorException("Volume " + action.properties.getVolumeId() + " not available");
@@ -117,8 +124,13 @@ public class AWSEC2VolumeAttachmentResourceAction extends ResourceAction {
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         boolean attached = false;
         DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
-        describeVolumesType.setVolumeSet(Lists.newArrayList(action.properties.getVolumeId()));
-        DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.<DescribeVolumesType,DescribeVolumesResponseType> sendSync(configuration, describeVolumesType);
+        describeVolumesType.setVolumeSet( Lists.newArrayList( action.properties.getVolumeId() ) );
+        DescribeVolumesResponseType describeVolumesResponseType;
+        try {
+          describeVolumesResponseType = AsyncRequests.sendSync( configuration, describeVolumesType );
+        } catch ( Exception e ) {
+          throw new ValidationErrorException("Error describing volume " + action.properties.getVolumeId() + ":" + asWebServiceErrorMessage( e, e.getMessage() ) );
+        }
         if (describeVolumesResponseType.getVolumeSet().size() == 0) {
           throwNotAttachedMessage(action.properties.getVolumeId(), action.properties.getInstanceId());
         }
@@ -143,7 +155,7 @@ public class AWSEC2VolumeAttachmentResourceAction extends ResourceAction {
         return VOLUME_ATTACHMENT_MAX_CREATE_RETRY_SECS;
       }
 
-      public void throwNotAttachedMessage(String volumeId, String instanceId) throws ValidationFailedException {
+      private ValidationFailedException throwNotAttachedMessage(String volumeId, String instanceId) throws ValidationFailedException {
         throw new ValidationFailedException("Volume " + volumeId + " not yet attached to instance " + instanceId);
       }
     },
@@ -189,7 +201,15 @@ public class AWSEC2VolumeAttachmentResourceAction extends ResourceAction {
         boolean detached = false;
         DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
         describeVolumesType.setVolumeSet(Lists.newArrayList(action.properties.getVolumeId()));
-        DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.<DescribeVolumesType,DescribeVolumesResponseType> sendSync(configuration, describeVolumesType);
+        DescribeVolumesResponseType describeVolumesResponseType;
+        try {
+          describeVolumesResponseType = AsyncRequests.sendSync( configuration, describeVolumesType );
+        } catch ( Exception e ) {
+          if ( isWebServiceErrorCode( e, "InvalidVolume.NotFound" ) ) {
+            return action;
+          }
+          throw new ValidationErrorException("Error describing volume " + action.properties.getVolumeId() + ":" + asWebServiceErrorMessage( e, e.getMessage() ) );
+        }
         if (describeVolumesResponseType.getVolumeSet().size() == 0) {
           return action; // volume is gone
         }
@@ -229,7 +249,15 @@ public class AWSEC2VolumeAttachmentResourceAction extends ResourceAction {
       }
       DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
       describeVolumesType.setVolumeSet(Lists.newArrayList(action.properties.getVolumeId()));
-      DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.<DescribeVolumesType,DescribeVolumesResponseType> sendSync(configuration, describeVolumesType);
+      DescribeVolumesResponseType describeVolumesResponseType;
+      try {
+        describeVolumesResponseType = AsyncRequests.sendSync( configuration, describeVolumesType );
+      } catch ( Exception e ) {
+        if ( isWebServiceErrorCode( e, "InvalidVolume.NotFound" ) ) {
+          return true; // volume can't be attached if it doesn't exist
+        }
+        throw new ValidationErrorException("Error describing volume " + action.properties.getVolumeId() + ":" + asWebServiceErrorMessage( e, e.getMessage() ) );
+      }
       if (describeVolumesResponseType.getVolumeSet().size()==0) {
         return true; // volume can't be attached if it doesn't exist
       }

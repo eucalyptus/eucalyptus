@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,12 +22,15 @@ package com.eucalyptus.resources.client;
 import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
+import org.spockframework.util.Nullable;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
+import com.google.common.base.Optional;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -37,9 +40,12 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
  */
 public abstract class EucalyptusClientTask<TM extends BaseMessage, TC extends ComponentId> {
   private static final Logger LOG = Logger.getLogger(EucalyptusClientTask.class);
-  private volatile boolean dispatched = false;
+  private String errorCode;
   private String errorMessage;
-  protected EucalyptusClientTask() {}
+
+  protected EucalyptusClientTask( ) {
+
+  }
 
   final CheckedListenableFuture<Boolean> dispatch(
       final ClientContext<TM, TC> context) {
@@ -65,7 +71,6 @@ public abstract class EucalyptusClientTask<TM extends BaseMessage, TC extends Co
           }
         }
       });
-      dispatched = true;
       return future;
     } catch (Exception e) {
       LOG.error("Got error", e);
@@ -77,21 +82,29 @@ public abstract class EucalyptusClientTask<TM extends BaseMessage, TC extends Co
       Callback.Checked<TM> callback);
 
   void dispatchFailure(ClientContext<TM, TC> context, Throwable throwable) {
-    final Throwable ex1 = Exceptions.findCauseByClassName( throwable,
-        "com.eucalyptus.compute.ClientComputeException" );
-    if (ex1 != null) {
-      errorMessage = ex1.getMessage();
+    final Optional<AsyncExceptions.AsyncWebServiceError> serviceErrorOption =
+        AsyncExceptions.asWebServiceError( throwable );
+    if ( serviceErrorOption.isPresent( ) ) {
+      errorCode = serviceErrorOption.get( ).getCode();
+      errorMessage = serviceErrorOption.get( ).getMessage();
       return;
     }
-    final NoSuchElementException ex2 = Exceptions.findCause(throwable,
-        NoSuchElementException.class);
-    if (ex2 != null) {
+
+    final NoSuchElementException ex2 = Exceptions.findCause( throwable, NoSuchElementException.class );
+    if ( ex2 != null ) {
       errorMessage = ex2.getMessage();
       return;
     }
+
     LOG.error("Eucalyptus client error", throwable);
   }
 
+  @Nullable
+  String getErrorCode() {
+    return errorCode;
+  }
+
+  @Nullable
   String getErrorMessage() {
     return errorMessage;
   }

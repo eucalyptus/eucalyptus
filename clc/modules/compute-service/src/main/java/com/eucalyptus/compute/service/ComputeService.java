@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,7 +35,6 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Restrictions;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.mule.api.MuleEventContext;
 import org.mule.api.lifecycle.Callable;
 import org.mule.component.ComponentException;
@@ -107,13 +106,15 @@ import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
+import com.eucalyptus.util.async.AsyncExceptions;
+import com.eucalyptus.util.async.AsyncExceptions.AsyncWebServiceError;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.FailedRequestException;
-import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
@@ -630,7 +631,7 @@ public class ComputeService implements Callable {
 
     final boolean showAll = request.getVolumeSet( ).remove( "verbose" );
     final AccountFullName ownerFullName = ( ctx.isAdministrator( ) && showAll ) ? null : ctx.getUserFullName( ).asAccountFullName( );
-    final Set<String> volumeIds = Sets.newHashSet( normalizeVolumeIdentifiers( request.getVolumeSet( ) ) );
+    final Set<String> volumeIds = Sets.newLinkedHashSet( normalizeVolumeIdentifiers( request.getVolumeSet() ) );
 
     final Filter filter = Filters.generate( request.getFilterSet(), Volume.class );
     final Predicate<? super Volume> requestedAndAccessible = CloudMetadatas.filteringFor( Volume.class )
@@ -1032,7 +1033,7 @@ public class ComputeService implements Callable {
       LOG.debug(response.toSimpleString());
       return response;
     } catch ( Exception e ) {
-      handleRemoteException( e );
+      handleServiceException( e );
       Exceptions.findAndRethrow( e, EucalyptusWebServiceException.class, EucalyptusCloudException.class );
       throw new EucalyptusCloudException( e );
     }
@@ -1276,21 +1277,19 @@ public class ComputeService implements Callable {
   }
 
   @SuppressWarnings( "ThrowableResultOfMethodCallIgnored" )
-  private void handleRemoteException( final Exception e ) throws EucalyptusCloudException {
-    final EucalyptusRemoteFault remoteFault = Exceptions.findCause( e, EucalyptusRemoteFault.class );
-    if ( remoteFault != null ) {
-      final HttpResponseStatus status = Objects.firstNonNull( remoteFault.getStatus(), HttpResponseStatus.INTERNAL_SERVER_ERROR );
-      final String code = remoteFault.getFaultCode( );
-      final String message = remoteFault.getFaultDetail( );
-      switch( status.getCode( ) ) {
+  private void handleServiceException( final Exception e ) throws EucalyptusCloudException {
+    final Optional<AsyncWebServiceError> serviceErrorOption = AsyncExceptions.asWebServiceError( e );
+    if ( serviceErrorOption.isPresent( ) ) {
+      final AsyncWebServiceError serviceError = serviceErrorOption.get( );
+      switch( serviceError.getHttpErrorCode() ) {
         case 400:
-          throw new ComputeServiceClientException( code, message );
+          throw new ComputeServiceClientException( serviceError.getCode(), serviceError.getMessage( ) );
         case 403:
-          throw new ComputeServiceAuthorizationException( code, message );
+          throw new ComputeServiceAuthorizationException( serviceError.getCode(), serviceError.getMessage( ) );
         case 503:
-          throw new ComputeServiceUnavailableException( message );
+          throw new ComputeServiceUnavailableException( serviceError.getMessage( ) );
         default:
-          throw new ComputeServiceException( code, message );
+          throw new ComputeServiceException( serviceError.getCode( ), serviceError.getMessage( ) );
       }
     }
   }
