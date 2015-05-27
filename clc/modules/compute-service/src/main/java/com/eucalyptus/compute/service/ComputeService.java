@@ -631,7 +631,7 @@ public class ComputeService implements Callable {
 
     final boolean showAll = request.getVolumeSet( ).remove( "verbose" );
     final AccountFullName ownerFullName = ( ctx.isAdministrator( ) && showAll ) ? null : ctx.getUserFullName( ).asAccountFullName( );
-    final Set<String> volumeIds = Sets.newLinkedHashSet( normalizeVolumeIdentifiers( request.getVolumeSet() ) );
+    final Set<String> volumeIds = Sets.newLinkedHashSet( normalizeVolumeIdentifiers( request.getVolumeSet( ) ) );
 
     final Filter filter = Filters.generate( request.getFilterSet(), Volume.class );
     final Predicate<? super Volume> requestedAndAccessible = CloudMetadatas.filteringFor( Volume.class )
@@ -679,6 +679,9 @@ public class ComputeService implements Callable {
         Entities.asTransaction( Volume.class, populateVolumeSet ).apply( volumeIds );
     @SuppressWarnings( "ConstantConditions" )
     final Set<String> allowedVolumeIds = volumeIdsAndVolumes.getLeft();
+    if ( allowedVolumeIds.isEmpty( ) && !volumeIds.isEmpty( ) ) {
+      throw new ComputeServiceClientException( "InvalidVolume.NotFound", "The volume '"+Iterables.get( volumeIds, 0 )+"' does not exist." );
+    }
     reply.setVolumeSet( volumeIdsAndVolumes.getRight() );
 
     final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( Volume.class )
@@ -1281,7 +1284,7 @@ public class ComputeService implements Callable {
     final Optional<AsyncWebServiceError> serviceErrorOption = AsyncExceptions.asWebServiceError( e );
     if ( serviceErrorOption.isPresent( ) ) {
       final AsyncWebServiceError serviceError = serviceErrorOption.get( );
-      switch( serviceError.getHttpErrorCode() ) {
+      switch( serviceError.getHttpErrorCode( ) ) {
         case 400:
           throw new ComputeServiceClientException( serviceError.getCode(), serviceError.getMessage( ) );
         case 403:
