@@ -64,21 +64,24 @@ package com.eucalyptus.util.dns;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+
 import org.apache.log4j.Logger;
 import org.xbill.DNS.DClass;
 import org.xbill.DNS.NSRecord;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.NameTooLongException;
 import org.xbill.DNS.TextParseException;
+
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
+
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 /**
@@ -201,11 +204,11 @@ public class DomainNames {
     public List<NSRecord> getNameServers( ) {
       List<NSRecord> nsRecs = Lists.newArrayList( );
       int idx = 1;
-      for ( ServiceConfiguration conf : Components.lookup( Eucalyptus.class ).services( ) ) {
+      for ( ServiceConfiguration conf : Components.lookup( Dns.class ).services( ) ) {
         nsRecs.add( new NSRecord( this.get( ),
                                   DClass.IN,
                                   60,
-                                  Name.fromConstantString( "ns" + idx + "." + this.get( ).toString( ) ) ) );
+                                  Name.fromConstantString( "ns" + idx++ + "." + this.get( ).toString( ) ) ) );
       }
       return nsRecs; 
     }
