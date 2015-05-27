@@ -152,6 +152,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
+import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.util.async.Futures;
@@ -2318,6 +2319,19 @@ public class ActivityManager {
       this.healthyInstanceIds.set( ImmutableList.copyOf( healthyInstanceIds ) );
 
       setActivityFinalStatus( ActivityStatusCode.Successful );
+    }
+
+    @Override
+    boolean dispatchFailure( final ActivityContext context, final Throwable throwable ) {
+      if ( AsyncExceptions.isWebServiceErrorCode( throwable, "InvalidInstanceID.NotFound" ) ) {
+        this.knownInstanceIds.set( Collections.<String>emptyList( ) );
+        this.healthyInstanceIds.set( Collections.<String>emptyList( ) );
+
+        setActivityFinalStatus( ActivityStatusCode.Successful );
+        return true;
+      } else {
+        return super.dispatchFailure( context, throwable );
+      }
     }
 
     List<String> getKnownInstanceIds() {

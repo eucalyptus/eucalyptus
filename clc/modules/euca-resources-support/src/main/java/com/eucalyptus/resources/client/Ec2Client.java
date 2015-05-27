@@ -45,6 +45,7 @@ import com.eucalyptus.util.DispatchingClient;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.Callback.Checked;
+import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
@@ -108,6 +109,16 @@ public class Ec2Client {
         resultInstances.addAll(res.getInstancesSet());
       }
       this.result.set(resultInstances);
+    }
+
+    @Override
+    boolean dispatchFailure( final ClientContext<ComputeMessage, Compute> context, final Throwable throwable ) {
+      if ( AsyncExceptions.isWebServiceErrorCode( throwable, "InvalidInstanceID.NotFound" ) ) {
+        this.result.set( Lists.<RunningInstancesItemType>newArrayList( ) );
+        return true;
+      } else {
+        return super.dispatchFailure( context, throwable );
+      }
     }
 
     public List<RunningInstancesItemType> getResult() {
@@ -899,8 +910,13 @@ public class Ec2Client {
     }
 
     @Override
-    void dispatchFailure( final ClientContext<ComputeMessage, Compute> context, final Throwable throwable ) {
-      super.dispatchFailure( context, throwable );    //TODO:STEVE: implement
+    boolean dispatchFailure( final ClientContext<ComputeMessage, Compute> context, final Throwable throwable ) {
+      if ( AsyncExceptions.isWebServiceErrorCode( throwable, "InvalidVolume.NotFound" ) ) {
+        this.result = Lists.newArrayList( );
+        return true;
+      } else {
+        return super.dispatchFailure( context, throwable );
+      }
     }
 
     @Override

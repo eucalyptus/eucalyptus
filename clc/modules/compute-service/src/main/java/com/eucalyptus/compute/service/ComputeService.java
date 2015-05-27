@@ -378,6 +378,9 @@ public class ComputeService implements Callable {
     try ( final TransactionResource db = Entities.readOnlyDistinctTransactionFor( VmInstance.class ) ) {
       final List<VmInstance> instances =
           VmInstances.list( ownerFullName, criterion, filter.getAliases(), requestedAndAccessible );
+      if ( instances.isEmpty( ) && !identifiers.isEmpty( ) ) {
+        throw new ComputeServiceClientException( "InvalidInstanceID.NotFound", "The instance '"+Iterables.get( identifiers, 0 )+"' was not found" );
+      }
       final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( VmInstance.class )
           .getResourceTagMap( AccountFullName.getInstance( ctx.getAccountNumber() ),
               Iterables.transform( instances, CloudMetadatas.toDisplayName() ) );
@@ -399,6 +402,7 @@ public class ComputeService implements Callable {
         }
       }
     } catch ( final Exception e ) {
+      Exceptions.findAndRethrow( e, ComputeServiceException.class );
       LOG.error( e );
       LOG.debug( e, e );
       throw new EucalyptusCloudException( e.getMessage( ) );
@@ -428,12 +432,16 @@ public class ComputeService implements Callable {
     try {
       final List<VmInstance> instances =
           VmInstances.list( ownerFullName, criterion, filter.getAliases(), requestedAndAccessible );
+      if ( instances.isEmpty( ) && !identifiers.isEmpty( ) ) {
+        throw new ComputeServiceClientException( "InvalidInstanceID.NotFound", "The instance '"+Iterables.get( identifiers, 0 )+"' was not found" );
+      }
 
       Iterables.addAll(
           reply.getInstanceStatusSet().getItem(),
           Iterables.transform( instances, TypeMappers.lookup( VmInstance.class, InstanceStatusItemType.class ) ) );
 
     } catch ( final Exception e ) {
+      Exceptions.findAndRethrow( e, ComputeServiceException.class );
       LOG.error( e );
       LOG.debug( e, e );
       throw new EucalyptusCloudException( e.getMessage( ) );

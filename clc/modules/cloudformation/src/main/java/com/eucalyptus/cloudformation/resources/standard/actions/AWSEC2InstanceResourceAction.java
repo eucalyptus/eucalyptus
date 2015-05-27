@@ -23,7 +23,6 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 import static com.eucalyptus.util.async.AsyncExceptions.asWebServiceErrorMessage;
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
@@ -77,6 +76,7 @@ import com.eucalyptus.compute.common.TerminateInstancesType;
 import com.eucalyptus.compute.common.Volume;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
@@ -236,9 +236,18 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
           ServiceConfiguration configuration = Topology.lookup(Compute.class);
           DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
           describeInstancesType.setInstancesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
-          DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType, DescribeInstancesResponseType>sendSync(configuration, describeInstancesType);
+          DescribeInstancesResponseType describeInstancesResponseType;
+          try {
+            describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
+          } catch ( Exception e ) {
+            if ( AsyncExceptions.isWebServiceErrorCode( e, "InvalidInstanceID.NotFound" ) ) {
+              throw new ValidationFailedException("Instance " + action.info.getPhysicalResourceId() + " does not yet exist");
+            } else {
+              throw e;
+            }
+          }
           if (describeInstancesResponseType.getReservationSet().size() == 0) {
-            throw new ValidationFailedException("Instance " + action.info.getAccountId() + " does not yet exist");
+            throw new ValidationFailedException("Instance " + action.info.getPhysicalResourceId( ) + " does not yet exist");
           }
           RunningInstancesItemType runningInstancesItemType = describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0);
           if ("running".equals(runningInstancesItemType.getStateName())) {
@@ -446,7 +455,16 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
           // First see if instance exists or has been terminated
           DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
           describeInstancesType.setInstancesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
-          DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType, DescribeInstancesResponseType>sendSync(configuration, describeInstancesType);
+          DescribeInstancesResponseType describeInstancesResponseType;
+          try {
+            describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
+          } catch ( Exception e ) {
+            if ( AsyncExceptions.isWebServiceErrorCode( e, "InvalidInstanceID.NotFound" ) ) {
+              return action;
+            } else {
+              throw e;
+            }
+          }
           if (describeInstancesResponseType.getReservationSet().size() == 0) return action; // already terminated
           if ("terminated".equals(
             describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0).getStateName()))
@@ -470,7 +488,16 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
           if (action.info.getPhysicalResourceId() == null) return action;
           DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
           describeInstancesType.setInstancesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
-          DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType, DescribeInstancesResponseType>sendSync(configuration, describeInstancesType);
+          DescribeInstancesResponseType describeInstancesResponseType;
+          try {
+            describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
+          } catch ( Exception e ) {
+            if ( AsyncExceptions.isWebServiceErrorCode( e, "InvalidInstanceID.NotFound" ) ) {
+              return action;
+            } else {
+              throw e;
+            }
+          }
           if (describeInstancesResponseType.getReservationSet().size() == 0) return action; // already terminated
           if ("terminated".equals(
             describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0).getStateName()))
@@ -578,7 +605,16 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
     ServiceConfiguration configuration = Topology.lookup(Compute.class);
     DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, info.getEffectiveUserId());
     describeInstancesType.setInstancesSet(Lists.newArrayList(info.getPhysicalResourceId()));
-    DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType, DescribeInstancesResponseType>sendSync(configuration, describeInstancesType);
+    DescribeInstancesResponseType describeInstancesResponseType;
+    try {
+      describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
+    } catch ( Exception e ) {
+      if ( AsyncExceptions.isWebServiceErrorCode( e, "InvalidInstanceID.NotFound" ) ) {
+        return;
+      } else {
+        throw e;
+      }
+    }
     if (describeInstancesResponseType.getReservationSet().size() == 0) {
       return;
     }
