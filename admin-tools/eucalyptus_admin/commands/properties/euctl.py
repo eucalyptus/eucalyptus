@@ -58,7 +58,7 @@ def _property_key_value(kvp_str):
         return (kvp_str.strip(), None)
 
 
-class EuCtl(PropertiesRequest):
+class Euctl(PropertiesRequest):
     DESCRIPTION = textwrap.dedent(
         '''\
         The %(prog)s utility retrieves cloud state and allows cloud

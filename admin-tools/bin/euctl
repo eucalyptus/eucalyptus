@@ -3,4 +3,4 @@
 import eucalyptus_admin.commands.properties.euctl
 
 if __name__ == '__main__':
-    eucalyptus_admin.commands.properties.euctl.EuCtl.run()
+    eucalyptus_admin.commands.properties.euctl.Euctl.run()
