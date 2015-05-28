@@ -22,6 +22,7 @@ package com.eucalyptus.cloudformation.ws;
 
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.HoldMe;
+import com.eucalyptus.cloudformation.CloudFormationErrorResponse;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpResponse;
@@ -84,6 +85,9 @@ public class CloudFormationQueryBinding extends BaseQueryBinding<OperationParame
   //          String response = Binding.createRestFault( this.requestType.get( ctx.getChannel( ) ), "Recieved an response from the service which has no content.", "" );
   //          byteOut.write( response.getBytes( ) );
   //          httpResponse.setStatus( HttpResponseStatus.INTERNAL_SERVER_ERROR );
+          } else if (httpResponse.getMessage( ) instanceof CloudFormationErrorResponse) {
+            CloudFormationErrorResponse cfer = (CloudFormationErrorResponse) httpResponse.getMessage();
+            getCloudFormationJsonError(cfer, byteOut);
           } else if ( httpResponse.getMessage( ) instanceof EucalyptusErrorMessageType) {
             EucalyptusErrorMessageType errMsg = ( EucalyptusErrorMessageType ) httpResponse.getMessage( );
             byteOut.write( Binding.createRestFault(errMsg.getSource(), errMsg.getMessage(), errMsg.getCorrelationId()).getBytes( ) );
@@ -149,6 +153,32 @@ public class CloudFormationQueryBinding extends BaseQueryBinding<OperationParame
                            final JsonGenerator jsonGenerator,
                            final SerializerProvider serializerProvider ) throws IOException {
       jsonGenerator.writeRawValue( String.valueOf( date.getTime( ) / 1000 ) + "." + Strings.padStart( Long.toString( date.getTime() % 1000 ), 3, '0' ) );
+    }
+  }
+
+  private void getCloudFormationJsonError(CloudFormationErrorResponse cfer, ByteArrayOutputStream byteOut) throws Exception {
+    try {
+      String message = cfer.getError().get(0).getMessage();
+      String type = cfer.getError().get(0).getType();
+      String code = cfer.getError().get(0).getCode();
+      String reqId = cfer.getRequestId();
+
+      byteOut.write(("{\"Error\":").getBytes());
+      byteOut.write(("{\"Code\":").getBytes());
+      byteOut.write(("\"" + code + "\",").getBytes());
+      byteOut.write(("\"Message\":").getBytes());
+      byteOut.write(("\"" + message + "\",").getBytes());
+      byteOut.write(("\"Type\":").getBytes());
+      byteOut.write(("\"" + type + "\"").getBytes());
+      byteOut.write("},".getBytes());
+      byteOut.write(("\"RequestId\":").getBytes());
+      byteOut.write(("\"" + reqId + "\"").getBytes());
+      byteOut.write("}".getBytes());
+
+    } catch (Exception e) {
+      LOG.debug(e);
+      Logs.exhaust().error(e, e);
+      throw e;
     }
   }
 }
