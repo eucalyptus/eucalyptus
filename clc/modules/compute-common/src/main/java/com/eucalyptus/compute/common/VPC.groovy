@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,9 +48,7 @@ class VpcMessage extends ComputeMessage implements ValidatableMessage {
         this )
   }
 }
-// ********************************** TODO ****************************************
-// * Everything below should be exactly the same in the backend (msgs) VPC.groovy *
-// ********************************** TODO ****************************************
+
 interface VpcTagged {
   ResourceTagSetType getTagSet( )
   void setTagSet( ResourceTagSetType tags )
@@ -1628,4 +1626,119 @@ class DhcpConfigurationItemSetType extends EucalyptusData {
   @HttpEmbedded( multiple = true )
   @HttpParameterMapping( parameter = "DhcpConfiguration" )
   ArrayList<DhcpConfigurationItemType> item = new ArrayList<DhcpConfigurationItemType>();
+}
+
+class AttachClassicLinkVpcType extends VpcMessage {
+  ArrayList<String> securityGroupId
+  String instanceId
+  String vpcId
+}
+
+class AttachClassicLinkVpcResponseType extends VpcMessage {
+
+}
+
+class DescribeClassicLinkInstancesType extends VpcMessage {
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
+  ArrayList<Filter> filterSet = new ArrayList<Filter>();
+  ArrayList<String> instanceId
+  Integer maxResults
+  String nextToken
+}
+
+class DescribeClassicLinkInstancesResponseType extends VpcMessage {
+}
+
+class DescribeVpcClassicLinkType extends VpcMessage {
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
+  ArrayList<Filter> filterSet = new ArrayList<Filter>();
+  String vpcId
+}
+
+class DescribeVpcClassicLinkResponseType extends VpcMessage {
+}
+
+class DetachClassicLinkVpcType extends VpcMessage {
+  String instanceId
+  String vpcId
+}
+
+class DetachClassicLinkVpcResponseType extends VpcMessage {
+}
+
+class DisableVpcClassicLinkType extends VpcMessage {
+  String vpcId
+}
+
+class DisableVpcClassicLinkResponseType extends VpcMessage {
+}
+
+class EnableVpcClassicLinkType extends VpcMessage {
+  String vpcId
+}
+
+class EnableVpcClassicLinkResponseType extends VpcMessage {
+}
+
+class CreateVpcEndpointType extends VpcMessage {
+  String clientToken
+  String policyDocument
+  ArrayList<String> routeTableId
+  String serviceName
+  String vpcId
+}
+
+class CreateVpcEndpointResponseType extends VpcMessage {
+}
+
+class DeleteVpcEndpointsType extends VpcMessage {
+  ArrayList<String> vpcEndpointId
+}
+
+class DeleteVpcEndpointsResponseType extends VpcMessage {
+}
+
+class DescribePrefixListsType extends VpcMessage {
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
+  ArrayList<Filter> filterSet = new ArrayList<Filter>();
+  Integer maxResults
+  String nextToken
+  ArrayList<String> prefixListId
+}
+
+class DescribePrefixListsResponseType extends VpcMessage {
+}
+
+class DescribeVpcEndpointServicesType extends VpcMessage {
+  Integer maxResults
+  String nextToken
+}
+
+class DescribeVpcEndpointServicesResponseType extends VpcMessage {
+}
+
+class DescribeVpcEndpointsType extends VpcMessage {
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
+  ArrayList<Filter> filterSet = new ArrayList<Filter>();
+  Integer maxResults
+  String nextToken
+  ArrayList<String> vpcEndpointId
+}
+
+class DescribeVpcEndpointsResponseType extends VpcMessage {
+}
+
+class ModifyVpcEndpointType extends VpcMessage {
+  ArrayList<String> addRouteTableId
+  String policyDocument
+  ArrayList<String> removeRouteTableId
+  Boolean resetPolicy
+  String vpcEndpointId
+}
+
+class ModifyVpcEndpointResponseType extends VpcMessage {
 }

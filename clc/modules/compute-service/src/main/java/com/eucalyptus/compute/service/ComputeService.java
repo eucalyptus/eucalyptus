@@ -557,6 +557,11 @@ public class ComputeService implements Callable {
     return reply;
   }
 
+  public CopySnapshotResponseType copySnapshot( final CopySnapshotType request ) {
+    final CopySnapshotResponseType reply = request.getReply( );
+    return reply;
+  }
+
   public DescribePlacementGroupsResponseType describePlacementGroups( final DescribePlacementGroupsType request ) {
     final DescribePlacementGroupsResponseType reply = request.getReply( );
     return reply;
@@ -610,7 +615,6 @@ public class ComputeService implements Callable {
     return request.getReply( );
   }
 
-
   public CancelSpotInstanceRequestsResponseType cancelSpotInstanceRequests( CancelSpotInstanceRequestsType request ) {
     return request.getReply( );
   }
@@ -632,6 +636,26 @@ public class ComputeService implements Callable {
   }
 
   public RequestSpotInstancesResponseType requestSpotInstances( RequestSpotInstancesType request ) {
+    return request.getReply( );
+  }
+
+  public CancelSpotFleetRequestsResponseType cancelSpotFleetRequests( CancelSpotFleetRequestsType request ) {
+    return request.getReply( );
+  }
+
+  public DescribeSpotFleetInstancesResponseType describeSpotFleetInstances( DescribeSpotFleetInstancesType request ) {
+    return request.getReply( );
+  }
+
+  public DescribeSpotFleetRequestHistoryResponseType describeSpotFleetRequestHistory( DescribeSpotFleetRequestHistoryType request ) {
+    return request.getReply( );
+  }
+
+  public DescribeSpotFleetRequestsResponseType describeSpotFleetRequests( DescribeSpotFleetRequestsType request ) {
+    return request.getReply( );
+  }
+
+  public RequestSpotFleetResponseType requestSpotFleet( RequestSpotFleetType request ) {
     return request.getReply( );
   }
 
@@ -788,6 +812,26 @@ public class ComputeService implements Callable {
   }
 
   public DescribeVolumeStatusResponseType describeVolumeStatus( DescribeVolumeStatusType request ) {
+    return request.getReply( );
+  }
+
+  public CancelImportTaskResponseType cancelImportTask( CancelImportTaskType request ) {
+    return request.getReply( );
+  }
+
+  public DescribeImportImageTasksResponseType describeImportImageTasks( DescribeImportImageTasksType request ) {
+    return request.getReply( );
+  }
+
+  public DescribeImportSnapshotTasksResponseType describeImportSnapshotTasks( DescribeImportSnapshotTasksType request ) {
+    return request.getReply( );
+  }
+
+  public ImportImageResponseType importImage( ImportImageType request ) {
+    return request.getReply( );
+  }
+
+  public ImportSnapshotResponseType importSnapshot( ImportSnapshotType request ) {
     return request.getReply( );
   }
 
@@ -1034,6 +1078,66 @@ public class ComputeService implements Callable {
     return reply;
   }
 
+  public DescribeMovingAddressesResponseType describeMovingAddresses( DescribeMovingAddressesType request ) {
+    return request.getReply( );
+  }
+
+  public MoveAddressToVpcResponseType moveAddressToVpc( MoveAddressToVpcType request ) {
+    return request.getReply( );
+  }
+
+  public RestoreAddressToClassicResponseType describeMovingAddresses( RestoreAddressToClassicType request ) {
+    return request.getReply( );
+  }
+
+  public AttachClassicLinkVpcResponseType attachClassicLinkVpc( AttachClassicLinkVpcType request ) {
+    return request.getReply( );
+  }
+
+  public DescribeClassicLinkInstancesResponseType describeClassicLinkInstances( DescribeClassicLinkInstancesType request ) {
+    return request.getReply( );
+  }
+
+  public DescribeVpcClassicLinkResponseType describeVpcClassicLink( DescribeVpcClassicLinkType request ) {
+    return request.getReply( );
+  }
+
+  public DetachClassicLinkVpcResponseType detachClassicLinkVpc( DetachClassicLinkVpcType request ) {
+    return request.getReply( );
+  }
+
+  public DisableVpcClassicLinkResponseType disableVpcClassicLink( DisableVpcClassicLinkType request ) {
+    return request.getReply( );
+  }
+
+  public EnableVpcClassicLinkResponseType enableVpcClassicLink( EnableVpcClassicLinkType request ) {
+    return request.getReply( );
+  }
+
+  public CreateVpcEndpointResponseType createVpcEndpoint( CreateVpcEndpointType request ) {
+    return request.getReply( );
+  }
+
+  public DeleteVpcEndpointsResponseType deleteVpcEndpoints( DeleteVpcEndpointsType request ) {
+    return request.getReply( );
+  }
+
+  public DescribePrefixListsResponseType describePrefixLists( DescribePrefixListsType request ) {
+    return request.getReply( );
+  }
+
+  public DescribeVpcEndpointServicesResponseType describeVpcEndpointServices( DescribeVpcEndpointServicesType request ) {
+    return request.getReply( );
+  }
+
+  public DescribeVpcEndpointsResponseType describeVpcEndpoints( DescribeVpcEndpointsType request ) {
+    return request.getReply( );
+  }
+
+  public ModifyVpcEndpointResponseType modifyVpcEndpoint( ModifyVpcEndpointType request ) {
+    return request.getReply( );
+  }
+
   @Override
   public ComputeMessage onCall( final MuleEventContext muleEventContext ) throws EucalyptusCloudException {
     final ComputeMessage request = (ComputeMessage) muleEventContext.getMessage( ).getPayload( );
@@ -1075,7 +1179,7 @@ public class ComputeService implements Callable {
         .byPrivileges()
         .buildPredicate();
 
-    try {
+    try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( persistent ) ) {
       results.addAll( lister.list(
           ownerFullName,
           filter.asCriterion( ),
