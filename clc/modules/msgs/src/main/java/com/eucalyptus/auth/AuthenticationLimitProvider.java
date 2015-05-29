@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,11 +21,7 @@ package com.eucalyptus.auth;
 
 import java.util.ServiceLoader;
 import javax.annotation.Nonnull;
-import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.NonNullFunction;
-import com.google.common.base.Function;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
 
 /**
  *
@@ -38,7 +34,9 @@ public interface AuthenticationLimitProvider {
 
   int getSigningCertificateLimitSpi( );
 
-  public static class Values {
+  int getPolicySizeLimitSpi( );
+
+  class Values {
     public static long getDefaultPasswordExpiry( ) {
       return getLongValue( AuthenticationLongProperties.DEFAULT_PASSWORD_EXPIRY );
     }
@@ -51,27 +49,22 @@ public interface AuthenticationLimitProvider {
       return getIntValue( AuthenticationLimit.SIGNING_CERTIFICATE );
     }
 
+    public static int getPolicySizeLimit( ) {
+      return getIntValue( AuthenticationLimit.POLICY_SIZE );
+    }
+
     static int getIntValue( final NonNullFunction<AuthenticationLimitProvider, Integer> valueFunction ) {
-      return getValue( valueFunction, Integer.MAX_VALUE, CollectionUtils.min( ) );
+      return getValue( valueFunction );
     }
 
     static long getLongValue( final NonNullFunction<AuthenticationLimitProvider, Long> valueFunction ) {
-      return getValue( valueFunction, Long.MAX_VALUE, CollectionUtils.lmin( ) );
+      return getValue( valueFunction );
     }
 
     static <VT> VT getValue(
-        final NonNullFunction<AuthenticationLimitProvider, VT> valueFunction,
-        final VT initial,
-        final Function<VT,Function<VT,VT>> reducer
+        final NonNullFunction<AuthenticationLimitProvider, VT> valueFunction
     ) {
-      return CollectionUtils.reduce(
-          Lists.newArrayList( Iterators.transform(
-              ServiceLoader.load( AuthenticationLimitProvider.class ).iterator( ),
-              valueFunction
-          ) ),
-          initial,
-          reducer
-      );
+      return valueFunction.apply( ServiceLoader.load( AuthenticationLimitProvider.class ).iterator( ).next( ) );
     }
   }
 
@@ -81,6 +74,13 @@ public interface AuthenticationLimitProvider {
       @Override
       public Integer apply( final AuthenticationLimitProvider authenticationLimitProvider ) {
         return authenticationLimitProvider.getAccessKeyLimitSpi( );
+      }
+    },
+    POLICY_SIZE {
+      @Nonnull
+      @Override
+      public Integer apply( final AuthenticationLimitProvider authenticationLimitProvider ) {
+        return authenticationLimitProvider.getPolicySizeLimitSpi( );
       }
     },
     SIGNING_CERTIFICATE {
