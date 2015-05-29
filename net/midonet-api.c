@@ -2219,7 +2219,6 @@ int mido_create_resource_v(midoname * parents, int max_parents, midoname * newna
 
 }
 
-
 int mido_cmp_midoname(midoname *a, midoname *b) {
     int ret=0;
 
@@ -2243,43 +2242,6 @@ int mido_cmp_midoname(midoname *a, midoname *b) {
         return(1);
     }
     return(0);
-}
-
-//!
-//!
-//!
-//! @param[in] lista
-//! @param[in] lista_max
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int mido_merge_midoname_lists(midoname *inplace, int inplace_max, midoname *new, int new_max, midoname **addmidos, int addmidos_max, midoname **delmidos, int delmidos_max) {
-    int ret=0, rc=0;
-    int i, j, found, foundidx;
-
-    for (i=0; i<inplace_max; i++) {
-        found=0;
-        for (j=0; j<new_max && !found; j++) {
-            if (mido_cmp_midoname(&(inplace[i]), &(new[j]))) {
-                found=1;
-                foundidx=j;
-            }
-        }
-        if (!found) {
-            LOGDEBUG("MEH: mido not found, will add to add list\n");
-            mido_print_midoname(&(new[foundidx]));
-        }
-    }
-
-    return(ret);
 }
 
 //!
