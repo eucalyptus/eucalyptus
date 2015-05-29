@@ -1,5 +1,5 @@
 <!--
-  Copyright 2009-2013 Eucalyptus Systems, Inc.
+  Copyright 2009-2015 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -80,21 +80,27 @@
       <inbound>
         <inbound-endpoint ref="VmControlWS"/>
       </inbound>
-      <component class="com.eucalyptus.vm.VmControl"/>
+      <component>
+        <singleton-object class="com.eucalyptus.vm.VmControl"/>
+      </component>
     </service>
 
     <service name="ClusterSink">
       <inbound>
         <inbound-endpoint ref="ClusterSinkWS"/>
       </inbound>
-      <component class="com.eucalyptus.cluster.ClusterEndpoint"/>
+      <component>
+        <singleton-object class="com.eucalyptus.cluster.ClusterEndpoint"/>
+      </component>
     </service>
 
     <service name="ClusterEndpoint">
       <inbound>
         <inbound-endpoint ref="ClusterEndpointWS"/>
       </inbound>
-      <component class="com.eucalyptus.cluster.ClusterEndpoint"/>
+      <component>
+        <singleton-object class="com.eucalyptus.cluster.ClusterEndpoint"/>
+      </component>
     </service>
 
     <service name="Address">
@@ -113,7 +119,9 @@
       <inbound>
         <inbound-endpoint ref="VmMetadataWS"/>
       </inbound>
-      <component class="com.eucalyptus.compute.metadata.VmMetadata"/>
+      <component>
+        <singleton-object class="com.eucalyptus.compute.metadata.VmMetadata"/>
+      </component>
     </service>
   </model>
 

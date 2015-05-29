@@ -103,7 +103,9 @@
 			<inbound>
 				<inbound-endpoint ref="StorageWS" />
 			</inbound>
-			<component class="com.eucalyptus.blockstorage.BlockStorageController" />
+			<component>
+				<singleton-object class="com.eucalyptus.blockstorage.BlockStorageController" />
+			</component>
 			<outbound>
 				<filtering-router>
 					<outbound-endpoint ref="ReplyQueueEndpoint" />
@@ -120,7 +122,9 @@
 			<inbound>
 				<inbound-endpoint ref="StorageReplyQueueWS" />
 			</inbound>
-      <component class="com.eucalyptus.ws.util.ReplyQueue"/>
+			<component>
+				<singleton-object class="com.eucalyptus.ws.util.ReplyQueue" />
+			</component>
 		</service>
 
 	</model>
@@ -130,7 +134,9 @@
 				<inbound-endpoint ref="StorageInternalWS" />
 				<inbound-endpoint ref="StorageInternalVM" />
 			</inbound>
-			<component class="com.eucalyptus.blockstorage.BlockStorageController" />
+			<component>
+				<singleton-object class="com.eucalyptus.blockstorage.BlockStorageController" />
+			</component>
 		</service>
 	</model>
 

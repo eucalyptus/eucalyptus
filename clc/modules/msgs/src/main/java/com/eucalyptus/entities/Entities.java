@@ -274,7 +274,7 @@ public class Entities {
     if ( hasTransaction( obj ) ) {
       throw new IllegalStateException( "Found existing transaction for context " + lookatPersistenceContext( obj ) );
     }
-    return new TransactionResource( get( obj ) );
+    return new TransactionResource( createTransaction( obj ) );
   }
 
   /**
@@ -350,7 +350,9 @@ public class Entities {
    *
    */
   public static void readOnly( final Object object ) {
-    getTransaction( object ).txState.getSession( ).setFlushMode( FlushMode.MANUAL );
+    final Session session = getTransaction( object ).txState.getSession( );
+    session.setDefaultReadOnly( true );
+    session.setFlushMode( FlushMode.MANUAL );
   }
 
   public static <T> void flush( final T object ) {

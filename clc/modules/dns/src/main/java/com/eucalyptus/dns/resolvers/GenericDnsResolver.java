@@ -29,7 +29,7 @@ import org.xbill.DNS.Record;
 
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.util.dns.DomainNameRecords;
 import com.eucalyptus.util.dns.DomainNames;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResolver;
@@ -73,7 +73,7 @@ public class GenericDnsResolver implements DnsResolver {
       if(DomainNames.externalSubdomain().equals(name)){
         final List<Record> answers = Lists.newArrayList();
         answers.add(DomainNameRecords.sourceOfAuthorityStaticSerial(name));
-        NavigableSet<ServiceConfiguration> nsServers = Components.lookup( Eucalyptus.class ).services( );
+        NavigableSet<ServiceConfiguration> nsServers = Components.lookup( Dns.class ).services( );
         List<Record> additional = Lists.newArrayList( );
         Name domain = DomainNames.isInternalSubdomain( name ) ? DomainNames.internalSubdomain( ) : DomainNames.externalSubdomain( );
         int idx = 1;

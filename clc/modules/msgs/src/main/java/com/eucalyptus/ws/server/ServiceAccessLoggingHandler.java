@@ -144,10 +144,7 @@ public enum ServiceAccessLoggingHandler implements ChannelUpstreamHandler, Chann
                                                              String query = Objects.toString( input.getQuery( ),
                                                                                               "" );
                                                              if ( HttpMethod.POST.equals( input.getMethod( ) ) ) {
-                                                               final ChannelBuffer buffer = input.getContent( );
-                                                               buffer.markReaderIndex( );
-                                                               query = new String( buffer.array( ) );
-                                                               buffer.resetReaderIndex( );
+                                                               query = input.getContentAsString( );
                                                              }
                                                              return Collections2.filter(
                                                                  RequestLoggingFilters.get( ).apply( Arrays.asList( query.split( "&" ) ) ),

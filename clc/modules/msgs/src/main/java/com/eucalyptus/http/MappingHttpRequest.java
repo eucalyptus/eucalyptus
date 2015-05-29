@@ -65,6 +65,7 @@ package com.eucalyptus.http;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Set;
 import org.apache.commons.codec.DecoderException;
@@ -92,6 +93,7 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
   private final Set<String>         nonQueryParameterKeys;
   private final Map<String, String> formFields;
   private String                    restNamespace;
+  private String                    contentAsString;
 
   public MappingHttpRequest( HttpVersion httpVersion, HttpMethod method, String uri ) {
     super( httpVersion );
@@ -257,7 +259,19 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
     removeHeader( key );
     return value;
   }
-  
+
+  public String getContentAsString( ) {
+    return getContentAsString( false );
+  }
+
+  public String getContentAsString( final boolean refresh ) {
+    String content = contentAsString;
+    if ( refresh || content == null ) {
+      content = contentAsString = StandardCharsets.UTF_8.decode( getContent( ).toByteBuffer( ) ).toString( );
+    }
+    return content;
+  }
+
   @Override
   public String logMessage( ) {
     StringBuffer buf = new StringBuffer();

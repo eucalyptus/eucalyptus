@@ -62,6 +62,7 @@
 
 package com.eucalyptus.crypto;
 
+import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import com.google.common.base.Optional;
 
@@ -82,6 +83,15 @@ public enum Digest {
   SHA384("SHA-384"),
   SHA512("SHA-512");
 
+  private final ThreadLocal<MessageDigest> threadlocalDigest = new ThreadLocal<MessageDigest>() {
+    @Override
+    protected MessageDigest initialValue( ) {
+      final MessageDigest digest = Digest.this.get( );
+      digest.reset( );
+      return digest;
+    }
+  };
+
   public static Optional<Digest> forAlgorithm( final String algorithm ) {
     Optional<Digest> digest = Optional.absent( );
     for ( final Digest candidateDigest : values( ) ) {
@@ -94,7 +104,13 @@ public enum Digest {
   }
 
   public byte[] digestBinary( final byte[] data ) {
-    return get( ).digest( data );
+    return threadlocalDigest.get( ).digest( data );
+  }
+
+  public byte[] digestBinary( final ByteBuffer data ) {
+    final MessageDigest digest = threadlocalDigest.get( );
+    digest.update( data );
+    return digest.digest( );
   }
 
   public String digestHex( final byte[] data ) {

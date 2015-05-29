@@ -39,7 +39,9 @@
       <inbound>
         <inbound-endpoint ref="ImageImportWS"/>
       </inbound>
-      <component class="com.eucalyptus.compute.conversion.ImportManager"/>
+      <component>
+        <singleton-object class="com.eucalyptus.compute.conversion.ImportManager"/>
+      </component>
       <outbound>
         <pass-through-router>
           <outbound-endpoint ref="ReplyQueueEndpoint"/>
@@ -51,7 +53,9 @@
       <inbound>
         <inbound-endpoint ref="ImageExportWS"/>
       </inbound>
-      <component class="com.eucalyptus.compute.conversion.ExportManager"/>
+      <component>
+        <singleton-object class="com.eucalyptus.compute.conversion.ExportManager"/>
+      </component>
       <outbound>
         <pass-through-router>
           <outbound-endpoint ref="ReplyQueueEndpoint"/>

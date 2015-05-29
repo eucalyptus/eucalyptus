@@ -2665,10 +2665,10 @@ public class LoadBalancingBackendService {
               loadBalancer.setAccessLogEmitInterval(emitInterval);
               loadBalancer.setAccessLogS3BucketName(bucketName);
               loadBalancer.setAccessLogS3BucketPrefix(bucketPrefix);
+              if(loadBalancer.getAccessLogEnabled() && 
+                  (loadBalancer.getAccessLogS3BucketName()==null || loadBalancer.getAccessLogS3BucketName().length()<=0))
+                throw new InvalidConfigurationRequestException("Bucket name to store access logs must be specified");
             }
-            if(loadBalancer.getAccessLogEnabled() && 
-                (loadBalancer.getAccessLogS3BucketName()==null || loadBalancer.getAccessLogS3BucketName().length()<=0))
-              throw new InvalidConfigurationRequestException("Bucket name to store access logs must be specified");
             return TypeMappers.transform( loadBalancer, LoadBalancerAttributes.class );
           } else {
             throw new NoSuchElementException( );

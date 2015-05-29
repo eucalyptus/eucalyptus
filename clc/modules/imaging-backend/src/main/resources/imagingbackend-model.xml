@@ -62,7 +62,9 @@
             <inbound>
                 <inbound-endpoint ref="ImagingBackendWS" />
             </inbound>
-            <component class="com.eucalyptus.imaging.backend.ImagingBackendService" />
+            <component>
+                <singleton-object class="com.eucalyptus.imaging.backend.ImagingBackendService" />
+            </component>
             <outbound>
                 <filtering-router>
                     <outbound-endpoint ref="ReplyQueueEndpoint" />
@@ -75,7 +77,9 @@
             <inbound>
                 <inbound-endpoint ref="ImagingBackendErrorQueueWS" />
             </inbound>
-            <component class="com.eucalyptus.ws.util.ReplyQueue" />
+            <component>
+                <singleton-object class="com.eucalyptus.ws.util.ReplyQueue" />
+            </component>
         </service>
 
     </model>
@@ -85,7 +89,9 @@
                 <inbound-endpoint ref="ImagingBackendInternalWS" />
                 <inbound-endpoint ref="ImagingBackendInternalVM" />
             </inbound>
-            <component class="com.eucalyptus.imaging.backend.ImagingBackendService" />
+            <component>
+                <singleton-object class="com.eucalyptus.imaging.backend.ImagingBackendService" />
+            </component>
         </service>
     </model>
 

@@ -62,7 +62,9 @@
             <inbound>
                 <inbound-endpoint ref="LoadBalancingBackendWS" />
             </inbound>
-            <component class="com.eucalyptus.loadbalancing.backend.LoadBalancingBackendService" />
+            <component>
+                <singleton-object class="com.eucalyptus.loadbalancing.backend.LoadBalancingBackendService" />
+            </component>
             <outbound>
                 <filtering-router>
                     <outbound-endpoint ref="ReplyQueueEndpoint" />
@@ -75,7 +77,9 @@
             <inbound>
                 <inbound-endpoint ref="LoadBalancingBackendErrorQueueWS" />
             </inbound>
-            <component class="com.eucalyptus.ws.util.ReplyQueue" />
+            <component>
+                <singleton-object class="com.eucalyptus.ws.util.ReplyQueue" />
+            </component>
         </service>
 
     </model>
@@ -85,7 +89,9 @@
                 <inbound-endpoint ref="LoadBalancingBackendInternalWS" />
                 <inbound-endpoint ref="LoadBalancingBackendInternalVM" />
             </inbound>
-            <component class="com.eucalyptus.loadbalancing.backend.LoadBalancingBackendService" />
+            <component>
+                <singleton-object class="com.eucalyptus.loadbalancing.backend.LoadBalancingBackendService" />
+            </component>
         </service>
     </model>
 

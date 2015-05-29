@@ -389,18 +389,20 @@ class NetworkConfigurations {
 
     @Override
     public void fireEvent( final ClockTick event ) {
-      if ( Hosts.isCoordinator( ) && !Bootstrap.isShuttingDown( ) && !Databases.isVolatile( ) ) {
+      if ( !Bootstrap.isShuttingDown( ) && !Databases.isVolatile( ) ) {
         try {
           Optional<NetworkConfiguration> configurationOptional = NetworkConfigurations.networkConfiguration
           if ( configurationOptional.present ) {
             DispatchingNetworkingService.updateNetworkService(
                 NetworkMode.fromString( configurationOptional.get( ).mode, NetworkMode.EDGE ) )
-            Iterables.all(
-                configurationOptional.asSet( ),
-                Entities.asTransaction( ClusterConfiguration.class, { NetworkConfiguration networkConfiguration ->
-                  NetworkConfigurations.process( networkConfiguration )
-                  true
-                } as Predicate<NetworkConfiguration> ) )
+            if ( Hosts.isCoordinator( ) ) {
+              Iterables.all(
+                  configurationOptional.asSet(),
+                  Entities.asTransaction(ClusterConfiguration.class, { NetworkConfiguration networkConfiguration ->
+                    NetworkConfigurations.process(networkConfiguration)
+                    true
+                  } as Predicate<NetworkConfiguration>))
+            }
           }
         } catch ( e ) {
           logger.error( "Error updating network configuration", e )

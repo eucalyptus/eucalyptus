@@ -103,7 +103,9 @@
       <inbound>
         <inbound-endpoint ref="ComponentVM" />
       </inbound>
-      <component class="com.eucalyptus.cloud.ws.ComponentService" />
+      <component>
+        <singleton-object class="com.eucalyptus.cloud.ws.ComponentService" />
+      </component>
       <outbound>
         <filtering-router>
           <outbound-endpoint ref="ReplyQueueEndpoint" />
@@ -118,7 +120,9 @@
         <inbound-endpoint ref="ComponentInternalWS" />
         <inbound-endpoint ref="ComponentInternalVM" />
       </inbound>
-      <component class="com.eucalyptus.cloud.ws.ComponentService" />
+      <component>
+        <singleton-object class="com.eucalyptus.cloud.ws.ComponentService" />
+      </component>
     </service>
   </model>
 </mule>

@@ -60,94 +60,26 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth.euare.persist;
+package com.eucalyptus.blockstorage.exceptions;
 
-import java.util.Date;
-import java.util.List;
-import org.apache.log4j.Logger;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.Debugging;
-import com.eucalyptus.auth.euare.UserPrincipalImpl;
-import com.eucalyptus.auth.euare.persist.entities.AccessKeyEntity;
-import com.eucalyptus.auth.euare.persist.entities.UserEntity;
-import com.eucalyptus.auth.euare.principal.EuareAccessKey;
-import com.eucalyptus.auth.principal.UserPrincipal;
-import java.util.concurrent.ExecutionException;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.util.Tx;
-import com.google.common.collect.Lists;
+import com.eucalyptus.util.EucalyptusCloudException;
 
-public class DatabaseAccessKeyProxy implements EuareAccessKey {
+@SuppressWarnings("serial")
+public class NoSuchRecordException extends EucalyptusCloudException {
 
-  private static final long serialVersionUID = 1L;
-  
-  private static final Logger LOG = Logger.getLogger( DatabaseAccessKeyProxy.class );
-  
-  private AccessKeyEntity delegate;
-  
-  public DatabaseAccessKeyProxy( AccessKeyEntity delegate ) {
-    this.delegate = delegate;
-  }
-  
-  @Override
-  public Boolean isActive( ) {
-    return this.delegate.isActive( );
-  }
-  
-  @Override
-  public void setActive( final Boolean active ) throws AuthException {
-    try {
-      DatabaseAuthUtils.invokeUnique( AccessKeyEntity.class, "accessKey", this.delegate.getAccessKey( ), new Tx<AccessKeyEntity>( ) {
-        public void fire( AccessKeyEntity t ) {
-          t.setActive( active );
-        }
-      } );
-    } catch ( ExecutionException e ) {
-      Debugging.logError( LOG, e, "Failed to setActive for " + this.delegate );
-      throw new AuthException( e );
-    }
-  }
-  
-  @Override
-  public String getSecretKey( ) {
-    return this.delegate.getSecretKey( );
-  }
-  
-//  @Override
-  public void setSecretKey( final String key ) throws AuthException {
-    try {
-      DatabaseAuthUtils.invokeUnique( AccessKeyEntity.class, "accessKey", this.delegate.getAccessKey( ), new Tx<AccessKeyEntity>( ) {
-        public void fire( AccessKeyEntity t ) {
-          t.setSecretKey( key );
-        }
-      } );
-    } catch ( ExecutionException e ) {
-      Debugging.logError( LOG, e, "Failed to setKey for " + this.delegate );
-      throw new AuthException( e );
-    }
-  }
-  
-  @Override
-  public Date getCreateDate( ) {
-    return this.delegate.getCreateDate( );
-  }
-  
-  @Override
-  public UserPrincipal getPrincipal( ) throws AuthException {
-    final List<UserPrincipal> results = Lists.newArrayList( );
-    try {
-      final UserEntity entity = this.delegate.getUser( );
-      results.add( new UserPrincipalImpl( Entities.merge( entity ) ) );
-    } catch ( Exception e ) {
-      Debugging.logError( LOG, e, "Failed to getUser for " + this.delegate );
-      throw new AuthException( e );
-    }
-    return results.get( 0 );
+  public NoSuchRecordException() {
+    super("Database record not found");
   }
 
-  @Override
-  public String getAccessKey( ) {
-    return this.delegate.getAccessKey( );
+  public NoSuchRecordException(String resourceId) {
+    super("Database record for " + resourceId + " not found");
   }
-  
+
+  public NoSuchRecordException(Throwable ex) {
+    super("Database record not found", ex);
+  }
+
+  public NoSuchRecordException(String message, Throwable ex) {
+    super(message, ex);
+  }
 }

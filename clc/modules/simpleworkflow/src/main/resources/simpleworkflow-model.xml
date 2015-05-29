@@ -50,7 +50,9 @@
       <inbound>
         <vm:inbound-endpoint ref="SimpleWorkflowRequestQueueEndpoint" />
       </inbound>
-      <component class="com.eucalyptus.simpleworkflow.SimpleWorkflowMessageValidator"/>
+      <component>
+          <singleton-object class="com.eucalyptus.simpleworkflow.SimpleWorkflowMessageValidator"/>
+      </component>
       <outbound>
         <filtering-router>
           <outbound-endpoint ref="SimpleWorkflowWS" />
@@ -78,7 +80,9 @@
       <inbound>
         <inbound-endpoint ref="SimpleWorkflowErrorQueueWS" />
       </inbound>
-      <component class="com.eucalyptus.simpleworkflow.ws.SimpleWorkflowErrorHandler" />
+      <component>
+        <singleton-object class="com.eucalyptus.simpleworkflow.ws.SimpleWorkflowErrorHandler" />
+      </component>
     </service>
 
   </model>

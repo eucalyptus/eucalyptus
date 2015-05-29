@@ -105,7 +105,9 @@
         <inbound-endpoint ref="NotificationsWS" />
         <inbound-endpoint ref="NotificationsVM" />
       </inbound>
-      <component class="com.eucalyptus.notifications.NotificationsService" />
+      <component>
+        <singleton-object class="com.eucalyptus.notifications.NotificationsService" />
+      </component>
       <outbound>
         <pass-through-router>
           <outbound-endpoint ref="NotificationsReplyQueueVM" />
@@ -117,7 +119,9 @@
       <inbound>
         <inbound-endpoint ref="NotificationsReplyQueueVM" />
       </inbound>
-      <component class="com.eucalyptus.ws.util.ReplyQueue" />
+      <component>
+        <singleton-object class="com.eucalyptus.ws.util.ReplyQueue" />
+      </component>
     </service>
 
   </model>
@@ -127,7 +131,9 @@
         <inbound-endpoint ref="NotificationsInternalWS" />
         <inbound-endpoint ref="NotificationsInternalVM" />
       </inbound>
-      <component class="com.eucalyptus.notifications.NotificationsService" />
+      <component>
+        <singleton-object class="com.eucalyptus.notifications.NotificationsService" />
+      </component>
     </service>
 
   </model>

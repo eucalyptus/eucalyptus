@@ -82,6 +82,7 @@ import com.eucalyptus.blockstorage.StorageResource;
 import com.eucalyptus.blockstorage.config.StorageControllerConfiguration;
 import com.eucalyptus.blockstorage.entities.StorageInfo;
 import com.eucalyptus.blockstorage.exceptions.ConnectionInfoNotFoundException;
+import com.eucalyptus.blockstorage.exceptions.NoSuchRecordException;
 import com.eucalyptus.blockstorage.san.common.entities.SANInfo;
 import com.eucalyptus.blockstorage.san.common.entities.SANVolumeInfo;
 import com.eucalyptus.blockstorage.util.StorageProperties;
@@ -172,17 +173,6 @@ public class SANManager implements LogicalStorageManager {
     this.connectionManager = connectionManager;
   }
 
-  private boolean checkSANCredentialsExist() {
-    SANInfo info = SANInfo.getStorageInfo();
-
-    if (info == null || SANProperties.DUMMY_SAN_HOST.equals(info.getSanHost()) || SANProperties.SAN_PASSWORD.equals(info.getSanPassword())
-        || SANProperties.SAN_USERNAME.equals(info.getSanUser())) {
-      return false;
-    } else {
-      return true;
-    }
-  }
-
   public void addSnapshot(String snapshotId) throws EucalyptusCloudException {
     finishVolume(snapshotId);
   }
@@ -198,35 +188,29 @@ public class SANManager implements LogicalStorageManager {
     if (connectionManager != null) {
       connectionManager.checkPreconditions();
     } else {
-      LOG.warn("Cannot configure SANManager because the connectionManager is null. Please configure the sanprovider, sanuser, sanhost, and sanpassword.");
-      throw new EucalyptusCloudException("SAN Provider not fully configured.");
+      LOG.warn("Invalid/uninitialized reference to blockstorage backend");
+      throw new EucalyptusCloudException("Invalid/uninitialized reference to blockstorage backend");
     }
 
   }
 
   public void cleanSnapshot(String snapshotId) {
     String sanSnapshotId = null;
-    try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
-      // make sure it exists
-      SANVolumeInfo volumeInfo = Entities.uniqueResult(new SANVolumeInfo(snapshotId));
-      if (volumeInfo == null || StringUtils.isBlank(volumeInfo.getSanVolumeId())) {
-        throw new EucalyptusCloudException(snapshotId + ": Backend ID not found");
-      }
-      sanSnapshotId = volumeInfo.getSanVolumeId();
-      tran.commit();
-    } catch (TransactionException | NoSuchElementException | EucalyptusCloudException ex) {
-      LOG.debug("Blockstorage backend record for " + snapshotId + " not found, skipping clean up");
+    try {
+      sanSnapshotId = lookup(snapshotId).getSanVolumeId();
+    } catch (Exception e) {
+      LOG.debug("Skipping clean up for " + snapshotId);
       return;
     }
 
-    LOG.info("Deleting backend snapshot " + sanSnapshotId + " mapping to " + snapshotId);
+    LOG.info("Deleting " + sanSnapshotId + " on backend");
     if (connectionManager.deleteVolume(sanSnapshotId)) {
       try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
         SANVolumeInfo snapInfo = Entities.uniqueResult(new SANVolumeInfo(snapshotId).withSanVolumeId(sanSnapshotId));
         Entities.delete(snapInfo);
         tran.commit();
       } catch (TransactionException | NoSuchElementException ex) {
-        LOG.error(snapshotId + ": Unable to clean failed snapshot", ex);
+        LOG.warn("Unable to clean failed backend resource " + snapshotId, ex);
         return;
       }
     }
@@ -234,99 +218,83 @@ public class SANManager implements LogicalStorageManager {
 
   public void cleanVolume(String volumeId) {
     String sanVolumeId = null;
-    try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
-      // make sure it exists
-      SANVolumeInfo volumeInfo = Entities.uniqueResult(new SANVolumeInfo(volumeId));
-      if (volumeInfo == null || StringUtils.isBlank(volumeInfo.getSanVolumeId())) {
-        throw new EucalyptusCloudException(volumeId + ": Backend ID not found");
-      }
-      sanVolumeId = volumeInfo.getSanVolumeId();
-    } catch (NoSuchElementException | TransactionException | EucalyptusCloudException ex) {
-      LOG.debug(volumeId + ": Volume not found", ex);
+    try {
+      sanVolumeId = lookup(volumeId).getSanVolumeId();
+    } catch (Exception e) {
+      LOG.debug("Skipping clean up for " + volumeId);
       return;
     }
 
-    LOG.info("Deleting backend volume " + sanVolumeId + " mapping to " + volumeId);
+    LOG.info("Deleting " + sanVolumeId + " on backend");
     if (connectionManager.deleteVolume(sanVolumeId)) {
       try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
         SANVolumeInfo volumeInfo = Entities.uniqueResult(new SANVolumeInfo(volumeId).withSanVolumeId(sanVolumeId));
         Entities.delete(volumeInfo);
         tran.commit();
       } catch (NoSuchElementException | TransactionException ex) {
-        LOG.error("Unable to clean failed volume: " + volumeId);
+        LOG.warn("Unable to clean failed backend resource " + volumeId);
         return;
       }
     }
   }
 
   public void configure() throws EucalyptusCloudException {
-    // dummy init
-    LOG.info("Configuring block storage backend for partition: " + StorageInfo.getStorageInfo().getName());
-
     // configure provider
     if (connectionManager != null) {
       try {
+        LOG.info("Checking backend connection information for cluster: " + StorageInfo.getStorageInfo().getName());
         connectionManager.checkConnectionInfo();
       } catch (ConnectionInfoNotFoundException e) {
         LOG.warn("Cannot configure SC blockstorage backend due to missing properties. " + e.getMessage());
         throw new EucalyptusCloudException("Cannot configure SC blockstorage backend due to missing properties. " + e.getMessage());
       }
 
+      LOG.info("Configuring block storage backend for cluster: " + StorageInfo.getStorageInfo().getName());
       connectionManager.configure();
     } else {
-      LOG.warn("Reference to blockstorage backend not initalized");
-      throw new EucalyptusCloudException("Reference to blockstorage backend not initalized");
+      LOG.warn("Invalid/uninitialized reference to blockstorage backend");
+      throw new EucalyptusCloudException("Invalid/uninitialized reference to blockstorage backend");
     }
   }
 
   public StorageResource createSnapshot(String volumeId, String snapshotId, String snapshotPointId, Boolean shouldTransferSnapshots)
       throws EucalyptusCloudException {
     String sanSnapshotId = resourceIdOnSan(snapshotId);
-    String sanVolumeId = null;
     SANVolumeInfo snapInfo = new SANVolumeInfo(snapshotId);
-    int size = -1;
     StorageResource storageResource = null;
 
-    try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
-      // Look up source volume in the database and get the backend volume ID
-      try {
-        SANVolumeInfo volumeInfo = Entities.uniqueResult(new SANVolumeInfo(volumeId));
-        if (volumeInfo == null || StringUtils.isBlank(volumeInfo.getSanVolumeId())) {
-          throw new EucalyptusCloudException("Backend ID not found for " + volumeId);
-        }
-        sanVolumeId = volumeInfo.getSanVolumeId();
-        size = volumeInfo.getSize();
-      } catch (TransactionException | NoSuchElementException ex) {
-        LOG.error(volumeId + ": Failed to lookup source volume entity", ex);
-        throw new EucalyptusCloudException("Failed to lookup source volume entity for " + volumeId, ex);
-      }
+    // Look up source volume in the database and get the backend volume ID
+    SANVolumeInfo volumeInfo = lookup(volumeId);
+    String sanVolumeId = volumeInfo.getSanVolumeId();
+    int size = volumeInfo.getSize();
 
-      // Check to make sure that snapshot does not already exist on the backend
-      try {
-        SANVolumeInfo existingSnap = Entities.uniqueResult(snapInfo);
-        if (connectionManager.snapshotExists(existingSnap.getSanVolumeId())) {
-          throw new VolumeAlreadyExistsException("Snapshot already exists on storage backend for " + snapshotId);
-        } else {
-          LOG.debug(snapshotId + ": Found the database entity but the snapshot does not exist on SAN. Deleting the database entity");
-          Entities.delete(existingSnap);
-          tran.commit();
-        }
-      } catch (TransactionException | VolumeAlreadyExistsException ex) {
-        throw new EucalyptusCloudException(ex);
-      } catch (NoSuchElementException ex) {
-        // intentional no-op
+    // Check to make sure that snapshot does not already exist on the backend
+    try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
+      SANVolumeInfo existingSnap = Entities.uniqueResult(snapInfo);
+      LOG.info("Checking for " + existingSnap.getSanVolumeId() + " on backend");
+      if (connectionManager.snapshotExists(existingSnap.getSanVolumeId())) {
+        throw new VolumeAlreadyExistsException("Existing resource found on backend for " + existingSnap.getSanVolumeId());
+      } else {
+        LOG.debug("Found database record but resource does not exist on backend. Deleting database record for " + snapshotId);
+        Entities.delete(existingSnap);
+        tran.commit();
       }
+    } catch (NoSuchElementException ex) {
+      // intentional no-op
+    } catch (VolumeAlreadyExistsException ex) {
+      throw ex;
+    } catch (Exception ex) {
+      throw new EucalyptusCloudException(ex);
     }
 
     try {
       Transactions.save(snapInfo.withSanVolumeId(sanSnapshotId).withSize(size).withSnapshotOf(volumeId));
     } catch (Exception ex) {
-      LOG.error(snapshotId + ": Failed to add database entity" + snapshotId, ex);
-      throw new EucalyptusCloudException("Failed to add database entity for " + snapshotId, ex);
+      LOG.warn("Failed to persist database record for " + snapshotId, ex);
+      throw new EucalyptusCloudException("Failed to persist database record for " + snapshotId, ex);
     }
 
-    LOG.info("Creating backend snapshot " + sanSnapshotId + " mapping to " + snapshotId + " from backend volume " + sanVolumeId + " mapping to "
-        + volumeId + " using snapshot point " + snapshotPointId);
+    LOG.info("Creating " + sanSnapshotId + " from " + sanVolumeId + " using snapshot point " + snapshotPointId + " on backend");
     String iqn = connectionManager.createSnapshot(sanVolumeId, sanSnapshotId, snapshotPointId);
 
     if (iqn != null) {
@@ -334,22 +302,25 @@ public class SANManager implements LogicalStorageManager {
       if (shouldTransferSnapshots) {
         String scIqn = StorageProperties.getStorageIqn();
         if (scIqn == null) {
-          throw new EucalyptusCloudException("Could not get the SC's initiator IQN, found null.");
+          LOG.warn("Storage Controller IQN not found");
+          throw new EucalyptusCloudException("Storage Controller IQN not found");
         }
 
         // Ensure that the SC can attach to the volume.
         String lun = null;
         try {
-          LOG.info("Exporting backend snapshot holder " + sanSnapshotId + " mapping to " + snapshotId + " to SC host IQN " + scIqn);
+          LOG.info("Exporting " + sanSnapshotId + " on backend to Storage Controller host IQN " + scIqn);
           lun = connectionManager.exportResource(sanSnapshotId, scIqn);
         } catch (EucalyptusCloudException attEx) {
-          LOG.debug("Failed to setup attachment for snapshot " + snapshotId + " to SC", attEx);
-          throw new EucalyptusCloudException("Could not setup snapshot volume " + snapshotId + " to SC because of error in attach prep", attEx);
+          LOG.warn("Failed to export " + sanSnapshotId + " on backend to Storage Controller", attEx);
+          throw new EucalyptusCloudException("Failed to create " + snapshotId + " due to error exporting " + sanSnapshotId
+              + " on backend to Storage Controller", attEx);
         }
 
         if (lun == null) {
-          throw new EucalyptusCloudException("Failed to export backend snapshot holder " + sanSnapshotId + " mapping to " + snapshotId
-              + " to SC host IQN " + scIqn);
+          LOG.warn("Invalid value found for LUN upon exporting " + sanSnapshotId + " on backend");
+          throw new EucalyptusCloudException("Failed to create " + snapshotId + " due to invalid value for LUN upon exporting " + sanSnapshotId
+              + " on backend");
         }
 
         // Moved this to before the connection is attempted since the volume does exist, it may need to be cleaned
@@ -358,25 +329,26 @@ public class SANManager implements LogicalStorageManager {
           existingSnap.setIqn(iqn + ',' + lun); // Store the lun ID in the iqn string, its needed for disconnecting the snapshot from SC later
           Entities.merge(existingSnap);
           tran.commit();
-        } catch (Exception ex) {
-          LOG.error(snapshotId + ": Failed to update database entity with IQN and LUN post snapshot creation");
-          throw new EucalyptusCloudException("Failed to update database entity with IQN and LUN post snapshot creation for " + snapshotId, ex);
-          // TODO some cleanup pending here
+        } catch (Exception e) {
+          LOG.warn("Failed to update database record with IQN and LUN post creation for " + snapshotId);
+          throw new EucalyptusCloudException("Failed to update database entity with IQN and LUN post creation for " + snapshotId, e);
         }
 
         // Run the connect
         try {
+          LOG.info("Connecting " + sanSnapshotId + " on backend to Storage Controller for transfer");
           storageResource = connectionManager.connectTarget(iqn, lun);
           storageResource.setId(snapshotId);
         } catch (Exception connEx) {
-          LOG.debug("Failed to connect SC to snapshot volume on SAN for snapshot " + snapshotId + ". Detaching and cleaning up.");
+          LOG.warn("Failed to connect " + sanSnapshotId + " on backend to Storage Controller. Detaching and cleaning up", connEx);
           try {
-            LOG.info("Unexporting backend snapshot holder " + sanSnapshotId + " mapping to " + snapshotId + " from SC host IQN " + scIqn);
+            LOG.info("Unexporting " + sanSnapshotId + " on backend from Storage Controller host IQN " + scIqn);
             connectionManager.unexportResource(sanSnapshotId, scIqn);
           } catch (EucalyptusCloudException detEx) {
-            LOG.debug("Could not detach snapshot volume " + snapshotId + " during cleanup of failed connection");
+            LOG.debug("Could not unexport " + sanSnapshotId + " during cleanup of failed connection");
           }
-          throw new EucalyptusCloudException("Could not connect SC to target snapshot for snapshot upload", connEx);
+          throw new EucalyptusCloudException("Failed to create " + snapshotId + " due to an error connecting " + sanSnapshotId
+              + " on backend to Storage Controller", connEx);
         }
       } else {
         // Just save the iqn of the snapshot, nothing more to do since upload is not necessary
@@ -386,13 +358,13 @@ public class SANManager implements LogicalStorageManager {
           Entities.merge(existingSnap);
           tran.commit();
         } catch (Exception ex) {
-          LOG.error(snapshotId + ": Failed to update database entity with IQN post snapshot creation");
-          throw new EucalyptusCloudException("Failed to update database entity with IQN post snapshot creation for " + snapshotId, ex);
-          // TODO some cleanup pending here
+          LOG.warn("Failed to update database record with IQN post creation for " + snapshotId);
+          throw new EucalyptusCloudException("Failed to update database record with IQN post creation for " + snapshotId, ex);
         }
       }
     } else {
-      throw new EucalyptusCloudException("Unable to create snapshot: " + snapshotId + " from volume: " + volumeId);
+      LOG.warn("Invalid IQN from backend for " + sanSnapshotId);
+      throw new EucalyptusCloudException("Failed to create " + snapshotId + " due to invalid IQN from backend for " + sanSnapshotId);
     }
 
     return storageResource;
@@ -402,30 +374,33 @@ public class SANManager implements LogicalStorageManager {
     String sanVolumeId = resourceIdOnSan(volumeId);
     SANVolumeInfo volumeInfo = new SANVolumeInfo(volumeId);
 
+    // Check to make sure that volume does not already exist on the backend
     try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
       SANVolumeInfo existingVol = Entities.uniqueResult(volumeInfo);
+      LOG.info("Checking for " + existingVol.getSanVolumeId() + " on backend");
       if (connectionManager.volumeExists(existingVol.getSanVolumeId())) {
-        throw new VolumeAlreadyExistsException("Volume already exists on storage backend for " + volumeId);
+        throw new VolumeAlreadyExistsException("Existing resource found on backend for " + existingVol.getSanVolumeId());
       } else {
-        LOG.debug(volumeId + ": Found the database entity but the volume does not exist on SAN. Deleting the database entity");
+        LOG.debug("Found database record but resource does not exist on backend. Deleting database record for " + volumeId);
         Entities.delete(existingVol);
         tran.commit();
       }
+    } catch (NoSuchElementException ex) {
+      // intentional no-op
     } catch (VolumeAlreadyExistsException ex) {
       throw ex;
     } catch (Exception ex) {
-      // intentional no-op
+      throw new EucalyptusCloudException(ex);
     }
 
-    try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
-      Entities.persist(volumeInfo.withSanVolumeId(sanVolumeId).withSize(size));
-      tran.commit();
+    try {
+      Transactions.save(volumeInfo.withSanVolumeId(sanVolumeId).withSize(size));
     } catch (Exception ex) {
-      LOG.error(volumeId + ": Failed to add database entity", ex);
-      throw new EucalyptusCloudException("Failed to add database entity for " + volumeId, ex);
+      LOG.warn("Failed to persist database record for " + volumeId, ex);
+      throw new EucalyptusCloudException("Failed to persist database record for " + volumeId, ex);
     }
 
-    LOG.info("Creating backend volume " + sanVolumeId + " mapping to " + volumeId);
+    LOG.info("Creating " + sanVolumeId + " on backend");
     String iqn = connectionManager.createVolume(sanVolumeId, size);
     if (iqn != null) {
       try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
@@ -433,12 +408,12 @@ public class SANManager implements LogicalStorageManager {
         existingVol.setIqn(iqn);
         tran.commit();
       } catch (Exception ex) {
-        LOG.error(volumeId + ": Failed to update database entity with IQN post volume creation");
-        throw new EucalyptusCloudException("Failed to update database entity with IQN post volume creation for " + volumeId, ex);
-        // TODO some cleanup pending here
+        LOG.warn("Failed to update database record with IQN post creation for " + volumeId);
+        throw new EucalyptusCloudException("Failed to update database record with IQN post creation for " + volumeId, ex);
       }
     } else {
-      throw new EucalyptusCloudException("Unable to create volume: " + volumeId);
+      LOG.warn("Invalid IQN from backend for " + sanVolumeId);
+      throw new EucalyptusCloudException("Failed to create " + volumeId + " due to invalid IQN from backend for " + sanVolumeId);
     }
   }
 
@@ -447,64 +422,50 @@ public class SANManager implements LogicalStorageManager {
       SANInfo sanInfo = Transactions.one(new SANInfo(), Functions.<SANInfo>identity());
       return (StringUtils.trimToEmpty(sanInfo.getResourcePrefix()) + resourceId + StringUtils.trimToEmpty(sanInfo.getResourceSuffix()));
     } catch (TransactionException ex) {
-      LOG.error("Unable to retrieve resource prefix/suffix from databse", ex);
+      LOG.warn("Unable to retrieve resource prefix/suffix from databse", ex);
       return resourceId;
     }
   }
 
   public int createVolume(String volumeId, String snapshotId, int size) throws EucalyptusCloudException {
-    String sanSnapshotId = null;
     String sanVolumeId = resourceIdOnSan(volumeId);
     SANVolumeInfo volumeInfo = new SANVolumeInfo(volumeId);
 
-    int snapSize = -1;
+    // Look up source snapshot in the database and get the backend snapshot ID
+    SANVolumeInfo snapInfo = lookup(snapshotId);
+    String sanSnapshotId = snapInfo.getSanVolumeId();
+    int snapSize = snapInfo.getSize();
+    if (size <= 0) {
+      size = snapSize;
+    }
 
+    // Check to make sure that volume does not already exist on the backend
     try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
-      // Look up source snapshot in the database and get the backend snapshot ID
-      try {
-        SANVolumeInfo snapInfo = Entities.uniqueResult(new SANVolumeInfo(snapshotId));
-        if (snapInfo == null || StringUtils.isBlank(snapInfo.getSanVolumeId())) {
-          throw new EucalyptusCloudException("Backend ID not found for " + snapshotId);
-        }
-        sanSnapshotId = snapInfo.getSanVolumeId();
-        snapSize = snapInfo.getSize();
-        if (size <= 0) {
-          size = snapSize;
-        }
-      } catch (TransactionException | NoSuchElementException ex) {
-        LOG.error(snapshotId + ": Failed to lookup source snapshot entity", ex);
-        throw new EucalyptusCloudException("Failed to lookup source snapshot entity for " + snapshotId, ex);
+      SANVolumeInfo existingVol = Entities.uniqueResult(volumeInfo);
+      LOG.info("Checking for " + existingVol.getSanVolumeId() + " on backend");
+      if (connectionManager.volumeExists(existingVol.getSanVolumeId())) {
+        throw new VolumeAlreadyExistsException("Existing resource found on backend for " + existingVol.getSanVolumeId());
+      } else {
+        LOG.debug("Found database record but resource does not exist on backend. Deleting database record for " + volumeId);
+        Entities.delete(existingVol);
+        tran.commit();
       }
-
-      // Check to make sure that volume does not already exist on the backend
-      try {
-        SANVolumeInfo existingVol = Entities.uniqueResult(volumeInfo);
-        if (connectionManager.volumeExists(existingVol.getSanVolumeId())) {
-          throw new VolumeAlreadyExistsException("Volume already exists on storage backend for " + volumeId);
-        } else {
-          LOG.debug(volumeId + ": Found the database entity but the volume does not exist on SAN. Deleting the database entity");
-          Entities.delete(existingVol);
-          tran.commit();
-        }
-      } catch (VolumeAlreadyExistsException ex) {
-        throw ex;
-      } catch (NoSuchElementException ex) {
-        // intentional no-op
-      } catch (Exception ex) {
-        throw new EucalyptusCloudException(ex);
-      }
-
+    } catch (NoSuchElementException ex) {
+      // intentional no-op
+    } catch (VolumeAlreadyExistsException ex) {
+      throw ex;
+    } catch (Exception ex) {
+      throw new EucalyptusCloudException(ex);
     }
 
     try {
       Transactions.save(volumeInfo.withSanVolumeId(sanVolumeId).withSize(size));
     } catch (Exception ex) {
-      LOG.error(volumeId + ": Failed to add database entity", ex);
-      throw new EucalyptusCloudException("Failed to add database entity for " + volumeId, ex);
+      LOG.warn("Failed to persist database record for " + volumeId, ex);
+      throw new EucalyptusCloudException("Failed to persist database record for " + volumeId, ex);
     }
 
-    LOG.info("Creating backend volume " + sanVolumeId + " mapping to " + volumeId + " from backend snapshot " + sanSnapshotId + " mapping to "
-        + snapshotId);
+    LOG.info("Creating " + sanVolumeId + " from " + sanSnapshotId + " on backend");
     String iqn = connectionManager.createVolume(sanVolumeId, sanSnapshotId, snapSize, size);
     if (iqn != null) {
       try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
@@ -513,12 +474,12 @@ public class SANManager implements LogicalStorageManager {
         Entities.merge(existingVol);
         tran.commit();
       } catch (Exception ex) {
-        LOG.error(volumeId + ": Failed to update database entity with IQN post volume creation");
-        throw new EucalyptusCloudException("Failed to update database entity with IQN post volume creation for " + volumeId, ex);
-        // TODO some cleanup pending here
+        LOG.warn("Failed to update database record with IQN post creation for " + volumeId);
+        throw new EucalyptusCloudException("Failed to update database record with IQN post creation for " + volumeId, ex);
       }
     } else {
-      throw new EucalyptusCloudException("Unable to create volume: " + volumeId + " from snapshot: " + snapshotId);
+      LOG.warn("Invalid IQN from backend for " + sanVolumeId);
+      throw new EucalyptusCloudException("Failed to create " + volumeId + " due to invalid IQN from backend for " + sanVolumeId);
     }
 
     return size;
@@ -526,48 +487,40 @@ public class SANManager implements LogicalStorageManager {
 
   public void cloneVolume(String volumeId, String parentVolumeId) throws EucalyptusCloudException {
     String sanVolumeId = resourceIdOnSan(volumeId);
-    String sanParentVolumeId = null;
     SANVolumeInfo volInfo = new SANVolumeInfo(volumeId);
-    int size = -1;
 
     // Look up source volume in the database and get the backend volume ID
-    try {
-      SANVolumeInfo parentVolumeInfo = Transactions.find(new SANVolumeInfo(parentVolumeId));
-      if (parentVolumeInfo == null || StringUtils.isBlank(parentVolumeInfo.getSanVolumeId())) {
-        throw new EucalyptusCloudException("Backend ID not found for " + parentVolumeId);
-      }
-      sanParentVolumeId = parentVolumeInfo.getSanVolumeId();
-      size = parentVolumeInfo.getSize();
-    } catch (TransactionException | NoSuchElementException ex) {
-      LOG.error(volumeId + ": Failed to lookup source volume entity", ex);
-      throw new EucalyptusCloudException("Failed to lookup source volume entity for " + parentVolumeId, ex);
-    }
+    SANVolumeInfo parentVolumeInfo = lookup(parentVolumeId);
+    String sanParentVolumeId = parentVolumeInfo.getSanVolumeId();
+    int size = parentVolumeInfo.getSize();
 
     // Check to make sure that cloned volume does not already exist on the backend
     try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
       SANVolumeInfo existingVol = Entities.uniqueResult(volInfo);
+      LOG.info("Checking for " + existingVol.getSanVolumeId() + " on backend");
       if (connectionManager.snapshotExists(existingVol.getSanVolumeId())) {
-        throw new VolumeAlreadyExistsException("Volume already exists on storage backend for " + volumeId);
+        throw new VolumeAlreadyExistsException("Existing resource found on backend for " + existingVol.getSanVolumeId());
       } else {
-        LOG.debug(volumeId + ": Found the database entity but the volume does not exist on SAN. Deleting the database entity");
+        LOG.debug("Found database record but resource does not exist on backend. Deleting database record for " + volumeId);
         Entities.delete(existingVol);
         tran.commit();
       }
+    } catch (NoSuchElementException ex) {
+      // intentional no-op
     } catch (VolumeAlreadyExistsException ex) {
       throw ex;
     } catch (Exception ex) {
-
+      throw new EucalyptusCloudException(ex);
     }
 
     try {
       Transactions.save(volInfo.withSanVolumeId(sanVolumeId).withSize(size));
     } catch (Exception ex) {
-      LOG.error(volumeId + ": Failed to add database entity" + volumeId, ex);
-      throw new EucalyptusCloudException("Failed to add database entity for " + volumeId, ex);
+      LOG.warn("Failed to persist database record for " + volumeId, ex);
+      throw new EucalyptusCloudException("Failed to persist database record for " + volumeId, ex);
     }
 
-    LOG.info("Cloning backend volume " + sanVolumeId + " mapping to " + volumeId + " from backend volume " + sanParentVolumeId + " mapping to "
-        + parentVolumeId);
+    LOG.info("Cloning " + sanVolumeId + " from " + sanParentVolumeId + " on backend");
     String iqn = connectionManager.cloneVolume(sanVolumeId, sanParentVolumeId);
     if (iqn != null) {
       try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
@@ -576,96 +529,86 @@ public class SANManager implements LogicalStorageManager {
         Entities.merge(existingVol);
         tran.commit();
       } catch (Exception ex) {
-        LOG.error(volumeId + ": Failed to update database entity with IQN post volume creation");
-        throw new EucalyptusCloudException("Failed to update database entity with IQN post volume creation for " + volumeId, ex);
-        // TODO some cleanup pending here
+        LOG.warn("Failed to update database record with IQN post creation for " + volumeId);
+        throw new EucalyptusCloudException("Failed to update database record with IQN post creation for " + volumeId, ex);
       }
     } else {
-      throw new EucalyptusCloudException("Unable to create volume: " + volumeId);
+      LOG.warn("Invalid IQN from backend for " + sanVolumeId);
+      throw new EucalyptusCloudException("Failed to create " + volumeId + " due to invalid IQN from backend for " + sanVolumeId);
     }
   }
 
   public void deleteSnapshot(String snapshotId) throws EucalyptusCloudException {
     String sanSnapshotId = null;
-    try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
-      // make sure it exists
-      SANVolumeInfo volumeInfo = Entities.uniqueResult(new SANVolumeInfo(snapshotId));
-      if (volumeInfo == null || StringUtils.isBlank(volumeInfo.getSanVolumeId())) {
-        throw new EucalyptusCloudException(snapshotId + ": Backend ID not found");
-      }
-      sanSnapshotId = volumeInfo.getSanVolumeId();
-    } catch (NoSuchElementException ex) {
-      throw new EucalyptusCloudException(snapshotId + ": Backend ID not found");
-    } catch (Exception ex) {
-      throw new EucalyptusCloudException("caught exception while querying the database for snapshot " + snapshotId, ex);
-    }
 
-    LOG.info("Deleting backend snapshot " + sanSnapshotId + " mapping to " + snapshotId);
+    // Look up source snapshot in the database and get the backend snapshot ID
+    try {
+      sanSnapshotId = lookup(snapshotId).getSanVolumeId();
+    } catch (Exception ex) {
+      LOG.debug("Skipping deletion for " + snapshotId);
+      return;
+    }
 
     boolean deleteEntity = false;
 
     // Try deleting the snapshot. It might fail as snapshots are global and another SC may have already deleted it
+    LOG.info("Deleting " + sanSnapshotId + " on backend");
     if (connectionManager.deleteVolume(sanSnapshotId)) {
       deleteEntity = true;
     } else {
       // If snapshot deletion failed, check to see if the snapshot even exists
-      LOG.debug("Unable to delete backend snapshot " + sanSnapshotId + ". Checking to see if the snapshot exists");
+      LOG.debug("Unable to delete " + sanSnapshotId + " on backend. Checking to see if the resource exists");
       if (!connectionManager.snapshotExists(sanSnapshotId)) {
-        LOG.debug("Backend snapshot " + sanSnapshotId + " not found. Safe to delete database entity");
+        LOG.debug("Resource not found on backend for " + sanSnapshotId + ". Safe to delete database record for " + snapshotId);
         deleteEntity = true;
       } else {
-        LOG.warn("Failed to delete backend snapshot " + sanSnapshotId + " mapping to " + snapshotId);
-        throw new EucalyptusCloudException("Failed to delete " + snapshotId + " on storage backend");
+        LOG.warn("Failed to delete backend resource " + sanSnapshotId);
+        throw new EucalyptusCloudException("Failed to delete backend resource " + sanSnapshotId);
       }
     }
 
     if (deleteEntity) {
-      try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
-        SANVolumeInfo snapInfo = Entities.uniqueResult(new SANVolumeInfo(snapshotId).withSanVolumeId(sanSnapshotId));
-        Entities.delete(snapInfo);
-        tran.commit();
-      } catch (TransactionException | NoSuchElementException ex) {
-        LOG.error("Failed to delete database entity post deletion for " + snapshotId, ex);
-        throw new EucalyptusCloudException("Failed to delete database entity post deletion for " + snapshotId, ex);
+      try {
+        Transactions.delete(new SANVolumeInfo(snapshotId).withSanVolumeId(sanSnapshotId));
+      } catch (Exception e) {
+        LOG.warn("Failed to remove database record post deletion for " + snapshotId, e);
+        throw new EucalyptusCloudException("Failed to remove database record post deletion for " + snapshotId, e);
       }
     }
   }
 
   public void deleteVolume(String volumeId) throws EucalyptusCloudException {
     String sanVolumeId = null;
-    try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
-      // make sure it exists
-      SANVolumeInfo volumeInfo = Entities.uniqueResult(new SANVolumeInfo(volumeId));
-      if (volumeInfo == null || StringUtils.isBlank(volumeInfo.getSanVolumeId())) {
-        throw new EucalyptusCloudException(volumeId + ": Backend ID not found");
-      }
-      sanVolumeId = volumeInfo.getSanVolumeId();
-    } catch (TransactionException | NoSuchElementException ex) {
-      throw new EucalyptusCloudException(ex);
+
+    // Look up source volume in the database and get the backend snapshot ID
+    try {
+      sanVolumeId = lookup(volumeId).getSanVolumeId();
+    } catch (Exception ex) {
+      LOG.debug("Skipping deletion for " + volumeId);
+      return;
     }
 
-    LOG.info("Deleting backend volume " + sanVolumeId + " mapping to " + volumeId);
+    LOG.info("Deleting " + sanVolumeId + " on backend");
     if (connectionManager.deleteVolume(sanVolumeId)) {
-      try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
-        SANVolumeInfo snapInfo = Entities.uniqueResult(new SANVolumeInfo(volumeId).withSanVolumeId(sanVolumeId));
-        Entities.delete(snapInfo);
-        tran.commit();
-      } catch (TransactionException | NoSuchElementException ex) {
-        LOG.error("Failed to delete database entity post deletion for " + volumeId, ex);
-        throw new EucalyptusCloudException("Failed to delete database entity post deletion for " + volumeId, ex);
+      try {
+        Transactions.delete(new SANVolumeInfo(volumeId).withSanVolumeId(sanVolumeId));
+      } catch (Exception e) {
+        LOG.warn("Failed to remove database record post deletion for " + volumeId, e);
+        throw new EucalyptusCloudException("Failed to remove database record post deletion for " + volumeId, e);
       }
     } else {
-      throw new EucalyptusCloudException("Failed to delete " + volumeId + " on storage backend");
+      LOG.warn("Failed to delete backend resource " + sanVolumeId);
+      throw new EucalyptusCloudException("Failed to delete backend resource " + sanVolumeId);
     }
   }
 
   public int getSnapshotSize(String snapshotId) throws EucalyptusCloudException {
-    try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
-      SANVolumeInfo snapInfo = Entities.uniqueResult(new SANVolumeInfo(snapshotId));
+    try {
+      SANVolumeInfo snapInfo = Transactions.find(new SANVolumeInfo(snapshotId));
       return snapInfo.getSize();
     } catch (Exception ex) {
-      LOG.error(ex);
-      throw new EucalyptusCloudException(ex);
+      LOG.warn("Encountered error during lookup for " + snapshotId, ex);
+      throw new EucalyptusCloudException("Encountered error during lookup for " + snapshotId, ex);
     }
   }
 
@@ -680,8 +623,7 @@ public class SANManager implements LogicalStorageManager {
   }
 
   public void loadSnapshots(List<String> snapshotSet, List<String> snapshotFileNames) throws EucalyptusCloudException {
-    // TODO Auto-generated method stub
-
+    // Nothing to do here
   }
 
   public List<String> prepareForTransfer(String snapshotId) throws EucalyptusCloudException {
@@ -696,20 +638,16 @@ public class SANManager implements LogicalStorageManager {
   }
 
   public void finishVolume(String snapshotId) throws EucalyptusCloudException {
-    String iqnAndLun;
-    String sanVolumeId;
+    String iqnAndLun = null;
+    String sanVolumeId = null;
 
-    try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
-      SANVolumeInfo snapInfo = Entities.uniqueResult(new SANVolumeInfo(snapshotId));
+    try {
+      SANVolumeInfo snapInfo = lookup(snapshotId);
       iqnAndLun = snapInfo.getIqn();
       sanVolumeId = snapInfo.getSanVolumeId();
-      tran.commit();
-    } catch (NoSuchElementException e) {
-      LOG.debug("Blockstorage backend record for " + snapshotId + " not found, skipping finish up");
+    } catch (NoSuchRecordException e) {
+      LOG.debug("Skipping finish up for " + snapshotId);
       return;
-    } catch (TransactionException ex) {
-      LOG.error(ex);
-      throw new EucalyptusCloudException("Unable to finalize snapshot: " + snapshotId);
     }
 
     if (iqnAndLun != null && iqnAndLun.contains(",")) { // disconnect and unexport the snapshot from SC
@@ -717,66 +655,65 @@ public class SANManager implements LogicalStorageManager {
       if (parts.length == 2) {
         // disconnect SC-snapshot iscsi connection
         try {
-          LOG.info("Disconnecting iscsi session between backend " + sanVolumeId + " mapping to " + snapshotId + " and SC");
+          LOG.info("Disconnecting " + sanVolumeId + " on backend from Storage Controller");
           connectionManager.disconnectTarget(sanVolumeId, parts[0], parts[1]);
         } catch (Exception e) {
           LOG.warn("Failed to disconnect iscsi session between " + sanVolumeId + " and SC", e);
         }
       } else {
-        LOG.warn("Unable to disconnect " + sanVolumeId + " from SC due to invalid iqn format. Expected iqn to contain one ',' but got: " + iqnAndLun);
-        throw new EucalyptusCloudException("Unable to disconnect " + sanVolumeId + " from SC due to invalid iqn format");
+        LOG.warn("Unable to disconnect " + sanVolumeId
+            + " from Storage Controller due to invalid iqn format. Expected iqn to contain one ',' but got: " + iqnAndLun);
+        throw new EucalyptusCloudException("Unable to disconnect " + sanVolumeId + " from Storage Controller due to invalid iqn format");
       }
 
       // Unexport volume from SC
       String scIqn = StorageProperties.getStorageIqn();
       try {
-        LOG.info("Unexporting backend " + sanVolumeId + " mapping to " + snapshotId + " from SC host IQN " + scIqn);
+        LOG.info("Unexporting " + sanVolumeId + " on backend from Storage Controller host IQN " + scIqn);
         connectionManager.unexportResource(sanVolumeId, scIqn);
       } catch (Exception e) {
-        LOG.warn("Failed to unexport " + sanVolumeId, e);
+        LOG.warn("Could not unexport " + sanVolumeId + " on backend from Storage Controller");
       }
     } else {
       // snapshot was never exported to SC, no need to disconnect it and un-export it
       // this could happen if snapshot upload was not necessary
-      LOG.debug("Skipping iscsi disconnect and unexport operations for " + sanVolumeId);
+      LOG.debug("Skipping disconnect and unexport operations for " + sanVolumeId);
     }
 
     // wait for snapshot operation to complete
     try {
-      LOG.info("Waiting for backend " + sanVolumeId + " mapping to " + snapshotId + " to complete");
+      LOG.info("Waiting for " + sanVolumeId + " to complete on backend");
       connectionManager.waitAndComplete(sanVolumeId);
     } catch (EucalyptusCloudException e) {
-      LOG.warn("Failed during wait for backend " + sanVolumeId + " to complete", e);
+      LOG.warn("Failed during wait for " + sanVolumeId + " to complete on backend", e);
       throw e;
     } catch (Exception e) {
-      LOG.warn("Failed during wait for backend " + sanVolumeId + " to complete", e);
-      throw new EucalyptusCloudException("Failed during wait for backend " + sanVolumeId + " to complete", e);
+      LOG.warn("Failed during wait for " + sanVolumeId + " to complete on backend", e);
+      throw new EucalyptusCloudException("Failed during wait for " + sanVolumeId + " to complete on backend", e);
     }
   }
 
   public StorageResource prepareSnapshot(String snapshotId, int sizeExpected, long actualSizeInMB) throws EucalyptusCloudException {
 
-    LOG.info("Preparing snapshot " + snapshotId + " of size: " + sizeExpected);
-
     try {
       // If any record for the snapshot exists, just copy that info
-      SANVolumeInfo volInfo = new SANVolumeInfo(snapshotId);
-      SANVolumeInfo foundVolInfo = Transactions.find(volInfo); // will return ok even with multiple results
-      LOG.debug("Found an existing snapshot record for " + snapshotId + " and will use that lun and record.");
+      lookup(snapshotId);
+      LOG.debug("Found existing database record for " + snapshotId + ".  Will use that lun and record.");
       return null;
-    } catch (TransactionException | NoSuchElementException e) {
+    } catch (NoSuchRecordException e) {
+      // going forward with the assumption that snapshot record is not found for this SC
+      LOG.debug("Backend database record for " + snapshotId
+          + " not found. Setting up holder on backend to hold the snapshot content downloaded from OSG");
     }
-
-    LOG.debug(snapshotId + " not found on this SC's SAN. Now creating a lun on the SAN for the snapshot to be copied from ObjectStorage.");
 
     String sanSnapshotId = resourceIdOnSan(snapshotId);
     String iqn = null;
     try {
       // TODO Create a database record first before firing off the volume creation
-      LOG.info("Creating backend snapshot holder " + sanSnapshotId + " mapping to " + snapshotId);
+      LOG.info("Creating " + sanSnapshotId + " of size " + actualSizeInMB + " MB on backend");
       iqn = connectionManager.createSnapshotHolder(sanSnapshotId, actualSizeInMB);
     } catch (EucalyptusCloudException e) {
-      LOG.error("Could not create a volume to hold snapshot " + snapshotId);
+      LOG.warn("Failed to create backend resource for " + snapshotId);
       iqn = null;
     }
 
@@ -790,51 +727,54 @@ public class SANManager implements LogicalStorageManager {
         // Ensure that the SC can attach to the volume.
         String lun = null;
         try {
-          LOG.info("Exporting backend snapshot holder " + sanSnapshotId + " mapping to " + snapshotId + " to SC host IQN " + scIqn);
+          LOG.info("Exporting " + sanSnapshotId + " on backend to Storage Controller host IQN " + scIqn);
           lun = connectionManager.exportResource(sanSnapshotId, scIqn);
         } catch (EucalyptusCloudException attEx) {
-          LOG.debug("Failed to setup attachment for snapshot " + snapshotId + " to SC", attEx);
-          throw new EucalyptusCloudException("Could not setup snapshot volume " + snapshotId + " to SC because of error in attach prep", attEx);
+          LOG.warn("Failed to export " + sanSnapshotId + " on backend to Storage Controller", attEx);
+          throw new EucalyptusCloudException("Failed to create " + snapshotId + " due to error exporting " + sanSnapshotId
+              + " on backend to Storage Controller", attEx);
         }
 
         if (lun == null) {
-          throw new EucalyptusCloudException("Failed to export backend snapshot holder " + sanSnapshotId + " mapping to " + snapshotId
-              + " to SC host IQN " + scIqn);
+          LOG.warn("Invalid value found for LUN upon exporting " + sanSnapshotId + " on backend");
+          throw new EucalyptusCloudException("Failed to create " + snapshotId + " due to invalid value for LUN upon exporting " + sanSnapshotId
+              + " on backend");
         }
 
         // Store the lun ID in the iqn string, its needed for disconnecting the snapshot from SC later
-        // iqn = iqn + ',' + lun;
-        StorageResource storageResource = null;
-        try {
-          // Run the connect
-          storageResource = connectionManager.connectTarget(iqn, lun);
-          storageResource.setId(snapshotId);
-        } catch (Exception connEx) {
-          LOG.debug("Failed to connect SC to snapshot volume on SAN for snapshot " + snapshotId + ". Detaching and cleaning up.");
-          try {
-            LOG.info("Unexporting backend snapshot holder " + sanSnapshotId + " mapping to " + snapshotId + " from SC host IQN " + scIqn);
-            connectionManager.unexportResource(sanSnapshotId, scIqn);
-          } catch (EucalyptusCloudException detEx) {
-            LOG.debug("Could not detach snapshot volume " + snapshotId + " during cleanup of failed connection");
-          }
-          throw new EucalyptusCloudException("Could not connect SC to target snapshot volume to prep for snapshot download from ObjectStorage",
-              connEx);
-        }
-
         SANVolumeInfo snapInfo = new SANVolumeInfo(snapshotId, iqn + ',' + lun, sizeExpected).withSanVolumeId(sanSnapshotId);
         try {
           Transactions.save(snapInfo);
         } catch (TransactionException e) {
-          LOG.error("Error occured trying to save the snapshot info to the database", e);
-          throw new EucalyptusCloudException(e);
+          LOG.warn("Failed to update database record with IQN and LUN post creation for " + snapshotId);
+          throw new EucalyptusCloudException("Failed to update database entity with IQN and LUN post creation for " + snapshotId, e);
         }
+
+        // Run the connect
+        StorageResource storageResource = null;
+        try {
+          LOG.info("Connecting " + sanSnapshotId + " on backend to Storage Controller for transfer");
+          storageResource = connectionManager.connectTarget(iqn, lun);
+          storageResource.setId(snapshotId);
+        } catch (Exception connEx) {
+          LOG.warn("Failed to connect " + sanSnapshotId + " on backend to Storage Controller. Detaching and cleaning up", connEx);
+          try {
+            LOG.info("Unexporting " + sanSnapshotId + " on backend from Storage Controller host IQN " + scIqn);
+            connectionManager.unexportResource(sanSnapshotId, scIqn);
+          } catch (EucalyptusCloudException detEx) {
+            LOG.debug("Could not unexport " + sanSnapshotId + " during cleanup of failed connection");
+          }
+          throw new EucalyptusCloudException("Failed to create " + snapshotId + " due to an error connecting " + sanSnapshotId
+              + " on backend to Storage Controller", connEx);
+        }
+
         return storageResource;
       } catch (EucalyptusCloudException e) {
-        LOG.error("Error occured trying to connect the SC to the snapshot lun on the SAN.", e);
-        if (!connectionManager.deleteVolume(snapshotId)) {
-          LOG.error("Failed to delete the snapshot volume during cleanup of failed snapshot prep for " + snapshotId);
+        LOG.debug("Deleting " + sanSnapshotId + " on backend");
+        if (!connectionManager.deleteVolume(sanSnapshotId)) {
+          LOG.debug("Failed to delete backend resource " + snapshotId);
         }
-        throw new EucalyptusCloudException("Failed to create new LUN for snapshot " + snapshotId, e);
+        throw e;
       }
     }
     return null;
@@ -868,7 +808,7 @@ public class SANManager implements LogicalStorageManager {
         // type parser will correctly covert the value
         entry.setValue(prop.getValue());
       } catch (IllegalAccessException | ConfigurablePropertyException e) {
-        LOG.error(e, e);
+        LOG.warn("Encountered error while setting storage properties", e);
       }
     }
     connectionManager.setStorageProps(storageProps);
@@ -885,39 +825,13 @@ public class SANManager implements LogicalStorageManager {
       String deviceName = connectionManager.connectTarget(iqn, null).getPath();
       return deviceName;
     } catch (TransactionException | NoSuchElementException ex) {
-      LOG.error("Unable to find volume: " + volumeId);
-      throw new EucalyptusCloudException("Unable to find volume path for volume: " + volumeId, ex);
+      LOG.warn("Block storage backend database record not found for " + volumeId);
+      throw new EucalyptusCloudException("Block storage backend database record not found for " + volumeId, ex);
     }
   }
 
   public void importVolume(String volumeId, String volumePath, int size) throws EucalyptusCloudException {
-    // try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
-    // Entities.uniqueResult(new SANVolumeInfo(volumeId));
-    // throw new EucalyptusCloudException("Volume " + volumeId + " already exists. Import failed.");
-    // } catch (NoSuchElementException ex) {
-    // // all good, move on
-    // } catch (TransactionException ex) {
-    // throw new EucalyptusCloudException(ex);
-    // }
-    //
-    // String sanVolumeId = resourceIdOnSan(volumeId);
-    //
-    // String iqn = connectionManager.createVolume(sanVolumeId, size);
-    // if (iqn != null) {
-    // String deviceName = connectionManager.connectTarget(iqn, null).getPath();
-    // // now copy
-    // try {
-    // SystemUtil.run(new String[] {StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=" + volumePath, "of=" + deviceName,
-    // "bs=" + StorageProperties.blockSize});
-    // } finally {
-    // connectionManager.disconnectTarget(sanVolumeId, iqn, null);
-    // }
-    // SANVolumeInfo volumeInfo = new SANVolumeInfo(volumeId, iqn, size).withSanVolumeId(sanVolumeId);
-    // try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
-    // Entities.persist(volumeInfo);
-    // tran.commit();
-    // }
-    // }
+    // may be throw an unsupported exception here
   }
 
   public String getSnapshotPath(String snapshotId) throws EucalyptusCloudException {
@@ -925,50 +839,17 @@ public class SANManager implements LogicalStorageManager {
   }
 
   public void importSnapshot(String snapshotId, String volumeId, String snapPath, int size) throws EucalyptusCloudException {
-    // try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
-    // Entities.uniqueResult(new SANVolumeInfo(snapshotId));
-    // throw new EucalyptusCloudException("Snapshot " + snapshotId + " already exists. Import failed.");
-    // } catch (NoSuchElementException ex) {
-    // // all good, move on
-    // } catch (TransactionException ex) {
-    // throw new EucalyptusCloudException(ex);
-    // }
-    //
-    // String sanSnapshotId = resourceIdOnSan(snapshotId);
-    // String iqn = connectionManager.createVolume(sanSnapshotId, size);
-    // if (iqn != null) {
-    // String deviceName = connectionManager.connectTarget(iqn, null).getPath();
-    // // now copy
-    // try {
-    // SystemUtil.run(new String[] {StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=" + snapPath, "of=" + deviceName,
-    // "bs=" + StorageProperties.blockSize});
-    // } finally {
-    // connectionManager.disconnectTarget(sanSnapshotId, iqn, null);
-    // }
-    // SANVolumeInfo volumeInfo = new SANVolumeInfo(snapshotId, iqn, size).withSanVolumeId(sanSnapshotId).withSnapshotOf(volumeId);
-    // try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
-    // Entities.persist(volumeInfo);
-    // tran.commit();
-    // }
-    // }
+    // may be throw an unsupported exception here
   }
 
   public String exportVolume(String volumeId, String nodeIqn) throws EucalyptusCloudException {
-    String sanVolumeId = null;
-    try {
-      SANVolumeInfo volumeInfo = Transactions.find(new SANVolumeInfo(volumeId));
-      if (volumeInfo == null || StringUtils.isBlank(volumeInfo.getSanVolumeId())) {
-        throw new EucalyptusCloudException("Backend ID not found for " + volumeId);
-      }
-      sanVolumeId = volumeInfo.getSanVolumeId();
-    } catch (TransactionException | NoSuchElementException ex) {
-      throw new EucalyptusCloudException("Backend ID not found for " + volumeId, ex);
-    }
+    String sanVolumeId = lookup(volumeId).getSanVolumeId();
 
-    LOG.info("Exporting backend volume " + sanVolumeId + " mapping to " + volumeId + " to NC host IQN " + nodeIqn);
+    LOG.info("Exporting " + sanVolumeId + " on backend to Node Controller host IQN " + nodeIqn);
     String lun = connectionManager.exportResource(sanVolumeId, nodeIqn);
     if (lun == null) {
-      throw new EucalyptusCloudException("No LUN found from connection manager");
+      LOG.warn("Invalid value found for LUN upon exporting " + sanVolumeId + " on backend");
+      throw new EucalyptusCloudException("Invalid value found for LUN upon exporting " + sanVolumeId + " on backend");
     }
 
     String volumeConnectionString = connectionManager.getVolumeConnectionString(volumeId);
@@ -991,36 +872,14 @@ public class SANManager implements LogicalStorageManager {
   }
 
   public void unexportVolumeFromAll(String volumeId) throws EucalyptusCloudException {
-    String sanVolumeId = null;
-    try {
-      SANVolumeInfo volumeInfo = Transactions.find(new SANVolumeInfo(volumeId));
-      if (volumeInfo == null || StringUtils.isBlank(volumeInfo.getSanVolumeId())) {
-        throw new EucalyptusCloudException("Backend ID not found for " + volumeId);
-      }
-      sanVolumeId = volumeInfo.getSanVolumeId();
-    } catch (EucalyptusCloudException ex) {
-      throw ex;
-    } catch (TransactionException | NoSuchElementException ex) {
-      throw new EucalyptusCloudException("Backend ID not found for " + volumeId, ex);
-    }
-    LOG.info("Unexporting backend volume " + sanVolumeId + " mapping to " + volumeId + " from all hosts");
+    String sanVolumeId = lookup(volumeId).getSanVolumeId();
+    LOG.info("Unexporting " + sanVolumeId + " on backend from all hosts");
     connectionManager.unexportResourceFromAll(sanVolumeId);
   }
 
   public void unexportVolume(String volumeId, String nodeIqn) throws EucalyptusCloudException, UnsupportedOperationException {
-    String sanVolumeId = null;
-    try {
-      SANVolumeInfo volumeInfo = Transactions.find(new SANVolumeInfo(volumeId));
-      if (volumeInfo == null || StringUtils.isBlank(volumeInfo.getSanVolumeId())) {
-        throw new EucalyptusCloudException("Backend ID not found for " + volumeId);
-      }
-      sanVolumeId = volumeInfo.getSanVolumeId();
-    } catch (EucalyptusCloudException ex) {
-      throw ex;
-    } catch (TransactionException | NoSuchElementException ex) {
-      throw new EucalyptusCloudException("Backend ID not found for " + volumeId, ex);
-    }
-    LOG.info("Unexporting backend volume " + sanVolumeId + " mapping to " + volumeId + " from NC host IQN " + nodeIqn);
+    String sanVolumeId = lookup(volumeId).getSanVolumeId();
+    LOG.info("Unexporting " + sanVolumeId + " on backend from Node Controller host IQN " + nodeIqn);
     connectionManager.unexportResource(sanVolumeId, nodeIqn);
   }
 
@@ -1034,7 +893,7 @@ public class SANManager implements LogicalStorageManager {
     try {
       connectionManager.stop();
     } catch (EucalyptusCloudException e) {
-      LOG.error("Exception stopping connection manager", e);
+      LOG.warn("Encountered error stopping connection manager", e);
       throw e;
     } finally {
       connectionManager = null;
@@ -1059,13 +918,15 @@ public class SANManager implements LogicalStorageManager {
       if (foundSnapInfo == null || StringUtils.isBlank(foundSnapInfo.getSanVolumeId())) {
         throw new EucalyptusCloudException("Backend ID not found for " + snapshotId);
       }
-      LOG.info("Checking for backend snapshot " + foundSnapInfo.getSanVolumeId() + " mapping to " + snapshotId);
+      LOG.info("Checking for " + foundSnapInfo.getSanVolumeId() + " on backend");
       if (connectionManager.snapshotExists(foundSnapInfo.getSanVolumeId())) { // Snapshot does exist. Nothing to do
+        LOG.debug("Found database record and backend resource for " + snapshotId + ". Nothing to do here");
         return true;
       } else { // Snapshot does not exist on SAN. Delete the record and move to the next part
+        LOG.debug("Found database record but resource does not exist on backend. Deleting database record for " + snapshotId);
         Entities.delete(foundSnapInfo);
+        tran.commit();
       }
-      tran.commit();
     } catch (Exception ex) {
       // Could be an error for snapshot lookup
     }
@@ -1078,7 +939,7 @@ public class SANManager implements LogicalStorageManager {
 
       // Loop through the snapshot records and check if one of them exists on the SAN this partition is connected to
       for (SANVolumeInfo foundSnapInfo : foundSnapInfos) {
-        LOG.info("Checking for backend snapshot " + foundSnapInfo.getSanVolumeId() + " mapping to " + snapshotId);
+        LOG.info("Checking for " + foundSnapInfo.getSanVolumeId() + " on backend");
         if (connectionManager.snapshotExists(foundSnapInfo.getSanVolumeId())) { // Snapshot does exist on SAN.
           // Create a record for it in this partition
           SANVolumeInfo newSnapInfo =
@@ -1102,35 +963,40 @@ public class SANManager implements LogicalStorageManager {
   }
 
   public String createSnapshotPoint(String parentVolumeId, String volumeId) throws EucalyptusCloudException {
-    if (connectionManager != null) {
-      String sanParentVolumeId = null;
-      try {
-        SANVolumeInfo parentVolInfo = Transactions.find(new SANVolumeInfo(parentVolumeId));
-        if (parentVolInfo == null || StringUtils.isBlank(parentVolInfo.getSanVolumeId())) {
-          throw new EucalyptusCloudException("Backend ID not found for " + parentVolumeId);
-        }
-        sanParentVolumeId = parentVolInfo.getSanVolumeId();
-      } catch (TransactionException | NoSuchElementException ex) {
-        LOG.error(parentVolumeId + ": Failed to lookup source volume entity", ex);
-        throw new EucalyptusCloudException("Failed to lookup source snapshot volume for " + parentVolumeId, ex);
-      }
-      String snapshotPoint = resourceIdOnSan(volumeId);
-      LOG.info("Creating backend snapshot point " + snapshotPoint + " against backend parent volume " + sanParentVolumeId + " mapping to "
-          + parentVolumeId);
-      return connectionManager.createSnapshotPoint(sanParentVolumeId, snapshotPoint);
-    } else {
-      throw new EucalyptusCloudException("Cannot create snapshot point, no SAN provider found");
-    }
+    String snapshotPoint = resourceIdOnSan(volumeId);
+    String sanParentVolumeId = lookup(parentVolumeId).getSanVolumeId();
+
+    LOG.info("Creating snapshot point " + snapshotPoint + " on " + sanParentVolumeId);
+    return connectionManager.createSnapshotPoint(sanParentVolumeId, snapshotPoint);
   }
 
   // TODO: zhill, should I removed the extra params or only allow the parent and vol Id and then calculate the snapPointId from that?
   // If the desire is to make this idempotent then a calculation is ideal since the original may have been lost (i.e. restart)
   public void deleteSnapshotPoint(String parentVolumeId, String volumeId, String snapshotPointId) throws EucalyptusCloudException {
-    if (connectionManager != null) {
-      connectionManager.deleteSnapshotPoint(parentVolumeId, snapshotPointId);
-    } else {
-      throw new EucalyptusCloudException("Cannot delete snapshot point, no SAN provider found");
-    }
+    String sanParentVolumeId = lookup(parentVolumeId).getSanVolumeId();
 
+    LOG.info("Deleting snapshot point " + snapshotPointId + " on " + sanParentVolumeId);
+    connectionManager.deleteSnapshotPoint(sanParentVolumeId, snapshotPointId);
+  }
+
+  private SANVolumeInfo lookup(String resourceId) throws EucalyptusCloudException {
+    SANVolumeInfo resourceInfo = null;
+    try {
+      resourceInfo = Transactions.find(new SANVolumeInfo(resourceId));
+      if (resourceInfo == null || StringUtils.isBlank(resourceInfo.getSanVolumeId())) {
+        LOG.warn("Backend name/ID not found for " + resourceId);
+        throw new EucalyptusCloudException("Backend name/ID not found for " + resourceId);
+      } else {
+        return resourceInfo;
+      }
+    } catch (NoSuchElementException e) {
+      LOG.warn("Block storage backend database record not found for " + resourceId);
+      throw new NoSuchRecordException("Block storage backend database record not found for " + resourceId);
+    } catch (EucalyptusCloudException e) {
+      throw e;
+    } catch (Exception e) {
+      LOG.warn("Encountered error during block storage backend database lookup for " + resourceId);
+      throw new EucalyptusCloudException("Encountered error during block storage backend database lookup for " + resourceId, e);
+    }
   }
 }

@@ -50,7 +50,9 @@
             <inbound>
                 <vm:inbound-endpoint ref="TokensRequestQueueEndpoint" />
             </inbound>
-            <component class="com.eucalyptus.tokens.TokensServiceGuard" />
+            <component>
+                <singleton-object class="com.eucalyptus.tokens.TokensServiceGuard" />
+            </component>
             <outbound>
                 <filtering-router>
                     <outbound-endpoint ref="TokensWS" />
@@ -63,7 +65,9 @@
             <inbound>
                 <inbound-endpoint ref="TokensWS" />
             </inbound>
-            <component class="com.eucalyptus.tokens.TokensService" />
+            <component>
+                <singleton-object class="com.eucalyptus.tokens.TokensService" />
+            </component>
             <outbound>
                 <filtering-router>
                     <outbound-endpoint ref="ReplyQueueEndpoint" />
@@ -76,7 +80,9 @@
             <inbound>
                 <inbound-endpoint ref="TokensErrorQueueWS" />
             </inbound>
-            <component class="com.eucalyptus.tokens.ws.TokensErrorHandler" />
+            <component>
+                <singleton-object class="com.eucalyptus.tokens.ws.TokensErrorHandler" />
+            </component>
         </service>
 
     </model>
@@ -86,7 +92,9 @@
                 <inbound-endpoint ref="TokensInternalWS" />
                 <inbound-endpoint ref="TokensInternalVM" />
             </inbound>
-            <component class="com.eucalyptus.tokens.TokensService" />
+            <component>
+                <singleton-object class="com.eucalyptus.tokens.TokensService" />
+            </component>
         </service>
     </model>
 

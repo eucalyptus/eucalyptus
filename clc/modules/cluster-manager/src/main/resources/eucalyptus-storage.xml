@@ -80,19 +80,25 @@
             <inbound>
                 <inbound-endpoint ref="ImageWS"/>
             </inbound>
-            <component class="com.eucalyptus.images.ImageManager"/>
+            <component>
+                <singleton-object class="com.eucalyptus.images.ImageManager"/>
+            </component>
         </service>
         <service name="Volume">
             <inbound>
                 <inbound-endpoint ref="VolumeWS"/>
             </inbound>
-            <component class="com.eucalyptus.blockstorage.VolumeManager"/>
+            <component>
+                <singleton-object class="com.eucalyptus.blockstorage.VolumeManager"/>
+            </component>
         </service>
         <service name="Snapshot">
             <inbound>
                 <inbound-endpoint ref="SnapshotWS"/>
             </inbound>
-            <component class="com.eucalyptus.blockstorage.SnapshotManager"/>
+            <component>
+                <singleton-object class="com.eucalyptus.blockstorage.SnapshotManager"/>
+            </component>
         </service>
 
     </model>

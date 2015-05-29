@@ -213,8 +213,8 @@ public class HmacUtils {
       }
     },
     SignatureV4Standard( SignatureVersion.SignatureV4 ) {
-      private final Splitter CSV_SPLITTER = Splitter.onPattern("\\s*,\\s*").trimResults().omitEmptyStrings();
-      private final Splitter NVP_SPLITTER = Splitter.onPattern("\\s*=\\s*").limit(2).trimResults().omitEmptyStrings();
+      private final Splitter CSV_SPLITTER = Splitter.on(',').trimResults().omitEmptyStrings();
+      private final Splitter NVP_SPLITTER = Splitter.on('=').limit(2).trimResults().omitEmptyStrings();
 
       @Override
       protected Date getTimestamp( @Nonnull final Function<String, List<String>> headerLookup,
@@ -488,9 +488,7 @@ public class HmacUtils {
   public static byte[] getSignature( final String key, final String subject, final Hmac mac ) throws AuthenticationException {
     final SecretKeySpec signingKey = new SecretKeySpec( key.getBytes( Charsets.UTF_8 ), mac.toString( ) );
     try {
-      final Mac digest = mac.getInstance( );
-      digest.init( signingKey );
-      return digest.doFinal( subject.getBytes( Charsets.UTF_8 ) );
+      return mac.digestBinary( signingKey, subject.getBytes( Charsets.UTF_8 ) );
     } catch ( Exception e ) {
       LOG.error( e, e );
       throw new AuthenticationException( "Failed to compute signature" );

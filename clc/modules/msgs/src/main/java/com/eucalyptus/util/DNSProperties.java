@@ -66,7 +66,6 @@ import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import org.apache.log4j.Logger;
 
 public class DNSProperties {
-
 	private static Logger LOG = Logger.getLogger( DNSProperties.class );
 	public static final String LOCALHOST_DOMAIN = "localhost";
 	public static String DB_NAME             = "eucalyptus_dns";
@@ -76,7 +75,14 @@ public class DNSProperties {
 	public static String DOMAIN = LOCALHOST_DOMAIN;
 	public static String NS_HOST = "nshost." + DOMAIN;
 	public static String NS_IP = "127.0.0.1";
-
+	
+	
+	public static String getDomain() {
+	  final SystemConfiguration systemConfiguration = SystemConfiguration.getSystemConfiguration();
+	  return systemConfiguration.getDnsDomain();
+	}
+	
+	//// doesn't seem to be called from anywhere
 	public static void update() {
 		SystemConfiguration systemConfiguration = SystemConfiguration.getSystemConfiguration();
 		DOMAIN = systemConfiguration.getDnsDomain();

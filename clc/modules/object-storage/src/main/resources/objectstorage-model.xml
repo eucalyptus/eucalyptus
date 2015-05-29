@@ -102,7 +102,9 @@
             <inbound>
                 <inbound-endpoint ref="ObjectStorageVM"/>
             </inbound>
-            <component class="com.eucalyptus.objectstorage.ObjectStorageGateway"/>
+            <component>
+                <singleton-object class="com.eucalyptus.objectstorage.ObjectStorageGateway"/>
+            </component>
             <outbound>
                 <pass-through-router>
                     <outbound-endpoint ref="ObjectStorageReplyQueueVM"/>
@@ -114,7 +116,9 @@
             <inbound>
                 <inbound-endpoint ref="ObjectStorageReplyQueueVM"/>
             </inbound>
-            <component class="com.eucalyptus.ws.util.ReplyQueue"/>
+            <component>
+                <singleton-object class="com.eucalyptus.ws.util.ReplyQueue" />
+            </component>
         </service>
     </model>
     
@@ -125,7 +129,9 @@
                 <inbound-endpoint ref="ObjectStorageInternalWS"/>
                 <inbound-endpoint ref="ObjectStorageInternalVM"/>
             </inbound>
-            <component class="com.eucalyptus.objectstorage.ObjectStorageGateway"/>
+            <component>
+                <singleton-object class="com.eucalyptus.objectstorage.ObjectStorageGateway"/>
+            </component>
         </service>
 
     </model>

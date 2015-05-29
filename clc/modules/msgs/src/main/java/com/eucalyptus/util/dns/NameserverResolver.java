@@ -65,19 +65,22 @@
 package com.eucalyptus.util.dns;
 
 import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
+
 import java.net.InetAddress;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.TimeUnit;
+
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
+
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.util.Cidr;
@@ -132,7 +135,7 @@ public class NameserverResolver implements DnsResolver {
       String label0 = name.getLabelString( 0 );
       if ( name.equals( Name.fromConstantString( label0 + "." + DomainNames.internalSubdomain( ) ) )
            || name.equals( Name.fromConstantString( label0 + "." + DomainNames.externalSubdomain( ) ) ) ) {
-        NavigableSet<ServiceConfiguration> nsServers = Components.lookup( Eucalyptus.class ).services( );
+        NavigableSet<ServiceConfiguration> nsServers = Components.lookup( Dns.class ).services( );
         Integer index = Objects.firstNonNull( Ints.tryParse( label0.substring( 2 ) ), 1 );
         if ( nsServers.size( ) >= index ) {
           ServiceConfiguration conf = nsServers.toArray( new ServiceConfiguration[] {} )[index-1];
@@ -143,7 +146,7 @@ public class NameserverResolver implements DnsResolver {
         }
       }
     } else if ( RequestType.NS.apply( query ) ) {
-      NavigableSet<ServiceConfiguration> nsServers = Components.lookup( Eucalyptus.class ).services( );
+      NavigableSet<ServiceConfiguration> nsServers = Components.lookup( Dns.class ).services( );
       List<Record> aRecs = Lists.newArrayList( );
       Name domain = DomainNames.isInternalSubdomain( name ) ? DomainNames.internalSubdomain( ) : DomainNames.externalSubdomain( );
       int idx = 1;
@@ -179,8 +182,8 @@ public class NameserverResolver implements DnsResolver {
       final InetAddress hostAddr = DomainNameRecords.inAddrArpaToInetAddress( query.getName( ) );
       final String hostAddress = hostAddr.getHostAddress( );
       if ( Hosts.contains( hostAddress ) ) {
-        NavigableSet<ServiceConfiguration> nsServers = Components.lookup( Eucalyptus.class ).services( );
-        int index = nsServers.headSet( ServiceConfigurations.lookupByHost( Eucalyptus.class, hostAddr.getHostAddress( ) ) ).size( );
+        NavigableSet<ServiceConfiguration> nsServers = Components.lookup( Dns.class ).services( );
+        int index = nsServers.headSet( ServiceConfigurations.lookupByHost( Dns.class, hostAddr.getHostAddress( ) ) ).size( );
         final Name nsName = Name.fromConstantString( "ns" + index + "." + DomainNames.externalSubdomain( ) );
         final Record ptrRecord = DomainNameRecords.ptrRecord( nsName, hostAddr );
         return DnsResponse.forName( query.getName( ) ).answer( ptrRecord );

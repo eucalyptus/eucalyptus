@@ -153,9 +153,7 @@ public class Hmacv2LoginModule extends HmacLoginModuleSupport {
   public String getSignature( final String queryKey, final String subject, final Hmac mac ) throws AuthenticationException {
     SecretKeySpec signingKey = new SecretKeySpec( queryKey.getBytes( ), mac.toString( ) );
     try {
-      Mac digest = mac.getInstance( );
-      digest.init( signingKey );
-      byte[] rawHmac = digest.doFinal( subject.getBytes( ) );
+      byte[] rawHmac = mac.digestBinary( signingKey, subject.getBytes( ) );
       return sanitize( Base64.encode( rawHmac ) );
     } catch ( Exception e ) {
       LOG.error( e, e );

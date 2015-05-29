@@ -7,7 +7,8 @@
       "ec2:*Instances",
       "ec2:*Volume*",
       "ec2:*Snapshot*",
-      "cloudformation:*"
+      "cloudformation:*",
+      "autoscaling:*"
     ],
     "Resource": "*"
   }]
