@@ -2219,6 +2219,69 @@ int mido_create_resource_v(midoname * parents, int max_parents, midoname * newna
 
 }
 
+
+int mido_cmp_midoname(midoname *a, midoname *b) {
+    int ret=0;
+
+    if (!a || !b) {
+        return(1);
+    }
+
+    if (!a->init || !b->init) {
+        return(1);
+    }
+
+    
+    ret = strcmp(a->tenant, b->tenant);
+    if (!ret) ret = strcmp(a->name, b->name);
+    if (!ret) ret = strcmp(a->uuid, b->uuid);
+    if (!ret) ret = strcmp(a->jsonbuf, b->jsonbuf);
+    if (!ret) ret = strcmp(a->resource_type, b->resource_type);
+    if (!ret) ret = strcmp(a->content_type, b->content_type);
+    
+    if (ret) {
+        return(1);
+    }
+    return(0);
+}
+
+//!
+//!
+//!
+//! @param[in] lista
+//! @param[in] lista_max
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int mido_merge_midoname_lists(midoname *inplace, int inplace_max, midoname *new, int new_max, midoname **addmidos, int addmidos_max, midoname **delmidos, int delmidos_max) {
+    int ret=0, rc=0;
+    int i, j, found, foundidx;
+
+    for (i=0; i<inplace_max; i++) {
+        found=0;
+        for (j=0; j<new_max && !found; j++) {
+            if (mido_cmp_midoname(&(inplace[i]), &(new[j]))) {
+                found=1;
+                foundidx=j;
+            }
+        }
+        if (!found) {
+            LOGDEBUG("MEH: mido not found, will add to add list\n");
+            mido_print_midoname(&(new[foundidx]));
+        }
+    }
+
+    return(ret);
+}
+
 //!
 //!
 //!
@@ -2610,6 +2673,7 @@ int midonet_http_get(char *url, char *apistr, char **out_payload)
     if (httpcode != 200L) {
         ret = 1;
     }
+    curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
     curl_global_cleanup();
 
