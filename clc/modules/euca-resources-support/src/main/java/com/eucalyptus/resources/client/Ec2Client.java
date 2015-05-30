@@ -520,11 +520,12 @@ public class Ec2Client {
     }
 
     @Override
-    void dispatchFailure( final ClientContext<ComputeMessage, Compute> context, final Throwable throwable ) {
+    boolean dispatchFailure( final ClientContext<ComputeMessage, Compute> context, final Throwable throwable ) {
       if ( AsyncExceptions.isWebServiceErrorCode( throwable, "InvalidAMIID.NotFound" ) ) {
         result = Lists.newArrayList( );
+        return true;
       } else {
-        super.dispatchFailure( context, throwable );
+        return super.dispatchFailure( context, throwable );
       }
     }
 
