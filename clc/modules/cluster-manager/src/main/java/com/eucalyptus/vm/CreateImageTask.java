@@ -650,19 +650,6 @@ public class CreateImageTask {
 		}
 	}
 	
-	private RunningInstancesItemType describeInstance(){
-		try{
-			final EucalyptusDescribeInstanceTask task = new EucalyptusDescribeInstanceTask();
-			final CheckedListenableFuture<Boolean> result = task.dispatch();
-			if(result.get()){
-				return task.getResult();
-			}else
-				throw new EucalyptusCloudException(String.format("Failed to describe instance %s", this.instanceId));
-		}catch(final Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
-	}
-	
 	private class CreateImageStopInstanceCallback extends StopInstanceCallback{
 		@Override
 		public void fire(StopInstanceResponseType msg) {
@@ -790,40 +777,7 @@ public class CreateImageTask {
 		}
 	}
 	
-	private class EucalyptusDescribeInstanceTask extends EucalyptusActivityTask<ComputeMessage, Compute> {
-		private RunningInstancesItemType result = null;
-		private EucalyptusDescribeInstanceTask(){}
-		private DescribeInstancesType describeInstances(){
-			final DescribeInstancesType req = new DescribeInstancesType();
-			req.setInstancesSet(Lists.newArrayList(CreateImageTask.this.instanceId));
-			return req;
-		}
-		
-		@Override
-		void dispatchInternal(Checked<ComputeMessage> callback) {
-			final DispatchingClient<ComputeMessage, Compute> client = this.getClient(Compute.class);
-			client.dispatch(describeInstances(), callback);				
-		}
-
-		@Override
-		void dispatchSuccess(ComputeMessage response) {
-			final DescribeInstancesResponseType resp = (DescribeInstancesResponseType) response;
-			final List<RunningInstancesItemType> resultInstances = Lists.newArrayList();
-			for(final ReservationInfoType res : resp.getReservationSet()){
-				resultInstances.addAll(res.getInstancesSet());
-			}
-			if(resultInstances.size()>0)
-				this.result = resultInstances.get(0);
-		}
-		
-		public RunningInstancesItemType getResult(){
-			return this.result;
-		}
-	}
-	
 	private abstract class EucalyptusActivityTask <TM extends BaseMessage, TC extends ComponentId>{
-	    private volatile boolean dispatched = false;
-	    
 	    protected EucalyptusActivityTask(){}
 	
 	    final CheckedListenableFuture<Boolean> dispatch( ) {
@@ -848,7 +802,6 @@ public class CreateImageTask {
 	            }
 	          }
 	        } );
-	        dispatched = true;
 	        return future;
 	      } catch ( Exception e ) {
 	        LOG.error( e, e );

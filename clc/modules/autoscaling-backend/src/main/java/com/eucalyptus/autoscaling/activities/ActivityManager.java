@@ -2321,6 +2321,19 @@ public class ActivityManager {
       setActivityFinalStatus( ActivityStatusCode.Successful );
     }
 
+    @Override
+    boolean dispatchFailure( final ActivityContext context, final Throwable throwable ) {
+      if ( AsyncExceptions.isWebServiceErrorCode( throwable, "InvalidInstanceID.NotFound" ) ) {
+        this.knownInstanceIds.set( Collections.<String>emptyList( ) );
+        this.healthyInstanceIds.set( Collections.<String>emptyList( ) );
+
+        setActivityFinalStatus( ActivityStatusCode.Successful );
+        return true;
+      } else {
+        return super.dispatchFailure( context, throwable );
+      }
+    }
+
     List<String> getKnownInstanceIds() {
       return knownInstanceIds.get();
     }

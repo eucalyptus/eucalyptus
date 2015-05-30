@@ -55,10 +55,11 @@ public abstract class EucalyptusClientTask<TM extends BaseMessage, TC extends Co
       dispatchInternal(context, new Callback.Checked<TM>() {
         @Override
         public void fireException(final Throwable throwable) {
+          boolean result = false;
           try {
-            dispatchFailure(context, throwable);
+            result = dispatchFailure(context, throwable);
           } finally {
-            future.set(false);
+            future.set( result );
           }
         }
 
@@ -81,22 +82,26 @@ public abstract class EucalyptusClientTask<TM extends BaseMessage, TC extends Co
   abstract void dispatchInternal(ClientContext<TM, TC> context,
       Callback.Checked<TM> callback);
 
-  void dispatchFailure(ClientContext<TM, TC> context, Throwable throwable) {
+  /**
+   * @return True if the failure was handled and should be treated as success.
+   */
+  boolean dispatchFailure(ClientContext<TM, TC> context, Throwable throwable) {
     final Optional<AsyncExceptions.AsyncWebServiceError> serviceErrorOption =
         AsyncExceptions.asWebServiceError( throwable );
     if ( serviceErrorOption.isPresent( ) ) {
       errorCode = serviceErrorOption.get( ).getCode();
       errorMessage = serviceErrorOption.get( ).getMessage();
-      return;
+      return false;
     }
 
     final NoSuchElementException ex2 = Exceptions.findCause( throwable, NoSuchElementException.class );
     if ( ex2 != null ) {
       errorMessage = ex2.getMessage();
-      return;
+      return false;
     }
 
     LOG.error("Eucalyptus client error", throwable);
+    return false;
   }
 
   @Nullable

@@ -1652,6 +1652,13 @@ public class EucalyptusActivityTasks {
 			}
 			return resultInstances;
 		}
+
+		@Override
+		List<RunningInstancesItemType> getFailureResult( final String errorCode ) {
+			return "InvalidInstanceID.NotFound".equals( errorCode ) ?
+					Lists.<RunningInstancesItemType>newArrayList( ) :
+					null;
+		}
 	}
 	
 	//SPARK: TODO: SYSTEM, STATIC MODE?
@@ -1824,10 +1831,11 @@ public class EucalyptusActivityTasks {
 				dispatchInternal( context, new Callback.Checked<TM>(){
 					@Override
 					public void fireException( final Throwable throwable ) {
+						boolean result = false;
 						try {
-							dispatchFailure( context, throwable );
+							result = dispatchFailure( context, throwable );
 						} finally {
-							future.set( false );
+							future.set( result );
 						}
 					}
 
@@ -1857,8 +1865,9 @@ public class EucalyptusActivityTasks {
 			client.dispatch( getRequest( ), callback );
 		}
 
-		void dispatchFailure( ActivityContext<TM,TC> context, Throwable throwable ) {
+		boolean dispatchFailure( ActivityContext<TM,TC> context, Throwable throwable ) {
 			LOG.error( "Loadbalancer activity error", throwable );
+			return false;
 		}
 
 		void dispatchSuccess( ActivityContext<TM,TC> context, TM response ){ }
@@ -1879,21 +1888,28 @@ public class EucalyptusActivityTasks {
 			return r.get( );
 		}
 
+		R getFailureResult( final String errorCode ) {
+			return null;
+		}
+
 		@Override
 		void dispatchSuccess( final ActivityContext<TM,TC> context, final TM response) {
 			r.set( extractResult( response ) );
 		}
 
 		@Override
-		void dispatchFailure( final ActivityContext<TM, TC> context, final Throwable throwable ) {
+		boolean dispatchFailure( final ActivityContext<TM, TC> context, final Throwable throwable ) {
 			final Optional<AsyncWebServiceError> serviceErrorOptional = AsyncExceptions.asWebServiceError( throwable );
-			if ( serviceErrorOptional.isPresent( ) ) {
-				r.set( failureResult( serviceErrorOptional.get( ).getCode( ) ) );
-				if ( getResult( ) == null ) {
-					super.dispatchFailure( context, throwable );
+			if ( serviceErrorOptional.isPresent( ) ){
+				final R result = getFailureResult( serviceErrorOptional.get( ).getCode( ) );
+				if ( result != null ) {
+					r.set( result );
+					return true;
+				} else {
+					return super.dispatchFailure( context, throwable );
 				}
 			} else {
-				super.dispatchFailure( context, throwable );
+				return super.dispatchFailure( context, throwable );
 			}
 		}
 	}

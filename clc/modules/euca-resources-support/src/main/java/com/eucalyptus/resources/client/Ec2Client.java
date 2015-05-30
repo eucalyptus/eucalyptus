@@ -111,6 +111,16 @@ public class Ec2Client {
       this.result.set(resultInstances);
     }
 
+    @Override
+    boolean dispatchFailure( final ClientContext<ComputeMessage, Compute> context, final Throwable throwable ) {
+      if ( AsyncExceptions.isWebServiceErrorCode( throwable, "InvalidInstanceID.NotFound" ) ) {
+        this.result.set( Lists.<RunningInstancesItemType>newArrayList( ) );
+        return true;
+      } else {
+        return super.dispatchFailure( context, throwable );
+      }
+    }
+
     public List<RunningInstancesItemType> getResult() {
       return this.result.get();
     }
@@ -909,8 +919,13 @@ public class Ec2Client {
     }
 
     @Override
-    void dispatchFailure( final ClientContext<ComputeMessage, Compute> context, final Throwable throwable ) {
-      super.dispatchFailure( context, throwable );    //TODO:STEVE: implement
+    boolean dispatchFailure( final ClientContext<ComputeMessage, Compute> context, final Throwable throwable ) {
+      if ( AsyncExceptions.isWebServiceErrorCode( throwable, "InvalidVolume.NotFound" ) ) {
+        this.result = Lists.newArrayList( );
+        return true;
+      } else {
+        return super.dispatchFailure( context, throwable );
+      }
     }
 
     @Override

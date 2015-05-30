@@ -52,6 +52,7 @@ import com.eucalyptus.compute.common.DescribeInstancesResponseType;
 import com.eucalyptus.compute.common.DescribeInstancesType;
 import com.eucalyptus.compute.common.ReleaseAddressResponseType;
 import com.eucalyptus.compute.common.ReleaseAddressType;
+import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
@@ -110,7 +111,16 @@ public class AWSEC2EIPResourceAction extends ResourceAction {
         if (action.properties.getInstanceId() != null) {
           DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
           describeInstancesType.setInstancesSet(Lists.newArrayList(action.properties.getInstanceId()));
-          DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType,DescribeInstancesResponseType> sendSync(configuration, describeInstancesType);
+          DescribeInstancesResponseType describeInstancesResponseType;
+          try {
+            describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
+          } catch ( Exception e ) {
+            if ( AsyncExceptions.isWebServiceErrorCode( e, "InvalidInstanceID.NotFound" ) ) {
+              throw new ValidationErrorException("No such instance " + action.properties.getInstanceId());
+            } else {
+              throw e;
+            }
+          }
           if (describeInstancesResponseType.getReservationSet() == null || describeInstancesResponseType.getReservationSet().isEmpty()) {
             throw new ValidationErrorException("No such instance " + action.properties.getInstanceId());
           }
