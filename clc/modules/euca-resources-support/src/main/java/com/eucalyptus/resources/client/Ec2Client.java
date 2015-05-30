@@ -45,6 +45,7 @@ import com.eucalyptus.util.DispatchingClient;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.Callback.Checked;
+import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
@@ -506,6 +507,15 @@ public class Ec2Client {
         ComputeMessage response) {
       final DescribeImagesResponseType resp = (DescribeImagesResponseType) response;
       result = resp.getImagesSet();
+    }
+
+    @Override
+    void dispatchFailure( final ClientContext<ComputeMessage, Compute> context, final Throwable throwable ) {
+      if ( AsyncExceptions.isWebServiceErrorCode( throwable, "InvalidAMIID.NotFound" ) ) {
+        result = Lists.newArrayList( );
+      } else {
+        super.dispatchFailure( context, throwable );
+      }
     }
 
     List<ImageDetails> getResult() {

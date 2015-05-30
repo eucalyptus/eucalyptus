@@ -196,6 +196,9 @@ public class ComputeService implements Callable {
         filter.getAliases(),
         requestedAndAccessible,
         Images.TO_IMAGE_DETAILS );
+    if ( imageDetailsList.isEmpty( ) && !imageIds.isEmpty( ) ) {
+      throw new ComputeServiceClientException( "InvalidAMIID.NotFound", "The image '"+Iterables.get( imageIds, 0 )+"' was not found" );
+    }
 
     final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( ImageInfo.class )
         .getResourceTagMap( AccountFullName.getInstance( ctx.getAccountNumber() ),
@@ -280,7 +283,9 @@ public class ComputeService implements Callable {
       } else {
         throw new EucalyptusCloudException( "invalid image attribute request." );
       }
-    } catch ( TransactionException | NoSuchElementException ex ) {
+    } catch ( final NoSuchElementException e ) {
+      throw new ComputeServiceClientException( "InvalidAMIID.NotFound", "The image '"+request.getImageId()+"' was not found" );
+    } catch ( final TransactionException ex ) {
       throw new EucalyptusCloudException( "Error handling image attribute request: " + ex.getMessage( ), ex );
     }
     return reply;

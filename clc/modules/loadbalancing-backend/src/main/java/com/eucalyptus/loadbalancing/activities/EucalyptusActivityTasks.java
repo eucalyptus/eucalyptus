@@ -137,6 +137,8 @@ import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.DispatchingClient;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.async.AsyncExceptions;
+import com.eucalyptus.util.async.AsyncExceptions.AsyncWebServiceError;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.base.Optional;
@@ -877,6 +879,13 @@ public class EucalyptusActivityTasks {
 		List<ImageDetails> extractResult(ComputeMessage response) {
 			final DescribeImagesResponseType resp = (DescribeImagesResponseType) response;
 			return resp.getImagesSet();
+		}
+
+		@Override
+		List<ImageDetails> failureResult( final String errorCode ) {
+			return "InvalidAMIID.NotFound".equals( errorCode ) ?
+					Lists.<ImageDetails>newArrayList( ) :
+					null;
 		}
 	}
 	
@@ -1864,6 +1873,8 @@ public class EucalyptusActivityTasks {
 		 */
 		abstract R extractResult( TM response );
 
+		R failureResult( String errorCode ) { return null; }
+
 		final R getResult( ) {
 			return r.get( );
 		}
@@ -1871,6 +1882,19 @@ public class EucalyptusActivityTasks {
 		@Override
 		void dispatchSuccess( final ActivityContext<TM,TC> context, final TM response) {
 			r.set( extractResult( response ) );
+		}
+
+		@Override
+		void dispatchFailure( final ActivityContext<TM, TC> context, final Throwable throwable ) {
+			final Optional<AsyncWebServiceError> serviceErrorOptional = AsyncExceptions.asWebServiceError( throwable );
+			if ( serviceErrorOptional.isPresent( ) ) {
+				r.set( failureResult( serviceErrorOptional.get( ).getCode( ) ) );
+				if ( getResult( ) == null ) {
+					super.dispatchFailure( context, throwable );
+				}
+			} else {
+				super.dispatchFailure( context, throwable );
+			}
 		}
 	}
 
