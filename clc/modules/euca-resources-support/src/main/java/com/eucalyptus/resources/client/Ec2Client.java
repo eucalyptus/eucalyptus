@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -899,6 +899,11 @@ public class Ec2Client {
     }
 
     @Override
+    void dispatchFailure( final ClientContext<ComputeMessage, Compute> context, final Throwable throwable ) {
+      super.dispatchFailure( context, throwable );    //TODO:STEVE: implement
+    }
+
+    @Override
     void dispatchSuccess(ClientContext<ComputeMessage, Compute> context,
         ComputeMessage response) {
       final DescribeVolumesResponseType resp = (DescribeVolumesResponseType) response;
@@ -1384,12 +1389,15 @@ public class Ec2Client {
     final CheckedListenableFuture<Boolean> result = task
         .dispatch(new Ec2Context(userId));
     try {
-      if (result.get()) {
+      if ( result.get( ) ) {
         return task.getVolumes();
-      } else
+      } else if ( "InvalidVolume.NotFound".equals( task.getErrorCode( ) ) ) {
+        return Lists.newArrayList( );
+      } else {
         throw new EucalyptusActivityException(
-            task.getErrorMessage() != null ? task.getErrorMessage()
+            task.getErrorMessage( ) != null ? task.getErrorMessage( )
                 : "failed to describe volumes");
+      }
     } catch (Exception ex) {
       throw Exceptions.toUndeclared(ex);
     }

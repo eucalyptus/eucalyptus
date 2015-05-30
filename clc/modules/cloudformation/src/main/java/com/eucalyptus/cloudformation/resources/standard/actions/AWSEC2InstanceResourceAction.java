@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import static com.eucalyptus.util.async.AsyncExceptions.asWebServiceErrorMessage;
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.cloudformation.CloudFormationException;
@@ -200,7 +201,12 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
               volumeIds.add(ec2MountPoint.getVolumeId());
             }
             describeVolumesType.setVolumeSet(volumeIds);
-            DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.<DescribeVolumesType, DescribeVolumesResponseType>sendSync(configuration, describeVolumesType);
+            DescribeVolumesResponseType describeVolumesResponseType;
+            try {
+              describeVolumesResponseType = AsyncRequests.sendSync( configuration, describeVolumesType );
+            } catch ( final Exception e ) {
+              throw new ValidationErrorException("Error checking volumes " + asWebServiceErrorMessage( e, e.getMessage( ) ) );
+            }
             Map<String, String> volumeStatusMap = Maps.newHashMap();
             for (Volume volume : describeVolumesResponseType.getVolumeSet()) {
               volumeStatusMap.put(volume.getVolumeId(), volume.getStatus());
@@ -319,7 +325,12 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
             }
             DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
             describeVolumesType.setVolumeSet(Lists.newArrayList(volumeIds));
-            DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.<DescribeVolumesType, DescribeVolumesResponseType>sendSync(configuration, describeVolumesType);
+            DescribeVolumesResponseType describeVolumesResponseType;
+            try {
+              describeVolumesResponseType = AsyncRequests.<DescribeVolumesType, DescribeVolumesResponseType>sendSync( configuration, describeVolumesType );
+            } catch ( Exception e ) {
+              throw new ValidationFailedException("Error describing volumes: " + asWebServiceErrorMessage( e, e.getMessage( ) ) );
+            }
             Map<String, String> volumeStatusMap = Maps.newHashMap();
             for (Volume volume : describeVolumesResponseType.getVolumeSet()) {
               for (AttachedVolume attachedVolume : volume.getAttachmentSet()) {
