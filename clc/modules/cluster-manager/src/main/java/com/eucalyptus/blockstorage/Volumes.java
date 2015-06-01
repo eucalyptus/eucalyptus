@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -116,7 +116,6 @@ import com.eucalyptus.vm.VmVolumeAttachment;
 import com.eucalyptus.tags.FilterSupport;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.base.Predicates;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -215,7 +214,7 @@ public class Volumes {
       Logs.extreme( ).debug( "Volume state update: " + Joiner.on( "\n" ).join( partitionVolumeMap.entries( ) ) );
       final EntityTransaction dbInstance = Entities.get( VmInstance.class );
       try {
-        final List<VmInstance> vms = VmInstances.list( Predicates.alwaysTrue( ) );
+        final List<VmInstance> vms = Entities.query( VmInstance.create( ) );
         dbInstance.rollback();
         for ( final String partition : partitionVolumeMap.keySet( ) ) {
         try {
