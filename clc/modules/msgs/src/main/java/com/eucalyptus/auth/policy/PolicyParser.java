@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -71,6 +71,7 @@ import java.util.regex.Matcher;
 import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.AuthenticationLimitProvider;
 import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.json.JsonUtils;
@@ -81,7 +82,6 @@ import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.key.Key;
 import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.QuotaKey;
-import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.eucalyptus.util.Pair;
 import com.google.common.base.Optional;
@@ -96,8 +96,6 @@ import com.google.common.collect.Sets;
  */
 public class PolicyParser {
 
-  public static final int MAX_POLICY_SIZE = 16 * 1024; // 16KB, much larger than AWS IAM specified
-  
   private static final Logger LOG = Logger.getLogger( PolicyParser.class );
   
   private enum PolicyAttachmentType {
@@ -148,7 +146,7 @@ public class PolicyParser {
     if ( policy == null ) {
       throw new PolicyParseException( PolicyParseException.EMPTY_POLICY );
     }
-    if ( policy.length( ) > MAX_POLICY_SIZE ) {
+    if ( policy.length( ) > AuthenticationLimitProvider.Values.getPolicySizeLimit( ) ) {
       throw new PolicyParseException( PolicyParseException.SIZE_TOO_LARGE );
     }
     try {
