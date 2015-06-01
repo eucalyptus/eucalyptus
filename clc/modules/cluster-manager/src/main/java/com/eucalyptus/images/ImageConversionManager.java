@@ -680,9 +680,7 @@ public class ImageConversionManager implements EventListener<ClockTick> {
   private void resetTag(final String userId, final String resourceId, final String tagKey, final String tagValue) throws Exception{
     // try deleting tags
     try{
-      HashMap<String, String> tags = Maps.newHashMap();
-      tags.put(tagKey, null);
-      Ec2Client.getInstance().deleteTags(userId, Lists.newArrayList(resourceId), tags);
+      Ec2Client.getInstance().deleteTags(userId, Lists.newArrayList(resourceId), Lists.newArrayList(tagKey));
     }catch(final Exception ex){
       ;
     }

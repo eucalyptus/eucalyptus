@@ -178,10 +178,13 @@ public class ImportVolumeImagingTask extends VolumeImagingTask {
         volumeDetails.getVolume().getId()!=null){
       try{
         // verify that volume actually exist
+        String volumeId = volumeDetails.getVolume().getId();
+        Ec2Client.getInstance().deleteTags(null, Lists.newArrayList(volumeId),
+            Lists.newArrayList(ImagingTaskStateManager.VOLUME_STATUS_TAG));
         final List<Volume> eucaVolumes =
-        Ec2Client.getInstance().describeVolumes(this.getOwnerUserId(), Lists.newArrayList(volumeDetails.getVolume().getId()));
+        Ec2Client.getInstance().describeVolumes(this.getOwnerUserId(), Lists.newArrayList(volumeId));
         if (eucaVolumes.size() != 0) {
-          Ec2Client.getInstance().deleteVolume(this.getOwnerUserId(), volumeDetails.getVolume().getId());
+          Ec2Client.getInstance().deleteVolume(this.getOwnerUserId(), volumeId);
         }
         setCleanUpDone(true);
       } catch(final Exception ex){

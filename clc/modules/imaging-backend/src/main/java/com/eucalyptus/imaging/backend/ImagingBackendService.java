@@ -52,6 +52,7 @@ import com.eucalyptus.imaging.common.backend.msgs.ImportImageType;
 import com.eucalyptus.imaging.common.backend.msgs.PutInstanceImportTaskStatusResponseType;
 import com.eucalyptus.imaging.common.backend.msgs.PutInstanceImportTaskStatusType;
 import com.eucalyptus.imaging.common.ImagingBackend;
+import com.eucalyptus.resources.client.Ec2Client;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
@@ -60,6 +61,7 @@ import com.eucalyptus.compute.common.internal.vm.VmInstance.Reason;
 import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 public class ImagingBackendService {
   private static Logger LOG = Logger.getLogger( ImagingBackendService.class );
@@ -261,6 +263,8 @@ public class ImagingBackendService {
           if(imagingTask instanceof VolumeImagingTask){
             try{
               ImagingTasks.updateVolumeStatus((VolumeImagingTask)imagingTask, volumeId, ImportTaskState.COMPLETED, null);
+              Ec2Client.getInstance().deleteTags(null, Lists.newArrayList(volumeId),
+                  Lists.newArrayList(ImagingTaskStateManager.VOLUME_STATUS_TAG));
             }catch(final Exception ex){
               ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
                   ImportTaskState.FAILED, ImportTaskState.STATE_MSG_FAILED_UNEXPECTED);

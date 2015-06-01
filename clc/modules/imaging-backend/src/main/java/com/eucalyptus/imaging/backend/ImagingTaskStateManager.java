@@ -72,7 +72,7 @@ import com.google.common.collect.Maps;
 public class ImagingTaskStateManager implements EventListener<ClockTick> {
   private static Logger LOG  = Logger.getLogger( ImagingTaskStateManager.class );
   public static final int TASK_PURGE_EXPIRATION_HOURS = 24;
-
+  public static final String VOLUME_STATUS_TAG = "euca:import-status";
   public static void register( ) {
         Listeners.register( ClockTick.class, new ImagingTaskStateManager() );
   }
@@ -472,6 +472,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
           try{
             final String volumeId = 
                 Ec2Client.getInstance().createVolume(instanceTask.getOwnerUserId(), zone, size);
+            Ec2Client.getInstance().createTags(null, VOLUME_STATUS_TAG, "in-progress", Lists.newArrayList(volumeId));
             volume.getVolume().setId(volumeId);
           }catch(final Exception ex){
             throw new Exception("Failed to create the volume", ex);
@@ -480,7 +481,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
           String volumeStatus= null;
           try{
             final List<Volume> eucaVolumes =
-                Ec2Client.getInstance().describeVolumes(instanceTask.getOwnerUserId(),
+                Ec2Client.getInstance().describeVolumes(null,
                     Lists.newArrayList(volume.getVolume().getId()));
             final Volume eucaVolume = eucaVolumes.get(0);
             volumeStatus = eucaVolume.getStatus();
@@ -542,13 +543,15 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
       //create volume (already sanitized)
       try{
         final String volumeId = Ec2Client.getInstance().createVolume(volumeTask.getOwnerUserId(), zone, size);
+        Ec2Client.getInstance().createTags(null, VOLUME_STATUS_TAG, "in-progress", Lists.newArrayList(volumeId));
         ImagingTasks.setVolumeId(volumeTask, volumeId);
       }catch(final Exception ex){
         throw new Exception("Failed to create the volume", ex);
       }
     } else { /// check status
+      // describe volume as system user since it is not visible to regular user until conversion is over
       final List<Volume> volumes = 
-          Ec2Client.getInstance().describeVolumes(volumeTask.getOwnerUserId(), Lists.newArrayList(volumeTask.getVolumeId()));
+          Ec2Client.getInstance().describeVolumes(null, Lists.newArrayList(volumeTask.getVolumeId()));
       final Volume volume = volumes.get(0);
       final String volumeStatus = volume.getStatus();
       if("available".equals(volumeStatus)){

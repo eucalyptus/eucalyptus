@@ -22,6 +22,7 @@ package com.eucalyptus.resources.client;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -1283,6 +1284,15 @@ public class Ec2Client {
     } catch (Exception ex) {
       throw Exceptions.toUndeclared(ex);
     }
+  }
+
+  public void deleteTags(final String userId, final List<String> resources,
+      ArrayList<String> tags) throws EucalyptusActivityException {
+    Map<String,String> tagsMap = new HashMap<String,String>();
+    for(String s:tags) {
+      tagsMap.put(s, null);
+    };
+    deleteTags(userId, resources, tagsMap);
   }
 
   public void deleteTags(final String userId, final List<String> resources,
