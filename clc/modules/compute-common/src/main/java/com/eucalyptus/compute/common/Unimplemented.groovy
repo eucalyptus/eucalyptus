@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -228,6 +228,65 @@ public class RequestSpotInstancesType extends SpotInstanceMessage {
 }
 
 public class RequestSpotInstancesResponseType extends SpotInstanceMessage {}
+
+/** *******************************************************************************/
+
+class CancelSpotFleetRequestsType extends SpotInstanceMessage {
+  ArrayList<String> spotFleetRequestId
+  Boolean terminateInstances
+}
+
+class CancelSpotFleetRequestsResponseType extends SpotInstanceMessage {
+}
+
+class DescribeSpotFleetInstancesType extends SpotInstanceMessage {
+  Integer maxResults
+  String nextToken
+  ArrayList<String> spotFleetRequestId
+}
+
+class DescribeSpotFleetInstancesResponseType extends SpotInstanceMessage {
+}
+
+class DescribeSpotFleetRequestHistoryType extends SpotInstanceMessage {
+  String eventType
+  Integer maxResults
+  String nextToken
+  String spotFleetRequestId
+  String startTime
+}
+
+class DescribeSpotFleetRequestHistoryResponseType extends SpotInstanceMessage {
+}
+
+class DescribeSpotFleetRequestsType extends SpotInstanceMessage {
+  Integer maxResults
+  String nextToken
+  ArrayList<String> spotFleetRequestId
+}
+
+class DescribeSpotFleetRequestsResponseType extends SpotInstanceMessage {
+}
+
+class RequestSpotFleetType extends SpotInstanceMessage {
+  SpotFleetRequestConfigType spotFleetRequestConfig
+}
+
+class RequestSpotFleetResponseType extends SpotInstanceMessage {
+
+}
+
+class SpotFleetRequestConfigType extends EucalyptusData {
+  String clientToken
+  String iamFleetRole
+  @HttpEmbedded( multiple = true )
+  ArrayList<LaunchSpecificationRequestType> launchSpecifications
+  String spotPrice
+  Integer targetCapacity
+  Boolean terminateInstancesWithExpiration
+  String validFrom
+  String validUntil
+}
 
 /** *******************************************************************************/
 

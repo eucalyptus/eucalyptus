@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2011-2014 Eucalyptus Systems, Inc.
+  Copyright 2011-2015 Eucalyptus Systems, Inc.
 
   Redistribution and use of this software in source and binary forms,
   with or without modification, are permitted provided that the following
@@ -104,4 +104,20 @@
       <structure name="item" map-as="com.eucalyptus.compute.common.Snapshot" />
     </collection>
   </mapping>
+
+  <mapping name="CopySnapshot" class="com.eucalyptus.compute.common.CopySnapshotType"
+           extends="com.eucalyptus.compute.common.ComputeMessage" ordered="false">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="description" field="description" usage="optional" />
+    <value name="destinationRegion" field="destinationRegion" usage="optional" />
+    <value name="presignedUrl" field="presignedUrl" usage="optional" />
+    <value name="sourceRegion" field="sourceRegion" usage="optional" />
+    <value name="sourceSnapshotId" field="sourceSnapshotId" usage="optional" />
+  </mapping>
+
+  <mapping name="CopySnapshotResponse" class="com.eucalyptus.compute.common.CopySnapshotResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+  </mapping>
+
 </binding>
