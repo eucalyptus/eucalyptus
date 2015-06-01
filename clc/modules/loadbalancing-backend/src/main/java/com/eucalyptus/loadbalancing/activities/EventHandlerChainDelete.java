@@ -174,7 +174,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 			  LOG.warn(String.format("Unable to set desired capacity for %s", groupName), ex);
 			}
 			
-			boolean error;
+			boolean error=false;
 			final int NUM_DELETE_ASG_RETRY = 4;
 			for(int i=0; i<NUM_DELETE_ASG_RETRY; i++){
 			  try{
@@ -192,6 +192,10 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 	      }
 			  if(!error)
 			    break;
+			}
+			
+			if(error){
+			  throw new EventHandlerException("Failed to delete autoscaling group; retry in a few seconds");
 			}
 			
 			if(launchConfigName!=null){
