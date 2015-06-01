@@ -419,7 +419,7 @@ public class VerifyMetadata {
             allocInfo.setIamInstanceProfileId( profile.getInstanceProfileId( ) );
             allocInfo.setIamRoleArn( role.getRoleArn( ) );
           } else {
-            throw new InvalidInstanceProfileMetadataException( "Role not found for IAM instance profile ARN: " + instanceProfileArn );
+            throw new InvalidInstanceProfileMetadataException( "Role not found for IAM instance profile ARN: " + profile.getInstanceProfileArn( ) );
           }
         } catch ( AuthException e ) {
           throw new MetadataException( "IAM instance profile error", e );
