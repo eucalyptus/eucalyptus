@@ -415,6 +415,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
             final List<ImageDetails> emis =
                 EucalyptusActivityTasks.getInstance().describeImagesWithVerbose(Lists.newArrayList(LoadBalancerASGroupCreator.IMAGE));
             EmiCheckResult = LoadBalancerASGroupCreator.IMAGE.equals( emis.get( 0 ).getImageId() );
+            EmiCheckResult = "available".equals(emis.get(0).getImageState());
           }catch(final Exception ex){
             EmiCheckResult=false;
           }
