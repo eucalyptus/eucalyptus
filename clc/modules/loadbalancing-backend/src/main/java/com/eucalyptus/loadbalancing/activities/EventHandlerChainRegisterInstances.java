@@ -21,11 +21,19 @@ package com.eucalyptus.loadbalancing.activities;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
+import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.loadbalancing.LoadBalancer;
+import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancers;
 import com.eucalyptus.loadbalancing.common.msgs.Instance;
+import com.google.common.base.Function;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 /**
  * @author Sang-Min Park
@@ -69,6 +77,43 @@ public class EventHandlerChainRegisterInstances extends EventHandlerChain<Regist
 					}
 				}
 			}
+			
+			LoadBalancer lb;
+      try{
+        lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
+      }catch(NoSuchElementException ex){
+        throw new EventHandlerException("Could not find the loadbalancer with name="+evt.getLoadBalancer(), ex);
+      }catch(Exception ex){
+        throw new EventHandlerException("Error while looking for loadbalancer with name="+evt.getLoadBalancer(), ex);
+      } 
+
+      final Set<String> lbZones = Sets.newHashSet(Collections2.transform(lb.getZones(), new Function<LoadBalancerZoneCoreView, String>(){
+        @Override
+        public String apply(LoadBalancerZoneCoreView arg0) {
+          return arg0.getName();
+        }
+      }));
+      
+			final String acctNumber = evt.getContext().getAccountNumber();
+			final List<String> instanceIds = Lists.newArrayList(Collections2.transform(evt.getInstances(), new Function<Instance,String>() {
+        @Override
+        public String apply(Instance arg0) {
+          return arg0.getInstanceId();
+        }
+			}));
+			
+			List<RunningInstancesItemType> eucaInstances = Lists.newArrayList();
+		  try{
+		    eucaInstances = EucalyptusActivityTasks.getInstance().describeUserInstances(acctNumber, instanceIds);
+		  }catch(final Exception ex) {
+		    throw new EventHandlerException("Failed to query instances: "+ex.getMessage());
+		  }
+		  
+		  for(final RunningInstancesItemType instance : eucaInstances) {
+		    if(! lbZones.contains(instance.getPlacement())) {
+		      throw new EventHandlerException("Instance "+instance.getInstanceId()+"'s availaibility zone is not enabled for the loadbalancer");
+		    }
+		  }
 		}
 
 		@Override
