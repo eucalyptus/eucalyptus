@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,9 +31,6 @@ import com.eucalyptus.binding.HttpEmbedded;
 
 public class VmImportMessage extends ComputeMessage {
 }
-public class VmImportResponseMessage extends VmImportMessage {
-}
-
 /*********************************************************************************/
 public class ImportInstanceType extends VmImportMessage {
   String description;
@@ -45,7 +42,7 @@ public class ImportInstanceType extends VmImportMessage {
   String platform;
   public ImportInstance() {}
 }
-public class ImportInstanceResponseType extends VmImportResponseMessage {
+public class ImportInstanceResponseType extends VmImportMessage {
   ConversionTask conversionTask;
   public ImportInstanceResponse() {}
 }
@@ -93,7 +90,7 @@ public class DescribeConversionTasksType extends VmImportMessage {
   ArrayList<String> conversionTaskIdSet = new ArrayList<String>();
   public DescribeConversionTasks() {}
 }
-public class DescribeConversionTasksResponseType extends VmImportResponseMessage {
+public class DescribeConversionTasksResponseType extends VmImportMessage {
   ArrayList<ConversionTask> conversionTasks = new ArrayList<ConversionTask>();
   public DescribeConversionTasksResponse() {}
 }
@@ -105,7 +102,7 @@ public class ImportVolumeType extends VmImportMessage {
   DiskImageVolume volume;
   public ImportVolume() {}
 }
-public class ImportVolumeResponseType extends VmImportResponseMessage {
+public class ImportVolumeResponseType extends VmImportMessage {
   ConversionTask conversionTask;
   public ImportVolumeResponse() {}
 }
@@ -125,10 +122,56 @@ public class CancelConversionTaskType extends VmImportMessage {
   String reasonMessage
   public CancelConversionTask() {}
 }
-public class CancelConversionTaskResponseType extends VmImportResponseMessage {
+public class CancelConversionTaskResponseType extends VmImportMessage {
   Boolean _return;
   public CancelConversionTaskResponse() {}
 }
+/*********************************************************************************/
+
+class CancelImportTaskType extends VmImportMessage {
+  String cancelReason
+  String importTaskId
+}
+
+class CancelImportTaskResponseType extends VmImportMessage {
+}
+
+class DescribeImportImageTasksType extends VmImportMessage {
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
+  ArrayList<Filter> filterSet = new ArrayList<Filter>();
+  ArrayList<String> importTaskId
+  Integer maxResults
+  String nextToken
+}
+
+class DescribeImportImageTasksResponseType extends VmImportMessage {
+}
+
+class DescribeImportSnapshotTasksType extends VmImportMessage {
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
+  ArrayList<Filter> filterSet = new ArrayList<Filter>();
+  ArrayList<String> importTaskId
+  Integer maxResults
+  String nextToken
+}
+
+class DescribeImportSnapshotTasksResponseType extends VmImportMessage {
+}
+
+class ImportImageType extends VmImportMessage {
+}
+
+class ImportImageResponseType extends VmImportMessage {
+}
+
+class ImportSnapshotType extends VmImportMessage {
+}
+
+class ImportSnapshotResponseType extends VmImportMessage {
+}
+
 /*********************************************************************************/
 public class ImportResourceTag extends EucalyptusData {
   String key;

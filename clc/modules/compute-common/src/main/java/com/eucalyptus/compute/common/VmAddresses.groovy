@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -130,4 +130,33 @@ public class AddressInfoType extends EucalyptusData {  //** added 2008-02-01  **
   {
   }
   
+}
+
+class DescribeMovingAddressesType extends VmAddressMessage {
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
+  ArrayList<Filter> filterSet = new ArrayList<Filter>();
+  @HttpParameterMapping (parameter = "PublicIp")
+  ArrayList<String> publicIpsSet = new ArrayList<String>();
+  Integer maxResults
+  String nextToken
+}
+
+class DescribeMovingAddressesResponseType extends VmAddressMessage {
+}
+
+class MoveAddressToVpcType extends VmAddressMessage {
+  String publicIp
+}
+
+class MoveAddressToVpcResponseType extends VmAddressMessage {
+
+}
+
+class RestoreAddressToClassicType extends VmAddressMessage {
+  String publicIp
+}
+
+class RestoreAddressToClassicResponseType extends VmAddressMessage {
+
 }

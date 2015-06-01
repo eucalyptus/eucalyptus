@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2011-2014 Eucalyptus Systems, Inc.
+  Copyright 2011-2015 Eucalyptus Systems, Inc.
 
   Redistribution and use of this software in source and binary forms,
   with or without modification, are permitted provided that the following
@@ -242,4 +242,95 @@
            extends="com.eucalyptus.compute.common.SpotInstanceMessage">
     <structure map-as="com.eucalyptus.compute.common.SpotInstanceMessage" />
   </mapping>
+
+  <mapping name="CancelSpotFleetRequests"
+           class="com.eucalyptus.compute.common.CancelSpotFleetRequestsType"
+           extends="com.eucalyptus.compute.common.SpotInstanceMessage">
+    <collection name="spotFleetRequestId" factory="org.jibx.runtime.Utility.arrayListFactory" field="spotFleetRequestId" usage="optional">
+      <structure name="item" />
+    </collection>
+    <value name="terminateInstances" field="terminateInstances" usage="optional"/>
+  </mapping>
+
+  <mapping name="CancelSpotFleetRequestsResponse"
+           class="com.eucalyptus.compute.common.CancelSpotFleetRequestsResponseType"
+           extends="com.eucalyptus.compute.common.SpotInstanceMessage">
+    <structure map-as="com.eucalyptus.compute.common.SpotInstanceMessage" />
+    <structure name="successfulFleetRequestSet"/>
+    <structure name="unsuccessfulFleetRequestSet"/>
+  </mapping>
+
+  <mapping name="DescribeSpotFleetInstances"
+           class="com.eucalyptus.compute.common.DescribeSpotFleetInstancesType"
+           extends="com.eucalyptus.compute.common.SpotInstanceMessage">
+    <value name="maxResults" field="maxResults" usage="optional"/>
+    <value name="nextToken" field="nextToken" usage="optional"/>
+    <collection name="spotFleetRequestId" factory="org.jibx.runtime.Utility.arrayListFactory" field="spotFleetRequestId" usage="optional">
+      <structure name="item" />
+    </collection>
+  </mapping>
+
+  <mapping name="DescribeSpotFleetInstancesResponse"
+           class="com.eucalyptus.compute.common.DescribeSpotFleetInstancesResponseType"
+           extends="com.eucalyptus.compute.common.SpotInstanceMessage">
+    <structure map-as="com.eucalyptus.compute.common.SpotInstanceMessage" />
+    <structure name="activeInstanceSet"/>
+  </mapping>
+
+  <mapping name="DescribeSpotFleetRequestHistory"
+           class="com.eucalyptus.compute.common.DescribeSpotFleetRequestHistoryType"
+           extends="com.eucalyptus.compute.common.SpotInstanceMessage">
+    <value name="eventType" field="eventType" usage="optional"/>
+    <value name="maxResults" field="maxResults" usage="optional"/>
+    <value name="nextToken" field="nextToken" usage="optional"/>
+    <value name="spotFleetRequestId" field="spotFleetRequestId" usage="optional"/>
+    <value name="startTime" field="startTime" usage="optional"/>
+  </mapping>
+
+  <mapping name="DescribeSpotFleetRequestHistoryResponse"
+           class="com.eucalyptus.compute.common.DescribeSpotFleetRequestHistoryResponseType"
+           extends="com.eucalyptus.compute.common.SpotInstanceMessage">
+    <structure map-as="com.eucalyptus.compute.common.SpotInstanceMessage" />
+    <structure name="historyRecordSet"/>
+  </mapping>
+
+  <mapping name="DescribeSpotFleetRequests"
+           class="com.eucalyptus.compute.common.DescribeSpotFleetRequestsType"
+           extends="com.eucalyptus.compute.common.SpotInstanceMessage">
+    <value name="maxResults" field="maxResults" usage="optional"/>
+    <value name="nextToken" field="nextToken" usage="optional"/>
+    <collection name="spotFleetRequestId" factory="org.jibx.runtime.Utility.arrayListFactory" field="spotFleetRequestId" usage="optional">
+      <structure name="item" />
+    </collection>
+  </mapping>
+
+  <mapping name="DescribeSpotFleetRequestsResponse"
+           class="com.eucalyptus.compute.common.DescribeSpotFleetRequestsResponseType"
+           extends="com.eucalyptus.compute.common.SpotInstanceMessage">
+    <structure map-as="com.eucalyptus.compute.common.SpotInstanceMessage" />
+    <structure name="spotFleetRequestConfigSet"/>
+  </mapping>
+
+  <mapping name="RequestSpotFleet"
+           class="com.eucalyptus.compute.common.RequestSpotFleetType"
+           extends="com.eucalyptus.compute.common.SpotInstanceMessage">
+    <structure name="spotFleetRequestConfig" field="spotFleetRequestConfig" map-as="com.eucalyptus.compute.common.SpotFleetRequestConfigType" usage="optional"/>
+  </mapping>
+
+  <mapping name="RequestSpotFleetResponse"
+           class="com.eucalyptus.compute.common.RequestSpotFleetResponseType"
+           extends="com.eucalyptus.compute.common.SpotInstanceMessage">
+    <structure map-as="com.eucalyptus.compute.common.SpotInstanceMessage" />
+  </mapping>
+
+  <mapping class="com.eucalyptus.compute.common.SpotFleetRequestConfigType" abstract="true">
+    <value name="clientToken" field="clientToken" usage="optional"/>
+    <value name="iamFleetRole" field="iamFleetRole" usage="optional"/>
+    <value name="spotPrice" field="spotPrice" usage="optional"/>
+    <value name="targetCapacity" field="targetCapacity" usage="optional"/>
+    <value name="terminateInstancesWithExpiration" field="terminateInstancesWithExpiration" usage="optional"/>
+    <value name="validFrom" field="validFrom" usage="optional"/>
+    <value name="validUntil" field="validUntil" usage="optional"/>
+  </mapping>
+
 </binding>
