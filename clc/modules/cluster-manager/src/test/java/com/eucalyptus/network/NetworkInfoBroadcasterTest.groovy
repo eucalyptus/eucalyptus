@@ -78,7 +78,8 @@ class NetworkInfoBroadcasterTest {
       Optional.of( new NetworkConfiguration(
           instanceDnsDomain: 'eucalyptus.internal',
           instanceDnsServers: [ '1.2.3.4' ],
-          publicIps: [ '2.0.0.0-2.0.0.255' ],
+          publicIps: [ '2.0.0.2-2.0.0.255' ],
+          publicGateway: '2.0.0.1',
           privateIps: [ '10.0.0.0-10.0.0.255' ],
           subnets: [
               new EdgeSubnet(
@@ -105,7 +106,7 @@ class NetworkInfoBroadcasterTest {
       ) ),
       new NetworkInfoBroadcaster.NetworkInfoSource( ) {
         @Override Iterable<NetworkInfoBroadcaster.VmInstanceNetworkView> getInstances() {
-          [ instance( 'i-00000001', 'cluster1', 'node1', '000000000002', '00:00:00:00:00:00', '2.0.0.0', '10.0.0.0' ) ]
+          [ instance( 'i-00000001', 'cluster1', 'node1', '000000000002', '00:00:00:00:00:00', '2.0.0.2', '10.0.0.0' ) ]
         }
         @Override Iterable<NetworkInfoBroadcaster.NetworkGroupNetworkView> getSecurityGroups() {
           [ group( 'sg-00000001', '000000000002', [], [], [] ) ]
@@ -140,10 +141,11 @@ class NetworkInfoBroadcasterTest {
         configuration: new NIConfiguration(
             properties: [
                 new NIProperty( name: 'mode', values: ['EDGE'] ),
-                new NIProperty( name: 'publicIps', values: ['2.0.0.0-2.0.0.255'] ),
+                new NIProperty( name: 'publicIps', values: ['2.0.0.2-2.0.0.255'] ),
                 new NIProperty( name: 'enabledCLCIp', values: ['1.1.1.1'] ),
                 new NIProperty( name: 'instanceDNSDomain', values: ['eucalyptus.internal'] ),
                 new NIProperty( name: 'instanceDNSServers', values: ['1.2.3.4'] ),
+                new NIProperty( name: 'publicGateway', values: ['2.0.0.1'] ),
             ],
             subnets: new NISubnets( name: 'subnets', subnets: [
                 new NISubnet(
@@ -185,7 +187,7 @@ class NetworkInfoBroadcasterTest {
               name: 'i-00000001',
               ownerId: '000000000002',
               macAddress: '00:00:00:00:00:00',
-              publicIp: '2.0.0.0',
+              publicIp: '2.0.0.2',
               privateIp: '10.0.0.0',
               securityGroups: [],
           )
