@@ -413,7 +413,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		}
 	}
 		
-	static class SecurityGroupSetup extends AbstractEventHandler<NewLoadbalancerEvent> implements StoredResult<String>{
+	public static class SecurityGroupSetup extends AbstractEventHandler<NewLoadbalancerEvent> implements StoredResult<String>{
 		private String createdGroup = null;
 		private String createdGroupId = null;
 		private String groupOwnerAccountId = null;
@@ -445,7 +445,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			}
 
 			if ( lb.getVpcId( ) == null ) {
-				final String groupName = String.format( "euca-internal-%s-%s", lb.getOwnerAccountNumber(), lb.getDisplayName() );
+				final String groupName = getSecurityGroupName( lb.getOwnerAccountNumber(), lb.getDisplayName() );
 				final String groupDesc = String.format( "group for loadbalancer %s", evt.getLoadBalancer() );
 
 				// check if there's an existing group with the same name
@@ -577,6 +577,10 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			if(this.createdGroupId != null)
 				result.add(this.createdGroupId);
 			return result;
+		}
+		
+		public static String getSecurityGroupName(final String ownerAccountNumber, final String lbName) {
+		  return String.format( "euca-internal-%s-%s", ownerAccountNumber, lbName );
 		}
 	}
 	

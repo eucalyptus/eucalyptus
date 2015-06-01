@@ -45,10 +45,12 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
+import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.STATE;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneEntityTransform;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew;
+import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.SecurityGroupSetup;
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNewListeners;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
@@ -58,6 +60,7 @@ import com.eucalyptus.loadbalancing.backend.CertificateNotFoundException;
 import com.eucalyptus.loadbalancing.backend.DuplicateAccessPointName;
 import com.eucalyptus.loadbalancing.backend.DuplicateListenerException;
 import com.eucalyptus.loadbalancing.backend.InternalFailure400Exception;
+import com.eucalyptus.loadbalancing.backend.InternalFailureException;
 import com.eucalyptus.loadbalancing.backend.InvalidConfigurationRequestException;
 import com.eucalyptus.loadbalancing.backend.ListenerNotFoundException;
 import com.eucalyptus.loadbalancing.backend.LoadBalancingException;
@@ -221,6 +224,24 @@ public class LoadBalancers {
         throw new DuplicateAccessPointName( );
     }
     
+    /// EC2 classic
+    if (vpcId == null) {
+      final String securityGroupName = 
+          SecurityGroupSetup.getSecurityGroupName(user.getAccountNumber(), lbName);
+      try ( final TransactionResource db = Entities.transactionFor(LoadBalancerSecurityGroup.class)) {
+        try{
+          final List<LoadBalancerSecurityGroup> groups =
+              Entities.query(LoadBalancerSecurityGroup.withState(STATE.OutOfService));
+          for(final LoadBalancerSecurityGroup group : groups) {
+            if (securityGroupName.equals(group.getName())) {
+              throw new InternalFailureException("Cleaning up the previous ELB with the same name. Retry in a few minutes.");
+            }
+          }
+        }catch(final NoSuchElementException e )  {
+          ;
+        }
+      }
+    }
     try ( final TransactionResource db = Entities.transactionFor( LoadBalancer.class ) ) {
       try {
         if( Entities.uniqueResult( LoadBalancer.namedByAccountId( user.getAccountNumber(), lbName ) ) != null )
