@@ -179,7 +179,6 @@ public class ImagingBackendService {
   public PutInstanceImportTaskStatusResponseType PutInstanceImportTaskStatus( PutInstanceImportTaskStatusType request ) throws EucalyptusCloudException {
     final PutInstanceImportTaskStatusResponseType reply = request.getReply( );
     final Context context = Contexts.lookup();
-    
     try{
       if ( ! ( context.getUser().isSystemAdmin() || ( context.isAdministrator() && Permissions.isAuthorized(
           VENDOR_IMAGINGSERVICE,
@@ -288,8 +287,8 @@ public class ImagingBackendService {
 
         case FAILED:
           String stateMsg = ImportTaskState.STATE_MSG_CONVERSION_FAILED;
-          if(request.getStatusMessage()!=null)
-            stateMsg = request.getStatusMessage();
+          if(request.getMessage()!=null)
+            stateMsg = request.getMessage();
           ImagingTasks.setState(imagingTask, ImportTaskState.FAILED, stateMsg);
           LOG.warn(String.format("Worker reported failed conversion: %s-%s", stateMsg, request.getErrorCode() !=null ? request.getErrorCode() : "no error code"));
           final String errorCode = request.getErrorCode();
