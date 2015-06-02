@@ -70,7 +70,7 @@ public class CloudFormationServiceBuilder extends AbstractServiceBuilder<CloudFo
 
   @Override
   public void fireEnable( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    if ( noOtherEnabled( config ) ) try {
+    if ( config.isVmLocal( ) && noOtherEnabled( config ) ) try {
       WorkflowClientManager.start( );
     } catch ( Exception e ) {
       throw new ServiceRegistrationException( "Error creating workflow client", e );
@@ -79,7 +79,7 @@ public class CloudFormationServiceBuilder extends AbstractServiceBuilder<CloudFo
 
   @Override
   public void fireDisable( final ServiceConfiguration config ) {
-    if ( noOtherEnabled( config ) ) try {
+    if ( config.isVmLocal( ) && noOtherEnabled( config ) ) try {
       WorkflowClientManager.stop( );
     } catch ( Exception e ) {
       logger.error( "Error stopping workflow client", e );

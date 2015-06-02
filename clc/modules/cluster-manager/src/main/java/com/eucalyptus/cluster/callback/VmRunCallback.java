@@ -77,6 +77,7 @@ import com.eucalyptus.cluster.ResourceState.NoSuchTokenException;
 import com.eucalyptus.compute.common.backend.RunInstancesType;
 import com.eucalyptus.compute.common.network.PublicIPResource;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.tracking.MessageContexts;
 import com.eucalyptus.util.Callback;
@@ -181,6 +182,10 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
                     }
                 ),
                 vm.getPartition( ) );
+        } else {
+          // trigger broadcast of network info for the instance if it does not occur due to
+          // address assignment
+          NetworkGroups.flushRules( );
         }
         return true;
       }
