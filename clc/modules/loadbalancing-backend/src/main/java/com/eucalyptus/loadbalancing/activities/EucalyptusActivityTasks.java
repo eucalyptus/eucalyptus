@@ -629,6 +629,7 @@ public class EucalyptusActivityTasks {
 	}
 	
 	public List<DescribeKeyPairsResponseItemType> describeKeyPairs(final List<String> keyNames){
+    keyNames.add("verbose"); // run in verbose mode for system user
 		return resultOf(
 				new EucaDescribeKeyPairsTask(keyNames),
 				new ComputeSystemActivity(),
