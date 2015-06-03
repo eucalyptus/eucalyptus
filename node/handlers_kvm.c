@@ -870,6 +870,32 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             }
             int error;
 
+            //Fix for EUCA-10433, need instance struct in global_instances prior to doing volume ops
+            sem_p(inst_sem);
+            instance->migration_state = MIGRATION_PREPARING;            
+            save_instance_struct(instance);
+            error = add_instance(&global_instances, instance);
+            copy_instances(); 
+            sem_v(inst_sem);
+            if (error) {
+                if (error == EUCA_DUPLICATE_ERROR) {
+                    LOGINFO("[%s] instance struct already exists (from previous migration?), deleting and re-adding...\n", instance->instanceId);
+                    error = remove_instance(&global_instances, instance);
+                    if (error) {
+                        LOGERROR("[%s] could not replace (remove) instance struct, failing...\n", instance->instanceId);
+                        goto failed_dest;
+                    }
+                    error = add_instance(&global_instances, instance);
+                    if (error) {
+                        LOGERROR("[%s] could not replace (add) instance struct, failing...\n", instance->instanceId);
+                        goto failed_dest;
+                    }
+                } else {
+                    LOGERROR("[%s] could not add instance struct, failing...\n", instance->instanceId);
+                    goto failed_dest;
+                }
+            }
+            
             if (vbr_parse(&(instance->params), pMeta) != EUCA_OK) {
                 goto failed_dest;
             }
@@ -893,6 +919,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 LOGERROR("[%s] failed to prepare images for migrating instance (error=%d)\n", instance->instanceId, error);
                 goto failed_dest;
             }
+
             // attach any volumes
             for (int v = 0; v < EUCA_MAX_VOLUMES; v++) {
                 ncVolume *volume = &instance->volumes[v];

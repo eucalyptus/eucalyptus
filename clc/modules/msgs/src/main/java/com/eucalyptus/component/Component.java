@@ -590,7 +590,7 @@ public class Component implements HasName<Component> {
       }
     }
     
-    private void updateBootstrapDependencies( ) {
+    private synchronized void updateBootstrapDependencies( ) {
       Iterable<Bootstrapper> currBootstrappers = Iterables.concat( Lists.newArrayList( this.bootstrappers.values( ) ),
                                                                                    Lists.newArrayList( this.disabledBootstrappers.values( ) ) );
       this.bootstrappers.clear( );

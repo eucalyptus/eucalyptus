@@ -44,6 +44,7 @@ class DispatchingNetworkingService {
   private static NetworkingService networkingServiceDelegate =
       networkingServiceProxy{ Object proxy, Method method, Object[] args ->
         if ( !method.name.equals( 'update' ) ) throw new IllegalStateException( "Networking not initialized" ); null }
+
   @Delegate
   private static NetworkingService lockingDelegate =
       networkingServiceProxy{ Object proxy, Method method, Object[] args ->

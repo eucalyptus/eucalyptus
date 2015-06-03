@@ -222,6 +222,7 @@ import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
 
 import com.google.common.base.Splitter;
 import com.google.common.base.Suppliers;

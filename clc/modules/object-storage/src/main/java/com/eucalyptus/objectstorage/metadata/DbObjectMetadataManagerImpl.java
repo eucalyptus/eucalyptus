@@ -129,7 +129,10 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
       // setup example and criteria
       ObjectEntity example = new ObjectEntity().withState(ObjectState.extant).withBucket(bucket);
       Criteria search = Entities.createCriteria(ObjectEntity.class).add(Example.create(example));
-      search.add(Restrictions.and(Restrictions.like("objectKey", objectKeyPrefix, MatchMode.START), Restrictions.lt("creationTimestamp", age)));
+      search.add(Restrictions.lt("creationTimestamp", age));
+      if (objectKeyPrefix != null && !objectKeyPrefix.equals("")) {
+        search.add(Restrictions.like("objectKey", objectKeyPrefix, MatchMode.START));
+      }
       search = getSearchByBucket(search, bucket);
       results = search.list();
       tran.commit();

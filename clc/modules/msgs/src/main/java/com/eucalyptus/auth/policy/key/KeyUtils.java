@@ -69,9 +69,10 @@ public class KeyUtils {
 
   public static void validateIntegerValue( String value, String key ) throws JSONException {
     try {
+        //test
       Long lv = Long.valueOf( value );
-      if ( lv <= 0 ) {
-        throw new JSONException( "Invalid value for " + key + ": " + value + ". Must be positive." );
+      if ( lv < 0 ) {
+        throw new JSONException( "Invalid value for " + key + ": " + value + ". Must be 0 or positive." );
       }
     } catch ( NumberFormatException e ) {
       throw new JSONException( "Invalid value format for " + key + ": " + value + ". Integer is required." );
