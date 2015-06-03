@@ -303,7 +303,7 @@ public class LoadBalancers {
 			if(!LoadBalancerListener.validRange(listener))
 				throw new InvalidConfigurationRequestException("Invalid port range");
 			if(!LoadBalancerListener.portAvailable(listener))
-				throw new EucalyptusCloudException("The specified port is restricted for use as a loadbalancer port");
+				throw new EucalyptusCloudException("The specified port(s) " + LoadBalancerListener.RESTRICTED_PORTS + ", are restricted for use as a loadbalancer port.");
 			final PROTOCOL protocol = PROTOCOL.valueOf(listener.getProtocol().toUpperCase());
 			  if(protocol.equals(PROTOCOL.HTTPS) || protocol.equals(PROTOCOL.SSL)) {
 			  final String sslId = listener.getSSLCertificateId();

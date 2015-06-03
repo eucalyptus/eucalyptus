@@ -83,6 +83,7 @@ import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.Regions;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ClusterInfoType;
@@ -282,13 +283,40 @@ public class ClusterEndpoint implements Startable {
     }
 
     final Clusters clusterRegistry = Clusters.getInstance( );
-    final List<Cluster> clusters = Lists.newArrayList( clusterRegistry.listValues( ) );
-    Iterables.addAll( clusters, Iterables.filter(
-        clusterRegistry.listDisabledValues( ),
-        Predicates.not(
-            CollectionUtils.propertyPredicate(
-                Collections2.transform( clusters, CloudMetadatas.toDisplayName() ),
-                CloudMetadatas.toDisplayName() ) ) ) );
+    final List<Cluster> clusters;
+    if ( args.isEmpty( ) ) {
+      clusters = Lists.newArrayList( clusterRegistry.listValues( ) );
+      Iterables.addAll( clusters, Iterables.filter(
+          clusterRegistry.listDisabledValues( ),
+          Predicates.not(
+              CollectionUtils.propertyPredicate(
+                  Collections2.transform( clusters, CloudMetadatas.toDisplayName() ),
+                  CloudMetadatas.toDisplayName() ) ) ) );
+    } else {
+      clusters = Lists.newArrayList();
+      for ( final String partitionName : request.getAvailabilityZoneSet( ) ) {
+        try {
+          clusters.add( Iterables.find( clusterRegistry.listValues( ), new Predicate<Cluster>( ) {
+            @Override
+            public boolean apply( Cluster input ) {
+              return partitionName.equals( input.getConfiguration( ).getPartition( ) );
+            }
+          } ) );
+        } catch ( NoSuchElementException e ) {
+          try {
+            clusters.add( clusterRegistry.lookup( partitionName ) );
+          } catch ( NoSuchElementException ex ) {
+            try {
+              clusters.add( clusterRegistry.lookupDisabled( partitionName ) );
+            } catch ( NoSuchElementException ex2 ) {
+              if ( !describeKeywords.containsValue( partitionName ) ) {
+                throw new ClientComputeException("InvalidParameterValue", "Invalid availability zone: [" + partitionName + "]");
+              }
+            }
+          }
+        }
+      }
+    }
 
     for ( final Cluster c : Iterables.filter( clusters, filterPredicate ) ) {
       reply.getAvailabilityZoneInfo( ).addAll( this.getDescriptionEntry( c ) );

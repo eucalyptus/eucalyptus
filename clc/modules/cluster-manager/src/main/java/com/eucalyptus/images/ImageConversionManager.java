@@ -89,6 +89,7 @@ import com.eucalyptus.storage.msgs.s3.ListEntry;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.DispatchingClient;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.ImagingSupport;
 import com.eucalyptus.util.Callback.Checked;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
@@ -396,6 +397,7 @@ public class ImageConversionManager implements EventListener<ClockTick> {
        try{
          this.cleanupBuckets(Lists.newArrayList(image), false);
          resetImagePendingAvailable(image.getDisplayName(), "Failed to request conversion");
+         ImagingSupport.terminateInstancesWaitingImageConversion(image.getDisplayName());
        }catch(final Exception ex2){
          LOG.error("Failed to cleanup the image's system bucket; setting image state failed: "+image.getDisplayName());
          try{

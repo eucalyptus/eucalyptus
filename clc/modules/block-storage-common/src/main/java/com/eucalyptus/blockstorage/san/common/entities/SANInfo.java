@@ -112,6 +112,7 @@ public class SANInfo extends AbstractPersistent {
   private static final Long ADDRESS_FAILURE_RETRY_INTERVAL_IN_MILLIS = 300 * 1000L; // 5 mins
   private static final long TASK_TIMEOUT = 5 * 60 * 1000;
   public static final String DEFAULT_CHAP_USER = "nouser";
+  public static final String DEFAULT_PATHS = "nopath";
 
   @ConfigurableIdentifier
   @Column(name = "storage_name", unique = true)
@@ -130,12 +131,12 @@ public class SANInfo extends AbstractPersistent {
   @ConfigurableField(description = "User ID for CHAP authentication", displayName = "CHAP user", type = ConfigurableFieldType.KEYVALUE)
   @Column(name = "chap_user")
   private String chapUser;
-  @ConfigurableField(description = "iSCSI Paths for NC", displayName = "NC paths", type = ConfigurableFieldType.KEYVALUE,
-      changeListener = PathsChangeListener.class)
+  @ConfigurableField(description = "iSCSI Paths for NC. Default value is 'nopath'", displayName = "NC paths", type = ConfigurableFieldType.KEYVALUE,
+      changeListener = PathsChangeListener.class, initial = DEFAULT_PATHS)
   @Column(name = "ncpaths")
   private String ncPaths;
-  @ConfigurableField(description = "iSCSI Paths for SC", displayName = "SC paths", type = ConfigurableFieldType.KEYVALUE,
-      changeListener = PathsChangeListener.class)
+  @ConfigurableField(description = "iSCSI Paths for SC. Default value is 'nopath'", displayName = "SC paths", type = ConfigurableFieldType.KEYVALUE,
+      changeListener = PathsChangeListener.class, initial = DEFAULT_PATHS)
   @Column(name = "scpaths")
   private String scPaths;
   @ConfigurableField(description = "Timeout for SAN commands.", displayName = "SAN Task Timeout")
@@ -147,8 +148,6 @@ public class SANInfo extends AbstractPersistent {
   @ConfigurableField(description = "Suffix for resource name on SAN", displayName = "Resource Suffix", initial = "")
   @Column(name = "resource_suffix")
   private String resourceSuffix;
-
-  public static final String DEFAULT_PATHS = "nopath";
 
   public SANInfo() {
     this.name = StorageProperties.NAME;
