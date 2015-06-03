@@ -137,7 +137,7 @@
     <param name="File" value="${euca.log.dir}/cloud-requests.log" />
     <param name="MaxFileSize" value="10MB" />
     <param name="MaxBackupIndex" value="10" />
-    <param name="Permissions" value="rw-------" />
+    <param name="Permissions" value="rw-r-----" />
     <layout class="org.apache.log4j.PatternLayout">
       <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %m%n" />
     </layout>
