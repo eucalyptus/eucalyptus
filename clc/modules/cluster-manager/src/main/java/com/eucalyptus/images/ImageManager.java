@@ -656,6 +656,8 @@ public class ImageManager {
       } finally {
         db.rollback( );
       }
+    }else {
+      throw new ClientComputeException("InvalidAMIName.Malformed", "AMI names must be between 3 and 128 characters long, and may contain letters, numbers, '(', ')', '.', '-', '/' and '_'");
     }
 
     if( description!=null && !Images.isImageDescriptionValid( description ) ){
