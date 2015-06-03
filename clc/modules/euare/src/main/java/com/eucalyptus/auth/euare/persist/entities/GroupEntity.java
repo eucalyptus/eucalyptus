@@ -64,6 +64,7 @@ package com.eucalyptus.auth.euare.persist.entities;
 
 import java.io.Serializable;
 import java.util.List;
+
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -77,8 +78,10 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
 import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.google.common.collect.Lists;
@@ -111,6 +114,9 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
   @Column( name = "auth_group_user_group" )
   Boolean userGroup;
   
+  @Column( name = "auth_group_unique_name", unique = true )
+  String uniqueName;
+  
   // Users in the group
   @ManyToMany( fetch = FetchType.LAZY )
   @JoinTable( name = "auth_group_has_users", joinColumns = { @JoinColumn( name = "auth_group_id" ) }, inverseJoinColumns = @JoinColumn( name = "auth_user_id" ) )
@@ -133,9 +139,10 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
     this.policies = Lists.newArrayList( );
   }
   
-  public GroupEntity( String name ) {
+  public GroupEntity( final String accountId, final String name ) {
     this( );
     this.name = name;
+    this.uniqueName = String.format("%s:%s", accountId, name);
   }
   
   public GroupEntity( Boolean userGroup ) {

@@ -327,7 +327,7 @@ public class DatabaseAccountProxy implements EuareAccount {
       if ( DatabaseAuthUtils.checkUserExists( userName, this.delegate.getName( ) ) ) {
         throw new AuthException( AuthException.USER_ALREADY_EXISTS );
       }
-      UserEntity newUser = new UserEntity( userName );
+      UserEntity newUser = new UserEntity( this.getAccountNumber(), userName );
       newUser.setPath( path );
       newUser.setEnabled( enabled );
       newUser.setPasswordExpires( System.currentTimeMillis( ) + AuthenticationLimitProvider.Values.getDefaultPasswordExpiry( ) );
@@ -336,7 +336,7 @@ public class DatabaseAccountProxy implements EuareAccount {
       }
       newUser.setToken( Crypto.generateSessionToken() );
       //newUser.setConfirmationCode( Crypto.generateSessionToken( userName ) );
-      GroupEntity newGroup = new GroupEntity( DatabaseAuthUtils.getUserGroupName( userName ) );
+      GroupEntity newGroup = new GroupEntity( this.getAccountNumber(), DatabaseAuthUtils.getUserGroupName( userName ) );
       newGroup.setUserGroup( true );
       try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
         AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, "name", this.delegate.getName( ) );
@@ -502,7 +502,7 @@ public class DatabaseAccountProxy implements EuareAccount {
       }
       try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
         AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, "name", this.delegate.getName( ) );
-        GroupEntity group = new GroupEntity( groupName );
+        GroupEntity group = new GroupEntity( this.getAccountNumber(), groupName );
         group.setPath( path );
         group.setUserGroup( false );
         group.setAccount( account );

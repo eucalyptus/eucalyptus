@@ -135,6 +135,9 @@ public class UserEntity extends AbstractPersistent implements Serializable {
   @Column( name = "auth_user_password_expires" )
   Long passwordExpires;
   
+  @Column( name = "auth_user_unique_name", unique = true )
+  String uniqueName;
+  
   // List of secret keys
   @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "user" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -166,9 +169,10 @@ public class UserEntity extends AbstractPersistent implements Serializable {
     this.groups = Lists.newArrayList( );
   }
 
-  public UserEntity( String name ) {
+  public UserEntity( final String accountId, final String name ) {
     this( );
     this.name = name;
+    this.uniqueName = String.format("%s:%s", accountId, name);
   }
   
   public UserEntity( Boolean enabled ) {
