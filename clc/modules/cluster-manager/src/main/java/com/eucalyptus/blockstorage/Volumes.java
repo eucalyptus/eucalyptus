@@ -88,6 +88,7 @@ import com.eucalyptus.compute.common.internal.blockstorage.Volume;
 import com.eucalyptus.compute.common.internal.blockstorage.VolumeTag;
 import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.ListenerRegistry;
@@ -204,7 +205,19 @@ public class Volumes {
       }
     }
   }
-  
+
+  public static void setSystemManagedFlag (final OwnerFullName ownerFullName,
+      final String volumeId, boolean systemManaged) throws NoSuchElementException {
+    try ( final TransactionResource db = Entities.transactionFor( Volume.class ) ) {
+      Volume volume = Entities.uniqueResult( Volume.named( ownerFullName, volumeId ) );
+      volume.setSystemManaged(systemManaged);
+      db.commit();
+    } catch ( final TransactionException ex ) {
+      LOG.debug( ex, ex );
+      throw Exceptions.toUndeclared( ex );
+    }
+  }
+
   public static Volume createStorageVolume( final ServiceConfiguration sc, final UserFullName owner, final String snapId, final Integer newSize, final BaseMessage request ) throws ExecutionException {
     final String newId = ResourceIdentifiers.generateString( Volume.ID_PREFIX );
     LOG.debug("Creating volume");

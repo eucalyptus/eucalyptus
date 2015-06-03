@@ -32,6 +32,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Context;
@@ -264,8 +265,7 @@ public class ImagingBackendService {
           if(imagingTask instanceof VolumeImagingTask){
             try{
               ImagingTasks.updateVolumeStatus((VolumeImagingTask)imagingTask, volumeId, ImportTaskState.COMPLETED, null);
-              Ec2Client.getInstance().deleteTags(null, Lists.newArrayList(volumeId),
-                  Lists.newArrayList(ImagingTaskStateManager.VOLUME_STATUS_TAG));
+              Volumes.setSystemManagedFlag(null, volumeId, false);
             }catch(final Exception ex){
               ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
                   ImportTaskState.FAILED, ImportTaskState.STATE_MSG_FAILED_UNEXPECTED);

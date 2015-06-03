@@ -22,10 +22,8 @@ package com.eucalyptus.compute.service;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -42,7 +40,6 @@ import org.mule.api.MuleEventContext;
 import org.mule.api.lifecycle.Callable;
 import org.mule.component.ComponentException;
 
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.binding.Binding;
@@ -690,6 +687,8 @@ public class ComputeService implements Callable {
         final List<Volume> volumes =
             Entities.query( Volume.named( ownerFullName, null ), true, filter.asCriterion(), filter.getAliases() );
         for ( final Volume foundVol : Iterables.filter(volumes, requestedAndAccessible )) {
+          if ( foundVol.getSystemManaged() &&  !ctx.isAdministrator( ) )
+            continue;
           allowedVolumeIds.add( foundVol.getDisplayName( ) );
           if ( State.ANNIHILATED.equals( foundVol.getState( ) ) ) {
             Entities.delete( foundVol );
@@ -727,27 +726,10 @@ public class ComputeService implements Callable {
 
     Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( Volume.class )
         .getResourceTagMap( AccountFullName.getInstance( ctx.getAccountNumber( ) ), allowedVolumeIds );
-    Map<String,com.eucalyptus.compute.common.Volume> volumes = new HashMap<String,com.eucalyptus.compute.common.Volume>();
     for ( final com.eucalyptus.compute.common.Volume volume : reply.getVolumeSet() ) {
       Tags.addFromTags( volume.getTagSet(), ResourceTag.class, tagsMap.get( volume.getVolumeId() ) );
-      volumes.put(volume.getVolumeId(), volume);
     }
-    if ( !ctx.isAdministrator( ) ) {
-      // don't show volumes that are still about to be imported by import process
-      tagsMap = TagSupport.forResourceClass( Volume.class )
-          .getResourceTagMap( AccountFullName.getInstance( Accounts.lookupSystemAdmin().getAccountNumber() ), allowedVolumeIds );
-      for (Entry<String,List<Tag>> val:tagsMap.entrySet()) {
-        if (Iterables.any(val.getValue(), new Predicate<Tag>( ) {
-          @Override
-          public boolean apply( final Tag tag ) {
-            return "euca:import-status".equals(tag.getKey());
-          } })
-         ) {
-          LOG.debug("Removing volume " + val.getKey() + " from the list of volumes");
-          reply.getVolumeSet().remove(volumes.get(val.getKey()));
-        }
-      }
-    }
+
     return reply;
   }
 

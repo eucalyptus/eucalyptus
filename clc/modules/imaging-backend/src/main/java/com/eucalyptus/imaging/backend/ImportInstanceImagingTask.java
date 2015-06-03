@@ -40,6 +40,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
+import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.compute.common.ConversionTask;
 import com.eucalyptus.compute.common.DiskImage;
 import com.eucalyptus.compute.common.DiskImageDescription;
@@ -249,8 +250,7 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
       if(volumeDetail.getVolume()!=null && volumeDetail.getVolume().getId()!=null){
         try{
           String volumeId = volumeDetail.getVolume().getId();
-          Ec2Client.getInstance().deleteTags(null, Lists.newArrayList(volumeId),
-              Lists.newArrayList(ImagingTaskStateManager.VOLUME_STATUS_TAG));
+          Volumes.setSystemManagedFlag(null, volumeId, false);
           final List<Volume> eucaVolumes =
             Ec2Client.getInstance().describeVolumes(this.getOwnerUserId(), Lists.newArrayList(volumeId));
           if (eucaVolumes.size() != 0) {
