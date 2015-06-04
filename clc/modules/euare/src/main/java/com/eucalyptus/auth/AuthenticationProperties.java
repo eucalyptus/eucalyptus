@@ -94,7 +94,7 @@ public class AuthenticationProperties {
 
   private static final String DEFAULT_CREDENTIAL_DOWNLOAD_GENERATE_CERTIFICATE = "Absent";
 
-  private static final String DEFAULT_AUTHORIZATION_CACHE = "maximumSize=1000, expireAfterWrite=0s";
+  private static final String DEFAULT_AUTHORIZATION_CACHE = "maximumSize=1000, expireAfterWrite=5s";
 
   private static final String DEFAULT_MAX_POLICY_SIZE_TEXT = "16384";
 
