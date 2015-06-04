@@ -217,6 +217,32 @@ class CloudFormationBindingTest extends QueryBindingTestSupport {
         CloudFormationQueryBinding.jsonWriter( ).writeValueAsString( new TestBean( ) ) )
   }
 
+  @Test
+  void testErrorFormat( ) {
+    assertEquals(
+        'JSON error response',
+        '''\
+        {
+          "RequestId" : "edbe8968-c437-11e4-bac0-25d29c2758a9",
+          "Error" : {
+            "Type" : "Sender",
+            "Code" : "ValidationError",
+            "Message" : "Template file referenced by https://cf-template-429942273585-us-west-1.s3.amazonaws.com/cfn-as-launchconfig-paravirt-instanceprofile.json?Signature=W9mgzWRlMAqZe1n0%2BM9gmmFLIF8%3D&Expires=1425670813&AWSAccessKeyId=ASIAIPHT3XGEH2GINPHQ&x-amz-security-token=AQoDYXdzEN3//////////wEa8AHGhON5Y9xtxXv79F9WCUnNWHAo4We9n4GIQGsrOJ9HmW/Niksj/m7mliigTqw0GTQS48R/v8bVuRo5B8BYWMVBqPvJ%2BIEKozO%2B48grz17fjy8gflb%2BGbwv/N4Fb0KORiX51GCm0xosId5dMBcrbJH5pn2fvwItEz2CvEnYTG3WN/abDuJD6qJeqvRGqIgG%2BFtjP/voQDWeIw5%2BFSwhFXyd29tu3NX12E8oy1DsO/Nox6UO92%2Ba8T0%2B0zcwn3JPZsLlDHutpSgNEjV85xolGEAQQt1FYihnTn/lkTL2UXcISgNWUKbsmZ%2BJQZqQR0ocY04gm4DopwU%3D does not exist."
+          }
+        }'''.stripIndent( ),
+        CloudFormationQueryBinding.jsonWriter( ).withDefaultPrettyPrinter().writeValueAsString( new CloudFormationErrorResponse(
+            effectiveUserId: '',
+            statusMessage: '',
+            _epoch: 42,
+            requestId: 'edbe8968-c437-11e4-bac0-25d29c2758a9',
+            error: new Error(
+                code: 'ValidationError',
+                message: 'Template file referenced by https://cf-template-429942273585-us-west-1.s3.amazonaws.com/cfn-as-launchconfig-paravirt-instanceprofile.json?Signature=W9mgzWRlMAqZe1n0%2BM9gmmFLIF8%3D&Expires=1425670813&AWSAccessKeyId=ASIAIPHT3XGEH2GINPHQ&x-amz-security-token=AQoDYXdzEN3//////////wEa8AHGhON5Y9xtxXv79F9WCUnNWHAo4We9n4GIQGsrOJ9HmW/Niksj/m7mliigTqw0GTQS48R/v8bVuRo5B8BYWMVBqPvJ%2BIEKozO%2B48grz17fjy8gflb%2BGbwv/N4Fb0KORiX51GCm0xosId5dMBcrbJH5pn2fvwItEz2CvEnYTG3WN/abDuJD6qJeqvRGqIgG%2BFtjP/voQDWeIw5%2BFSwhFXyd29tu3NX12E8oy1DsO/Nox6UO92%2Ba8T0%2B0zcwn3JPZsLlDHutpSgNEjV85xolGEAQQt1FYihnTn/lkTL2UXcISgNWUKbsmZ%2BJQZqQR0ocY04gm4DopwU%3D does not exist.',
+                type: 'Sender'
+            )
+        ) ) )
+  }
+
   static class TestBean {
     Date date = new Date( 1 )
   }

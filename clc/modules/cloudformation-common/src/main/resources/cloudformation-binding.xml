@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2009-2013 Eucalyptus Systems, Inc.
+  Copyright 2009-2015 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -33,13 +33,11 @@
     <value name="Type" field="type" usage="required"/>
     <value name="Code" field="code" usage="required"/>
     <value name="Message" field="message" usage="required"/>
-    <structure name="Detail" field="detail" usage="required" type="com.eucalyptus.cloudformation.ErrorDetail"/>
+    <structure name="Detail" field="detail" usage="optional" type="com.eucalyptus.cloudformation.ErrorDetail"/>
   </mapping>
   <mapping name="ErrorResponse" class="com.eucalyptus.cloudformation.CloudFormationErrorResponse" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
     <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
-    <collection field="error">
-      <structure name="Error" type="com.eucalyptus.cloudformation.Error"/>
-    </collection>
+    <structure name="Error" field="error" usage="optional" type="com.eucalyptus.cloudformation.Error"/>
     <value name="RequestId" field="requestId" usage="required"/>
   </mapping>
   <mapping class="com.eucalyptus.cloudformation.ResourceList" abstract="true">
