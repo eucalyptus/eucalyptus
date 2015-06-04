@@ -51,6 +51,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.DescribeKeyPairsResponseItemType;
 import com.eucalyptus.compute.common.ImageDetails;
 import com.eucalyptus.compute.common.ResourceTag;
@@ -152,7 +153,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 	
 	private static void onPropertyChange(final String emi, final String instanceType,
 	    final String keyname, String initScript) throws EucalyptusCloudException{
-	  if (!( Bootstrap.isFinished() && Topology.isEnabled( Eucalyptus.class ) ) )
+	  if (!( Bootstrap.isFinished() && Topology.isEnabled( Compute.class ) ) )
 			return;
 		
 		// should validate the parameters
