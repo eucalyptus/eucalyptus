@@ -192,6 +192,11 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
 
   public void setName( String name ) {
     this.name = name;
+    if (this.uniqueName!=null && this.uniqueName.indexOf(":")>0) {
+      final String[] tokens = this.uniqueName.split(":");
+      final String accountId = tokens[0];
+      this.uniqueName = String.format("%s:%s", accountId, name);
+    }
   }
   
   public String getPath( ) {
