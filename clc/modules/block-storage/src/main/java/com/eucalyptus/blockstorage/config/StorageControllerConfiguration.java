@@ -149,7 +149,7 @@ public class StorageControllerConfiguration extends ComponentConfiguration imple
     @Override
     public void fireChange(ConfigurableProperty t, String newValue) throws ConfigurablePropertyException {
       String existingValue = (String) t.getValue();
-      if (existingValue != null && !"<unset>".equals(existingValue)) {
+      if (existingValue != null && !"".equals(existingValue)) {
         if (newValue != null && !newValue.equals(existingValue)) {
           throw new ConfigurablePropertyException(
               "Cannot change extant storage backend configuration. You must deregister all SCs in the partition before you can change the configuration value");
