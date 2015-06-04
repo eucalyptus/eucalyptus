@@ -616,7 +616,7 @@ public class SANManager implements LogicalStorageManager {
     return connectionManager.getVolumeConnectionString(volumeId);
   }
 
-  public void initialize() {
+  public void initialize() throws EucalyptusCloudException {
     LOG.info("Initializing SANInfo entity");
     SANInfo.getStorageInfo();
     connectionManager.initialize();
@@ -959,7 +959,7 @@ public class SANManager implements LogicalStorageManager {
   public void checkVolume(String volumeId) throws EucalyptusCloudException {}
 
   public List<CheckerTask> getCheckers() {
-    return new ArrayList<CheckerTask>();
+    return connectionManager.getCheckers();
   }
 
   public String createSnapshotPoint(String parentVolumeId, String volumeId) throws EucalyptusCloudException {

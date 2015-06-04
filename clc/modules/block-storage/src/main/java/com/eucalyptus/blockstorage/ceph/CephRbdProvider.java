@@ -64,6 +64,7 @@ package com.eucalyptus.blockstorage.ceph;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -81,6 +82,7 @@ import com.eucalyptus.blockstorage.ceph.exceptions.EucalyptusCephException;
 import com.eucalyptus.blockstorage.san.common.SANManager;
 import com.eucalyptus.blockstorage.san.common.SANProvider;
 import com.eucalyptus.blockstorage.util.StorageProperties;
+import com.eucalyptus.storage.common.CheckerTask;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
@@ -398,5 +400,10 @@ public class CephRbdProvider implements SANProvider {
     // Create a snapshot on the image for future use as one might not exist
     String snapshotPoint = CephRbdInfo.SNAPSHOT_ON_PREFIX + snapshotId;
     rbdService.createSnapshot(snapshotId, snapshotPoint);
+  }
+
+  @Override
+  public List<CheckerTask> getCheckers() {
+    return new ArrayList<CheckerTask>();
   }
 }
