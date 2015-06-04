@@ -39,7 +39,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
@@ -343,7 +343,7 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 		public void fireEvent(ClockTick event) {
 			if (!( Bootstrap.isFinished() &&
 			          Topology.isEnabledLocally( LoadBalancingBackend.class ) &&
-			          Topology.isEnabled( Eucalyptus.class ) )) 
+			          Topology.isEnabled( Compute.class ) ))
 				return;
 			
 			/// determine the BE instances to query
