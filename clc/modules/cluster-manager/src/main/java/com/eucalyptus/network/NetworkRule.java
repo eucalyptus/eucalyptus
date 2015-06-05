@@ -104,25 +104,209 @@ public class NetworkRule extends AbstractPersistent {
    */
   public static final int RULE_MAX_PORT = 65535;
 
+  /**
+   * Set of all supported protocols per: http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml
+   * To enable a protocol to be supported in EC2Classic (vpc only is the default), then pass 'false' to the constructor
+   *
+   * An example currently is sctp, which we support in EDGE (euca-10031) as an exception to AWS compatibility
+   */
   public enum Protocol {
-    icmp(1){
+    hopopt(0),
+    icmp(1, false){
       @Override public Integer extractLowPort ( final NetworkRule rule ) { return null; }
       @Override public Integer extractHighPort( final NetworkRule rule ) { return null; }
       @Override public Integer extractIcmpType( final NetworkRule rule ) { return rule.getLowPort( ); }
       @Override public Integer extractIcmpCode( final NetworkRule rule ) { return rule.getHighPort( ); }
+
+      @Override
+      public String getUserFacingName() {
+        return this.name();
+      }
     },
-    tcp(6),
-    udp(17)
-    ;
+    igmp(2),
+    ggp(3),
+    ipv4(4),
+    st(5),
+    tcp(6, false) {
+      @Override
+      public String getUserFacingName() {
+        return this.name();
+      }
+    },
+    cbt(7),
+    egp(8),
+    igp(9),
+    bnn_rcc_mon(10),
+    nvp_ii(11),
+    pup(12),
+    argus(13),
+    emcon(14),
+    xnet(15),
+    chaos(16),
+    udp(17, false) {
+      @Override
+      public String getUserFacingName() {
+        return this.name();
+      }
+    },
+    mux(18),
+    dcn_meas(19),
+    hmp(20),
+    prm(21),
+    xns_idp(22),
+    trunk_1(23),
+    trunk_2(24),
+    leaf_1(25),
+    leaf_2(26),
+    rdp(27),
+    irtp(28),
+    iso_tp4(29),
+    netblt(30),
+    mfe_nsp(31),
+    merit_inp(32),
+    dccp(33),
+    three_pc(34),
+    idpr(35),
+    xtp(36),
+    ddp(37),
+    idpr_cmtp(38),
+    tp_plusplus(39),
+    il(40),
+    ipv6(41),
+    sdrp(42),
+    ipv6_route(43),
+    ipv6_frag(44),
+    idrp(45),
+    rsvp(46),
+    gre(47),
+    dsr(48),
+    bna(49),
+    esp(50),
+    ah(51),
+    i_nlsp(52),
+    swipe(53),
+    narp(54),
+    mobile(55),
+    tlsp(56),
+    skip(57),
+    ipv6_icmp(58),
+    ipv6_nonxt(59),
+    ipv6_opts(60),
+    any_host_internal(61),
+    cftp(62),
+    any_local_net(63),
+    sat_expak(64),
+    kyrptolan(65),
+    rvd(66),
+    ippc(67),
+    any_distributed_filesystem(68),
+    sat_mon(69),
+    visa(70),
+    ipcv(71),
+    cpnx(72),
+    cphb(73),
+    wsn(74),
+    pvp(75),
+    br_sat_mon(76),
+    sun_nd(77),
+    wb_mon(78),
+    wb_expak(79),
+    iso_ip(80),
+    vmtp(81),
+    secure_vmtp(82),
+    vines(83),
+    ttp(84),
+    iptn(84),
+    nsfnet_igp(85),
+    dgp(86),
+    tcf(87),
+    eigrp(88),
+    ospfigp(89),
+    sprite_rpc(90),
+    larp(91),
+    ntp(92),
+    ax_25(93),
+    ipip(94),
+    micp(95),
+    scc_sp(96),
+    etherip(97),
+    encap(98),
+    any_private_encryption(99),
+    gmtp(100),
+    ifmp(101),
+    pnni(102),
+    pim(103),
+    aris(104),
+    scps(105),
+    qnx(106),
+    a_n(107),
+    ipcomp(108),
+    snp(109),
+    compaq_peer(110),
+    ipx_in_ip(111),
+    vrrp(112),
+    pgm(113),
+    any_0hop(114),
+    l2tp(115),
+    ddx(116),
+    iatp(117),
+    stp(118),
+    srp(119),
+    uti(120),
+    smp(121),
+    sm(122),
+    ptp(123),
+    isis(124),
+    fire(125),
+    crtp(126),
+    crudp(127),
+    sscopmce(128),
+    iplt(129),
+    sps(130),
+    pipe(131),
+    sctp(132, false),
+    fc(133),
+    rsvp_e2e_ignore(134),
+    nobility(135),
+    udplite(136),
+    mpls_in_ip(137),
+    manet(138),
+    hip(139),
+    shim6(140),
+    wesp(141),
+    rohc(142),
+    experimental1(253),
+    experimental2(254)
+        ;
+    /*
+    143-252		Unassigned		[Internet_Assigned_Numbers_Authority]
+    255	Reserved			[Internet_Assigned_Numbers_Authority]
+        */
+
 
     private final int number;
+    private final boolean vpcModeOnly; //Is this protocol allowed in EC2-Classic mode (EDGE/MANAGED*)
 
-    private Protocol( int number ) {
+    private Protocol( int number, boolean vpcOnly) {
       this.number = number;
+      this.vpcModeOnly = vpcOnly;
+    }
+
+    private Protocol( int number) {
+      this.number = number;
+      this.vpcModeOnly = true;
     }
 
     public int getNumber( ) {
       return number;
+    }
+
+    public boolean isVpcOnly() {
+      return this.vpcModeOnly;
+    }
+
+    public String getUserFacingName() {
+      return String.valueOf(this.number);
     }
 
     public static Protocol fromString( final String value ) {
@@ -226,29 +410,26 @@ public class NetworkRule extends AbstractPersistent {
   }
 
   public static NetworkRule create( final String protocolText,
-                                    final boolean vpc,
+                                      final boolean vpc,
                                     final Integer lowPort,
                                     final Integer highPort,
                                     final Collection<NetworkPeer> peers,
                                     final Collection<String> ipRanges ) {
-    Pair<Optional<Protocol>,Integer> protocolPair = parseProtocol( protocolText, vpc );
-    return create( protocolPair.getLeft( ).orNull( ), protocolPair.getRight( ), lowPort, highPort, peers, ipRanges );
+    Protocol p = parseProtocol(protocolText, vpc);
+    return create( p , p.getNumber(), lowPort, highPort, peers, ipRanges );
   }
 
-  protected static Pair<Optional<Protocol>,Integer> parseProtocol(
+  protected static Protocol parseProtocol(
       final String protocolText,
       final boolean vpc
   ) {
-    Protocol protocol = null;
-    try {
-      protocol = Protocol.fromString( protocolText );
-    } catch ( final IllegalArgumentException e ) {
-      if ( !vpc ) throw e;
+    Protocol protocol = Protocol.fromString( protocolText );
+
+    //Ensure that VPC-only protocols aren't allowed
+    if(!vpc && protocol.isVpcOnly()) {
+      throw new IllegalArgumentException("Protocol '" + protocolText + "' not supported in EC2-Classic compatible mode");
     }
-    Integer protocolNumber = protocol != null ?
-        protocol.getNumber( ) :
-        Integer.parseInt( protocolText );
-    return Pair.lopair( protocol, protocolNumber );
+    return protocol;
   }
 
   public static NetworkRule named( ) {
@@ -299,7 +480,7 @@ public class NetworkRule extends AbstractPersistent {
 
   public String getDisplayProtocol( ) {
     return protocol != null ?
-        protocol.name( ) :
+        protocol.getUserFacingName() :
         Objects.toString( protocolNumber, "-1" );
   }
 
@@ -338,7 +519,8 @@ public class NetworkRule extends AbstractPersistent {
   }
 
   public boolean isVpcOnly( ) {
-    return getLowPort() == null || getHighPort() == null || getProtocol() == null;
+    return getProtocol() == null || getProtocol().isVpcOnly();
+    //return getLowPort() == null || getHighPort() == null || getProtocol() == null;
   }
 
   public static Predicate<NetworkRule> egress( ) {
