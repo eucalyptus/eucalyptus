@@ -117,8 +117,8 @@
   <mapping name="GetInstanceImportTaskResponse" class="com.eucalyptus.imaging.common.GetInstanceImportTaskResponseType"
     extends="com.eucalyptus.imaging.common.ImagingMessage">
     <structure map-as="com.eucalyptus.imaging.common.ImagingMessage" />
-    <value name="importTaskId" field="importTaskId"/>
-    <value name="importTaskType" field="importTaskType"/>
+    <value name="importTaskId" field="importTaskId" usage="optional"/>
+    <value name="importTaskType" field="importTaskType" usage="optional"/>
     <structure name="volumeTask" field="volumeTask" usage="optional" type="com.eucalyptus.imaging.common.VolumeTask" />
     <structure name="instanceStoreTask" field="instanceStoreTask" usage="optional" type="com.eucalyptus.imaging.common.InstanceStoreTask" />
   </mapping>
