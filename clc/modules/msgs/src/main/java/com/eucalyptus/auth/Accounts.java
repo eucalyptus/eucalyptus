@@ -314,18 +314,6 @@ public class Accounts {
     return getIdentityProvider( ).lookupRoleByName( accountNumber, name );
   }
 
-  /**
-   * Lookup all enabled user certificates for an account.
-   *
-   * @param accountNumber The account number for the users
-   * @return The list of certificates
-   * @throws AuthException On error
-   */
-  @Nonnull
-  public static List<X509Certificate> lookupAccountCertificatesByAccountNumber( String accountNumber ) throws AuthException {
-    return getIdentityProvider( ).lookupAccountCertificatesByAccountNumber( accountNumber );
-  }
-
   @Nonnull
   public static SecurityTokenContent decodeSecurityToken( String accessKeyIdentifier, String securityToken ) throws AuthException {
     return getIdentityProvider().decodeSecurityToken( accessKeyIdentifier, securityToken );

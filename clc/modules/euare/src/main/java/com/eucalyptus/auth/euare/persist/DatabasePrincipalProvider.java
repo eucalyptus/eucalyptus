@@ -19,8 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare.persist;
 
-import static com.eucalyptus.auth.principal.Certificate.Util.revoked;
-import static com.eucalyptus.auth.principal.Certificate.Util.x509Certificate;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Collection;
@@ -56,7 +54,6 @@ import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.SecurityTokenContent;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.auth.euare.UserPrincipalImpl;
 import com.eucalyptus.auth.tokens.SecurityTokenManager;
@@ -69,7 +66,6 @@ import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.base.Optional;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 
 /**
  *
@@ -341,21 +337,6 @@ public class DatabasePrincipalProvider implements PrincipalProvider {
         break;
       default:
         throw new AuthException( AuthException.CONFLICT );
-    }
-  }
-
-  @Override
-  public List<X509Certificate> lookupAccountCertificatesByAccountNumber( final String accountNumber ) throws AuthException {
-    try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( CertificateEntity.class ) ) {
-      final List<X509Certificate> certificates = Lists.newArrayList( );
-      for ( final User user : Accounts.lookupAccountById( accountNumber ).getUsers( ) ) {
-        Iterables.addAll( certificates, Iterables.transform(
-            Iterables.filter(
-                user.getCertificates(),
-                CollectionUtils.propertyPredicate( false, revoked( ) ) ),
-            x509Certificate( ) ) );
-      }
-      return certificates;
     }
   }
 

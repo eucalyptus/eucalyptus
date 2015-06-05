@@ -317,21 +317,6 @@ public class RegionDelegatingPrincipalProvider implements PrincipalProvider {
   }
 
   @Override
-  public List<X509Certificate> lookupAccountCertificatesByAccountNumber( final String accountNumber ) throws AuthException {
-    return regionDispatchByAccountNumber( accountNumber, new NonNullFunction<PrincipalProvider, List<X509Certificate>>() {
-      @Nonnull
-      @Override
-      public List<X509Certificate> apply( final PrincipalProvider principalProvider ) {
-        try {
-          return principalProvider.lookupAccountCertificatesByAccountNumber( accountNumber );
-        } catch ( AuthException e ) {
-          throw Exceptions.toUndeclared( e );
-        }
-      }
-    } );
-  }
-
-  @Override
   public X509Certificate getCertificateByAccountNumber( final String accountNumber ) throws AuthException {
     return regionDispatchByAccountNumber( accountNumber, new NonNullFunction<PrincipalProvider, X509Certificate>() {
       @Nonnull
