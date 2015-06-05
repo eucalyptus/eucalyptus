@@ -89,7 +89,6 @@ public class Hmacv2LoginModule extends HmacLoginModuleSupport {
   @Override
   public boolean authenticate( HmacCredentials credentials ) throws Exception {
     String sig = credentials.getSignature( );
-    checkForReplay( sig );
     AccessKey accessKey = lookupAccessKey( credentials );
     UserPrincipal user = accessKey.getPrincipal( );
     String secretKey = accessKey.getSecretKey();

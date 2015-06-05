@@ -748,10 +748,6 @@ public class HmacLoginModuleTest {
       protected AccessKey lookupAccessKey(final HmacCredentials credentials) throws AuthException {
         return accessKey( secret );
       }
-
-      @Override
-      protected void checkForReplay( final String signature ) throws AuthenticationException {
-      }
     };
   }
 
@@ -764,10 +760,6 @@ public class HmacLoginModuleTest {
       @Override
       protected AccessKey lookupAccessKey( final HmacCredentials credentials ) throws AuthException {
         return accessKey( secret );
-      }
-
-      @Override
-      protected void checkForReplay( final String signature ) throws AuthenticationException {
       }
     };
   }
