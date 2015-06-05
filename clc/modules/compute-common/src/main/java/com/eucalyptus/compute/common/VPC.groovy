@@ -1527,7 +1527,22 @@ class CreateNetworkAclEntryType extends VpcMessage {
   @HttpParameterMapping( parameter = "Icmp" )
   IcmpTypeCodeType icmpTypeCode;
   PortRangeType portRange;
+
   CreateNetworkAclEntryType() {  }
+
+  @Override
+  Map<String, String> validate() {
+    Map<String,String> errors = super.validate( )
+
+    if ( [ 'tcp', '6', 'udp', '17' ].contains( protocol ) &&
+        portRange?.from != null &&
+        portRange?.to != null &&
+        portRange?.from > portRange?.to ) {
+      errors.put( 'PortRange', "Invalid TCP/UDP port range (${portRange?.from}:${portRange?.to})" as String )
+    }
+
+    errors
+  }
 }
 class DescribeVpnConnectionsResponseType extends VpcMessage {
   VpnConnectionSetType vpnConnectionSet = new VpnConnectionSetType();
