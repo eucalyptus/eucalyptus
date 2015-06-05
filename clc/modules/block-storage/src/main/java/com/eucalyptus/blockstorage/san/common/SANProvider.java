@@ -66,9 +66,11 @@
 package com.eucalyptus.blockstorage.san.common;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import com.eucalyptus.blockstorage.StorageResource;
 import com.eucalyptus.blockstorage.exceptions.ConnectionInfoNotFoundException;
+import com.eucalyptus.storage.common.CheckerTask;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
@@ -83,8 +85,11 @@ public interface SANProvider {
 
   /**
    * Initialize database entities that might be used by/required for configuring the storage provider
+   * 
+   * @throws ConnectionInfoNotFoundException
+   * @throws EucalyptusCloudException
    */
-  public void initialize();
+  public void initialize() throws EucalyptusCloudException;
 
   /**
    * Configure the provider. This is typically called during initialization of the system but may be called repeatedly, so it should be idempotent.
@@ -314,7 +319,7 @@ public interface SANProvider {
    */
   public void deleteSnapshotPoint(String parentVolumeId, String snapshotPointId) throws EucalyptusCloudException;
 
-  public void checkConnectionInfo() throws ConnectionInfoNotFoundException;
+  public void checkConnectionInfo() throws EucalyptusCloudException;
 
   /**
    * Checks for the snapshot on the SAN backend and returns true or false accordingly
@@ -339,9 +344,16 @@ public interface SANProvider {
   public String getProviderName();
 
   /**
+   * Check if the snapshot is in progress and wait for it to complete before returning back to caller
    * 
    * @param snapshotId
    * @throws EucalyptusCloudException
    */
   public void waitAndComplete(String snapshotId) throws EucalyptusCloudException;
+
+  /**
+   * 
+   * @return A list of tasks that the provider needs to run periodically
+   */
+  public List<CheckerTask> getCheckers();
 }

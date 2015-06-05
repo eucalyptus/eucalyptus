@@ -194,7 +194,7 @@ public class DatabaseServerProperties {
         String masterPassword = DatabaseInfo.getDatabaseInfo()
             .getAppendOnlyPassword();
         if (masterPassword == null || masterPassword.length() <= 0)
-          masterPassword = Crypto.generateAlphanumericId(8).toLowerCase();
+          masterPassword = Crypto.generateAlphanumericId(25).toLowerCase();
         final String masterUserName = "eucalyptus";
         boolean vmCreated = false;
         try {

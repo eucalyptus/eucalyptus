@@ -93,6 +93,7 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.ClusterInfoType;
+import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.DescribeImagesResponseType;
 import com.eucalyptus.compute.common.DescribeImagesType;
 import com.eucalyptus.compute.common.DescribeInstanceStatusResponseType;
@@ -3214,6 +3215,7 @@ public class ActivityManager {
     public void fireEvent( final ClockTick event ) {
       if ( Bootstrap.isOperational( ) &&
           Topology.isEnabledLocally( AutoScalingBackend.class ) &&
+          Topology.isEnabled( Compute.class ) &&
           Topology.isEnabled( Eucalyptus.class ) ) {
         activityManager.doScaling();
       }

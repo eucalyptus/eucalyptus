@@ -277,8 +277,19 @@ if (!is_null_or_empty($protocol) && $protocol eq $PROTOCOL_RBD) {
       login_target($iface, $ip, $store, $user, $password);
       sleep(1);
     }
+    
     # get dev from lun
-    push @devices, retry_until_exists(\&get_iscsi_device, [$netdev, $ip, $store, $lun], 5);
+    $blockdevice = retry_until_exists(\&get_iscsi_device, [$netdev, $ip, $store, $lun], 2);
+    
+    # rescan the session and try fetching the device. adding this check to cover 3PAR which might be slow in exporting luns
+    if (is_null_or_empty($blockdevice)) {
+      $blockdevice = retry_until_exists(\&refresh_session_and_get_iscsi_device, [$netdev, $ip, $store, $lun], 5);
+    }
+    
+    # push the block device to the array only if its not empty
+    if (!is_null_or_empty($blockdevice)) {
+      push @devices, $blockdevice;
+    }
   }
   # debugging
   use Data::Dumper;
@@ -438,6 +449,13 @@ sub setup_virsh_secret {
 	run_cmd(1, 1, "virsh secret-define --file $secret_path");
 	run_cmd(1, 1, "virsh secret-set-value $uuid --base64 $ceph_key");
 	run_cmd(1, 0, "rm -f $secret_path");
+}
+
+sub refresh_session_and_get_iscsi_device {
+  my ($netdev, $ip, $store, $lun) = @_;
+  print STDERR "Refreshing iscsiadm session before fetching attached device\n";
+  run_cmd(1, 0, "$ISCSIADM -m session -R");
+  return get_iscsi_device($netdev, $ip, $store, $lun);
 }
 
 ##############################################
