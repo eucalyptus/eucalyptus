@@ -39,6 +39,7 @@ import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Either;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.NonNullFunction;
+import com.eucalyptus.util.async.AsyncExceptions;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
@@ -307,7 +308,12 @@ public class RegionDelegatingPrincipalProvider implements PrincipalProvider {
               identityProvider.reserveGlobalName( namespace, name, duration );
               return Either.right( "" );
             } catch ( AuthException e ) {
-              return Either.left( e );
+              if ( AsyncExceptions.isWebServiceErrorCode( e, AuthException.CONFLICT ) ||
+                  AuthException.CONFLICT.equals( e.getMessage( ) ) ) {
+                return Either.left( e );
+              } else {
+                throw Exceptions.toUndeclared( e );
+              }
             }
           }
         }, 0, CollectionUtils.<String>count( Predicates.notNull( ) ) );
@@ -414,7 +420,6 @@ public class RegionDelegatingPrincipalProvider implements PrincipalProvider {
           }
         }
       }
-      //TODO:STEVE: check error codes to ensure failure due to not found only? (or catch more specific exception for either)
       final Iterable<R> successResults = Optional.presentInstances( Iterables.transform(
           regionResults,
           Either.<AuthException,R>rightOption( ) ) );

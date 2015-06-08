@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare;
 
+import java.net.ConnectException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
@@ -28,6 +29,8 @@ import java.util.List;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.euare.common.identity.DescribeCertificateResponseType;
@@ -77,6 +80,7 @@ import com.eucalyptus.component.EphemeralConfiguration;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
@@ -232,6 +236,8 @@ public class RemotePrincipalProvider implements PrincipalProvider {
         @Override public String getName( ) { return profileErn.getName( ); }
         @Override public String getPath( ) { return profileErn.getPath(); }
       };
+    } catch ( AuthException e ) {
+      throw e;
     } catch ( Exception e ) {
       throw new AuthException( e );
     }
@@ -246,6 +252,8 @@ public class RemotePrincipalProvider implements PrincipalProvider {
       final DescribeRoleResponseType response = send( request );
       final DescribeRoleResult result = response.getDescribeRoleResult();
       return TypeMappers.transform( result.getRole( ), Role.class );
+    } catch ( AuthException e ) {
+      throw e;
     } catch ( Exception e ) {
       throw new AuthException( e );
     }
@@ -261,6 +269,8 @@ public class RemotePrincipalProvider implements PrincipalProvider {
       final DecodeSecurityTokenResponseType response = send( request );
       final DecodeSecurityTokenResult result = response.getDecodeSecurityTokenResult();
       return TypeMappers.transform( result.getSecurityToken(), SecurityTokenContent.class );
+    } catch ( AuthException e ) {
+      throw e;
     } catch ( Exception e ) {
       throw new AuthException( e );
     }
@@ -276,6 +286,8 @@ public class RemotePrincipalProvider implements PrincipalProvider {
     request.setDuration( duration );
     try {
       send( request );
+    } catch ( AuthException e ) {
+      throw e;
     } catch ( Exception e ) {
       throw new AuthException( e );
     }
@@ -287,6 +299,8 @@ public class RemotePrincipalProvider implements PrincipalProvider {
       final DescribeCertificateResponseType response = send( new DescribeCertificateType( ) );
       final DescribeCertificateResult result = response.getDescribeCertificateResult( );
       return PEMFiles.getCert( result.getPem( ).getBytes( StandardCharsets.UTF_8 ) );
+    } catch ( AuthException e ) {
+      throw e;
     } catch ( Exception e ) {
       throw new AuthException( e );
     }
@@ -307,18 +321,34 @@ public class RemotePrincipalProvider implements PrincipalProvider {
       final SignCertificateResponseType response = send( signCertificateType );
       final SignCertificateResult result = response.getSignCertificateResult( );
       return PEMFiles.getCert( result.getPem().getBytes( StandardCharsets.UTF_8 ) );
+    } catch ( AuthException e ) {
+      throw e;
     } catch ( Exception e ) {
       throw new AuthException( e );
     }
   }
 
   private <R extends IdentityMessage> R send( final IdentityMessage request ) throws Exception {
+    final URI endpoint = URI.create( endpoints.iterator( ).next( ) );
     final ServiceConfiguration config = new EphemeralConfiguration(
         ComponentIds.lookup( Identity.class ),
         "identity",
         "identity",
-        URI.create( endpoints.iterator( ).next( ) ) ); //TODO:STEVE: endpoint handling
-    return AsyncRequests.sendSync( config, request );
+        endpoint );
+    try {
+      return AsyncRequests.sendSync( config, request );
+    } catch ( Exception e ) {
+      if ( Exceptions.isCausedBy( e, SSLHandshakeException.class ) ) {
+        throw new AuthException( "HTTPS connection failed for region host " + endpoint.getHost( ) );
+      }
+      if ( Exceptions.isCausedBy( e, SSLException.class ) ) {
+        throw new AuthException( "HTTPS error for region host " + endpoint.getHost( ) + ": " + String.valueOf( e.getMessage( ) ) );
+      }
+      if ( Exceptions.isCausedBy( e, ConnectException.class ) ) {
+        throw new AuthException( "Error connecting to region host " + endpoint.getHost( )  );
+      }
+      throw e;
+    }
   }
 
   private AccountIdentifiers resultFor( final DescribeAccountsType request ) throws AuthException {
