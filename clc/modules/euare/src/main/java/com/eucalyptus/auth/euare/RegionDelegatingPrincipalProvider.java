@@ -311,7 +311,7 @@ public class RegionDelegatingPrincipalProvider implements PrincipalProvider {
             }
           }
         }, 0, CollectionUtils.<String>count( Predicates.notNull( ) ) );
-    if ( successes < ( 1 + ( numberOfRegions / 2 ) ) ) {
+    if ( successes < numberOfRegions ) {
       throw new AuthException( AuthException.CONFLICT );
     }
   }
