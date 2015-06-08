@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,7 +48,7 @@ public class ErrorDetail extends EucalyptusData {
   public ErrorDetail() {  }
 }
 @ComponentMessage(CloudFormation.class)
-@JsonIgnoreProperties(["correlationId", "userId","effectiveUserId","callerContext","_return","statusMessage","_epoch","_services","_disabledServices","_notreadyServices","_stoppedServices"] )
+@JsonIgnoreProperties(["CorrelationId", "UserId","EffectiveUserId", "CallerContext","Reply","_return","StatusMessage","_epoch","_services","_disabledServices","_notreadyServices","_stoppedServices"] )
 public class CloudFormationMessage extends BaseMessage {
   @Override
   @JsonIgnore
@@ -72,7 +72,7 @@ public class Error extends EucalyptusData {
   String message;
   public Error() {  }
   @JsonProperty("Detail")
-  ErrorDetail detail = new ErrorDetail();
+  ErrorDetail detail
 }
 public class ResourceList extends EucalyptusData {
   public ResourceList() {  }
@@ -81,9 +81,9 @@ public class ResourceList extends EucalyptusData {
 }
 public class CloudFormationErrorResponse extends CloudFormationMessage {
   @JsonProperty("RequestId")
-  String requestId;
+  String requestId
   @JsonProperty("Error")
-  ArrayList<Error> error = new ArrayList<Error>( );
+  Error error
 
   CloudFormationErrorResponse( ) {
     set_return( false )
@@ -91,7 +91,7 @@ public class CloudFormationErrorResponse extends CloudFormationMessage {
 
   @Override
   String toSimpleString( ) {
-    "${error?.getAt(0)?.type} error (${error?.getAt(0)?.code}): ${error?.getAt(0)?.message}"
+    "${error?.type} error (${error?.code}): ${error?.message}"
   }
 }
 public class Outputs extends EucalyptusData {

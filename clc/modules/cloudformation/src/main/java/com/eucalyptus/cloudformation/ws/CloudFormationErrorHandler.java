@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,7 +48,7 @@ public class CloudFormationErrorHandler extends ErrorHandlerSupport {
     error.setType( role == Role.Receiver ? "Receiver" : "Sender" );
     error.setCode( code );
     error.setMessage( message );
-    errorResp.getError().add( error );
+    errorResp.setError( error );
     return errorResp;
   }
 }
