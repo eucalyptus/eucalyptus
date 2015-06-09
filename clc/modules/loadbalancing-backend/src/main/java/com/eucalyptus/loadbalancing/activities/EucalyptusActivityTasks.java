@@ -627,15 +627,6 @@ public class EucalyptusActivityTasks {
 				"failed to create IAM role"
 		);
 	}
-	
-	public List<DescribeKeyPairsResponseItemType> describeKeyPairs(final List<String> keyNames){
-    keyNames.add("verbose"); // run in verbose mode for system user
-		return resultOf(
-				new EucaDescribeKeyPairsTask(keyNames),
-				new ComputeSystemActivity(),
-				"failed to describe keypairs"
-		);
-	}
 
 	public List<SecurityGroupItemType> describeUserSecurityGroupsById(
 			final AccountFullName accountFullName,
@@ -931,28 +922,6 @@ public class EucalyptusActivityTasks {
 			return req;
 		}
 	}
-	
-	private class EucaDescribeKeyPairsTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<DescribeKeyPairsResponseItemType>> {
-		private List<String> keyNames = null;
-		private EucaDescribeKeyPairsTask(final List<String> keyNames){
-			this.keyNames = keyNames;
-		}
-		
-		DescribeKeyPairsType getRequest(){
-			final DescribeKeyPairsType req = new DescribeKeyPairsType();
-			if(this.keyNames!=null){
-				req.setKeySet(new ArrayList<>(this.keyNames));
-			}
-			return req;
-		}
-		
-		@Override
-		List<DescribeKeyPairsResponseItemType> extractResult(ComputeMessage response) {
-			final DescribeKeyPairsResponseType resp = (DescribeKeyPairsResponseType) response;
-			return resp.getKeySet();
-		}
-	}
-
 
 	private class EucaDescribeSecurityGroupsTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<SecurityGroupItemType>> {
 		private String vpcId = null;

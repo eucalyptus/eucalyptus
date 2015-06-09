@@ -38,6 +38,8 @@ import com.eucalyptus.component.Faults.CheckException;
 import org.apache.log4j.Logger;
 import org.springframework.util.StringUtils;
 
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseType;
 import com.eucalyptus.autoscaling.common.msgs.LaunchConfigurationType;
@@ -52,7 +54,6 @@ import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.Compute;
-import com.eucalyptus.compute.common.DescribeKeyPairsResponseItemType;
 import com.eucalyptus.compute.common.ImageDetails;
 import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -73,6 +74,7 @@ import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.InstanceProf
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.SecurityGroupSetup;
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.TagCreator;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
+import com.eucalyptus.resources.client.Ec2Client;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -127,10 +129,40 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 	
 	public static class ElbKeyNameChangeListener implements PropertyChangeListener<String> {
 		   @Override
-		   public void fireChange( ConfigurableProperty t, String newValue ) throws ConfigurablePropertyException {
+		   public void fireChange( ConfigurableProperty t, String keyname ) throws ConfigurablePropertyException {
 			   try {
-			     if(t.getValue()!=null && !t.getValue().equals(newValue))
-			       onPropertyChange(null, null, newValue, null);
+			     if(t.getValue()!=null && !t.getValue().equals(keyname)) {
+			       if ( keyname != null && !keyname.isEmpty() ) {
+  			       // find out if there are any old elbs are deployed
+  			       boolean oldElbExist = false;
+  			       for (LoadBalancer lb:LoadBalancers.listLoadbalancers()){
+  			         if (!lb.useSystemAccount()) {
+  			           oldElbExist = true;
+  			           break;
+  			         }
+  			       }
+  			       try {
+  			         Ec2Client.getInstance().describeKeyPairs(Accounts.lookupSystemAccountByAlias(
+  			            AccountIdentifiers.ELB_SYSTEM_ACCOUNT ).getUserId( ), Lists.newArrayList(keyname));
+  			       } catch(Exception ex) {
+  			         throw new ConfigurablePropertyException("Could not change key name due to: " + ex.getMessage() 
+  			             + ". Do you have keypair " + keyname + " that belongs to "
+  			             + AccountIdentifiers.ELB_SYSTEM_ACCOUNT + " account?");
+  			       }
+  			       if (oldElbExist) {
+  			         try {
+  			           Ec2Client.getInstance().describeKeyPairs(null,
+  	                  Lists.newArrayList(keyname));
+  			         } catch(Exception ex) {
+  	               throw new ConfigurablePropertyException("Could not change key name due to: " + ex.getMessage()
+  	                   + ". Do you have keypair " + keyname + " that belongs to system account?");
+  	             }
+  			       }
+			       }
+			       onPropertyChange(null, null, keyname, null);
+			     }
+			   } catch ( final ConfigurablePropertyException e ) {
+           throw e;
 			   } catch ( final Exception e ) {
 			     throw new ConfigurablePropertyException("Could not change key name due to: " + e.getMessage());
 			   }
@@ -171,23 +203,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 				throw new EucalyptusCloudException("Failed to verify EMI in the system");
 			}
 		}
-		
-		if(keyname != null && !keyname.equals("")){
-			try{
-			  // validate keypair as system admin
-				final List<DescribeKeyPairsResponseItemType> keypairs =
-				    EucalyptusActivityTasks.getInstance().describeKeyPairs(Lists.newArrayList(keyname));
-				if( keypairs==null || keypairs.size()<=0 )
-					throw new EucalyptusCloudException("No such keypair is found in the system");
-				if( !keypairs.get(0).getKeyName().equals(keyname))
-					throw new EucalyptusCloudException("No such keypair is found in the system");
-			}catch(final EucalyptusCloudException ex){
-				throw ex;
-			}catch(final Exception ex){
-				throw new EucalyptusCloudException("Failed to verify the keyname in the system");
-			}
-		}
-		
+		// keyname is validated by caller
 		if( !Topology.isEnabledLocally( LoadBalancingBackend.class ) )
 		  return;
 

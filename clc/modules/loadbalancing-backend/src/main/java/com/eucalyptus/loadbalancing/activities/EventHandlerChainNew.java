@@ -28,12 +28,15 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
+
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.euare.GetRolePolicyResult;
 import com.eucalyptus.auth.euare.InstanceProfileType;
 import com.eucalyptus.auth.euare.RoleType;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupsType;
@@ -51,6 +54,7 @@ import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
+import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
@@ -72,6 +76,7 @@ import com.eucalyptus.loadbalancing.LoadBalancers;
 import com.eucalyptus.loadbalancing.common.LoadBalancingBackend;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceEntityTransform;
+import com.eucalyptus.resources.client.Ec2Client;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -166,16 +171,18 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 				}
 			}
 			
-			// check if the keyname is configured and exists
+			// check if the keyname is configured and exists, the key name for new ELB's should be from
+	    // loadbalancing account
 			final String keyName = LoadBalancerASGroupCreator.KEYNAME;
-			if(keyName!=null && keyName.length()>0){
-				try{
-					final List<DescribeKeyPairsResponseItemType> keypairs = EucalyptusActivityTasks.getInstance().describeKeyPairs(Lists.newArrayList(keyName));
-					if(keypairs==null || keypairs.size()<=0 || !keypairs.get(0).getKeyName().equals(keyName))
-						throw new Exception();
-				}catch(Exception ex){
-					throw new EventHandlerException(String.format("The configured keyname is not found"));
-				}
+			if ( keyName != null && !keyName.isEmpty() ) {
+	      try {
+          Ec2Client.getInstance().describeKeyPairs(Accounts.lookupSystemAccountByAlias(
+             AccountIdentifiers.ELB_SYSTEM_ACCOUNT ).getUserId( ), Lists.newArrayList(keyName));
+        } catch(Exception ex) {
+          throw new EventHandlerException("The configured keyname is not found."
+              + " Do you have keypair " + keyName + " that belongs to "
+              + AccountIdentifiers.ELB_SYSTEM_ACCOUNT + " account?");
+        }
 			}
 		}
 		
