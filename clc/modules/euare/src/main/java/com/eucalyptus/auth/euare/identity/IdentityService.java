@@ -37,12 +37,10 @@ import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMOutputFormat;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.log4j.Logger;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.InvalidAccessKeyAuthException;
 import com.eucalyptus.auth.api.PrincipalProvider;
-import com.eucalyptus.auth.euare.EuareException;
 import com.eucalyptus.auth.euare.EuareServerCertificateUtil;
 import com.eucalyptus.auth.euare.common.identity.Account;
 import com.eucalyptus.auth.euare.common.identity.DecodeSecurityTokenResponseType;
@@ -121,7 +119,7 @@ public class IdentityService {
     this.principalProvider = principalProvider;
   }
 
-  public DescribePrincipalResponseType describePrincipal( final DescribePrincipalType request ) throws EuareException {
+  public DescribePrincipalResponseType describePrincipal( final DescribePrincipalType request ) throws IdentityServiceException {
     final DescribePrincipalResponseType response = request.getReply( );
     final DescribePrincipalResult result = new DescribePrincipalResult( );
 
@@ -205,7 +203,7 @@ public class IdentityService {
 
   public DescribeAccountsResponseType describeAccounts(
     final DescribeAccountsType request
-  ) throws EuareException {
+  ) throws IdentityServiceException {
     final DescribeAccountsResponseType response = request.getReply( );
     final DescribeAccountsResult result = new DescribeAccountsResult( );
 
@@ -243,7 +241,7 @@ public class IdentityService {
 
   public DescribeInstanceProfileResponseType describeInstanceProfile(
       final DescribeInstanceProfileType request
-  ) throws EuareException {
+  ) throws IdentityServiceException {
     final DescribeInstanceProfileResponseType response = request.getReply( );
     final DescribeInstanceProfileResult result = new DescribeInstanceProfileResult( );
 
@@ -262,7 +260,7 @@ public class IdentityService {
     return response;
   }
 
-  public DescribeRoleResponseType describeRole( final DescribeRoleType request ) throws EuareException {
+  public DescribeRoleResponseType describeRole( final DescribeRoleType request ) throws IdentityServiceException {
     final DescribeRoleResponseType response = request.getReply( );
     final DescribeRoleResult result = new DescribeRoleResult( );
 
@@ -280,7 +278,7 @@ public class IdentityService {
 
   public DecodeSecurityTokenResponseType decodeSecurityToken(
       final DecodeSecurityTokenType request
-  ) throws EuareException {
+  ) throws IdentityServiceException {
     final DecodeSecurityTokenResponseType response = request.getReply( );
     final DecodeSecurityTokenResult result = new DecodeSecurityTokenResult( );
 
@@ -299,13 +297,16 @@ public class IdentityService {
 
   public ReserveNameResponseType reserveName(
       final ReserveNameType request
-  ) throws EuareException {
+  ) throws IdentityServiceException {
     final ReserveNameResponseType response = request.getReply( );
     final ReserveNameResult result = new ReserveNameResult( );
 
     try {
       principalProvider.reserveGlobalName( request.getNamespace(), request.getName(), request.getDuration() );
     } catch ( AuthException e ) {
+      if ( AuthException.CONFLICT.equals( e.getMessage( ) ) ) {
+        throw new IdentityServiceSenderException( "Conflict", "Name not available: " + request.getName( ) );
+      }
       throw handleException( e );
     }
 
@@ -323,7 +324,7 @@ public class IdentityService {
     return response;
   }
 
-  public SignCertificateResponseType signCertificate( final SignCertificateType request ) throws EuareException {
+  public SignCertificateResponseType signCertificate( final SignCertificateType request ) throws IdentityServiceException {
     final SignCertificateResponseType response = request.getReply( );
     final SignCertificateResult result = new SignCertificateResult( );
     final String pubkey = request.getKey( );
@@ -331,9 +332,9 @@ public class IdentityService {
     final Integer expirationDays = request.getExpirationDays( );
 
     if( Strings.isNullOrEmpty( pubkey ) )
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "No public key is provided");
+      throw new IdentityServiceSenderException( "InvalidValue", "No public key is provided");
     if( Strings.isNullOrEmpty( principal ) )
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "No principal is provided");
+      throw new IdentityServiceSenderException( "InvalidValue", "No principal is provided");
 
     try {
       final KeyFactory keyFactory = KeyFactory.getInstance( "RSA", "BC");
@@ -347,14 +348,14 @@ public class IdentityService {
       final String certPem = new String( PEMFiles.getBytes(  vmCert ) );
       result.setPem( certPem );
     } catch( final Exception ex ) {
-      throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
+      throw new IdentityServiceReceiverException( "InternalError", String.valueOf( ex.getMessage( ) ));
     }
     response.setSignCertificateResult( result );
     return response;
   }
 
 
-  public TunnelActionResponseType tunnelAction( final TunnelActionType request ) throws EuareException {
+  public TunnelActionResponseType tunnelAction( final TunnelActionType request ) throws IdentityServiceException {
     final TunnelActionResponseType response = request.getReply( );
     final TunnelActionResult result = new TunnelActionResult( );
 
@@ -388,16 +389,16 @@ public class IdentityService {
   /**
    * Method always throws, signature allows use of "throw handleException ..."
    */
-  private EuareException handleException( final Exception e ) throws EuareException {
-    final EuareException cause = Exceptions.findCause( e, EuareException.class );
+  private IdentityServiceException handleException( final Exception e ) throws IdentityServiceException {
+    final IdentityServiceException cause = Exceptions.findCause( e, IdentityServiceException.class );
     if ( cause != null ) {
       throw cause;
     }
 
     logger.error( e, e );
 
-    final EuareException exception =
-        new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, "InternalError", String.valueOf(e.getMessage( )) );
+    final IdentityServiceException exception =
+        new IdentityServiceReceiverException( "InternalError", String.valueOf( e.getMessage( ) ) );
     if ( Contexts.lookup( ).hasAdministrativePrivileges( ) ) {
       exception.initCause( e );
     }
