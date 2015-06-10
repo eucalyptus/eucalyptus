@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 package com.eucalyptus.tokens
 
 import com.eucalyptus.binding.HttpParameterMapping
+import com.eucalyptus.ws.WebServiceError
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import com.eucalyptus.auth.policy.annotation.PolicyAction
@@ -95,7 +96,7 @@ class TokensErrorType extends EucalyptusData {
 class TokensErrorDetailType extends EucalyptusData {
 }
 
-class TokensErrorResponseType extends TokenMessage {
+class TokensErrorResponseType extends TokenMessage implements WebServiceError {
   String requestId
   HttpResponseStatus httpStatus;
   ArrayList<TokensErrorType> errors = new ArrayList<TokensErrorType>( )
@@ -106,7 +107,17 @@ class TokensErrorResponseType extends TokenMessage {
 
   @Override
   String toSimpleString( ) {
-    "${errors?.getAt(0)?.type} error (${errors?.getAt(0)?.code}): ${errors?.getAt(0)?.message}"
+    "${errors?.getAt(0)?.type} error (${webServiceErrorCode}): ${webServiceErrorMessage}"
+  }
+
+  @Override
+  String getWebServiceErrorCode( ) {
+    errors?.getAt(0)?.code
+  }
+
+  @Override
+  String getWebServiceErrorMessage( ) {
+    errors?.getAt(0)?.message
   }
 }
 

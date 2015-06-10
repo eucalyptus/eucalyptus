@@ -21,7 +21,6 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
 import static com.eucalyptus.util.async.AsyncExceptions.asWebServiceErrorMessage;
-import static com.eucalyptus.util.async.AsyncExceptions.isWebServiceErrorCode;
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.cloudformation.ValidationErrorException;
@@ -57,6 +56,7 @@ import com.eucalyptus.compute.common.DescribeSnapshotsResponseType;
 import com.eucalyptus.compute.common.DescribeSnapshotsType;
 import com.eucalyptus.compute.common.DescribeVolumesResponseType;
 import com.eucalyptus.compute.common.DescribeVolumesType;
+import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -133,14 +133,11 @@ public class AWSEC2VolumeResourceAction extends ResourceAction {
         AWSEC2VolumeResourceAction action = (AWSEC2VolumeResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
-        describeVolumesType.setVolumeSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
+        describeVolumesType.getFilterSet( ).add( Filter.filter( "volume-id", action.info.getPhysicalResourceId( ) ) );
         DescribeVolumesResponseType describeVolumesResponseType;
         try {
           describeVolumesResponseType = AsyncRequests.sendSync( configuration, describeVolumesType);
         } catch ( final Exception e ) {
-          if ( isWebServiceErrorCode( e, "InvalidVolume.NotFound" ) ) {
-            throw new ValidationFailedException( "Volume " + action.info.getPhysicalResourceId() + " not yet available." );
-          }
           throw new ValidationErrorException("Error describing volume " + action.info.getPhysicalResourceId() + ":" + asWebServiceErrorMessage( e, e.getMessage() ) );
         }
         if (describeVolumesResponseType.getVolumeSet().size()==0) {
@@ -221,8 +218,8 @@ public class AWSEC2VolumeResourceAction extends ResourceAction {
         if (!("Snapshot".equals(action.info.getDeletionPolicy()))) return action;
         DescribeSnapshotsType describeSnapshotsType = MessageHelper.createMessage(DescribeSnapshotsType.class, action.info.getEffectiveUserId());
         String snapshotId = JsonHelper.getJsonNodeFromString(action.info.getSnapshotIdForDelete()).asText();
-        describeSnapshotsType.setSnapshotSet(Lists.newArrayList(snapshotId));
-        DescribeSnapshotsResponseType describeSnapshotsResponseType = AsyncRequests.<DescribeSnapshotsType, DescribeSnapshotsResponseType>sendSync(configuration, describeSnapshotsType);
+        describeSnapshotsType.getFilterSet( ).add( Filter.filter( "snapshot-id", snapshotId ) );
+        DescribeSnapshotsResponseType describeSnapshotsResponseType = AsyncRequests.sendSync(configuration, describeSnapshotsType);
         if (describeSnapshotsResponseType.getSnapshotSet() == null || describeSnapshotsResponseType.getSnapshotSet().isEmpty()) {
           throw new ValidationFailedException("Snapshot " + snapshotId + " not yet complete");
         }
@@ -306,14 +303,11 @@ public class AWSEC2VolumeResourceAction extends ResourceAction {
     private static boolean volumeDeleted(AWSEC2VolumeResourceAction action, ServiceConfiguration configuration) throws Exception {
       if (action.info.getPhysicalResourceId() == null) return true;
       DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
-      describeVolumesType.setVolumeSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
+      describeVolumesType.getFilterSet( ).add( Filter.filter( "volume-id", action.info.getPhysicalResourceId( ) ) );
       DescribeVolumesResponseType describeVolumesResponseType;
       try {
         describeVolumesResponseType = AsyncRequests.sendSync(configuration, describeVolumesType);
       } catch ( final Exception e ) {
-        if ( isWebServiceErrorCode( e, "InvalidVolume.NotFound" ) ) {
-          return true; // already deleted
-        }
         throw new ValidationErrorException("Error describing volume " + action.info.getPhysicalResourceId() + ":" + asWebServiceErrorMessage( e, e.getMessage() ) );
       }
       if (describeVolumesResponseType.getVolumeSet().size() == 0) {

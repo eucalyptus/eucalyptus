@@ -430,7 +430,7 @@ public class DescribeVolumeAttributeResponseType extends BlockVolumeMessage {
 }
 
 public class DescribeVolumeStatusType extends BlockVolumeMessage {
-  ArrayList<String> volumeId
+  ArrayList<String> volumeId = Lists.newArrayList( )
   Integer maxResults
   String nextToken
   @HttpParameterMapping (parameter = "Filter")

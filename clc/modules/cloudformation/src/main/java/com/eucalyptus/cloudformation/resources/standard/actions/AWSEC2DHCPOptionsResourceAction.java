@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -51,10 +51,9 @@ import com.eucalyptus.compute.common.DescribeDhcpOptionsResponseType;
 import com.eucalyptus.compute.common.DescribeDhcpOptionsType;
 import com.eucalyptus.compute.common.DhcpConfigurationItemSetType;
 import com.eucalyptus.compute.common.DhcpConfigurationItemType;
-import com.eucalyptus.compute.common.DhcpOptionsIdSetItemType;
-import com.eucalyptus.compute.common.DhcpOptionsIdSetType;
 import com.eucalyptus.compute.common.DhcpValueSetType;
 import com.eucalyptus.compute.common.DhcpValueType;
+import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.base.Strings;
@@ -159,9 +158,11 @@ public class AWSEC2DHCPOptionsResourceAction extends ResourceAction {
         if (action.info.getPhysicalResourceId() == null) return action;
         // Check dhcp options (return if gone)
         DescribeDhcpOptionsType describeDhcpOptionsType = MessageHelper.createMessage(DescribeDhcpOptionsType.class, action.info.getEffectiveUserId());
-        action.setDhcpOptionsId(describeDhcpOptionsType, action.info.getPhysicalResourceId());
-        DescribeDhcpOptionsResponseType describeDhcpOptionsResponseType = AsyncRequests.<DescribeDhcpOptionsType,DescribeDhcpOptionsResponseType> sendSync(configuration, describeDhcpOptionsType);
-        if (describeDhcpOptionsResponseType.getDhcpOptionsSet() == null || describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem() == null || describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem().isEmpty()) {
+        describeDhcpOptionsType.getFilterSet( ).add( Filter.filter( "dhcp-options-id", action.info.getPhysicalResourceId() ) );
+        DescribeDhcpOptionsResponseType describeDhcpOptionsResponseType = AsyncRequests.sendSync(configuration, describeDhcpOptionsType);
+        if (describeDhcpOptionsResponseType.getDhcpOptionsSet() == null ||
+            describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem() == null ||
+            describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem().isEmpty()) {
           return action; // already deleted
         }
         DeleteDhcpOptionsType deleteDhcpOptionsType = MessageHelper.createMessage(DeleteDhcpOptionsType.class, action.info.getEffectiveUserId());
@@ -230,18 +231,6 @@ public class AWSEC2DHCPOptionsResourceAction extends ResourceAction {
       throw new ValidationErrorException("If you specify NetbiosNameServers, then NetbiosNodeType is required.");
     }
   }
-
-  private void setDhcpOptionsId(DescribeDhcpOptionsType describeDhcpOptionsType, String dhcpOptionsId) {
-    DhcpOptionsIdSetType dhcpOptionsSet = new DhcpOptionsIdSetType();
-    ArrayList<DhcpOptionsIdSetItemType> item = Lists.newArrayList();
-    DhcpOptionsIdSetItemType dhcpOptionsIdSetItemType = new DhcpOptionsIdSetItemType();
-    dhcpOptionsIdSetItemType.setDhcpOptionsId(dhcpOptionsId);
-    item.add(dhcpOptionsIdSetItemType);
-    dhcpOptionsSet.setItem(item);
-    item.add(dhcpOptionsIdSetItemType);
-    describeDhcpOptionsType.setDhcpOptionsSet(dhcpOptionsSet);
-  }
-
 
   @Override
   public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {

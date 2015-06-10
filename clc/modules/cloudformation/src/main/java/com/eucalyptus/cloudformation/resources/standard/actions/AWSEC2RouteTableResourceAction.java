@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,8 +48,7 @@ import com.eucalyptus.compute.common.DeleteRouteTableResponseType;
 import com.eucalyptus.compute.common.DeleteRouteTableType;
 import com.eucalyptus.compute.common.DescribeRouteTablesResponseType;
 import com.eucalyptus.compute.common.DescribeRouteTablesType;
-import com.eucalyptus.compute.common.RouteTableIdSetItemType;
-import com.eucalyptus.compute.common.RouteTableIdSetType;
+import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
@@ -133,12 +132,8 @@ public class AWSEC2RouteTableResourceAction extends ResourceAction {
 
         // See if route table is there
         DescribeRouteTablesType describeRouteTablesType = MessageHelper.createMessage(DescribeRouteTablesType.class, action.info.getEffectiveUserId());
-        RouteTableIdSetType routeTableIdSet = new RouteTableIdSetType();
-        RouteTableIdSetItemType routeTableIdSetItem = new RouteTableIdSetItemType();
-        routeTableIdSetItem.setRouteTableId(action.info.getPhysicalResourceId());
-        routeTableIdSet.setItem(Lists.newArrayList(routeTableIdSetItem));
-        describeRouteTablesType.setRouteTableIdSet(routeTableIdSet);
-        DescribeRouteTablesResponseType describeRouteTablesResponseType = AsyncRequests.<DescribeRouteTablesType, DescribeRouteTablesResponseType> sendSync(configuration, describeRouteTablesType);
+        describeRouteTablesType.getFilterSet( ).add( Filter.filter( "route-table-id", action.info.getPhysicalResourceId( ) ) );
+        DescribeRouteTablesResponseType describeRouteTablesResponseType = AsyncRequests.sendSync(configuration, describeRouteTablesType);
         if (describeRouteTablesResponseType.getRouteTableSet() == null || describeRouteTablesResponseType.getRouteTableSet().getItem() == null ||
           describeRouteTablesResponseType.getRouteTableSet().getItem().isEmpty()) {
           return action; // no route table

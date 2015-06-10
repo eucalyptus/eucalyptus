@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +18,9 @@
  * additional information or have any questions.
  ************************************************************************/
 @GroovyAddClassUUID
-package com.eucalyptus.imaging.common;
+package com.eucalyptus.imaging.common
+
+import com.eucalyptus.ws.WebServiceError;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -283,7 +285,7 @@ public class Error extends EucalyptusData {
   ErrorDetail detail = new ErrorDetail()
 }
 
-public class ErrorResponse extends ImagingMessage {
+public class ErrorResponse extends ImagingMessage implements WebServiceError {
   String requestId
   ArrayList<Error> error = new ArrayList<Error>( )
 
@@ -293,7 +295,17 @@ public class ErrorResponse extends ImagingMessage {
 
   @Override
   String toSimpleString( ) {
-    "${error?.getAt(0)?.type} error (${error?.getAt(0)?.code}): ${error?.getAt(0)?.message}"
+    "${error?.getAt(0)?.type} error (${webServiceErrorCode}): ${webServiceErrorMessage}"
+  }
+
+  @Override
+  String getWebServiceErrorCode( ) {
+    error?.getAt(0)?.code
+  }
+
+  @Override
+  String getWebServiceErrorMessage( ) {
+    error?.getAt(0)?.message
   }
 }
 public class ErrorDetail extends EucalyptusData {

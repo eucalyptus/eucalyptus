@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,10 +46,6 @@ import com.eucalyptus.compute.common.DescribeSubnetsType;
 import com.eucalyptus.compute.common.DisassociateRouteTableResponseType;
 import com.eucalyptus.compute.common.DisassociateRouteTableType;
 import com.eucalyptus.compute.common.Filter;
-import com.eucalyptus.compute.common.RouteTableIdSetItemType;
-import com.eucalyptus.compute.common.RouteTableIdSetType;
-import com.eucalyptus.compute.common.SubnetIdSetItemType;
-import com.eucalyptus.compute.common.SubnetIdSetType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
@@ -155,12 +151,8 @@ public class AWSEC2SubnetRouteTableAssociationResourceAction extends ResourceAct
 
   private void checkSubnetExists(ServiceConfiguration configuration) throws Exception {
     DescribeSubnetsType describeSubnetsType = MessageHelper.createMessage(DescribeSubnetsType.class, info.getEffectiveUserId());
-    SubnetIdSetType SubnetIdSet = new SubnetIdSetType();
-    SubnetIdSetItemType SubnetIdSetItem = new SubnetIdSetItemType();
-    SubnetIdSetItem.setSubnetId(properties.getSubnetId());
-    SubnetIdSet.setItem(Lists.newArrayList(SubnetIdSetItem));
-    describeSubnetsType.setSubnetSet(SubnetIdSet);
-    DescribeSubnetsResponseType describeSubnetsResponseType = AsyncRequests.<DescribeSubnetsType, DescribeSubnetsResponseType> sendSync(configuration, describeSubnetsType);
+    describeSubnetsType.getFilterSet( ).add( Filter.filter( "subnet-id", properties.getSubnetId( ) ) );
+    DescribeSubnetsResponseType describeSubnetsResponseType = AsyncRequests.sendSync( configuration, describeSubnetsType );
     if (describeSubnetsResponseType.getSubnetSet() == null || describeSubnetsResponseType.getSubnetSet().getItem() == null ||
       describeSubnetsResponseType.getSubnetSet().getItem().isEmpty()) {
       throw new ValidationErrorException("No such subnet with id '" + properties.getSubnetId());
@@ -169,12 +161,8 @@ public class AWSEC2SubnetRouteTableAssociationResourceAction extends ResourceAct
 
   private void checkRouteTableExists(ServiceConfiguration configuration) throws Exception {
     DescribeRouteTablesType describeRouteTablesType = MessageHelper.createMessage(DescribeRouteTablesType.class, info.getEffectiveUserId());
-    RouteTableIdSetType routeTableIdSet = new RouteTableIdSetType();
-    RouteTableIdSetItemType routeTableIdSetItem = new RouteTableIdSetItemType();
-    routeTableIdSetItem.setRouteTableId(properties.getRouteTableId());
-    routeTableIdSet.setItem(Lists.newArrayList(routeTableIdSetItem));
-    describeRouteTablesType.setRouteTableIdSet(routeTableIdSet);
-    DescribeRouteTablesResponseType describeRouteTablesResponseType = AsyncRequests.<DescribeRouteTablesType, DescribeRouteTablesResponseType> sendSync(configuration, describeRouteTablesType);
+    describeRouteTablesType.getFilterSet( ).add( Filter.filter( "route-table-id", properties.getRouteTableId( ) ) );
+    DescribeRouteTablesResponseType describeRouteTablesResponseType = AsyncRequests.sendSync( configuration, describeRouteTablesType );
     if (describeRouteTablesResponseType.getRouteTableSet() == null || describeRouteTablesResponseType.getRouteTableSet().getItem() == null ||
       describeRouteTablesResponseType.getRouteTableSet().getItem().isEmpty()) {
       throw new ValidationErrorException("No such route table with id '" + properties.getRouteTableId());
@@ -189,12 +177,8 @@ public class AWSEC2SubnetRouteTableAssociationResourceAction extends ResourceAct
 
   private boolean subnetExistsForDelete(ServiceConfiguration configuration) throws Exception {
     DescribeSubnetsType describeSubnetsType = MessageHelper.createMessage(DescribeSubnetsType.class, info.getEffectiveUserId());
-    SubnetIdSetType SubnetIdSet = new SubnetIdSetType();
-    SubnetIdSetItemType SubnetIdSetItem = new SubnetIdSetItemType();
-    SubnetIdSetItem.setSubnetId(properties.getSubnetId());
-    SubnetIdSet.setItem(Lists.newArrayList(SubnetIdSetItem));
-    describeSubnetsType.setSubnetSet(SubnetIdSet);
-    DescribeSubnetsResponseType describeSubnetsResponseType = AsyncRequests.<DescribeSubnetsType, DescribeSubnetsResponseType> sendSync(configuration, describeSubnetsType);
+    describeSubnetsType.getFilterSet( ).add( Filter.filter( "subnet-id", properties.getSubnetId( ) ) );
+    DescribeSubnetsResponseType describeSubnetsResponseType = AsyncRequests.sendSync( configuration, describeSubnetsType );
     if (describeSubnetsResponseType.getSubnetSet() == null || describeSubnetsResponseType.getSubnetSet().getItem() == null ||
       describeSubnetsResponseType.getSubnetSet().getItem().isEmpty()) {
       return false;
@@ -204,12 +188,8 @@ public class AWSEC2SubnetRouteTableAssociationResourceAction extends ResourceAct
 
   private boolean routeTableExistsForDelete(ServiceConfiguration configuration) throws Exception {
     DescribeRouteTablesType describeRouteTablesType = MessageHelper.createMessage(DescribeRouteTablesType.class, info.getEffectiveUserId());
-    RouteTableIdSetType routeTableIdSet = new RouteTableIdSetType();
-    RouteTableIdSetItemType routeTableIdSetItem = new RouteTableIdSetItemType();
-    routeTableIdSetItem.setRouteTableId(properties.getRouteTableId());
-    routeTableIdSet.setItem(Lists.newArrayList(routeTableIdSetItem));
-    describeRouteTablesType.setRouteTableIdSet(routeTableIdSet);
-    DescribeRouteTablesResponseType describeRouteTablesResponseType = AsyncRequests.<DescribeRouteTablesType, DescribeRouteTablesResponseType> sendSync(configuration, describeRouteTablesType);
+    describeRouteTablesType.getFilterSet( ).add( Filter.filter( "route-table-id", properties.getRouteTableId( ) ) );
+    DescribeRouteTablesResponseType describeRouteTablesResponseType = AsyncRequests.sendSync( configuration, describeRouteTablesType );
     if (describeRouteTablesResponseType.getRouteTableSet() == null || describeRouteTablesResponseType.getRouteTableSet().getItem() == null ||
       describeRouteTablesResponseType.getRouteTableSet().getItem().isEmpty()) {
       return false;
@@ -225,7 +205,7 @@ public class AWSEC2SubnetRouteTableAssociationResourceAction extends ResourceAct
     filter.setValueSet(Lists.<String>newArrayList(info.getPhysicalResourceId()));
     filterSet.add(filter);
     describeRouteTablesType.setFilterSet(filterSet);
-    DescribeRouteTablesResponseType describeRouteTablesResponseType = AsyncRequests.<DescribeRouteTablesType, DescribeRouteTablesResponseType> sendSync(configuration, describeRouteTablesType);
+    DescribeRouteTablesResponseType describeRouteTablesResponseType = AsyncRequests.<DescribeRouteTablesType, DescribeRouteTablesResponseType> sendSync( configuration, describeRouteTablesType );
     if (describeRouteTablesResponseType.getRouteTableSet() == null || describeRouteTablesResponseType.getRouteTableSet().getItem() == null ||
       describeRouteTablesResponseType.getRouteTableSet().getItem().isEmpty()) {
       return false;

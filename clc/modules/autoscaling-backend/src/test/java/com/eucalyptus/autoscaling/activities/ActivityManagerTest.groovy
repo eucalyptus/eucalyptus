@@ -41,6 +41,7 @@ import com.eucalyptus.autoscaling.tags.Tag
 import com.eucalyptus.compute.common.DescribeInstanceStatusResponseType
 import com.eucalyptus.compute.common.DescribeInstanceStatusType
 import com.eucalyptus.compute.common.DescribeTagsType
+import com.eucalyptus.compute.common.Filter
 import com.eucalyptus.compute.common.InstanceStateType
 import com.eucalyptus.compute.common.InstanceStatusItemType
 import com.eucalyptus.compute.common.InstanceStatusSetType

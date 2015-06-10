@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,8 +43,7 @@ import com.eucalyptus.compute.common.DeleteRouteResponseType;
 import com.eucalyptus.compute.common.DeleteRouteType;
 import com.eucalyptus.compute.common.DescribeRouteTablesResponseType;
 import com.eucalyptus.compute.common.DescribeRouteTablesType;
-import com.eucalyptus.compute.common.RouteTableIdSetItemType;
-import com.eucalyptus.compute.common.RouteTableIdSetType;
+import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.RouteTableType;
 import com.eucalyptus.compute.common.RouteType;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -86,12 +85,8 @@ public class AWSEC2RouteResourceAction extends ResourceAction {
           throw new ValidationErrorException("RouteTableId is a required field");
         }
         DescribeRouteTablesType describeRouteTablesType = MessageHelper.createMessage(DescribeRouteTablesType.class, action.info.getEffectiveUserId());
-        RouteTableIdSetType routeTableIdSet = new RouteTableIdSetType();
-        RouteTableIdSetItemType routeTableIdSetItem = new RouteTableIdSetItemType();
-        routeTableIdSetItem.setRouteTableId(action.properties.getRouteTableId());
-        routeTableIdSet.setItem(Lists.newArrayList(routeTableIdSetItem));
-        describeRouteTablesType.setRouteTableIdSet(routeTableIdSet);
-        DescribeRouteTablesResponseType describeRouteTablesResponseType = AsyncRequests.<DescribeRouteTablesType, DescribeRouteTablesResponseType>sendSync(configuration, describeRouteTablesType);
+        describeRouteTablesType.getFilterSet( ).add( Filter.filter( "route-table-id", action.properties.getRouteTableId( ) ) );
+        DescribeRouteTablesResponseType describeRouteTablesResponseType = AsyncRequests.sendSync(configuration, describeRouteTablesType);
         if (describeRouteTablesResponseType.getRouteTableSet() == null || describeRouteTablesResponseType.getRouteTableSet().getItem() == null ||
           describeRouteTablesResponseType.getRouteTableSet().getItem().isEmpty()) {
           throw new ValidationErrorException("No such route table with id '" + action.properties.getRouteTableId());
@@ -134,12 +129,8 @@ public class AWSEC2RouteResourceAction extends ResourceAction {
         if (action.info.getPhysicalResourceId() == null) return action;
 
         DescribeRouteTablesType describeRouteTablesType = MessageHelper.createMessage(DescribeRouteTablesType.class, action.info.getEffectiveUserId());
-        RouteTableIdSetType routeTableIdSet = new RouteTableIdSetType();
-        RouteTableIdSetItemType routeTableIdSetItem = new RouteTableIdSetItemType();
-        routeTableIdSetItem.setRouteTableId(action.properties.getRouteTableId());
-        routeTableIdSet.setItem(Lists.newArrayList(routeTableIdSetItem));
-        describeRouteTablesType.setRouteTableIdSet(routeTableIdSet);
-        DescribeRouteTablesResponseType describeRouteTablesResponseType = AsyncRequests.<DescribeRouteTablesType, DescribeRouteTablesResponseType>sendSync(configuration, describeRouteTablesType);
+        describeRouteTablesType.getFilterSet( ).add( Filter.filter( "route-table-id", action.properties.getRouteTableId( ) ) );
+        DescribeRouteTablesResponseType describeRouteTablesResponseType = AsyncRequests.sendSync(configuration, describeRouteTablesType);
         if (describeRouteTablesResponseType.getRouteTableSet() == null || describeRouteTablesResponseType.getRouteTableSet().getItem() == null ||
           describeRouteTablesResponseType.getRouteTableSet().getItem().isEmpty()) {
           return action;

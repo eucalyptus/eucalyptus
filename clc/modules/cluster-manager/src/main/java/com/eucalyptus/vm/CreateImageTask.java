@@ -38,11 +38,10 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.ComputeMessage;
-import com.eucalyptus.compute.common.DescribeInstancesResponseType;
-import com.eucalyptus.compute.common.DescribeInstancesType;
 import com.eucalyptus.compute.common.DescribeSnapshotsResponseType;
 import com.eucalyptus.compute.common.DescribeSnapshotsType;
 import com.eucalyptus.compute.common.EbsDeviceMapping;
+import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.cluster.callback.StartInstanceCallback;
 import com.eucalyptus.cluster.callback.StopInstanceCallback;
@@ -51,8 +50,6 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.compute.common.ReservationInfoType;
-import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.compute.common.Snapshot;
 import com.eucalyptus.compute.common.backend.CreateSnapshotResponseType;
 import com.eucalyptus.compute.common.backend.CreateSnapshotType;
@@ -740,7 +737,7 @@ public class CreateImageTask {
 		
 		private DescribeSnapshotsType describeSnapshots(){
 			final DescribeSnapshotsType req = new DescribeSnapshotsType();
-			req.setSnapshotSet(Lists.newArrayList(this.snapshotIds));
+			req.getFilterSet( ).add( Filter.filter( "snapshot-id", this.snapshotIds ) );
 			return req;
 		}
 		
