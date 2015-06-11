@@ -62,8 +62,8 @@ def build_key_path_map(local_keydir, remote_keydir, zone=None):
         add_key_paths(GLOBAL_KEYS, path_map, local_keydir, remote_keydir)
     if zone:
         # CLC to CLC (zone keys, keydir/zone -> keydir/zone)
-        add_key_paths(ZONE_KEYS, path_map, os.path.join(local_keydir, zone),
-                      os.path.join(remote_keydir, zone))
+        add_key_paths([zone + '/'], path_map, local_keydir,
+                      remote_keydir + '/')
         # CLC to CC  (zone keys, keydir/zone -> keydir)
         add_key_paths(ZONE_KEYS, path_map, os.path.join(local_keydir, zone),
                       remote_keydir)
