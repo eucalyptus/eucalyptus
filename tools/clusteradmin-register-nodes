@@ -41,8 +41,8 @@ import sys
 CONFPATH = 'etc/eucalyptus/eucalyptus.conf'
 
 
-def modify_node_list(confpath, nodes, remove=False):
-    if not nodes:
+def modify_node_list(confpath, newnodes, remove=False):
+    if not newnodes:
         return
     newconfpath = confpath + '.new'
     try:
@@ -50,11 +50,11 @@ def modify_node_list(confpath, nodes, remove=False):
         for line in fileinput.input([newconfpath], inplace=True):
             if line.startswith('NODES='):
                 # NODES="192.0.2.11 192.0.2.12 192.0.2.13"
-                nodes = set(line.split('=', 1)[1].strip('" ').split())
+                nodes = set(line.strip().split('=', 1)[1].strip('"').split())
                 if remove:
-                    nodes.difference_update(nodes)
+                    nodes.difference_update(newnodes)
                 else:
-                    nodes.update(nodes)
+                    nodes.update(newnodes)
                 newline = 'NODES="{0}"'.format(' '.join(nodes))
                 print newline.rstrip()
             else:
