@@ -305,7 +305,10 @@ public class Pipelines {
     public boolean checkAccepts( final HttpRequest message ) {
       if ( message instanceof MappingHttpRequest ) {
         final MappingHttpRequest httpRequest = ( MappingHttpRequest ) message;
-        if ( httpRequest.getMethod( ).equals( HttpMethod.POST ) ) {
+        if ( !( message.getUri( ).startsWith( this.servicePath ) || message.getUri( ).startsWith( this.internalServicePath ) ) ) {
+          return false;
+        }
+        if ( httpRequest.getMethod( ).equals( HttpMethod.POST ) && !message.getHeaderNames().contains( "SOAPAction" ) ) {
           final Map<String, String> parameters = new HashMap<String, String>( httpRequest.getParameters( ) );
           final String query = httpRequest.getContentAsString( );
           for ( final String p : query.split( "&" ) ) {
@@ -335,7 +338,7 @@ public class Pipelines {
             }
           }
         }
-        return ( message.getUri( ).startsWith( this.servicePath ) || message.getUri( ).startsWith( this.internalServicePath ) );
+        return true;
       }
       return false;
     }

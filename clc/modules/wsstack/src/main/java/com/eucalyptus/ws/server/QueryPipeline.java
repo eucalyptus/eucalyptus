@@ -80,8 +80,13 @@ public abstract class QueryPipeline extends FilteredPipeline {
   @Override
   public boolean checkAccepts( final HttpRequest message ) {
     if ( message instanceof MappingHttpRequest) {
-      MappingHttpRequest httpRequest = ( MappingHttpRequest ) message;
-      if ( httpRequest.getMethod( ).equals( HttpMethod.POST ) ) {
+      final MappingHttpRequest httpRequest = ( MappingHttpRequest ) message;
+      final boolean usesServicePath = Iterables.any( servicePathPrefixes, Strings.isPrefixOf( message.getUri( ) ) );
+      final boolean noPath = message.getUri( ).isEmpty( ) || message.getUri( ).equals( "/" ) || message.getUri( ).startsWith( "/?" );
+      if ( !usesServicePath && !( noPath && resolvesByHost( message.getHeader( HttpHeaders.Names.HOST ) ) ) ) {
+        return false;
+      }
+      if ( httpRequest.getMethod( ).equals( HttpMethod.POST ) && !message.getHeaderNames().contains( "SOAPAction" ) ) {
         Map<String,String> parameters = new HashMap<String,String>( httpRequest.getParameters( ) );
         Set<String> nonQueryParameters = Sets.newHashSet();
         final String query = httpRequest.getContentAsString( );
@@ -112,11 +117,7 @@ public abstract class QueryPipeline extends FilteredPipeline {
           }
         }
       }
-      final boolean usesServicePath = Iterables.any( servicePathPrefixes, Strings.isPrefixOf( message.getUri( ) ) );
-      final boolean noPath = message.getUri( ).isEmpty( ) || message.getUri( ).equals( "/" ) || message.getUri( ).startsWith( "/?" );
-      return
-          usesServicePath ||
-          ( noPath && resolvesByHost( message.getHeader( HttpHeaders.Names.HOST ) ) );
+      return true;
     }
     return false;
   }
