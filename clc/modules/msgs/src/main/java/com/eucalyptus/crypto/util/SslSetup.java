@@ -133,6 +133,7 @@ public class SslSetup {
   private static final Logger LOG             = Logger.getLogger( SslSetup.class );
   private static final String PROTOCOL        = "TLS";
   private static SSLContext   SERVER_CONTEXT  = null;
+  private static String[]     SERVER_SUPPORTED_CIPHERS = null;
   private static SSLContext   CLIENT_CONTEXT  = null;
   @ConfigurableField( description = "Alias of the certificate entry in euca.p12 to use for SSL for webservices.",
                       changeListener = SslCertChangeListener.class )
@@ -164,6 +165,7 @@ public class SslSetup {
           SSLContext newContext = createServerContext( );
           SERVER_ALIAS = newValue;
           SERVER_CONTEXT = newContext;
+          SERVER_SUPPORTED_CIPHERS = SERVER_CONTEXT.createSSLEngine( ).getSupportedCipherSuites( );
         } catch ( Exception ex ) {
           throw new ConfigurablePropertyException( ex );
         }
@@ -182,6 +184,7 @@ public class SslSetup {
           SSLContext newContext = createServerContext( );
           SERVER_PASSWORD = newValue;
           SERVER_CONTEXT = newContext;
+          SERVER_SUPPORTED_CIPHERS = SERVER_CONTEXT.createSSLEngine( ).getSupportedCipherSuites( );
         } catch ( Exception ex ) {
           throw new ConfigurablePropertyException( ex );
         }
@@ -217,6 +220,7 @@ public class SslSetup {
     }
     
     SERVER_CONTEXT = serverContext;
+    SERVER_SUPPORTED_CIPHERS = SERVER_CONTEXT.createSSLEngine( ).getSupportedCipherSuites( );
     CLIENT_CONTEXT = clientContext;
   }
   
@@ -232,12 +236,12 @@ public class SslSetup {
   }
   
   public static SSLEngine getServerEngine( ) {//TODO:GRZE: @Configurability
-    final SSLEngine engine = SslSetup.getServerContext( ).createSSLEngine( );
+    final SSLEngine engine = SERVER_CONTEXT.createSSLEngine( );
     engine.setUseClientMode( false );
     engine.setWantClientAuth( false );
     engine.setNeedClientAuth( false );
     engine.setEnabledProtocols( SslUtils.getEnabledProtocols( SERVER_SSL_PROTOCOLS, engine.getSupportedProtocols( ) ) );
-    engine.setEnabledCipherSuites( SslUtils.getEnabledCipherSuites( SERVER_SSL_CIPHERS, engine.getSupportedCipherSuites( ) ) );
+    engine.setEnabledCipherSuites( SslUtils.getEnabledCipherSuites( SERVER_SSL_CIPHERS, SERVER_SUPPORTED_CIPHERS ) );
     return engine;
   }
 
