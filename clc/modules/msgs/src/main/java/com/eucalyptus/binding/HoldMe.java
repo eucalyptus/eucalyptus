@@ -82,8 +82,8 @@
 
 package com.eucalyptus.binding;
 
-import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.io.StringReader;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -271,7 +271,7 @@ public class HoldMe implements Lock {
   }
   
   public static XMLStreamReader getXMLStreamReader( String text ) throws XMLStreamException {
-    return HoldMe.getXMLInputFactory( ).createXMLStreamReader( new ByteArrayInputStream( text.getBytes( ) ) );
+    return HoldMe.getXMLInputFactory( ).createXMLStreamReader( new StringReader( text ) );
   }
   
   public static XMLInputFactory getXMLInputFactory( ) {
