@@ -46,6 +46,7 @@ import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.simpleworkflow.SwfJsonUtils;
 import com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.UnsafeByteArrayOutputStream;
 import com.eucalyptus.ws.handlers.ExceptionMarshallerHandler;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.google.common.base.Optional;
@@ -80,7 +81,7 @@ public class SimpleWorkflowBinding extends MessageStackHandler implements Except
   public void outgoingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpResponse ) {
       MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
-      ByteArrayOutputStream byteOut = new ByteArrayOutputStream( 8192 );
+      UnsafeByteArrayOutputStream byteOut = new UnsafeByteArrayOutputStream( 8192 );
       if ( httpResponse.getMessage( ) instanceof EucalyptusErrorMessageType ) {
         httpResponse.setStatus( HttpResponseStatus.BAD_REQUEST );
         final Optional<String> correlationId = getCorrelationId( event );
@@ -105,8 +106,7 @@ public class SimpleWorkflowBinding extends MessageStackHandler implements Except
           }
         }
       }
-      byte[] req = byteOut.toByteArray( );
-      ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( req );
+      ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( byteOut.getBuffer( ), 0, byteOut.getCount( ) );
       httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes( ) ) );
       httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "application/x-amz-json-1.0" );
       httpResponse.setContent( buffer );
@@ -142,12 +142,12 @@ public class SimpleWorkflowBinding extends MessageStackHandler implements Except
       type = "InvalidParameterValue";
     }
 
-    final ByteArrayOutputStream byteOut = new ByteArrayOutputStream( 8192 );
+    final UnsafeByteArrayOutputStream byteOut = new UnsafeByteArrayOutputStream( 8192 );
     SwfJsonUtils.writeObject( byteOut, ImmutableMap.of( "__type", type, "message", message ) );
 
     return new ExceptionResponse(
         responseStatus,
-        ChannelBuffers.wrappedBuffer( byteOut.toByteArray( ) ),
+        ChannelBuffers.wrappedBuffer( byteOut.getBuffer( ), 0, byteOut.getCount( ) ),
         ImmutableMap.copyOf( headers )
     );
   }

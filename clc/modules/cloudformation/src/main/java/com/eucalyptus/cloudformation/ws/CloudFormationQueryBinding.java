@@ -27,6 +27,7 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.UnsafeByteArrayOutputStream;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -78,7 +79,7 @@ public class CloudFormationQueryBinding extends BaseQueryBinding<OperationParame
     } else {
       if ( event.getMessage( ) instanceof MappingHttpResponse) {
         MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
-        ByteArrayOutputStream byteOut = new ByteArrayOutputStream( 8192 );
+        UnsafeByteArrayOutputStream byteOut = new UnsafeByteArrayOutputStream( 8192 );
         HoldMe.canHas.lock( );
         try {
           if ( httpResponse.getMessage( ) == null ) {
@@ -122,8 +123,7 @@ public class CloudFormationQueryBinding extends BaseQueryBinding<OperationParame
               throw e;
             }
           }
-          byte[] req = byteOut.toByteArray( );
-          ChannelBuffer buffer = ChannelBuffers.wrappedBuffer(req);
+          ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( byteOut.getBuffer( ), 0, byteOut.getCount( ) );
           httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes( ) ) );
           httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "application/json; charset=UTF-8" );
           httpResponse.setContent( buffer );

@@ -109,7 +109,7 @@ public class DatabaseCertificateProxy implements EuareCertificate {
   public String getCertificateId( ) {
     return this.delegate.getCertificateId( );
   }
-  
+
   @Override
   public Boolean isActive( ) {
     return this.delegate.isActive( );
