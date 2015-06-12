@@ -24,6 +24,7 @@ import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
+import com.eucalyptus.ws.WebServiceError;
 import com.eucalyptus.ws.protocol.QueryBindingInfo;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
@@ -89,6 +90,20 @@ public class AsyncExceptions {
         final String code = remoteFault.getFaultCode();
         final String message = remoteFault.getFaultDetail();
         error = Optional.of( new AsyncWebServiceError( status.getCode( ), code, message ) );
+      }
+    }
+
+    // also remote ...
+    if ( !error.isPresent( ) ) {
+      final FailedRequestException failedRequestException =
+          Exceptions.findCause( throwable, FailedRequestException.class );
+      if ( failedRequestException != null && failedRequestException.getRequest( ) instanceof WebServiceError ) {
+        final WebServiceError webServiceError = failedRequestException.getRequest( );
+        final String code = webServiceError.getWebServiceErrorCode( );
+        final String message = webServiceError.getWebServiceErrorMessage( );
+        if ( code != null && message != null ) {
+          error = Optional.of( new AsyncWebServiceError( 0, code, message ) );
+        }
       }
     }
 

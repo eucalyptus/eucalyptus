@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@ package com.eucalyptus.loadbalancing.common.msgs
 
 import com.eucalyptus.loadbalancing.common.LoadBalancing
 import com.eucalyptus.util.MessageValidation
+import com.eucalyptus.ws.WebServiceError
 import com.google.common.base.Function
 import com.google.common.collect.Maps
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -738,7 +739,7 @@ class PolicyAttributes extends EucalyptusData {
   @HttpParameterMapping(parameter="member")
   ArrayList<PolicyAttribute> member = new ArrayList<PolicyAttribute>();
 }
-class ErrorResponse extends LoadBalancingMessage { // EucalyptusData {
+class ErrorResponse extends LoadBalancingMessage implements WebServiceError {
   String requestId;
   @HttpEmbedded(multiple=true)
   @HttpParameterMapping(parameter="error")
@@ -750,7 +751,17 @@ class ErrorResponse extends LoadBalancingMessage { // EucalyptusData {
 
   @Override
   String toSimpleString( ) {
-    "${error?.getAt(0)?.type} error (${error?.getAt(0)?.code}): ${error?.getAt(0)?.message}"
+    "${error?.getAt(0)?.type} error (${webServiceErrorCode}): ${webServiceErrorMessage}"
+  }
+
+  @Override
+  String getWebServiceErrorCode( ) {
+    error?.getAt(0)?.code
+  }
+
+  @Override
+  String getWebServiceErrorMessage( ) {
+    error?.getAt(0)?.message
   }
 }
 class ApplySecurityGroupsToLoadBalancerType extends LoadBalancingMessage {

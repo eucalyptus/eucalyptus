@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,14 +22,10 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.cloudformation.ValidationErrorException;
-import com.eucalyptus.cloudformation.entity.StackResourceEntity;
-import com.eucalyptus.cloudformation.entity.StackResourceEntityManager;
 import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
-import com.eucalyptus.cloudformation.resources.ResourcePropertyResolver;
-import com.eucalyptus.cloudformation.resources.ResourceResolverManager;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2EIPAssociationResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2EIPAssociationProperties;
 import com.eucalyptus.cloudformation.template.JsonHelper;
@@ -52,17 +48,14 @@ import com.eucalyptus.compute.common.DescribeNetworkInterfacesResponseType;
 import com.eucalyptus.compute.common.DescribeNetworkInterfacesType;
 import com.eucalyptus.compute.common.DisassociateAddressResponseType;
 import com.eucalyptus.compute.common.DisassociateAddressType;
-import com.eucalyptus.compute.common.NetworkInterfaceIdSetItemType;
-import com.eucalyptus.compute.common.NetworkInterfaceIdSetType;
+import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.NetworkInterfaceType;
-import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
 import com.netflix.glisten.WorkflowOperations;
 import org.apache.log4j.Logger;
 
-import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nullable;
 
@@ -95,17 +88,8 @@ public class AWSEC2EIPAssociationResourceAction extends ResourceAction {
         }
         if (action.properties.getInstanceId() != null) {
           DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
-          describeInstancesType.setInstancesSet(Lists.newArrayList(action.properties.getInstanceId()));
-          DescribeInstancesResponseType describeInstancesResponseType;
-          try {
-            describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
-          } catch ( Exception e ) {
-            if ( AsyncExceptions.isWebServiceErrorCode( e, "InvalidInstanceID.NotFound" ) ) {
-              throw new ValidationErrorException("No such instance " + action.properties.getInstanceId());
-            } else {
-              throw e;
-            }
-          }
+          describeInstancesType.getFilterSet( ).add( Filter.filter( "instance-id", action.properties.getInstanceId() ) );
+          DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
           if (describeInstancesResponseType.getReservationSet() == null || describeInstancesResponseType.getReservationSet().isEmpty()) {
             throw new ValidationErrorException("No such instance " + action.properties.getInstanceId());
           }
@@ -151,13 +135,8 @@ public class AWSEC2EIPAssociationResourceAction extends ResourceAction {
         // Update the instance info (if network id exists)
         if (action.properties.getNetworkInterfaceId() != null) {
           DescribeNetworkInterfacesType describeNetworkInterfacesType = MessageHelper.createMessage(DescribeNetworkInterfacesType.class, action.info.getEffectiveUserId());
-          NetworkInterfaceIdSetType networkInterfaceIdSetType = new NetworkInterfaceIdSetType();
-          NetworkInterfaceIdSetItemType networkInterfaceIdSetItemType = new NetworkInterfaceIdSetItemType();
-          networkInterfaceIdSetItemType.setNetworkInterfaceId(action.properties.getNetworkInterfaceId());
-          ArrayList<NetworkInterfaceIdSetItemType> networkInterfaceIdSetItemTypes = Lists.newArrayList(networkInterfaceIdSetItemType);
-          networkInterfaceIdSetType.setItem(networkInterfaceIdSetItemTypes);
-          describeNetworkInterfacesType.setNetworkInterfaceIdSet(networkInterfaceIdSetType);
-          DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.<DescribeNetworkInterfacesType, DescribeNetworkInterfacesResponseType> sendSync(configuration, describeNetworkInterfacesType);
+          describeNetworkInterfacesType.getFilterSet( ).add( Filter.filter( "network-interface-id", action.properties.getNetworkInterfaceId() ) );
+          DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.sendSync( configuration, describeNetworkInterfacesType);
           if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet() != null &&
             describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem() != null &&
             !describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().isEmpty()) {
@@ -219,13 +198,8 @@ public class AWSEC2EIPAssociationResourceAction extends ResourceAction {
         // Update the instance info (if network id exists)
         if (action.properties.getNetworkInterfaceId() != null) {
           DescribeNetworkInterfacesType describeNetworkInterfacesType = MessageHelper.createMessage(DescribeNetworkInterfacesType.class, action.info.getEffectiveUserId());
-          NetworkInterfaceIdSetType networkInterfaceIdSetType = new NetworkInterfaceIdSetType();
-          NetworkInterfaceIdSetItemType networkInterfaceIdSetItemType = new NetworkInterfaceIdSetItemType();
-          networkInterfaceIdSetItemType.setNetworkInterfaceId(action.properties.getNetworkInterfaceId());
-          ArrayList<NetworkInterfaceIdSetItemType> networkInterfaceIdSetItemTypes = Lists.newArrayList(networkInterfaceIdSetItemType);
-          networkInterfaceIdSetType.setItem(networkInterfaceIdSetItemTypes);
-          describeNetworkInterfacesType.setNetworkInterfaceIdSet(networkInterfaceIdSetType);
-          DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.<DescribeNetworkInterfacesType, DescribeNetworkInterfacesResponseType> sendSync(configuration, describeNetworkInterfacesType);
+          describeNetworkInterfacesType.getFilterSet( ).add( Filter.filter( "network-interface-id", action.properties.getNetworkInterfaceId() ) );
+          DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.sendSync(configuration, describeNetworkInterfacesType);
           if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet() != null &&
             describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem() != null &&
             !describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().isEmpty()) {

@@ -109,6 +109,7 @@ import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
 import com.google.common.collect.Iterables;
@@ -578,20 +579,22 @@ public class RestrictedTypes {
     return filterByProperty( CollectionUtils.<String>listUnit().apply( requestedValue ), extractor );
   }
 
-  public static <T extends RestrictedType> Predicate<T> filterByProperty( final Collection<String> requestedValues,
+  public static <T extends RestrictedType> Predicate<T> filterByProperty( final Collection<String> values,
                                                                           final Function<? super T,String> extractor ) {
     return new Predicate<T>( ) {
       @Override
       public boolean apply( T input ) {
+        final ImmutableList<String> requestedValues = values == null ? null : ImmutableList.copyOf( values );
         return requestedValues == null || requestedValues.isEmpty( ) || requestedValues.contains( extractor.apply( input ) );
       }
     };
   }
 
-  public static <T extends RestrictedType> Predicate<T> filterByOwningAccount( final Collection<String> requestedIdentifiers ) {
+  public static <T extends RestrictedType> Predicate<T> filterByOwningAccount( final Collection<String> identifiers ) {
     return new Predicate<T>( ) {
       @Override
       public boolean apply( T input ) {
+        final ImmutableList<String> requestedIdentifiers = identifiers == null ? null : ImmutableList.copyOf( identifiers );
         return requestedIdentifiers == null || requestedIdentifiers.isEmpty( ) || requestedIdentifiers.contains( input.getOwner( ).getAccountNumber( ) );
       }
     };

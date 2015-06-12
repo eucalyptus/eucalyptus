@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,13 +43,9 @@ import com.eucalyptus.compute.common.DescribeSubnetsResponseType;
 import com.eucalyptus.compute.common.DescribeSubnetsType;
 import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.NetworkAclAssociationType;
-import com.eucalyptus.compute.common.NetworkAclIdSetItemType;
-import com.eucalyptus.compute.common.NetworkAclIdSetType;
 import com.eucalyptus.compute.common.NetworkAclType;
 import com.eucalyptus.compute.common.ReplaceNetworkAclAssociationResponseType;
 import com.eucalyptus.compute.common.ReplaceNetworkAclAssociationType;
-import com.eucalyptus.compute.common.SubnetIdSetItemType;
-import com.eucalyptus.compute.common.SubnetIdSetType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
@@ -164,12 +160,8 @@ public class AWSEC2SubnetNetworkAclAssociationResourceAction extends ResourceAct
 
   private void checkSubnetExists(ServiceConfiguration configuration) throws Exception {
     DescribeSubnetsType describeSubnetsType = MessageHelper.createMessage(DescribeSubnetsType.class, info.getEffectiveUserId());
-    SubnetIdSetType SubnetIdSet = new SubnetIdSetType();
-    SubnetIdSetItemType SubnetIdSetItem = new SubnetIdSetItemType();
-    SubnetIdSetItem.setSubnetId(properties.getSubnetId());
-    SubnetIdSet.setItem(Lists.newArrayList(SubnetIdSetItem));
-    describeSubnetsType.setSubnetSet(SubnetIdSet);
-    DescribeSubnetsResponseType describeSubnetsResponseType = AsyncRequests.<DescribeSubnetsType, DescribeSubnetsResponseType> sendSync(configuration, describeSubnetsType);
+    describeSubnetsType.getFilterSet( ).add( Filter.filter( "subnet-id", properties.getSubnetId( ) ) );
+    DescribeSubnetsResponseType describeSubnetsResponseType = AsyncRequests.sendSync( configuration, describeSubnetsType );
     if (describeSubnetsResponseType.getSubnetSet() == null || describeSubnetsResponseType.getSubnetSet().getItem() == null ||
       describeSubnetsResponseType.getSubnetSet().getItem().isEmpty()) {
       throw new ValidationErrorException("No such subnet with id '" + properties.getSubnetId());
@@ -178,12 +170,8 @@ public class AWSEC2SubnetNetworkAclAssociationResourceAction extends ResourceAct
 
   private void checkNetworkAclExists(ServiceConfiguration configuration) throws Exception {
     DescribeNetworkAclsType describeNetworkAclsType = MessageHelper.createMessage(DescribeNetworkAclsType.class, info.getEffectiveUserId());
-    NetworkAclIdSetType networkAclIdSet = new NetworkAclIdSetType();
-    NetworkAclIdSetItemType networkAclIdSetItem = new NetworkAclIdSetItemType();
-    networkAclIdSetItem.setNetworkAclId(properties.getNetworkAclId());
-    networkAclIdSet.setItem(Lists.newArrayList(networkAclIdSetItem));
-    describeNetworkAclsType.setNetworkAclIdSet(networkAclIdSet);
-    DescribeNetworkAclsResponseType describeNetworkAclsResponseType = AsyncRequests.<DescribeNetworkAclsType, DescribeNetworkAclsResponseType> sendSync(configuration, describeNetworkAclsType);
+    describeNetworkAclsType.getFilterSet( ).add( Filter.filter( "network-acl-id", properties.getNetworkAclId( ) ) );
+    DescribeNetworkAclsResponseType describeNetworkAclsResponseType = AsyncRequests.sendSync( configuration, describeNetworkAclsType );
     if (describeNetworkAclsResponseType.getNetworkAclSet() == null || describeNetworkAclsResponseType.getNetworkAclSet().getItem() == null ||
       describeNetworkAclsResponseType.getNetworkAclSet().getItem().isEmpty()) {
       throw new ValidationErrorException("No such network acl with id '" + properties.getNetworkAclId());
@@ -198,8 +186,8 @@ public class AWSEC2SubnetNetworkAclAssociationResourceAction extends ResourceAct
     filter.setName("association.subnet-id");
     filter.setValueSet(Lists.<String>newArrayList(properties.getSubnetId()));
     filterSet.add(filter);
-    describeNetworkAclsType.setFilterSet(filterSet);
-    DescribeNetworkAclsResponseType describeNetworkAclsResponseType = AsyncRequests.<DescribeNetworkAclsType, DescribeNetworkAclsResponseType> sendSync(configuration, describeNetworkAclsType);
+    describeNetworkAclsType.setFilterSet( filterSet );
+    DescribeNetworkAclsResponseType describeNetworkAclsResponseType = AsyncRequests.<DescribeNetworkAclsType, DescribeNetworkAclsResponseType> sendSync( configuration, describeNetworkAclsType );
     if (describeNetworkAclsResponseType.getNetworkAclSet() == null || describeNetworkAclsResponseType.getNetworkAclSet().getItem() == null ||
       describeNetworkAclsResponseType.getNetworkAclSet().getItem().isEmpty()) {
       throw new ValidationErrorException("Can not find existing network association for subnet " + properties.getSubnetId());
@@ -242,12 +230,8 @@ public class AWSEC2SubnetNetworkAclAssociationResourceAction extends ResourceAct
 
   private String checkSubnetIdAndGetVpcIdForDelete(ServiceConfiguration configuration) throws Exception {
     DescribeSubnetsType describeSubnetsType = MessageHelper.createMessage(DescribeSubnetsType.class, info.getEffectiveUserId());
-    SubnetIdSetType SubnetIdSet = new SubnetIdSetType();
-    SubnetIdSetItemType SubnetIdSetItem = new SubnetIdSetItemType();
-    SubnetIdSetItem.setSubnetId(properties.getSubnetId());
-    SubnetIdSet.setItem(Lists.newArrayList(SubnetIdSetItem));
-    describeSubnetsType.setSubnetSet(SubnetIdSet);
-    DescribeSubnetsResponseType describeSubnetsResponseType = AsyncRequests.<DescribeSubnetsType, DescribeSubnetsResponseType> sendSync(configuration, describeSubnetsType);
+    describeSubnetsType.getFilterSet( ).add( Filter.filter( "subnet-id", properties.getSubnetId( ) ) );
+    DescribeSubnetsResponseType describeSubnetsResponseType = AsyncRequests.sendSync( configuration, describeSubnetsType );
     if (describeSubnetsResponseType.getSubnetSet() == null || describeSubnetsResponseType.getSubnetSet().getItem() == null ||
       describeSubnetsResponseType.getSubnetSet().getItem().isEmpty()) {
       return null;
@@ -257,12 +241,8 @@ public class AWSEC2SubnetNetworkAclAssociationResourceAction extends ResourceAct
 
   private boolean networkAclExistsForDelete(ServiceConfiguration configuration) throws Exception {
     DescribeNetworkAclsType describeNetworkAclsType = MessageHelper.createMessage(DescribeNetworkAclsType.class, info.getEffectiveUserId());
-    NetworkAclIdSetType networkAclIdSet = new NetworkAclIdSetType();
-    NetworkAclIdSetItemType networkAclIdSetItem = new NetworkAclIdSetItemType();
-    networkAclIdSetItem.setNetworkAclId(properties.getNetworkAclId());
-    networkAclIdSet.setItem(Lists.newArrayList(networkAclIdSetItem));
-    describeNetworkAclsType.setNetworkAclIdSet(networkAclIdSet);
-    DescribeNetworkAclsResponseType describeNetworkAclsResponseType = AsyncRequests.<DescribeNetworkAclsType, DescribeNetworkAclsResponseType> sendSync(configuration, describeNetworkAclsType);
+    describeNetworkAclsType.getFilterSet( ).add( Filter.filter( "network-acl-id", properties.getNetworkAclId( ) ) );
+    DescribeNetworkAclsResponseType describeNetworkAclsResponseType = AsyncRequests.sendSync( configuration, describeNetworkAclsType );
     if (describeNetworkAclsResponseType.getNetworkAclSet() == null || describeNetworkAclsResponseType.getNetworkAclSet().getItem() == null ||
       describeNetworkAclsResponseType.getNetworkAclSet().getItem().isEmpty()) {
       return false;

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,16 +43,12 @@ import com.eucalyptus.compute.common.DescribeDhcpOptionsResponseType;
 import com.eucalyptus.compute.common.DescribeDhcpOptionsType;
 import com.eucalyptus.compute.common.DescribeVpcsResponseType;
 import com.eucalyptus.compute.common.DescribeVpcsType;
-import com.eucalyptus.compute.common.DhcpOptionsIdSetItemType;
-import com.eucalyptus.compute.common.DhcpOptionsIdSetType;
-import com.eucalyptus.compute.common.VpcIdSetItemType;
-import com.eucalyptus.compute.common.VpcIdSetType;
+import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
 import com.netflix.glisten.WorkflowOperations;
 
-import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nullable;
 
@@ -82,17 +78,21 @@ public class AWSEC2VPCDHCPOptionsAssociationResourceAction extends ResourceActio
         // Check dhcp options (if not "default")
         if (!"default".equals(action.properties.getDhcpOptionsId())) {
           DescribeDhcpOptionsType describeDhcpOptionsType = MessageHelper.createMessage(DescribeDhcpOptionsType.class, action.info.getEffectiveUserId());
-          action.setDhcpOptionsId(describeDhcpOptionsType, action.properties.getDhcpOptionsId());
-          DescribeDhcpOptionsResponseType describeDhcpOptionsResponseType = AsyncRequests.<DescribeDhcpOptionsType,DescribeDhcpOptionsResponseType> sendSync(configuration, describeDhcpOptionsType);
-          if (describeDhcpOptionsResponseType.getDhcpOptionsSet() == null || describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem() == null || describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem().isEmpty()) {
+          describeDhcpOptionsType.getFilterSet( ).add( Filter.filter( "dhcp-options-id", action.properties.getDhcpOptionsId( ) ) );
+          DescribeDhcpOptionsResponseType describeDhcpOptionsResponseType = AsyncRequests.sendSync( configuration, describeDhcpOptionsType );
+          if (describeDhcpOptionsResponseType.getDhcpOptionsSet() == null ||
+              describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem() == null ||
+              describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem().isEmpty()) {
             throw new ValidationErrorException("No such dhcp options: " + action.properties.getDhcpOptionsId());
           }
         }
         // check vpc
         DescribeVpcsType describeVpcsType = MessageHelper.createMessage(DescribeVpcsType.class, action.info.getEffectiveUserId());
-        action.setVpcId(describeVpcsType, action.properties.getVpcId());
-        DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.<DescribeVpcsType,DescribeVpcsResponseType> sendSync(configuration, describeVpcsType);
-        if (describeVpcsResponseType.getVpcSet() == null || describeVpcsResponseType.getVpcSet().getItem() == null || describeVpcsResponseType.getVpcSet().getItem().isEmpty()) {
+        describeVpcsType.getFilterSet( ).add( Filter.filter( "vpc-id", action.properties.getVpcId( ) ) );
+        DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.sendSync( configuration, describeVpcsType );
+        if (describeVpcsResponseType.getVpcSet() == null ||
+            describeVpcsResponseType.getVpcSet().getItem() == null ||
+            describeVpcsResponseType.getVpcSet().getItem().isEmpty()) {
           throw new ValidationErrorException("No such vpc: " + action.properties.getVpcId());
         }
         AssociateDhcpOptionsType associateDhcpOptionsType = MessageHelper.createMessage(AssociateDhcpOptionsType.class, action.info.getEffectiveUserId());
@@ -123,17 +123,21 @@ public class AWSEC2VPCDHCPOptionsAssociationResourceAction extends ResourceActio
         // Check dhcp options (if not "default")
         if (!"default".equals(action.properties.getDhcpOptionsId())) {
           DescribeDhcpOptionsType describeDhcpOptionsType = MessageHelper.createMessage(DescribeDhcpOptionsType.class, action.info.getEffectiveUserId());
-          action.setDhcpOptionsId(describeDhcpOptionsType, action.properties.getDhcpOptionsId());
-          DescribeDhcpOptionsResponseType describeDhcpOptionsResponseType = AsyncRequests.<DescribeDhcpOptionsType,DescribeDhcpOptionsResponseType> sendSync(configuration, describeDhcpOptionsType);
-          if (describeDhcpOptionsResponseType.getDhcpOptionsSet() == null || describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem() == null || describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem().isEmpty()) {
+          describeDhcpOptionsType.getFilterSet( ).add( Filter.filter( "dhcp-options-id", action.properties.getDhcpOptionsId() ) );
+          DescribeDhcpOptionsResponseType describeDhcpOptionsResponseType = AsyncRequests.sendSync( configuration, describeDhcpOptionsType);
+          if (describeDhcpOptionsResponseType.getDhcpOptionsSet() == null ||
+              describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem() == null ||
+              describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem().isEmpty()) {
             return action;
           }
         }
         // check vpc
         DescribeVpcsType describeVpcsType = MessageHelper.createMessage(DescribeVpcsType.class, action.info.getEffectiveUserId());
-        action.setVpcId(describeVpcsType, action.properties.getVpcId());
-        DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.<DescribeVpcsType,DescribeVpcsResponseType> sendSync(configuration, describeVpcsType);
-        if (describeVpcsResponseType.getVpcSet() == null || describeVpcsResponseType.getVpcSet().getItem() == null || describeVpcsResponseType.getVpcSet().getItem().isEmpty()) {
+        describeVpcsType.getFilterSet( ).add( Filter.filter( "vpc-id", action.properties.getVpcId( ) ) );
+        DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.sendSync(configuration, describeVpcsType);
+        if (describeVpcsResponseType.getVpcSet() == null ||
+            describeVpcsResponseType.getVpcSet().getItem() == null ||
+            describeVpcsResponseType.getVpcSet().getItem().isEmpty()) {
           return action;
         }
         AssociateDhcpOptionsType associateDhcpOptionsType = MessageHelper.createMessage(AssociateDhcpOptionsType.class, action.info.getEffectiveUserId());
@@ -170,30 +174,6 @@ public class AWSEC2VPCDHCPOptionsAssociationResourceAction extends ResourceActio
   @Override
   public void setResourceInfo(ResourceInfo resourceInfo) {
     info = (AWSEC2VPCDHCPOptionsAssociationResourceInfo) resourceInfo;
-  }
-
-  private void setVpcId(DescribeVpcsType describeVpcsType, String vpcId) {
-    VpcIdSetType vpcSet = new VpcIdSetType();
-    describeVpcsType.setVpcSet(vpcSet);
-
-    ArrayList<VpcIdSetItemType> item = Lists.newArrayList();
-    vpcSet.setItem(item);
-
-    VpcIdSetItemType vpcIdSetItem = new VpcIdSetItemType();
-    item.add(vpcIdSetItem);
-
-    vpcIdSetItem.setVpcId(vpcId);
-  }
-
-  private void setDhcpOptionsId(DescribeDhcpOptionsType describeDhcpOptionsType, String dhcpOptionsId) {
-    DhcpOptionsIdSetType dhcpOptionsSet = new DhcpOptionsIdSetType();
-    ArrayList<DhcpOptionsIdSetItemType> item = Lists.newArrayList();
-    DhcpOptionsIdSetItemType dhcpOptionsIdSetItemType = new DhcpOptionsIdSetItemType();
-    dhcpOptionsIdSetItemType.setDhcpOptionsId(dhcpOptionsId);
-    item.add(dhcpOptionsIdSetItemType);
-    dhcpOptionsSet.setItem(item);
-    item.add(dhcpOptionsIdSetItemType);
-    describeDhcpOptionsType.setDhcpOptionsSet(dhcpOptionsSet);
   }
 
   @Override

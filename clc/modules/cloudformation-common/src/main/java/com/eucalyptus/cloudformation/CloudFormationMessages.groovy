@@ -20,6 +20,7 @@
 @GroovyAddClassUUID
 package com.eucalyptus.cloudformation
 
+import com.eucalyptus.ws.WebServiceError
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
@@ -79,7 +80,7 @@ public class ResourceList extends EucalyptusData {
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>();
 }
-public class CloudFormationErrorResponse extends CloudFormationMessage {
+public class CloudFormationErrorResponse extends CloudFormationMessage implements WebServiceError {
   @JsonProperty("RequestId")
   String requestId
   @JsonProperty("Error")
@@ -91,7 +92,19 @@ public class CloudFormationErrorResponse extends CloudFormationMessage {
 
   @Override
   String toSimpleString( ) {
-    "${error?.type} error (${error?.code}): ${error?.message}"
+    "${error?.type} error (${webServiceErrorCode}): ${webServiceErrorMessage}"
+  }
+
+  @JsonIgnore
+  @Override
+  String getWebServiceErrorCode( ) {
+    error?.code
+  }
+
+  @JsonIgnore
+  @Override
+  String getWebServiceErrorMessage() {
+    error?.message
   }
 }
 public class Outputs extends EucalyptusData {

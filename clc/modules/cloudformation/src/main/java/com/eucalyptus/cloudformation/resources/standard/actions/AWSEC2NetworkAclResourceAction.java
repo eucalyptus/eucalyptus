@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,8 +48,7 @@ import com.eucalyptus.compute.common.DeleteNetworkAclResponseType;
 import com.eucalyptus.compute.common.DeleteNetworkAclType;
 import com.eucalyptus.compute.common.DescribeNetworkAclsResponseType;
 import com.eucalyptus.compute.common.DescribeNetworkAclsType;
-import com.eucalyptus.compute.common.NetworkAclIdSetItemType;
-import com.eucalyptus.compute.common.NetworkAclIdSetType;
+import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
@@ -133,14 +132,11 @@ public class AWSEC2NetworkAclResourceAction extends ResourceAction {
 
         // See if network ACL is there
         DescribeNetworkAclsType describeNetworkAclsType = MessageHelper.createMessage(DescribeNetworkAclsType.class, action.info.getEffectiveUserId());
-        NetworkAclIdSetType networkAclIdSet = new NetworkAclIdSetType();
-        NetworkAclIdSetItemType networkAclIdSetItem = new NetworkAclIdSetItemType();
-        networkAclIdSetItem.setNetworkAclId(action.info.getPhysicalResourceId());
-        networkAclIdSet.setItem(Lists.newArrayList(networkAclIdSetItem));
-        describeNetworkAclsType.setNetworkAclIdSet(networkAclIdSet);
-        DescribeNetworkAclsResponseType describeNetworkAclsResponseType = AsyncRequests.<DescribeNetworkAclsType, DescribeNetworkAclsResponseType> sendSync(configuration, describeNetworkAclsType);
-        if (describeNetworkAclsResponseType.getNetworkAclSet() == null || describeNetworkAclsResponseType.getNetworkAclSet().getItem() == null ||
-          describeNetworkAclsResponseType.getNetworkAclSet().getItem().isEmpty()) {
+        describeNetworkAclsType.getFilterSet( ).add( Filter.filter( "network-acl-id", action.info.getPhysicalResourceId( ) ) );
+        DescribeNetworkAclsResponseType describeNetworkAclsResponseType = AsyncRequests.sendSync( configuration, describeNetworkAclsType );
+        if (describeNetworkAclsResponseType.getNetworkAclSet() == null ||
+            describeNetworkAclsResponseType.getNetworkAclSet().getItem() == null ||
+            describeNetworkAclsResponseType.getNetworkAclSet().getItem().isEmpty()) {
           return action; // no network acl
         }
         DeleteNetworkAclType DeleteNetworkAclType = MessageHelper.createMessage(DeleteNetworkAclType.class, action.info.getEffectiveUserId());

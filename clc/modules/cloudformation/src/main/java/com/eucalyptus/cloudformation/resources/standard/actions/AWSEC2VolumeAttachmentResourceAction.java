@@ -21,7 +21,6 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
 import static com.eucalyptus.util.async.AsyncExceptions.asWebServiceErrorMessage;
-import static com.eucalyptus.util.async.AsyncExceptions.isWebServiceErrorCode;
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
@@ -49,9 +48,9 @@ import com.eucalyptus.compute.common.DescribeVolumesResponseType;
 import com.eucalyptus.compute.common.DescribeVolumesType;
 import com.eucalyptus.compute.common.DetachVolumeResponseType;
 import com.eucalyptus.compute.common.DetachVolumeType;
+import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
@@ -93,22 +92,13 @@ public class AWSEC2VolumeAttachmentResourceAction extends ResourceAction {
         AWSEC2VolumeAttachmentResourceAction action = (AWSEC2VolumeAttachmentResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
-        describeInstancesType.setInstancesSet(Lists.newArrayList(action.properties.getInstanceId()));
-        DescribeInstancesResponseType describeInstancesResponseType;
-        try {
-          describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
-        } catch ( Exception e ) {
-          if ( AsyncExceptions.isWebServiceErrorCode( e, "InvalidInstanceID.NotFound" ) ) {
-            throw new ValidationErrorException("No such instance " + action.properties.getInstanceId());
-          } else {
-            throw e;
-          }
-        }
+        describeInstancesType.getFilterSet( ).add( Filter.filter( "instance-id", action.properties.getInstanceId( ) ) );
+        DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
         if (describeInstancesResponseType.getReservationSet() == null || describeInstancesResponseType.getReservationSet().isEmpty()) {
           throw new ValidationErrorException("No such instance " + action.properties.getInstanceId());
         }
         DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
-        describeVolumesType.setVolumeSet(Lists.newArrayList(action.properties.getVolumeId()));
+        describeVolumesType.getFilterSet( ).add( Filter.filter( "volume-id", action.properties.getVolumeId( ) ) );
         DescribeVolumesResponseType describeVolumesResponseType;
         try {
           describeVolumesResponseType = AsyncRequests.sendSync( configuration, describeVolumesType );
@@ -134,7 +124,7 @@ public class AWSEC2VolumeAttachmentResourceAction extends ResourceAction {
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         boolean attached = false;
         DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
-        describeVolumesType.setVolumeSet( Lists.newArrayList( action.properties.getVolumeId() ) );
+        describeVolumesType.getFilterSet( ).add( Filter.filter( "volume-id", action.properties.getVolumeId( ) ) );
         DescribeVolumesResponseType describeVolumesResponseType;
         try {
           describeVolumesResponseType = AsyncRequests.sendSync( configuration, describeVolumesType );
@@ -210,14 +200,11 @@ public class AWSEC2VolumeAttachmentResourceAction extends ResourceAction {
         if (notCreatedOrNoInstanceOrNoVolume(action, configuration)) return action;
         boolean detached = false;
         DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
-        describeVolumesType.setVolumeSet(Lists.newArrayList(action.properties.getVolumeId()));
+        describeVolumesType.getFilterSet( ).add( Filter.filter( "volume-id", action.properties.getVolumeId( ) ) );
         DescribeVolumesResponseType describeVolumesResponseType;
         try {
           describeVolumesResponseType = AsyncRequests.sendSync( configuration, describeVolumesType );
         } catch ( Exception e ) {
-          if ( isWebServiceErrorCode( e, "InvalidVolume.NotFound" ) ) {
-            return action;
-          }
           throw new ValidationErrorException("Error describing volume " + action.properties.getVolumeId() + ":" + asWebServiceErrorMessage( e, e.getMessage() ) );
         }
         if (describeVolumesResponseType.getVolumeSet().size() == 0) {
@@ -252,29 +239,17 @@ public class AWSEC2VolumeAttachmentResourceAction extends ResourceAction {
     private static boolean notCreatedOrNoInstanceOrNoVolume(AWSEC2VolumeAttachmentResourceAction action, ServiceConfiguration configuration) throws Exception {
       if (action.info.getPhysicalResourceId() == null) return true;
       DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
-      describeInstancesType.setInstancesSet(Lists.newArrayList(action.properties.getInstanceId()));
-      DescribeInstancesResponseType describeInstancesResponseType;
-      try {
-        describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
-      } catch ( Exception e ) {
-        if ( AsyncExceptions.isWebServiceErrorCode( e, "InvalidInstanceID.NotFound" ) ) {
-          return true; // can't be attached to a nonexistent instance;
-        } else {
-          throw e;
-        }
-      }
+      describeInstancesType.getFilterSet( ).add( Filter.filter( "instance-id", action.properties.getInstanceId( ) ) );
+      DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
       if (describeInstancesResponseType.getReservationSet() == null || describeInstancesResponseType.getReservationSet().isEmpty()) {
         return true; // can't be attached to a nonexistent instance;
       }
       DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
-      describeVolumesType.setVolumeSet(Lists.newArrayList(action.properties.getVolumeId()));
+      describeVolumesType.getFilterSet( ).add( Filter.filter( "volume-id", action.properties.getVolumeId( ) ) );
       DescribeVolumesResponseType describeVolumesResponseType;
       try {
         describeVolumesResponseType = AsyncRequests.sendSync( configuration, describeVolumesType );
       } catch ( Exception e ) {
-        if ( isWebServiceErrorCode( e, "InvalidVolume.NotFound" ) ) {
-          return true; // volume can't be attached if it doesn't exist
-        }
         throw new ValidationErrorException("Error describing volume " + action.properties.getVolumeId() + ":" + asWebServiceErrorMessage( e, e.getMessage() ) );
       }
       if (describeVolumesResponseType.getVolumeSet().size()==0) {

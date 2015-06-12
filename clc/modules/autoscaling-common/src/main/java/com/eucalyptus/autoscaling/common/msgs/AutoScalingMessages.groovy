@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@ package com.eucalyptus.autoscaling.common.msgs
 
 import com.eucalyptus.autoscaling.common.AutoScaling
 import com.eucalyptus.autoscaling.common.AutoScalingMessageValidation
+import com.eucalyptus.ws.WebServiceError
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import com.eucalyptus.component.annotation.ComponentMessage
@@ -110,7 +111,7 @@ public class TerminateInstanceInAutoScalingGroupType extends AutoScalingMessage 
   Boolean shouldDecrementDesiredCapacity
   public TerminateInstanceInAutoScalingGroupType() {  }
 }
-public class ErrorResponse extends AutoScalingMessage {
+public class ErrorResponse extends AutoScalingMessage implements WebServiceError {
   String requestId
   ArrayList<Error> error = new ArrayList<Error>( )
 
@@ -120,7 +121,17 @@ public class ErrorResponse extends AutoScalingMessage {
 
   @Override
   String toSimpleString( ) {
-    "${error?.getAt(0)?.type} error (${error?.getAt(0)?.code}): ${error?.getAt(0)?.message}"
+    "${error?.getAt(0)?.type} error (${webServiceErrorCode}): ${webServiceErrorMessage}"
+  }
+
+  @Override
+  String getWebServiceErrorCode( ) {
+    error?.getAt(0)?.code
+  }
+
+  @Override
+  String getWebServiceErrorMessage( ) {
+    error?.getAt(0)?.message
   }
 }
 public class BlockDeviceMappings extends EucalyptusData {

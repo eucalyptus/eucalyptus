@@ -17,54 +17,32 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.simpleworkflow.common.model;
+package com.eucalyptus.compute.common.internal.tags
 
-
-import org.codehaus.jackson.annotate.JsonIgnore;
-import org.codehaus.jackson.annotate.JsonProperty;
-import com.eucalyptus.ws.WebServiceError;
+import spock.lang.Specification
 
 /**
  *
  */
-public class SimpleWorkflowErrorResponse extends SimpleWorkflowMessage implements WebServiceError {
-  String message;
-  String code;
+class FiltersSpecification extends Specification {
 
-  public SimpleWorkflowErrorResponse( ) {
-  }
+  def 'should support escaping any/all wildcards'() {
+    expect: 'wildcards escaped in filter value'
+    escapedFilter == Filters.escape( filter )
 
-  public SimpleWorkflowErrorResponse( final String message, final String code ) {
-    this.message = message;
-    this.code = code;
-  }
+    where:
+    escapedFilter      | filter
+    '\\\\'             | '\\'
+    '\\*'              | '*'
+    '\\?'              | '?'
+    '\\*amazon\\?\\\\' | '*amazon?\\'
+    '\\\\\\\\\\\\'     | '\\\\\\'
+    '\\*\\*\\*'        | '***'
+    '\\?\\?\\?'        | '???'
+    'foo\\?bar'        | 'foo?bar'
+    'foobar\\?'        | 'foobar?'
+    '\\?foobar'        | '?foobar'
+    'Foo\\?Bar'        | 'Foo?Bar'
 
-  public String getMessage() {
-    return message;
-  }
-
-  public void setMessage( final String message ) {
-    this.message = message;
-  }
-
-  @JsonProperty("__type")
-  public String getCode() {
-    return code;
-  }
-
-  public void setCode( final String code ) {
-    this.code = code;
-  }
-
-  @JsonIgnore
-  @Override
-  public String getWebServiceErrorCode( ) {
-    return getCode( );
-  }
-
-  @JsonIgnore
-  @Override
-  public String getWebServiceErrorMessage() {
-    return getMessage( );
   }
 }

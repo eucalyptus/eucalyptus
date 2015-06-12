@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,10 +45,9 @@ import com.eucalyptus.compute.common.DeleteNetworkAclEntryResponseType;
 import com.eucalyptus.compute.common.DeleteNetworkAclEntryType;
 import com.eucalyptus.compute.common.DescribeNetworkAclsResponseType;
 import com.eucalyptus.compute.common.DescribeNetworkAclsType;
+import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.IcmpTypeCodeType;
 import com.eucalyptus.compute.common.NetworkAclEntryType;
-import com.eucalyptus.compute.common.NetworkAclIdSetItemType;
-import com.eucalyptus.compute.common.NetworkAclIdSetType;
 import com.eucalyptus.compute.common.NetworkAclType;
 import com.eucalyptus.compute.common.PortRangeType;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -87,12 +86,8 @@ public class AWSEC2NetworkAclEntryResourceAction extends ResourceAction {
           throw new ValidationErrorException("NetworkAclId is a required field");
         }
         DescribeNetworkAclsType describeNetworkAclsType = MessageHelper.createMessage(DescribeNetworkAclsType.class, action.info.getEffectiveUserId());
-        NetworkAclIdSetType networkAclIdSet = new NetworkAclIdSetType();
-        NetworkAclIdSetItemType networkAclIdSetItem = new NetworkAclIdSetItemType();
-        networkAclIdSetItem.setNetworkAclId(action.properties.getNetworkAclId());
-        networkAclIdSet.setItem(Lists.newArrayList(networkAclIdSetItem));
-        describeNetworkAclsType.setNetworkAclIdSet(networkAclIdSet);
-        DescribeNetworkAclsResponseType describeNetworkAclsResponseType = AsyncRequests.<DescribeNetworkAclsType, DescribeNetworkAclsResponseType> sendSync(configuration, describeNetworkAclsType);
+        describeNetworkAclsType.getFilterSet( ).add( Filter.filter( "network-acl-id", action.properties.getNetworkAclId() ) );
+        DescribeNetworkAclsResponseType describeNetworkAclsResponseType = AsyncRequests.sendSync(configuration, describeNetworkAclsType);
         if (describeNetworkAclsResponseType.getNetworkAclSet() == null || describeNetworkAclsResponseType.getNetworkAclSet().getItem() == null ||
           describeNetworkAclsResponseType.getNetworkAclSet().getItem().isEmpty()) {
           throw new ValidationErrorException("No such network acl with id '" + action.properties.getNetworkAclId());
@@ -132,12 +127,8 @@ public class AWSEC2NetworkAclEntryResourceAction extends ResourceAction {
 
         // See if network ACL is there
         DescribeNetworkAclsType describeNetworkAclsType = MessageHelper.createMessage(DescribeNetworkAclsType.class, action.info.getEffectiveUserId());
-        NetworkAclIdSetType networkAclIdSet = new NetworkAclIdSetType();
-        NetworkAclIdSetItemType networkAclIdSetItem = new NetworkAclIdSetItemType();
-        networkAclIdSetItem.setNetworkAclId(action.properties.getNetworkAclId());
-        networkAclIdSet.setItem(Lists.newArrayList(networkAclIdSetItem));
-        describeNetworkAclsType.setNetworkAclIdSet(networkAclIdSet);
-        DescribeNetworkAclsResponseType describeNetworkAclsResponseType = AsyncRequests.<DescribeNetworkAclsType, DescribeNetworkAclsResponseType> sendSync(configuration, describeNetworkAclsType);
+        describeNetworkAclsType.getFilterSet( ).add( Filter.filter( "network-acl-id", action.properties.getNetworkAclId() ) );
+        DescribeNetworkAclsResponseType describeNetworkAclsResponseType = AsyncRequests.sendSync( configuration, describeNetworkAclsType);
         if (describeNetworkAclsResponseType.getNetworkAclSet() == null || describeNetworkAclsResponseType.getNetworkAclSet().getItem() == null ||
           describeNetworkAclsResponseType.getNetworkAclSet().getItem().isEmpty()) {
           return action; // no network acl

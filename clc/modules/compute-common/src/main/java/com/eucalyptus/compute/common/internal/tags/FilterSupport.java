@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -181,6 +181,23 @@ public abstract class FilterSupport<RT> {
      */
     public Builder<RT> withBooleanProperty( final String filterName,
                                             final Function<? super RT,Boolean> booleanExtractor ) {
+      predicateFunctions.put( filterName,  FilterSupport.<RT>booleanFilter( booleanExtractor ) );
+      return this;
+    }
+
+    /**
+     * Declare an internal filterable boolean property.
+     *
+     * <p>An internal property cannot be accessed via the public API but can be
+     * explicitly added.</p>
+     *
+     * @param filterName The name of the filter
+     * @param booleanExtractor Function to extract the property value
+     * @return This builder for call chaining
+     */
+    public Builder<RT> withInternalBooleanProperty( final String filterName,
+                                                    final Function<? super RT,Boolean> booleanExtractor ) {
+      internalFilters.add( filterName );
       predicateFunctions.put( filterName,  FilterSupport.<RT>booleanFilter( booleanExtractor ) );
       return this;
     }
@@ -584,7 +601,7 @@ public abstract class FilterSupport<RT> {
   public Filter generate( final Map<String, Set<String>> filters,
                           final boolean allowInternalFilters ) throws InvalidFilterException  {
     final Context ctx = Contexts.lookup();
-    final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
+    final String requestAccountId = ctx.getAccountNumber( );
     return generate( filters, allowInternalFilters, requestAccountId );
   }
 

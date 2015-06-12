@@ -88,7 +88,7 @@ public class Ec2Client {
 
     private DescribeInstancesType describeInstances() {
       final DescribeInstancesType req = new DescribeInstancesType();
-      req.setInstancesSet(Lists.newArrayList(this.instanceIds));
+      req.getFilterSet( ).add( Filter.filter( "instance-id", this.instanceIds ) );
       return req;
     }
 
@@ -110,16 +110,6 @@ public class Ec2Client {
         resultInstances.addAll(res.getInstancesSet());
       }
       this.result.set(resultInstances);
-    }
-
-    @Override
-    boolean dispatchFailure( final ClientContext<ComputeMessage, Compute> context, final Throwable throwable ) {
-      if ( AsyncExceptions.isWebServiceErrorCode( throwable, "InvalidInstanceID.NotFound" ) ) {
-        this.result.set( Lists.<RunningInstancesItemType>newArrayList( ) );
-        return true;
-      } else {
-        return super.dispatchFailure( context, throwable );
-      }
     }
 
     public List<RunningInstancesItemType> getResult() {
@@ -312,41 +302,6 @@ public class Ec2Client {
     }
   }
 
-  private class ComputeDescribeSecurityGroupTask extends
-      EucalyptusClientTask<ComputeMessage, Compute> {
-    private List<String> groups = null;
-    private List<SecurityGroupItemType> result = null;
-
-    ComputeDescribeSecurityGroupTask(final List<String> groups) {
-      this.groups = groups;
-    }
-
-    private DescribeSecurityGroupsType describeSecurityGroups() {
-      final DescribeSecurityGroupsType req = new DescribeSecurityGroupsType();
-      req.setSecurityGroupSet(Lists.newArrayList(this.groups));
-      return req;
-    }
-
-    @Override
-    void dispatchInternal(ClientContext<ComputeMessage, Compute> context,
-        Checked<ComputeMessage> callback) {
-      final DispatchingClient<ComputeMessage, Compute> client = context
-          .getClient();
-      client.dispatch(describeSecurityGroups(), callback);
-    }
-
-    @Override
-    void dispatchSuccess(ClientContext<ComputeMessage, Compute> context,
-        ComputeMessage response) {
-      final DescribeSecurityGroupsResponseType resp = (DescribeSecurityGroupsResponseType) response;
-      this.result = resp.getSecurityGroupInfo();
-    }
-
-    public List<SecurityGroupItemType> getResult() {
-      return this.result;
-    }
-  }
-
   private class ComputeRunInstanceTask extends
       EucalyptusClientTask<ComputeMessage, Compute> {
     private final String availabilityZone;
@@ -500,7 +455,7 @@ public class Ec2Client {
     private DescribeImagesType describeImages() {
       final DescribeImagesType req = new DescribeImagesType();
       if (this.imageIds != null && this.imageIds.size() > 0) {
-        req.setImagesSet(new ArrayList<String>(imageIds));
+        req.setFilterSet( Lists.newArrayList( Filter.filter( "image-id", this.imageIds ) ) );
       }
       return req;
     }
@@ -518,16 +473,6 @@ public class Ec2Client {
         ComputeMessage response) {
       final DescribeImagesResponseType resp = (DescribeImagesResponseType) response;
       result = resp.getImagesSet();
-    }
-
-    @Override
-    boolean dispatchFailure( final ClientContext<ComputeMessage, Compute> context, final Throwable throwable ) {
-      if ( AsyncExceptions.isWebServiceErrorCode( throwable, "InvalidAMIID.NotFound" ) ) {
-        result = Lists.newArrayList( );
-        return true;
-      } else {
-        return super.dispatchFailure( context, throwable );
-      }
     }
 
     List<ImageDetails> getResult() {
@@ -613,24 +558,22 @@ public class Ec2Client {
 
   private class ComputeDescribeKeyPairsTask extends
       EucalyptusClientTask<ComputeMessage, Compute> {
+    private boolean verbose;
     private List<String> keyNames = null;
     private List<DescribeKeyPairsResponseItemType> result = null;
 
-    private ComputeDescribeKeyPairsTask() {
-    }
-
-    private ComputeDescribeKeyPairsTask(final String keyName) {
-      this.keyNames = Lists.newArrayList(keyName);
-    }
-
-    private ComputeDescribeKeyPairsTask(final List<String> keyNames) {
+    private ComputeDescribeKeyPairsTask( final boolean verbose, final List<String> keyNames) {
+      this.verbose = verbose;
       this.keyNames = keyNames;
     }
 
     private DescribeKeyPairsType describeKeyPairs() {
       final DescribeKeyPairsType req = new DescribeKeyPairsType();
-      if (this.keyNames != null) {
-        req.setKeySet(new ArrayList<String>(this.keyNames));
+      if ( this.verbose ) {
+        req.setKeySet( Lists.newArrayList( "verbose" ) );
+      }
+      if ( keyNames != null && !keyNames.isEmpty( ) ) {
+        req.getFilterSet( ).add( Filter.filter( "key-name", keyNames ) );
       }
       return req;
     }
@@ -893,21 +836,22 @@ public class Ec2Client {
 
   private class DescribeVolumesTask extends
       EucalyptusClientTask<ComputeMessage, Compute> {
+    private boolean verbose;
     private List<String> volumeIds = null;
     private List<Volume> result = null;
 
-    private DescribeVolumesTask() {
-      this.volumeIds = null;
-    }
-
-    private DescribeVolumesTask(final List<String> volumeIds) {
+    private DescribeVolumesTask( final boolean verbose, final List<String> volumeIds) {
+      this.verbose = verbose;
       this.volumeIds = volumeIds;
     }
 
     private DescribeVolumesType describeVolumes() {
       final DescribeVolumesType req = new DescribeVolumesType();
+      if ( verbose ) {
+        req.setVolumeSet( Lists.newArrayList( "verbose" ) );
+      }
       if (this.volumeIds != null && this.volumeIds.size() > 0) {
-        req.setVolumeSet(Lists.newArrayList(this.volumeIds));
+        req.getFilterSet( ).add( Filter.filter( "volume-id", volumeIds ) );
       }
       return req;
     }
@@ -944,16 +888,22 @@ public class Ec2Client {
 
   private class DescribeSnapshotsTask extends
       EucalyptusClientTask<ComputeMessage, Compute> {
+    private final boolean verbose;
     private List<String> snapshots = null;
     private List<Snapshot> results = null;
 
-    private DescribeSnapshotsTask(final List<String> subnetIds) {
+    private DescribeSnapshotsTask( final boolean verbose, final List<String> subnetIds) {
+      this.verbose = verbose;
       this.snapshots = subnetIds;
     }
 
     private DescribeSnapshotsType describeSnapshots() {
       final DescribeSnapshotsType req = new DescribeSnapshotsType();
-      req.setSnapshotSet(Lists.newArrayList(this.snapshots));
+      if ( verbose ) {
+        req.setSnapshotSet( Lists.newArrayList( "verbose" ) );
+      }
+      req.getFilterSet( ).add( Filter.filter( "snapshot-id", this.snapshots ) );
+
       return req;
     }
 
@@ -1147,27 +1097,6 @@ public class Ec2Client {
     }
   }
 
-  public List<SecurityGroupItemType> describeSecurityGroups(
-      final String userId, List<String> groupNames)
-      throws EucalyptusActivityException {
-    if (userId == null) // run in verbose mode for system user
-      groupNames.add("verbose");
-    final ComputeDescribeSecurityGroupTask task = new ComputeDescribeSecurityGroupTask(
-        groupNames);
-    final CheckedListenableFuture<Boolean> result = task
-        .dispatch(new Ec2Context(userId));
-    try {
-      if (result.get()) {
-        return task.getResult();
-      } else
-        throw new EucalyptusActivityException(
-            task.getErrorMessage() != null ? task.getErrorMessage()
-                : "failed to describe security groups");
-    } catch (Exception ex) {
-      throw Exceptions.toUndeclared(ex);
-    }
-  }
-
   public void authorizeSecurityGroup(final String userId, String groupName,
       String protocol, int portNum) throws EucalyptusActivityException {
     final ComputeAuthorizeIngressRuleTask task = new ComputeAuthorizeIngressRuleTask(
@@ -1209,10 +1138,8 @@ public class Ec2Client {
   public List<DescribeKeyPairsResponseItemType> describeKeyPairs(
       final String userId, final List<String> keyNames)
       throws EucalyptusActivityException {
-    if (userId == null) // run in verbose mode for system user
-      keyNames.add("verbose");
-    final ComputeDescribeKeyPairsTask task = new ComputeDescribeKeyPairsTask(
-        keyNames);
+    // run in verbose mode for system user
+    final ComputeDescribeKeyPairsTask task = new ComputeDescribeKeyPairsTask( userId == null, keyNames);
     final CheckedListenableFuture<Boolean> result = task
         .dispatch(new Ec2Context(userId));
     try {
@@ -1419,16 +1346,13 @@ public class Ec2Client {
 
   public List<Volume> describeVolumes(final String userId,
       final List<String> volumeIds) throws EucalyptusActivityException {
-    if (userId == null) // run in verbose mode for system user
-      volumeIds.add("verbose");
-    final DescribeVolumesTask task = new DescribeVolumesTask(volumeIds);
+    // run in verbose mode for system user
+    final DescribeVolumesTask task = new DescribeVolumesTask( userId == null, volumeIds );
     final CheckedListenableFuture<Boolean> result = task
         .dispatch(new Ec2Context(userId));
     try {
       if ( result.get( ) ) {
         return task.getVolumes();
-      } else if ( "InvalidVolume.NotFound".equals( task.getErrorCode( ) ) ) {
-        return Lists.newArrayList( );
       } else {
         throw new EucalyptusActivityException(
             task.getErrorMessage( ) != null ? task.getErrorMessage( )
@@ -1460,9 +1384,8 @@ public class Ec2Client {
 
   public List<Snapshot> describeSnapshots(final String userId,
       final List<String> snapshotIds) throws EucalyptusActivityException {
-    if (userId == null) // run in verbose mode for system user
-      snapshotIds.add("verbose");
-    final DescribeSnapshotsTask task = new DescribeSnapshotsTask(snapshotIds);
+    // run in verbose mode for system user
+    final DescribeSnapshotsTask task = new DescribeSnapshotsTask(userId == null, snapshotIds);
     final CheckedListenableFuture<Boolean> result = task
         .dispatch(new Ec2Context(userId));
     try {

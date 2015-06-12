@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -51,10 +51,7 @@ import com.eucalyptus.compute.common.DetachInternetGatewayResponseType;
 import com.eucalyptus.compute.common.DetachInternetGatewayType;
 import com.eucalyptus.compute.common.DetachVpnGatewayResponseType;
 import com.eucalyptus.compute.common.DetachVpnGatewayType;
-import com.eucalyptus.compute.common.InternetGatewayIdSetItemType;
-import com.eucalyptus.compute.common.InternetGatewayIdSetType;
-import com.eucalyptus.compute.common.VpcIdSetItemType;
-import com.eucalyptus.compute.common.VpcIdSetType;
+import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.VpnGatewayIdSetItemType;
 import com.eucalyptus.compute.common.VpnGatewayIdSetType;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -129,17 +126,19 @@ public class AWSEC2VPCGatewayAttachmentResourceAction extends ResourceAction {
 
         // Check gateway (return if gone)
         DescribeInternetGatewaysType describeInternetGatewaysType = MessageHelper.createMessage(DescribeInternetGatewaysType.class, action.info.getEffectiveUserId());
-        action.setInternetGatewayId(describeInternetGatewaysType, action.properties.getInternetGatewayId());
-        DescribeInternetGatewaysResponseType describeInternetGatewaysResponseType = AsyncRequests.<DescribeInternetGatewaysType, DescribeInternetGatewaysResponseType>sendSync(configuration, describeInternetGatewaysType);
+        describeInternetGatewaysType.getFilterSet( ).add( Filter.filter( "internet-gateway-id", action.properties.getInternetGatewayId( ) ) );
+        DescribeInternetGatewaysResponseType describeInternetGatewaysResponseType = AsyncRequests.sendSync(configuration, describeInternetGatewaysType);
         if (describeInternetGatewaysResponseType.getInternetGatewaySet() == null || describeInternetGatewaysResponseType.getInternetGatewaySet().getItem() == null || describeInternetGatewaysResponseType.getInternetGatewaySet().getItem().isEmpty()) {
           return action; // already deleted
         }
         if (action.properties.getVpcId() != null) {
           // Check vpc (return if gone)
           DescribeVpcsType describeVpcsType = MessageHelper.createMessage(DescribeVpcsType.class, action.info.getEffectiveUserId());
-          action.setVpcId(describeVpcsType, action.properties.getVpcId());
-          DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.<DescribeVpcsType, DescribeVpcsResponseType>sendSync(configuration, describeVpcsType);
-          if (describeVpcsResponseType.getVpcSet() == null || describeVpcsResponseType.getVpcSet().getItem() == null || describeVpcsResponseType.getVpcSet().getItem().isEmpty()) {
+          describeVpcsType.getFilterSet( ).add( Filter.filter( "vpc-id", action.properties.getVpcId( ) ) );
+          DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.sendSync(configuration, describeVpcsType);
+          if (describeVpcsResponseType.getVpcSet() == null ||
+              describeVpcsResponseType.getVpcSet().getItem() == null ||
+              describeVpcsResponseType.getVpcSet().getItem().isEmpty()) {
             return action; // already deleted
           }
           DetachInternetGatewayType detachInternetGatewayType = MessageHelper.createMessage(DetachInternetGatewayType.class, action.info.getEffectiveUserId());
@@ -201,33 +200,6 @@ public class AWSEC2VPCGatewayAttachmentResourceAction extends ResourceAction {
     item.add(vpnGatewayIdSetItem);
 
     vpnGatewayIdSetItem.setVpnGatewayId(vpnGatewayId);
-  }
-
-  private void setInternetGatewayId(DescribeInternetGatewaysType describeInternetGatewaysType, String internetGatewayId) {
-    InternetGatewayIdSetType internetGatewaySet = new InternetGatewayIdSetType();
-    describeInternetGatewaysType.setInternetGatewayIdSet(internetGatewaySet);
-
-    ArrayList<InternetGatewayIdSetItemType> item = Lists.newArrayList();
-    internetGatewaySet.setItem(item);
-
-    InternetGatewayIdSetItemType internetgatewayIdSetItem = new InternetGatewayIdSetItemType();
-    item.add(internetgatewayIdSetItem);
-
-    internetgatewayIdSetItem.setInternetGatewayId(internetGatewayId);
-  }
-
-
-  private void setVpcId(DescribeVpcsType describeVpcsType, String vpcId) {
-    VpcIdSetType vpcSet = new VpcIdSetType();
-    describeVpcsType.setVpcSet(vpcSet);
-
-    ArrayList<VpcIdSetItemType> item = Lists.newArrayList();
-    vpcSet.setItem(item);
-
-    VpcIdSetItemType vpcIdSetItem = new VpcIdSetItemType();
-    item.add(vpcIdSetItem);
-
-    vpcIdSetItem.setVpcId(vpcId);
   }
 
   @Override

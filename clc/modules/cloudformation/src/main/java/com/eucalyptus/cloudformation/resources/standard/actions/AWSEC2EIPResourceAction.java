@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,14 +22,10 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.cloudformation.ValidationErrorException;
-import com.eucalyptus.cloudformation.entity.StackResourceEntity;
-import com.eucalyptus.cloudformation.entity.StackResourceEntityManager;
 import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
-import com.eucalyptus.cloudformation.resources.ResourcePropertyResolver;
-import com.eucalyptus.cloudformation.resources.ResourceResolverManager;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2EIPResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2EIPProperties;
 import com.eucalyptus.cloudformation.template.JsonHelper;
@@ -50,9 +46,9 @@ import com.eucalyptus.compute.common.DescribeAddressesResponseType;
 import com.eucalyptus.compute.common.DescribeAddressesType;
 import com.eucalyptus.compute.common.DescribeInstancesResponseType;
 import com.eucalyptus.compute.common.DescribeInstancesType;
+import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.ReleaseAddressResponseType;
 import com.eucalyptus.compute.common.ReleaseAddressType;
-import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
@@ -110,17 +106,8 @@ public class AWSEC2EIPResourceAction extends ResourceAction {
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         if (action.properties.getInstanceId() != null) {
           DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
-          describeInstancesType.setInstancesSet(Lists.newArrayList(action.properties.getInstanceId()));
-          DescribeInstancesResponseType describeInstancesResponseType;
-          try {
-            describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
-          } catch ( Exception e ) {
-            if ( AsyncExceptions.isWebServiceErrorCode( e, "InvalidInstanceID.NotFound" ) ) {
-              throw new ValidationErrorException("No such instance " + action.properties.getInstanceId());
-            } else {
-              throw e;
-            }
-          }
+          describeInstancesType.getFilterSet( ).add( Filter.filter( "instance-id", action.properties.getInstanceId( ) ) );
+          DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
           if (describeInstancesResponseType.getReservationSet() == null || describeInstancesResponseType.getReservationSet().isEmpty()) {
             throw new ValidationErrorException("No such instance " + action.properties.getInstanceId());
           }

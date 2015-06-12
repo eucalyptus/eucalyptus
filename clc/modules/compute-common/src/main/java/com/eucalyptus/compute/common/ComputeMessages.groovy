@@ -23,8 +23,10 @@ package com.eucalyptus.compute.common
 
 import com.eucalyptus.binding.HttpParameterMapping
 import com.eucalyptus.component.annotation.ComponentMessage
+import com.eucalyptus.compute.common.internal.tags.Filters
 import com.eucalyptus.system.Threads
 import com.eucalyptus.util.Exceptions
+import com.eucalyptus.ws.WebServiceError
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
@@ -117,6 +119,29 @@ public class Filter extends EucalyptusData {
   String name;
   @HttpParameterMapping (parameter = "Value")
   ArrayList<String> valueSet = new ArrayList<String>( );
+
+  Filter( ) {
+  }
+
+  /**
+   * Create a filter with any wildcards in the value escaped.
+   */
+  static Filter filter( String name, String value ) {
+    Filter filter = new Filter( )
+    filter.name = name
+    filter.valueSet.add( Filters.escape( value ) )
+    filter
+  }
+
+  /**
+   * Create a filter with any wildcards in the values escaped.
+   */
+  static Filter filter( String name, Iterable<String> values ) {
+    Filter filter = new Filter( )
+    filter.name = name
+    values.each { String value -> filter.valueSet.add( Filters.escape( value ) ) }
+    filter
+  }
 }
 
 public class ErrorDetail extends EucalyptusData {
@@ -127,7 +152,7 @@ public class ErrorDetail extends EucalyptusData {
   public ErrorDetail() {  }
 }
 
-public class ErrorResponse extends ComputeMessage {
+public class ErrorResponse extends ComputeMessage implements WebServiceError {
   String requestId
   ArrayList<ErrorDetail> error = new ArrayList<ErrorDetail>( )
 
@@ -137,6 +162,16 @@ public class ErrorResponse extends ComputeMessage {
 
   @Override
   String toSimpleString( ) {
-    "${error?.getAt(0)?.type} error (${error?.getAt(0)?.code}): ${error?.getAt(0)?.message}"
+    "${error?.getAt(0)?.type} error (${webServiceErrorCode}): ${webServiceErrorMessage}"
+  }
+
+  @Override
+  String getWebServiceErrorCode( ) {
+    error?.getAt(0)?.code
+  }
+
+  @Override
+  String getWebServiceErrorMessage( ) {
+    error?.getAt(0)?.message
   }
 }
