@@ -438,6 +438,7 @@ public class DatabaseUserProxy implements User {
   public AccessKey getKey( final String keyId ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( AccessKeyEntity.class ) ) {
       AccessKeyEntity key = DatabaseAuthUtils.getUnique( AccessKeyEntity.class, "accessKey", keyId );
+      checkKeyOwner( key );
       db.commit( );
       return new DatabaseAccessKeyProxy( key );
     } catch ( Exception e ) {
@@ -454,7 +455,9 @@ public class DatabaseUserProxy implements User {
     try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
       UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, "userId", this.delegate.getUserId( ) );
       AccessKeyEntity keyEntity = DatabaseAuthUtils.getUnique( AccessKeyEntity.class, "accessKey", keyId );
-      user.getKeys( ).remove( keyEntity );
+      List <AccessKeyEntity> keys = user.getKeys();
+      checkKeyOwner( keyId, keys );
+      keys.remove(keyEntity);
       Entities.delete( keyEntity );
       db.commit( );
     } catch ( Exception e ) {
@@ -502,6 +505,7 @@ public class DatabaseUserProxy implements User {
   public Certificate getCertificate( final String certificateId ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( CertificateEntity.class ) ) {
       CertificateEntity cert = DatabaseAuthUtils.getUnique( CertificateEntity.class, "certificateId", certificateId );
+      checkCertOwner( cert );
       db.commit( );
       return new DatabaseCertificateProxy( cert );
     } catch ( Exception e ) {
@@ -536,6 +540,7 @@ public class DatabaseUserProxy implements User {
     try ( final TransactionResource db = Entities.transactionFor( CertificateEntity.class ) ) {
       CertificateEntity certificateEntity = DatabaseAuthUtils.getUnique( CertificateEntity.class, "certificateId", certificateId );
       certificateEntity.setRevoked( true );
+      checkCertOwner( certificateEntity );
       db.commit( );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to get delete certificate " + certificateId );
@@ -823,5 +828,49 @@ public class DatabaseUserProxy implements User {
     in.defaultReadObject( );
     this.accountNumberSupplier = DatabaseAuthUtils.getAccountNumberSupplier( this );
     this.userInfoSupplier = getUserInfoSupplier( );
+  }
+
+  private void checkKeyOwner( final AccessKeyEntity keyEnt) throws AuthException {
+    if( !this.delegate.getUserId().equals(keyEnt.getUser().getUserId()) ) {
+      AuthException ae = new AuthException( AuthException.NO_SUCH_KEY );
+      Debugging.logError( LOG, ae, this.delegate.getName() + " is not owner of provided key" );
+      throw ae;
+    }
+  }
+
+  private void checkKeyOwner( final String keyId, final List <AccessKeyEntity> keys  ) throws AuthException {
+    boolean found = false;
+    if (!keys.isEmpty() ) {
+      for (AccessKeyEntity key : keys)
+        if ( key.getAccessKey().equals( keyId ) )
+          found = true;
+    }
+    if( !found ){
+      AuthException ae = new AuthException( AuthException.NO_SUCH_KEY );
+      Debugging.logError( LOG, ae, this.delegate.getName() + " is not the owner of provided Key" );
+      throw ae;
+    }
+  }
+
+  private void checkCertOwner( final CertificateEntity certEnt ) throws AuthException {
+    if( !this.delegate.getUserId().equals(certEnt.getUser().getUserId()) ) {
+      AuthException ae = new AuthException( AuthException.NO_SUCH_CERTIFICATE );
+      Debugging.logError( LOG, ae, this.delegate.getName() + " is not owner of provided Certificate" );
+      throw ae;
+    }
+  }
+
+  private void checkCertOwner( final String certificateId, final List <CertificateEntity> certs ) throws AuthException {
+    boolean found = false;
+    if (!certs.isEmpty() ) {
+      for (CertificateEntity cert : certs)
+        if (cert.getCertificateId().equals(certificateId))
+          found = true;
+    }
+    if( !found ){
+      AuthException ae = new AuthException( AuthException.NO_SUCH_CERTIFICATE );
+      Debugging.logError( LOG, ae, this.delegate.getName() + " is not owner of provided Certificate" );
+      throw ae;
+    }
   }
 }
