@@ -52,7 +52,6 @@ import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.ImageDetails;
 import com.eucalyptus.compute.common.ResourceTag;
@@ -427,7 +426,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 	  @Override
     public boolean check( ) throws Exception {
       if ( CloudMetadatas.isMachineImageIdentifier( LoadBalancerASGroupCreator.IMAGE ) ) {
-        if( CheckCounter >= 3 && Topology.isEnabled( Eucalyptus.class ) ){
+        if( CheckCounter >= 3 && Topology.isEnabled( Compute.class ) ){
           try{
             final List<ImageDetails> emis =
                 EucalyptusActivityTasks.getInstance().describeImagesWithVerbose(Lists.newArrayList(LoadBalancerASGroupCreator.IMAGE));
