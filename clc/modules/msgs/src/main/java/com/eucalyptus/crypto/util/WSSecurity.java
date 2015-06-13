@@ -428,7 +428,7 @@ public class WSSecurity {
       if ( this == o ) return true;
       if ( o == null || getClass( ) != o.getClass( ) ) return false;
       final CertificateKey that = (CertificateKey) o;
-      return Objects.equals( encoded, that.encoded );
+      return Arrays.equals( encoded, that.encoded );
     }
 
     @Override
