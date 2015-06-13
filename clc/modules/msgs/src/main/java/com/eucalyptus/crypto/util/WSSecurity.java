@@ -63,13 +63,15 @@
 package com.eucalyptus.crypto.util;
 
 import java.io.ByteArrayInputStream;
-import java.io.InputStreamReader;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.Callable;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.axiom.soap.SOAPEnvelope;
@@ -96,7 +98,6 @@ import org.apache.xml.security.signature.SignedInfo;
 import org.apache.xml.security.signature.XMLSignature;
 import org.apache.xml.security.signature.XMLSignatureException;
 import org.apache.xml.security.signature.XMLSignatureInput;
-import org.bouncycastle.openssl.PEMParser;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.Text;
@@ -105,6 +106,9 @@ import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.WebServicesException;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheBuilderSpec;
 
 /**
  * 
@@ -113,6 +117,7 @@ public class WSSecurity {
   private static Logger             LOG = Logger.getLogger( WSSecurity.class );
   private static CertificateFactory factory;
   private static final String       SYSTEM_PROPERTY_SKIP_SECURITY_CHECK = "com.eucalyptus.crypto.util.skipWsSecurityConfigurationChecks";
+  private static final Cache<CertificateKey,X509Certificate> cache = cache( System.getProperty( "com.eucalyptus.crypto.util.wsCertCache", "maximumSize=100" ) );
 
   static {
     System.setProperty( "org.apache.xml.security.resource.config", "/xml-security-config.xml" );
@@ -177,10 +182,15 @@ public class WSSecurity {
         String certStr = ( "-----BEGIN CERTIFICATE-----\n" + ( node == null || !( node instanceof Text ) ? null : ( ( Text ) node ).getData( ) ) + "\n-----END CERTIFICATE-----\n" );
         cert = PEMFiles.getCert( certStr.getBytes( ) );
       } else {
-        X509Security x509 = new X509Security( bstDirect );
-        byte[] bstToken = x509.getToken( );
-        CertificateFactory factory = getCertificateFactory( );
-        cert = ( X509Certificate ) factory.generateCertificate( new ByteArrayInputStream( bstToken ) );
+        final X509Security x509 = new X509Security( bstDirect );
+        final byte[] bstToken = x509.getToken( );
+        cert = cache.get( new CertificateKey( bstToken ), new Callable<X509Certificate>( ) {
+          @Override
+          public X509Certificate call( ) throws Exception {
+            CertificateFactory factory = getCertificateFactory( );
+            return ( X509Certificate ) factory.generateCertificate( new ByteArrayInputStream( bstToken ) );
+          }
+        } );
       }
     } catch ( Exception e ) {
       LOG.error( e, e );
@@ -397,6 +407,33 @@ public class WSSecurity {
       return false;
     } catch (InvalidCanonicalizerException e) {
       return true;
+    }
+  }
+
+  private static Cache<CertificateKey,X509Certificate> cache( final String cacheSpec ) {
+    return CacheBuilder
+        .from( CacheBuilderSpec.parse( cacheSpec ) )
+        .build( );
+  }
+
+  private static final class CertificateKey {
+    private final byte[] encoded;
+
+    public CertificateKey( final byte[] encoded ) {
+      this.encoded = encoded;
+    }
+
+    @Override
+    public boolean equals( final Object o ) {
+      if ( this == o ) return true;
+      if ( o == null || getClass( ) != o.getClass( ) ) return false;
+      final CertificateKey that = (CertificateKey) o;
+      return Arrays.equals( encoded, that.encoded );
+    }
+
+    @Override
+    public int hashCode() {
+      return Arrays.hashCode( encoded );
     }
   }
 }

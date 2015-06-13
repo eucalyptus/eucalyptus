@@ -62,6 +62,7 @@
 
 package com.eucalyptus.binding;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -93,6 +94,7 @@ import org.jibx.runtime.impl.StAXReaderWrapper;
 import org.jibx.runtime.impl.StAXWriter;
 import org.jibx.runtime.impl.UnmarshallingContext;
 import com.eucalyptus.util.NamespaceMappingXMLStreamWriter;
+import com.eucalyptus.util.UnsafeByteArrayOutputStream;
 import com.eucalyptus.ws.WebServicesException;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -207,12 +209,12 @@ public class Binding {
   }
 
   public OMElement toOM( final Object param, final String altNs ) throws BindingException {
-    final ByteArrayOutputStream bos = new ByteArrayOutputStream( );
+    final UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream( 4196 );
     final String useNs = toStream( bos, param, altNs );
     final OMElement retVal;
     HoldMe.canHas.lock( );
     try {
-      final StAXOMBuilder stAXOMBuilder = HoldMe.getStAXOMBuilder( HoldMe.getXMLStreamReader( bos.toString() ) );
+      final StAXOMBuilder stAXOMBuilder = HoldMe.getStAXOMBuilder( HoldMe.getXMLStreamReader( new ByteArrayInputStream( bos.getBuffer( ), 0, bos.getCount( ) ) ) );
       retVal = stAXOMBuilder.getDocumentElement( );
     } catch ( XMLStreamException e ) {
       LOG.error( e, e );
