@@ -65,10 +65,12 @@ package com.eucalyptus.component;
 import java.io.Serializable;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
@@ -326,7 +328,15 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public String getServiceModelFileName( ) {
     return String.format( "%s-model.xml", this.getName( ) );
   }
-  
+
+  public Set<String> getCertificateUsages( ) {
+    return Collections.emptySet( );
+  }
+
+  public X509Certificate getCertificate( final String usage ) {
+    return null;
+  }
+
   @Override
   public final int compareTo( final ComponentId that ) {
     return this.name( ).compareTo( that.name( ) );

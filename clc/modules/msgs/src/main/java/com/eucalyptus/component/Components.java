@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -192,6 +192,10 @@ public class Components {
 
   public static Function<ServiceConfiguration,ServiceConfiguration> updateConfiguration( ) {
     return UpdateComponentServiceConfiguration.INSTANCE;
+  }
+
+  public static Function<Component,ComponentId> componentId( ) {
+    return ToComponentId.INSTANCE;
   }
 
   enum ToComponentId implements Function<Component, ComponentId> {
