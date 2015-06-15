@@ -756,7 +756,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
 
   public Set<NetworkGroupId> getNetworkGroupIds( ) {
-    updateGroups( );
     return this.networkGroupIds;
   }
   
@@ -976,15 +975,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
      * @see Supplier#get()
      */
     @Override
-    public RunningInstancesItemType apply( final VmInstance v ) {
-      if ( !Entities.isPersistent( v ) ) {
-        throw new TransientEntityException( v.toString( ) );
+    public RunningInstancesItemType apply( final VmInstance input ) {
+      if ( !Entities.isPersistent( input ) ) {
+        throw new TransientEntityException( input.toString( ) );
       } else {
-        final EntityTransaction db = Entities.get( VmInstance.class );
         try {
-          final VmInstance input = Entities.merge( v );
-          RunningInstancesItemType runningInstance;
-          runningInstance = new RunningInstancesItemType( );
+          final RunningInstancesItemType runningInstance = new RunningInstancesItemType( );
           
           runningInstance.setAmiLaunchIndex( Integer.toString( input.getLaunchRecord( ).getLaunchIndex( ) ) );
           final VmState displayState = input.getDisplayState();
@@ -1148,9 +1144,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         } catch ( final NoSuchElementException ex ) {
           throw ex;
         } catch ( final Exception ex ) {
-          throw new NoSuchElementException( "Failed to lookup vm instance: " + v );
-        } finally {
-          if ( db.isActive() ) db.rollback();
+          throw new NoSuchElementException( "Failed to lookup vm instance: " + input );
         }
       }
     }
