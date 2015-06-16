@@ -452,7 +452,7 @@ public class VmBootRecord {
   private ImageInfo getMachineImage( ) {
     return this.machineImage;
   }
-  
+
   public final Boolean isMonitoring() {
     return Objects.firstNonNull( monitoring, Boolean.FALSE );
   }
@@ -466,8 +466,8 @@ public class VmBootRecord {
     StringBuilder builder = new StringBuilder( );
     builder.append( "VmBootRecord:" );
     if ( this.machineImage != null ) builder.append( "machineImage=" ).append( this.machineImage ).append( ":" );
-    if ( this.kernel != null ) builder.append( "kernel=" ).append( this.kernel ).append( ":" );
-    if ( this.ramdisk != null ) builder.append( "ramdisk=" ).append( this.ramdisk ).append( ":" );
+    if ( Entities.isReadable( this.kernel ) ) builder.append( "kernel=" ).append( this.kernel ).append( ":" );
+    if ( Entities.isReadable( this.ramdisk ) ) builder.append( "ramdisk=" ).append( this.ramdisk ).append( ":" );
     if ( this.platform != null ) builder.append( "platform=" ).append( this.platform ).append( ":" );
     if ( Entities.isReadable( this.persistentVolumes ) ) builder.append( "persistentVolumes=" ).append( this.persistentVolumes ).append( ":" );
     if ( this.userData != null ) builder.append( "userData=" ).append( Arrays.toString( this.userData ) ).append( ":" );
@@ -533,8 +533,8 @@ public class VmBootRecord {
   private static String displayName( @Nullable final String preferred,
                                      @Nullable final RestrictedType restrictedType,
                                      @Nullable final String defaultName ) {
-    return java.util.Objects.toString(
-        preferred,
-        java.util.Objects.toString( CloudMetadatas.toDisplayName().apply( restrictedType ), defaultName ) );
+    return preferred != null ?
+        preferred :
+        java.util.Objects.toString( CloudMetadatas.toDisplayName().apply( restrictedType ), defaultName );
   }
 }

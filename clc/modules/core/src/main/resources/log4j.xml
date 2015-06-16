@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!--
-  Copyright 2009-2013 Eucalyptus Systems, Inc.
+  Copyright 2009-2015 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -324,15 +324,11 @@
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
-  <category name="org.infinispan" additivity="false">
+  <category name="org.hibernate" additivity="false">
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
-  <category name="org.infinispan.transaction.TransactionTable" additivity="false">
-    <priority value="INFO" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="org.hibernate" additivity="false">
+  <category name="net.sf.hajdbc" additivity="false">
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>

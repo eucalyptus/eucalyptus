@@ -2519,13 +2519,6 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
     }
   }
 
-  /**
-   *
-   */
-  public static RunningInstancesItemType transform( final String name ) {
-    return VmInstance.Transform.INSTANCE.apply( lookup( name ) );
-  }
-
   public static Function<VmInstance,VmBundleTask> bundleTask() {
     return VmInstanceToVmBundleTask.INSTANCE;
   }

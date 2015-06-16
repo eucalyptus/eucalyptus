@@ -163,7 +163,7 @@ public class VmInstances {
         ownerFullName,
         Restrictions.not( VmInstance.criterion( VmInstance.VmStateSet.DONE.array() ) ),
         Collections.<String,String>emptyMap(),
-        Predicates.and( VmInstance.VmStateSet.DONE.not(), predicate ) );
+        Predicates.and( VmInstance.VmStateSet.DONE.not(), checkPredicate( predicate ) ) );
   }
 
   /**
