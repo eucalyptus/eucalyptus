@@ -555,7 +555,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
                       initial = "" + 60 )
   public static Long      MIGRATION_REFRESH_TIME        = 60l;
 
-  @ConfigurableField( description = "Prefix to use for instance MAC addresses.",
+  @ConfigurableField( description = "Default prefix to use for instance / network interface MAC addresses.",
                       initial = "d0:0d" )
   public static String    MAC_PREFIX                    = "d0:0d";
 

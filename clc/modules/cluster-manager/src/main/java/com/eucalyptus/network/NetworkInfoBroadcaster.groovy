@@ -313,7 +313,7 @@ class NetworkInfoBroadcaster {
                 ),
                 properties: [
                     new NIProperty( name: 'enabledCCIp', values: [ InetAddress.getByName(cluster.hostName).hostAddress ] ),
-                    new NIProperty( name: 'macPrefix', values: [ configCluster.macPrefix ?: VmInstances.MAC_PREFIX ] ),
+                    new NIProperty( name: 'macPrefix', values: [ configCluster.macPrefix ] ),
                     vpcmido ? new NIProperty( name: 'privateIps', values: [ '172.31.0.5' ] ) : new NIProperty( name: 'privateIps', values: configCluster.privateIps )
                 ],
                 nodes: new NINodes(
@@ -325,7 +325,7 @@ class NetworkInfoBroadcaster {
                 name: configCluster.name,
                 properties: [
                     new NIProperty( name: 'enabledCCIp', values: [ InetAddress.getByName(cluster.hostName).hostAddress ] ),
-                    new NIProperty( name: 'macPrefix', values: [ configCluster.macPrefix ?: VmInstances.MAC_PREFIX ] )
+                    new NIProperty( name: 'macPrefix', values: [ configCluster.macPrefix ] )
                 ],
                 nodes: new NINodes(
                     name: 'nodes',

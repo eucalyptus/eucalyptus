@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,6 +31,7 @@ import com.eucalyptus.compute.common.network.PublicIPResource
 import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType
 import com.eucalyptus.compute.common.network.VpcNetworkInterfaceResource
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterface as VpcNetworkInterface
+import com.eucalyptus.network.config.NetworkConfigurations
 import com.eucalyptus.util.dns.DomainNames
 import com.eucalyptus.compute.common.internal.vm.VmInstance
 import com.eucalyptus.vm.VmInstances
@@ -41,8 +42,6 @@ import com.google.common.collect.Lists
 import groovy.transform.CompileStatic
 import org.apache.log4j.Logger
 
-import static com.eucalyptus.vm.VmInstances.MAC_PREFIX
-
 /**
  *
  */
@@ -51,7 +50,7 @@ class NetworkInterfaceHelper {
   private static final Logger logger = Logger.getLogger( NetworkInterfaceHelper )
 
   static String mac( final String identifier ) {
-    String.format( "${MAC_PREFIX}:%s:%s:%s:%s",
+    String.format( "${NetworkConfigurations.macPrefix}:%s:%s:%s:%s",
         identifier.substring( 4, 6 ),
         identifier.substring( 6, 8 ),
         identifier.substring( 8, 10 ),

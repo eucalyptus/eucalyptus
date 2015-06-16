@@ -27,13 +27,12 @@ import com.eucalyptus.compute.common.network.PrepareNetworkResourcesResponseType
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesType
 import com.eucalyptus.compute.common.network.PublicIPResource
 import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType
+import com.eucalyptus.network.config.NetworkConfigurations
 import com.eucalyptus.records.Logs
 import com.google.common.collect.Lists
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import org.apache.log4j.Logger
-
-import static com.eucalyptus.vm.VmInstances.MAC_PREFIX
 
 /**
  *
@@ -97,7 +96,7 @@ abstract class NetworkingServiceSupport implements NetworkingService {
   }
 
   protected static String mac( final String identifier ) {
-    String.format( "${MAC_PREFIX}:%s:%s:%s:%s",
+    String.format( "${NetworkConfigurations.macPrefix}:%s:%s:%s:%s",
         identifier.substring( 2, 4 ),
         identifier.substring( 4, 6 ),
         identifier.substring( 6, 8 ),
