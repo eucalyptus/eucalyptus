@@ -138,7 +138,6 @@
     <collection name="tagSet" field="resourceTagSet" usage="optional" factory="org.jibx.runtime.Utility.arrayListFactory">
       <structure name="item" type="com.eucalyptus.compute.common.ImportResourceTag" />
     </collection>
-    <value name="imageConversion" field="imageConversion" usage="optional" />
   </mapping>
   <mapping class="com.eucalyptus.compute.common.ImportInstanceTaskDetails" abstract="true">
     <collection name="volumes" field="volumes" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
