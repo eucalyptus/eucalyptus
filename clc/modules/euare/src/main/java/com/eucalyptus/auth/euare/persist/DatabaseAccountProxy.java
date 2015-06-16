@@ -360,7 +360,7 @@ public class DatabaseAccountProxy implements EuareAccount {
       GroupEntity userGroup = DatabaseAuthUtils.getUniqueGroup( DatabaseAuthUtils.getUserGroupName( userName ), accountName );
       boolean result = ( user.getGroups( ).size( ) > 1
           || user.getKeys( ).size( ) > 0
-          || getCurrentCertificateNumber( user.getCertificates( ) ) > 0
+          || user.getCertificates( ).size( ) > 0
           || userGroup.getPolicies( ).size( ) > 0 );
       db.commit( );
       return result;
@@ -382,16 +382,6 @@ public class DatabaseAccountProxy implements EuareAccount {
     }
   }
 
-  private static int getCurrentCertificateNumber( List<CertificateEntity> certs ) {
-    int num = 0;
-    for ( CertificateEntity cert : certs ) {
-      if ( !cert.isRevoked( ) ) {
-        num++;
-      }
-    }
-    return num;
-  }
-  
   @Override
   public void deleteUser( String userName, boolean forceDeleteAdmin, boolean recursive ) throws AuthException {
     synchronized(getLock()) {

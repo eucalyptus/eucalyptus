@@ -29,6 +29,4 @@ public interface EuareCertificate extends Certificate {
 
   void setActive( Boolean active ) throws AuthException;
 
-  void setRevoked( Boolean revoked ) throws AuthException;
-
 }

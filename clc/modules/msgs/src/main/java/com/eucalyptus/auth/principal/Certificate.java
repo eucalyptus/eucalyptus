@@ -75,8 +75,6 @@ public interface Certificate extends Serializable {
 
   Boolean isActive( );
 
-  Boolean isRevoked( );
-
   String getPem( );
 
   X509Certificate getX509Certificate( );
@@ -86,21 +84,21 @@ public interface Certificate extends Serializable {
   UserPrincipal getPrincipal( ) throws AuthException;
   
   static class Util {
-    public static Function<Certificate,Boolean> revoked( ) {
-      return CertificateToRevokedFlag.INSTANCE;
+    public static Function<Certificate,Boolean> active( ) {
+      return CertificateToActiveFlag.INSTANCE;
     }
 
     public static Function<Certificate,X509Certificate> x509Certificate( ) {
       return CertificateToX509Certificate.INSTANCE;
     }
 
-    private enum CertificateToRevokedFlag implements Function<Certificate,Boolean> {
+    private enum CertificateToActiveFlag implements Function<Certificate,Boolean> {
       INSTANCE;
 
       @Nullable
       @Override
       public Boolean apply( @Nullable final Certificate certificate ) {
-        return certificate == null ? null : certificate.isRevoked( );
+        return certificate == null ? null : certificate.isActive( );
       }
     }
 

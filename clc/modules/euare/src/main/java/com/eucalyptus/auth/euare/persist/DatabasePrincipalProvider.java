@@ -328,10 +328,8 @@ public class DatabasePrincipalProvider implements PrincipalProvider {
         break;
       case Signing_Certificate_Id:
         try {
-          final Certificate certificate = Accounts.lookupCertificateById( name );
-          if ( !certificate.isRevoked( ) ) {
-            throw new AuthException( AuthException.CONFLICT );
-          }
+          Accounts.lookupCertificateById( name );
+          throw new AuthException( AuthException.CONFLICT );
         } catch ( AuthException e ) {
           if ( !AuthException.NO_SUCH_CERTIFICATE.equals(  e.getMessage() ) ) {
             throw new AuthException( AuthException.CONFLICT );
