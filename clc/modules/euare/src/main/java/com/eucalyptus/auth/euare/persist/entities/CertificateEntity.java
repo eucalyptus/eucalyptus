@@ -100,39 +100,38 @@ import com.google.common.base.Predicate;
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class CertificateEntity extends AbstractPersistent implements Serializable {
 
-  @Transient
   private static final long serialVersionUID = 1L;
 
   // Flag for active or inactive
   @Column( name = "auth_certificate_active" )
-  Boolean active;
+  private Boolean active;
   
-  // Flag for revoked certificates
+  // Flag for revoked certificates (not used from 4.2)
   @Column( name = "auth_certificate_revoked" )
-  Boolean revoked;
+  private Boolean revoked;
   
   // The certificate identifier, random for certificate generated pre 4.2
   @Column( name = "auth_certificate_id" )
-  String certificateId;
+  private String certificateId;
 
   // The certificate identifier derived from the certificate content.
   @Column( name = "auth_certificate_hash_id" )
-  String certificateHashId;
+  private String certificateHashId;
 
   // The certificate
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
   @Column( name = "auth_certificate_pem" )
-  String pem;
+  private String pem;
   
   // The create date
   @Column( name = "auth_certificate_create_date" )
-  Date createDate;
+  private Date createDate;
   
   // The owning user
   @ManyToOne( fetch = FetchType.LAZY )
   @JoinColumn( name = "auth_certificate_owning_user" )
-  UserEntity user;
+  private UserEntity user;
   
   public CertificateEntity( ) {
   }
@@ -160,7 +159,6 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
     sb.append( "Cert(" );
     sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
     sb.append( "active=" ).append( this.isActive( ) ).append( ", " );
-    sb.append( "revoked=" ).append( this.isRevoked( ) ).append( ", " );
     sb.append( "pem=" ).append( this.getPem( ) );
     sb.append( ")" );
     return sb.toString( );
@@ -180,17 +178,6 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
   
   public void setActive( Boolean active ) {
     this.active = active;
-  }
-  
-  public Boolean isRevoked( ) {
-    return this.revoked;
-  }
-  
-  public void setRevoked( Boolean revoked ) {
-    this.revoked = revoked;
-    if ( this.revoked ) {
-      this.active = false;
-    }
   }
   
   public Date getCreateDate( ) {
@@ -222,12 +209,20 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
     public boolean apply( Class arg0 ) {
       try ( final TransactionResource tx = Entities.transactionFor( CertificateEntity.class ) ) {
         final List<CertificateEntity> entities = (List<CertificateEntity>)
-            Entities.createCriteria( CertificateEntity.class ).add( Restrictions.isNull( "certificateHashId" ) ).list( );
+            Entities.createCriteria( CertificateEntity.class ).add( Restrictions.or(
+                Restrictions.isNull( "certificateHashId" ),
+                Restrictions.eq( "revoked", true )
+            ) ).list( );
         for ( final CertificateEntity entity : entities ) {
-          try {
-            entity.certificateHashId = Identifiers.generateCertificateIdentifier( X509CertHelper.toCertificate( entity.getPem() ) );
-          } catch ( Exception e ) {
-            logger.error( "Error generating fingerprint identifier for certificate", e );
+          if ( entity.revoked ) {
+            logger.info( "Deleting revoked certificate: " + entity.getCertificateId( ) );
+            Entities.delete( entity );
+          } else {
+            try {
+              entity.certificateHashId = Identifiers.generateCertificateIdentifier( X509CertHelper.toCertificate( entity.getPem( ) ) );
+            } catch ( Exception e ) {
+              logger.error( "Error generating fingerprint identifier for certificate", e );
+            }
           }
         }
         tx.commit( );

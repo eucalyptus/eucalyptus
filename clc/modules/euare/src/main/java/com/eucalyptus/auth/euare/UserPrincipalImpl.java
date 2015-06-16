@@ -19,7 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare;
 
-import static com.eucalyptus.auth.principal.Certificate.Util.revoked;
+import static com.eucalyptus.auth.principal.Certificate.Util.active;
 import static com.eucalyptus.util.CollectionUtils.propertyPredicate;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
@@ -27,7 +27,7 @@ import java.util.Date;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.apache.log4j.Logger;
+import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.euare.persist.DatabaseAuthUtils;
 import com.eucalyptus.auth.euare.persist.entities.AccessKeyEntity;
@@ -176,9 +176,9 @@ public class UserPrincipalImpl implements UserPrincipal {
     this.systemUser = systemAdmin;
     this.password = user.getPassword();
     this.passwordExpires = password == null ? null : Objects.firstNonNull( user.getPasswordExpires( ), Long.MAX_VALUE );
-    this.keys = ImmutableList.copyOf( Iterables.transform( user.getKeys( ), ekeyWrapper( this )) );
+    this.keys = ImmutableList.copyOf( Iterables.filter( Iterables.transform( user.getKeys( ), ekeyWrapper( this ) ), AccessKeys.isActive( ) ) );
     this.certificates = ImmutableList.copyOf(
-        Iterables.filter( Iterables.transform( user.getCertificates( ), ecertWrapper( this ) ), propertyPredicate( false, revoked() ) ) );
+        Iterables.filter( Iterables.transform( user.getCertificates( ), ecertWrapper( this ) ), propertyPredicate( true, active( ) ) ) );
     this.principalPolicies = ImmutableList.copyOf( policies );
   }
 
@@ -232,9 +232,9 @@ public class UserPrincipalImpl implements UserPrincipal {
     this.systemUser = user.isSystemUser();
     this.password = user.getPassword();
     this.passwordExpires = password == null ? null : Objects.firstNonNull( user.getPasswordExpires( ), Long.MAX_VALUE );
-    this.keys = ImmutableList.copyOf( Iterables.transform( user.getKeys( ), keyWrapper( this )) );
+    this.keys = ImmutableList.copyOf( Iterables.filter( Iterables.transform( user.getKeys( ), keyWrapper( this ) ), AccessKeys.isActive( ) )  );
     this.certificates = ImmutableList.copyOf(
-        Iterables.filter( user.getCertificates( ), propertyPredicate( false, revoked( ) ) ) );
+        Iterables.filter( user.getCertificates( ), propertyPredicate( true, active( ) ) ) );
     this.principalPolicies = ImmutableList.copyOf( policies );
   }
 
@@ -421,7 +421,6 @@ public class UserPrincipalImpl implements UserPrincipal {
         return new Certificate( ){
           @Override public String getCertificateId( ) { return accessKey.getCertificateId( ); }
           @Override public Boolean isActive( ) { return accessKey.isActive(); }
-          @Override public Boolean isRevoked( ) { return accessKey.isRevoked( ); }
           @Override public String getPem( ) { return accessKey.getPem( ); }
           @Override public X509Certificate getX509Certificate( ) { return X509CertHelper.toCertificate( getPem() ); }
           @Override public Date getCreateDate( ) { return accessKey.getCreateDate( ); }

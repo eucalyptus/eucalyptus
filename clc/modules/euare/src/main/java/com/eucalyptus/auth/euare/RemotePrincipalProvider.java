@@ -533,7 +533,6 @@ public class RemotePrincipalProvider implements PrincipalProvider {
         return new Certificate( ) {
           @Override public String getCertificateId( ) { return certificate.getCertificateBody( ); }
           @Override public Boolean isActive( ) { return true; }
-          @Override public Boolean isRevoked( ) { return false; }
           @Override public String getPem( ) { return certificate.getCertificateBody( ); }
           @Override public X509Certificate getX509Certificate( ) { return null; }
           @Override public Date getCreateDate( ) { return null; }

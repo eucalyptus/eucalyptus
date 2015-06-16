@@ -19,7 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare.identity;
 
-import static com.eucalyptus.auth.principal.Certificate.Util.revoked;
 import static com.eucalyptus.util.CollectionUtils.propertyPredicate;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
@@ -37,6 +36,7 @@ import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMOutputFormat;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.InvalidAccessKeyAuthException;
@@ -159,18 +159,18 @@ public class IdentityService {
         principal.setPasswordExpiry( user.getPasswordExpires( ) );
 
         final ArrayList<com.eucalyptus.auth.euare.common.identity.AccessKey> accessKeys = Lists.newArrayList( );
-        for ( final AccessKey accessKey : user.getKeys( ) ) {
+        for ( final AccessKey accessKey : Iterables.filter( user.getKeys( ), AccessKeys.isActive( ) ) ) {
           final com.eucalyptus.auth.euare.common.identity.AccessKey key =
               new com.eucalyptus.auth.euare.common.identity.AccessKey( );
-          key.setAccessKeyId( accessKey.getAccessKey( ) );
-          key.setSecretAccessKey( accessKey.getSecretKey( ) );
-          accessKeys.add( key );
+            key.setAccessKeyId( accessKey.getAccessKey( ) );
+            key.setSecretAccessKey( accessKey.getSecretKey( ) );
+            accessKeys.add( key );
         }
         principal.setAccessKeys( accessKeys );
 
         final ArrayList<com.eucalyptus.auth.euare.common.identity.Certificate> certificates = Lists.newArrayList( );
         for ( final Certificate certificate :
-            Iterables.filter( user.getCertificates(), propertyPredicate( false, revoked() ) ) ) {
+            Iterables.filter( user.getCertificates( ), propertyPredicate( true, Certificate.Util.active( ) ) ) ) {
           final com.eucalyptus.auth.euare.common.identity.Certificate cert =
               new com.eucalyptus.auth.euare.common.identity.Certificate();
           cert.setCertificateId( certificate.getCertificateId() );

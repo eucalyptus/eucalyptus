@@ -93,11 +93,6 @@ public class Principals {
                                                                                         }
                                                                                         
                                                                                         @Override
-                                                                                        public Boolean isRevoked( ) {
-                                                                                          return false;
-                                                                                        }
-
-                                                                                        @Override
                                                                                         public String getPem( ) {
                                                                                           return B64.url.encString( PEMFiles.getBytes( getX509Certificate( ) ) );
                                                                                         }
@@ -237,11 +232,6 @@ public class Principals {
                                                                                           return true;
                                                                                         }
                                                                                         
-                                                                                        @Override
-                                                                                        public Boolean isRevoked( ) {
-                                                                                          return null;
-                                                                                        }
-
                                                                                         @Override
                                                                                         public String getPem( ) {
                                                                                           return B64.url.encString( PEMFiles.getBytes( getX509Certificate( ) ) );
