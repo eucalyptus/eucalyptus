@@ -20,6 +20,8 @@
 package com.eucalyptus.network.config
 
 import com.eucalyptus.network.PrivateAddresses
+import com.eucalyptus.vm.VmInstances
+import com.google.common.base.Optional
 import com.google.common.collect.Lists
 import groovy.transform.CompileStatic
 import org.junit.Test
@@ -30,6 +32,58 @@ import static org.junit.Assert.*
  */
 @CompileStatic
 class NetworkConfigurationsTest {
+
+  @Test
+  void testConfiguredMacPrefix(){
+    // verify default when not configured
+    NetworkConfigurations.getMacPrefix( Optional.of( new NetworkConfiguration(
+    ) ) ).with{ String macPrefix ->
+      assertEquals( 'default mac prefix', VmInstances.MAC_PREFIX, macPrefix )
+    }
+
+    // verify configuration from top level
+    NetworkConfigurations.getMacPrefix( Optional.of( new NetworkConfiguration(
+        macPrefix: '00:00'
+    ) ) ).with{ String macPrefix ->
+      assertEquals( 'top level mac prefix', '00:00', macPrefix )
+    }
+    NetworkConfigurations.getMacPrefix( Optional.of( new NetworkConfiguration(
+        macPrefix: '00:00',
+        clusters: [
+            new Cluster( name: 'cluster0' )
+        ]
+    ) ) ).with{ String macPrefix ->
+      assertEquals( 'top level mac prefix, cluster without macPrefix ignored', '00:00', macPrefix )
+    }
+    NetworkConfigurations.getMacPrefix( Optional.of( new NetworkConfiguration(
+        macPrefix: '00:00',
+        clusters: [
+            new Cluster(
+                name: 'cluster0',
+                macPrefix: '11:00'
+            ),
+            new Cluster(
+                name: 'cluster1',
+                macPrefix: '11:11'
+            )
+        ]
+    ) ) ).with{ String macPrefix ->
+      assertEquals( 'top level mac prefix, multiple clusters ignored', '00:00', macPrefix )
+    }
+
+    // verify configuration from cluster level
+    NetworkConfigurations.getMacPrefix( Optional.of( new NetworkConfiguration(
+        macPrefix: '00:00',
+        clusters: [
+            new Cluster(
+                name: 'cluster0',
+                macPrefix: '11:11'
+            )
+        ]
+    ) ) ).with{ String macPrefix ->
+      assertEquals( 'top level mac prefix, cluster ignored', '11:11', macPrefix )
+    }
+  }
 
   @Test
   void testConfiguredPrivateIPsForCluster(){
@@ -135,6 +189,7 @@ class NetworkConfigurationsTest {
         clusters: [
             new Cluster(
                 name: 'cluster1',
+                macPrefix: 'd0:0d',
                 privateIps: [ '10.111.0.2-10.111.255.254' ],
                 subnet: new EdgeSubnet(
                     name: "10.111.0.0",
