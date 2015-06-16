@@ -200,7 +200,6 @@ public class ConversionTask extends EucalyptusData{
   ImportInstanceTaskDetails importInstance;
   String state;
   String statusMessage;
-  String imageConversion;
   
   @HttpEmbedded(multiple = true)
   @HttpParameterMapping (parameter = "ResourceTag")
