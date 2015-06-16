@@ -55,12 +55,10 @@ import com.eucalyptus.compute.common.CreateTagsResponseType;
 import com.eucalyptus.compute.common.CreateTagsType;
 import com.eucalyptus.compute.common.DescribeInstancesResponseType;
 import com.eucalyptus.compute.common.DescribeInstancesType;
-import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
-import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
 import com.eucalyptus.compute.common.DescribeVolumesResponseType;
 import com.eucalyptus.compute.common.DescribeVolumesType;
 import com.eucalyptus.compute.common.EbsDeviceMapping;
-import com.eucalyptus.compute.common.GroupItemType;
+import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.InstanceNetworkInterfaceSetItemRequestType;
 import com.eucalyptus.compute.common.InstanceNetworkInterfaceSetRequestType;
 import com.eucalyptus.compute.common.PrivateIpAddressesSetItemRequestType;
@@ -70,13 +68,11 @@ import com.eucalyptus.compute.common.RunInstancesType;
 import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.compute.common.SecurityGroupIdSetItemType;
 import com.eucalyptus.compute.common.SecurityGroupIdSetType;
-import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.compute.common.TerminateInstancesResponseType;
 import com.eucalyptus.compute.common.TerminateInstancesType;
 import com.eucalyptus.compute.common.Volume;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
@@ -86,7 +82,6 @@ import com.netflix.glisten.WorkflowOperations;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import javax.annotation.Nullable;
 
 /**
@@ -200,7 +195,7 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
             for (EC2MountPoint ec2MountPoint : action.properties.getVolumes()) {
               volumeIds.add(ec2MountPoint.getVolumeId());
             }
-            describeVolumesType.setVolumeSet(volumeIds);
+            describeVolumesType.getFilterSet( ).add( Filter.filter( "volume-id", volumeIds ) );
             DescribeVolumesResponseType describeVolumesResponseType;
             try {
               describeVolumesResponseType = AsyncRequests.sendSync( configuration, describeVolumesType );
@@ -235,17 +230,8 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
           AWSEC2InstanceResourceAction action = (AWSEC2InstanceResourceAction) resourceAction;
           ServiceConfiguration configuration = Topology.lookup(Compute.class);
           DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
-          describeInstancesType.setInstancesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
-          DescribeInstancesResponseType describeInstancesResponseType;
-          try {
-            describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
-          } catch ( Exception e ) {
-            if ( AsyncExceptions.isWebServiceErrorCode( e, "InvalidInstanceID.NotFound" ) ) {
-              throw new ValidationFailedException("Instance " + action.info.getPhysicalResourceId() + " does not yet exist");
-            } else {
-              throw e;
-            }
-          }
+          describeInstancesType.getFilterSet( ).add( Filter.filter( "instance-id", action.info.getPhysicalResourceId( ) ) );
+          DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
           if (describeInstancesResponseType.getReservationSet().size() == 0) {
             throw new ValidationFailedException("Instance " + action.info.getPhysicalResourceId( ) + " does not yet exist");
           }
@@ -333,10 +319,10 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
               deviceMap.put(ec2MountPoint.getVolumeId(), ec2MountPoint.getDevice());
             }
             DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
-            describeVolumesType.setVolumeSet(Lists.newArrayList(volumeIds));
+            describeVolumesType.getFilterSet( ).add( Filter.filter( "volume-id", volumeIds ) );
             DescribeVolumesResponseType describeVolumesResponseType;
             try {
-              describeVolumesResponseType = AsyncRequests.<DescribeVolumesType, DescribeVolumesResponseType>sendSync( configuration, describeVolumesType );
+              describeVolumesResponseType = AsyncRequests.sendSync( configuration, describeVolumesType );
             } catch ( Exception e ) {
               throw new ValidationFailedException("Error describing volumes: " + asWebServiceErrorMessage( e, e.getMessage( ) ) );
             }
@@ -454,17 +440,8 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
           if (action.info.getPhysicalResourceId() == null) return action;
           // First see if instance exists or has been terminated
           DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
-          describeInstancesType.setInstancesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
-          DescribeInstancesResponseType describeInstancesResponseType;
-          try {
-            describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
-          } catch ( Exception e ) {
-            if ( AsyncExceptions.isWebServiceErrorCode( e, "InvalidInstanceID.NotFound" ) ) {
-              return action;
-            } else {
-              throw e;
-            }
-          }
+          describeInstancesType.getFilterSet( ).add( Filter.filter( "instance-id", action.info.getPhysicalResourceId( ) ) );
+          DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
           if (describeInstancesResponseType.getReservationSet().size() == 0) return action; // already terminated
           if ("terminated".equals(
             describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0).getStateName()))
@@ -487,17 +464,8 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
           // See if instance was ever populated
           if (action.info.getPhysicalResourceId() == null) return action;
           DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
-          describeInstancesType.setInstancesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
-          DescribeInstancesResponseType describeInstancesResponseType;
-          try {
-            describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
-          } catch ( Exception e ) {
-            if ( AsyncExceptions.isWebServiceErrorCode( e, "InvalidInstanceID.NotFound" ) ) {
-              return action;
-            } else {
-              throw e;
-            }
-          }
+          describeInstancesType.getFilterSet( ).add( Filter.filter( "instance-id", action.info.getPhysicalResourceId( ) ) );
+          DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
           if (describeInstancesResponseType.getReservationSet().size() == 0) return action; // already terminated
           if ("terminated".equals(
             describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0).getStateName()))
@@ -552,31 +520,6 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
     return new DeleteMultiStepPromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
-  private ArrayList<GroupItemType> convertSecurityGroups(List<String> securityGroups, ServiceConfiguration configuration, String effectiveUserId) throws Exception {
-    if (securityGroups == null) return null;
-    // Is there a better way?
-    DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, effectiveUserId);
-    DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType =
-      AsyncRequests.<DescribeSecurityGroupsType, DescribeSecurityGroupsResponseType>sendSync(configuration, describeSecurityGroupsType);
-    ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
-    Map<String, String> nameToIdMap = Maps.newHashMap();
-    if (securityGroupItemTypeArrayList != null) {
-      for (SecurityGroupItemType securityGroupItemType : securityGroupItemTypeArrayList) {
-        nameToIdMap.put(securityGroupItemType.getGroupName(), securityGroupItemType.getGroupId());
-      }
-    }
-    ArrayList<GroupItemType> groupItemTypes = Lists.newArrayList();
-    for (String securityGroup : securityGroups) {
-      GroupItemType groupItemType = new GroupItemType();
-      groupItemType.setGroupName(securityGroup);
-      String groupId = nameToIdMap.get(securityGroup);
-      if (groupId == null) throw new NoSuchElementException("No such security group with name " + securityGroup);
-      groupItemType.setGroupId(groupId);
-      groupItemTypes.add(groupItemType);
-    }
-    return groupItemTypes;
-  }
-
   private ArrayList<BlockDeviceMappingItemType> convertBlockDeviceMappings(List<EC2BlockDeviceMapping> blockDeviceMappings) {
     if (blockDeviceMappings == null) return null;
     ArrayList<BlockDeviceMappingItemType> blockDeviceMappingItemTypes = Lists.newArrayList();
@@ -604,17 +547,8 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
     // This assumes everything is set, propertywise and attributewise
     ServiceConfiguration configuration = Topology.lookup(Compute.class);
     DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, info.getEffectiveUserId());
-    describeInstancesType.setInstancesSet(Lists.newArrayList(info.getPhysicalResourceId()));
-    DescribeInstancesResponseType describeInstancesResponseType;
-    try {
-      describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
-    } catch ( Exception e ) {
-      if ( AsyncExceptions.isWebServiceErrorCode( e, "InvalidInstanceID.NotFound" ) ) {
-        return;
-      } else {
-        throw e;
-      }
-    }
+    describeInstancesType.getFilterSet( ).add( Filter.filter( "instance-id", info.getPhysicalResourceId( ) ) );
+    DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
     if (describeInstancesResponseType.getReservationSet().size() == 0) {
       return;
     }

@@ -244,7 +244,7 @@ public class Threads {
       OrderedShutdown.registerPostShutdownHook( new Runnable( ) {
         @Override
         public void run( ) {
-          LOG.warn( "SHUTDOWN:" + ThreadPool.this.name
+          LOG.info( "SHUTDOWN:" + ThreadPool.this.name
                     + " Stopping thread pool..." );
           if ( ThreadPool.this.pool != null ) {
             ThreadPool.this.free( );
@@ -319,7 +319,7 @@ public class Threads {
       }
       try {
         for ( int i = 0; ( i < 10 ) && !this.pool.awaitTermination( 1, TimeUnit.SECONDS ); i++ ) {
-          LOG.warn( "SHUTDOWN:" + ThreadPool.this.name
+          LOG.info( "SHUTDOWN:" + ThreadPool.this.name
                     + " - Waiting for pool to shutdown." );
           if ( i > 2 ) {
             LOG.warn( Joiner.on( "\n\t\t" ).join( this.creationPoint ) );

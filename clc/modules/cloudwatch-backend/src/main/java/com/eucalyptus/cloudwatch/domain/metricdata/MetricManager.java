@@ -150,7 +150,7 @@ public class MetricManager {
     for (Map.Entry<String, String> entry : sortedDimensionMap.entrySet()) {
       sb.append(entry.getKey() + "|" + entry.getValue() + "|");
     }
-    return HashUtils.hash(sb.toString());
+    return HashUtils.hash(sb);
   }
 
   public static String hash(Collection<DimensionEntity> dimensions) {
@@ -158,7 +158,7 @@ public class MetricManager {
     for (DimensionEntity dimension : dimensions) {
       sb.append(dimension.getName() + "|" + dimension.getValue() + "|");
     }
-    return HashUtils.hash(sb.toString());
+    return HashUtils.hash(sb);
   }
 
   public static Date stripSeconds(Date timestamp) {

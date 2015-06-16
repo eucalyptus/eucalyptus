@@ -22,6 +22,7 @@ package com.eucalyptus.compute.common.internal.tags;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nonnull;
+import com.google.common.base.CharMatcher;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -92,6 +93,40 @@ public class Filters {
                                             final Class<?> resourceType,
                                             final String qualifier ) {
     return new FiltersBuilder( filters, resourceType, qualifier );
+  }
+
+  /**
+   * Escape any wildcards in a filter value so it can be used as a literal.
+   *
+   * <p>Escapes \ * and ? using a \<\p>
+   *
+   * @param filterValue The value to escape
+   * @return The escaped filter value
+   */
+  @Nonnull
+  public static String escape( @Nonnull final CharSequence filterValue ) {
+    final String escaped;
+    final CharMatcher syntaxMatcher = CharMatcher.anyOf("\\*?");
+    if ( syntaxMatcher.matchesAnyOf( filterValue ) ) {
+      final StringBuilder escapedBuffer = new StringBuilder( filterValue.length( ) + 8 );
+      for ( int i=0; i<filterValue.length(); i++ ) {
+        final char character = filterValue.charAt( i );
+        switch ( character ) {
+          case '\\':
+          case '*':
+          case '?':
+            escapedBuffer.append( '\\' );
+            // fall through
+          default:
+            escapedBuffer.append( character );
+        }
+      }
+      escaped = escapedBuffer.toString( );
+    } else {
+      escaped = filterValue.toString( );
+    }
+
+    return escaped;
   }
 
   public static class FiltersBuilder {

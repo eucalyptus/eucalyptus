@@ -106,6 +106,9 @@ public class DatabasePrincipalProvider implements PrincipalProvider {
       } catch ( Exception e ) {
         throw new InvalidAccessKeyAuthException( "Failed to find access key", e );
       }
+      if ( user == null ) {
+        throw new InvalidAccessKeyAuthException( "Failed to find access key" );
+      }
       final UserPrincipal principal = new UserPrincipalImpl( user );
       final Optional<AccessKey> accessKey = Iterables.tryFind(
           principal.getKeys( ),

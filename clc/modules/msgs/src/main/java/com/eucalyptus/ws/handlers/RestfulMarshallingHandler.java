@@ -97,6 +97,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.UnsafeByteArrayOutputStream;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import com.google.common.base.Objects;
@@ -177,7 +178,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpResponse ) {
       MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
-      ByteArrayOutputStream byteOut = new ByteArrayOutputStream( 8192 );
+      UnsafeByteArrayOutputStream byteOut = new UnsafeByteArrayOutputStream( 8192 );
       HoldMe.canHas.lock( );
       try {
         if ( httpResponse.getMessage( ) == null ) {
@@ -220,8 +221,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
             throw e;
           }
         }
-        byte[] req = byteOut.toByteArray( );
-        ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( req );
+        ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( byteOut.getBuffer( ), 0, byteOut.getCount( ) );
         httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes( ) ) );
         httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "application/xml; charset=UTF-8" );
         httpResponse.setContent( buffer );

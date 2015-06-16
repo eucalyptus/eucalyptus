@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -50,16 +50,14 @@ import com.eucalyptus.compute.common.DeleteVpcResponseType;
 import com.eucalyptus.compute.common.DeleteVpcType;
 import com.eucalyptus.compute.common.DescribeVpcsResponseType;
 import com.eucalyptus.compute.common.DescribeVpcsType;
+import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.ModifyVpcAttributeResponseType;
 import com.eucalyptus.compute.common.ModifyVpcAttributeType;
-import com.eucalyptus.compute.common.VpcIdSetItemType;
-import com.eucalyptus.compute.common.VpcIdSetType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
 import com.netflix.glisten.WorkflowOperations;
 
-import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nullable;
 
@@ -166,9 +164,11 @@ public class AWSEC2VPCResourceAction extends ResourceAction {
         if (action.info.getPhysicalResourceId() == null) return action;
 
         DescribeVpcsType describeVpcsType = MessageHelper.createMessage(DescribeVpcsType.class, action.info.getEffectiveUserId());
-        action.setVpcId(describeVpcsType, action.info.getPhysicalResourceId());
-        DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.<DescribeVpcsType,DescribeVpcsResponseType> sendSync(configuration, describeVpcsType);
-        if (describeVpcsResponseType.getVpcSet() == null || describeVpcsResponseType.getVpcSet().getItem() == null || describeVpcsResponseType.getVpcSet().getItem().isEmpty()) {
+        describeVpcsType.getFilterSet( ).add( Filter.filter( "vpc-id", action.info.getPhysicalResourceId( ) ) );
+        DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.sendSync( configuration, describeVpcsType );
+        if (describeVpcsResponseType.getVpcSet() == null ||
+            describeVpcsResponseType.getVpcSet().getItem() == null ||
+            describeVpcsResponseType.getVpcSet().getItem().isEmpty()) {
           return action; // already deleted
         }
         DeleteVpcType deleteVpcType = MessageHelper.createMessage(DeleteVpcType.class, action.info.getEffectiveUserId());
@@ -210,19 +210,6 @@ public class AWSEC2VPCResourceAction extends ResourceAction {
     AttributeBooleanValueType attributeBooleanValueType = new AttributeBooleanValueType();
     attributeBooleanValueType.setValue(value);
     return attributeBooleanValueType;
-  }
-
-  private void setVpcId(DescribeVpcsType describeVpcsType, String vpcId) {
-    VpcIdSetType vpcSet = new VpcIdSetType();
-    describeVpcsType.setVpcSet(vpcSet);
-
-    ArrayList<VpcIdSetItemType> item = Lists.newArrayList();
-    vpcSet.setItem(item);
-
-    VpcIdSetItemType vpcIdSetItem = new VpcIdSetItemType();
-    item.add(vpcIdSetItem);
-
-    vpcIdSetItem.setVpcId(vpcId);
   }
 
   @Override

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,9 +19,15 @@
  ************************************************************************/
 package com.eucalyptus.entities;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
+import org.hibernate.Criteria;
+import org.hibernate.FetchMode;
+import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
@@ -32,6 +38,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 
 /**
  *
@@ -40,6 +47,9 @@ public class EntityCache<E extends AbstractPersistent, TE extends Comparable<TE>
 
   private static final int batchSize = 500;
   private final E example;
+  private final Criterion criterion;
+  private final Set<String> eagerAssociationPaths;
+  private final Set<String> lazyAssociationPaths;
   private final Function<? super E,TE> transformFunction;
   private final ConcurrentMap<Pair<String,Integer>,TE> cache = Maps.newConcurrentMap( );
 
@@ -51,38 +61,66 @@ public class EntityCache<E extends AbstractPersistent, TE extends Comparable<TE>
    */
   public EntityCache( final E example,
                       final Function<? super E,TE> transformFunction ) {
+    this(
+        example,
+        Restrictions.conjunction( ),
+        Collections.<String>emptySet( ),
+        Collections.<String>emptySet( ),
+        transformFunction );
+  }
+
+  /**
+   * Create an entity cache for the given example.
+   *
+   * @param example The example object
+   * @param criterion Additional criterion
+   * @param eagerAssociationPaths Paths to be eagerly loaded
+   * @param lazyAssociationPaths Paths to be lazily (or not) loaded
+   * @param transformFunction Function to transform to immutable cache format
+   */
+  public EntityCache( final E example,
+                      final Criterion criterion,
+                      final Set<String> eagerAssociationPaths,
+                      final Set<String> lazyAssociationPaths,
+                      final Function<? super E,TE> transformFunction ) {
     this.example = example;
+    this.criterion = criterion;
+    this.eagerAssociationPaths = eagerAssociationPaths;
+    this.lazyAssociationPaths = lazyAssociationPaths;
     this.transformFunction = transformFunction;
   }
 
   @SuppressWarnings( "unchecked" )
-  private List<Pair<String,Integer>> loadVersionMap( ) {
-    try ( final TransactionResource db = Entities.transactionFor( example ) ){
-      List<Object[]> idVersionList = (List<Object[]>) Entities.createCriteria( example.getClass( ) )
+  private Collection<Pair<String,Integer>> loadVersionMap( ) {
+    try ( final TransactionResource db = Entities.readOnlyDistinctTransactionFor( example ) ){
+      final Criteria criteria = Entities.createCriteria( example.getClass( ) )
           .add( Example.create( example ) )
-          .setReadOnly( true )
-          .setCacheable( false )
-          .setFetchSize( 1000 )
-          .setProjection( Projections.projectionList().add( Projections.id( ) ).add( Projections.property( "version" ) ) )
-          .list( );
-      return Lists.newArrayList( Iterables.transform( idVersionList, ObjectArrayToStringIntPair.INSTANCE ) );
+          .add( criterion )
+          .setProjection( Projections.projectionList( )
+              .add( Projections.property( "id" ) )
+              .add( Projections.property( "version" ) ) );
+      final List<Object[]> idVersionList = (List<Object[]>) criteria.list( );
+      final Set<Pair<String,Integer>> results = Sets.newLinkedHashSetWithExpectedSize( idVersionList.size( ) );
+      Iterables.addAll( results, Iterables.transform( idVersionList, ObjectArrayToStringIntPair.INSTANCE ) );
+      return results;
     }
   }
 
   @SuppressWarnings( { "unchecked", "ConstantConditions" } )
   private void refresh( ) {
-    final List<Pair<String,Integer>> currentKeys = loadVersionMap( );
+    final Collection<Pair<String,Integer>> currentKeys = loadVersionMap( );
     cache.keySet( ).retainAll( currentKeys );
     currentKeys.removeAll( cache.keySet( ) );
-    for ( List<Pair<String,Integer>> keyBatch : Iterables.partition( currentKeys, batchSize ) ) {
-      try ( final TransactionResource db = Entities.transactionFor( example ) ) {
-        List<E> entities = (List<E>) Entities.createCriteria( example.getClass( ) )
+    for ( final List<Pair<String,Integer>> keyBatch : Iterables.partition( currentKeys, batchSize ) ) {
+      try ( final TransactionResource db = Entities.readOnlyDistinctTransactionFor( example ) ) {
+        final Criteria criteria =  Entities.createCriteria( example.getClass( ) )
             .add( Example.create( example ) )
-            .setReadOnly( true )
-            .setCacheable( false )
+            .add( criterion )
             .setFetchSize( batchSize )
-            .add( Restrictions.in( "id", Lists.newArrayList( Iterables.transform( keyBatch, Pair.<String,Integer>left( ) ) ) ) )
-            .list( );
+            .add( Restrictions.in( "id", Lists.newArrayList( Iterables.transform( keyBatch, Pair.<String, Integer>left( ) ) ) ) );
+        for ( final String path : eagerAssociationPaths ) criteria.setFetchMode( path, FetchMode.JOIN );
+        for ( final String path : lazyAssociationPaths ) criteria.setFetchMode( path, FetchMode.SELECT );
+        final List<E> entities = (List<E> ) criteria.list( );
         for ( final E entity : entities ) {
           cache.put( Pair.pair( getId( entity ), entity.getVersion( ) ), transformFunction.apply( entity ) );
         }

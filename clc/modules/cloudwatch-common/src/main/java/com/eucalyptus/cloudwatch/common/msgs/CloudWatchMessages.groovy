@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 package com.eucalyptus.cloudwatch.common.msgs
 
 import com.eucalyptus.cloudwatch.common.CloudWatch
+import com.eucalyptus.ws.WebServiceError
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
 import java.lang.reflect.Field;
@@ -299,7 +300,7 @@ public class DisableAlarmActionsType extends CloudWatchMessage {
   AlarmNames alarmNames;
   public DisableAlarmActionsType() {  }
 }
-public class CloudWatchErrorResponse extends CloudWatchMessage {
+public class CloudWatchErrorResponse extends CloudWatchMessage implements WebServiceError {
   String requestId;
   ArrayList<Error> error = new ArrayList<Error>( );
 
@@ -309,7 +310,17 @@ public class CloudWatchErrorResponse extends CloudWatchMessage {
 
   @Override
   String toSimpleString( ) {
-    "${error?.getAt(0)?.type} error (${error?.getAt(0)?.code}): ${error?.getAt(0)?.message}"
+    "${error?.getAt(0)?.type} error (${webServiceErrorCode}): ${webServiceErrorMessage}"
+  }
+
+  @Override
+  String getWebServiceErrorCode( ) {
+    error?.getAt(0)?.code
+  }
+
+  @Override
+  String getWebServiceErrorMessage( ) {
+    error?.getAt(0)?.message
   }
 }
 public class Metrics extends EucalyptusData {

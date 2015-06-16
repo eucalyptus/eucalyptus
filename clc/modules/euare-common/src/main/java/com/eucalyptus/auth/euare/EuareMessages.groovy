@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -66,7 +66,8 @@ package com.eucalyptus.auth.euare;
 import com.eucalyptus.auth.policy.annotation.PolicyAction;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.component.annotation.ComponentMessage;
-import com.eucalyptus.component.id.Euare;
+import com.eucalyptus.component.id.Euare
+import com.eucalyptus.ws.WebServiceError;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
@@ -733,7 +734,7 @@ public class ListServerCertificatesType extends EuareMessage implements EuareMes
   Integer maxItems;
   public ListServerCertificatesType() {  }
 }
-public class ErrorResponseType extends EuareMessage {
+public class ErrorResponseType extends EuareMessage implements WebServiceError {
   String requestId;
   HttpResponseStatus httpStatus;
   ArrayList<ErrorType> errorList = new ArrayList<ErrorType>( );
@@ -744,7 +745,17 @@ public class ErrorResponseType extends EuareMessage {
 
   @Override
   String toSimpleString( ) {
-    "${errorList?.getAt(0)?.type} error (${errorList?.getAt(0)?.code}): ${errorList?.getAt(0)?.message}"
+    "${errorList?.getAt(0)?.type} error (${webServiceErrorCode}): ${webServiceErrorMessage}"
+  }
+
+  @Override
+  String getWebServiceErrorCode( ) {
+    errorList?.getAt(0)?.code
+  }
+
+  @Override
+  String getWebServiceErrorMessage( ) {
+    errorList?.getAt(0)?.message
   }
 }
 public class GetGroupResponseType extends EuareMessage {

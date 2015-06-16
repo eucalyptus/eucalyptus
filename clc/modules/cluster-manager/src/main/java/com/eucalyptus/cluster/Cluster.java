@@ -1016,7 +1016,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   
   @Override
   public String toString( ) {
-    final StringBuilder buf = new StringBuilder( );
+    final StringBuilder buf = new StringBuilder( 512 );
     buf.append( "Cluster " ).append( this.configuration ).append( '\n' );
     buf.append( "Cluster " ).append( this.configuration.getName( ) );//.append( " mq=" ).append( this.getConfiguration( ).lookupService( ). ).append( '\n' );//TODO:GRZE:RESTORE ME
     for ( final NodeInfo node : this.nodeMap.values( ) ) {

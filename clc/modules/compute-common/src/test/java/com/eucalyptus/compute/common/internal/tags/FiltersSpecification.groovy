@@ -17,20 +17,32 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.cloudwatch.hashing;
+package com.eucalyptus.compute.common.internal.tags
 
-import java.nio.CharBuffer;
-import java.nio.charset.StandardCharsets;
+import spock.lang.Specification
 
-import com.eucalyptus.crypto.Digest;
-import com.google.common.io.BaseEncoding;
+/**
+ *
+ */
+class FiltersSpecification extends Specification {
 
-public class HashUtils {
+  def 'should support escaping any/all wildcards'() {
+    expect: 'wildcards escaped in filter value'
+    escapedFilter == Filters.escape( filter )
 
-  public static String hash( final CharSequence text ) {
-    return BaseEncoding.base16( ).lowerCase( ).encode(
-        Digest.SHA1.digestBinary( StandardCharsets.UTF_8.encode( CharBuffer.wrap( text ) ) )
-    );
+    where:
+    escapedFilter      | filter
+    '\\\\'             | '\\'
+    '\\*'              | '*'
+    '\\?'              | '?'
+    '\\*amazon\\?\\\\' | '*amazon?\\'
+    '\\\\\\\\\\\\'     | '\\\\\\'
+    '\\*\\*\\*'        | '***'
+    '\\?\\?\\?'        | '???'
+    'foo\\?bar'        | 'foo?bar'
+    'foobar\\?'        | 'foobar?'
+    '\\?foobar'        | '?foobar'
+    'Foo\\?Bar'        | 'Foo?Bar'
+
   }
-
 }
