@@ -18,22 +18,21 @@
  * additional information or have any questions.
  ************************************************************************/
 
-package com.eucalyptus.cloudwatch.domain.absolute;
+package com.eucalyptus.cluster.callback.cloudwatch;
 
 import java.util.Date;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
-import javax.persistence.Column;
 import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
 
-import com.eucalyptus.cloudwatch.domain.metricdata.MetricDataQueue.AbsoluteMetricCache;
-import com.eucalyptus.cloudwatch.domain.metricdata.MetricDataQueue.AbsoluteMetricCacheKey;
+import com.eucalyptus.cluster.callback.cloudwatch.AbsoluteMetricQueue.AbsoluteMetricCache;
+import com.eucalyptus.cluster.callback.cloudwatch.AbsoluteMetricQueue.AbsoluteMetricCacheKey;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 

@@ -25,7 +25,6 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cloudwatch.common.CloudWatchBackend;
-import com.eucalyptus.cloudwatch.domain.absolute.AbsoluteMetricHelper;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmManager;
 import com.eucalyptus.cloudwatch.domain.listmetrics.ListMetricManager;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricManager;
@@ -60,12 +59,6 @@ public class DBCleanupService implements Runnable {
     }
     try {
       AlarmManager.deleteAlarmHistory(twoWeeksAgo);
-    } catch (Exception ex) {
-      LOG.error(ex);
-      LOG.error(ex, ex);
-    }
-    try {
-      AbsoluteMetricHelper.deleteAbsoluteMetricHistory(twoWeeksAgo);
     } catch (Exception ex) {
       LOG.error(ex);
       LOG.error(ex, ex);

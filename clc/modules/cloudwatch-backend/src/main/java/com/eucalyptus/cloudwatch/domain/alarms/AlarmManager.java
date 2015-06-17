@@ -74,7 +74,7 @@ import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity.StateValue;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity.Statistic;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmHistory.HistoryItemType;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
-import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
+import com.eucalyptus.cloudwatch.common.internal.metricdata.Units;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.ComputeMessage;
 import com.eucalyptus.compute.common.backend.StopInstancesType;

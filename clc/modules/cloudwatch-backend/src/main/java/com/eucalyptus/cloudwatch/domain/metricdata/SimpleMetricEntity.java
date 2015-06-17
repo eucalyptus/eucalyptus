@@ -22,8 +22,8 @@ package com.eucalyptus.cloudwatch.domain.metricdata;
 import java.util.Date;
 import java.util.Map;
 
+import com.eucalyptus.cloudwatch.common.internal.metricdata.Units;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
-import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
 import com.google.common.collect.Maps;
 
 public class SimpleMetricEntity {

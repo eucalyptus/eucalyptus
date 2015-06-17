@@ -96,7 +96,7 @@ import com.eucalyptus.cloudwatch.domain.listmetrics.ListMetric;
 import com.eucalyptus.cloudwatch.domain.listmetrics.ListMetricManager;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricDataQueue;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
-import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
+import com.eucalyptus.cloudwatch.common.internal.metricdata.Units;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricManager;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricStatistics;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricUtils;

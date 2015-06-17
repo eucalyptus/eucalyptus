@@ -57,7 +57,7 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.cloudwatch.common.CloudWatchMetadata;
 import com.eucalyptus.cloudwatch.domain.AbstractPersistentWithDimensions;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
-import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
+import com.eucalyptus.cloudwatch.common.internal.metricdata.Units;
 import com.eucalyptus.auth.principal.OwnerFullName;
 
 @Entity
