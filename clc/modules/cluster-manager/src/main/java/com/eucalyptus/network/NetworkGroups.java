@@ -123,6 +123,7 @@ import com.google.common.base.Functions;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
+import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
@@ -160,6 +161,11 @@ public class NetworkGroups {
   public static String        NETWORK_CONFIGURATION = "";
   @ConfigurableField( description = "Minimum interval between broadcasts of network information (seconds)." )
   public static Integer       MIN_BROADCAST_INTERVAL = 5;
+
+  @ConfigurableField( description = "Comma delimited list of protocol numbers to support in EDGE mode for security group rules beyond the EC2-classic defaults (tcp,udp,icmp)",
+      initial="",
+      changeListener = NetworkConfigurations.ProtocolListPropertyChangeListener.class)
+  public static String EC2_CLASSIC_ADDITIONAL_PROTOCOLS_ALLOWED = "";
 
 
   public static class NetworkRangeConfiguration {
@@ -274,6 +280,10 @@ public class NetworkGroups {
     private boolean isActive( Integer tag ) {
       return this.activeTagsByPartition.containsValue( tag );
     }
+  }
+
+  public static boolean isProtocolInExceptionList(Integer number) {
+    return number != null && Iterables.contains(Splitter.on(',').trimResults().split(NetworkGroups.EC2_CLASSIC_ADDITIONAL_PROTOCOLS_ALLOWED), String.valueOf(number));
   }
 
   private enum NetworkIndexTransform implements Function<NetworkReportType, List<String>> {
