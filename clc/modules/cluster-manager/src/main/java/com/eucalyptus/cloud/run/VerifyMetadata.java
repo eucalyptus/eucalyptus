@@ -111,6 +111,7 @@ import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.images.Emis.LookupMachine;
 import com.eucalyptus.compute.common.internal.images.ImageInfo;
 import com.eucalyptus.images.Images;
+import com.eucalyptus.imaging.ImagingServiceProperties;
 import com.eucalyptus.imaging.common.ImagingBackend;
 import com.eucalyptus.compute.common.internal.keys.KeyPairs;
 import com.eucalyptus.compute.common.internal.keys.SshKeyPair;
@@ -119,6 +120,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.compute.common.internal.vmtypes.VmType;
+import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
@@ -282,12 +284,18 @@ public class VerifyMetadata {
     private static long GIG = 1073741824l;
     private static long MB = 1048576l;
     // check if image can be converted
-    private static boolean verifyImagerCapacity(MachineImageInfo img) throws MetadataException{
-      String workerType = com.eucalyptus.imaging.ImagingServiceProperties.INSTANCE_TYPE;
-      String emiName = com.eucalyptus.imaging.ImagingServiceProperties.IMAGE;
+    private static boolean verifyImagerCapacity(MachineImageInfo img) throws MetadataException {
+      String workerType = null;
+      try {
+        workerType = PropertyDirectory.getPropertyEntry("services.imaging.worker.instance_type").getValue();
+      } catch (IllegalAccessException e) {}
       if (workerType == null )
         return false;
-      if (emiName == null || "NULL".equals(emiName))
+      String emiName = null;
+      try {
+        emiName = PropertyDirectory.getPropertyEntry("services.imaging.worker.image").getValue();
+      } catch (IllegalAccessException e) {}
+      if (!ImagingServiceProperties.stackExists(true))
         throw new MetadataException("Partition image cannot be deployed without an enabled Imaging Service."
             + " Please contact your cloud administrator.");
       

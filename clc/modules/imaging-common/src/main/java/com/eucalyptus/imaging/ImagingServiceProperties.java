@@ -253,6 +253,27 @@ public class ImagingServiceProperties {
     }
   }
 
+  public static boolean stackExists(boolean checkStackStatus) {
+    try {
+      Stack stack = CloudFormationClient.getInstance().describeStack(
+          Accounts.lookupSystemAccountByAlias( AccountIdentifiers.IMAGING_SYSTEM_ACCOUNT ).getUserId( ),
+          ImagingServiceProperties.IMAGING_WORKER_STACK_NAME);
+      if (stack != null) {
+        LOG.debug("Found stack " + ImagingServiceProperties.IMAGING_WORKER_STACK_NAME);
+        if ( checkStackStatus )
+          return "CREATE_COMPLETE".equalsIgnoreCase( stack.getStackStatus() );
+        else
+          return true;
+      } else {
+        LOG.debug("Imaging worker stack does not exist");
+        return false;
+      }
+    } catch (Exception ex) {
+      LOG.warn("Could not describe stack " + ImagingServiceProperties.IMAGING_WORKER_STACK_NAME);
+      return false;
+    }
+  }
+
   static final Set<String> configuredZones = Sets.newHashSet();
 
   public static List<String> listConfiguredZones() throws Exception {

@@ -91,39 +91,21 @@ public class ImagingServiceLaunchers {
       LOG.warn("Previous stack start up is still in progress");
       return false;
     }
-    return stackExists();
+    return ImagingServiceProperties.stackExists(false);
   }
 
   public boolean shouldEnable() {
     if (isLauncherLocked(launcherId))
       return false;
-    return !stackExists();
+    return !ImagingServiceProperties.stackExists(false);
   }
 
   public boolean isWorkedEnabled() {
     try {
       if (isLauncherLocked(launcherId))
         return false;
-      return stackExists();
+      return ImagingServiceProperties.stackExists(false);
     } catch (final Exception ex) {
-      return false;
-    }
-  }
-
-  private boolean stackExists() {
-    try {
-      Stack stack = CloudFormationClient.getInstance().describeStack(
-          Accounts.lookupSystemAccountByAlias( AccountIdentifiers.IMAGING_SYSTEM_ACCOUNT ).getUserId( ),
-          ImagingServiceProperties.IMAGING_WORKER_STACK_NAME);
-      if (stack != null) {
-        LOG.debug("Found stack " + ImagingServiceProperties.IMAGING_WORKER_STACK_NAME);
-        return true; // check status ?
-      } else {
-        LOG.debug("Imaging worker stack does not exist");
-        return false;
-      }
-    } catch (Exception ex) {
-      LOG.warn("Could not describe stack " + ImagingServiceProperties.IMAGING_WORKER_STACK_NAME);
       return false;
     }
   }
