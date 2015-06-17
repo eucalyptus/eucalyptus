@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,9 +63,11 @@
 @GroovyAddClassUUID
 package com.eucalyptus.empyrean
 
+import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
 import com.eucalyptus.component.annotation.ComponentMessage
 import com.eucalyptus.util.HasSideEffect
+import com.google.common.collect.Lists
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
@@ -155,6 +157,11 @@ public class ServiceStatusDetail extends EucalyptusData {
     return "${this.timestamp} ${this.severity} ${this.serviceFullName} ${this.serviceName} ${this.serviceHost} ${this.message}";
   }
 }
+class Filter extends EucalyptusData {
+  String name
+  @HttpParameterMapping (parameter = "Value")
+  ArrayList<String> values = Lists.newArrayList( )
+}
 public class DescribeServicesType extends ServiceTransitionType {
   Boolean listAll;
   Boolean listInternal;
@@ -167,6 +174,9 @@ public class DescribeServicesType extends ServiceTransitionType {
   String byPartition;
   @HttpParameterMapping (parameter = "ServiceName")
   ArrayList<String> serviceNames = new ArrayList( );
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded(multiple = true)
+  ArrayList<Filter> filters = Lists.newArrayList( )
 }
 public class DescribeServicesResponseType extends EmpyreanMessage {
   ArrayList<ServiceStatusType> serviceStatuses = new ArrayList<ServiceStatusType>( );

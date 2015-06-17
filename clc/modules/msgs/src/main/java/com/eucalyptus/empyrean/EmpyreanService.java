@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,15 +67,19 @@ import static org.hamcrest.Matchers.notNullValue;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
+import javax.annotation.Nullable;
 import com.eucalyptus.component.ServiceOrderings;
+import com.eucalyptus.component.groups.ServiceGroups;
+import com.google.common.base.Functions;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.Component;
@@ -99,6 +103,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 
 public class EmpyreanService {
   private static Logger LOG = Logger.getLogger( EmpyreanService.class );
@@ -376,6 +381,127 @@ public class EmpyreanService {
   }
   
   static class Filters {
+    /**
+     * Build a predicate from the given filters
+     */
+    private static Predicate<ServiceConfiguration> from( Iterable<Filter> filters ) {
+      final List<Predicate<ServiceConfiguration>> predicates = Lists.newArrayList( );
+      for ( final Filter filter : filters ) {
+        final Function<String,Predicate<ServiceConfiguration>> builder = filterBuilders.get( filter.getName( ) );
+        predicates.add( builder == null || filter.getValues( ) == null ?
+            Predicates.<ServiceConfiguration>alwaysFalse( ) :
+            Predicates.or( Iterables.transform( filter.getValues( ), builder ) ) );
+      }
+      return Predicates.and( predicates );
+    }
+
+    /**
+     * Create a string filter builder
+     */
+    private static Function<String,Predicate<ServiceConfiguration>> sfb( final Function<ServiceConfiguration,String> f ) {
+      return new Function<String,Predicate<ServiceConfiguration>>( ) {
+        @Nullable
+        @Override
+        public final Predicate<ServiceConfiguration> apply( final String filter ) {
+          return new Predicate<ServiceConfiguration>( ){
+            @Override
+            public boolean apply( final ServiceConfiguration serviceConfiguration ) {
+              return filter.equals( f.apply( serviceConfiguration ) );
+            }
+          };
+        }
+      };
+    };
+
+    /**
+     * Create a string set filter builder
+     */
+    private static Function<String,Predicate<ServiceConfiguration>> ssfb( final Function<ServiceConfiguration,Set<String>> f ) {
+      return new Function<String,Predicate<ServiceConfiguration>>( ) {
+        @Nullable
+        @Override
+        public final Predicate<ServiceConfiguration> apply( final String filter ) {
+          return new Predicate<ServiceConfiguration>( ){
+            @Override
+            public boolean apply( final ServiceConfiguration serviceConfiguration ) {
+              //noinspection ConstantConditions
+              return f.apply( serviceConfiguration ).contains( filter );
+            }
+          };
+        }
+      };
+    };
+
+    /**
+     * Create a boolean filter builder
+     */
+    private static Function<String,Predicate<ServiceConfiguration>> bfb( final Function<ServiceConfiguration,Boolean> f ) {
+      return sfb( Functions.compose( Functions.toStringFunction( ), f ) );
+    }
+
+    /**
+     * Map of filter names to filter builders
+     */
+    private static final Map<String,Function<String,Predicate<ServiceConfiguration>>> filterBuilders =
+        ImmutableMap.<String,Function<String,Predicate<ServiceConfiguration>>>builder( )
+        .put( "internal", bfb( new Function<ServiceConfiguration, Boolean>( ) {
+          @Override
+          public Boolean apply( final ServiceConfiguration serviceConfiguration ) {
+            return serviceConfiguration.getComponentId( ).isInternal( );
+          }
+        } ) )
+        .put( "user-service", bfb( new Function<ServiceConfiguration, Boolean>( ) {
+              @Override public Boolean apply( final ServiceConfiguration serviceConfiguration ) {
+                return serviceConfiguration.getComponentId( ).isAdminService( );
+              }
+        } ) )
+        .put( "public", bfb( new Function<ServiceConfiguration, Boolean>( ) {
+              @Override public Boolean apply( final ServiceConfiguration serviceConfiguration ) {
+                return serviceConfiguration.getComponentId( ).isPublicService( );
+              }
+        } ) )
+        .put( "service-type", sfb( new Function<ServiceConfiguration, String>( ) {
+          @Override
+          public String apply( final ServiceConfiguration serviceConfiguration ) {
+            return serviceConfiguration.getComponentId( ).name( );
+          }
+        } ) )
+        .put( "host", sfb( new Function<ServiceConfiguration, String>( ) {
+          @Override
+          public String apply( final ServiceConfiguration serviceConfiguration ) {
+            return serviceConfiguration.getHostName( );
+          }
+        } ) )
+        .put( "state", new Function<String,Predicate<ServiceConfiguration>>( ){
+          @Nullable
+          @Override
+          public Predicate<ServiceConfiguration> apply( final String filter ) {
+            return state( Component.State.valueOf( filter.toUpperCase( ) ) );
+          }
+        } )
+        .put( "partition", sfb( new Function<ServiceConfiguration, String>( ) {
+          @Override
+          public String apply( final ServiceConfiguration serviceConfiguration ) {
+            return serviceConfiguration.getPartition( );
+          }
+        } ) )
+        .put( "service-group", ssfb( new Function<ServiceConfiguration, Set<String>>( ) {
+          @Nullable
+          @Override
+          public Set<String> apply( final ServiceConfiguration serviceConfiguration ) {
+            return Sets.newHashSet( Iterables.transform(
+                ServiceGroups.listMembership( serviceConfiguration.getComponentId( ) ),
+                ComponentIds.name( ) ) );
+          }
+        } ) )
+        .put( "service-group-member", bfb( new Function<ServiceConfiguration, Boolean>( ) {
+          @Override
+          public Boolean apply( final ServiceConfiguration serviceConfiguration ) {
+            return !ServiceGroups.listMembership( serviceConfiguration.getComponentId( ) ).isEmpty( );
+          }
+        } ) )
+        .build( );
+
     static Predicate<ServiceConfiguration> publicService( ) {
       return new Predicate<ServiceConfiguration>( ) {
         @Override
@@ -384,7 +510,7 @@ public class EmpyreanService {
         }
       };
     }
-    
+
     static Predicate<ServiceConfiguration> partition( final String partition ) {
       return new Predicate<ServiceConfiguration>( ) {
         @Override
@@ -393,7 +519,7 @@ public class EmpyreanService {
         }
       };
     }
-    
+
     static Predicate<ServiceConfiguration> host( final String host ) {
       return new Predicate<ServiceConfiguration>( ) {
         @Override
@@ -402,7 +528,7 @@ public class EmpyreanService {
         }
       };
     }
-    
+
     static Predicate<ServiceConfiguration> name( final List<String> names ) {
       return new Predicate<ServiceConfiguration>( ) {
         @Override
@@ -411,7 +537,7 @@ public class EmpyreanService {
         }
       };
     }
-    
+
     static Predicate<ServiceConfiguration> state( final Component.State state ) {
       return new Predicate<ServiceConfiguration>( ) {
         @Override
@@ -424,7 +550,7 @@ public class EmpyreanService {
         }
       };
     }
-    
+
     static Predicate<Component> componentType( final ComponentId compId ) {
       return new Predicate<Component>( ) {
         @Override
@@ -433,7 +559,7 @@ public class EmpyreanService {
         }
       };
     }
-    
+
     static Predicate<ServiceConfiguration> listAllOrInternal( final Boolean listAllArg, final Boolean listUserServicesArg, final Boolean listInternalArg ) {
       final boolean listAll = Boolean.TRUE.equals( listAllArg );
       final boolean listInternal = Boolean.TRUE.equals( listInternalArg );
@@ -458,7 +584,7 @@ public class EmpyreanService {
       };
     }
   }
-  
+
   @ServiceOperation(user=true)
   public enum DescribeService implements Function<DescribeServicesType, DescribeServicesResponseType> {
     INSTANCE;
@@ -484,6 +610,7 @@ public class EmpyreanService {
        */
       final List<Predicate<ServiceConfiguration>> filters = new ArrayList<Predicate<ServiceConfiguration>>( ) {
         {
+          this.add( Filters.from( request.getFilters( ) ) );
           this.add( Filters.publicService( ) );
           if ( request.getByPartition( ) != null ) {
             this.add( Filters.partition( request.getByPartition( ) ) ); 
@@ -526,6 +653,7 @@ public class EmpyreanService {
       final Function<ServiceConfiguration, ServiceStatusType> transformToStatus = ServiceConfigurations.asServiceStatus( showEvents, showEventStacks );
       final List<Predicate<ServiceConfiguration>> filters = new ArrayList<Predicate<ServiceConfiguration>>( ) {
         {
+          this.add( Filters.from( request.getFilters( ) ) );
           if ( request.getByPartition( ) != null ) {
             Partitions.exists( request.getByPartition( ) );
             this.add( Filters.partition( request.getByPartition( ) ) );
