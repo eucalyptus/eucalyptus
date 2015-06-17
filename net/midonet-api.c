@@ -962,7 +962,7 @@ int mido_create_dhcphost(midoname * devname, midoname * dhcp, char *name, char *
     if (!found) {
 
         //        rc = mido_create_resource(devname, 1, &myname, outname, "subnetPrefix", subnet, "subnetLength", slashnet, "defaultGateway", gw, "dnsServerAddrs", "jsonarr", "dnsServerAddrs:", da, "dnsServerAddrs:END", "END", NULL);
-        rc = mido_create_resource(parents, 2, &myname, outname, "name", myname.name, "macAddr", mac, "ipAddr", ip, "extraDhcpOpts", "jsonlist", "extraDhcpOpts:DOMAIN_SEARCH", "extraDhcpOpts:foobar.com", "extraDhcpOpts:END", NULL);
+        rc = mido_create_resource(parents, 2, &myname, outname, "name", myname.name, "macAddr", mac, "ipAddr", ip, "extraDhcpOpts", "jsonlist", "extraDhcpOpts:domain_search", "foobar.com", "extraDhcpOpts:END", NULL);
         if (rc) {
             ret = 1;
         }
