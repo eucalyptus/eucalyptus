@@ -960,7 +960,9 @@ int mido_create_dhcphost(midoname * devname, midoname * dhcp, char *name, char *
     EUCA_FREE(dhcphosts);
 
     if (!found) {
-        rc = mido_create_resource(parents, 2, &myname, outname, "name", myname.name, "macAddr", mac, "ipAddr", ip, NULL);
+
+        //        rc = mido_create_resource(devname, 1, &myname, outname, "subnetPrefix", subnet, "subnetLength", slashnet, "defaultGateway", gw, "dnsServerAddrs", "jsonarr", "dnsServerAddrs:", da, "dnsServerAddrs:END", "END", NULL);
+        rc = mido_create_resource(parents, 2, &myname, outname, "name", myname.name, "macAddr", mac, "ipAddr", ip, "extraDhcpOpts", "jsonlist", "extraDhcpOpts:DOMAIN_SEARCH", "extraDhcpOpts:foobar.com", "extraDhcpOpts:END", NULL);
         if (rc) {
             ret = 1;
         }
@@ -2181,6 +2183,7 @@ int mido_create_resource_v(midoname * parents, int max_parents, midoname * newna
         }
 
         // perform the create
+        LOGDEBUG("POST PAYLOAD: %s\n", payload);
         rc = midonet_http_post(url, newname->content_type, payload, &outloc);
         if (rc) {
             LOGERROR("midonet_http_post(%s, ...) failed\n", url);

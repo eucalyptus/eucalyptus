@@ -1307,7 +1307,7 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                     {
                         gni_secgroup *gnisecgroups = NULL;
                         int max_gnisecgroups, rulepos = 1, sgrulepos = 1;
-                        char tmp_name1[32], tmp_name2[32], tmp_name3[32], tmp_name4[32];
+                        char tmp_name1[32], tmp_name2[32], tmp_name3[32], tmp_name4[32], tmp_buf[1024];
 
                         subnet_buf[0] = slashnet_buf[0] = gw_buf[0] = '\0';
                         cidr_split(vpcsubnet->gniSubnet->cidr, subnet_buf, slashnet_buf, gw_buf, pt_buf);
@@ -1327,6 +1327,13 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
 
                         snprintf(tmp_name3, 32, "%d", rulepos);
                         rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, "position", tmp_name3, "type", "accept", "matchReturnFlow", "true", NULL);
+                        if (rc) {
+                        } else {
+                            rulepos++;
+                        }
+
+                        snprintf(tmp_name3, 32, "%d", rulepos);
+                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, "position", tmp_name3, "type", "accept", "nwDstAddress", pt_buf, "nwDstLength", "32", NULL);
                         if (rc) {
                         } else {
                             rulepos++;
@@ -1388,16 +1395,12 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                                     rulepos++;
                                 }
                                 
-
-                                /*
                                 snprintf(tmp_name3, 32, "%d", rulepos);
                                 rc = mido_create_rule(&(vpcinstance->midos[INST_POSTCHAIN]), NULL, "type", "drop", "invDlType", "true", "position", tmp_name3, "dlType", "2054", NULL);
                                 if (rc) {
                                 } else {
                                     rulepos++;
                                 }
-                                */
-
                                 
                                 sgrulepos = 1;
                                 for (k = 0; k < gnisecgroup->max_egress_rules; k++) {
@@ -1464,6 +1467,14 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                                             }
                                         }
                                         
+                                    } else if (gnisecgroup->egress_rules[k].protocol == -1) {
+                                        // DAN HERE - why is proto -1 not triggering?
+                                        snprintf(tmp_name3, 32, "%d", sgrulepos);
+                                        rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_EGRESS]), NULL, "position", tmp_name3, "type", "accept", NULL);
+                                        if (rc) {
+                                        } else {
+                                            sgrulepos++;
+                                        }
                                     }
                                 }
                             } else {
@@ -1473,6 +1484,7 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                         }
                         EUCA_FREE(gnisecgroups);
                         
+
                         snprintf(tmp_name3, 32, "%d", rulepos);
                         rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, "position", tmp_name3, "type", "drop", "invDlType", "true", "dlType", "2054", NULL);
                         if (rc) {
