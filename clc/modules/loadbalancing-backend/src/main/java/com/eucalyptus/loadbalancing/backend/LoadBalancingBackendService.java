@@ -479,7 +479,7 @@ public class LoadBalancingBackendService {
     Optional<LoadBalancerServoDescription> descs = Optional.<LoadBalancerServoDescription>absent( );
     try {
       final LoadBalancer lb = LoadBalancerEntityTransform.INSTANCE.apply(zone.getLoadbalancer());
-      if( zone != null && LoadBalancingMetadatas.filterPrivilegedWithoutOwner().apply( lb ) && zone.getState().equals(LoadBalancerZone.STATE.InService)){
+      if( zone != null && LoadBalancingMetadatas.filterPrivileged().apply( lb ) && zone.getState().equals(LoadBalancerZone.STATE.InService)){
         descs= lookupLBDescriptions.apply( zone );
       }
     } catch( final Exception ex ) {
@@ -525,7 +525,7 @@ public class LoadBalancingBackendService {
 			  LOG.warn("failed to query servo instance");
 		  }
 	  }
-	  if(lb==null || !LoadBalancingMetadatas.filterPrivilegedWithoutOwner().apply( lb ))
+	  if(lb==null || !LoadBalancingMetadatas.filterPrivileged().apply( lb ))
 		  return reply;
 	  
 	  /// INSTANCE HEALTH CHECK UPDATE

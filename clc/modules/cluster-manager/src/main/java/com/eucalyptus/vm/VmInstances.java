@@ -222,6 +222,7 @@ import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
 
 import com.google.common.base.Splitter;
 import com.google.common.base.Suppliers;
@@ -554,7 +555,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
                       initial = "" + 60 )
   public static Long      MIGRATION_REFRESH_TIME        = 60l;
 
-  @ConfigurableField( description = "Prefix to use for instance MAC addresses.",
+  @ConfigurableField( description = "Default prefix to use for instance / network interface MAC addresses.",
                       initial = "d0:0d" )
   public static String    MAC_PREFIX                    = "d0:0d";
 
@@ -2516,13 +2517,6 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
       Entities.initialize( input.getTransientVolumeState( ).getAttachments( ) );
       return true;
     }
-  }
-
-  /**
-   *
-   */
-  public static RunningInstancesItemType transform( final String name ) {
-    return VmInstance.Transform.INSTANCE.apply( lookup( name ) );
   }
 
   public static Function<VmInstance,VmBundleTask> bundleTask() {

@@ -109,7 +109,7 @@ public class DatabaseCertificateProxy implements EuareCertificate {
   public String getCertificateId( ) {
     return this.delegate.getCertificateId( );
   }
-  
+
   @Override
   public Boolean isActive( ) {
     return this.delegate.isActive( );
@@ -125,27 +125,6 @@ public class DatabaseCertificateProxy implements EuareCertificate {
       } );
     } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setActive for " + this.delegate );
-      throw new AuthException( e );
-    }
-  }
-  
-  @Override
-  public Boolean isRevoked( ) {
-    return this.delegate.isRevoked( );
-  }
-  
-  public void setRevoked( final Boolean revoked ) throws AuthException {
-    try {
-      DatabaseAuthUtils.invokeUnique( CertificateEntity.class, "certificateId", this.delegate.getCertificateId( ), new Tx<CertificateEntity>( ) {
-        public void fire( CertificateEntity t ) {
-          t.setRevoked( revoked );
-          if ( !revoked ) {
-            t.setActive( true );
-          }
-        }
-      } );
-    } catch ( ExecutionException e ) {
-      Debugging.logError( LOG, e, "Failed to setRevoked for " + this.delegate );
       throw new AuthException( e );
     }
   }

@@ -27,7 +27,9 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.UnsafeByteArrayOutputStream;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -77,7 +79,7 @@ public class CloudFormationQueryBinding extends BaseQueryBinding<OperationParame
     } else {
       if ( event.getMessage( ) instanceof MappingHttpResponse) {
         MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
-        ByteArrayOutputStream byteOut = new ByteArrayOutputStream( 8192 );
+        UnsafeByteArrayOutputStream byteOut = new UnsafeByteArrayOutputStream( 8192 );
         HoldMe.canHas.lock( );
         try {
           if ( httpResponse.getMessage( ) == null ) {
@@ -86,8 +88,7 @@ public class CloudFormationQueryBinding extends BaseQueryBinding<OperationParame
   //          byteOut.write( response.getBytes( ) );
   //          httpResponse.setStatus( HttpResponseStatus.INTERNAL_SERVER_ERROR );
           } else if (httpResponse.getMessage( ) instanceof CloudFormationErrorResponse) {
-            CloudFormationErrorResponse cfer = (CloudFormationErrorResponse) httpResponse.getMessage();
-            getCloudFormationJsonError(cfer, byteOut);
+            jsonWriter().writeValue(byteOut, httpResponse.getMessage());
           } else if ( httpResponse.getMessage( ) instanceof EucalyptusErrorMessageType) {
             EucalyptusErrorMessageType errMsg = ( EucalyptusErrorMessageType ) httpResponse.getMessage( );
             byteOut.write( Binding.createRestFault(errMsg.getSource(), errMsg.getMessage(), errMsg.getCorrelationId()).getBytes( ) );
@@ -122,8 +123,7 @@ public class CloudFormationQueryBinding extends BaseQueryBinding<OperationParame
               throw e;
             }
           }
-          byte[] req = byteOut.toByteArray( );
-          ChannelBuffer buffer = ChannelBuffers.wrappedBuffer(req);
+          ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( byteOut.getBuffer( ), 0, byteOut.getCount( ) );
           httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes( ) ) );
           httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "application/json; charset=UTF-8" );
           httpResponse.setContent( buffer );
@@ -140,6 +140,7 @@ public class CloudFormationQueryBinding extends BaseQueryBinding<OperationParame
     mapper.setSerializerFactory( mapper.getSerializerFactory( ).withAdditionalSerializers(
         new SimpleSerializers( Lists.<JsonSerializer<?>>newArrayList( new EpochSecondsDateSerializer( ) ) )
     ) );
+    mapper.setSerializationInclusion( JsonInclude.Include.NON_NULL );
     return mapper.writer( ).without( SerializationFeature.FAIL_ON_EMPTY_BEANS );
   }
 
@@ -153,32 +154,6 @@ public class CloudFormationQueryBinding extends BaseQueryBinding<OperationParame
                            final JsonGenerator jsonGenerator,
                            final SerializerProvider serializerProvider ) throws IOException {
       jsonGenerator.writeRawValue( String.valueOf( date.getTime( ) / 1000 ) + "." + Strings.padStart( Long.toString( date.getTime() % 1000 ), 3, '0' ) );
-    }
-  }
-
-  private void getCloudFormationJsonError(CloudFormationErrorResponse cfer, ByteArrayOutputStream byteOut) throws Exception {
-    try {
-      String message = cfer.getError().get(0).getMessage();
-      String type = cfer.getError().get(0).getType();
-      String code = cfer.getError().get(0).getCode();
-      String reqId = cfer.getRequestId();
-
-      byteOut.write(("{\"Error\":").getBytes());
-      byteOut.write(("{\"Code\":").getBytes());
-      byteOut.write(("\"" + code + "\",").getBytes());
-      byteOut.write(("\"Message\":").getBytes());
-      byteOut.write(("\"" + message + "\",").getBytes());
-      byteOut.write(("\"Type\":").getBytes());
-      byteOut.write(("\"" + type + "\"").getBytes());
-      byteOut.write("},".getBytes());
-      byteOut.write(("\"RequestId\":").getBytes());
-      byteOut.write(("\"" + reqId + "\"").getBytes());
-      byteOut.write("}".getBytes());
-
-    } catch (Exception e) {
-      LOG.debug(e);
-      Logs.exhaust().error(e, e);
-      throw e;
     }
   }
 }

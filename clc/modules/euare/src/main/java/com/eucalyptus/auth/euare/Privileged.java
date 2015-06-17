@@ -708,7 +708,7 @@ class Privileged {
         accountAdminActionPermittedIfAuthorized( requestUser, user ) )  ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
-    if ( countUnrevokedCertificates( user.getCertificates( ) ) >= AuthenticationLimitProvider.Values.getSigningCertificateLimit( ) ) {
+    if ( user.getCertificates( ).size( ) >= AuthenticationLimitProvider.Values.getSigningCertificateLimit( ) ) {
       throw new AuthException( AuthException.QUOTA_EXCEEDED );
     }
     X509Certificate x509 = Certs.generateCertificate( keyPair, user.getName() );
@@ -728,7 +728,7 @@ class Privileged {
         accountAdminActionPermittedIfAuthorized( requestUser, user ) ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
-    if ( countUnrevokedCertificates( user.getCertificates( ) ) >= AuthenticationLimitProvider.Values.getSigningCertificateLimit( ) ) {
+    if ( user.getCertificates( ).size( ) >= AuthenticationLimitProvider.Values.getSigningCertificateLimit( ) ) {
       throw new AuthException( AuthException.QUOTA_EXCEEDED );
     }
     if ( Strings.isNullOrEmpty( certBody ) ) {
@@ -748,14 +748,7 @@ class Privileged {
     Accounts.reserveGlobalName( GlobalNamespace.Signing_Certificate_Id, certificateId );
     for ( Certificate c : user.getCertificates( ) ) {
       if ( c.getPem( ).equals( encodedPem ) ) {
-        if ( !c.isRevoked( ) ) {
-          throw new AuthException( AuthException.CONFLICT );        
-        } else if ( certificateId.equals( c.getCertificateId( ) ) ) {
-          user.getCertificate( certificateId ).setRevoked( false );
-          return c;
-        } else {
-          user.removeCertificate( c.getCertificateId( ) );
-        }
+        throw new AuthException( AuthException.CONFLICT );
       }
     }
     return user.addCertificate( certificateId, x509 );
@@ -767,9 +760,7 @@ class Privileged {
     }
     List<Certificate> certs = Lists.newArrayList( );
     for ( Certificate cert : user.getCertificates( ) ) {
-      if ( !cert.isRevoked( ) ) {
-        certs.add( cert );
-      }
+      certs.add( cert );
     }
     return certs;
   }
@@ -794,9 +785,6 @@ class Privileged {
       throw new AuthException( AuthException.EMPTY_CERT_ID );
     }
     EuareCertificate cert = user.getCertificate( certId );
-    if ( cert.isRevoked( ) ) {
-      throw new AuthException( AuthException.NO_SUCH_CERTIFICATE );
-    }
     cert.setActive( "Active".equalsIgnoreCase( status ) );
   }
 
@@ -905,12 +893,4 @@ class Privileged {
     }
     account.updateServerCeritificate(certName, newCertName, newPath);
   }
-
-  private static int countUnrevokedCertificates( final List<Certificate> certificates )  {
-    return Iterables.size(
-        Iterables.filter(
-            certificates,
-            CollectionUtils.propertyPredicate( false, Certificate.Util.revoked( ) )
-        ) );
-  }
-} 
+}

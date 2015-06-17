@@ -40,6 +40,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
+import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.compute.common.ConversionTask;
 import com.eucalyptus.compute.common.DiskImage;
 import com.eucalyptus.compute.common.DiskImageDescription;
@@ -248,10 +249,12 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
     for(final ImportInstanceVolumeDetail volumeDetail : instanceDetails.getVolumes()){
       if(volumeDetail.getVolume()!=null && volumeDetail.getVolume().getId()!=null){
         try{
+          String volumeId = volumeDetail.getVolume().getId();
+          Volumes.setSystemManagedFlag(null, volumeId, false);
           final List<Volume> eucaVolumes =
-            Ec2Client.getInstance().describeVolumes(this.getOwnerUserId(), Lists.newArrayList(volumeDetail.getVolume().getId()));
+            Ec2Client.getInstance().describeVolumes(this.getOwnerUserId(), Lists.newArrayList(volumeId));
           if (eucaVolumes.size() != 0) {
-            Ec2Client.getInstance().deleteVolume(this.getOwnerUserId(), volumeDetail.getVolume().getId());
+            Ec2Client.getInstance().deleteVolume(this.getOwnerUserId(), volumeId);
           }
         } catch(final Exception ex) {
           LOG.warn(String.format("Failed to delete the volume %s for import task %s", 

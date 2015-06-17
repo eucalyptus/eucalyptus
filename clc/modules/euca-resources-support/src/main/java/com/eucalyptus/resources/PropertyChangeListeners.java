@@ -23,8 +23,11 @@ import java.util.List;
 
 import org.springframework.util.StringUtils;
 
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ClusterInfoType;
+import com.eucalyptus.compute.common.DescribeKeyPairsResponseItemType;
 import com.eucalyptus.compute.common.ImageDetails;
 import com.eucalyptus.compute.common.VmTypeDetails;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -100,24 +103,6 @@ public class PropertyChangeListeners {
       } catch (final Exception ex) {
         throw new ConfigurablePropertyException(
             "The value must be number type and bigger than 0");
-      }
-    }
-  }
-
-  public static class KeyNameChangeListener implements PropertyChangeListener<String> {
-    @Override
-    public void fireChange(ConfigurableProperty t, String keyname)
-        throws ConfigurablePropertyException {
-      if(t.getValue()!=null && t.getValue().equals(keyname))
-        return;
-      if (keyname == null  || keyname.isEmpty())
-        return;
-      try {
-        // describeKeyPairs throws an error if keypair not found
-        Ec2Client.getInstance().describeKeyPairs(null, Lists.newArrayList(keyname));
-      } catch (final Exception e) {
-        throw new ConfigurablePropertyException("Could not change key name due to: "
-            + e.getMessage());
       }
     }
   }

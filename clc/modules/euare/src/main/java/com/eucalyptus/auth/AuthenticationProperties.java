@@ -94,8 +94,10 @@ public class AuthenticationProperties {
 
   private static final String DEFAULT_CREDENTIAL_DOWNLOAD_GENERATE_CERTIFICATE = "Absent";
 
-  private static final String DEFAULT_AUTHORIZATION_CACHE = "maximumSize=1000, expireAfterWrite=0s";
-  
+  private static final String DEFAULT_AUTHORIZATION_CACHE = "maximumSize=1000, expireAfterWrite=5s";
+
+  private static final String DEFAULT_MAX_POLICY_SIZE_TEXT = "16384";
+
   @ConfigurableField( description = "CIDR to match against for host address selection", initial = "", changeListener = CidrChangeListener.class )
   public static volatile String CREDENTIAL_DOWNLOAD_HOST_MATCH = "";
 
@@ -118,13 +120,16 @@ public class AuthenticationProperties {
   public static volatile Boolean SYSTEM_ACCOUNT_QUOTA_ENABLED = true;
 
   @ConfigurableField( description = "Default password expiry time", initial = "60d", changeListener = AuthenticationIntervalPropertyChangeListener.class )
-  public static String DEFAULT_PASSWORD_EXPIRY = "60d";
+  public static volatile String DEFAULT_PASSWORD_EXPIRY = "60d";
 
   @ConfigurableField(
       description = "Authorization cache configuration, for credentials and authorization metadata",
       initial = DEFAULT_AUTHORIZATION_CACHE,
       changeListener = PropertyChangeListeners.CacheSpecListener.class )
   public static volatile String AUTHORIZATION_CACHE = DEFAULT_AUTHORIZATION_CACHE;
+
+  @ConfigurableField( description = "Maximum size for an IAM policy (bytes)", initial = DEFAULT_MAX_POLICY_SIZE_TEXT )
+  public static volatile int MAX_POLICY_SIZE = Integer.parseInt( DEFAULT_MAX_POLICY_SIZE_TEXT );
 
   private static AtomicLong DEFAULT_PASSWORD_EXPIRY_MILLIS = new AtomicLong( TimeUnit.DAYS.toMillis( 60 ) );
 
@@ -213,6 +218,11 @@ public class AuthenticationProperties {
     @Override
     public int getSigningCertificateLimitSpi( ) {
       return SIGNING_CERTIFICATES_LIMIT;
+    }
+
+    @Override
+    public int getPolicySizeLimitSpi( ) {
+      return MAX_POLICY_SIZE;
     }
   }
 

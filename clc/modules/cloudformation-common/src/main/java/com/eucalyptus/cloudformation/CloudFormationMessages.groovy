@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 @GroovyAddClassUUID
 package com.eucalyptus.cloudformation
 
+import com.eucalyptus.ws.WebServiceError
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
@@ -48,7 +49,7 @@ public class ErrorDetail extends EucalyptusData {
   public ErrorDetail() {  }
 }
 @ComponentMessage(CloudFormation.class)
-@JsonIgnoreProperties(["correlationId", "userId","effectiveUserId","callerContext","_return","statusMessage","_epoch","_services","_disabledServices","_notreadyServices","_stoppedServices"] )
+@JsonIgnoreProperties(["CorrelationId", "UserId","EffectiveUserId", "CallerContext","Reply","_return","StatusMessage","_epoch","_services","_disabledServices","_notreadyServices","_stoppedServices"] )
 public class CloudFormationMessage extends BaseMessage {
   @Override
   @JsonIgnore
@@ -72,18 +73,18 @@ public class Error extends EucalyptusData {
   String message;
   public Error() {  }
   @JsonProperty("Detail")
-  ErrorDetail detail = new ErrorDetail();
+  ErrorDetail detail
 }
 public class ResourceList extends EucalyptusData {
   public ResourceList() {  }
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>();
 }
-public class CloudFormationErrorResponse extends CloudFormationMessage {
+public class CloudFormationErrorResponse extends CloudFormationMessage implements WebServiceError {
   @JsonProperty("RequestId")
-  String requestId;
+  String requestId
   @JsonProperty("Error")
-  ArrayList<Error> error = new ArrayList<Error>( );
+  Error error
 
   CloudFormationErrorResponse( ) {
     set_return( false )
@@ -91,7 +92,19 @@ public class CloudFormationErrorResponse extends CloudFormationMessage {
 
   @Override
   String toSimpleString( ) {
-    "${error?.getAt(0)?.type} error (${error?.getAt(0)?.code}): ${error?.getAt(0)?.message}"
+    "${error?.type} error (${webServiceErrorCode}): ${webServiceErrorMessage}"
+  }
+
+  @JsonIgnore
+  @Override
+  String getWebServiceErrorCode( ) {
+    error?.code
+  }
+
+  @JsonIgnore
+  @Override
+  String getWebServiceErrorMessage() {
+    error?.message
   }
 }
 public class Outputs extends EucalyptusData {

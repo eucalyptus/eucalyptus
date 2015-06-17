@@ -13,7 +13,6 @@
 	<classpathentry kind="src" path="modules/cloudwatch-common/src/test/java"/>
 	<classpathentry kind="src" path="modules/cloudwatch-service/src/main/java"/>
 	<classpathentry kind="src" path="modules/cloudwatch-service/src/test/java"/>
-	<classpathentry kind="src" path="modules/cluster-manager/conf/scripts"/>
 	<classpathentry kind="src" path="modules/cluster-manager/src/test/groovy"/>
 	<classpathentry kind="src" path="modules/compute-common/src/main/java"/>
 	<classpathentry kind="src" path="modules/compute-common/src/test/java"/>
@@ -43,8 +42,6 @@
 	<classpathentry kind="src" path="modules/simpleworkflow/src/test/java"/>
 	<classpathentry kind="src" path="modules/wsstack/conf/scripts"/>
 	<classpathentry kind="src" path="modules/www/conf/www"/>
-	<classpathentry kind="src" output="modules/authentication/build" path="modules/authentication/src/main/java"/>
-	<classpathentry kind="src" output="modules/authentication/build" path="modules/authentication/src/test/java"/>
 	<classpathentry kind="src" output="modules/autoscaling/build" path="modules/autoscaling/src/main/java"/>
 	<classpathentry kind="src" output="modules/autoscaling/build" path="modules/autoscaling/src/test/java"/>
 	<classpathentry kind="src" output="modules/autoscaling-common/build" path="modules/autoscaling-common/src/main/java"/>

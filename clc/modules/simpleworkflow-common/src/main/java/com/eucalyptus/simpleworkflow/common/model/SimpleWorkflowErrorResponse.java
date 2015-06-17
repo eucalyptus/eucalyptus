@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,12 +20,14 @@
 package com.eucalyptus.simpleworkflow.common.model;
 
 
+import org.codehaus.jackson.annotate.JsonIgnore;
 import org.codehaus.jackson.annotate.JsonProperty;
+import com.eucalyptus.ws.WebServiceError;
 
 /**
  *
  */
-public class SimpleWorkflowErrorResponse extends SimpleWorkflowMessage {
+public class SimpleWorkflowErrorResponse extends SimpleWorkflowMessage implements WebServiceError {
   String message;
   String code;
 
@@ -52,5 +54,17 @@ public class SimpleWorkflowErrorResponse extends SimpleWorkflowMessage {
 
   public void setCode( final String code ) {
     this.code = code;
+  }
+
+  @JsonIgnore
+  @Override
+  public String getWebServiceErrorCode( ) {
+    return getCode( );
+  }
+
+  @JsonIgnore
+  @Override
+  public String getWebServiceErrorMessage() {
+    return getMessage( );
   }
 }

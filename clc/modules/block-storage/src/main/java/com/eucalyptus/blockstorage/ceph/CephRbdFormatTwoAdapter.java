@@ -361,15 +361,6 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
                   // nothing to do here
                 }
 
-                // // If its an EBS snapshot, create a snapshot point and protect it
-                // if (cloneName.contains("snap-")) {
-                // String spOnSnapshot = CephRbdInfo.SNAPSHOT_ON_PREFIX + cloneName;
-                // LOG.debug("Creating snapshot=" + spOnSnapshot + ", image=" + cloneName + ", pool=" + cloneConn.getPool());
-                // clone.snapCreate(spOnSnapshot);
-                // LOG.debug("Protecting snapshot=" + spOnSnapshot + ", image=" + cloneName + ", pool=" + cloneConn.getPool());
-                // clone.snapProtect(spOnSnapshot);
-                // }
-
                 return cloneConn.getPool() + CephRbdInfo.POOL_IMAGE_DELIMITER + cloneName;
               } catch (RbdException e) {
                 LOG.warn("Caught error while cloning/resizing image " + cloneName + " from source image " + parentName + ": " + e.getMessage());

@@ -474,7 +474,6 @@ public class DatabaseUserProxy implements EuareUser {
       UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, "userId", this.delegate.getUserId( ) );
       CertificateEntity certEntity = new CertificateEntity( certificateId, cert );
       certEntity.setActive( true );
-      certEntity.setRevoked( false );
       Entities.persist( certEntity );
       certEntity.setUser( user );
       user.getCertificates( ).add( certEntity );
@@ -493,7 +492,7 @@ public class DatabaseUserProxy implements EuareUser {
     }
     try ( final TransactionResource db = Entities.transactionFor( CertificateEntity.class ) ) {
       CertificateEntity certificateEntity = DatabaseAuthUtils.getUnique( CertificateEntity.class, "certificateId", certificateId );
-      certificateEntity.setRevoked( true );
+      Entities.delete( certificateEntity );
       db.commit( );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to get delete certificate " + certificateId );

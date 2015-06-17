@@ -62,25 +62,23 @@ def build_key_path_map(local_keydir, remote_keydir, zone=None):
         add_key_paths(GLOBAL_KEYS, path_map, local_keydir, remote_keydir)
     if zone:
         # CLC to CLC (zone keys, keydir/zone -> keydir/zone)
-        add_key_paths(ZONE_KEYS, path_map, os.path.join(local_keydir, zone),
-                      os.path.join(remote_keydir, zone))
+        add_key_paths([zone + '/'], path_map, local_keydir,
+                      remote_keydir + '/')
         # CLC to CC  (zone keys, keydir/zone -> keydir)
         add_key_paths(ZONE_KEYS, path_map, os.path.join(local_keydir, zone),
                       remote_keydir)
     return path_map
 
 
-def copy_keys(desthost, path_map, scp):
+def copy_keys(desthost, path_map, rsync):
     for srcpath in path_map:
-        try:
-            with open(srcpath):
-                pass  # If we get past here it is accessible
-        except IOError as err:
+        if not os.path.exists(srcpath):
             sys.exit('{0}: cannot access {1}: {2}'.format(
                 os.path.basename(sys.argv[0]), err.filename, err.strerror))
     for srcpath, destpaths in path_map.items():
         for destpath in destpaths:
-            cmd = shlex.split(scp) + [srcpath, desthost + ':' + destpath]
+            cmd = shlex.split(rsync) + \
+                [srcpath, '{0}:{1}'.format(desthost, destpath)]
             try:
                 subprocess.check_call(cmd)
             except subprocess.CalledProcessError:
@@ -103,14 +101,14 @@ def main():
     parser.add_argument('--remote-keydir', default=keydir,
                         help=('the directory on the remote machine to copy '
                               'keys to (default: {0})'.format(keydir)))
-    parser.add_argument('--scp', default='scp',
-                        help=('OpenSSH scp command to copy key files '
-                              '(default: "scp")'))
+    parser.add_argument('--rsync', default='rsync -a',
+                        help=('rsync command to copy key files '
+                              '(default: "rsync -a")'))
     args = parser.parse_args()
     path_map = build_key_path_map(args.local_keydir, args.remote_keydir,
                                   zone=args.availability_zone)
     for host in args.hosts:
-        copy_keys(host, path_map, args.scp)
+        copy_keys(host, path_map, args.rsync)
 
 
 if __name__ == '__main__':

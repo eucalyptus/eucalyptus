@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -51,8 +51,7 @@ import com.eucalyptus.compute.common.DeleteNetworkInterfaceResponseType;
 import com.eucalyptus.compute.common.DeleteNetworkInterfaceType;
 import com.eucalyptus.compute.common.DescribeNetworkInterfacesResponseType;
 import com.eucalyptus.compute.common.DescribeNetworkInterfacesType;
-import com.eucalyptus.compute.common.NetworkInterfaceIdSetItemType;
-import com.eucalyptus.compute.common.NetworkInterfaceIdSetType;
+import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.NetworkInterfacePrivateIpAddressesSetItemType;
 import com.eucalyptus.compute.common.PrivateIpAddressesSetItemRequestType;
 import com.eucalyptus.compute.common.PrivateIpAddressesSetRequestType;
@@ -132,10 +131,11 @@ public class AWSEC2NetworkInterfaceResourceAction extends ResourceAction {
         // Note: this is done separately, because an exception is thrown if not exactly one item is primary and we won't persist the network interface id,
         // but it will have been created
         DescribeNetworkInterfacesType describeNetworkInterfacesType = MessageHelper.createMessage(DescribeNetworkInterfacesType.class, action.info.getEffectiveUserId());
-        describeNetworkInterfacesType.setNetworkInterfaceIdSet(action.convertNetworkInterfaceIdSet(action.info.getPhysicalResourceId()));
-        DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.<DescribeNetworkInterfacesType, DescribeNetworkInterfacesResponseType>sendSync(configuration, describeNetworkInterfacesType);
-        if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet() == null || describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem() == null ||
-          describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().size() != 1) {
+        describeNetworkInterfacesType.getFilterSet( ).add( Filter.filter( "network-interface-id", action.info.getPhysicalResourceId( ) ) );
+        DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.sendSync(configuration, describeNetworkInterfacesType);
+        if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet() == null ||
+            describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem() == null ||
+            describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().size() != 1) {
           throw new ValidationErrorException("Network interface " + action.info.getPhysicalResourceId() + " either does not exist or is not unique");
         }
         // Get the private ip addresses
@@ -168,9 +168,8 @@ public class AWSEC2NetworkInterfaceResourceAction extends ResourceAction {
         AWSEC2NetworkInterfaceResourceAction action = (AWSEC2NetworkInterfaceResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         DescribeNetworkInterfacesType describeNetworkInterfacesType = MessageHelper.createMessage(DescribeNetworkInterfacesType.class, action.info.getEffectiveUserId());
-        NetworkInterfaceIdSetType networkInterfaceIdSet = action.getNetworkInterfaceIdSetType(action.info.getPhysicalResourceId());
-        describeNetworkInterfacesType.setNetworkInterfaceIdSet(networkInterfaceIdSet);
-        DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.<DescribeNetworkInterfacesType,DescribeNetworkInterfacesResponseType> sendSync(configuration, describeNetworkInterfacesType);
+        describeNetworkInterfacesType.getFilterSet( ).add( Filter.filter( "network-interface-id", action.info.getPhysicalResourceId( ) ) );
+        DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.sendSync( configuration, describeNetworkInterfacesType );
         if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().size() ==0) {
           throw new ValidationFailedException("Network interface " + action.info.getPhysicalResourceId() + " not yet available");
         }
@@ -220,16 +219,6 @@ public class AWSEC2NetworkInterfaceResourceAction extends ResourceAction {
     }
   }
 
-  private NetworkInterfaceIdSetType getNetworkInterfaceIdSetType(String networkInterfaceId) {
-    NetworkInterfaceIdSetType networkInterfaceIdSet = new NetworkInterfaceIdSetType();
-    ArrayList<NetworkInterfaceIdSetItemType> item = Lists.newArrayList();
-    NetworkInterfaceIdSetItemType networkInterfaceIdSetItemType = new NetworkInterfaceIdSetItemType();
-    networkInterfaceIdSetItemType.setNetworkInterfaceId(networkInterfaceId);
-    item.add(networkInterfaceIdSetItemType);
-    networkInterfaceIdSet.setItem(item);
-    return networkInterfaceIdSet;
-  }
-
   private enum DeleteSteps implements Step {
     DELETE_NETWORK_INTERFACE {
       @Override
@@ -269,10 +258,11 @@ public class AWSEC2NetworkInterfaceResourceAction extends ResourceAction {
     private static boolean checkDeleted(AWSEC2NetworkInterfaceResourceAction action, ServiceConfiguration configuration) throws Exception {
       // check if network interface still exists (return otherwise)
       DescribeNetworkInterfacesType describeNetworkInterfacesType = MessageHelper.createMessage(DescribeNetworkInterfacesType.class, action.info.getEffectiveUserId());
-      describeNetworkInterfacesType.setNetworkInterfaceIdSet(action.convertNetworkInterfaceIdSet(action.info.getPhysicalResourceId()));
-      DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.<DescribeNetworkInterfacesType, DescribeNetworkInterfacesResponseType>sendSync(configuration, describeNetworkInterfacesType);
-      if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet() == null || describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem() == null ||
-        describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().isEmpty()) {
+      describeNetworkInterfacesType.getFilterSet( ).add( Filter.filter( "network-interface-id", action.info.getPhysicalResourceId( ) ) );
+      DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.sendSync(configuration, describeNetworkInterfacesType);
+      if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet() == null ||
+          describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem() == null ||
+          describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().isEmpty()) {
         return true;
       }
       return false;
@@ -299,17 +289,6 @@ public class AWSEC2NetworkInterfaceResourceAction extends ResourceAction {
   public void setResourceInfo(ResourceInfo resourceInfo) {
     info = (AWSEC2NetworkInterfaceResourceInfo) resourceInfo;
   }
-
-  private NetworkInterfaceIdSetType convertNetworkInterfaceIdSet(String networkInterfaceId) {
-    NetworkInterfaceIdSetType networkInterfaceIdSetType = new NetworkInterfaceIdSetType();
-    ArrayList<NetworkInterfaceIdSetItemType> item = Lists.newArrayList();
-    NetworkInterfaceIdSetItemType networkInterfaceIdSetItemType = new NetworkInterfaceIdSetItemType();
-    networkInterfaceIdSetItemType.setNetworkInterfaceId(networkInterfaceId);
-    item.add(networkInterfaceIdSetItemType);
-    networkInterfaceIdSetType.setItem(item);
-    return networkInterfaceIdSetType;
-  }
-
 
   private SecurityGroupIdSetType convertGroupSet(List<String> groupSet) {
     SecurityGroupIdSetType securityGroupIdSetType = new SecurityGroupIdSetType();

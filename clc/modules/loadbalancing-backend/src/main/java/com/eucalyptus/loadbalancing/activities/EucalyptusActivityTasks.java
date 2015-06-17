@@ -137,6 +137,8 @@ import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.DispatchingClient;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.async.AsyncExceptions;
+import com.eucalyptus.util.async.AsyncExceptions.AsyncWebServiceError;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.base.Optional;
@@ -380,7 +382,7 @@ public class EucalyptusActivityTasks {
 	}
 	
 	public List<SecurityGroupItemType> describeSystemSecurityGroups( List<String> groupNames ){
-		final EucalyptusDescribeSecurityGroupTask task = new EucalyptusDescribeSecurityGroupTask(null,groupNames,null,null);
+		final EucalyptusDescribeSecurityGroupTask task = new EucalyptusDescribeSecurityGroupTask(null,groupNames,null);
 		return resultOf( task, new ComputeSystemActivity(), "failed to describe security groups" );
 	}
 	
@@ -418,9 +420,9 @@ public class EucalyptusActivityTasks {
 		);
 	}
 
-	public List<SecurityGroupItemType> describeUserSecurityGroupsByName( AccountFullName accountFullName, String vpcId, String groupNameFilter ){
+	public List<SecurityGroupItemType> describeUserSecurityGroupsByName( AccountFullName accountFullName, String vpcId, String groupName ){
 		final EucalyptusDescribeSecurityGroupTask task =
-				new EucalyptusDescribeSecurityGroupTask( null, null, Lists.newArrayList( groupNameFilter ), vpcId );
+				new EucalyptusDescribeSecurityGroupTask( null, Lists.newArrayList( groupName), vpcId );
 		return resultOf( task, new ComputeUserActivity( accountFullName ), "failed to describe security groups" );
 	}
 
@@ -623,14 +625,6 @@ public class EucalyptusActivityTasks {
 				new EuareCreateRoleTask(roleName, path, assumeRolePolicy),
 				new EuareSystemActivity(),
 				"failed to create IAM role"
-		);
-	}
-	
-	public List<DescribeKeyPairsResponseItemType> describeKeyPairs(final List<String> keyNames){
-		return resultOf(
-				new EucaDescribeKeyPairsTask(keyNames),
-				new ComputeSystemActivity(),
-				"failed to describe keypairs"
 		);
 	}
 
@@ -868,7 +862,7 @@ public class EucalyptusActivityTasks {
 		DescribeImagesType getRequest(){
 			final DescribeImagesType req = new DescribeImagesType();
 			if(this.imageIds!=null && this.imageIds.size()>0){
-				req.setImagesSet(new ArrayList<>(imageIds));
+				req.setFilterSet( Lists.newArrayList( Filter.filter( "image-id", this.imageIds ) ) );
 			}
 			return req;
 		}
@@ -921,28 +915,6 @@ public class EucalyptusActivityTasks {
 			return req;
 		}
 	}
-	
-	private class EucaDescribeKeyPairsTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<DescribeKeyPairsResponseItemType>> {
-		private List<String> keyNames = null;
-		private EucaDescribeKeyPairsTask(final List<String> keyNames){
-			this.keyNames = keyNames;
-		}
-		
-		DescribeKeyPairsType getRequest(){
-			final DescribeKeyPairsType req = new DescribeKeyPairsType();
-			if(this.keyNames!=null){
-				req.setKeySet(new ArrayList<>(this.keyNames));
-			}
-			return req;
-		}
-		
-		@Override
-		List<DescribeKeyPairsResponseItemType> extractResult(ComputeMessage response) {
-			final DescribeKeyPairsResponseType resp = (DescribeKeyPairsResponseType) response;
-			return resp.getKeySet();
-		}
-	}
-
 
 	private class EucaDescribeSecurityGroupsTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<SecurityGroupItemType>> {
 		private String vpcId = null;
@@ -1627,10 +1599,10 @@ public class EucalyptusActivityTasks {
 		
 		DescribeInstancesType getRequest(){
 			final DescribeInstancesType req = new DescribeInstancesType();
-			final ArrayList<String> instances = Lists.newArrayList(this.instanceIds);
-			if(this.verbose)
-			  instances.add("verbose");
-			req.setInstancesSet(instances);
+			if( this.verbose ) {
+				req.setInstancesSet( Lists.newArrayList( "verbose" ) );
+			}
+			req.getFilterSet( ).add( filter( "instance-id", this.instanceIds ) );
 			return req;
 		}
 		
@@ -1642,6 +1614,13 @@ public class EucalyptusActivityTasks {
 				resultInstances.addAll(res.getInstancesSet());
 			}
 			return resultInstances;
+		}
+
+		@Override
+		List<RunningInstancesItemType> getFailureResult( final String errorCode ) {
+			return "InvalidInstanceID.NotFound".equals( errorCode ) ?
+					Lists.<RunningInstancesItemType>newArrayList( ) :
+					null;
 		}
 	}
 	
@@ -1730,17 +1709,14 @@ public class EucalyptusActivityTasks {
 	private class EucalyptusDescribeSecurityGroupTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<SecurityGroupItemType>>{
 		@Nullable private List<String> groupIds = null;
 		@Nullable private List<String> groupNames = null;
-		@Nullable private List<String> groupNameFilters = null;
 		@Nullable private String vpcId = null;
 
 		EucalyptusDescribeSecurityGroupTask(
 				@Nullable final List<String> groupIds,
 				@Nullable final List<String> groupNames,
-				@Nullable final List<String> groupNameFilters,
 				@Nullable final String vpcId ){
 			this.groupIds = groupIds;
 			this.groupNames = groupNames;
-			this.groupNameFilters = groupNameFilters;
 			this.vpcId = vpcId;
 		}
 
@@ -1750,10 +1726,7 @@ public class EucalyptusActivityTasks {
 				req.getFilterSet().add( filter( "group-id", groupIds ) );
 			}
 			if ( groupNames != null && !groupNames.isEmpty( ) ) {
-				req.setSecurityGroupSet( Lists.newArrayList( groupNames ) );
-			}
-			if ( groupNameFilters != null && !groupNameFilters.isEmpty( ) ) {
-				req.getFilterSet().add( filter( "group-name", groupNameFilters ) );
+				req.getFilterSet().add( filter( "group-name", groupNames ) );
 			}
 			if ( vpcId != null ) {
 				req.getFilterSet().add( filter( "vpc-id", vpcId ) );
@@ -1800,10 +1773,7 @@ public class EucalyptusActivityTasks {
 	}
 
 	private static Filter filter( final String name, final Iterable<String> values ) {
-		final Filter filter = new Filter( );
-		filter.setName( name );
-		filter.setValueSet( Lists.newArrayList( values ) );
-		return filter;
+		return Filter.filter( name, values );
 	}
 
 	private abstract class EucalyptusActivityTask <TM extends BaseMessage, TC extends ComponentId>{
@@ -1815,10 +1785,11 @@ public class EucalyptusActivityTasks {
 				dispatchInternal( context, new Callback.Checked<TM>(){
 					@Override
 					public void fireException( final Throwable throwable ) {
+						boolean result = false;
 						try {
-							dispatchFailure( context, throwable );
+							result = dispatchFailure( context, throwable );
 						} finally {
-							future.set( false );
+							future.set( result );
 						}
 					}
 
@@ -1848,8 +1819,9 @@ public class EucalyptusActivityTasks {
 			client.dispatch( getRequest( ), callback );
 		}
 
-		void dispatchFailure( ActivityContext<TM,TC> context, Throwable throwable ) {
+		boolean dispatchFailure( ActivityContext<TM,TC> context, Throwable throwable ) {
 			LOG.error( "Loadbalancer activity error", throwable );
+			return false;
 		}
 
 		void dispatchSuccess( ActivityContext<TM,TC> context, TM response ){ }
@@ -1864,13 +1836,35 @@ public class EucalyptusActivityTasks {
 		 */
 		abstract R extractResult( TM response );
 
+		R failureResult( String errorCode ) { return null; }
+
 		final R getResult( ) {
 			return r.get( );
+		}
+
+		R getFailureResult( final String errorCode ) {
+			return null;
 		}
 
 		@Override
 		void dispatchSuccess( final ActivityContext<TM,TC> context, final TM response) {
 			r.set( extractResult( response ) );
+		}
+
+		@Override
+		boolean dispatchFailure( final ActivityContext<TM, TC> context, final Throwable throwable ) {
+			final Optional<AsyncWebServiceError> serviceErrorOptional = AsyncExceptions.asWebServiceError( throwable );
+			if ( serviceErrorOptional.isPresent( ) ){
+				final R result = getFailureResult( serviceErrorOptional.get( ).getCode( ) );
+				if ( result != null ) {
+					r.set( result );
+					return true;
+				} else {
+					return super.dispatchFailure( context, throwable );
+				}
+			} else {
+				return super.dispatchFailure( context, throwable );
+			}
 		}
 	}
 

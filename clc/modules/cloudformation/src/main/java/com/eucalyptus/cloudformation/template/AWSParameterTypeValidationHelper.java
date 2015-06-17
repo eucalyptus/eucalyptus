@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,7 +37,6 @@ import com.eucalyptus.compute.common.DescribeVpcsResponseType;
 import com.eucalyptus.compute.common.DescribeVpcsType;
 import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.compute.common.SubnetType;
-import com.eucalyptus.compute.common.VpcIdSetType;
 import com.eucalyptus.compute.common.VpcType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -52,7 +51,7 @@ public class AWSParameterTypeValidationHelper {
     ServiceConfiguration configuration = Topology.lookup(Compute.class);
     try {
       DescribeKeyPairsType describeKeyPairsType = MessageHelper.createMessage(DescribeKeyPairsType.class, effectiveUserId);
-      DescribeKeyPairsResponseType describeKeyPairsResponseType = AsyncRequests.<DescribeKeyPairsType, DescribeKeyPairsResponseType>sendSync(configuration, describeKeyPairsType);
+      DescribeKeyPairsResponseType describeKeyPairsResponseType = AsyncRequests.sendSync(configuration, describeKeyPairsType);
       if (describeKeyPairsResponseType != null && describeKeyPairsResponseType.getKeySet() != null) {
         for (DescribeKeyPairsResponseItemType describeKeyPairsResponseItemType:describeKeyPairsResponseType.getKeySet()) {
           retVal.add(describeKeyPairsResponseItemType.getKeyName());
@@ -107,7 +106,7 @@ public class AWSParameterTypeValidationHelper {
     ServiceConfiguration configuration = Topology.lookup(Compute.class);
     try {
       DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, effectiveUserId);
-      DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType = AsyncRequests.<DescribeSecurityGroupsType, DescribeSecurityGroupsResponseType>sendSync(configuration, describeSecurityGroupsType);
+      DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType = AsyncRequests.sendSync(configuration, describeSecurityGroupsType);
       if (describeSecurityGroupsResponseType != null && describeSecurityGroupsResponseType.getSecurityGroupInfo() != null) {
         for (SecurityGroupItemType securityGroupItemType:describeSecurityGroupsResponseType.getSecurityGroupInfo()) {
           retVal.add(securityGroupItemType.getGroupId());

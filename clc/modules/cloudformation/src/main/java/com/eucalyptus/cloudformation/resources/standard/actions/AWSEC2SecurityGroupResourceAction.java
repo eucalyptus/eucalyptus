@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -55,6 +55,7 @@ import com.eucalyptus.compute.common.DeleteSecurityGroupResponseType;
 import com.eucalyptus.compute.common.DeleteSecurityGroupType;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
+import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.IpPermissionType;
 import com.eucalyptus.compute.common.RevokeSecurityGroupEgressResponseType;
 import com.eucalyptus.compute.common.RevokeSecurityGroupEgressType;
@@ -276,9 +277,8 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
         // See if group exists now
         String groupId = JsonHelper.getJsonNodeFromString(action.info.getGroupId()).asText();
         DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, action.info.getEffectiveUserId());
-        describeSecurityGroupsType.setSecurityGroupIdSet(Lists.newArrayList(groupId));
-        DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType =
-          AsyncRequests.<DescribeSecurityGroupsType, DescribeSecurityGroupsResponseType>sendSync(configuration, describeSecurityGroupsType);
+        describeSecurityGroupsType.setFilterSet( Lists.newArrayList( Filter.filter( "group-id", groupId ) ) );
+        DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType = AsyncRequests.sendSync(configuration, describeSecurityGroupsType);
         ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
         if (securityGroupItemTypeArrayList == null || securityGroupItemTypeArrayList.isEmpty()) {
           return action;

@@ -32,6 +32,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
+import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.compute.common.ConversionTask;
 import com.eucalyptus.compute.common.DiskImageDescription;
 import com.eucalyptus.compute.common.DiskImageDetail;
@@ -178,10 +179,12 @@ public class ImportVolumeImagingTask extends VolumeImagingTask {
         volumeDetails.getVolume().getId()!=null){
       try{
         // verify that volume actually exist
+        String volumeId = volumeDetails.getVolume().getId();
+        Volumes.setSystemManagedFlag(null, volumeId, false);
         final List<Volume> eucaVolumes =
-        Ec2Client.getInstance().describeVolumes(this.getOwnerUserId(), Lists.newArrayList(volumeDetails.getVolume().getId()));
+        Ec2Client.getInstance().describeVolumes(this.getOwnerUserId(), Lists.newArrayList(volumeId));
         if (eucaVolumes.size() != 0) {
-          Ec2Client.getInstance().deleteVolume(this.getOwnerUserId(), volumeDetails.getVolume().getId());
+          Ec2Client.getInstance().deleteVolume(this.getOwnerUserId(), volumeId);
         }
         setCleanUpDone(true);
       } catch(final Exception ex){

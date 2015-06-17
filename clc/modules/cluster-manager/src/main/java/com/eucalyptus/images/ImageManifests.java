@@ -65,10 +65,6 @@ package com.eucalyptus.images;
 import java.io.ByteArrayInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
-import java.security.Signature;
-import java.security.cert.Certificate;
-import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
@@ -99,10 +95,6 @@ import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.ImageMetadata.DeviceMappingType;
-import com.eucalyptus.component.Partition;
-import com.eucalyptus.component.Partitions;
-import com.eucalyptus.component.auth.SystemCredentials;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -116,18 +108,6 @@ import com.google.common.collect.Lists;
 public class ImageManifests {
   private static Logger LOG = Logger.getLogger( ImageManifests.class );
 
-  private static byte[] hexToBytes( String data ) {
-    int k = 0;
-    byte[] results = new byte[data.length( ) / 2];
-    for ( int i = 0; i < data.length( ); ) {
-      results[k] = ( byte ) ( Character.digit( data.charAt( i++ ), 16 ) << 4 );
-      results[k] += ( byte ) ( Character.digit( data.charAt( i++ ), 16 ) );
-      k++;
-    }
-    
-    return results;
-  }
-  
   static String requestManifestData( String bucketName, String objectName ) throws EucalyptusCloudException {
     try {
       try ( final EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3ClientForUser(
@@ -347,72 +327,6 @@ public class ImageManifests {
           this.ramdiskId = null;
         }
       }
-    }
-    
-    public boolean checkManifestSignature( User user ) throws EucalyptusCloudException {
-      int idxImgOpen = this.manifest.indexOf("<image>");
-      int idxImgClose = this.manifest.lastIndexOf("</image>");
-      if (idxImgOpen < 0 || idxImgClose < 0 || idxImgOpen > idxImgClose)
-        throw new EucalyptusCloudException("Manifest in wrong format");
-      String image = this.manifest.substring(idxImgOpen, idxImgClose+"</image>".length());
-     
-      int idxConfOpen = this.manifest.indexOf("<machine_configuration>");
-      int idxConfClose = this.manifest.lastIndexOf("</machine_configuration>");
-      if (idxConfOpen < 0 || idxConfClose < 0 || idxConfOpen > idxConfClose)
-        throw new EucalyptusCloudException("Manifest in wrong format");
-      String machineConfiguration = this.manifest.substring(idxConfOpen, idxConfClose+"</machine_configuration>".length());
-      
-      final String pad = ( machineConfiguration + image );
-      Predicate<Certificate> tryVerifyWithCert = new Predicate<Certificate>( ) {
-        
-        @Override
-        public boolean apply( Certificate checkCert ) {
-          if ( checkCert instanceof X509Certificate ) {
-            X509Certificate cert = ( X509Certificate ) checkCert;
-            Signature sigVerifier;
-            try {
-              sigVerifier = Signature.getInstance( "SHA1withRSA" );
-              PublicKey publicKey = cert.getPublicKey( );
-              sigVerifier.initVerify( publicKey );
-              sigVerifier.update( ( pad ).getBytes( ) );
-              return sigVerifier.verify( hexToBytes( ImageManifest.this.signature ) );
-            } catch ( Exception ex ) {
-              LOG.error( ex, ex );
-              return false;
-            }
-          } else {
-            return false;
-          }
-        }
-      };
-      Function<com.eucalyptus.auth.principal.Certificate, X509Certificate> activeEuareToX509 = new Function<com.eucalyptus.auth.principal.Certificate, X509Certificate>( ) {
-        @Override
-        public X509Certificate apply( com.eucalyptus.auth.principal.Certificate input ) {
-          return input.isActive() ? input.getX509Certificate( ) : null;
-        }
-      };
-      
-      try {
-        if ( Iterables.any( Lists.transform( user.getCertificates( ), activeEuareToX509 ), tryVerifyWithCert ) ) {
-          return true;
-        } else if ( tryVerifyWithCert.apply( SystemCredentials.lookup( Eucalyptus.class ).getCertificate( ) ) ) {
-          return true;
-        } else {
-          // check other users from the same account
-          if ( Iterables.any( Accounts.lookupAccountCertificatesByAccountNumber( user.getAccountNumber( ) ), tryVerifyWithCert ) ) {
-              return true;
-          }
-          // check bundle cases (use NC's certificates)
-          for(Partition p: Partitions.list( )) {
-            if ( tryVerifyWithCert.apply( p.getNodeCertificate() ) )
-              return true;
-          }
-        }
-      } catch ( AuthException e ) {
-        throw new EucalyptusCloudException( "Invalid Manifest: Failed to verify signature because of missing (deleted?) user certificate.",
-                                            e );
-      }
-      return false;
     }
     
     public String getSignature( ) {

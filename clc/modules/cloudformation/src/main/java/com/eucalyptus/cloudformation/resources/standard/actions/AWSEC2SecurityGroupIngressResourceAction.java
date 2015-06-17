@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,6 +41,7 @@ import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressType;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
+import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.IpPermissionType;
 import com.eucalyptus.compute.common.RevokeSecurityGroupIngressResponseType;
 import com.eucalyptus.compute.common.RevokeSecurityGroupIngressType;
@@ -86,9 +87,8 @@ public class AWSEC2SecurityGroupIngressResourceAction extends ResourceAction {
         // Make sure security group exists.
         if (!Strings.isNullOrEmpty(action.properties.getGroupId())) {
           DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, action.info.getEffectiveUserId());
-          describeSecurityGroupsType.setSecurityGroupIdSet(Lists.newArrayList(action.properties.getGroupId()));
-          DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType =
-            AsyncRequests.<DescribeSecurityGroupsType, DescribeSecurityGroupsResponseType>sendSync(configuration, describeSecurityGroupsType);
+          describeSecurityGroupsType.setFilterSet( Lists.newArrayList( Filter.filter( "group-id", action.properties.getGroupId( ) ) ) );
+          DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType = AsyncRequests.sendSync(configuration, describeSecurityGroupsType);
           ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
           if (securityGroupItemTypeArrayList == null || securityGroupItemTypeArrayList.isEmpty()) {
             throw new ValidationErrorException("No such group with id '" + action.properties.getGroupId()+"'");
@@ -97,8 +97,8 @@ public class AWSEC2SecurityGroupIngressResourceAction extends ResourceAction {
         if (!Strings.isNullOrEmpty(action.properties.getGroupName())) {
           DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, action.info.getEffectiveUserId());
           describeSecurityGroupsType.setSecurityGroupSet(Lists.newArrayList(action.properties.getGroupName()));
-          DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType =
-            AsyncRequests.<DescribeSecurityGroupsType, DescribeSecurityGroupsResponseType>sendSync(configuration, describeSecurityGroupsType);
+          describeSecurityGroupsType.setFilterSet( Lists.newArrayList( Filter.filter( "group-name", action.properties.getGroupName( ) ) ) );
+          DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType = AsyncRequests.sendSync(configuration, describeSecurityGroupsType);
           ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
           if (securityGroupItemTypeArrayList == null || securityGroupItemTypeArrayList.isEmpty()) {
             throw new ValidationErrorException("No such group with name '" + action.properties.getGroupName() + "'");
@@ -172,9 +172,8 @@ public class AWSEC2SecurityGroupIngressResourceAction extends ResourceAction {
         // Make sure security group exists.
         if (!Strings.isNullOrEmpty(action.properties.getGroupId())) {
           DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, action.info.getEffectiveUserId());
-          describeSecurityGroupsType.setSecurityGroupIdSet(Lists.newArrayList(action.properties.getGroupId()));
-          DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType =
-            AsyncRequests.<DescribeSecurityGroupsType, DescribeSecurityGroupsResponseType>sendSync(configuration, describeSecurityGroupsType);
+          describeSecurityGroupsType.setFilterSet( Lists.newArrayList( Filter.filter( "group-id", action.properties.getGroupId( ) ) ) );
+          DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType = AsyncRequests.sendSync(configuration, describeSecurityGroupsType);
           ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
           if (securityGroupItemTypeArrayList == null || securityGroupItemTypeArrayList.isEmpty()) {
             return action; // no group
@@ -182,9 +181,8 @@ public class AWSEC2SecurityGroupIngressResourceAction extends ResourceAction {
         }
         if (!Strings.isNullOrEmpty(action.properties.getGroupName())) {
           DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, action.info.getEffectiveUserId());
-          describeSecurityGroupsType.setSecurityGroupSet(Lists.newArrayList(action.properties.getGroupName()));
-          DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType =
-            AsyncRequests.<DescribeSecurityGroupsType, DescribeSecurityGroupsResponseType>sendSync(configuration, describeSecurityGroupsType);
+          describeSecurityGroupsType.setFilterSet( Lists.newArrayList( Filter.filter( "group-name", action.properties.getGroupName( ) ) ) );
+          DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType = AsyncRequests.sendSync(configuration, describeSecurityGroupsType);
           ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
           if (securityGroupItemTypeArrayList == null || securityGroupItemTypeArrayList.isEmpty()) {
             return action; // no group

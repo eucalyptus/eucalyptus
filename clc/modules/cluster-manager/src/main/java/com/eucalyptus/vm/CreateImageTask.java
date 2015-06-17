@@ -38,11 +38,10 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.ComputeMessage;
-import com.eucalyptus.compute.common.DescribeInstancesResponseType;
-import com.eucalyptus.compute.common.DescribeInstancesType;
 import com.eucalyptus.compute.common.DescribeSnapshotsResponseType;
 import com.eucalyptus.compute.common.DescribeSnapshotsType;
 import com.eucalyptus.compute.common.EbsDeviceMapping;
+import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.cluster.callback.StartInstanceCallback;
 import com.eucalyptus.cluster.callback.StopInstanceCallback;
@@ -51,8 +50,6 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.compute.common.ReservationInfoType;
-import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.compute.common.Snapshot;
 import com.eucalyptus.compute.common.backend.CreateSnapshotResponseType;
 import com.eucalyptus.compute.common.backend.CreateSnapshotType;
@@ -282,9 +279,14 @@ public class CreateImageTask {
 			 *   if stopped, then create snapshot;
 			 *   otherwise, wait;
 			 */
-			for(final CreateImageTask task : tasks){
-				final VmInstance vm = task.getVmInstance();
-				if(vm.getRuntimeState()!=null && "poweredOff".equals(vm.getRuntimeState().getGuestState())){
+			for(final CreateImageTask task : tasks) {
+				VmInstance vm = null;
+				try {
+				  vm = task.getVmInstance();
+				} catch (NoSuchElementException ex) {
+				  return;
+				}
+				if(vm.getRuntimeState()!=null && "poweredOff".equals(vm.getRuntimeState().getGuestState())) {
 					try{
 						task.createSnapshot();
 						task.setVmCreateImageTaskState(CreateImageState.creating_snapshot);
@@ -400,18 +402,29 @@ public class CreateImageTask {
 			 throw Exceptions.toUndeclared(ex);
 		 }
 	}
+
+	/*
+	 * Finds VmInstance. Throws NoSuchElementException if instance can't be found
+	 */
 	
-	private VmInstance getVmInstance() {
-		try ( TransactionResource db =
-		          Entities.transactionFor( VmInstance.class ) ) {
-			 final VmInstance vm = Entities.uniqueResult(VmInstance.named(this.instanceId));
-			 db.commit();
-			 return vm;
-		 }catch(NoSuchElementException ex){
-			 throw ex;
-		 }catch(Exception ex){
-			 throw Exceptions.toUndeclared(ex);
-		 }
+	private VmInstance getVmInstance() throws NoSuchElementException {
+	  try ( TransactionResource db =
+        Entities.transactionFor( VmInstance.class ) ) {
+      final VmInstance vm = Entities.uniqueResult(VmInstance.named(this.instanceId));
+      db.commit();
+      return vm;
+    }catch(NoSuchElementException ex){
+      LOG.error("Unable to find the vm instance (terminated?) - " + this.instanceId);
+      try{
+        Images.setImageState(this.getImageId(), ImageMetadata.State.failed);
+      }catch(final Exception innerEx){
+        LOG.error("Unable to set image state as failed", ex);
+      }
+      createImageTasks.remove(this.instanceId);
+      throw ex;
+    }catch(Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
 	}
 	
 	private static List<BlockDeviceMappingItemType> getDeviceMappingsFromImage(final String imageId){
@@ -482,7 +495,7 @@ public class CreateImageTask {
 			throw ex;
 		}
 	}
-	
+  
 	private String getInstanceImageId(){
 		return this.getVmInstance().getImageId();
 	}
@@ -650,19 +663,6 @@ public class CreateImageTask {
 		}
 	}
 	
-	private RunningInstancesItemType describeInstance(){
-		try{
-			final EucalyptusDescribeInstanceTask task = new EucalyptusDescribeInstanceTask();
-			final CheckedListenableFuture<Boolean> result = task.dispatch();
-			if(result.get()){
-				return task.getResult();
-			}else
-				throw new EucalyptusCloudException(String.format("Failed to describe instance %s", this.instanceId));
-		}catch(final Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
-	}
-	
 	private class CreateImageStopInstanceCallback extends StopInstanceCallback{
 		@Override
 		public void fire(StopInstanceResponseType msg) {
@@ -737,7 +737,7 @@ public class CreateImageTask {
 		
 		private DescribeSnapshotsType describeSnapshots(){
 			final DescribeSnapshotsType req = new DescribeSnapshotsType();
-			req.setSnapshotSet(Lists.newArrayList(this.snapshotIds));
+			req.getFilterSet( ).add( Filter.filter( "snapshot-id", this.snapshotIds ) );
 			return req;
 		}
 		
@@ -790,40 +790,7 @@ public class CreateImageTask {
 		}
 	}
 	
-	private class EucalyptusDescribeInstanceTask extends EucalyptusActivityTask<ComputeMessage, Compute> {
-		private RunningInstancesItemType result = null;
-		private EucalyptusDescribeInstanceTask(){}
-		private DescribeInstancesType describeInstances(){
-			final DescribeInstancesType req = new DescribeInstancesType();
-			req.setInstancesSet(Lists.newArrayList(CreateImageTask.this.instanceId));
-			return req;
-		}
-		
-		@Override
-		void dispatchInternal(Checked<ComputeMessage> callback) {
-			final DispatchingClient<ComputeMessage, Compute> client = this.getClient(Compute.class);
-			client.dispatch(describeInstances(), callback);				
-		}
-
-		@Override
-		void dispatchSuccess(ComputeMessage response) {
-			final DescribeInstancesResponseType resp = (DescribeInstancesResponseType) response;
-			final List<RunningInstancesItemType> resultInstances = Lists.newArrayList();
-			for(final ReservationInfoType res : resp.getReservationSet()){
-				resultInstances.addAll(res.getInstancesSet());
-			}
-			if(resultInstances.size()>0)
-				this.result = resultInstances.get(0);
-		}
-		
-		public RunningInstancesItemType getResult(){
-			return this.result;
-		}
-	}
-	
 	private abstract class EucalyptusActivityTask <TM extends BaseMessage, TC extends ComponentId>{
-	    private volatile boolean dispatched = false;
-	    
 	    protected EucalyptusActivityTask(){}
 	
 	    final CheckedListenableFuture<Boolean> dispatch( ) {
@@ -848,7 +815,6 @@ public class CreateImageTask {
 	            }
 	          }
 	        } );
-	        dispatched = true;
 	        return future;
 	      } catch ( Exception e ) {
 	        LOG.error( e, e );

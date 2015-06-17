@@ -67,7 +67,6 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
     }
 
     final String sig = credentials.getSignature( );
-    checkForReplay( sig );
     final Function<String,List<String>> headerLookup = headerLookup( credentials.getHeaders() );
     final Function<String,List<String>> parameterLookup = parameterLookup( credentials.getParameters() );
     final Map<String,String> authorizationParameters = credentials.getVariant().getAuthorizationParameters( headerLookup, parameterLookup );

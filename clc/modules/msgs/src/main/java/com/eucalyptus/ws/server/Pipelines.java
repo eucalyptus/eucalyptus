@@ -305,8 +305,12 @@ public class Pipelines {
     public boolean checkAccepts( final HttpRequest message ) {
       if ( message instanceof MappingHttpRequest ) {
         final MappingHttpRequest httpRequest = ( MappingHttpRequest ) message;
-        if ( httpRequest.getMethod( ).equals( HttpMethod.POST ) ) {
-          final Map<String, String> parameters = new HashMap<String, String>( httpRequest.getParameters( ) );
+        if ( !( message.getUri( ).startsWith( this.servicePath ) || message.getUri( ).startsWith( this.internalServicePath ) ) ) {
+          return false;
+        }
+        if ( httpRequest.getMethod( ).equals( HttpMethod.POST ) && !message.getHeaderNames().contains( "SOAPAction" ) ) {
+          final Map<String, String> parameters = new HashMap<>( httpRequest.getParameters( ) );
+          final Set<String> nonQueryParameters = Sets.newHashSet( );
           final String query = httpRequest.getContentAsString( );
           for ( final String p : query.split( "&" ) ) {
             final String[] splitParam = p.split( "=" );
@@ -321,6 +325,7 @@ public class Pipelines {
               if ( rhs != null ) rhs = new URLCodec( ).decode( rhs );
             } catch ( final DecoderException e ) {}
             parameters.put( lhs, rhs );
+            nonQueryParameters.add( lhs );
           }
           for ( final RequiredQueryParams p : RequiredQueryParams.values( ) ) {
             if ( !parameters.containsKey( p.toString( ) ) ) {
@@ -328,6 +333,7 @@ public class Pipelines {
             }
           }
           httpRequest.getParameters( ).putAll( parameters );
+          httpRequest.addNonQueryParameterKeys( nonQueryParameters );
         } else {
           for ( final RequiredQueryParams p : RequiredQueryParams.values( ) ) {
             if ( !httpRequest.getParameters( ).containsKey( p.toString( ) ) ) {
@@ -335,7 +341,7 @@ public class Pipelines {
             }
           }
         }
-        return ( message.getUri( ).startsWith( this.servicePath ) || message.getUri( ).startsWith( this.internalServicePath ) );
+        return true;
       }
       return false;
     }

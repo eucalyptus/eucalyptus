@@ -193,12 +193,12 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
         Object prop = this.getter.invoke( o );
         String result = prop != null
           ? prop.toString( )
-          : "<unset>";
+          : "";
         trans.commit( );
         return result;
     } catch (Exception e) {
       Logs.exhaust().error(e, e);
-         return "<unset>";
+         return "";
     }
   }
   

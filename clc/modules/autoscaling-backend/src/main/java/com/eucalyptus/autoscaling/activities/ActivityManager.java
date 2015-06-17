@@ -41,6 +41,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
@@ -93,6 +95,7 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.ClusterInfoType;
+import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.DescribeImagesResponseType;
 import com.eucalyptus.compute.common.DescribeImagesType;
 import com.eucalyptus.compute.common.DescribeInstanceStatusResponseType;
@@ -152,6 +155,8 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
+import com.eucalyptus.util.async.AsyncExceptions;
+import com.eucalyptus.util.async.AsyncExceptions.AsyncWebServiceError;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.util.async.Futures;
@@ -161,6 +166,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Splitter;
@@ -932,7 +938,7 @@ public class ActivityManager {
   private DescribeInstanceStatusType monitorInstances( final Collection<String> instanceIds ) {
     final DescribeInstanceStatusType describeInstanceStatusType = new DescribeInstanceStatusType();
     describeInstanceStatusType.setIncludeAllInstances( true );
-    describeInstanceStatusType.getInstancesSet().addAll( instanceIds );
+    describeInstanceStatusType.getInstancesSet( ).addAll( instanceIds );
     describeInstanceStatusType.getFilterSet().add( filter( "instance-state-name", "pending", "running" ) );
     describeInstanceStatusType.getFilterSet().add( filter( "system-status.status", "not-applicable", "initializing", "ok" ) );
     describeInstanceStatusType.getFilterSet().add( filter( "instance-status.status", "not-applicable", "initializing", "ok" ) );
@@ -2320,6 +2326,25 @@ public class ActivityManager {
       setActivityFinalStatus( ActivityStatusCode.Successful );
     }
 
+    @Override
+    boolean dispatchFailure( final ActivityContext context, final Throwable throwable ) {
+      final Optional<AsyncWebServiceError> errorOptional = AsyncExceptions.asWebServiceError( throwable );
+      if ( errorOptional.isPresent( ) && "InvalidInstanceID.NotFound".equals( errorOptional.get( ).getCode( ) ) ) {
+        final List<String> healthyInstanceIds = Lists.newArrayList( instanceIds );
+        final Matcher matcher = Pattern.compile( "i-[0-9A-Fa-f]{8}").matcher( errorOptional.get( ).getMessage( ) );
+        while ( matcher.find( ) ) {
+          healthyInstanceIds.remove( matcher.group( ) );
+        }
+        this.knownInstanceIds.set( ImmutableList.copyOf( instanceIds ) );
+        this.healthyInstanceIds.set( ImmutableList.copyOf( healthyInstanceIds ) );
+
+        setActivityFinalStatus( ActivityStatusCode.Successful );
+        return true;
+      } else {
+        return super.dispatchFailure( context, throwable );
+      }
+    }
+
     List<String> getKnownInstanceIds() {
       return knownInstanceIds.get();
     }
@@ -2681,18 +2706,14 @@ public class ActivityManager {
     void dispatchInternal( final ActivityContext context,
                            final Callback.Checked<DescribeSubnetsResponseType> callback ) {
       final ComputeClient client = context.getComputeClient();
-
-      final ArrayList<SubnetIdSetItemType> subnetIdItems = Lists.newArrayList( );
-      for ( final String subnetId : Iterables.concat( Lists.newArrayList( "verbose" ), subnetIds ) ) {
-        final SubnetIdSetItemType subnetIdItem = new SubnetIdSetItemType( );
-        subnetIdItem.setSubnetId( subnetId );
-        subnetIdItems.add( subnetIdItem );
-      }
+      final SubnetIdSetItemType subnetIdItem = new SubnetIdSetItemType( );
+      subnetIdItem.setSubnetId( "verbose" );
+      final ArrayList<SubnetIdSetItemType> subnetIdItems = Lists.newArrayList( subnetIdItem );
       final SubnetIdSetType subnetIdSetType = new SubnetIdSetType( );
       subnetIdSetType.setItem( subnetIdItems );
       final DescribeSubnetsType describeSubnetsType = new DescribeSubnetsType( );
       describeSubnetsType.setSubnetSet( subnetIdSetType );
-
+      describeSubnetsType.getFilterSet( ).add( Filter.filter( "subnet-id", this.subnetIds ) );
       client.dispatch( describeSubnetsType, callback );
     }
 
@@ -2821,6 +2842,17 @@ public class ActivityManager {
       }
 
       setActivityFinalStatus( ActivityStatusCode.Successful );
+    }
+
+    @Override
+    boolean dispatchFailure( final ActivityContext context, final Throwable throwable ) {
+      if ( AsyncExceptions.isWebServiceErrorCode( throwable, "InvalidAMIID.NotFound" ) ) {
+        setValidationError( "Invalid image id(s): " + imageIds );
+        setActivityFinalStatus( ActivityStatusCode.Successful );
+        return true;
+      } else {
+        return super.dispatchFailure( context, throwable );
+      }
     }
   }
 
@@ -3189,6 +3221,7 @@ public class ActivityManager {
     public void fireEvent( final ClockTick event ) {
       if ( Bootstrap.isOperational( ) &&
           Topology.isEnabledLocally( AutoScalingBackend.class ) &&
+          Topology.isEnabled( Compute.class ) &&
           Topology.isEnabled( Eucalyptus.class ) ) {
         activityManager.doScaling();
       }

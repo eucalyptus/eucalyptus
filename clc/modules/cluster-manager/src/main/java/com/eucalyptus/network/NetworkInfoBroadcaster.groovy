@@ -114,6 +114,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Immutable
 import groovy.transform.PackageScope
 import org.apache.log4j.Logger
+import org.hibernate.criterion.Restrictions
 
 import javax.annotation.Nullable
 import javax.xml.bind.JAXBContext
@@ -135,16 +136,28 @@ class NetworkInfoBroadcaster {
 
   private static final AtomicLong lastBroadcastTime = new AtomicLong( 0L );
   private static final ConcurrentMap<String,Long> activeBroadcastMap = Maps.<String,Long>newConcurrentMap( ) as ConcurrentMap<String, Long>
-  private static final EntityCache<VmInstance,VmInstanceNetworkView> instanceCache = new EntityCache<>( VmInstance.named(null), TypeMappers.lookup( VmInstance, VmInstanceNetworkView )  );
-  private static final EntityCache<NetworkGroup,NetworkGroupNetworkView> securityGroupCache = new EntityCache<>( NetworkGroup.withNaturalId( null ), TypeMappers.lookup( NetworkGroup, NetworkGroupNetworkView )  );
-
-  private static final EntityCache<Vpc,VpcNetworkView> vpcCache = new EntityCache<>( Vpc.exampleWithOwner( null ), TypeMappers.lookup( Vpc, VpcNetworkView )  );
-  private static final EntityCache<VpcSubnet,SubnetNetworkView> subnetCache = new EntityCache<>( VpcSubnet.exampleWithOwner( null ), TypeMappers.lookup( VpcSubnet, SubnetNetworkView )  );
-  private static final EntityCache<DhcpOptionSet,DhcpOptionSetNetworkView> dhcpOptionsCache = new EntityCache<>( DhcpOptionSet.exampleWithOwner( null ), TypeMappers.lookup( DhcpOptionSet, DhcpOptionSetNetworkView )  );
-  private static final EntityCache<NetworkAcl,NetworkAclNetworkView> networkAclCache = new EntityCache<>( NetworkAcl.exampleWithOwner( null ), TypeMappers.lookup( NetworkAcl, NetworkAclNetworkView )  );
-  private static final EntityCache<RouteTable,RouteTableNetworkView> routeTableCache = new EntityCache<>( RouteTable.exampleWithOwner( null ), TypeMappers.lookup( RouteTable, RouteTableNetworkView )  );
-  private static final EntityCache<InternetGateway,InternetGatewayNetworkView> internetGatewayCache = new EntityCache<>( InternetGateway.exampleWithOwner( null ), TypeMappers.lookup( InternetGateway, InternetGatewayNetworkView )  );
-  private static final EntityCache<VpcNetworkInterface,NetworkInterfaceNetworkView> networkInterfaceCache = new EntityCache<>( VpcNetworkInterface.exampleWithOwner( null ), TypeMappers.lookup( VpcNetworkInterface, NetworkInterfaceNetworkView )  );
+  private static final EntityCache<VmInstance,VmInstanceNetworkView> instanceCache = new EntityCache<>(
+      VmInstance.named(null),
+      Restrictions.not( VmInstance.criterion( TORNDOWN.array( ) ) ),
+      ['networkGroups'] as Set<String>,
+      ['bootRecord.machineImage', 'bootRecord.vmType'] as Set<String>,
+      TypeMappers.lookup( VmInstance, VmInstanceNetworkView )  );
+  private static final EntityCache<NetworkGroup,NetworkGroupNetworkView> securityGroupCache =
+      new EntityCache<>( NetworkGroup.withNaturalId( null ), TypeMappers.lookup( NetworkGroup, NetworkGroupNetworkView )  );
+  private static final EntityCache<Vpc,VpcNetworkView> vpcCache =
+      new EntityCache<>( Vpc.exampleWithOwner( null ), TypeMappers.lookup( Vpc, VpcNetworkView )  );
+  private static final EntityCache<VpcSubnet,SubnetNetworkView> subnetCache =
+      new EntityCache<>( VpcSubnet.exampleWithOwner( null ), TypeMappers.lookup( VpcSubnet, SubnetNetworkView )  );
+  private static final EntityCache<DhcpOptionSet,DhcpOptionSetNetworkView> dhcpOptionsCache =
+      new EntityCache<>( DhcpOptionSet.exampleWithOwner( null ), TypeMappers.lookup( DhcpOptionSet, DhcpOptionSetNetworkView )  );
+  private static final EntityCache<NetworkAcl,NetworkAclNetworkView> networkAclCache =
+      new EntityCache<>( NetworkAcl.exampleWithOwner( null ), TypeMappers.lookup( NetworkAcl, NetworkAclNetworkView )  );
+  private static final EntityCache<RouteTable,RouteTableNetworkView> routeTableCache =
+      new EntityCache<>( RouteTable.exampleWithOwner( null ), TypeMappers.lookup( RouteTable, RouteTableNetworkView )  );
+  private static final EntityCache<InternetGateway,InternetGatewayNetworkView> internetGatewayCache =
+      new EntityCache<>( InternetGateway.exampleWithOwner( null ), TypeMappers.lookup( InternetGateway, InternetGatewayNetworkView )  );
+  private static final EntityCache<VpcNetworkInterface,NetworkInterfaceNetworkView> networkInterfaceCache =
+      new EntityCache<>( VpcNetworkInterface.exampleWithOwner( null ), TypeMappers.lookup( VpcNetworkInterface, NetworkInterfaceNetworkView )  );
 
   interface NetworkInfoSource {
     Iterable<VmInstanceNetworkView> getInstances( );
@@ -159,16 +172,25 @@ class NetworkInfoBroadcaster {
   }
 
   private static NetworkInfoSource cacheSource( ) {
+    final Supplier<Iterable<VmInstanceNetworkView>> instanceSupplier = Suppliers.memoize( instanceCache ) as Supplier<Iterable<VmInstanceNetworkView>>;
+    final Supplier<Iterable<NetworkGroupNetworkView>> securityGroupSupplier = Suppliers.memoize( securityGroupCache ) as Supplier<Iterable<NetworkGroupNetworkView>>;
+    final Supplier<Iterable<VpcNetworkView>> vpcSupplier = Suppliers.memoize( vpcCache ) as Supplier<Iterable<VpcNetworkView>>;
+    final Supplier<Iterable<SubnetNetworkView>> subnetSupplier = Suppliers.memoize( subnetCache ) as Supplier<Iterable<SubnetNetworkView>>;
+    final Supplier<Iterable<DhcpOptionSetNetworkView>> dhcpOptionsSupplier = Suppliers.memoize( dhcpOptionsCache ) as Supplier<Iterable<DhcpOptionSetNetworkView>>;
+    final Supplier<Iterable<NetworkAclNetworkView>> networkAclSupplier = Suppliers.memoize( networkAclCache ) as Supplier<Iterable<NetworkAclNetworkView>>;
+    final Supplier<Iterable<RouteTableNetworkView>> routeTableSupplier = Suppliers.memoize( routeTableCache ) as Supplier<Iterable<RouteTableNetworkView>>;
+    final Supplier<Iterable<InternetGatewayNetworkView>> internetGatewaySupplier = Suppliers.memoize( internetGatewayCache ) as Supplier<Iterable<InternetGatewayNetworkView>>;
+    final Supplier<Iterable<NetworkInterfaceNetworkView>> networkInterfaceSupplier = Suppliers.memoize( networkInterfaceCache ) as Supplier<Iterable<NetworkInterfaceNetworkView>>;
     new NetworkInfoSource( ) {
-      @Override Iterable<VmInstanceNetworkView> getInstances( ) { instanceCache.get( ) }
-      @Override Iterable<NetworkGroupNetworkView> getSecurityGroups( ) { securityGroupCache.get( ) }
-      @Override Iterable<VpcNetworkView> getVpcs( ) { vpcCache.get( ) }
-      @Override Iterable<SubnetNetworkView> getSubnets( ) { subnetCache.get( ) }
-      @Override Iterable<DhcpOptionSetNetworkView> getDhcpOptionSets( ) { dhcpOptionsCache.get( ) }
-      @Override Iterable<NetworkAclNetworkView> getNetworkAcls( ) { networkAclCache.get( ) }
-      @Override Iterable<RouteTableNetworkView> getRouteTables( ) { routeTableCache.get( ) }
-      @Override Iterable<InternetGatewayNetworkView> getInternetGateways( ) { internetGatewayCache.get( ) }
-      @Override Iterable<NetworkInterfaceNetworkView> getNetworkInterfaces( ) { networkInterfaceCache.get( ) }
+      @Override Iterable<VmInstanceNetworkView> getInstances( ) { instanceSupplier.get( ) }
+      @Override Iterable<NetworkGroupNetworkView> getSecurityGroups( ) { securityGroupSupplier.get( ) }
+      @Override Iterable<VpcNetworkView> getVpcs( ) { vpcSupplier.get( ) }
+      @Override Iterable<SubnetNetworkView> getSubnets( ) { subnetSupplier.get( ) }
+      @Override Iterable<DhcpOptionSetNetworkView> getDhcpOptionSets( ) { dhcpOptionsSupplier.get( ) }
+      @Override Iterable<NetworkAclNetworkView> getNetworkAcls( ) { networkAclSupplier.get( ) }
+      @Override Iterable<RouteTableNetworkView> getRouteTables( ) { routeTableSupplier.get( ) }
+      @Override Iterable<InternetGatewayNetworkView> getInternetGateways( ) { internetGatewaySupplier.get( ) }
+      @Override Iterable<NetworkInterfaceNetworkView> getNetworkInterfaces( ) { networkInterfaceSupplier.get( ) }
     }
   }
 
@@ -291,7 +313,7 @@ class NetworkInfoBroadcaster {
                 ),
                 properties: [
                     new NIProperty( name: 'enabledCCIp', values: [ InetAddress.getByName(cluster.hostName).hostAddress ] ),
-                    new NIProperty( name: 'macPrefix', values: [ configCluster.macPrefix ?: VmInstances.MAC_PREFIX ] ),
+                    new NIProperty( name: 'macPrefix', values: [ configCluster.macPrefix ] ),
                     vpcmido ? new NIProperty( name: 'privateIps', values: [ '172.31.0.5' ] ) : new NIProperty( name: 'privateIps', values: configCluster.privateIps )
                 ],
                 nodes: new NINodes(
@@ -303,7 +325,7 @@ class NetworkInfoBroadcaster {
                 name: configCluster.name,
                 properties: [
                     new NIProperty( name: 'enabledCCIp', values: [ InetAddress.getByName(cluster.hostName).hostAddress ] ),
-                    new NIProperty( name: 'macPrefix', values: [ configCluster.macPrefix ?: VmInstances.MAC_PREFIX ] )
+                    new NIProperty( name: 'macPrefix', values: [ configCluster.macPrefix ] )
                 ],
                 nodes: new NINodes(
                     name: 'nodes',
@@ -319,8 +341,15 @@ class NetworkInfoBroadcaster {
     info.configuration.properties.addAll( [
         new NIProperty( name: 'enabledCLCIp', values: [clcHostSupplier.get()]),
         new NIProperty( name: 'instanceDNSDomain', values: [networkConfiguration.orNull()?.instanceDnsDomain?:EucaStrings.trimPrefix('.',"${VmInstances.INSTANCE_SUBDOMAIN}.internal")]),
-        new NIProperty( name: 'instanceDNSServers', values: dnsServers ),
+        new NIProperty( name: 'instanceDNSServers', values: dnsServers )
     ]  )
+
+    boolean hasEdgePublicGateway = networkConfiguration.orNull()?.publicGateway != null
+    if ( hasEdgePublicGateway ) {
+      info.configuration.properties.add(
+        new NIProperty( name: 'publicGateway', values: [networkConfiguration.orNull()?.publicGateway] )
+      )
+    }
 
     Iterable<VmInstanceNetworkView> instances = Iterables.filter(
         networkInfoSource.instances,
@@ -348,7 +377,7 @@ class NetworkInfoBroadcaster {
     Iterable<NetworkAclNetworkView> networkAcls = networkInfoSource.networkAcls
     Iterable<RouteTableNetworkView> routeTables = networkInfoSource.routeTables
     Iterable<InternetGatewayNetworkView> internetGateways = networkInfoSource.internetGateways
-    Map<String,List<String>> vpcIdToInternetGatewayIds = (Map<String,List<String>> ) ((ArrayListMultimap<String,String>)internetGateways.inject(ArrayListMultimap.<String,String>create()){
+    Map<String,Collection<String>> vpcIdToInternetGatewayIds = (Map<String,Collection<String>> ) ((ArrayListMultimap<String,String>)internetGateways.inject(ArrayListMultimap.<String,String>create()){
       ListMultimap<String,String> map, InternetGatewayNetworkView internetGateway ->
         if ( internetGateway.vpcId ) map.put( internetGateway.vpcId, internetGateway.internetGatewayId )
         map
@@ -386,13 +415,13 @@ class NetworkInfoBroadcaster {
               routes: Lists.transform( routeTable.routes, TypeMappers.lookup( RouteNetworkView, NIRoute ) ) as List<NIRoute>
           )
         },
-        vpcIdToInternetGatewayIds.get( vpc.vpcId )?:[] as List<String>
+        vpcIdToInternetGatewayIds.get( vpc.vpcId ) as List<String>?:[] as List<String>
       )
     } )
 
     // populate instances
     Iterable<NetworkInterfaceNetworkView> networkInterfaces = networkInfoSource.networkInterfaces
-    Map<String,List<NetworkInterfaceNetworkView>> instanceIdToNetworkInterfaces = (Map<String,List<NetworkInterfaceNetworkView>> ) ((ArrayListMultimap<String,NetworkInterfaceNetworkView>) networkInterfaces.inject(ArrayListMultimap.<String,NetworkInterfaceNetworkView>create()){
+    Map<String,Collection<NetworkInterfaceNetworkView>> instanceIdToNetworkInterfaces = (Map<String,Collection<NetworkInterfaceNetworkView>> ) ((ArrayListMultimap<String,NetworkInterfaceNetworkView>) networkInterfaces.inject(ArrayListMultimap.<String,NetworkInterfaceNetworkView>create()){
       ListMultimap<String,NetworkInterfaceNetworkView> map, NetworkInterfaceNetworkView networkInterface ->
         if ( networkInterface.instanceId ) map.put( networkInterface.instanceId, networkInterface )
         map
@@ -1075,7 +1104,7 @@ class NetworkInfoBroadcaster {
 
       if ( counter++%intervalTicks == 0 &&
           Topology.isEnabledLocally( Eucalyptus ) &&
-          Hosts.coordinator &&
+          Hosts.isCoordinator() &&
           !Bootstrap.isShuttingDown() &&
           !Databases.isVolatile() ) {
         requestNetworkInfoBroadcast( )

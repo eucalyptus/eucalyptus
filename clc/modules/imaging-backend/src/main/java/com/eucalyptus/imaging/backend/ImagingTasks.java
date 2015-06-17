@@ -39,6 +39,9 @@ import com.eucalyptus.compute.common.InstancePlacement;
 import com.eucalyptus.compute.common.SubnetType;
 import com.eucalyptus.compute.common.backend.ImportInstanceType;
 import com.eucalyptus.compute.common.backend.ImportVolumeType;
+import com.eucalyptus.config.Property;
+import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
@@ -98,6 +101,8 @@ public class ImagingTasks {
     try{
       /// TODO: should we assume the converted image is always larger than or equal to the uploaded image
       final int volumeSize = request.getVolume().getSize();
+      if (getMaxVolumeSize(availabilityZone) < volumeSize)
+        throw new ImagingServiceException("Requested volume size exceeds max allowed volume size");
       final long imageBytes = request.getImage().getBytes();
       final long volumeSizeInBytes = (volumeSize * (long) Math.pow(1024, 3));
       if(imageBytes > volumeSizeInBytes)
@@ -217,6 +222,8 @@ public class ImagingTasks {
       try{
         /// TODO: should we assume the converted image is always larger than or equal to the uploaded image
         final int volumeSize = volumeDetail.getSize();
+        if (getMaxVolumeSize(availabilityZone) < volumeSize)
+          throw new ImagingServiceException("Requested volume size exceeds max allowed volume size");
         final long imageBytes = imageDetail.getBytes();
         final long volumeSizeInBytes = (volumeSize * (long) Math.pow(1024, 3));
         if(imageBytes > volumeSizeInBytes)
@@ -241,7 +248,23 @@ public class ImagingTasks {
     }
     return transform;
   }
-    public static DiskImagingTask createDiskImagingTask(final ImportImageType request) 
+
+  private static int getMaxVolumeSize(String availabilityZone) {
+    ConfigurableProperty prop = null;
+    int maxVolSize = Integer.MAX_VALUE;
+    try {
+      prop = PropertyDirectory.getPropertyEntry(availabilityZone + ".storage.maxvolumesizeingb");
+    } catch (IllegalAccessException ex) {}
+    if (prop == null){
+      return maxVolSize;
+    }
+    try {
+      maxVolSize = Integer.parseInt(prop.getValue());
+    } catch (NumberFormatException ex) {}
+    return maxVolSize;
+  }
+
+  public static DiskImagingTask createDiskImagingTask(final ImportImageType request)
       throws ImagingServiceException{
     /// sanity check
     if(request.getImage().getDiskImageSet()==null || request.getImage().getDiskImageSet().size()<=0)

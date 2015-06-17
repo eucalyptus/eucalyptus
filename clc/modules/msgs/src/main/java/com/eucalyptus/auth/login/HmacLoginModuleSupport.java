@@ -130,10 +130,6 @@ abstract class HmacLoginModuleSupport extends BaseLoginModule<HmacCredentials> {
     return key;
   }
   
-  protected void checkForReplay( final String signature ) throws AuthenticationException {
-    SecurityContext.enqueueSignature( normalize(signature) );
-  }
-
   protected String urldecode( final String text ) {
     return URLDecoder.decode( text );
   }

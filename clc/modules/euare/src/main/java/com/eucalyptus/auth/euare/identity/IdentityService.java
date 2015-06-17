@@ -19,7 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare.identity;
 
-import static com.eucalyptus.auth.principal.Certificate.Util.revoked;
 import static com.eucalyptus.util.CollectionUtils.propertyPredicate;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
@@ -37,12 +36,11 @@ import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMOutputFormat;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.log4j.Logger;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.InvalidAccessKeyAuthException;
 import com.eucalyptus.auth.api.PrincipalProvider;
-import com.eucalyptus.auth.euare.EuareException;
 import com.eucalyptus.auth.euare.EuareServerCertificateUtil;
 import com.eucalyptus.auth.euare.common.identity.Account;
 import com.eucalyptus.auth.euare.common.identity.DecodeSecurityTokenResponseType;
@@ -63,9 +61,6 @@ import com.eucalyptus.auth.euare.common.identity.DescribePrincipalType;
 import com.eucalyptus.auth.euare.common.identity.DescribeRoleResponseType;
 import com.eucalyptus.auth.euare.common.identity.DescribeRoleResult;
 import com.eucalyptus.auth.euare.common.identity.DescribeRoleType;
-import com.eucalyptus.auth.euare.common.identity.LookupCertificatesResponseType;
-import com.eucalyptus.auth.euare.common.identity.LookupCertificatesResult;
-import com.eucalyptus.auth.euare.common.identity.LookupCertificatesType;
 import com.eucalyptus.auth.euare.common.identity.Policy;
 import com.eucalyptus.auth.euare.common.identity.Principal;
 import com.eucalyptus.auth.euare.common.identity.ReserveNameResponseType;
@@ -86,7 +81,6 @@ import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.PolicyVersions;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.SecurityTokenContent;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingManager;
@@ -97,7 +91,6 @@ import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
-import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LockResource;
 import com.eucalyptus.util.TypeMapper;
@@ -126,7 +119,7 @@ public class IdentityService {
     this.principalProvider = principalProvider;
   }
 
-  public DescribePrincipalResponseType describePrincipal( final DescribePrincipalType request ) throws EuareException {
+  public DescribePrincipalResponseType describePrincipal( final DescribePrincipalType request ) throws IdentityServiceException {
     final DescribePrincipalResponseType response = request.getReply( );
     final DescribePrincipalResult result = new DescribePrincipalResult( );
 
@@ -166,18 +159,18 @@ public class IdentityService {
         principal.setPasswordExpiry( user.getPasswordExpires( ) );
 
         final ArrayList<com.eucalyptus.auth.euare.common.identity.AccessKey> accessKeys = Lists.newArrayList( );
-        for ( final AccessKey accessKey : user.getKeys( ) ) {
+        for ( final AccessKey accessKey : Iterables.filter( user.getKeys( ), AccessKeys.isActive( ) ) ) {
           final com.eucalyptus.auth.euare.common.identity.AccessKey key =
               new com.eucalyptus.auth.euare.common.identity.AccessKey( );
-          key.setAccessKeyId( accessKey.getAccessKey( ) );
-          key.setSecretAccessKey( accessKey.getSecretKey( ) );
-          accessKeys.add( key );
+            key.setAccessKeyId( accessKey.getAccessKey( ) );
+            key.setSecretAccessKey( accessKey.getSecretKey( ) );
+            accessKeys.add( key );
         }
         principal.setAccessKeys( accessKeys );
 
         final ArrayList<com.eucalyptus.auth.euare.common.identity.Certificate> certificates = Lists.newArrayList( );
         for ( final Certificate certificate :
-            Iterables.filter( user.getCertificates(), propertyPredicate( false, revoked() ) ) ) {
+            Iterables.filter( user.getCertificates( ), propertyPredicate( true, Certificate.Util.active( ) ) ) ) {
           final com.eucalyptus.auth.euare.common.identity.Certificate cert =
               new com.eucalyptus.auth.euare.common.identity.Certificate();
           cert.setCertificateId( certificate.getCertificateId() );
@@ -210,7 +203,7 @@ public class IdentityService {
 
   public DescribeAccountsResponseType describeAccounts(
     final DescribeAccountsType request
-  ) throws EuareException {
+  ) throws IdentityServiceException {
     final DescribeAccountsResponseType response = request.getReply( );
     final DescribeAccountsResult result = new DescribeAccountsResult( );
 
@@ -248,7 +241,7 @@ public class IdentityService {
 
   public DescribeInstanceProfileResponseType describeInstanceProfile(
       final DescribeInstanceProfileType request
-  ) throws EuareException {
+  ) throws IdentityServiceException {
     final DescribeInstanceProfileResponseType response = request.getReply( );
     final DescribeInstanceProfileResult result = new DescribeInstanceProfileResult( );
 
@@ -267,7 +260,7 @@ public class IdentityService {
     return response;
   }
 
-  public DescribeRoleResponseType describeRole( final DescribeRoleType request ) throws EuareException {
+  public DescribeRoleResponseType describeRole( final DescribeRoleType request ) throws IdentityServiceException {
     final DescribeRoleResponseType response = request.getReply( );
     final DescribeRoleResult result = new DescribeRoleResult( );
 
@@ -285,7 +278,7 @@ public class IdentityService {
 
   public DecodeSecurityTokenResponseType decodeSecurityToken(
       final DecodeSecurityTokenType request
-  ) throws EuareException {
+  ) throws IdentityServiceException {
     final DecodeSecurityTokenResponseType response = request.getReply( );
     final DecodeSecurityTokenResult result = new DecodeSecurityTokenResult( );
 
@@ -304,43 +297,20 @@ public class IdentityService {
 
   public ReserveNameResponseType reserveName(
       final ReserveNameType request
-  ) throws EuareException {
+  ) throws IdentityServiceException {
     final ReserveNameResponseType response = request.getReply( );
     final ReserveNameResult result = new ReserveNameResult( );
 
     try {
       principalProvider.reserveGlobalName( request.getNamespace(), request.getName(), request.getDuration() );
     } catch ( AuthException e ) {
+      if ( AuthException.CONFLICT.equals( e.getMessage( ) ) ) {
+        throw new IdentityServiceSenderException( "Conflict", "Name not available: " + request.getName( ) );
+      }
       throw handleException( e );
     }
 
     response.setReserveNameResult( result );
-    return response;
-  }
-
-  public LookupCertificatesResponseType lookupCertificates( final LookupCertificatesType request ) throws EuareException {
-    final LookupCertificatesResponseType response = request.getReply( );
-    final LookupCertificatesResult result = new LookupCertificatesResult( );
-    final ArrayList<String> pemCertificates = Lists.newArrayList( );
-    try {
-      for ( final User user : com.eucalyptus.auth.euare.Accounts.lookupAccountById( request.getAccountNumber() ).getUsers( ) ) {
-        Iterables.addAll( pemCertificates, Iterables.transform(
-            Iterables.filter(
-                user.getCertificates( ),
-                CollectionUtils.propertyPredicate( false, revoked() ) ),
-            new Function<Certificate, String>( ) {
-              @Nullable
-              @Override
-              public String apply( final Certificate certificate ) {
-                return B64.url.decString( certificate.getPem( ) );
-              }
-            } ) );
-      }
-    } catch ( AuthException e ) {
-      throw handleException( e );
-    }
-    result.setPem( pemCertificates );
-    response.setLookupCertificatesResult( result );
     return response;
   }
 
@@ -354,7 +324,7 @@ public class IdentityService {
     return response;
   }
 
-  public SignCertificateResponseType signCertificate( final SignCertificateType request ) throws EuareException {
+  public SignCertificateResponseType signCertificate( final SignCertificateType request ) throws IdentityServiceException {
     final SignCertificateResponseType response = request.getReply( );
     final SignCertificateResult result = new SignCertificateResult( );
     final String pubkey = request.getKey( );
@@ -362,9 +332,9 @@ public class IdentityService {
     final Integer expirationDays = request.getExpirationDays( );
 
     if( Strings.isNullOrEmpty( pubkey ) )
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "No public key is provided");
+      throw new IdentityServiceSenderException( "InvalidValue", "No public key is provided");
     if( Strings.isNullOrEmpty( principal ) )
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "No principal is provided");
+      throw new IdentityServiceSenderException( "InvalidValue", "No principal is provided");
 
     try {
       final KeyFactory keyFactory = KeyFactory.getInstance( "RSA", "BC");
@@ -378,14 +348,14 @@ public class IdentityService {
       final String certPem = new String( PEMFiles.getBytes(  vmCert ) );
       result.setPem( certPem );
     } catch( final Exception ex ) {
-      throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
+      throw new IdentityServiceReceiverException( "InternalError", String.valueOf( ex.getMessage( ) ));
     }
     response.setSignCertificateResult( result );
     return response;
   }
 
 
-  public TunnelActionResponseType tunnelAction( final TunnelActionType request ) throws EuareException {
+  public TunnelActionResponseType tunnelAction( final TunnelActionType request ) throws IdentityServiceException {
     final TunnelActionResponseType response = request.getReply( );
     final TunnelActionResult result = new TunnelActionResult( );
 
@@ -419,16 +389,16 @@ public class IdentityService {
   /**
    * Method always throws, signature allows use of "throw handleException ..."
    */
-  private EuareException handleException( final Exception e ) throws EuareException {
-    final EuareException cause = Exceptions.findCause( e, EuareException.class );
+  private IdentityServiceException handleException( final Exception e ) throws IdentityServiceException {
+    final IdentityServiceException cause = Exceptions.findCause( e, IdentityServiceException.class );
     if ( cause != null ) {
       throw cause;
     }
 
     logger.error( e, e );
 
-    final EuareException exception =
-        new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, "InternalError", String.valueOf(e.getMessage( )) );
+    final IdentityServiceException exception =
+        new IdentityServiceReceiverException( "InternalError", String.valueOf( e.getMessage( ) ) );
     if ( Contexts.lookup( ).hasAdministrativePrivileges( ) ) {
       exception.initCause( e );
     }

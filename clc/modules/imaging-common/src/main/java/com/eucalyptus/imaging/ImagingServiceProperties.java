@@ -85,7 +85,7 @@ public class ImagingServiceProperties {
   @ConfigurableField(displayName = "keyname",
       description = "keyname to use when debugging imaging worker",
       readonly = false, type = ConfigurableFieldType.KEYVALUE,
-      changeListener = PropertyChangeListeners.KeyNameChangeListener.class)
+      changeListener = KeyNameChangeListener.class)
   public static String KEYNAME = null;
 
   @ConfigurableField(displayName = "ntp_server",
@@ -192,6 +192,27 @@ public class ImagingServiceProperties {
           LOG.debug(e);
         }
         return false;
+      }
+    }
+  }
+
+  public static class KeyNameChangeListener implements PropertyChangeListener<String> {
+    @Override
+    public void fireChange(ConfigurableProperty t, String keyname)
+        throws ConfigurablePropertyException {
+      if(t.getValue()!=null && t.getValue().equals(keyname))
+        return;
+      if (keyname == null  || keyname.isEmpty())
+        return;
+      try {
+        // describeKeyPairs throws an error if keypair not found
+        Ec2Client.getInstance().describeKeyPairs(Accounts.lookupSystemAccountByAlias(
+            AccountIdentifiers.IMAGING_SYSTEM_ACCOUNT ).getUserId( ),
+            Lists.newArrayList(keyname));
+      } catch (final Exception e) {
+        throw new ConfigurablePropertyException("Could not change key name due to: "
+            + e.getMessage() + ". Are you using keypair that belongs to "
+            + AccountIdentifiers.IMAGING_SYSTEM_ACCOUNT + " account?");
       }
     }
   }

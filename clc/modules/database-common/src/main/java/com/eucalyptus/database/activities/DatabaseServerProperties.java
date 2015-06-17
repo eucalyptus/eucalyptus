@@ -100,7 +100,7 @@ public class DatabaseServerProperties {
 
   @ConfigurableField(displayName = "keyname", description = "keyname to use when debugging database server",
       readonly = false, type = ConfigurableFieldType.KEYVALUE,
-      changeListener = PropertyChangeListeners.KeyNameChangeListener.class)
+      changeListener = KeyNameChangeListener.class)
   public static String KEYNAME = null;
 
   @ConfigurableField(displayName = "ntp_server", description = "address of the NTP server used by database server",
@@ -194,7 +194,7 @@ public class DatabaseServerProperties {
         String masterPassword = DatabaseInfo.getDatabaseInfo()
             .getAppendOnlyPassword();
         if (masterPassword == null || masterPassword.length() <= 0)
-          masterPassword = Crypto.generateAlphanumericId(8).toLowerCase();
+          masterPassword = Crypto.generateAlphanumericId(25).toLowerCase();
         final String masterUserName = "eucalyptus";
         boolean vmCreated = false;
         try {
@@ -264,6 +264,27 @@ public class DatabaseServerProperties {
       }
       LOG.info("Database worker stack is destroyed");
       return true;
+    }
+  }
+
+  public static class KeyNameChangeListener implements PropertyChangeListener<String> {
+    @Override
+    public void fireChange(ConfigurableProperty t, String keyname)
+        throws ConfigurablePropertyException {
+      if(t.getValue()!=null && t.getValue().equals(keyname))
+        return;
+      if (keyname == null  || keyname.isEmpty())
+        return;
+      try {
+        // describeKeyPairs throws an error if keypair not found
+        Ec2Client.getInstance().describeKeyPairs(Accounts.lookupSystemAccountByAlias(
+            AccountIdentifiers.DATABASE_SYSTEM_ACCOUNT ).getUserId( ),
+            Lists.newArrayList(keyname));
+      } catch (final Exception e) {
+        throw new ConfigurablePropertyException("Could not change key name due to: "
+            + e.getMessage() + ". Are you using keypair that belongs to "
+            + AccountIdentifiers.DATABASE_SYSTEM_ACCOUNT + " account?");
+      }
     }
   }
 

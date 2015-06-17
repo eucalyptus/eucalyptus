@@ -248,8 +248,11 @@ public class BlockStorageController {
     CheckerThreadPool.add(new ExpiredSnapshotCleaner());
     CheckerThreadPool.add(new SnapshotTransferCleaner());
     // add any block manager checkers
-    for (CheckerTask checker : blockManager.getCheckers()) {
-      CheckerThreadPool.add(checker);
+    List<CheckerTask> backendCheckers = null;
+    if ((backendCheckers = blockManager.getCheckers()) != null && !backendCheckers.isEmpty()) {
+      for (CheckerTask checker : backendCheckers) {
+        CheckerThreadPool.add(checker);
+      }
     }
 
     // TODO ask neil what this means
@@ -423,19 +426,20 @@ public class BlockStorageController {
         throw new EucalyptusCloudException(e);
       }
 
-      if (validToken.hasOnlyExport(nodeIp, nodeIqn)) {
-        // There are no active exports, so unexport all.
-        blockManager.unexportVolumeFromAll(volumeId);
-      } else {
-        try {
-          blockManager.unexportVolume(volumeEntity.getVolumeId(), nodeIqn);
-        } catch (UnsupportedOperationException e) {
-          // The backend doesn't support unexport to just one host... this is a noop.
+      try {
+        blockManager.unexportVolume(volumeEntity.getVolumeId(), nodeIqn);
+      } catch (UnsupportedOperationException e) { // The backend doesn't support unexport to just one host
+        // Check to see if the volume is exported to any other hosts
+        if (validToken.hasOnlyExport(nodeIp, nodeIqn)) {
+          // Either volume is exported to this host only or has no active exports , so unexport all.
+          blockManager.unexportVolumeFromAll(volumeId);
+        } else {
+          // Volume may be exported to other hosts... this is a noop.
           LOG.info("Volume " + volumeId + ": UnexportVolume for single host not supported by backend. Treating as no-op and continuing normally.");
-        } catch (Exception e) {
-          LOG.error("Could not detach volume: " + volumeId, e);
-          throw e;
         }
+      } catch (Exception e) {
+        LOG.error("Could not detach volume: " + volumeId, e);
+        throw e;
       }
 
       // Do the actual invalidation. Handle retries, but only on the DB part.

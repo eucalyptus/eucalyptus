@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.compute.service;
 
+import static com.eucalyptus.util.Strings.append;
+import static com.eucalyptus.util.Strings.prepend;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -31,17 +33,17 @@ import java.util.concurrent.ExecutionException;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.persistence.EntityNotFoundException;
+
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
-import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Restrictions;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.mule.api.MuleEventContext;
 import org.mule.api.lifecycle.Callable;
 import org.mule.component.ComponentException;
 
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.type.RestrictedType;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
@@ -67,6 +69,7 @@ import com.eucalyptus.compute.common.internal.network.NetworkGroup;
 import com.eucalyptus.compute.common.internal.network.NetworkGroups;
 import com.eucalyptus.compute.common.internal.tags.Filter;
 import com.eucalyptus.compute.common.internal.tags.Filters;
+import com.eucalyptus.compute.common.internal.tags.InvalidFilterException;
 import com.eucalyptus.compute.common.internal.tags.Tag;
 import com.eucalyptus.compute.common.internal.tags.TagSupport;
 import com.eucalyptus.compute.common.internal.tags.Tags;
@@ -107,18 +110,20 @@ import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
+import com.eucalyptus.util.async.AsyncExceptions;
+import com.eucalyptus.util.async.AsyncExceptions.AsyncWebServiceError;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.FailedRequestException;
-import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.collect.Collections2;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -178,6 +183,7 @@ public class ComputeService implements Callable {
       ownersSet.add( requestAccountId );
     }
     final Filter filter = Filters.generate( request.getFilterSet(), ImageInfo.class );
+    final Filter persistenceFilter = getPersistenceFilter( ImageInfo.class, imageIds, "image-id", filter );
     final Predicate<? super ImageInfo> requestedAndAccessible = CloudMetadatas.filteringFor( ImageInfo.class )
         .byId( imageIds )
         .byOwningAccount( request.getOwnersSet() )
@@ -190,11 +196,13 @@ public class ComputeService implements Callable {
         .byPrivilegesWithoutOwner()
         .buildPredicate();
     final List<ImageDetails> imageDetailsList = Transactions.filteredTransform(
-        new ImageInfo(),
-        filter.asCriterion(),
-        filter.getAliases(),
-        requestedAndAccessible,
+        new ImageInfo( ),
+        persistenceFilter.asCriterion( ),
+        persistenceFilter.getAliases( ),
+        Predicates.and( new TrackingPredicate<ImageInfo>( imageIds ), requestedAndAccessible ),
         Images.TO_IMAGE_DETAILS );
+
+    errorIfNotFound( "InvalidAMIID.NotFound", "image", imageIds );
 
     final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( ImageInfo.class )
         .getResourceTagMap( AccountFullName.getInstance( ctx.getAccountNumber() ),
@@ -279,13 +287,15 @@ public class ComputeService implements Callable {
       } else {
         throw new EucalyptusCloudException( "invalid image attribute request." );
       }
-    } catch ( TransactionException | NoSuchElementException ex ) {
+    } catch ( final NoSuchElementException e ) {
+      throw new ComputeServiceClientException( "InvalidAMIID.NotFound", "The image '"+request.getImageId()+"' was not found" );
+    } catch ( final TransactionException ex ) {
       throw new EucalyptusCloudException( "Error handling image attribute request: " + ex.getMessage( ), ex );
     }
     return reply;
   }
 
-  public DescribeSecurityGroupsResponseType describe( final DescribeSecurityGroupsType request ) throws EucalyptusCloudException, MetadataException, TransactionException {
+  public DescribeSecurityGroupsResponseType describeSecurityGroups( final DescribeSecurityGroupsType request ) throws EucalyptusCloudException, MetadataException, TransactionException {
     final DescribeSecurityGroupsResponseType reply = request.getReply();
     final Context ctx = Contexts.lookup();
     final boolean showAll =
@@ -294,13 +304,15 @@ public class ComputeService implements Callable {
 
     NetworkGroups.createDefault( ctx.getUserFullName() ); //ensure the default group exists to cover some old broken installs
 
+    final List<String> normalizedIds = normalizeGroupIdentifiers( request.getSecurityGroupIdSet( ) );
     final Filters.FiltersBuilder builder = Filters.generateFor( request.getFilterSet( ), NetworkGroup.class );
     if ( ( request.getSecurityGroupSet( ).isEmpty( ) && !request.getSecurityGroupIdSet( ).isEmpty( ) ) ||
         ( !request.getSecurityGroupSet( ).isEmpty( ) && request.getSecurityGroupIdSet( ).isEmpty( ) )) {
       builder.withOptionalInternalFilter( "group-name", request.getSecurityGroupSet( ) );
-      builder.withOptionalInternalFilter( "group-id", normalizeGroupIdentifiers( request.getSecurityGroupIdSet( ) ) );
+      builder.withOptionalInternalFilter( "group-id", normalizedIds );
     }
     final Filter filter = builder.generate( );
+    final Filter persistenceFilter = getPersistenceFilter( NetworkGroup.class, normalizedIds, "group-id", filter );
     final Predicate<? super NetworkGroup> requestedAndAccessible =
         CloudMetadatas.filteringFor( NetworkGroup.class )
             .byPredicate( Predicates.or(
@@ -317,7 +329,7 @@ public class ComputeService implements Callable {
             .byPrivileges()
             .buildPredicate();
 
-    final OwnerFullName ownerFn = Contexts.lookup( ).isAdministrator( ) && showAll ?
+    final OwnerFullName ownerFn = Contexts.lookup( ).isAdministrator( ) && ( showAll || !normalizedIds.isEmpty( ) ) ?
         null :
         AccountFullName.getInstance( ctx.getAccountNumber( ) );
 
@@ -329,9 +341,12 @@ public class ComputeService implements Callable {
             try {
               return Transactions.filteredTransform(
                   NetworkGroup.withOwner( ownerFn ),
-                  filter.asCriterion(),
-                  filter.getAliases(),
-                  requestedAndAccessible,
+                  persistenceFilter.asCriterion( ),
+                  persistenceFilter.getAliases( ),
+                  Predicates.and(
+                      new TrackingPredicate<>( NetworkGroup.groupId( ), normalizedIds ),
+                      requestedAndAccessible
+                  ),
                   TypeMappers.lookup( NetworkGroup.class, SecurityGroupItemType.class ) );
             } catch ( TransactionException e ) {
               if ( Exceptions.isCausedBy( e, EntityNotFoundException.class ) ) {
@@ -342,6 +357,8 @@ public class ComputeService implements Callable {
             }
           }
         } ).apply( null );
+
+    errorIfNotFound( "InvalidGroup.NotFound", "security group", normalizedIds );
 
     final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( NetworkGroup.class )
         .getResourceTagMap( AccountFullName.getInstance( ctx.getAccountNumber( ) ),
@@ -365,18 +382,22 @@ public class ComputeService implements Callable {
     final Filter filter = Filters.generateFor( msg.getFilterSet(), VmInstance.class )
         .withOptionalInternalFilter( "instance-id", identifiers )
         .generate();
+    final Filter persistenceFilter = getPersistenceFilter( VmInstance.class, identifiers, "instance-id", filter );
     final Predicate<? super VmInstance> requestedAndAccessible = CloudMetadatas.filteringFor( VmInstance.class )
         .byId( identifiers ) // filters without wildcard support
         .byPredicate( filter.asPredicate() )
         .byPrivileges()
         .buildPredicate();
-    final Criterion criterion = filter.asCriterionWithConjunction( Restrictions.not( VmInstance.criterion( VmInstance.VmState.BURIED ) ) );
     final OwnerFullName ownerFullName = ( ctx.isAdministrator( ) && showAll )
         ? null
         : ctx.getUserFullName( ).asAccountFullName( );
     try ( final TransactionResource db = Entities.readOnlyDistinctTransactionFor( VmInstance.class ) ) {
-      final List<VmInstance> instances =
-          VmInstances.list( ownerFullName, criterion, filter.getAliases(), requestedAndAccessible );
+      final List<VmInstance> instances = VmInstances.list(
+          ownerFullName,
+          persistenceFilter.asCriterionWithConjunction( Restrictions.not( VmInstance.criterion( VmInstance.VmState.BURIED ) ) ),
+          persistenceFilter.getAliases( ),
+          Predicates.and( new TrackingPredicate<VmInstance>( identifiers ), requestedAndAccessible ) );
+      errorIfNotFound( "InvalidInstanceID.NotFound", "instance ID", identifiers );
       final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( VmInstance.class )
           .getResourceTagMap( AccountFullName.getInstance( ctx.getAccountNumber() ),
               Iterables.transform( instances, CloudMetadatas.toDisplayName() ) );
@@ -398,6 +419,7 @@ public class ComputeService implements Callable {
         }
       }
     } catch ( final Exception e ) {
+      Exceptions.findAndRethrow( e, ComputeServiceException.class );
       LOG.error( e );
       LOG.debug( e, e );
       throw new EucalyptusCloudException( e.getMessage( ) );
@@ -414,25 +436,29 @@ public class ComputeService implements Callable {
     final Filter filter = Filters.generateFor( msg.getFilterSet(), VmInstance.class, "status" )
         .withOptionalInternalFilter( "instance-id", identifiers )
         .generate();
+    final Filter persistenceFilter = getPersistenceFilter( VmInstance.class, "status", identifiers, "instance-id", filter );
     final Predicate<? super VmInstance> requestedAndAccessible = CloudMetadatas.filteringFor( VmInstance.class )
         .byId( identifiers ) // filters without wildcard support
         .byPredicate( includeAllInstances ? Predicates.<VmInstance>alwaysTrue() : VmInstance.VmState.RUNNING )
         .byPredicate( filter.asPredicate() )
         .byPrivileges()
         .buildPredicate();
-    final Criterion criterion = filter.asCriterionWithConjunction( Restrictions.not( VmInstance.criterion( VmInstance.VmState.BURIED ) ) );
     final OwnerFullName ownerFullName = ( ctx.isAdministrator( ) && showAll )
         ? null
         : ctx.getUserFullName( ).asAccountFullName( );
     try {
-      final List<VmInstance> instances =
-          VmInstances.list( ownerFullName, criterion, filter.getAliases(), requestedAndAccessible );
-
+      final List<VmInstance> instances = VmInstances.list(
+          ownerFullName,
+          persistenceFilter.asCriterionWithConjunction( Restrictions.not( VmInstance.criterion( VmInstance.VmState.BURIED ) ) ),
+          persistenceFilter.getAliases( ),
+          Predicates.and( new TrackingPredicate<VmInstance>( identifiers ), requestedAndAccessible ) );
+      errorIfNotFound( "InvalidInstanceID.NotFound", "instance ID", identifiers );
       Iterables.addAll(
           reply.getInstanceStatusSet().getItem(),
           Iterables.transform( instances, TypeMappers.lookup( VmInstance.class, InstanceStatusItemType.class ) ) );
 
     } catch ( final Exception e ) {
+      Exceptions.findAndRethrow( e, ComputeServiceException.class );
       LOG.error( e );
       LOG.debug( e, e );
       throw new EucalyptusCloudException( e.getMessage( ) );
@@ -518,28 +544,30 @@ public class ComputeService implements Callable {
   public DescribeKeyPairsResponseType describeKeyPairs( DescribeKeyPairsType request ) throws Exception {
     final DescribeKeyPairsResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
-    final boolean showAll = request.getKeySet( ).remove( "verbose" );
+    final List<String> keyNames = request.getKeySet( );
+    final boolean showAll = keyNames.remove( "verbose" );
     final OwnerFullName ownerFullName = ctx.isAdministrator( ) &&  showAll  ? null : Contexts.lookup( ).getUserFullName( ).asAccountFullName( );
     final Filter filter = Filters.generate( request.getFilterSet(), SshKeyPair.class );
+    final Filter persistenceFilter = getPersistenceFilter( SshKeyPair.class, keyNames, "key-name", filter );
     final Predicate<? super SshKeyPair> requestedAndAccessible = CloudMetadatas.filteringFor( SshKeyPair.class )
-        .byId( request.getKeySet( ) )
+        .byId( keyNames )
         .byPredicate( filter.asPredicate() )
         .byPrivileges()
         .buildPredicate();
-    final List<String> foundKeyNameList = new ArrayList<>( );
-    for ( final SshKeyPair kp : KeyPairs.list( ownerFullName, requestedAndAccessible, filter.asCriterion(), filter.getAliases() ) ) {
+    final Iterable<SshKeyPair> keyPairs = KeyPairs.list(
+        ownerFullName,
+        Predicates.and( new TrackingPredicate<SshKeyPair>( keyNames ), requestedAndAccessible ),
+        persistenceFilter.asCriterion( ),
+        persistenceFilter.getAliases( ) );
+    for ( final SshKeyPair kp : keyPairs ) {
       reply.getKeySet( ).add( new DescribeKeyPairsResponseItemType( kp.getDisplayName( ), kp.getFingerPrint( ) ) );
-      foundKeyNameList.add( kp.getDisplayName( ) );
     }
+    errorIfNotFound( "InvalidKeyPair.NotFound", "key pair", keyNames );
+    return reply;
+  }
 
-    if ( !request.getKeySet( ).isEmpty( ) && request.getKeySet( ).size( ) != reply.getKeySet( ).size( ) ) {
-      List<String> reverseRequestedKeySet = ImmutableList.copyOf( request.getKeySet() ).reverse( );
-      for ( String requestedKey : reverseRequestedKeySet ) {
-        if ( !foundKeyNameList.contains( requestedKey ) ) {
-          throw new ComputeServiceClientException( "InvalidKeyPair.NotFound", "The key pair '" + requestedKey + "' does not exist" );
-        }
-      }
-    }
+  public CopySnapshotResponseType copySnapshot( final CopySnapshotType request ) {
+    final CopySnapshotResponseType reply = request.getReply( );
     return reply;
   }
 
@@ -596,7 +624,6 @@ public class ComputeService implements Callable {
     return request.getReply( );
   }
 
-
   public CancelSpotInstanceRequestsResponseType cancelSpotInstanceRequests( CancelSpotInstanceRequestsType request ) {
     return request.getReply( );
   }
@@ -621,6 +648,26 @@ public class ComputeService implements Callable {
     return request.getReply( );
   }
 
+  public CancelSpotFleetRequestsResponseType cancelSpotFleetRequests( CancelSpotFleetRequestsType request ) {
+    return request.getReply( );
+  }
+
+  public DescribeSpotFleetInstancesResponseType describeSpotFleetInstances( DescribeSpotFleetInstancesType request ) {
+    return request.getReply( );
+  }
+
+  public DescribeSpotFleetRequestHistoryResponseType describeSpotFleetRequestHistory( DescribeSpotFleetRequestHistoryType request ) {
+    return request.getReply( );
+  }
+
+  public DescribeSpotFleetRequestsResponseType describeSpotFleetRequests( DescribeSpotFleetRequestsType request ) {
+    return request.getReply( );
+  }
+
+  public RequestSpotFleetResponseType requestSpotFleet( RequestSpotFleetType request ) {
+    return request.getReply( );
+  }
+
   /**
    *
    */
@@ -629,13 +676,20 @@ public class ComputeService implements Callable {
     final Context ctx = Contexts.lookup( );
 
     final boolean showAll = request.getVolumeSet( ).remove( "verbose" );
-    final AccountFullName ownerFullName = ( ctx.isAdministrator( ) && showAll ) ? null : ctx.getUserFullName( ).asAccountFullName( );
-    final Set<String> volumeIds = Sets.newHashSet( normalizeVolumeIdentifiers( request.getVolumeSet( ) ) );
+    final Set<String> volumeIds = Sets.newLinkedHashSet( normalizeVolumeIdentifiers( request.getVolumeSet( ) ) );
+    final AccountFullName ownerFullName = ( ctx.isAdministrator( ) && ( showAll || !volumeIds.isEmpty( ) ) ) ?
+        null :
+        ctx.getUserFullName( ).asAccountFullName( );
 
-    final Filter filter = Filters.generate( request.getFilterSet(), Volume.class );
+    final Filters.FiltersBuilder  filtersBuilder = Filters.generateFor( request.getFilterSet( ), Volume.class );
+    if ( !ctx.isAdministrator( ) ) {
+      filtersBuilder.withOptionalInternalFilter( "system-managed", Collections.singleton( "false" ) );
+    }
+    final Filter filter = filtersBuilder.generate( );
+    final Filter persistenceFilter = getPersistenceFilter( Volume.class, volumeIds, "volume-id", filter );
     final Predicate<? super Volume> requestedAndAccessible = CloudMetadatas.filteringFor( Volume.class )
         .byId( volumeIds )
-        .byPredicate( filter.asPredicate() )
+        .byPredicate( filter.asPredicate( ) )
         .byPrivileges()
         .buildPredicate();
 
@@ -645,9 +699,15 @@ public class ComputeService implements Callable {
         final Set<String> allowedVolumeIds = Sets.newHashSet();
         final ArrayList<com.eucalyptus.compute.common.Volume> replyVolumes = Lists.newArrayList();
         final List<VmInstance> vms = VmInstances.list( ownerFullName, Predicates.alwaysTrue() );
-        final List<Volume> volumes =
-            Entities.query( Volume.named( ownerFullName, null ), true, filter.asCriterion(), filter.getAliases() );
-        for ( final Volume foundVol : Iterables.filter(volumes, requestedAndAccessible )) {
+        final List<Volume> volumes = Entities.query(
+            Volume.named( ownerFullName, null ),
+            true,
+            persistenceFilter.asCriterion( ),
+            persistenceFilter.getAliases( ) );
+        final Iterable<Volume> filteredVolumes = Iterables.filter(
+            volumes,
+            Predicates.and( new TrackingPredicate<Volume>( volumeIds ), requestedAndAccessible ) );
+        for ( final Volume foundVol : filteredVolumes ) {
           allowedVolumeIds.add( foundVol.getDisplayName( ) );
           if ( State.ANNIHILATED.equals( foundVol.getState( ) ) ) {
             Entities.delete( foundVol );
@@ -676,16 +736,66 @@ public class ComputeService implements Callable {
 
     final Pair<Set<String>,ArrayList<com.eucalyptus.compute.common.Volume>> volumeIdsAndVolumes =
         Entities.asTransaction( Volume.class, populateVolumeSet ).apply( volumeIds );
+    errorIfNotFound( "InvalidVolume.NotFound", "volume", volumeIds );
     @SuppressWarnings( "ConstantConditions" )
     final Set<String> allowedVolumeIds = volumeIdsAndVolumes.getLeft();
     reply.setVolumeSet( volumeIdsAndVolumes.getRight() );
 
-    final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( Volume.class )
+    Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( Volume.class )
         .getResourceTagMap( AccountFullName.getInstance( ctx.getAccountNumber( ) ), allowedVolumeIds );
     for ( final com.eucalyptus.compute.common.Volume volume : reply.getVolumeSet() ) {
       Tags.addFromTags( volume.getTagSet(), ResourceTag.class, tagsMap.get( volume.getVolumeId() ) );
     }
 
+    return reply;
+  }
+
+  public DescribeVolumeStatusResponseType describeVolumeStatus( final DescribeVolumeStatusType request ) throws EucalyptusCloudException {
+    final DescribeVolumeStatusResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final boolean showAll = request.getVolumeId( ).remove( "verbose" );
+    final Set<String> volumeIds = Sets.newLinkedHashSet( normalizeVolumeIdentifiers( request.getVolumeId( ) ) );
+    final AccountFullName ownerFullName = ( ctx.isAdministrator( ) && ( showAll || !volumeIds.isEmpty( ) ) ) ?
+        null :
+        ctx.getUserFullName( ).asAccountFullName( );
+    final Filters.FiltersBuilder  filtersBuilder = Filters.generateFor( request.getFilterSet( ), Volume.class, "status"  );
+    if ( !ctx.isAdministrator( ) ) {
+      filtersBuilder.withOptionalInternalFilter( "system-managed", Collections.singleton( "false" ) );
+    }
+    final Filter filter = filtersBuilder.generate( );
+    final Filter persistenceFilter = getPersistenceFilter( Volume.class, "status", volumeIds, "volume-id", filter );
+    final Predicate<? super Volume> requestedAndAccessible = CloudMetadatas.filteringFor( Volume.class )
+        .byId( volumeIds )
+        .byPredicate( filter.asPredicate() )
+        .byPrivileges( )
+        .buildPredicate( );
+    final Function<Volume,VolumeStatusItemType> volumeTransform =
+        TypeMappers.lookup( Volume.class, VolumeStatusItemType.class );
+    final Function<Set<String>, ArrayList<VolumeStatusItemType>> populateVolumeSet
+        = new Function<Set<String>, ArrayList<VolumeStatusItemType>>( ) {
+      public ArrayList<VolumeStatusItemType> apply( final Set<String> input ) {
+        final ArrayList<VolumeStatusItemType> replyVolumes = Lists.newArrayList();
+        final List<Volume> volumes = Entities.query(
+            Volume.named( ownerFullName, null ),
+            true,
+            persistenceFilter.asCriterion( ),
+            persistenceFilter.getAliases( ) );
+        final Iterable<Volume> filteredVolumes = Iterables.filter(
+            volumes,
+            Predicates.and( new TrackingPredicate<Volume>( volumeIds ), requestedAndAccessible ) );
+        for ( final Volume foundVol : filteredVolumes ) {
+          if ( State.ANNIHILATED.equals( foundVol.getState( ) ) ) {
+            Entities.delete( foundVol );
+          }
+          replyVolumes.add( volumeTransform.apply( foundVol ) );
+        }
+        return replyVolumes;
+      }
+    };
+    final ArrayList<VolumeStatusItemType> volumeStatusItemTypes =
+        Entities.asTransaction( Volume.class, populateVolumeSet ).apply( volumeIds );
+    errorIfNotFound( "InvalidVolume.NotFound", "volume", volumeIds );
+    reply.setVolumeStatusSet( volumeStatusItemTypes );
     return reply;
   }
 
@@ -701,9 +811,10 @@ public class ComputeService implements Callable {
       ownersSet.add( requestAccountId );
     }
     final Filter filter = Filters.generate( request.getFilterSet(), Snapshot.class );
-    try ( final TransactionResource tx = Entities.transactionFor( Snapshot.class ) ){
+    final Filter persistenceFilter = getPersistenceFilter( Snapshot.class, snapshotIds, "snapshot-id", filter );
+    try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( Snapshot.class ) ){
       final List<Snapshot> unfilteredSnapshots =
-          Entities.query( Snapshot.named( null, null ), true, filter.asCriterion(), filter.getAliases() );
+          Entities.query( Snapshot.named( null, null ), true, persistenceFilter.asCriterion(), persistenceFilter.getAliases() );
       final Predicate<? super Snapshot> requestedAndAccessible = CloudMetadatas.filteringFor( Snapshot.class )
           .byId( snapshotIds )
           .byOwningAccount( request.getOwnersSet( ) )
@@ -713,7 +824,10 @@ public class ComputeService implements Callable {
           .byPrivilegesWithoutOwner( )
           .buildPredicate( );
 
-      final Iterable<Snapshot> snapshots = Iterables.filter( unfilteredSnapshots, requestedAndAccessible );
+      final List<Snapshot> snapshots = Lists.newArrayList( Iterables.filter(
+          unfilteredSnapshots,
+          Predicates.and( new TrackingPredicate<>( snapshotIds ), requestedAndAccessible ) ) );
+      errorIfNotFound( "InvalidSnapshot.NotFound", "snapshot", snapshotIds );
       final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( Snapshot.class )
           .getResourceTagMap( AccountFullName.getInstance( ctx.getAccountNumber( ) ),
               Iterables.transform( snapshots, CloudMetadatas.toDisplayName() ) );
@@ -770,7 +884,23 @@ public class ComputeService implements Callable {
     return request.getReply( );
   }
 
-  public DescribeVolumeStatusResponseType describeVolumeStatus( DescribeVolumeStatusType request ) {
+  public CancelImportTaskResponseType cancelImportTask( CancelImportTaskType request ) {
+    return request.getReply( );
+  }
+
+  public DescribeImportImageTasksResponseType describeImportImageTasks( DescribeImportImageTasksType request ) {
+    return request.getReply( );
+  }
+
+  public DescribeImportSnapshotTasksResponseType describeImportSnapshotTasks( DescribeImportSnapshotTasksType request ) {
+    return request.getReply( );
+  }
+
+  public ImportImageResponseType importImage( ImportImageType request ) {
+    return request.getReply( );
+  }
+
+  public ImportSnapshotResponseType importSnapshot( ImportSnapshotType request ) {
     return request.getReply( );
   }
 
@@ -1017,6 +1147,66 @@ public class ComputeService implements Callable {
     return reply;
   }
 
+  public DescribeMovingAddressesResponseType describeMovingAddresses( DescribeMovingAddressesType request ) {
+    return request.getReply( );
+  }
+
+  public MoveAddressToVpcResponseType moveAddressToVpc( MoveAddressToVpcType request ) {
+    return request.getReply( );
+  }
+
+  public RestoreAddressToClassicResponseType restoreAddressToClassic( RestoreAddressToClassicType request ) {
+    return request.getReply( );
+  }
+
+  public AttachClassicLinkVpcResponseType attachClassicLinkVpc( AttachClassicLinkVpcType request ) {
+    return request.getReply( );
+  }
+
+  public DescribeClassicLinkInstancesResponseType describeClassicLinkInstances( DescribeClassicLinkInstancesType request ) {
+    return request.getReply( );
+  }
+
+  public DescribeVpcClassicLinkResponseType describeVpcClassicLink( DescribeVpcClassicLinkType request ) {
+    return request.getReply( );
+  }
+
+  public DetachClassicLinkVpcResponseType detachClassicLinkVpc( DetachClassicLinkVpcType request ) {
+    return request.getReply( );
+  }
+
+  public DisableVpcClassicLinkResponseType disableVpcClassicLink( DisableVpcClassicLinkType request ) {
+    return request.getReply( );
+  }
+
+  public EnableVpcClassicLinkResponseType enableVpcClassicLink( EnableVpcClassicLinkType request ) {
+    return request.getReply( );
+  }
+
+  public CreateVpcEndpointResponseType createVpcEndpoint( CreateVpcEndpointType request ) {
+    return request.getReply( );
+  }
+
+  public DeleteVpcEndpointsResponseType deleteVpcEndpoints( DeleteVpcEndpointsType request ) {
+    return request.getReply( );
+  }
+
+  public DescribePrefixListsResponseType describePrefixLists( DescribePrefixListsType request ) {
+    return request.getReply( );
+  }
+
+  public DescribeVpcEndpointServicesResponseType describeVpcEndpointServices( DescribeVpcEndpointServicesType request ) {
+    return request.getReply( );
+  }
+
+  public DescribeVpcEndpointsResponseType describeVpcEndpoints( DescribeVpcEndpointsType request ) {
+    return request.getReply( );
+  }
+
+  public ModifyVpcEndpointResponseType modifyVpcEndpoint( ModifyVpcEndpointType request ) {
+    return request.getReply( );
+  }
+
   @Override
   public ComputeMessage onCall( final MuleEventContext muleEventContext ) throws EucalyptusCloudException {
     final ComputeMessage request = (ComputeMessage) muleEventContext.getMessage( ).getPayload( );
@@ -1032,7 +1222,7 @@ public class ComputeService implements Callable {
       LOG.debug(response.toSimpleString());
       return response;
     } catch ( Exception e ) {
-      handleRemoteException( e );
+      handleServiceException( e );
       Exceptions.findAndRethrow( e, EucalyptusWebServiceException.class, EucalyptusCloudException.class );
       throw new EucalyptusCloudException( e );
     }
@@ -1048,28 +1238,59 @@ public class ComputeService implements Callable {
       final Function<AT,String> idFunction,
       final Lister<AP> lister ) throws EucalyptusCloudException {
     final boolean showAll = ids.remove( "verbose" );
+    final List<String> normalizedIds = identifier.normalize( ids );
     final Context ctx = Contexts.lookup( );
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
-    final OwnerFullName ownerFullName = ctx.isAdministrator( ) && showAll ? null : accountFullName;
+    final OwnerFullName ownerFullName = ctx.isAdministrator( ) && ( showAll || !normalizedIds.isEmpty( ) ) ?
+        null :
+        accountFullName;
     final Filter filter = Filters.generate( filters, persistent );
+    final Filter persistenceFilter =
+        getPersistenceFilter( persistent, normalizedIds, identifier.getFilterName( ), filter );
     final Predicate<? super AP> requestedAndAccessible = CloudMetadatas.filteringFor( persistent )
-        .byId( identifier.normalize( ids ) )
+        .byId( normalizedIds )
         .byPredicate( filter.asPredicate( ) )
         .byPrivileges()
         .buildPredicate();
 
-    try {
+    try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( persistent ) ) {
       results.addAll( lister.list(
           ownerFullName,
-          filter.asCriterion( ),
-          filter.getAliases( ),
-          requestedAndAccessible,
+          persistenceFilter.asCriterion( ),
+          persistenceFilter.getAliases( ),
+          Predicates.and( new TrackingPredicate<>( normalizedIds ), requestedAndAccessible ),
           TypeMappers.lookup( persistent, api ) ) );
+
+      identifier.errorIfNotFound( normalizedIds );
 
       populateTags( accountFullName, persistent, results, idFunction );
     } catch ( Exception e ) {
       throw handleException( e );
     }
+  }
+
+  private static <AP extends AbstractPersistent> Filter getPersistenceFilter(
+      final Class<AP> persistent,
+      final Collection<String> identifiers,
+      final String identifierFilterName,
+      final Filter filter
+  ) throws InvalidFilterException {
+    return getPersistenceFilter( persistent, Filters.DEFAULT_FILTERS, identifiers, identifierFilterName, filter );
+  }
+
+  private static <AP extends AbstractPersistent> Filter getPersistenceFilter(
+      final Class<AP> persistent,
+      final String qualifier,
+      final Collection<String> identifiers,
+      final String identifierFilterName,
+      final Filter filter
+  ) throws InvalidFilterException {
+    return !identifiers.isEmpty( ) ?
+        Filters.generateFor(
+            Collections.<com.eucalyptus.compute.common.Filter>emptySet( ),
+            persistent,
+            qualifier ).withOptionalInternalFilter( identifierFilterName, identifiers ).generate( ) :
+        filter;
   }
 
   private static boolean canModifyImage( final ImageInfo imgInfo ) {
@@ -1177,29 +1398,40 @@ public class ComputeService implements Callable {
   }
 
   private enum Identifier {
-    acl( "networkAcl" ),
-    aclassoc( "networkAclAssociation" ),
-    dopt( "DHCPOption" ),
-    eni( "networkInterface" ),
-    igw( "internetGateway" ),
-    rtb( "routeTable" ),
-    rtbassoc( "routeTableAssociation" ),
-    subnet( "subnet" ),
-    vpc( "vpc" ),
+    acl( "networkAcl", "network-acl-id", "InvalidNetworkAclID.NotFound" ),
+    dopt( "DHCPOption", "dhcp-options-id", "InvalidDhcpOptionID.NotFound" ),
+    eni( "networkInterface", "network-interface-id", "InvalidNetworkInterfaceID.NotFound" ),
+    igw( "internetGateway", "internet-gateway-id", "InvalidInternetGatewayID.NotFound" ),
+    rtb( "routeTable", "route-table-id", "InvalidRouteTableID.NotFound" ),
+    subnet( "subnet", "subnet-id", "InvalidSubnetID.NotFound" ),
+    vpc( "vpc", "vpc-id", "InvalidVpcID.NotFound" ),
     ;
 
     private final String code;
     private final String defaultParameter;
     private final String defaultListParameter;
+    private final String filterName;
+    private final String notFoundErrorCode;
 
-    Identifier( final String defaultParameter ) {
-      this( defaultParameter, defaultParameter + "s" );
+    Identifier( final String defaultParameter, final String filterName, final String notFoundErrorCode ) {
+      this( defaultParameter, defaultParameter + "s", filterName, notFoundErrorCode );
     }
 
-    Identifier( final String defaultParameter, final String defaultListParameter ) {
+    Identifier(
+        final String defaultParameter,
+        final String defaultListParameter,
+        final String filterName,
+        final String notFoundErrorCode
+    ) {
       this.code = "InvalidParameterValue";
       this.defaultParameter = defaultParameter;
       this.defaultListParameter = defaultListParameter;
+      this.filterName = filterName;
+      this.notFoundErrorCode = notFoundErrorCode;
+    }
+
+    public String getFilterName( ) {
+      return filterName;
     }
 
     public String generate( ) {
@@ -1227,6 +1459,40 @@ public class ComputeService implements Callable {
             code,
             "Value ("+e.getIdentifier()+") for parameter "+parameter+" is invalid. Expected: '"+name()+"-...'." );
       }
+    }
+
+    public void errorIfNotFound( final Iterable<String> identifiers ) throws EucalyptusCloudException {
+      ComputeService.errorIfNotFound( notFoundErrorCode, defaultParameter + " ID", identifiers );
+
+      if ( Iterables.size( identifiers ) == 1 ) {
+        throw new ComputeServiceClientException(
+            notFoundErrorCode,
+            "The "+defaultParameter+" ID '"+Iterables.getOnlyElement( identifiers )+"' does not exist" );
+      } else if ( !Iterables.isEmpty( identifiers ) ) {
+        final Iterable<String> quotedIdentifiers =
+            Iterables.transform( identifiers, Functions.compose( append( "'" ), prepend( "'" ) ) );
+        throw new ComputeServiceClientException(
+            notFoundErrorCode,
+            "The "+defaultParameter+" IDs "+ Joiner.on( ", ").join( quotedIdentifiers ) +" do not exist" );
+      }
+    }
+  }
+
+  private static void errorIfNotFound(
+      final String notFoundErrorCode,
+      final String identifierDescription,
+      final Iterable<String> identifiers
+  ) throws EucalyptusCloudException {
+    if ( Iterables.size( identifiers ) == 1 ) {
+      throw new ComputeServiceClientException(
+          notFoundErrorCode,
+          "The "+identifierDescription+" '"+Iterables.getOnlyElement( identifiers )+"' does not exist" );
+    } else if ( !Iterables.isEmpty( identifiers ) ) {
+      final Iterable<String> quotedIdentifiers =
+          Iterables.transform( identifiers, Functions.compose( append( "'" ), prepend( "'" ) ) );
+      throw new ComputeServiceClientException(
+          notFoundErrorCode,
+          "The "+identifierDescription+"s "+ Joiner.on( ", ").join( quotedIdentifiers ) +" do not exist" );
     }
   }
 
@@ -1276,21 +1542,19 @@ public class ComputeService implements Callable {
   }
 
   @SuppressWarnings( "ThrowableResultOfMethodCallIgnored" )
-  private void handleRemoteException( final Exception e ) throws EucalyptusCloudException {
-    final EucalyptusRemoteFault remoteFault = Exceptions.findCause( e, EucalyptusRemoteFault.class );
-    if ( remoteFault != null ) {
-      final HttpResponseStatus status = Objects.firstNonNull( remoteFault.getStatus(), HttpResponseStatus.INTERNAL_SERVER_ERROR );
-      final String code = remoteFault.getFaultCode( );
-      final String message = remoteFault.getFaultDetail( );
-      switch( status.getCode( ) ) {
+  private void handleServiceException( final Exception e ) throws EucalyptusCloudException {
+    final Optional<AsyncWebServiceError> serviceErrorOption = AsyncExceptions.asWebServiceError( e );
+    if ( serviceErrorOption.isPresent( ) ) {
+      final AsyncWebServiceError serviceError = serviceErrorOption.get( );
+      switch( serviceError.getHttpErrorCode( ) ) {
         case 400:
-          throw new ComputeServiceClientException( code, message );
+          throw new ComputeServiceClientException( serviceError.getCode(), serviceError.getMessage( ) );
         case 403:
-          throw new ComputeServiceAuthorizationException( code, message );
+          throw new ComputeServiceAuthorizationException( serviceError.getCode(), serviceError.getMessage( ) );
         case 503:
-          throw new ComputeServiceUnavailableException( message );
+          throw new ComputeServiceUnavailableException( serviceError.getMessage( ) );
         default:
-          throw new ComputeServiceException( code, message );
+          throw new ComputeServiceException( serviceError.getCode( ), serviceError.getMessage( ) );
       }
     }
   }
@@ -1325,5 +1589,30 @@ public class ComputeService implements Callable {
       exception.initCause( e );
     }
     throw exception;
+  }
+
+  private static class TrackingPredicate<T extends RestrictedType> implements Predicate<T> {
+    private final Function<? super T,String> idFunction;
+    private final Collection<String> identifiers;
+
+    public TrackingPredicate(
+        final Collection<String> identifiers
+    ) {
+      this( CloudMetadatas.toDisplayName( ), identifiers );
+    }
+
+    public TrackingPredicate(
+        final Function<? super T, String> idFunction,
+        final Collection<String> identifiers
+    ) {
+      this.idFunction = idFunction;
+      this.identifiers = identifiers;
+    }
+
+    @Override
+    public boolean apply( @Nullable final T t ) {
+      if ( t != null ) identifiers.remove( idFunction.apply( t ) );
+      return true;
+    }
   }
 }

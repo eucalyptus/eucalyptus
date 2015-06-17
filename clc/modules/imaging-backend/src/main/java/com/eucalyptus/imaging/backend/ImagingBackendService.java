@@ -32,6 +32,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Context;
@@ -52,7 +53,9 @@ import com.eucalyptus.imaging.common.backend.msgs.ImportImageType;
 import com.eucalyptus.imaging.common.backend.msgs.PutInstanceImportTaskStatusResponseType;
 import com.eucalyptus.imaging.common.backend.msgs.PutInstanceImportTaskStatusType;
 import com.eucalyptus.imaging.common.ImagingBackend;
+import com.eucalyptus.resources.client.Ec2Client;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.ImagingSupport;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
@@ -60,6 +63,7 @@ import com.eucalyptus.compute.common.internal.vm.VmInstance.Reason;
 import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 public class ImagingBackendService {
   private static Logger LOG = Logger.getLogger( ImagingBackendService.class );
@@ -179,7 +183,6 @@ public class ImagingBackendService {
   public PutInstanceImportTaskStatusResponseType PutInstanceImportTaskStatus( PutInstanceImportTaskStatusType request ) throws EucalyptusCloudException {
     final PutInstanceImportTaskStatusResponseType reply = request.getReply( );
     final Context context = Contexts.lookup();
-    
     try{
       if ( ! ( context.getUser().isSystemAdmin() || ( context.isAdministrator() && Permissions.isAuthorized(
           VENDOR_IMAGINGSERVICE,
@@ -262,6 +265,7 @@ public class ImagingBackendService {
           if(imagingTask instanceof VolumeImagingTask){
             try{
               ImagingTasks.updateVolumeStatus((VolumeImagingTask)imagingTask, volumeId, ImportTaskState.COMPLETED, null);
+              Volumes.setSystemManagedFlag(null, volumeId, false);
             }catch(final Exception ex){
               ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
                   ImportTaskState.FAILED, ImportTaskState.STATE_MSG_FAILED_UNEXPECTED);
@@ -288,8 +292,8 @@ public class ImagingBackendService {
 
         case FAILED:
           String stateMsg = ImportTaskState.STATE_MSG_CONVERSION_FAILED;
-          if(request.getStatusMessage()!=null)
-            stateMsg = request.getStatusMessage();
+          if(request.getMessage()!=null)
+            stateMsg = request.getMessage();
           ImagingTasks.setState(imagingTask, ImportTaskState.FAILED, stateMsg);
           LOG.warn(String.format("Worker reported failed conversion: %s-%s", stateMsg, request.getErrorCode() !=null ? request.getErrorCode() : "no error code"));
           final String errorCode = request.getErrorCode();
@@ -310,13 +314,7 @@ public class ImagingBackendService {
                 }
               }
             }
-            LOG.debug("Image that failed conversion: " + imageId);
-            if ( imageId != null ) {
-              for( VmInstance vm : VmInstances.list( new InstanceByImageId(imageId)) ) {
-                LOG.debug("Shutting down instance: " + vm.getInstanceId());
-                VmInstances.setState( vm, VmState.SHUTTING_DOWN, Reason.FAILED );
-              }
-            }
+            ImagingSupport.terminateInstancesWaitingImageConversion(imageId);
           }
           break;
         }
@@ -330,17 +328,6 @@ public class ImagingBackendService {
       LOG.warn(String.format("Imaging task %s has been cancelled", request.getImportTaskId()));
     }
     return reply;
-  }
-
-  private class InstanceByImageId implements Predicate<VmInstance> {
-    private String imageId;
-    public InstanceByImageId(String imageId) {
-      this.imageId = imageId;
-    }
-    @Override
-    public boolean apply( final VmInstance input ) {
-      return imageId.equals(input.getImageId());
-    }
   }
 
   public GetInstanceImportTaskResponseType GetInstanceImportTask( GetInstanceImportTaskType request ) throws EucalyptusCloudException {

@@ -41,6 +41,7 @@ import com.eucalyptus.network.NetworkMode
 import com.eucalyptus.network.PrivateAddresses
 import com.eucalyptus.util.Exceptions
 import com.eucalyptus.util.UpperCamelPropertyNamingStrategy
+import com.eucalyptus.vm.VmInstances
 import com.google.common.base.Objects as GObjects
 import com.google.common.base.Optional
 import com.google.common.base.Predicate
@@ -177,6 +178,23 @@ class NetworkConfigurations {
     }
   }
 
+  static String getMacPrefix( ) {
+    getMacPrefix( NetworkConfigurations.networkConfiguration )
+  }
+
+  static String getMacPrefix( final Optional<NetworkConfiguration> configuration ) {
+    String macPrefix = VmInstances.MAC_PREFIX
+    if ( configuration.isPresent( ) ) {
+      final NetworkConfiguration exploded = explode( configuration.get( ) )
+      if ( 1 == exploded?.clusters?.size( ) && exploded.clusters[0].macPrefix ) {
+        macPrefix = exploded.clusters[0].macPrefix
+      } else if ( exploded.macPrefix ) {
+        macPrefix = exploded.macPrefix
+      }
+    }
+    macPrefix
+  }
+
   static Iterable<Integer> getPrivateAddresses( NetworkConfiguration configuration, String clusterName ) {
     Lists.newArrayList( NetworkConfigurations.iterateRanges( NetworkConfigurations.getPrivateAddressRanges( configuration, clusterName ) ) )
   }
@@ -247,7 +265,7 @@ class NetworkConfigurations {
     // Populate values at cluster level
     clusters.each{ Cluster cluster ->  cluster.with{
       if ( !macPrefix ) {
-        macPrefix = configuration.macPrefix
+        macPrefix = configuration.macPrefix?:VmInstances.MAC_PREFIX
       }
 
       // EDGE mode configuration

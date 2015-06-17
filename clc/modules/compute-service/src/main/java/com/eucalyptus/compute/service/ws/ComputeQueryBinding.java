@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,7 +34,7 @@ import com.eucalyptus.ws.protocol.OperationParameter;
 public class ComputeQueryBinding extends BaseQueryBinding<OperationParameter> {
 
   static final String COMPUTE_NAMESPACE_PATTERN = "http://ec2.amazonaws.com/doc/%s/";
-  static final String COMPUTE_DEFAULT_VERSION = "2014-10-01";
+  static final String COMPUTE_DEFAULT_VERSION = "2015-04-15";
   static final String COMPUTE_DEFAULT_NAMESPACE = String.format( COMPUTE_NAMESPACE_PATTERN, COMPUTE_DEFAULT_VERSION );
 
   public ComputeQueryBinding( ) {

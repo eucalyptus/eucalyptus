@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -233,7 +233,6 @@ public class Snapshot extends EucalyptusData {
   ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
 }
 
-//TODO:ADDED
 public class CreateVolumePermissionOperationType extends EucalyptusData {
     @HttpEmbedded( multiple = true )
     ArrayList<CreateVolumePermissionItemType> add = Lists.newArrayList()
@@ -431,7 +430,7 @@ public class DescribeVolumeAttributeResponseType extends BlockVolumeMessage {
 }
 
 public class DescribeVolumeStatusType extends BlockVolumeMessage {
-  ArrayList<String> volumeId
+  ArrayList<String> volumeId = Lists.newArrayList( )
   Integer maxResults
   String nextToken
   @HttpParameterMapping (parameter = "Filter")
@@ -463,3 +462,14 @@ public class ModifyVolumeAttributeType extends BlockVolumeMessage {
 }
 
 public class ModifyVolumeAttributeResponseType extends BlockVolumeMessage { }
+
+class CopySnapshotType extends BlockSnapshotMessage {
+  String description
+  String destinationRegion
+  String presignedUrl
+  String sourceRegion
+  String sourceSnapshotId
+}
+
+class CopySnapshotResponseType extends BlockSnapshotMessage {
+}

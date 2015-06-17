@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -83,11 +83,14 @@ import com.eucalyptus.compute.common.CloudMetadata.VolumeMetadata;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.VolumeStatusItemType;
 import com.eucalyptus.compute.common.internal.blockstorage.State;
 import com.eucalyptus.compute.common.internal.blockstorage.Volume;
 import com.eucalyptus.compute.common.internal.blockstorage.VolumeTag;
 import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.ListenerRegistry;
@@ -100,11 +103,13 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.RestrictedTypes.UsageMetricFunction;
+import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
 import com.eucalyptus.compute.common.internal.tags.FilterSupport;
 import com.google.common.base.Function;
+import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.cloud.VolumeSizeExceededException;
@@ -204,7 +209,19 @@ public class Volumes {
       }
     }
   }
-  
+
+  public static void setSystemManagedFlag (final OwnerFullName ownerFullName,
+      final String volumeId, boolean systemManaged) throws NoSuchElementException {
+    try ( final TransactionResource db = Entities.transactionFor( Volume.class ) ) {
+      Volume volume = Entities.uniqueResult( Volume.named( ownerFullName, volumeId ) );
+      volume.setSystemManaged(systemManaged);
+      db.commit();
+    } catch ( final TransactionException ex ) {
+      LOG.debug( ex, ex );
+      throw Exceptions.toUndeclared( ex );
+    }
+  }
+
   public static Volume createStorageVolume( final ServiceConfiguration sc, final UserFullName owner, final String snapId, final Integer newSize, final BaseMessage request ) throws ExecutionException {
     final String newId = ResourceIdentifiers.generateString( Volume.ID_PREFIX );
     LOG.debug("Creating volume");
@@ -311,29 +328,67 @@ public class Volumes {
       LOG.error("Error creating/inserting reporting event " + (actionInfo == null ? "null" : actionInfo.getAction().toString()) + " for volume " + (volume == null ? "null" : volume.getDisplayName()), e);
     }
   }
-  
+
+  @TypeMapper
+  public enum VolumeToVolumeStatusItemTypeTransform implements Function<Volume, VolumeStatusItemType> {
+    INSTANCE;
+
+    @Override
+    public VolumeStatusItemType apply( final Volume volume ) {
+      final VolumeStatusItemType status = new VolumeStatusItemType( );
+      status.setAvailabilityZone( volume.getPartition( ) );
+      status.setVolumeId( volume.getDisplayName( ) );
+      status.setStatus( "ok" );
+      status.setIoEnabledStatus( "passed" );
+      return status;
+    }
+  }
+
   public static class VolumeFilterSupport extends FilterSupport<Volume>{
-	  public VolumeFilterSupport(){
-		  super( builderFor(Volume.class)
-				  .withTagFiltering( VolumeTag.class, "volume" )
-				  .withDateProperty("attachment.attach-time", FilterDateFunctions.ATTACHMENT_ATTACH_TIME)
-				  .withBooleanProperty("attachment.delete-on-termination", FilterBooleanFunctions.ATTACHMENT_DELETE_ON_TERMINATION)
-				  .withStringProperty("attachment.device", FilterStringFunctions.ATTACHMENT_DEVICE)
-				  .withStringProperty("attachment.instance-id", FilterStringFunctions.ATTACHMENT_INSTANCE_ID)
-				  .withStringProperty("attachment.status", FilterStringFunctions.ATTACHMENT_STATUS)
-				  .withStringProperty("availability-zone", FilterStringFunctions.AVAILABILITY_ZONE)
-				  .withDateProperty("create-time", FilterDateFunctions.CREATE_TIME)
-				  .withStringProperty("size", FilterStringFunctions.SIZE)
-				  .withStringProperty("snapshot-id", FilterStringFunctions.SNAPSHOT_ID)
-				  .withStringProperty("status", FilterStringFunctions.STATUS)
-				  .withStringProperty("volume-id", FilterStringFunctions.VOLUME_ID)
-				  .withConstantProperty("volume-type", "standard")
-				  .withPersistenceFilter( "availability-zone", "partition" )
-				  .withPersistenceFilter( "create-time", "creationTimestamp", PersistenceFilter.Type.Date )
-				  .withPersistenceFilter( "size", "size", PersistenceFilter.Type.Integer )
-				  .withPersistenceFilter( "snapshot-id", "parentSnapshot" )
-				  .withPersistenceFilter( "volume-id", "displayName" ) );
-	  }
+    public VolumeFilterSupport(){
+      super( builderFor( Volume.class )
+          .withTagFiltering( VolumeTag.class, "volume" )
+          .withDateProperty( "attachment.attach-time", FilterDateFunctions.ATTACHMENT_ATTACH_TIME )
+          .withBooleanProperty( "attachment.delete-on-termination", FilterBooleanFunctions.ATTACHMENT_DELETE_ON_TERMINATION )
+          .withStringProperty( "attachment.device", FilterStringFunctions.ATTACHMENT_DEVICE )
+          .withStringProperty( "attachment.instance-id", FilterStringFunctions.ATTACHMENT_INSTANCE_ID )
+          .withStringProperty( "attachment.status", FilterStringFunctions.ATTACHMENT_STATUS )
+          .withStringProperty( "availability-zone", FilterStringFunctions.AVAILABILITY_ZONE )
+          .withDateProperty( "create-time", FilterDateFunctions.CREATE_TIME )
+          .withStringProperty( "size", FilterStringFunctions.SIZE )
+          .withStringProperty( "snapshot-id", FilterStringFunctions.SNAPSHOT_ID )
+          .withStringProperty( "status", FilterStringFunctions.STATUS )
+          .withInternalBooleanProperty( "system-managed", FilterBooleanFunctions.SYSTEM_MANAGED )
+          .withStringProperty( "volume-id", FilterStringFunctions.VOLUME_ID )
+          .withConstantProperty( "volume-type", "standard" )
+          .withPersistenceFilter( "availability-zone", "partition" )
+          .withPersistenceFilter( "create-time", "creationTimestamp", PersistenceFilter.Type.Date )
+          .withPersistenceFilter( "size", "size", PersistenceFilter.Type.Integer )
+          .withPersistenceFilter( "snapshot-id", "parentSnapshot" )
+          .withPersistenceFilter( "volume-id", "displayName" ) );
+    }
+  }
+
+  public static class VolumeStatusFilterSupport extends FilterSupport<Volume>{
+    public VolumeStatusFilterSupport( ){
+      super( qualifierBuilderFor( Volume.class, "status" )
+          .withUnsupportedProperty( "action.code" )
+          .withUnsupportedProperty( "action.description" )
+          .withUnsupportedProperty( "action.event-id" )
+          .withStringProperty( "availability-zone", FilterStringFunctions.AVAILABILITY_ZONE )
+          .withUnsupportedProperty( "event.description" )
+          .withUnsupportedProperty( "event.event-id" )
+          .withUnsupportedProperty( "event.event-type" )
+          .withUnsupportedProperty( "event.not-after" )
+          .withUnsupportedProperty( "event.not-before" )
+          .withInternalBooleanProperty( "system-managed", FilterBooleanFunctions.SYSTEM_MANAGED )
+          .withInternalStringProperty( "volume-id", CloudMetadatas.toDisplayName( ) )
+          .withConstantProperty( "volume-status.details-name", "io-enabled" )
+          .withConstantProperty( "volume-status.details-status", "passed" )
+          .withConstantProperty( "volume-status.status", "ok" )
+          .withPersistenceFilter( "availability-zone", "partition" )
+          .withPersistenceFilter( "volume-id", "displayName" ) );
+    }
   }
 
   private enum FilterStringFunctions implements Function<Volume,String> {
@@ -422,16 +477,22 @@ public class Volumes {
 	  }
   }
   private enum FilterBooleanFunctions implements Function<Volume, Boolean> {
-	  ATTACHMENT_DELETE_ON_TERMINATION {
-		@Override
-		public Boolean apply(final Volume vol){
-			 try{
-				 VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment(vol.getDisplayName());
-				 return attachment.getDeleteOnTerminate();
-			 }catch (final Throwable e){
-				 return false;
-			 }
-		}
-	  }
+    ATTACHMENT_DELETE_ON_TERMINATION {
+      @Override
+      public Boolean apply(final Volume vol){
+         try{
+           VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment(vol.getDisplayName());
+           return attachment.getDeleteOnTerminate();
+         }catch (final Throwable e){
+           return false;
+         }
+      }
+    },
+    SYSTEM_MANAGED {
+      @Override
+      public Boolean apply(final Volume vol){
+        return Objects.firstNonNull( vol.getSystemManaged( ), Boolean.FALSE );
+      }
+    },
   }
 }

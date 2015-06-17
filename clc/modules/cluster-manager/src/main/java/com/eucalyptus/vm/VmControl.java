@@ -471,7 +471,7 @@ public class VmControl {
         ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, v.lookupPartition( ) );
         cluster = Clusters.lookup( ccConfig );
       } catch ( final NoSuchElementException e1 ) {
-        throw new EucalyptusCloudException( "Failed to find cluster info for '" + v.getPartition( ) + "' related to vm: " + instanceId );
+        throw new ComputeException( "InternalError", "Failed to find enabled cluster controller for cluster '"+v.getPartition()+"'");
       }
       try {
         final ClusterGetConsoleOutputResponseType response =
@@ -1117,6 +1117,8 @@ public class VmControl {
           } ).apply( passwordData );
           v.updatePasswordData( passwordData );
         }
+      } catch(final EucalyptusCloudException e) {
+        throw e;
       } catch ( Exception e ) {
         throw new ComputeException( "InternalError", "Error processing request: " + e.getMessage( ) );
       }

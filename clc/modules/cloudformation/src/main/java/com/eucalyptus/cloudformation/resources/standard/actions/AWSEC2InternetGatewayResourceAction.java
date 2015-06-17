@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,14 +48,12 @@ import com.eucalyptus.compute.common.DeleteInternetGatewayResponseType;
 import com.eucalyptus.compute.common.DeleteInternetGatewayType;
 import com.eucalyptus.compute.common.DescribeInternetGatewaysResponseType;
 import com.eucalyptus.compute.common.DescribeInternetGatewaysType;
-import com.eucalyptus.compute.common.InternetGatewayIdSetItemType;
-import com.eucalyptus.compute.common.InternetGatewayIdSetType;
+import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
 import com.netflix.glisten.WorkflowOperations;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -130,9 +128,11 @@ public class AWSEC2InternetGatewayResourceAction extends ResourceAction {
         if (action.info.getPhysicalResourceId() == null) return action;
         // Check gateway (return if gone)
         DescribeInternetGatewaysType describeInternetGatewaysType = MessageHelper.createMessage(DescribeInternetGatewaysType.class, action.info.getEffectiveUserId());
-        action.setInternetGatewayId(describeInternetGatewaysType, action.info.getPhysicalResourceId());
-        DescribeInternetGatewaysResponseType describeInternetGatewaysResponseType = AsyncRequests.<DescribeInternetGatewaysType,DescribeInternetGatewaysResponseType> sendSync(configuration, describeInternetGatewaysType);
-        if (describeInternetGatewaysResponseType.getInternetGatewaySet() == null || describeInternetGatewaysResponseType.getInternetGatewaySet().getItem() == null || describeInternetGatewaysResponseType.getInternetGatewaySet().getItem().isEmpty()) {
+        describeInternetGatewaysType.getFilterSet( ).add( Filter.filter( "internet-gateway-id", action.info.getPhysicalResourceId() ) );
+        DescribeInternetGatewaysResponseType describeInternetGatewaysResponseType = AsyncRequests.sendSync(configuration, describeInternetGatewaysType);
+        if (describeInternetGatewaysResponseType.getInternetGatewaySet() == null ||
+            describeInternetGatewaysResponseType.getInternetGatewaySet().getItem() == null ||
+            describeInternetGatewaysResponseType.getInternetGatewaySet().getItem().isEmpty()) {
           return action; // already deleted
         }
         DeleteInternetGatewayType deleteInternetGatewayType = MessageHelper.createMessage(DeleteInternetGatewayType.class, action.info.getEffectiveUserId());
@@ -166,19 +166,6 @@ public class AWSEC2InternetGatewayResourceAction extends ResourceAction {
   @Override
   public void setResourceInfo(ResourceInfo resourceInfo) {
     info = (AWSEC2InternetGatewayResourceInfo) resourceInfo;
-  }
-
-  private void setInternetGatewayId(DescribeInternetGatewaysType describeInternetGatewaysType, String internetGatewayId) {
-    InternetGatewayIdSetType internetGatewaySet = new InternetGatewayIdSetType();
-    describeInternetGatewaysType.setInternetGatewayIdSet(internetGatewaySet);
-
-    ArrayList<InternetGatewayIdSetItemType> item = Lists.newArrayList();
-    internetGatewaySet.setItem(item);
-
-    InternetGatewayIdSetItemType internetGatewayIdSetItemType = new InternetGatewayIdSetItemType();
-    item.add(internetGatewayIdSetItemType);
-
-    internetGatewayIdSetItemType.setInternetGatewayId(internetGatewayId);
   }
 
   @Override

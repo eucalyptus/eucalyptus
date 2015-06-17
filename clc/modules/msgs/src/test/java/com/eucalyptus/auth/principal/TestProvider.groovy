@@ -190,11 +190,6 @@ class TestProvider implements PrincipalProvider {
   }
 
   @Override
-  List<X509Certificate> lookupAccountCertificatesByAccountNumber(final String accountNumber) throws AuthException {
-    throw new AuthException( "Not implemented in test provider" )
-  }
-
-  @Override
   X509Certificate getCertificateByAccountNumber(final String accountNumber) throws AuthException {
     throw new AuthException( "Not implemented in test provider" )
   }

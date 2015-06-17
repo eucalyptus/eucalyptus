@@ -32,6 +32,7 @@ import com.eucalyptus.compute.common.ModifyVpcAttributeType
 import com.eucalyptus.compute.common.ResetSnapshotAttributeType
 import com.eucalyptus.compute.common.UserIdGroupPairType
 import com.eucalyptus.ws.protocol.QueryBindingTestSupport
+import com.google.common.base.Splitter
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import groovy.transform.CompileStatic
 import org.junit.Test
@@ -323,6 +324,386 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
     void testValidBinding2014_10_01() {
         URL resource = ComputeQueryBindingTest.getResource('/ec2-2014-10-01-binding.xml')
         assertValidBindingXml(resource)
+    }
+
+    @Test
+    void testValidBinding2015_04_15() {
+        URL resource = ComputeQueryBindingTest.getResource('/ec2-2015-04-15-binding.xml')
+        assertValidBindingXml(resource)
+    }
+
+    @Test
+    void testBindingsForAllActions(){
+      // http://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_Operations.html
+      String actionsCopiedAndPastedFromAWSEC2Docs = '''
+    AcceptVpcPeeringConnection
+
+    AllocateAddress
+
+    AssignPrivateIpAddresses
+
+    AssociateAddress
+
+    AssociateDhcpOptions
+
+    AssociateRouteTable
+
+    AttachClassicLinkVpc
+
+    AttachInternetGateway
+
+    AttachNetworkInterface
+
+    AttachVolume
+
+    AttachVpnGateway
+
+    AuthorizeSecurityGroupEgress
+
+    AuthorizeSecurityGroupIngress
+
+    BundleInstance
+
+    CancelBundleTask
+
+    CancelConversionTask
+
+    CancelExportTask
+
+    CancelImportTask
+
+    CancelReservedInstancesListing
+
+    CancelSpotFleetRequests
+
+    CancelSpotInstanceRequests
+
+    ConfirmProductInstance
+
+    CopyImage
+
+    CopySnapshot
+
+    CreateCustomerGateway
+
+    CreateDhcpOptions
+
+    CreateImage
+
+    CreateInstanceExportTask
+
+    CreateInternetGateway
+
+    CreateKeyPair
+
+    CreateNetworkAcl
+
+    CreateNetworkAclEntry
+
+    CreateNetworkInterface
+
+    CreatePlacementGroup
+
+    CreateReservedInstancesListing
+
+    CreateRoute
+
+    CreateRouteTable
+
+    CreateSecurityGroup
+
+    CreateSnapshot
+
+    CreateSpotDatafeedSubscription
+
+    CreateSubnet
+
+    CreateTags
+
+    CreateVolume
+
+    CreateVpc
+
+    CreateVpcEndpoint
+
+    CreateVpcPeeringConnection
+
+    CreateVpnConnection
+
+    CreateVpnConnectionRoute
+
+    CreateVpnGateway
+
+    DeleteCustomerGateway
+
+    DeleteDhcpOptions
+
+    DeleteInternetGateway
+
+    DeleteKeyPair
+
+    DeleteNetworkAcl
+
+    DeleteNetworkAclEntry
+
+    DeleteNetworkInterface
+
+    DeletePlacementGroup
+
+    DeleteRoute
+
+    DeleteRouteTable
+
+    DeleteSecurityGroup
+
+    DeleteSnapshot
+
+    DeleteSpotDatafeedSubscription
+
+    DeleteSubnet
+
+    DeleteTags
+
+    DeleteVolume
+
+    DeleteVpc
+
+    DeleteVpcEndpoints
+
+    DeleteVpcPeeringConnection
+
+    DeleteVpnConnection
+
+    DeleteVpnConnectionRoute
+
+    DeleteVpnGateway
+
+    DeregisterImage
+
+    DescribeAccountAttributes
+
+    DescribeAddresses
+
+    DescribeAvailabilityZones
+
+    DescribeBundleTasks
+
+    DescribeClassicLinkInstances
+
+    DescribeConversionTasks
+
+    DescribeCustomerGateways
+
+    DescribeDhcpOptions
+
+    DescribeExportTasks
+
+    DescribeImageAttribute
+
+    DescribeImages
+
+    DescribeImportImageTasks
+
+    DescribeImportSnapshotTasks
+
+    DescribeInstanceAttribute
+
+    DescribeInstanceStatus
+
+    DescribeInstances
+
+    DescribeInternetGateways
+
+    DescribeKeyPairs
+
+    DescribeMovingAddresses
+
+    DescribeNetworkAcls
+
+    DescribeNetworkInterfaceAttribute
+
+    DescribeNetworkInterfaces
+
+    DescribePlacementGroups
+
+    DescribePrefixLists
+
+    DescribeRegions
+
+    DescribeReservedInstances
+
+    DescribeReservedInstancesListings
+
+    DescribeReservedInstancesModifications
+
+    DescribeReservedInstancesOfferings
+
+    DescribeRouteTables
+
+    DescribeSecurityGroups
+
+    DescribeSnapshotAttribute
+
+    DescribeSnapshots
+
+    DescribeSpotDatafeedSubscription
+
+    DescribeSpotFleetInstances
+
+    DescribeSpotFleetRequestHistory
+
+    DescribeSpotFleetRequests
+
+    DescribeSpotInstanceRequests
+
+    DescribeSpotPriceHistory
+
+    DescribeSubnets
+
+    DescribeTags
+
+    DescribeVolumeAttribute
+
+    DescribeVolumeStatus
+
+    DescribeVolumes
+
+    DescribeVpcAttribute
+
+    DescribeVpcClassicLink
+
+    DescribeVpcEndpointServices
+
+    DescribeVpcEndpoints
+
+    DescribeVpcPeeringConnections
+
+    DescribeVpcs
+
+    DescribeVpnConnections
+
+    DescribeVpnGateways
+
+    DetachClassicLinkVpc
+
+    DetachInternetGateway
+
+    DetachNetworkInterface
+
+    DetachVolume
+
+    DetachVpnGateway
+
+    DisableVgwRoutePropagation
+
+    DisableVpcClassicLink
+
+    DisassociateAddress
+
+    DisassociateRouteTable
+
+    EnableVgwRoutePropagation
+
+    EnableVolumeIO
+
+    EnableVpcClassicLink
+
+    GetConsoleOutput
+
+    GetPasswordData
+
+    ImportImage
+
+    ImportInstance
+
+    ImportKeyPair
+
+    ImportSnapshot
+
+    ImportVolume
+
+    ModifyImageAttribute
+
+    ModifyInstanceAttribute
+
+    ModifyNetworkInterfaceAttribute
+
+    ModifyReservedInstances
+
+    ModifySnapshotAttribute
+
+    ModifySubnetAttribute
+
+    ModifyVolumeAttribute
+
+    ModifyVpcAttribute
+
+    ModifyVpcEndpoint
+
+    MonitorInstances
+
+    MoveAddressToVpc
+
+    PurchaseReservedInstancesOffering
+
+    RebootInstances
+
+    RegisterImage
+
+    RejectVpcPeeringConnection
+
+    ReleaseAddress
+
+    ReplaceNetworkAclAssociation
+
+    ReplaceNetworkAclEntry
+
+    ReplaceRoute
+
+    ReplaceRouteTableAssociation
+
+    ReportInstanceStatus
+
+    RequestSpotFleet
+
+    RequestSpotInstances
+
+    ResetImageAttribute
+
+    ResetInstanceAttribute
+
+    ResetNetworkInterfaceAttribute
+
+    ResetSnapshotAttribute
+
+    RestoreAddressToClassic
+
+    RevokeSecurityGroupEgress
+
+    RevokeSecurityGroupIngress
+
+    RunInstances
+
+    StartInstances
+
+    StopInstances
+
+    TerminateInstances
+
+    UnassignPrivateIpAddresses
+
+    UnmonitorInstances
+    '''
+
+      List<String> whitelist = [
+      ]
+      Splitter.on(' ').trimResults( ).omitEmptyStrings( ).split( actionsCopiedAndPastedFromAWSEC2Docs ).each { String action ->
+        try {
+          Class.forName( "com.eucalyptus.compute.common.${action}Type" )
+        } catch ( Exception e ) {
+          if ( !whitelist.contains(action) ) fail( "Message not found for ${action}" )
+        }
+      }
     }
 
     @Test
@@ -636,7 +1017,7 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
             }
         }
 
-        String supportedVersions = [
+        List<String> supportedVersions = [
                 "2012-03-01",
                 "2012-04-01",
                 "2012-05-01",

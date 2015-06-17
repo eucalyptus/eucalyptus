@@ -63,6 +63,7 @@
 package com.eucalyptus.ws.handlers;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import javax.annotation.Nonnull;
 import org.apache.axiom.soap.SOAP11Constants;
 import org.apache.axiom.soap.SOAP12Constants;
@@ -71,6 +72,7 @@ import org.apache.axiom.soap.SOAPFactory;
 import org.apache.axiom.soap.impl.builder.StAXSOAPModelBuilder;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBufferOutputStream;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandler;
@@ -81,6 +83,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.http.MappingHttpMessage;
+import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.WebServicesException;
@@ -94,7 +97,9 @@ public class SoapMarshallingHandler extends MessageStackHandler implements Excep
   public void incomingMessage( final MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpMessage ) {
       MappingHttpMessage httpMessage = ( MappingHttpMessage ) event.getMessage( );
-      String content = httpMessage.getContent( ).toString( "UTF-8" );
+      String content = httpMessage instanceof MappingHttpRequest ?
+          ( (MappingHttpRequest) httpMessage ).getContentAsString( ) :
+          httpMessage.getContent( ).toString( StandardCharsets.UTF_8 );
       httpMessage.setMessageString( content );
       HoldMe.canHas.lock( );
       SOAPEnvelope env = null;
@@ -122,15 +127,14 @@ public class SoapMarshallingHandler extends MessageStackHandler implements Excep
   @Override
   public void outgoingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpMessage ) {
-      MappingHttpMessage httpMessage = ( MappingHttpMessage ) event.getMessage( );
-      ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
+      final MappingHttpMessage httpMessage = ( MappingHttpMessage ) event.getMessage( );
+      final ChannelBuffer buffer = ChannelBuffers.dynamicBuffer( 4096 );
       HoldMe.canHas.lock( );
-      try {
-        httpMessage.getSoapEnvelope( ).serialize( byteOut );//HACK: does this need fixing for xml brokeness?
+      try ( final ChannelBufferOutputStream out = new ChannelBufferOutputStream( buffer ) ) {
+        httpMessage.getSoapEnvelope( ).serialize( out );//HACK: does this need fixing for xml brokeness?
       } finally {
         HoldMe.canHas.unlock( );
       }
-      ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( byteOut.toByteArray( ) );
       httpMessage.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes( ) ) );
       httpMessage.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/xml; charset=UTF-8" );
       httpMessage.setContent( buffer );

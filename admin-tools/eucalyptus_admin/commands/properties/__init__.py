@@ -24,7 +24,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from requestbuilder import Arg
-import requestbuilder.auth
+import requestbuilder.auth.aws
 import requestbuilder.request
 import requestbuilder.service
 
@@ -44,6 +44,6 @@ class Properties(requestbuilder.service.BaseService):
 class PropertiesRequest(requestbuilder.request.AWSQueryRequest):
     SUITE = EucalyptusAdmin
     SERVICE_CLASS = Properties
-    AUTH_CLASS = requestbuilder.auth.QuerySigV2Auth
+    AUTH_CLASS = requestbuilder.auth.aws.HmacV4Auth
     API_VERSION = 'eucalyptus'
     METHOD = 'POST'

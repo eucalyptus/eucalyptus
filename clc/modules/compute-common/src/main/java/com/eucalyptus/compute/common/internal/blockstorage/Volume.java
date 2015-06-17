@@ -64,6 +64,7 @@ package com.eucalyptus.compute.common.internal.blockstorage;
 
 import java.util.Collection;
 import java.util.Date;
+
 import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -74,9 +75,11 @@ import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
+
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.common.CloudMetadata.VolumeMetadata;
 import com.eucalyptus.component.ComponentIds;
@@ -108,6 +111,8 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   private String   remoteDevice;
   @Column( name = "metadata_volume_localdevice" )
   private String   localDevice;
+  @Column( name = "metadata_system_managed" )
+  private Boolean  systemManaged;
   @Transient
   private FullName fullName;
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "volume" )
@@ -248,5 +253,12 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
                           .namespace( this.getOwnerAccountNumber( ) )
                           .relativeId( "volume", this.getDisplayName( ) );
   }
-  
+
+  public Boolean getSystemManaged( ) {
+    return systemManaged == null ? false : systemManaged;
+  }
+
+  public void setSystemManaged( Boolean systemManaged ) {
+    this.systemManaged = systemManaged;
+  }
 }

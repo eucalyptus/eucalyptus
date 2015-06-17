@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -50,16 +50,12 @@ import com.eucalyptus.compute.common.DescribeSubnetsResponseType;
 import com.eucalyptus.compute.common.DescribeSubnetsType;
 import com.eucalyptus.compute.common.DescribeVpcsResponseType;
 import com.eucalyptus.compute.common.DescribeVpcsType;
-import com.eucalyptus.compute.common.SubnetIdSetItemType;
-import com.eucalyptus.compute.common.SubnetIdSetType;
-import com.eucalyptus.compute.common.VpcIdSetItemType;
-import com.eucalyptus.compute.common.VpcIdSetType;
+import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
 import com.netflix.glisten.WorkflowOperations;
 
-import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nullable;
 
@@ -143,16 +139,20 @@ public class AWSEC2SubnetResourceAction extends ResourceAction {
 
         // Check vpc (return if gone)
         DescribeVpcsType describeVpcsType = MessageHelper.createMessage(DescribeVpcsType.class, action.info.getEffectiveUserId());
-        action.setVpcId(describeVpcsType, action.properties.getVpcId());
-        DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.<DescribeVpcsType,DescribeVpcsResponseType> sendSync(configuration, describeVpcsType);
-        if (describeVpcsResponseType.getVpcSet() == null || describeVpcsResponseType.getVpcSet().getItem() == null || describeVpcsResponseType.getVpcSet().getItem().isEmpty()) {
+        describeVpcsType.getFilterSet( ).add( Filter.filter( "vpc-id", action.properties.getVpcId( ) ) );
+        DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.sendSync(configuration, describeVpcsType);
+        if (describeVpcsResponseType.getVpcSet() == null ||
+            describeVpcsResponseType.getVpcSet().getItem() == null ||
+            describeVpcsResponseType.getVpcSet().getItem().isEmpty()) {
           return action; // already deleted
         }
         // check subnet (return if gone)
         DescribeSubnetsType describeSubnetsType = MessageHelper.createMessage(DescribeSubnetsType.class, action.info.getEffectiveUserId());
-        action.setSubnetId(describeSubnetsType, action.info.getPhysicalResourceId());
-        DescribeSubnetsResponseType describeSubnetsResponseType = AsyncRequests.<DescribeSubnetsType,DescribeSubnetsResponseType> sendSync(configuration, describeSubnetsType);
-        if (describeSubnetsResponseType.getSubnetSet() == null || describeSubnetsResponseType.getSubnetSet().getItem() == null || describeSubnetsResponseType.getSubnetSet().getItem().isEmpty()) {
+        describeSubnetsType.getFilterSet( ).add( Filter.filter( "subnet-id", action.info.getPhysicalResourceId( ) ) );
+        DescribeSubnetsResponseType describeSubnetsResponseType = AsyncRequests.sendSync( configuration, describeSubnetsType);
+        if (describeSubnetsResponseType.getSubnetSet() == null ||
+            describeSubnetsResponseType.getSubnetSet().getItem() == null ||
+            describeSubnetsResponseType.getSubnetSet().getItem().isEmpty()) {
           return action; // already deleted
         }
         DeleteSubnetType deleteSubnetType = MessageHelper.createMessage(DeleteSubnetType.class, action.info.getEffectiveUserId());
@@ -187,33 +187,6 @@ public class AWSEC2SubnetResourceAction extends ResourceAction {
   @Override
   public void setResourceInfo(ResourceInfo resourceInfo) {
     info = (AWSEC2SubnetResourceInfo) resourceInfo;
-  }
-
-
-  private void setSubnetId(DescribeSubnetsType describeSubnetsType, String subnetId) {
-    SubnetIdSetType subnetSet = new SubnetIdSetType();
-    describeSubnetsType.setSubnetSet(subnetSet);
-
-    ArrayList<SubnetIdSetItemType> item = Lists.newArrayList();
-    subnetSet.setItem(item);
-
-    SubnetIdSetItemType subnetIdSetItem = new SubnetIdSetItemType();
-    item.add(subnetIdSetItem);
-
-    subnetIdSetItem.setSubnetId(subnetId);
-  }
-
-  private void setVpcId(DescribeVpcsType describeVpcsType, String vpcId) {
-    VpcIdSetType vpcSet = new VpcIdSetType();
-    describeVpcsType.setVpcSet(vpcSet);
-
-    ArrayList<VpcIdSetItemType> item = Lists.newArrayList();
-    vpcSet.setItem(item);
-
-    VpcIdSetItemType vpcIdSetItem = new VpcIdSetItemType();
-    item.add(vpcIdSetItem);
-
-    vpcIdSetItem.setVpcId(vpcId);
   }
 
   @Override

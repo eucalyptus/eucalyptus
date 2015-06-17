@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,38 +19,18 @@
  ************************************************************************/
 package com.eucalyptus.cloudwatch.hashing;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.io.UnsupportedEncodingException;
-import java.security.MessageDigest;
+import java.nio.CharBuffer;
+import java.nio.charset.StandardCharsets;
 
 import com.eucalyptus.crypto.Digest;
+import com.google.common.io.BaseEncoding;
 
 public class HashUtils {
 
-  public static String hash(String input) {
-    if (input == null) throw new IllegalArgumentException("input is null");
-    byte[] inputBytes;
-    try {
-      // using .getBytes() with no argument is platform dependent.  
-      // Using a known encoding instead
-      inputBytes = input.getBytes("UTF-8");
-    } catch (UnsupportedEncodingException e) {
-      // TODO Auto-generated catch block
-      throw new UnsupportedOperationException("UTF-8 is not installed");
-    } 
-    MessageDigest md = Digest.SHA1.get();
-    return toHexString(md.digest(inputBytes));
+  public static String hash( final CharSequence text ) {
+    return BaseEncoding.base16( ).lowerCase( ).encode(
+        Digest.SHA1.digestBinary( StandardCharsets.UTF_8.encode( CharBuffer.wrap( text ) ) )
+    );
   }
-  
-  private static String toHexString(byte[] b) {
-    StringWriter s = new StringWriter();
-    PrintWriter out = new PrintWriter(s);
-    for (int i=0;i<b.length; i++) {
-      out.printf("%02x", b[i]);
-    }
-    out.flush();
-    return s.toString();
-  }
-  
+
 }
