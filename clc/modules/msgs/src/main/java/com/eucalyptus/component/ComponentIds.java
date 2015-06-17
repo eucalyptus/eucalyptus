@@ -68,6 +68,7 @@ import java.util.NoSuchElementException;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.util.Classes;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ClassToInstanceMap;
 import com.google.common.collect.Lists;
@@ -123,12 +124,26 @@ public class ComponentIds {
   static ComponentId createEphemeral( String componentIdName ) {
     return new ComponentId( componentIdName ) {{}};
   }
-  
+
+  public static Function<ComponentId,String> name( ) {
+    return ComponentIdStringFunctions.NAME;
+  }
+
   private enum ComponentIdPredicates implements Predicate<ComponentId> {
     MANY_TO_ONE{
       @Override
       public boolean apply( @Nullable final ComponentId componentId ) {
         return componentId != null && componentId.isManyToOnePartition( );
+      }
+    }
+  }
+
+  private enum ComponentIdStringFunctions implements Function<ComponentId,String> {
+    NAME {
+      @Nullable
+      @Override
+      public String apply( @Nullable final ComponentId componentId ) {
+        return componentId == null ? null : componentId.name( );
       }
     }
   }
