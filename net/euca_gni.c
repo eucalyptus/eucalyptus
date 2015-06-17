@@ -1683,7 +1683,7 @@ globalNetworkInfo *gni_init()
 //!
 int gni_populate(globalNetworkInfo * gni, gni_hostname_info *host_info, char *xmlpath)
 {
-    int rc;
+    int rc=0, found=0, count=0;
     xmlDocPtr docptr;
     xmlXPathContextPtr ctxptr;
     char expression[2048], *strptra = NULL;
@@ -1844,8 +1844,10 @@ int gni_populate(globalNetworkInfo * gni, gni_hostname_info *host_info, char *xm
         gni->secgroups[j].max_grouprules = max_results;
         EUCA_FREE(results);
 
-        int found = 0;
-        int count = 0;
+
+        //ingress
+        found=0;
+        count=0;
         while (!found) {
             snprintf(expression, 2048, "/network-data/securityGroups/securityGroup[@name='%s']/ingressRules/rule[%d]/protocol", gni->secgroups[j].name, count + 1);
             rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
@@ -1939,11 +1941,102 @@ int gni_populate(globalNetworkInfo * gni, gni_hostname_info *host_info, char *xm
 
         }
 
-        /*  for (k=0; k<gni->secgroups[j].max_ingress_rules; k++) {
-           LOGTRACE("HELLO: rule=%d %d %d %d %d %d %s %s %s\n", k, gni->secgroups[j].ingress_rules[k].protocol, gni->secgroups[j].ingress_rules[k].fromPort, gni->secgroups[j].ingress_rules[k].toPort, gni->secgroups[j].ingress_rules[k].icmpType, gni->secgroups[j].ingress_rules[k].icmpCode, gni->secgroups[j].ingress_rules[k].groupId, gni->secgroups[j].ingress_rules[k].groupOwnerId, gni->secgroups[j].ingress_rules[k].cidr);
-           }
-           exit(0);
-         */
+        //egress
+        found = 0;
+        count = 0;
+        while (!found) {
+            snprintf(expression, 2048, "/network-data/securityGroups/securityGroup[@name='%s']/egressRules/rule[%d]/protocol", gni->secgroups[j].name, count + 1);
+            rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+            if (!max_results) {
+                found = 1;
+            } else {
+                count++;
+            }
+            for (i = 0; i < max_results; i++) {
+                EUCA_FREE(results[i]);
+            }
+            EUCA_FREE(results);
+        }
+
+        gni->secgroups[j].egress_rules = EUCA_ZALLOC(count, sizeof(gni_rule));
+        gni->secgroups[j].max_egress_rules = count;
+
+        for (k = 0; k < gni->secgroups[j].max_egress_rules; k++) {
+
+            snprintf(expression, 2048, "/network-data/securityGroups/securityGroup[@name='%s']/egressRules/rule[%d]/protocol", gni->secgroups[j].name, k + 1);
+            rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+            for (i = 0; i < max_results; i++) {
+                LOGTRACE("after function: %d: %s\n", i, results[i]);
+                gni->secgroups[j].egress_rules[k].protocol = atoi(results[i]);
+                EUCA_FREE(results[i]);
+            }
+            EUCA_FREE(results);
+
+            snprintf(expression, 2048, "/network-data/securityGroups/securityGroup[@name='%s']/egressRules/rule[%d]/groupId", gni->secgroups[j].name, k + 1);
+            rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+            for (i = 0; i < max_results; i++) {
+                LOGTRACE("after function: %d: %s\n", i, results[i]);
+                snprintf(gni->secgroups[j].egress_rules[k].groupId, SECURITY_GROUP_ID_LEN, "%s", results[i]);
+                EUCA_FREE(results[i]);
+            }
+            EUCA_FREE(results);
+
+            snprintf(expression, 2048, "/network-data/securityGroups/securityGroup[@name='%s']/egressRules/rule[%d]/groupOwnerId", gni->secgroups[j].name, k + 1);
+            rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+            for (i = 0; i < max_results; i++) {
+                LOGTRACE("after function: %d: %s\n", i, results[i]);
+                snprintf(gni->secgroups[j].egress_rules[k].groupOwnerId, 16, "%s", results[i]);
+                EUCA_FREE(results[i]);
+            }
+            EUCA_FREE(results);
+
+            snprintf(expression, 2048, "/network-data/securityGroups/securityGroup[@name='%s']/egressRules/rule[%d]/cidr", gni->secgroups[j].name, k + 1);
+            rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+            for (i = 0; i < max_results; i++) {
+                LOGTRACE("after function: %d: %s\n", i, results[i]);
+                snprintf(gni->secgroups[j].egress_rules[k].cidr, INET_ADDR_LEN, "%s", results[i]);
+                EUCA_FREE(results[i]);
+            }
+            EUCA_FREE(results);
+
+            snprintf(expression, 2048, "/network-data/securityGroups/securityGroup[@name='%s']/egressRules/rule[%d]/fromPort", gni->secgroups[j].name, k + 1);
+            rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+            for (i = 0; i < max_results; i++) {
+                LOGTRACE("after function: %d: %s\n", i, results[i]);
+                gni->secgroups[j].egress_rules[k].fromPort = atoi(results[i]);
+                EUCA_FREE(results[i]);
+            }
+            EUCA_FREE(results);
+
+            snprintf(expression, 2048, "/network-data/securityGroups/securityGroup[@name='%s']/egressRules/rule[%d]/toPort", gni->secgroups[j].name, k + 1);
+            rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+            for (i = 0; i < max_results; i++) {
+                LOGTRACE("after function: %d: %s\n", i, results[i]);
+                gni->secgroups[j].egress_rules[k].toPort = atoi(results[i]);
+                EUCA_FREE(results[i]);
+            }
+            EUCA_FREE(results);
+
+            snprintf(expression, 2048, "/network-data/securityGroups/securityGroup[@name='%s']/egressRules/rule[%d]/icmpType", gni->secgroups[j].name, k + 1);
+            rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+            for (i = 0; i < max_results; i++) {
+                LOGTRACE("after function: %d: %s\n", i, results[i]);
+                gni->secgroups[j].egress_rules[k].icmpType = atoi(results[i]);
+                EUCA_FREE(results[i]);
+            }
+            EUCA_FREE(results);
+
+            snprintf(expression, 2048, "/network-data/securityGroups/securityGroup[@name='%s']/egressRules/rule[%d]/icmpCode", gni->secgroups[j].name, k + 1);
+            rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+            for (i = 0; i < max_results; i++) {
+                LOGTRACE("after function: %d: %s\n", i, results[i]);
+                gni->secgroups[j].egress_rules[k].icmpCode = atoi(results[i]);
+                EUCA_FREE(results[i]);
+            }
+            EUCA_FREE(results);
+
+        }
+
     }
 
     // begin VPC

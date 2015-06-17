@@ -960,7 +960,9 @@ int mido_create_dhcphost(midoname * devname, midoname * dhcp, char *name, char *
     EUCA_FREE(dhcphosts);
 
     if (!found) {
-        rc = mido_create_resource(parents, 2, &myname, outname, "name", myname.name, "macAddr", mac, "ipAddr", ip, NULL);
+
+        //        rc = mido_create_resource(devname, 1, &myname, outname, "subnetPrefix", subnet, "subnetLength", slashnet, "defaultGateway", gw, "dnsServerAddrs", "jsonarr", "dnsServerAddrs:", da, "dnsServerAddrs:END", "END", NULL);
+        rc = mido_create_resource(parents, 2, &myname, outname, "name", myname.name, "macAddr", mac, "ipAddr", ip, "extraDhcpOpts", "jsonlist", "extraDhcpOpts:domain_search", "foobar.com", "extraDhcpOpts:END", NULL);
         if (rc) {
             ret = 1;
         }
@@ -2181,6 +2183,7 @@ int mido_create_resource_v(midoname * parents, int max_parents, midoname * newna
         }
 
         // perform the create
+        LOGDEBUG("POST PAYLOAD: %s\n", payload);
         rc = midonet_http_post(url, newname->content_type, payload, &outloc);
         if (rc) {
             LOGERROR("midonet_http_post(%s, ...) failed\n", url);
@@ -2217,6 +2220,31 @@ int mido_create_resource_v(midoname * parents, int max_parents, midoname * newna
     EUCA_FREE(outloc);
     return (ret);
 
+}
+
+int mido_cmp_midoname(midoname *a, midoname *b) {
+    int ret=0;
+
+    if (!a || !b) {
+        return(1);
+    }
+
+    if (!a->init || !b->init) {
+        return(1);
+    }
+
+    
+    ret = strcmp(a->tenant, b->tenant);
+    if (!ret) ret = strcmp(a->name, b->name);
+    if (!ret) ret = strcmp(a->uuid, b->uuid);
+    if (!ret) ret = strcmp(a->jsonbuf, b->jsonbuf);
+    if (!ret) ret = strcmp(a->resource_type, b->resource_type);
+    if (!ret) ret = strcmp(a->content_type, b->content_type);
+    
+    if (ret) {
+        return(1);
+    }
+    return(0);
 }
 
 //!
@@ -2610,6 +2638,7 @@ int midonet_http_get(char *url, char *apistr, char **out_payload)
     if (httpcode != 200L) {
         ret = 1;
     }
+    curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
     curl_global_cleanup();
 

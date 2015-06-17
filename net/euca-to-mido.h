@@ -164,7 +164,7 @@ enum {
 
 typedef struct mido_vpc_secgroup_t {
     gni_secgroup *gniSecgroup;
-    char name[SECURITY_GROUP_ID_LEN];
+    char name[16];
     midoname midos[VPCSG_END];
     int gnipresent;
 
@@ -172,7 +172,7 @@ typedef struct mido_vpc_secgroup_t {
 
 typedef struct mido_vpc_instance_t {
     gni_instance *gniInst;
-    char name[INSTANCE_ID_LEN];
+    char name[16];
     midoname midos[VPCINSTANCEEND];
     int gnipresent;
 } mido_vpc_instance;
@@ -192,6 +192,7 @@ typedef struct mido_vpc_subnet_t {
 } mido_vpc_subnet;
 
 typedef struct mido_vpc_t {
+    gni_vpc *gniVpc;
     char name[16];
     int rtid;
     midoname midos[VPCEND];
@@ -298,11 +299,13 @@ int create_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet *
                            u32 * instanceDNSServers, int max_instanceDNSServers);
 int delete_mido_vpc_subnet(mido_config * mido, mido_vpc_subnet * subnet);
 int find_mido_vpc_subnet(mido_vpc * vpc, char *subnetname, mido_vpc_subnet ** outvpcsubnet);
+int find_mido_vpc_subnet_global(mido_config * mido, char *subnetname, mido_vpc_subnet ** outvpcsubnet);
 
 int populate_mido_vpc_instance(mido_config * mido, mido_core * midocore, mido_vpc * vpc, mido_vpc_subnet * vpcsubnet, mido_vpc_instance * vpcinstance);
 int create_mido_vpc_instance(mido_config * mido, mido_vpc_instance * vpcinstance, char *nodehostname);
 int delete_mido_vpc_instance(mido_vpc_instance * vpcinstance);
 int find_mido_vpc_instance(mido_vpc_subnet * vpcsubnet, char *instancename, mido_vpc_instance ** outvpcinstance);
+int find_mido_vpc_instance_global(mido_config * mido, char *instancename, mido_vpc_instance ** outvpcinstance);
 
 int populate_mido_vpc_secgroup(mido_config * mido, mido_vpc_secgroup * vpcsecgroup);
 int create_mido_vpc_secgroup(mido_config * mido, mido_vpc_secgroup * vpcsecgroup);
