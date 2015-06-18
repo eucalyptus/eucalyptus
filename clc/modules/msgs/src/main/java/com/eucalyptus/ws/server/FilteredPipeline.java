@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -163,9 +163,10 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
       final Class<? extends ComponentId> component = part == null ? null : part.value( );
       final Set<Name> names;
       if ( component != null ) {
-        names = ImmutableSet.of(
-            DomainNames.internalSubdomain( component ),
-            DomainNames.externalSubdomain( component ) );
+        names = ImmutableSet.copyOf( Iterables.concat(
+            DomainNames.internalSubdomains( component ),
+            DomainNames.externalSubdomains( component )
+        ) );
       } else {
         names = Collections.emptySet();
       }

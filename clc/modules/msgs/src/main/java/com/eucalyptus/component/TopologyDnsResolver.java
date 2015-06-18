@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,7 +67,6 @@ import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
 import java.net.InetAddress;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
-import java.net.SocketException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -84,15 +83,11 @@ import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.configurable.ConfigurableProperty;
-import com.eucalyptus.configurable.ConfigurablePropertyException;
-import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResolver;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResponse;
 import com.eucalyptus.util.dns.DnsResolvers.RequestType;
-import com.eucalyptus.util.dns.DnsResolvers;
 import com.eucalyptus.util.dns.DomainNameRecords;
 import com.eucalyptus.util.dns.DomainNames;
 import com.google.common.base.CharMatcher;
@@ -145,8 +140,9 @@ public class TopologyDnsResolver implements DnsResolver {
       @Override
       public boolean apply( Name input ) {
         boolean exists = false;
+        String label =  input.getLabelString( 0 );
         try {
-          ComponentId compId = ComponentIds.lookup( input.getLabelString( 0 ) );
+          ComponentId compId = ComponentIds.lookup( label );
           exists |= compId.isPublicService( );
           exists |= compId.isAdminService( );
           exists |= compId.isRegisterable( );
@@ -157,6 +153,14 @@ public class TopologyDnsResolver implements DnsResolver {
           exists &= compId.isDnsSupported( );
         } catch ( NoSuchElementException ex ) {
           exists = false;
+        }
+        if ( !exists ) {
+          try {
+            ComponentIds.lookupByDnsName( label );
+            exists = true;
+          } catch ( NoSuchElementException ex2 ) {
+            exists = false;
+          }
         }
         return exists;
       }
@@ -232,7 +236,15 @@ public class TopologyDnsResolver implements DnsResolver {
                                                                             // Strip off the first
 // label and use that as the component type
                                                                             String componentName = name.getLabelString( 0 );
-                                                                            return ComponentIds.lookup( componentName ).getClass( );
+                                                                            try {
+                                                                              final Class<? extends ComponentId> componentIdClass =
+                                                                                  ComponentIds.lookup( componentName ).getClass( );
+                                                                              if ( ComponentIds.lookup( componentIdClass ).isDnsSupported( ) ) {
+                                                                                return componentIdClass;
+                                                                              }
+                                                                            } catch ( NoSuchElementException e ) {
+                                                                            }
+                                                                            return ComponentIds.lookupByDnsName( componentName ).getClass( );
                                                                           } catch ( Exception ex ) {
                                                                             throw new IllegalArgumentException( "Cannot resolve a component type for "
                                                                                                                 + name
