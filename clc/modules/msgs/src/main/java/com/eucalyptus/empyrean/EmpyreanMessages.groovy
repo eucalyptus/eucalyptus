@@ -181,3 +181,24 @@ public class DescribeServicesType extends ServiceTransitionType {
 public class DescribeServicesResponseType extends EmpyreanMessage {
   ArrayList<ServiceStatusType> serviceStatuses = new ArrayList<ServiceStatusType>( );
 }
+
+class DescribeServiceCertificatesType extends EmpyreanMessage {
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded(multiple = true)
+  ArrayList<Filter> filters = Lists.newArrayList( )
+  String format // pem / der (b64)
+  String fingerprintDigest // 'SHA-1', 'SHA-224', 'SHA-256', 'SHA-384', 'SHA-512'
+}
+
+class DescribeServiceCertificatesResponseType extends EmpyreanMessage {
+  ArrayList<ServiceCertificateType> serviceCertificates = Lists.newArrayList( );
+}
+
+class ServiceCertificateType extends EucalyptusData {
+  String serviceType
+  String certificateUsage
+  String certificateFormat
+  String certificate
+  String certificateFingerprint
+  String certificateFingerprintDigest
+}
