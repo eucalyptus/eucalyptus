@@ -205,7 +205,6 @@ public class ImagingServiceProperties {
       if (keyname == null  || keyname.isEmpty())
         return;
       try {
-        // describeKeyPairs throws an error if keypair not found
         Ec2Client.getInstance().describeKeyPairs(Accounts.lookupSystemAccountByAlias(
             AccountIdentifiers.IMAGING_SYSTEM_ACCOUNT ).getUserId( ),
             Lists.newArrayList(keyname));
