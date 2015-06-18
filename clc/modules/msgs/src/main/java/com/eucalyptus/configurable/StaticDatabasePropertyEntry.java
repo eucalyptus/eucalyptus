@@ -77,6 +77,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
@@ -471,6 +472,28 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     public boolean apply( Class arg0 ) {
       updateLdapConfiguration( );
       return true;
+    }
+  }
+
+  @EntityUpgrade( entities = StaticPropertyEntry.class, since = Version.v4_2_0, value = Empyrean.class )
+  public enum DropServiceKeypairPropertyUpgrade implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( DropServiceKeypairPropertyUpgrade.class );
+    @Override
+    public boolean apply( Class arg0 ) {
+        try {
+          StaticDatabasePropertyEntry.update( "com.eucalyptus.imaging.ImagingServiceProperties.keyname",
+              "services.imaging.worker.keyname", "" );
+          LOG.info("Resetting services.imaging.worker.keyname property to ''. Please set it to a keypair from "
+              + AccountIdentifiers.IMAGING_SYSTEM_ACCOUNT + " account if needed.");
+          StaticDatabasePropertyEntry.update( "com.eucalyptus.loadbalancing.activities.LoadBalancerASGroupCreator.keyname",
+              "services.loadbalancing.worker.keyname", "" );
+          LOG.info("Resetting services.loadbalancing.worker.keyname to '' . Please set it to a keypair from "
+              + AccountIdentifiers.ELB_SYSTEM_ACCOUNT + " account if needed.");
+          return true;
+        } catch (Exception e) {
+          throw Exceptions.toUndeclared( e );
+        }
     }
   }
 }
