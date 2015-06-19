@@ -29,11 +29,9 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import javax.persistence.Column;
 import javax.persistence.EntityTransaction;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
 
+import com.eucalyptus.cloudwatch.common.internal.metricdata.Units;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Order;
@@ -41,7 +39,6 @@ import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.cloudwatch.domain.DimensionEntity;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
-import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
 import com.eucalyptus.cloudwatch.hashing.HashUtils;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;

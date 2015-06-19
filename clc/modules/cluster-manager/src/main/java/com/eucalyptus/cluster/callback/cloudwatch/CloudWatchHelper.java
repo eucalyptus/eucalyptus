@@ -17,7 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.cluster.callback;
+package com.eucalyptus.cluster.callback.cloudwatch;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -516,8 +516,8 @@ public class CloudWatchHelper {
     }
   }
 
-  public List<PutMetricDataType> collectMetricData(DescribeSensorsResponse msg) throws Exception {
-    ArrayList<PutMetricDataType> putMetricDataList = new ArrayList<>();
+  public List<AbsoluteMetricQueueItem> collectMetricData(DescribeSensorsResponse msg) throws Exception {
+    ArrayList<AbsoluteMetricQueueItem> absoluteMetricQueueItems = new ArrayList<>();
     final Iterable<String> uuidList = instanceInfoProvider.getRunningInstanceUUIDList();
 
     // cloudwatch metric caches
@@ -564,20 +564,20 @@ public class CloudWatchHelper {
               boolean isEc2DiskMetric = !isEbsMetric && hasEc2DiskMetricName;
 
               if (isEbsMetric || !isEc2DiskMetric) {
-                addToPutMetricDataList(putMetricDataList,
+                addToQueueItems(absoluteMetricQueueItems,
                   new Supplier<InstanceUsageEvent>() {
-                  @Override
-                  public InstanceUsageEvent get() {
-                    return new InstanceUsageEvent(
-                      sensorData.getResourceUuid(),
-                      sensorData.getResourceName(),
-                      metricType.getMetricName(),
-                      dimensionType.getSequenceNum(),
-                      dimensionType.getDimensionName(),
-                      currentValue,
-                      currentTimeStamp);
-                  }
-                });
+                    @Override
+                    public InstanceUsageEvent get() {
+                      return new InstanceUsageEvent(
+                        sensorData.getResourceUuid(),
+                        sensorData.getResourceName(),
+                        metricType.getMetricName(),
+                        dimensionType.getSequenceNum(),
+                        dimensionType.getDimensionName(),
+                        currentValue,
+                        currentTimeStamp);
+                    }
+                  });
 
                 if (isEbsMetric) {
                   // special case to calculate VolumeConsumedReadWriteOps
@@ -585,11 +585,11 @@ public class CloudWatchHelper {
                   // VolumeThroughputPercentage as 100%, we will just use VolumeReadOps + VolumeWriteOps
 
                   // And just in case VolumeReadOps is called DiskReadOps we do both cases...
-                  addToPutMetricDataList(putMetricDataList, combineReadWriteDiskMetric("DiskReadOps", "DiskWriteOps", metricCacheMap, "DiskConsumedReadWriteOps", metricType, sensorData, dimensionType, value));
-                  addToPutMetricDataList(putMetricDataList, combineReadWriteDiskMetric("VolumeReadOps", "VolumeWriteOps", metricCacheMap, "VolumeConsumedReadWriteOps", metricType, sensorData, dimensionType, value));
+                  addToQueueItems(absoluteMetricQueueItems, combineReadWriteDiskMetric("DiskReadOps", "DiskWriteOps", metricCacheMap, "DiskConsumedReadWriteOps", metricType, sensorData, dimensionType, value));
+                  addToQueueItems(absoluteMetricQueueItems, combineReadWriteDiskMetric("VolumeReadOps", "VolumeWriteOps", metricCacheMap, "VolumeConsumedReadWriteOps", metricType, sensorData, dimensionType, value));
 
                   // Also need VolumeTotalReadWriteTime to compute VolumeIdleTime
-                  addToPutMetricDataList(putMetricDataList, combineReadWriteDiskMetric("VolumeTotalReadTime", "VolumeTotalWriteTime", metricCacheMap, "VolumeTotalReadWriteTime", metricType, sensorData, dimensionType, value));
+                  addToQueueItems(absoluteMetricQueueItems, combineReadWriteDiskMetric("VolumeTotalReadTime", "VolumeTotalWriteTime", metricCacheMap, "VolumeTotalReadWriteTime", metricType, sensorData, dimensionType, value));
                 }
               } else {
                 // see if it is a volume metric
@@ -601,9 +601,9 @@ public class CloudWatchHelper {
         }
       }
 
-      if ( Iterables.tryFind( putMetricDataList, withMetric( "AWS/EC2", null, "InstanceId", sensorData.getResourceName( ) ) ).isPresent( ) &&
-          !Iterables.tryFind( putMetricDataList, withMetric( "AWS/EC2", Count.StatusCheckFailed.name( ), "InstanceId", sensorData.getResourceName( ) ) ).isPresent( ) ) {
-        putMetricDataList.add( buildInstanceStatusPut( sensorData.getResourceName( ) ) );
+      if ( Iterables.tryFind( absoluteMetricQueueItems, withMetric( "AWS/EC2", null, "InstanceId", sensorData.getResourceName( ) ) ).isPresent( ) &&
+          !Iterables.tryFind( absoluteMetricQueueItems, withMetric( "AWS/EC2", Count.StatusCheckFailed.name( ), "InstanceId", sensorData.getResourceName( ) ) ).isPresent( ) ) {
+                absoluteMetricQueueItems.addAll(buildInstanceStatusPut(sensorData.getResourceName()));
       }
     }
     Collection<Supplier<InstanceUsageEvent>> ec2DiskMetrics = ec2DiskMetricCache.getMetrics();
@@ -616,12 +616,12 @@ public class CloudWatchHelper {
       }}));
     for (Supplier<InstanceUsageEvent> ec2DiskMetric: ec2DiskMetricsSorted) {
       try {
-        addToPutMetricDataList(putMetricDataList, ec2DiskMetric);
+        addToQueueItems(absoluteMetricQueueItems, ec2DiskMetric);
       } catch (Exception ex) {
         LOG.debug("Unable to add system metric " +ec2DiskMetric, ex);
       }
     }
-    return consolidatePutMetricDataList( putMetricDataList );
+    return absoluteMetricQueueItems;
   }  
 
   private List<MetricDimensionsValuesType> stripMilliseconds(ArrayList<MetricDimensionsValuesType> values) {
@@ -663,7 +663,7 @@ public class CloudWatchHelper {
     return retVal;
   }
 
-  private void addToPutMetricDataList(List<PutMetricDataType> putMetricDataList, Supplier<InstanceUsageEvent> cloudWatchSupplier) throws Exception {
+  private void addToQueueItems(List<AbsoluteMetricQueueItem> queueItems, Supplier<InstanceUsageEvent> cloudWatchSupplier) throws Exception {
     if (cloudWatchSupplier == null) return;
     final InstanceUsageEvent event = cloudWatchSupplier.get();
     LOG.trace(event);
@@ -677,14 +677,14 @@ public class CloudWatchHelper {
     if (instanceInfoProvider.getInstanceId(event.getInstanceId()).equals(event.getInstanceId())
         && instanceInfoProvider.getMonitoring(event.getInstanceId())) {
 
-      PutMetricDataType putMetricData = new PutMetricDataType();
+      AbsoluteMetricQueueItem newQueueItem = new AbsoluteMetricQueueItem();
       MetricDatum metricDatum = new MetricDatum();
       ArrayList<Dimension> dimArray = Lists.newArrayList();
 
       if (event.getDimension() != null && event.getValue() != null) {
 
         if (event.getDimension().startsWith("vol-")) {
-          putMetricData.setNamespace("AWS/EBS");
+          newQueueItem.setNamespace("AWS/EBS");
           Dimension volDim = new Dimension();
           volDim.setName("VolumeId");
           volDim.setValue(event.getDimension());
@@ -698,7 +698,7 @@ public class CloudWatchHelper {
             metricDatum.setMetricName(event.getMetric());
           }
         } else {
-          putMetricData.setNamespace("AWS/EC2");
+          newQueueItem.setNamespace("AWS/EC2");
           populateInstanceDimensions( event.getInstanceId( ), dimArray );
 
           // convert ephemeral disks metrics
@@ -716,8 +716,6 @@ public class CloudWatchHelper {
       Dimensions dims = new Dimensions();
       dims.setMember(dimArray);
 
-      MetricData metricData = new MetricData();
-
       metricDatum.setTimestamp(new Date(event.getValueTimestamp()));
       metricDatum.setDimensions(dims);
       metricDatum.setValue(event.getValue());
@@ -729,11 +727,9 @@ public class CloudWatchHelper {
         metricDatum.setMetricName(ABSOLUTE_METRICS.get(metricDatum.getMetricName()));
       }
       
-      metricData.setMember(Lists.newArrayList(metricDatum));
-      putMetricData.setMetricData(metricData);
-      putMetricData.setUserId(instanceInfoProvider.getEffectiveUserId(event.getInstanceId()).getAccountNumber());
-      putMetricData.markPrivileged();
-      putMetricDataList.add(putMetricData);
+      newQueueItem.setMetricDatum(metricDatum);
+      newQueueItem.setAccountId(instanceInfoProvider.getEffectiveUserId(event.getInstanceId()).getAccountNumber());
+      queueItems.add(newQueueItem);
     }
   }
 
@@ -766,7 +762,7 @@ public class CloudWatchHelper {
     dimArray.add(instanceTypeDim);
   }
 
-  private PutMetricDataType buildInstanceStatusPut( final String instanceId ) throws Exception {
+  private List<AbsoluteMetricQueueItem> buildInstanceStatusPut( final String instanceId ) throws Exception {
     final List<Pair<String,Double>> instanceStatusDatums = ImmutableList.<Pair<String,Double>>builder()
         .add( Pair.pair(
             Count.StatusCheckFailed.name(),
@@ -784,48 +780,41 @@ public class CloudWatchHelper {
     final Dimensions dimensions = new Dimensions();
     dimensions.setMember( dimArray );
 
-    final ArrayList<MetricDatum> metricDatums = Lists.newArrayList( );
+    final List<AbsoluteMetricQueueItem> queueItems = Lists.newArrayList();
     for ( final Pair<String,Double> datum : instanceStatusDatums ) {
       final MetricDatum metricDatum = new MetricDatum( );
-      metricDatum.setMetricName( datum.getLeft( ) );
-      metricDatum.setDimensions( dimensions );
-      metricDatum.setTimestamp( new Date() );
-      metricDatum.setValue( datum.getRight( ) );
+      metricDatum.setMetricName(datum.getLeft());
+      metricDatum.setDimensions(dimensions);
+      metricDatum.setTimestamp(new Date());
+      metricDatum.setValue(datum.getRight());
       metricDatum.setUnit( Count.class.getSimpleName() );
-      metricDatums.add( metricDatum );
+      final AbsoluteMetricQueueItem queueItem = new AbsoluteMetricQueueItem( );
+      queueItem.setNamespace("AWS/EC2");
+      queueItem.setMetricDatum(metricDatum);
+      queueItem.setAccountId(instanceInfoProvider.getEffectiveUserId(instanceId).getAccountNumber());
+      queueItems.add(queueItem);
     }
-
-    final MetricData metricData = new MetricData( );
-    metricData.setMember( metricDatums );
-
-    final PutMetricDataType putMetricData = new PutMetricDataType( );
-    putMetricData.setNamespace( "AWS/EC2" );
-    putMetricData.setMetricData( metricData );
-    putMetricData.setUserId( instanceInfoProvider.getEffectiveUserId( instanceId ).getAccountNumber() );
-    putMetricData.markPrivileged( );
-
-    return putMetricData;
+    return queueItems;
   }
 
-  private static Predicate<PutMetricDataType> withMetric( final String namespace,
-                                                          final String name,
-                                                          final String dimensionName,
-                                                          final String dimensionValue ) {
-    return new Predicate<PutMetricDataType>( ) {
+  private static Predicate<AbsoluteMetricQueueItem> withMetric( final String namespace,
+                                                                final String name,
+                                                                final String dimensionName,
+                                                                final String dimensionValue ) {
+    return new Predicate<AbsoluteMetricQueueItem>( ) {
       private final Predicate<MetricDatum> metricDatumPredicate = Predicates.and(
-          name == null ?
-            Predicates.<MetricDatum>alwaysTrue( ) :
-            withMetric( name ),
-          withMetricDimension( dimensionName, dimensionValue )
+        name == null ?
+          Predicates.<MetricDatum>alwaysTrue( ) :
+          withMetric( name ),
+        withMetricDimension( dimensionName, dimensionValue )
       );
 
       @Override
-      public boolean apply( @Nullable final PutMetricDataType putMetricDataType ) {
-        return putMetricDataType != null &&
-            namespace.equals( putMetricDataType.getNamespace( ) ) &&
-            putMetricDataType.getMetricData( ) != null &&
-            putMetricDataType.getMetricData( ).getMember( ) != null &&
-            Iterables.tryFind( putMetricDataType.getMetricData( ).getMember( ), metricDatumPredicate ).isPresent( );
+      public boolean apply( @Nullable final AbsoluteMetricQueueItem queueItem ) {
+        return queueItem != null &&
+          namespace.equals( queueItem.getNamespace( ) ) &&
+          queueItem.getMetricDatum() != null &&
+          metricDatumPredicate.apply( queueItem.getMetricDatum());
       }
     };
   }

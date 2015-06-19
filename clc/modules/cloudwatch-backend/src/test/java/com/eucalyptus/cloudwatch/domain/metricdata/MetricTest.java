@@ -23,11 +23,11 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.eucalyptus.cloudwatch.common.internal.metricdata.Units;
 import org.apache.log4j.Logger;
 import org.junit.Ignore;
 
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
-import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
 
 @Ignore("Manual development test")
 public class MetricTest {

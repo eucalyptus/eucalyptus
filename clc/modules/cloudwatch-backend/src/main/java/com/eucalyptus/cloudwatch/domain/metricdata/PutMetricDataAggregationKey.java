@@ -21,8 +21,8 @@ package com.eucalyptus.cloudwatch.domain.metricdata;
 
 import java.util.Date;
 
+import com.eucalyptus.cloudwatch.common.internal.metricdata.Units;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
-import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
 
 
 public class PutMetricDataAggregationKey {

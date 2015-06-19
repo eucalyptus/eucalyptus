@@ -18,7 +18,7 @@
  * additional information or have any questions.
  ************************************************************************/
 
-package com.eucalyptus.cloudwatch.domain.absolute;
+package com.eucalyptus.cluster.callback.cloudwatch;
 
 import java.util.Date;
 import javax.persistence.Column;
