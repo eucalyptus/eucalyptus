@@ -714,8 +714,7 @@ char *java_library_path(euca_opts * args)
     while ((dir_ent = readdir(lib_dir_p)) != 0) {
         if (strcmp(dir_ent->d_name, ".") != 0 && strcmp(dir_ent->d_name, "..")
             != 0 && strcmp(dir_ent->d_name, "openjdk-crypto.jar") != 0
-            && strstr(dir_ent->d_name, "disabled") == NULL && (strstr(dir_ent->d_name, "eucalyptus-") != NULL
-                                                               || strstr(dir_ent->d_name, "vijava") != NULL)) {
+            && strstr(dir_ent->d_name, "disabled") == NULL && (strstr(dir_ent->d_name, "eucalyptus-") != NULL)) {
             char jar[256];
             snprintf(jar, 255, "%s/%s", lib_dir, dir_ent->d_name);
             if ((CHECK_ISREG(jar) || CHECK_ISLNK(jar)))
@@ -729,8 +728,7 @@ char *java_library_path(euca_opts * args)
     while ((dir_ent = readdir(lib_dir_p)) != 0) {
         if (strcmp(dir_ent->d_name, ".") != 0 && strcmp(dir_ent->d_name, "..")
             != 0 && strcmp(dir_ent->d_name, "openjdk-crypto.jar") != 0
-            && strstr(dir_ent->d_name, "disabled") == NULL && (strstr(dir_ent->d_name, "eucalyptus-") == NULL
-                                                               && strstr(dir_ent->d_name, "vijava") == NULL)) {
+            && strstr(dir_ent->d_name, "disabled") == NULL && (strstr(dir_ent->d_name, "eucalyptus-") == NULL)) {
             char jar[256];
             snprintf(jar, 255, "%s/%s", lib_dir, dir_ent->d_name);
             if ((CHECK_ISREG(jar) || CHECK_ISLNK(jar)))
