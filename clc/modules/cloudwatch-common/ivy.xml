@@ -3,6 +3,8 @@
     <dependencies>
         <dependency org="com.eucalyptus" name="eucalyptus-configuration" rev="latest.integration"/>
         <dependency org="com.eucalyptus" name="eucalyptus-msgs" rev="latest.integration"/>
+        <dependency org="com.eucalyptus" name="eucalyptus-autoscaling-common" rev="latest.integration"/>
+        <dependency org="com.eucalyptus" name="eucalyptus-compute-common" rev="latest.integration"/>
     </dependencies>
 </ivy-module>
 
