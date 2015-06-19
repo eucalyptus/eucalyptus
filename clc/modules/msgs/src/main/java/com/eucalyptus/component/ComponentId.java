@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -88,6 +88,7 @@ import com.eucalyptus.component.annotation.InternalService;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.component.annotation.PublicService;
+import com.eucalyptus.component.annotation.ServiceNames;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.Ats;
@@ -99,8 +100,10 @@ import com.eucalyptus.ws.StackConfiguration.BasicTransport;
 import com.eucalyptus.ws.TransportDefinition;
 import com.eucalyptus.ws.server.Pipelines;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 public abstract class ComponentId implements HasName<ComponentId>, HasFullName<ComponentId>, Serializable {
   private static final long  serialVersionUID = 1L;
@@ -461,6 +464,29 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     } else {
       return "eucalyptus";
     }
+  }
+
+  /**
+   * Get any additional DNS host labels for this component.
+   */
+  public Set<String> getServiceNames( ) {
+    Set<String> names = Collections.emptySet( );
+    if ( this.ats.has( ServiceNames.class ) ) {
+      names = ImmutableSet.copyOf( this.ats.get( ServiceNames.class ).value( ) );
+    } else if ( this.ats.has( AwsServiceName.class ) ) {
+      names = Collections.singleton( getAwsServiceName( ) );
+    }
+    return names;
+  }
+
+  /**
+   * Get all DNS host labels for this component.
+   */
+  public Set<String> getAllServiceNames( ) {
+    final Set<String> names = Sets.newLinkedHashSet( );
+    names.add( name( ) );
+    names.addAll( getServiceNames( ) );
+    return names;
   }
 
   public DatabaseNamingStrategy getDatabaseNamingStrategy( ) {
