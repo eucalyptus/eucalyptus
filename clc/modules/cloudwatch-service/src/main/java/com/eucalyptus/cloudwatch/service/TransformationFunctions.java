@@ -17,35 +17,33 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.cloudwatch.backend;
-
-import java.util.ArrayList;
-import java.util.Map;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
-import org.apache.log4j.Logger;
+package com.eucalyptus.cloudwatch.service;
 
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.cloudwatch.common.CloudWatchMetadata;
-import com.eucalyptus.cloudwatch.common.backend.msgs.AlarmHistoryItem;
-import com.eucalyptus.cloudwatch.common.backend.msgs.Dimension;
-import com.eucalyptus.cloudwatch.common.backend.msgs.DimensionFilter;
-import com.eucalyptus.cloudwatch.common.backend.msgs.DimensionFilters;
-import com.eucalyptus.cloudwatch.common.backend.msgs.Dimensions;
-import com.eucalyptus.cloudwatch.common.backend.msgs.Metric;
-import com.eucalyptus.cloudwatch.common.backend.msgs.MetricAlarm;
-import com.eucalyptus.cloudwatch.common.backend.msgs.ResourceList;
 import com.eucalyptus.cloudwatch.common.internal.domain.DimensionEntity;
 import com.eucalyptus.cloudwatch.common.internal.domain.alarms.AlarmEntity;
 import com.eucalyptus.cloudwatch.common.internal.domain.alarms.AlarmHistory;
 import com.eucalyptus.cloudwatch.common.internal.domain.listmetrics.ListMetric;
-import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.cloudwatch.common.msgs.AlarmHistoryItem;
+import com.eucalyptus.cloudwatch.common.msgs.Dimension;
+import com.eucalyptus.cloudwatch.common.msgs.DimensionFilter;
+import com.eucalyptus.cloudwatch.common.msgs.DimensionFilters;
+import com.eucalyptus.cloudwatch.common.msgs.Dimensions;
+import com.eucalyptus.cloudwatch.common.msgs.Metric;
+import com.eucalyptus.cloudwatch.common.msgs.MetricAlarm;
+import com.eucalyptus.cloudwatch.common.msgs.ResourceList;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.apache.log4j.Logger;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Map;
 
 public class TransformationFunctions {
 

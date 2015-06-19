@@ -21,8 +21,47 @@ package com.eucalyptus.cloudwatch.service;
 
 import com.eucalyptus.auth.AuthContextSupplier;
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
+
+import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.cloudwatch.common.CloudWatch;
+import com.eucalyptus.cloudwatch.common.config.CloudWatchConfigProperties;
+import com.eucalyptus.cloudwatch.common.internal.domain.InvalidTokenException;
+import com.eucalyptus.cloudwatch.common.internal.domain.listmetrics.ListMetric;
+import com.eucalyptus.cloudwatch.common.internal.domain.listmetrics.ListMetricManager;
+import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricManager;
+import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricStatistics;
+import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricUtils;
+import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.Units;
+import com.eucalyptus.cloudwatch.common.msgs.Datapoint;
+import com.eucalyptus.cloudwatch.common.msgs.Datapoints;
+import com.eucalyptus.cloudwatch.common.msgs.GetMetricStatisticsResponseType;
+import com.eucalyptus.cloudwatch.common.msgs.GetMetricStatisticsType;
+import com.eucalyptus.cloudwatch.common.msgs.ListMetricsResponseType;
+import com.eucalyptus.cloudwatch.common.msgs.ListMetricsResult;
+import com.eucalyptus.cloudwatch.common.msgs.ListMetricsType;
+import com.eucalyptus.cloudwatch.common.msgs.Metric;
+import com.eucalyptus.cloudwatch.common.msgs.MetricDatum;
+import com.eucalyptus.cloudwatch.common.msgs.Metrics;
+import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataResponseType;
+import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataType;
+import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricEntity.MetricType;
+import com.eucalyptus.cloudwatch.common.msgs.Statistics;
+import com.eucalyptus.cloudwatch.service.queue.metricdata.MetricDataQueue;
+import com.eucalyptus.component.Faults;
+import com.eucalyptus.context.Context;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Lists;
+import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.mule.api.MuleEventContext;
+import org.mule.api.lifecycle.Callable;
 import org.mule.component.ComponentException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -46,9 +85,138 @@ import edu.ucsb.eucalyptus.msgs.BaseMessages;
 /**
  *
  */
-public class CloudWatchService {
+public class CloudWatchService implements Callable {
 
-  public CloudWatchMessage dispatchAction( final CloudWatchMessage request ) throws EucalyptusCloudException {
+  private static final Logger LOG = Logger.getLogger(CloudWatchService.class);
+  public PutMetricDataResponseType putMetricData(PutMetricDataType request)
+    throws CloudWatchException {
+    PutMetricDataResponseType reply = request.getReply();
+    long before = System.currentTimeMillis();
+    final Context ctx = Contexts.lookup();
+
+    try {
+      // IAM Action Check
+      checkActionPermission(PolicySpec.CLOUDWATCH_PUTMETRICDATA, ctx);
+      if (CloudWatchConfigProperties.isDisabledCloudWatchService()) {
+        faultDisableCloudWatchServiceIfNecessary();
+        throw new ServiceDisabledException("Service Disabled");
+      }
+      final OwnerFullName ownerFullName = ctx.getUserFullName();
+      final List<MetricDatum> metricData = CloudWatchBackendServiceFieldValidator.validateMetricData(request.getMetricData());
+      final String namespace = CloudWatchBackendServiceFieldValidator.validateNamespace(request.getNamespace(), true);
+      final Boolean privileged = Contexts.lookup().isPrivileged();
+      LOG.trace("Namespace=" + namespace);
+      LOG.trace("metricData="+metricData);
+      MetricType metricType = CloudWatchBackendServiceFieldValidator.getMetricTypeFromNamespace(namespace);
+      if (metricType == MetricType.System && !privileged) {
+        throw new InvalidParameterValueException("The value AWS/ for parameter Namespace is invalid.");
+      }
+      MetricDataQueue.getInstance().insertMetricData(ownerFullName.getAccountNumber(), namespace, metricData, metricType);
+    } catch (Exception ex) {
+      handleException(ex);
+    }
+    return reply;
+  }
+
+  public ListMetricsResponseType listMetrics(ListMetricsType request)
+    throws CloudWatchException {
+    ListMetricsResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup();
+
+    try {
+      // IAM Action Check
+      checkActionPermission(PolicySpec.CLOUDWATCH_LISTMETRICS, ctx);
+
+      final OwnerFullName ownerFullName = ctx.getUserFullName();
+      final String namespace = CloudWatchBackendServiceFieldValidator.validateNamespace(request.getNamespace(), false);
+      final String metricName = CloudWatchBackendServiceFieldValidator.validateMetricName(request.getMetricName(),
+        false);
+      final Map<String, String> dimensionMap = TransformationFunctions.DimensionFiltersToMap.INSTANCE
+        .apply(CloudWatchBackendServiceFieldValidator.validateDimensionFilters(request.getDimensions()));
+
+      // take all stats updated after two weeks ago
+      final Date after = new Date(System.currentTimeMillis() - 2 * 7 * 24 * 60
+        * 60 * 1000L);
+      final Date before = null; // no bound on time before stats are updated
+      // (though maybe 'now')
+      final Integer maxRecords = 500; // per the API docs
+      final String nextToken = request.getNextToken();
+      final List<ListMetric> results;
+      try {
+        results = ListMetricManager.listMetrics(
+          ownerFullName.getAccountNumber(), metricName, namespace,
+          dimensionMap, after, before, maxRecords, nextToken);
+      } catch (InvalidTokenException e) {
+        // not sure why, but this is the message AWS sends (different from the alarm case, different exception too)
+        throw new InvalidParameterValueException("Invalid nextToken");
+      }
+
+      final Metrics metrics = new Metrics();
+      metrics.setMember(Lists.newArrayList(Collections2
+        .<ListMetric, Metric>transform(results,
+          TransformationFunctions.ListMetricToMetric.INSTANCE)));
+      final ListMetricsResult listMetricsResult = new ListMetricsResult();
+      listMetricsResult.setMetrics(metrics);
+      if (maxRecords != null && results.size() == maxRecords) {
+        listMetricsResult.setNextToken(results.get(results.size() - 1)
+          .getNaturalId());
+      }
+      reply.setListMetricsResult(listMetricsResult);
+    } catch (Exception ex) {
+      handleException(ex);
+    }
+    return reply;
+  }
+  public GetMetricStatisticsResponseType getMetricStatistics(
+    GetMetricStatisticsType request) throws CloudWatchException {
+    GetMetricStatisticsResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup();
+    try {
+      // IAM Action Check
+      checkActionPermission(PolicySpec.CLOUDWATCH_GETMETRICSTATISTICS, ctx);
+
+      // TODO: parse statistics separately()?
+      final OwnerFullName ownerFullName = ctx.getUserFullName();
+      Statistics statistics = CloudWatchBackendServiceFieldValidator.validateStatistics(request.getStatistics());
+      final String namespace = CloudWatchBackendServiceFieldValidator.validateNamespace(request.getNamespace(), true);
+      final String metricName = CloudWatchBackendServiceFieldValidator.validateMetricName(request.getMetricName(),
+        true);
+      final Date startTime = MetricUtils.stripSeconds(CloudWatchBackendServiceFieldValidator.validateStartTime(request.getStartTime(), true));
+      final Date endTime = MetricUtils.stripSeconds(CloudWatchBackendServiceFieldValidator.validateEndTime(request.getEndTime(), true));
+      final Integer period = CloudWatchBackendServiceFieldValidator.validatePeriod(request.getPeriod(), true);
+      CloudWatchBackendServiceFieldValidator.validateDateOrder(startTime, endTime, "StartTime", "EndTime", true,
+        true);
+      CloudWatchBackendServiceFieldValidator.validateNotTooManyDataPoints(startTime, endTime, period, 1440L);
+
+      // TODO: null units here does not mean Units.NONE but basically a
+      // wildcard.
+      // Consider this case.
+      final Units units = CloudWatchBackendServiceFieldValidator.validateUnits(request.getUnit(), false);
+      final Map<String, String> dimensionMap = TransformationFunctions.DimensionsToMap.INSTANCE
+        .apply(CloudWatchBackendServiceFieldValidator.validateDimensions(request.getDimensions()));
+      Collection<MetricStatistics> metrics;
+      metrics = MetricManager.getMetricStatistics(
+        ownerFullName.getAccountNumber(), metricName, namespace,
+        dimensionMap, CloudWatchBackendServiceFieldValidator.getMetricTypeFromNamespace(namespace), units,
+        startTime, endTime, period);
+      reply.getGetMetricStatisticsResult().setLabel(metricName);
+      ArrayList<Datapoint> datapoints = CloudWatchBackendServiceFieldValidator.convertMetricStatisticsToDatapoints(
+        statistics, metrics);
+      if (datapoints.size() > 0) {
+        Datapoints datapointsReply = new Datapoints();
+        datapointsReply.setMember(datapoints);
+        reply.getGetMetricStatisticsResult().setDatapoints(datapointsReply);
+      }
+    } catch (Exception ex) {
+      handleException(ex);
+    }
+    return reply;
+  }
+
+
+
+
+  private CloudWatchMessage dispatchAction( final CloudWatchMessage request ) throws EucalyptusCloudException {
     final AuthContextSupplier user = Contexts.lookup( ).getAuthContext( );
     if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_CLOUDWATCH, getIamActionByMessageType( request ), user ) ) {
       throw new CloudWatchAuthorizationException( "UnauthorizedOperation", "You are not authorized to perform this operation." );
@@ -112,5 +280,47 @@ public class CloudWatchService {
           throw new CloudWatchException( code, Role.Receiver, message );
       }
     }
+  }
+
+  private static final int DISABLED_SERVICE_FAULT_ID = 1500;
+  private boolean alreadyFaulted = false;
+  private void faultDisableCloudWatchServiceIfNecessary() {
+    // TODO Auto-generated method stub
+    if (!alreadyFaulted) {
+      Faults.forComponent(CloudWatch.class).havingId(DISABLED_SERVICE_FAULT_ID).withVar("component", "cloudwatch").log();
+      alreadyFaulted = true;
+    }
+
+  }
+
+  private void checkActionPermission(final String actionType, final Context ctx)
+    throws EucalyptusCloudException {
+    if (!Permissions.isAuthorized(PolicySpec.VENDOR_CLOUDWATCH, actionType, "",
+      ctx.getAccount(), actionType, ctx.getAuthContext())) {
+      throw new EucalyptusCloudException("User does not have permission");
+    }
+  }
+
+  private static void handleException(final Exception e)
+    throws CloudWatchException {
+    final CloudWatchException cause = Exceptions.findCause(e,
+      CloudWatchException.class);
+    if (cause != null) {
+      throw cause;
+    }
+
+    final InternalFailureException exception = new InternalFailureException(
+      String.valueOf(e.getMessage()));
+    if (Contexts.lookup().hasAdministrativePrivileges()) {
+      exception.initCause(e);
+    }
+    throw exception;
+  }
+
+  @Override
+  public Object onCall(MuleEventContext muleEventContext) throws Exception {
+    final CloudWatchMessage request = (CloudWatchMessage) muleEventContext.getMessage( ).getPayload( );
+    LOG.debug(request.toSimpleString());
+    return dispatchAction(request);
   }
 }

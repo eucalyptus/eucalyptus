@@ -22,7 +22,7 @@ package com.eucalyptus.cluster.callback.cloudwatch;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cloudwatch.common.CloudWatch;
 import com.eucalyptus.cloudwatch.common.CloudWatchBackend;
-import com.eucalyptus.cloudwatch.common.internal.metricdata.Units;
+import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.Units;
 import com.eucalyptus.cloudwatch.common.msgs.Dimension;
 import com.eucalyptus.cloudwatch.common.msgs.Dimensions;
 import com.eucalyptus.cloudwatch.common.msgs.MetricData;
