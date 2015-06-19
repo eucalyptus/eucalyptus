@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -70,6 +70,7 @@ import com.eucalyptus.component.annotation.GenerateKeys;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.component.annotation.PublicService;
+import com.eucalyptus.component.annotation.ServiceNames;
 
 /**
  * The component identifier for the ObjectStorage partition component. This is the parent component to supports active-active (manyToOne) of
@@ -81,6 +82,7 @@ import com.eucalyptus.component.annotation.PublicService;
 @PublicService
 @GenerateKeys
 @AwsServiceName("s3")
+@ServiceNames( { "s3", "walrus" } )
 @PolicyVendor("s3")
 @Partition(value = {ObjectStorage.class}, manyToOne = true)
 @FaultLogPrefix("services")
