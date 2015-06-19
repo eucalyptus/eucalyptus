@@ -512,6 +512,13 @@ public class ClusterAllocator implements Runnable {
                 + " and retry");
           }
           
+          // Fix for EUCA-6947. Go through all transient attachments (volumes attached to instance at run time) and add them to resource token so they
+          // can be included in the VBR sent to CC/NC
+          for (VmVolumeAttachment attachment : vm.getTransientVolumeState().getAttachments()) {
+            final Volume volume = Volumes.lookup(null, attachment.getVolumeId());
+            token.getEbsVolumes().put(attachment.getDevice(), volume);
+          }
+          
           // Go through all ephemeral attachment records and populate them into resource token so they can used for vbr construction
           for (VmEphemeralAttachment attachment : vm.getBootRecord( ).getEphemeralStorage()) {
             token.getEphemeralDisks().put(attachment.getDevice(), attachment.getEphemeralId());

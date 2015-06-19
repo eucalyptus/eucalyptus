@@ -1535,7 +1535,9 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
       @Override
       public String apply(@Nonnull Map<String, String> arg0) {
         final VmInstance entity = Entities.merge(vm);
-        for (VmVolumeAttachment attachment : entity.getBootRecord().getPersistentVolumes()) {
+        List<VmVolumeAttachment> allAttachments = Lists.newArrayList(entity.getBootRecord().getPersistentVolumes());
+        allAttachments.addAll(entity.getTransientVolumeState().getAttachments());
+        for (VmVolumeAttachment attachment : allAttachments) {
           if (arg0.containsKey(attachment.getVolumeId())) {
             attachment.setRemoteDevice(arg0.get(attachment.getVolumeId()));
           } else {
@@ -1734,7 +1736,8 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
         && VmState.RUNNING.equals( newState ) ) {
       vm.setState( newState );
       if ( VmState.STOPPED.equals( olderState ) ) {
-        restoreVolumeState( vm );
+        // Fix for EUCA-6947. Skip transient volume attachment since all volumes (boot and run time) are forwarded to CC/NC at instance boot time
+        // restoreVolumeState( vm );
       }
     } else if ( VmState.PENDING.equals( oldState )
         && VmState.TERMINATED.equals( newState )
