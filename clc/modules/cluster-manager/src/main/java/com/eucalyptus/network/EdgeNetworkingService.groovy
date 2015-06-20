@@ -124,7 +124,6 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
     DescribeNetworkingFeaturesResponseType.cast( request.reply( new DescribeNetworkingFeaturesResponseType(
         describeNetworkingFeaturesResult : new DescribeNetworkingFeaturesResult(
             networkingFeatures: Lists.newArrayList(
-                Consistent,
                 configurationOptional.isPresent( ) && NetworkMode.VPCMIDO.toString( ) == configurationOptional.get( ).mode ? Vpc : Classic
             )
         )

@@ -599,7 +599,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
 
   @ConfigurableField( description = "Comma separated list of handlers to use for unknown instances ('restore', 'restore-failed', 'terminate', 'terminate-done')",
       initial = "restore-failed", changeListener = UnknownInstanceHandlerChangeListener.class )
-  public static String UNKNOWN_INSTANCE_HANDLERS        = "terminate-done, restore-failed, restore";
+  public static String UNKNOWN_INSTANCE_HANDLERS        = "terminate-done, restore-failed";
 
   @ConfigurableField( description = "Instance metadata user data cache configuration.",
       initial = "maximumSize=50, expireAfterWrite=5s, softValues",
@@ -2156,16 +2156,11 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
       }
     },
     /**
-     * Restores instances without network resources in consistent networking modes (EDGE, VPC)
-     *
-     * <p>Not safe for use in other modes due to possible network resource inconsistencies.</p>
+     * Restores instances without network resources.
      */
     RestoreFailed {
       @Override
       public boolean apply( final VmInfo input ) {
-        if ( !Networking.getInstance( ).supports( NetworkingFeature.Consistent ) ) {
-          return false; // consistent back-end required for restore-failed
-        }
         final VmState inputState = VmState.Mapper.get( input.getStateName( ) );
         if ( !VmStateSet.RUN.contains( inputState ) ) {
           return false;
