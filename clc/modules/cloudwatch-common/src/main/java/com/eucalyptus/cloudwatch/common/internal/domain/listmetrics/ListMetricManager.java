@@ -34,6 +34,7 @@ import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.cloudwatch.common.internal.domain.InvalidTokenException;
+import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricEntity;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Disjunction;
@@ -243,7 +244,7 @@ public class ListMetricManager {
     }
   }
 
-  public static void addMetricBatch(List<SimpleMetricEntity> dataBatch) {
+  public static void addMetricBatch(List<ListMetric> dataBatch) {
     EntityTransaction db = Entities.get(ListMetric.class);
     try {
       HashSet<ListMetricCacheLoadKey> loadedKeys = Sets.newHashSet();
@@ -300,9 +301,9 @@ public class ListMetricManager {
 
 
   private static Collection<ListMetricCacheKey> prune(
-      List<SimpleMetricEntity> dataBatch) {
+      List<ListMetric> dataBatch) {
     Collection<ListMetricCacheKey> returnValue = new LinkedHashSet<ListMetricCacheKey>();
-    for (SimpleMetricEntity item: dataBatch) {
+    for (ListMetric item: dataBatch) {
       ListMetricCacheLoadKey loadKey = new ListMetricCacheLoadKey();
       loadKey.setAccountId(item.getAccountId());
       loadKey.setNamespace(item.getNamespace());
@@ -314,6 +315,29 @@ public class ListMetricManager {
       returnValue.add(key);
     }
     return returnValue;
+  }
+
+  public static ListMetric createListMetric(String accountId, String metricName, MetricEntity.MetricType metricType, String namespace, Map<String, String> dimensionMap) {
+    if (dimensionMap == null) {
+      dimensionMap = new HashMap<String, String>();
+    } else if (dimensionMap.size() > ListMetric.MAX_DIM_NUM) {
+      throw new IllegalArgumentException("Too many dimensions for metric, " + dimensionMap.size());
+    }
+    TreeSet<DimensionEntity> dimensions = new TreeSet<DimensionEntity>();
+    for (Map.Entry<String,String> entry: dimensionMap.entrySet()) {
+      DimensionEntity d = new DimensionEntity();
+      d.setName(entry.getKey());
+      d.setValue(entry.getValue());
+      dimensions.add(d);
+    }
+
+    ListMetric metric = new ListMetric();
+    metric.setAccountId(accountId);
+    metric.setMetricName(metricName);
+    metric.setMetricType(metricType);
+    metric.setNamespace(namespace);
+    metric.setDimensions(dimensions);
+    return metric;
   }
 
   private static class ListMetricCacheLoadKey {
