@@ -27,6 +27,7 @@ import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.SimpleMetricE
 import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.Units;
 import com.eucalyptus.cloudwatch.common.msgs.Dimension;
 import com.eucalyptus.cloudwatch.common.msgs.MetricDatum;
+import com.eucalyptus.cloudwatch.service.queue.listmetrics.ListMetricQueue;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -72,27 +73,27 @@ public class MetricDataQueue {
       try {
         List<MetricQueueItem> dataBatch = Lists.newArrayList();
         dataQueue.drainTo(dataBatch, 15000);
-        LOG.debug("Timing:dataBatch.size()="+dataBatch.size());
+        LOG.debug("PutMetricDataQueue:Timing:dataBatch.size()="+dataBatch.size());
         long t1 = System.currentTimeMillis();
         List<SimpleMetricEntity> simpleDataBatch = convertToSimpleDataBatch(dataBatch);
         long t2 = System.currentTimeMillis();
-        LOG.debug("Timing:dataBatch.convertToSimpleDataBatch():time="+(t2-t1));
+        LOG.debug("PutMetricDataQueue:Timing:dataBatch.convertToSimpleDataBatch():time="+(t2-t1));
         simpleDataBatch = aggregate(simpleDataBatch);
         long t3 = System.currentTimeMillis();
-        LOG.debug("Timing:dataBatch.aggregate():time="+(t3-t2));
+        LOG.debug("PutMetricDataQueue:Timing:dataBatch.aggregate():time="+(t3-t2));
         MetricManager.addMetricBatch(simpleDataBatch);
         long t4 = System.currentTimeMillis();
-        LOG.debug("Timing:dataBatch.MetricManager.addMetricBatch():time="+(t4-t3));
-        ListMetricManager.addMetricBatch(simpleDataBatch);
+        LOG.debug("PutMetricDataQueue:Timing:dataBatch.MetricManager.addMetricBatch():time="+(t4-t3));
+        ListMetricQueue.getInstance().addAll(simpleDataBatch);
         long t5 = System.currentTimeMillis();
-        LOG.debug("Timing:ListMetricManager.addMetricBatch:time="+(t5-t4));
+        LOG.debug("PutMetricDataQueue:Timing:ListMetricQueue.addAll():time="+(t5-t4));
       } catch (Throwable ex) {
-        LOG.debug("error");
+        LOG.debug("PutMetricDataQueue:error");
         ex.printStackTrace();
         LOG.error(ex,ex);
       } finally {
         long after = System.currentTimeMillis();
-        LOG.debug("Timing:time="+(after-before));
+        LOG.debug("PutMetricDataQueue:Timing:time="+(after-before));
       }
     }
   };

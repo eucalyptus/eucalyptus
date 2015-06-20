@@ -94,27 +94,27 @@ public class AbsoluteMetricQueue {
         List<AbsoluteMetricQueueItem> dataBatch = Lists.newArrayList();
         dataQueue.drainTo(dataBatch);
         //        dataQueue.drainTo(dataBatch, 15000);
-        LOG.debug("Cluster:Timing:dataBatch.size()=" + dataBatch.size());
+        LOG.debug("AbsoluteMetricQueue:Timing:dataBatch.size()=" + dataBatch.size());
         long t1 = System.currentTimeMillis();
         dataBatch = dealWithAbsoluteMetrics(dataBatch);
         long t2 = System.currentTimeMillis();
-        LOG.debug("Cluster:Timing:dataBatch.foldMetrics():time="+(t2-t1));
+        LOG.debug("AbsoluteMetricQueue:Timing:dataBatch.foldMetrics():time="+(t2-t1));
         List<PutMetricDataType> putMetricDataTypeList =convertToPutMetricDataList(dataBatch);
         long t3 = System.currentTimeMillis();
-        LOG.debug("Cluster:Timing:dataBatch.convertToPutMetricDataList():time="+(t3-t2));
+        LOG.debug("AbsoluteMetricQueue:Timing:dataBatch.convertToPutMetricDataList():time="+(t3-t2));
         putMetricDataTypeList = CloudWatchHelper.consolidatePutMetricDataList(putMetricDataTypeList);
         long t4 = System.currentTimeMillis();
-        LOG.debug("Cluster:Timing:dataBatch.consolidatePutMetricDataList():time="+(t4-t3));
+        LOG.debug("AbsoluteMetricQueue:Timing:dataBatch.consolidatePutMetricDataList():time="+(t4-t3));
         callPutMetricData(putMetricDataTypeList);
         long t5 = System.currentTimeMillis();
-        LOG.debug("Timing:ListMetricManager.callPutMetricData():time="+(t5-t4));
+        LOG.debug("AbsoluteMetricQueue:Timing:callPutMetricData():time="+(t5-t4));
       } catch (Throwable ex) {
-        LOG.debug("error");
+        LOG.debug("AbsoluteMetricQueue:error");
         ex.printStackTrace();
         LOG.error(ex,ex);
       } finally {
         long after = System.currentTimeMillis();
-        LOG.debug("Timing:time="+(after-before));
+        LOG.debug("AbsoluteMetricQueue:Timing:time="+(after-before));
       }
     }
   };
