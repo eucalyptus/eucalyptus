@@ -66,23 +66,23 @@ import com.eucalyptus.auth.policy.PolicySpec;
 
 public class EuareResourceName extends Ern {
 
-  private String userOrGroup;
-  private String path;
-  private String name;
+  private final String type;
+  private final String path;
+  private final String name;
   
-  public EuareResourceName( String namespace, String userOrGroup, String path, String name ) {
+  public EuareResourceName( String namespace, String type, String path, String name ) {
+    this.vendor = PolicySpec.VENDOR_IAM;
     this.namespace = namespace;
-    this.userOrGroup = userOrGroup;
+    this.type = type;
     this.path = path;
     this.name = name;
-    this.vendor = PolicySpec.VENDOR_IAM;
   }
 
   @Override
   public String toString( ) {
     StringBuilder sb = new StringBuilder( );
     sb.append( ARN_PREFIX ).append( this.getVendor( ) ).append( "::" ).append( this.getNamespace( ) )
-        .append( ':' ).append( this.userOrGroup ).append( this.path );
+        .append( ':' ).append( this.type ).append( this.path );
     if ( !"/".equals( this.path ) && !this.path.endsWith( "/" ) ) {
       sb.append( '/' );
     }
@@ -90,20 +90,11 @@ public class EuareResourceName extends Ern {
     return sb.toString( );
   }
   
-  public void setUserOrGroup( String userOrGroup ) {
-    this.userOrGroup = userOrGroup;
-  }
-  public String getUserOrGroup( ) {
-    return userOrGroup;
-  }
-  public void setPath( String path ) {
-    this.path = path;
+  public String getType() {
+    return type;
   }
   public String getPath( ) {
     return path;
-  }
-  public void setName( String name ) {
-    this.name = name;
   }
   public String getName( ) {
     return name;
@@ -111,7 +102,7 @@ public class EuareResourceName extends Ern {
 
   @Override
   public String getResourceType( ) {
-    return this.vendor + ":" + this.userOrGroup;
+    return this.vendor + ":" + this.type;
   }
 
   @Override

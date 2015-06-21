@@ -48,7 +48,7 @@ public class S3ErnBuilder extends ServiceErnBuilder {
     if (matcher.matches()) {
       String bucket = matcher.group(ARN_PATTERNGROUP_S3_BUCKET);
       String object = matcher.group(ARN_PATTERNGROUP_S3_OBJECT);
-      return new S3ResourceName(bucket, object);
+      return new S3ResourceName(account, bucket, object);
     }
     throw new JSONException("'" + ern + "' is not a valid ARN");
   }

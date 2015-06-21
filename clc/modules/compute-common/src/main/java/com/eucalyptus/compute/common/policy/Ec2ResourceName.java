@@ -67,13 +67,14 @@ import com.eucalyptus.auth.policy.ern.Ern;
 
 public class Ec2ResourceName extends Ern {
   
-  private String type;
-  private String id;
+  private final String type;
+  private final String id;
   
-  public Ec2ResourceName( String type, String id ) {
+  public Ec2ResourceName( String namespace, String type, String id ) {
+    this.vendor = PolicySpec.VENDOR_EC2;
+    this.namespace = namespace;
     this.type = type;
     this.id = id;
-    this.vendor = PolicySpec.VENDOR_EC2;
   }
   
   @Override

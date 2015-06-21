@@ -50,7 +50,7 @@ public class LoadBalancingErnBuilder extends ServiceErnBuilder {
     if ( matcher.matches( ) ) {
       final String type = matcher.group( ARN_PATTERNGROUP_ELB_TYPE ).toLowerCase( );
       final String id = matcher.group( ARN_PATTERNGROUP_ELB_ID );
-      return new LoadBalancingResourceName( type, id );
+      return new LoadBalancingResourceName( account, type, id );
     }
     throw new JSONException( "'" + ern + "' is not a valid ARN" );
   }

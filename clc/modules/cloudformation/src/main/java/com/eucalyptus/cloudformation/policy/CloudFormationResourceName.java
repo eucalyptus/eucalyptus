@@ -26,13 +26,14 @@ import com.eucalyptus.cloudformation.common.policy.CloudFormationPolicySpec;
  *
  */
 public class CloudFormationResourceName extends Ern {
-  private String type;
-  private String id;
+  private final String type;
+  private final String id;
 
-  public CloudFormationResourceName( String type, String id ) {
+  public CloudFormationResourceName( String namespace, String type, String id ) {
+    this.vendor = CloudFormationPolicySpec.VENDOR_CLOUDFORMATION;
+    this.namespace = namespace;
     this.type = type;
     this.id = id;
-    this.vendor = CloudFormationPolicySpec.VENDOR_CLOUDFORMATION;
   }
 
   @Override

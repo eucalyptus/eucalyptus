@@ -51,7 +51,7 @@ public class CloudFormationErnBuilder extends ServiceErnBuilder {
     if ( matcher.matches( ) ) {
       final String type = matcher.group( ARN_PATTERNGROUP_CF_TYPE ).toLowerCase( );
       final String id = matcher.group( ARN_PATTERNGROUP_CF_ID );
-      return new CloudFormationResourceName( type, id );
+      return new CloudFormationResourceName( account, type, id );
     }
     throw new JSONException( "'" + ern + "' is not a valid ARN" );
   }

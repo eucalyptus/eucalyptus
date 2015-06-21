@@ -84,8 +84,8 @@ public abstract class Ern {
   public static final int ARN_PATTERNGROUP_RESOURCE = 4;
 
   protected String vendor;
-  protected String region = "";
-  protected String namespace = "";
+  protected String region;
+  protected String namespace;
 
   public static Ern parse( String ern ) throws JSONException {
     if ( ARN_WILDCARD.equals( ern ) ) return new WildcardResourceName();

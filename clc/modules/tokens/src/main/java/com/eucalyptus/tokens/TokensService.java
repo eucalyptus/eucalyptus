@@ -34,7 +34,6 @@ import javax.annotation.Nullable;
 import javax.security.auth.Subject;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
@@ -283,7 +282,7 @@ public class TokensService {
     try {
       final Ern roleArn = Ern.parse( roleArnString );
       if ( !(roleArn instanceof EuareResourceName) ||
-          !PolicySpec.IAM_RESOURCE_ROLE.equals(((EuareResourceName) roleArn).getUserOrGroup()) ) throw new IllegalArgumentException();
+          !PolicySpec.IAM_RESOURCE_ROLE.equals(((EuareResourceName) roleArn).getType( )) ) throw new IllegalArgumentException();
       final String roleAccountId = roleArn.getNamespace();
       final String roleName = ((EuareResourceName) roleArn).getName();
 

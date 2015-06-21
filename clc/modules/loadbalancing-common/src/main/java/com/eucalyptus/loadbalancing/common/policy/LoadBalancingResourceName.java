@@ -26,13 +26,14 @@ import com.eucalyptus.auth.policy.ern.Ern;
  */
 public class LoadBalancingResourceName extends Ern {
 
-  private String type;
-  private String id;
+  private final String type;
+  private final String id;
 
-  public LoadBalancingResourceName( String type, String id ) {
+  public LoadBalancingResourceName( String namespace, String type, String id ) {
+    this.vendor = LoadBalancingPolicySpec.VENDOR_LOADBALANCING;
+    this.namespace = namespace;
     this.type = type;
     this.id = id;
-    this.vendor = LoadBalancingPolicySpec.VENDOR_LOADBALANCING;
   }
 
   @Override

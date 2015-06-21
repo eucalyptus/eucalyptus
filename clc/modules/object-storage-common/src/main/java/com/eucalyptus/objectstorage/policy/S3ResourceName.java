@@ -67,13 +67,14 @@ import com.eucalyptus.auth.policy.ern.Ern;
 
 public class S3ResourceName extends Ern {
 
-  private String bucket;
-  private String object;
+  private final String bucket;
+  private final String object;
 
-  public S3ResourceName(String bucket, String object) {
+  public S3ResourceName(String namespace, String bucket, String object) {
+    this.vendor = PolicySpec.VENDOR_S3;
+    this.namespace = namespace;
     this.bucket = bucket;
     this.object = object;
-    this.vendor = PolicySpec.VENDOR_S3;
   }
 
   public boolean isBucket() {

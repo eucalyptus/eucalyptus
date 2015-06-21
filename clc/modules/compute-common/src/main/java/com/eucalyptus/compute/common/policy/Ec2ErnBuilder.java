@@ -64,7 +64,7 @@ public class Ec2ErnBuilder extends ServiceErnBuilder {
       } else if ( "securitygroup".equals( type ) ) {
         type = PolicySpec.EC2_RESOURCE_SECURITYGROUP;
       }
-      return new Ec2ResourceName( type, id );
+      return new Ec2ResourceName( account, type, id );
     }
     throw new JSONException( "'" + ern + "' is not a valid ARN" );
   }
