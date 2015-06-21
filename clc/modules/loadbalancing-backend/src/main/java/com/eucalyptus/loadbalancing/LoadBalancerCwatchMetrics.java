@@ -19,15 +19,18 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.Sets;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.cloudwatch.common.msgs.Dimension;
@@ -156,6 +159,10 @@ public class LoadBalancerCwatchMetrics {
 		if(data!=null && data.getMember()!=null && data.getMember().size()>0){
 			try{
 				EucalyptusActivityTasks.getInstance().putCloudWatchMetricData(userId, CLOUDWATCH_ELB_METRIC_NAMESPACE, data);
+        // we now need to add the values that CW used to aggregate, to allow for get-metric-statistics with fewer dimensions (ELB only)
+        EucalyptusActivityTasks.getInstance().putCloudWatchMetricData(userId, CLOUDWATCH_ELB_METRIC_NAMESPACE, removeDimensions(data,"LoadBalancerName"));
+        EucalyptusActivityTasks.getInstance().putCloudWatchMetricData(userId, CLOUDWATCH_ELB_METRIC_NAMESPACE, removeDimensions(data,"AvailabilityZone"));
+        EucalyptusActivityTasks.getInstance().putCloudWatchMetricData(userId, CLOUDWATCH_ELB_METRIC_NAMESPACE, removeDimensions(data,"LoadBalancerName","AvailabilityZone"));
 			}catch(Exception ex){
 				Exceptions.toUndeclared(ex);
 			}finally{
@@ -163,8 +170,51 @@ public class LoadBalancerCwatchMetrics {
 			}
 		}
 	}
-	
-	private MetricData getDataAndClear(final String userId){
+
+  private MetricData removeDimensions(MetricData metricData, String... removedDimensionNames) {
+    Set<String> dimensionNamesSet = Sets.newHashSet();
+    if (removedDimensionNames != null) {
+      for (String removedDimensionName: removedDimensionNames) {
+        dimensionNamesSet.add(removedDimensionName);
+      }
+    }
+    if (metricData == null) return null;
+    MetricData returnValue = new MetricData();
+    if (metricData.getMember() != null) {
+      returnValue.setMember(new ArrayList<MetricDatum>());
+      for (MetricDatum metricDatum: metricData.getMember()) {
+        if (metricDatum == null) {
+          returnValue.getMember().add(null);
+          continue;
+        } else {
+          MetricDatum returnValueMetricDatum = new MetricDatum();
+          returnValueMetricDatum.setMetricName(metricDatum.getMetricName());
+          returnValueMetricDatum.setStatisticValues(metricDatum.getStatisticValues());
+          returnValueMetricDatum.setTimestamp(metricDatum.getTimestamp());
+          returnValueMetricDatum.setValue(metricDatum.getValue());
+          returnValueMetricDatum.setUnit(metricDatum.getUnit());
+          if (metricDatum.getDimensions() == null || metricDatum.getDimensions().getMember() == null) {
+            returnValueMetricDatum.setDimensions(metricDatum.getDimensions());
+          } else {
+            Dimensions returnValueDimensions = new Dimensions();
+            returnValueDimensions.setMember(new ArrayList<Dimension>());
+            for (Dimension dimension : metricDatum.getDimensions().getMember()) {
+              if (dimension == null || dimension.getName() == null || !dimensionNamesSet.contains(dimension.getName())) {
+                returnValueDimensions.getMember().add(dimension);
+              } else {
+                ; // skip it
+              }
+            }
+            returnValueMetricDatum.setDimensions(returnValueDimensions);
+          }
+          returnValue.getMember().add(returnValueMetricDatum);
+        }
+      }
+    }
+    return returnValue;
+  }
+
+  private MetricData getDataAndClear(final String userId){
 		/// dimensions
 		/// lb - availability zone	
 		final MetricData data = new MetricData();		

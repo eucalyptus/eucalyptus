@@ -66,7 +66,7 @@ public class MetricManager {
     simpleMetricEntity.setTimestamp(timestamp);
     simpleMetricEntity.setUnits(units);
     validateMetricQueueItem(simpleMetricEntity);
-    addManyMetrics(makeMetricMap(foldAndHash(simpleMetricEntity)));
+    addManyMetrics(makeMetricMap(hash(simpleMetricEntity)));
   }
   
   private static Multimap<Class, MetricEntity> makeMetricMap(Collection<MetricEntity> entities) {
@@ -81,7 +81,7 @@ public class MetricManager {
   }
   
 
-  private static List<MetricEntity> foldAndHash(SimpleMetricEntity simpleMetricEntity) {
+  private static List<MetricEntity> hash(SimpleMetricEntity simpleMetricEntity) {
     if (simpleMetricEntity == null) return new ArrayList<MetricEntity>();
     TreeSet<DimensionEntity> dimensions = new TreeSet<DimensionEntity>();
     for (Map.Entry<String, String> entry : simpleMetricEntity.getDimensionMap().entrySet()) {
@@ -90,32 +90,23 @@ public class MetricManager {
       d.setValue(entry.getValue());
       dimensions.add(d);
     }
-    Set<Set<DimensionEntity>> permutations = null;
-    if (simpleMetricEntity.getMetricType() == MetricType.System) {
-      permutations = Sets.powerSet(dimensions);
-    } else {
-      permutations = Sets.newHashSet();
-      permutations.add(dimensions);
-    }
     ArrayList<MetricEntity> returnValue = new ArrayList<MetricEntity>();
-    for (Set<DimensionEntity> dimensionsPermutation : permutations) {
-      String dimensionHash = hash(dimensionsPermutation);
-      MetricEntity metric = MetricEntityFactory.getNewMetricEntity(simpleMetricEntity.getMetricType(),
+    String dimensionHash = hash(dimensions);
+    MetricEntity metric = MetricEntityFactory.getNewMetricEntity(simpleMetricEntity.getMetricType(),
           dimensionHash);
-      metric.setAccountId(simpleMetricEntity.getAccountId());
-      metric.setMetricName(simpleMetricEntity.getMetricName());
-      metric.setNamespace(simpleMetricEntity.getNamespace());
-      metric.setDimensions(dimensions);// arguable, but has complete list
-      metric.setDimensionHash(dimensionHash);
-      metric.setMetricType(simpleMetricEntity.getMetricType());
-      metric.setUnits(simpleMetricEntity.getUnits());
-      metric.setTimestamp(simpleMetricEntity.getTimestamp());
-      metric.setSampleMax(simpleMetricEntity.getSampleMax());
-      metric.setSampleMin(simpleMetricEntity.getSampleMin());
-      metric.setSampleSum(simpleMetricEntity.getSampleSum());
-      metric.setSampleSize(simpleMetricEntity.getSampleSize());
-      returnValue.add(metric);
-    }
+    metric.setAccountId(simpleMetricEntity.getAccountId());
+    metric.setMetricName(simpleMetricEntity.getMetricName());
+    metric.setNamespace(simpleMetricEntity.getNamespace());
+    metric.setDimensions(dimensions);
+    metric.setDimensionHash(dimensionHash);
+    metric.setMetricType(simpleMetricEntity.getMetricType());
+    metric.setUnits(simpleMetricEntity.getUnits());
+    metric.setTimestamp(simpleMetricEntity.getTimestamp());
+    metric.setSampleMax(simpleMetricEntity.getSampleMax());
+    metric.setSampleMin(simpleMetricEntity.getSampleMin());
+    metric.setSampleSum(simpleMetricEntity.getSampleSum());
+    metric.setSampleSize(simpleMetricEntity.getSampleSize());
+    returnValue.add(metric);
     return returnValue;
   }
 
@@ -319,7 +310,7 @@ public class MetricManager {
     ArrayList<MetricEntity> metricEntities = new ArrayList<MetricEntity>();
     for (SimpleMetricEntity simpleMetricEntity: dataBatch) {
       validateMetricQueueItem(simpleMetricEntity);
-      metricEntities.addAll(foldAndHash(simpleMetricEntity));
+      metricEntities.addAll(hash(simpleMetricEntity));
     }
     addManyMetrics(makeMetricMap(metricEntities));
   }
