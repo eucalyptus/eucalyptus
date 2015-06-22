@@ -1954,7 +1954,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       @Override
       public String apply(@Nonnull Map<String, String> arg0) {
         final VmInstance entity = Entities.merge(VmInstance.this);
-        for (VmVolumeAttachment attachment : entity.getBootRecord().getPersistentVolumes()) {
+        List<VmVolumeAttachment> allAttachments = Lists.newArrayList(entity.getBootRecord().getPersistentVolumes());
+        allAttachments.addAll(entity.getTransientVolumeState().getAttachments());
+        for (VmVolumeAttachment attachment : allAttachments) {
           if (arg0.containsKey(attachment.getVolumeId())) {
             attachment.setRemoteDevice(arg0.get(attachment.getVolumeId()));
           } else {
