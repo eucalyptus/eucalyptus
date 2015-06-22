@@ -45,13 +45,10 @@ clc/modules/postgresql/src/main/resources/postgresql-binaries.properties
 clc/modules/storage-san-common
 clc/modules/storage-san-threepar
 clc/modules/storage-san-threepar-libs
-clc/modules/storage-san-emc-libs
-clc/modules/storage-san-emc
 clc/modules/storage-san-equallogic
 clc/modules/storage-san-equallogic-libs
 clc/modules/storage-san-netapp
 clc/modules/storage-san-netapp-libs
-clc/modules/vmware-broker
 clc/modules/storage-san
 clc/modules/www/build-war
 clc/modules/www/conf/eucalyptus-web.properties
