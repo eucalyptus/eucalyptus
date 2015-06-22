@@ -35,8 +35,12 @@
 #include <eucalyptus.h>
 #include <hash.h>
 
+#define TCP_PROTOCOL_NUMBER 6
+#define UDP_PROTOCOL_NUMBER 17
+#define ICMP_PROTOCOL_NUMBER 1
+
 //! Static prototypes
-static int map_proto_to_names(int proto_number, char *out_proto_name, char *out_module_name, int out_proto_len, int out_module_len);
+static int map_proto_to_names(int proto_number, char *out_proto_name, int out_proto_len);
 
 int gni_secgroup_get_chainname(globalNetworkInfo * gni, gni_secgroup * secgroup, char **outchainname)
 {
@@ -1691,44 +1695,37 @@ int gni_free(globalNetworkInfo * gni)
 }
 
 //Maps the protocol number passed in, to the name 
-static int map_proto_to_names(int proto_number, char *out_proto_name, char *out_module_name, int out_proto_len, int out_module_len)
+static int map_proto_to_names(int proto_number, char *out_proto_name, int out_proto_len)
 {
-  if(NULL == out_proto_name || out_proto_len < 5 || NULL == out_module_name || out_module_len < 5) {
-    LOGERROR("Cannot map protocol number to name because arguments are null or not allocated enough buffers. Proto number=%d, out_proto_len=%d, out_module_len=%d \n", proto_number, out_proto_len, out_module_len);
-    return 1;
-  }
+  struct protoent *proto = NULL;
+    if (NULL == out_proto_name) {
+        LOGERROR("Cannot map protocol number to name because arguments are null or not allocated enough buffers. Proto number=%d, out_proto_len=%d\n",
+                 proto_number, out_proto_len);
+        return 1;
+    }
 
-  //Exception cases to map numbers to names instead of just numbers
-  switch(proto_number) {
-  case 1:
-    //ICMP
-    snprintf(out_proto_name, out_proto_len, "%s", "icmp");
-    snprintf(out_module_name, out_module_len, "%s", "icmp");
-    break;
-  case 6:
-    //TCP
-    snprintf(out_proto_name, out_proto_len, "%s", "tcp");
-    snprintf(out_module_name, out_module_len, "%s", "tcp");
-    break;
-  case 17:
-    //UDP
-    snprintf(out_proto_name, out_proto_len, "%s", "udp");
-    snprintf(out_module_name, out_module_len, "%s", "udp");
-    break;
+	if(proto_number < 0 || proto_number > 255) {
+	  LOGERROR("Cannot map invalid protocol number: %d. Must be between 0 and 255 inclusive\n", proto_number);
+	  return 1;
+	}
 
-  case 132:
-    //SCTP
-    snprintf(out_proto_name, out_proto_len, "%s", "sctp");
-    snprintf(out_module_name, out_module_len, "%s", "sctp");
-    break;
-    
-  default:
-    snprintf(out_proto_name, out_proto_len, "%d", proto_number);
-    snprintf(out_module_name, out_module_len, "%d", proto_number);
-    break;
-  }
-
-  return 0;
+	//Explicitly map only tcp/udp/icmp
+	if(TCP_PROTOCOL_NUMBER == proto_number ||
+	   UDP_PROTOCOL_NUMBER == proto_number ||
+	   ICMP_PROTOCOL_NUMBER == proto_number) {
+	  //Use libc to map number to name
+	  proto = getprotobynumber(proto_number);
+    }
+	  if(NULL != proto) {
+		//There is a name, use it
+        if (NULL != proto->p_name && strlen(proto->p_name) > 0) {
+		  euca_strncpy(out_proto_name, proto->p_name, out_proto_len);
+        }
+	  } else {
+        //There is no name, just use the raw number
+        snprintf(out_proto_name, out_proto_len, "%d", proto_number);
+	  }
+    return 0;
 }
 
 //!
@@ -1754,8 +1751,7 @@ int ruleconvert(char *rulebuf, char *outrule)
     int protocol_number = -1;
     int rc = EUCA_ERROR;
     char portrange[64], sourcecidr[64], icmptyperange[64], sourceowner[64], sourcegroup[64], newrule[4097], buf[2048];
-    char proto[64]; //protocol name mapped for IPTABLES usage
-    char module[64]; //module name mapped for IPTABLES usage
+    char proto[64];                    //protocol name mapped for IPTABLES usage
     char *ptra = NULL, *toka = NULL, *idx = NULL;
 
     proto[0] = portrange[0] = sourcecidr[0] = icmptyperange[0] = newrule[0] = sourceowner[0] = sourcegroup[0] = '\0';
@@ -1769,9 +1765,8 @@ int ruleconvert(char *rulebuf, char *outrule)
         if (!strcmp(toka, "-P")) {
             toka = strtok_r(NULL, " ", &ptra);
             if (toka) {
-	      //snprintf(proto, 64, "%s", toka);
-	      protocol_number = atoi(toka);
-	    }
+                protocol_number = atoi(toka);
+            }
         } else if (!strcmp(toka, "-p")) {
             toka = strtok_r(NULL, " ", &ptra);
             if (toka)
@@ -1808,27 +1803,33 @@ int ruleconvert(char *rulebuf, char *outrule)
         toka = strtok_r(NULL, " ", &ptra);
     }
 
-    LOGTRACE("TOKENIZED RULE: PROTO: %d PORTRANGE: %s SOURCECIDR: %s ICMPTYPERANGE: %s SOURCEOWNER: %s SOURCEGROUP: %s\n", protocol_number, portrange, sourcecidr, icmptyperange, sourceowner,
-             sourcegroup);
+    LOGTRACE("TOKENIZED RULE: PROTO: %d PORTRANGE: %s SOURCECIDR: %s ICMPTYPERANGE: %s SOURCEOWNER: %s SOURCEGROUP: %s\n", protocol_number, portrange, sourcecidr, icmptyperange,
+             sourceowner, sourcegroup);
 
     // check if enough info is present to construct rule
     // Fix for EUCA-10031, no port range required. Ports should be limited and enforced at front-end
     // per AWS policy, not in the backend since IPTABLES doesn't care
     if (protocol_number >= 0) {
-      //Handle protocol mapping first
-      rc = map_proto_to_names(protocol_number, proto, module, 64, 64);
-      if(!rc && strlen(proto) > 0 && strlen(module) > 0) {
-	snprintf(buf, 2048, "-p %s -m %s ", proto, module);
-	strncat(newrule, buf, 2048);
-      } else {
-	LOGERROR("Error mapping protocol number %d to string for iptables rules\n", protocol_number);
-	return 1;
-      }
+        //Handle protocol mapping first
+        rc = map_proto_to_names(protocol_number, proto, 64);
+        if (!rc && strlen(proto) > 0) {
+            if (TCP_PROTOCOL_NUMBER == protocol_number || UDP_PROTOCOL_NUMBER == protocol_number) {
+                //For tcp and udp add a module for port handling
+                snprintf(buf, 2048, "-p %s -m %s ", proto, proto);
+            } else {
+                snprintf(buf, 2048, "-p %s ", proto);
+            }
+            strncat(newrule, buf, 2048);
+        } else {
+            LOGERROR("Error mapping protocol number %d to string for iptables rules\n", protocol_number);
+            return 1;
+        }
 
         if (strlen(sourcecidr)) {
             snprintf(buf, 2048, "-s %s ", sourcecidr);
             strncat(newrule, buf, 2048);
         }
+
         if (strlen(sourceowner) && strlen(sourcegroup)) {
             char ug[64], *chainhash = NULL;
             snprintf(ug, 64, "%s-%s", sourceowner, sourcegroup);
@@ -1840,11 +1841,14 @@ int ruleconvert(char *rulebuf, char *outrule)
             }
         }
 
-        if (strlen(portrange)) {
+        //Only allow port ranges for tcp and udp
+        if ((TCP_PROTOCOL_NUMBER == protocol_number || UDP_PROTOCOL_NUMBER == protocol_number) && strlen(portrange)) {
             snprintf(buf, 2048, "--dport %s ", portrange);
             strncat(newrule, buf, 2048);
         }
-        if (strlen(icmptyperange)) {
+
+        //Only allow icmp for proper icmp
+        if (protocol_number == 1 && strlen(icmptyperange)) {
             snprintf(buf, 2048, "--icmp-type %s ", icmptyperange);
             strncat(newrule, buf, 2048);
         }

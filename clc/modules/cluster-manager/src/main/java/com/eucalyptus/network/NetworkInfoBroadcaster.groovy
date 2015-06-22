@@ -482,10 +482,10 @@ class NetworkInfoBroadcaster {
     // Only EC2-Classic rules supported by this format
     if ( !networkRule.isVpcOnly( ) ) {
         String rule = "";
-        if (networkRule.lowPort == null && networkRule.highPort == null) {
+        if (networkRule.protocol == null) {
             //Special case where ports are not present, but
             // we support that as an exception to EC2-Classic spec
-            rule = String.format("-P %d", networkRule.protocol.getNumber());
+            rule = String.format("-P %d", networkRule.getProtocolNumber());
         } else {
             rule = String.format(
                     "-P %d -%s %d%s%d ",

@@ -62,6 +62,8 @@ import org.springframework.validation.ValidationUtils
 import javax.annotation.Nullable
 import javax.persistence.EntityTransaction
 import java.util.concurrent.TimeUnit
+import java.util.regex.Matcher
+import java.util.regex.Pattern
 
 /**
  *
@@ -427,6 +429,22 @@ class NetworkConfigurations {
       }
     }
   }
+
+    /**
+     * Enforces a format of a comma delimited list of integers between 0-255
+     */
+    static class ProtocolListPropertyChangeListener implements PropertyChangeListener<String> {
+        static Pattern commaListPattern = Pattern.compile('\\s*(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\s*,\\s*)*([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])?\\s*')
+        @Override
+        void fireChange( final ConfigurableProperty property,
+                         final String newValue ) throws ConfigurablePropertyException {
+            if ( !Strings.isNullOrEmpty( newValue ) ) {
+                if(!commaListPattern.matcher(newValue).matches()) {
+                    throw new ConfigurablePropertyException("Invalid format. Must conform to regex: " + commaListPattern.toString())
+                }
+            }
+        }
+    }
 
   public static class NetworkConfigurationEventListener implements EucaEventListener<ClockTick> {
     public static void register( ) {
