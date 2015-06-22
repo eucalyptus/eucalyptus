@@ -576,7 +576,7 @@ public class ActivityManager {
         final Ern ern = Ern.parse( iamInstanceProfile );
         if ( ern instanceof EuareResourceName &&
             INSTANCE_PROFILE_RESOURCE.equals( ern.getResourceType() ) ) {
-          if ( accountNumber.equals( ern.getNamespace() ) ) {
+          if ( accountNumber.equals( ern.getAccount( ) ) ) {
             instanceProfileName = ((EuareResourceName)ern).getName();
           } else {
             instanceProfileName = null;

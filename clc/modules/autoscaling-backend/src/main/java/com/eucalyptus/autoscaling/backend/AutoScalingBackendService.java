@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -138,6 +138,7 @@ import com.eucalyptus.autoscaling.common.backend.msgs.TerminateInstanceInAutoSca
 import com.eucalyptus.autoscaling.common.backend.msgs.TerminateInstanceInAutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.backend.msgs.UpdateAutoScalingGroupResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.UpdateAutoScalingGroupType;
+import com.eucalyptus.autoscaling.common.policy.AutoScalingPolicySpec;
 import com.eucalyptus.autoscaling.config.AutoScalingConfiguration;
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
 import com.eucalyptus.autoscaling.configurations.LaunchConfigurationMinimumView;
@@ -612,11 +613,11 @@ public class AutoScalingBackendService {
           Restrictions.conjunction(),
           Collections.<String,String>emptyMap() ) ) ) {
         if ( Permissions.isAuthorized(
-            PolicySpec.VENDOR_AUTOSCALING,
+            AutoScalingPolicySpec.VENDOR_AUTOSCALING,
             tag.getResourceType(),
             tag.getKey(),
             context.getAccount(),
-            PolicySpec.describeAction( PolicySpec.VENDOR_AUTOSCALING, tag.getResourceType() ),
+            PolicySpec.describeAction( AutoScalingPolicySpec.VENDOR_AUTOSCALING, tag.getResourceType() ),
             context.getAuthContext() ) ) {
           tagDescriptions.getMember().add( TypeMappers.transform( tag, TagDescription.class ) );
         }
@@ -716,11 +717,11 @@ public class AutoScalingBackendService {
                   tagSupport.lookup( ownerFullName, tagType.getResourceId() );
               final Tag example = tagSupport.example( resource, ownerFullName, tagType.getKey(), tagType.getValue() );
               if ( example != null && Permissions.isAuthorized(
-                  PolicySpec.VENDOR_AUTOSCALING,
-                  PolicySpec.AUTOSCALING_RESOURCE_TAG,
+                  AutoScalingPolicySpec.VENDOR_AUTOSCALING,
+                  AutoScalingPolicySpec.AUTOSCALING_RESOURCE_TAG,
                   example.getResourceType() + ":" + example.getResourceId() + ":" + example.getKey(),
                   context.getAccount(),
-                  PolicySpec.AUTOSCALING_DELETETAGS,
+                  AutoScalingPolicySpec.AUTOSCALING_DELETETAGS,
                   context.getAuthContext() ) ) {
                 Tags.delete( example );
               }

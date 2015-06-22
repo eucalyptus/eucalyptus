@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,13 +26,14 @@ import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.component.annotation.PublicService;
+import com.eucalyptus.simpleworkflow.common.policy.SimpleWorkflowPolicySpec;
 
 /**
  *
  */
 @PublicService
 @AwsServiceName( "swf" )
-@PolicyVendor( "swf" )
+@PolicyVendor( SimpleWorkflowPolicySpec.VENDOR_SWF )
 @Partition( value = SimpleWorkflow.class, manyToOne = true )
 @FaultLogPrefix( "services" )
 @Description( "Simple Workflow API service" )

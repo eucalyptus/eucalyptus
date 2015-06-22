@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,14 +20,14 @@
 package com.eucalyptus.cloudwatch.common;
 
 import com.eucalyptus.auth.policy.annotation.PolicyResourceType;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.auth.type.RestrictedType;
+import com.eucalyptus.cloudwatch.common.policy.CloudWatchPolicySpec;
 
 /**
  *
  */
-@PolicyVendor( PolicySpec.VENDOR_CLOUDWATCH )
+@PolicyVendor( CloudWatchPolicySpec.VENDOR_CLOUDWATCH )
 public interface CloudWatchMetadata extends RestrictedType {
 
   @PolicyResourceType( "alarm" )

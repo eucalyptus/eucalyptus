@@ -286,7 +286,7 @@ public class PolicyParser {
       final Ern ern = Ern.parse( resource );
       resourceMap.put(
           Pair.lopair(
-              Strings.emptyToNull( ern.getNamespace( ) ) ,
+              Strings.emptyToNull( ern.getAccount( ) ) ,
               ern.getResourceType( ) ),
           ern.getResourceName() );
     }

@@ -283,7 +283,7 @@ public class TokensService {
       final Ern roleArn = Ern.parse( roleArnString );
       if ( !(roleArn instanceof EuareResourceName) ||
           !PolicySpec.IAM_RESOURCE_ROLE.equals(((EuareResourceName) roleArn).getType( )) ) throw new IllegalArgumentException();
-      final String roleAccountId = roleArn.getNamespace();
+      final String roleAccountId = roleArn.getAccount( );
       final String roleName = ((EuareResourceName) roleArn).getName();
 
       if ( AccountIdentifiers.SYSTEM_ACCOUNT.equals( roleAccountId ) ) {

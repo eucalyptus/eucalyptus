@@ -64,7 +64,7 @@ public class EuareRemoteRegionFilter implements Filter {
         final DownloadServerCertificateType downloadServerCertificateType = (DownloadServerCertificateType) request;
         final String certArn = downloadServerCertificateType.getCertificateArn( );
         if ( certArn != null ) {
-          final String accountNumber = Ern.parse( certArn ).getNamespace( );
+          final String accountNumber = Ern.parse( certArn ).getAccount( );
           region = regionConfigurationManager.getRegionByAccountNumber( accountNumber );
         }
       } else if ( !region.isPresent( ) && request.getUserId( ) != null ) {

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -103,8 +103,6 @@ public class PolicySpec {
   public static final String VENDOR_EC2 = "ec2";
   public static final String VENDOR_S3 = "s3";
   public static final String VENDOR_STS = "sts";
-  public static final String VENDOR_AUTOSCALING = "autoscaling";
-  public static final String VENDOR_CLOUDWATCH = "cloudwatch";
   public static final String VENDOR_IMAGINGSERVICE = "eucaimaging";
 	// Do not add vendors here (use modules)
 
@@ -406,58 +404,6 @@ public class PolicySpec {
   public static final String STS_GETIMPERSONATIONTOKEN = "getimpersonationtoken"; // eucalyptus extension
   public static final String STS_GETSESSIONTOKEN = "getsessiontoken";
 
-  // Auto Scaling actions, based on API Reference (API Version 2011-01-01)
-  public static final String AUTOSCALING_CREATEAUTOSCALINGGROUP = "createautoscalinggroup";
-  public static final String AUTOSCALING_CREATELAUNCHCONFIGURATION = "createlaunchconfiguration";
-  public static final String AUTOSCALING_CREATEORUPDATESCALINGTRIGGER = "createorupdatescalingtrigger"; // deprecated
-  public static final String AUTOSCALING_CREATEORUPDATETAGS = "createorupdatetags";
-  public static final String AUTOSCALING_DELETEAUTOSCALINGGROUP = "deleteautoscalinggroup";
-  public static final String AUTOSCALING_DELETELAUNCHCONFIGURATION = "deletelaunchconfiguration";
-  public static final String AUTOSCALING_DELETENOTIFICATIONCONFIGURATION = "deletenotificationconfiguration";
-  public static final String AUTOSCALING_DELETEPOLICY = "deletepolicy";
-  public static final String AUTOSCALING_DELETESCHEDULEDACTION = "deletescheduledaction";
-  public static final String AUTOSCALING_DELETETAGS = "deletetags";
-  public static final String AUTOSCALING_DELETETRIGGER = "deletetrigger"; // deprecated
-  public static final String AUTOSCALING_DESCRIBEADJUSTMENTTYPES = "describeadjustmenttypes";
-  public static final String AUTOSCALING_DESCRIBEAUTOSCALINGGROUPS = "describeautoscalinggroups";
-  public static final String AUTOSCALING_DESCRIBEAUTOSCALINGINSTANCES = "describeautoscalinginstances";
-  public static final String AUTOSCALING_DESCRIBEAUTOSCALINGNOTIFICATIONTYPES = "describeautoscalingnotificationtypes";
-  public static final String AUTOSCALING_DESCRIBELAUNCHCONFIGURATIONS = "describelaunchconfigurations";
-  public static final String AUTOSCALING_DESCRIBEMETRICCOLLECTIONTYPES = "describemetriccollectiontypes";
-  public static final String AUTOSCALING_DESCRIBENOTIFICATIONCONFIGURATIONS = "describenotificationconfigurations";
-  public static final String AUTOSCALING_DESCRIBEPOLICIES = "describepolicies";
-  public static final String AUTOSCALING_DESCRIBESCALINGACTIVITIES = "describescalingactivities";
-  public static final String AUTOSCALING_DESCRIBESCALINGPROCESSTYPES = "describescalingprocesstypes";
-  public static final String AUTOSCALING_DESCRIBESCHEDULEDACTIONS = "describescheduledactions";
-  public static final String AUTOSCALING_DESCRIBETAGS = "describetags";
-  public static final String AUTOSCALING_DESCRIBETERMINATIONPOLICYTYPES = "describeterminationpolicytypes";
-  public static final String AUTOSCALING_DESCRIBETRIGGERS = "describetriggers"; // deprecated
-  public static final String AUTOSCALING_DISABLEMETRICSCOLLECTION = "disablemetricscollection";
-  public static final String AUTOSCALING_ENABLEMETRICSCOLLECTION = "enablemetricscollection";
-  public static final String AUTOSCALING_EXECUTEPOLICY = "executepolicy";
-  public static final String AUTOSCALING_PUTNOTIFICATIONCONFIGURATION = "putnotificationconfiguration";
-  public static final String AUTOSCALING_PUTSCALINGPOLICY = "putscalingpolicy";
-  public static final String AUTOSCALING_PUTSCHEDULEDUPDATEGROUPACTION = "putscheduledupdategroupaction";
-  public static final String AUTOSCALING_RESUMEPROCESSES = "resumeprocesses";
-  public static final String AUTOSCALING_SETDESIREDCAPACITY = "setdesiredcapacity";
-  public static final String AUTOSCALING_SETINSTANCEHEALTH = "setinstancehealth";
-  public static final String AUTOSCALING_SUSPENDPROCESSES = "suspendprocesses";
-  public static final String AUTOSCALING_TERMINATEINSTANCEINAUTOSCALINGGROUP = "terminateinstanceinautoscalinggroup";
-  public static final String AUTOSCALING_UPDATEAUTOSCALINGGROUP = "updateautoscalinggroup";
-
-  //Cloud Watch actions, based on API Reference (API Version 2010-08-01)
-  public static final String CLOUDWATCH_DELETEALARMS = "deletealarms";
-  public static final String CLOUDWATCH_DESCRIBEALARMHISTORY = "describealarmhistory";
-  public static final String CLOUDWATCH_DESCRIBEALARMS = "describealarms";
-  public static final String CLOUDWATCH_DESCRIBEALARMSFORMETRIC = "describealarmsformetric";
-  public static final String CLOUDWATCH_DISABLEALARMACTIONS = "disablealarmactions";
-  public static final String CLOUDWATCH_ENABLEALARMACTIONS = "enablealarmactions";
-  public static final String CLOUDWATCH_GETMETRICSTATISTICS = "getmetricstatistics";
-  public static final String CLOUDWATCH_LISTMETRICS = "listmetrics";
-  public static final String CLOUDWATCH_PUTMETRICALARM = "putmetricalarm";
-  public static final String CLOUDWATCH_PUTMETRICDATA = "putmetricdata";
-  public static final String CLOUDWATCH_SETALARMSTATE = "setalarmstate";
-
   // Euca-specific Imaging Service operations
   public static final String IMAGINGSERVICE_PUTINSTANCEIMPORTTASKSTATUS = "putinstanceimporttaskstatus";
   public static final String IMAGINGSERVICE_GETINSTANCEIMPORTTASK = "getinstanceimporttask";
@@ -542,9 +488,6 @@ public class PolicySpec {
   // S3 resource types
   public static final String S3_RESOURCE_BUCKET = "bucket";
   public static final String S3_RESOURCE_OBJECT = "object";
-
-  // Auto scaling resource types
-  public static final String AUTOSCALING_RESOURCE_TAG = "tag";
 
   public static String qualifiedName( String vendor, String name ) {
     return name == null ? null : vendor + ":" + name;

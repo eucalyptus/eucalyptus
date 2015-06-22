@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -66,6 +66,9 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.annotation.Nullable;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.google.common.base.Strings;
 import net.sf.json.JSONException;
 
 public abstract class Ern {
@@ -83,9 +86,22 @@ public abstract class Ern {
   public static final int ARN_PATTERNGROUP_ACCOUNT = 3;
   public static final int ARN_PATTERNGROUP_RESOURCE = 4;
 
-  protected String vendor;
-  protected String region;
-  protected String namespace;
+  private final String service;
+  private final String region;
+  private final String account;
+
+  protected Ern( ) {
+    this( null, null, null );
+  }
+
+  protected Ern(
+      @Nullable  final String service,
+      @Nullable final String region,
+      @Nullable final String account ) {
+    this.service = Strings.emptyToNull( service );
+    this.region = Strings.emptyToNull( region );
+    this.account = Strings.emptyToNull( account );
+  }
 
   public static Ern parse( String ern ) throws JSONException {
     if ( ARN_WILDCARD.equals( ern ) ) return new WildcardResourceName();
@@ -103,15 +119,18 @@ public abstract class Ern {
     }
     throw new JSONException( "'" + ern + "' is not a valid ARN" );
   }
-  
-  public String getVendor( ) {
-    return vendor;
+
+  @Nullable
+  public String getService( ) {
+    return service;
   }
 
-  public String getNamespace( ) {
-    return namespace;
+  @Nullable
+  public String getAccount( ) {
+    return account;
   }
 
+  @Nullable
   public String getRegion( ) {
     return region;
   }
@@ -119,6 +138,10 @@ public abstract class Ern {
   public abstract String getResourceType( );
   
   public abstract String getResourceName( );
+
+  protected String qualifiedName( String name ) {
+    return PolicySpec.qualifiedName( getService( ), name );
+  }
 
   public static void registerServiceErnBuilder( final ServiceErnBuilder builder ) {
     if ( !ernBuilders.contains( builder ) ) {

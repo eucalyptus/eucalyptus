@@ -17,17 +17,22 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.loadbalancing.common.policy;
-
-import com.eucalyptus.auth.policy.ern.ResourceNameSupport;
+package com.eucalyptus.autoscaling.common.policy;
 
 /**
  *
  */
-public class LoadBalancingResourceName extends ResourceNameSupport {
+public interface AutoScalingPolicySpec {
 
-  public LoadBalancingResourceName( String region, String account, String type, String id ) {
-    super( LoadBalancingPolicySpec.VENDOR_LOADBALANCING, region, account, type, id );
-  }
+  String VENDOR_AUTOSCALING = "autoscaling";
+
+  // Resource types
+  String AUTOSCALING_RESOURCE_TAG = "tag";
+
+  // Actions
+  String AUTOSCALING_CREATEAUTOSCALINGGROUP = "createautoscalinggroup";
+  String AUTOSCALING_CREATELAUNCHCONFIGURATION = "createlaunchconfiguration";
+  String AUTOSCALING_DELETETAGS = "deletetags";
+  String AUTOSCALING_PUTSCALINGPOLICY = "putscalingpolicy";
 
 }

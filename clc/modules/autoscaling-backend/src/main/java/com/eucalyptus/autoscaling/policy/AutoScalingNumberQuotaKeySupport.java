@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.PolicyScope;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
+import com.eucalyptus.autoscaling.common.policy.AutoScalingPolicySpec;
 import com.eucalyptus.util.RestrictedTypes;
 import net.sf.json.JSONException;
 
@@ -55,7 +56,7 @@ abstract class AutoScalingNumberQuotaKeySupport<T extends AutoScalingMetadata> e
   @Override
   public final boolean canApply( String action ) {
     return PolicySpec.qualifiedName(
-        PolicySpec.VENDOR_AUTOSCALING,
+        AutoScalingPolicySpec.VENDOR_AUTOSCALING,
         this.action ).equals( action );
   }
 

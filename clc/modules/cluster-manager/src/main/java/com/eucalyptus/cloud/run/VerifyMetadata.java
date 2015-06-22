@@ -371,7 +371,7 @@ public class VerifyMetadata {
           if ( !( name instanceof EuareResourceName) ) {
             throw new InvalidInstanceProfileMetadataException( "Invalid IAM instance profile ARN: " + instanceProfileArn );
           }
-          profileAccount = name.getNamespace( );
+          profileAccount = name.getAccount( );
           profileName = ((EuareResourceName) name).getName( );
 
         } catch ( JSONException e ) {

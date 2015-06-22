@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -70,9 +70,8 @@ public class S3ResourceName extends Ern {
   private final String bucket;
   private final String object;
 
-  public S3ResourceName(String namespace, String bucket, String object) {
-    this.vendor = PolicySpec.VENDOR_S3;
-    this.namespace = namespace;
+  public S3ResourceName( String account, String bucket, String object) {
+    super( PolicySpec.VENDOR_S3, null, account );
     this.bucket = bucket;
     this.object = object;
   }
@@ -87,7 +86,7 @@ public class S3ResourceName extends Ern {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append(ARN_PREFIX).append(this.getVendor()).append(":::").append(this.bucket);
+    sb.append(ARN_PREFIX).append(this.getService( )).append(":::").append(this.bucket);
     if (this.object != null) {
       sb.append(this.object);
     }
@@ -105,9 +104,9 @@ public class S3ResourceName extends Ern {
   @Override
   public String getResourceType() {
     if (this.isBucket()) {
-      return this.vendor + ":" + PolicySpec.S3_RESOURCE_BUCKET;
+      return qualifiedName( PolicySpec.S3_RESOURCE_BUCKET );
     } else {
-      return this.vendor + ":" + PolicySpec.S3_RESOURCE_OBJECT;
+      return qualifiedName( PolicySpec.S3_RESOURCE_OBJECT );
     }
   }
 

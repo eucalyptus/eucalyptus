@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,7 +64,7 @@ public class Ec2ErnBuilder extends ServiceErnBuilder {
       } else if ( "securitygroup".equals( type ) ) {
         type = PolicySpec.EC2_RESOURCE_SECURITYGROUP;
       }
-      return new Ec2ResourceName( account, type, id );
+      return new Ec2ResourceName( region, account, type, id );
     }
     throw new JSONException( "'" + ern + "' is not a valid ARN" );
   }

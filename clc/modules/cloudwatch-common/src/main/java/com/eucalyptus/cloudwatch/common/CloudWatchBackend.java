@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,18 +19,18 @@
  ************************************************************************/
 package com.eucalyptus.cloudwatch.common;
 
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.CloudControllerColocatingBootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.cloudwatch.common.policy.CloudWatchPolicySpec;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.component.id.Eucalyptus;
 
-@PolicyVendor( PolicySpec.VENDOR_CLOUDWATCH )
+@PolicyVendor( CloudWatchPolicySpec.VENDOR_CLOUDWATCH )
 @Partition( Eucalyptus.class )
 @FaultLogPrefix( "cloud" )
 public class CloudWatchBackend extends ComponentId {

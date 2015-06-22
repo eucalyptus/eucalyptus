@@ -17,7 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.loadbalancing.common.policy;
+package com.eucalyptus.autoscaling.common.policy;
 
 import java.util.Collections;
 import java.util.regex.Matcher;
@@ -29,15 +29,16 @@ import net.sf.json.JSONException;
 /**
  *
  */
-public class LoadBalancingErnBuilder extends ServiceErnBuilder {
+public class AutoScalingErnBuilder extends ServiceErnBuilder {
 
-  public static final Pattern RESOURCE_PATTERN = Pattern.compile( "([a-z0-9_-]+)/(\\S+)" );
+  //TODO: We currently extract the identifier from the ARN, not the name
+  public static final Pattern RESOURCE_PATTERN = Pattern.compile( "([a-z0-9]+):(?:(\\*)|([0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}):(?:\\S+))" );
 
-  public static final int ARN_PATTERNGROUP_ELB_TYPE = 1;
-  public static final int ARN_PATTERNGROUP_ELB_ID = 2;
+  public static final int ARN_PATTERNGROUP_AUTOSCALING_TYPE = 1;
+  public static final int ARN_PATTERNGROUP_AUTOSCALING_ID = 2;
 
-  public LoadBalancingErnBuilder( ) {
-    super( Collections.singleton( LoadBalancingPolicySpec.VENDOR_LOADBALANCING ) );
+  public AutoScalingErnBuilder( ) {
+    super( Collections.singleton( AutoScalingPolicySpec.VENDOR_AUTOSCALING ) );
   }
 
   @Override
@@ -48,9 +49,9 @@ public class LoadBalancingErnBuilder extends ServiceErnBuilder {
                     final String resource ) throws JSONException {
     final Matcher matcher = RESOURCE_PATTERN.matcher( resource );
     if ( matcher.matches( ) ) {
-      final String type = matcher.group( ARN_PATTERNGROUP_ELB_TYPE ).toLowerCase( );
-      final String id = matcher.group( ARN_PATTERNGROUP_ELB_ID );
-      return new LoadBalancingResourceName( region, account, type, id );
+      String type = matcher.group( ARN_PATTERNGROUP_AUTOSCALING_TYPE ).toLowerCase( );
+      String id = matcher.group( ARN_PATTERNGROUP_AUTOSCALING_ID ).toLowerCase( );
+      return new AutoScalingResourceName( region, account, type, id );
     }
     throw new JSONException( "'" + ern + "' is not a valid ARN" );
   }

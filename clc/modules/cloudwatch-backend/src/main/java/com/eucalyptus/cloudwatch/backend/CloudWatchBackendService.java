@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@
 package com.eucalyptus.cloudwatch.backend;
 
 import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.cloudwatch.common.CloudWatchBackend;
 import com.eucalyptus.cloudwatch.common.CloudWatchMetadata;
@@ -56,6 +55,7 @@ import com.eucalyptus.cloudwatch.common.internal.domain.alarms.AlarmHistory.Hist
 import com.eucalyptus.cloudwatch.common.internal.domain.alarms.AlarmManager;
 import com.eucalyptus.cloudwatch.common.internal.domain.alarms.AlarmNotFoundException;
 import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.Units;
+import com.eucalyptus.cloudwatch.common.policy.CloudWatchPolicySpec;
 import com.eucalyptus.cloudwatch.workflow.DBCleanupService;
 import com.eucalyptus.cloudwatch.workflow.alarms.AlarmStateEvaluationDispatcher;
 import com.eucalyptus.component.Faults;
@@ -102,7 +102,7 @@ public class CloudWatchBackendService {
 
     try {
       // IAM Action Check
-      checkActionPermission(PolicySpec.CLOUDWATCH_PUTMETRICALARM, ctx);
+      checkActionPermission(CloudWatchPolicySpec.CLOUDWATCH_PUTMETRICALARM, ctx);
       if (CloudWatchConfigProperties.isDisabledCloudWatchService()) {
         faultDisableCloudWatchServiceIfNecessary();
         throw new ServiceDisabledException("Service Disabled");
@@ -392,7 +392,7 @@ public class CloudWatchBackendService {
 
   private void checkActionPermission(final String actionType, final Context ctx)
       throws EucalyptusCloudException {
-    if (!Permissions.isAuthorized(PolicySpec.VENDOR_CLOUDWATCH, actionType, "",
+    if (!Permissions.isAuthorized(CloudWatchPolicySpec.VENDOR_CLOUDWATCH, actionType, "",
         ctx.getAccount(), actionType, ctx.getAuthContext())) {
       throw new EucalyptusCloudException("User does not have permission");
     }
