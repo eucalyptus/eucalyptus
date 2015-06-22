@@ -138,6 +138,8 @@ install: build
 	@$(INSTALL) -m 755 clcadmin-initialize-cloud $(DESTDIR)$(sbindir)/clcadmin-initialize-cloud
 	@$(INSTALL) -m 755 clusteradmin-register-nodes $(DESTDIR)$(sbindir)/clusteradmin-register-nodes
 	@$(INSTALL) -m 755 clusteradmin-register-nodes $(DESTDIR)$(sbindir)/clusteradmin-deregister-nodes
+	@$(INSTALL) -d $(DESTDIR)$(etcdir)/eucalyptus/cloud.d/elb-security-policy
+	@$(INSTALL) -m 755 elb-security-policy/*.json $(DESTDIR)$(etcdir)/eucalyptus/cloud.d/elb-security-policy/
 	@make -C status install
 	@make -C imaging install
 
@@ -170,5 +172,6 @@ uninstall:
 	@$(RM) -f $(DESTDIR)$(libexecdir)/eucalyptus/euca-upgrade
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/doc/iptables-preload.template
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/nginx_proxy.conf
+	@$(RM) -f $(DESTDIR)$(etcdir)/eucalyptus/cloud.d/elb-security-policy/*.json
 	@make -C status uninstall
 	@make -C imaging uninstall

@@ -1,4 +1,5 @@
-[
+        {
+            "PolicyAttributeDescriptions": [
                 {
                     "AttributeName": "Protocol-SSLv2", 
                     "AttributeValue": "false"
@@ -117,11 +118,11 @@
                 }, 
                 {
                     "AttributeName": "ECDHE-RSA-RC4-SHA", 
-                    "AttributeValue": "false"
+                    "AttributeValue": "true"
                 }, 
                 {
                     "AttributeName": "RC4-SHA", 
-                    "AttributeValue": "false"
+                    "AttributeValue": "true"
                 }, 
                 {
                     "AttributeName": "ECDHE-ECDSA-RC4-SHA", 
@@ -375,4 +376,7 @@
                     "AttributeName": "EXP-KRB5-RC4-MD5", 
                     "AttributeValue": "false"
                 }
-]
+            ], 
+            "PolicyName": "ELBSecurityPolicy-2014-10", 
+            "PolicyTypeName": "SSLNegotiationPolicyType"
+        } 

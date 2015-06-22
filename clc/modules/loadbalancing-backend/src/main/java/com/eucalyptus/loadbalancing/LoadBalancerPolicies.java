@@ -19,11 +19,17 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FilenameFilter;
 import java.io.InputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.annotate.JsonProperty;
@@ -52,12 +58,14 @@ import com.eucalyptus.loadbalancing.common.msgs.PolicyAttributeTypeDescription;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyAttributeTypeDescriptions;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyDescription;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyTypeDescription;
+import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.Sets;
 import com.google.common.base.Predicate;
 /**
  * @author Sang-Min Park
@@ -66,6 +74,7 @@ import com.google.common.base.Predicate;
 public class LoadBalancerPolicies {
   private static Logger    LOG     = Logger.getLogger( LoadBalancerPolicies.class );
 
+  public static String LATEST_SECURITY_POLICY_NAME = null;
   /**
    * initialize the policy types that ELB will support
    * this method is idempotent 
@@ -589,6 +598,7 @@ public class LoadBalancerPolicies {
     return Lists.newArrayList(getSamplePolicyDescription42());
   }
   
+
   private static class AttributeNameValuePair {
     @JsonProperty("AttributeName")
     public String AttributeName = null;
@@ -597,18 +607,31 @@ public class LoadBalancerPolicies {
     public String AttributeValue = null;
   }
   
-  private static PolicyDescription getPolicyDescription(final String policyName, 
-      final String policyTypeName, final String pathToAttributeJson) {
-    final ClassLoader classLoader = LoadBalancerPolicies.class.getClassLoader();
+  private static class SSLSecurityPolicy {
+    @JsonProperty("PolicyName")
+    public String PolicyName = null;
+  
+    @JsonProperty("PolicyTypeName")
+    public String PolicyTypeName = null;
+    
+    @JsonProperty("PolicyAttributeDescriptions")
+    public List<AttributeNameValuePair> PolicyAttributeDescriptions = null;
+  }
+  
+  private static PolicyDescription getPolicyDescription(final String pathToAttributeJson) {
     try{
-      final InputStream fileStream = classLoader.getResourceAsStream(pathToAttributeJson);
+      final InputStream fileStream = new FileInputStream(pathToAttributeJson);
       final ObjectMapper objectMapper = new ObjectMapper();
-      final List<AttributeNameValuePair> attrList = objectMapper.readValue(fileStream, new TypeReference<List<AttributeNameValuePair>>(){ });
+      final SSLSecurityPolicy policy = objectMapper.readValue(fileStream, SSLSecurityPolicy.class);
       final PolicyDescription policyDesc = new PolicyDescription();
+      final String policyName = policy.PolicyName;
+      final String policyTypeName = policy.PolicyTypeName;
+      if(policyName == null || policyTypeName==null)
+        throw new Exception("PolicyName and PolicyTypeName must not be null");
       policyDesc.setPolicyName(policyName);
       policyDesc.setPolicyTypeName(policyTypeName);
       final List<PolicyAttributeDescription> policyAttrs = Lists.newArrayList(Iterables.filter(
-          Lists.transform(attrList, new Function<AttributeNameValuePair, PolicyAttributeDescription>(){
+          Lists.transform(policy.PolicyAttributeDescriptions, new Function<AttributeNameValuePair, PolicyAttributeDescription>(){
         @Override
         public PolicyAttributeDescription apply(AttributeNameValuePair arg0) {
           if(arg0.AttributeName==null || arg0.AttributeValue==null)
@@ -624,9 +647,9 @@ public class LoadBalancerPolicies {
       policyDesc.setPolicyAttributeDescriptions(descs);
       return policyDesc;
     }catch(final Exception ex){
-      LOG.warn("Unable to read ELB sample policy files", ex);
+      LOG.warn(String.format("Unable to read ELB security policy file: %s", pathToAttributeJson), ex);
       return null;
-    } 
+    }
   }
   
   private static List<PolicyDescription> samplePolicyDescription = Lists.newArrayList();
@@ -634,18 +657,46 @@ public class LoadBalancerPolicies {
     if(samplePolicyDescription.isEmpty()){
       samplePolicyDescription = getSamplePolicyDescription40();
       PolicyDescription policyDesc = null;
-      if ((policyDesc=getPolicyDescription("ELBSecurityPolicy-2015-02", "SSLNegotiationPolicyType", "com/eucalyptus/loadbalancing/elb_security_policy_2015_02.json"))!=null)
-        samplePolicyDescription.add(policyDesc);
-      if ((policyDesc=getPolicyDescription("ELBSecurityPolicy-2014-10", "SSLNegotiationPolicyType", "com/eucalyptus/loadbalancing/elb_security_policy_2014_10.json"))!=null)
-        samplePolicyDescription.add(policyDesc);
-      if((policyDesc=getPolicyDescription("ELBSecurityPolicy-2014-01", "SSLNegotiationPolicyType", "com/eucalyptus/loadbalancing/elb_security_policy_2014_01.json"))!=null)
-        samplePolicyDescription.add(policyDesc);
-      if((policyDesc=getPolicyDescription("ELBSecurityPolicy-2011-08", "SSLNegotiationPolicyType", "com/eucalyptus/loadbalancing/elb_security_policy_2011_08.json"))!=null)
-        samplePolicyDescription.add(policyDesc);
-      if((policyDesc=getPolicyDescription("ELBSample-ELBDefaultNegotiationPolicy", "SSLNegotiationPolicyType", "com/eucalyptus/loadbalancing/elb_security_policy_sample_elb_default_negotiation_policy.json"))!=null)
-        samplePolicyDescription.add(policyDesc);
-      if((policyDesc=getPolicyDescription("ELBSample-OpenSSLDefaultNegotiationPolicy", "SSLNegotiationPolicyType", "com/eucalyptus/loadbalancing/elb_security_policy_sample_openssl_default_negotiation_policy.json"))!=null)
-        samplePolicyDescription.add(policyDesc);
+      String[] policyFiles = null;
+      final Set<String> policyNames = Sets.newHashSet();
+      final String dir = String.format("%s/elb-security-policy", BaseDirectory.CONF);
+      try{
+        final File policyDirectory = new File(dir);
+        policyFiles = policyDirectory.list(new FilenameFilter() {
+          @Override
+          public boolean accept(File dir, String name) {
+            if(name!=null && name.toLowerCase().endsWith(".json"))
+              return true;
+            else
+              return false;
+          }});
+        if(policyFiles == null)
+          throw new Exception("The directory '"+dir+"' is not found");
+      }catch(final Exception ex) {
+        LOG.error("Failed to find ELB security policy files", ex);
+      }
+      Date latest = new Date(Long.MIN_VALUE);
+      for(final String policyFileName : policyFiles) {
+        final String policyFilePath = String.format("%s/%s", dir, policyFileName);
+        if ((policyDesc = getPolicyDescription(policyFilePath))!=null) {
+          if(!policyNames.contains(policyDesc.getPolicyName())) {
+            samplePolicyDescription.add(policyDesc);
+            policyNames.add(policyDesc.getPolicyName());
+            try{
+              final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM");
+              final Date policyDate = df.parse(policyDesc.getPolicyName().substring(policyDesc.getPolicyName().length()-7));
+              if (policyDate.after(latest)) {
+                latest = policyDate;
+                LATEST_SECURITY_POLICY_NAME = policyDesc.getPolicyName(); 
+              }
+            }catch(final Exception ex){
+              ;
+            }
+          } else {
+            LOG.warn("Policy with dupilcate policy name found: "+ policyDesc.getPolicyName());
+          }
+        }
+      }
     }
     return samplePolicyDescription;
   }
