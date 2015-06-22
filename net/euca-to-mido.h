@@ -312,7 +312,7 @@ int create_mido_vpc_secgroup(mido_config * mido, mido_vpc_secgroup * vpcsecgroup
 int delete_mido_vpc_secgroup(mido_vpc_secgroup * vpcsecgroup);
 int find_mido_vpc_secgroup(mido_config * mido, char *secgroupname, mido_vpc_secgroup ** outvpcsecgroup);
 
-int connect_mido_vpc_instance(mido_vpc_subnet * vpcsubnet, mido_vpc_instance * inst, midoname * vmhost);
+int connect_mido_vpc_instance(mido_vpc_subnet * vpcsubnet, mido_vpc_instance * inst, midoname * vmhost, char *instanceDNSDomain);
 
 int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mido_vpc * vpc, mido_vpc_subnet * vpcsubnet, mido_vpc_instance * inst);
 int disconnect_mido_vpc_instance_elip(mido_vpc_instance * vpcinstance);

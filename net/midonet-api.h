@@ -108,6 +108,7 @@ typedef struct midoname_t {
     char *jsonbuf;
     char *resource_type;
     char *content_type;
+    char *vers;
     int init;
 } midoname;
 
@@ -125,7 +126,7 @@ typedef struct midoname_t {
 
 //int mido_allocate_midorule(char *position, char *type, char *action, char *protocol, char *srcIAGuuid, char *src_port_min, char *src_port_max,  char *dstIAGuuid, char *dst_port_min, char *dst_port_max, char *matchForwardFlow, char *matchReturnFlow, char *nat_target, char *nat_port_min, char *nat_port_max, midorule *outrule);
 
-int mido_create_midoname(char *tenant, char *name, char *uuid, char *resource_type, char *content_type, char *jsonbuf, midoname * outname);
+int mido_create_midoname(char *tenant, char *name, char *uuid, char *resource_type, char *content_type, char *vers, char *jsonbuf, midoname * outname);
 void mido_free_midoname(midoname * name);
 void mido_free_midoname_list(midoname * name, int max_name);
 int mido_update_midoname(midoname * name);
@@ -165,7 +166,7 @@ int mido_print_dhcp(midoname * name);
 int mido_delete_dhcp(midoname * devname, midoname * name);
 int mido_get_dhcps(midoname * devname, midoname ** outnames, int *outnames_max);
 
-int mido_create_dhcphost(midoname * devname, midoname * dhcp, char *name, char *mac, char *ip, midoname * outname);
+int mido_create_dhcphost(midoname * devname, midoname * dhcp, char *name, char *mac, char *ip, char *dns_domain, midoname * outname);
 int mido_delete_dhcphost(midoname * name);
 int mido_get_dhcphosts(midoname * devname, midoname * dhcp, midoname ** outnames, int *outnames_max);
 
@@ -213,7 +214,7 @@ int mido_get_ipaddrgroup_ips(midoname * ipaddrgroup, midoname ** outnames, int *
 int mido_create_resource_v(midoname * parents, int max_parents, midoname * newname, midoname * outname, va_list * al);
 int mido_create_resource(midoname * parents, int max_parents, midoname * newname, midoname * outname, ...);
 //int mido_read_resource(char *resource_type, midoname * name, char *apistr);
-int mido_update_resource(char *resource_type, char *content_type, midoname * name, va_list * al);
+int mido_update_resource(char *resource_type, char *content_type, char *vers, midoname * name, va_list * al);
 int mido_print_resource(char *resource_type, midoname * name);
 int mido_delete_resource(midoname * parentname, midoname * name);
 int mido_get_resources(midoname * parents, int max_parents, char *tenant, char *resource_type, char *apistr, midoname ** outnames, int *outnames_max);
@@ -225,8 +226,8 @@ int mido_cmp_midoname_to_input_json_v(midoname * name, va_list * al);
 char *mido_jsonize(char *tenant, va_list * al);
 
 int midonet_http_get(char *url, char *apistr, char **out_payload);
-int midonet_http_put(char *url, char *resource_type, char *payload);
-int midonet_http_post(char *url, char *resource_type, char *payload, char **out_payload);
+int midonet_http_put(char *url, char *resource_type, char *vers, char *payload);
+int midonet_http_post(char *url, char *resource_type, char *vers, char *payload, char **out_payload);
 int midonet_http_delete(char *url);
 
 /*----------------------------------------------------------------------------*\
