@@ -65,6 +65,9 @@ package com.eucalyptus.empyrean;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
+import java.nio.charset.StandardCharsets;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -75,6 +78,8 @@ import java.util.Set;
 import javax.annotation.Nullable;
 import com.eucalyptus.component.ServiceOrderings;
 import com.eucalyptus.component.groups.ServiceGroups;
+import com.eucalyptus.crypto.Digest;
+import com.eucalyptus.crypto.util.PEMFiles;
 import com.google.common.base.Functions;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
@@ -104,6 +109,7 @@ import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import com.google.common.io.BaseEncoding;
 
 public class EmpyreanService {
   private static Logger LOG = Logger.getLogger( EmpyreanService.class );
@@ -387,10 +393,41 @@ public class EmpyreanService {
     private static Predicate<ServiceConfiguration> from( Iterable<Filter> filters ) {
       final List<Predicate<ServiceConfiguration>> predicates = Lists.newArrayList( );
       for ( final Filter filter : filters ) {
-        final Function<String,Predicate<ServiceConfiguration>> builder = filterBuilders.get( filter.getName( ) );
+        final Function<String,Predicate<ComponentId>> cbuilder = componentIdFilterBuilders.get( filter.getName( ) );
+        if ( cbuilder != null ) {
+          predicates.add( Predicates.compose(
+              Predicates.or( Iterables.transform( filter.getValues( ), cbuilder ) ),
+              ServiceConfigurations.componentId( ) ) );
+        } else {
+          final Function<String, Predicate<ServiceConfiguration>> builder = serviceConfigurationFilterBuilders.get( filter.getName( ) );
+          predicates.add( builder == null || filter.getValues( ) == null ?
+              Predicates.<ServiceConfiguration>alwaysFalse( ) :
+              Predicates.or( Iterables.transform( filter.getValues( ), builder ) ) );
+        }
+      }
+      return Predicates.and( predicates );
+    }
+
+    /**
+     * Build a predicate from the given filters
+     */
+    private static Predicate<ComponentId> componentFrom( Iterable<Filter> filters ) {
+      final List<Predicate<ComponentId>> predicates = Lists.newArrayList( );
+      for ( final Filter filter : filters ) {
+        final Function<String,Predicate<ComponentId>> builder = componentIdFilterBuilders.get( filter.getName( ) );
         predicates.add( builder == null || filter.getValues( ) == null ?
-            Predicates.<ServiceConfiguration>alwaysFalse( ) :
+            Predicates.<ComponentId>alwaysFalse( ) :
             Predicates.or( Iterables.transform( filter.getValues( ), builder ) ) );
+      }
+      return Predicates.and( predicates );
+    }
+
+    private static Predicate<String> usageFrom( Iterable<Filter> filters ) {
+      final List<Predicate<String>> predicates = Lists.newArrayList( );
+      for ( final Filter filter : filters ) {
+        if ( "certificate-usage".equals( filter.getName( ) ) ) {
+          predicates.add( Predicates.in( filter.getValues( ) ) );
+        }
       }
       return Predicates.and( predicates );
     }
@@ -398,15 +435,15 @@ public class EmpyreanService {
     /**
      * Create a string filter builder
      */
-    private static Function<String,Predicate<ServiceConfiguration>> sfb( final Function<ServiceConfiguration,String> f ) {
-      return new Function<String,Predicate<ServiceConfiguration>>( ) {
+    private static <I> Function<String,Predicate<I>> sfb( final Function<I,String> f ) {
+      return new Function<String,Predicate<I>>( ) {
         @Nullable
         @Override
-        public final Predicate<ServiceConfiguration> apply( final String filter ) {
-          return new Predicate<ServiceConfiguration>( ){
+        public final Predicate<I> apply( final String filter ) {
+          return new Predicate<I>( ){
             @Override
-            public boolean apply( final ServiceConfiguration serviceConfiguration ) {
-              return filter.equals( f.apply( serviceConfiguration ) );
+            public boolean apply( final I item ) {
+              return filter.equals( f.apply( item ) );
             }
           };
         }
@@ -416,16 +453,16 @@ public class EmpyreanService {
     /**
      * Create a string set filter builder
      */
-    private static Function<String,Predicate<ServiceConfiguration>> ssfb( final Function<ServiceConfiguration,Set<String>> f ) {
-      return new Function<String,Predicate<ServiceConfiguration>>( ) {
+    private static <I> Function<String,Predicate<I>> ssfb( final Function<I,Set<String>> f ) {
+      return new Function<String,Predicate<I>>( ) {
         @Nullable
         @Override
-        public final Predicate<ServiceConfiguration> apply( final String filter ) {
-          return new Predicate<ServiceConfiguration>( ){
+        public final Predicate<I> apply( final String filter ) {
+          return new Predicate<I>( ){
             @Override
-            public boolean apply( final ServiceConfiguration serviceConfiguration ) {
+            public boolean apply( final I item ) {
               //noinspection ConstantConditions
-              return f.apply( serviceConfiguration ).contains( filter );
+              return f.apply( item ).contains( filter );
             }
           };
         }
@@ -435,37 +472,61 @@ public class EmpyreanService {
     /**
      * Create a boolean filter builder
      */
-    private static Function<String,Predicate<ServiceConfiguration>> bfb( final Function<ServiceConfiguration,Boolean> f ) {
+    private static <I> Function<String,Predicate<I>> bfb( final Function<I,Boolean> f ) {
       return sfb( Functions.compose( Functions.toStringFunction( ), f ) );
     }
 
     /**
-     * Map of filter names to filter builders
+     * Map of filter names to component filter builders
      */
-    private static final Map<String,Function<String,Predicate<ServiceConfiguration>>> filterBuilders =
+    private static final Map<String,Function<String,Predicate<ComponentId>>> componentIdFilterBuilders =
+        ImmutableMap.<String,Function<String,Predicate<ComponentId>>>builder( )
+            .put( "internal", bfb( new Function<ComponentId, Boolean>( ) {
+              @Override
+              public Boolean apply( final ComponentId componentId ) {
+                return componentId.isInternal( );
+              }
+            } ) )
+            .put( "user-service", bfb( new Function<ComponentId, Boolean>( ) {
+              @Override
+              public Boolean apply( final ComponentId componentId ) {
+                return componentId.isAdminService( );
+              }
+            } ) )
+            .put( "public", bfb( new Function<ComponentId, Boolean>( ) {
+              @Override public Boolean apply( final ComponentId componentId ) {
+                return componentId.isPublicService( );
+              }
+            } ) )
+            .put( "service-type", sfb( ComponentIds.name( ) ) )
+            .put( "service-group", ssfb( new Function<ComponentId, Set<String>>( ) {
+              @Nullable
+              @Override
+              public Set<String> apply( final ComponentId componentId ) {
+                return Sets.newHashSet( Iterables.transform(
+                    ServiceGroups.listMembership( componentId ),
+                    ComponentIds.name( ) ) );
+              }
+            } ) )
+            .put( "service-group-member", bfb( new Function<ComponentId, Boolean>( ) {
+              @Override
+              public Boolean apply( final ComponentId componentId ) {
+                return !ServiceGroups.listMembership( componentId ).isEmpty( );
+              }
+            } ) )
+            .put( "certificate-usage", ssfb( new Function<ComponentId, Set<String>>( ) {
+              @Override
+              public Set<String> apply( final ComponentId componentId ) {
+                return componentId.getCertificateUsages( );
+              }
+            } ) )
+            .build( );
+
+    /**
+     * Map of filter names to service configuration filter builders
+     */
+    private static final Map<String,Function<String,Predicate<ServiceConfiguration>>> serviceConfigurationFilterBuilders =
         ImmutableMap.<String,Function<String,Predicate<ServiceConfiguration>>>builder( )
-        .put( "internal", bfb( new Function<ServiceConfiguration, Boolean>( ) {
-          @Override
-          public Boolean apply( final ServiceConfiguration serviceConfiguration ) {
-            return serviceConfiguration.getComponentId( ).isInternal( );
-          }
-        } ) )
-        .put( "user-service", bfb( new Function<ServiceConfiguration, Boolean>( ) {
-              @Override public Boolean apply( final ServiceConfiguration serviceConfiguration ) {
-                return serviceConfiguration.getComponentId( ).isAdminService( );
-              }
-        } ) )
-        .put( "public", bfb( new Function<ServiceConfiguration, Boolean>( ) {
-              @Override public Boolean apply( final ServiceConfiguration serviceConfiguration ) {
-                return serviceConfiguration.getComponentId( ).isPublicService( );
-              }
-        } ) )
-        .put( "service-type", sfb( new Function<ServiceConfiguration, String>( ) {
-          @Override
-          public String apply( final ServiceConfiguration serviceConfiguration ) {
-            return serviceConfiguration.getComponentId( ).name( );
-          }
-        } ) )
         .put( "host", sfb( new Function<ServiceConfiguration, String>( ) {
           @Override
           public String apply( final ServiceConfiguration serviceConfiguration ) {
@@ -483,21 +544,6 @@ public class EmpyreanService {
           @Override
           public String apply( final ServiceConfiguration serviceConfiguration ) {
             return serviceConfiguration.getPartition( );
-          }
-        } ) )
-        .put( "service-group", ssfb( new Function<ServiceConfiguration, Set<String>>( ) {
-          @Nullable
-          @Override
-          public Set<String> apply( final ServiceConfiguration serviceConfiguration ) {
-            return Sets.newHashSet( Iterables.transform(
-                ServiceGroups.listMembership( serviceConfiguration.getComponentId( ) ),
-                ComponentIds.name( ) ) );
-          }
-        } ) )
-        .put( "service-group-member", bfb( new Function<ServiceConfiguration, Boolean>( ) {
-          @Override
-          public Boolean apply( final ServiceConfiguration serviceConfiguration ) {
-            return !ServiceGroups.listMembership( serviceConfiguration.getComponentId( ) ).isEmpty( );
           }
         } ) )
         .build( );
@@ -688,5 +734,55 @@ public class EmpyreanService {
       }
     }
     return reply;
+  }
+
+  @ServiceOperation(user=true)
+  public enum DescribeServiceCertificates implements Function<DescribeServiceCertificatesType, DescribeServiceCertificatesResponseType> {
+    INSTANCE;
+
+    @Override
+    public DescribeServiceCertificatesResponseType apply( final DescribeServiceCertificatesType request ) {
+      final DescribeServiceCertificatesResponseType reply = request.getReply( );
+      /**
+       * Only show public services to normal users.
+       * Allow for filtering by component and state w/in that set.
+       */
+      final Predicate<ServiceConfiguration> configPredicate = Filters.publicService( );
+      final List<ServiceCertificateType> serviceCertificates = Lists.newArrayList( );
+      final Predicate<Component> componentPredicate =
+          Predicates.compose( Filters.componentFrom( request.getFilters( ) ), Components.componentId( ) );
+      final Predicate<String> usagePredicate = Filters.usageFrom( request.getFilters( ) );
+      for ( final Component comp : Iterables.filter( Components.list( ), componentPredicate ) ) {
+        if ( Iterables.any( comp.services( ), Predicates.and( configPredicate, Filters.from( request.getFilters( ) ) ) ) ) {
+          final ComponentId currentComponentId = comp.getComponentId( );
+          final ServiceCertificateType serviceCertificate = new ServiceCertificateType( );
+          final Set<String> usages = currentComponentId.getCertificateUsages( );
+          for ( final String usage : Iterables.filter( usages, usagePredicate ) ) {
+            final X509Certificate certificate = currentComponentId.getCertificate( usage );
+            try {
+              final byte[] certificateBytes = certificate.getEncoded( );
+              serviceCertificate.setServiceType( comp.getName( ) );
+              if ( "der".equals( request.getFormat( ) ) ) {
+                serviceCertificate.setCertificateFormat( "der" );
+                serviceCertificate.setCertificate( BaseEncoding.base64( ).encode( certificateBytes ) );
+              } else {
+                serviceCertificate.setCertificateFormat( "pem" );
+                serviceCertificate.setCertificate( new String( PEMFiles.getBytes( certificate ), StandardCharsets.UTF_8 ) );
+              }
+              final Digest digest = Digest.forAlgorithm( request.getFingerprintDigest( ) ).or( Digest.SHA256 );
+              serviceCertificate.setCertificateFingerprintDigest( digest.algorithm( ) );
+              serviceCertificate.setCertificateFingerprint( BaseEncoding.base16( ).withSeparator( ":", 2 ).encode( digest.digestBinary( certificateBytes ) ) );
+              serviceCertificate.setCertificateUsage( usage );
+              serviceCertificates.add( serviceCertificate );
+            } catch ( final CertificateEncodingException e ) {
+              LOG.error( "Error processing service certificate", e );
+            }
+          }
+        }
+      }
+      reply.getServiceCertificates( ).addAll( serviceCertificates );
+      return reply;
+    }
+
   }
 }

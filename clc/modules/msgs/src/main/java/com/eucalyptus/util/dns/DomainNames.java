@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,6 +64,7 @@ package com.eucalyptus.util.dns;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 import org.xbill.DNS.DClass;
@@ -79,8 +80,11 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
+import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
@@ -105,14 +109,28 @@ public class DomainNames {
   public static Name internalSubdomain( Class<? extends ComponentId> componentId ) {
     return SystemSubdomain.INTERNAL.apply( componentId );
   }
-  
+
+  /**
+   * @return Subdomains representing the cloud internal DNS subdomain for {@code ComponentId}
+   */
+  public static Set<Name> internalSubdomains( Class<? extends ComponentId> componentId ) {
+    return SystemSubdomain.INTERNAL.names( componentId );
+  }
+
   /**
    * @return Subdomain representing the external system DNS subdomain for {@code ComponentId}
    */
   public static Name externalSubdomain( Class<? extends ComponentId> componentId ) {
     return SystemSubdomain.EXTERNAL.apply( componentId );
   }
-  
+
+  /**
+   * @return Subdomains representing the external system DNS subdomains for {@code ComponentId}
+   */
+  public static Set<Name> externalSubdomains( Class<? extends ComponentId> componentId ) {
+    return SystemSubdomain.EXTERNAL.names( componentId );
+  }
+
   /**
    * @return Subdomain representing the cloud internal DNS subdomain
    */
@@ -157,7 +175,30 @@ public class DomainNames {
   public static boolean isInternalSubdomain( Name name ) {
     return name.subdomain( SystemSubdomain.INTERNAL.get( ) );
   }
-  
+
+  /**
+   * Get the system domain for which the given name is a subdomain.
+   *
+   * @param componentId The component to check names for
+   * @param perhapsSystemSubdomain The name to check
+   * @return The optional system domain (internal or external)
+   */
+  public static Optional<Name> systemDomainFor(
+      final Class<? extends ComponentId> componentId,
+      final Name perhapsSystemSubdomain
+  ) {
+    Optional<Name> systemDomainResult = Optional.absent( );
+    for ( final Name systemDomain : Iterables.concat(
+        DomainNames.externalSubdomains( componentId ),
+        DomainNames.internalSubdomains( componentId ) ) ) {
+      if ( perhapsSystemSubdomain.subdomain( systemDomain ) && !perhapsSystemSubdomain.equals( systemDomain ) ) {
+        systemDomainResult = Optional.of( systemDomain );
+        break;
+      }
+    }
+    return systemDomainResult;
+  }
+
   /**
    * Get the list of Name Server Records for the given Name if we are authoritative. That is, only
    * ever return Names which refer to our interna DNS server.
@@ -200,7 +241,17 @@ public class DomainNames {
       Name compName = Name.fromConstantString( ComponentIds.lookup( input ).name( ) );
       return absolute( compName, this.get( ) );
     }
-    
+
+    public Set<Name> names( final Class<? extends ComponentId> input ) {
+      final Set<Name> names = Sets.newLinkedHashSet( );
+      final ComponentId componentId = ComponentIds.lookup( input );
+      final Name domain = get( );
+      for ( final String name : componentId.getAllServiceNames( ) ) {
+        names.add( absolute( Name.fromConstantString( name ), domain ) );
+      }
+      return names;
+    }
+
     public List<NSRecord> getNameServers( ) {
       List<NSRecord> nsRecs = Lists.newArrayList( );
       int idx = 1;

@@ -33,8 +33,15 @@ import com.eucalyptus.auth.euare.ServerCertificateType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.common.msgs.Listener;
+import com.eucalyptus.loadbalancing.common.msgs.PolicyAttribute;
 import com.eucalyptus.loadbalancing.LoadBalancer;
+import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
+import com.eucalyptus.loadbalancing.LoadBalancerListener;
+import com.eucalyptus.loadbalancing.LoadBalancerPolicies;
+import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription;
+import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancers;
 import com.google.common.collect.Iterables;
@@ -54,6 +61,7 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 	  this.insert(new AuthorizeSSLCertificate(this));
 		this.insert(new AuthorizeIngressRule(this));
 		this.insert(new UpdateHealthCheckConfig(this));
+		this.insert(new DefaultSSLPolicy(this));
 		return this;
 	}
 	
@@ -328,4 +336,119 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 		public void rollback() throws EventHandlerException {
 		}
 	}
+	
+	 public static class DefaultSSLPolicy extends AbstractEventHandler<CreateListenerEvent> {
+    protected DefaultSSLPolicy(
+        EventHandlerChain<? extends CreateListenerEvent> chain) {
+      super(chain);
+    }
+
+    @Override
+    public void apply(CreateListenerEvent evt) throws EventHandlerException {
+      LoadBalancer lb;
+      try{
+        lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
+      }catch(NoSuchElementException ex){
+        throw new EventHandlerException("Could not find the loadbalancer with name="+evt.getLoadBalancer(), ex);
+      }catch(Exception ex){
+        throw new EventHandlerException("Error while looking for loadbalancer with name="+evt.getLoadBalancer(), ex);
+      }
+      final List<Listener> listeners = Lists.newArrayList(evt.getListeners());
+      
+      boolean sslListener = false;
+      for(final Listener l : listeners) {
+        final String protocol = l.getProtocol().toLowerCase();
+        if("https".equals(protocol) || "ssl".equals(protocol)) {
+          sslListener = true;
+          break;
+        }
+      }
+      if(!sslListener)
+        return;
+      
+      try{
+        /// this will load the sample policies into memory
+        if(LoadBalancerPolicies.LATEST_SECURITY_POLICY_NAME == null) {
+          LoadBalancerPolicies.getSamplePolicyDescription();
+          if(LoadBalancerPolicies.LATEST_SECURITY_POLICY_NAME == null)
+            throw new Exception("Latest security policy is not found");
+        }
+        
+        boolean policyCreated = false;
+        final Collection<LoadBalancerPolicyDescriptionCoreView> policies = lb.getPolicies();
+        if(policies != null) {
+          for (final LoadBalancerPolicyDescriptionCoreView view : policies ) {
+            if ("SSLNegotiationPolicyType".equals(view.getPolicyTypeName()) &&
+                LoadBalancerPolicies.LATEST_SECURITY_POLICY_NAME.equals(view.getPolicyName())) {
+              policyCreated = true;
+              break;
+            }
+          }
+        }
+        if(! policyCreated) {
+          final PolicyAttribute attr = new PolicyAttribute();
+          attr.setAttributeName("Reference-Security-Policy");
+          attr.setAttributeValue(LoadBalancerPolicies.LATEST_SECURITY_POLICY_NAME);
+          LoadBalancerPolicies.addLoadBalancerPolicy(lb, LoadBalancerPolicies.LATEST_SECURITY_POLICY_NAME, "SSLNegotiationPolicyType", 
+              Lists.newArrayList(attr));
+          try{ // reload with the newly created policy
+            lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
+          }catch(NoSuchElementException ex){
+            throw new EventHandlerException("Could not find the loadbalancer with name="+evt.getLoadBalancer(), ex);
+          }catch(Exception ex){
+            throw new EventHandlerException("Error while looking for loadbalancer with name="+evt.getLoadBalancer(), ex);
+          }
+        }
+      }catch (final Exception ex) {
+        LOG.warn("Failed to create default security policy for https/ssl listeners", ex);
+        return;
+      }
+      
+      try{
+        final LoadBalancerPolicyDescription policy = 
+            LoadBalancerPolicies.getLoadBalancerPolicyDescription(lb, LoadBalancerPolicies.LATEST_SECURITY_POLICY_NAME);
+        if(policy==null)
+          throw new Exception("No such policy is found: "+LoadBalancerPolicies.LATEST_SECURITY_POLICY_NAME);
+
+        final Collection<LoadBalancerListenerCoreView> lbListeners = lb.getListeners();
+        for(final Listener l : listeners) {
+          final String protocol = l.getProtocol().toLowerCase();
+          if("https".equals(protocol) || "ssl".equals(protocol)) {
+            LoadBalancerListener listener = null;
+            for(final LoadBalancerListenerCoreView view : lbListeners){
+              if(view.getLoadbalancerPort() == l.getLoadBalancerPort()){
+                listener = LoadBalancerListenerEntityTransform.INSTANCE.apply(view);
+                break;
+              }
+            }
+            if(listener == null)
+              throw new Exception("No such listener is found");
+            boolean policyAttached=false;
+            final List<LoadBalancerPolicyDescriptionCoreView> listenerPolicies = listener.getPolicies();
+            if(listenerPolicies!=null) {
+              for(final LoadBalancerPolicyDescriptionCoreView listenerPolicy : listenerPolicies ) {
+                if( "SSLNegotiationPolicyType".equals(listenerPolicy.getPolicyTypeName()) &&
+                    LoadBalancerPolicies.LATEST_SECURITY_POLICY_NAME.equals(listenerPolicy.getPolicyName()))
+                {
+                  policyAttached = true;
+                  break;
+                }
+              }
+            }
+            
+            if(!policyAttached && listener!=null && policy!=null) {
+              LoadBalancerPolicies.addPoliciesToListener(listener, Lists.newArrayList(policy));
+            }
+          }
+        }
+      }catch(final Exception ex) {
+        LOG.warn("Failed to set default security policy to https/ssl listeners", ex);
+      }
+    }
+
+    @Override
+    public void rollback() throws EventHandlerException {
+      ;
+    }
+	 }
 }

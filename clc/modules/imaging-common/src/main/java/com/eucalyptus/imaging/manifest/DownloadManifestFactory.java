@@ -114,7 +114,7 @@ public class DownloadManifestFactory {
       throws DownloadManifestException {
     try (final EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3ClientForUser(
         Accounts.lookupSystemAccountByAlias( AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT ),
-        (int)TimeUnit.MINUTES.toSeconds( 15 )) ) {
+        (int)TimeUnit.HOURS.toSeconds( expirationHours )) ) {
       // prepare to do pre-signed urls
       if (!urlForNc)
         s3Client.refreshEndpoint(true);
@@ -284,10 +284,10 @@ public class DownloadManifestFactory {
 
   public static String generatePresignedUrl(final String manifestName)
       throws DownloadManifestException {
+    final long expirationHours = DEFAULT_EXPIRE_TIME_HR * 2;
     try (final EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3ClientForUser(
         Accounts.lookupSystemAccountByAlias( AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT ),
-        (int)TimeUnit.MINUTES.toSeconds( 15 )) ) {
-      final long expirationHours = DEFAULT_EXPIRE_TIME_HR * 2;
+        (int)TimeUnit.HOURS.toSeconds( expirationHours )) ) {
       Date expiration = new Date();
       long msec = expiration.getTime() + 1000 * 60 * 60 * expirationHours;
       expiration.setTime(msec);

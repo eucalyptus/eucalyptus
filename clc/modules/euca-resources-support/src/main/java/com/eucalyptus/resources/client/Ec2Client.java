@@ -558,23 +558,16 @@ public class Ec2Client {
 
   private class ComputeDescribeKeyPairsTask extends
       EucalyptusClientTask<ComputeMessage, Compute> {
-    private boolean verbose;
-    private List<String> keyNames = null;
+    private ArrayList<String> keyNames = null;
     private List<DescribeKeyPairsResponseItemType> result = null;
 
-    private ComputeDescribeKeyPairsTask( final boolean verbose, final List<String> keyNames) {
-      this.verbose = verbose;
+    private ComputeDescribeKeyPairsTask(final ArrayList<String> keyNames) {
       this.keyNames = keyNames;
     }
 
     private DescribeKeyPairsType describeKeyPairs() {
       final DescribeKeyPairsType req = new DescribeKeyPairsType();
-      if ( this.verbose ) {
-        req.setKeySet( Lists.newArrayList( "verbose" ) );
-      }
-      if ( keyNames != null && !keyNames.isEmpty( ) ) {
-        req.getFilterSet( ).add( Filter.filter( "key-name", keyNames ) );
-      }
+      req.setKeySet( keyNames );
       return req;
     }
 
@@ -1135,11 +1128,15 @@ public class Ec2Client {
     }
   }
 
+  /*
+   * Throws an error if keypair not found
+   */
   public List<DescribeKeyPairsResponseItemType> describeKeyPairs(
-      final String userId, final List<String> keyNames)
+      final String userId, final ArrayList<String> keyNames)
       throws EucalyptusActivityException {
-    // run in verbose mode for system user
-    final ComputeDescribeKeyPairsTask task = new ComputeDescribeKeyPairsTask( userId == null, keyNames);
+    if (userId == null) // run in verbose mode for system user
+      keyNames.add("verbose");
+    final ComputeDescribeKeyPairsTask task = new ComputeDescribeKeyPairsTask(keyNames);
     final CheckedListenableFuture<Boolean> result = task
         .dispatch(new Ec2Context(userId));
     try {

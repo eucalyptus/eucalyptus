@@ -79,6 +79,7 @@ public class ComponentIds {
   private static Logger                                          LOG        = Logger.getLogger( ComponentIds.class );
   private static final ClassToInstanceMap<ComponentId>           compIdMap  = MutableClassToInstanceMap.create( );
   private static final Map<String, Class<? extends ComponentId>> compIdName = Maps.newHashMap( );
+  private static final Map<String, Class<? extends ComponentId>> compIdNames = Maps.newHashMap( );
 
   public static List<Class<? extends ComponentId>> listTypes( ) {
     return Lists.newArrayList( compIdMap.keySet( ) );
@@ -94,6 +95,9 @@ public class ComponentIds {
       T newInstance = Classes.newInstance( compIdClass );
       compIdMap.putInstance( compIdClass, newInstance );
       compIdName.put( newInstance.name( ), compIdClass );
+      for ( final String name : newInstance.getServiceNames( ) ) {
+        compIdNames.put( name, compIdClass );
+      }
       LOG.debug( "Registered ComponentId: " + compIdClass.toString( ) );
       return newInstance;
     } else {
@@ -116,7 +120,20 @@ public class ComponentIds {
       return compIdMap.get( compIdName.get( name.toLowerCase( ) ) );
     }
   }
-  
+
+  /**
+   * Lookup the ComponentId with dns name <tt>name</tt>.
+   *
+   * @throws NoSuchElementException If not found
+   */
+  public static ComponentId lookupByDnsName( final String name ) {
+    if ( !compIdNames.containsKey( name.toLowerCase( ) ) ) {
+      throw new NoSuchElementException( "No ComponentId with dns name: " + name.toLowerCase( ) );
+    } else {
+      return compIdMap.get( compIdNames.get( name.toLowerCase( ) ) );
+    }
+  }
+
   public static Predicate<ComponentId> manyToOne( ) {
     return ComponentIdPredicates.MANY_TO_ONE;
   }

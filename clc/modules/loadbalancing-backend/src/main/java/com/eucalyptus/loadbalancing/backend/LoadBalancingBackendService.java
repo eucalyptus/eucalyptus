@@ -1242,7 +1242,16 @@ public class LoadBalancingBackendService {
       }
       throw (LoadBalancingException) ex;
     }
-	    
+    
+    try{
+      LoadBalancers.createLoadbalancerListener(lbName,  ctx, listeners);
+    }catch(final LoadBalancingException ex){
+      throw ex;
+    }catch(final Exception e){
+      final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getMessage() : "internal error";
+        throw new InternalFailure400Exception(String.format("Failed to create listener: %s", reason), e );
+    }
+    
 	  try{
     		CreateListenerEvent evt = new CreateListenerEvent();
     		evt.setLoadBalancer(lbName);
@@ -1251,18 +1260,22 @@ public class LoadBalancingBackendService {
     		evt.setListeners(listeners);
     		ActivityManager.getInstance().fire(evt);
 	  }catch(final EventFailedException e){
-    		LOG.error("failed to handle CreateListener event", e);
-    		final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getMessage() : "internal error";
-    		throw new InternalFailure400Exception(String.format("Failed to create listener: %s", reason), e );
+	    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerListener.class ) ) {
+	      for (final Listener l : listeners){
+	        try{
+	          final LoadBalancerListener exist = 
+	              Entities.uniqueResult(LoadBalancerListener.named(lb, l.getLoadBalancerPort()));
+	          Entities.delete(exist);
+	        }catch(final Exception ex) {
+	          ;
+	        }
+	      }
+	    }
+	    LOG.error("failed to handle CreateListener event", e);
+	    final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getMessage() : "internal error";   		
+	    throw new InternalFailure400Exception(String.format("Failed to create listener: %s", reason), e );
 	  }
-	  try{
-		  LoadBalancers.createLoadbalancerListener(lbName,  ctx, listeners);
-	  }catch(final LoadBalancingException ex){
-		  throw ex;
-	  }catch(final Exception e){
-		  final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getMessage() : "internal error";
-    	  throw new InternalFailure400Exception(String.format("Failed to create listener: %s", reason), e );
-	  }
+
 	  reply.set_return(true);
 	  return reply;
   }

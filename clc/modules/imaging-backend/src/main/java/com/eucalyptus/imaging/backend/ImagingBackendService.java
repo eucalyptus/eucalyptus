@@ -333,6 +333,7 @@ public class ImagingBackendService {
   public GetInstanceImportTaskResponseType GetInstanceImportTask( GetInstanceImportTaskType request ) throws EucalyptusCloudException {
     final GetInstanceImportTaskResponseType reply = request.getReply( );
     final Context context = Contexts.lookup();
+    final String workerId = request.getInstanceId();
     try{
       if ( ! ( context.getUser().isSystemAdmin() || ( context.isAdministrator() && Permissions.isAuthorized(
           VENDOR_IMAGINGSERVICE,
@@ -365,14 +366,15 @@ public class ImagingBackendService {
           LOG.warn(String.format("The worker (%s) is marked invalid", request.getInstanceId()));
           return reply;
         }
-      }else
+      }else {
         worker = ImagingWorkers.createWorker(request.getInstanceId());
+      }
 
       final ImagingTask prevTask = ImagingTasks.getConvertingTaskByWorkerId(request.getInstanceId());
       if(prevTask!=null){
         /// this should NOT happen; if it does, it's worker script's bug
         ImagingTasks.killAndRerunTask(prevTask.getDisplayName());
-        LOG.warn(String.format("A task (%s:%s) is gone missing [BUG in worker script]", 
+        LOG.info(String.format("A task (%s:%s) is gone missing and will be re-scheduled", 
             prevTask.getDisplayName(), request.getInstanceId()));
       }
 

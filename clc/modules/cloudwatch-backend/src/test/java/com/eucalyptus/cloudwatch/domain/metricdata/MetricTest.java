@@ -1,4 +1,4 @@
-/*************************************************************************
+package com.eucalyptus.cloudwatch.domain.metricdata; /*************************************************************************
  * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,17 +17,17 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.cloudwatch.domain.metricdata;
+
+import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricEntity;
+import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricManager;
+import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricEntity.MetricType;
+import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.Units;
+import org.apache.log4j.Logger;
+import org.junit.Ignore;
 
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-
-import org.apache.log4j.Logger;
-import org.junit.Ignore;
-
-import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
-import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
 
 @Ignore("Manual development test")
 public class MetricTest {
@@ -57,7 +57,7 @@ public class MetricTest {
     dimensionMap4.put("dim9", "dim9");
     dimensionMap4.put("dim10", "dim10");
     MetricManager.addMetric("account1", "metric1", "name1", null,
-        MetricType.Custom, Units.None, new Date(), 1.0, 1.0, 1.0, 1.0);
+      MetricType.Custom, Units.None, new Date(), 1.0, 1.0, 1.0, 1.0);
     MetricManager.addMetric("account1", "metric1", "name1",
         dimensionMap1, MetricType.System, Units.BitsPerSecond,
         new Date(System.currentTimeMillis() - 10000000), 1.0, 2.0, 2.0, 2.0);

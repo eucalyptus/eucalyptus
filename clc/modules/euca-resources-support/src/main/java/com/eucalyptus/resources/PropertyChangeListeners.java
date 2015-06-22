@@ -23,11 +23,8 @@ import java.util.List;
 
 import org.springframework.util.StringUtils;
 
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ClusterInfoType;
-import com.eucalyptus.compute.common.DescribeKeyPairsResponseItemType;
 import com.eucalyptus.compute.common.ImageDetails;
 import com.eucalyptus.compute.common.VmTypeDetails;
 import com.eucalyptus.configurable.ConfigurableProperty;

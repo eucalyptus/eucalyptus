@@ -56,12 +56,6 @@ import com.eucalyptus.cloudformation.workflow.StartTimeoutPassableWorkflowClient
 import com.eucalyptus.cloudformation.workflow.WorkflowClientManager;
 import com.eucalyptus.cloudformation.ws.StackWorkflowTags;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.Topology;
-import com.eucalyptus.compute.common.ClusterInfoType;
-import com.eucalyptus.compute.common.Compute;
-import com.eucalyptus.compute.common.DescribeAvailabilityZonesResponseType;
-import com.eucalyptus.compute.common.DescribeAvailabilityZonesType;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.context.Context;
@@ -74,13 +68,11 @@ import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.IO;
 import com.eucalyptus.util.RestrictedTypes;
-import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.dns.DomainNames;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.ByteStreams;
 import com.netflix.glisten.InterfaceBasedWorkflowClient;
 import com.netflix.glisten.WorkflowClientFactory;
@@ -100,7 +92,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import javax.net.ssl.SSLHandshakeException;
 
@@ -332,7 +323,7 @@ public class CloudFormationService {
     }
 
     // Otherwise, assume the URL is a eucalyptus S3 url...
-    String[] validHostBucketSuffixes = new String[]{"walrus", "objectstorage"};
+    String[] validHostBucketSuffixes = new String[]{"walrus", "objectstorage", "s3"};
     String[] validServicePaths = new String[]{ObjectStorageProperties.LEGACY_WALRUS_SERVICE_PATH, ComponentIds.lookup(ObjectStorage.class).getServicePath()};
     String[] validDomains = new String[]{DomainNames.externalSubdomain().relativize( Name.root ).toString( )};
     S3Helper.BucketAndKey bucketAndKey = S3Helper.getBucketAndKeyFromUrl(url, validServicePaths, validHostBucketSuffixes, validDomains);

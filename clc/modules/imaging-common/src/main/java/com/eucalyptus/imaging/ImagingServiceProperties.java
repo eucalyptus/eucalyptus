@@ -205,7 +205,6 @@ public class ImagingServiceProperties {
       if (keyname == null  || keyname.isEmpty())
         return;
       try {
-        // describeKeyPairs throws an error if keypair not found
         Ec2Client.getInstance().describeKeyPairs(Accounts.lookupSystemAccountByAlias(
             AccountIdentifiers.IMAGING_SYSTEM_ACCOUNT ).getUserId( ),
             Lists.newArrayList(keyname));
@@ -250,6 +249,27 @@ public class ImagingServiceProperties {
         throw new ConfigurablePropertyException(
             "Could not change log server port to " + newValue + " due to: " + e.getMessage());
       }
+    }
+  }
+
+  public static boolean stackExists(boolean checkStackStatus) {
+    try {
+      Stack stack = CloudFormationClient.getInstance().describeStack(
+          Accounts.lookupSystemAccountByAlias( AccountIdentifiers.IMAGING_SYSTEM_ACCOUNT ).getUserId( ),
+          ImagingServiceProperties.IMAGING_WORKER_STACK_NAME);
+      if (stack != null) {
+        LOG.debug("Found stack " + ImagingServiceProperties.IMAGING_WORKER_STACK_NAME);
+        if ( checkStackStatus )
+          return "CREATE_COMPLETE".equalsIgnoreCase( stack.getStackStatus() );
+        else
+          return true;
+      } else {
+        LOG.debug("Imaging worker stack does not exist");
+        return false;
+      }
+    } catch (Exception ex) {
+      LOG.warn("Could not describe stack " + ImagingServiceProperties.IMAGING_WORKER_STACK_NAME);
+      return false;
     }
   }
 

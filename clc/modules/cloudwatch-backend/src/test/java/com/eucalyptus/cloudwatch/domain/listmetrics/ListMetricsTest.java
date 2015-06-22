@@ -1,4 +1,4 @@
-/*************************************************************************
+package com.eucalyptus.cloudwatch.domain.listmetrics; /*************************************************************************
  * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,7 +17,15 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.cloudwatch.domain.listmetrics;
+
+import com.eucalyptus.cloudwatch.common.internal.domain.DimensionEntity;
+import com.eucalyptus.cloudwatch.common.internal.domain.listmetrics.ListMetric;
+import com.eucalyptus.cloudwatch.common.internal.domain.listmetrics.ListMetricManager;
+import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricEntity.MetricType;
+import com.google.common.collect.Lists;
+import org.apache.log4j.Logger;
+import org.junit.Ignore;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -27,13 +35,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-
-import org.apache.log4j.Logger;
-import org.junit.Ignore;
-
-import com.eucalyptus.cloudwatch.domain.DimensionEntity;
-import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
-import com.google.common.collect.Lists;
 
 
 @Ignore("Manual development test")

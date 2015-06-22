@@ -25,8 +25,9 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
-import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataType;
-
+import com.eucalyptus.cluster.callback.cloudwatch.AbsoluteMetricQueue;
+import com.eucalyptus.cluster.callback.cloudwatch.AbsoluteMetricQueueItem;
+import com.eucalyptus.cluster.callback.cloudwatch.CloudWatchHelper;
 import edu.ucsb.eucalyptus.msgs.DescribeSensorsResponse;
 import edu.ucsb.eucalyptus.msgs.DescribeSensorsType;
 import edu.ucsb.eucalyptus.msgs.MetricCounterType;
@@ -37,9 +38,6 @@ import edu.ucsb.eucalyptus.msgs.MetricDimensionsValuesType;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.Logs;
@@ -113,11 +111,8 @@ public class DescribeSensorCallback extends
 
   private void processCloudWatchStats(final DescribeSensorsResponse msg) throws Exception {
     CloudWatchHelper cloudWatchHelper = new CloudWatchHelper(new CloudWatchHelper.DefaultInstanceInfoProvider());
-    List<PutMetricDataType> putMetricDataList = cloudWatchHelper.collectMetricData(msg);
-    ServiceConfiguration serviceConfiguration = CloudWatchHelper.createServiceConfiguration();
-    for (PutMetricDataType putMetricData: putMetricDataList) {
-      cloudWatchHelper.sendSystemMetric(serviceConfiguration, putMetricData);
-    }
+    List<AbsoluteMetricQueueItem> queueItems = cloudWatchHelper.collectMetricData(msg);
+    AbsoluteMetricQueue.getInstance().addQueueItems(queueItems);
   }
 
 
@@ -182,7 +177,7 @@ public class DescribeSensorCallback extends
     }
   }
 
-  enum GetTimestamp implements Function<MetricDimensionsValuesType, Date> {
+  public enum GetTimestamp implements Function<MetricDimensionsValuesType, Date> {
     INSTANCE;
 
     @Override

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,6 +34,7 @@ import javax.security.auth.login.LoginException;
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.xbill.DNS.Name;
 
 import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.component.ComponentIds;
@@ -48,13 +49,18 @@ import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.exceptions.s3.SignatureDoesNotMatchException;
 import com.eucalyptus.objectstorage.pipeline.auth.ObjectStorageWrappedCredentials;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.eucalyptus.util.dns.DomainNames;
+import com.google.common.base.Optional;
+import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
+import com.google.common.collect.Iterables;
 
 /**
  * Primary implementation of S3 authentication. Both REST and Query.
  */
 public class S3Authentication {
   private static final Logger LOG = Logger.getLogger(S3Authentication.class);
+  private static final Splitter hostSplitter = Splitter.on(':').limit(2);
 
   public static enum SecurityParameter {
     AWSAccessKeyId, Timestamp, Expires, Signature, Authorization, Date, Content_MD5, Content_Type, SecurityToken,
@@ -370,23 +376,23 @@ public class S3Authentication {
       StringBuilder addrString = new StringBuilder();
 
       // Normalize the URI
-      if (targetHost.contains(".objectstorage")) {
-        // dns-style request
-        String hostBucket = targetHost.substring(0, targetHost.indexOf(".objectstorage"));
-        if (hostBucket.length() == 0) {
-          throw new InvalidAddressingHeaderException("Invalid Host header: " + targetHost);
-        } else {
-          addrString.append("/" + hostBucket);
+      boolean foundName = false;
+      if ( !Strings.isNullOrEmpty( targetHost ) ) {
+        final String host = Iterables.getFirst( hostSplitter.split( targetHost ), targetHost );
+        final Name hostDnsName = DomainNames.absolute( Name.fromString( host ) );
+        final Optional<Name> systemDomain = DomainNames.systemDomainFor( ObjectStorage.class, hostDnsName );
+        if ( systemDomain.isPresent( ) ) {
+          foundName = true;
+          // dns-style request
+          final String hostBucket = hostDnsName.relativize( systemDomain.get( ) ).toString( );
+          if ( hostBucket.length( ) == 0 ) {
+            throw new InvalidAddressingHeaderException( "Invalid Host header: " + targetHost );
+          } else {
+            addrString.append("/" + hostBucket);
+          }
         }
-      } else if (targetHost.contains(".walrus")) {
-        // dns-style request with walrus
-        String hostBucket = targetHost.substring(0, targetHost.indexOf(".walrus"));
-        if (hostBucket.length() == 0) {
-          throw new InvalidAddressingHeaderException("Invalid Host header: " + targetHost);
-        } else {
-          addrString.append("/" + hostBucket);
-        }
-      } else {
+      }
+      if ( !foundName ) {
         // path-style request (or service request that won't have a bucket anyway)
         if (removeServicePath) {
           if (addr.startsWith(osgServicePath)) {

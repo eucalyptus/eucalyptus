@@ -30,11 +30,6 @@ public enum NetworkingFeature {
   Classic,
 
   /**
-   * Consistent (e.g. view based)
-   */
-  Consistent,
-
-  /**
    * EC2-VPC platform
    */
   Vpc,

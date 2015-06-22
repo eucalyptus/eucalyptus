@@ -570,6 +570,20 @@ public class ServiceConfigurations {
     return ServiceConfigurationToPublicEndpoint.INSTANCE;
   }
 
+  enum ServiceConfigurationToComponentId implements NonNullFunction<ServiceConfiguration,ComponentId> {
+    INSTANCE;
+
+    @Nonnull
+    @Override
+    public ComponentId apply( final ServiceConfiguration serviceConfiguration ) {
+      return serviceConfiguration.getComponentId( );
+    }
+  }
+
+  public static NonNullFunction<ServiceConfiguration,ComponentId> componentId( ) {
+    return ServiceConfigurationToComponentId.INSTANCE;
+  }
+
   @TypeMapper
   public enum CheckExceptionRecordMapper implements Function<CheckException, ServiceStatusDetail> {
     INSTANCE;

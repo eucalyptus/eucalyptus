@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -162,11 +162,10 @@ public abstract class ObjectStorageRESTPipeline extends FilteredPipeline {
    * @return
    */
   private boolean maybeBucketHostedStyle(String fullHostHeader) {
+    final String host = Iterables.getFirst(hostSplitter.split(fullHostHeader), fullHostHeader);
     try {
-      return DomainNames.absolute(Name.fromString(Iterables.getFirst(hostSplitter.split(fullHostHeader), fullHostHeader))).subdomain(
-          DomainNames.externalSubdomain(ObjectStorage.class))
-          || DomainNames.absolute(Name.fromString(Iterables.getFirst(hostSplitter.split(fullHostHeader), fullHostHeader))).subdomain(
-              Name.fromString("walrus." + DomainNames.externalSubdomain().toString()));
+      final Name hostDnsName = Name.fromString( host, Name.root );
+      return DomainNames.systemDomainFor( ObjectStorage.class, hostDnsName ).isPresent( );
     } catch (Exception e) {
       LOG.error("Error parsing domain name from hostname: " + fullHostHeader, e);
       return false;
