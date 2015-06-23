@@ -62,12 +62,16 @@
 
 package com.eucalyptus.auth.policy;
 
+import static org.hamcrest.Matchers.notNullValue;
 import static com.eucalyptus.auth.principal.Principal.PrincipalType;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Matcher;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
 import org.apache.log4j.Logger;
@@ -83,7 +87,7 @@ import com.eucalyptus.auth.policy.key.Key;
 import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
-import com.eucalyptus.util.Pair;
+import com.eucalyptus.util.Parameters;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.collect.HashMultimap;
@@ -281,13 +285,11 @@ public class PolicyParser {
       actionMap.put( vendor, action );
     }
     // Group resources by type, key is a pair of (optional) account + resource type
-    final SetMultimap<Pair<Optional<String>,String>, String> resourceMap = HashMultimap.create( );
+    final SetMultimap<PolicyResourceSetKey, String> resourceMap = HashMultimap.create( );
     for ( final String resource : resources ) {
       final Ern ern = Ern.parse( resource );
       resourceMap.put(
-          Pair.lopair(
-              Strings.emptyToNull( ern.getNamespace( ) ) ,
-              ern.getResourceType( ) ),
+          key( ern.getRegion( ), ern.getAccount( ), ern.getResourceType( ) ),
           ern.getResourceName() );
     }
     final boolean notAction = PolicySpec.NOTACTION.equals( actionElement );
@@ -298,9 +300,10 @@ public class PolicyParser {
       final String vendor = actionSetEntry.getKey( );
       final Set<String> actionSet = (Set<String>) actionSetEntry.getValue( );
       boolean added = false;
-      for ( final Map.Entry<Pair<Optional<String>,String>, Collection<String>> resourceSetEntry : resourceMap.asMap().entrySet() ) {
-        final Optional<String> accountIdOrName = resourceSetEntry.getKey( ).getLeft();
-        final String type = resourceSetEntry.getKey( ).getRight();
+      for ( final Map.Entry<PolicyResourceSetKey, Collection<String>> resourceSetEntry : resourceMap.asMap().entrySet() ) {
+        final Optional<String> region = Optional.fromNullable( resourceSetEntry.getKey( ).region );
+        final Optional<String> accountIdOrName = Optional.fromNullable( resourceSetEntry.getKey( ).account );
+        final String type = resourceSetEntry.getKey( ).type;
         final Set<String> resourceSet = (Set<String>) resourceSetEntry.getValue( );
         if ( PolicySpec.ALL_ACTION.equals( vendor )
             || PolicySpec.ALL_RESOURCE.equals( type )
@@ -308,6 +311,7 @@ public class PolicyParser {
           results.add( new PolicyAuthorization(
               sid,
               EffectType.valueOf( effect ),
+              region.orNull( ),
               accountIdOrName.orNull( ),
               type,
               principal,
@@ -448,4 +452,41 @@ public class PolicyParser {
     return ( value != null ) ? value.trim( ).toLowerCase( ) : null;
   }
 
+  private static PolicyResourceSetKey key( final String region, final String account, final String type ) {
+    return new PolicyResourceSetKey( Strings.emptyToNull( region ), Strings.emptyToNull( account ), type );
+  }
+
+  private static final class PolicyResourceSetKey {
+    @Nullable
+    private final String region;
+    @Nullable
+    private final String account;
+    @Nonnull
+    private final String type;
+
+    public PolicyResourceSetKey(
+        @Nullable final String region,
+        @Nullable final String account,
+        @Nonnull  final String type ) {
+      Parameters.checkParam( "type", type, notNullValue( ) );
+      this.region = region;
+      this.account = account;
+      this.type = type;
+    }
+
+    @Override
+    public boolean equals( final Object o ) {
+      if ( this == o ) return true;
+      if ( o == null || getClass( ) != o.getClass( ) ) return false;
+      final PolicyResourceSetKey that = (PolicyResourceSetKey) o;
+      return Objects.equals( region, that.region ) &&
+          Objects.equals( account, that.account ) &&
+          Objects.equals( type, that.type );
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash( region, account, type );
+    }
+  }
 }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,34 +63,12 @@
 package com.eucalyptus.compute.common.policy;
 
 import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.policy.ern.Ern;
+import com.eucalyptus.auth.policy.ern.ResourceNameSupport;
 
-public class Ec2ResourceName extends Ern {
+public class Ec2ResourceName extends ResourceNameSupport {
   
-  private String type;
-  private String id;
-  
-  public Ec2ResourceName( String type, String id ) {
-    this.type = type;
-    this.id = id;
-    this.vendor = PolicySpec.VENDOR_EC2;
-  }
-  
-  @Override
-  public String toString( ) {
-    StringBuilder sb = new StringBuilder( );
-    sb.append( ARN_PREFIX ).append( this.getVendor( ) ).append( ":::" ).append( this.type ).append( '/' ).append( this.id );
-    return sb.toString( );
-  }
-  
-  @Override
-  public String getResourceType( ) {
-    return this.vendor + ":" + this.type;
+  public Ec2ResourceName( String region, String account, String type, String id ) {
+    super( PolicySpec.VENDOR_EC2, region, account, type, id );
   }
 
-  @Override
-  public String getResourceName( ) {
-    return this.id;
-  }
-  
 }

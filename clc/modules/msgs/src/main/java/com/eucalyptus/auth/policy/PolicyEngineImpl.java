@@ -66,6 +66,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import static com.eucalyptus.auth.principal.Principal.PrincipalType;
 import static com.eucalyptus.util.Parameters.checkParam;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -130,8 +131,12 @@ public class PolicyEngineImpl implements PolicyEngine {
 
   @Nonnull
   private final Function<String,String> accountResolver;
+
   @Nonnull
   private final Supplier<Boolean> enableSystemQuotas;
+
+  @Nonnull
+  private final Supplier<String> region;
 
   private enum Decision {
     DEFAULT, // no match
@@ -185,16 +190,21 @@ public class PolicyEngineImpl implements PolicyEngine {
     }
   };
   
-  public PolicyEngineImpl( @Nonnull final Supplier<Boolean> enableSystemQuotas ) {
-    this( DefaultAccountResolver.INSTANCE, enableSystemQuotas );
+  public PolicyEngineImpl(
+      @Nonnull final Supplier<Boolean> enableSystemQuotas,
+      @Nonnull final Supplier<String> region
+  ) {
+    this( DefaultAccountResolver.INSTANCE, enableSystemQuotas, region );
   }
 
   public PolicyEngineImpl(
       @Nonnull final Function<String,String> accountResolver,
-      @Nonnull final Supplier<Boolean> enableSystemQuotas
+      @Nonnull final Supplier<Boolean> enableSystemQuotas,
+      @Nonnull final Supplier<String> region
   ) {
     this.accountResolver = checkParam( "accountResolver", accountResolver, notNullValue( ) );
     this.enableSystemQuotas = checkParam( "enableSystemQuotas", enableSystemQuotas, notNullValue( ) );
+    this.region = checkParam( "region", region, notNullValue( ) );
   }
 
   /*
@@ -254,7 +264,7 @@ public class PolicyEngineImpl implements PolicyEngine {
         // Check resource authorizations
         Decision decision = resourcePolicy == null ?
             Decision.ALLOW :
-            processAuthorizations( AuthEvaluationContextImpl.authorizations( resourcePolicy, true ), AuthorizationMatch.All, action, null, null, evaluationContext.getPrincipalType(), evaluationContext.getPrincipalName(), keyEval, contractEval );
+            processAuthorizations( AuthEvaluationContextImpl.authorizations( resourcePolicy, true ), AuthorizationMatch.All, action, null, null, null, evaluationContext.getPrincipalType(), evaluationContext.getPrincipalName(), keyEval, contractEval );
         // Denied by explicit or default deny
         if ( decision != Decision.ALLOW ) {
           LOG.debug( "Request is rejected by resource authorization check, due to decision " + decision );
@@ -355,7 +365,7 @@ public class PolicyEngineImpl implements PolicyEngine {
 
     final String accountNumber = evaluationContext.getRequestAccountNumber( );
     if ( resourceAccountNumber != null && !resourceAccountNumber.equals( accountNumber ) && !evaluationContext.isSystemUser() ) {
-      final Decision decision = processAuthorizations( evaluationContext.lookupAuthorizations( ), authorizationMatch ,action, resourceAccountNumber ,resourceName, keyEval, contractEval );
+      final Decision decision = processAuthorizations( evaluationContext.lookupAuthorizations( ), authorizationMatch ,action, resourceAccountNumber, resourceType, resourceName, keyEval, contractEval );
       if ( decision == Decision.DENY ) {
         LOG.debug( "Request is rejected by authorization check, due to decision " + decision );
       }
@@ -363,7 +373,7 @@ public class PolicyEngineImpl implements PolicyEngine {
       return decision == Decision.ALLOW ? Decision.DEFAULT : decision;
     } else {
       // If not denied by global authorizations, check local (intra-account) authorizations.
-      final Decision decision = processAuthorizations( evaluationContext.lookupAuthorizations(), authorizationMatch, action, resourceAccountNumber, resourceName, keyEval, contractEval );
+      final Decision decision = processAuthorizations( evaluationContext.lookupAuthorizations(), authorizationMatch, action, resourceAccountNumber, resourceType, resourceName, keyEval, contractEval );
       // Denied by explicit or default deny
       if ( decision == Decision.DENY || decision == Decision.DEFAULT ) {
         LOG.debug( "Request is rejected by authorization check, due to decision " + decision );
@@ -376,10 +386,11 @@ public class PolicyEngineImpl implements PolicyEngine {
                                           AuthorizationMatch authorizationMatch,
                                           String action,
                                           String resourceAccountNumber,
+                                          String resourceType,
                                           String resource,
                                           CachedKeyEvaluator keyEval,
                                           ContractKeyEvaluator contractEval ) throws AuthException {
-    return  processAuthorizations( authorizations, authorizationMatch ,action, resourceAccountNumber, resource, null, null, keyEval, contractEval );
+    return  processAuthorizations( authorizations, authorizationMatch ,action, resourceAccountNumber, resourceType, resource, null, null, keyEval, contractEval );
   }
 
     /**
@@ -397,12 +408,14 @@ public class PolicyEngineImpl implements PolicyEngine {
                                           @Nonnull  AuthorizationMatch authorizationMatch,
                                           @Nonnull  final String action,
                                           @Nullable final String resourceAccountNumber,
+                                          @Nullable final String resourceType,
                                           @Nullable final String resource,
                                           @Nullable final PrincipalType principalType,
                                           @Nullable final String principalName,
                                           @Nonnull  final CachedKeyEvaluator keyEval,
                                           @Nonnull  final ContractKeyEvaluator contractEval ) throws AuthException {
     Decision result = Decision.DEFAULT;
+    final String region = PolicyEngineImpl.this.region.get( );
     for ( Authorization auth : authorizations ) {
       if ( auth.getEffect( ) == EffectType.Limit ) continue;
 
@@ -415,7 +428,7 @@ public class PolicyEngineImpl implements PolicyEngine {
       if ( authorizationMatch == AuthorizationMatch.Unconditional && auth.getEffect( ) == EffectType.Allow ) {
         return Decision.ALLOW; // Cannot deny reliably with unconditional matching
       }
-      if ( !matchResources( auth, resourceAccountNumber, resource ) ) {
+      if ( !matchResources( auth, region, resourceAccountNumber, resourceType, resource ) ) {
         continue;
       }
       if ( !evaluateConditions( auth.getConditions( ), action, keyEval, contractEval ) ) {
@@ -442,22 +455,27 @@ public class PolicyEngineImpl implements PolicyEngine {
         evaluateElement( matchOne( principalType.convertForUserMatching( principal.getValues() ), principalName, PATTERN_MATCHER ), principal.isNotPrincipal() ) );
   }
 
-  private boolean matchResources( Authorization auth, String resource ) throws AuthException {
-    return matchResources( auth, null, resource );
+  private boolean matchResources( Authorization auth, String resourceType, String resource ) throws AuthException {
+    return matchResources( auth, null, null, resourceType, resource );
   }
 
   private boolean matchResources( @Nonnull  Authorization auth,
+                                  @Nullable String region,
                                   @Nullable String resourceAccountNumber,
+                                  @Nullable String resourceType,
                                   @Nullable String resource ) throws AuthException {
-    
     if ( resource == null ) {
       return true;
+    } else if ( auth.getRegion() != null && region != null && !auth.getRegion().equals( region ) ) {
+      return auth.isNotResource( );
     } else if ( auth.getAccount() != null && resourceAccountNumber != null && !resolveAccount(auth.getAccount()).equals( resourceAccountNumber ) ) {
+      return auth.isNotResource( );
+    } else if ( !matchOne( Collections.singleton( auth.getType( ) ), resourceType, PATTERN_MATCHER ) ) {
       return auth.isNotResource( );
     } else  if ( PolicySpec.EC2_RESOURCE_ADDRESS.equals( auth.getType( ) ) ) {
       return evaluateElement( matchOne( auth.getResources( ), resource, ADDRESS_MATCHER ), auth.isNotResource( ) );
     } else if ( String.format("%s:%s", PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_SERVER_CERTIFICATE).equals ( auth.getType( ))){
-      return evaluateElement( matchOne( auth.getResources( ), resource, SERVER_CERTIFICATE_MATCHER), auth.isNotResource() );
+      return evaluateElement( matchOne( auth.getResources( ), resource, SERVER_CERTIFICATE_MATCHER ), auth.isNotResource( ) );
     }else {
       return evaluateElement( matchOne( auth.getResources( ), resource, PATTERN_MATCHER ), auth.isNotResource( ) );
     }
@@ -531,7 +549,7 @@ public class PolicyEngineImpl implements PolicyEngine {
         LOG.debug( "Action " + action + " not matching" );
         continue;
       }
-      if ( !matchResources( auth, resourceName ) ) {
+      if ( !matchResources( auth, resourceType, resourceName ) ) {
         LOG.debug( "Resource " + resourceName + " not matching" );
         continue;
       }
@@ -580,7 +598,7 @@ public class PolicyEngineImpl implements PolicyEngine {
     }
     throw new RuntimeException( "Should not reach here: unrecognized scope." );
   }
-  
+
   static class AuthEvaluationContextImpl implements AuthEvaluationContext {
     @Nullable
     private final String resourceType;
@@ -694,7 +712,7 @@ public class PolicyEngineImpl implements PolicyEngine {
             Iterables.transform( authorizations, Pair.<PolicyVersion,Authorization>right( ) ),
             resourceType == null ?
                 AuthorizationPredicates.ALLOW_EFFECT :
-                Predicates.not( AuthorizationPredicates.LIMIT_EFFECT ) //TODO:STEVE: resource matching here? -- Predicates.or( AuthorizationPredicates.ALL_RESOURCE, resource( resourceType ) )
+                Predicates.not( AuthorizationPredicates.LIMIT_EFFECT )
         ) );
       }
       return authorizations;

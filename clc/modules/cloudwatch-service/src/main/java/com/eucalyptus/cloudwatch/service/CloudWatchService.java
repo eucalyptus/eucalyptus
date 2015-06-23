@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -53,6 +53,7 @@ import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataResponseType;
 import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataType;
 import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricEntity.MetricType;
 import com.eucalyptus.cloudwatch.common.msgs.Statistics;
+import com.eucalyptus.cloudwatch.common.policy.CloudWatchPolicySpec;
 import com.eucalyptus.cloudwatch.service.queue.metricdata.MetricDataQueue;
 import com.eucalyptus.component.Faults;
 import com.eucalyptus.context.Context;
@@ -64,7 +65,6 @@ import org.mule.api.MuleEventContext;
 import org.mule.api.lifecycle.Callable;
 import org.mule.component.ComponentException;
 import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.cloudwatch.common.CloudWatchBackend;
 import com.eucalyptus.cloudwatch.common.backend.msgs.CloudWatchBackendMessage;
 import com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage;
@@ -96,7 +96,7 @@ public class CloudWatchService implements Callable {
 
     try {
       // IAM Action Check
-      checkActionPermission(PolicySpec.CLOUDWATCH_PUTMETRICDATA, ctx);
+      checkActionPermission(CloudWatchPolicySpec.CLOUDWATCH_PUTMETRICDATA, ctx);
       if (CloudWatchConfigProperties.isDisabledCloudWatchService()) {
         faultDisableCloudWatchServiceIfNecessary();
         throw new ServiceDisabledException("Service Disabled");
@@ -125,7 +125,7 @@ public class CloudWatchService implements Callable {
 
     try {
       // IAM Action Check
-      checkActionPermission(PolicySpec.CLOUDWATCH_LISTMETRICS, ctx);
+      checkActionPermission(CloudWatchPolicySpec.CLOUDWATCH_LISTMETRICS, ctx);
 
       final OwnerFullName ownerFullName = ctx.getUserFullName();
       final String namespace = CloudWatchBackendServiceFieldValidator.validateNamespace(request.getNamespace(), false);
@@ -173,7 +173,7 @@ public class CloudWatchService implements Callable {
     final Context ctx = Contexts.lookup();
     try {
       // IAM Action Check
-      checkActionPermission(PolicySpec.CLOUDWATCH_GETMETRICSTATISTICS, ctx);
+      checkActionPermission(CloudWatchPolicySpec.CLOUDWATCH_GETMETRICSTATISTICS, ctx);
 
       // TODO: parse statistics separately()?
       final OwnerFullName ownerFullName = ctx.getUserFullName();
@@ -218,7 +218,7 @@ public class CloudWatchService implements Callable {
 
   private CloudWatchMessage dispatchAction( final CloudWatchMessage request ) throws EucalyptusCloudException {
     final AuthContextSupplier user = Contexts.lookup( ).getAuthContext( );
-    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_CLOUDWATCH, getIamActionByMessageType( request ), user ) ) {
+    if ( !Permissions.perhapsAuthorized(CloudWatchPolicySpec.VENDOR_CLOUDWATCH, getIamActionByMessageType( request ), user ) ) {
       throw new CloudWatchAuthorizationException( "UnauthorizedOperation", "You are not authorized to perform this operation." );
     }
 
@@ -295,7 +295,7 @@ public class CloudWatchService implements Callable {
 
   private void checkActionPermission(final String actionType, final Context ctx)
     throws EucalyptusCloudException {
-    if (!Permissions.isAuthorized(PolicySpec.VENDOR_CLOUDWATCH, actionType, "",
+    if (!Permissions.isAuthorized(CloudWatchPolicySpec.VENDOR_CLOUDWATCH, actionType, "",
       ctx.getAccount(), actionType, ctx.getAuthContext())) {
       throw new EucalyptusCloudException("User does not have permission");
     }

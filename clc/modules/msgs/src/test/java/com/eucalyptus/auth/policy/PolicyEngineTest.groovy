@@ -23,11 +23,16 @@ import com.eucalyptus.auth.AuthException
 import com.eucalyptus.auth.api.PolicyEngine
 import com.eucalyptus.auth.policy.ern.Ern
 import com.eucalyptus.auth.policy.ern.EuareErnBuilder
+import com.eucalyptus.auth.policy.ern.ResourceNameSupport
+import com.eucalyptus.auth.policy.ern.ServiceErnBuilder
 import com.eucalyptus.auth.principal.PolicyScope
 import com.eucalyptus.auth.principal.PolicyVersion
 import com.eucalyptus.crypto.Digest
 import com.eucalyptus.crypto.util.B64
+import com.eucalyptus.util.Strings
 import com.google.common.base.Suppliers
+import com.google.common.base.Supplier
+import net.sf.json.JSONException
 import org.junit.Before
 import org.junit.BeforeClass
 
@@ -52,12 +57,168 @@ import com.google.common.base.Function
 class PolicyEngineTest {
 
   @BeforeClass
-  public static void beforeClass( ){
+  static void beforeClass( ){
     Ern.registerServiceErnBuilder( new EuareErnBuilder( ) )
+    Ern.registerServiceErnBuilder( new ServiceErnBuilder( [ 'testservice' ] ) {
+      @Override
+      Ern build( String ern, String service, String region, String account, String resource ) throws JSONException {
+        return new ResourceNameSupport( service, region, account, Strings.substringBefore('/').apply(resource), Strings.substringAfter('/').apply(resource) ) { }
+      }
+    } )
   }
 
   @Test
-  public void testPersonaRolePolicyAccountCreate(  ) {
+  public void testServiceMatch( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": [
+            "*"
+          ],
+          "Resource": "arn:aws:testservice:::resourcetype/*"
+        } ]
+      }
+      """.stripIndent(), "testservice:resourcetype", "testservice:Foo", "010101010101", "" )
+  }
+
+  @Test( expected = AuthException.class )
+  public void testServiceMismatch( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": [
+            "*"
+          ],
+          "Resource": "arn:aws:testservice:::resourcetype/*"
+        } ]
+      }
+      """.stripIndent(), "othertestservice:resourcetype", "othertestservice:Foo", "010101010101", "" )
+  }
+
+  @Test
+  public void testRegionMatch( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": [
+            "testservice:*"
+          ],
+          "Resource": "arn:aws:testservice:region-1:eucalyptus:resourcetype/*"
+        } ]
+      }
+      """.stripIndent(), "testservice:resourcetype", "testservice:Foo", "010101010101", "" )
+  }
+
+  @Test
+  public void testRegionNotSpecifiedForResource( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": [
+            "testservice:*"
+          ],
+          "Resource": "arn:aws:testservice::eucalyptus:resourcetype/*"
+        } ]
+      }
+      """.stripIndent(), "testservice:resourcetype", "testservice:Foo", "010101010101", "" )
+  }
+
+  @Test( expected = AuthException.class )
+  public void testRegionMismatch( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": [
+            "testservice:*"
+          ],
+          "Resource": "arn:aws:testservice:region-2:eucalyptus:resourcetype/*"
+        } ]
+      }
+      """.stripIndent(), "testservice:resourcetype", "testservice:Foo", "010101010101", "" )
+  }
+
+  @Test
+  public void testAccountMatch( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": [
+            "testservice:*"
+          ],
+          "Resource": "arn:aws:testservice:*:eucalyptus:resourcetype/*"
+        } ]
+      }
+      """.stripIndent(), "testservice:resourcetype", "testservice:Foo", "010101010101", "" )
+  }
+
+  @Test
+  public void testAccountNotSpecifiedForResource( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": [
+            "testservice:*"
+          ],
+          "Resource": "arn:aws:testservice:*::resourcetype/*"
+        } ]
+      }
+      """.stripIndent(), "testservice:resourcetype", "testservice:Foo", "010101010101", "" )
+  }
+
+  @Test( expected = AuthException.class )
+  public void testAccountMismatch( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": [
+            "testservice:*"
+          ],
+          "Resource": "arn:aws:testservice:*:111111111111:resourcetype/*"
+        } ]
+      }
+      """.stripIndent(), "testservice:resourcetype", "testservice:Foo", "010101010101", "" )
+  }
+
+  @Test
+  public void testResourceTypeMatch( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": [
+            "testservice:*"
+          ],
+          "Resource": "arn:aws:testservice:::resourcetype/*"
+        } ]
+      }
+      """.stripIndent(), "testservice:resourcetype", "testservice:Foo", "010101010101", "" )
+  }
+
+  @Test( expected = AuthException.class )
+  public void testResourceTypeMismatch( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": [
+            "testservice:*"
+          ],
+          "Resource": "arn:aws:testservice:::resourcetype/*"
+        } ]
+      }
+      """.stripIndent(), "testservice:otherresourcetype", "testservice:Foo", "010101010101", "" )
+  }
+
+  @Test
+  void testPersonaRolePolicyAccountCreate(  ) {
     evaluateAuthorization( """\
       {
         "Statement":[ {
@@ -72,7 +233,7 @@ class PolicyEngineTest {
   }
 
   @Test
-  public void testPersonaRolePolicyAccountDelete(  ) {
+  void testPersonaRolePolicyAccountDelete(  ) {
     evaluateAuthorization( """\
       {
         "Statement":[ {
@@ -87,7 +248,7 @@ class PolicyEngineTest {
   }
 
   @Test
-  public void testPersonaRolePolicyListAccounts(  ) {
+  void testPersonaRolePolicyListAccounts(  ) {
     evaluateAuthorization( """\
       {
         "Statement":[ {
@@ -102,7 +263,7 @@ class PolicyEngineTest {
   }
 
   @Test( expected = AuthException.class )
-  public void testPersonaRolePolicyEucalyptusListUsers(  ) {
+  void testPersonaRolePolicyEucalyptusListUsers(  ) {
     evaluateAuthorization( """\
       {
         "Statement":[ {
@@ -117,7 +278,7 @@ class PolicyEngineTest {
   }
 
   @Test
-  public void testPersonaRolePolicyOtherListUsers(  ) {
+  void testPersonaRolePolicyOtherListUsers(  ) {
     evaluateAuthorization( """\
       {
         "Statement":[ {
@@ -136,7 +297,7 @@ class PolicyEngineTest {
                                       String requestAction,
                                       String resourceAccountNumber,
                                       String resourceName ) {
-    PolicyEngine engine = new PolicyEngineImpl( accountResolver( ), Suppliers.ofInstance( Boolean.FALSE ) )
+    PolicyEngine engine = new PolicyEngineImpl( accountResolver( ), Suppliers.ofInstance( Boolean.FALSE ), { 'region-1' } as Supplier<String> )
     PolicyEngineImpl.AuthEvaluationContextImpl context = new PolicyEngineImpl.AuthEvaluationContextImpl( resourceType, requestAction, user(), [:] as Map<String,String>, [ new PolicyVersion(){
       @Override String getPolicyVersionId( ) { '1234567890' }
       @Override String getPolicyName( ) { 'test' }
@@ -155,7 +316,7 @@ class PolicyEngineTest {
 
   private Function<String, String> accountResolver( ) {
     // 010101010101 is the accountNumber for eucalyptus account in this test
-    { String account -> "010101010101" } as Function<String, String>
+    { String account -> 'eucalyptus'==account ? "010101010101" : account } as Function<String, String>
   }
 
 }

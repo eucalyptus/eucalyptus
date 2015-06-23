@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@ package com.eucalyptus.compute.policy;
 
 import java.util.Date;
 import javax.annotation.Nullable;
+import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
 import com.eucalyptus.compute.common.internal.blockstorage.Snapshots;
 import com.eucalyptus.records.Logs;
 
@@ -100,7 +101,7 @@ public class ComputePolicyContext {
 
   @Nullable
   static String getRegion( ) {
-    return "eucalyptus";
+    return RegionConfigurations.getRegionName( ).or( "eucalyptus" );
   }
 
   @Nullable

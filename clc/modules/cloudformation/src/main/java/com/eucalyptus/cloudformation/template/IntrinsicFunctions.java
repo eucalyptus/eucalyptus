@@ -605,7 +605,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
         throw new AccessDeniedException("Unable to access availability zones.  " + (rootCause.getMessage() == null ? "" : rootCause.getMessage()));
       }
       final Map<String, List<String>> availabilityZoneMap = Maps.newHashMap();
-      availabilityZoneMap.put(CloudFormationService.REGION, defaultRegionAvailabilityZones);
+      availabilityZoneMap.put(CloudFormationService.getRegion( ), defaultRegionAvailabilityZones);
       availabilityZoneMap.put("",defaultRegionAvailabilityZones); // "" defaults to the default region
       if (availabilityZoneMap != null && availabilityZoneMap.containsKey(key)) {
         availabilityZones.addAll(availabilityZoneMap.get(key));
