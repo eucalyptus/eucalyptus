@@ -66,8 +66,7 @@ public class ListMetricManager {
         db.rollback();
     }
   }
-  private static List<ListMetric> foldMetric(String accountId, String metricName, String namespace, Map<String, String> dimensionMap, MetricType metricType) {
-    List<ListMetric> metrics = Lists.newArrayList();
+  private static ListMetric createMetric(String accountId, String metricName, String namespace, Map<String, String> dimensionMap, MetricType metricType) {
     if (dimensionMap == null) {
       dimensionMap = new HashMap<String, String>();
     } else if (dimensionMap.size() > ListMetric.MAX_DIM_NUM) {
@@ -80,62 +79,38 @@ public class ListMetricManager {
       d.setValue(entry.getValue());
       dimensions.add(d);
     }
-    Set<Set<DimensionEntity>> permutations = null;
-    if (metricType == MetricType.System) {
-      // do dimension folding (i.e. insert 2^n metrics.  
-      // All with the same metric name and namespace, but one for each subset of the dimension set passed in, including all, and none)
-      if (!namespace.equals("AWS/EC2")) {
-        permutations = Sets.powerSet(dimensions);
-      } else {
-        // Hack: no values in AWS/EC2 have more than one dimension, so fold, but only choose dimension subsets of size at most 1.
-        // See EUCA-do dimension folding (i.e. insert 2^n metrics.  
-        // All with the same metric name and namespace, but one for each subset of the dimension set passed in, including all, and none)
-        permutations = Sets.filter(Sets.powerSet(dimensions), new Predicate<Set<DimensionEntity>>(){
-          public boolean apply(@Nullable Set<DimensionEntity> candidate) {
-            return (candidate != null && candidate.size() < 2);
-          } } );
-      }
-    } else { // no folding on custom metrics
-      permutations = Sets.newHashSet();
-      permutations.add(dimensions);
-    }
-    for (Set<DimensionEntity> dimensionsPermutation : permutations) {
-      ListMetric metric = new ListMetric();
-      metric.setAccountId(accountId);
-      metric.setMetricName(metricName);
-      metric.setNamespace(namespace);
-      metric.setDimensions(dimensionsPermutation);
-      metric.setMetricType(metricType);
-      metrics.add(metric);
-    }
-    return metrics;
+    ListMetric metric = new ListMetric();
+    metric.setAccountId(accountId);
+    metric.setMetricName(metricName);
+    metric.setNamespace(namespace);
+    metric.setDimensions(dimensions);
+    metric.setMetricType(metricType);
+    return metric;
   }
   private static void addMetric(EntityTransaction db, String accountId, String metricName, String namespace, Map<String, String> dimensionMap, MetricType metricType) {
-    List<ListMetric> foldedMetrics = foldMetric(accountId, metricName, namespace, dimensionMap, metricType);
-    for (ListMetric metric: foldedMetrics) {
-      Criteria criteria = Entities.createCriteria(ListMetric.class)
-          .add( Restrictions.eq( "accountId" , metric.getAccountId() ) )
-          .add( Restrictions.eq( "metricName" , metric.getMetricName() ) )
-          .add( Restrictions.eq( "namespace" , metric.getNamespace() ) );
-    
-      // add dimension restrictions
-      int dimIndex = 1;
-      for (DimensionEntity d: metric.getDimensions()) {
-        criteria.add( Restrictions.eq( "dim" + dimIndex + "Name", d.getName() ) );
-        criteria.add( Restrictions.eq( "dim" + dimIndex + "Value", d.getValue() ) );
-        dimIndex++;
-      }
-      while (dimIndex <= ListMetric.MAX_DIM_NUM) {
-        criteria.add( Restrictions.isNull( "dim" + dimIndex + "Name") );
-        criteria.add( Restrictions.isNull( "dim" + dimIndex + "Value") );
-        dimIndex++;
-      }
-      ListMetric inDbMetric = (ListMetric) criteria.uniqueResult();
-      if (inDbMetric != null) {
-        inDbMetric.setVersion(1 + inDbMetric.getVersion());
-      } else {
-        Entities.persist(metric);
-      }
+    ListMetric metric = createMetric(accountId, metricName, namespace, dimensionMap, metricType);
+    Criteria criteria = Entities.createCriteria(ListMetric.class)
+        .add( Restrictions.eq( "accountId" , metric.getAccountId() ) )
+        .add( Restrictions.eq( "metricName" , metric.getMetricName() ) )
+        .add( Restrictions.eq( "namespace" , metric.getNamespace() ) );
+
+    // add dimension restrictions
+    int dimIndex = 1;
+    for (DimensionEntity d: metric.getDimensions()) {
+      criteria.add( Restrictions.eq( "dim" + dimIndex + "Name", d.getName() ) );
+      criteria.add( Restrictions.eq( "dim" + dimIndex + "Value", d.getValue() ) );
+      dimIndex++;
+    }
+    while (dimIndex <= ListMetric.MAX_DIM_NUM) {
+      criteria.add( Restrictions.isNull( "dim" + dimIndex + "Name") );
+      criteria.add( Restrictions.isNull( "dim" + dimIndex + "Value") );
+      dimIndex++;
+    }
+    ListMetric inDbMetric = (ListMetric) criteria.uniqueResult();
+    if (inDbMetric != null) {
+      inDbMetric.setVersion(1 + inDbMetric.getVersion());
+    } else {
+      Entities.persist(metric);
     }
   }
   
@@ -250,13 +225,13 @@ public class ListMetricManager {
       HashSet<ListMetricCacheLoadKey> loadedKeys = Sets.newHashSet();
       HashMap<ListMetricCacheKey, ListMetric> cache = Maps.newHashMap();
       Collection<ListMetricCacheKey> cacheKeys = prune(dataBatch);
-      List<ListMetric> foldedMetrics = Lists.newArrayList();
+      List<ListMetric> listMetrics = Lists.newArrayList();
       for (ListMetricCacheKey cacheKey:cacheKeys) {
-        foldedMetrics.addAll(foldMetric(cacheKey.getLoadKey().getAccountId(), 
-            cacheKey.getMetricName(), cacheKey.getLoadKey().getNamespace(), 
-            cacheKey.getDimensionMap(), cacheKey.getMetricType()));
+        listMetrics.add(createMetric(cacheKey.getLoadKey().getAccountId(),
+          cacheKey.getMetricName(), cacheKey.getLoadKey().getNamespace(),
+          cacheKey.getDimensionMap(), cacheKey.getMetricType()));
       }
-      for (ListMetric metric: foldedMetrics) {
+      for (ListMetric metric: listMetrics) {
         ListMetricCacheLoadKey loadKey = new ListMetricCacheLoadKey();
         loadKey.setAccountId(metric.getAccountId());
         loadKey.setNamespace(metric.getNamespace());
