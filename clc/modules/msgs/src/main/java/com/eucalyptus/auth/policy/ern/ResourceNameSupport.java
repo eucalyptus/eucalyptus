@@ -29,8 +29,8 @@ public abstract class ResourceNameSupport extends Ern {
   private final String type;
   private final String id;
 
-  public ResourceNameSupport( String vendor, String region, String account, String type, String id ) {
-    super( vendor, region, account );
+  public ResourceNameSupport( String service, String region, String account, String type, String id ) {
+    super( service, region, account );
     this.type = type;
     this.id = id;
   }
