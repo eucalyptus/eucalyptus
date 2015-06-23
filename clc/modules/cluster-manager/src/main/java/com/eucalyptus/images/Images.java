@@ -96,7 +96,6 @@ import com.eucalyptus.compute.common.ImageDetails;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.ImageMetadata.Architecture;
 import com.eucalyptus.compute.common.ImageMetadata.State;
-import com.eucalyptus.compute.common.StaticDiskImage;
 import com.eucalyptus.compute.common.internal.images.BlockStorageDeviceMapping;
 import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
 import com.eucalyptus.compute.common.internal.images.BootableImageInfo;
@@ -596,9 +595,6 @@ public class Images extends com.eucalyptus.compute.common.internal.images.Images
           img.setState( ImageMetadata.State.deregistered );
       }
       tx.commit( );
-      if ( img instanceof StaticDiskImage ) {
-        StaticDiskImages.flush( (StaticDiskImage) img );
-      }
     } catch ( ConstraintViolationException cve ) {
       tx.rollback( );
       throw new InstanceNotTerminatedException("To deregister " + imageId + " all associated instances must be in the terminated state.");
@@ -1010,10 +1006,6 @@ public class Images extends com.eucalyptus.compute.common.internal.images.Images
 // imageInfo.addProductCode( p );
 // }
 // imageInfo.grantPermission( ctx.getAccount( ) );
-    LOG.info( "Triggering cache population in Walrus for: " + ret.getDisplayName( ) );
-    if ( ret instanceof StaticDiskImage && ret.getRunManifestLocation()!=null) {
-      StaticDiskImages.prepare( ret.getRunManifestLocation( ) );
-    }
     return ret;
   }
   

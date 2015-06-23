@@ -461,9 +461,7 @@ public class Emis {
           builder.ramdiskId( ramdiskId );
         }
       }
-      final BootableSet bootSet = builder.start( );
-      Emis.checkStoredImage( bootSet );
-      return bootSet;
+      return builder.start( );
     } catch ( final MetadataException ex ) {
       throw ex;
     } catch ( final Exception ex ) {
@@ -477,9 +475,7 @@ public class Emis {
   
   public static BootableSet newBootableSet( final String imageId ) throws MetadataException {
     try {
-      final BootableSet bootSet = new BootsetBuilder( ).imageId( imageId ).run( );
-      Emis.checkStoredImage( bootSet );
-      return bootSet;
+      return new BootsetBuilder( ).imageId( imageId ).run( );
     } catch ( final MetadataException ex ) {
       throw ex;
     } catch ( final Exception ex ) {
@@ -718,22 +714,4 @@ public class Emis {
       return ramdiskId;
     }
   }
-  
-  private static void checkStoredImage( final BootableSet bootSet ) {
-    try {
-      if ( bootSet.getMachine( ) instanceof StaticDiskImage ) {
-        StaticDiskImages.check( ( StaticDiskImage ) bootSet.getMachine( ) );
-      }
-      if ( bootSet.hasKernel( ) ) {
-        StaticDiskImages.check( bootSet.getKernel( ) );
-      }
-      if ( bootSet.hasRamdisk( ) ) {
-        StaticDiskImages.check( bootSet.getRamdisk( ) );
-      }
-    } catch ( final Exception ex ) {
-      LOG.error( ex );
-      Logs.extreme( ).error( ex, ex );
-    }
-  }
-
 }
