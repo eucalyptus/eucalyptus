@@ -1267,7 +1267,7 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                         LOGINFO("connecting gni host '%s' with midonet host '%s' interface for instance '%s'\n", gniinstance->nodehostname, vpcinstance->midos[VMHOST].name,
                                 gniinstance->name);
 
-                        rc = connect_mido_vpc_instance(vpcsubnet, vpcinstance, &(vpcinstance->midos[VMHOST]));
+                        rc = connect_mido_vpc_instance(vpcsubnet, vpcinstance, &(vpcinstance->midos[VMHOST]), gni->instanceDNSDomain);
                         if (rc) {
                             LOGERROR("cannot connect instance to midonet: check midonet health\n");
                         } else {
@@ -1307,7 +1307,7 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                     {
                         gni_secgroup *gnisecgroups = NULL;
                         int max_gnisecgroups, rulepos = 1, sgrulepos = 1;
-                        char tmp_name1[32], tmp_name2[32], tmp_name3[32], tmp_name4[32], tmp_buf[1024];
+                        char tmp_name1[32], tmp_name2[32], tmp_name3[32], tmp_name4[32];
 
                         subnet_buf[0] = slashnet_buf[0] = gw_buf[0] = '\0';
                         cidr_split(vpcsubnet->gniSubnet->cidr, subnet_buf, slashnet_buf, gw_buf, pt_buf);
@@ -1395,13 +1395,6 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                                     rulepos++;
                                 }
                                 
-                                snprintf(tmp_name3, 32, "%d", rulepos);
-                                rc = mido_create_rule(&(vpcinstance->midos[INST_POSTCHAIN]), NULL, "type", "drop", "invDlType", "true", "position", tmp_name3, "dlType", "2054", NULL);
-                                if (rc) {
-                                } else {
-                                    rulepos++;
-                                }
-                                
                                 sgrulepos = 1;
                                 for (k = 0; k < gnisecgroup->max_egress_rules; k++) {
                                     // TODO other protos?
@@ -1470,7 +1463,7 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                                     } else if (gnisecgroup->egress_rules[k].protocol == -1) {
                                         // DAN HERE - why is proto -1 not triggering?
                                         snprintf(tmp_name3, 32, "%d", sgrulepos);
-                                        rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_EGRESS]), NULL, "position", tmp_name3, "type", "accept", NULL);
+                                        rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_EGRESS]), NULL, "position", tmp_name3, "type", "accept", "nwProto", "0", NULL);
                                         if (rc) {
                                         } else {
                                             sgrulepos++;
@@ -1571,6 +1564,11 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                                     // TODO other protos?
                                     // TODO add ingress from other SGs (set up IAGs and such)
                                     
+                                    subnet_buf[0] = slashnet_buf[0] = gw_buf[0] = '\0';
+                                    if (strlen(gnisecgroup->ingress_rules[k].cidr)) {
+                                        cidr_split(gnisecgroup->ingress_rules[k].cidr, subnet_buf, slashnet_buf, gw_buf, NULL);
+                                    }
+
                                     snprintf(tmp_name4, 32, "%d", gnisecgroup->ingress_rules[k].protocol);
                                     if (strlen(gnisecgroup->ingress_rules[k].groupId)) {
                                         // other group
@@ -1604,7 +1602,7 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                                         
                                         snprintf(tmp_name3, 32, "%d", rulepos);
                                         rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_INGRESS]), NULL, "position", tmp_name3, "type", "accept", "tpDst", "jsonjson", "tpDst:start",
-                                                              tmp_name1, "tpDst:end", tmp_name2, "tpDst:END", "END", "nwProto", tmp_name4, NULL);
+                                                              tmp_name1, "tpDst:end", tmp_name2, "tpDst:END", "END", "nwProto", tmp_name4, "nwSrcAddress", subnet_buf, "nwSrcLength", slashnet_buf, NULL);
                                         if (rc) {
                                         } else {
                                             rulepos++;
@@ -1617,21 +1615,27 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                                         
                                         if (gnisecgroup->ingress_rules[k].icmpCode >= 0) {
                                             snprintf(tmp_name1, 32, "%d", gnisecgroup->ingress_rules[k].icmpCode);
-                                            rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_INGRESS]), NULL, "position", tmp_name3, "type", "accept", "tpDst", "jsonjson",
-                                                                  "tpDst:start", tmp_name1, "tpDst:end", tmp_name1, "tpDst:END", "END", "nwProto", tmp_name4, NULL);
+                                            rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_INGRESS]), NULL, "position", tmp_name3, "type", "accept", "tpDst", "jsonjson", "tpDst:start", tmp_name1, "tpDst:end", tmp_name1, "tpDst:END", "END", "nwProto", tmp_name4, "nwSrcAddress", subnet_buf, "nwSrcLength", slashnet_buf, NULL);
                                             if (rc) {
                                             } else {
                                                 rulepos++;
                                             }
                                         } else {
                                             // its the all rule
-                                            rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_INGRESS]), NULL, "position", tmp_name3, "type", "accept", "nwProto", tmp_name4, NULL);
+                                            rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_INGRESS]), NULL, "position", tmp_name3, "type", "accept", "nwProto", tmp_name4, "nwSrcAddress", subnet_buf, "nwSrcLength", slashnet_buf, NULL);
                                             if (rc) {
                                             } else {
                                                 rulepos++;
                                             }
                                         }
                                         
+                                    } else if (gnisecgroup->ingress_rules[k].protocol == -1) {
+                                        snprintf(tmp_name3, 32, "%d", rulepos);
+                                        rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_INGRESS]), NULL, "position", tmp_name3, "type", "accept", "nwProto", "0", "nwSrcAddress", subnet_buf, "nwSrcLength", slashnet_buf, NULL);
+                                        if (rc) {
+                                        } else {
+                                            rulepos++;
+                                        }
                                     }
                                 }
                             } else {
@@ -2833,7 +2837,6 @@ int populate_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet
         for (i = 0; i < vpcsubnet->max_brports; i++) {
             LOGDEBUG("VPC BRPORTS: %s/%s\n", SP(vpcsubnet->brports[i].name), vpcsubnet->brports[i].uuid);
 
-            LOGDEBUG("RERRO1: %s\n", SP(tmpstr));
             for (j = 0; j < vpc->max_rtports; j++) {
                 tmpstr = NULL;
                 rc = mido_getel_midoname(&(vpc->rtports[j]), "peerId", &tmpstr);
@@ -2847,7 +2850,6 @@ int populate_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet
             }
 
             rc = mido_getel_midoname(&(vpcsubnet->brports[i]), "interfaceName", &tmpstr);
-            LOGDEBUG("RERRO: %s\n", SP(tmpstr));
             if (!rc && tmpstr && strlen(tmpstr) && strstr(tmpstr, "vn0_")) {
                 // found the meta iface
                 mido_copy_midoname(&(vpcsubnet->midos[VPCBR_METAPORT]), &(vpcsubnet->brports[i]));
@@ -3203,7 +3205,7 @@ int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mid
 //!
 //! @note
 //!
-int connect_mido_vpc_instance(mido_vpc_subnet * vpcsubnet, mido_vpc_instance * vpcinstance, midoname * vmhost)
+int connect_mido_vpc_instance(mido_vpc_subnet * vpcsubnet, mido_vpc_instance * vpcinstance, midoname * vmhost, char *instanceDNSDomain)
 {
     int ret = 0, rc = 0;
     char *macAddr = NULL, *ipAddr = NULL;
@@ -3232,7 +3234,7 @@ int connect_mido_vpc_instance(mido_vpc_subnet * vpcsubnet, mido_vpc_instance * v
 
     LOGDEBUG("adding host %s/%s to dhcp server\n", SP(macAddr), SP(ipAddr));
     //  bzero(&(vpcinstance->midos[VPCBR_DHCPHOST]), sizeof(midoname));
-    rc = mido_create_dhcphost(&(vpcsubnet->midos[VPCBR]), &(vpcsubnet->midos[VPCBR_DHCP]), vpcinstance->gniInst->name, macAddr, ipAddr, &(vpcinstance->midos[VPCBR_DHCPHOST]));
+    rc = mido_create_dhcphost(&(vpcsubnet->midos[VPCBR]), &(vpcsubnet->midos[VPCBR_DHCP]), vpcinstance->gniInst->name, macAddr, ipAddr, instanceDNSDomain, &(vpcinstance->midos[VPCBR_DHCPHOST]));
     EUCA_FREE(ipAddr);
     EUCA_FREE(macAddr);
     if (rc) {
