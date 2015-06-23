@@ -99,12 +99,6 @@ public class HttpServerBootstrapper extends Bootstrapper {
                       displayName = "euca.https.port" )
   public static Integer HTTPS_PORT = 8443;
   private static Server jettyServer;
-  @ConfigurableField( initial = "",
-                      description = "Http Proxy Host" )
-  public static String  httpProxyHost;
-  @ConfigurableField( initial = "",
-                      description = "Http Proxy Port" )
-  public static String  httpProxyPort;
   @ConfigurableField( description = "SSL ciphers for HTTPS listener.",
                       displayName = "euca.https.ciphers" )
   public static String  HTTPS_CIPHERS = "RSA:DSS:ECDSA:+RC4:+3DES:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES";
@@ -114,12 +108,6 @@ public class HttpServerBootstrapper extends Bootstrapper {
 
   private static void setupJettyServer( ) throws Exception {
     //http proxy setup
-    if ( System.getProperty( "http.proxyHost" ) != null ) {
-      httpProxyHost = System.getProperty( "http.proxyHost" );
-    }
-    if ( System.getProperty( "http.proxyPort" ) != null ) {
-      httpProxyPort = System.getProperty( "http.proxyPort" );
-    }
     jettyServer = new org.eclipse.jetty.server.Server( );
     System.setProperty( "org.eclipse.jetty.util.log.DEBUG", "true" );
     System.setProperty( "euca.https.port", "" + HTTPS_PORT );

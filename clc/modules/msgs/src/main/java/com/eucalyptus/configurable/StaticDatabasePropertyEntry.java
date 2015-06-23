@@ -468,9 +468,25 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       }
     }
 
+    private void deleteRemovedProperties( final Iterable<String> propertyNames ) {
+      try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
+        for ( final String propertyName : propertyNames ) try {
+          final StaticDatabasePropertyEntry property = Entities.uniqueResult( new StaticDatabasePropertyEntry( null,propertyName, null ) );
+          LOG.info( "Deleting cloud property: " + propertyName );
+          Entities.delete( property );
+        } catch ( NoSuchElementException e ) {
+          LOG.info( "Property not found, skipped delete for: " + propertyName );
+        }
+        db.commit( );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+
     @Override
     public boolean apply( Class arg0 ) {
       updateLdapConfiguration( );
+      deleteRemovedProperties( Lists.newArrayList( "www.httpProxyHost" , "www.httpProxyPort" ) );
       return true;
     }
   }
