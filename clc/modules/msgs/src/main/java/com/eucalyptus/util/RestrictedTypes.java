@@ -582,9 +582,10 @@ public class RestrictedTypes {
   public static <T extends RestrictedType> Predicate<T> filterByProperty( final Collection<String> values,
                                                                           final Function<? super T,String> extractor ) {
     return new Predicate<T>( ) {
+      final ImmutableList<String> requestedValues = values == null ? null : ImmutableList.copyOf( values );
+
       @Override
       public boolean apply( T input ) {
-        final ImmutableList<String> requestedValues = values == null ? null : ImmutableList.copyOf( values );
         return requestedValues == null || requestedValues.isEmpty( ) || requestedValues.contains( extractor.apply( input ) );
       }
     };
@@ -592,9 +593,10 @@ public class RestrictedTypes {
 
   public static <T extends RestrictedType> Predicate<T> filterByOwningAccount( final Collection<String> identifiers ) {
     return new Predicate<T>( ) {
+      final ImmutableList<String> requestedIdentifiers = identifiers == null ? null : ImmutableList.copyOf( identifiers );
+
       @Override
       public boolean apply( T input ) {
-        final ImmutableList<String> requestedIdentifiers = identifiers == null ? null : ImmutableList.copyOf( identifiers );
         return requestedIdentifiers == null || requestedIdentifiers.isEmpty( ) || requestedIdentifiers.contains( input.getOwner( ).getAccountNumber( ) );
       }
     };
