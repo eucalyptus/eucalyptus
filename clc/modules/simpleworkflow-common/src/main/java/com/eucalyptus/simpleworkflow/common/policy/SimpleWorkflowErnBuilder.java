@@ -31,7 +31,7 @@ import net.sf.json.JSONException;
  */
 public class SimpleWorkflowErnBuilder extends ServiceErnBuilder {
 
-  public static final Pattern RESOURCE_PATTERN = Pattern.compile( "([a-z0-9]+):/(\\S+)" );
+  public static final Pattern RESOURCE_PATTERN = Pattern.compile( "/([a-z0-9-]+)/(\\S+)" );
 
   public static final int ARN_PATTERNGROUP_SWF_TYPE = 1;
   public static final int ARN_PATTERNGROUP_SWF_ID = 2;

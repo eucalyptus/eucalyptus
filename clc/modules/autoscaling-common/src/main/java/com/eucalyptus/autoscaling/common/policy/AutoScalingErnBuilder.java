@@ -32,7 +32,7 @@ import net.sf.json.JSONException;
 public class AutoScalingErnBuilder extends ServiceErnBuilder {
 
   //TODO: We currently extract the identifier from the ARN, not the name
-  public static final Pattern RESOURCE_PATTERN = Pattern.compile( "([a-z0-9]+):(?:(\\*)|([0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}):(?:\\S+))" );
+  public static final Pattern RESOURCE_PATTERN = Pattern.compile( "([a-zA-Z0-9]+):(?:(\\*)|([0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}):(?:\\S+))" );
 
   public static final int ARN_PATTERNGROUP_AUTOSCALING_TYPE = 1;
   public static final int ARN_PATTERNGROUP_AUTOSCALING_ID = 2;
