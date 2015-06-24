@@ -67,4 +67,8 @@ public class EventHandlerChains {
 	public static EventHandlerChain<ApplySecurityGroupsEvent> onApplySecurityGroups(){
 		return (new EventHandlerChainApplySecurityGroups()).build();
 	}
+	
+	public static EventHandlerChain<ModifyAttributesEvent> onModifyAttributes(){
+	  return (new EventHandlerChainModifyAttributes()).build();
+	}
 }

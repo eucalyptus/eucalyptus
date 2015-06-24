@@ -363,7 +363,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	static class IAMPolicySetup extends AbstractEventHandler<NewLoadbalancerEvent> {
 		static final String SERVO_ROLE_POLICY_NAME = "euca-internal-loadbalancer-vm-policy";
 		private static final String SERVO_ROLE_POLICY_DOCUMENT=
-				"{\"Statement\":[{\"Action\": [\"elasticloadbalancing:DescribeLoadBalancersByServo\", \"elasticloadbalancing:PutServoStates\", \"elasticloadbalancing:DescribeLoadBalancerAttributes\", \"s3:GetObject\", \"s3:ListBucket\", \"s3:PutObject\", \"s3:GetObjectAcl\", \"s3:PutObjectAcl\"],\"Effect\": \"Allow\",\"Resource\": \"*\"}]}";
+				"{\"Statement\":[{\"Action\": [\"elasticloadbalancing:DescribeLoadBalancersByServo\", \"elasticloadbalancing:PutServoStates\", \"elasticloadbalancing:DescribeLoadBalancerAttributes\"],\"Effect\": \"Allow\",\"Resource\": \"*\"}]}";
 				
 			protected IAMPolicySetup(EventHandlerChain<NewLoadbalancerEvent> chain) {
 			super(chain);

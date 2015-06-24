@@ -138,6 +138,16 @@ public class ActivityManager {
 				}
 			}
 		},
+		ModifyAttributes(ModifyAttributesEvent.class){
+      @Override
+      public void fireEvent(LoadbalancingEvent event) {
+        try{
+          EventHandlerChains.onModifyAttributes().execute((ModifyAttributesEvent) event);
+        }catch(EventHandlerChainException ex){
+          throw Exceptions.toUndeclared(ex);
+        }
+      }
+		}
 		;
 
 		private final Class<? extends LoadbalancingEvent> evtType;
