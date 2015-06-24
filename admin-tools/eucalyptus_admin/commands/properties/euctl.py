@@ -139,6 +139,7 @@ class Euctl(PropertiesRequest):
 
     def main(self):
         # FIXME:  This doesn't handle empty property values.
+        # FIXME:  This doesn't behave well with the magic "euca" property.
         if self.args.get('dump'):
             prop_name = self.args.get('prop_pairs')[0][0]
             self.log.info('dumping property value   %s', prop_name)
