@@ -52,6 +52,8 @@ import com.eucalyptus.network.config.NetworkConfigurations
 import com.eucalyptus.records.EventRecord
 import com.eucalyptus.records.EventType
 import com.eucalyptus.records.Logs
+import com.eucalyptus.util.Consumer
+import com.eucalyptus.util.Consumers
 import com.eucalyptus.util.EucalyptusCloudException
 import com.eucalyptus.util.Exceptions
 import com.eucalyptus.util.Numbers
@@ -111,10 +113,7 @@ class ManagedNetworkingService extends NetworkingServiceSupport {
           }
           break
         case SecurityGroupResource:
-          // Only serve the request if we do not have any PrivateIndexResources in the list
-          if ( !resources.find{ NetworkResource resource -> resource instanceof PrivateNetworkIndex } ) {
-            resources.addAll( prepareSecurityGroup( request, (SecurityGroupResource) networkResource ) )
-          }
+          resources.addAll( prepareSecurityGroup( request, (SecurityGroupResource) networkResource ) )
           break
       }
     }
@@ -199,60 +198,61 @@ class ManagedNetworkingService extends NetworkingServiceSupport {
           final List<NetworkResource> resources = [ ]
           final NetworkGroup networkGroup =
               Entities.uniqueResult( NetworkGroup.withGroupId( null, securityGroupResource.value ) );
-          if ( !networkGroup.hasExtantNetwork( ) ) {
-            extantNetwork( networkGroup )
-            try {
-              Entities.flush( NetworkGroup ) // will fail on conflict
-            } catch ( Exception e ) {
-              if ( retries > 0 && (
-                  Exceptions.isCausedBy( e, ConstraintViolationException ) ||
-                  Exceptions.isCausedBy( e, OptimisticLockException.class )
-              ) ) {
-                throw new RetryTransactionException( )
+          final Consumer<NetworkGroup> extantConsumer = Consumers.once( { NetworkGroup group ->
+            if ( !group.hasExtantNetwork( ) ) {
+              extantNetwork( group )
+              try {
+                Entities.flush( NetworkGroup ) // will fail on conflict
+              } catch ( Exception e ) {
+                if ( retries > 0 && (
+                    Exceptions.isCausedBy( e, ConstraintViolationException ) ||
+                        Exceptions.isCausedBy( e, OptimisticLockException.class )
+                ) ) {
+                  throw new RetryTransactionException( )
+                }
+                throw e;
               }
-              throw e;
             }
-          }
+          } as Consumer<NetworkGroup> )
           final Set<String> identifiers = []
-          // specific values requested, restore case
-          request.getResources( ).findAll{ it instanceof PrivateNetworkIndexResource }.each {
-            PrivateNetworkIndexResource privateNetworkIndexResource ->
-              if ( identifiers.add( privateNetworkIndexResource.ownerId ) ) {
-                Integer restoreVlan = privateNetworkIndexResource.tag
-                Long restoreNetworkIndex = Long.valueOf( privateNetworkIndexResource.value )
+          request.getResources( ).findAll{ it instanceof PrivateIPResource }.each { PrivateIPResource privateIPResource ->
+            if ( privateIPResource.value ) { // specific value requested, restore case
+              if ( identifiers.add( privateIPResource.ownerId ) ) {
+                Pair<Integer,Long> restore = tagAndIndex( privateIPResource.value )
+                Integer restoreVlan = restore.left
+                Long restoreNetworkIndex = restore.right
                 if ( networkGroup.hasExtantNetwork( ) && extantNetwork( networkGroup ).getTag( ) == restoreVlan ) {
-                  logger.info( "Found matching extant network for ${privateNetworkIndexResource.ownerId}: ${extantNetwork(networkGroup)}" );
+                  logger.info( "Found matching extant network for ${privateIPResource.ownerId}: ${extantNetwork(networkGroup)}" );
                   extantNetwork( networkGroup ).reclaimNetworkIndex( restoreNetworkIndex );
                 } else if ( networkGroup.hasExtantNetwork( ) && extantNetwork( networkGroup ).getTag( ) != restoreVlan ) {
-                  throw new EucalyptusCloudException( "Found conflicting extant network for ${privateNetworkIndexResource.ownerId}: ${extantNetwork(networkGroup)}" )
+                  throw new EucalyptusCloudException( "Found conflicting extant network for ${privateIPResource.ownerId}: ${extantNetwork(networkGroup)}" )
                 } else {
-                  logger.info( "Restoring extant network for ${privateNetworkIndexResource.ownerId}: ${restoreVlan}" );
+                  logger.info( "Restoring extant network for ${privateIPResource.ownerId}: ${restoreVlan}" );
                   ExtantNetwork exNet = reclaim( networkGroup, restoreVlan );
-                  logger.debug( "Restored extant network for ${privateNetworkIndexResource.ownerId}: ${extantNetwork( networkGroup )}" );
-                  logger.info( "Restoring private network index for ${privateNetworkIndexResource.ownerId}: ${restoreNetworkIndex}" );
+                  logger.debug( "Restored extant network for ${privateIPResource.ownerId}: ${extantNetwork( networkGroup )}" );
+                  logger.info( "Restoring private network index for ${privateIPResource.ownerId}: ${restoreNetworkIndex}" );
                   exNet.reclaimNetworkIndex( restoreNetworkIndex );
                 }
                 resources.add( new PrivateNetworkIndexResource(
-                    mac: mac( privateNetworkIndexResource.ownerId ),
-                    privateIp: privateIp( restoreVlan, restoreNetworkIndex ),
+                    mac: mac( privateIPResource.ownerId ),
+                    privateIp: privateIPResource.value,
                     tag: restoreVlan,
                     value: String.valueOf( restoreNetworkIndex ),
-                    ownerId: privateNetworkIndexResource.ownerId
+                    ownerId: privateIPResource.ownerId
                 ) )
               }
-          }
-
-          // regular prepare case
-          request.getResources( ).findAll{ it instanceof PrivateIPResource }.each { PrivateIPResource privateIPResource ->
-            if ( identifiers.add( privateIPResource.ownerId ) ) {
-              final Long index = allocateNetworkIndex( extantNetwork( networkGroup ) ).index;
-              resources.add( new PrivateNetworkIndexResource(
-                  mac: mac( privateIPResource.ownerId ),
-                  privateIp: privateIp( extantNetwork( networkGroup ).tag, index ),
-                  tag: extantNetwork( networkGroup ).tag,
-                  value: String.valueOf( index ),
-                  ownerId: privateIPResource.ownerId
-              ) )
+            } else { // regular prepare case
+              extantConsumer.accept( networkGroup )
+              if ( identifiers.add( privateIPResource.ownerId ) ) {
+                final Long index = allocateNetworkIndex( extantNetwork( networkGroup ) ).index;
+                resources.add( new PrivateNetworkIndexResource(
+                    mac: mac( privateIPResource.ownerId ),
+                    privateIp: privateIp( extantNetwork( networkGroup ).tag, index ),
+                    tag: extantNetwork( networkGroup ).tag,
+                    value: String.valueOf( index ),
+                    ownerId: privateIPResource.ownerId
+                ) )
+              }
             }
           }
 
@@ -272,6 +272,15 @@ class ManagedNetworkingService extends NetworkingServiceSupport {
       throw new ResourceAllocationException( "Private address allocation failure" );
     }
     ManagedSubnets.indexToAddress( subnetOptional.get(), tag, index )
+  }
+
+  private static Pair<Integer,Long> tagAndIndex( final String privateIp ) {
+    final Optional<ManagedSubnet> subnetOptional =
+        NetworkConfigurations.networkConfiguration.transform( ManagedSubnets.managedSubnet( ) )
+    if ( !subnetOptional.isPresent( ) ) {
+      throw new ResourceAllocationException( "Private address allocation failure" );
+    }
+    ManagedSubnets.addressToIndex( subnetOptional.get( ), privateIp )
   }
 
   private static void timeoutPrivateNetworkIndexes( final Iterable<String> addresses, final String addressPartition ) {
