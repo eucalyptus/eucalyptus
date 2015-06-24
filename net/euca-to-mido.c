@@ -933,8 +933,8 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                                     }
 
                                 } else if (gnisecgroup->ingress_rules[k].protocol == 1) {
-                                    // ICMP
-
+				    // ICMP
+				  
                                     snprintf(tmp_name3, 32, "%d", rulepos);
 
                                     if (gnisecgroup->ingress_rules[k].icmpCode >= 0) {

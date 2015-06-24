@@ -356,7 +356,8 @@ public class VmRuntimeState {
                 && VmState.RUNNING.equals( newState ) ) {
       this.getVmInstance( ).setState( newState );
       if ( VmState.STOPPED.equals( olderState ) ) {
-        this.restoreVolumeState( );
+        // Fix for EUCA-6947. Skip transient volume attachment since all volumes (boot and run time) are forwarded to CC/NC at instance boot time
+        // this.restoreVolumeState( );
       }
     } else if ( VmState.PENDING.equals( oldState )
                 && VmState.TERMINATED.equals( newState )

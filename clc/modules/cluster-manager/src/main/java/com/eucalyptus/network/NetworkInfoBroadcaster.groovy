@@ -481,14 +481,21 @@ class NetworkInfoBroadcaster {
     Set<String> rules = Sets.newLinkedHashSet( )
     // Only EC2-Classic rules supported by this format
     if ( !networkRule.isVpcOnly( ) ) {
-      String rule = String.format(
-          "-P %s -%s %d%s%d ",
-          networkRule.protocol,
-          NetworkRule.Protocol.icmp == networkRule.protocol ? "t" : "p",
-          networkRule.lowPort,
-          NetworkRule.Protocol.icmp == networkRule.protocol ? ":" : "-",
-          networkRule.highPort);
-      rules.addAll(networkRule.networkPeers.collect { NetworkPeer peer ->
+        String rule = "";
+        if (networkRule.protocol == null) {
+            //Special case where ports are not present, but
+            // we support that as an exception to EC2-Classic spec
+            rule = String.format("-P %d", networkRule.getProtocolNumber());
+        } else {
+            rule = String.format(
+                    "-P %d -%s %d%s%d ",
+                    networkRule.protocol.getNumber(),
+                    NetworkRule.Protocol.icmp == networkRule.protocol ? "t" : "p",
+                    networkRule.lowPort,
+                    NetworkRule.Protocol.icmp == networkRule.protocol ? ":" : "-",
+                    networkRule.highPort);
+        }
+        rules.addAll(networkRule.networkPeers.collect { NetworkPeer peer ->
         String.format("%s -o %s -u %s", rule, peer.groupId, peer.userQueryKey)
       })
       rules.addAll(networkRule.ipRanges.collect { String cidr ->
