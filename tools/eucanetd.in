@@ -155,7 +155,27 @@ do_start() {
 			fi
 		fi
 	done
-	   
+
+	#
+	# DHCP service port detection. If there is a rogue DHCP process (like dnsmasq) listening on 
+	# port 67(0043 in hex) don't start eucanetd and display a message 
+	#
+	LISTEN_INODE=$(awk '$2 ~ /:0043/ {print $10}' /proc/net/udp)
+	if [ -n "$LISTEN_INODE" ]; then
+
+		# get the process id from the fd link: /proc/1234/fd/5->socket:[54321]
+		PROC_ID=$(find /proc -lname "socket:\[${LISTEN_INODE}\]" 2> /dev/null | head -1 | awk -F/ '{print $3}')
+		if [ -n "${PROC_ID}" ]; then
+			PROC_NAME=$(cut -d '' -f 1 /proc/${PROC_ID}/cmdline)
+		else
+			PROC_NAME="UNKNOWN"
+		fi
+
+		echo "Cannot start eucanetd: ${PROC_NAME} (pid:${PROC_ID}), is listening on the DHCP service port (67)."
+		exit 1
+	fi
+
+
 	# Ensure that we have a net directory or dhcp will not start
 	if [ ! -d $EUCALYPTUS/var/run/eucalyptus/net ]; then
 		mkdir -p $EUCALYPTUS/var/run/eucalyptus/net
