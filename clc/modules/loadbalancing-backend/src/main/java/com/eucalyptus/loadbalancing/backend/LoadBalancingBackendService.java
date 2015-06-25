@@ -92,6 +92,7 @@ import com.eucalyptus.loadbalancing.activities.DisabledZoneEvent;
 import com.eucalyptus.loadbalancing.activities.EnabledZoneEvent;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
+import com.eucalyptus.loadbalancing.activities.ModifyAttributesEvent;
 import com.eucalyptus.loadbalancing.activities.NewLoadbalancerEvent;
 import com.eucalyptus.loadbalancing.activities.ActivityManager;
 import com.eucalyptus.loadbalancing.activities.RegisterInstancesEvent;
@@ -2657,37 +2658,10 @@ public class LoadBalancingBackendService {
                 request.getLoadBalancerAttributes().getCrossZoneLoadBalancing();
             if( crossZoneLb != null)
               loadBalancer.setCrossZoneLoadbalancingEnabled(crossZoneLb.getEnabled());
-            
-            final AccessLog accessLog = request.getLoadBalancerAttributes().getAccessLog();
-            if( accessLog != null ) {
-              final boolean accessLogEnabled = accessLog.getEnabled();
-              String bucketName = null;
-              String bucketPrefix = null;
-              Integer emitInterval = null;
-              if(accessLogEnabled) {
-                bucketName = accessLog.getS3BucketName();
-                bucketPrefix = 
-                  com.google.common.base.Objects.firstNonNull(accessLog.getS3BucketPrefix(), "");
-                emitInterval = 
-                  com.google.common.base.Objects.firstNonNull(accessLog.getEmitInterval(), 60);
-                if(emitInterval < 5 || emitInterval > 60) {
-                  throw new InvalidConfigurationRequestException("Access log's emit interval must be between 5 and 60 minutes");
-                }
-              }
-              loadBalancer.setAccessLogEnabled(accessLogEnabled);
-              loadBalancer.setAccessLogEmitInterval(emitInterval);
-              loadBalancer.setAccessLogS3BucketName(bucketName);
-              loadBalancer.setAccessLogS3BucketPrefix(bucketPrefix);
-              if(loadBalancer.getAccessLogEnabled() && 
-                  (loadBalancer.getAccessLogS3BucketName()==null || loadBalancer.getAccessLogS3BucketName().length()<=0))
-                throw new InvalidConfigurationRequestException("Bucket name to store access logs must be specified");
-            }
             return TypeMappers.transform( loadBalancer, LoadBalancerAttributes.class );
           } else {
             throw new NoSuchElementException( );
           }
-        } catch( LoadBalancingException e) {
-          throw Exceptions.toUndeclared(e);
         } catch ( NoSuchElementException e ) {
           throw Exceptions.toUndeclared( new AccessPointNotFoundException( ) );
         } catch ( TransactionException e ) {
@@ -2695,7 +2669,20 @@ public class LoadBalancingBackendService {
         }
       }
     };
-
+    
+    try{
+      /// the workflow will address access logs (any other complex setup would be handled there)
+      final ModifyAttributesEvent evt = new ModifyAttributesEvent();
+      evt.setLoadBalancer(request.getLoadBalancerName());
+      evt.setLoadBalancerAccountNumber( accountNumber );
+      evt.setContext(ctx);
+      evt.setAttributes(request.getLoadBalancerAttributes());
+      ActivityManager.getInstance().fire(evt);
+    }catch(final EventFailedException e){
+      final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
+      throw new InternalFailure400Exception(String.format("Failed to modify attributes: %s",reason), e);
+    }
+    
     final LoadBalancerAttributes attributes =
         Entities.asTransaction( LoadBalancer.class, modifyAttributes ).apply( request.getLoadBalancerName( ) );
 

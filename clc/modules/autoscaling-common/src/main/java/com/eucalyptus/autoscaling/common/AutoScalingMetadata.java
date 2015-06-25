@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,48 +20,48 @@
 package com.eucalyptus.autoscaling.common;
 
 import com.eucalyptus.auth.policy.annotation.PolicyResourceType;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.auth.type.RestrictedType;
+import com.eucalyptus.autoscaling.common.policy.AutoScalingPolicySpec;
 
 /**
  *
  */
-@PolicyVendor( PolicySpec.VENDOR_AUTOSCALING )
+@PolicyVendor( AutoScalingPolicySpec.VENDOR_AUTOSCALING )
 public interface AutoScalingMetadata extends RestrictedType {
 
-  public interface AutoScalingMetadataWithResourceName extends AutoScalingMetadata {
+  interface AutoScalingMetadataWithResourceName extends AutoScalingMetadata {
     String getArn();
   } 
   
   @PolicyResourceType( "launchconfiguration" )
-  public interface LaunchConfigurationMetadata extends AutoScalingMetadataWithResourceName {}
+  interface LaunchConfigurationMetadata extends AutoScalingMetadataWithResourceName {}
 
-  @PolicyResourceType( "autoscalingroup" )
-  public interface AutoScalingGroupMetadata extends AutoScalingMetadataWithResourceName {}
+  @PolicyResourceType( "autoscalinggroup" )
+  interface AutoScalingGroupMetadata extends AutoScalingMetadataWithResourceName {}
 
   @PolicyResourceType( "terminationpolicytype" )
-  public interface TerminationPolicyTypeMetadata extends AutoScalingMetadata {}
+  interface TerminationPolicyTypeMetadata extends AutoScalingMetadata {}
 
   @PolicyResourceType( "adjustmenttype" )
-  public interface AdjustmentTypeMetadata extends AutoScalingMetadata {}
+  interface AdjustmentTypeMetadata extends AutoScalingMetadata {}
 
   @PolicyResourceType( "scalingpolicy" )
-  public interface ScalingPolicyMetadata extends AutoScalingMetadataWithResourceName {}
+  interface ScalingPolicyMetadata extends AutoScalingMetadataWithResourceName {}
 
-  @PolicyResourceType( "instance" )
-  public interface AutoScalingInstanceMetadata extends AutoScalingMetadata {}
+  @PolicyResourceType( "autoscalinginstance" )
+  interface AutoScalingInstanceMetadata extends AutoScalingMetadata {}
 
   @PolicyResourceType( "tag" )
-  public interface AutoScalingTagMetadata extends AutoScalingMetadata {}
+  interface AutoScalingTagMetadata extends AutoScalingMetadata {}
 
   @PolicyResourceType( "scalingprocesstype" )
-  public interface ScalingProcessTypeMetadata extends AutoScalingMetadata {}
+  interface ScalingProcessTypeMetadata extends AutoScalingMetadata {}
 
   @PolicyResourceType( "scalingactivity" )
-  public interface ScalingActivityMetadata extends AutoScalingMetadata {}
+  interface ScalingActivityMetadata extends AutoScalingMetadata {}
 
   @PolicyResourceType( "metriccollectiontype" )
-  public interface MetricCollectionTypeMetadata extends AutoScalingMetadata {}
+  interface MetricCollectionTypeMetadata extends AutoScalingMetadata {}
 
 }

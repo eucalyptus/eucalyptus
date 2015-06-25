@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,8 +20,8 @@
 package com.eucalyptus.autoscaling.policy;
 
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.LaunchConfigurationMetadata;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.key.PolicyKey;
+import com.eucalyptus.autoscaling.common.policy.AutoScalingPolicySpec;
 
 /**
  *
@@ -33,7 +33,7 @@ public class LaunchConfigurationNumberQuotaKey  extends AutoScalingNumberQuotaKe
 
   public LaunchConfigurationNumberQuotaKey() {
     super( KEY,
-        PolicySpec.AUTOSCALING_CREATELAUNCHCONFIGURATION,
+        AutoScalingPolicySpec.AUTOSCALING_CREATELAUNCHCONFIGURATION,
         LaunchConfigurationMetadata.class );
   }   
 }

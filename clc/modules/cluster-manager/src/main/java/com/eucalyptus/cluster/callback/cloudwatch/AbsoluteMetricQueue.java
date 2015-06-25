@@ -93,28 +93,31 @@ public class AbsoluteMetricQueue {
       try {
         List<AbsoluteMetricQueueItem> dataBatch = Lists.newArrayList();
         dataQueue.drainTo(dataBatch);
-        //        dataQueue.drainTo(dataBatch, 15000);
-        LOG.debug("AbsoluteMetricQueue:Timing:dataBatch.size()=" + dataBatch.size());
+//        dataQueue.drainTo(dataBatch, 15000);
+        LOG.warn("Cluster:Timing:dataBatch.size()="+dataBatch.size());
         long t1 = System.currentTimeMillis();
         dataBatch = dealWithAbsoluteMetrics(dataBatch);
         long t2 = System.currentTimeMillis();
-        LOG.debug("AbsoluteMetricQueue:Timing:dataBatch.foldMetrics():time="+(t2-t1));
-        List<PutMetricDataType> putMetricDataTypeList =convertToPutMetricDataList(dataBatch);
+        LOG.warn("Cluster:Timing:dataBatch.dealWithAbsoluteMetrics():time="+(t2-t1));
+        dataBatch = foldMetrics(dataBatch);
         long t3 = System.currentTimeMillis();
-        LOG.debug("AbsoluteMetricQueue:Timing:dataBatch.convertToPutMetricDataList():time="+(t3-t2));
-        putMetricDataTypeList = CloudWatchHelper.consolidatePutMetricDataList(putMetricDataTypeList);
+        LOG.warn("Cluster:Timing:dataBatch.foldMetrics():time="+(t3-t2));
+        List<PutMetricDataType> putMetricDataTypeList =convertToPutMetricDataList(dataBatch);
         long t4 = System.currentTimeMillis();
-        LOG.debug("AbsoluteMetricQueue:Timing:dataBatch.consolidatePutMetricDataList():time="+(t4-t3));
-        callPutMetricData(putMetricDataTypeList);
+        LOG.warn("Cluster:Timing:dataBatch.convertToPutMetricDataList():time="+(t4-t3));
+        putMetricDataTypeList = CloudWatchHelper.consolidatePutMetricDataList(putMetricDataTypeList);
         long t5 = System.currentTimeMillis();
-        LOG.debug("AbsoluteMetricQueue:Timing:callPutMetricData():time="+(t5-t4));
+        LOG.warn("Cluster:Timing:dataBatch.consolidatePutMetricDataList():time="+(t5-t4));
+        callPutMetricData(putMetricDataTypeList);
+        long t6 = System.currentTimeMillis();
+        LOG.warn("Timing:ListMetricManager.callPutMetricData():time="+(t6-t5));
       } catch (Throwable ex) {
-        LOG.debug("AbsoluteMetricQueue:error");
+        LOG.warn("error");
         ex.printStackTrace();
         LOG.error(ex,ex);
       } finally {
         long after = System.currentTimeMillis();
-        LOG.debug("AbsoluteMetricQueue:Timing:time="+(after-before));
+        LOG.warn("Timing:time="+(after-before));
       }
     }
   };
@@ -147,6 +150,47 @@ public class AbsoluteMetricQueue {
         throw new EucalyptusCloudException("Unable to send put metric data to cloud watch");
       }
     }
+  }
+
+  private static List<AbsoluteMetricQueueItem> foldMetrics(List<AbsoluteMetricQueueItem> dataBatch) {
+    final List<AbsoluteMetricQueueItem> foldedMetrics = Lists.newArrayList();
+    if (dataBatch != null) {
+      for (AbsoluteMetricQueueItem queueItem : dataBatch) {
+        // keep the same metric data unless the namespace is AWS/EC2.  In that case points will exist with dimensions
+        // instance-id, image-id, instance-type, and (optionally) autoscaling group name.  These points have 4
+        // dimensions, and we are really only supposed to have one dimension (or zero) for aggregation purposes.
+        if (queueItem != null && queueItem.getNamespace() != null && "AWS/EC2".equals(queueItem.getNamespace())) {
+          MetricDatum metricDatum = queueItem.getMetricDatum();
+          if (metricDatum != null && metricDatum.getDimensions() != null &&
+            metricDatum.getDimensions().getMember() != null) {
+            Set<Dimension> dimensionSet = Sets.newLinkedHashSet(metricDatum.getDimensions().getMember());
+            for (Set<Dimension> permutation: Sets.powerSet(dimensionSet)) {
+              if (permutation.size() > 1) continue;
+              MetricDatum newMetricDatum = new MetricDatum();
+              newMetricDatum.setValue(metricDatum.getValue());
+              newMetricDatum.setUnit(metricDatum.getUnit());
+              newMetricDatum.setStatisticValues(metricDatum.getStatisticValues());
+              newMetricDatum.setTimestamp(metricDatum.getTimestamp());
+              newMetricDatum.setMetricName(metricDatum.getMetricName());
+              ArrayList<Dimension> newDimensionsList = Lists.newArrayList(permutation);
+              Dimensions newDimensions = new Dimensions();
+              newDimensions.setMember(newDimensionsList);
+              newMetricDatum.setDimensions(newDimensions);
+              AbsoluteMetricQueueItem newQueueItem = new AbsoluteMetricQueueItem();
+              newQueueItem.setAccountId(queueItem.getAccountId());
+              newQueueItem.setNamespace(queueItem.getNamespace());
+              newQueueItem.setMetricDatum(newMetricDatum);
+              foldedMetrics.add(newQueueItem);
+            }
+          } else {
+            foldedMetrics.add(queueItem);
+          }
+        } else {
+          foldedMetrics.add(queueItem);
+        }
+      }
+    }
+    return foldedMetrics;
   }
 
   static {

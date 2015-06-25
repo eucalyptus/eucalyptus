@@ -136,7 +136,7 @@ class AutoScalingServiceTest {
     discovery.processClass(Tags.TagToTagDescription )
     TagSupportDiscovery tagDiscovery = new TagSupportDiscovery()
     tagDiscovery.processClass( TestAutoScalingGroupTagSupport.class )
-    Permissions.setPolicyEngine( new PolicyEngineImpl( Suppliers.ofInstance( Boolean.FALSE ) ) )
+    Permissions.setPolicyEngine( new PolicyEngineImpl( Suppliers.ofInstance( Boolean.FALSE ), Suppliers.<String>ofInstance( null ) ) )
   }
 
   @Test

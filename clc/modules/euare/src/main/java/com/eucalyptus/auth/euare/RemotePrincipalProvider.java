@@ -436,7 +436,7 @@ public class RemotePrincipalProvider implements PrincipalProvider {
         @Nonnull
         @Override
         public String getAccountNumber() {
-          return ern.getNamespace( );
+          return ern.getAccount( );
         }
 
         @Nonnull
@@ -567,7 +567,7 @@ public class RemotePrincipalProvider implements PrincipalProvider {
       final EuareResourceName roleErn = (EuareResourceName) Ern.parse( role.getRoleArn( ) );
       final PolicyVersion rolePolicy = TypeMappers.transform( role.getAssumeRolePolicy( ), PolicyVersion.class );
       return new Role( ) {
-        @Override public String getAccountNumber( ) { return roleErn.getNamespace( ); }
+        @Override public String getAccountNumber( ) { return roleErn.getAccount( ); }
         @Override public String getRoleId( ) { return role.getRoleId( ); }
         @Override public String getRoleArn( ) { return role.getRoleArn( ); }
         @Override public String getPath( ) { return roleErn.getPath( ); }

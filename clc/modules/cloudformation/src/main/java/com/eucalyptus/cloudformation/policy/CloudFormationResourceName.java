@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,36 +19,16 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.policy;
 
-import com.eucalyptus.auth.policy.ern.Ern;
+import com.eucalyptus.auth.policy.ern.ResourceNameSupport;
 import com.eucalyptus.cloudformation.common.policy.CloudFormationPolicySpec;
 
 /**
  *
  */
-public class CloudFormationResourceName extends Ern {
-  private String type;
-  private String id;
+public class CloudFormationResourceName extends ResourceNameSupport {
 
-  public CloudFormationResourceName( String type, String id ) {
-    this.type = type;
-    this.id = id;
-    this.vendor = CloudFormationPolicySpec.VENDOR_CLOUDFORMATION;
+  public CloudFormationResourceName( String region, String account, String type, String id ) {
+    super( CloudFormationPolicySpec.VENDOR_CLOUDFORMATION, region, account, type, id );
   }
 
-  @Override
-  public String toString( ) {
-    StringBuilder sb = new StringBuilder( );
-    sb.append( ARN_PREFIX ).append( this.getVendor( ) ).append( ":::" ).append( this.type ).append( '/' ).append( this.id );
-    return sb.toString( );
-  }
-
-  @Override
-  public String getResourceType( ) {
-    return this.vendor + ":" + this.type;
-  }
-
-  @Override
-  public String getResourceName( ) {
-    return this.id;
-  }
 }

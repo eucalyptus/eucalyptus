@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,7 +38,7 @@ class ErnTest {
   @Test
   void testRoleArn( ) {
     final Ern ern = Ern.parse( "arn:aws:iam::013765657871:role/Role1" )
-    assertEquals( "Namespace", "013765657871", ern.getNamespace() );
+    assertEquals( "Namespace", "013765657871", ern.getAccount() );
     assertEquals( "Resource type", qualifiedName( VENDOR_IAM, IAM_RESOURCE_ROLE ), ern.getResourceType() );
     assertEquals( "Resource name", "/Role1", ern.getResourceName( ) );
   }

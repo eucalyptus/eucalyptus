@@ -453,24 +453,6 @@ class VmInstanceLifecycleHelpers {
     }
 
     @Override
-    void prepareAllocation(
-        final VmInfo vmInfo,
-        final Allocation allocation ) {
-      vmInfo?.netParams?.with {
-        if ( vlan != null && networkIndex != null && networkIndex > -1 ) {
-          allocation?.allocationTokens?.find{ final ResourceToken resourceToken ->
-            resourceToken.instanceUuid == vmInfo.uuid
-          }?.getAttribute(NetworkResourcesKey)?.add( new PrivateNetworkIndexResource(
-              ownerId: vmInfo.instanceId,
-              tag:  vlan,
-              value: String.valueOf( networkIndex )
-          ) )
-        }
-        void
-      }
-    }
-
-    @Override
     void startVmInstance(
         final ResourceToken resourceToken,
         final VmInstance instance ) {

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,7 +32,7 @@ import net.sf.json.JSONException;
  */
 public class CloudFormationErnBuilder extends ServiceErnBuilder {
 
-  public static final Pattern RESOURCE_PATTERN = Pattern.compile( "([a-z-]+)/([a-zA-Z0-9-]+/[a-zA-Z0-9-]+)" );
+  public static final Pattern RESOURCE_PATTERN = Pattern.compile( "([a-z-]+)/(\\*|[a-zA-Z0-9-]+/[a-zA-Z0-9-]+)" );
 
   public static final int ARN_PATTERNGROUP_CF_TYPE = 1;
   public static final int ARN_PATTERNGROUP_CF_ID = 2;
@@ -51,7 +51,7 @@ public class CloudFormationErnBuilder extends ServiceErnBuilder {
     if ( matcher.matches( ) ) {
       final String type = matcher.group( ARN_PATTERNGROUP_CF_TYPE ).toLowerCase( );
       final String id = matcher.group( ARN_PATTERNGROUP_CF_ID );
-      return new CloudFormationResourceName( type, id );
+      return new CloudFormationResourceName( region, account, type, id );
     }
     throw new JSONException( "'" + ern + "' is not a valid ARN" );
   }

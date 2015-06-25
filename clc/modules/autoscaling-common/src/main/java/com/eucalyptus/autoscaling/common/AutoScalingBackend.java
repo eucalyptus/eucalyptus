@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.common;
 
-import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.autoscaling.common.policy.AutoScalingPolicySpec;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.CloudControllerColocatingBootstrapper;
 import com.eucalyptus.bootstrap.Provides;
@@ -33,7 +33,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 /**
  * @author Chris Grzegorczyk <grze@eucalyptus.com>
  */
-@PolicyVendor( PolicySpec.VENDOR_AUTOSCALING )
+@PolicyVendor( AutoScalingPolicySpec.VENDOR_AUTOSCALING )
 @Partition(Eucalyptus.class)
 @FaultLogPrefix( "cloud" )
 public class AutoScalingBackend extends ComponentId {

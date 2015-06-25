@@ -1,1 +1,2 @@
 com.eucalyptus.compute.vpc.VpcComputeAccountInitializer
+com.eucalyptus.network.DefaultNetworkGroupComputeAccountInitializer

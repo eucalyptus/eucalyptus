@@ -67,6 +67,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.euare.Accounts;
 import com.eucalyptus.auth.AuthenticationProperties;
 import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
 import com.eucalyptus.auth.euare.ldap.LdapSync;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareUser;
@@ -88,9 +89,12 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
     
   public boolean load( ) throws Exception {
     Permissions.setPolicyEngine( new PolicyEngineImpl( new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
+      @Override public Boolean get() {
         return AuthenticationProperties.SYSTEM_ACCOUNT_QUOTA_ENABLED;
+      }
+    }, new Supplier<String>() {
+      @Override public String get() {
+        return RegionConfigurations.getRegionName( ).orNull( );
       }
     } ) );
     return true;

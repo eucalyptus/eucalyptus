@@ -25,6 +25,7 @@ import com.amazonaws.services.simpleworkflow.model.DescribeWorkflowExecutionRequ
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecution;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionDetail;
 import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.tokens.SecurityTokenAWSCredentialsProvider;
 import com.eucalyptus.cloudformation.common.policy.CloudFormationPolicySpec;
@@ -69,6 +70,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.IO;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.dns.DomainNames;
+import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
@@ -153,7 +155,7 @@ public class CloudFormationService {
         }
         pseudoParameterValues.setNotificationArns(notificationArns);
       }
-      pseudoParameterValues.setRegion(REGION);
+      pseudoParameterValues.setRegion(getRegion());
       final ArrayList<String> capabilities = Lists.newArrayList();
       if (request.getCapabilities() != null && request.getCapabilities().getMember() != null) {
         capabilities.addAll(request.getCapabilities().getMember());
@@ -820,7 +822,7 @@ public class CloudFormationService {
       pseudoParameterValues.setStackName(stackName);
       pseudoParameterValues.setStackId(stackId);
       ArrayList<String> notificationArns = Lists.newArrayList();
-      pseudoParameterValues.setRegion(REGION);
+      pseudoParameterValues.setRegion(getRegion());
       List<Parameter> parameters = Lists.newArrayList();
       final ValidateTemplateResult validateTemplateResult = new TemplateParser().validateTemplate(templateText, parameters, pseudoParameterValues, userId);
       reply.setValidateTemplateResult(validateTemplateResult);
@@ -828,6 +830,12 @@ public class CloudFormationService {
       handleException(ex);
     }
     return reply;
+  }
+
+  public static String getRegion( ) {
+    return Optional.fromNullable( Strings.emptyToNull( REGION ) )
+        .or( RegionConfigurations.getRegionName( ) )
+        .or( "eucalyptus" );
   }
 
   private static void handleException(final Exception e)

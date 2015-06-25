@@ -17,17 +17,19 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.loadbalancing.common.policy;
-
-import com.eucalyptus.auth.policy.ern.ResourceNameSupport;
+package com.eucalyptus.cloudwatch.common.policy;
 
 /**
  *
  */
-public class LoadBalancingResourceName extends ResourceNameSupport {
+public interface CloudWatchPolicySpec {
 
-  public LoadBalancingResourceName( String region, String account, String type, String id ) {
-    super( LoadBalancingPolicySpec.VENDOR_LOADBALANCING, region, account, type, id );
-  }
+  String VENDOR_CLOUDWATCH = "cloudwatch";
+
+  // Actions
+  String CLOUDWATCH_GETMETRICSTATISTICS = "getmetricstatistics";
+  String CLOUDWATCH_LISTMETRICS = "listmetrics";
+  String CLOUDWATCH_PUTMETRICALARM = "putmetricalarm";
+  String CLOUDWATCH_PUTMETRICDATA = "putmetricdata";
 
 }

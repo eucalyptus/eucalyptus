@@ -308,14 +308,23 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
         LOG.warn("Failed to find the loadbalancer named " + evt.getLoadBalancer(), ex);
         return;
       } 
-      // delete role policy
+      List<String> rolePolicies = null;
       try{
-        EucalyptusActivityTasks.getInstance().deleteRolePolicy(roleName, 
-            EventHandlerChainNew.IAMPolicySetup.SERVO_ROLE_POLICY_NAME, lb.useSystemAccount());
+        rolePolicies =EucalyptusActivityTasks.getInstance().listRolePolicies(roleName);
       }catch(final Exception ex){
-        LOG.error("failed to delete role policy", ex);
+        LOG.warn("Failed to list role policies to delete", ex);
       }
-      
+      if(rolePolicies != null) {
+        for(final String policy : rolePolicies) {
+          // delete role policy
+          try{
+            EucalyptusActivityTasks.getInstance().deleteRolePolicy(roleName, 
+                policy, lb.useSystemAccount());
+          }catch(final Exception ex){
+            LOG.error("failed to delete role policy", ex);
+          }
+        }
+      }
       // delete role
       try{
         EucalyptusActivityTasks.getInstance().deleteRole(roleName, lb.useSystemAccount());

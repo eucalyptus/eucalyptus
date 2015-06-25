@@ -377,12 +377,15 @@ class NetworkInfoBroadcaster {
     Iterable<NetworkAclNetworkView> networkAcls = networkInfoSource.networkAcls
     Iterable<RouteTableNetworkView> routeTables = networkInfoSource.routeTables
     Iterable<InternetGatewayNetworkView> internetGateways = networkInfoSource.internetGateways
+    Set<String> activeVpcs = (Set<String>) instances.inject( Sets.newHashSetWithExpectedSize( 500 ) ){
+      Set<String> vpcIds, VmInstanceNetworkView instance -> instance.vpcId?.with{ String id -> vpcIds.add(id) }; vpcIds
+    }
     Map<String,Collection<String>> vpcIdToInternetGatewayIds = (Map<String,Collection<String>> ) ((ArrayListMultimap<String,String>)internetGateways.inject(ArrayListMultimap.<String,String>create()){
       ListMultimap<String,String> map, InternetGatewayNetworkView internetGateway ->
         if ( internetGateway.vpcId ) map.put( internetGateway.vpcId, internetGateway.internetGatewayId )
         map
     }).asMap( )
-    info.vpcs.addAll( vpcs.collect{ VpcNetworkView vpc ->
+    info.vpcs.addAll( vpcs.findAll{ VpcNetworkView vpc -> activeVpcs.contains(vpc.vpcId) }.collect{ VpcNetworkView vpc ->
       new NIVpc(
         vpc.vpcId,
         vpc.ownerAccountNumber,
@@ -468,7 +471,9 @@ class NetworkInfoBroadcaster {
     } )
 
     // populate internet gateways
-    info.internetGateways.addAll( internetGateways.collect { InternetGatewayNetworkView internetGateway ->
+    info.internetGateways.addAll( internetGateways.findAll{ InternetGatewayNetworkView gateway ->
+      activeVpcs.contains(gateway.vpcId)
+    }.collect { InternetGatewayNetworkView internetGateway ->
       new NIInternetGateway(
           name: internetGateway.internetGatewayId,
           ownerId: internetGateway.ownerAccountNumber,

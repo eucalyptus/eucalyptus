@@ -258,7 +258,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 						try{
 						    EucalyptusActivityTasks.getInstance().createLaunchConfiguration(newEmi, newType, lc.getIamInstanceProfile(), 
 									launchConfigName, lc.getSecurityGroups().getMember(), newKeyname, newUserdata,
-									Boolean.TRUE.equals( lc.getAssociatePublicIpAddress( ) ), lb.useSystemAccount() );
+									lc.getAssociatePublicIpAddress( ), lb.useSystemAccount() );
 						}catch(final Exception ex){
 							throw new EucalyptusCloudException("failed to create new launch config", ex);
 						}

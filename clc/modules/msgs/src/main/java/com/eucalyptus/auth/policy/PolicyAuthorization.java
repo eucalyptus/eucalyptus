@@ -42,6 +42,8 @@ public class PolicyAuthorization implements Authorization {
 
   private final Authorization.EffectType effect;
 
+  private final String region;
+
   // The account name or number resource this authorization applies to.
   private final String account;
 
@@ -65,6 +67,7 @@ public class PolicyAuthorization implements Authorization {
   public PolicyAuthorization(
       @Nullable final String statementId,
       @Nonnull  final Authorization.EffectType effect,
+      @Nullable final String region,
       @Nullable final String account,
       @Nullable final String type,
       @Nullable final PolicyPrincipal principal,
@@ -80,6 +83,7 @@ public class PolicyAuthorization implements Authorization {
     checkParam( "resources", resources, notNullValue() );
     this.statementId = PolicyUtils.intern( statementId );
     this.effect = effect;
+    this.region = PolicyUtils.intern( region );
     this.account = PolicyUtils.intern( account );
     this.type = PolicyUtils.intern( type );
     this.principal = PolicyUtils.intern( principal );
@@ -103,6 +107,7 @@ public class PolicyAuthorization implements Authorization {
         effect,
         null,
         null,
+        null,
         principal,
         conditions,
         actions,
@@ -118,6 +123,11 @@ public class PolicyAuthorization implements Authorization {
 
   public EffectType getEffect() {
     return effect;
+  }
+
+  @Override
+  public String getRegion() {
+    return region;
   }
 
   public String getAccount() {
@@ -163,6 +173,7 @@ public class PolicyAuthorization implements Authorization {
 
     if ( notAction != that.notAction ) return false;
     if ( notResource != that.notResource ) return false;
+    if ( region != null ? !region.equals( that.region ) : that.region != null ) return false;
     if ( account != null ? !account.equals( that.account ) : that.account != null ) return false;
     if ( !actions.equals( that.actions ) ) return false;
     if ( !conditions.equals( that.conditions ) ) return false;
@@ -179,6 +190,7 @@ public class PolicyAuthorization implements Authorization {
   public int hashCode() {
     int result = statementId != null ? statementId.hashCode() : 0;
     result = 31 * result + effect.hashCode();
+    result = 31 * result + ( region != null ? region.hashCode() : 0 );
     result = 31 * result + ( account != null ? account.hashCode() : 0 );
     result = 31 * result + ( type != null ? type.hashCode() : 0 );
     result = 31 * result + ( principal != null ? principal.hashCode() : 0 );

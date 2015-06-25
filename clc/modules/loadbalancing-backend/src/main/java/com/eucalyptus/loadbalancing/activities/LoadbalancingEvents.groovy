@@ -21,6 +21,7 @@ package com.eucalyptus.loadbalancing.activities
 
 import com.eucalyptus.loadbalancing.common.msgs.Instance
 import com.eucalyptus.loadbalancing.common.msgs.Listener
+import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerAttributes
 import com.eucalyptus.context.Context
 import com.eucalyptus.event.GenericEvent
 
@@ -67,4 +68,7 @@ class DisabledZoneEvent extends LoadbalancingUserEvent {
 }
 class ApplySecurityGroupsEvent extends LoadbalancingUserEvent {
 	Map<String,String> securityGroupIdsToNames
+}
+class ModifyAttributesEvent extends LoadbalancingUserEvent {
+  LoadBalancerAttributes attributes
 }
