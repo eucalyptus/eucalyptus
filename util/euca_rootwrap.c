@@ -165,11 +165,15 @@ int main(int argc, char **argv)
         exit(1);
     }
     // Allocate memory for our new argument list so we can sanitize every arguments...
-    if ((newargv = calloc((argc - 1), sizeof(char *))) == NULL) {
+    if ((newargv = calloc((argc), sizeof(char *))) == NULL) {
         perror("alloc");
         exit(1);
     }
-    // Copy an sanitize
+
+    //
+    // Copy and "sanitize" inputs, since this program accepts all input there isn't
+    // a whitelist of valid inputs. This causes the strings to become untainted.
+    //
     for (i = 0, j = 1; j < argc; i++, j++) {
         if ((newargv[i] = euca_strdup(argv[j])) == NULL) {
             while ((--i) >= 0) {
@@ -181,7 +185,7 @@ int main(int argc, char **argv)
         }
     }
 
-    newargv = argv + 1;
+    newargv[argc-1] = NULL; // execvp argument must be NULL terminated.
 
     if (setresuid(((uid_t) 0), ((uid_t) 0), ((uid_t) 0))) {
         perror("setresuid");
@@ -194,8 +198,9 @@ int main(int argc, char **argv)
     rc = execvp(newargv[0], newargv);
 
     // cleanup
+    perror(newargv[0]);
     for (i = 0; i < (argc - 1); i++)
         free(newargv[i]);
-    free(newargv[i]);
+    free(newargv);
     exit(rc);
 }
