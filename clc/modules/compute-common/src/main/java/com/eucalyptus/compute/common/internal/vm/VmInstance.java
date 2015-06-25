@@ -859,7 +859,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       final EntityTransaction db = Entities.get( VmInstance.class );
       try {
         final VmInstance entity = Entities.merge( this );
-        Set<VmVolumeAttachment> persistentAttachments = Sets.newHashSet( entity.getBootRecord( ).getPersistentVolumes( ) );
+        Set<VmVolumeAttachment> persistentAttachments = Sets.<VmVolumeAttachment>newHashSet( entity.getBootRecord( ).getPersistentVolumes( ) );
     	boolean ret = Iterables.all( persistentAttachments, new Predicate<VmVolumeAttachment>( ) {
             
             @Override

@@ -68,17 +68,23 @@ import java.util.Objects;
 
 import javax.annotation.Nullable;
 import javax.persistence.Column;
-import javax.persistence.Embeddable;
+import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
+import javax.persistence.ManyToOne;
+import javax.persistence.MappedSuperclass;
 
-import org.hibernate.annotations.Parent;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
+import com.eucalyptus.entities.AbstractPersistent;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 
-@Embeddable
-public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
+@MappedSuperclass
+public abstract class VmVolumeAttachment extends AbstractPersistent implements Comparable<VmVolumeAttachment> {
+  private static final long serialVersionUID = 1L;
+
   public enum AttachmentState {
     attaching {
       
@@ -160,7 +166,9 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     public abstract String stateFlag( );
   }
   
-  @Parent
+  @ManyToOne( optional = false )
+  @JoinColumn( name = "vminstance_id", nullable = false, updatable = false )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private VmInstance vmInstance;
   @Column( name = "metadata_vm_volume_id", unique = true )
   private String	volumeId;
@@ -207,15 +215,6 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
 	this.deleteOnTerminate = deleteOnTerminate;
 	this.isRootDevice = rootDevice;
 	this.attachedAtStartup = attachedAtStartup;
-  }
-  
-  public static Function<edu.ucsb.eucalyptus.msgs.AttachedVolume, VmVolumeAttachment> fromAttachedVolume( final VmInstance vm ) {
-    return new Function<edu.ucsb.eucalyptus.msgs.AttachedVolume, VmVolumeAttachment>( ) {
-      @Override
-      public VmVolumeAttachment apply( edu.ucsb.eucalyptus.msgs.AttachedVolume vol ) {
-        return new VmVolumeAttachment( vm, vol.getVolumeId( ), vol.getDevice( ), vol.getRemoteDevice( ), vol.getStatus( ), vol.getAttachTime( ), false, Boolean.FALSE );
-      }
-    };
   }
   
   public static Function<VmVolumeAttachment, com.eucalyptus.compute.common.AttachedVolume> asAttachedVolume( final VmInstance vm ) {
@@ -343,12 +342,6 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     if ( this.status != null ) builder.append( "status=" ).append( this.status ).append( ":" );
     if ( this.attachTime != null ) builder.append( "attachTime=" ).append( this.attachTime );
     return builder.toString( );
-  }
-  
-  public static VmVolumeAttachment exampleWithVolumeId( final String volumeId ) {
-    VmVolumeAttachment ex = new VmVolumeAttachment( );
-    ex.setVolumeId( volumeId );
-    return ex;
   }
   
   static Predicate<VmVolumeAttachment> volumeDeviceFilter( final String deviceName ) {

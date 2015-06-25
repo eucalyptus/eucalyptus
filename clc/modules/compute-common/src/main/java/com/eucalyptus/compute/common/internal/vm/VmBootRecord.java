@@ -66,6 +66,7 @@ import java.util.Arrays;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
@@ -76,6 +77,7 @@ import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
 import javax.persistence.PreRemove;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -133,10 +135,9 @@ public class VmBootRecord {
   @Column( name = "metadata_vm_architecture" )
   @Enumerated(  EnumType.STRING )
   private ImageMetadata.Architecture architecture;
-  @ElementCollection
-  @CollectionTable( name = "metadata_instances_persistent_volumes" )
+  @OneToMany( mappedBy = "vmInstance", orphanRemoval = true, cascade = CascadeType.ALL )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<VmVolumeAttachment> persistentVolumes = Sets.newHashSet( );
+  private Set<VmBootVolumeAttachment> persistentVolumes = Sets.newHashSet( );
   @ElementCollection
   @CollectionTable( name = "metadata_instances_ephemeral_storage" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -326,7 +327,7 @@ public class VmBootRecord {
     return virtType;
   }
 
-  public Set<VmVolumeAttachment> getPersistentVolumes( ) {
+  public Set<VmBootVolumeAttachment> getPersistentVolumes( ) {
     return this.persistentVolumes;
   }
   
