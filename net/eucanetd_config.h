@@ -90,11 +90,6 @@
 
 #define NUM_EUCANETD_CONFIG                      1
 
-/* Defines the bitmask for the flush mode */
-#define EUCANETD_FLUSH_AND_RUN_MASK              0x01  //!< Will only flush and continue running
-#define EUCANETD_FLUSH_ONLY_MASK                 0x02  //!< Will flush and stop running the daemon
-#define EUCANETD_FLUSH_MASK                      0xFF  //!< Mask to see if we need to flush
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  TYPEDEFS                                  |
@@ -129,7 +124,6 @@ enum {
     EUCANETD_CVAL_LOGLEVEL,
     EUCANETD_CVAL_LOGROLLNUMBER,
     EUCANETD_CVAL_LOGMAXSIZE,
-    EUCANETD_CVAL_MIDOSETUPCORE,
     EUCANETD_CVAL_MIDOEUCANETDHOST,
     EUCANETD_CVAL_MIDOGWHOST,
     EUCANETD_CVAL_MIDOGWIP,
@@ -171,7 +165,6 @@ typedef struct eucanetdConfig_t {
     char dhcpDaemon[EUCA_MAX_PATH];    //!< The path to the ISC DHCP server executable to use. (VNET_DHCPDAEMON)
 
     char midoeucanetdhost[HOSTNAME_LEN];
-    char midosetupcore[32];
     char midogwhost[HOSTNAME_LEN];
     char midogwip[HOSTNAME_LEN];
     char midogwiface[HOSTNAME_LEN];
@@ -195,6 +188,7 @@ typedef struct eucanetdConfig_t {
 
     int debug;
     int flushmode;
+    int flushcore;
     boolean init;
 } eucanetdConfig;
 

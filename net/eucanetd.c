@@ -198,8 +198,6 @@ configEntry configKeysRestartEUCANETD[] = {
     ,
     {"EUCA_USER", "eucalyptus"}
     ,
-    {"MIDOSETUPCORE", "Y"}
-    ,
     {"MIDOEUCANETDHOST", NULL}
     ,
     {"MIDOGWHOST", NULL}
@@ -349,26 +347,28 @@ int main(int argc, char **argv)
 
     // parse commandline arguments
     config->flushmode = 0;
-    while ((opt = getopt(argc, argv, "dhFf")) != -1) {
+    // default is to flush core, for now
+    config->flushcore = 1;
+    while ((opt = getopt(argc, argv, "dhFr")) != -1) {
         switch (opt) {
         case 'd':
             config->debug = 1;
             break;
         case 'F':
-            config->flushmode |= EUCANETD_FLUSH_ONLY_MASK;
+            config->flushmode = 1;
             config->debug = 1;
             break;
-        case 'f':
-            config->flushmode |= EUCANETD_FLUSH_AND_RUN_MASK;
+        case 'r':
+            config->flushcore = 1;
             break;
         case 'h':
-            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n\t%-12s| flush - clear all iptables/ebtables/ipset rules and continue\n"
-                   "\t%-12s| flush & stop - clear all iptables/ebtables/ipset rules and return\n", argv[0], "-d", "-F", "-f");
+            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n\t%-12s| flush - clear all dynamic networking artifacts and exit\n"
+                   "\t%-12s| full flush (including core network artifacts)\n", argv[0], "-d", "-F", "-r");
             exit(1);
             break;
         default:
-            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n\t%-12s| flush - clear all iptables/ebtables/ipset rules and continue\n"
-                   "\t%-12s| flush & stop - clear all iptables/ebtables/ipset rules and return\n", argv[0], "-d", "-F", "-f");
+            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n\t%-12s| flush - clear all dynamic networking artifacts and exit\n"
+                   "\t%-12s| full flush (including core network artifacts)\n", argv[0], "-d", "-F", "-r");
             exit(1);
             break;
         }
@@ -475,7 +475,7 @@ int main(int argc, char **argv)
             }
         }
         // Do we need to flush all eucalyptus networking artifacts
-        if (config->flushmode & EUCANETD_FLUSH_MASK) {
+        if (config->flushmode) {
             // Make sure we were given a flush API prior to calling it
             if (pDriverHandler->system_flush) {
                 if (pDriverHandler->system_flush(globalnetworkinfo)) {
@@ -483,12 +483,9 @@ int main(int argc, char **argv)
                 }
             }
 
-            if(config->flushmode & EUCANETD_FLUSH_ONLY_MASK) {
-                gIsRunning = FALSE;
-                update_globalnet = FALSE;
-            } else {
-                update_globalnet = TRUE;
-            }
+            gIsRunning = FALSE;
+            update_globalnet = FALSE;
+
             config->flushmode = 0;
         }
         // if information on sec. group rules/membership has changed, apply
@@ -590,11 +587,9 @@ int main(int argc, char **argv)
 
     LOGINFO("EUCANETD going down.\n");
 
-    exit(0);
-
     if (pDriverHandler->cleanup) {
         LOGINFO("Cleaning up '%s' network driver on termination.\n", pDriverHandler->name);
-        if (pDriverHandler->cleanup(globalnetworkinfo, (config->flushmode & EUCANETD_FLUSH_MASK)) != 0) {
+        if (pDriverHandler->cleanup(globalnetworkinfo, config->flushmode) != 0) {
             LOGERROR("Failed to cleanup '%s' network driver.\n", pDriverHandler->name);
         }
     }
@@ -620,7 +615,7 @@ int main(int argc, char **argv)
 //!
 static void eucanetd_sigterm_handler(int signal)
 {
-    LOGERROR("EUCANETD caught SIGTERM signal.\n");
+    LOGINFO("EUCANETD caught SIGTERM signal.\n");
     gIsRunning = FALSE;
 }
 
@@ -637,7 +632,7 @@ static void eucanetd_sigterm_handler(int signal)
 //!
 static void eucanetd_sighup_handler(int signal)
 {
-    LOGERROR("EUCANETD caught a SIGHUP signal.\n");
+    LOGINFO("EUCANETD caught a SIGHUP signal.\n");
     config->flushmode = TRUE;
 }
 
@@ -667,7 +662,7 @@ static void eucanetd_install_signal_handlers(void)
     bzero(&act, sizeof(struct sigaction));
     act.sa_handler = &eucanetd_sighup_handler;
     if (sigaction(SIGHUP, &act, NULL) < 0) {
-        LOGERROR("Failed to install SIGTERM handler");
+        LOGFATAL("Failed to install SIGTERM handler");
         exit(1);
     }
 }
@@ -1053,7 +1048,6 @@ static int eucanetd_read_config(void)
     cvals[EUCANETD_CVAL_NC_ROUTER_IP] = configFileValue("NC_ROUTER_IP");
     cvals[EUCANETD_CVAL_METADATA_USE_VM_PRIVATE] = configFileValue("METADATA_USE_VM_PRIVATE");
     cvals[EUCANETD_CVAL_METADATA_IP] = configFileValue("METADATA_IP");
-    cvals[EUCANETD_CVAL_MIDOSETUPCORE] = configFileValue("MIDOSETUPCORE");
     cvals[EUCANETD_CVAL_MIDOEUCANETDHOST] = configFileValue("MIDOEUCANETDHOST");
     cvals[EUCANETD_CVAL_MIDOGWHOST] = configFileValue("MIDOGWHOST");
     cvals[EUCANETD_CVAL_MIDOGWIP] = configFileValue("MIDOGWIP");
@@ -1170,8 +1164,6 @@ static int eucanetd_read_config(void)
 
     // mido config opts
 
-    if (cvals[EUCANETD_CVAL_MIDOSETUPCORE])
-        snprintf(config->midosetupcore, sizeof(config->midosetupcore), "%s", cvals[EUCANETD_CVAL_MIDOSETUPCORE]);
     if (cvals[EUCANETD_CVAL_MIDOEUCANETDHOST])
         snprintf(config->midoeucanetdhost, sizeof(config->midoeucanetdhost), "%s", cvals[EUCANETD_CVAL_MIDOEUCANETDHOST]);
     if (cvals[EUCANETD_CVAL_MIDOGWHOST])
@@ -1184,8 +1176,6 @@ static int eucanetd_read_config(void)
         snprintf(config->midopubnw, sizeof(config->midopubnw), "%s", cvals[EUCANETD_CVAL_MIDOPUBNW]);
     if (cvals[EUCANETD_CVAL_MIDOPUBGWIP])
         snprintf(config->midopubgwip, sizeof(config->midopubgwip), "%s", cvals[EUCANETD_CVAL_MIDOPUBGWIP]);
-    if (cvals[EUCANETD_CVAL_MIDOSETUPCORE])
-        snprintf(config->midosetupcore, sizeof(config->midosetupcore), "%s", cvals[EUCANETD_CVAL_MIDOSETUPCORE]);
     if (cvals[EUCANETD_CVAL_MIDOEUCANETDHOST])
         snprintf(config->midoeucanetdhost, sizeof(config->midoeucanetdhost), "%s", cvals[EUCANETD_CVAL_MIDOEUCANETDHOST]);
 
