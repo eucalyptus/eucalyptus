@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -99,6 +99,7 @@ import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.exception.LockAcquisitionException;
 import org.hibernate.proxy.HibernateProxy;
+import org.hibernate.sql.JoinType;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -399,6 +400,29 @@ public class Entities {
                                    final boolean readOnly, 
                                    final Criterion criterion,
                                    final Map<String,String> aliases ) {
+    return query( example, readOnly, criterion, aliases, false );
+  }
+
+
+  /**
+   * Query items matching the given example restricted by the given criterion.
+   *
+   * <P>The caller must have an active transaction for the entity.</P>
+   *
+   * @param example The example object
+   * @param readOnly Use True if the results will not be modified
+   * @param criterion Additional restrictions for the query
+   * @param aliases Any aliases necessary for the given criterion
+   * @param outerJoins True to use outer joins
+   * @param <T> The entity type
+   * @return The result list
+   */
+  @SuppressWarnings( { "unchecked", "cast" } )
+  public static <T> List<T> query( final T example,
+                                   final boolean readOnly,
+                                   final Criterion criterion,
+                                   final Map<String,String> aliases,
+                                   final boolean outerJoins ) {
     final Example qbe = Example.create( example );
     final Criteria criteria = getTransaction( example ).getTxState( ).getSession( )
         .createCriteria( example.getClass( ) )
@@ -408,7 +432,10 @@ public class Entities {
         .add( qbe )
         .add( criterion );
     for ( final Map.Entry<String,String> aliasEntry : aliases.entrySet() ) {
-      criteria.createAlias( aliasEntry.getKey(), aliasEntry.getValue() ); // inner join by default
+      criteria.createAlias(
+          aliasEntry.getKey( ),
+          aliasEntry.getValue( ),
+          outerJoins ? JoinType.LEFT_OUTER_JOIN : JoinType.INNER_JOIN );
     }
     final List<T> resultList = ( List<T> ) criteria.list( );
     return Lists.newArrayList( Sets.newHashSet( resultList ) );

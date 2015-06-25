@@ -93,7 +93,6 @@ import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.criterion.SimpleExpression;
-import org.hibernate.type.StringType;
 import org.xbill.DNS.Name;
 
 import com.eucalyptus.address.Address;
@@ -177,7 +176,6 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.entities.TransactionResource;
@@ -227,6 +225,7 @@ import com.google.common.base.Predicates;
 import com.google.common.base.Splitter;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -245,9 +244,6 @@ import edu.ucsb.eucalyptus.msgs.StopInstanceType;
 public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmInstances {
 
   private static final Logger LOG = Logger.getLogger( VmInstances.class );
-
-  private static final String SQL_RESTRICTION_PERSISTENT_VOLUME = "{alias}.id in (select vminstance_id from %smetadata_instances_persistent_volumes where metadata_vm_volume_id=?)";
-  private static final String SQL_RESTRICTION_ATTACHED_VOLUME = "{alias}.id in (select vminstance_id from %smetadata_instances_volume_attachments where metadata_vm_volume_id=?)";
 
   public enum Timeout implements Predicate<VmInstance> {
     EXPIRED( VmState.RUNNING ) {
@@ -749,17 +745,14 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
   public static VmVolumeAttachment lookupVolumeAttachment( final String volumeId ) {
     VmVolumeAttachment ret = null;
     try ( final TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
-      final String schemaPrefix =
-          Optional.fromNullable( PersistenceContexts.toSchemaName().apply( "eucalyptus_cloud" ) )
-              .transform( Strings.append( "." ) )
-              .or( "" );
       final List<VmInstance> vms = VmInstances.list( null,
           Restrictions.or(
-              Restrictions.sqlRestriction( String.format( SQL_RESTRICTION_PERSISTENT_VOLUME, schemaPrefix ), volumeId, StringType.INSTANCE ),
-              Restrictions.sqlRestriction( String.format( SQL_RESTRICTION_ATTACHED_VOLUME, schemaPrefix ), volumeId, StringType.INSTANCE )
+              Restrictions.eq( "bootVolumes.volumeId", volumeId ),
+              Restrictions.eq( "volumeAttachments.volumeId", volumeId )
           ),
-          Collections.<String, String>emptyMap(),
-          null );
+          ImmutableMap.of( "transientVolumeState.attachments", "volumeAttachments", "bootRecord.persistentVolumes", "bootVolumes" ),
+          null,
+          true );
       for ( VmInstance vm : vms ) {
         try {
           ret = vm.lookupVolumeAttachment( volumeId );
