@@ -19,12 +19,15 @@
  ************************************************************************/
 package com.eucalyptus.compute.common.internal.vm;
 
+import static com.eucalyptus.upgrade.Upgrades.Version.v4_2_0;
 import java.util.Date;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.compute.common.Compute;
+import com.eucalyptus.upgrade.Upgrades;
 
 /**
  *
@@ -62,5 +65,17 @@ public class VmBootVolumeAttachment extends VmVolumeAttachment {
         rootDevice,
         attachedAtStartup
     );
+  }
+
+  @Upgrades.PreUpgrade( since = v4_2_0, value = Compute.class )
+  public static class SchemaUpgradeForEntity extends SchemaUpgradeForEntitySupport  {
+
+    public SchemaUpgradeForEntity( ) {
+      super(
+          "metadata_instances_persistent_volumes",
+          "metadata_instances_persistent_volumes_pkey",
+          "uk_qhck6noa8fca18b72q1hf7vh9"
+      );
+    }
   }
 }
