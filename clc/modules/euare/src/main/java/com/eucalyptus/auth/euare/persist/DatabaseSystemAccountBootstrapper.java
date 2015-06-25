@@ -122,7 +122,7 @@ public class DatabaseSystemAccountBootstrapper extends Bootstrapper {
       for ( final SystemAccountProvider.SystemAccountRole systemAccountRole : provider.getRoles( ) ) {
         try {
           final EuareRole role = account.lookupRoleByName( systemAccountRole.getName( ) );
-          ensureSystemRolePoliciesExist( role, systemAccountRole );
+          ensureSystemRolePoliciesExist( role, systemAccountRole, account.getAccountNumber() );
         } catch ( final AuthException e ) {
           addSystemRole( account, systemAccountRole );
         }
@@ -140,7 +140,7 @@ public class DatabaseSystemAccountBootstrapper extends Bootstrapper {
       final String path = systemAccountRole.getPath( );
       final String assumeRolePolicy = systemAccountRole.getAssumeRolePolicy();
       final EuareRole role = account.addRole( name, path, assumeRolePolicy );
-      ensureSystemRolePoliciesExist( role, systemAccountRole );
+      ensureSystemRolePoliciesExist( role, systemAccountRole, account.getAccountNumber() );
     } catch ( Exception e ) {
       LOG.error( String.format( "Error adding system role: %s", systemAccountRole.getName( ) ), e );
     }
@@ -148,7 +148,8 @@ public class DatabaseSystemAccountBootstrapper extends Bootstrapper {
 
   private static void ensureSystemRolePoliciesExist(
       final EuareRole role,
-      final SystemAccountProvider.SystemAccountRole systemAccountRole ) throws AuthException, PolicyParseException {
+      final SystemAccountProvider.SystemAccountRole systemAccountRole,
+      final String accountId) throws AuthException, PolicyParseException {
     final Set<String> existingPolicies = Sets.newHashSet();
     for ( final Policy policy : role.getPolicies( ) ) {
       existingPolicies.add( policy.getName( ) );
@@ -156,7 +157,9 @@ public class DatabaseSystemAccountBootstrapper extends Bootstrapper {
     for ( final SystemAccountProvider.AttachedPolicy policy : systemAccountRole.getPolicies( ) ) {
       if ( !existingPolicies.contains( policy.getName( ) ) ) {
         LOG.info( "Creating system role policy '"+policy.getName( )+"'" );
-        role.putPolicy( policy.getName( ), policy.getPolicy( ) );
+        String p = policy.getPolicy( );
+        p = p != null ? p.replaceAll("<AccountNumber>", accountId) : p;
+        role.putPolicy( policy.getName( ), p );
       }
     }
   }
