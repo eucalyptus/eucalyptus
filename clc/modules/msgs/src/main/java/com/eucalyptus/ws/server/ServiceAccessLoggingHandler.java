@@ -159,7 +159,8 @@ public enum ServiceAccessLoggingHandler implements ChannelUpstreamHandler, Chann
                                                        };
   
   private static Logger     LOG                        = Logger.getLogger( ServiceAccessLoggingHandler.class );
-  
+  private static String     REDACTED                   = "--REDACTED--";
+ 
   private static void createLogEntry( ChannelHandlerContext ctx, Object replyObject, String... extra ) {
     try {
       Context context = Contexts.lookup( ctx.getChannel( ) );
@@ -197,7 +198,13 @@ public enum ServiceAccessLoggingHandler implements ChannelUpstreamHandler, Chann
         if ( msge.getMessage( ) instanceof MappingHttpRequest ) {// Handle single request-response MEP
           MappingHttpRequest httpMessage = ( MappingHttpRequest ) ( ( MessageEvent ) e ).getMessage( );
           final String method = Objects.toString( httpMessage.getMethod( ), "HTTP-UNKNOWN" );
-          final String parameters = Joiner.on( "," ).join( createParameters.apply( httpMessage ) );
+          String parameters = Joiner.on( "," ).join( createParameters.apply( httpMessage ) );
+
+          // Redact non-zero length POST *content* at any level other than TRACE
+          // Note that we still log at INFO with the createLogEntry() call.
+          if (!LOG.isTraceEnabled() && !parameters.isEmpty() && HttpMethod.POST.equals(httpMessage.getMethod())) { 
+            parameters = REDACTED;
+          }
           createLogEntry( ctx, httpMessage.getMessage( ), method, parameters );
         }
       }
