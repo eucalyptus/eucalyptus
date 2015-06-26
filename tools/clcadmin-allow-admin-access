@@ -39,6 +39,7 @@ import argparse
 import json
 import logging
 import os
+import subprocess
 import sys
 import urlparse
 
@@ -47,6 +48,7 @@ import boto.iam.connection
 
 CANNED_ROLES = ('AccountAdministrator', 'InfrastructureAdministrator',
                 'ResourceAdministrator')
+CREDENTIAL_EXE = 'clcadmin-assume-system-credentials'
 HOST = '127.0.0.1'
 PORT = 8773
 SERVICE_PATH = '/services/Euare'
@@ -124,29 +126,19 @@ def parse_cli_args():
               'the user access to (default: all canned roles)'))
     parser.add_argument('-v', dest='verbose', action='count',
                         help='show more verbose output')
-    parser.add_argument('-I', '--access-key-id', help='access key ID')
-    parser.add_argument('-S', '--secret-key', help='secret key')
     return parser.parse_args()
 
 
 def get_creds(args):
-    key_id = args.access_key_id
-    secret_key = args.secret_key
-    if key_id and secret_key:
-        return (key_id, secret_key)
-    elif not key_id and not secret_key:
-        pass
-    else:
-        raise ValueError('arguments -I/--access-key-id and -S/--secret-key '
-                         'must be used together')
-
-    key_id = os.getenv('AWS_ACCESS_KEY_ID')
-    secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
-    if key_id and secret_key:
-        return (key_id, secret_key)
-    raise ValueError(
-        'an access key ID and secret key are required; run '
-        '``eval `clcadmin-assume-system-credentials`\'\' and try again')
+    proc = subprocess.Popen([CREDENTIAL_EXE], stdout=subprocess.PIPE)
+    for line in proc.stdout:
+        if 'AWS_ACCESS_KEY_ID=' in line:
+            key_id = line.strip().split('=')[1].strip('";')
+        if 'AWS_SECRET_ACCESS_KEY=' in line:
+            secret_key = line.strip().split('=')[1].strip('";')
+    if proc.wait() != 0:
+        raise subprocess.CalledProcessError(proc.returncode, CREDENTIAL_EXE)
+    return key_id, secret_key
 
 
 def main():
@@ -157,8 +149,8 @@ def main():
         boto.set_stream_logger('main', logging.DEBUG)
     try:
         key_id, secret_key = get_creds(args)
-    except ValueError as err:
-        sys.exit('error: {0}'.format(err.args[0]))
+    except subprocess.CalledProcessError as err:
+        sys.exit('error: obtaining credentials failed ({0})'.format(err))
     conn = EuareConnection(aws_access_key_id=key_id,
                            aws_secret_access_key=secret_key, is_secure=False,
                            port=PORT, host=HOST, path=SERVICE_PATH)
