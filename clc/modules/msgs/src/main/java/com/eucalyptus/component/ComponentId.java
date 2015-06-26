@@ -138,7 +138,11 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public List<? extends TransportDefinition> getTransports( ) {
     return Lists.newArrayList( BasicTransport.HTTP );
   }
-  
+
+  public boolean isUseServiceHostName( ) {
+    return false;
+  }
+
   public String getServicePath( final String... pathParts ) {
     return "/services/" + this.capitalizedName;
   }
