@@ -41,7 +41,7 @@
 #include "imager.h"
 #include "cache.h"
 #include "img.h"
-#include "vmdk.h"
+//#include "vmdk.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
