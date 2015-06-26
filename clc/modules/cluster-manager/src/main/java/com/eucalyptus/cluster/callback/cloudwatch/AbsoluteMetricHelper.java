@@ -69,6 +69,7 @@ public class AbsoluteMetricHelper {
       lastEntity.setTimestamp(newTimestamp);
       lastEntity.setLastMetricValue(newMetricValue);
       Entities.persist(lastEntity);
+      cache.clearSessionIfNecessary();
       cache.put(namespace, metricName, dimensionName, dimensionValue, lastEntity);
       returnValue =  null;
     } else {
@@ -90,10 +91,12 @@ public class AbsoluteMetricHelper {
         LOG.trace("too much time has passed, (" + elapsedTimeInMillis + " ms), starting over");
         lastEntity.setTimestamp(newTimestamp);
         lastEntity.setLastMetricValue(newMetricValue);
+        cache.clearSessionIfNecessary();
         returnValue = null;
       } else if (elapsedTimeInMillis > 0) { 
         lastEntity.setTimestamp(newTimestamp);
         lastEntity.setLastMetricValue(newMetricValue);
+        cache.clearSessionIfNecessary();
         if (valueDifference < -TOLERANCE) { // value has gone "down" (or down more than the TOLERANCE)
           // if the value difference is negative (i.e. has gone down, the assumption is that the NC has restarted, and the new
           // value started from some time in the past.  Best thing to do here is either assume it is a first point again, or

@@ -98,6 +98,9 @@ import org.hibernate.ejb.EntityManagerFactoryImpl;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.exception.LockAcquisitionException;
+import org.hibernate.jdbc.Work;
+import org.hibernate.metadata.ClassMetadata;
+import org.hibernate.persister.entity.AbstractEntityPersister;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.sql.JoinType;
 import com.eucalyptus.bootstrap.Databases;
@@ -358,6 +361,14 @@ public class Entities {
 
   public static <T> void flush( final T object ) {
     getTransaction( object ).txState.getEntityManager( ).flush( );
+  }
+
+  public static <T> void flushSession( final T object ) {
+    getTransaction( object ).txState.getSession().flush( );
+  }
+
+  public static <T> void clearSession( final T object ) {
+    getTransaction( object ).txState.getSession( ).clear( );
   }
 
   /**
