@@ -94,6 +94,10 @@
                 <inbound-endpoint ref="CloudWatchInternalVM" />
             </inbound>
             <component>
+                <entry-point-resolver-set>
+                    <reflection-entry-point-resolver/>
+                    <callable-entry-point-resolver/>
+                </entry-point-resolver-set>
                 <singleton-object class="com.eucalyptus.cloudwatch.service.CloudWatchService" />
             </component>
         </service>
