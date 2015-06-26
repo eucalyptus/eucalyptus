@@ -29,6 +29,7 @@ import requestbuilder.request
 import requestbuilder.service
 
 from eucalyptus_admin.commands import EucalyptusAdmin
+from eucalyptus_admin.exceptions import AWSError
 
 
 class Properties(requestbuilder.service.BaseService):
@@ -39,6 +40,9 @@ class Properties(requestbuilder.service.BaseService):
 
     ARGS = [Arg('-U', '--url', metavar='URL', help='''Connect to the
                 service using a specific URL.''')]
+
+    def handle_http_error(self, response):
+        raise AWSError(response)
 
 
 class PropertiesRequest(requestbuilder.request.AWSQueryRequest):
