@@ -62,23 +62,43 @@
 
 package com.eucalyptus.compute.common.internal.vm;
 
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Date;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.Callable;
 
 import javax.annotation.Nullable;
 import javax.persistence.Column;
-import javax.persistence.Embeddable;
+import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
+import javax.persistence.ManyToOne;
+import javax.persistence.MappedSuperclass;
 
-import org.hibernate.annotations.Parent;
+import org.apache.log4j.Logger;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
+import org.hibernate.id.UUIDHexGenerator;
 
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Databases;
+import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.upgrade.Upgrades;
+import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import groovy.lang.Closure;
+import groovy.sql.GroovyRowResult;
+import groovy.sql.Sql;
 
-@Embeddable
-public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
+@MappedSuperclass
+public abstract class VmVolumeAttachment extends AbstractPersistent implements Comparable<VmVolumeAttachment> {
+  private static final long serialVersionUID = 1L;
+
   public enum AttachmentState {
     attaching {
       
@@ -160,7 +180,9 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     public abstract String stateFlag( );
   }
   
-  @Parent
+  @ManyToOne( optional = false )
+  @JoinColumn( name = "vminstance_id", nullable = false, updatable = false )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private VmInstance vmInstance;
   @Column( name = "metadata_vm_volume_id", unique = true )
   private String	volumeId;
@@ -175,7 +197,7 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
   @Column( name = "metadata_vm_volume_at_startup", columnDefinition = "boolean default false" )
   private Boolean	attachedAtStartup;
   @Column( name = "metadata_vm_volume_attach_time" )
-  private Date		attachTime;
+  private Date attachTime;
   @Column( name = "metadata_vm_vol_delete_on_terminate" )
   private Boolean	deleteOnTerminate;
   @Column( name = "metadata_vm_volume_is_root_device", columnDefinition = "boolean default false" )
@@ -207,15 +229,6 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
 	this.deleteOnTerminate = deleteOnTerminate;
 	this.isRootDevice = rootDevice;
 	this.attachedAtStartup = attachedAtStartup;
-  }
-  
-  public static Function<edu.ucsb.eucalyptus.msgs.AttachedVolume, VmVolumeAttachment> fromAttachedVolume( final VmInstance vm ) {
-    return new Function<edu.ucsb.eucalyptus.msgs.AttachedVolume, VmVolumeAttachment>( ) {
-      @Override
-      public VmVolumeAttachment apply( edu.ucsb.eucalyptus.msgs.AttachedVolume vol ) {
-        return new VmVolumeAttachment( vm, vol.getVolumeId( ), vol.getDevice( ), vol.getRemoteDevice( ), vol.getStatus( ), vol.getAttachTime( ), false, Boolean.FALSE );
-      }
-    };
   }
   
   public static Function<VmVolumeAttachment, com.eucalyptus.compute.common.AttachedVolume> asAttachedVolume( final VmInstance vm ) {
@@ -345,12 +358,6 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     return builder.toString( );
   }
   
-  public static VmVolumeAttachment exampleWithVolumeId( final String volumeId ) {
-    VmVolumeAttachment ex = new VmVolumeAttachment( );
-    ex.setVolumeId( volumeId );
-    return ex;
-  }
-  
   static Predicate<VmVolumeAttachment> volumeDeviceFilter( final String deviceName ) {
     return new Predicate<VmVolumeAttachment>( ) {
       @Override
@@ -427,6 +434,102 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
       public String apply( @Nullable final VmVolumeAttachment volumeAttachment ) {
         return volumeAttachment == null ? null : volumeAttachment.getVolumeId( );
       }
+    }
+  }
+
+  public static class SchemaUpgradeForEntitySupport implements Callable<Boolean> {
+    private final String table;
+    private final String primaryKeyConstraintName;
+    private final String permUuidUniqueConstraintName;
+
+    public SchemaUpgradeForEntitySupport(
+        final String table,
+        final String primaryKeyConstraintName,
+        final String permUuidUniqueConstraintName
+    ) {
+      this.table = table;
+      this.primaryKeyConstraintName = primaryKeyConstraintName;
+      this.permUuidUniqueConstraintName = permUuidUniqueConstraintName;
+    }
+
+    private boolean columnExists( Sql sql, String name ) throws SQLException {
+      return !sql.rows(
+          "select column_name from information_schema.columns where table_name=? and column_name=?",
+          new Object[]{ table, name } ).isEmpty( );
+    }
+
+    @Override
+    public Boolean call( ) throws Exception {
+      final Logger LOG = Logger.getLogger( getClass( ) );
+      LOG.info( "Checking "+table+" for upgrade" );
+      Sql sql = null;
+      try {
+        sql = Bootstrap.isFinished( ) ? // if finished assume manual (re-)run
+            Databases.getBootstrapper( ).getConnection( "eucalyptus_cloud" ) :
+            Upgrades.DatabaseFilters.NEWVERSION.getConnection( "eucalyptus_cloud" );
+
+        sql.withTransaction( new Closure( this ) {
+          {
+            this.maximumNumberOfParameters = 1;
+          }
+
+          @Override
+          public Object call( final Object... args ) {
+            try {
+              final Sql sql = new Sql( (Connection) args[ 0 ] );
+
+              if ( !columnExists( sql, "id" ) ) {
+                sql.execute( "alter table " + table + " add column id character varying(255)" );
+                if ( !columnExists( sql, "creation_timestamp" ) ) {
+                  sql.execute( "alter table " + table + " add column creation_timestamp timestamp without time zone" );
+                }
+                if ( !columnExists( sql, "last_update_timestamp" ) ) {
+                  sql.execute( "alter table " + table + " add column last_update_timestamp timestamp without time zone" );
+                }
+                if ( !columnExists( sql, "metadata_perm_uuid" ) ) {
+                  sql.execute( "alter table " + table + " add column metadata_perm_uuid character varying(255)" );
+                }
+                if ( !columnExists( sql, "version" ) ) {
+                  sql.execute( "alter table " + table + " add column version integer" );
+                }
+
+                final List<GroovyRowResult> volumeAndInstanceIds = // instance id is foreign key
+                    sql.rows( "select metadata_vm_volume_id, vminstance_id from " + table + " order by metadata_vm_volume_id, vminstance_id" );
+
+                final UUIDHexGenerator generator = new UUIDHexGenerator( );
+                final java.sql.Date date = new java.sql.Date( System.currentTimeMillis( ) );
+                for ( final GroovyRowResult volumeAndInstanceIdRow : volumeAndInstanceIds ) {
+                  sql.execute( "update " + table + " set id = ?, creation_timestamp = ?, last_update_timestamp = ?, metadata_perm_uuid = ?, version = 1 where metadata_vm_volume_id = ? and vminstance_id = ?",
+                      new Object[]{
+                          generator.generate( null, null ),
+                          date,
+                          date,
+                          UUID.randomUUID( ).toString( ),
+                          volumeAndInstanceIdRow.getAt( 0 ),
+                          volumeAndInstanceIdRow.getAt( 1 ),
+                      } );
+                }
+
+                sql.execute( "alter table " + table + " alter column id set not null" );
+                sql.execute( "alter table " + table + " alter column metadata_perm_uuid set not null" );
+                sql.execute( "alter table " + table + " add constraint " + primaryKeyConstraintName + " primary key (id)" );
+                sql.execute( "alter table " + table + " add constraint " + permUuidUniqueConstraintName + " unique (metadata_perm_uuid)" );
+              } else {
+                LOG.info( "New columns exist, skipping upgrade" );
+              }
+            } catch ( Exception e ) {
+              throw Exceptions.toUndeclared( "Failed to upgrade "+table+" schema", e );
+            }
+            return null;
+          }
+        } );
+      } finally {
+        if ( sql != null ) {
+          sql.close( );
+        }
+      }
+
+      return Boolean.TRUE;
     }
   }
 }
