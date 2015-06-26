@@ -38,4 +38,9 @@ import com.eucalyptus.component.annotation.PublicService;
 @Description( "Eucalyptus identity service" )
 public class Identity extends ComponentId {
   private static final long serialVersionUID = 1L;
+
+  @Override
+  public boolean isUseServiceHostName( ) {
+    return true;
+  }
 }
