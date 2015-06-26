@@ -98,6 +98,8 @@ class Euctl(PropertiesRequest):
                 values, the methods of retrieving them are given.'''),
             Arg('-r', '--reset', action='store_true',
                 help='Reset the given variables to their default values.'),
+            Arg('-d', dest='show_default', action='store_true', help='''Show
+                variables' default values instead of their current values.'''),
             Arg('-n', dest='suppress_name', action='store_true',
                 help='''Suppress output of the variable name.  This is
                 useful for setting shell variables.'''),
@@ -177,8 +179,11 @@ class Euctl(PropertiesRequest):
                 req = DescribeProperties.from_other(self, Property=[key])
                 response = req.main()
                 for prop_dict in response.get('properties') or []:
-                    prop = _build_property(prop_dict.get('name'),
-                                           prop_dict.get('value'))
+                    if self.args.get('show_default'):
+                        value = prop_dict.get('defaultValue')
+                    else:
+                        value = prop_dict.get('value')
+                    prop = _build_property(prop_dict.get('name'), value)
                     if not self.args.get('suppress_all'):
                         prop.print_(
                             suppress_name=self.args.get('suppress_name'),
