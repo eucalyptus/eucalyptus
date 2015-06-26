@@ -88,7 +88,7 @@ class Euctl(PropertiesRequest):
         program's --edit and --dump options.
         ''')
 
-    ARGS = [Arg('prop_pairs', metavar='NAME[=VALUE]', nargs='*',
+    ARGS = [Arg('prop_pairs', metavar='NAME[=VALUE|=@FILE]', nargs='*',
                 type=_property_key_value,
                 help='''Output the specified variable, and where a value
                 is given, attempt to set it to the specified value.'''),
@@ -106,18 +106,15 @@ class Euctl(PropertiesRequest):
                 option overrides the behavior of -n.'''),
             MutuallyExclusiveArgList(
                 Arg('--edit', action='store_true', help='''Edit a structured
-                    variable interactively.  The value will be formatted in
-                    the manner specified by the --format option.  Only one
-                    variable may be edited per invocation.  When looking for
-                    an editor, the program will first try the environment
-                    variable VISUAL, then the environment variable EDITOR,
-                    and finally the default editor, vi(1).'''),
+                    variable interactively.  Only one variable may be edited
+                    per invocation.  When looking for an editor, the program
+                    will first try the environment variable VISUAL, then the
+                    environment variable EDITOR, and finally the default
+                    editor, vi(1).'''),
                 Arg('--dump', action='store_true', help='''Output the value of
-                    a structured variable in its entirety.  The value will
-                    be formatted in the manner specified by the --format
-                    option.''')),
+                    a structured variable in its entirety.''')),
             Arg('--format', choices=('json', 'yaml'), default='json',
-                help='''Use the specified format when displaying
+                help='''Try to use the specified format when displaying
                 a structured variable.  (default: json)''')]
 
     def configure(self):
@@ -139,7 +136,6 @@ class Euctl(PropertiesRequest):
 
     def main(self):
         # FIXME:  This doesn't handle empty property values.
-        # FIXME:  This doesn't behave well with the magic "euca" property.
         if self.args.get('dump'):
             prop_name = self.args.get('prop_pairs')[0][0]
             self.log.info('dumping property value   %s', prop_name)
@@ -158,6 +154,19 @@ class Euctl(PropertiesRequest):
                 print >> sys.stderr, prop_name, 'is unchanged'
         else:
             for key, val in self.args.get('prop_pairs') or [(None, None)]:
+                if key == 'euca':
+                    # DescribeProperties doesn't work on the magical,
+                    # groovy code-injecting "euca" property, so we have
+                    # to handle input and output in one shot.
+                    #
+                    # We don't do this all the time is case the value
+                    # we chose doesn't actually get set for some reason.
+                    self.log.info('handling one-shot property "euca"')
+                    req = ModifyPropertyValue.from_other(self, Name=key,
+                                                         Value=val)
+                    response = req.main()
+                    print response.get('value')
+                    continue
                 if val is not None:
                     self.log.info('setting property value   %s: %s', key, val)
                     self._set_property(key, value=val)
