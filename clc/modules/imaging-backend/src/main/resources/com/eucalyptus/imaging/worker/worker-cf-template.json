@@ -242,7 +242,7 @@
     },
     "SecurityGroup": {
       "Properties": {
-        "GroupDescription": "Imaging worker's security group",
+        "GroupDescription": "Security group for the Imaging workers",
         "Tags": [
           {
             "Key": "service-type",
