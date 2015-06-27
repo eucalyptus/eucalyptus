@@ -193,8 +193,12 @@ public class NetworkGroupManager {
       throw new ClientUnauthorizedComputeException( "Not authorized to delete network group " + group.getDisplayName() + " for " + ctx.getUser( ).getName( ) );
     }
 
-    if ( group.getVpcId( ) != null && NetworkGroups.defaultNetworkName( ).equals( group.getDisplayName( ) ) ) {
-      throw new ClientComputeException( "CannotDelete", "Group ("+group.getGroupId()+") cannot be deleted, it is the default group for " + group.getVpcId( ) );
+    if ( NetworkGroups.defaultNetworkName( ).equals( group.getDisplayName( ) ) ) {
+      if ( group.getVpcId( ) != null ) {
+        throw new ClientComputeException( "CannotDelete", "Group ("+group.getGroupId()+") cannot be deleted, it is the default group for " + group.getVpcId( ) );
+      } else {
+        throw new ClientComputeException( "InvalidGroup.Reserved", "The security group 'default' is reserved" );
+      }
     }
 
     if ( NetworkGroups.defaultNetworkName( ).equals( group.getDisplayName( ) ) ) {
