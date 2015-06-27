@@ -64,16 +64,9 @@ import org.hibernate.criterion.Restrictions;
 /**
  * Created by ethomas on 6/16/15.
  */
-@ConfigurableClass( root = "cloudwatch", description = "Parameters controlling cloud watch and reporting")
 public class AbsoluteMetricQueue {
 
-  @ConfigurableField(initial = "10000",
-    changeListener = PropertyChangeListeners.IsPositiveInteger.class,
-    description = "number of insert/update operations per transaction for absolute metrics")
   public static volatile Integer ABSOLUTE_METRIC_NUM_DB_OPERATIONS_PER_TRANSACTION = 10000;
-  @ConfigurableField(initial = "50",
-    changeListener = PropertyChangeListeners.IsPositiveInteger.class,
-    description = "number of insert/update operations until session flush (should match batch size) for absolute metrics")
   public static volatile Integer ABSOLUTE_METRIC_NUM_DB_OPERATIONS_UNTIL_SESSION_FLUSH = 50;
 
 

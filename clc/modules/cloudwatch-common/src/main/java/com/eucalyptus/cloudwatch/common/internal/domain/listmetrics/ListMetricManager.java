@@ -54,12 +54,10 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
-@ConfigurableClass( root = "cloudwatch", description = "Parameters controlling cloud watch and reporting")
 public class ListMetricManager {
 
-  @ConfigurableField(initial = "10000", description = "number of insert/update operations per transaction for list metrics")
   public static volatile Integer LIST_METRIC_NUM_DB_OPERATIONS_PER_TRANSACTION = 10000;
-  @ConfigurableField(initial = "50", description = "number of insert/update operations until session flush (should match batch size) for list metrics")
+
   public static volatile Integer LIST_METRIC_NUM_DB_OPERATIONS_UNTIL_SESSION_FLUSH = 50;
 
   private static final Logger LOG = Logger.getLogger(ListMetricManager.class);

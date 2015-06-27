@@ -51,16 +51,9 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
-@ConfigurableClass( root = "cloudwatch", description = "Parameters controlling cloud watch and reporting")
 public class MetricManager {
 
-  @ConfigurableField(initial = "10000",
-    changeListener = PropertyChangeListeners.IsPositiveInteger.class,
-    description = "number of insert/update operations per transaction for metric data")
   public static volatile Integer METRIC_DATA_NUM_DB_OPERATIONS_PER_TRANSACTION = 10000;
-  @ConfigurableField(initial = "50",
-    changeListener = PropertyChangeListeners.IsPositiveInteger.class,
-    description = "number of insert/update operations until session flush (should match batch size) for metric data")
   public static volatile Integer METRIC_DATA_NUM_DB_OPERATIONS_UNTIL_SESSION_FLUSH = 50;
 
   public static final Logger LOG = Logger.getLogger(MetricManager.class);
