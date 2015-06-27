@@ -17,7 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.cluster.callback.cloudwatch;
+package com.eucalyptus.cluster.callback.reporting;
 
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cloudwatch.common.CloudWatch;
@@ -32,9 +32,6 @@ import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataType;
 import com.eucalyptus.cloudwatch.common.msgs.StatisticSet;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.configurable.ConfigurableClass;
-import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -57,7 +54,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import com.eucalyptus.cluster.callback.cloudwatch.AbsoluteMetricHelper.MetricDifferenceInfo;
+import com.eucalyptus.cluster.callback.reporting.AbsoluteMetricHelper.MetricDifferenceInfo;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
 

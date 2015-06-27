@@ -18,7 +18,7 @@
  * additional information or have any questions.
  ************************************************************************/
 
-package com.eucalyptus.cluster.callback.cloudwatch;
+package com.eucalyptus.cluster.callback.reporting;
 
 import java.util.Date;
 import java.util.Map;
@@ -31,8 +31,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
 
-import com.eucalyptus.cluster.callback.cloudwatch.AbsoluteMetricQueue.AbsoluteMetricCache;
-import com.eucalyptus.cluster.callback.cloudwatch.AbsoluteMetricQueue.AbsoluteMetricCacheKey;
+import com.eucalyptus.cluster.callback.reporting.AbsoluteMetricQueue.AbsoluteMetricCache;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 

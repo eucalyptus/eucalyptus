@@ -25,9 +25,9 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
-import com.eucalyptus.cluster.callback.cloudwatch.AbsoluteMetricQueue;
-import com.eucalyptus.cluster.callback.cloudwatch.AbsoluteMetricQueueItem;
-import com.eucalyptus.cluster.callback.cloudwatch.CloudWatchHelper;
+import com.eucalyptus.cluster.callback.reporting.AbsoluteMetricQueue;
+import com.eucalyptus.cluster.callback.reporting.AbsoluteMetricQueueItem;
+import com.eucalyptus.cluster.callback.reporting.CloudWatchHelper;
 import edu.ucsb.eucalyptus.msgs.DescribeSensorsResponse;
 import edu.ucsb.eucalyptus.msgs.DescribeSensorsType;
 import edu.ucsb.eucalyptus.msgs.MetricCounterType;

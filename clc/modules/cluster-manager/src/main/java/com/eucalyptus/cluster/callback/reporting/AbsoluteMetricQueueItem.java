@@ -18,7 +18,7 @@
  * additional information or have any questions.
  ************************************************************************/
 
-package com.eucalyptus.cluster.callback.cloudwatch;
+package com.eucalyptus.cluster.callback.reporting;
 
 
 import com.eucalyptus.cloudwatch.common.msgs.MetricDatum;

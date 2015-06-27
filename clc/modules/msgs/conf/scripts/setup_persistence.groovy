@@ -108,7 +108,7 @@ PersistenceContexts.list( ).each { String context_name ->
       ] )
 
   LOG.info("Context name: = '" + context_name + "'");
-  if ( context_name in ["eucalyptus_cloudwatch", "eucalyptus_cloudwatch_backend"]) {
+  if ( context_name in ["eucalyptus_cloudwatch", "eucalyptus_cloudwatch_backend", "eucalyptus_cloud"]) {
     LOG.info("entering batch mode");
     hibernate_config.putAll( [
       /** batch **/
