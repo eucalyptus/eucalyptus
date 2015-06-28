@@ -161,9 +161,9 @@ class Privileged {
     }
     try {
       Accounts.reserveGlobalName( GlobalNamespace.Account_Alias, newName );
-      throw new AuthException( AuthException.CONFLICT );
-    } catch ( AuthException ae ) {
       account.setName( newName );
+    } catch ( AuthException ae ) {
+      throw new AuthException( AuthException.CONFLICT );
     }
   }
   
