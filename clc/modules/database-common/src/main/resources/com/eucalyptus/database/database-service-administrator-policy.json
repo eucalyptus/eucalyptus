@@ -11,7 +11,7 @@
    },
    {
     "Effect": "Allow",
-    "Action": [ "cloudformation:DescribeStacks" ],
+    "Action": [ "cloudformation:*" ],
     "Resource": [ "arn:aws:cloudformation::<AccountNumber>:stack/*" ]
    },
    {
