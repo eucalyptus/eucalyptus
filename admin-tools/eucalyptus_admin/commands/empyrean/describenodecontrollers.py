@@ -23,8 +23,6 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from requestbuilder import Arg, Filter, MutuallyExclusiveArgList
-
 from eucalyptus_admin.commands.ec2.describeinstances import DescribeInstances
 from eucalyptus_admin.commands.empyrean import EmpyreanRequest
 from eucalyptus_admin.commands.empyrean.describeservices import \
@@ -63,7 +61,7 @@ class DescribeNodeControllers(EmpyreanRequest, TableOutputMixin):
         return nodes
 
     def print_result(self, nodes):
-        for node_name, node in sorted(nodes.items()):
+        for _, node in sorted(nodes.items()):
             table = self.get_table(('NODE', 'zone', 'host', 'state',
                                     'details'))
             table.add_row(('NODE', node['zone'], node['host'],

@@ -27,7 +27,6 @@ from distutils.command.build_py import build_py
 from distutils.command.sdist import sdist
 import glob
 import os.path
-import sys
 
 from setuptools import find_packages, setup
 
@@ -92,7 +91,7 @@ setup(name='eucalyptus_admin',
       install_requires=['PyYAML', 'requestbuilder>=0.3'],
       license='BSD (Simplified)',
       platforms='Posix; MacOS X',
-      classifiers=['Development Status :: 2 - Pre-Alpha',
+      classifiers=['Development Status :: 4 - Beta',
                    'Intended Audience :: System Administrators',
                    'License :: OSI Approved :: Simplified BSD License',
                    'Operating System :: OS Independent',

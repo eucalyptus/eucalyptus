@@ -64,7 +64,7 @@ class MigrateInstances(EC2Request):
             self.params['AllowHosts'] = False
             self.params['DestinationHost'] = self.args['exclude_dest']
 
-    def postprocess(self):
+    def postprocess(self, _):
         req = ModifyService.from_other(self, Name=self.args['source'],
                                        State='STOP')
         req.main()

@@ -37,7 +37,7 @@ class _RenamingFilter(Filter):
         self.__server_name = server_name
 
     def convert(self, argval):
-        name, value = Filter.convert(self, argval)
+        _, value = Filter.convert(self, argval)
         return (self.__server_name, value)
 
 
