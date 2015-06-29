@@ -22,6 +22,7 @@ package com.eucalyptus.imaging.backend;
 
 import java.util.Date;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import javax.annotation.Nullable;
 import javax.persistence.DiscriminatorValue;
@@ -177,18 +178,23 @@ public class ImportVolumeImagingTask extends VolumeImagingTask {
         this.getTask().getImportVolume();
     if(volumeDetails.getVolume()!=null &&
         volumeDetails.getVolume().getId()!=null){
+      String volumeId = volumeDetails.getVolume().getId();
       try{
         // verify that volume actually exist
-        String volumeId = volumeDetails.getVolume().getId();
         Volumes.setSystemManagedFlag(null, volumeId, false);
         final List<Volume> eucaVolumes =
-        Ec2Client.getInstance().describeVolumes(this.getOwnerUserId(), Lists.newArrayList(volumeId));
+            Ec2Client.getInstance().describeVolumes(this.getOwnerUserId(), Lists.newArrayList(volumeId));
         if (eucaVolumes.size() != 0) {
           Ec2Client.getInstance().deleteVolume(this.getOwnerUserId(), volumeId);
         }
         setCleanUpDone(true);
+      } catch(final NoSuchElementException ex) {
+        LOG.debug("Can't find volume with ID " + volumeId + ". Probably it was already deleted");
+        setCleanUpDone(true);
       } catch(final Exception ex){
-        LOG.warn(String.format("Failed to delete the volume %s for import task %s", volumeDetails.getVolume().getId(), this.getDisplayName()));
+        LOG.error(ex);
+        LOG.warn(String.format("Failed to delete the volume %s for import task %s",
+            volumeDetails.getVolume().getId(), this.getDisplayName()));
       }
     }
   }
