@@ -1,0 +1,2 @@
+recursive-include conf *
+recursive-include man *
