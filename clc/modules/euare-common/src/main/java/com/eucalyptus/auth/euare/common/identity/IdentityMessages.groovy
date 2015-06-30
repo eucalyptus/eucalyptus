@@ -166,6 +166,7 @@ class ReserveNameType extends IdentityMessage {
   String namespace
   String name
   Integer duration // seconds
+  String clientToken // callers token identifying the request
 }
 
 class ReserveNameResponseType extends IdentityMessage {

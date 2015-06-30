@@ -186,7 +186,7 @@ class TestProvider implements PrincipalProvider {
   }
 
   @Override
-  void reserveGlobalName(final String namespace, final String name, final Integer duration) throws AuthException {
+  void reserveGlobalName(final String namespace, final String name, final Integer duration, final String clientToken ) {
   }
 
   @Override

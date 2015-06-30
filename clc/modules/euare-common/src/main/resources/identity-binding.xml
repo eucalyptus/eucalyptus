@@ -126,6 +126,7 @@
     <value name="Namespace" field="namespace" usage="optional"/>
     <value name="Name" field="name" usage="optional"/>
     <value name="Duration" field="duration" usage="optional"/>
+    <value name="ClientToken" field="clientToken" usage="optional"/>
   </mapping>
   <mapping name="SignCertificateResponse" class="com.eucalyptus.auth.euare.common.identity.SignCertificateResponseType">
     <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>

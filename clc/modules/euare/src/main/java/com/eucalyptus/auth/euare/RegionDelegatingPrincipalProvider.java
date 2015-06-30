@@ -296,7 +296,8 @@ public class RegionDelegatingPrincipalProvider implements PrincipalProvider {
   @Override
   public void reserveGlobalName( final String namespace,
                                  final String name,
-                                 final Integer duration ) throws AuthException {
+                                 final Integer duration,
+                                 final String clientToken ) throws AuthException {
     final int numberOfRegions = Iterables.size( regionConfigurationManager.getRegionInfos( ) );
     final Integer successes = numberOfRegions <= 1 ?
         1 : // skip if only a local region
@@ -305,7 +306,7 @@ public class RegionDelegatingPrincipalProvider implements PrincipalProvider {
           @Override
           public Either<AuthException,String> apply( final PrincipalProvider identityProvider ) {
             try {
-              identityProvider.reserveGlobalName( namespace, name, duration );
+              identityProvider.reserveGlobalName( namespace, name, duration, clientToken );
               return Either.right( "" );
             } catch ( AuthException e ) {
               if ( AsyncExceptions.isWebServiceErrorCode( e, AuthException.CONFLICT ) ||

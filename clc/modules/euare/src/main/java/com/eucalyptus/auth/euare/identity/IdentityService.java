@@ -302,7 +302,7 @@ public class IdentityService {
     final ReserveNameResult result = new ReserveNameResult( );
 
     try {
-      principalProvider.reserveGlobalName( request.getNamespace(), request.getName(), request.getDuration() );
+      principalProvider.reserveGlobalName( request.getNamespace(), request.getName(), request.getDuration(), request.getClientToken() );
     } catch ( AuthException e ) {
       if ( AuthException.CONFLICT.equals( e.getMessage( ) ) ) {
         throw new IdentityServiceSenderException( "Conflict", "Name not available: " + request.getName( ) );

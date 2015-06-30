@@ -83,8 +83,9 @@ public interface PrincipalProvider {
    * @param namespace The namespace for the name (qualified policy resource type)
    * @param name The name to reserve
    * @param duration The reservation duration in seconds
+   * @param clientToken Optional client identifier for the request
    */
-  void reserveGlobalName( String namespace, String name, Integer duration ) throws AuthException;
+  void reserveGlobalName( String namespace, String name, Integer duration, String clientToken ) throws AuthException;
 
   X509Certificate getCertificateByAccountNumber( String accountNumber ) throws AuthException;
 
