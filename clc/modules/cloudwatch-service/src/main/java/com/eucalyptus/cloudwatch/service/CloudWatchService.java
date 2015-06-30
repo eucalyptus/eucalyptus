@@ -102,15 +102,15 @@ public class CloudWatchService implements Callable {
         throw new ServiceDisabledException("Service Disabled");
       }
       final OwnerFullName ownerFullName = ctx.getUserFullName();
-      final List<MetricDatum> metricData = CloudWatchBackendServiceFieldValidator.validateMetricData(request.getMetricData());
-      final String namespace = CloudWatchBackendServiceFieldValidator.validateNamespace(request.getNamespace(), true);
+      final String namespace = CloudWatchServiceFieldValidator.validateNamespace(request.getNamespace(), true);
+      MetricType metricType = CloudWatchServiceFieldValidator.getMetricTypeFromNamespace(namespace);
       final Boolean privileged = Contexts.lookup().isPrivileged();
-      LOG.trace("Namespace=" + namespace);
-      LOG.trace("metricData="+metricData);
-      MetricType metricType = CloudWatchBackendServiceFieldValidator.getMetricTypeFromNamespace(namespace);
       if (metricType == MetricType.System && !privileged) {
         throw new InvalidParameterValueException("The value AWS/ for parameter Namespace is invalid.");
       }
+      final List<MetricDatum> metricData = CloudWatchServiceFieldValidator.validateMetricData(request.getMetricData(), metricType);
+      LOG.trace("Namespace=" + namespace);
+      LOG.trace("metricData="+metricData);
       MetricDataQueue.getInstance().insertMetricData(ownerFullName.getAccountNumber(), namespace, metricData, metricType);
     } catch (Exception ex) {
       handleException(ex);
@@ -128,11 +128,11 @@ public class CloudWatchService implements Callable {
       checkActionPermission(CloudWatchPolicySpec.CLOUDWATCH_LISTMETRICS, ctx);
 
       final OwnerFullName ownerFullName = ctx.getUserFullName();
-      final String namespace = CloudWatchBackendServiceFieldValidator.validateNamespace(request.getNamespace(), false);
-      final String metricName = CloudWatchBackendServiceFieldValidator.validateMetricName(request.getMetricName(),
+      final String namespace = CloudWatchServiceFieldValidator.validateNamespace(request.getNamespace(), false);
+      final String metricName = CloudWatchServiceFieldValidator.validateMetricName(request.getMetricName(),
         false);
       final Map<String, String> dimensionMap = TransformationFunctions.DimensionFiltersToMap.INSTANCE
-        .apply(CloudWatchBackendServiceFieldValidator.validateDimensionFilters(request.getDimensions()));
+        .apply(CloudWatchServiceFieldValidator.validateDimensionFilters(request.getDimensions()));
 
       // take all stats updated after two weeks ago
       final Date after = new Date(System.currentTimeMillis() - 2 * 7 * 24 * 60
@@ -177,30 +177,30 @@ public class CloudWatchService implements Callable {
 
       // TODO: parse statistics separately()?
       final OwnerFullName ownerFullName = ctx.getUserFullName();
-      Statistics statistics = CloudWatchBackendServiceFieldValidator.validateStatistics(request.getStatistics());
-      final String namespace = CloudWatchBackendServiceFieldValidator.validateNamespace(request.getNamespace(), true);
-      final String metricName = CloudWatchBackendServiceFieldValidator.validateMetricName(request.getMetricName(),
+      Statistics statistics = CloudWatchServiceFieldValidator.validateStatistics(request.getStatistics());
+      final String namespace = CloudWatchServiceFieldValidator.validateNamespace(request.getNamespace(), true);
+      final String metricName = CloudWatchServiceFieldValidator.validateMetricName(request.getMetricName(),
         true);
-      final Date startTime = MetricUtils.stripSeconds(CloudWatchBackendServiceFieldValidator.validateStartTime(request.getStartTime(), true));
-      final Date endTime = MetricUtils.stripSeconds(CloudWatchBackendServiceFieldValidator.validateEndTime(request.getEndTime(), true));
-      final Integer period = CloudWatchBackendServiceFieldValidator.validatePeriod(request.getPeriod(), true);
-      CloudWatchBackendServiceFieldValidator.validateDateOrder(startTime, endTime, "StartTime", "EndTime", true,
+      final Date startTime = MetricUtils.stripSeconds(CloudWatchServiceFieldValidator.validateStartTime(request.getStartTime(), true));
+      final Date endTime = MetricUtils.stripSeconds(CloudWatchServiceFieldValidator.validateEndTime(request.getEndTime(), true));
+      final Integer period = CloudWatchServiceFieldValidator.validatePeriod(request.getPeriod(), true);
+      CloudWatchServiceFieldValidator.validateDateOrder(startTime, endTime, "StartTime", "EndTime", true,
         true);
-      CloudWatchBackendServiceFieldValidator.validateNotTooManyDataPoints(startTime, endTime, period, 1440L);
+      CloudWatchServiceFieldValidator.validateNotTooManyDataPoints(startTime, endTime, period, 1440L);
 
       // TODO: null units here does not mean Units.NONE but basically a
       // wildcard.
       // Consider this case.
-      final Units units = CloudWatchBackendServiceFieldValidator.validateUnits(request.getUnit(), false);
+      final Units units = CloudWatchServiceFieldValidator.validateUnits(request.getUnit(), false);
       final Map<String, String> dimensionMap = TransformationFunctions.DimensionsToMap.INSTANCE
-        .apply(CloudWatchBackendServiceFieldValidator.validateDimensions(request.getDimensions()));
+        .apply(CloudWatchServiceFieldValidator.validateDimensions(request.getDimensions()));
       Collection<MetricStatistics> metrics;
       metrics = MetricManager.getMetricStatistics(
         ownerFullName.getAccountNumber(), metricName, namespace,
-        dimensionMap, CloudWatchBackendServiceFieldValidator.getMetricTypeFromNamespace(namespace), units,
+        dimensionMap, CloudWatchServiceFieldValidator.getMetricTypeFromNamespace(namespace), units,
         startTime, endTime, period);
       reply.getGetMetricStatisticsResult().setLabel(metricName);
-      ArrayList<Datapoint> datapoints = CloudWatchBackendServiceFieldValidator.convertMetricStatisticsToDatapoints(
+      ArrayList<Datapoint> datapoints = CloudWatchServiceFieldValidator.convertMetricStatisticsToDatapoints(
         statistics, metrics);
       if (datapoints.size() > 0) {
         Datapoints datapointsReply = new Datapoints();

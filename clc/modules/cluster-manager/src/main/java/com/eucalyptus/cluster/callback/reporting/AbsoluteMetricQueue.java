@@ -30,12 +30,15 @@ import com.eucalyptus.cloudwatch.common.msgs.MetricDatum;
 import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataResponseType;
 import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataType;
 import com.eucalyptus.cloudwatch.common.msgs.StatisticSet;
+import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -50,6 +53,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -147,11 +153,51 @@ public class AbsoluteMetricQueue {
     return Topology.lookup(CloudWatch.class);
   }
 
+  private static final int MAX_CONCURRENT_PUT_METRIC_DATA_REQUESTS = 16;
+  private static final ConcurrentMap<Pair<ComponentId, String>, ArrayBlockingQueue<String>> putMetricDataRequestCountMap =
+    Maps.newConcurrentMap();
+
   private static void callPutMetricData(List<PutMetricDataType> putMetricDataList) throws Exception {
-    ServiceConfiguration serviceConfiguration = createServiceConfiguration();
+    List<ServiceConfiguration> configurationServiceList = Lists.newArrayList(Topology.lookupMany(CloudWatch.class));
+    int numPutMetricDataRequests = 0;
     for (PutMetricDataType putMetricData: putMetricDataList) {
-      BaseMessage reply = AsyncRequests.dispatch(serviceConfiguration, putMetricData).get();
-      if (!(reply instanceof PutMetricDataResponseType)) {
+      final String requestToken = UUID.randomUUID().toString();
+      ServiceConfiguration serviceConfiguration = configurationServiceList.get(numPutMetricDataRequests % configurationServiceList.size());
+      numPutMetricDataRequests++;
+      Pair<ComponentId, String> key = new Pair<>(serviceConfiguration.getComponentId(), serviceConfiguration.getHostName());
+      ArrayBlockingQueue<String> queueTemp = putMetricDataRequestCountMap.get(key);
+      if (queueTemp == null) {
+        final ArrayBlockingQueue<String> value = new ArrayBlockingQueue<String>(MAX_CONCURRENT_PUT_METRIC_DATA_REQUESTS);
+        queueTemp = putMetricDataRequestCountMap.putIfAbsent(key, value);
+        if (queueTemp == null) {
+          queueTemp = value;
+        }
+      }
+      final ArrayBlockingQueue<String> queue = queueTemp;
+      queue.put(requestToken);
+      LOG.info("putting token" + requestToken);
+      LOG.info("current = " + queue.size());
+      LOG.info("size = " + putMetricData.toString().length());
+      try {
+        final CheckedListenableFuture<PutMetricDataResponseType> future =
+          AsyncRequests.<PutMetricDataType, PutMetricDataResponseType>dispatch(serviceConfiguration, putMetricData);
+        future.addListener(new Runnable() {
+          @Override
+          public void run() {
+            try {
+              future.get();
+            } catch (Exception ex) {
+              LOG.error(ex, ex);
+            }
+            queue.remove(requestToken);
+            LOG.info("removing token" + requestToken);
+            LOG.info("current = " + queue.size());
+          }
+        });
+      } catch (Exception ex) {
+        queue.remove(requestToken);
+        LOG.info("removing token" + requestToken);
+        LOG.info("current = " + queue.size());
         throw new EucalyptusCloudException("Unable to send put metric data to cloud watch");
       }
     }
