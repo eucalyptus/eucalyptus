@@ -23,8 +23,11 @@ import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import javax.annotation.Nonnull;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.euare.common.identity.Identity;
 import com.eucalyptus.auth.euare.persist.DatabasePrincipalProvider;
 import com.eucalyptus.auth.api.PrincipalProvider;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurationManager;
@@ -35,9 +38,11 @@ import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.SecurityTokenContent;
 import com.eucalyptus.auth.principal.UserPrincipal;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Either;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.util.async.AsyncExceptions;
 import com.google.common.base.Function;
@@ -408,16 +413,29 @@ public class RegionDelegatingPrincipalProvider implements PrincipalProvider {
       final List<Either<AuthException,R>> regionResults = Lists.newArrayList( );
       regionResults.add( invoker.apply( localProvider ) );
       if ( !Iterables.isEmpty( regionInfos ) ) {
+        final List<Future<Either<AuthException,R>>> regionResultFutures = Lists.newArrayList( );
         withRegions:
         for ( final RegionInfo regionInfo : regionInfos ) {
           if ( !RegionConfigurations.getRegionName( ).asSet( ).contains( regionInfo.getName( ) ) ) {
             for ( final RegionInfo.RegionService service : regionInfo.getServices( ) ) {
               if ( "identity".equals( service.getType( ) ) ) {
                 final PrincipalProvider remoteProvider = new RemotePrincipalProvider( service.getEndpoints( ) );
-                regionResults.add( invoker.apply( remoteProvider ) );
+                regionResultFutures.add( Threads.enqueue(
+                    Identity.class,
+                    RegionDelegatingPrincipalProvider.class,
+                    FUtils.cpartial( invoker, remoteProvider ) ) );
                 continue withRegions;
               }
             }
+          }
+        }
+        for ( final Future<Either<AuthException,R>> future : regionResultFutures ) {
+          try {
+            regionResults.add( future.get( ) );
+          } catch ( final InterruptedException e ) {
+            throw new AuthException( "Interrupted" );
+          } catch ( final ExecutionException e ) {
+            throw new RuntimeException( e ); // Any AuthException caught and unwrapped below
           }
         }
       }
