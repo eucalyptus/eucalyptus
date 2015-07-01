@@ -853,6 +853,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
 
             sem_p(inst_sem);
             instance->migration_state = MIGRATION_PREPARING;
+            instance->migrationTime = time(NULL); //In preparing state, so set migrationTime.
             euca_strncpy(instance->migration_src, sourceNodeName, HOSTNAME_SIZE);
             euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
             euca_strncpy(instance->migration_credentials, credentials, CREDENTIAL_SIZE);
@@ -873,8 +874,8 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             int error;
 
             //Fix for EUCA-10433, need instance struct in global_instances prior to doing volume ops
+            //The monitor thread will now pick up the instance, so the migrationTime must be set
             sem_p(inst_sem);
-            instance->migration_state = MIGRATION_PREPARING;            
             save_instance_struct(instance);
             error = add_instance(&global_instances, instance);
             copy_instances(); 
@@ -955,6 +956,7 @@ unroll:
 
             sem_p(inst_sem);
             instance->migration_state = MIGRATION_READY;
+            instance->migrationTime = 0; //Reset the timer, to ensure monitoring thread handles this properly. This is required when setting BOOTING state
             instance->bootTime = time(NULL);    // otherwise nc_state.booting_cleanup_threshold will kick in
             change_state(instance, BOOTING);    // not STAGING, since in that mode we don't poll hypervisor for info
             LOGINFO("[%s] migration destination ready %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
