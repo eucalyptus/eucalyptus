@@ -223,7 +223,7 @@ typedef struct mido_config_t {
     u32 int_rtaddr;
     u32 enabledCLCIp;
     int int_rtsn;
-    int flushcore;
+    int setupcore;
     midoname *hosts;
     midoname *routers;
     midoname *bridges;
@@ -281,8 +281,8 @@ int set_router_id(mido_config * mido, int id);
 
 int cidr_split(char *cidr, char *outnet, char *outslashnet, char *outgw, char *outplustwo);
 
-int initialize_mido(mido_config * mido, char *eucahome, char *ext_eucanetdhostname, char *ext_rthostname, char *ext_rtaddr, char *ext_rtiface, char *ext_pubnw,
-                    char *ext_pubgwip, char *int_rtnetwork, char *int_rtslashnet, int flushcore);
+int initialize_mido(mido_config * mido, char *eucahome, char *setupcore, char *ext_eucanetdhostname, char *ext_rthostname, char *ext_rtaddr, char *ext_rtiface, char *ext_pubnw,
+                    char *ext_pubgwip, char *int_rtnetwork, char *int_rtslashnet);
 int discover_mido_resources(mido_config * mido);
 
 int populate_mido_core(mido_config * mido, mido_core * midocore);
@@ -316,8 +316,6 @@ int connect_mido_vpc_instance(mido_vpc_subnet * vpcsubnet, mido_vpc_instance * i
 
 int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mido_vpc * vpc, mido_vpc_subnet * vpcsubnet, mido_vpc_instance * inst);
 int disconnect_mido_vpc_instance_elip(mido_vpc_instance * vpcinstance);
-
-int apply_mido_sg_instance_rules(globalNetworkInfo *gni, gni_instance *gniinstance, mido_config *mido, mido_vpc_subnet *vpcsubnet, mido_vpc_instance *vpcinstance, int mode, int inrulepos, int *outrulenumber);
 
 int free_mido_config(mido_config * mido);
 int free_mido_core(mido_core * midocore);

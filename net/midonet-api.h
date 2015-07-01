@@ -109,6 +109,7 @@ typedef struct midoname_t {
     char *resource_type;
     char *content_type;
     char *vers;
+    char *uri;
     int init;
 } midoname;
 
@@ -126,7 +127,7 @@ typedef struct midoname_t {
 
 //int mido_allocate_midorule(char *position, char *type, char *action, char *protocol, char *srcIAGuuid, char *src_port_min, char *src_port_max,  char *dstIAGuuid, char *dst_port_min, char *dst_port_max, char *matchForwardFlow, char *matchReturnFlow, char *nat_target, char *nat_port_min, char *nat_port_max, midorule *outrule);
 
-int mido_create_midoname(char *tenant, char *name, char *uuid, char *resource_type, char *content_type, char *vers, char *jsonbuf, midoname * outname);
+int mido_create_midoname(char *tenant, char *name, char *uuid, char *resource_type, char *content_type, char *vers, char *uri, char *jsonbuf, midoname * outname);
 void mido_free_midoname(midoname * name);
 void mido_free_midoname_list(midoname * name, int max_name);
 int mido_update_midoname(midoname * name);

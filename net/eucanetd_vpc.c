@@ -289,8 +289,8 @@ static int network_driver_init(eucanetdConfig * pConfig)
             return (1);
         }
 
-        rc = initialize_mido(pMidoConfig, pConfig->eucahome, pConfig->midoeucanetdhost, pConfig->midogwhost, pConfig->midogwip, pConfig->midogwiface,
-                             pConfig->midopubnw, pConfig->midopubgwip, "169.254.0.0", "17", pConfig->flushcore);
+        rc = initialize_mido(pMidoConfig, pConfig->eucahome, pConfig->midosetupcore, pConfig->midoeucanetdhost, pConfig->midogwhost, pConfig->midogwip, pConfig->midogwiface,
+                             pConfig->midopubnw, pConfig->midopubgwip, "169.254.0.0", "17");
         if (rc) {
             LOGERROR("could not initialize mido: please ensure that all required config options for MIDOVPC mode are set in eucalyptus.conf\n");
             return (1);
@@ -421,8 +421,8 @@ static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni)
             bzero(pMidoConfig, sizeof(mido_config));
         }
 
-        rc = initialize_mido(pMidoConfig, config->eucahome, config->midoeucanetdhost, config->midogwhost, config->midogwip, config->midogwiface,
-                             config->midopubnw, config->midopubgwip, "169.254.0.0", "17", config->flushcore);
+        rc = initialize_mido(pMidoConfig, config->eucahome, config->midosetupcore, config->midoeucanetdhost, config->midogwhost, config->midogwip, config->midogwiface,
+                             config->midopubnw, config->midopubgwip, "169.254.0.0", "17");
         if (rc) {
             LOGERROR("could not initialize mido config\n");
             ret = EUCANETD_RUN_ERROR_API;

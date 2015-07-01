@@ -222,6 +222,7 @@ void mido_free_midoname(midoname * name)
     EUCA_FREE(name->resource_type);
     EUCA_FREE(name->content_type);
     EUCA_FREE(name->vers);
+    EUCA_FREE(name->uri);
     bzero(name, sizeof(midoname));
 }
 
@@ -728,7 +729,7 @@ int mido_create_dhcp(midoname * devname, char *subnet, char *slashnet, char *gw,
     myname.resource_type = strdup("dhcp");
     myname.content_type = strdup("DhcpSubnet");
 
-    // this is not so great - need to re-work the resource interface to allow for arbitrary sized arrays
+    // TODO this is not so great - need to re-work the resource interface to allow for arbitrary sized arrays
     switch (max_dnsServers) {
     case 1:
         da = hex2dot(dnsServers[0]);
@@ -1328,9 +1329,7 @@ int mido_create_rule(midoname * chain, midoname * outname, ...)
 {
     int rc = 0, ret = 0, max_rules = 0, found = 0, i = 0;
     midoname myname, *rules = NULL;
-    va_list ap = { {0} }, ap1 = { {
-    0}}, ap2 = { {
-    0}};
+    va_list ap = {{0}}, ap1 = {{0}}, ap2 = {{0}};
 
     va_start(ap, outname);
     va_copy(ap1, ap);
@@ -1553,8 +1552,8 @@ int mido_create_port(midoname * devname, char *port_type, char *ip, char *nw, ch
     myname.tenant = strdup(devname->tenant);
     myname.resource_type = strdup("ports");
     myname.content_type = strdup("Port");
+    myname.vers = strdup("v2");
 
-    //{"type":"InteriorRouter","portAddress":"1.2.3.4","networkAddress":"1.2.3.0","networkLength":"24","tenantId":"euca_tenant_0"}
     if (ip && nw && slashnet) {
         rc = mido_create_resource(devname, 1, &myname, outname, "type", port_type, "portAddress", ip, "networkAddress", nw, "networkLength", slashnet, NULL);
     } else {
@@ -1608,7 +1607,7 @@ int mido_update_port(midoname * name, ...)
     va_list al = { {0} };
     int ret = 0;
     va_start(al, name);
-    ret = mido_update_resource("ports", "Port", "v1", name, &al);
+    ret = mido_update_resource("ports", "Port", "v2", name, &al);
     va_end(al);
 
     return (ret);
@@ -1845,19 +1844,97 @@ int mido_link_ports(midoname * a, midoname * b)
 //!
 //! @note
 //!
+int mido_update_resource_new(char *resource_type, char *content_type, char *vers, midoname * name, va_list * al)
+{
+    char url[EUCA_MAX_PATH];
+    int rc = 0, ret = 0;
+    char *key = NULL, *val = NULL, *payload=NULL;
+    struct json_object *jobj = NULL, *el = NULL, *jobjnew=NULL;
+    va_list ala = { {0} };
+
+    va_copy(ala, *al);
+    //    jsonbuf = mido_jsonize(NULL, &ala);
+    payload = mido_jsonize(name->tenant, &ala);
+    va_end(ala);
+
+    LOGDEBUG("MEHMEH: input jsonbuf: %s\n", name->jsonbuf);
+    LOGDEBUG("MEHMEH: payload to parse: %s\n", payload);
+
+    jobj = json_tokener_parse(name->jsonbuf);
+    jobjnew = json_tokener_parse(payload);
+
+    if (jobj) {
+        json_object_object_foreach(jobjnew, elkey, elval) {
+            val = SP(json_object_get_string(elval));
+            //            LOGDEBUG("WTF: %s | %s\n", elkey, val);
+            el = json_object_object_get(jobj, elkey);
+            //            json_object_object_get_ex(jobj, key, &el);
+            if (el) {
+                json_object_object_add(jobj, elkey, json_object_new_string(val));
+                //                json_object_put(el);
+            } else {
+                json_object_object_add(jobj, elkey, json_object_new_string(val));
+            }
+        }
+
+        EUCA_FREE(name->jsonbuf);
+        name->jsonbuf = strdup(json_object_to_json_string(jobj));
+
+        json_object_put(jobj);
+        ret = mido_update_midoname(name);
+    } else {
+        printf("ERROR: json_tokener_parse(...): returned NULL\n");
+        ret = 1;
+    }
+    EUCA_FREE(payload);
+
+    // ready to send the http_put
+    if (!ret) {
+        LOGDEBUG("MEHMEH: PUT payload: %s | %s\n", name->uri, name->jsonbuf);
+        //        rc = midonet_http_put(url, content_type, vers, name->jsonbuf);
+        rc = midonet_http_put(name->uri, content_type, vers, name->jsonbuf);
+        if (rc) {
+            ret = 1;
+        }
+    }
+    return (ret);
+}
+
 int mido_update_resource(char *resource_type, char *content_type, char *vers, midoname * name, va_list * al)
 {
     char url[EUCA_MAX_PATH];
     int rc = 0, ret = 0;
-    char *key = NULL, *val = NULL;
+    char *key = NULL, *val = NULL, *payload=NULL;
     struct json_object *jobj = NULL, *el = NULL;
+    va_list ala = { {0} };
+
+    va_copy(ala, *al);
+    payload = mido_jsonize(name->tenant, &ala);
+    va_end(ala);
+    
+    
+    if (payload) {
+        //        LOGDEBUG("MEHMEH: PUT payload: %s | %s\n", name->uri, payload);
+        rc = midonet_http_put(name->uri, content_type, vers, payload);
+        if (rc) {
+            ret = 1;
+        }
+        EUCA_FREE(payload);
+    }
+    return(ret);
+    
+    
+    //    LOGDEBUG("MEHMEH: input jsonbuf: %s\n", name->jsonbuf);
+    //    LOGDEBUG("MEHMEH: payload to parse: %s\n", payload);
 
     jobj = json_tokener_parse(name->jsonbuf);
+    //jobj = json_tokener_parse(payload);
     if (jobj) {
         key = va_arg(*al, char *);
         if (key)
             val = va_arg(*al, char *);
         while (key && val) {
+            //            LOGDEBUG("WTF: %s | %s\n", key, val);
             el = json_object_object_get(jobj, key);
             //            json_object_object_get_ex(jobj, key, &el);
             if (el) {
@@ -1881,14 +1958,17 @@ int mido_update_resource(char *resource_type, char *content_type, char *vers, mi
         ret = 1;
     }
 
+
     // ready to send the http_put
     if (!ret) {
-        snprintf(url, EUCA_MAX_PATH, "http://localhost:8080/midonet-api/%s/%s", resource_type, name->uuid);
-        rc = midonet_http_put(url, content_type, vers, name->jsonbuf);
+        //        rc = midonet_http_put(url, content_type, vers, name->jsonbuf);
+        rc = midonet_http_put(name->uri, content_type, vers, name->jsonbuf);
+        //        rc = midonet_http_put(name->uri, content_type, vers, payload);
         if (rc) {
             ret = 1;
         }
     }
+    EUCA_FREE(payload);
     return (ret);
 }
 
@@ -2163,13 +2243,26 @@ int mido_create_resource_v(midoname * parents, int max_parents, midoname * newna
     char tmpbuf[EUCA_MAX_PATH];
     int i;
 
+
     if (outname) {
         if (outname->init) {
-            LOGTRACE("ALREADY EXISTS: %s/%s\n", outname->resource_type, outname->uuid);
+            LOGTRACE("ALREADY EXISTS (INSTALLED): %s/%s/%s\n", outname->resource_type, outname->uuid, outname->jsonbuf);
+            
+            rc = mido_cmp_midoname_to_input_json_v(outname, al);
+            if (rc) {
+                //int mido_update_resource(char *resource_type, char *content_type, char *vers, midoname * name, va_list * al)
+                // TODO wrong URI for DHCP
+                //                LOGDEBUG("MEHMEH: updating mido resource: b4: %s\n", outname->jsonbuf);
+                mido_update_resource(newname->resource_type, newname->content_type, newname->vers, outname, al);
+                //                LOGDEBUG("MEHMEH: updated mido resource: after: %s\n", outname->jsonbuf);
+            }
+            LOGTRACE("ALREADY EXISTS (NEW): %d/%s\n", rc, newname->resource_type);
+            
             return (0);
         }
         bzero(outname, sizeof(midoname));
     }
+
     //  construct the payload
     payload = mido_jsonize(newname->tenant, al);
 
@@ -2207,6 +2300,11 @@ int mido_create_resource_v(midoname * parents, int max_parents, midoname * newna
             if (rc) {
                 ret = 1;
             } else {
+                mido_copy_midoname(outname, newname);
+                if (outhttp)
+                    outname->jsonbuf = strdup(outhttp);
+
+                /*
                 if (newname->tenant)
                     outname->tenant = strdup(newname->tenant);
                 if (outhttp)
@@ -2217,6 +2315,9 @@ int mido_create_resource_v(midoname * parents, int max_parents, midoname * newna
                     outname->content_type = strdup(newname->content_type);
                 if (newname->vers)
                     outname->vers = strdup(newname->vers);
+                if (newname->uri)
+                    outname->uri = strdup(newname->uri);
+                */
 
                 outname->init = 1;
                 ret = mido_update_midoname(outname);
@@ -2250,6 +2351,7 @@ int mido_cmp_midoname(midoname *a, midoname *b) {
     if (!ret) ret = strcmp(a->resource_type, b->resource_type);
     if (!ret) ret = strcmp(a->content_type, b->content_type);
     if (!ret) ret = strcmp(a->vers, b->vers);
+    if (!ret) ret = strcmp(a->uri, b->uri);
     
     if (ret) {
         return(1);
@@ -2297,6 +2399,8 @@ void mido_copy_midoname(midoname * dst, midoname * src)
         dst->content_type = strdup(src->content_type);
     if (src->vers)
         dst->vers = strdup(src->vers);
+    if (src->uri)
+        dst->uri = strdup(src->uri);
 
     dst->init = 1;
 }
@@ -2322,7 +2426,7 @@ void mido_copy_midoname(midoname * dst, midoname * src)
 //!
 //! @note
 //!
-int mido_create_midoname(char *tenant, char *name, char *uuid, char *resource_type, char *content_type, char *vers, char *jsonbuf, midoname * outname)
+int mido_create_midoname(char *tenant, char *name, char *uuid, char *resource_type, char *content_type, char *vers, char *uri, char *jsonbuf, midoname * outname)
 {
     if (!outname) {
         return (1);
@@ -2343,6 +2447,8 @@ int mido_create_midoname(char *tenant, char *name, char *uuid, char *resource_ty
         outname->jsonbuf = strdup(jsonbuf);
     if (vers)
         outname->vers = strdup(vers);
+    if (uri)
+        outname->uri = strdup(uri);
 
     outname->init = 1;
 
@@ -2398,6 +2504,15 @@ int mido_update_midoname(midoname * name)
             name->name = strdup(json_object_get_string(el));
             //            json_object_put(el);
         }
+
+        el = json_object_object_get(jobj, "uri");
+        //        json_object_object_get_ex(jobj, "name", &el);
+        if (el) {
+            EUCA_FREE(name->uri);
+            name->uri = strdup(json_object_get_string(el));
+            //            json_object_put(el);
+        }
+
         // special cases
         if (!strcmp(name->resource_type, "dhcp")) {
             char *subnet = NULL, *slashnet = NULL;
@@ -2720,7 +2835,9 @@ int midonet_http_put(char *url, char *resource_type, char *vers, char *payload)
         ret = 1;
     }
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcode);
-    if (httpcode != 200L && httpcode != 204L) {
+    if (httpcode == 200L || httpcode == 204L) {
+        ret = 0;
+    } else {
         ret = 1;
     }
 
@@ -3061,6 +3178,9 @@ int json_object_cmp(json_object * one, json_object * two)
                 ret = 1;
             }
         }
+    } else {
+        LOGTRACE("comparing strings: %s %s\n", json_object_to_json_string(one), json_object_to_json_string(two));
+        ret = strcmp(json_object_to_json_string(one), json_object_to_json_string(two));
     }
 
     LOGTRACE("result of cmp: %d\n", ret);
@@ -3321,6 +3441,7 @@ int mido_get_resources(midoname * parents, int max_parents, char *tenant, char *
         strcat(url, tmpbuf);
     }
     //    snprintf(url, EUCA_MAX_PATH, "http://localhost:8080/midonet-api/%s?tenant_id=%s", resource_type, tenant);
+    //    LOGDEBUG("MEHMEHURL: %s | %s\n", apistr, url);
     rc = midonet_http_get(url, apistr, &payload);
     //    LOGDEBUG("PAYLOAD: %s %s '%s' '%s' '%d' \n", SP(url), SP(payload), SP(resource_type), SP(tenant), max_parents);
     if (!rc) {
@@ -3354,7 +3475,6 @@ int mido_get_resources(midoname * parents, int max_parents, char *tenant, char *
                         names[names_max].init = 1;
                         mido_update_midoname(&(names[names_max]));
                         names_max++;
-
                         //                        json_object_put(resource);
                     }
                 }
