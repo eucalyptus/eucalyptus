@@ -38,6 +38,8 @@ import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricEntity;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.LinkedListMultimap;
+import com.google.common.collect.Multimap;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Disjunction;
@@ -227,58 +229,145 @@ public class ListMetricManager {
     }
   }
 
+  private static class NonPrefetchFields {
+    private MetricType metricType;
+    private Map<String, String> dimensionMap;
+
+    public NonPrefetchFields(MetricType metricType, Map<String, String> dimensionMap) {
+      this.metricType = metricType;
+      this.dimensionMap = dimensionMap;
+    }
+
+    public MetricType getMetricType() {
+      return metricType;
+    }
+
+    public void setMetricType(MetricType metricType) {
+      this.metricType = metricType;
+    }
+
+    public Map<String, String> getDimensionMap() {
+      return dimensionMap;
+    }
+
+    public void setDimensionMap(Map<String, String> dimensionMap) {
+      this.dimensionMap = dimensionMap;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+
+      NonPrefetchFields that = (NonPrefetchFields) o;
+
+      if (dimensionMap != null ? !dimensionMap.equals(that.dimensionMap) : that.dimensionMap != null) return false;
+      if (metricType != that.metricType) return false;
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      int result = metricType != null ? metricType.hashCode() : 0;
+      result = 31 * result + (dimensionMap != null ? dimensionMap.hashCode() : 0);
+      return result;
+    }
+  }
+  private static class PrefetchFields {
+    private String accountId;
+    private String namespace;
+    private String metricName;
+
+    public String getAccountId() {
+      return accountId;
+    }
+
+    public void setAccountId(String accountId) {
+      this.accountId = accountId;
+    }
+
+    public PrefetchFields(String accountId, String namespace, String metricName) {
+      this.accountId = accountId;
+      this.namespace = namespace;
+      this.metricName = metricName;
+    }
+
+    public String getNamespace() {
+      return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+      this.namespace = namespace;
+    }
+
+    public String getMetricName() {
+      return metricName;
+    }
+
+    public void setMetricName(String metricName) {
+      this.metricName = metricName;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+
+      PrefetchFields that = (PrefetchFields) o;
+
+      if (accountId != null ? !accountId.equals(that.accountId) : that.accountId != null) return false;
+      if (metricName != null ? !metricName.equals(that.metricName) : that.metricName != null) return false;
+      if (namespace != null ? !namespace.equals(that.namespace) : that.namespace != null) return false;
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      int result = accountId != null ? accountId.hashCode() : 0;
+      result = 31 * result + (namespace != null ? namespace.hashCode() : 0);
+      result = 31 * result + (metricName != null ? metricName.hashCode() : 0);
+      return result;
+    }
+  }
   public static void addMetricBatch(List<ListMetric> dataBatch) {
-    for (List<ListMetric> dataBatchPartial: Iterables.partition(dataBatch, LIST_METRIC_NUM_DB_OPERATIONS_PER_TRANSACTION)) {
+    // sort the collection by common items to require fewer lookups
+    Multimap<PrefetchFields, ListMetric> dataBatchPrefetchMap = LinkedListMultimap.create();
+    for (final ListMetric item: dataBatch) {
+      PrefetchFields prefetchFields = new PrefetchFields(item.getAccountId(), item.getNamespace(), item.getMetricName());
+      dataBatchPrefetchMap.put(prefetchFields, item);
+    }
+    // do db stuff in a certain number of operations per connection
+    for (List<PrefetchFields> prefetchFieldsListPartial : Iterables.partition(dataBatchPrefetchMap.keySet(), LIST_METRIC_NUM_DB_OPERATIONS_PER_TRANSACTION)) {
       EntityTransaction db = Entities.get(ListMetric.class);
       try {
         int numOperations = 0;
-        HashSet<ListMetricCacheLoadKey> loadedKeys = Sets.newHashSet();
-        HashMap<ListMetricCacheKey, ListMetric> cache = Maps.newHashMap();
-        Collection<ListMetricCacheKey> cacheKeys = prune(dataBatchPartial);
-        List<ListMetric> listMetrics = Lists.newArrayList();
-        for (ListMetricCacheKey cacheKey : cacheKeys) {
-          listMetrics.add(createMetric(cacheKey.getLoadKey().getAccountId(),
-            cacheKey.getMetricName(), cacheKey.getLoadKey().getNamespace(),
-            cacheKey.getDimensionMap(), cacheKey.getMetricType()));
-        }
-        for (ListMetric metric : listMetrics) {
-          ListMetricCacheLoadKey loadKey = new ListMetricCacheLoadKey();
-          loadKey.setAccountId(metric.getAccountId());
-          loadKey.setNamespace(metric.getNamespace());
-          if (!loadedKeys.contains(loadKey)) {
-            Criteria criteria = Entities.createCriteria(ListMetric.class)
-              .add(Restrictions.eq("accountId", metric.getAccountId()))
-              .add(Restrictions.eq("namespace", metric.getNamespace()));
-            List<ListMetric> results = (List<ListMetric>) criteria.list();
-            for (ListMetric result : results) {
-              ListMetricCacheKey key = new ListMetricCacheKey();
-              key.setLoadKey(loadKey);
-              key.setDimensionMap(result.getDimensionMap());
-              key.setMetricName(result.getMetricName());
-              key.setMetricType(result.getMetricType());
-              cache.put(key, result);
-            }
-            loadedKeys.add(loadKey);
+        for (PrefetchFields prefetchFields: prefetchFieldsListPartial) {
+          // Prefetch all list metrics with same metric name/namespace/account id
+          Map<NonPrefetchFields, ListMetric> dataCache = Maps.newHashMap();
+          Criteria criteria = Entities.createCriteria(ListMetric.class)
+            .add(Restrictions.eq("accountId", prefetchFields.getAccountId()))
+            .add(Restrictions.eq("namespace", prefetchFields.getNamespace()))
+            .add(Restrictions.eq("namespace", prefetchFields.getMetricName()));
+          List<ListMetric> results = (List<ListMetric>) criteria.list();
+          for (ListMetric result : results) {
+            dataCache.put(new NonPrefetchFields(result.getMetricType(), result.getDimensionMap()), result);
           }
-
-          ListMetricCacheKey key = new ListMetricCacheKey();
-          key.setDimensionMap(metric.getDimensionMap());
-          key.setLoadKey(loadKey);
-          key.setMetricName(metric.getMetricName());
-          key.setMetricType(metric.getMetricType());
-          ListMetric inDbMetric = cache.get(key);
-          if (inDbMetric != null) {
-            inDbMetric.setVersion(1 + inDbMetric.getVersion());
-          } else {
-            cache.put(key, metric);
-            Entities.persist(metric);
+          for (ListMetric listMetric : dataBatchPrefetchMap.get(prefetchFields)) {
+            NonPrefetchFields cacheKey = new NonPrefetchFields(listMetric.getMetricType(), listMetric.getDimensionMap());
+            if (dataCache.containsKey(cacheKey)) {
+              dataCache.get(cacheKey).updateTimeStamps();
+            } else {
+              Entities.persist(listMetric);
+              dataCache.put(cacheKey, listMetric);
+            }
           }
           numOperations++;
           if (numOperations % LIST_METRIC_NUM_DB_OPERATIONS_UNTIL_SESSION_FLUSH == 0) {
             Entities.flushSession(ListMetric.class);
             Entities.clearSession(ListMetric.class);
           }
-
         }
         db.commit();
       } catch (RuntimeException ex) {
@@ -289,24 +378,6 @@ public class ListMetricManager {
           db.rollback();
       }
     }
-  }
-
-
-  private static Collection<ListMetricCacheKey> prune(
-      List<ListMetric> dataBatch) {
-    Collection<ListMetricCacheKey> returnValue = new LinkedHashSet<ListMetricCacheKey>();
-    for (ListMetric item: dataBatch) {
-      ListMetricCacheLoadKey loadKey = new ListMetricCacheLoadKey();
-      loadKey.setAccountId(item.getAccountId());
-      loadKey.setNamespace(item.getNamespace());
-      ListMetricCacheKey key = new ListMetricCacheKey();
-      key.setDimensionMap(item.getDimensionMap());
-      key.setLoadKey(loadKey);
-      key.setMetricName(item.getMetricName());
-      key.setMetricType(item.getMetricType());
-      returnValue.add(key);
-    }
-    return returnValue;
   }
 
   public static ListMetric createListMetric(String accountId, String metricName, MetricEntity.MetricType metricType, String namespace, Map<String, String> dimensionMap) {
@@ -332,123 +403,4 @@ public class ListMetricManager {
     return metric;
   }
 
-  private static class ListMetricCacheLoadKey {
-    String accountId;
-    String namespace;
-    public String getAccountId() {
-      return accountId;
-    }
-    public void setAccountId(String accountId) {
-      this.accountId = accountId;
-    }
-    public String getNamespace() {
-      return namespace;
-    }
-    public void setNamespace(String namespace) {
-      this.namespace = namespace;
-    }
-    @Override
-    public int hashCode() {
-      final int prime = 31;
-      int result = 1;
-      result = prime * result
-          + ((accountId == null) ? 0 : accountId.hashCode());
-      result = prime * result
-          + ((namespace == null) ? 0 : namespace.hashCode());
-      return result;
-    }
-    @Override
-    public boolean equals(Object obj) {
-      if (this == obj)
-        return true;
-      if (obj == null)
-        return false;
-      if (getClass() != obj.getClass())
-        return false;
-      ListMetricCacheLoadKey other = (ListMetricCacheLoadKey) obj;
-      if (accountId == null) {
-        if (other.accountId != null)
-          return false;
-      } else if (!accountId.equals(other.accountId))
-        return false;
-      if (namespace == null) {
-        if (other.namespace != null)
-          return false;
-      } else if (!namespace.equals(other.namespace))
-        return false;
-      return true;
-    }
-  }
-
-  private static class ListMetricCacheKey {
-    String metricName;
-    MetricType metricType;
-    ListMetricCacheLoadKey loadKey;
-    Map<String, String> dimensionMap;
-    public ListMetricCacheLoadKey getLoadKey() {
-      return loadKey;
-    }
-    public void setLoadKey(ListMetricCacheLoadKey loadKey) {
-      this.loadKey = loadKey;
-    }
-    public Map<String, String> getDimensionMap() {
-      return dimensionMap;
-    }
-    public void setDimensionMap(Map<String, String> dimensionMap) {
-      this.dimensionMap = dimensionMap;
-    }
-    public String getMetricName() {
-      return metricName;
-    }
-    public void setMetricName(String metricName) {
-      this.metricName = metricName;
-    }
-    public MetricType getMetricType() {
-      return metricType;
-    }
-    public void setMetricType(MetricType metricType) {
-      this.metricType = metricType;
-    }
-    @Override
-    public int hashCode() {
-      final int prime = 31;
-      int result = 1;
-      result = prime * result
-          + ((dimensionMap == null) ? 0 : dimensionMap.hashCode());
-      result = prime * result + ((loadKey == null) ? 0 : loadKey.hashCode());
-      result = prime * result
-          + ((metricName == null) ? 0 : metricName.hashCode());
-      result = prime * result
-          + ((metricType == null) ? 0 : metricType.hashCode());
-      return result;
-    }
-    @Override
-    public boolean equals(Object obj) {
-      if (this == obj)
-        return true;
-      if (obj == null)
-        return false;
-      if (getClass() != obj.getClass())
-        return false;
-      ListMetricCacheKey other = (ListMetricCacheKey) obj;
-      if (dimensionMap == null) {
-        if (other.dimensionMap != null)
-          return false;
-      } else if (!dimensionMap.equals(other.dimensionMap))
-        return false;
-      if (loadKey == null) {
-        if (other.loadKey != null)
-          return false;
-      } else if (!loadKey.equals(other.loadKey))
-        return false;
-      if (metricName == null) {
-        if (other.metricName != null)
-          return false;
-      } else if (!metricName.equals(other.metricName))
-        return false;
-      if (metricType != other.metricType)
-        return false;
-      return true;
-    }
-  }
 }

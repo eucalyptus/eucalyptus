@@ -30,19 +30,18 @@ import com.eucalyptus.cloudwatch.common.msgs.MetricDatum;
 import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataResponseType;
 import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataType;
 import com.eucalyptus.cloudwatch.common.msgs.StatisticSet;
-import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import org.apache.log4j.Logger;
@@ -53,9 +52,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -153,51 +149,11 @@ public class AbsoluteMetricQueue {
     return Topology.lookup(CloudWatch.class);
   }
 
-  private static final int MAX_CONCURRENT_PUT_METRIC_DATA_REQUESTS = 16;
-  private static final ConcurrentMap<Pair<ComponentId, String>, ArrayBlockingQueue<String>> putMetricDataRequestCountMap =
-    Maps.newConcurrentMap();
-
   private static void callPutMetricData(List<PutMetricDataType> putMetricDataList) throws Exception {
-    List<ServiceConfiguration> configurationServiceList = Lists.newArrayList(Topology.lookupMany(CloudWatch.class));
-    int numPutMetricDataRequests = 0;
+    ServiceConfiguration serviceConfiguration = createServiceConfiguration();
     for (PutMetricDataType putMetricData: putMetricDataList) {
-      final String requestToken = UUID.randomUUID().toString();
-      ServiceConfiguration serviceConfiguration = configurationServiceList.get(numPutMetricDataRequests % configurationServiceList.size());
-      numPutMetricDataRequests++;
-      Pair<ComponentId, String> key = new Pair<>(serviceConfiguration.getComponentId(), serviceConfiguration.getHostName());
-      ArrayBlockingQueue<String> queueTemp = putMetricDataRequestCountMap.get(key);
-      if (queueTemp == null) {
-        final ArrayBlockingQueue<String> value = new ArrayBlockingQueue<String>(MAX_CONCURRENT_PUT_METRIC_DATA_REQUESTS);
-        queueTemp = putMetricDataRequestCountMap.putIfAbsent(key, value);
-        if (queueTemp == null) {
-          queueTemp = value;
-        }
-      }
-      final ArrayBlockingQueue<String> queue = queueTemp;
-      queue.put(requestToken);
-      LOG.info("putting token" + requestToken);
-      LOG.info("current = " + queue.size());
-      LOG.info("size = " + putMetricData.toString().length());
-      try {
-        final CheckedListenableFuture<PutMetricDataResponseType> future =
-          AsyncRequests.<PutMetricDataType, PutMetricDataResponseType>dispatch(serviceConfiguration, putMetricData);
-        future.addListener(new Runnable() {
-          @Override
-          public void run() {
-            try {
-              future.get();
-            } catch (Exception ex) {
-              LOG.error(ex, ex);
-            }
-            queue.remove(requestToken);
-            LOG.info("removing token" + requestToken);
-            LOG.info("current = " + queue.size());
-          }
-        });
-      } catch (Exception ex) {
-        queue.remove(requestToken);
-        LOG.info("removing token" + requestToken);
-        LOG.info("current = " + queue.size());
+      BaseMessage reply = AsyncRequests.dispatch(serviceConfiguration, putMetricData).get();
+      if (!(reply instanceof PutMetricDataResponseType)) {
         throw new EucalyptusCloudException("Unable to send put metric data to cloud watch");
       }
     }
@@ -251,45 +207,77 @@ public class AbsoluteMetricQueue {
   protected static List<AbsoluteMetricQueueItem> dealWithAbsoluteMetrics(
     List<AbsoluteMetricQueueItem> dataBatch) {
     List<AbsoluteMetricQueueItem> dataToInsert = new ArrayList<AbsoluteMetricQueueItem>();
-    for (List<AbsoluteMetricQueueItem> dataBatchPartial: Iterables.partition(dataBatch, ABSOLUTE_METRIC_NUM_DB_OPERATIONS_PER_TRANSACTION)) {
+    // We need to do some sorting to allow fewer db lookups.  There is also logic for different metric types, so they will be sorted now.
 
+    // Some points do not actually go in.  If a data point represents an absolute value, the first one does not go in.
+    // Also, some data points are added while we go through the list (derived metrics)
+
+    // Deal with the absolute metrics
+    // CPUUtilization
+    // VolumeReadOps
+    // VolumeWriteOps
+    // VolumeConsumedReadWriteOps
+    // VolumeReadBytes
+    // VolumeWriteBytes
+    // VolumeTotalReadTime
+    // VolumeTotalWriteTime
+    // VolumeTotalReadWriteTime (used to calculate VolumeIdleTime)
+    // DiskReadOps
+    // DiskWriteOps
+    // DiskReadBytes
+    // DiskWriteBytes
+    // NetworkIn
+    // NetworkOut
+
+    Multimap<String, AbsoluteMetricQueueItem> instanceMetricMap = LinkedListMultimap.create();
+    Multimap<String, AbsoluteMetricQueueItem> volumeMetricMap = LinkedListMultimap.create();
+    for (final AbsoluteMetricQueueItem item : dataBatch) {
+      String nameSpace = item.getNamespace();
+      MetricDatum datum = item.getMetricDatum();
+      if ("AWS/EBS".equals(nameSpace)) {
+        String volumeId = null;
+        if ((datum.getDimensions() != null) && (datum.getDimensions().getMember() != null)) {
+          for (Dimension dimension : datum.getDimensions().getMember()) {
+            if ("VolumeId".equals(dimension.getName())) {
+              volumeId = dimension.getValue();
+            }
+          }
+        }
+        if (volumeId == null) {
+          continue; // this data point doesn't count.
+        } else {
+          volumeMetricMap.put(volumeId, item);
+        }
+      } else if ("AWS/EC2".equals(nameSpace)) {
+        String instanceId = null;
+        if ((datum.getDimensions() != null) && (datum.getDimensions().getMember() != null)) {
+          for (Dimension dimension : datum.getDimensions().getMember()) {
+            if ("InstanceId".equals(dimension.getName())) {
+              instanceId = dimension.getValue();
+            }
+          }
+        }
+        if (instanceId == null) {
+          continue; // this data point doesn't count.
+        } else {
+          instanceMetricMap.put(instanceId, item);
+        }
+      } else {
+        // not really an absolute metric, just leave it alone
+        dataToInsert.add(item);
+      }
+    }
+    for (List<String> partialVolumeKeySet: Iterables.partition(volumeMetricMap.keySet(), ABSOLUTE_METRIC_NUM_DB_OPERATIONS_PER_TRANSACTION)) {
       EntityTransaction db = Entities.get(AbsoluteMetricHistory.class);
       try {
-        AbsoluteMetricCache cache = new AbsoluteMetricCache(db);
-        // Some points do not actually go in.  If a data point represents an absolute value, the first one does not go in.
-        // Also, some data points are added while we go through the list (derived metrics)
-
-        for (final AbsoluteMetricQueueItem item : dataBatchPartial) {
-          String accountId = item.getAccountId();
-          String nameSpace = item.getNamespace();
-          MetricDatum datum = item.getMetricDatum();
-          // Deal with the absolute metrics
-          // CPUUtilization
-          // VolumeReadOps
-          // VolumeWriteOps
-          // VolumeConsumedReadWriteOps
-          // VolumeReadBytes
-          // VolumeWriteBytes
-          // VolumeTotalReadTime
-          // VolumeTotalWriteTime
-          // VolumeTotalReadWriteTime (used to calculate VolumeIdleTime)
-          // DiskReadOps
-          // DiskWriteOps
-          // DiskReadBytes
-          // DiskWriteBytes
-          // NetworkIn
-          // NetworkOut
-
-          if ("AWS/EBS".equals(nameSpace)) {
-            String volumeId = null;
-            if ((datum.getDimensions() != null) && (datum.getDimensions().getMember() != null)) {
-              for (Dimension dimension : datum.getDimensions().getMember()) {
-                if ("VolumeId".equals(dimension.getName())) {
-                  volumeId = dimension.getValue();
-                  cache.load(nameSpace, "VolumeId", volumeId);
-                }
-              }
-            }
+        int numVolumes = 0;
+        for (String volumeId: partialVolumeKeySet) {
+          AbsoluteMetricCache cache = new AbsoluteMetricCache(db);
+          cache.load("AWS/EBS", "VolumeId", volumeId);
+          for (AbsoluteMetricQueueItem item : volumeMetricMap.get(volumeId)) {
+            String accountId = item.getAccountId();
+            String nameSpace = item.getNamespace();
+            MetricDatum datum = item.getMetricDatum();
             if (EBS_ABSOLUTE_METRICS.containsKey(datum.getMetricName())) {
               // we check if the point below is a 'first' point, or maybe a point in the past.  Either case reject it.
               if (!adjustAbsoluteVolumeStatisticSet(cache, datum, datum.getMetricName(), EBS_ABSOLUTE_METRICS.get(datum.getMetricName()), volumeId))
@@ -312,18 +300,35 @@ public class AbsoluteMetricQueue {
             if ("VolumeQueueLength".equals(datum.getMetricName())) {
               if (!adjustAbsoluteVolumeQueueLengthStatisticSet(cache, datum, volumeId)) continue;
             }
+            // Once here, our item has been appropriately adjusted.  Add it
+            dataToInsert.add(item);
           }
-
-          if ("AWS/EC2".equals(nameSpace)) {
-            String instanceId = null;
-            if ((datum.getDimensions() != null) && (datum.getDimensions().getMember() != null)) {
-              for (Dimension dimension : datum.getDimensions().getMember()) {
-                if ("InstanceId".equals(dimension.getName())) {
-                  instanceId = dimension.getValue();
-                  cache.load(nameSpace, "InstanceId", instanceId);
-                }
-              }
-            }
+          numVolumes++;
+          if (numVolumes % ABSOLUTE_METRIC_NUM_DB_OPERATIONS_UNTIL_SESSION_FLUSH == 0) {
+            Entities.flushSession(AbsoluteMetricHistory.class);
+            Entities.clearSession(AbsoluteMetricHistory.class);
+          }
+        }
+        db.commit();
+      } catch (RuntimeException ex) {
+        Logs.extreme().error(ex, ex);
+        throw ex;
+      } finally {
+        if (db.isActive())
+          db.rollback();
+      }
+    }
+    for (List<String> partialInstanceKeySet: Iterables.partition(instanceMetricMap.keySet(), ABSOLUTE_METRIC_NUM_DB_OPERATIONS_PER_TRANSACTION)) {
+      EntityTransaction db = Entities.get(AbsoluteMetricHistory.class);
+      try {
+        int numInstances = 0;
+        for (String instanceId: partialInstanceKeySet) {
+          AbsoluteMetricCache cache = new AbsoluteMetricCache(db);
+          cache.load("AWS/EC2", "InstanceId", instanceId);
+          for (AbsoluteMetricQueueItem item : instanceMetricMap.get(instanceId)) {
+            String accountId = item.getAccountId();
+            String nameSpace = item.getNamespace();
+            MetricDatum datum = item.getMetricDatum();
             if (EC2_ABSOLUTE_METRICS.containsKey(datum.getMetricName())) {
               if (!adjustAbsoluteInstanceStatisticSet(cache, datum, datum.getMetricName(), EC2_ABSOLUTE_METRICS.get(datum.getMetricName()), instanceId))
                 continue;
@@ -332,8 +337,14 @@ public class AbsoluteMetricQueue {
               if (!adjustAbsoluteInstanceCPUStatisticSet(cache, datum, "CPUUtilizationMSAbsolute", "CPUUtilization", instanceId))
                 continue;
             }
+            // Once here, our item has been appropriately adjusted.  Add it
+            dataToInsert.add(item);
           }
-          dataToInsert.add(item); // this data point is ok
+          numInstances++;
+          if (numInstances % ABSOLUTE_METRIC_NUM_DB_OPERATIONS_UNTIL_SESSION_FLUSH == 0) {
+            Entities.flushSession(AbsoluteMetricHistory.class);
+            Entities.clearSession(AbsoluteMetricHistory.class);
+          }
         }
         db.commit();
       } catch (RuntimeException ex) {
@@ -543,22 +554,13 @@ public class AbsoluteMetricQueue {
       this.db = db;
     }
 
-    private int numAdjustments = 0;
-    public void clearSessionIfNecessary() {
-      numAdjustments++;
-      if (numAdjustments % ABSOLUTE_METRIC_NUM_DB_OPERATIONS_UNTIL_SESSION_FLUSH == 0) {
-        Entities.flushSession(AbsoluteMetricHistory.class);
-        Entities.clearSession(AbsoluteMetricHistory.class);
-      }
-    }
-
     public void load(String namespace, String dimensionName, String dimensionValue) {
       AbsoluteMetricLoadCacheKey loadKey = new AbsoluteMetricLoadCacheKey(namespace, dimensionName);
       if (!loaded.contains(loadKey)) {
         Criteria criteria = Entities.createCriteria(AbsoluteMetricHistory.class)
           .add( Restrictions.eq("namespace", namespace) )
-          .add( Restrictions.eq( "dimensionName", dimensionName ) );
-//            .add( Restrictions.eq( "dimensionValue", dimensionValue ) );
+//          .add( Restrictions.eq( "dimensionName", dimensionName ) );
+          .add( Restrictions.eq( "dimensionValue", dimensionValue ) );
         List<AbsoluteMetricHistory> list = (List<AbsoluteMetricHistory>) criteria.list();
         for (AbsoluteMetricHistory item: list) {
           cacheMap.put(new AbsoluteMetricCacheKey(item), item);
@@ -582,55 +584,48 @@ public class AbsoluteMetricQueue {
 
   public static class AbsoluteMetricLoadCacheKey {
     private String namespace;
-    private String dimensionName;
+    private String dimensionValue;
 
     public String getNamespace() {
       return namespace;
     }
+
     public void setNamespace(String namespace) {
       this.namespace = namespace;
     }
-    public String getDimensionName() {
-      return dimensionName;
+
+    public String getDimensionValue() {
+      return dimensionValue;
     }
-    public void setDimensionName(String dimensionName) {
-      this.dimensionName = dimensionName;
+
+    public void setDimensionValue(String dimensionValue) {
+      this.dimensionValue = dimensionValue;
     }
-    private AbsoluteMetricLoadCacheKey(String namespace, String dimensionName) {
-      super();
+
+    public AbsoluteMetricLoadCacheKey(String namespace, String dimensionValue) {
       this.namespace = namespace;
-      this.dimensionName = dimensionName;
+      this.dimensionValue = dimensionValue;
     }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+
+      AbsoluteMetricLoadCacheKey that = (AbsoluteMetricLoadCacheKey) o;
+
+      if (dimensionValue != null ? !dimensionValue.equals(that.dimensionValue) : that.dimensionValue != null)
+        return false;
+      if (namespace != null ? !namespace.equals(that.namespace) : that.namespace != null) return false;
+
+      return true;
+    }
+
     @Override
     public int hashCode() {
-      final int prime = 31;
-      int result = 1;
-      result = prime * result
-        + ((dimensionName == null) ? 0 : dimensionName.hashCode());
-      result = prime * result
-        + ((namespace == null) ? 0 : namespace.hashCode());
+      int result = namespace != null ? namespace.hashCode() : 0;
+      result = 31 * result + (dimensionValue != null ? dimensionValue.hashCode() : 0);
       return result;
-    }
-    @Override
-    public boolean equals(Object obj) {
-      if (this == obj)
-        return true;
-      if (obj == null)
-        return false;
-      if (getClass() != obj.getClass())
-        return false;
-      AbsoluteMetricLoadCacheKey other = (AbsoluteMetricLoadCacheKey) obj;
-      if (dimensionName == null) {
-        if (other.dimensionName != null)
-          return false;
-      } else if (!dimensionName.equals(other.dimensionName))
-        return false;
-      if (namespace == null) {
-        if (other.namespace != null)
-          return false;
-      } else if (!namespace.equals(other.namespace))
-        return false;
-      return true;
     }
   }
 
