@@ -349,7 +349,7 @@ public class ListMetricManager {
           Criteria criteria = Entities.createCriteria(ListMetric.class)
             .add(Restrictions.eq("accountId", prefetchFields.getAccountId()))
             .add(Restrictions.eq("namespace", prefetchFields.getNamespace()))
-            .add(Restrictions.eq("namespace", prefetchFields.getMetricName()));
+            .add(Restrictions.eq("metricName", prefetchFields.getMetricName()));
           List<ListMetric> results = (List<ListMetric>) criteria.list();
           for (ListMetric result : results) {
             dataCache.put(new NonPrefetchFields(result.getMetricType(), result.getDimensionMap()), result);
