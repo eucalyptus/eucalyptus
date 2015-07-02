@@ -72,7 +72,7 @@ public class MetricDataQueue {
       long before = System.currentTimeMillis();
       try {
         List<MetricQueueItem> dataBatch = Lists.newArrayList();
-        dataQueue.drainTo(dataBatch, 15000);
+        dataQueue.drainTo(dataBatch);//, 15000);
         LOG.debug("PutMetricDataQueue:Timing:dataBatch.size()="+dataBatch.size());
         long t1 = System.currentTimeMillis();
         List<SimpleMetricEntity> simpleDataBatch = convertToSimpleDataBatch(dataBatch);
