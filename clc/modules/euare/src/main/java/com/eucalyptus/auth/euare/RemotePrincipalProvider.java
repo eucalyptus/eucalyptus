@@ -167,28 +167,44 @@ public class RemotePrincipalProvider implements PrincipalProvider {
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByUserId( final String userId, final String nonce ) throws AuthException {
-    return lookupPrincipalByUserId( userId, nonce );
+  public UserPrincipal lookupCachedPrincipalByUserId( final UserPrincipal userPrincipal, final String userId, final String nonce ) throws AuthException {
+    final DescribePrincipalType request = new DescribePrincipalType( );
+    request.setUserId( userId );
+    request.setNonce( nonce );
+    return resultFor( request, userPrincipal );
+
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByRoleId( final String roleId, final String nonce ) throws AuthException {
-    return lookupPrincipalByRoleId( roleId, nonce );
+  public UserPrincipal lookupCachedPrincipalByRoleId( final UserPrincipal userPrincipal, final String roleId, final String nonce ) throws AuthException {
+    final DescribePrincipalType request = new DescribePrincipalType( );
+    request.setRoleId( roleId );
+    request.setNonce( nonce );
+    return resultFor( request, userPrincipal );
+
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByAccessKeyId( final String keyId, final String nonce ) throws AuthException {
-    return lookupPrincipalByAccessKeyId( keyId, nonce );
+  public UserPrincipal lookupCachedPrincipalByAccessKeyId( final UserPrincipal userPrincipal, final String keyId, final String nonce ) throws AuthException {
+    final DescribePrincipalType request = new DescribePrincipalType( );
+    request.setAccessKeyId( keyId );
+    request.setNonce( nonce );
+    return resultFor( request, userPrincipal );
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByCertificateId( final String certificateId ) throws AuthException {
-    return lookupPrincipalByCertificateId( certificateId );
+  public UserPrincipal lookupCachedPrincipalByCertificateId( final UserPrincipal userPrincipal, final String certificateId ) throws AuthException {
+    final DescribePrincipalType request = new DescribePrincipalType( );
+    request.setCertificateId( certificateId );
+    return resultFor( request, userPrincipal );
+
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByAccountNumber( final String accountNumber ) throws AuthException {
-    return lookupPrincipalByAccountNumber( accountNumber );
+  public UserPrincipal lookupCachedPrincipalByAccountNumber( final UserPrincipal userPrincipal, final String accountNumber ) throws AuthException {
+    final DescribePrincipalType request = new DescribePrincipalType( );
+    request.setAccountId( accountNumber );
+    return resultFor( request, userPrincipal );
   }
 
   @Override
@@ -400,11 +416,21 @@ public class RemotePrincipalProvider implements PrincipalProvider {
   }
 
   private UserPrincipal resultFor( final DescribePrincipalType request ) throws AuthException {
+    return resultFor( request, null );
+  }
+
+  private UserPrincipal resultFor( final DescribePrincipalType request, final UserPrincipal cached ) throws AuthException {
     try {
+      if ( cached != null ) {
+        request.setPtag( cached.getPTag( ) );
+      }
       final DescribePrincipalResponseType response = send( request );
       final Principal principal = response.getDescribePrincipalResult( ).getPrincipal( );
       if ( principal == null ) {
         throw new AuthException( "Invalid identity" );
+      }
+      if ( principal.getPtag( ) != null && cached != null && principal.getPtag( ).equals( cached.getPTag( ) ) ) {
+        return cached;
       }
       final UserPrincipal[] userPrincipalHolder = new UserPrincipal[1];
       final Supplier<UserPrincipal> userPrincipalSupplier = new Supplier<UserPrincipal>() {
@@ -517,6 +543,12 @@ public class RemotePrincipalProvider implements PrincipalProvider {
         @Override
         public String getToken() {
           return null;
+        }
+
+        @Nullable
+        @Override
+        public String getPTag() {
+          return principal.getPtag( );
         }
       };
     } catch ( Exception e ) {

@@ -69,6 +69,7 @@ import java.util.List;
 import java.util.Set;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.component.auth.SystemCredentials;
@@ -222,6 +223,11 @@ public class Principals {
                                                   return Lists.newArrayList( );
                                                 }
 
+                                                @Nullable
+                                                @Override
+                                                public String getPTag() {
+                                                  return null;
+                                                }
                                               };
                                                                                            
   private static final SystemUser NOBODY_USER = new SystemUser( ) {
@@ -360,6 +366,12 @@ public class Principals {
                                                 @Override
                                                 public List<PolicyVersion> getPrincipalPolicies( ) {
                                                   return Lists.newArrayList( );
+                                                }
+
+                                                @Nullable
+                                                @Override
+                                                public String getPTag() {
+                                                  return null;
                                                 }
                                               };
 

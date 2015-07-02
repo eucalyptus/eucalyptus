@@ -100,6 +100,7 @@
     <value name="AccountId" field="accountId" usage="optional"/>
     <value name="CanonicalId" field="canonicalId" usage="optional"/>
     <value name="Nonce" field="nonce" usage="optional"/>
+    <value name="Ptag" field="ptag" usage="optional"/>
   </mapping>
   <mapping name="DescribeRoleResponse" class="com.eucalyptus.auth.euare.common.identity.DescribeRoleResponseType">
     <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
@@ -181,6 +182,7 @@
     <collection name="Policies" field="policies" usage="optional">>
       <structure name="member" type="com.eucalyptus.auth.euare.common.identity.Policy"/>
     </collection>
+    <value name="Ptag" field="ptag" usage="optional"/>
   </mapping>
   <mapping class="com.eucalyptus.auth.euare.common.identity.Role" abstract="true">
     <value name="RoleId" field="roleId" usage="optional"/>

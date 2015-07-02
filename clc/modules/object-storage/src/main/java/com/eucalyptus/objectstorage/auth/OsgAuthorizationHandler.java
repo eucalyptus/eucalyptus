@@ -145,7 +145,7 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
 
       // This is not an expected path, but if no context found use the request credentials itself
       if (requestUser == null && !Strings.isNullOrEmpty(request.getEffectiveUserId())) {
-        requestUser = Accounts.lookupPrincipalByUserId(request.getEffectiveUserId(), null);
+        requestUser = Accounts.lookupPrincipalByUserId(request.getEffectiveUserId());
         requestAccountNumber = requestUser.getAccountNumber( );
       }
 

@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.util;
 
+import java.util.Collections;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -333,7 +334,70 @@ public class Strings {
   public static Function<Object,String> toStringFunction() {
     return StringerFunctions.TOSTRING;
   }
-  
+
+  /**
+   * Get a CharSequence that is the concatenation of the given sequences.
+   *
+   * @param sequences The sequences to concatenate
+   * @return The new sequence
+   */
+  public static CharSequence concat( final Iterable<? extends CharSequence> sequences ) {
+    return concat( sequences, 0, length( sequences ) );
+  }
+
+  /**
+   * Get a CharSequence that is the concatenation of the given sequences.
+   *
+   * @param sequences The sequences to concatenate
+   * @param start The start of the sequence
+   * @param end The end of the sequence
+   * @return The new sequence
+   */
+  public static CharSequence concat( final Iterable<? extends CharSequence> sequences, final int start, final int end ){
+    final int sequencesLength = end - start;
+    return new CharSequence( ) {
+      @Override
+      public int length( ) {
+        return sequencesLength;
+      }
+
+      @Override
+      public char charAt( final int index ) {
+        if ( index < 0 || index >= length( ) ) {
+          throw new IndexOutOfBoundsException( String.valueOf( index ) );
+        }
+        int adjustedIndex = start + index;
+        for ( final CharSequence sequence : sequences ) {
+          if ( adjustedIndex < sequence.length( ) ) {
+            return sequence.charAt( adjustedIndex );
+          } else {
+            adjustedIndex -= sequence.length( );
+          }
+        }
+        throw new IndexOutOfBoundsException( String.valueOf( index ) );
+      }
+
+      @Override
+      public CharSequence subSequence( final int start, final int end ) {
+        return concat( Collections.singleton( this ), start, end );
+      }
+
+      @Nonnull
+      @Override
+      public String toString( ) {
+        return new StringBuilder( this ).toString( );
+      }
+    };
+  }
+
+  private static int length( final Iterable<? extends CharSequence> sequences ) {
+    int length = 0;
+    for ( final CharSequence sequence : sequences ) {
+      length += sequence.length( );
+    }
+    return length;
+  }
+
   private enum StringFunctions implements Function<String,String> {
     LOWER {
       @Override

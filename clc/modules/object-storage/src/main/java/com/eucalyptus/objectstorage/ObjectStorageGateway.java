@@ -461,7 +461,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         if (Principals.systemFullName().getUserId().equals(requestUserId)) {
           return Accounts.lookupSystemAdmin();
         } else {
-          return Accounts.lookupPrincipalByUserId(requestUserId, null);
+          return Accounts.lookupPrincipalByUserId(requestUserId);
         }
       }
     } catch (AuthException e) {

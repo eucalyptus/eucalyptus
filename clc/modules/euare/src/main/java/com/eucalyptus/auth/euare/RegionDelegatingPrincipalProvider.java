@@ -168,28 +168,110 @@ public class RegionDelegatingPrincipalProvider implements PrincipalProvider {
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByUserId( final String userId, final String nonce ) throws AuthException {
-    return lookupPrincipalByUserId( userId, nonce );
+  public UserPrincipal lookupCachedPrincipalByUserId(
+      final UserPrincipal cached,
+      final String userId,
+      final String nonce
+  ) throws AuthException {
+    return regionDispatchByIdentifier( userId, new NonNullFunction<PrincipalProvider, UserPrincipal>( ) {
+      @Nonnull
+      @Override
+      public UserPrincipal apply( final PrincipalProvider principalProvider ) {
+        try {
+          return principalProvider.lookupCachedPrincipalByUserId( cached, userId, nonce );
+        } catch ( AuthException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      }
+    } );
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByRoleId( final String roleId, final String nonce ) throws AuthException {
-    return lookupPrincipalByRoleId( roleId, nonce );
+  public UserPrincipal lookupCachedPrincipalByRoleId(
+      final UserPrincipal cached,
+      final String roleId,
+      final String nonce
+  ) throws AuthException {
+    return regionDispatchByIdentifier( roleId, new NonNullFunction<PrincipalProvider, UserPrincipal>( ) {
+      @Nonnull
+      @Override
+      public UserPrincipal apply( final PrincipalProvider principalProvider ) {
+        try {
+          return principalProvider.lookupCachedPrincipalByRoleId( cached, roleId, nonce );
+        } catch ( AuthException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      }
+    } );
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByAccessKeyId( final String keyId, final String nonce ) throws AuthException {
-    return lookupPrincipalByAccessKeyId( keyId, nonce );
+  public UserPrincipal lookupCachedPrincipalByAccessKeyId(
+      final UserPrincipal cached,
+      final String keyId,
+      final String nonce
+  ) throws AuthException {
+    return regionDispatchByIdentifier( keyId, new NonNullFunction<PrincipalProvider, UserPrincipal>( ) {
+      @Nonnull
+      @Override
+      public UserPrincipal apply( final PrincipalProvider principalProvider ) {
+        try {
+          return principalProvider.lookupCachedPrincipalByAccessKeyId( cached, keyId, nonce );
+        } catch ( AuthException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      }
+    } );
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByCertificateId( final String certificateId ) throws AuthException {
-    return lookupPrincipalByCertificateId( certificateId );
+  public UserPrincipal lookupCachedPrincipalByCertificateId(
+      final UserPrincipal cached,
+      final String certificateId
+  ) throws AuthException {
+    if ( cached != null ) {
+      return regionDispatchByAccountNumber( cached.getAccountNumber( ), new NonNullFunction<PrincipalProvider, UserPrincipal>( ) {
+        @Nonnull
+        @Override
+        public UserPrincipal apply( final PrincipalProvider principalProvider ) {
+          try {
+            return principalProvider.lookupCachedPrincipalByCertificateId( cached, certificateId );
+          } catch ( AuthException e ) {
+            throw Exceptions.toUndeclared( e );
+          }
+        }
+      } );
+    } else {
+      return regionDispatchAndReduce( new NonNullFunction<PrincipalProvider, Either<AuthException, UserPrincipal>>() {
+        @Nonnull
+        @Override
+        public Either<AuthException, UserPrincipal> apply( final PrincipalProvider principalProvider ) {
+          try {
+            return Either.right( principalProvider.lookupCachedPrincipalByCertificateId( null, certificateId ) );
+          } catch ( AuthException e ) {
+            return Either.left( e );
+          }
+        }
+      } );
+    }
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByAccountNumber( final String accountNumber ) throws AuthException {
-    return lookupPrincipalByAccountNumber( accountNumber );
+  public UserPrincipal lookupCachedPrincipalByAccountNumber(
+      final UserPrincipal cached,
+      final String accountNumber
+  ) throws AuthException {
+    return regionDispatchByAccountNumber( accountNumber, new NonNullFunction<PrincipalProvider, UserPrincipal>( ) {
+      @Nonnull
+      @Override
+      public UserPrincipal apply( final PrincipalProvider principalProvider ) {
+        try {
+          return principalProvider.lookupCachedPrincipalByAccountNumber( cached, accountNumber );
+        } catch ( AuthException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      }
+    } );
   }
 
   @Override

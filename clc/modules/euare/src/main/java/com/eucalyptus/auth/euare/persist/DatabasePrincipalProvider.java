@@ -159,27 +159,27 @@ public class DatabasePrincipalProvider implements PrincipalProvider {
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByUserId( final String userId, final String nonce ) throws AuthException {
+  public UserPrincipal lookupCachedPrincipalByUserId( final UserPrincipal cached, final String userId, final String nonce ) throws AuthException {
     return lookupPrincipalByUserId( userId, nonce );
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByRoleId( final String roleId, final String nonce ) throws AuthException {
+  public UserPrincipal lookupCachedPrincipalByRoleId( final UserPrincipal cached, final String roleId, final String nonce ) throws AuthException {
     return lookupPrincipalByRoleId( roleId, nonce );
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByAccessKeyId( final String keyId, final String nonce ) throws AuthException {
+  public UserPrincipal lookupCachedPrincipalByAccessKeyId( final UserPrincipal cached, final String keyId, final String nonce ) throws AuthException {
     return lookupPrincipalByAccessKeyId( keyId, nonce );
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByCertificateId( final String certificateId ) throws AuthException {
+  public UserPrincipal lookupCachedPrincipalByCertificateId( final UserPrincipal cached, final String certificateId ) throws AuthException {
     return lookupPrincipalByCertificateId( certificateId );
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByAccountNumber( final String accountNumber ) throws AuthException {
+  public UserPrincipal lookupCachedPrincipalByAccountNumber( final UserPrincipal cached, final String accountNumber ) throws AuthException {
     return lookupPrincipalByAccountNumber( accountNumber );
   }
 

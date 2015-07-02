@@ -38,6 +38,7 @@ class DescribePrincipalType extends IdentityMessage {
   String accountId
   String canonicalId
   String nonce
+  String ptag
 }
 
 class DescribePrincipalResponseType extends IdentityMessage {
@@ -60,6 +61,7 @@ class Principal extends EucalyptusData {
   ArrayList<AccessKey> accessKeys
   ArrayList<Certificate> certificates
   ArrayList<Policy> policies
+  String ptag
 }
 
 class AccessKey extends EucalyptusData {
