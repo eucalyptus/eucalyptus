@@ -206,9 +206,9 @@ public class RecursiveDnsResolver implements DnsResolver {
             for ( Object record : ImmutableSet.copyOf( rrs ) ) {
               if(iamAuthority && DomainNames.isExternalSubdomain(((Record)record).getName())){
                 final Name resolvedName = ((Record)record).getName();
-                final Name instanceDomain = InstanceDomainNames.lookupInstanceDomain( resolvedName );
-                final InetAddress publicIp = InstanceDomainNames.toInetAddress( resolvedName.relativize( instanceDomain ) );
                 try{
+                  final Name instanceDomain = InstanceDomainNames.lookupInstanceDomain( resolvedName );
+                  final InetAddress publicIp = InstanceDomainNames.toInetAddress( resolvedName.relativize( instanceDomain ) );
                   final VmInstance vm = VmInstances.lookupByPublicIp( publicIp.getHostAddress( ) );
                   final InetAddress instanceAddress = InetAddresses.forString( vm.getPrivateAddress( ) );
                   final Record privateARecord = DomainNameRecords.addressRecord( resolvedName, instanceAddress );
