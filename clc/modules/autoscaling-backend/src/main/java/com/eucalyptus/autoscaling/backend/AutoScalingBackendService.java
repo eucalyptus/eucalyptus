@@ -253,7 +253,7 @@ public class AutoScalingBackendService {
     //TODO: MaxRecords / NextToken support for DescribeAutoScalingGroups
 
     final Context ctx = Contexts.lookup( );
-    final boolean showAll = request.autoScalingGroupNames().remove( "verbose" );
+    final boolean showAll = request.autoScalingGroupNames().remove( "verbose" ) || !request.autoScalingGroupNames( ).isEmpty( );
     final OwnerFullName ownerFullName = ctx.isAdministrator( ) &&  showAll ?
         null :
         ctx.getUserFullName( ).asAccountFullName( );
@@ -383,7 +383,8 @@ public class AutoScalingBackendService {
     //TODO: MaxRecords / NextToken support for DescribePolicies
 
     final Context ctx = Contexts.lookup( );
-    final boolean showAll = request.policyNames().remove( "verbose" );
+    final boolean isGroupResourceName = AutoScalingResourceName.isResourceName().apply( request.getAutoScalingGroupName() );
+    final boolean showAll = request.policyNames().remove( "verbose" ) || isGroupResourceName;
     final OwnerFullName ownerFullName = ctx.isAdministrator( ) &&  showAll ?
         null :
         ctx.getUserFullName( ).asAccountFullName( );
@@ -392,7 +393,7 @@ public class AutoScalingBackendService {
       final Predicate<ScalingPolicy> requestedAndAccessible =
         Predicates.and( 
           AutoScalingMetadatas.filterPrivilegesByIdOrArn( ScalingPolicy.class, request.policyNames() ),
-          AutoScalingResourceName.isResourceName().apply( request.getAutoScalingGroupName() ) ?
+          isGroupResourceName ?
             AutoScalingMetadatas.filterByProperty(
                   AutoScalingResourceName.parse( request.getAutoScalingGroupName(), autoScalingGroup ).getUuid(),
                   ScalingPolicies.toGroupUuid() )  :
@@ -534,7 +535,8 @@ public class AutoScalingBackendService {
     final DescribeScalingActivitiesResponseType reply = request.getReply( );
 
     final Context ctx = Contexts.lookup( );
-    final boolean showAll = request.activityIds().remove( "verbose" );
+    final boolean showAll = request.activityIds().remove( "verbose" ) ||
+        AutoScalingResourceName.isResourceName().apply( request.getAutoScalingGroupName( ) );
     final OwnerFullName ownerFullName = ctx.isAdministrator( ) &&  showAll ?
         null :
         ctx.getUserFullName( ).asAccountFullName( );
@@ -1022,7 +1024,7 @@ public class AutoScalingBackendService {
     //TODO: MaxRecords / NextToken support for DescribeAutoScalingInstances
 
     final Context ctx = Contexts.lookup( );
-    final boolean showAll = request.instanceIds().remove( "verbose" );
+    final boolean showAll = request.instanceIds().remove( "verbose" ) || !request.instanceIds().isEmpty();
     final OwnerFullName ownerFullName = ctx.isAdministrator( ) &&  showAll ?
         null :
         ctx.getUserFullName( ).asAccountFullName( );
@@ -1281,7 +1283,8 @@ public class AutoScalingBackendService {
     //TODO: MaxRecords / NextToken support for DescribeLaunchConfigurations
     
     final Context ctx = Contexts.lookup( );
-    final boolean showAll = request.launchConfigurationNames().remove( "verbose" );  
+    final boolean showAll = request.launchConfigurationNames().remove( "verbose" ) ||
+        (!request.launchConfigurationNames().isEmpty() && Iterables.all( request.launchConfigurationNames( ), AutoScalingResourceName.isResourceName( ) ) );
     final OwnerFullName ownerFullName = ctx.isAdministrator( ) &&  showAll ?
         null : 
         ctx.getUserFullName( ).asAccountFullName( );

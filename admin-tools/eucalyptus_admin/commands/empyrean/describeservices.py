@@ -23,40 +23,57 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from requestbuilder import Arg, Filter
+import sys
+
+from requestbuilder import Arg, Filter, MutuallyExclusiveArgList
 
 from eucalyptus_admin.commands.empyrean import EmpyreanRequest
 from eucalyptus_admin.commands.mixins import TableOutputMixin
 
 
+class _RenamingFilter(Filter):
+    def __init__(self, name, server_name, **kwargs):
+        Filter.__init__(self, name, **kwargs)
+        self.__server_name = server_name
+
+    def convert(self, argval):
+        _, value = Filter.convert(self, argval)
+        return (self.__server_name, value)
+
+
 class DescribeServices(EmpyreanRequest, TableOutputMixin):
-    DESCRIPTION = "List the cloud's services"
+    DESCRIPTION = "Show information about the cloud's services"
     ARGS = [Arg('ServiceName', metavar='SVCINSTANCE', nargs='*',
                 help='limit results to specific instances of services'),
             Arg('-a', '--all', dest='ListAll', action='store_true',
                 help='show all services regardless of type'),
-            Arg('--show-events', action='store_true', dest='ShowEvents'),
-            Arg('--expert', action='store_true', route_to=None,
-                help='show advanced information')]
-    # XXX:  Old options not implemented in this tool include:
-    #  * ByHost (to be replaced by filters)
-    #  * ByPartition (to be replaced by filters)
-    #  * ByServiceType (to be replaced by filters)
-    #  * ByState (to be replaced by filters)
-    #  * ListInternal (to be replaced by filters)
-    #  * ListUserServices (to be replaced by filters)
-    #  * ShowEvents (events to be split into different actions)
-    #  * ShowEventStacks (events to be split into different actions)
-    # TODO:  These filters currently don't work (See EUCA-10639)
-    FILTERS = [Filter('availability-zone', help='''availability zone in which
-                      the instance of the service participates'''),
-               Filter('is-service-group', help='''whether the instance of
-                      the service is a service group'''),
-               Filter('name', help='the name of the service instance'),
-               Filter('service-group-member', help='''whether the instance of
-                      the service is a member of a specific service group'''),
-               Filter('service-type'),
-               Filter('state')]
+            MutuallyExclusiveArgList(
+                Arg('--by-type', action='store_true', route_to=None,
+                    help='show services by service type (default)'),
+                Arg('--by-zone', action='store_true', route_to=None,
+                    help='show services by availability zone'),
+                Arg('--by-host', action='store_true', route_to=None,
+                    help='show services by host'),
+                Arg('--expert', action='store_true', route_to=None,
+                    help='show advanced information'))]
+    FILTERS = [_RenamingFilter('availability-zone', 'partition',
+                               help="the service's availability zone"),
+               Filter('host', help='the machine running the service'),
+               Filter('internal', help='''whether the service is used
+                      only internally (true or false)'''),
+               Filter('public',
+                      help='whether the service is public (true or false)'),
+               Filter('service-group', help='''whether the service is a
+                      member of a specific service group'''),
+               Filter('service-group-member',
+                      help='''whether the service is a member of any
+                      service group (true or false)'''),
+               Filter('service-type', help='the type of service'),
+               Filter('state', help="the service's state"),
+               # TODO:  this is wrong!
+               # https://eucalyptus.atlassian.net/browse/EUCA-11006
+               Filter('user-service', help='''whether the service is
+                      user-facing (true or false)''')]
     LIST_TAGS = ['serviceStatuses', 'uris']
 
     def print_result(self, result):
@@ -66,15 +83,101 @@ class DescribeServices(EmpyreanRequest, TableOutputMixin):
             table.sortby = 'arn'
             for service in services:
                 svcid = service.get('serviceId') or {}
-                table.add_row(('SERVICE', svcid.get('fullName'),
-                               service.get('localState').lower(),
-                               service.get('localEpoch'), svcid.get('uri')))
-        else:
-            table = self.get_table(('SERVICE', 'type', 'zone', 'name', 'state'))
-            table.sortby = 'type'
+                table.add_row((
+                    'SERVICE', svcid.get('fullName'),
+                    _colorize_state(service.get('localState').lower()),
+                    service.get('localEpoch'), svcid.get('uri')))
+        elif self.args.get('by_host'):
+            hosts = {}
             for service in services:
                 svcid = service.get('serviceId') or {}
-                table.add_row(('SERVICE', svcid.get('type'),
-                               svcid.get('partition'), svcid.get('name'),
-                               service.get('localState').lower()))
+                hosts.setdefault(svcid.get('host'), [])
+                hosts[svcid.get('host')].append(service)
+            table = self.get_table(('SERVICE', 'host', 'type', 'name', 'state'))
+            for host, services in sorted(hosts.iteritems()):
+                host = _colorize(host, _get_service_list_color(services))
+                for service in services:
+                    svcid = service.get('serviceId') or {}
+                    table.add_row((
+                        'SERVICE', host, svcid.get('type'), svcid.get('name'),
+                        _colorize_state(service.get('localState').lower())))
+        elif self.args.get('by_zone'):
+            by_zone = {}
+            for service in services:
+                svcid = service.get('serviceId') or {}
+                by_zone.setdefault(svcid.get('partition'), {})
+                by_zone[svcid.get('partition')].setdefault(
+                    svcid.get('type'), [])
+                by_zone[svcid.get('partition')][svcid.get('type')].append(
+                    service)
+            table = self.get_table(('SERVICE', 'zone', 'type', 'name', 'state'))
+            for zone, svctypes in sorted(by_zone.iteritems()):
+                if not zone:
+                    continue
+                zone_color = 'green'
+                for svctype, services in sorted(svctypes.iteritems()):
+                    svctype_color = _get_service_list_color(services)
+                    if svctype_color == 'red':
+                        zone_color = 'red'
+                    elif svctype_color == 'brown' and zone_color == 'green':
+                        zone_color = 'brown'
+                zone = _colorize(zone, zone_color)
+                for svctype, services in sorted(svctypes.iteritems()):
+                    svctype = _colorize(svctype,
+                                        _get_service_list_color(services))
+                    for service in services:
+                        svcid = service.get('serviceId') or {}
+                        state = service.get('localState').lower()
+                        table.add_row((
+                            'SERVICE', zone, svctype, svcid.get('name'),
+                            _colorize_state(state)))
+        # TODO:  by_group (needs EUCA-10816)
+        # https://eucalyptus.atlassian.net/browse/EUCA-10816
+        else:  # by_type
+            svctypes = {}
+            for service in services:
+                svcid = service.get('serviceId') or {}
+                svctypes.setdefault(svcid.get('type'), [])
+                svctypes[svcid.get('type')].append(service)
+            table = self.get_table(('SERVICE', 'type', 'zone', 'name', 'state'))
+            for svctype, services in sorted(svctypes.iteritems()):
+                svctype = _colorize(svctype, _get_service_list_color(services))
+                for service in services:
+                    svcid = service.get('serviceId') or {}
+                    table.add_row((
+                        'SERVICE', svctype, svcid.get('partition'),
+                        svcid.get('name'),
+                        _colorize_state(service.get('localState').lower())))
         print table
+
+
+def _colorize(str_, color):
+    COLORS = dict(none=(0, 0), black=(0, 30), red=(0, 31), green=(0, 32),
+                  brown=(0, 33), blue=(0, 34), purple=(0, 35), cyan=(0, 36),
+                  lightgray=(0, 37))
+    if sys.stdout.isatty() and str_:
+        return '\033[{0};{1}m{2}\033[0m'.format(COLORS[color][0], COLORS[color][1], str_)
+    else:
+        return str_
+
+
+def _colorize_state(state):
+    if state.lower() == 'enabled':
+        return _colorize(state, 'green')
+    elif state.lower() == 'disabled':
+        return _colorize(state, 'cyan')
+    elif state.lower() == 'stopped':
+        return _colorize(state, 'blue')
+    elif state.lower() in ('broken', 'notready'):
+        return _colorize(state, 'red')
+    return state
+
+
+def _get_service_list_color(services):
+    if all(service.get('localState').lower() in
+           ('enabled', 'disabled') for service in services):
+        return 'green'
+    elif all(service.get('localState').lower() in
+             ('notready', 'broken', 'stopped') for service in services):
+        return 'red'
+    return 'brown'

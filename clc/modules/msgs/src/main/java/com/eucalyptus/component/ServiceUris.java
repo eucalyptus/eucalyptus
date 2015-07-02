@@ -231,7 +231,7 @@ public class ServiceUris {
       this.internal = true;
       return this;
     }
-    
+
     public URI get( ) {
       checkParam( this.address, notNullValue() );
       checkParam( this.path, notNullValue() );
@@ -241,7 +241,10 @@ public class ServiceUris {
       String schemeString = StackConfiguration.DEFAULT_HTTPS_ENABLED
         ? this.scheme.getSecureScheme( )
         : this.scheme.getScheme( );
-      String hostNameString = this.address.getHostAddress();
+      // Use hostname if the component supports it and the address was created with a name.
+      final String hostNameString = componentId.isUseServiceHostName( ) && !this.address.toString().startsWith( "/" ) ?
+          this.address.getHostName( ) :
+          this.address.getHostAddress( );
       try {
         URI u = new URI( schemeString, null, hostNameString, this.port, ( "/" + this.path ).replaceAll( "^//", "/" ), Lexemes.QUERY.format( this.query ), null );
         u.parseServerAuthority( );

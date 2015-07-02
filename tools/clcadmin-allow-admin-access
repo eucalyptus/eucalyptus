@@ -1,0 +1,175 @@
+#!/usr/bin/python -tt
+#
+# Copyright 2015 Eucalyptus Systems, Inc.
+#
+# Redistribution and use of this software in source and binary forms,
+# with or without modification, are permitted provided that the following
+# conditions are met:
+#
+#   Redistributions of source code must retain the above copyright notice,
+#   this list of conditions and the following disclaimer.
+#
+#   Redistributions in binary form must reproduce the above copyright
+#   notice, this list of conditions and the following disclaimer in the
+#   documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+"""
+%(prog)s gives a user access to one or more administrator roles by
+adding an entry to each role's access policy.  If no roles are given the
+user will gain access to all three predefined roles, which include
+AccountAdministrator, InfrastructureAdministrator, and
+ResourceAdministrator.
+"""
+
+from __future__ import unicode_literals
+
+import argparse
+import json
+import logging
+import os
+import subprocess
+import sys
+import urlparse
+
+import boto.iam.connection
+
+
+CANNED_ROLES = ('AccountAdministrator', 'InfrastructureAdministrator',
+                'ResourceAdministrator')
+CREDENTIAL_EXE = 'clcadmin-assume-system-credentials'
+HOST = '127.0.0.1'
+PORT = 8773
+SERVICE_PATH = '/services/Euare'
+
+
+class EuareConnection(boto.iam.connection.IAMConnection):
+    def create_account(self, account_name=None):
+        params = {}
+        if account_name:
+            params['AccountName'] = account_name
+        return self.get_response('CreateAccount', params)
+
+    def get_all_accounts(self):
+        return self.get_response('ListAccounts', {},
+                                 list_marker='Accounts')
+
+    def resolve_account_name(self, account_name):
+        """
+        Resolve an account name or ID to an account ID.  If an account with
+        that identifier does not exist this function will raise a KeyError.
+        """
+        accounts = self.get_all_accounts()
+        for account in (accounts.get('list_accounts_response', {})
+                                .get('list_accounts_result', {})
+                                .get('accounts', [])):
+            if account_name in (account['account_name'],
+                                account['account_id']):
+                return account['account_id']
+        raise KeyError('no such account: {0}'.format(account_name))
+
+    def get_user(self, user_name=None, delegate_account=None):
+        params = {}
+        if user_name:
+            params['UserName'] = user_name
+        if delegate_account:
+            params['DelegateAccount'] = delegate_account
+        return self.get_response('GetUser', params)
+
+    def resolve_user_arn(self, user_name=None, delegate_account=None):
+        user = self.get_user(user_name, delegate_account)
+        return (user.get('get_user_response', {})
+                    .get('get_user_result', {})
+                    .get('user', {})
+                    .get('arn'))
+
+    def get_assume_role_policy(self, role_name):
+        role = self.get_role(role_name)
+        policy = (role.get('get_role_response', {})
+                      .get('get_role_result', {})
+                      .get('role', {})
+                      .get('assume_role_policy_document', '{}'))
+        return json.loads(urlparse.unquote(policy))
+
+
+def add_user_to_assume_policy(policy, user_arn):
+    statement = {'Action': ['sts:AssumeRole'],
+                 'Effect': 'Allow',
+                 'Principal': {'AWS': [user_arn]}}
+    policy.setdefault('Statement', [])
+    if statement not in policy['Statement']:
+        policy['Statement'].append(statement)
+
+
+def parse_cli_args():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        '-u', dest='user', required=True,
+        help='user to grant access to administrator roles (required)')
+    parser.add_argument(
+        '-a', dest='account', required=True,
+        help='the account containing the user (required)')
+    parser.add_argument(
+        'roles', metavar='ROLE', nargs='*', default=CANNED_ROLES,
+        help=('name of a canned role or ARN of a custom role to grant '
+              'the user access to (default: all canned roles)'))
+    parser.add_argument('-v', dest='verbose', action='count',
+                        help='show more verbose output')
+    return parser.parse_args()
+
+
+def get_creds(args):
+    proc = subprocess.Popen([CREDENTIAL_EXE], stdout=subprocess.PIPE)
+    for line in proc.stdout:
+        if 'AWS_ACCESS_KEY_ID=' in line:
+            key_id = line.strip().split('=')[1].strip('";')
+        if 'AWS_SECRET_ACCESS_KEY=' in line:
+            secret_key = line.strip().split('=')[1].strip('";')
+    if proc.wait() != 0:
+        raise subprocess.CalledProcessError(proc.returncode, CREDENTIAL_EXE)
+    return key_id, secret_key
+
+
+def main():
+    args = parse_cli_args()
+    if args.verbose == 1:
+        boto.set_stream_logger('main', logging.INFO)
+    elif args.verbose >= 2:
+        boto.set_stream_logger('main', logging.DEBUG)
+    try:
+        key_id, secret_key = get_creds(args)
+    except subprocess.CalledProcessError as err:
+        sys.exit('error: obtaining credentials failed ({0})'.format(err))
+    conn = EuareConnection(aws_access_key_id=key_id,
+                           aws_secret_access_key=secret_key, is_secure=False,
+                           port=PORT, host=HOST, path=SERVICE_PATH)
+    try:
+        account = conn.resolve_account_name(args.account)
+    except KeyError:
+        sys.exit('error: no such account: {0}'.format(args.account))
+    boto.log.debug('account ID is %s', account)
+    try:
+        user = conn.resolve_user_arn(args.user, account)
+        for role in args.roles:
+            boto.log.info('adding %s to role %s', user, role)
+            assume_policy = conn.get_assume_role_policy(role)
+            add_user_to_assume_policy(assume_policy, user)
+            conn.update_assume_role_policy(role, json.dumps(assume_policy,
+                                                            indent=2))
+    except boto.exception.BotoServerError as err:
+        sys.exit('error: {0}'.format(err.message))
+
+
+if __name__ == '__main__':
+    main()

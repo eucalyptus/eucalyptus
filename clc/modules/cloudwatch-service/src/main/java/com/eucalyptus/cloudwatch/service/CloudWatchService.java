@@ -213,9 +213,6 @@ public class CloudWatchService implements Callable {
     return reply;
   }
 
-
-
-
   private CloudWatchMessage dispatchAction( final CloudWatchMessage request ) throws EucalyptusCloudException {
     final AuthContextSupplier user = Contexts.lookup( ).getAuthContext( );
     if ( !Permissions.perhapsAuthorized(CloudWatchPolicySpec.VENDOR_CLOUDWATCH, getIamActionByMessageType( request ), user ) ) {

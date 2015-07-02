@@ -23,9 +23,9 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.AccountFullName
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataType
-import com.eucalyptus.cluster.callback.cloudwatch.AbsoluteMetricQueue;
-import com.eucalyptus.cluster.callback.cloudwatch.CloudWatchHelper;
-import com.eucalyptus.cluster.callback.cloudwatch.CloudWatchHelper.InstanceInfoProvider;
+import com.eucalyptus.cluster.callback.reporting.AbsoluteMetricQueue;
+import com.eucalyptus.cluster.callback.reporting.CloudWatchHelper;
+import com.eucalyptus.cluster.callback.reporting.CloudWatchHelper.InstanceInfoProvider;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -35,7 +35,7 @@ import edu.ucsb.eucalyptus.msgs.MetricDimensionsType;
 import edu.ucsb.eucalyptus.msgs.MetricDimensionsValuesType;
 import edu.ucsb.eucalyptus.msgs.MetricsResourceType;
 import edu.ucsb.eucalyptus.msgs.SensorsResourceType;
-import com.eucalyptus.cluster.callback.cloudwatch.AbsoluteMetricQueueItem
+import com.eucalyptus.cluster.callback.reporting.AbsoluteMetricQueueItem
 import org.apache.log4j.Logger;
 
 import java.text.DecimalFormat;

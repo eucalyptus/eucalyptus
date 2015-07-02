@@ -214,6 +214,8 @@ public class Volumes {
       final String volumeId, boolean systemManaged) throws NoSuchElementException {
     try ( final TransactionResource db = Entities.transactionFor( Volume.class ) ) {
       Volume volume = Entities.uniqueResult( Volume.named( ownerFullName, volumeId ) );
+      if (volume == null)
+        throw new NoSuchElementException( "Can not find volume with id " + volumeId );
       volume.setSystemManaged(systemManaged);
       db.commit();
     } catch ( final TransactionException ex ) {

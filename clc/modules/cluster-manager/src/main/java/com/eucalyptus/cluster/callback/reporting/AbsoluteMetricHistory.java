@@ -18,7 +18,7 @@
  * additional information or have any questions.
  ************************************************************************/
 
-package com.eucalyptus.cluster.callback.cloudwatch;
+package com.eucalyptus.cluster.callback.reporting;
 
 import java.util.Date;
 import javax.persistence.Column;
@@ -30,7 +30,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity
-@PersistenceContext(name="eucalyptus_cloudwatch")
+@PersistenceContext(name="eucalyptus_cloud")
 @Table(name="absolute_metric_history")
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class AbsoluteMetricHistory extends AbstractPersistent {

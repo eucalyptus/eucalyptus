@@ -29,6 +29,7 @@ import requestbuilder.request
 import requestbuilder.service
 
 from eucalyptus_admin.commands import EucalyptusAdmin
+from eucalyptus_admin.exceptions import AWSError
 
 
 class Empyrean(requestbuilder.service.BaseService):
@@ -39,6 +40,9 @@ class Empyrean(requestbuilder.service.BaseService):
 
     ARGS = [Arg('-U', '--url', metavar='URL',
                 help='bootstrap service endpoint URL')]
+
+    def handle_http_error(self, response):
+        raise AWSError(response)
 
 
 class EmpyreanRequest(requestbuilder.request.AWSQueryRequest):

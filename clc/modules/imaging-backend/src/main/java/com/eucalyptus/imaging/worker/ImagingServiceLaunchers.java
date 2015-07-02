@@ -127,8 +127,6 @@ public class ImagingServiceLaunchers {
 
       // generate certificate
       ServerCertificateMetadataType metadata = createAndUploadCertificate();
-      LOG.debug("Created new certificate "
-          + metadata.getServerCertificateName());
       // use CF for stack creation
       String template = getInstance().loadTemplate("worker-cf-template.json");
       ArrayList<Parameter> params = new ArrayList<Parameter>();
@@ -161,6 +159,7 @@ public class ImagingServiceLaunchers {
           ImagingServiceProperties.IMAGING_WORKER_STACK_NAME, template, params);
       LOG.debug("Done creating CF stack for the imaging worker");
     } catch (final Exception ex) {
+      LOG.error(ex);
       throw new EucalyptusCloudException(ex);
     } finally {
       this.releaseLauncher(launcherId);
@@ -203,6 +202,7 @@ public class ImagingServiceLaunchers {
           Accounts.lookupSystemAccountByAlias( AccountIdentifiers.IMAGING_SYSTEM_ACCOUNT ).getUserId( ),
           SERVER_CERTIFICATE_NAME, DEFAULT_SERVER_CERT_PATH, certPem, pkPem,
           null);
+      LOG.debug("Created new certificate " + res.getServerCertificateName());
     } catch (final Exception ex) {
       throw new EucalyptusCloudException("failed to upload server cert", ex);
     }

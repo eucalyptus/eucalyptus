@@ -64,6 +64,7 @@
 package com.eucalyptus.vmtypes;
 
 import javax.annotation.Nullable;
+import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
 import com.eucalyptus.cluster.Clusters;
@@ -107,8 +108,9 @@ public class VmTypesManager {
     }
   }
   
-  public DescribeInstanceTypesResponseType DescribeInstanceTypes( final DescribeInstanceTypesType request ) {
+  public DescribeInstanceTypesResponseType DescribeInstanceTypes( final DescribeInstanceTypesType request ) throws ClientComputeException {
     DescribeInstanceTypesResponseType reply = request.getReply( );
+    final boolean administrator = Contexts.lookup( ).isAdministrator( );
     for ( final VmType v : Iterables.filter( VmTypes.list( ), CloudMetadatas.filteringFor( VmType.class ).byId( request.getInstanceTypes( ) ).byPrivileges( ).buildPredicate( ) ) ) {
       VmTypeDetails vmTypeDetails = new VmTypeDetails( ) {
         {
@@ -122,6 +124,9 @@ public class VmTypesManager {
             }
           }
           if ( request.getAvailability( ) ) {
+            if ( !administrator ) {
+              throw new ClientComputeException( "AuthFailure", "Not permitted to access availability" );
+            }
             for ( ServiceConfiguration cc : Topology.enabledServices( ClusterController.class ) ) {
               VmTypeAvailability available = Clusters.lookup( cc ).getNodeState( ).getAvailability( v.getName( ) );
               VmTypeZoneStatus status = VmAvailabilityToZoneStatus.INSTANCE.apply( available );

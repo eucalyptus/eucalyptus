@@ -196,7 +196,9 @@ public class CloudFormationClient {
       if (result.get()) {
         return task.getResult();
       } else
-        throw new EucalyptusActivityException("failed to describe stack " + name);
+        throw new EucalyptusActivityException(
+            task.getErrorMessage() != null ? task.getErrorMessage()
+            : "failed to describe stack " + name);
     } catch (Exception ex) {
       throw Exceptions.toUndeclared(ex);
     }
@@ -217,7 +219,9 @@ public class CloudFormationClient {
       if (result.get()) {
         return task.getResult();
       } else
-        throw new EucalyptusActivityException("failed to describe stack " + name + " resources");
+        throw new EucalyptusActivityException(
+            task.getErrorMessage() != null ? task.getErrorMessage()
+                : "failed to describe stack " + name + " resources");
     } catch (Exception ex) {
       throw Exceptions.toUndeclared(ex);
     }
@@ -232,7 +236,9 @@ public class CloudFormationClient {
       if (result.get()) {
         return;
       } else
-        throw new EucalyptusActivityException("failed to remove stack " + name);
+        throw new EucalyptusActivityException(
+            task.getErrorMessage() != null ? task.getErrorMessage()
+                : "failed to remove stack " + name);
     } catch (Exception ex) {
       throw Exceptions.toUndeclared(ex);
     }
@@ -248,7 +254,9 @@ public class CloudFormationClient {
       if (result.get()) {
         return;
       } else
-        throw new EucalyptusActivityException("failed to create stack " + name);
+        throw new EucalyptusActivityException(
+            task.getErrorMessage() != null ? task.getErrorMessage()
+                : "failed to create stack " + name);
     } catch (Exception ex) {
       throw Exceptions.toUndeclared(ex);
     }

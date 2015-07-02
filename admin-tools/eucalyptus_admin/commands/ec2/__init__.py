@@ -32,22 +32,22 @@ from eucalyptus_admin.commands import EucalyptusAdmin
 from eucalyptus_admin.exceptions import AWSError
 
 
-class Properties(requestbuilder.service.BaseService):
-    NAME = 'properties'
-    DESCRIPTION = 'Cloud property management service'
+class EC2(requestbuilder.service.BaseService):
+    NAME = 'ec2'
+    DESCRIPTION = 'Compute service'
     REGION_ENVVAR = 'AWS_DEFAULT_REGION'
-    URL_ENVVAR = 'PROPERTIES_URL'
+    URL_ENVVAR = 'EC2_URL'
 
-    ARGS = [Arg('-U', '--url', metavar='URL', help='''Connect to the
-                service using a specific URL.''')]
+    ARGS = [Arg('-U', '--url', metavar='URL',
+                help='compute service endpoint URL')]
 
     def handle_http_error(self, response):
         raise AWSError(response)
 
 
-class PropertiesRequest(requestbuilder.request.AWSQueryRequest):
+class EC2Request(requestbuilder.request.AWSQueryRequest):
     SUITE = EucalyptusAdmin
-    SERVICE_CLASS = Properties
+    SERVICE_CLASS = EC2
     AUTH_CLASS = requestbuilder.auth.aws.HmacV4Auth
-    API_VERSION = 'eucalyptus'
+    API_VERSION = '2014-10-01'
     METHOD = 'POST'

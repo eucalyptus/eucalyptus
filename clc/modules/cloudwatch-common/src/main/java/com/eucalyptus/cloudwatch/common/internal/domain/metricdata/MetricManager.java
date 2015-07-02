@@ -31,6 +31,10 @@ import java.util.TreeSet;
 
 import javax.persistence.EntityTransaction;
 
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.PropertyChangeListeners;
+import com.google.common.collect.Iterables;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Order;
@@ -48,7 +52,11 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
 public class MetricManager {
-	public static final Logger LOG = Logger.getLogger(MetricManager.class);
+
+  public static volatile Integer METRIC_DATA_NUM_DB_OPERATIONS_PER_TRANSACTION = 10000;
+  public static volatile Integer METRIC_DATA_NUM_DB_OPERATIONS_UNTIL_SESSION_FLUSH = 50;
+
+  public static final Logger LOG = Logger.getLogger(MetricManager.class);
   public static void addMetric(String accountId, 
       String metricName, String namespace, Map<String, String> dimensionMap,
       MetricType metricType, Units units, Date timestamp, Double sampleSize,
@@ -112,18 +120,26 @@ public class MetricManager {
 
   private static void addManyMetrics(Multimap<Class, MetricEntity> metricMap) {
     for (Class c : metricMap.keySet()) {
-      EntityTransaction db = Entities.get(c);
-      try {
-        for (MetricEntity me : metricMap.get(c)) {
-          Entities.persist(me);
+      for (List<MetricEntity> dataBatchPartial : Iterables.partition(metricMap.get(c), METRIC_DATA_NUM_DB_OPERATIONS_PER_TRANSACTION)) {
+        EntityTransaction db = Entities.get(c);
+        try {
+          int numOperations = 0;
+          for (MetricEntity me : dataBatchPartial) {
+            numOperations++;
+            if (numOperations % METRIC_DATA_NUM_DB_OPERATIONS_UNTIL_SESSION_FLUSH == 0) {
+              Entities.flushSession(me);
+              Entities.clearSession(me);
+            }
+            Entities.persist(me);
+          }
+          db.commit();
+        } catch (RuntimeException ex) {
+          Logs.extreme().error(ex, ex);
+          throw ex;
+        } finally {
+          if (db.isActive())
+            db.rollback();
         }
-        db.commit();
-      } catch (RuntimeException ex) {
-        Logs.extreme().error(ex, ex);
-        throw ex;
-      } finally {
-        if (db.isActive())
-          db.rollback();
       }
     }
   }

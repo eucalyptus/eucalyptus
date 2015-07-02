@@ -163,7 +163,8 @@ public class VmInstances {
         ownerFullName,
         Restrictions.not( VmInstance.criterion( VmInstance.VmStateSet.DONE.array() ) ),
         Collections.<String,String>emptyMap(),
-        Predicates.and( VmInstance.VmStateSet.DONE.not(), checkPredicate( predicate ) ) );
+        Predicates.and( VmInstance.VmStateSet.DONE.not(), checkPredicate( predicate ) ),
+        false );
   }
 
   /**
@@ -173,10 +174,21 @@ public class VmInstances {
                                        final Criterion criterion,
                                        final Map<String,String> aliases,
                                        @Nullable final Predicate<? super VmInstance> predicate ) {
+    return list( ownerFullName, criterion, aliases, predicate, false );
+  }
+
+  /**
+   * List instances in any state that match the given parameters.
+   */
+  public static List<VmInstance> list( @Nullable final OwnerFullName ownerFullName,
+                                       final Criterion criterion,
+                                       final Map<String,String> aliases,
+                                       @Nullable final Predicate<? super VmInstance> predicate,
+                                       final boolean outerJoins ) {
     return list( new Supplier<List<VmInstance>>() {
       @Override
       public List<VmInstance> get() {
-        return Entities.query( VmInstance.named( ownerFullName, null ), false, criterion, aliases );
+        return Entities.query( VmInstance.named( ownerFullName, null ), false, criterion, aliases, outerJoins );
       }
     }, Predicates.and(
         RestrictedTypes.filterByOwner( ownerFullName ),

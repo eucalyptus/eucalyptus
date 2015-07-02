@@ -22,6 +22,7 @@ package com.eucalyptus.imaging.backend;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Set;
 
 import javax.annotation.Nullable;
@@ -248,14 +249,16 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
       return;
     for(final ImportInstanceVolumeDetail volumeDetail : instanceDetails.getVolumes()){
       if(volumeDetail.getVolume()!=null && volumeDetail.getVolume().getId()!=null){
+        String volumeId = volumeDetail.getVolume().getId();
         try{
-          String volumeId = volumeDetail.getVolume().getId();
           Volumes.setSystemManagedFlag(null, volumeId, false);
           final List<Volume> eucaVolumes =
             Ec2Client.getInstance().describeVolumes(this.getOwnerUserId(), Lists.newArrayList(volumeId));
           if (eucaVolumes.size() != 0) {
             Ec2Client.getInstance().deleteVolume(this.getOwnerUserId(), volumeId);
           }
+        } catch(final NoSuchElementException ex) {
+          LOG.debug("Can't find volume with ID " + volumeId + ". Probably it was already deleted");
         } catch(final Exception ex) {
           LOG.warn(String.format("Failed to delete the volume %s for import task %s", 
               volumeDetail.getVolume().getId(), this.getDisplayName()));

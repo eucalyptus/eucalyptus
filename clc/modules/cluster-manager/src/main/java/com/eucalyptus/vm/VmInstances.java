@@ -93,7 +93,6 @@ import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.criterion.SimpleExpression;
-import org.hibernate.type.StringType;
 import org.xbill.DNS.Name;
 
 import com.eucalyptus.address.Address;
@@ -135,7 +134,6 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.InstanceStatusEventType;
-import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.compute.common.backend.StopInstancesType;
 import com.eucalyptus.compute.common.backend.TerminateInstancesType;
 import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
@@ -150,6 +148,7 @@ import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
 import com.eucalyptus.compute.common.internal.util.ResourceAllocationException;
 import com.eucalyptus.compute.common.internal.vm.MigrationState;
 import com.eucalyptus.compute.common.internal.vm.VmBootRecord;
+import com.eucalyptus.compute.common.internal.vm.VmBootVolumeAttachment;
 import com.eucalyptus.compute.common.internal.vm.VmBundleTask;
 import com.eucalyptus.compute.common.internal.vm.VmEphemeralAttachment;
 import com.eucalyptus.compute.common.internal.vm.VmId;
@@ -160,6 +159,7 @@ import com.eucalyptus.compute.common.internal.vm.VmMigrationTask;
 import com.eucalyptus.compute.common.internal.vm.VmNetworkConfig;
 import com.eucalyptus.compute.common.internal.vm.VmPlacement;
 import com.eucalyptus.compute.common.internal.vm.VmRuntimeState;
+import com.eucalyptus.compute.common.internal.vm.VmStandardVolumeAttachment;
 import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
 import com.eucalyptus.compute.common.internal.vm.VmVolumeState;
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
@@ -176,7 +176,6 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.entities.TransactionResource;
@@ -222,11 +221,11 @@ import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.base.Supplier;
 
 import com.google.common.base.Splitter;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -245,9 +244,6 @@ import edu.ucsb.eucalyptus.msgs.StopInstanceType;
 public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmInstances {
 
   private static final Logger LOG = Logger.getLogger( VmInstances.class );
-
-  private static final String SQL_RESTRICTION_PERSISTENT_VOLUME = "{alias}.id in (select vminstance_id from %smetadata_instances_persistent_volumes where metadata_vm_volume_id=?)";
-  private static final String SQL_RESTRICTION_ATTACHED_VOLUME = "{alias}.id in (select vminstance_id from %smetadata_instances_volume_attachments where metadata_vm_volume_id=?)";
 
   public enum Timeout implements Predicate<VmInstance> {
     EXPIRED( VmState.RUNNING ) {
@@ -749,17 +745,14 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
   public static VmVolumeAttachment lookupVolumeAttachment( final String volumeId ) {
     VmVolumeAttachment ret = null;
     try ( final TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
-      final String schemaPrefix =
-          Optional.fromNullable( PersistenceContexts.toSchemaName().apply( "eucalyptus_cloud" ) )
-              .transform( Strings.append( "." ) )
-              .or( "" );
       final List<VmInstance> vms = VmInstances.list( null,
           Restrictions.or(
-              Restrictions.sqlRestriction( String.format( SQL_RESTRICTION_PERSISTENT_VOLUME, schemaPrefix ), volumeId, StringType.INSTANCE ),
-              Restrictions.sqlRestriction( String.format( SQL_RESTRICTION_ATTACHED_VOLUME, schemaPrefix ), volumeId, StringType.INSTANCE )
+              Restrictions.eq( "bootVolumes.volumeId", volumeId ),
+              Restrictions.eq( "volumeAttachments.volumeId", volumeId )
           ),
-          Collections.<String, String>emptyMap(),
-          null );
+          ImmutableMap.of( "transientVolumeState.attachments", "volumeAttachments", "bootRecord.persistentVolumes", "bootVolumes" ),
+          null,
+          true );
       for ( VmInstance vm : vms ) {
         try {
           ret = vm.lookupVolumeAttachment( volumeId );
@@ -1000,7 +993,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
 
   private static void cleanUpAttachedVolumes( final String instanceId,
                                               final String qualifier,
-                                              final Collection<VmVolumeAttachment> attachments,
+                                              final Collection<? extends VmVolumeAttachment> attachments,
                                               final Predicate<? super VmVolumeAttachment> matching ) {
     if ( attachments != null ) {
       for ( final VmVolumeAttachment attachment : Iterables.filter( Lists.newArrayList( attachments ), matching ) ) {
@@ -1021,7 +1014,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
   }
 
   private static void addMatchingVolumeIds( final Collection<String> volumeIds,
-                                            final Collection<VmVolumeAttachment> attachments,
+                                            final Collection<? extends VmVolumeAttachment> attachments,
                                             final Predicate<? super VmVolumeAttachment> matching ) {
     CollectionUtils.fluent( attachments )
         .filter( matching )
@@ -1404,7 +1397,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
        */
       private void updateVolumeAttachments( final List<AttachedVolume> volumes ) {
         try {
-          final List<VmVolumeAttachment> ncAttachedVols = Lists.transform( volumes, VmVolumeAttachment.fromAttachedVolume( vm ) );
+          final List<VmStandardVolumeAttachment> ncAttachedVols = Lists.transform( volumes, VmStandardVolumeAttachment.fromAttachedVolume( vm ) );
           Set<String> remoteVolumes = Sets.newHashSet( Collections2.transform( ncAttachedVols, VmVolumeState.VmVolumeAttachmentName.INSTANCE ) );
           Set<String> localVolumes = Sets.newHashSet( Collections2.transform( vm.getTransientVolumeState().getAttachments(), VmVolumeState.VmVolumeAttachmentName.INSTANCE ) );
           localVolumes.addAll(Collections2.transform( vm.getBootRecord().getPersistentVolumes(), VmVolumeState.VmVolumeAttachmentName.INSTANCE ));
@@ -1419,10 +1412,10 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
             LOG.debug( "Reported state for: " + vm.getInstanceId( )
                 + Collections2.transform( ncAttachedVols, VmVolumeState.VmVolumeAttachmentStateInfo.INSTANCE ) );
           }
-          final Map<String, VmVolumeAttachment> ncAttachedVolMap = new HashMap<String, VmVolumeAttachment>( ) {
+          final Map<String, VmStandardVolumeAttachment> ncAttachedVolMap = new HashMap<String, VmStandardVolumeAttachment>( ) {
 
             {
-              for ( final VmVolumeAttachment v : ncAttachedVols ) {
+              for ( final VmStandardVolumeAttachment v : ncAttachedVols ) {
                 this.put( v.getVolumeId( ), v );
               }
             }
@@ -1468,7 +1461,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
               continue;
             }
             try {
-              VmVolumeAttachment ncVolumeAttachment = ncAttachedVolMap.get( volId );
+              final VmStandardVolumeAttachment ncVolumeAttachment = ncAttachedVolMap.get( volId );
               final VmVolumeAttachment.AttachmentState remoteState = VmVolumeAttachment.AttachmentState.parse( ncVolumeAttachment.getStatus() );
               if ( VmVolumeAttachment.AttachmentState.attached.equals( remoteState ) || VmVolumeAttachment.AttachmentState.detaching_failed.equals( remoteState ) ) {
                 LOG.warn( "Restoring volume attachment state for " + vm.getInstanceId( ) + " with " + ncVolumeAttachment.toString( ) );
@@ -1504,7 +1497,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
       public Volume apply( final Volume input ) {
         final VmInstance entity = Entities.merge( vm );
         final Volume volEntity = Entities.merge( vol );
-        VmVolumeAttachment attachVol = new VmVolumeAttachment( entity, volEntity.getDisplayName( ), deviceName, remoteDevice,
+        final VmStandardVolumeAttachment attachVol = new VmStandardVolumeAttachment( entity, volEntity.getDisplayName( ), deviceName, remoteDevice,
             VmVolumeAttachment.AttachmentState.attaching.name( ), new Date( ), false, Boolean.FALSE );
         volEntity.setState( State.BUSY );
         entity.getTransientVolumeState( ).addVolumeAttachment( attachVol );
@@ -1520,7 +1513,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
         final VmInstance entity = Entities.merge( vm );
         final Volume volEntity = Entities.merge( vol );
         // At this point the remote device string is not available. Setting this member to null leads to DB lookup issues later. So setting it to empty string instead
-        final VmVolumeAttachment volumeAttachment = new VmVolumeAttachment( entity, vol.getDisplayName( ), deviceName, new String(), VmVolumeAttachment.AttachmentState.attached.name( ),
+        final VmBootVolumeAttachment volumeAttachment = new VmBootVolumeAttachment( entity, vol.getDisplayName( ), deviceName, new String(), VmVolumeAttachment.AttachmentState.attached.name( ),
             new Date( ), deleteOnTerminate, isRootDevice, Boolean.TRUE );
         entity.getBootRecord( ).getPersistentVolumes().add( volumeAttachment );
         return volEntity;
@@ -1535,7 +1528,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
       @Override
       public String apply(@Nonnull Map<String, String> arg0) {
         final VmInstance entity = Entities.merge(vm);
-        List<VmVolumeAttachment> allAttachments = Lists.newArrayList(entity.getBootRecord().getPersistentVolumes());
+        List<VmVolumeAttachment> allAttachments = Lists.<VmVolumeAttachment>newArrayList(entity.getBootRecord().getPersistentVolumes());
         allAttachments.addAll(entity.getTransientVolumeState().getAttachments());
         for (VmVolumeAttachment attachment : allAttachments) {
           if (arg0.containsKey(attachment.getVolumeId())) {

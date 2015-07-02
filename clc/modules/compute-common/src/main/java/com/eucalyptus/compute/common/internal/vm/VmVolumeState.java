@@ -66,9 +66,11 @@ import java.util.Date;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
 import javax.persistence.ElementCollection;
 import javax.persistence.Embeddable;
+import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
@@ -90,10 +92,9 @@ public class VmVolumeState {
   private static Logger                 LOG         = Logger.getLogger( VmVolumeState.class );
   @Parent
   private VmInstance                    vmInstance;
-  @ElementCollection
-  @CollectionTable( name = "metadata_instances_volume_attachments" )
+  @OneToMany( mappedBy = "vmInstance", orphanRemoval = true, cascade = CascadeType.ALL )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private final Set<VmVolumeAttachment> attachments = Sets.newHashSet( );
+  private final Set<VmStandardVolumeAttachment> attachments = Sets.newHashSet( );
   
   VmVolumeState( ) {
     super( );
@@ -141,7 +142,7 @@ public class VmVolumeState {
     return Iterables.all( this.attachments, pred );
   }
   
-  public void addVolumeAttachment( final VmVolumeAttachment volume ) {
+  public void addVolumeAttachment( final VmStandardVolumeAttachment volume ) {
     final String volumeId = volume.getVolumeId( );
     volume.setStatus( AttachmentState.attaching.name( ) );
     volume.setAttachTime( volume.getAttachTime( ) != null ? volume.getAttachTime( ) : new Date( ) );
@@ -181,7 +182,7 @@ public class VmVolumeState {
     return builder.toString( );
   }
   
-  public Set<VmVolumeAttachment> getAttachments( ) {
+  public Set<VmStandardVolumeAttachment> getAttachments( ) {
     return this.attachments;
   }
   

@@ -20,6 +20,7 @@
 package com.eucalyptus.imaging.backend;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
@@ -40,6 +41,9 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import com.eucalyptus.compute.common.ConversionTask;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
@@ -144,6 +148,18 @@ public class VolumeImagingTask extends ImagingTask {
 
   protected void setCleanUpDone(Boolean cleanUpDone) {
     this.cleanUpDone = cleanUpDone;
+    try ( final TransactionResource db =
+        Entities.transactionFor(VolumeImagingTask.class ) ) {
+      LOG.debug("Setting clean up flag to " + cleanUpDone + " for task " + task.getConversionTaskId());
+      try {
+        VolumeImagingTask entity = Entities.uniqueResult(VolumeImagingTask.named(task.getConversionTaskId()));
+        entity.cleanUpDone = cleanUpDone;
+        Entities.persist(entity);
+      } catch (Exception e) {
+        LOG.error(e);
+      }
+      db.commit();
+    }
   }
 
   @Override

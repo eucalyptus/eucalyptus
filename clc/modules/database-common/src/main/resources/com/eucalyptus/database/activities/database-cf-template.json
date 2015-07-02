@@ -224,7 +224,7 @@
     },
     "SecurityGroup": {
       "Properties": {
-        "GroupDescription": "Database worker's security group",
+        "GroupDescription": "Security group for the reporting database worker",
         "SecurityGroupIngress": [
                     {
                         "IpProtocol": "tcp",

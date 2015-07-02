@@ -35,6 +35,9 @@ import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.cloudwatch.common.internal.domain.InvalidTokenException;
 import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricEntity;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+import com.google.common.collect.Iterables;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Disjunction;
@@ -52,6 +55,11 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 public class ListMetricManager {
+
+  public static volatile Integer LIST_METRIC_NUM_DB_OPERATIONS_PER_TRANSACTION = 10000;
+
+  public static volatile Integer LIST_METRIC_NUM_DB_OPERATIONS_UNTIL_SESSION_FLUSH = 50;
+
   private static final Logger LOG = Logger.getLogger(ListMetricManager.class);
   public static void addMetric(String accountId, String metricName, String namespace, Map<String, String> dimensionMap, MetricType metricType) {
     EntityTransaction db = Entities.get(ListMetric.class);
@@ -220,57 +228,66 @@ public class ListMetricManager {
   }
 
   public static void addMetricBatch(List<ListMetric> dataBatch) {
-    EntityTransaction db = Entities.get(ListMetric.class);
-    try {
-      HashSet<ListMetricCacheLoadKey> loadedKeys = Sets.newHashSet();
-      HashMap<ListMetricCacheKey, ListMetric> cache = Maps.newHashMap();
-      Collection<ListMetricCacheKey> cacheKeys = prune(dataBatch);
-      List<ListMetric> listMetrics = Lists.newArrayList();
-      for (ListMetricCacheKey cacheKey:cacheKeys) {
-        listMetrics.add(createMetric(cacheKey.getLoadKey().getAccountId(),
-          cacheKey.getMetricName(), cacheKey.getLoadKey().getNamespace(),
-          cacheKey.getDimensionMap(), cacheKey.getMetricType()));
-      }
-      for (ListMetric metric: listMetrics) {
-        ListMetricCacheLoadKey loadKey = new ListMetricCacheLoadKey();
-        loadKey.setAccountId(metric.getAccountId());
-        loadKey.setNamespace(metric.getNamespace());
-        if (!loadedKeys.contains(loadKey)) {
-          Criteria criteria = Entities.createCriteria(ListMetric.class)
-              .add( Restrictions.eq( "accountId" , metric.getAccountId() ) )
-              .add( Restrictions.eq( "namespace" , metric.getNamespace() ) );
-          List<ListMetric> results = (List<ListMetric>) criteria.list();
-          for (ListMetric result: results) {
-            ListMetricCacheKey key = new ListMetricCacheKey();
-            key.setLoadKey(loadKey);
-            key.setDimensionMap(result.getDimensionMap());
-            key.setMetricName(result.getMetricName());
-            key.setMetricType(result.getMetricType());
-            cache.put(key, result);
+    for (List<ListMetric> dataBatchPartial: Iterables.partition(dataBatch, LIST_METRIC_NUM_DB_OPERATIONS_PER_TRANSACTION)) {
+      EntityTransaction db = Entities.get(ListMetric.class);
+      try {
+        int numOperations = 0;
+        HashSet<ListMetricCacheLoadKey> loadedKeys = Sets.newHashSet();
+        HashMap<ListMetricCacheKey, ListMetric> cache = Maps.newHashMap();
+        Collection<ListMetricCacheKey> cacheKeys = prune(dataBatchPartial);
+        List<ListMetric> listMetrics = Lists.newArrayList();
+        for (ListMetricCacheKey cacheKey : cacheKeys) {
+          listMetrics.add(createMetric(cacheKey.getLoadKey().getAccountId(),
+            cacheKey.getMetricName(), cacheKey.getLoadKey().getNamespace(),
+            cacheKey.getDimensionMap(), cacheKey.getMetricType()));
+        }
+        for (ListMetric metric : listMetrics) {
+          ListMetricCacheLoadKey loadKey = new ListMetricCacheLoadKey();
+          loadKey.setAccountId(metric.getAccountId());
+          loadKey.setNamespace(metric.getNamespace());
+          if (!loadedKeys.contains(loadKey)) {
+            Criteria criteria = Entities.createCriteria(ListMetric.class)
+              .add(Restrictions.eq("accountId", metric.getAccountId()))
+              .add(Restrictions.eq("namespace", metric.getNamespace()));
+            List<ListMetric> results = (List<ListMetric>) criteria.list();
+            for (ListMetric result : results) {
+              ListMetricCacheKey key = new ListMetricCacheKey();
+              key.setLoadKey(loadKey);
+              key.setDimensionMap(result.getDimensionMap());
+              key.setMetricName(result.getMetricName());
+              key.setMetricType(result.getMetricType());
+              cache.put(key, result);
+            }
+            loadedKeys.add(loadKey);
           }
-          loadedKeys.add(loadKey);
-        }
 
-        ListMetricCacheKey key = new ListMetricCacheKey();
-        key.setDimensionMap(metric.getDimensionMap());
-        key.setLoadKey(loadKey);
-        key.setMetricName(metric.getMetricName());
-        key.setMetricType(metric.getMetricType());
-        ListMetric inDbMetric = cache.get(key);
-        if (inDbMetric != null) {
-          inDbMetric.setVersion(1 + inDbMetric.getVersion());
-        } else {
-          cache.put(key, metric);
-          Entities.persist(metric);
+          ListMetricCacheKey key = new ListMetricCacheKey();
+          key.setDimensionMap(metric.getDimensionMap());
+          key.setLoadKey(loadKey);
+          key.setMetricName(metric.getMetricName());
+          key.setMetricType(metric.getMetricType());
+          ListMetric inDbMetric = cache.get(key);
+          if (inDbMetric != null) {
+            inDbMetric.setVersion(1 + inDbMetric.getVersion());
+          } else {
+            cache.put(key, metric);
+            Entities.persist(metric);
+          }
+          numOperations++;
+          if (numOperations % LIST_METRIC_NUM_DB_OPERATIONS_UNTIL_SESSION_FLUSH == 0) {
+            Entities.flushSession(ListMetric.class);
+            Entities.clearSession(ListMetric.class);
+          }
+
         }
+        db.commit();
+      } catch (RuntimeException ex) {
+        Logs.extreme().error(ex, ex);
+        throw ex;
+      } finally {
+        if (db.isActive())
+          db.rollback();
       }
-      db.commit();
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-    if (db.isActive())
-      db.rollback();
     }
   }
 

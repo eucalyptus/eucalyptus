@@ -23,31 +23,36 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from requestbuilder import Arg
-import requestbuilder.auth.aws
-import requestbuilder.request
-import requestbuilder.service
+import io
+import six
 
-from eucalyptus_admin.commands import EucalyptusAdmin
-from eucalyptus_admin.exceptions import AWSError
+import requestbuilder.exceptions
+import requestbuilder.xmlparse
 
 
-class Properties(requestbuilder.service.BaseService):
-    NAME = 'properties'
-    DESCRIPTION = 'Cloud property management service'
-    REGION_ENVVAR = 'AWS_DEFAULT_REGION'
-    URL_ENVVAR = 'PROPERTIES_URL'
+class AWSError(requestbuilder.exceptions.ServerError):
+    def __init__(self, response, *args):
+        requestbuilder.exceptions.ServerError.__init__(self, response, *args)
+        self.code = None
+        self.message = None
 
-    ARGS = [Arg('-U', '--url', metavar='URL', help='''Connect to the
-                service using a specific URL.''')]
+        if self.body:
+            try:
+                parsed = requestbuilder.xmlparse.parse_aws_xml(
+                    io.StringIO(six.text_type(self.body)))
+                parsed = parsed[parsed.keys()[0]]
+                if 'Errors' in parsed:
+                    parsed = parsed['Errors']
+                if 'Error' in parsed:
+                    parsed = parsed['Error']
+                if parsed.get('Code'):
+                    self.code = parsed['Code']
+                    self.args += (parsed['Code'],)
+                self.message = parsed.get('Message')
+            except ValueError:
+                self.message = self.body
+            self.args += (self.message,)
 
-    def handle_http_error(self, response):
-        raise AWSError(response)
-
-
-class PropertiesRequest(requestbuilder.request.AWSQueryRequest):
-    SUITE = EucalyptusAdmin
-    SERVICE_CLASS = Properties
-    AUTH_CLASS = requestbuilder.auth.aws.HmacV4Auth
-    API_VERSION = 'eucalyptus'
-    METHOD = 'POST'
+    def format_for_cli(self):
+        return 'error ({0}): {1}'.format(self.code or self.status_code,
+                                         self.message or self.reason)

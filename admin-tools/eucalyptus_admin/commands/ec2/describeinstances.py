@@ -24,30 +24,19 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from requestbuilder import Arg
-import requestbuilder.auth.aws
-import requestbuilder.request
-import requestbuilder.service
 
-from eucalyptus_admin.commands import EucalyptusAdmin
-from eucalyptus_admin.exceptions import AWSError
+from eucalyptus_admin.commands.ec2 import EC2Request
 
 
-class Properties(requestbuilder.service.BaseService):
-    NAME = 'properties'
-    DESCRIPTION = 'Cloud property management service'
-    REGION_ENVVAR = 'AWS_DEFAULT_REGION'
-    URL_ENVVAR = 'PROPERTIES_URL'
-
-    ARGS = [Arg('-U', '--url', metavar='URL', help='''Connect to the
-                service using a specific URL.''')]
-
-    def handle_http_error(self, response):
-        raise AWSError(response)
-
-
-class PropertiesRequest(requestbuilder.request.AWSQueryRequest):
-    SUITE = EucalyptusAdmin
-    SERVICE_CLASS = Properties
-    AUTH_CLASS = requestbuilder.auth.aws.HmacV4Auth
-    API_VERSION = 'eucalyptus'
-    METHOD = 'POST'
+class DescribeInstances(EC2Request):
+    """
+    This is a rather limited version of DescribeInstances meant for
+    internal use by DescribeNodeControllers.  For a full-featured
+    implementation use euca2ools.
+    """
+    DESCRIPTION = 'Show information about isntances'
+    ARGS = [Arg('InstanceId', metavar='INSTANCE', nargs='*',
+                help='limit results to specific instances')]
+    LIST_TAGS = ['reservationSet', 'instancesSet', 'groupSet', 'tagSet',
+                 'blockDeviceMapping', 'productCodes', 'networkInterfaceSet',
+                 'privateIpAddressesSet']

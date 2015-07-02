@@ -107,6 +107,20 @@ PersistenceContexts.list( ).each { String context_name ->
         'hibernate.cache.use_query_cache': 'false',
       ] )
 
+  LOG.info("Context name: = '" + context_name + "'");
+  if ( context_name in ["eucalyptus_cloudwatch", "eucalyptus_cloudwatch_backend", "eucalyptus_cloud"]) {
+    LOG.info("entering batch mode");
+    hibernate_config.putAll( [
+      /** batch **/
+      'hibernate.jdbc.batch_size' : '50',
+      'hibernate.order_inserts' : 'true',
+      'hibernate.order_updates' : 'true',
+      'hibernate.jdbc.batch_versioned_data' : 'true'
+    ])
+  } else {
+    LOG.info("not entering batch mode");
+  }
+
   String schemaName = PersistenceContexts.toSchemaName( ).apply( context_name )
   if ( schemaName ) {
     hibernate_config.put( 'hibernate.default_schema', schemaName )

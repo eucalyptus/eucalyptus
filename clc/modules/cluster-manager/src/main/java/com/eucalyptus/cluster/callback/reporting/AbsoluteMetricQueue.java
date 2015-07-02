@@ -17,7 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.cluster.callback.cloudwatch;
+package com.eucalyptus.cluster.callback.reporting;
 
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cloudwatch.common.CloudWatch;
@@ -37,6 +37,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -53,7 +54,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import com.eucalyptus.cluster.callback.cloudwatch.AbsoluteMetricHelper.MetricDifferenceInfo;
+import com.eucalyptus.cluster.callback.reporting.AbsoluteMetricHelper.MetricDifferenceInfo;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
 
@@ -61,6 +62,10 @@ import org.hibernate.criterion.Restrictions;
  * Created by ethomas on 6/16/15.
  */
 public class AbsoluteMetricQueue {
+
+  public static volatile Integer ABSOLUTE_METRIC_NUM_DB_OPERATIONS_PER_TRANSACTION = 10000;
+  public static volatile Integer ABSOLUTE_METRIC_NUM_DB_OPERATIONS_UNTIL_SESSION_FLUSH = 50;
+
 
   static {
     ScheduledExecutorService dbCleanupService = Executors
@@ -94,30 +99,30 @@ public class AbsoluteMetricQueue {
         List<AbsoluteMetricQueueItem> dataBatch = Lists.newArrayList();
         dataQueue.drainTo(dataBatch);
 //        dataQueue.drainTo(dataBatch, 15000);
-        LOG.warn("Cluster:Timing:dataBatch.size()="+dataBatch.size());
+        LOG.debug("Cluster:Timing:dataBatch.size()="+dataBatch.size());
         long t1 = System.currentTimeMillis();
         dataBatch = dealWithAbsoluteMetrics(dataBatch);
         long t2 = System.currentTimeMillis();
-        LOG.warn("Cluster:Timing:dataBatch.dealWithAbsoluteMetrics():time="+(t2-t1));
+        LOG.debug("Cluster:Timing:dataBatch.dealWithAbsoluteMetrics():time="+(t2-t1));
         dataBatch = foldMetrics(dataBatch);
         long t3 = System.currentTimeMillis();
-        LOG.warn("Cluster:Timing:dataBatch.foldMetrics():time="+(t3-t2));
+        LOG.debug("Cluster:Timing:dataBatch.foldMetrics():time="+(t3-t2));
         List<PutMetricDataType> putMetricDataTypeList =convertToPutMetricDataList(dataBatch);
         long t4 = System.currentTimeMillis();
-        LOG.warn("Cluster:Timing:dataBatch.convertToPutMetricDataList():time="+(t4-t3));
+        LOG.debug("Cluster:Timing:dataBatch.convertToPutMetricDataList():time="+(t4-t3));
         putMetricDataTypeList = CloudWatchHelper.consolidatePutMetricDataList(putMetricDataTypeList);
         long t5 = System.currentTimeMillis();
-        LOG.warn("Cluster:Timing:dataBatch.consolidatePutMetricDataList():time="+(t5-t4));
+        LOG.debug("Cluster:Timing:dataBatch.consolidatePutMetricDataList():time="+(t5-t4));
         callPutMetricData(putMetricDataTypeList);
         long t6 = System.currentTimeMillis();
-        LOG.warn("Timing:ListMetricManager.callPutMetricData():time="+(t6-t5));
+        LOG.debug("Cluster:Timing:ListMetricManager.callPutMetricData():time="+(t6-t5));
       } catch (Throwable ex) {
-        LOG.warn("error");
+        LOG.debug("error");
         ex.printStackTrace();
         LOG.error(ex,ex);
       } finally {
         long after = System.currentTimeMillis();
-        LOG.warn("Timing:time="+(after-before));
+        LOG.debug("Cluster:Timing:time="+(after-before));
       }
     }
   };
@@ -200,92 +205,98 @@ public class AbsoluteMetricQueue {
   protected static List<AbsoluteMetricQueueItem> dealWithAbsoluteMetrics(
     List<AbsoluteMetricQueueItem> dataBatch) {
     List<AbsoluteMetricQueueItem> dataToInsert = new ArrayList<AbsoluteMetricQueueItem>();
-    EntityTransaction db = Entities.get(AbsoluteMetricHistory.class);
-    try {
-      AbsoluteMetricCache cache = new AbsoluteMetricCache(db);
-      // Some points do not actually go in.  If a data point represents an absolute value, the first one does not go in.
-      // Also, some data points are added while we go through the list (derived metrics)
+    for (List<AbsoluteMetricQueueItem> dataBatchPartial: Iterables.partition(dataBatch, ABSOLUTE_METRIC_NUM_DB_OPERATIONS_PER_TRANSACTION)) {
 
-      for (final AbsoluteMetricQueueItem item : dataBatch) {
-        String accountId = item.getAccountId();
-        String nameSpace = item.getNamespace();
-        MetricDatum datum = item.getMetricDatum();
-        // Deal with the absolute metrics
-        // CPUUtilization
-        // VolumeReadOps
-        // VolumeWriteOps
-        // VolumeConsumedReadWriteOps
-        // VolumeReadBytes
-        // VolumeWriteBytes
-        // VolumeTotalReadTime
-        // VolumeTotalWriteTime
-        // VolumeTotalReadWriteTime (used to calculate VolumeIdleTime)
-        // DiskReadOps
-        // DiskWriteOps
-        // DiskReadBytes
-        // DiskWriteBytes
-        // NetworkIn
-        // NetworkOut
+      EntityTransaction db = Entities.get(AbsoluteMetricHistory.class);
+      try {
+        AbsoluteMetricCache cache = new AbsoluteMetricCache(db);
+        // Some points do not actually go in.  If a data point represents an absolute value, the first one does not go in.
+        // Also, some data points are added while we go through the list (derived metrics)
 
-        if ("AWS/EBS".equals(nameSpace)) {
-          String volumeId = null;
-          if ((datum.getDimensions() != null) && (datum.getDimensions().getMember() != null)) {
-            for (Dimension dimension: datum.getDimensions().getMember()) {
-              if ("VolumeId".equals(dimension.getName())) {
-                volumeId = dimension.getValue();
-                cache.load(nameSpace, "VolumeId", volumeId);
+        for (final AbsoluteMetricQueueItem item : dataBatchPartial) {
+          String accountId = item.getAccountId();
+          String nameSpace = item.getNamespace();
+          MetricDatum datum = item.getMetricDatum();
+          // Deal with the absolute metrics
+          // CPUUtilization
+          // VolumeReadOps
+          // VolumeWriteOps
+          // VolumeConsumedReadWriteOps
+          // VolumeReadBytes
+          // VolumeWriteBytes
+          // VolumeTotalReadTime
+          // VolumeTotalWriteTime
+          // VolumeTotalReadWriteTime (used to calculate VolumeIdleTime)
+          // DiskReadOps
+          // DiskWriteOps
+          // DiskReadBytes
+          // DiskWriteBytes
+          // NetworkIn
+          // NetworkOut
+
+          if ("AWS/EBS".equals(nameSpace)) {
+            String volumeId = null;
+            if ((datum.getDimensions() != null) && (datum.getDimensions().getMember() != null)) {
+              for (Dimension dimension : datum.getDimensions().getMember()) {
+                if ("VolumeId".equals(dimension.getName())) {
+                  volumeId = dimension.getValue();
+                  cache.load(nameSpace, "VolumeId", volumeId);
+                }
               }
             }
-          }
-          if (EBS_ABSOLUTE_METRICS.containsKey(datum.getMetricName())) {
-            // we check if the point below is a 'first' point, or maybe a point in the past.  Either case reject it.
-            if (!adjustAbsoluteVolumeStatisticSet(cache, datum, datum.getMetricName(), EBS_ABSOLUTE_METRICS.get(datum.getMetricName()), volumeId)) continue;
-          }
-          // special cases
-          // 1) VolumeThroughputPercentage -- this is 100% for provisioned volumes, and we need to insert a
-          //                                  data point for every timestamp that a volume event occurs.
-          //                                  To make sure we don't duplicate the effort, we choose one event at random, VolumeReadOps,
-          //                                  and create this new metric arbitrarily
-          if ("VolumeReadOps".equals(datum.getMetricName())) { // special case
-            dataToInsert.add(createVolumeThroughputMetric(accountId, nameSpace, datum));
-          }
-          // 2) VolumeIdleTime -- we piggy back off of the metric we don't need VolumeTotalReadWriteTime, and convert it to VolumeIdleTime
-          if ("VolumeTotalReadWriteTime".equals(datum.getMetricName())) {
-            convertVolumeTotalReadWriteTimeToVolumeIdleTime(datum);
-          }
-          // 3) VolumeQueueLength -- this one comes in essentially correct, but we don't have a time duration for it, so we piggy back off
-          //                         the absolute metric framework
-          if ("VolumeQueueLength".equals(datum.getMetricName())) {
-            if (!adjustAbsoluteVolumeQueueLengthStatisticSet(cache, datum, volumeId)) continue;
-          }
-        }
-
-        if ("AWS/EC2".equals(nameSpace)) {
-          String instanceId = null;
-          if ((datum.getDimensions() != null) && (datum.getDimensions().getMember() != null)) {
-            for (Dimension dimension: datum.getDimensions().getMember()) {
-              if ("InstanceId".equals(dimension.getName())) {
-                instanceId = dimension.getValue();
-                cache.load(nameSpace, "InstanceId", instanceId);
-              }
+            if (EBS_ABSOLUTE_METRICS.containsKey(datum.getMetricName())) {
+              // we check if the point below is a 'first' point, or maybe a point in the past.  Either case reject it.
+              if (!adjustAbsoluteVolumeStatisticSet(cache, datum, datum.getMetricName(), EBS_ABSOLUTE_METRICS.get(datum.getMetricName()), volumeId))
+                continue;
+            }
+            // special cases
+            // 1) VolumeThroughputPercentage -- this is 100% for provisioned volumes, and we need to insert a
+            //                                  data point for every timestamp that a volume event occurs.
+            //                                  To make sure we don't duplicate the effort, we choose one event at random, VolumeReadOps,
+            //                                  and create this new metric arbitrarily
+            if ("VolumeReadOps".equals(datum.getMetricName())) { // special case
+              dataToInsert.add(createVolumeThroughputMetric(accountId, nameSpace, datum));
+            }
+            // 2) VolumeIdleTime -- we piggy back off of the metric we don't need VolumeTotalReadWriteTime, and convert it to VolumeIdleTime
+            if ("VolumeTotalReadWriteTime".equals(datum.getMetricName())) {
+              convertVolumeTotalReadWriteTimeToVolumeIdleTime(datum);
+            }
+            // 3) VolumeQueueLength -- this one comes in essentially correct, but we don't have a time duration for it, so we piggy back off
+            //                         the absolute metric framework
+            if ("VolumeQueueLength".equals(datum.getMetricName())) {
+              if (!adjustAbsoluteVolumeQueueLengthStatisticSet(cache, datum, volumeId)) continue;
             }
           }
-          if (EC2_ABSOLUTE_METRICS.containsKey(datum.getMetricName())) {
-            if (!adjustAbsoluteInstanceStatisticSet(cache, datum, datum.getMetricName(), EC2_ABSOLUTE_METRICS.get(datum.getMetricName()), instanceId)) continue;
-          } else if ("CPUUtilizationMSAbsolute".equals(datum.getMetricName())) { // special case
-            // we check if the point below is a 'first' point, or maybe a point in the past.  Either case reject it.
-            if (!adjustAbsoluteInstanceCPUStatisticSet(cache, datum, "CPUUtilizationMSAbsolute", "CPUUtilization", instanceId)) continue;
+
+          if ("AWS/EC2".equals(nameSpace)) {
+            String instanceId = null;
+            if ((datum.getDimensions() != null) && (datum.getDimensions().getMember() != null)) {
+              for (Dimension dimension : datum.getDimensions().getMember()) {
+                if ("InstanceId".equals(dimension.getName())) {
+                  instanceId = dimension.getValue();
+                  cache.load(nameSpace, "InstanceId", instanceId);
+                }
+              }
+            }
+            if (EC2_ABSOLUTE_METRICS.containsKey(datum.getMetricName())) {
+              if (!adjustAbsoluteInstanceStatisticSet(cache, datum, datum.getMetricName(), EC2_ABSOLUTE_METRICS.get(datum.getMetricName()), instanceId))
+                continue;
+            } else if ("CPUUtilizationMSAbsolute".equals(datum.getMetricName())) { // special case
+              // we check if the point below is a 'first' point, or maybe a point in the past.  Either case reject it.
+              if (!adjustAbsoluteInstanceCPUStatisticSet(cache, datum, "CPUUtilizationMSAbsolute", "CPUUtilization", instanceId))
+                continue;
+            }
           }
+          dataToInsert.add(item); // this data point is ok
         }
-        dataToInsert.add(item); // this data point is ok
+        db.commit();
+      } catch (RuntimeException ex) {
+        Logs.extreme().error(ex, ex);
+        throw ex;
+      } finally {
+        if (db.isActive())
+          db.rollback();
       }
-      db.commit();
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      if (db.isActive())
-        db.rollback();
     }
     return dataToInsert;
   }
@@ -484,6 +495,15 @@ public class AbsoluteMetricQueue {
     private Map<AbsoluteMetricCacheKey, AbsoluteMetricHistory> cacheMap = Maps.newHashMap();
     public AbsoluteMetricCache(EntityTransaction db) {
       this.db = db;
+    }
+
+    private int numAdjustments = 0;
+    public void clearSessionIfNecessary() {
+      numAdjustments++;
+      if (numAdjustments % ABSOLUTE_METRIC_NUM_DB_OPERATIONS_UNTIL_SESSION_FLUSH == 0) {
+        Entities.flushSession(AbsoluteMetricHistory.class);
+        Entities.clearSession(AbsoluteMetricHistory.class);
+      }
     }
 
     public void load(String namespace, String dimensionName, String dimensionValue) {
