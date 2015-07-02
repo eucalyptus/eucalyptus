@@ -241,7 +241,8 @@ public class ServiceUris {
       String schemeString = StackConfiguration.DEFAULT_HTTPS_ENABLED
         ? this.scheme.getSecureScheme( )
         : this.scheme.getScheme( );
-      final String hostNameString = componentId.isUseServiceHostName( ) ?
+      // Use hostname if the component supports it and the address was created with a name.
+      final String hostNameString = componentId.isUseServiceHostName( ) && !this.address.toString().startsWith( "/" ) ?
           this.address.getHostName( ) :
           this.address.getHostAddress( );
       try {
