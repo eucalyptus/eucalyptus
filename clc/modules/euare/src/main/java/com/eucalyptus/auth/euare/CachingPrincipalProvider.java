@@ -32,6 +32,7 @@ import com.eucalyptus.auth.AuthenticationProperties;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.Parameters;
+import com.eucalyptus.util.async.AsyncExceptions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheBuilderSpec;
@@ -96,15 +97,23 @@ public class CachingPrincipalProvider extends RegionDelegatingPrincipalProvider 
   private UserPrincipal cache(
       final PrincipalCacheKey key,
       final PrincipalLoader loader ) throws AuthException {
+    PrincipalCacheValue principalValue = null;
+    final Cache<PrincipalCacheKey,PrincipalCacheValue> cache = cache( );
     try {
-      final Cache<PrincipalCacheKey,PrincipalCacheValue> cache = cache( );
-      PrincipalCacheValue principalValue = cache.get( key, loader.callable( null ) );
-      if ( principalValue.created + AuthenticationProperties.getAuthorizationExpiry( ) < System.currentTimeMillis( ) ) {
-        cache.invalidate( key );
+      principalValue = cache.get( key, loader.callable( null ) );
+      if ( principalValue.updated + AuthenticationProperties.getAuthorizationExpiry( ) < System.currentTimeMillis( ) ) {
+        cache.invalidate( key ); // invalidate expired and refresh
         principalValue =  cache.get( key, loader.callable( principalValue.principal ) );
       }
       return principalValue.principal;
     } catch ( final ExecutionException e ) {
+      // reuse cached value on failure within configured limit, but not for web service error responses
+      if ( !AsyncExceptions.asWebServiceError( e ).isPresent( ) &&
+          principalValue != null &&
+          principalValue.created + AuthenticationProperties.getAuthorizationReuseExpiry( ) > System.currentTimeMillis( ) ) {
+        cache.put( key, new PrincipalCacheValue( principalValue ) );
+        return principalValue.principal;
+      }
       if ( e.getCause( ) instanceof AuthException ) {
         throw (AuthException) e.getCause( );
       } else {
@@ -152,12 +161,21 @@ public class CachingPrincipalProvider extends RegionDelegatingPrincipalProvider 
 
   private static final class PrincipalCacheValue {
              private final long created;
+             private final long updated;
     @Nonnull private final UserPrincipal principal;
 
     public PrincipalCacheValue( @Nonnull final UserPrincipal principal ) {
       Parameters.checkParam( "principal", principal, notNullValue( ) );
       this.created = System.currentTimeMillis( );
+      this.updated = created;
       this.principal = principal;
+    }
+
+    public PrincipalCacheValue( @Nonnull final PrincipalCacheValue value ) {
+      Parameters.checkParam( "value", value, notNullValue( ) );
+      this.created = value.created;
+      this.updated = System.currentTimeMillis( );
+      this.principal = value.principal;
     }
   }
 

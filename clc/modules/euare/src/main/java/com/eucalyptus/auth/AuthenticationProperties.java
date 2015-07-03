@@ -131,12 +131,17 @@ public class AuthenticationProperties {
   @ConfigurableField( description = "Default expiry for cached authorization metadata", initial = "5s", changeListener = AuthenticationIntervalPropertyChangeListener.class )
   public static volatile String AUTHORIZATION_EXPIRY = "5s";
 
+  @ConfigurableField( description = "Default expiry for re-use of cached authorization metadata on failure", initial = "0s", changeListener = AuthenticationIntervalPropertyChangeListener.class )
+  public static volatile String AUTHORIZATION_REUSE_EXPIRY = "0s";
+
   @ConfigurableField( description = "Maximum size for an IAM policy (bytes)", initial = DEFAULT_MAX_POLICY_SIZE_TEXT )
   public static volatile int MAX_POLICY_SIZE = Integer.parseInt( DEFAULT_MAX_POLICY_SIZE_TEXT );
 
   private static AtomicLong DEFAULT_PASSWORD_EXPIRY_MILLIS = new AtomicLong( TimeUnit.DAYS.toMillis( 60 ) );
 
   private static AtomicLong AUTHORIZATION_EXPIRY_MILLIS = new AtomicLong( TimeUnit.SECONDS.toMillis( 5 ) );
+
+  private static AtomicLong AUTHORIZATION_REUSE_EXPIRY_MILLIS = new AtomicLong( 0 );
 
   private static volatile CredentialDownloadGenerateCertificateStrategy credentialDownloadGenerateCertificateStrategy =
       Enums.getIfPresent(
@@ -163,6 +168,10 @@ public class AuthenticationProperties {
 
   public static long getAuthorizationExpiry( ) {
     return AUTHORIZATION_EXPIRY_MILLIS.get( );
+  }
+
+  public static long getAuthorizationReuseExpiry( ) {
+    return AUTHORIZATION_REUSE_EXPIRY_MILLIS.get( );
   }
 
   @Nonnull
