@@ -440,6 +440,9 @@ public class LoadBalancingBackendService {
 	  if(lb==null || !LoadBalancingMetadatas.filterPrivilegedWithoutOwner().apply( lb ))
 		  return reply;
 	  
+	  final int healthyTimeoutSec = lb.getHealthCheckInterval() * lb.getHealthyThreshold();
+	  final long currentTime = System.currentTimeMillis();
+	  
 	  /// INSTANCE HEALTH CHECK UPDATE
 	  if(instances!= null && instances.getMember()!=null && instances.getMember().size()>0){
 		  final Collection<LoadBalancerBackendInstanceCoreView> lbInstances = lb.getBackendInstances();
@@ -460,7 +463,16 @@ public class LoadBalancingBackendService {
 					  break;
 				  }  
 			  }
-			  if(found!=null){
+			  boolean outdated = false;
+        Date lastUpdated;
+			  if(found!= null && (lastUpdated = found.instanceStateLastUpdated()) != null){
+		      final int diffSec = (int)((currentTime - lastUpdated.getTime())/1000.0);
+		      if(diffSec > healthyTimeoutSec){
+		        outdated = true;
+		      }
+		    }
+			  
+			  if(outdated || (found!=null && !state.equals(found.getState().name()))){
 				  try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
 					  final LoadBalancerBackendInstance update = Entities.uniqueResult(
 							  LoadBalancerBackendInstance.named(lb, found.getInstanceId()));
@@ -477,9 +489,9 @@ public class LoadBalancingBackendService {
 					  Entities.persist(update);
 					  db.commit();
 				  }catch(final NoSuchElementException ex){
-					  LOG.error("unable to find the loadbancer backend instance", ex);
+					  LOG.error("unable to find the loadbancer backend instance");
 				  }catch(final Exception ex){
-					  LOG.error("unable to update the state of loadbalancer backend instance", ex);
+					  LOG.error("unable to update the state of loadbalancer backend instance");
 				  }
 			  }
 		  }
