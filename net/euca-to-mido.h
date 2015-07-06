@@ -78,7 +78,7 @@
 \*----------------------------------------------------------------------------*/
 
 #include <midonet-api.h>
-
+#include <eucanetd_config.h>
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  DEFINES                                   |
@@ -223,7 +223,7 @@ typedef struct mido_config_t {
     u32 int_rtaddr;
     u32 enabledCLCIp;
     int int_rtsn;
-    int setupcore;
+    int flushmode;
     midoname *hosts;
     midoname *routers;
     midoname *bridges;
@@ -281,7 +281,7 @@ int set_router_id(mido_config * mido, int id);
 
 int cidr_split(char *cidr, char *outnet, char *outslashnet, char *outgw, char *outplustwo);
 
-int initialize_mido(mido_config * mido, char *eucahome, char *setupcore, char *ext_eucanetdhostname, char *ext_rthostname, char *ext_rtaddr, char *ext_rtiface, char *ext_pubnw,
+int initialize_mido(mido_config * mido, char *eucahome, int flushmode, char *ext_eucanetdhostname, char *ext_rthostname, char *ext_rtaddr, char *ext_rtiface, char *ext_pubnw,
                     char *ext_pubgwip, char *int_rtnetwork, char *int_rtslashnet);
 int discover_mido_resources(mido_config * mido);
 

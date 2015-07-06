@@ -691,15 +691,11 @@ int do_midonet_populate(mido_config * mido)
         return (1);
     }
 
-    if (mido->setupcore) {
-        // create the core (only the things that aren't already there)
-        rc = create_mido_core(mido, mido->midocore);
-        if (rc) {
-            LOGERROR("cannot setup midonet core router/bridge: check midonet health\n");
-            return (1);
-        }
-    } else {
-        LOGDEBUG("skipping the create of midocore (see MIDOSETUPCORE parameter in eucalyptus.conf)\n");
+    // create the core (only the things that aren't already there)
+    rc = create_mido_core(mido, mido->midocore);
+    if (rc) {
+        LOGERROR("cannot setup midonet core router/bridge: check midonet health\n");
+        return (1);
     }
 
     // pattern
@@ -862,7 +858,8 @@ int do_midonet_teardown(mido_config * mido)
         delete_mido_vpc_secgroup(&(mido->vpcsecgroups[i]));
     }
 
-    if (mido->setupcore) {
+    if (mido->flushmode == FLUSH_ALL) {
+        LOGDEBUG("deleting mido core\n");
         delete_mido_core(mido, mido->midocore);
     } else {
         LOGDEBUG("skipping the delete of midocore (see MIDOSETUPCORE param in eucalyptus.conf)\n");
@@ -2629,7 +2626,7 @@ int delete_mido_vpc_instance(mido_vpc_instance * vpcinstance)
 //!
 //! @note
 //!
-int initialize_mido(mido_config * mido, char *eucahome, char *setupcore, char *ext_eucanetdhostname, char *ext_rthostname, char *ext_rtaddr, char *ext_rtiface, char *ext_pubnw,
+int initialize_mido(mido_config * mido, char *eucahome, int flushmode, char *ext_eucanetdhostname, char *ext_rthostname, char *ext_rtaddr, char *ext_rtiface, char *ext_pubnw,
                     char *ext_pubgwip, char *int_rtnetwork, char *int_rtslashnet)
 {
     int ret = 0;
@@ -2652,10 +2649,7 @@ int initialize_mido(mido_config * mido, char *eucahome, char *setupcore, char *e
 
     mido->eucahome = strdup(eucahome);
 
-    mido->setupcore = 1;
-    if (setupcore && (strlen(setupcore) > 0) && (!strcmp(setupcore, "N") || !strcmp(setupcore, "n"))) {
-        mido->setupcore = 0;
-    }
+    mido->flushmode = flushmode;
 
     mido->ext_eucanetdhostname = strdup(ext_eucanetdhostname);
     mido->ext_rthostname = strdup(ext_rthostname);
