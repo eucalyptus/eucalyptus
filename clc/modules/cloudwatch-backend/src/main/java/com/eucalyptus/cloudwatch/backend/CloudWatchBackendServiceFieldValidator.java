@@ -37,6 +37,7 @@ import com.eucalyptus.cloudwatch.common.internal.domain.alarms.AlarmManager;
 import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricEntity;
 import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricStatistics;
 import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricUtils;
+import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricEntity.MetricType;
 import com.google.common.collect.Lists;
 import net.sf.json.JSONException;
 import net.sf.json.JSONSerializer;
@@ -69,7 +70,9 @@ public class CloudWatchBackendServiceFieldValidator {
     }
   }
 
-  static List<MetricDatum> validateMetricData(MetricData metricData) throws CloudWatchException {
+  static int NUM_SYSTEM_METRIC_DATA_POINTS = 50;
+  static int NUM_CUSTOM_METRIC_DATA_POINTS = 20;
+  static List<MetricDatum> validateMetricData(MetricData metricData, MetricType metricType) throws CloudWatchException {
     List<MetricDatum> metricDataCollection = null;
     if (metricData != null) {
       metricDataCollection = metricData.getMember();
@@ -77,15 +80,19 @@ public class CloudWatchBackendServiceFieldValidator {
     }
     if (metricDataCollection == null) {
       throw new MissingParameterException(
-         "The parameter MetricData is required.");
-   }
+        "The parameter MetricData is required.");
+    }
     if (metricDataCollection.size() < 1) {
       throw new MissingParameterException(
-          "The parameter MetricData is required.");
+        "The parameter MetricData is required.");
     }
-    if (metricDataCollection.size() > 20) {
+    if (metricDataCollection.size() > NUM_CUSTOM_METRIC_DATA_POINTS && metricType == MetricType.Custom) {
       throw new InvalidParameterValueException(
-          "The collection MetricData must not have a size greater than 20.");
+        "The collection MetricData must not have a size greater than " + NUM_CUSTOM_METRIC_DATA_POINTS);
+    }
+    if (metricDataCollection.size() > NUM_SYSTEM_METRIC_DATA_POINTS && metricType == MetricType.Custom) {
+      throw new InvalidParameterValueException(
+        "The collection MetricData must not have a size greater than " + NUM_SYSTEM_METRIC_DATA_POINTS + " (for system metrics)");
     }
     int ctr = 1;
     for (MetricDatum metricDatum : metricDataCollection) {
