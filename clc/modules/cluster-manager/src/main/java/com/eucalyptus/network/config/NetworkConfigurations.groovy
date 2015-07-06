@@ -122,7 +122,7 @@ class NetworkConfigurations {
 
   @PackageScope
   static void process( final NetworkConfiguration networkConfiguration ) {
-    Addresses.addressManager.update( iterateRangesAsString( networkConfiguration.publicIps ) )
+    Addresses.addressManager.update( iterateRangesAsString( networkConfiguration.publicIps ), networkConfiguration.mode ?: 'EDGE')
     Entities.transaction( ClusterConfiguration.class ) { EntityTransaction db ->
       Components.lookup(ClusterController.class).services().each { ClusterConfiguration config ->
         (networkConfiguration?.clusters?.find{ Cluster cluster -> cluster.name == config.partition }?:new Cluster()).with{
