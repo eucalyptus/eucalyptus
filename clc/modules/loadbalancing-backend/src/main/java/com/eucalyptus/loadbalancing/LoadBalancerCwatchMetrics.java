@@ -154,13 +154,18 @@ public class LoadBalancerCwatchMetrics {
 			data = this.getDataAndClear(userId);
 		
 		if(data!=null && data.getMember()!=null && data.getMember().size()>0){
-			try{
-				EucalyptusActivityTasks.getInstance().putCloudWatchMetricData(userId, CLOUDWATCH_ELB_METRIC_NAMESPACE, data);
-			}catch(Exception ex){
-				Exceptions.toUndeclared(ex);
-			}finally{
-				this.lastReported.put(userId, new Date(currentTime));
-			}
+		  final int MAX_PUT_METRIC_DATA_ITEMS = 20;
+		  for(final List<MetricDatum> partition : Iterables.partition(data.getMember(), MAX_PUT_METRIC_DATA_ITEMS)) {
+		    final MetricData partitionedData = new MetricData();
+		    partitionedData.setMember(Lists.newArrayList(partition));
+		    try{
+		      EucalyptusActivityTasks.getInstance().putCloudWatchMetricData(userId, CLOUDWATCH_ELB_METRIC_NAMESPACE, partitionedData);
+		    }catch(Exception ex){
+		      Exceptions.toUndeclared(ex);
+		    }finally{
+		      this.lastReported.put(userId, new Date(currentTime));
+		    }
+		  }
 		}
 	}
 	
@@ -200,7 +205,9 @@ public class LoadBalancerCwatchMetrics {
     	synchronized(lock){
 			/// add HealthyHostCount and UnHealthyHostCount
         	for(final BackendInstance instance : candidates){
-        		final ElbDimension thisDim = this.instanceToDimensionMap.get(instance);
+            if (! this.instanceHealthMap.containsKey(instance))
+              continue;
+        	  final ElbDimension thisDim = this.instanceToDimensionMap.get(instance);
         		if(this.instanceHealthMap.get(instance).booleanValue()){ // healthy	
         			if(!healthyCountMap.containsKey(thisDim))
         				healthyCountMap.put(thisDim, 0);

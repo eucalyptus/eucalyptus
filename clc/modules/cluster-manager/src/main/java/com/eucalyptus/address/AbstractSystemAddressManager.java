@@ -213,10 +213,26 @@ public abstract class AbstractSystemAddressManager {
   /**
    * Update addresses from the list assign (system) to instances if necessary.
    */
-  public void update( final Iterable<String> addresses ) {
+  public void update( final Iterable<String> addresses, String networkMode) {
     Helper.loadStoredAddresses( );
     for ( final String address : addresses ) {
-      Helper.lookupOrCreate( address, true );
+      final Address addr = Helper.lookupOrCreate( address, true );
+
+      if (addr.isAllocated() && !addr.isAssigned() && networkMode.equals("EDGE")) {
+        final VmInstance vm = Helper.maybeFindVm(null, address, null); // Lookup by Public IP
+        if (vm != null) {
+          // We have an instance that is using the EIP as its publicIP, ensure that the Address is 'assigned' to it.
+          // - since Address.instanceId is transient this is needed to refresh the state if a restart happens.
+          if (!addr.isPending()) {
+            try {
+              addr.assign(vm).clearPending();
+            } catch (final Exception e) {
+              LOG.error("Unable to reassociate address: " + address + " to Instance: " + vm.getInstanceId() + "Reason: " + e.getMessage());
+              LOG.debug(e, e);
+            }
+          }
+        }
+      }
     }
   }
 
@@ -448,7 +464,7 @@ public abstract class AbstractSystemAddressManager {
     
     protected static void loadStoredAddresses( ) {
       final Address clusterAddr = new Address( );
-      final EntityTransaction db = Entities.get( Address.class );
+      final EntityTransaction db = Entities.get(Address.class);
       try {
         for ( Address addr : Entities.query( clusterAddr ) ) {
           if ( !Addresses.getInstance( ).contains( addr.getName( ) ) ) {
