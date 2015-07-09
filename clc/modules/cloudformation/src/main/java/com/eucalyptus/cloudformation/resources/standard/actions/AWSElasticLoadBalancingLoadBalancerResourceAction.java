@@ -50,6 +50,7 @@ import com.eucalyptus.loadbalancing.common.msgs.CreateLoadBalancerPolicyResponse
 import com.eucalyptus.loadbalancing.common.msgs.CreateLoadBalancerPolicyType;
 import com.eucalyptus.loadbalancing.common.msgs.CreateLoadBalancerResponseType;
 import com.eucalyptus.loadbalancing.common.msgs.CreateLoadBalancerType;
+import com.eucalyptus.loadbalancing.common.msgs.CrossZoneLoadBalancing;
 import com.eucalyptus.loadbalancing.common.msgs.DeleteLoadBalancerResponseType;
 import com.eucalyptus.loadbalancing.common.msgs.DeleteLoadBalancerType;
 import com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancersResponseType;
@@ -59,8 +60,11 @@ import com.eucalyptus.loadbalancing.common.msgs.Instance;
 import com.eucalyptus.loadbalancing.common.msgs.Instances;
 import com.eucalyptus.loadbalancing.common.msgs.Listener;
 import com.eucalyptus.loadbalancing.common.msgs.Listeners;
+import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerAttributes;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerDescription;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerNames;
+import com.eucalyptus.loadbalancing.common.msgs.ModifyLoadBalancerAttributesResponseType;
+import com.eucalyptus.loadbalancing.common.msgs.ModifyLoadBalancerAttributesType;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyAttribute;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyAttributes;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyNames;
@@ -279,7 +283,25 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends ResourceA
         return action;
       }
     },
-    PLACEHOLDER_FOR_OTHER_FIELDS { //// placeholder for "AccessLoggingPolicy", "ConnectionDrainingPolicy", "CrossZone" : Boolean
+    SET_CROSS_ZONE_ATTRIBUTE {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSElasticLoadBalancingLoadBalancerResourceAction action = (AWSElasticLoadBalancingLoadBalancerResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
+        if (action.properties.getCrossZone() != null && action.properties.getCrossZone() == Boolean.TRUE) {
+          ModifyLoadBalancerAttributesType modifyLoadBalancerAttributesType = MessageHelper.createMessage(ModifyLoadBalancerAttributesType.class, action.info.getEffectiveUserId());
+          modifyLoadBalancerAttributesType.setLoadBalancerName(action.info.getPhysicalResourceId());
+          LoadBalancerAttributes loadBalancerAttributes = new LoadBalancerAttributes();
+          CrossZoneLoadBalancing crossZoneLoadBalancing = new CrossZoneLoadBalancing();
+          crossZoneLoadBalancing.setEnabled(Boolean.TRUE);
+          loadBalancerAttributes.setCrossZoneLoadBalancing(crossZoneLoadBalancing);
+          modifyLoadBalancerAttributesType.setLoadBalancerAttributes(loadBalancerAttributes);
+          AsyncRequests.<ModifyLoadBalancerAttributesType, ModifyLoadBalancerAttributesResponseType>sendSync(configuration, modifyLoadBalancerAttributesType);
+        }
+        return action;
+      }
+    },
+    PLACEHOLDER_FOR_OTHER_FIELDS { //// placeholder for "AccessLoggingPolicy", "ConnectionDrainingPolicy"
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSElasticLoadBalancingLoadBalancerResourceAction action = (AWSElasticLoadBalancingLoadBalancerResourceAction) resourceAction;
