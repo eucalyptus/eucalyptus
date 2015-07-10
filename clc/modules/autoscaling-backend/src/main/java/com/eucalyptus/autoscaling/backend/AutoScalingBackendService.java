@@ -1241,7 +1241,7 @@ public class AutoScalingBackendService {
             final List<String> referenceErrors = activityManager.validateReferences(
                 autoScalingGroup.getOwner(),
                 Consumers.atomic( subnetsByZone ),
-                autoScalingGroup.getAvailabilityZones(),
+                request.availabilityZones( ),
                 Collections.<String>emptyList(), // load balancer names cannot be updated
                 subnetIds
             );
