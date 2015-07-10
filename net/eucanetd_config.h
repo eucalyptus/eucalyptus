@@ -133,6 +133,7 @@ enum {
     EUCANETD_CVAL_MIDOGWHOST,
     EUCANETD_CVAL_MIDOGWIP,
     EUCANETD_CVAL_MIDOGWIFACE,
+    EUCANETD_CVAL_MIDOGWHOSTS,
     EUCANETD_CVAL_MIDOPUBNW,
     EUCANETD_CVAL_MIDOPUBGWIP,
     EUCANETD_CVAL_LOCALIP,
@@ -179,6 +180,7 @@ typedef struct eucanetdConfig_t {
     char midogwhost[HOSTNAME_LEN];
     char midogwip[HOSTNAME_LEN];
     char midogwiface[HOSTNAME_LEN];
+    char midogwhosts[HOSTNAME_LEN*3*33];
     char midopubnw[HOSTNAME_LEN];
     char midopubgwip[HOSTNAME_LEN];
 

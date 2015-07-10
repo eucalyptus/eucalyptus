@@ -206,6 +206,8 @@ configEntry configKeysRestartEUCANETD[] = {
     ,
     {"MIDOGWIFACE", NULL}
     ,
+    {"MIDOGWHOSTS", NULL}
+    ,
     {"MIDOPUBNW", NULL}
     ,
     {"MIDOPUBGWIP", NULL}
@@ -575,6 +577,7 @@ int main(int argc, char **argv)
         }
 
         epoch_timer += config->polling_frequency;        
+        
         /*
         if (counter  >= 3) {
             gIsRunning=FALSE;
@@ -1049,9 +1052,10 @@ static int eucanetd_read_config(void)
     cvals[EUCANETD_CVAL_MIDOGWHOST] = configFileValue("MIDOGWHOST");
     cvals[EUCANETD_CVAL_MIDOGWIP] = configFileValue("MIDOGWIP");
     cvals[EUCANETD_CVAL_MIDOGWIFACE] = configFileValue("MIDOGWIFACE");
+    cvals[EUCANETD_CVAL_MIDOGWHOSTS] = configFileValue("MIDOGWHOSTS");
     cvals[EUCANETD_CVAL_MIDOPUBNW] = configFileValue("MIDOPUBNW");
     cvals[EUCANETD_CVAL_MIDOPUBGWIP] = configFileValue("MIDOPUBGWIP");
-
+    LOGDEBUG("WTFWTF: %s\n", cvals[EUCANETD_CVAL_MIDOGWHOSTS]);
     EUCA_FREE(config->eucahome);
     config->eucahome = strdup(cvals[EUCANETD_CVAL_EUCAHOME]);
 
@@ -1169,6 +1173,8 @@ static int eucanetd_read_config(void)
         snprintf(config->midogwip, sizeof(config->midogwip), "%s", cvals[EUCANETD_CVAL_MIDOGWIP]);
     if (cvals[EUCANETD_CVAL_MIDOGWIFACE])
         snprintf(config->midogwiface, sizeof(config->midogwiface), "%s", cvals[EUCANETD_CVAL_MIDOGWIFACE]);
+    if (cvals[EUCANETD_CVAL_MIDOGWHOSTS])
+        snprintf(config->midogwhosts, sizeof(config->midogwhosts), "%s", cvals[EUCANETD_CVAL_MIDOGWHOSTS]);
     if (cvals[EUCANETD_CVAL_MIDOPUBNW])
         snprintf(config->midopubnw, sizeof(config->midopubnw), "%s", cvals[EUCANETD_CVAL_MIDOPUBNW]);
     if (cvals[EUCANETD_CVAL_MIDOPUBGWIP])
