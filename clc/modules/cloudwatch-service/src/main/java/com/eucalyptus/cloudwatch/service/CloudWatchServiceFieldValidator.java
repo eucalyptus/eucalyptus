@@ -36,6 +36,7 @@ import com.eucalyptus.cloudwatch.common.msgs.MetricDatum;
 import com.eucalyptus.cloudwatch.common.msgs.ResourceList;
 import com.eucalyptus.cloudwatch.common.msgs.StatisticSet;
 import com.eucalyptus.cloudwatch.common.msgs.Statistics;
+import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricEntity.MetricType;
 import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.Units;
 import com.google.common.collect.Lists;
 import net.sf.json.JSONException;
@@ -50,7 +51,7 @@ import java.util.List;
 import java.util.Map;
 
 
-public class CloudWatchBackendServiceFieldValidator {
+public class CloudWatchServiceFieldValidator {
 
   private static final String SystemMetricPrefix = "AWS/";
 
@@ -70,7 +71,9 @@ public class CloudWatchBackendServiceFieldValidator {
     }
   }
 
-  static List<MetricDatum> validateMetricData(MetricData metricData) throws CloudWatchException {
+  static int NUM_SYSTEM_METRIC_DATA_POINTS = 50;
+  static int NUM_CUSTOM_METRIC_DATA_POINTS = 20;
+  static List<MetricDatum> validateMetricData(MetricData metricData, MetricType metricType) throws CloudWatchException {
     List<MetricDatum> metricDataCollection = null;
     if (metricData != null) {
       metricDataCollection = metricData.getMember();
@@ -84,9 +87,13 @@ public class CloudWatchBackendServiceFieldValidator {
       throw new MissingParameterException(
           "The parameter MetricData is required.");
     }
-    if (metricDataCollection.size() > 20) {
+    if (metricDataCollection.size() > NUM_CUSTOM_METRIC_DATA_POINTS && metricType == MetricType.Custom) {
       throw new InvalidParameterValueException(
-          "The collection MetricData must not have a size greater than 20.");
+        "The collection MetricData must not have a size greater than " + NUM_CUSTOM_METRIC_DATA_POINTS);
+    }
+    if (metricDataCollection.size() > NUM_SYSTEM_METRIC_DATA_POINTS && metricType == MetricType.Custom) {
+      throw new InvalidParameterValueException(
+          "The collection MetricData must not have a size greater than " + NUM_SYSTEM_METRIC_DATA_POINTS + " (for system metrics)");
     }
     int ctr = 1;
     for (MetricDatum metricDatum : metricDataCollection) {
