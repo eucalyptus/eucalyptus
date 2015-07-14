@@ -76,35 +76,14 @@ public class LoadBalancerCwatchMetrics {
 		return _instance;
 	}
 	
-	public void addMetric(final String servoId, final MetricData metric){
+	public void addMetric(final LoadBalancerZone lbZone, final MetricData metric){
 		// based on the servo Id, find the loadbalancer and the availability zone
-		// 
-		LoadBalancerZoneCoreView lbZone ;
-		try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
-			LoadBalancerServoInstance servo = Entities.uniqueResult(LoadBalancerServoInstance.named(servoId));
-			lbZone = servo.getAvailabilityZone();
-			db.commit();
-		}catch(NoSuchElementException ex){
-			throw Exceptions.toUndeclared("Failed to find the servo instance "+servoId);
-		}catch(Exception ex){
-			throw Exceptions.toUndeclared("database error while querying "+servoId);
-		}
-		
-		LoadBalancerZone zone = null;
-		LoadBalancerCoreView lb = null;
-		
-		try{
-			zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(lbZone);
-			lb = zone.getLoadbalancer();
-		}catch(final Exception ex){
-			return;
-		}
-		
+		LoadBalancerCoreView lb = lbZone.getLoadbalancer();
 		final String userId = lb.getOwnerUserId();
 		final String lbName = lb.getDisplayName();
 		final String zoneName = lbZone.getName();
 		ElbDimension dim = new ElbDimension(userId, lbName, zoneName);
-		synchronized(lock){
+		synchronized(lock) {
 			if(!metricsMap.containsKey(dim))
 				metricsMap.put(dim, new ElbAggregate(lbName, zoneName));
 			metricsMap.get(dim).addMetric(metric);
@@ -146,28 +125,34 @@ public class LoadBalancerCwatchMetrics {
 	private void maybeReport(final String userId){
 		MetricData data = null;
 		if(! this.lastReported.containsKey(userId)){
-			this.lastReported.put(userId, new Date(System.currentTimeMillis()));
-			return;
+		  this.lastReported.put(userId, new Date(System.currentTimeMillis()));
+		  return;
 		}
-		
 		final Date lastReport = this.lastReported.get(userId);
 		long currentTime = System.currentTimeMillis();
 		int diffSec = (int)((currentTime - lastReport.getTime())/1000.0);
-		if(diffSec >= CLOUDWATCH_REPORTING_INTERVAL_SEC)
-			data = this.getDataAndClear(userId);
-		
+		if(diffSec >= CLOUDWATCH_REPORTING_INTERVAL_SEC) {
+      this.lastReported.put(userId, new Date(currentTime));
+		  data = this.getDataAndClear(userId);
+		}
+
 		if(data!=null && data.getMember()!=null && data.getMember().size()>0){
-			try{
-				EucalyptusActivityTasks.getInstance().putCloudWatchMetricData(userId, CLOUDWATCH_ELB_METRIC_NAMESPACE, data);
-        // we now need to add the values that CW used to aggregate, to allow for get-metric-statistics with fewer dimensions (ELB only)
-        EucalyptusActivityTasks.getInstance().putCloudWatchMetricData(userId, CLOUDWATCH_ELB_METRIC_NAMESPACE, removeDimensions(data,"LoadBalancerName"));
-        EucalyptusActivityTasks.getInstance().putCloudWatchMetricData(userId, CLOUDWATCH_ELB_METRIC_NAMESPACE, removeDimensions(data,"AvailabilityZone"));
-        EucalyptusActivityTasks.getInstance().putCloudWatchMetricData(userId, CLOUDWATCH_ELB_METRIC_NAMESPACE, removeDimensions(data,"LoadBalancerName","AvailabilityZone"));
-			}catch(Exception ex){
-				Exceptions.toUndeclared(ex);
-			}finally{
-				this.lastReported.put(userId, new Date(currentTime));
-			}
+		  final int MAX_PUT_METRIC_DATA_ITEMS = 20;
+		  for(final List<MetricDatum> partition : Iterables.partition(data.getMember(), MAX_PUT_METRIC_DATA_ITEMS)) {
+		    final MetricData partitionedData = new MetricData();
+		    partitionedData.setMember(Lists.newArrayList(partition));
+		    try{
+		      EucalyptusActivityTasks.getInstance().putCloudWatchMetricData(userId, CLOUDWATCH_ELB_METRIC_NAMESPACE, partitionedData);
+		      // we now need to add the values that CW used to aggregate, to allow for get-metric-statistics with fewer dimensions (ELB only)
+		      EucalyptusActivityTasks.getInstance().putCloudWatchMetricData(userId, CLOUDWATCH_ELB_METRIC_NAMESPACE, removeDimensions(partitionedData,"LoadBalancerName"));
+		      EucalyptusActivityTasks.getInstance().putCloudWatchMetricData(userId, CLOUDWATCH_ELB_METRIC_NAMESPACE, removeDimensions(partitionedData,"AvailabilityZone"));
+		      EucalyptusActivityTasks.getInstance().putCloudWatchMetricData(userId, CLOUDWATCH_ELB_METRIC_NAMESPACE, removeDimensions(partitionedData,"LoadBalancerName","AvailabilityZone"));
+		    }catch(Exception ex){
+		      Exceptions.toUndeclared(ex);
+		    }finally{
+		      ;
+		    }
+		  }
 		}
 	}
 
@@ -246,11 +231,12 @@ public class LoadBalancerCwatchMetrics {
 				}
 			}
     	}));
-    	
     	synchronized(lock){
 			/// add HealthyHostCount and UnHealthyHostCount
         	for(final BackendInstance instance : candidates){
-        		final ElbDimension thisDim = this.instanceToDimensionMap.get(instance);
+            if (! this.instanceHealthMap.containsKey(instance))
+              continue;
+        	  final ElbDimension thisDim = this.instanceToDimensionMap.get(instance);
         		if(this.instanceHealthMap.get(instance).booleanValue()){ // healthy	
         			if(!healthyCountMap.containsKey(thisDim))
         				healthyCountMap.put(thisDim, 0);

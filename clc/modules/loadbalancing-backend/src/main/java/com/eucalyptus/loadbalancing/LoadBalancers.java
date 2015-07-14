@@ -442,7 +442,6 @@ public class LoadBalancers {
 		try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
 			LoadBalancerServoInstance sample = LoadBalancerServoInstance.named(instanceId);
 			final LoadBalancerServoInstance exist = Entities.uniqueResult(sample);
-			db.commit();
 			return exist;
 		}catch(NoSuchElementException ex){
 			throw ex;
@@ -454,7 +453,6 @@ public class LoadBalancers {
 	public static LoadBalancerBackendInstance lookupBackendInstance(final LoadBalancer lb, final String instanceId) {
 		try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
 			final LoadBalancerBackendInstance found = Entities.uniqueResult(LoadBalancerBackendInstance.named(lb, instanceId));
-			db.commit();
 			return found;
 		}catch(final NoSuchElementException ex){
 			throw ex;

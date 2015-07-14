@@ -54,6 +54,7 @@ import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneEntityTransform;
+import com.eucalyptus.loadbalancing.backend.LoadBalancingServoCache;
 import com.eucalyptus.loadbalancing.common.LoadBalancingBackend;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
 import com.eucalyptus.util.Exceptions;
@@ -233,7 +234,7 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 	@Override
 	public String toString(){
 		String id = this.instanceId==null? "unassigned" : this.instanceId;
-		return String.format("Servo-instance (%s) for loadbalancer %s in %s", id, this.loadbalancer.getDisplayName(), this.zone.getName());
+		return String.format("Servo-instance (%s) for %s", id, this.zone.getName());
 	}
 	
 	public static class LoadBalancerServoInstanceCoreView {
@@ -346,7 +347,7 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 			          Topology.isEnabled( Compute.class ) ))
 				return;
 			
-			/// determine the BE instances to query
+			/// determine the servo instances to query
 			final List<LoadBalancerServoInstance> allInstances = Lists.newArrayList();
 			final List<LoadBalancerServoInstance> stateOutdated = Lists.newArrayList();
 			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
@@ -409,6 +410,7 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 								update.setPrivateIp(privateIpAddr);
 							update.setDnsState(LoadBalancerServoInstance.DNS_STATE.Registered);
 							db.commit();
+							LoadBalancingServoCache.getInstance().invalidate(update);
 						}catch(NoSuchElementException ex){
 							LOG.warn("failed to find the servo instance named "+instance.getInstanceId(), ex);
 						}catch(Exception ex){
@@ -423,6 +425,7 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 							final LoadBalancerServoInstance update = Entities.uniqueResult(instance);
 							update.setDnsState(LoadBalancerServoInstance.DNS_STATE.Deregistered);
 							db.commit();
+	            LoadBalancingServoCache.getInstance().invalidate(update);
 						}catch(NoSuchElementException ex){
 							LOG.warn("failed to find the servo instance named "+instance.getInstanceId(), ex);
 						}catch(Exception ex){
