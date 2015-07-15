@@ -38,7 +38,6 @@
 #include <misc.h>
 #include <objectstorage.h>
 #include <map.h>
-#include <vmdk.h>
 #include "imager.h"
 #include "cache.h"
 #include "img.h"
