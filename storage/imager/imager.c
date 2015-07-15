@@ -46,7 +46,6 @@
 #include <map.h>
 #include <euca_string.h>
 
-//#include "vmdk.h" // vmdk_init()
 #include "imager.h"
 #include "cmd.h"
 #include "cache.h"
@@ -93,7 +92,6 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-//boolean vddk_available = FALSE;
 char cloud_cert_path[EUCA_MAX_PATH];
 char service_key_path[EUCA_MAX_PATH];
 imager_command known_cmds[EUCA_NB_IMAGER_CMD] = {
@@ -463,11 +461,6 @@ int main(int argc, char *argv[])
         strncat(argv_str, argv[i], sizeof(argv_str) - strlen(argv_str) - 1);
         strncat(argv_str, "\" ", sizeof(argv_str) - strlen(argv_str) - 1);
     }
-
-    // initialize dependencies
-//    if (vmdk_init() == EUCA_OK) {
-//        vddk_available = TRUE;
-//    }
 
     // parse command-line parameters
     while (*(++argv)) {
