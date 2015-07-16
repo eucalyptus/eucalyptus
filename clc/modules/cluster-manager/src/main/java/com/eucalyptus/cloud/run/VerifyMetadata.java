@@ -259,15 +259,6 @@ public class VerifyMetadata {
                 " bytes of the instance is greater than the vmType " + vmType.getDisplayName( ) +
                 " size " + vmType.getDisk( ) + " GB." );
           }
-          final MachineImageInfo emi = LookupMachine.INSTANCE.apply(imageId);
-          if(ImageMetadata.State.pending_available.equals(emi.getState())) {
-            if ( !Topology.isEnabled( ImagingBackend.class) )
-              throw new MetadataException("Partition image cannot be deployed without an adequately "
-                  + "provisioned Imaging Worker. Please contact your cloud administrator.");
-            if ( !verifyImagerCapacity(emi) )
-              throw new MetadataException("Partition image of this size cannot be deployed without an adequately "
-                  + "provisioned Imaging Worker. Please contact your cloud administrator.");
-          }
         }
       } catch ( VerificationException e ) {
         throw e;
@@ -279,46 +270,6 @@ public class VerifyMetadata {
         throw new VerificationException( "Failed to verify references for request: " + msg.toSimpleString( ) + " because of: " + ex.getMessage( ), ex );
       }
       return true;
-    }
-
-    private static long GIG = 1073741824l;
-    private static long MB = 1048576l;
-    // check if image can be converted
-    private static boolean verifyImagerCapacity(MachineImageInfo img) throws MetadataException {
-      String workerType = null;
-      try {
-        workerType = PropertyDirectory.getPropertyEntry("services.imaging.worker.instance_type").getValue();
-      } catch (IllegalAccessException e) {}
-      if (workerType == null )
-        return false;
-      String emiName = null;
-      try {
-        emiName = PropertyDirectory.getPropertyEntry("services.imaging.worker.image").getValue();
-      } catch (IllegalAccessException e) {}
-      if (!ImagingServiceProperties.stackExists(true))
-        throw new MetadataException("Partition image cannot be deployed without an enabled Imaging Service."
-            + " Please contact your cloud administrator.");
-      
-      List<VmTypeDetails> allTypes = EucalyptusClient.getInstance().describeVMTypes();
-      long diskSizeBytes = 0;
-      for(VmTypeDetails type:allTypes){
-        if (type.getName().equalsIgnoreCase(workerType)){
-          diskSizeBytes = type.getDisk() * GIG;
-          break;
-        }
-      }
-      // there is a chance that emi is de-registered
-      MachineImageInfo emi;
-      try {
-        emi = LookupMachine.INSTANCE.apply(emiName);
-      } catch (NoSuchElementException ex) {
-          throw new MetadataException("Partition image cannot be deployed without an enabled Imaging Service."
-                  + " Please contact your cloud administrator.");
-      }
-      long spaceLeft = diskSizeBytes - emi.getImageSizeBytes() - img.getImageSizeBytes() - 100*2*MB;
-      if (spaceLeft > 0)
-        return true;
-      return false;
     }
   }
   

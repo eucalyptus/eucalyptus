@@ -207,12 +207,7 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
   public String getImageConversionId(){
     return this.imageConversionId;
   }
-
-  @Override
-  public String getRunManifestLocation( ) {
-    return this.runManifestLocation;
-  }
-  
+ 
   public void setRunManifestLocation( final String runManifestLocation) {
     this.runManifestLocation = runManifestLocation;
   }

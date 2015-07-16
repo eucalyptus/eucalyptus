@@ -413,8 +413,6 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
          processNewImportVolumeImagingTask((ImportVolumeImagingTask) task); 
        else if(task instanceof ImportInstanceImagingTask)
          processNewImportInstanceImagingTask((ImportInstanceImagingTask)task);
-       else if(task instanceof DiskImagingTask) // no need to create volumes
-         ImagingTasks.transitState(task, ImportTaskState.NEW, ImportTaskState.PENDING, "");
        else
          throw new Exception("Invalid ImagingTask");
       }catch(final Exception ex){
