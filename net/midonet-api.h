@@ -171,6 +171,17 @@ int mido_create_dhcphost(midoname * devname, midoname * dhcp, char *name, char *
 int mido_delete_dhcphost(midoname * name);
 int mido_get_dhcphosts(midoname * devname, midoname * dhcp, midoname ** outnames, int *outnames_max);
 
+int mido_create_portgroup(char *tenant, char *name, midoname *outname);
+int mido_update_portgroup(midoname * name, ...);
+int mido_delete_portgroup(midoname * name);
+int mido_print_portgroup(midoname * name);
+int mido_get_portgroups(char *tenant, midoname ** outnames, int *outnames_max);
+
+int mido_create_portgroup_port(midoname * portgroup, char * portId, midoname * outname);
+int mido_delete_portgroup_port(midoname * name);
+int mido_get_portgroup_ports(midoname * portgroup, midoname ** outnames, int *outnames_max);
+
+
 int mido_create_port(midoname * devname, char *port_type, char *ip, char *nw, char *slashnet, midoname * outname);
 //int mido_read_port(midoname * name);
 int mido_update_port(midoname * name, ...);

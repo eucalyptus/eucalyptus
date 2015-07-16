@@ -198,8 +198,6 @@ configEntry configKeysRestartEUCANETD[] = {
     ,
     {"EUCA_USER", "eucalyptus"}
     ,
-    {"MIDOSETUPCORE", "Y"}
-    ,
     {"MIDOEUCANETDHOST", NULL}
     ,
     {"MIDOGWHOST", NULL}
@@ -207,6 +205,8 @@ configEntry configKeysRestartEUCANETD[] = {
     {"MIDOGWIP", NULL}
     ,
     {"MIDOGWIFACE", NULL}
+    ,
+    {"MIDOGWHOSTS", NULL}
     ,
     {"MIDOPUBNW", NULL}
     ,
@@ -348,18 +348,19 @@ int main(int argc, char **argv)
     eucanetd_initialize();
 
     // parse commandline arguments
-    config->flushmode = 0;
+    config->flushmode = FLUSH_NONE;
     while ((opt = getopt(argc, argv, "dhFf")) != -1) {
         switch (opt) {
         case 'd':
             config->debug = 1;
             break;
         case 'F':
-            config->flushmode |= EUCANETD_FLUSH_ONLY_MASK;
+            config->flushmode = FLUSH_ALL;
             config->debug = 1;
             break;
         case 'f':
-            config->flushmode |= EUCANETD_FLUSH_AND_RUN_MASK;
+            config->flushmode = FLUSH_DYNAMIC;
+            config->debug = 1;
             break;
         case 'h':
             printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n\t%-12s| flush - clear all iptables/ebtables/ipset rules and continue\n"
@@ -475,21 +476,16 @@ int main(int argc, char **argv)
             }
         }
         // Do we need to flush all eucalyptus networking artifacts
-        if (config->flushmode & EUCANETD_FLUSH_MASK) {
+        if (config->flushmode) {
             // Make sure we were given a flush API prior to calling it
             if (pDriverHandler->system_flush) {
                 if (pDriverHandler->system_flush(globalnetworkinfo)) {
                     LOGERROR("manual flushing of all euca networking artifacts (iptables, ebtables, ipset) failed: check above log errors for details\n");
                 }
             }
-
-            if(config->flushmode & EUCANETD_FLUSH_ONLY_MASK) {
-                gIsRunning = FALSE;
-                update_globalnet = FALSE;
-            } else {
-                update_globalnet = TRUE;
-            }
-            config->flushmode = 0;
+            update_globalnet = FALSE;
+            gIsRunning = FALSE;
+            config->flushmode = FLUSH_NONE;
         }
         // if information on sec. group rules/membership has changed, apply
         if (update_globalnet) {
@@ -581,6 +577,7 @@ int main(int argc, char **argv)
         }
 
         epoch_timer += config->polling_frequency;        
+        
         /*
         if (counter  >= 3) {
             gIsRunning=FALSE;
@@ -590,11 +587,9 @@ int main(int argc, char **argv)
 
     LOGINFO("EUCANETD going down.\n");
 
-    exit(0);
-
     if (pDriverHandler->cleanup) {
         LOGINFO("Cleaning up '%s' network driver on termination.\n", pDriverHandler->name);
-        if (pDriverHandler->cleanup(globalnetworkinfo, (config->flushmode & EUCANETD_FLUSH_MASK)) != 0) {
+        if (pDriverHandler->cleanup(globalnetworkinfo, config->flushmode) != 0) {
             LOGERROR("Failed to cleanup '%s' network driver.\n", pDriverHandler->name);
         }
     }
@@ -638,7 +633,7 @@ static void eucanetd_sigterm_handler(int signal)
 static void eucanetd_sighup_handler(int signal)
 {
     LOGERROR("EUCANETD caught a SIGHUP signal.\n");
-    config->flushmode = TRUE;
+    config->flushmode = FLUSH_NONE;
 }
 
 //!
@@ -1053,14 +1048,14 @@ static int eucanetd_read_config(void)
     cvals[EUCANETD_CVAL_NC_ROUTER_IP] = configFileValue("NC_ROUTER_IP");
     cvals[EUCANETD_CVAL_METADATA_USE_VM_PRIVATE] = configFileValue("METADATA_USE_VM_PRIVATE");
     cvals[EUCANETD_CVAL_METADATA_IP] = configFileValue("METADATA_IP");
-    cvals[EUCANETD_CVAL_MIDOSETUPCORE] = configFileValue("MIDOSETUPCORE");
     cvals[EUCANETD_CVAL_MIDOEUCANETDHOST] = configFileValue("MIDOEUCANETDHOST");
     cvals[EUCANETD_CVAL_MIDOGWHOST] = configFileValue("MIDOGWHOST");
     cvals[EUCANETD_CVAL_MIDOGWIP] = configFileValue("MIDOGWIP");
     cvals[EUCANETD_CVAL_MIDOGWIFACE] = configFileValue("MIDOGWIFACE");
+    cvals[EUCANETD_CVAL_MIDOGWHOSTS] = configFileValue("MIDOGWHOSTS");
     cvals[EUCANETD_CVAL_MIDOPUBNW] = configFileValue("MIDOPUBNW");
     cvals[EUCANETD_CVAL_MIDOPUBGWIP] = configFileValue("MIDOPUBGWIP");
-
+    LOGDEBUG("WTFWTF: %s\n", cvals[EUCANETD_CVAL_MIDOGWHOSTS]);
     EUCA_FREE(config->eucahome);
     config->eucahome = strdup(cvals[EUCANETD_CVAL_EUCAHOME]);
 
@@ -1170,8 +1165,6 @@ static int eucanetd_read_config(void)
 
     // mido config opts
 
-    if (cvals[EUCANETD_CVAL_MIDOSETUPCORE])
-        snprintf(config->midosetupcore, sizeof(config->midosetupcore), "%s", cvals[EUCANETD_CVAL_MIDOSETUPCORE]);
     if (cvals[EUCANETD_CVAL_MIDOEUCANETDHOST])
         snprintf(config->midoeucanetdhost, sizeof(config->midoeucanetdhost), "%s", cvals[EUCANETD_CVAL_MIDOEUCANETDHOST]);
     if (cvals[EUCANETD_CVAL_MIDOGWHOST])
@@ -1180,12 +1173,12 @@ static int eucanetd_read_config(void)
         snprintf(config->midogwip, sizeof(config->midogwip), "%s", cvals[EUCANETD_CVAL_MIDOGWIP]);
     if (cvals[EUCANETD_CVAL_MIDOGWIFACE])
         snprintf(config->midogwiface, sizeof(config->midogwiface), "%s", cvals[EUCANETD_CVAL_MIDOGWIFACE]);
+    if (cvals[EUCANETD_CVAL_MIDOGWHOSTS])
+        snprintf(config->midogwhosts, sizeof(config->midogwhosts), "%s", cvals[EUCANETD_CVAL_MIDOGWHOSTS]);
     if (cvals[EUCANETD_CVAL_MIDOPUBNW])
         snprintf(config->midopubnw, sizeof(config->midopubnw), "%s", cvals[EUCANETD_CVAL_MIDOPUBNW]);
     if (cvals[EUCANETD_CVAL_MIDOPUBGWIP])
         snprintf(config->midopubgwip, sizeof(config->midopubgwip), "%s", cvals[EUCANETD_CVAL_MIDOPUBGWIP]);
-    if (cvals[EUCANETD_CVAL_MIDOSETUPCORE])
-        snprintf(config->midosetupcore, sizeof(config->midosetupcore), "%s", cvals[EUCANETD_CVAL_MIDOSETUPCORE]);
     if (cvals[EUCANETD_CVAL_MIDOEUCANETDHOST])
         snprintf(config->midoeucanetdhost, sizeof(config->midoeucanetdhost), "%s", cvals[EUCANETD_CVAL_MIDOEUCANETDHOST]);
 

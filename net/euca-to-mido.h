@@ -78,7 +78,7 @@
 \*----------------------------------------------------------------------------*/
 
 #include <midonet-api.h>
-
+#include <eucanetd_config.h>
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  DEFINES                                   |
@@ -137,11 +137,7 @@ enum {
     VPCRT_UPLINK,
     VPCRT_PRECHAIN,
     VPCRT_POSTCHAIN,
-    VPCRT_PREETHERCHAIN,
-    VPCRT_PREMETACHAIN,
-    VPCRT_PREVPCINTERNALCHAIN,
     VPCRT_PREELIPCHAIN,
-    VPCRT_PREFWCHAIN,
     VPCEND
 };
 
@@ -153,6 +149,7 @@ enum {
     EUCART_GWPORT,
     GWHOST,
     METADATA_IPADDRGROUP,
+    GWPORTGROUP,
     MIDOCOREEND
 };
 
@@ -205,10 +202,16 @@ typedef struct mido_vpc_t {
 
 typedef struct mido_core_t {
     midoname midos[MIDOCOREEND];
+
     midoname *brports;
-    midoname *rtports;
     int max_brports;
+
+    midoname *rtports;
     int max_rtports;
+
+    midoname gwhosts[32];
+    midoname gwports[32];
+    int max_gws;
 } mido_core;
 
 typedef struct mido_config_t {
@@ -216,6 +219,12 @@ typedef struct mido_config_t {
     char *ext_rthostname;
     char *ext_rtaddr;
     char *ext_rtiface;
+
+    char *ext_rthostnamearr[32];
+    char *ext_rthostaddrarr[32];
+    char *ext_rthostifacearr[32];
+    int ext_rthostarrmax;
+
     char *ext_pubnw;
     char *ext_pubgwip;
     char *eucahome;
@@ -223,7 +232,8 @@ typedef struct mido_config_t {
     u32 int_rtaddr;
     u32 enabledCLCIp;
     int int_rtsn;
-    int setupcore;
+    int flushmode;
+
     midoname *hosts;
     midoname *routers;
     midoname *bridges;
@@ -231,6 +241,8 @@ typedef struct mido_config_t {
     midoname *brports;
     midoname *rtports;
     midoname *ipaddrgroups;
+    midoname *portgroups;
+
     int max_hosts;
     int max_routers;
     int max_bridges;
@@ -238,11 +250,16 @@ typedef struct mido_config_t {
     int max_brports;
     int max_rtports;
     int max_ipaddrgroups;
+    int max_portgroups;
+
     mido_core *midocore;
+
     mido_vpc *vpcs;
     int max_vpcs;
+
     mido_vpc_secgroup *vpcsecgroups;
     int max_vpcsecgroups;
+
     int router_ids[4096];
 } mido_config;
 
@@ -281,7 +298,7 @@ int set_router_id(mido_config * mido, int id);
 
 int cidr_split(char *cidr, char *outnet, char *outslashnet, char *outgw, char *outplustwo);
 
-int initialize_mido(mido_config * mido, char *eucahome, char *setupcore, char *ext_eucanetdhostname, char *ext_rthostname, char *ext_rtaddr, char *ext_rtiface, char *ext_pubnw,
+int initialize_mido(mido_config * mido, char *eucahome, int flushmode, char *ext_eucanetdhostname, char *ext_rthostname, char *ext_rtaddr, char *ext_rtiface, char *ext_rthosts, char *ext_pubnw,
                     char *ext_pubgwip, char *int_rtnetwork, char *int_rtslashnet);
 int discover_mido_resources(mido_config * mido);
 
