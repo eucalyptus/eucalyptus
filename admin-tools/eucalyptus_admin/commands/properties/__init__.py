@@ -30,6 +30,7 @@ import requestbuilder.service
 
 from eucalyptus_admin.commands import EucalyptusAdmin
 from eucalyptus_admin.exceptions import AWSError
+from eucalyptus_admin.util import add_fake_region_name
 
 
 class Properties(requestbuilder.service.BaseService):
@@ -40,6 +41,10 @@ class Properties(requestbuilder.service.BaseService):
 
     ARGS = [Arg('-U', '--url', metavar='URL', help='''Connect to the
                 service using a specific URL.''')]
+
+    def configure(self):
+        requestbuilder.service.BaseService.configure(self)
+        add_fake_region_name(self)
 
     def handle_http_error(self, response):
         raise AWSError(response)

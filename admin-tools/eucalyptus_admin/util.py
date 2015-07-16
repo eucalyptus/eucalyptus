@@ -23,36 +23,9 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from requestbuilder import Arg
-import requestbuilder.auth.aws
-import requestbuilder.request
-import requestbuilder.service
-
-from eucalyptus_admin.commands import EucalyptusAdmin
-from eucalyptus_admin.exceptions import AWSError
-from eucalyptus_admin.util import add_fake_region_name
+import os
 
 
-class Empyrean(requestbuilder.service.BaseService):
-    NAME = 'empyrean'
-    DESCRIPTION = 'Bootstrap service'
-    REGION_ENVVAR = 'AWS_DEFAULT_REGION'
-    URL_ENVVAR = 'EMPYREAN_URL'
-
-    ARGS = [Arg('-U', '--url', metavar='URL',
-                help='bootstrap service endpoint URL')]
-
-    def configure(self):
-        requestbuilder.service.BaseService.configure(self)
-        add_fake_region_name(self)
-
-    def handle_http_error(self, response):
-        raise AWSError(response)
-
-
-class EmpyreanRequest(requestbuilder.request.AWSQueryRequest):
-    SUITE = EucalyptusAdmin
-    SERVICE_CLASS = Empyrean
-    AUTH_CLASS = requestbuilder.auth.aws.HmacV4Auth
-    API_VERSION = 'eucalyptus'
-    METHOD = 'POST'
+def add_fake_region_name(service):
+    if service.region_name is None and not os.getenv('AWS_AUTH_REGION'):
+        service.region_name = 'undefined-{0}'.format(os.getpid())
