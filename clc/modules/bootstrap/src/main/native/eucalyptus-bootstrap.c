@@ -281,16 +281,20 @@ static void *signal_set(int sig, void *newHandler)
 static int __get_pid(char *pidpath)
 {
     FILE *pidfile;
-    int pid;
-    if ((pidfile = fopen(pidpath, "r")) == NULL) {
-        return -1;
+    int pid = -1;
+
+    if ((pidfile = fopen(pidpath, "r")) != NULL) {
+        if (fscanf(pidfile, "%d", &pid) != 1) {
+            __error("Failed to read pid file: %s", pidpath);
+        }
+        fclose(pidfile);
+        if (pid > 0 && (kill(pid,0) != 0)) {
+            __error("PID: %d is nonexistant",pid);
+            pid = -1;
+        }
     }
-    __abort(-1, (fscanf(pidfile, "%d", &pid) < 0), "Failed to read pid file.");
-    fclose(pidfile);
-    if (kill(pid, 0) == 0) {
-        return pid;
-    }
-    return -1;
+    __debug("pid return: %d", pid);
+    return pid;
 }
 
 static int __write_pid(char *pidpath)
