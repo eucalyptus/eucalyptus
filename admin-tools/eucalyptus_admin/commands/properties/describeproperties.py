@@ -26,10 +26,9 @@
 from requestbuilder import Arg
 
 from eucalyptus_admin.commands.properties import PropertiesRequest
-from eucalyptus_admin.commands.mixins import TableOutputMixin
 
 
-class DescribeProperties(PropertiesRequest, TableOutputMixin):
+class DescribeProperties(PropertiesRequest):
     DESCRIPTION = "List the cloud's properties"
     ARGS = [Arg('Property', metavar='PROPERTY', nargs='*',
                 help='limit results to specific properties')]
