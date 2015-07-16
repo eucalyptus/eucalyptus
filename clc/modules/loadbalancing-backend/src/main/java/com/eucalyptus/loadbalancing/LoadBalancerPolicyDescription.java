@@ -144,7 +144,7 @@ public class LoadBalancerPolicyDescription extends AbstractPersistent {
     return this.policyType;
   }
   
-  public void addPolicyAttributeDescription(final String attrName, final String attrValue) 
+  public void addPolicyAttributeDescription(final String attrName, String attrValue) 
       throws InvalidConfigurationRequestException {
     if(this.getPolicyTypeDescription() != null){
       LoadBalancerPolicyAttributeTypeDescriptionCoreView attrType = null;
@@ -176,9 +176,15 @@ public class LoadBalancerPolicyDescription extends AbstractPersistent {
       if ("PublicKeyPolicyType".equals(this.policyType.getPolicyTypeName()) &&
           "PublicKey".equals(attrName)) {
         try{
-          final X509Certificate cert = PEMFiles.getCert(attrValue.getBytes( Charsets.UTF_8 ));
+          String certString = attrValue.trim();
+          if(! certString.startsWith("-----BEGIN CERTIFICATE-----"))
+            certString = String.format("-----BEGIN CERTIFICATE-----\n%s", certString);
+          if(! certString.endsWith("-----END CERTIFICATE-----"))
+            certString = String.format("%s\n-----END CERTIFICATE-----", certString);
+          final X509Certificate cert = PEMFiles.getCert(certString.getBytes( Charsets.UTF_8 ));
           if(cert==null)
             throw new EucalyptusCloudException("Malformed cert");
+          attrValue = certString;
         }catch(final Exception ex){
           throw new InvalidConfigurationRequestException("PublicKey is invalid");
         }
