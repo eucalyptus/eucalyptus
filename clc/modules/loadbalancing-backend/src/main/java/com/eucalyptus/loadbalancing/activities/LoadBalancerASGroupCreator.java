@@ -208,7 +208,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 
 		if ((emi!=null && emi.length()>0) ||
 		      (instanceType!=null && instanceType.length()>0) ||
-		      (keyname!=null && keyname.length()>0) || (initScript != null) ){
+		      (keyname!=null) || (initScript != null) ){
 			final List<LoadBalancer> lbs = LoadBalancers.listLoadbalancers();
 			for(final LoadBalancer lb : lbs){
 				final LoadBalancerAutoScalingGroupCoreView asg = lb.getAutoScaleGroup();
