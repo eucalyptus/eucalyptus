@@ -72,6 +72,7 @@ import com.eucalyptus.compute.common.internal.network.NetworkGroup
 import com.eucalyptus.network.NetworkGroups
 import com.eucalyptus.network.PrivateAddresses
 import com.eucalyptus.compute.common.internal.network.PrivateNetworkIndex
+import com.eucalyptus.network.PublicAddresses
 import com.eucalyptus.records.Logs
 import com.eucalyptus.system.Threads
 import com.eucalyptus.util.Callback
@@ -273,7 +274,7 @@ class VmInstanceLifecycleHelpers {
           Predicates.instanceOf( PublicIPResource.class ),
           null )
       return publicIPResource!=null && publicIPResource.getValue()!=null ?
-          Addresses.getInstance().lookup( publicIPResource.getValue() ) :
+          Addresses.getInstance().lookupActiveAddress( publicIPResource.value ) :
           null
     }
 
@@ -397,12 +398,14 @@ class VmInstanceLifecycleHelpers {
         final VmInstance instance,
         final VmState state ) {
       if ( VmInstance.VmStateSet.TORNDOWN.contains( state ) ) try {
-        if ( instance.networkIndex == null &&
+        if ( !instance.vpcId &&
+            instance.networkIndex == null &&
             !Strings.isNullOrEmpty( instance.privateAddress ) &&
             !VmNetworkConfig.DEFAULT_IP.equals( instance.privateAddress ) ) {
           Networking.instance.release( new ReleaseNetworkResourcesType( resources: [
               new PrivateIPResource( value: instance.privateAddress, ownerId: instance.displayName )
           ] as ArrayList<NetworkResource> ) )
+          VmInstances.updatePrivateAddress( instance, VmNetworkConfig.DEFAULT_IP )
         }
       } catch ( final Exception ex ) {
         logger.error( "Error releasing private address '${instance.privateAddress}' on instance '${instance.displayName}' clean up.", ex )
@@ -536,6 +539,31 @@ class VmInstanceLifecycleHelpers {
       }
     }
 
+    @SuppressWarnings("UnnecessaryQualifiedReference")
+    @Override
+    void prepareVmInstance( final ResourceToken resourceToken,
+                            final VmInstanceBuilder builder ) {
+      Address address = getAddress( resourceToken )
+      if ( address ) {
+        builder.onBuild({ VmInstance instance ->
+          if ( !instance.vpcId ) { // Network interface handles public IP for VPC
+            Addresses.getInstance( ).assign( address, instance )
+            VmInstances.updatePublicAddress( instance, address.address )
+          }
+        })
+      }
+    }
+
+    @Override
+    void startVmInstance( final ResourceToken resourceToken,
+                          final VmInstance instance ) {
+      Address address = getAddress( resourceToken )
+      if ( address && !instance.vpcId ) {
+        Addresses.getInstance( ).assign( address, instance )
+        VmInstances.updatePublicAddress( instance, address.address )
+      }
+    }
+
     @Override
     void restoreInstanceResources(
         final ResourceToken resourceToken,
@@ -545,37 +573,51 @@ class VmInstanceLifecycleHelpers {
       restoreAddress( publicIp, vmInfo )
     }
 
+    @Override
+    void cleanUpInstance( final VmInstance instance, final VmState state ) {
+      // For EC2-Classic unassign any public/elastic IP
+      if ( !instance.vpcId &&
+          !( VmNetworkConfig.DEFAULT_IP.equals( instance.publicAddress ) || Strings.isNullOrEmpty( instance.publicAddress ) ) &&
+          VmInstance.VmStateSet.TORNDOWN.contains( state )
+      ) {
+        if ( Addresses.getInstance( ).unassign( instance.publicAddress ) ) {
+          VmInstances.updatePublicAddress( instance, VmNetworkConfig.DEFAULT_IP )
+          PublicAddresses.markDirty( instance.publicAddress, instance.partition );
+        }
+      }
+    }
+
     private static void restoreAddress(
         final Optional<String> reservedPublicIp,
         final VmInfo input ) {
       Entities.transaction( VmInstance ) { EntityTransaction db ->
         try {
-          final VmInstance instance = VmInstances.lookup( input.getInstanceId( ) )
+          final VmInstance instance = VmInstances.lookup( input.instanceId )
 
           Closure<?> assign = { Address address ->
-            address.assign( instance ).clearPending( )
+            Addresses.getInstance( ).assign( address, instance )
             null
           }
 
           Closure<?> updateInstanceAddresses = { Address address ->
-            VmInstances.updateAddresses( instance, input.getNetParams( ).getIpAddress( ), address.getDisplayName( ) )
+            VmInstances.updateAddresses( instance, input.netParams.ipAddress, address.address )
             null
           }
 
           if ( reservedPublicIp.isPresent( ) ) { // Restore impending system address
-            final Address pendingAddress = Addresses.getInstance().lookup( reservedPublicIp.get( ) )
+            final Address pendingAddress = Addresses.getInstance().lookupActiveAddress( reservedPublicIp.get( ) )
             updateInstanceAddresses.call( pendingAddress )
             if ( !pendingAddress.isReallyAssigned( ) ) {
               assign.call( pendingAddress )
             }
           } else { // Check for / restore an Elastic IP
-            final UserFullName userFullName = UserFullName.getInstance( input.getOwnerId( ) )
-            final Address address = Addresses.getInstance( ).lookup( input.getNetParams( ).getIgnoredPublicIp( ) )
+            final UserFullName userFullName = UserFullName.getInstance( input.ownerId )
+            final Address address = Addresses.getInstance().lookupActiveAddress( input.netParams.ignoredPublicIp )
             if ( address.isAssigned( ) &&
-                address.getInstanceAddress( ).equals( input.getNetParams( ).getIpAddress( ) ) &&
-                address.getInstanceId( ).equals( input.getInstanceId( ) ) ) {
+                address.instanceAddress.equals( input.netParams.ipAddress ) &&
+                address.instanceId.equals( input.instanceId ) ) {
               updateInstanceAddresses.call( address )
-            } else if ( !address.isAssigned( ) && address.isAllocated( ) && address.getOwnerAccountNumber( ).equals( userFullName.getAccountNumber() ) ) {
+            } else if ( !address.isAssigned( ) && address.isAllocated( ) && address.ownerAccountNumber.equals( userFullName.accountNumber ) ) {
               updateInstanceAddresses.call( address )
               assign.call( address )
             }
@@ -583,11 +625,11 @@ class VmInstanceLifecycleHelpers {
 
           db.commit( )
         } catch ( final Exception e ) {
-          Logger.getLogger( PublicIPVmInstanceLifecycleHelper ).error( "Failed to restore address state " + input.getNetParams( )
+          Logger.getLogger( PublicIPVmInstanceLifecycleHelper ).error( "Failed to restore address state " + input.netParams
               + " for instance "
-              + input.getInstanceId( )
+              + input.instanceId
               + " because of: "
-              + e.getMessage( ) )
+              + e.message )
           Logs.extreme( ).error( e, e )
         }
       }
@@ -600,7 +642,7 @@ class VmInstanceLifecycleHelpers {
 
     @Override
     void verifyAllocation( final Allocation allocation ) throws MetadataException {
-      final AccountFullName accountFullName = allocation.getOwnerFullName( ).asAccountFullName( )
+      final AccountFullName accountFullName = allocation.ownerFullName.asAccountFullName( )
 
       final Set<String> networkNames = Sets.newLinkedHashSet( allocation.getRequest( ).securityGroupNames( ) )
       final Set<String> networkIds = Sets.newLinkedHashSet( allocation.getRequest().securityGroupsIds() )
@@ -632,7 +674,7 @@ class VmInstanceLifecycleHelpers {
           }
         }
       }
-      final AuthContext authContext = allocation.getAuthContext( ).get( )
+      final AuthContext authContext = allocation.authContext.get( )
       for ( String groupId : networkIds ) {
         if ( !Iterables.tryFind( groups, CollectionUtils.propertyPredicate( groupId, NetworkGroup.groupId() ) ).isPresent() ) {
           groups.add( NetworkGroups.lookupByGroupId( authContext.isSystemUser( ) ? null : accountFullName, groupId ) )
@@ -645,12 +687,12 @@ class VmInstanceLifecycleHelpers {
       final Map<String, NetworkGroup> networkRuleGroups = Maps.newHashMap( )
       for ( final NetworkGroup group : groups ) {
         if ( !RestrictedTypes.filterPrivileged( ).apply( group ) ) {
-          throw new IllegalMetadataAccessException( "Not authorized to use network group " +group.getGroupId()+ "/" + group.getDisplayName() + " for " + allocation.getOwnerFullName( ).getUserName( ) )
+          throw new IllegalMetadataAccessException( "Not authorized to use network group " +group.groupId+ "/" + group.displayName + " for " + allocation.ownerFullName.userName )
         }
-        networkRuleGroups.put( group.getDisplayName(), group )
+        networkRuleGroups.put( group.displayName, group )
       }
 
-      if ( allocation.getNetworkGroups( ).isEmpty( ) ) {
+      if ( allocation.networkGroups.isEmpty( ) ) {
         allocation.setNetworkRules( networkRuleGroups )
       }
     }
@@ -956,6 +998,13 @@ class VmInstanceLifecycleHelpers {
     @Override
     void startVmInstance( final ResourceToken resourceToken, final VmInstance instance ) {
       for ( VpcNetworkInterface networkInterface : instance.networkInterfaces ) {
+        if ( networkInterface.attached && networkInterface.attachment.deviceIndex == 0 ) {
+          if ( networkInterface.associated ) {
+            VmInstances.updateAddresses( instance, networkInterface.privateIpAddress, networkInterface.association.publicIp )
+          } else {
+            VmInstances.updatePrivateAddress(instance, networkInterface.privateIpAddress)
+          }
+        }
         NetworkInterfaceHelper.start( networkInterface, instance )
       }
     }
@@ -963,7 +1012,13 @@ class VmInstanceLifecycleHelpers {
     @Override
     void cleanUpInstance( final VmInstance instance, final VmState state ) {
       for ( VpcNetworkInterface networkInterface : instance.networkInterfaces ) {
+        if ( networkInterface.associated ) {
+          PublicAddresses.markDirty( networkInterface.association.publicIp, instance.partition );
+        }
         if ( VmInstance.VmStateSet.DONE.contains( state ) && Entities.isPersistent( instance ) ) {
+          if ( networkInterface.attached && networkInterface.attachment.deviceIndex == 0 ) {
+            VmInstances.updateAddresses( instance, VmNetworkConfig.DEFAULT_IP, VmNetworkConfig.DEFAULT_IP )
+          }
           if ( networkInterface?.attachment?.deleteOnTerminate ) {
             NetworkInterfaceHelper.release( networkInterface )
             Entities.delete( networkInterface )

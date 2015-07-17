@@ -21,7 +21,7 @@ package com.eucalyptus.compute.entities;
 
 import java.util.List;
 import java.util.concurrent.Callable;
-import com.eucalyptus.address.Address;
+import com.eucalyptus.compute.common.internal.address.AllocatedAddressEntity;
 import com.eucalyptus.compute.common.internal.blockstorage.Snapshot;
 import com.eucalyptus.compute.common.internal.blockstorage.Volume;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -44,7 +44,7 @@ public class AccountName400Upgrade extends AccountMetadata.AccountName400Upgrade
 
   private static final List<Class<? extends AccountMetadata>> accountMetadataClasses =
       ImmutableList.<Class<? extends AccountMetadata>>builder()
-          .add( Address.class )
+          .add( AllocatedAddressEntity.class )
           .add( ExtantNetwork.class )
           .add( ImageInfo.class )
           .add( NetworkGroup.class )

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,35 +17,19 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.network
-
-import com.google.common.collect.Maps
-import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
+package com.eucalyptus.address;
 
 /**
  *
  */
-@CompileStatic
-class PublicAddresses {
-  private static final Map<String,String> dirtyAddresses = Maps.newConcurrentMap( )
+class AllocatedAddressPersistenceException extends Exception {
+  private static final long serialVersionUID = 1L;
 
-  static void markDirty( String address, String partition ) {
-    dirtyAddresses.put( address, partition )
+  public AllocatedAddressPersistenceException( final String message ) {
+    super( message );
   }
 
-  @PackageScope
-  static void clearDirty( Collection<String> inUse, String partition ) {
-    dirtyAddresses.each{ String address, String addressPartition ->
-      if ( partition == addressPartition && !inUse.contains( address )) {
-        dirtyAddresses.remove( address )
-      }
-    }
+  public AllocatedAddressPersistenceException( final String message, final Throwable cause ) {
+    super( message, cause );
   }
-
-  @PackageScope
-  static boolean isDirty( String address ) {
-    dirtyAddresses.containsKey( address )
-  }
-
 }

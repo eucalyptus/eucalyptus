@@ -232,6 +232,7 @@ public abstract class AbstractNamedRegistry<TYPE extends HasFullName> {
         throw new NoSuchElementException( "Disabled map is empty." );
       }
       this.activeMap.put( first.getName( ), first );
+      this.disabledMap.remove( first.getName( ) );
       return first;
     } finally {
       this.canHas.writeLock( ).unlock( );
