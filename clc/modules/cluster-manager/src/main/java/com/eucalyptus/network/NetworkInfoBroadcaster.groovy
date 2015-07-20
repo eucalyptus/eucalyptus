@@ -29,6 +29,8 @@ import com.eucalyptus.cluster.NICluster
 import com.eucalyptus.cluster.NIClusters
 import com.eucalyptus.cluster.NIConfiguration
 import com.eucalyptus.cluster.NIDhcpOptionSet
+import com.eucalyptus.cluster.NIMidonetGateway
+import com.eucalyptus.cluster.NIMidonetGateways
 import com.eucalyptus.cluster.NIInstance
 import com.eucalyptus.cluster.NIInternetGateway
 import com.eucalyptus.cluster.NIMidonet
@@ -72,6 +74,7 @@ import com.eucalyptus.event.ClockTick
 import com.eucalyptus.event.Listeners
 import com.eucalyptus.event.EventListener as EucaEventListener
 import com.eucalyptus.network.config.Cluster as ConfigCluster
+import com.eucalyptus.network.config.MidonetGateway
 import com.eucalyptus.network.config.NetworkConfiguration
 import com.eucalyptus.network.config.NetworkConfigurations
 import com.eucalyptus.network.config.EdgeSubnet
@@ -603,18 +606,48 @@ class NetworkInfoBroadcaster {
               ].findAll( ) as List<NIProperty>,
               midonet: networkConfiguration?.mido ? new NIMidonet(
                   name: "mido",
+                  gateways: networkConfiguration?.mido?.gatewayHost ?
+                      new NIMidonetGateways(
+                          name: 'gateways',
+                          gateways : [
+                              new NIMidonetGateway(
+                                  properties: [
+                                      networkConfiguration?.mido?.gatewayHost ?
+                                          new NIProperty(
+                                              name: 'gatewayHost',
+                                              values: [ networkConfiguration.mido.gatewayHost ] ) :
+                                          null,
+                                      networkConfiguration?.mido?.gatewayIP ?
+                                          new NIProperty(
+                                              name: 'gatewayIP',
+                                              values: [ networkConfiguration.mido.gatewayIP ] ) :
+                                          null,
+                                      networkConfiguration?.mido?.gatewayInterface ?
+                                          new NIProperty(
+                                              name: 'gatewayInterface',
+                                              values: [ networkConfiguration.mido.gatewayInterface ] ) :
+                                          null,
+                                  ].findAll( ) as List<NIProperty>,
+                              )
+                          ]
+                      ) :
+                      networkConfiguration?.mido?.gateways ?
+                          new NIMidonetGateways(
+                              name: 'gateways',
+                              gateways : networkConfiguration?.mido?.gateways?.collect{ MidonetGateway gateway ->
+                                new NIMidonetGateway(
+                                    properties: [
+                                        new NIProperty( name: 'gatewayHost', values: [ gateway.gatewayHost ] ),
+                                        new NIProperty( name: 'gatewayIP', values: [ gateway.gatewayIP ] ),
+                                        new NIProperty( name: 'gatewayInterface', values: [ gateway.gatewayInterface ] ),
+                                    ].findAll( ) as List<NIProperty>,
+                                )
+                              } as List<NIMidonetGateway>
+                          ) :
+                          null,
                   properties: [
                       networkConfiguration?.mido?.eucanetdHost ?
                           new NIProperty( name: 'eucanetdHost', values: [ networkConfiguration.mido.eucanetdHost ] ) :
-                          null,
-                      networkConfiguration?.mido?.gatewayHost ?
-                          new NIProperty( name: 'gatewayHost', values: [ networkConfiguration.mido.gatewayHost ] ) :
-                          null,
-                      networkConfiguration?.mido?.gatewayIP ?
-                          new NIProperty( name: 'gatewayIP', values: [ networkConfiguration.mido.gatewayIP ] ) :
-                          null,
-                      networkConfiguration?.mido?.gatewayInterface ?
-                          new NIProperty( name: 'gatewayInterface', values: [ networkConfiguration.mido.gatewayInterface ] ) :
                           null,
                       networkConfiguration?.mido?.publicNetworkCidr ?
                           new NIProperty( name: 'publicNetworkCidr', values: [ networkConfiguration.mido.publicNetworkCidr ] ) :

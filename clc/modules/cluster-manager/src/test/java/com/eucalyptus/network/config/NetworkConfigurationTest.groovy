@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -454,6 +454,54 @@ class NetworkConfigurationTest {
         ],
         "Mido": {
           "EucanetdHost": "a",
+          "Gateways": [
+            {
+              "GatewayHost": "b",
+              "GatewayIP": "10.0.0.1",
+              "GatewayInterface": "foo"
+            }
+          ],
+          "PublicNetworkCidr": "0.0.0.0/0",
+          "PublicGatewayIP": "10.0.0.1"
+        }
+    }
+    """.stripIndent()
+
+    NetworkConfiguration result = NetworkConfigurations.parse( config )
+    println result
+
+    NetworkConfiguration expected = new NetworkConfiguration(
+        mode: 'VPCMIDO',
+        macPrefix: 'd0:0d',
+        publicIps: [ '10.111.200.1-10.111.200.2' ],
+        mido: new Midonet(
+                eucanetdHost: 'a',
+                gateways: [
+                    new MidonetGateway(
+                        gatewayHost: 'b',
+                        gatewayIP: '10.0.0.1',
+                        gatewayInterface: 'foo',
+                    )
+                ],
+                publicNetworkCidr: '0.0.0.0/0',
+                publicGatewayIP: '10.0.0.1'
+        )
+    )
+
+    assertEquals( 'Result does not match template', expected, result )
+  }
+
+  @Test
+  void testVpcMidoSingleGatewayParse() {
+    String config = """
+    {
+        "Mode": "VPCMIDO",
+        "MacPrefix": "d0:0d",
+        "PublicIps": [
+            "10.111.200.1-10.111.200.2"
+        ],
+        "Mido": {
+          "EucanetdHost": "a",
           "GatewayHost": "b",
           "GatewayIP": "10.0.0.1",
           "GatewayInterface": "foo",
@@ -471,12 +519,12 @@ class NetworkConfigurationTest {
         macPrefix: 'd0:0d',
         publicIps: [ '10.111.200.1-10.111.200.2' ],
         mido: new Midonet(
-                eucanetdHost: 'a',
-                gatewayHost: 'b',
-                gatewayIP: '10.0.0.1',
-                gatewayInterface: 'foo',
-                publicNetworkCidr: '0.0.0.0/0',
-                publicGatewayIP: '10.0.0.1'
+            eucanetdHost: 'a',
+            gatewayHost: 'b',
+            gatewayIP: '10.0.0.1',
+            gatewayInterface: 'foo',
+            publicNetworkCidr: '0.0.0.0/0',
+            publicGatewayIP: '10.0.0.1'
         )
     )
 

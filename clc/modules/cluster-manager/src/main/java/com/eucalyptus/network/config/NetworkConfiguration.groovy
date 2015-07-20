@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,11 +68,22 @@ class NetworkConfiguration {
 @Canonical
 class Midonet {
   String eucanetdHost
+  // top level,single gateway specification
   String gatewayHost
   String gatewayIP
   String gatewayInterface
+  // gateway list
+  List<MidonetGateway> gateways
   String publicNetworkCidr
   String publicGatewayIP
+}
+
+@CompileStatic
+@Canonical
+class MidonetGateway {
+  String gatewayHost
+  String gatewayIP
+  String gatewayInterface
 }
 
 /**
@@ -268,9 +279,15 @@ class MidonetValidator extends TypedValidator<Midonet> {
   @Override
   void validate( final Midonet midonet ) {
     require( midonet.&getEucanetdHost )
-    require( midonet.&getGatewayHost )
-    require( midonet.&getGatewayIP )
-    require( midonet.&getGatewayInterface )
+    if ( !midonet.gatewayHost || !midonet.gatewayIP || !midonet.gatewayInterface ) {
+      require( midonet.&getGateways )
+      validateAll( midonet.&getGateways, new MidonetGatewayValidator( errors ) )
+      if ( midonet.gateways != null && midonet.gateways.empty ) {
+        errors.reject( "property.invalid.gateways", [ pathTranslate( errors.getNestedPath( ), "Gateways" ) ] as Object[ ], 'At least one gateway is required "{0}"' )
+      } else if ( midonet.gateways != null && midonet.gateways.size( ) > 6 ) {
+        errors.reject( "property.invalid.gateways", [ pathTranslate( errors.getNestedPath( ), "Gateways" ), midonet.gateways.size( ) ] as Object[ ], 'Maximum allowed gateways (6) exceeded "{0}": {1}' )
+      }
+    }
     require( midonet.&getPublicNetworkCidr )
     require( midonet.&getPublicGatewayIP )
     validate( midonet.&getEucanetdHost, new HostValidator(errors) )
@@ -278,6 +295,22 @@ class MidonetValidator extends TypedValidator<Midonet> {
     validate( midonet.&getGatewayIP, new IPValidator(errors) )
     validate( midonet.&getPublicNetworkCidr, new CidrValidator(errors) )
     validate( midonet.&getPublicGatewayIP, new IPValidator(errors) )
+  }
+}
+
+@CompileStatic
+@Canonical
+@PackageScope
+class MidonetGatewayValidator extends TypedValidator<MidonetGateway> {
+  Errors errors
+
+  @Override
+  void validate( final MidonetGateway midonetGateway ) {
+    require( midonetGateway.&getGatewayHost )
+    require( midonetGateway.&getGatewayIP )
+    require( midonetGateway.&getGatewayInterface )
+    validate( midonetGateway.&getGatewayHost, new HostValidator(errors) )
+    validate( midonetGateway.&getGatewayIP, new IPValidator(errors) )
   }
 }
 
