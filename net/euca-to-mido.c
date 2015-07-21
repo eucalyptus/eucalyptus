@@ -3245,7 +3245,6 @@ int connect_mido_vpc_instance(mido_vpc_subnet * vpcsubnet, mido_vpc_instance * v
     snprintf(ifacename, IF_NAME_LEN, "vn_%s", vpcinstance->gniInst->name);
 
     // create the Exterior ports for VMs
-    //    rc = mido_create_port(&(vpcsubnet->midos[VPCBR]), "ExteriorBridge", NULL, NULL, NULL, &(vpcinstance->midos[VPCBR_VMPORT]));
     rc = mido_create_port(&(vpcsubnet->midos[VPCBR]), "Bridge", NULL, NULL, NULL, &(vpcinstance->midos[VPCBR_VMPORT]));
     if (rc) {
         LOGERROR("cannot create midonet bridge port: check midonet health\n");

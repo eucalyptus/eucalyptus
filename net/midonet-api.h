@@ -137,6 +137,8 @@ void mido_print_midoname(midoname * name);
 int mido_cmp_midoname(midoname *a, midoname *b);
 int mido_merge_midoname_lists(midoname *lista, int lista_max, midoname *listb, int listb_max, midoname **addmidos, int addmidos_max, midoname **delmidos, int delmidos_max);
 
+int mido_check_state(void);
+
 int mido_create_tenant(char *name, midoname * outname);
 //int mido_read_tenant(midoname * name);
 int mido_update_tenant(midoname * name);

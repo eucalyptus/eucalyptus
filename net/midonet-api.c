@@ -2625,6 +2625,12 @@ int midonet_http_get(char *url, char *apistr, char **out_payload)
     long httpcode = 0L;
     struct curl_slist *headers = NULL;
     char hbuf[EUCA_MAX_PATH];
+    long long timer=0;
+
+    timer = time_usec();
+    if (!strstr(url, "system_state")) {
+        //mido_check_state();
+    }
 
     *out_payload = NULL;
 
@@ -2666,6 +2672,8 @@ int midonet_http_get(char *url, char *apistr, char **out_payload)
     }
     if (mem_writer_params.mem)
         free(mem_writer_params.mem);
+
+    LOGTRACE("total time for http operation: %f seconds\n", (time_usec() - timer) / 100000.0);
     return (ret);
 }
 
@@ -2695,6 +2703,11 @@ int midonet_http_put(char *url, char *resource_type, char *vers, char *payload)
     struct curl_slist *headers = NULL;
     int ret = 0;
     long httpcode = 0L;
+    long long timer=0;
+
+    timer = time_usec();
+
+    mido_check_state();
 
     mem_reader_params.mem = payload;
     mem_reader_params.size = strlen(payload) + 1;
@@ -2734,6 +2747,7 @@ int midonet_http_put(char *url, char *resource_type, char *vers, char *payload)
     curl_easy_cleanup(curl);
     curl_global_cleanup();
 
+    LOGTRACE("total time for http operation: %f seconds\n", (time_usec() - timer) / 100000.0);
     return (ret);
 }
 
@@ -2798,6 +2812,11 @@ int midonet_http_post(char *url, char *resource_type, char *vers, char *payload,
     int ret = 0;
     char *loc = NULL, hbuf[EUCA_MAX_PATH];
     struct curl_slist *headers = NULL;
+    long long timer=0;
+
+    timer = time_usec();
+
+    mido_check_state();
 
     *out_payload = NULL;
 
@@ -2840,6 +2859,7 @@ int midonet_http_post(char *url, char *resource_type, char *vers, char *payload,
     }
     EUCA_FREE(loc);
 
+    LOGTRACE("total time for http operation: %f seconds\n", (time_usec() - timer) / 100000.0);
     return (ret);
 }
 
@@ -2863,7 +2883,12 @@ int midonet_http_delete(char *url)
     CURL *curl = NULL;
     CURLcode curlret;
     int ret = 0;
+    long long timer=0;
 
+    timer = time_usec();
+
+    mido_check_state();
+        
     curl = curl_easy_init();
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
@@ -2875,6 +2900,7 @@ int midonet_http_delete(char *url)
     curl_easy_cleanup(curl);
     curl_global_cleanup();
 
+    LOGTRACE("total time for http operation: %f seconds\n", (time_usec() - timer) / 100000.0);
     return (ret);
 }
 
@@ -3488,6 +3514,34 @@ int mido_get_hosts(midoname ** outnames, int *outnames_max)
     EUCA_FREE(names);
 
     return (ret);
+}
+
+int mido_check_state(void) {
+    int ret = 0, rc = 0, mido = 0, retries = 120, i;
+    char url[EUCA_MAX_PATH];
+    char *outbuf = NULL;
+    
+    bzero(url, EUCA_MAX_PATH);
+    snprintf(url, EUCA_MAX_PATH, "http://localhost:8080/midonet-api/system_state");
+
+    for (i=0; i<retries && !mido; i++) {
+        rc = midonet_http_get(url, "application/vnd.org.midonet.SystemState-v2+json", &outbuf);
+        if (rc) {
+            LOGERROR("midonet-api is not available (attempt %d/%d): check midonet-api health to resume eucanetd operation\n", i, retries);
+            sleep(1);
+        } else {
+            LOGDEBUG("midonet-api system state: %s\n", SP(outbuf));
+            mido = 1;
+        }
+        EUCA_FREE(outbuf);    
+    }
+    if (!mido) {
+        LOGFATAL("midonet-api is not reachable after %d retries: eucanetd shutting down\n", retries);
+        ret = 1;
+        exit(1);
+    }
+
+    return(ret);
 }
 
 #ifdef MIDONET_API_TEST
