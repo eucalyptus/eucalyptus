@@ -54,22 +54,28 @@ import com.google.common.base.Function;
  * 
  */
 public class ServerCertificates {
-  
-  public static boolean isCertValid(final String certBody, final String pk, final String certChain){
+  public static void verifyCertificate(final String certBody, final String pk, final String certChain) 
+      throws AuthException{
     try{
       final X509Certificate cert = PEMFiles.getCert(certBody.getBytes( Charsets.UTF_8 ));
       if(cert==null)
-        throw new EucalyptusCloudException("Malformed cert");
-      
+        throw new Exception("Malformed certificate");
+    }catch(final Exception ex) {
+      throw new AuthException(
+          String.format("%s (%s)", AuthException.SERVER_CERT_INVALID_FORMAT,
+              "Certificate body is invalid - is the cert in PEM format?"));
+    }
+     
+    try{
       final KeyPair kp = PEMFiles.getKeyPair(pk.getBytes( Charsets.UTF_8 ));
       if(kp == null)
-        throw new EucalyptusCloudException("Malformed pk");
+        throw new Exception("Malformed pk");
     }catch(final Exception ex){
-      return false;
+      throw new AuthException(
+          String.format("%s (%s)", AuthException.SERVER_CERT_INVALID_FORMAT,
+          "Private key is invalid - is the key in PEM format?"));
     }
-    return true;
   }
-  
 
   @Resolver( ServerCertificateEntity.class )
   public enum Lookup implements Function<String, ServerCertificateEntity> {
