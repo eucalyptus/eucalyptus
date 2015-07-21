@@ -70,6 +70,22 @@ class NIProperty {
 @XmlAccessorType( XmlAccessType.NONE )
 class NIMidonet {
   @XmlAttribute String name
+  @XmlElement(name="property") NIMidonetGateways gateways
+  @XmlElement(name="property") List<NIProperty> properties = Lists.newArrayList()
+}
+
+@Canonical
+@CompileStatic
+@XmlAccessorType( XmlAccessType.NONE )
+class NIMidonetGateways {
+  @XmlAttribute String name
+  @XmlElement(name="gateway") List<NIMidonetGateway> gateways = Lists.newArrayList()
+}
+
+@Canonical
+@CompileStatic
+@XmlAccessorType( XmlAccessType.NONE )
+class NIMidonetGateway {
   @XmlElement(name="property") List<NIProperty> properties = Lists.newArrayList()
 }
 

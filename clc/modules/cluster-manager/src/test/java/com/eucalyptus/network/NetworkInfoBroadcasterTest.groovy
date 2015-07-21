@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,8 @@ import com.eucalyptus.cluster.ClusterConfiguration
 import com.eucalyptus.cluster.NICluster
 import com.eucalyptus.cluster.NIClusters
 import com.eucalyptus.cluster.NIConfiguration
+import com.eucalyptus.cluster.NIMidonetGateway
+import com.eucalyptus.cluster.NIMidonetGateways
 import com.eucalyptus.cluster.NIInstance
 import com.eucalyptus.cluster.NIManagedSubnet
 import com.eucalyptus.cluster.NIManagedSubnets
@@ -38,6 +40,7 @@ import com.eucalyptus.network.config.Cluster as ConfigCluster
 import com.eucalyptus.network.config.EdgeSubnet
 import com.eucalyptus.network.config.ManagedSubnet
 import com.eucalyptus.network.config.Midonet
+import com.eucalyptus.network.config.MidonetGateway
 import com.eucalyptus.network.config.NetworkConfiguration
 import com.eucalyptus.util.TypeMappers
 import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState
@@ -297,18 +300,92 @@ class NetworkInfoBroadcasterTest {
   }
 
   @Test
+  void testBroadcastVpcMidoSingleGateway( ) {
+    Midonet midonet = new Midonet(
+        eucanetdHost: 'a-35.qa1.eucalyptus-systems.com',
+        gatewayHost: 'a-35.qa1.eucalyptus-systems.com',
+        gatewayIP: '10.116.133.77',
+        gatewayInterface: 'em1.116',
+        publicNetworkCidr: '10.116.0.0/17',
+        publicGatewayIP: '10.116.133.67'
+    )
+    NIMidonet niMidonet = new NIMidonet(
+        name: 'mido',
+        gateways: new NIMidonetGateways(
+          name: 'gateways',
+          gateways: [
+              new NIMidonetGateway(
+                  properties: [
+                    new NIProperty( name: 'gatewayHost', values: ['a-35.qa1.eucalyptus-systems.com'] ),
+                    new NIProperty( name: 'gatewayIP', values: ['10.116.133.77'] ),
+                    new NIProperty( name: 'gatewayInterface', values: ['em1.116'] ),
+                  ]
+              )
+          ]
+        ),
+        properties: [
+            new NIProperty( name: 'eucanetdHost', values: ['a-35.qa1.eucalyptus-systems.com'] ),
+            new NIProperty( name: 'publicNetworkCidr', values: ['10.116.0.0/17'] ),
+            new NIProperty( name: 'publicGatewayIP', values: ['10.116.133.67'] ),
+        ]
+    )
+    vpcBroadcastTest( midonet, niMidonet )
+  }
+
+  @Test
   void testBroadcastVpcMido( ) {
-    NetworkInfo info = NetworkInfoBroadcaster.buildNetworkConfiguration(
-        Optional.of( new NetworkConfiguration(
-            mode: 'VPCMIDO',
-            mido: new Midonet(
-                eucanetdHost: 'a-35.qa1.eucalyptus-systems.com',
+    Midonet midonet = new Midonet(
+        eucanetdHost: 'a-35.qa1.eucalyptus-systems.com',
+        gateways: [
+            new MidonetGateway(
                 gatewayHost: 'a-35.qa1.eucalyptus-systems.com',
                 gatewayIP: '10.116.133.77',
                 gatewayInterface: 'em1.116',
-                publicNetworkCidr: '10.116.0.0/17',
-                publicGatewayIP: '10.116.133.67'
             ),
+            new MidonetGateway(
+                gatewayHost: 'a-36.qa1.eucalyptus-systems.com',
+                gatewayIP: '10.116.133.78',
+                gatewayInterface: 'em1.117',
+            ),
+        ],
+        publicNetworkCidr: '10.116.0.0/17',
+        publicGatewayIP: '10.116.133.67'
+    )
+    NIMidonet niMidonet = new NIMidonet(
+        name: 'mido',
+        gateways: new NIMidonetGateways(
+            name: 'gateways',
+            gateways: [
+                new NIMidonetGateway(
+                    properties: [
+                        new NIProperty( name: 'gatewayHost', values: ['a-35.qa1.eucalyptus-systems.com'] ),
+                        new NIProperty( name: 'gatewayIP', values: ['10.116.133.77'] ),
+                        new NIProperty( name: 'gatewayInterface', values: ['em1.116'] ),
+                    ]
+                ),
+                new NIMidonetGateway(
+                    properties: [
+                        new NIProperty( name: 'gatewayHost', values: ['a-36.qa1.eucalyptus-systems.com'] ),
+                        new NIProperty( name: 'gatewayIP', values: ['10.116.133.78'] ),
+                        new NIProperty( name: 'gatewayInterface', values: ['em1.117'] ),
+                    ]
+                ),
+            ]
+        ),
+        properties: [
+            new NIProperty( name: 'eucanetdHost', values: ['a-35.qa1.eucalyptus-systems.com'] ),
+            new NIProperty( name: 'publicNetworkCidr', values: ['10.116.0.0/17'] ),
+            new NIProperty( name: 'publicGatewayIP', values: ['10.116.133.67'] ),
+        ]
+    )
+    vpcBroadcastTest( midonet, niMidonet )
+  }
+
+  private void vpcBroadcastTest( final Midonet midoConfig, final NIMidonet midoNetworkInformation ) {
+    NetworkInfo info = NetworkInfoBroadcaster.buildNetworkConfiguration(
+        Optional.of( new NetworkConfiguration(
+            mode: 'VPCMIDO',
+            mido: midoConfig,
             publicIps: [ '2.0.0.0-2.0.0.255' ],
         ) ),
         new NetworkInfoBroadcaster.NetworkInfoSource( ) {
@@ -354,17 +431,7 @@ class NetworkInfoBroadcasterTest {
                 new NIProperty( name: 'instanceDNSDomain', values: ['eucalyptus.internal'] ),
                 new NIProperty( name: 'instanceDNSServers', values: ['127.0.0.1'] ),
             ],
-            midonet: new NIMidonet(
-                name: 'mido',
-                properties: [
-                    new NIProperty( name: 'eucanetdHost', values: ['a-35.qa1.eucalyptus-systems.com'] ),
-                    new NIProperty( name: 'gatewayHost', values: ['a-35.qa1.eucalyptus-systems.com'] ),
-                    new NIProperty( name: 'gatewayIP', values: ['10.116.133.77'] ),
-                    new NIProperty( name: 'gatewayInterface', values: ['em1.116'] ),
-                    new NIProperty( name: 'publicNetworkCidr', values: ['10.116.0.0/17'] ),
-                    new NIProperty( name: 'publicGatewayIP', values: ['10.116.133.67'] ),
-                ]
-            ),
+            midonet: midoNetworkInformation,
             clusters: new NIClusters( name: 'clusters', clusters: [
                 new NICluster(
                     name: 'cluster1',
