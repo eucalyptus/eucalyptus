@@ -100,7 +100,7 @@ class NetworkConfigurations {
 
   @PackageScope
   static void process( final NetworkConfiguration networkConfiguration ) {
-    Addresses.addressManager.update( iterateRangesAsString( networkConfiguration.publicIps ) )
+    Addresses.getInstance( ).update( iterateRangesAsString( networkConfiguration.publicIps ) )
     Entities.transaction( ClusterConfiguration.class ) { EntityTransaction db ->
       Components.lookup(ClusterController.class).services().each { ClusterConfiguration config ->
         (networkConfiguration?.clusters?.find{ Cluster cluster -> cluster.name == config.partition }?:new Cluster()).with {

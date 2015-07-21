@@ -73,6 +73,7 @@ import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.common.AddressInfoType;
 import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.internal.address.AddressDomain;
 import com.eucalyptus.compute.common.internal.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.compute.common.internal.vpc.InternetGateways;
@@ -84,14 +85,12 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.network.PublicAddresses;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.compute.common.internal.tags.Filters;
-import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
-import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.util.async.UnconditionalCallback;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.compute.common.internal.vm.VmNetworkConfig;
@@ -102,7 +101,6 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import com.eucalyptus.compute.common.backend.AllocateAddressResponseType;
 import com.eucalyptus.compute.common.backend.AllocateAddressType;
 import com.eucalyptus.compute.common.backend.AssociateAddressResponseType;
@@ -120,32 +118,29 @@ public class AddressManager {
   private static final Logger LOG = Logger.getLogger( AddressManager.class );
 
   private final InternetGateways internetGateways;
+  private final Addresses addresses;
 
   @Inject
-  public AddressManager( final InternetGateways internetGateways ) {
+  public AddressManager(
+      final AllocatedAddressPersistence allocatedAddressPersistence,
+      final InternetGateways internetGateways
+  ) {
+    this.addresses = new Addresses( allocatedAddressPersistence );
     this.internetGateways = internetGateways;
   }
-  
-  @SuppressWarnings( "UnusedDeclaration" )
+
   public AllocateAddressResponseType allocateAddress( final AllocateAddressType request ) throws Exception {
     final AllocateAddressResponseType reply = request.getReply( );
     try {
       final String defaultVpcId = getDefaultVpcId( );
-      final Address.Domain domain = defaultVpcId != null ?
-          Address.Domain.vpc :
-          Optional.fromNullable( request.getDomain( ) )
-              .transform( Enums.valueOfFunction( Address.Domain.class ) ).or( Address.Domain.standard );
-      final Addresses.Allocator allocator = Addresses.allocator( domain );
+      final AddressDomain domain = Optional.fromNullable( request.getDomain( ) )
+          .transform( Enums.valueOfFunction( AddressDomain.class ) )
+          .or( defaultVpcId != null ? AddressDomain.vpc : AddressDomain.standard );
+      final Addresses.Allocator allocator = addresses.allocator( domain );
       final Address address = RestrictedTypes.allocateNamedUnitlessResources( 1, allocator, allocator ).get( 0 );
       reply.setPublicIp( address.getName( ) );
-      switch ( domain ) {
-        case vpc:
-          reply.setAllocationId( address.getAllocationId( ) );
-          // fallthrough
-        default:
-          reply.setDomain( domain.name( ) );
-          break;
-      }
+      reply.setAllocationId( address.getAllocationId( ) );
+      reply.setDomain( domain.name( ) );
     } catch( final RuntimeException e ) {
       if( e.getCause( ) != null ) {
         throw new EucalyptusCloudException( e.getCause() );
@@ -155,20 +150,18 @@ public class AddressManager {
     }
     return reply;
   }
-  
-  @SuppressWarnings( "UnusedDeclaration" )
+
   public ReleaseAddressResponseType releaseAddress( final ReleaseAddressType request ) throws Exception {
     final ReleaseAddressResponseType reply = request.getReply( ).markFailed( );
     if ( request.getPublicIp( ) == null && request.getAllocationId( ) == null ) {
       throw new ClientComputeException( "MissingParameter", "PublicIp or AllocationId required" );
     }
 
+    final String allocationId = ResourceIdentifiers.tryNormalize().apply( request.getAllocationId( ) );
     final Address address;
     try {
       address = RestrictedTypes.doPrivileged(
-          Objects.firstNonNull(
-              request.getPublicIp( ),
-              ResourceIdentifiers.tryNormalize().apply( request.getAllocationId( ) ) ),
+          Objects.firstNonNull( request.getPublicIp( ), allocationId ),
           Address.class );
     } catch ( NoSuchElementException e ) {
       if ( request.getAllocationId( ) != null ) {
@@ -179,23 +172,23 @@ public class AddressManager {
       throw e;
     }
 
-    if ( address.getDomain() == Address.Domain.vpc && address.isAssigned( ) ) {
+    try {
+      addresses.release(
+          address,
+          address.getDomain( ) == AddressDomain.vpc ? allocationId != null ? allocationId : address.getAllocationId( ) : null );
+    } catch ( IllegalStateException e ) {
       throw new ClientComputeException(
           "InvalidIPAddress.InUse",
           "Address ("+address.getName( )+") in use ("+address.getNetworkInterfaceId( )+")" );
     }
 
-    if ( address.isPending( ) ) {
-      address.clearPending( );
-    }
-
-    Addresses.release( address );
-
     reply.set_return( true );
     return reply;
   }
-  
-  @SuppressWarnings( "UnusedDeclaration" )
+
+  /**
+   * NOTE: ComputeService#describeAddresses is used for non-verbose describe functionality.
+   */
   public DescribeAddressesResponseType describeAddresses( final DescribeAddressesType request ) throws EucalyptusCloudException {
     final DescribeAddressesResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
@@ -210,20 +203,19 @@ public class AddressManager {
             Collections.singleton( ctx.getAccount( ).getAccountNumber( ) ) )
         .byPrivileges( )
         .buildPredicate( );
-    for ( final Address address : Iterables.filter( Addresses.getInstance( ).listValues( ), filter ) ) {
+    for ( final Address address : Iterables.filter( addresses.listActiveAddresses( ), filter ) ) {
       reply.getAddressesSet( ).add( verbose
           ? address.getAdminDescription( )
           : TypeMappers.transform( address, AddressInfoType.class ) );
     }
     if ( verbose ) {
-      for ( Address address : Iterables.filter( Addresses.getInstance( ).listDisabledValues( ), filter ) ) {
-        reply.getAddressesSet( ).add( new AddressInfoType( address.getName( ), Address.Domain.standard.toString(), Principals.nobodyFullName( ).getUserName( ) ) );
+      for ( Address address : Iterables.filter( addresses.listInactiveAddresses( ), filter ) ) {
+        reply.getAddressesSet( ).add( new AddressInfoType( address.getName( ), AddressDomain.standard.toString(), Principals.nobodyFullName( ).getUserName( ) ) );
       }
     }
     return reply;
   }
 
-  @SuppressWarnings( "UnusedDeclaration" )
   public AssociateAddressResponseType associateAddress( final AssociateAddressType request ) throws Exception {
     final AssociateAddressResponseType reply = request.getReply( ).markFailed( );
     final String instanceId = request.getInstanceId( )==null ?
@@ -236,144 +228,122 @@ public class AddressManager {
             request.getPublicIp( ),
             ResourceIdentifiers.tryNormalize().apply( request.getAllocationId( ) ) ),
         Address.class );
-    if ( !address.isAllocated( ) ) {
+    if ( !address.isAllocated( ) && !Contexts.lookup( ).isAdministrator( ) ) {
       throw new EucalyptusCloudException( "Cannot associate an address which is not allocated: " + request.getPublicIp( ) );
     } else if ( !Contexts.lookup( ).isAdministrator( ) && !Contexts.lookup( ).getUserFullName( ).asAccountFullName( ).getAccountNumber( ).equals( address.getOwner( ).getAccountNumber( ) ) ) {
       throw new EucalyptusCloudException( "Cannot associate an address which is not allocated to your account: " + request.getPublicIp( ) );
     }
     final VmInstance vm = instanceId == null ? null : RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
-    if ( address.getDomain( ) != Address.Domain.vpc ) { // EC2-Classic
-      if ( vm == null ) {
-        throw new ClientComputeException( "InvalidParameterCombination", "InstanceId must be specified when using PublicIp" );
-      }
-      if ( VmStateSet.NOT_RUNNING.apply( vm ) ) {
-        throw new ClientComputeException( "InvalidInstanceID", "The instance '"+vm.getDisplayName( )+"' is not in a valid state for this operation." );
-      }
-      final VmInstance oldVm = findCurrentAssignedVm( address );
-      final Address oldAddr = findVmExistingAddress( vm );
-      reply.set_return( true );
+    try ( final Addresses.AddressingBatch batch = addresses.batch( ) ) {
+      if ( address.getDomain( ) != AddressDomain.vpc ) { // EC2-Classic
+        if ( vm == null ) {
+          throw new ClientComputeException( "InvalidParameterCombination", "InstanceId must be specified when using PublicIp" );
+        }
+        if ( VmStateSet.NOT_RUNNING.apply( vm ) ) {
+          throw new ClientComputeException( "InvalidInstanceID", "The instance '" + vm.getDisplayName( ) + "' is not in a valid state for this operation." );
+        }
+        final VmInstance oldVm = findCurrentAssignedVm( address );
+        final Address oldAddr = findVmExistingAddress( addresses, vm );
+        reply.set_return( true );
 
-      if ( oldAddr != null && address.equals( oldAddr ) ) {
-        return reply;
-      }
+        if ( oldAddr != null && address.equals( oldAddr ) ) {
+          return reply;
+        }
 
-      final UnconditionalCallback<BaseMessage> assignTarget = new UnconditionalCallback<BaseMessage>( ) {
-        public void fire( ) {
-          AddressingDispatcher.dispatch(
-              AsyncRequests.newRequest( address.assign( vm ).getCallback() ).then(
-                  new Callback.Success<BaseMessage>() {
-                    @Override
-                    public void fire( BaseMessage response ) {
-                      Addresses.updatePublicIpByInstanceId( vm.getInstanceId(), address.getName() );
-                    }
-                  }
-              ),
-              vm.getPartition() );
+        if ( address.isAssigned( ) ) { // clear current assignment for address
+          addresses.unassign( address );
           if ( oldVm != null ) {
-            Addresses.system( oldVm );
+            addresses.system( oldVm );
           }
         }
-      };
 
-      final UnconditionalCallback<BaseMessage> unassignBystander = new UnconditionalCallback<BaseMessage>( ) {
-        public void fire( ) {
-          if ( oldAddr != null ) {
-            AddressingDispatcher.dispatch(
-                AsyncRequests.newRequest( oldAddr.unassign().getCallback() ).then( assignTarget ),
-                vm.getPartition() );
+        if ( oldAddr != null ) { // clear current address for vm assigning to
+          addresses.unassign( oldAddr );
+        }
+
+        if ( addresses.assign( address, vm ) ) {
+          Addresses.updatePublicIpByInstanceId( vm.getInstanceId( ), address.getName( ) );
+        }
+      } else { // VPC
+        final NetworkInterface networkInterface;
+        try ( final TransactionResource tx = Entities.transactionFor( VmInstance.class ) ) {
+          if ( vm != null ) {
+            if ( VmStateSet.EXPECTING_TEARDOWN.apply( vm ) || VmStateSet.DONE.apply( vm ) ) { // STOPPED is OK
+              throw new ClientComputeException( "InvalidInstanceID", "The instance '" + vm.getDisplayName( ) + "' is not in a valid state for this operation." );
+            }
+            networkInterface = Iterables.getOnlyElement( Entities.merge( vm ).getNetworkInterfaces( ) );
           } else {
-            assignTarget.fire( );
-          }
-        }
-      };
-
-      if ( address.isAssigned( ) ) {
-        AddressingDispatcher.dispatch(
-            AsyncRequests.newRequest( address.unassign().getCallback() ).then( unassignBystander ),
-            oldVm.getPartition() );
-      } else {
-        unassignBystander.fire( );
-      }
-
-    } else { // VPC
-      final NetworkInterface networkInterface;
-      try ( final TransactionResource tx = Entities.transactionFor( VmInstance.class ) ) {
-        if ( vm != null ) {
-          if ( VmStateSet.EXPECTING_TEARDOWN.apply( vm ) || VmStateSet.DONE.apply( vm ) ) { // STOPPED is OK
-            throw new ClientComputeException( "InvalidInstanceID", "The instance '"+vm.getDisplayName( )+"' is not in a valid state for this operation." );
-          }
-          networkInterface = Iterables.getOnlyElement( Entities.merge( vm ).getNetworkInterfaces( ) );
-        } else {
-          if ( networkInterfaceId == null ) {
-            throw new ClientComputeException( "MissingParameter", "Either instance ID or network interface id must be specified" );
-          }
-          networkInterface = RestrictedTypes.doPrivileged( networkInterfaceId, NetworkInterface.class );
-          if ( networkInterface.isAttached( ) ) {
-            final VmInstance attachedVm = networkInterface.getAttachment( ).getInstance( );
-            if ( VmStateSet.EXPECTING_TEARDOWN.apply( attachedVm ) ) { // STOPPED is OK
-              throw new ClientComputeException( "IncorrectInstanceState", "The instance to which '"+networkInterfaceId+"' is attached is not in a valid state for this operation" );
+            if ( networkInterfaceId == null ) {
+              throw new ClientComputeException( "MissingParameter", "Either instance ID or network interface id must be specified" );
+            }
+            networkInterface = RestrictedTypes.doPrivileged( networkInterfaceId, NetworkInterface.class );
+            if ( networkInterface.isAttached( ) ) {
+              final VmInstance attachedVm = networkInterface.getAttachment( ).getInstance( );
+              if ( VmStateSet.EXPECTING_TEARDOWN.apply( attachedVm ) ) { // STOPPED is OK
+                throw new ClientComputeException( "IncorrectInstanceState", "The instance to which '" + networkInterfaceId + "' is attached is not in a valid state for this operation" );
+              }
             }
           }
         }
-      }
-      reply.set_return( true );
+        reply.set_return( true );
 
-      if ( !address.isAssigned( ) || !networkInterface.getDisplayName( ).equals( address.getNetworkInterfaceId( ) ) ) {
-        if ( address.isAssigned( ) && !request.getAllowReassociation( ) ) {
-          throw new ClientComputeException( "Resource.AlreadyAssociated", "Address already associated" );
-        }
+        if ( !address.isAssigned( ) || !networkInterface.getDisplayName( ).equals( address.getNetworkInterfaceId( ) ) ) {
+          if ( address.isAssigned( ) && !request.getAllowReassociation( ) ) {
+            throw new ClientComputeException( "Resource.AlreadyAssociated", "Address already associated" );
+          }
 
-        if ( address.isAssigned( ) ) {
-          final NetworkInterface oldNetworkInterface = RestrictedTypes.doPrivileged( address.getNetworkInterfaceId( ), NetworkInterface.class );
+          if ( address.isAssigned( ) ) {
+            final NetworkInterface oldNetworkInterface = RestrictedTypes.doPrivileged( address.getNetworkInterfaceId( ), NetworkInterface.class );
+            try ( final TransactionResource tx = Entities.transactionFor( NetworkInterface.class ) ) {
+              final NetworkInterface eni = Entities.merge( oldNetworkInterface );
+              addresses.unassign( address, null );
+              eni.disassociate( );
+              if ( eni.isAttached( ) ) {
+                VmInstances.updatePublicAddress( eni.getAttachment( ).getInstance( ), VmNetworkConfig.DEFAULT_IP );
+              }
+              tx.commit( );
+            }
+          }
+
           try ( final TransactionResource tx = Entities.transactionFor( NetworkInterface.class ) ) {
-            final NetworkInterface eni = Entities.merge( oldNetworkInterface );
-            address.unassign( eni );
-            eni.disassociate( );
-            if ( eni.isAttached( ) ) {
-              VmInstances.updatePublicAddress( eni.getAttachment( ).getInstance( ), VmNetworkConfig.DEFAULT_IP );
+            final NetworkInterface eni = Entities.merge( networkInterface );
+            internetGateways.lookupByVpc(
+                AccountFullName.getInstance( address.getOwnerAccountNumber( ) ),
+                eni.getVpc( ).getDisplayName( ),
+                CloudMetadatas.toDisplayName( ) );
+
+            if ( eni.isAssociated( ) ) {
+              NetworkInterfaceHelper.releasePublic( eni );
+              eni.disassociate( );
+              if ( eni.isAttached( ) ) {
+                final VmInstance instance = eni.getAttachment( ).getInstance( );
+                PublicAddresses.markDirty( address.getAddress( ), instance.getPartition( ) );
+                VmInstances.updatePublicAddress( instance, VmNetworkConfig.DEFAULT_IP );
+              }
             }
+
+            NetworkInterfaceHelper.associate( address, eni );
+
             tx.commit( );
+          } catch ( final VpcMetadataNotFoundException e ) {
+            throw new ClientComputeException( "Gateway.NotAttached", "Internet gateway not found for VPC" );
           }
         }
-
-        try ( final TransactionResource tx = Entities.transactionFor( NetworkInterface.class ) ) {
-          final NetworkInterface eni = Entities.merge( networkInterface );
-          internetGateways.lookupByVpc(
-              AccountFullName.getInstance( address.getOwnerAccountNumber( ) ),
-              eni.getVpc( ).getDisplayName( ),
-              CloudMetadatas.toDisplayName( ) );
-
-          if ( eni.isAssociated( ) ) {
-            NetworkInterfaceHelper.releasePublic( eni );
-            eni.disassociate( );
-            if ( eni.isAttached( ) ) {
-              VmInstances.updatePublicAddress( eni.getAttachment( ).getInstance( ), VmNetworkConfig.DEFAULT_IP );
-            }
-          }
-
-          NetworkInterfaceHelper.associate( address, eni );
-
-          tx.commit( );
-        } catch ( final VpcMetadataNotFoundException e ) {
-          throw new ClientComputeException( "Gateway.NotAttached", "Internet gateway not found for VPC" );
-        }
+        reply.setAssociationId( address.getAssociationId( ) );
       }
-      reply.setAssociationId( address.getAssociationId( ) );
     }
 
     return reply;
   }
-  
-  @SuppressWarnings( "UnusedDeclaration" )
+
   public DisassociateAddressResponseType disassociateAddress( final DisassociateAddressType request ) throws Exception {
     final DisassociateAddressResponseType reply = request.getReply( ).markFailed( );
     final Context ctx = Contexts.lookup( );
+    final String associationId = ResourceIdentifiers.tryNormalize( ).apply( request.getAssociationId( ) );
     final Address address;
     try {
       address = RestrictedTypes.doPrivileged(
-          Objects.firstNonNull(
-            request.getPublicIp( ),
-            ResourceIdentifiers.tryNormalize( ).apply( request.getAssociationId( ) ) ),
+          Objects.firstNonNull( request.getPublicIp( ), associationId ),
           Address.class );
     } catch ( final NoSuchElementException e ) {
       if ( request.getAssociationId( ) != null ) {
@@ -384,61 +354,57 @@ public class AddressManager {
     }
 
     reply.set_return( true );
-    if ( address.isSystemOwned( ) && !ctx.isAdministrator( ) ) {
-      throw new EucalyptusCloudException( "Only administrators can unassign system owned addresses: " + address.toString() );
-    } else if ( address.getDomain( ) != Address.Domain.vpc ) { // EC2-Classic (allow for null domain)
-      final String vmId = address.getInstanceId( );
-      try {
-        final VmInstance vm = VmInstances.lookup( vmId );
-        final UnconditionalCallback<BaseMessage> systemAddressAssignmentCallback = new UnconditionalCallback<BaseMessage>( ) {
-          @Override
-          public void fire( ) {
+    try ( final Addresses.AddressingBatch batch = addresses.batch( ) ) {
+      if ( address.isSystemOwned( ) && !ctx.isAdministrator( ) ) {
+        throw new EucalyptusCloudException( "Only administrators can unassign system owned addresses: " + address.toString( ) );
+      } else if ( address.getDomain( ) != AddressDomain.vpc ) { // EC2-Classic (allow for null domain)
+        final String vmId = address.getInstanceId( );
+        try {
+          addresses.unassign( address );
+          final VmInstance instance = VmInstances.lookup( vmId );
+          if ( address.getAddress( ).equals( instance.getPublicAddress( ) ) ) {
+            Addresses.updatePublicIpByInstanceId( instance.getDisplayName( ), null );
             try {
-              Addresses.system( VmInstances.lookup( vmId ) );
+              addresses.system( instance );
             } catch ( NoSuchElementException e ) {
               LOG.debug( e, e );
             } catch ( Exception e ) {
-              LOG.error("Error assigning system address for instance " + vm.getInstanceId(), e);
+              LOG.error( "Error assigning system address for instance " + vmId, e );
             }
           }
-        };
-
-        AddressingDispatcher.dispatch(
-            AsyncRequests.newRequest( address.unassign().getCallback() ).then( systemAddressAssignmentCallback ),
-            vm.getPartition() ); 
-      } catch ( Exception e ) {
-        LOG.debug( e );
-        Logs.extreme( ).debug( e, e );
-        address.unassign( ).clearPending( );
-      }
-    } else { // VPC
-      final NetworkInterface networkInterface = RestrictedTypes.doPrivileged( address.getNetworkInterfaceId( ), NetworkInterface.class );
-      try ( final TransactionResource tx = Entities.transactionFor( NetworkInterface.class ) ) {
-        final NetworkInterface eni = Entities.merge( networkInterface );
-        if ( address.isStarted( ) ) {
-          address.stop( );
+        } catch ( Exception e ) {
+          LOG.debug( e );
+          Logs.extreme( ).debug( e, e );
         }
-        address.unassign( eni );
-        eni.disassociate( );
-        if ( eni.isAttached( ) ) {
-          final VmInstance vm = eni.getAttachment( ).getInstance( );
-          VmInstances.updatePublicAddress( vm, VmNetworkConfig.DEFAULT_IP );
-          if( !vm.isUsePrivateAddressing( ) &&
-              ( VmInstance.VmState.PENDING.equals( vm.getState( ) ) || VmInstance.VmState.RUNNING.equals( vm.getState( ) ) ) ) {
-            NetworkInterfaceHelper.associate( Addresses.allocateSystemAddress( ), eni );
+      } else { // VPC
+        final NetworkInterface networkInterface =
+            RestrictedTypes.doPrivileged( address.getNetworkInterfaceId( ), NetworkInterface.class );
+        try ( final TransactionResource tx = Entities.transactionFor( NetworkInterface.class ) ) {
+          final NetworkInterface eni = Entities.merge( networkInterface );
+          if ( addresses.unassign( address, associationId ) ) {
+            eni.disassociate( );
+            if ( eni.isAttached( ) ) {
+              final VmInstance vm = eni.getAttachment( ).getInstance( );
+              PublicAddresses.markDirty( address.getAddress( ), vm.getPartition( ) );
+              VmInstances.updatePublicAddress( vm, VmNetworkConfig.DEFAULT_IP );
+              if ( !vm.isUsePrivateAddressing( ) &&
+                  ( VmInstance.VmState.PENDING.equals( vm.getState( ) ) || VmInstance.VmState.RUNNING.equals( vm.getState( ) ) ) ) {
+                NetworkInterfaceHelper.associate( addresses.allocateSystemAddress( ), eni );
+              }
+            }
+            tx.commit( );
           }
         }
-        tx.commit( );
       }
     }
     return reply;
   }
 
-  private static Address findVmExistingAddress( final VmInstance vm ) {
+  private static Address findVmExistingAddress( final Addresses addresses, final VmInstance vm ) {
     Address oldAddr = null;
     if ( vm.hasPublicAddress( ) ) {
       try {
-        oldAddr = Addresses.getInstance( ).lookup( vm.getPublicAddress( ) );
+        oldAddr = addresses.lookupActiveAddress( vm.getPublicAddress( ) );
       } catch ( Exception e ) {
         LOG.debug( e, e );
       }
@@ -448,7 +414,7 @@ public class AddressManager {
 
   private static VmInstance findCurrentAssignedVm( Address address ) {
     VmInstance oldVm = null;
-    if ( address.isAssigned( ) && !address.isPending( ) ) {
+    if ( address.isAssigned( ) ) {
       try {
         oldVm = VmInstances.lookup( address.getInstanceId( ) );
       } catch ( Exception e ) {

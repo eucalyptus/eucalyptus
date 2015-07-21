@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,35 +17,35 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.network
+package com.eucalyptus.compute.upgrade;
 
-import com.google.common.collect.Maps
-import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
+import java.util.concurrent.Callable;
+import org.apache.log4j.Logger;
+import com.eucalyptus.compute.common.Compute;
+import com.eucalyptus.upgrade.Upgrades;
+import groovy.sql.Sql;
 
 /**
  *
  */
-@CompileStatic
-class PublicAddresses {
-  private static final Map<String,String> dirtyAddresses = Maps.newConcurrentMap( )
+@Upgrades.PreUpgrade( value = Compute.class, since = Upgrades.Version.v4_2_0 )
+public class Compute420PreUpgrade implements Callable<Boolean> {
+  private static final Logger logger = Logger.getLogger( Compute420PreUpgrade.class );
 
-  static void markDirty( String address, String partition ) {
-    dirtyAddresses.put( address, partition )
-  }
-
-  @PackageScope
-  static void clearDirty( Collection<String> inUse, String partition ) {
-    dirtyAddresses.each{ String address, String addressPartition ->
-      if ( partition == addressPartition && !inUse.contains( address )) {
-        dirtyAddresses.remove( address )
+  @Override
+  public Boolean call( ) throws Exception {
+    Sql sql = null;
+    try {
+      sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection( "eucalyptus_cloud" );
+      sql.execute( "drop table if exists cloud_address_configuration" );
+      return true;
+    } catch ( Exception ex ) {
+      logger.error( "Error updating cloud schema", ex );
+      return false;
+    } finally {
+      if ( sql != null ) {
+        sql.close( );
       }
     }
   }
-
-  @PackageScope
-  static boolean isDirty( String address ) {
-    dirtyAddresses.containsKey( address )
-  }
-
 }

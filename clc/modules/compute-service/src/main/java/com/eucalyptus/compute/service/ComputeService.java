@@ -51,6 +51,8 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.*;
+import com.eucalyptus.compute.common.internal.address.AddressI;
+import com.eucalyptus.compute.common.internal.address.AllocatedAddressEntity;
 import com.eucalyptus.compute.common.internal.blockstorage.Snapshot;
 import com.eucalyptus.compute.common.internal.blockstorage.Snapshots;
 import com.eucalyptus.compute.common.internal.blockstorage.State;
@@ -292,6 +294,50 @@ public class ComputeService implements Callable {
     } catch ( final TransactionException ex ) {
       throw new EucalyptusCloudException( "Error handling image attribute request: " + ex.getMessage( ), ex );
     }
+    return reply;
+  }
+
+  public DescribeAddressesResponseType describeAddresses( final DescribeAddressesType request ) throws EucalyptusCloudException {
+    final Context ctx = Contexts.lookup( );
+    final boolean isAdmin = ctx.isAdministrator( );
+    final boolean verbose = isAdmin && request.getPublicIpsSet( ).contains( "verbose" ) ;
+    if ( verbose ) {
+      // dispatch to back end so all addresses can be described
+      return (DescribeAddressesResponseType) proxy( request );
+    }
+
+    // handle stateless describe for users elastic IPs
+    final DescribeAddressesResponseType reply = request.getReply( );
+    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
+    final Filter filter = Filters.generateFor( request.getFilterSet( ), AllocatedAddressEntity.class )
+        .withOptionalInternalFilter( "public-ip", request.getPublicIpsSet( ) )
+        .withOptionalInternalFilter( "allocation-id", request.getAllocationIds( ) )
+        .generate( );
+    final Predicate<? super AllocatedAddressEntity> requestedAndAccessible =
+        CloudMetadatas.filteringFor( AllocatedAddressEntity.class )
+        .byId( request.getPublicIpsSet( ) )
+        .byProperty( request.getAllocationIds( ), AllocatedAddressEntity.allocation( ) )
+        .byPredicate( filter.asPredicate( ) )
+        .byOwningAccount( Collections.singleton( accountFullName.getAccountNumber( ) ) )
+        .byPrivileges( )
+        .buildPredicate( );
+
+    try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( AllocatedAddressEntity.class ) ) {
+      final Iterable<AddressInfoType> addresses = Transactions.filteredTransform(
+          AllocatedAddressEntity.exampleWithOwnerAndAddress( accountFullName, null ),
+          filter.asCriterion( ),
+          filter.getAliases( ),
+          requestedAndAccessible,
+          TypeMappers.lookup( AddressI.class, AddressInfoType.class ) );
+
+      Iterables.addAll( reply.getAddressesSet( ), addresses );
+    } catch ( final Exception e ) {
+      Exceptions.findAndRethrow( e, ComputeServiceException.class );
+      LOG.error( e );
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( e.getMessage( ) );
+    }
+
     return reply;
   }
 
@@ -1210,6 +1256,10 @@ public class ComputeService implements Callable {
   @Override
   public ComputeMessage onCall( final MuleEventContext muleEventContext ) throws EucalyptusCloudException {
     final ComputeMessage request = (ComputeMessage) muleEventContext.getMessage( ).getPayload( );
+    return proxy( request );
+  }
+
+  private ComputeMessage proxy( final ComputeMessage request ) throws EucalyptusCloudException {
     LOG.debug(request.toSimpleString());
 
     // Dispatch

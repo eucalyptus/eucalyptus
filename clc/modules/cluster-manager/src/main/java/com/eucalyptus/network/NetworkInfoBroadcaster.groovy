@@ -19,7 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.network
 
-import com.eucalyptus.address.AddressingDispatcher
 import com.eucalyptus.bootstrap.Bootstrap
 import com.eucalyptus.bootstrap.Databases
 import com.eucalyptus.bootstrap.Hosts
@@ -107,9 +106,7 @@ import com.google.common.collect.Multimap
 import com.google.common.collect.Sets
 import com.google.common.io.Files as GFiles
 import edu.ucsb.eucalyptus.cloud.NodeInfo
-import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.BroadcastNetworkInfoResponseType
-import edu.ucsb.eucalyptus.msgs.UnassignAddressType
 import groovy.transform.CompileStatic
 import groovy.transform.Immutable
 import groovy.transform.PackageScope
@@ -1071,20 +1068,6 @@ class NetworkInfoBroadcaster {
           networkInterface.sourceDestCheck,
           networkInterface.networkGroups.collect{ NetworkGroup group -> group.groupId }
       )
-    }
-  }
-
-  public static final class BroadcastAddressingInterceptor extends AddressingDispatcher.AddressingInterceptorSupport {
-    @Override
-    protected void onMessage(
-        final Request<? extends BaseMessage, ? extends BaseMessage> request,
-        final String partition
-    ) {
-      NetworkInfoBroadcaster.requestNetworkInfoBroadcast( )
-      if ( request.getRequest( ) instanceof UnassignAddressType ) {
-        UnassignAddressType unassign = (UnassignAddressType) request.getRequest( )
-        PublicAddresses.markDirty( unassign.getSource( ), partition )
-      }
     }
   }
 

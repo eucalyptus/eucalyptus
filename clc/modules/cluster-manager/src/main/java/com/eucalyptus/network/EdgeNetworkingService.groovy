@@ -98,7 +98,8 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
       switch( networkResource ) {
         case PublicIPResource:
           try {
-            Addresses.getInstance( ).lookup( networkResource.value ).release( )
+            final Addresses addresses = Addresses.getInstance( );
+            addresses.release( addresses.lookupActiveAddress( networkResource.value ), null )
           } catch ( NoSuchElementException e ) {
             logger.info( "IP address not found for release: ${networkResource.value}" )
           } catch ( e ) {
