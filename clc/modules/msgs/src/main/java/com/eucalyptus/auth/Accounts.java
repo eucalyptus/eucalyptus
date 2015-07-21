@@ -281,27 +281,27 @@ public class Accounts {
 
   @Nonnull
   public static UserPrincipal lookupCachedPrincipalByAccountNumber( String accountNumber ) throws AuthException {
-    return getIdentityProvider( ).lookupCachedPrincipalByAccountNumber( accountNumber );
+    return getIdentityProvider( ).lookupCachedPrincipalByAccountNumber( null, accountNumber );
   }
 
   @Nonnull
   public static UserPrincipal lookupCachedPrincipalByAccessKeyId( String accessKeyId, String nonce ) throws AuthException {
-    return getIdentityProvider( ).lookupCachedPrincipalByAccessKeyId( accessKeyId, nonce );
+    return getIdentityProvider( ).lookupCachedPrincipalByAccessKeyId( null, accessKeyId, nonce );
   }
 
   @Nonnull
   public static UserPrincipal lookupCachedPrincipalByUserId( String userId, String nonce ) throws AuthException {
-    return getIdentityProvider( ).lookupCachedPrincipalByUserId( userId, nonce );
+    return getIdentityProvider( ).lookupCachedPrincipalByUserId( null, userId, nonce );
   }
 
   @Nonnull
   public static UserPrincipal lookupCachedPrincipalByRoleId( String roleId, String nonce ) throws AuthException {
-    return getIdentityProvider( ).lookupCachedPrincipalByRoleId( roleId, nonce );
+    return getIdentityProvider( ).lookupCachedPrincipalByRoleId( null, roleId, nonce );
   }
 
   @Nonnull
   public static UserPrincipal lookupCachedPrincipalByCertificateId( String certificateId ) throws AuthException {
-    return getIdentityProvider( ).lookupCachedPrincipalByCertificateId( certificateId );
+    return getIdentityProvider( ).lookupCachedPrincipalByCertificateId( null, certificateId );
   }
 
   @Nonnull

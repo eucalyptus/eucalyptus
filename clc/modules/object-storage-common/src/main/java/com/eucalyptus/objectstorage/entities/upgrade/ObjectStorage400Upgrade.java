@@ -738,7 +738,7 @@ public class ObjectStorage400Upgrade {
             } else { // If none of the above conditions match, lookup for the user
               if (walrusBucket.getUserId() != null) {
                 try {
-                  owningUser = Accounts.lookupPrincipalByUserId( walrusBucket.getUserId(), null );
+                  owningUser = Accounts.lookupPrincipalByUserId( walrusBucket.getUserId() );
                   userIdUserMap.put(walrusBucket.getUserId(), owningUser);
                 } catch (AuthException e) { // User is deleted, lookup for the account admin
                   deletedUserIds.add(walrusBucket.getUserId());

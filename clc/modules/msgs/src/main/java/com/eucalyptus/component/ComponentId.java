@@ -74,6 +74,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
+import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
@@ -98,6 +99,7 @@ import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.ws.StackConfiguration.BasicTransport;
 import com.eucalyptus.ws.TransportDefinition;
+import com.eucalyptus.ws.WebServices;
 import com.eucalyptus.ws.server.Pipelines;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
@@ -254,7 +256,11 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   }
   
   private static final ConcurrentMap<String, Class<ChannelPipelineFactory>> clientPipelines = Maps.newConcurrentMap( );
-  
+
+  public ClientBootstrap getClientBootstrap( final ChannelPipelineFactory factory ) {
+    return WebServices.clientBootstrap( factory );
+  }
+
   public ChannelPipelineFactory getClientPipeline( ) {
     ChannelPipelineFactory factory = null;
     for ( final Class c : Classes.ancestors( this ) ) {

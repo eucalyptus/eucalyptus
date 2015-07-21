@@ -78,7 +78,7 @@ class IdentityBindingGenerator {
 
   void printFields( String messageclass, Collection<String> beanClasses ) {
     Class.forName( messageclass ).declaredFields.each { Field field ->
-      if ( field.name.startsWith( '$' ) || field.name.startsWith( '_' ) ) {
+      if ( field.name.startsWith( '$' ) || field.name.startsWith( '_' ) || field.type.package.name.startsWith( 'groovy.lang' ) ) {
         // ignore
       } else if ( Collection.class.isAssignableFrom( field.type ) ) {
         Class itemType = ( Class ) ( ( ParameterizedType ) field.genericType ).actualTypeArguments[0];

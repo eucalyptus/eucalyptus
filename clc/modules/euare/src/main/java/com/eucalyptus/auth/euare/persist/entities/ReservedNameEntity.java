@@ -46,17 +46,20 @@ import com.eucalyptus.util.Parameters;
 public class ReservedNameEntity extends AbstractPersistent implements Serializable {
   private static final long serialVersionUID = 1L;
 
-  @Column( name = "auth_namespaced_name", unique = true )
+  @Column( name = "auth_namespaced_name", unique = true, updatable = false )
   private String namespacedName;
 
-  @Column( name = "auth_namespace" )
+  @Column( name = "auth_namespace", updatable = false )
   private String namespace;
 
-  @Column( name = "auth_name" )
+  @Column( name = "auth_name", updatable = false )
   private String name;
 
+  @Column( name = "auth_client_token", unique = true, updatable = false )
+  private String clientToken;
+
   @Temporal( TemporalType.TIMESTAMP)
-  @Column( name = "auth_expires" )
+  @Column( name = "auth_expires", updatable = false )
   private Date expiry;
 
   public ReservedNameEntity( ) {
@@ -64,15 +67,23 @@ public class ReservedNameEntity extends AbstractPersistent implements Serializab
 
   public static ReservedNameEntity create( @Nonnull final String namespace,
                                            @Nonnull final String name,
-                                                    final int duration ) {
+                                                    final int duration,
+                                                    final String clientToken ) {
     Parameters.checkParam( "namespace", namespace, not( isEmptyOrNullString( ) ) );
     Parameters.checkParam( "name", name, not( isEmptyOrNullString( ) ) );
     final ReservedNameEntity reservedNameEntity = new ReservedNameEntity( );
     reservedNameEntity.setNamespacedName( namespace + ":" + name );
     reservedNameEntity.setNamespace( namespace );
     reservedNameEntity.setName( name );
+    reservedNameEntity.setClientToken( clientToken );
     reservedNameEntity.setExpiry( new Date( System.currentTimeMillis( ) + TimeUnit.SECONDS.toMillis( duration ) ) );
     return reservedNameEntity;
+  }
+
+  public static ReservedNameEntity exampleWithToken( final String clientToken ) {
+    final ReservedNameEntity example = new ReservedNameEntity( );
+    example.setClientToken( clientToken );
+    return example;
   }
 
   public Date getExpiry( ) {
@@ -105,5 +116,13 @@ public class ReservedNameEntity extends AbstractPersistent implements Serializab
 
   public void setName( final String name ) {
     this.name = name;
+  }
+
+  public String getClientToken( ) {
+    return clientToken;
+  }
+
+  public void setClientToken( final String clientToken ) {
+    this.clientToken = clientToken;
   }
 }

@@ -23,8 +23,11 @@ import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import javax.annotation.Nonnull;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.euare.common.identity.Identity;
 import com.eucalyptus.auth.euare.persist.DatabasePrincipalProvider;
 import com.eucalyptus.auth.api.PrincipalProvider;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurationManager;
@@ -35,9 +38,11 @@ import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.SecurityTokenContent;
 import com.eucalyptus.auth.principal.UserPrincipal;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Either;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.util.async.AsyncExceptions;
 import com.google.common.base.Function;
@@ -163,28 +168,110 @@ public class RegionDelegatingPrincipalProvider implements PrincipalProvider {
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByUserId( final String userId, final String nonce ) throws AuthException {
-    return lookupPrincipalByUserId( userId, nonce );
+  public UserPrincipal lookupCachedPrincipalByUserId(
+      final UserPrincipal cached,
+      final String userId,
+      final String nonce
+  ) throws AuthException {
+    return regionDispatchByIdentifier( userId, new NonNullFunction<PrincipalProvider, UserPrincipal>( ) {
+      @Nonnull
+      @Override
+      public UserPrincipal apply( final PrincipalProvider principalProvider ) {
+        try {
+          return principalProvider.lookupCachedPrincipalByUserId( cached, userId, nonce );
+        } catch ( AuthException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      }
+    } );
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByRoleId( final String roleId, final String nonce ) throws AuthException {
-    return lookupPrincipalByRoleId( roleId, nonce );
+  public UserPrincipal lookupCachedPrincipalByRoleId(
+      final UserPrincipal cached,
+      final String roleId,
+      final String nonce
+  ) throws AuthException {
+    return regionDispatchByIdentifier( roleId, new NonNullFunction<PrincipalProvider, UserPrincipal>( ) {
+      @Nonnull
+      @Override
+      public UserPrincipal apply( final PrincipalProvider principalProvider ) {
+        try {
+          return principalProvider.lookupCachedPrincipalByRoleId( cached, roleId, nonce );
+        } catch ( AuthException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      }
+    } );
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByAccessKeyId( final String keyId, final String nonce ) throws AuthException {
-    return lookupPrincipalByAccessKeyId( keyId, nonce );
+  public UserPrincipal lookupCachedPrincipalByAccessKeyId(
+      final UserPrincipal cached,
+      final String keyId,
+      final String nonce
+  ) throws AuthException {
+    return regionDispatchByIdentifier( keyId, new NonNullFunction<PrincipalProvider, UserPrincipal>( ) {
+      @Nonnull
+      @Override
+      public UserPrincipal apply( final PrincipalProvider principalProvider ) {
+        try {
+          return principalProvider.lookupCachedPrincipalByAccessKeyId( cached, keyId, nonce );
+        } catch ( AuthException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      }
+    } );
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByCertificateId( final String certificateId ) throws AuthException {
-    return lookupPrincipalByCertificateId( certificateId );
+  public UserPrincipal lookupCachedPrincipalByCertificateId(
+      final UserPrincipal cached,
+      final String certificateId
+  ) throws AuthException {
+    if ( cached != null ) {
+      return regionDispatchByAccountNumber( cached.getAccountNumber( ), new NonNullFunction<PrincipalProvider, UserPrincipal>( ) {
+        @Nonnull
+        @Override
+        public UserPrincipal apply( final PrincipalProvider principalProvider ) {
+          try {
+            return principalProvider.lookupCachedPrincipalByCertificateId( cached, certificateId );
+          } catch ( AuthException e ) {
+            throw Exceptions.toUndeclared( e );
+          }
+        }
+      } );
+    } else {
+      return regionDispatchAndReduce( new NonNullFunction<PrincipalProvider, Either<AuthException, UserPrincipal>>() {
+        @Nonnull
+        @Override
+        public Either<AuthException, UserPrincipal> apply( final PrincipalProvider principalProvider ) {
+          try {
+            return Either.right( principalProvider.lookupCachedPrincipalByCertificateId( null, certificateId ) );
+          } catch ( AuthException e ) {
+            return Either.left( e );
+          }
+        }
+      } );
+    }
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByAccountNumber( final String accountNumber ) throws AuthException {
-    return lookupPrincipalByAccountNumber( accountNumber );
+  public UserPrincipal lookupCachedPrincipalByAccountNumber(
+      final UserPrincipal cached,
+      final String accountNumber
+  ) throws AuthException {
+    return regionDispatchByAccountNumber( accountNumber, new NonNullFunction<PrincipalProvider, UserPrincipal>( ) {
+      @Nonnull
+      @Override
+      public UserPrincipal apply( final PrincipalProvider principalProvider ) {
+        try {
+          return principalProvider.lookupCachedPrincipalByAccountNumber( cached, accountNumber );
+        } catch ( AuthException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      }
+    } );
   }
 
   @Override
@@ -296,7 +383,8 @@ public class RegionDelegatingPrincipalProvider implements PrincipalProvider {
   @Override
   public void reserveGlobalName( final String namespace,
                                  final String name,
-                                 final Integer duration ) throws AuthException {
+                                 final Integer duration,
+                                 final String clientToken ) throws AuthException {
     final int numberOfRegions = Iterables.size( regionConfigurationManager.getRegionInfos( ) );
     final Integer successes = numberOfRegions <= 1 ?
         1 : // skip if only a local region
@@ -305,7 +393,7 @@ public class RegionDelegatingPrincipalProvider implements PrincipalProvider {
           @Override
           public Either<AuthException,String> apply( final PrincipalProvider identityProvider ) {
             try {
-              identityProvider.reserveGlobalName( namespace, name, duration );
+              identityProvider.reserveGlobalName( namespace, name, duration, clientToken );
               return Either.right( "" );
             } catch ( AuthException e ) {
               if ( AsyncExceptions.isWebServiceErrorCode( e, AuthException.CONFLICT ) ||
@@ -407,16 +495,29 @@ public class RegionDelegatingPrincipalProvider implements PrincipalProvider {
       final List<Either<AuthException,R>> regionResults = Lists.newArrayList( );
       regionResults.add( invoker.apply( localProvider ) );
       if ( !Iterables.isEmpty( regionInfos ) ) {
+        final List<Future<Either<AuthException,R>>> regionResultFutures = Lists.newArrayList( );
         withRegions:
         for ( final RegionInfo regionInfo : regionInfos ) {
           if ( !RegionConfigurations.getRegionName( ).asSet( ).contains( regionInfo.getName( ) ) ) {
             for ( final RegionInfo.RegionService service : regionInfo.getServices( ) ) {
               if ( "identity".equals( service.getType( ) ) ) {
                 final PrincipalProvider remoteProvider = new RemotePrincipalProvider( service.getEndpoints( ) );
-                regionResults.add( invoker.apply( remoteProvider ) );
+                regionResultFutures.add( Threads.enqueue(
+                    Identity.class,
+                    RegionDelegatingPrincipalProvider.class,
+                    FUtils.cpartial( invoker, remoteProvider ) ) );
                 continue withRegions;
               }
             }
+          }
+        }
+        for ( final Future<Either<AuthException,R>> future : regionResultFutures ) {
+          try {
+            regionResults.add( future.get( ) );
+          } catch ( final InterruptedException e ) {
+            throw new AuthException( "Interrupted" );
+          } catch ( final ExecutionException e ) {
+            throw new RuntimeException( e ); // Any AuthException caught and unwrapped below
           }
         }
       }

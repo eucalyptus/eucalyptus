@@ -63,6 +63,7 @@ class TestProvider implements PrincipalProvider {
         @Override List<Certificate> getCertificates() { [ ] }
         @Override List<PolicyVersion> getPrincipalPolicies() { [ ] }
         @Override String getToken() { null }
+        @Override String getPTag() { null }
       }
       users << testUser
       testUser
@@ -125,27 +126,27 @@ class TestProvider implements PrincipalProvider {
   }
 
   @Override
-  UserPrincipal lookupCachedPrincipalByUserId( final String userId, final String nonce ) throws AuthException {
+  UserPrincipal lookupCachedPrincipalByUserId( final UserPrincipal cached, final String userId, final String nonce ) throws AuthException {
     return lookupPrincipalByUserId( userId, nonce );
   }
 
   @Override
-  UserPrincipal lookupCachedPrincipalByRoleId( final String roleId, final String nonce ) throws AuthException {
+  UserPrincipal lookupCachedPrincipalByRoleId( final UserPrincipal cached, final String roleId, final String nonce ) throws AuthException {
     return lookupPrincipalByRoleId( roleId, nonce );
   }
 
   @Override
-  UserPrincipal lookupCachedPrincipalByAccessKeyId( final String keyId, final String nonce ) throws AuthException {
+  UserPrincipal lookupCachedPrincipalByAccessKeyId( final UserPrincipal cached, final String keyId, final String nonce ) throws AuthException {
     return lookupPrincipalByAccessKeyId( keyId, nonce );
   }
 
   @Override
-  UserPrincipal lookupCachedPrincipalByCertificateId( final String certificateId ) throws AuthException {
+  UserPrincipal lookupCachedPrincipalByCertificateId( final UserPrincipal cached, final String certificateId ) throws AuthException {
     return lookupPrincipalByCertificateId( certificateId );
   }
 
   @Override
-  UserPrincipal lookupCachedPrincipalByAccountNumber( final String accountNumber ) throws AuthException {
+  UserPrincipal lookupCachedPrincipalByAccountNumber( final UserPrincipal cached, final String accountNumber ) throws AuthException {
     return lookupPrincipalByAccountNumber( accountNumber );
   }
 
@@ -186,7 +187,7 @@ class TestProvider implements PrincipalProvider {
   }
 
   @Override
-  void reserveGlobalName(final String namespace, final String name, final Integer duration) throws AuthException {
+  void reserveGlobalName(final String namespace, final String name, final Integer duration, final String clientToken ) {
   }
 
   @Override

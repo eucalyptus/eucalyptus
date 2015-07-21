@@ -20,6 +20,7 @@
 package com.eucalyptus.auth.euare;
 
 import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -31,6 +32,7 @@ import com.eucalyptus.auth.AuthenticationProperties;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.Parameters;
+import com.eucalyptus.util.async.AsyncExceptions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheBuilderSpec;
@@ -40,69 +42,78 @@ import com.google.common.cache.CacheBuilderSpec;
  */
 public class CachingPrincipalProvider extends RegionDelegatingPrincipalProvider {
 
-  private final static AtomicReference<Pair<String,Cache<PrincipalCacheKey,UserPrincipal>>> cacheReference =
+  private final static AtomicReference<Pair<String,Cache<PrincipalCacheKey,PrincipalCacheValue>>> cacheReference =
       new AtomicReference<>( );
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByUserId( final String userId, final String nonce ) throws AuthException {
-    return cache( new UserIdPrincipalCacheKey( userId, nonce ), new Callable<UserPrincipal>( ) {
-      @Nonnull
+  public UserPrincipal lookupCachedPrincipalByUserId( final UserPrincipal cached, final String userId, final String nonce ) throws AuthException {
+    return cache( new UserIdPrincipalCacheKey( userId, nonce ), new PrincipalLoader( ) {
       @Override
-      public UserPrincipal call( ) throws AuthException {
-        return CachingPrincipalProvider.super.lookupCachedPrincipalByUserId( userId, nonce );
+      public UserPrincipal load( final UserPrincipal cached ) throws AuthException {
+        return CachingPrincipalProvider.super.lookupCachedPrincipalByUserId( cached, userId, nonce );
       }
     } );
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByRoleId( final String roleId, final String nonce ) throws AuthException {
-    return cache( new RoleIdPrincipalCacheKey( roleId, nonce ), new Callable<UserPrincipal>( ) {
-      @Nonnull
+  public UserPrincipal lookupCachedPrincipalByRoleId( final UserPrincipal cached, final String roleId, final String nonce ) throws AuthException {
+    return cache( new RoleIdPrincipalCacheKey( roleId, nonce ), new PrincipalLoader( ) {
       @Override
-      public UserPrincipal call( ) throws AuthException {
-        return CachingPrincipalProvider.super.lookupCachedPrincipalByRoleId( roleId, nonce );
+      public UserPrincipal load( final UserPrincipal cached ) throws AuthException {
+        return CachingPrincipalProvider.super.lookupCachedPrincipalByRoleId( cached, roleId, nonce );
       }
     } );
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByAccessKeyId( final String keyId, final String nonce ) throws AuthException {
-    return cache( new AccessKeyIdPrincipalCacheKey( keyId, nonce ), new Callable<UserPrincipal>( ) {
-      @Nonnull
+  public UserPrincipal lookupCachedPrincipalByAccessKeyId( final UserPrincipal cached, final String keyId, final String nonce ) throws AuthException {
+    return cache( new AccessKeyIdPrincipalCacheKey( keyId, nonce ), new PrincipalLoader( ) {
       @Override
-      public UserPrincipal call( ) throws AuthException {
-        return CachingPrincipalProvider.super.lookupCachedPrincipalByAccessKeyId( keyId, nonce );
+      public UserPrincipal load( final UserPrincipal cached ) throws AuthException {
+        return CachingPrincipalProvider.super.lookupCachedPrincipalByAccessKeyId( cached, keyId, nonce );
       }
     } );
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByCertificateId( final String certificateId ) throws AuthException {
-    return cache( new CertificateIdPrincipalCacheKey( certificateId ), new Callable<UserPrincipal>( ) {
-      @Nonnull
+  public UserPrincipal lookupCachedPrincipalByCertificateId( final UserPrincipal cached, final String certificateId ) throws AuthException {
+    return cache( new CertificateIdPrincipalCacheKey( certificateId ), new PrincipalLoader( ) {
       @Override
-      public UserPrincipal call( ) throws AuthException {
-        return CachingPrincipalProvider.super.lookupCachedPrincipalByCertificateId( certificateId );
+      public UserPrincipal load( final UserPrincipal cached ) throws AuthException {
+        return CachingPrincipalProvider.super.lookupCachedPrincipalByCertificateId( cached, certificateId );
       }
     } );
   }
 
-  public UserPrincipal lookupCachedPrincipalByAccountNumber( final String accountNumber ) throws AuthException {
-    return cache( new AccountNumberPrincipalCacheKey( accountNumber ), new Callable<UserPrincipal>( ) {
-      @Nonnull
+  public UserPrincipal lookupCachedPrincipalByAccountNumber( final UserPrincipal cached, final String accountNumber ) throws AuthException {
+    return cache( new AccountNumberPrincipalCacheKey( accountNumber ), new PrincipalLoader( ) {
       @Override
-      public UserPrincipal call( ) throws AuthException {
-        return CachingPrincipalProvider.super.lookupCachedPrincipalByAccountNumber( accountNumber );
+      public UserPrincipal load( final UserPrincipal cached ) throws AuthException {
+        return CachingPrincipalProvider.super.lookupCachedPrincipalByAccountNumber( cached, accountNumber );
       }
     } );
   }
 
   private UserPrincipal cache(
       final PrincipalCacheKey key,
-      final Callable<UserPrincipal> invoker ) throws AuthException {
+      final PrincipalLoader loader ) throws AuthException {
+    PrincipalCacheValue principalValue = null;
+    final Cache<PrincipalCacheKey,PrincipalCacheValue> cache = cache( );
     try {
-      return cache( ).get( key, invoker );
+      principalValue = cache.get( key, loader.callable( null ) );
+      if ( principalValue.updated + AuthenticationProperties.getAuthorizationExpiry( ) < System.currentTimeMillis( ) ) {
+        cache.invalidate( key ); // invalidate expired and refresh
+        principalValue =  cache.get( key, loader.callable( principalValue.principal ) );
+      }
+      return principalValue.principal;
     } catch ( final ExecutionException e ) {
+      // reuse cached value on failure within configured limit, but not for web service error responses
+      if ( !AsyncExceptions.asWebServiceError( e ).isPresent( ) &&
+          principalValue != null &&
+          principalValue.created + AuthenticationProperties.getAuthorizationReuseExpiry( ) > System.currentTimeMillis( ) ) {
+        cache.put( key, new PrincipalCacheValue( principalValue ) );
+        return principalValue.principal;
+      }
       if ( e.getCause( ) instanceof AuthException ) {
         throw (AuthException) e.getCause( );
       } else {
@@ -111,12 +122,12 @@ public class CachingPrincipalProvider extends RegionDelegatingPrincipalProvider 
     }
   }
 
-  private static Cache<PrincipalCacheKey,UserPrincipal> cache( ) {
-    Cache<PrincipalCacheKey,UserPrincipal> cache;
-    final Pair<String,Cache<PrincipalCacheKey,UserPrincipal>> cachePair = cacheReference.get( );
+  private static Cache<PrincipalCacheKey,PrincipalCacheValue> cache( ) {
+    Cache<PrincipalCacheKey,PrincipalCacheValue> cache;
+    final Pair<String,Cache<PrincipalCacheKey,PrincipalCacheValue>> cachePair = cacheReference.get( );
     final String cacheSpec = AuthenticationProperties.AUTHORIZATION_CACHE;
     if ( cachePair == null || !cacheSpec.equals( cachePair.getLeft( ) ) ) {
-      final Pair<String,Cache<PrincipalCacheKey,UserPrincipal>> newCachePair =
+      final Pair<String,Cache<PrincipalCacheKey,PrincipalCacheValue>> newCachePair =
           Pair.pair( cacheSpec, cache( cacheSpec ) );
       if ( cacheReference.compareAndSet( cachePair, newCachePair ) || cachePair == null ) {
         cache = newCachePair.getRight( );
@@ -129,10 +140,43 @@ public class CachingPrincipalProvider extends RegionDelegatingPrincipalProvider 
     return cache;
   }
 
-  private static Cache<PrincipalCacheKey,UserPrincipal> cache( final String cacheSpec ) {
+  private static Cache<PrincipalCacheKey,PrincipalCacheValue> cache( final String cacheSpec ) {
     return CacheBuilder
         .from( CacheBuilderSpec.parse( cacheSpec ) )
         .build( );
+  }
+
+  private static abstract class PrincipalLoader {
+    abstract UserPrincipal load( UserPrincipal cached ) throws AuthException;
+
+    Callable<PrincipalCacheValue> callable( final UserPrincipal cached ) {
+      return new Callable<PrincipalCacheValue>( ) {
+        @Override
+        public PrincipalCacheValue call( ) throws AuthException {
+          return new PrincipalCacheValue( load( cached ) );
+        }
+      };
+    }
+  }
+
+  private static final class PrincipalCacheValue {
+             private final long created;
+             private final long updated;
+    @Nonnull private final UserPrincipal principal;
+
+    public PrincipalCacheValue( @Nonnull final UserPrincipal principal ) {
+      Parameters.checkParam( "principal", principal, notNullValue( ) );
+      this.created = System.currentTimeMillis( );
+      this.updated = created;
+      this.principal = principal;
+    }
+
+    public PrincipalCacheValue( @Nonnull final PrincipalCacheValue value ) {
+      Parameters.checkParam( "value", value, notNullValue( ) );
+      this.created = value.created;
+      this.updated = System.currentTimeMillis( );
+      this.principal = value.principal;
+    }
   }
 
   private static abstract class PrincipalCacheKey {

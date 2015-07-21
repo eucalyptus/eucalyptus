@@ -312,7 +312,7 @@ public final class ReportingDataVerifier {
       verified = true;
     } else {
       try {
-        final User user = Accounts.lookupPrincipalByUserId( userId, null );
+        final User user = Accounts.lookupPrincipalByUserId( userId );
         ReportingAccountCrud.getInstance().createOrUpdateAccount( user.getAccountNumber(), Accounts.lookupAccountAliasById( user.getName() ) );
         ReportingUserCrud.getInstance().createOrUpdateUser( user.getUserId(), user.getAccountNumber(), user.getName() );
         verified = true;

@@ -48,11 +48,11 @@ public interface PrincipalProvider {
   /**
    * Principal lookup that may be cached
    */
-  UserPrincipal lookupCachedPrincipalByUserId( String userId, String nonce ) throws AuthException;
-  UserPrincipal lookupCachedPrincipalByRoleId( String roleId, String nonce ) throws AuthException;
-  UserPrincipal lookupCachedPrincipalByAccessKeyId( String keyId, String nonce ) throws AuthException;
-  UserPrincipal lookupCachedPrincipalByCertificateId( String certificateId ) throws AuthException;
-  UserPrincipal lookupCachedPrincipalByAccountNumber( String accountNumber ) throws AuthException;
+  UserPrincipal lookupCachedPrincipalByUserId( UserPrincipal cached, String userId, String nonce ) throws AuthException;
+  UserPrincipal lookupCachedPrincipalByRoleId( UserPrincipal cached, String roleId, String nonce ) throws AuthException;
+  UserPrincipal lookupCachedPrincipalByAccessKeyId( UserPrincipal cached, String keyId, String nonce ) throws AuthException;
+  UserPrincipal lookupCachedPrincipalByCertificateId( UserPrincipal cached, String certificateId ) throws AuthException;
+  UserPrincipal lookupCachedPrincipalByAccountNumber( UserPrincipal cached, String accountNumber ) throws AuthException;
 
   /**
    *
@@ -83,8 +83,9 @@ public interface PrincipalProvider {
    * @param namespace The namespace for the name (qualified policy resource type)
    * @param name The name to reserve
    * @param duration The reservation duration in seconds
+   * @param clientToken Optional client identifier for the request
    */
-  void reserveGlobalName( String namespace, String name, Integer duration ) throws AuthException;
+  void reserveGlobalName( String namespace, String name, Integer duration, String clientToken ) throws AuthException;
 
   X509Certificate getCertificateByAccountNumber( String accountNumber ) throws AuthException;
 
