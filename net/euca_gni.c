@@ -2191,6 +2191,53 @@ int gni_populate(globalNetworkInfo * gni, gni_hostname_info *host_info, char *xm
     }
     EUCA_FREE(results);
 
+
+    
+    char gwtoks[6][2048];
+    int good=1, max_gws=0;
+    
+    snprintf(expression, 2048, "/network-data/configuration/property[@name='mido']/property[@name='gateways']/*/property[@name='gatewayHost']/value");
+    rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+    max_gws=max_results;
+    for (i = 0; i < max_results; i++) {
+        LOGTRACE("after function: %d: %s\n", i, results[i]);
+        bzero(gwtoks[i], 2048);
+        snprintf(gwtoks[i], 2048, "%s", results[i]);
+        EUCA_FREE(results[i]);
+    }
+    EUCA_FREE(results);
+
+    snprintf(expression, 2048, "/network-data/configuration/property[@name='mido']/property[@name='gateways']/*/property[@name='gatewayIP']/value");
+    rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+    if (max_results != max_gws) good=0;
+    for (i = 0; i < max_results; i++) {
+        LOGTRACE("after function: %d: %s\n", i, results[i]);
+        euca_strncat(gwtoks[i], ",", 2048);
+        euca_strncat(gwtoks[i], results[i], 2048);
+        EUCA_FREE(results[i]);
+    }
+    EUCA_FREE(results);
+
+    snprintf(expression, 2048, "/network-data/configuration/property[@name='mido']/property[@name='gateways']/*/property[@name='gatewayInterface']/value");
+    rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+    if (max_results != max_gws) good=0;
+    for (i = 0; i < max_results; i++) {
+        LOGTRACE("after function: %d: %s\n", i, results[i]);
+        euca_strncat(gwtoks[i], ",", 2048);
+        euca_strncat(gwtoks[i], results[i], 2048);
+        EUCA_FREE(results[i]);
+    }
+    EUCA_FREE(results);
+
+    if (!good || max_gws <= 0) {
+    } else {
+        for (i=0; i<max_gws; i++) {
+            euca_strncat(gni->GatewayHosts, gwtoks[i], HOSTNAME_LEN*3*33);
+            euca_strncat(gni->GatewayHosts, " ", HOSTNAME_LEN*3*33);
+        }
+    }
+
+    /*
     snprintf(expression, 2048, "/network-data/configuration/property[@name='mido']/property[@name='gatewayHost']/value");
     rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
@@ -2217,6 +2264,8 @@ int gni_populate(globalNetworkInfo * gni, gni_hostname_info *host_info, char *xm
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
+    */
+
 
     snprintf(expression, 2048, "/network-data/configuration/property[@name='mido']/property[@name='publicNetworkCidr']/value");
     rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);

@@ -248,9 +248,7 @@ typedef struct globalNetworkInfo_t {
     char sMode[NETMODE_LEN];           //! The network mode string passed in the GNI
     u32 enabledCLCIp;                  //!< IP address of the enabled CLC
     char EucanetdHost[HOSTNAME_LEN];
-    char GatewayHost[HOSTNAME_LEN];
-    char GatewayIP[HOSTNAME_LEN];
-    char GatewayInterface[32];
+    char GatewayHosts[HOSTNAME_LEN*3*33];
     char PublicNetworkCidr[HOSTNAME_LEN];
     char PublicGatewayIP[HOSTNAME_LEN];
     char instanceDNSDomain[HOSTNAME_LEN];   //!< The DNS domain name to use for the instances

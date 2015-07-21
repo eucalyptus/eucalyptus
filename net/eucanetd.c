@@ -200,12 +200,6 @@ configEntry configKeysRestartEUCANETD[] = {
     ,
     {"MIDOEUCANETDHOST", NULL}
     ,
-    {"MIDOGWHOST", NULL}
-    ,
-    {"MIDOGWIP", NULL}
-    ,
-    {"MIDOGWIFACE", NULL}
-    ,
     {"MIDOGWHOSTS", NULL}
     ,
     {"MIDOPUBNW", NULL}
@@ -1049,13 +1043,10 @@ static int eucanetd_read_config(void)
     cvals[EUCANETD_CVAL_METADATA_USE_VM_PRIVATE] = configFileValue("METADATA_USE_VM_PRIVATE");
     cvals[EUCANETD_CVAL_METADATA_IP] = configFileValue("METADATA_IP");
     cvals[EUCANETD_CVAL_MIDOEUCANETDHOST] = configFileValue("MIDOEUCANETDHOST");
-    cvals[EUCANETD_CVAL_MIDOGWHOST] = configFileValue("MIDOGWHOST");
-    cvals[EUCANETD_CVAL_MIDOGWIP] = configFileValue("MIDOGWIP");
-    cvals[EUCANETD_CVAL_MIDOGWIFACE] = configFileValue("MIDOGWIFACE");
     cvals[EUCANETD_CVAL_MIDOGWHOSTS] = configFileValue("MIDOGWHOSTS");
     cvals[EUCANETD_CVAL_MIDOPUBNW] = configFileValue("MIDOPUBNW");
     cvals[EUCANETD_CVAL_MIDOPUBGWIP] = configFileValue("MIDOPUBGWIP");
-    LOGDEBUG("WTFWTF: %s\n", cvals[EUCANETD_CVAL_MIDOGWHOSTS]);
+
     EUCA_FREE(config->eucahome);
     config->eucahome = strdup(cvals[EUCANETD_CVAL_EUCAHOME]);
 
@@ -1069,16 +1060,8 @@ static int eucanetd_read_config(void)
         cvals[EUCANETD_CVAL_MIDOEUCANETDHOST] = strdup(globalnetworkinfo->EucanetdHost);
     }
 
-    if (!cvals[EUCANETD_CVAL_MIDOGWHOST]) {
-        cvals[EUCANETD_CVAL_MIDOGWHOST] = strdup(globalnetworkinfo->GatewayHost);
-    }
-
-    if (!cvals[EUCANETD_CVAL_MIDOGWIP]) {
-        cvals[EUCANETD_CVAL_MIDOGWIP] = strdup(globalnetworkinfo->GatewayIP);
-    }
-
-    if (!cvals[EUCANETD_CVAL_MIDOGWIFACE]) {
-        cvals[EUCANETD_CVAL_MIDOGWIFACE] = strdup(globalnetworkinfo->GatewayInterface);
+    if (!cvals[EUCANETD_CVAL_MIDOGWHOSTS]) {
+        cvals[EUCANETD_CVAL_MIDOGWHOSTS] = strdup(globalnetworkinfo->GatewayHosts);
     }
 
     if (!cvals[EUCANETD_CVAL_MIDOPUBNW]) {
@@ -1167,12 +1150,6 @@ static int eucanetd_read_config(void)
 
     if (cvals[EUCANETD_CVAL_MIDOEUCANETDHOST])
         snprintf(config->midoeucanetdhost, sizeof(config->midoeucanetdhost), "%s", cvals[EUCANETD_CVAL_MIDOEUCANETDHOST]);
-    if (cvals[EUCANETD_CVAL_MIDOGWHOST])
-        snprintf(config->midogwhost, sizeof(config->midogwhost), "%s", cvals[EUCANETD_CVAL_MIDOGWHOST]);
-    if (cvals[EUCANETD_CVAL_MIDOGWIP])
-        snprintf(config->midogwip, sizeof(config->midogwip), "%s", cvals[EUCANETD_CVAL_MIDOGWIP]);
-    if (cvals[EUCANETD_CVAL_MIDOGWIFACE])
-        snprintf(config->midogwiface, sizeof(config->midogwiface), "%s", cvals[EUCANETD_CVAL_MIDOGWIFACE]);
     if (cvals[EUCANETD_CVAL_MIDOGWHOSTS])
         snprintf(config->midogwhosts, sizeof(config->midogwhosts), "%s", cvals[EUCANETD_CVAL_MIDOGWHOSTS]);
     if (cvals[EUCANETD_CVAL_MIDOPUBNW])

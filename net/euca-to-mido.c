@@ -2613,9 +2613,6 @@ int delete_mido_vpc_instance(mido_vpc_instance * vpcinstance)
 //! @param[in] eucahome
 //! @param[in] setupcore
 //! @param[in] ext_eucanetdhostname
-//! @param[in] ext_rthostname
-//! @param[in] ext_rtaddr
-//! @param[in] ext_rtiface
 //! @param[in] ext_pubnw
 //! @param[in] ext_pubgwip
 //! @param[in] int_rtnetwork
@@ -2631,7 +2628,7 @@ int delete_mido_vpc_instance(mido_vpc_instance * vpcinstance)
 //!
 //! @note
 //!
-int initialize_mido(mido_config * mido, char *eucahome, int flushmode, char *ext_eucanetdhostname, char *ext_rthostname, char *ext_rtaddr, char *ext_rtiface, char *ext_rthosts, char *ext_pubnw,
+int initialize_mido(mido_config * mido, char *eucahome, int flushmode, char *ext_eucanetdhostname, char *ext_rthosts, char *ext_pubnw,
                     char *ext_pubgwip, char *int_rtnetwork, char *int_rtslashnet)
 {
     int ret = 0;
@@ -2639,17 +2636,15 @@ int initialize_mido(mido_config * mido, char *eucahome, int flushmode, char *ext
     if (!mido ||
         !eucahome ||
         !ext_eucanetdhostname ||
-        !ext_rthostname ||
-        !ext_rtaddr ||
-        !ext_rtiface ||
         !ext_pubnw ||
         !ext_pubgwip ||
         !int_rtnetwork ||
         !int_rtslashnet ||
+        !ext_rthosts ||
         !strlen(ext_eucanetdhostname) ||
-        !strlen(ext_rthostname) || !strlen(ext_rtaddr) || !strlen(ext_rtiface) || !strlen(ext_pubnw) || !strlen(ext_pubgwip) || !strlen(int_rtnetwork) || !strlen(int_rtslashnet))
+        !strlen(ext_pubnw) || !strlen(ext_pubgwip) || !strlen(int_rtnetwork) || !strlen(int_rtslashnet) || !strlen(ext_rthosts))
         return (1);
-
+    
     bzero(mido, sizeof(mido_config));
 
     mido->eucahome = strdup(eucahome);
@@ -2658,41 +2653,37 @@ int initialize_mido(mido_config * mido, char *eucahome, int flushmode, char *ext
 
     mido->ext_eucanetdhostname = strdup(ext_eucanetdhostname);
 
-    mido->ext_rthostname = strdup(ext_rthostname);
-    mido->ext_rtaddr = strdup(ext_rtaddr);
-    mido->ext_rtiface = strdup(ext_rtiface);
-    if (ext_rthosts) {
-        char *toksA[32], *toksB[3];
-        int numtoksA=0, numtoksB=0, i=0, idx=0;
-        
-        numtoksA = euca_tokenizer(ext_rthosts, " ", toksA, 32);
-        for (i=0; i<numtoksA; i++) {
-            numtoksB = euca_tokenizer(toksA[i], ",", toksB, 3);
-            if (numtoksB == 3) {
-                mido->ext_rthostnamearr[idx] = strdup(toksB[0]);
-                mido->ext_rthostaddrarr[idx] = strdup(toksB[1]);
-                mido->ext_rthostifacearr[idx] = strdup(toksB[2]);
-                EUCA_FREE(toksB[0]);
-                EUCA_FREE(toksB[1]);
-                EUCA_FREE(toksB[2]);
-                idx++;
-            }
-            EUCA_FREE(toksA[i]);
+    char *toksA[32], *toksB[3];
+    int numtoksA=0, numtoksB=0, i=0, idx=0;
+    
+    numtoksA = euca_tokenizer(ext_rthosts, " ", toksA, 32);
+    for (i=0; i<numtoksA; i++) {
+        numtoksB = euca_tokenizer(toksA[i], ",", toksB, 3);
+        if (numtoksB == 3) {
+            mido->ext_rthostnamearr[idx] = strdup(toksB[0]);
+            mido->ext_rthostaddrarr[idx] = strdup(toksB[1]);
+            mido->ext_rthostifacearr[idx] = strdup(toksB[2]);
+            EUCA_FREE(toksB[0]);
+            EUCA_FREE(toksB[1]);
+            EUCA_FREE(toksB[2]);
+            idx++;
         }
-        mido->ext_rthostarrmax = idx;
-        
-        for (i=0; i<mido->ext_rthostarrmax; i++) {
-            LOGDEBUG("parsed mido GW host information: GW id=%d: %s/%s/%s\n", i, mido->ext_rthostnamearr[i],  mido->ext_rthostaddrarr[i], mido->ext_rthostifacearr[i]);
-        }
+        EUCA_FREE(toksA[i]);
     }
+    mido->ext_rthostarrmax = idx;
+    
+    for (i=0; i<mido->ext_rthostarrmax; i++) {
+        LOGDEBUG("parsed mido GW host information: GW id=%d: %s/%s/%s\n", i, mido->ext_rthostnamearr[i],  mido->ext_rthostaddrarr[i], mido->ext_rthostifacearr[i]);
+    }
+
     mido->ext_pubnw = strdup(ext_pubnw);
     mido->ext_pubgwip = strdup(ext_pubgwip);
     mido->int_rtnw = dot2hex(int_rtnetwork);    // strdup(int_rtnetwork);
     mido->int_rtsn = atoi(int_rtslashnet);
     mido->int_rtaddr = mido->int_rtnw + 1;
     mido->midocore = calloc(1, sizeof(mido_core));
-    LOGDEBUG("mido initialized: mido->ext_eucanetdhostname=%s ext_rthostname=%s ext_rtaddr=%s  mido->ext_rtiface=%s mido->ext_pubnw=%s mido->ext_pubgwip=%s int_rtcidr=%s/%s \n",
-             SP(mido->ext_eucanetdhostname), SP(mido->ext_rthostname), SP(mido->ext_rtaddr), SP(mido->ext_rtiface), SP(mido->ext_pubnw), SP(mido->ext_pubgwip), SP(int_rtnetwork),
+    LOGDEBUG("mido initialized: mido->ext_eucanetdhostname=%s mido->ext_pubnw=%s mido->ext_pubgwip=%s int_rtcidr=%s/%s \n",
+             SP(mido->ext_eucanetdhostname), SP(mido->ext_pubnw), SP(mido->ext_pubgwip), SP(int_rtnetwork),
              SP(int_rtslashnet));
 
     return (ret);
@@ -3033,17 +3024,11 @@ int populate_mido_core(mido_config * mido, mido_core * midocore)
             url = NULL;
             rc = mido_getel_midoname(&(midocore->rtports[j]), "portAddress", &url);
             if (!rc && url) {
-                if (mido->ext_rtaddr) {
-                    if (!strcmp(mido->ext_rtaddr, url)) {
-                        mido_copy_midoname(&(midocore->midos[EUCART_GWPORT]), &(midocore->rtports[j]));
-                    }
-                } else {
-                    for (k=0; k<mido->ext_rthostarrmax; k++) {
-                        if (!strcmp(url, mido->ext_rthostaddrarr[k])) {
-                            mido_copy_midoname(&(midocore->gwports[gwidx]), &(midocore->rtports[j]));
-                            gwidx++;
-                            midocore->max_gws++;
-                        }
+                for (k=0; k<mido->ext_rthostarrmax; k++) {
+                    if (!strcmp(url, mido->ext_rthostaddrarr[k])) {
+                        mido_copy_midoname(&(midocore->gwports[gwidx]), &(midocore->rtports[j]));
+                        gwidx++;
+                        midocore->max_gws++;
                     }
                 }
             }
@@ -3056,9 +3041,6 @@ int populate_mido_core(mido_config * mido, mido_core * midocore)
     // search all hosts for GW host(s)
     gwidx=0;
     for (i = 0; i < mido->max_hosts; i++) {
-        if (strstr(mido->hosts[i].name, mido->ext_rthostname)) {
-            mido_copy_midoname(&(midocore->midos[GWHOST]), &(mido->hosts[i]));
-        }
         for (k=0; k<mido->ext_rthostarrmax; k++) {
             if (!strcmp(mido->hosts[i].name, mido->ext_rthostnamearr[k])) {
                 mido_copy_midoname(&(midocore->gwhosts[gwidx]), &(mido->hosts[i]));
@@ -3318,11 +3300,14 @@ int free_mido_config(mido_config * mido)
     EUCA_FREE(mido->eucahome);
 
     EUCA_FREE(mido->ext_eucanetdhostname);
-    EUCA_FREE(mido->ext_rthostname);
-    EUCA_FREE(mido->ext_rtaddr);
-    EUCA_FREE(mido->ext_rtiface);
     EUCA_FREE(mido->ext_pubnw);
     EUCA_FREE(mido->ext_pubgwip);
+
+    for (i=0; i<mido->ext_rthostarrmax; i++) {
+        EUCA_FREE(mido->ext_rthostnamearr[i]);
+        EUCA_FREE(mido->ext_rthostaddrarr[i]);
+        EUCA_FREE(mido->ext_rthostifacearr[i]);
+    }
 
     mido_free_midoname_list(mido->hosts, mido->max_hosts);
     EUCA_FREE(mido->hosts);
@@ -3387,15 +3372,6 @@ int free_mido_core(mido_core * midocore)
 
     if (!midocore)
         return (0);
-
-    /*
-       mido_free_midoname(&(midocore->midos[EUCART]));
-       mido_free_midoname(&(midocore->midos[EUCART_BRPORT]));
-       mido_free_midoname(&(midocore->midos[EUCABR_RTPORT]));
-       mido_free_midoname(&(midocore->midos[EUCABR]));
-       mido_free_midoname(&(midocore->midos[EUCART_GWPORT]));
-       mido_free_midoname(&(midocore->midos[GWHOST]));
-     */
 
     mido_free_midoname_list(midocore->midos, MIDOCOREEND);
     mido_free_midoname_list(midocore->gwhosts, midocore->max_gws);
@@ -3876,9 +3852,6 @@ int delete_mido_core(mido_config * mido, mido_core * midocore)
     rc = mido_delete_ipaddrgroup(&(midocore->midos[METADATA_IPADDRGROUP]));
 
     // delete the host/port links
-    rc = mido_unlink_host_port(&(midocore->midos[GWHOST]), &(midocore->midos[EUCART_GWPORT]));
-    sleep(1);
-
     for (i=0; i<midocore->max_gws; i++) {
         rc = mido_unlink_host_port(&(midocore->gwhosts[i]), &(midocore->gwports[i]));
         sleep (1);
@@ -3996,41 +3969,6 @@ int create_mido_core(mido_config * mido, mido_core * midocore)
                 LOGERROR("cannot add portgroup port: check midonet health\n");
             }
 
-        }
-    } else {
-
-        // exterior port for GW
-        cidr_split(mido->ext_pubnw, pubnw, pubnm, NULL, NULL);
-        rc = mido_create_port(&(midocore->midos[EUCART]), "Router", mido->ext_rtaddr, pubnw, pubnm, &(midocore->midos[EUCART_GWPORT]));
-        if (rc) {
-            LOGERROR("cannot create router port: check midonet health\n");
-            return (1);
-        }
-    
-        // exterior port GW IP
-        rc = mido_create_route(&(midocore->midos[EUCART]), &(midocore->midos[EUCART_GWPORT]), "0.0.0.0", "0", pubnw, pubnm, "UNSET", "0", NULL);
-        if (rc) {
-            LOGERROR("cannot create router route: check midonet health\n");
-            return (1);
-        }
-
-        // exterior port default GW
-        rc = mido_create_route(&(midocore->midos[EUCART]), &(midocore->midos[EUCART_GWPORT]), "0.0.0.0", "0", "0.0.0.0", "0", mido->ext_pubgwip, "0", NULL);
-        if (rc) {
-            LOGERROR("cannot create router route: check midonet health\n");
-            return (1);
-        }
-
-        // link exterior port 
-        rc = mido_link_host_port(&(midocore->midos[GWHOST]), mido->ext_rtiface, &(midocore->midos[EUCART]), &(midocore->midos[EUCART_GWPORT]));
-        if (rc) {
-            LOGERROR("cannot link router port to host interface: check midonet health\n");
-            return (1);
-        }
-
-        rc = mido_create_portgroup_port(&(midocore->midos[GWPORTGROUP]), midocore->midos[EUCART_GWPORT].uuid, NULL);
-        if (rc) {
-            LOGERROR("cannot add portgroup port: check midonet health\n");
         }
     }
 

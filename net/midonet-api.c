@@ -3154,8 +3154,6 @@ int mido_cmp_midoname_to_input_json_v(midoname * name, va_list * al)
     json_object *srcjobj = NULL, *dstjobj = NULL;
     int ret = 0;
 
-    //    LOGTRACE("\n\n\nWTFHELLOn");
-
     va_copy(ala, *al);
     jsonbuf = mido_jsonize(NULL, &ala);
     va_end(ala);
@@ -3400,7 +3398,6 @@ int mido_get_resources(midoname * parents, int max_parents, char *tenant, char *
     }
 
     if (names && (names_max > 0)) {
-        //        LOGINFO("WTF: %s %d, %d, %08X\n", resource_type, names_max, sizeof(midoname), *outnames);
         *outnames = calloc(names_max, sizeof(midoname));
         memcpy(*outnames, names, sizeof(midoname) * names_max);
         *outnames_max = names_max;

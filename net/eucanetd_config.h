@@ -130,9 +130,6 @@ enum {
     EUCANETD_CVAL_LOGROLLNUMBER,
     EUCANETD_CVAL_LOGMAXSIZE,
     EUCANETD_CVAL_MIDOEUCANETDHOST,
-    EUCANETD_CVAL_MIDOGWHOST,
-    EUCANETD_CVAL_MIDOGWIP,
-    EUCANETD_CVAL_MIDOGWIFACE,
     EUCANETD_CVAL_MIDOGWHOSTS,
     EUCANETD_CVAL_MIDOPUBNW,
     EUCANETD_CVAL_MIDOPUBGWIP,
@@ -177,9 +174,6 @@ typedef struct eucanetdConfig_t {
     char dhcpDaemon[EUCA_MAX_PATH];    //!< The path to the ISC DHCP server executable to use. (VNET_DHCPDAEMON)
 
     char midoeucanetdhost[HOSTNAME_LEN];
-    char midogwhost[HOSTNAME_LEN];
-    char midogwip[HOSTNAME_LEN];
-    char midogwiface[HOSTNAME_LEN];
     char midogwhosts[HOSTNAME_LEN*3*33];
     char midopubnw[HOSTNAME_LEN];
     char midopubgwip[HOSTNAME_LEN];
