@@ -210,8 +210,8 @@ public class ImageManager {
     			  if(ImageMetadata.Type.machine.equals(manifest.getImageType( )) &&
     	            ImageMetadata.VirtualizationType.paravirtualized.equals(virtualizationType) &&
     			      (amiFromManifest.isEmpty() || isPathAPartition(amiFromManifest)) )
-                    return Images.createPendingAvailableFromManifest( ctx.getUserFullName( ), request.getName( ), 
-                      request.getDescription( ), arch, virtualizationType, ImageMetadata.Platform.linux, ImageMetadata.ImageFormat.partitioned, eki, eri, manifest );
+    			    return Images.registerFromManifest( ctx.getUserFullName( ), request.getName( ),
+                 request.getDescription( ), arch, virtualizationType, ImageMetadata.Platform.linux, ImageMetadata.ImageFormat.partitioned, eki, eri, manifest );
     			  else
     			    return Images.registerFromManifest( ctx.getUserFullName( ), request.getName( ), 
     			      request.getDescription( ), arch, virtualizationType, imagePlatform, ImageMetadata.ImageFormat.fulldisk, eki, eri, manifest );
@@ -266,7 +266,7 @@ public class ImageManager {
   
   public static boolean isPathAPartition(String str) {
     char lastChar = str.charAt(str.length() - 1); // get last letter/number
-	return !Character.isLetter(lastChar);
+    return !Character.isLetter(lastChar);
   }
 
   public DeregisterImageResponseType deregister( DeregisterImageType request ) throws EucalyptusCloudException {

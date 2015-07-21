@@ -899,36 +899,7 @@ public class Images extends com.eucalyptus.compute.common.internal.images.Images
     ret = persistRegistration( creator, manifest, ret );
     return ret;
   }
-  
-  public static ImageInfo createPendingAvailableFromManifest( UserFullName creator,
-                                                     String imageNameArg,
-                                                     String imageDescription,
-                                                     ImageMetadata.Architecture requestArch,
-                                                     ImageMetadata.VirtualizationType virtType,
-                                                     ImageMetadata.Platform platform,
-                                                     ImageMetadata.ImageFormat imgFormat,
-                                                     String eki,
-                                                     String eri,
-                                                     ImageManifest manifest ) throws Exception {
-    PutGetImageInfo ret = prepareFromManifest( creator, imageNameArg, imageDescription, requestArch, 
-        virtType, platform, imgFormat, eki, eri, manifest );
-    ret.setState( ImageMetadata.State.pending_available );
-    ret = persistRegistration( creator, manifest, ret );
-    return ret;
-  }
-    
-  public static void registerFromPendingImage( String imageId ) throws Exception {
-    EntityTransaction tx = Entities.get( PutGetImageInfo.class );
-    try {
-      ImageInfo ret = Entities.uniqueResult( Images.exampleWithImageId( imageId ) );
-      ret.setState( State.available );
-      tx.commit( );
-    } catch ( Exception e ) {
-      tx.rollback( );
-      throw new EucalyptusCloudException( "Failed to update image: " + imageId + " because of: " + e.getMessage( ), e );
-    }
-  }
-  
+
   private static PutGetImageInfo prepareFromManifest( UserFullName creator,
                                                       String imageNameArg,
                                                       String imageDescription,

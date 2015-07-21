@@ -139,52 +139,7 @@ public abstract class AbstractTaskScheduler {
     WorkerTask newTask = null;
 
     try{
-      if (nextTask instanceof DiskImagingTask){
-        final DiskImagingTask imagingTask = (DiskImagingTask) nextTask;
-        final DiskImageConversionTask conversionTask = imagingTask.getTask();
-        // generate temporary download manifests
-        try{
-          final List<ImportDiskImageDetail> importImages = conversionTask.getImportDisk().getDiskImageSet();
-          for(final ImportDiskImageDetail image : importImages){
-            String manifestUrl = image.getDownloadManifestUrl();
-            final String key = manifestUrl.substring(manifestUrl.lastIndexOf("/")+1);
-            manifestUrl = manifestUrl.substring(0, manifestUrl.lastIndexOf("/"));
-            final String bucket = manifestUrl.substring(manifestUrl.lastIndexOf("/")+1);
-            final ImageManifestFile manifestFile = new ImageManifestFile(
-                String.format("%s/%s", bucket, key),
-                BundleImageManifest.INSTANCE,
-                ImageConfiguration.getInstance( ).getMaxManifestSizeBytes( ) );
-            String manifestName = String.format("%s-%s-%s", imagingTask.getDisplayName(),
-                conversionTask.getImportDisk().getConvertedImage().getPrefix(),
-                image.getFormat());
-            final String downloadManifest = 
-                DownloadManifestFactory.generateDownloadManifest(manifestFile, this.imagingServiceKey, 
-                    manifestName, 5, false);
-            image.setDownloadManifestUrl(downloadManifest);
-          }
-        }catch(final Exception ex){
-          ImagingTasks.setState(imagingTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_DOWNLOAD_MANIFEST);
-          throw new EucalyptusCloudException("Failed to generate download manifest", ex);
-        }
-
-        newTask = new WorkerTask(imagingTask.getDisplayName(), WorkerTaskType.convert_image);
-
-        final InstanceStoreTask ist = new InstanceStoreTask();
-        ist.setAccountId(imagingTask.getOwnerAccountNumber());
-        ist.setAccessKey(conversionTask.getImportDisk().getAccessKey());
-        ist.setConvertedImage(conversionTask.getImportDisk().getConvertedImage());
-        ist.setImportImageSet(conversionTask.getImportDisk().getDiskImageSet());
-        ist.setUploadPolicy(conversionTask.getImportDisk().getUploadPolicy());
-        ist.setUploadPolicySignature(conversionTask.getImportDisk().getUploadPolicySignature());
-        ist.setServiceCertArn(this.imagingServiceCertArn);
-        final ServiceConfiguration osg = Topology.lookup( ObjectStorage.class );
-        final URI osgUri = osg.getUri();
-        if ( DNSProperties.LOCALHOST_DOMAIN.equals(DNSProperties.getDomain()) )
-          ist.setS3Url(String.format("%s://%s:%d%s", osgUri.getScheme(), osgUri.getHost(), osgUri.getPort(), osgUri.getPath())); 
-        else
-          ist.setS3Url(String.format("%s://objectstorage.%s:%d", osgUri.getScheme(), DNSProperties.getDomain(), osgUri.getPort()));
-        newTask.setInstanceStoreTask(ist);
-      }else if(nextTask instanceof ImportVolumeImagingTask){
+      if(nextTask instanceof ImportVolumeImagingTask){
         final ImportVolumeImagingTask volumeTask = (ImportVolumeImagingTask) nextTask;
         String manifestLocation = null;
         if(volumeTask.getDownloadManifestUrl().size() == 0){

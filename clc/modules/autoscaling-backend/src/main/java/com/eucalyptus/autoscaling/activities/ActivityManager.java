@@ -2662,7 +2662,7 @@ public class ActivityManager {
 
       final DescribeAvailabilityZonesType describeAvailabilityZonesType
           = new DescribeAvailabilityZonesType();
-      describeAvailabilityZonesType.setAvailabilityZoneSet( Lists.newArrayList( availabilityZones ) );
+      describeAvailabilityZonesType.getFilterSet().add( filter( "zone-name", Lists.newArrayList( availabilityZones ) ) );
 
       client.dispatch( describeAvailabilityZonesType, callback );
     }

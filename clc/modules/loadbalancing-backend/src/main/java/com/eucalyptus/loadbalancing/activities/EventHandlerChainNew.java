@@ -73,6 +73,7 @@ import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancers;
+import com.eucalyptus.loadbalancing.backend.LoadBalancingServoCache;
 import com.eucalyptus.loadbalancing.common.LoadBalancingBackend;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceEntityTransform;
@@ -777,7 +778,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 					}
 				}
 				
-				// CASE 1: NEW INSTANCES WITH THE AS GROUP FOUND
+				// CASE 1: NEW INSTANCES WITHIN THE AS GROUP FOUND
 				if(newServos.size()>0){
 					try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
 						for(LoadBalancerServoInstance instance : newServos){
@@ -807,12 +808,12 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 							LOG.error("unable to transform servo instance from the view", ex);
 							continue;
 						}
-						
 						try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
 							final LoadBalancerServoInstance update = Entities.uniqueResult(instance);
 							update.setState(LoadBalancerServoInstance.STATE.Error);
 							Entities.persist(update);
 							db.commit();
+		          LoadBalancingServoCache.getInstance().invalidate(update);
 						}catch(Exception ex){
 						}
 					}else{/// CASE 3: INSTANCE STATE UPDATED
@@ -851,12 +852,12 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 								LOG.error("unable to transform servo instance from the view", ex);
 								continue;
 							}	
-
 							try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
 								final LoadBalancerServoInstance update = Entities.uniqueResult(instance);
 								update.setState(newState);
 								Entities.persist(update);
 								db.commit();
+	              LoadBalancingServoCache.getInstance().invalidate(update);
 							}catch(Exception ex){
 							}
 						}

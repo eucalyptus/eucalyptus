@@ -52,6 +52,7 @@ import com.netflix.glisten.WorkflowOperations;
 
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 
 /**
@@ -79,7 +80,7 @@ public class AWSCloudFormationWaitConditionHandleResourceAction extends Resource
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         final AWSCloudFormationWaitConditionHandleResourceAction action = (AWSCloudFormationWaitConditionHandleResourceAction) resourceAction;
-        try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client( new CloudFormationAWSCredentialsProvider() ) ) {
+        try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client( new CloudFormationAWSCredentialsProvider( (int)TimeUnit.HOURS.toSeconds( 12 ) ) ) ) {
           // look for an existing bucket...
           String bucketName = null;
           ObjectNode objectNode = null;

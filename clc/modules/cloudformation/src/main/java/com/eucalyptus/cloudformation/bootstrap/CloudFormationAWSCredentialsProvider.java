@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,6 +34,10 @@ public class CloudFormationAWSCredentialsProvider extends SecurityTokenAWSCreden
 
   public CloudFormationAWSCredentialsProvider( ) {
     super( CloudFormationUserSupplier.INSTANCE );
+  }
+
+  public CloudFormationAWSCredentialsProvider( final int expirationSecs ) {
+    super( CloudFormationUserSupplier.INSTANCE, expirationSecs );
   }
 
   public enum CloudFormationUserSupplier implements Supplier<User> {

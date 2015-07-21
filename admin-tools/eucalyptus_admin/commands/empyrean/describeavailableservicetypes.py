@@ -24,9 +24,9 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from requestbuilder import Arg
+from requestbuilder.mixins.formatting import TableOutputMixin
 
 from eucalyptus_admin.commands.empyrean import EmpyreanRequest
-from eucalyptus_admin.commands.mixins import TableOutputMixin
 
 
 class DescribeAvailableServiceTypes(EmpyreanRequest, TableOutputMixin):

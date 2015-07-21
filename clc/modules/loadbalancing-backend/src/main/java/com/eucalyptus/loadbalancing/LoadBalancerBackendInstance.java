@@ -61,6 +61,7 @@ import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
 import com.eucalyptus.loadbalancing.backend.InternalFailure400Exception;
 import com.eucalyptus.loadbalancing.backend.InvalidEndPointException;
 import com.eucalyptus.loadbalancing.backend.LoadBalancingException;
+import com.eucalyptus.loadbalancing.backend.LoadBalancingServoCache;
 import com.eucalyptus.loadbalancing.common.LoadBalancingBackend;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.auth.principal.FullName;
@@ -135,7 +136,7 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		this.setState(STATE.OutOfService);
 		this.setReasonCode("ELB");
 		this.setDescription("Instance registration is still in progress.");
-		
+		this.updateInstanceStateTimestamp();
 		if(this.getVmInstance() == null)
 			throw new InvalidEndPointException();
 
@@ -253,6 +254,10 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
     	this.instanceUpdateTimestamp = new Date(currentTime);
     }
     
+    public Date instanceStateLastUpdated(){
+      return this.instanceUpdateTimestamp;
+    }
+    
 	@Override
 	public String getPartition() {
 		if(this.partition!=null)
@@ -365,7 +370,6 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
 				allInstances.addAll(
 						Entities.query(LoadBalancerBackendInstance.named()));
-				db.commit();
 			}catch(final Exception ex){
 			}
 			final Date current = new Date(System.currentTimeMillis());
@@ -442,23 +446,31 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 						final LoadBalancerBackendInstance update = Entities.uniqueResult(be);
 						update.setBackendState(trueState);
 						Entities.persist(update);
-					}else if (instanceMap.containsKey(be.getInstanceId())){
-						final LoadBalancerBackendInstance update = Entities.uniqueResult(be);
-						update.setVmInstance(instanceMap.get(be.getInstanceId()));
-						Entities.persist(update);
+						db.commit();
+						LoadBalancingServoCache.getInstance().invalidate(be);
+				  }else if (instanceMap.containsKey(be.getInstanceId()) &&  // when IP address is changed
+				      !instanceMap.get(be.getInstanceId()).getIpAddress().equals(be.getIpAddress())){
+				    final LoadBalancerBackendInstance update = Entities.uniqueResult(be);
+				    update.setVmInstance(instanceMap.get(be.getInstanceId()));
+				    Entities.persist(update);
+				    db.commit();
+				    LoadBalancingServoCache.getInstance().invalidate(be);
 					}
 				}
-				db.commit();
 			}catch(final Exception ex){
+			  ;
 			}
 			
 			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
 			  for(final LoadBalancerBackendInstance be : beToDelete) {
-			   final LoadBalancerBackendInstance entity = Entities.uniqueResult(be);
-			   Entities.delete(entity);
-			   LOG.info("Instance "+be.getInstanceId()+" is terminated and removed from ELB");
+			    final LoadBalancerBackendInstance entity = Entities.uniqueResult(be);
+			    Entities.delete(entity);
+			    LOG.info("Instance "+be.getInstanceId()+" is terminated and removed from ELB");
 			  }
 			  db.commit();
+			  for(final LoadBalancerBackendInstance be : beToDelete) {
+			    LoadBalancingServoCache.getInstance().invalidate(be);
+			  }
 			}catch(final Exception ex) {
 			  ;
 			}

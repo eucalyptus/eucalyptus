@@ -371,30 +371,17 @@ public class Emis {
         }
         if ( this.getMachine( ) instanceof StaticDiskImage ) { // BootableImage+StaticDiskImage = MachineImageInfo
           StaticDiskImage diskImage = (StaticDiskImage) this.getMachine( );
-          final MachineImageInfo emi = LookupMachine.INSTANCE.apply(this.getMachine().getDisplayName());
-          String manifestLocation = null;
-          // generate download manifest and replace machine URL
-          if(ImageMetadata.State.pending_available.equals(emi.getState())){
-            manifestLocation = DownloadManifestFactory.generatePresignedUrl(reservationId);
-            Images.setImageState(emi.getDisplayName(), ImageMetadata.State.pending_conversion);
-          }else if(ImageMetadata.State.pending_conversion.equals(emi.getState())){
-            manifestLocation = DownloadManifestFactory.generatePresignedUrl(reservationId);
-          }else{
-            // paravirtualized images have RunManifest that is located in the system bucket
-            // and is not accessible by users so there is nothing to check
-            if ( diskImage.getManifestLocation().equals( diskImage.getRunManifestLocation() )
-                && !isEmptyString( diskImage.getManifestHash() )
-                && !diskImage.getManifestHash().equals( ImageManifests.getManifestHash(
-                                                        diskImage.getManifestLocation() )) )
-              throw new MetadataException("Instance manifest was changed after registration");
-            manifestLocation = DownloadManifestFactory.generateDownloadManifest(
+          if (!isEmptyString( diskImage.getManifestHash() )
+              && !diskImage.getManifestHash().equals( ImageManifests.getManifestHash(
+                                                      diskImage.getManifestLocation() )) )
+            throw new MetadataException("Instance manifest was changed after registration");
+          String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
                 new ImageManifestFile(
-                  diskImage.getRunManifestLocation( ),
+                  diskImage.getManifestLocation( ),
                   BundleImageManifest.INSTANCE,
                   ImageConfiguration.getInstance( ).getMaxManifestSizeBytes( ) ),
                   partition.getNodeCertificate( ).getPublicKey( ),
                   reservationId, true);
-          }
           vmTypeInfo.setRoot( diskImage.getDisplayName( ), manifestLocation,
                               this.getMachine( ).getImageSizeBytes() );
         }

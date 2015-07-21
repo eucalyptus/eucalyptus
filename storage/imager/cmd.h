@@ -87,22 +87,6 @@ int prepare_cleanup(imager_request * req, boolean last);
 //! @}
 
 //! @{
-//! @name Convert commands handlers
-const char **convert_parameters();
-int convert_validate(imager_request * req);
-artifact *convert_requirements(imager_request * req, artifact * prev_art) _attribute_wur_;
-int convert_cleanup(imager_request * req, boolean last);
-//! @}
-
-//! @{
-//! @name Upload commands handlers
-const char **upload_parameters(void);
-int upload_validate(imager_request * req);
-artifact *upload_requirements(imager_request * req, artifact * prev_art) _attribute_wur_;
-int upload_cleanup(imager_request * req, boolean last);
-//! @}
-
-//! @{
 //! @name Bundle commands handlers
 const char **bundle_parameters(void);
 int bundle_validate(imager_request * req);

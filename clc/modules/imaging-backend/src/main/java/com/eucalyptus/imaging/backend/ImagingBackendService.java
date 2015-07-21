@@ -33,13 +33,8 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.blockstorage.Volumes;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.images.ImageConversionManager;
-import com.eucalyptus.compute.common.internal.images.ImageInfo;
-import com.eucalyptus.compute.common.internal.images.MachineImageInfo;
 import com.eucalyptus.imaging.backend.AbstractTaskScheduler.WorkerTask;
 import com.eucalyptus.imaging.common.backend.msgs.CancelConversionTaskResponseType;
 import com.eucalyptus.imaging.common.backend.msgs.CancelConversionTaskType;
@@ -48,137 +43,14 @@ import com.eucalyptus.imaging.common.backend.msgs.DescribeConversionTasksType;
 import com.eucalyptus.imaging.common.DiskImageConversionTask;
 import com.eucalyptus.imaging.common.backend.msgs.GetInstanceImportTaskResponseType;
 import com.eucalyptus.imaging.common.backend.msgs.GetInstanceImportTaskType;
-import com.eucalyptus.imaging.common.backend.msgs.ImportImageResponseType;
-import com.eucalyptus.imaging.common.backend.msgs.ImportImageType;
 import com.eucalyptus.imaging.common.backend.msgs.PutInstanceImportTaskStatusResponseType;
 import com.eucalyptus.imaging.common.backend.msgs.PutInstanceImportTaskStatusType;
-import com.eucalyptus.imaging.common.ImagingBackend;
-import com.eucalyptus.resources.client.Ec2Client;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.ImagingSupport;
-import com.eucalyptus.util.RestrictedTypes;
-import com.eucalyptus.compute.common.internal.vm.VmInstance;
-import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.compute.common.internal.vm.VmInstance.Reason;
-import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 
 public class ImagingBackendService {
   private static Logger LOG = Logger.getLogger( ImagingBackendService.class );
 
   private static final int MAX_TIMEOUT_AND_RETRY = 1; 
-  public static ImportImageResponseType importImage(ImportImageType request) throws ImagingServiceException {
-    final ImportImageResponseType reply = request.getReply();
-    final Context context = Contexts.lookup( );
-    try{
-      if (!Bootstrap.isFinished() ||
-           !Topology.isEnabled( ImagingBackend.class )){
-        throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "For import, Imaging service should be enabled");
-      }
-    }catch(final Exception ex){
-      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "For import, Imaging service should be enabled");
-    }
-    
-    try{
-      /// api is callable only by sysadmin
-      if ( !context.getUser().isSystemAdmin() ) {
-        throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to import image." );
-      }
-    }catch(final ImagingServiceException ex){
-      throw ex;
-    }catch(final Exception ex){
-      throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to import image." );
-    }
-    
-    DiskImagingTask task = null;
-    try{
-      task = ImagingTasks.createDiskImagingTask(request);
-    }catch(final ImagingServiceException ex){
-       throw ex;
-    }catch(final Exception ex){
-      LOG.error("Failed to import image", ex);
-      throw new ImagingServiceException("Failed to import image", ex);
-    }
-    reply.setConversionTask(task.getTask());
-    reply.set_return(true);  
- 
-    return reply; 
-  }
-
-  public static DescribeConversionTasksResponseType describeConversionTask(DescribeConversionTasksType request) throws ImagingServiceException {
-    DescribeConversionTasksResponseType reply = request.getReply( );
-    Context ctx = Contexts.lookup( );
-    boolean verbose = request.getConversionTaskIdSet( ).remove( "verbose" );
-    try{
-      /// api is callable only by sysadmin
-      if ( !ctx.getUser().isSystemAdmin() ) {
-        throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to describe conversion tasks." );
-      }
-    }catch(final ImagingServiceException ex){
-      throw ex;
-    }catch(final Exception ex){
-      throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to describe conversion tasks." );
-    }
-
-    Collection<String> ownerInfo = ( ctx.isAdministrator( ) && verbose )
-        ? Collections.<String> emptyList( )
-            : Collections.singleton( ctx.getAccount( ).getAccountNumber( ) );
-        //TODO: extends for volumes
-        final Predicate<? super DiskImagingTask> requestedAndAccessible = RestrictedTypes.filteringFor( DiskImagingTask.class )
-            .byId( request.getConversionTaskIdSet( ) )
-            .byOwningAccount( ownerInfo )
-            .byPrivileges( )
-            .buildPredicate( );
-
-        Iterable<DiskImagingTask> tasksToList = ImagingTasks.getDiskImagingTasks(AccountFullName.getInstance(ctx.getAccountNumber()),
-            request.getConversionTaskIdSet());
-        for ( DiskImagingTask task : Iterables.filter( tasksToList, requestedAndAccessible ) ) {
-          DiskImageConversionTask t = (DiskImageConversionTask) task.getTask( );
-          reply.getConversionTasks().add( t );
-        }
-        return reply;  
-  }
-  
-  /**
-   * <ol>
-   * <li>Persist cancellation request state
-   * <li>Submit cancellations for any outstanding import sub-tasks to imaging service
-   * </ol>
-   */
-  public CancelConversionTaskResponseType CancelConversionTask( CancelConversionTaskType request ) throws ImagingServiceException {
-    final CancelConversionTaskResponseType reply = request.getReply( );
-    Context ctx = Contexts.lookup( );
-    try{
-      /// api is callable only by sysadmin
-      if ( ! (ctx.getUser().isSystemAdmin( ) )) {
-        throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to cancel conversion tasks." );
-      }
-    }catch(final ImagingServiceException ex){
-      throw ex;
-    }catch(final Exception ex){
-      throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to cancel conversion tasks." );
-    }
-    try{
-      final ImagingTask task = ImagingTasks.lookup(request.getConversionTaskId());
-      final ImportTaskState state = task.getState();
-      if(state.equals(ImportTaskState.NEW) || 
-          state.equals(ImportTaskState.PENDING) ||
-          state.equals(ImportTaskState.CONVERTING) ||
-          state.equals(ImportTaskState.INSTANTIATING) ) {
-        ImagingTasks.setState(AccountFullName.getInstance(Contexts.lookup().getAccountNumber()), request.getConversionTaskId(),
-          ImportTaskState.CANCELLING, ImportTaskState.STATE_MSG_USER_CANCELLATION);
-      }
-      reply.set_return(true);
-    }catch(final NoSuchElementException ex){
-      throw new ImagingServiceException("No task with id="+request.getConversionTaskId()+" is found");
-    }catch(final Exception ex){
-      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "Failed to cancel conversion task", ex);
-    }
-    
-    return reply;
-  }
 
   public PutInstanceImportTaskStatusResponseType PutInstanceImportTaskStatus( PutInstanceImportTaskStatusType request ) throws EucalyptusCloudException {
     final PutInstanceImportTaskStatusResponseType reply = request.getReply( );
@@ -262,31 +134,26 @@ public class ImagingBackendService {
           break;
 
         case DONE:
-          if(imagingTask instanceof VolumeImagingTask){
-            try{
-              ImagingTasks.updateVolumeStatus((VolumeImagingTask)imagingTask, volumeId, ImportTaskState.COMPLETED, null);
-              Volumes.setSystemManagedFlag(null, volumeId, false);
-            }catch(final Exception ex){
-              ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
-                  ImportTaskState.FAILED, ImportTaskState.STATE_MSG_FAILED_UNEXPECTED);
-              LOG.error("Failed to update volume's state", ex);
-              break;
-            }
-            
-            try{
-              if(imagingTask instanceof ImportVolumeImagingTask){
-                ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
-                    ImportTaskState.COMPLETED, ImportTaskState.STATE_MSG_DONE);
-              }else if(ImagingTasks.isConversionDone((VolumeImagingTask)imagingTask)){
-                  ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
-                      ImportTaskState.INSTANTIATING, ImportTaskState.STATE_MSG_LAUNCHING_INSTANCE);
-              }
-            }catch(final Exception ex){
-              LOG.error("Failed to update imaging task's state to completed", ex);
-            }
-          }else if(imagingTask instanceof DiskImagingTask){
+          try{
+            ImagingTasks.updateVolumeStatus((VolumeImagingTask)imagingTask, volumeId, ImportTaskState.COMPLETED, null);
+            Volumes.setSystemManagedFlag(null, volumeId, false);
+          }catch(final Exception ex){
             ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
-                ImportTaskState.COMPLETED, ImportTaskState.STATE_MSG_DONE);
+                ImportTaskState.FAILED, ImportTaskState.STATE_MSG_FAILED_UNEXPECTED);
+            LOG.error("Failed to update volume's state", ex);
+            break;
+          }
+          
+          try{
+            if(imagingTask instanceof ImportVolumeImagingTask){
+              ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
+                  ImportTaskState.COMPLETED, ImportTaskState.STATE_MSG_DONE);
+            }else if(ImagingTasks.isConversionDone((VolumeImagingTask)imagingTask)){
+                ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
+                    ImportTaskState.INSTANTIATING, ImportTaskState.STATE_MSG_LAUNCHING_INSTANCE);
+            }
+          }catch(final Exception ex){
+            LOG.error("Failed to update imaging task's state to completed", ex);
           }
           break;
 
@@ -301,20 +168,6 @@ public class ImagingBackendService {
             LOG.warn(String.format("A task %s experienced fatal error. Worker instance %s is being retired",
                 request.getImportTaskId(), request.getInstanceId()));
             ImagingWorkers.retireWorker(request.getInstanceId());
-          }
-          if(imagingTask instanceof DiskImagingTask){
-            // terminate all instances that are waiting for the conversion
-            String conversionTaskId = ((DiskImagingTask)imagingTask).getTask().getConversionTaskId();
-            String imageId = null;
-            for( ImageInfo imageInfo:ImageConversionManager.getPartitionedImages() ){
-              if ( imageInfo instanceof MachineImageInfo ) {
-                if ( conversionTaskId.equals( ((MachineImageInfo)imageInfo).getImageConversionId() ) ) {
-                  imageId = imageInfo.getDisplayName();
-                  break;
-                }
-              }
-            }
-            ImagingSupport.terminateInstancesWaitingImageConversion(imageId);
           }
           break;
         }
@@ -333,7 +186,6 @@ public class ImagingBackendService {
   public GetInstanceImportTaskResponseType GetInstanceImportTask( GetInstanceImportTaskType request ) throws EucalyptusCloudException {
     final GetInstanceImportTaskResponseType reply = request.getReply( );
     final Context context = Contexts.lookup();
-    final String workerId = request.getInstanceId();
     try{
       if ( ! ( context.getUser().isSystemAdmin() || ( context.isAdministrator() && Permissions.isAuthorized(
           VENDOR_IMAGINGSERVICE,

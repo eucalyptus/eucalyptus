@@ -1519,7 +1519,10 @@ public class EucalyptusActivityTasks {
 			req.setImageId(this.imageId);
 			req.setInstanceType(this.instanceType);
 			req.setIamInstanceProfile(this.instanceProfileName);
-			req.setKeyName(this.keyName);
+			if(this.keyName == null || this.keyName.length()<=0)
+			  req.setKeyName(null);
+			else
+			  req.setKeyName(this.keyName);
 			req.setLaunchConfigurationName(this.launchConfigName);
 			req.setSecurityGroups( new SecurityGroups( this.securityGroupNamesOrIds ) );
 			req.setUserData(userData);

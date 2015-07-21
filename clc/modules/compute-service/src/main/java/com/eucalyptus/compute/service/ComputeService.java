@@ -1611,7 +1611,10 @@ public class ComputeService implements Callable {
 
     @Override
     public boolean apply( @Nullable final T t ) {
-      if ( t != null ) identifiers.remove( idFunction.apply( t ) );
+      if ( t != null ) {
+        //noinspection StatementWithEmptyBody
+        while ( identifiers.remove( idFunction.apply( t ) ) );
+      }
       return true;
     }
   }

@@ -42,6 +42,7 @@ public class SecurityTokenAWSCredentialsProvider implements AWSCredentialsProvid
 
   private final AtomicReference<Supplier<AWSCredentials>> credentialsSupplier = new AtomicReference<>( );
   private final Supplier<User> user;
+  private final int expirationSecs;
 
   public SecurityTokenAWSCredentialsProvider( final AccountFullName accountFullName ) {
     this( new Supplier<User>() {
@@ -61,7 +62,12 @@ public class SecurityTokenAWSCredentialsProvider implements AWSCredentialsProvid
   }
 
   public SecurityTokenAWSCredentialsProvider( final Supplier<User> user ) {
+    this( user, EXPIRATION_SECS );
+  }
+
+  public SecurityTokenAWSCredentialsProvider( final Supplier<User> user, final int expirationSecs ) {
     this.user = user;
+    this.expirationSecs = Math.max( expirationSecs, PRE_EXPIRY * 2 );
     refresh( );
   }
 
@@ -80,7 +86,7 @@ public class SecurityTokenAWSCredentialsProvider implements AWSCredentialsProvid
       @Override
       public AWSCredentials get() {
         try {
-          final SecurityToken securityToken = SecurityTokenManager.issueSecurityToken( user.get(), EXPIRATION_SECS );
+          final SecurityToken securityToken = SecurityTokenManager.issueSecurityToken( user.get(), expirationSecs );
           return new BasicSessionCredentials(
               securityToken.getAccessKeyId( ),
               securityToken.getSecretKey( ),
@@ -89,6 +95,6 @@ public class SecurityTokenAWSCredentialsProvider implements AWSCredentialsProvid
           throw Exceptions.toUndeclared( e );
         }
       }
-    }, EXPIRATION_SECS - PRE_EXPIRY, TimeUnit.SECONDS );
+    }, expirationSecs - PRE_EXPIRY, TimeUnit.SECONDS );
   }
 }

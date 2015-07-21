@@ -68,9 +68,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
-import java.util.concurrent.atomic.AtomicInteger;
-import javax.persistence.EntityTransaction;
-import org.apache.log4j.Logger;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.records.Logs;
@@ -87,42 +84,9 @@ import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
 public class Transactions {
-  private static Logger                           LOG      = Logger.getLogger( Transactions.class );
-  private static ThreadLocal<AtomicInteger>       depth    = new ThreadLocal<AtomicInteger>( ) {
-                                                             
-                                                             @Override
-                                                             protected AtomicInteger initialValue( ) {
-                                                               return new AtomicInteger( 0 );
-                                                             }
-                                                             
-                                                           };
-  private static ThreadLocal<List<EntityTransaction>> wrappers = new ThreadLocal<List<EntityTransaction>>( ) {
-                                                             
-                                                             @Override
-                                                             protected List<EntityTransaction> initialValue( ) {
-                                                               return Lists.newArrayList( );
-                                                             }
-                                                             
-                                                           };
-  
-  private static <T> EntityTransaction get( T obj ) {
-    EntityTransaction db = Entities.get( obj );
-    depth.get( ).incrementAndGet( );
-    wrappers.get( ).add( db );
-    return db;
-  }
-  
-  private static void pop( ) {
-    Integer nextLevel = depth.get( ).decrementAndGet( );
-    if ( nextLevel <= 0 ) {
-      for ( EntityTransaction db : wrappers.get( ) ) {
-        if ( db.isActive( ) ) {
-          db.commit( );
-        }
-      }
-      wrappers.remove( );
-      depth.remove( );
-    }
+
+  private static <T> TransactionResource get( T obj ) {
+    return Entities.transactionFor( obj );
   }
   
   private static TransactionException transformException( Throwable t ) {
@@ -159,8 +123,7 @@ public class Transactions {
                                   final Callback<T> c ) throws TransactionException {
     checkParam( search, notNullValue() );
     checkParam( c, notNullValue() );
-    EntityTransaction db = Transactions.get( search );
-    try {
+    try ( final TransactionResource db = Transactions.get( search ) ) {
       List<T> res = Entities.query( search, false, criterion, aliases );
       for ( T t : res ) {
         try {
@@ -169,22 +132,15 @@ public class Transactions {
           throw new TransactionCallbackException( ex );
         }
       }
-      
+
+      db.commit( );
       return res;
-    } catch ( TransactionCallbackException e ) {
-      db.rollback( );
-      Logs.extreme( ).error( e, e );
-      throw e;
-    } catch ( UndeclaredThrowableException e ) {
-      db.rollback( );
+    } catch ( TransactionCallbackException | UndeclaredThrowableException e ) {
       Logs.extreme( ).error( e, e );
       throw e;
     } catch ( Exception e ) {
-      db.rollback( );
       Logs.extreme( ).error( e, e );
       throw new TransactionInternalException( e );
-    } finally {
-      pop( );
     }
   }
 
@@ -243,24 +199,22 @@ public class Transactions {
                                final Function<? super T, S> f ) throws TransactionException {
     checkParam( type, notNullValue() );
     checkParam( f, notNullValue() );
-    EntityTransaction db = Transactions.get( type );
-    try {
+    try ( final TransactionResource db = Transactions.get( type ) ) {
       T entity = lookup.call();
       if ( !predicate.apply( entity ) ) {
         throw new NoSuchElementException();
       }
       try {
         S res = f.apply( entity );
+        db.commit( );
         return res;
       } catch ( Exception ex ) {
         throw new TransactionCallbackException( ex );
       }
     } catch ( TransactionCallbackException e ) {
-      db.rollback( );
       Logs.extreme( ).error( e, e );
       throw e;
     } catch ( UndeclaredThrowableException e ) {
-      db.rollback( );
       Logs.extreme( ).error( e, e );
       if ( e.getCause( ) instanceof TransactionException ) {
         throw e;
@@ -268,10 +222,7 @@ public class Transactions {
         throw new TransactionCallbackException( e.getCause( ) );
       }
     } catch ( Exception t ) {
-      db.rollback( );
       throw Transactions.transformException( t );
-    } finally {
-      pop( );
     }
   }
   
@@ -331,8 +282,7 @@ public class Transactions {
     checkParam( condition, notNullValue() );
     checkParam( transform, notNullValue() );
     List<O> res = Lists.newArrayList( );
-    EntityTransaction db = Transactions.get( searchClass );
-    try {
+    try ( final TransactionResource db = Transactions.get( searchClass ) ) {
       List<T> queryResults = searchResultSupplier.get();
       for ( T t : queryResults ) {
         if ( condition.apply( t ) ) {
@@ -343,16 +293,13 @@ public class Transactions {
           }
         }
       }
+      db.commit( );
       return res;
     } catch ( TransactionCallbackException e ) {
-      db.rollback( );
       Logs.extreme( ).error( e, e );
       throw e;
     } catch ( Exception e ) {
-      db.rollback( );
       throw Transactions.transformException( e );
-    } finally {
-      pop( );
     }
   }
 
@@ -367,8 +314,7 @@ public class Transactions {
   public static <T> T save( T saveMe, Callback<T> c ) throws TransactionException {
     checkParam( saveMe, notNullValue() );
     checkParam( c, notNullValue() );
-    EntityTransaction db = Transactions.get( saveMe );
-    try {
+    try ( final TransactionResource db = Transactions.get( saveMe ) ) {
       T entity = Entities.merge( saveMe );
       try {
         c.fire( entity );
@@ -378,14 +324,10 @@ public class Transactions {
       db.commit( );
       return entity;
     } catch ( TransactionCallbackException e ) {
-      db.rollback( );
       Logs.extreme( ).error( e, e );
       throw e;
     } catch ( Exception t ) {
-      db.rollback( );
       throw Transactions.transformException( t );
-    } finally {
-      pop( );
     }
   }
 
@@ -401,16 +343,12 @@ public class Transactions {
    */
   public static <T> T saveDirect( T saveMe ) throws TransactionException {
     checkParam( saveMe, notNullValue() );
-    final EntityTransaction db = Transactions.get( saveMe );
-    try {
+    try ( final TransactionResource db = Transactions.get( saveMe ) ) {
       final T entity = Entities.persist( saveMe );
       db.commit( );
       return entity;
     } catch ( Exception t ) {
       throw Transactions.transformException( t );
-    } finally {
-      if ( db.isActive() ) db.rollback();
-      pop( );
     }
   }
 
@@ -421,12 +359,12 @@ public class Transactions {
   public static <T> boolean delete( T search, Predicate<? super T> precondition ) throws TransactionException {
     checkParam( search, notNullValue() );
     checkParam( precondition, notNullValue() );
-    EntityTransaction db = Transactions.get( search );
-    try {
+    try ( final TransactionResource db = Transactions.get( search ) ) {
       T entity = Entities.uniqueResult( search );
       try {
         if ( precondition.apply( entity ) ) {
           Entities.delete( entity );
+          db.commit( );
           return true;
         } else {
           return false;
@@ -435,21 +373,17 @@ public class Transactions {
         throw new TransactionCallbackException( ex );
       }
     } catch ( TransactionCallbackException e ) {
-      db.rollback( );
       Logs.extreme( ).error( e, e );
       throw e;
     } catch ( Exception t ) {
-      db.rollback( );
       throw Transactions.transformException( t );
-    } finally {
-      pop( );
     }
   }
-  
+
   /**
    * Deletes all queried entities, based on the search entity, that match the precondition.
    * Returns true if all succeeded, false if otherwise. Does not stop on first failure. Attempts
-   * all regardless of failure 
+   * all regardless of failure
    * @param search
    * @param precondition
    * @return
@@ -458,8 +392,7 @@ public class Transactions {
   public static <T> boolean deleteAll( T search, Predicate<? super T> precondition ) throws TransactionException {
 	    checkParam( search, notNullValue() );
 	    checkParam( precondition, notNullValue() );
-	    EntityTransaction db = Transactions.get( search );
-	    try {
+	    try ( final TransactionResource db = Transactions.get( search ) ) {
 	      List<T> entities = Entities.query(search);
 	      boolean failed = false;
 	      for(T entity : entities) {
@@ -473,17 +406,14 @@ public class Transactions {
 	    		  throw new TransactionCallbackException( ex );
 	    	  }
 	      }
+	      db.commit( );
 	      return !failed;
 	    } catch ( TransactionCallbackException e ) {
-	      db.rollback( );
 	      Logs.extreme( ).error( e, e );
 	      throw e;
 	    } catch ( Exception t ) {
-	      db.rollback( );
 	      throw Transactions.transformException( t );
-	    } finally {
-	      pop( );
 	    }
 	  }
-  
+
 }

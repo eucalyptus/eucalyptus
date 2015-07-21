@@ -26,9 +26,9 @@
 import sys
 
 from requestbuilder import Arg, Filter, MutuallyExclusiveArgList
+from requestbuilder.mixins.formatting import TableOutputMixin
 
 from eucalyptus_admin.commands.empyrean import EmpyreanRequest
-from eucalyptus_admin.commands.mixins import TableOutputMixin
 
 
 class _RenamingFilter(Filter):

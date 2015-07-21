@@ -34,7 +34,6 @@
 #include <diskutil.h>
 #include <assert.h>
 #include "imager.h"
-#include "vmdk.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

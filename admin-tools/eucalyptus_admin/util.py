@@ -23,20 +23,9 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import prettytable
-from requestbuilder import Arg
+import os
 
 
-class TableOutputMixin(object):
-    ARGS = [Arg('--show-headers', action='store_true', route_to=None,
-                help='show column headers')]
-
-    def get_table(self, field_names):
-        table = prettytable.PrettyTable(field_names=field_names)
-        table.border = False
-        table.header = self.args.get('show_headers') or False
-        table.header_style = 'upper'
-        table.align = 'l'  # left
-        table.left_padding_width = 0
-        table.right_padding_width = 2
-        return table
+def add_fake_region_name(service):
+    if service.region_name is None and not os.getenv('AWS_AUTH_REGION'):
+        service.region_name = 'undefined-{0}'.format(os.getpid())

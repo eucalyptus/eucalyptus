@@ -263,7 +263,7 @@ public class ImagingTasks {
     } catch (NumberFormatException ex) {}
     return maxVolSize;
   }
-
+/*
   public static DiskImagingTask createDiskImagingTask(final ImportImageType request)
       throws ImagingServiceException{
     /// sanity check
@@ -323,7 +323,7 @@ public class ImagingTasks {
     }
     return transform;
   }
-  
+ */ 
   /************************* Methods for generic imaging tasks ************************/
   public static List<ImagingTask> getImagingTasks(){
     synchronized(lock){
@@ -651,26 +651,6 @@ public class ImagingTasks {
       }catch(final Exception ex){
         throw Exceptions.toUndeclared(ex);
       }
-    }
-  }
-  
-  /************************* Methods for disk imaging tasks ************************/
-  public static List<DiskImagingTask> getDiskImagingTasks(final AccountFullName owningAccount, final List<String> taskIdList){
-    synchronized(lock){
-      final List<DiskImagingTask> result = Lists.newArrayList();
-      try ( final TransactionResource db =
-          Entities.transactionFor( DiskImagingTask.class ) ) {
-        final DiskImagingTask sample = DiskImagingTask.named(owningAccount);
-        final List<DiskImagingTask> tasks = Entities.query(sample, true);
-        if(taskIdList!=null && taskIdList.size()>0){
-          for(final DiskImagingTask candidate : tasks){
-            if(taskIdList.contains(candidate.getDisplayName()))
-              result.add(candidate);
-          }
-        }else
-          result.addAll(tasks);
-      }
-      return result;
     }
   }
 }
