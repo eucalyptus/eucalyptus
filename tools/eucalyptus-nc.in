@@ -112,6 +112,14 @@ fi
 export EUCALYPTUS
 RUNDIR=$EUCALYPTUS/var/run/eucalyptus
 
+# check selinux status
+selinux_enabled() {
+
+    $(/usr/sbin/selinuxenabled)
+
+    return $?
+}
+
 create_httpd_config() {
 	IPS="all"
 
@@ -136,6 +144,20 @@ create_httpd_config() {
 
 # crude way to start the axis2c services
 do_start() {
+        if selinux_enabled ; then
+            # selinuxenabled should exit with rc 1 if disabled
+            echo
+            echo
+            echo "SELinux is enabled on this NC host. Disable SELinux before starting NC."
+            echo "To disable run the following commands:"
+            echo
+            echo "sed -i \"s/SELINUX=enforcing/SELINUX=permissive/\" /etc/selinux/config"
+            echo "setenforce 0"
+            echo
+
+            exit 1
+        fi
+
 	# Set kernel parameters for connection tracking (EUCA-5697)
 	$EUCALYPTUS/usr/libexec/eucalyptus/conntrack_kernel_params
 
