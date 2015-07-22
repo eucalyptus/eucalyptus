@@ -361,7 +361,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
    * Validity checks based on S3 naming. See http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html Check that the bucket is a valid
    * DNS name (or optionally can look like an IP)
    */
-  protected static boolean checkBucketNameValidity(String bucketName) {
+  public static boolean checkBucketNameValidity(String bucketName) {
     return BucketNameValidatorRepo.getBucketNameValidator(
         ConfigurationCache.getConfiguration(ObjectStorageGlobalConfiguration.class).getBucket_naming_restrictions()).check(bucketName);
   }
