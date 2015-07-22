@@ -696,7 +696,7 @@ public class ImageManager {
     	throw new EucalyptusCloudException( "Unable to register the image", ex);
     }
 
-    final CreateImageTask task = new CreateImageTask(userId, instanceId, noReboot, blockDevices);
+    final CreateImageTask task = new CreateImageTask(userId, instanceId, imageInfo.getDisplayName(), noReboot, blockDevices);
     try{
     	task.create(imageInfo.getDisplayName());
     }catch(final Exception ex){

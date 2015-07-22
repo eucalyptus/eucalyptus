@@ -100,12 +100,14 @@ public class CreateImageTask {
 	private String userId = null;
 	private String accountAdminId = null;
 	private String instanceId = null;
+	private String imageId = null;
 	private Boolean noReboot = null;
 	private List<BlockDeviceMappingItemType> blockDevices = null;
 	
-	public CreateImageTask(final String userId, final String instanceId, final Boolean noReboot, List<BlockDeviceMappingItemType> blockDevices){
+	public CreateImageTask(final String userId, final String instanceId, final String imageId, final Boolean noReboot, List<BlockDeviceMappingItemType> blockDevices){
 		this.userId = userId;
 		this.instanceId = instanceId;
+		this.imageId = imageId;
 		this.noReboot = noReboot;
 		this.blockDevices  = blockDevices;
 	}
@@ -134,7 +136,7 @@ public class CreateImageTask {
 			
 			noReboot = vmTask.getNoReboot();
 			final CreateImageTask newTask =
-					new CreateImageTask(userId, instanceId, noReboot, deviceMaps);
+					new CreateImageTask(userId, instanceId, vmTask.getImageId(), noReboot, deviceMaps);
 			try{
 				newTask.setAccountAdmin();
 			}catch(final AuthException ex){
@@ -594,8 +596,7 @@ public class CreateImageTask {
 	}
 	
 	private String getImageId(){
-		final VmInstance vm = this.getVmInstance();
-		return vm.getRuntimeState().getVmCreateImageTask().getImageId();
+		return this.imageId;
 	}
 	
 	private List<String> getSnapshotIds(){
