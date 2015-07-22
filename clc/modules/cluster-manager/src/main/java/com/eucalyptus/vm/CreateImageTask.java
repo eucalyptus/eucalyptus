@@ -422,7 +422,8 @@ public class CreateImageTask {
 	  try ( TransactionResource db =
         Entities.transactionFor( VmInstance.class ) ) {
       final VmInstance vm = Entities.uniqueResult(VmInstance.named(this.instanceId));
-      db.commit();
+      if(VmState.TERMINATED.equals(vm.getState()) || VmState.BURIED.equals(vm.getState()))
+          throw new NoSuchElementException();
       return vm;
     }catch(NoSuchElementException ex){
       LOG.error("Unable to find the vm instance (terminated?) - " + this.instanceId);
