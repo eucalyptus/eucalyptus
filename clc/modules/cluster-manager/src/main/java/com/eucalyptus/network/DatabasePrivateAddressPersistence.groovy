@@ -22,6 +22,8 @@ package com.eucalyptus.network
 import com.eucalyptus.entities.Entities
 import com.google.common.base.Function
 import com.google.common.base.Optional
+import com.google.common.collect.Iterables
+import com.google.common.collect.Lists
 import groovy.transform.CompileStatic
 import org.apache.log4j.Logger
 import org.hibernate.exception.ConstraintViolationException
@@ -80,6 +82,15 @@ class DatabasePrivateAddressPersistence implements PrivateAddressPersistence {
         PrivateAddress entity -> closure.call( entity )
       }
       db.commit( )
+    }
+  }
+
+  @Override
+  def <T> List<T> list( final String scope,
+                        final String tag,
+                        final Function<PrivateAddress, T> transform ) {
+    transaction( PrivateAddress ) { EntityTransaction db ->
+      Lists.newArrayList( Iterables.transform( Entities.query( PrivateAddress.scoped( scope, tag ) ), transform ) )
     }
   }
 

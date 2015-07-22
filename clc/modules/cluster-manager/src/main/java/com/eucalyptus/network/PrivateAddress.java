@@ -88,6 +88,13 @@ public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstan
     return privateAddress;
   }
 
+  public static PrivateAddress scoped( String scope, String tag ) {
+    final PrivateAddress privateAddress = new PrivateAddress( );
+    privateAddress.setScope( scope );
+    privateAddress.setTag( tag );
+    return privateAddress;
+  }
+
   public static PrivateAddress inState( State state ) {
     return inState( state, null );
   }

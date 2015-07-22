@@ -40,6 +40,7 @@ import com.eucalyptus.network.NetworkGroups
 import com.eucalyptus.network.NetworkMode
 import com.eucalyptus.network.PrivateAddresses
 import com.eucalyptus.util.Exceptions
+import com.eucalyptus.util.Pair
 import com.eucalyptus.util.UpperCamelPropertyNamingStrategy
 import com.eucalyptus.vm.VmInstances
 import com.google.common.base.Objects as GObjects
@@ -195,11 +196,11 @@ class NetworkConfigurations {
     macPrefix
   }
 
-  static Iterable<Integer> getPrivateAddresses( NetworkConfiguration configuration, String clusterName ) {
-    Lists.newArrayList( NetworkConfigurations.iterateRanges( NetworkConfigurations.getPrivateAddressRanges( configuration, clusterName ) ) )
+  static Pair<Iterable<Integer>,Integer> getPrivateAddresses( NetworkConfiguration configuration, String clusterName ) {
+    NetworkConfigurations.iterateRanges( NetworkConfigurations.getPrivateAddressRanges( configuration, clusterName ) )
   }
 
-  static Iterable<Integer> getPrivateAddresses( String clusterName ) {
+  static Pair<Iterable<Integer>,Integer> getPrivateAddresses( String clusterName ) {
     Optional<NetworkConfiguration> configuration = NetworkConfigurations.networkConfiguration
     if ( !configuration.present ) {
       throw new IllegalStateException( "Networking configuration not found for cluster '${clusterName}'" )
@@ -375,13 +376,15 @@ class NetworkConfigurations {
 
   }
 
-  private static Iterable<Integer> iterateRanges( Iterable<String> rangeIterable ) {
+  private static Pair<Iterable<Integer>,Integer> iterateRanges( Iterable<String> rangeIterable ) {
     final List<IPRange> ranges = Lists.newArrayList( Optional.presentInstances( Iterables.transform( rangeIterable, IPRange.parse( ) ) ) );
-    Iterables.concat( ranges )
+    int rangesSize = 0
+    for ( IPRange range : ranges ) { rangesSize = rangesSize + (int) range.size( ) }
+    Pair.pair( Iterables.concat( ranges ), rangesSize )
   }
 
   private static Iterable<String> iterateRangesAsString( Iterable<String> rangeIterable ) {
-    Iterables.transform( iterateRanges( rangeIterable ), PrivateAddresses.fromInteger( ) )
+    Iterables.transform( iterateRanges( rangeIterable ).left, PrivateAddresses.fromInteger( ) )
   }
 
   static class NetworkConfigurationPropertyChangeListener implements PropertyChangeListener<String> {

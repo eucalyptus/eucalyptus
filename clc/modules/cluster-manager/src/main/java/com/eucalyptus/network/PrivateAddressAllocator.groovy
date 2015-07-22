@@ -30,10 +30,29 @@ import groovy.transform.CompileStatic
 @CompileStatic
 interface PrivateAddressAllocator {
 
-  String allocate( String scope, String tag, Iterable<Integer> addresses ) throws NotEnoughResourcesException
+  /**
+   * Allocate an address
+   *
+   * @param scope The scope (namespace) for the allocation
+   * @param tag The tag for the address, returned on release
+   * @param addresses The list of all addresses
+   * @param addressCount The number of addresses
+   * @param allocatedCount The number of allocated addresses or -1 for unknown
+   * @return The allocated address
+   * @throws NotEnoughResourcesException If an address cannot be allocated.
+   */
+  String allocate( String scope, String tag, Iterable<Integer> addresses, int addressCount, int allocatedCount ) throws NotEnoughResourcesException
 
   void associate( String address, VmInstance instance ) throws ResourceAllocationException
 
+  /**
+   * Release an address
+   *
+   * @param scope The scope (namespace) for the allocation
+   * @param address The address to release
+   * @param ownerId The address owner (the owning resource identifier)
+   * @return The tag for the address if any
+   */
   String release( String scope, String address, String ownerId )
 
   boolean verify( String scope, String address, String ownerId )
