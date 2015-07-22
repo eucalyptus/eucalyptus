@@ -482,14 +482,16 @@ int ncModifyNodeStub(ncStub * pStub, ncMetadata * pMeta, char *stateName)
 //! @param[in]  instancesLen number of instances in the instance list
 //! @param[in]  action IP of the destination Node Controller
 //! @param[in]  credentials credentials that enable the migration
+//! @param[in]  resourceLocations ID=URL list of self-signed URLs (only relevant for 'prepare' on source node)
+//! @param[in]  resourceLocationsLen number of URLs in the list (only relevant for 'prepare' on source node)
 //!
 //! @return the result of doMigrateInstances() (either EUCA_OK or EUCA_ERROR)
 //!
 //! @see doMigrateInstances()
 //!
-int ncMigrateInstancesStub(ncStub * pStub, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials)
+int ncMigrateInstancesStub(ncStub * pStub, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials, char ** resourceLocations, int resourceLocationsLen)
 {
-    return doMigrateInstances(pMeta, instances, instancesLen, action, credentials);
+    return doMigrateInstances(pMeta, instances, instancesLen, action, credentials, resourceLocations, resourceLocationsLen);
 }
 
 //!

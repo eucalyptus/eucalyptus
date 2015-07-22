@@ -634,6 +634,7 @@
 	    <xs:element maxOccurs="unbounded" minOccurs="1" name="instances" type="tns:instanceType"/>
             <xs:element maxOccurs="1" minOccurs="1" name="action" type="xs:string" />
             <xs:element maxOccurs="1" minOccurs="0" name="credentials" type="xs:string" />
+	    <xs:element minOccurs="0" maxOccurs="unbounded" name="resourceLocation" type="xs:string"/>
 	  </xs:sequence>
 	</xs:extension>
       </xs:complexContent>

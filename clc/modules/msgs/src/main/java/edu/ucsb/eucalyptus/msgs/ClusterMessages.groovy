@@ -22,6 +22,8 @@ package edu.ucsb.eucalyptus.msgs
 
 import com.google.common.base.Joiner
 import com.google.common.collect.Lists
+import edu.ucsb.eucalyptus.cloud.VirtualBootRecord
+import groovy.transform.Canonical
 
 public class CloudClusterMessage extends EucalyptusMessage {
 
@@ -105,10 +107,26 @@ public class ClusterGetConsoleOutputType extends CloudClusterMessage {
 }
 
 public class ClusterMigrateInstancesType extends CloudClusterMessage {
-  String sourceHost;
-  String instanceId;
-  ArrayList<String> destinationHosts = new ArrayList<String>( );
-  Boolean allowHosts = false;
+    String sourceHost
+    String instanceId
+    //Array of strings of the format: e[kmr]i-xxxx=http://presignedurl_for_download_manifest
+    ArrayList<String> resourceLocations = new ArrayList<>()
+    ArrayList<String> destinationHosts = new ArrayList<String>( )
+    Boolean allowHosts = false
+
+    public void addResourceLocations(List<VmTypeInfo> resources) {
+        resources.each { VmTypeInfo vmTypeInfo ->
+            ArrayList<VirtualBootRecord> images = Lists.newArrayList(vmTypeInfo.lookupKernel(), vmTypeInfo.lookupRamdisk(), vmTypeInfo.lookupRoot())
+            images.each { VirtualBootRecord image ->
+                if(image != null) {
+                    this.resourceLocations.add(image.getId() + '=' +
+                                               image.getResourceLocation())
+                }
+            }
+
+        }
+        resourceLocations = Lists.newArrayList(resourceLocations.unique())
+    }
 }
 
 public class ClusterMigrateInstancesResponseType extends CloudClusterMessage {}

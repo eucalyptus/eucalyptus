@@ -226,7 +226,7 @@ static int doDescribeBundleTasks(struct nc_state_t *nc, ncMetadata * pMeta, char
 static int doDescribeSensors(struct nc_state_t *nc, ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds,
                              int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
 static int doModifyNode(struct nc_state_t *nc, ncMetadata * pMeta, char *stateName);
-static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials);
+static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials, char **resourceLocations, int resourceLocationsLen);
 static void *startstop_thread(void *arg);
 static int doStartInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
 static int doStopInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
@@ -2330,7 +2330,7 @@ static int doModifyNode(struct nc_state_t *nc, ncMetadata * pMeta, char *stateNa
 //!
 //! TODO: doxygen
 //!
-static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials)
+static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials, char **resourceLocations, int resourceLocationsLen)
 {
     LOGERROR("no default for %s!\n", __func__);
     return (EUCA_UNSUPPORTED_ERROR);
