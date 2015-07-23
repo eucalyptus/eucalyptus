@@ -139,7 +139,7 @@ class ManagedNetworkingService extends NetworkingServiceSupport {
       switch( networkResource ) {
         case PublicIPResource:
           try {
-            Addresses.getInstance( ).lookup( networkResource.value ).release( )
+            Addresses.getInstance( ).lookupActiveAddress( networkResource.value ).release( )
           } catch ( NoSuchElementException e ) {
             logger.info( "IP address not found for release: ${networkResource.value}" )
           } catch ( e ) {

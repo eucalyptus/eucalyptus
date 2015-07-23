@@ -28,6 +28,8 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.common.msgs.AccessLog;
+import com.eucalyptus.objectstorage.ObjectStorageGateway;
+
 
 public class EventHandlerChainModifyAttributes extends EventHandlerChain<ModifyAttributesEvent> {
   private static Logger LOG  = Logger.getLogger(EventHandlerChainModifyAttributes.class);
@@ -55,13 +57,15 @@ public class EventHandlerChainModifyAttributes extends EventHandlerChain<ModifyA
       
       final boolean accessLogEnabled = accessLog.getEnabled();
       if (accessLogEnabled) {
+        // No verification of accessLog.getS3BucketPrefix() is done
         final String bucketName = accessLog.getS3BucketName();
-        final String bucketPrefix = 
-            com.google.common.base.Objects.firstNonNull(accessLog.getS3BucketPrefix(), "");
-        final Integer emitInterval = 
+        final Integer emitInterval =
             com.google.common.base.Objects.firstNonNull(accessLog.getEmitInterval(), 60);
-        if (bucketName == null || bucketName.length() <=0)
-          throw new EventHandlerException("Bucket name must be specified");
+
+
+        if (!ObjectStorageGateway.checkBucketNameValidity(bucketName)) {
+          throw new EventHandlerException("Invalid bucket name specified");
+        }
         if(emitInterval < 5 || emitInterval > 60) {
           throw new EventHandlerException("Access log's emit interval must be between 5 and 60 minutes");
         }

@@ -134,7 +134,6 @@ public class PEMFiles {
     return getBytes( new PemObject( type, bytes ) );
   }
   
-
   public static X509Certificate getCert( final byte[] o ) {
     X509Certificate x509 = null;
     ByteArrayInputStream pemByteIn = new ByteArrayInputStream( o );

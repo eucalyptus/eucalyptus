@@ -85,6 +85,7 @@ import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
+import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
@@ -98,6 +99,10 @@ import com.google.common.collect.Lists;
  *
  */
 public class RemotePrincipalProvider implements PrincipalProvider {
+
+  private static int MAX_RETRIES = 4;
+  private static int RETRY_SLEEP = 20;
+  private static float BACKOFF = 2.5f;
 
   private final Set<String> endpoints;
 
@@ -162,28 +167,44 @@ public class RemotePrincipalProvider implements PrincipalProvider {
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByUserId( final String userId, final String nonce ) throws AuthException {
-    return lookupPrincipalByUserId( userId, nonce );
+  public UserPrincipal lookupCachedPrincipalByUserId( final UserPrincipal userPrincipal, final String userId, final String nonce ) throws AuthException {
+    final DescribePrincipalType request = new DescribePrincipalType( );
+    request.setUserId( userId );
+    request.setNonce( nonce );
+    return resultFor( request, userPrincipal );
+
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByRoleId( final String roleId, final String nonce ) throws AuthException {
-    return lookupPrincipalByRoleId( roleId, nonce );
+  public UserPrincipal lookupCachedPrincipalByRoleId( final UserPrincipal userPrincipal, final String roleId, final String nonce ) throws AuthException {
+    final DescribePrincipalType request = new DescribePrincipalType( );
+    request.setRoleId( roleId );
+    request.setNonce( nonce );
+    return resultFor( request, userPrincipal );
+
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByAccessKeyId( final String keyId, final String nonce ) throws AuthException {
-    return lookupPrincipalByAccessKeyId( keyId, nonce );
+  public UserPrincipal lookupCachedPrincipalByAccessKeyId( final UserPrincipal userPrincipal, final String keyId, final String nonce ) throws AuthException {
+    final DescribePrincipalType request = new DescribePrincipalType( );
+    request.setAccessKeyId( keyId );
+    request.setNonce( nonce );
+    return resultFor( request, userPrincipal );
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByCertificateId( final String certificateId ) throws AuthException {
-    return lookupPrincipalByCertificateId( certificateId );
+  public UserPrincipal lookupCachedPrincipalByCertificateId( final UserPrincipal userPrincipal, final String certificateId ) throws AuthException {
+    final DescribePrincipalType request = new DescribePrincipalType( );
+    request.setCertificateId( certificateId );
+    return resultFor( request, userPrincipal );
+
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByAccountNumber( final String accountNumber ) throws AuthException {
-    return lookupPrincipalByAccountNumber( accountNumber );
+  public UserPrincipal lookupCachedPrincipalByAccountNumber( final UserPrincipal userPrincipal, final String accountNumber ) throws AuthException {
+    final DescribePrincipalType request = new DescribePrincipalType( );
+    request.setAccountId( accountNumber );
+    return resultFor( request, userPrincipal );
   }
 
   @Override
@@ -279,11 +300,13 @@ public class RemotePrincipalProvider implements PrincipalProvider {
   @Override
   public void reserveGlobalName( final String namespace,
                                  final String name,
-                                 final Integer duration ) throws AuthException {
+                                 final Integer duration,
+                                 final String clientToken ) throws AuthException {
     final ReserveNameType request = new ReserveNameType( );
     request.setNamespace( namespace );
     request.setName( name );
     request.setDuration( duration );
+    request.setClientToken( clientToken );
     try {
       send( request );
     } catch ( AuthException e ) {
@@ -335,20 +358,32 @@ public class RemotePrincipalProvider implements PrincipalProvider {
         "identity",
         "identity",
         endpoint );
-    try {
-      return AsyncRequests.sendSync( config, request );
-    } catch ( Exception e ) {
-      if ( Exceptions.isCausedBy( e, SSLHandshakeException.class ) ) {
-        throw new AuthException( "HTTPS connection failed for region host " + endpoint.getHost( ) );
+    for ( int n=0; n<=MAX_RETRIES; n++ ) {
+      try {
+        return AsyncRequests.sendSync( config, request );
+      } catch ( Exception e ) {
+        final Optional<AsyncExceptions.AsyncWebServiceError> errorOptional = AsyncExceptions.asWebServiceError( e );
+        if ( errorOptional.isPresent( ) ) {
+          throw e; // rethrow errors from service
+        }
+        if ( Thread.currentThread( ).isInterrupted( ) || n==MAX_RETRIES ) {
+          if ( Exceptions.isCausedBy( e, SSLHandshakeException.class ) ) {
+            throw new AuthException( "HTTPS connection failed for region host " + endpoint.getHost( ) );
+          }
+          if ( Exceptions.isCausedBy( e, SSLException.class ) ) {
+            throw new AuthException( "HTTPS error for region host " + endpoint.getHost( ) + ": " + String.valueOf( e.getMessage( ) ) );
+          }
+          if ( Exceptions.isCausedBy( e, ConnectException.class ) ) {
+            throw new AuthException( "Error connecting to region host " + endpoint.getHost( ) );
+          }
+          throw e;
+        } else {
+          final long sleep = (long)( RETRY_SLEEP * Math.pow( BACKOFF, n ) );
+          Thread.sleep( sleep );
+        }
       }
-      if ( Exceptions.isCausedBy( e, SSLException.class ) ) {
-        throw new AuthException( "HTTPS error for region host " + endpoint.getHost( ) + ": " + String.valueOf( e.getMessage( ) ) );
-      }
-      if ( Exceptions.isCausedBy( e, ConnectException.class ) ) {
-        throw new AuthException( "Error connecting to region host " + endpoint.getHost( )  );
-      }
-      throw e;
     }
+    throw new Exception( "Retry error" ); // not reachable
   }
 
   private AccountIdentifiers resultFor( final DescribeAccountsType request ) throws AuthException {
@@ -381,11 +416,21 @@ public class RemotePrincipalProvider implements PrincipalProvider {
   }
 
   private UserPrincipal resultFor( final DescribePrincipalType request ) throws AuthException {
+    return resultFor( request, null );
+  }
+
+  private UserPrincipal resultFor( final DescribePrincipalType request, final UserPrincipal cached ) throws AuthException {
     try {
+      if ( cached != null ) {
+        request.setPtag( cached.getPTag( ) );
+      }
       final DescribePrincipalResponseType response = send( request );
       final Principal principal = response.getDescribePrincipalResult( ).getPrincipal( );
       if ( principal == null ) {
         throw new AuthException( "Invalid identity" );
+      }
+      if ( principal.getPtag( ) != null && cached != null && principal.getPtag( ).equals( cached.getPTag( ) ) ) {
+        return cached;
       }
       final UserPrincipal[] userPrincipalHolder = new UserPrincipal[1];
       final Supplier<UserPrincipal> userPrincipalSupplier = new Supplier<UserPrincipal>() {
@@ -498,6 +543,12 @@ public class RemotePrincipalProvider implements PrincipalProvider {
         @Override
         public String getToken() {
           return null;
+        }
+
+        @Nullable
+        @Override
+        public String getPTag() {
+          return principal.getPtag( );
         }
       };
     } catch ( Exception e ) {

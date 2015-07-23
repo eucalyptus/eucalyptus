@@ -42,6 +42,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.InvalidAccessKeyAuthException;
 import com.eucalyptus.auth.api.PrincipalProvider;
 import com.eucalyptus.auth.euare.EuareServerCertificateUtil;
+import com.eucalyptus.auth.euare.UserPrincipalImpl;
 import com.eucalyptus.auth.euare.common.identity.Account;
 import com.eucalyptus.auth.euare.common.identity.DecodeSecurityTokenResponseType;
 import com.eucalyptus.auth.euare.common.identity.DecodeSecurityTokenResult;
@@ -145,8 +146,8 @@ public class IdentityService {
       }
 
       if ( user != null ) {
+        final String ptag = UserPrincipalImpl.ptag( user );
         final Principal principal = new Principal( );
-        principal.setEnabled( user.isEnabled( ) );
         principal.setArn( Accounts.getUserArn( user ) );
         principal.setUserId( user.getUserId( ) );
         principal.setRoleId( Accounts.isRoleIdentifier( user.getAuthenticatedId( ) ) ?
@@ -154,40 +155,44 @@ public class IdentityService {
                 null
         );
         principal.setCanonicalId( user.getCanonicalId( ) );
-        principal.setAccountAlias( user.getAccountAlias() );
-        principal.setPasswordHash( user.getPassword( ) );
-        principal.setPasswordExpiry( user.getPasswordExpires( ) );
+        principal.setPtag( ptag );
+        if ( !ptag.equals( request.getPtag( ) ) ) {
+          principal.setAccountAlias( user.getAccountAlias() );
+          principal.setEnabled( user.isEnabled( ) );
+          principal.setPasswordHash( user.getPassword( ) );
+          principal.setPasswordExpiry( user.getPasswordExpires( ) );
 
-        final ArrayList<com.eucalyptus.auth.euare.common.identity.AccessKey> accessKeys = Lists.newArrayList( );
-        for ( final AccessKey accessKey : Iterables.filter( user.getKeys( ), AccessKeys.isActive( ) ) ) {
-          final com.eucalyptus.auth.euare.common.identity.AccessKey key =
-              new com.eucalyptus.auth.euare.common.identity.AccessKey( );
+          final ArrayList<com.eucalyptus.auth.euare.common.identity.AccessKey> accessKeys = Lists.newArrayList( );
+          for ( final AccessKey accessKey : Iterables.filter( user.getKeys( ), AccessKeys.isActive( ) ) ) {
+            final com.eucalyptus.auth.euare.common.identity.AccessKey key =
+                new com.eucalyptus.auth.euare.common.identity.AccessKey( );
             key.setAccessKeyId( accessKey.getAccessKey( ) );
             key.setSecretAccessKey( accessKey.getSecretKey( ) );
             accessKeys.add( key );
-        }
-        principal.setAccessKeys( accessKeys );
+          }
+          principal.setAccessKeys( accessKeys );
 
-        final ArrayList<com.eucalyptus.auth.euare.common.identity.Certificate> certificates = Lists.newArrayList( );
-        for ( final Certificate certificate :
-            Iterables.filter( user.getCertificates( ), propertyPredicate( true, Certificate.Util.active( ) ) ) ) {
-          final com.eucalyptus.auth.euare.common.identity.Certificate cert =
-              new com.eucalyptus.auth.euare.common.identity.Certificate();
-          cert.setCertificateId( certificate.getCertificateId() );
-          cert.setCertificateBody( certificate.getPem() );
-          certificates.add( cert );
-        }
-        principal.setCertificates( certificates );
+          final ArrayList<com.eucalyptus.auth.euare.common.identity.Certificate> certificates = Lists.newArrayList( );
+          for ( final Certificate certificate :
+              Iterables.filter( user.getCertificates( ), propertyPredicate( true, Certificate.Util.active( ) ) ) ) {
+            final com.eucalyptus.auth.euare.common.identity.Certificate cert =
+                new com.eucalyptus.auth.euare.common.identity.Certificate();
+            cert.setCertificateId( certificate.getCertificateId() );
+            cert.setCertificateBody( certificate.getPem() );
+            certificates.add( cert );
+          }
+          principal.setCertificates( certificates );
 
-        final ArrayList<Policy> policies = Lists.newArrayList( );
-        if ( user.isEnabled( ) ) {
-          Iterables.addAll(
-              policies,
-              Iterables.transform(
-                  user.getPrincipalPolicies( ),
-                  TypeMappers.lookup( PolicyVersion.class, Policy.class ) ) );
+          final ArrayList<Policy> policies = Lists.newArrayList( );
+          if ( user.isEnabled( ) ) {
+            Iterables.addAll(
+                policies,
+                Iterables.transform(
+                    user.getPrincipalPolicies( ),
+                    TypeMappers.lookup( PolicyVersion.class, Policy.class ) ) );
+          }
+          principal.setPolicies( policies );
         }
-        principal.setPolicies( policies );
 
         result.setPrincipal( principal );
       }
@@ -302,7 +307,7 @@ public class IdentityService {
     final ReserveNameResult result = new ReserveNameResult( );
 
     try {
-      principalProvider.reserveGlobalName( request.getNamespace(), request.getName(), request.getDuration() );
+      principalProvider.reserveGlobalName( request.getNamespace(), request.getName(), request.getDuration(), request.getClientToken() );
     } catch ( AuthException e ) {
       if ( AuthException.CONFLICT.equals( e.getMessage( ) ) ) {
         throw new IdentityServiceSenderException( "Conflict", "Name not available: " + request.getName( ) );

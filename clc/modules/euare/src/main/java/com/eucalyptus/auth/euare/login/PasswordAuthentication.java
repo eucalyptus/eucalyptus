@@ -73,7 +73,7 @@ public class PasswordAuthentication {
         updatePassword( user, newPassword );
         checkPasswordExpiration( user );
       }
-      return Accounts.lookupPrincipalByUserId( user.getUserId( ), null );
+      return Accounts.lookupPrincipalByUserId( user.getUserId( ) );
     } else { // can be remote region if not LDAP
       final String accountNumber = Accounts.lookupAccountIdByAlias( accountAlias );
       final UserPrincipal user  = Accounts.lookupPrincipalByAccountNumberAndUsername( accountNumber, username );

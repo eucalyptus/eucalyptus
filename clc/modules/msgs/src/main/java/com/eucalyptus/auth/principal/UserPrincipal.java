@@ -113,4 +113,6 @@ public interface UserPrincipal extends User {
   @Nonnull
   List<PolicyVersion> getPrincipalPolicies( );
 
+  @Nullable
+  String getPTag( );
 }

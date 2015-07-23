@@ -672,7 +672,11 @@ public class DatabaseAccountProxy implements EuareAccount {
       if(! ServerCertificateEntity.isCertificatePathValid(certPath))
         throw new AuthException(AuthException.INVALID_SERVER_CERT_PATH);
 
-      if(! ServerCertificates.isCertValid( certBody, pk, certChain )){
+      try{
+        ServerCertificates.verifyCertificate( certBody, pk, certChain );
+      }catch(final AuthException ex) {
+        throw ex;
+      }catch(final Exception ex) {
         throw new AuthException(AuthException.SERVER_CERT_INVALID_FORMAT);
       }
 

@@ -71,15 +71,13 @@ abstract class NetworkingServiceSupport implements NetworkingService {
       String restoreQualifier = ''
       try {
         try {
-          final Address addr = Addresses.getInstance( ).lookup( publicIPResource.value )
+          final Address addr = Addresses.getInstance( ).lookupActiveAddress( publicIPResource.value )
           if ( addr.reallyAssigned && addr.instanceId == publicIPResource.ownerId ) {
             address = publicIPResource.value
           }
         } catch ( NoSuchElementException ignored ) { // Address disabled
           restoreQualifier = "(from disabled) "
-          final Address addr = Addresses.getInstance( ).lookupDisabled( publicIPResource.value );
-          addr.pendingAssignment( );
-          address = publicIPResource.value
+          address = Addresses.getInstance( ).allocateSystemAddress( publicIPResource.value ).displayName;
         }
       } catch ( final Exception e ) {
         logger.error( "Failed to restore address state ${restoreQualifier}${publicIPResource.value}" +
@@ -87,7 +85,7 @@ abstract class NetworkingServiceSupport implements NetworkingService {
         Logs.extreme( ).error( e, e );
       }
     } else {
-      address = Addresses.allocateSystemAddress( ).displayName
+      address = Addresses.getInstance( ).allocateSystemAddress( ).displayName
     }
 
     address ?

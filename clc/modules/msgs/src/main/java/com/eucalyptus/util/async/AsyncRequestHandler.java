@@ -123,7 +123,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
       final SocketAddress serviceSocketAddress = config.getSocketAddress( );
       final ChannelPipelineFactory factory = config.getComponentId( ).getClientPipeline( );
       try {
-        this.clientBootstrap = WebServices.clientBootstrap( new ChannelPipelineFactory( ) {
+        this.clientBootstrap = config.getComponentId( ).getClientBootstrap( new ChannelPipelineFactory( ) {
           @Override
           public ChannelPipeline getPipeline( ) throws Exception {
             final ChannelPipeline pipeline = factory.getPipeline( );

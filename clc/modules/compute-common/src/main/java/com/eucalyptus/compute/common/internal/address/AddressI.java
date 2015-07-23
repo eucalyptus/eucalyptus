@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,35 +17,22 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.network
+package com.eucalyptus.compute.common.internal.address;
 
-import com.google.common.collect.Maps
-import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
+import javax.annotation.Nullable;
 
 /**
  *
  */
-@CompileStatic
-class PublicAddresses {
-  private static final Map<String,String> dirtyAddresses = Maps.newConcurrentMap( )
-
-  static void markDirty( String address, String partition ) {
-    dirtyAddresses.put( address, partition )
-  }
-
-  @PackageScope
-  static void clearDirty( Collection<String> inUse, String partition ) {
-    dirtyAddresses.each{ String address, String addressPartition ->
-      if ( partition == addressPartition && !inUse.contains( address )) {
-        dirtyAddresses.remove( address )
-      }
-    }
-  }
-
-  @PackageScope
-  static boolean isDirty( String address ) {
-    dirtyAddresses.containsKey( address )
-  }
-
+public interface AddressI {
+  String getAddress( );
+  @Nullable String getOwnerAccountNumber( );
+  @Nullable String getInstanceId( );
+  @Nullable String getInstanceUuid( );
+  @Nullable AddressDomain getDomain( );
+  @Nullable String getAllocationId( );
+  @Nullable String getAssociationId( );
+  @Nullable String getNetworkInterfaceId( );
+  @Nullable String getNetworkInterfaceOwnerId( );
+  @Nullable String getPrivateAddress( );
 }

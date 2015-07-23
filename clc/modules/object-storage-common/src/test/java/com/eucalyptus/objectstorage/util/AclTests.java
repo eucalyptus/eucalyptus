@@ -373,7 +373,7 @@ public class AclTests {
 
   @Test
   public void testAcpGeneration() throws Exception {
-    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().iterator().next()).get(0), null);
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().iterator().next()).get(0));
     String canonicalId = user.getCanonicalId( );
 
     AccessControlList acl = new AccessControlList();
@@ -420,7 +420,7 @@ public class AclTests {
 
   @Test
   public void testAcpGenerationFailWithNulls() throws Exception {
-    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().iterator().next()).get(0), null);
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().iterator().next()).get(0));
     String canonicalId = user.getCanonicalId( );
 
     AccessControlList acl = new AccessControlList();
@@ -453,7 +453,7 @@ public class AclTests {
 
   @Test
   public void testAcpGenerationForDeleteMarkers() throws Exception {
-    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().iterator().next()).get(0), null);
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().iterator().next()).get(0));
     String canonicalId = user.getCanonicalId( );
 
     AccessControlList acl = new AccessControlList();

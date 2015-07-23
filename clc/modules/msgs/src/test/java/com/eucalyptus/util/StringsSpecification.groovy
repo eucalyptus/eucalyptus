@@ -23,6 +23,7 @@ import spock.lang.Specification
 
 import java.util.regex.Pattern
 
+import static com.eucalyptus.util.Strings.concat
 import static com.eucalyptus.util.Strings.regexReplace
 import static com.eucalyptus.util.Strings.substringAfter
 import static com.eucalyptus.util.Strings.substringBefore
@@ -83,4 +84,30 @@ class StringsSpecification extends Specification {
     'aaa'     | 'a(.*)'       | 'b$1'       | null         | 'baa'
     'a\nb\nc' | '(?s).*(b).*' | '$1'        | null         | 'b'
   }
+
+  def 'should support char sequence concatenation'() {
+    expect: 'concatenated character sequence'
+    concat( sequences ).toString( ) == result
+
+    where:
+    result       | sequences
+    ''           | [ '' ]
+    'foo'        | [ 'foo' ]
+    'foobar'     | [ 'foo', 'bar' ]
+    'foobarbaz'  | [ 'foo', 'bar', 'baz' ]
+
+  }
+
+  def 'should support char sequence concatenation with range'() {
+    expect: 'concatenated character sequence'
+    concat( sequences, start, end ).toString( ) == result
+
+    where:
+    result       | start | end | sequences
+    ''           |     0 |   0 | [ '' ]
+    'fo'         |     0 |   2 | [ 'foo' ]
+    'fo'         |     0 |   2 | [ 'foo', 'bar' ]
+    'obarb'      |     2 |   7 | [ 'foo', 'bar', 'baz' ]
+  }
+
 }

@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.address
 
+import com.eucalyptus.compute.common.internal.address.AddressI
 import com.eucalyptus.tags.FilterSupportTest
 import org.junit.Test
 
@@ -29,30 +30,30 @@ class AddressFilterSupportTest extends FilterSupportTest.InstanceTestSupport<Add
 
   @Test
   void testPredicateFilters() {
-    assertMatch( true, "domain", "standard", new Address() )
-    assertMatch( false, "domain", "other", new Address() )
+    assertMatch( true, "domain", "standard", new Address( null ) )
+    assertMatch( false, "domain", "other", new Address( null ) )
 
-    assertMatch( true, "instance-id", "i-00000001", new Address( instanceId: "i-00000001" ) )
-    assertMatch( false, "instance-id", "i-00000001", new Address( instanceId: "i-00000002" ) )
+    assertMatch( true, "instance-id", "i-00000001", new Address( null ){ public String getInstanceId(){ 'i-00000001' } } )
+    assertMatch( false, "instance-id", "i-00000001", new Address( null ){ public String getInstanceId(){ 'i-00000002' } } )
 
-    assertMatch( true, "public-ip", "1.2.3.4", new Address( displayName: "1.2.3.4" ) )
-    assertMatch( false, "public-ip", "1.2.3.4", new Address( displayName: "1.2.3.3" ) )
+    assertMatch( true, "public-ip", "1.2.3.4", new Address( '1.2.3.4' ) )
+    assertMatch( false, "public-ip", "1.2.3.4", new Address( '1.2.3.3' ) )
 
-    // Unsupported VPC filters, should fail by not matching (no error)
-    assertMatch( false, "allocation-id", "value", new Address() )
-    assertMatch( false, "association-id", "value", new Address() )
-    assertMatch( false, "network-interface-id", "value", new Address() )
-    assertMatch( false, "network-interface-owner-id", "value", new Address() )
-    assertMatch( false, "private-ip-address", "value", new Address() )
+    // VPC filters, should fail by not matching (no error)
+    assertMatch( false, "allocation-id", "value", new Address( null ) )
+    assertMatch( false, "association-id", "value", new Address( null ) )
+    assertMatch( false, "network-interface-id", "value", new Address( null ) )
+    assertMatch( false, "network-interface-owner-id", "value", new Address( null ) )
+    assertMatch( false, "private-ip-address", "value", new Address( null ) )
   }
 
   @Test
   void testWildcardPredicateFilter() {
-    assertMatch( true, "domain", "st*", new Address() )
-    assertMatch( false, "domain", "str*", new Address() )
+    assertMatch( true, "domain", "st*", new Address( null ) )
+    assertMatch( false, "domain", "str*", new Address( null ) )
   }
 
-  void assertMatch( final boolean expectedMatch, final String filterKey, final String filterValue, final Address target) {
+  void assertMatch( final boolean expectedMatch, final String filterKey, final String filterValue, final AddressI target) {
     super.assertMatch( new Addresses.AddressFilterSupport(), expectedMatch, filterKey, filterValue, target )
   }
 }

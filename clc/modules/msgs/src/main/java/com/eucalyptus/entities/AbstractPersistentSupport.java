@@ -198,8 +198,16 @@ public abstract class AbstractPersistentSupport<RT extends RestrictedType, AP ex
   }
 
   public boolean delete( final RT metadata ) throws PE {
+    return delete( metadata, Predicates.<AP>alwaysTrue( ) );
+  }
+
+  public boolean delete( final RT metadata, final Predicate<? super AP> precondition ) throws PE {
     try {
-      return Transactions.delete( exampleWithName( AccountFullName.getInstance( metadata.getOwner().getAccountNumber() ), metadata.getDisplayName() ) );
+      return Transactions.delete(
+          exampleWithName(
+              AccountFullName.getInstance( metadata.getOwner( ).getAccountNumber( ) ),
+              metadata.getDisplayName( ) ),
+          precondition );
     } catch ( NoSuchElementException e ) {
       return false;
     } catch ( Exception e ) {

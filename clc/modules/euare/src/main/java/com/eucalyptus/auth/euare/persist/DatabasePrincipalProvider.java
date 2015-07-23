@@ -25,6 +25,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import org.hibernate.FlushMode;
@@ -61,10 +62,12 @@ import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.base.Optional;
+import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 
 /**
@@ -156,27 +159,27 @@ public class DatabasePrincipalProvider implements PrincipalProvider {
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByUserId( final String userId, final String nonce ) throws AuthException {
+  public UserPrincipal lookupCachedPrincipalByUserId( final UserPrincipal cached, final String userId, final String nonce ) throws AuthException {
     return lookupPrincipalByUserId( userId, nonce );
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByRoleId( final String roleId, final String nonce ) throws AuthException {
+  public UserPrincipal lookupCachedPrincipalByRoleId( final UserPrincipal cached, final String roleId, final String nonce ) throws AuthException {
     return lookupPrincipalByRoleId( roleId, nonce );
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByAccessKeyId( final String keyId, final String nonce ) throws AuthException {
+  public UserPrincipal lookupCachedPrincipalByAccessKeyId( final UserPrincipal cached, final String keyId, final String nonce ) throws AuthException {
     return lookupPrincipalByAccessKeyId( keyId, nonce );
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByCertificateId( final String certificateId ) throws AuthException {
+  public UserPrincipal lookupCachedPrincipalByCertificateId( final UserPrincipal cached, final String certificateId ) throws AuthException {
     return lookupPrincipalByCertificateId( certificateId );
   }
 
   @Override
-  public UserPrincipal lookupCachedPrincipalByAccountNumber( final String accountNumber ) throws AuthException {
+  public UserPrincipal lookupCachedPrincipalByAccountNumber( final UserPrincipal cached, final String accountNumber ) throws AuthException {
     return lookupPrincipalByAccountNumber( accountNumber );
   }
 
@@ -294,7 +297,8 @@ public class DatabasePrincipalProvider implements PrincipalProvider {
   @Override
   public void reserveGlobalName( final String namespace,
                                  final String name,
-                                 final Integer duration ) throws AuthException {
+                                 final Integer duration,
+                                 final String clientToken ) throws AuthException {
     final GlobalNamespace globalNamespace;
     try {
       globalNamespace = GlobalNamespace.forNamespace( namespace );
@@ -307,10 +311,23 @@ public class DatabasePrincipalProvider implements PrincipalProvider {
     }
 
     try ( final TransactionResource tx = Entities.transactionFor( ReservedNameEntity.class ) ) {
-      Entities.persist( ReservedNameEntity.create( namespace, name, duration ) );
-      tx.commit();
+      Entities.persist( ReservedNameEntity.create( namespace, name, duration, Strings.emptyToNull( clientToken ) ) );
+      tx.commit( );
     } catch ( ConstraintViolationException e ) {
-      throw new AuthException( AuthException.CONFLICT );
+      boolean conflict = true;
+      if ( !Strings.isNullOrEmpty( clientToken ) ) try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( ReservedNameEntity.class ) ) {
+        // use the existing reservation for the token if it matches and
+        // has half the duration remaining
+        final ReservedNameEntity entity = Entities.uniqueResult( ReservedNameEntity.exampleWithToken( clientToken ) );
+        conflict = !entity.getNamespace( ).equals( namespace ) ||
+            !entity.getName( ).equals( name ) ||
+            entity.getExpiry( ).before( new Date( System.currentTimeMillis( ) + TimeUnit.SECONDS.toMillis( duration / 2  ) ) );
+      } catch ( TransactionException|NoSuchElementException e1 ) {
+        // fail with conflict
+      }
+      if ( conflict ) {
+        throw new AuthException( AuthException.CONFLICT );
+      }
     } catch ( final Exception e ) {
       throw new AuthException( e );
     }

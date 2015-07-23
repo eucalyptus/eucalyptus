@@ -62,6 +62,7 @@
 package com.eucalyptus.auth.euare;
 
 import java.util.List;
+import java.util.UUID;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
@@ -90,7 +91,7 @@ public class Accounts extends com.eucalyptus.auth.Accounts {
 
   public static void reserveGlobalName( GlobalNamespace namespace, String name ) throws AuthException {
     if ( GlobalNamespace.Account_Alias != namespace || !isSystemAccount( name ) ) {
-      getIdentityProvider( ).reserveGlobalName( namespace.getNamespace( ), name, 90 );
+      getIdentityProvider( ).reserveGlobalName( namespace.getNamespace( ), name, 90, UUID.randomUUID( ).toString( ) );
     }
   }
 

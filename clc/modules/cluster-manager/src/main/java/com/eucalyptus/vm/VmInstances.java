@@ -95,9 +95,6 @@ import org.hibernate.criterion.Restrictions;
 import org.hibernate.criterion.SimpleExpression;
 import org.xbill.DNS.Name;
 
-import com.eucalyptus.address.Address;
-import com.eucalyptus.address.Addresses;
-import com.eucalyptus.address.AddressingDispatcher;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.msgs.GetVolumeTokenResponseType;
@@ -186,8 +183,6 @@ import com.eucalyptus.compute.common.internal.network.NetworkGroup;
 import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.images.Emis;
 import com.eucalyptus.network.NetworkGroups;
-import com.eucalyptus.records.EventRecord;
-import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.system.tracking.MessageContexts;
@@ -197,17 +192,13 @@ import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.Intervals;
-import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.util.async.CheckedListenableFuture;
-import com.eucalyptus.util.async.DelegatingRemoteCallback;
 import com.eucalyptus.util.async.MessageCallback;
-import com.eucalyptus.util.async.RemoteCallback;
 import com.eucalyptus.util.dns.DomainNames;
 import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState;
 import com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet;
@@ -817,25 +808,6 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
 	  throw Exceptions.toUndeclared(ex);
 	}
   }
-
-  public static VmInstance lookupByPublicIp( final String ip ) throws NoSuchElementException {
-	try ( TransactionResource db =
-	          Entities.transactionFor( VmInstance.class ) ) {
-      VmInstance vmExample = VmInstance.exampleWithPublicIp( ip );
-      VmInstance vm = ( VmInstance ) Entities.createCriteriaUnique( VmInstance.class )
-                                             .add( Example.create( vmExample ) )
-                                             .add( VmInstance.criterion( VmState.RUNNING, VmState.PENDING ) )
-                                             .uniqueResult();
-      if ( vm == null ) {
-        throw new NoSuchElementException( "VmInstance with public ip: " + ip );
-      }
-      db.commit( );
-      return vm;
-    } catch ( Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
-      throw new NoSuchElementException( ex.getMessage( ) );
-    }
-  }
   
   public static Predicate<VmInstance> withBundleId( final String bundleId ) {
     return new Predicate<VmInstance>( ) {
@@ -875,37 +847,6 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
     RuntimeException logEx = new RuntimeException( "Cleaning up instance: " + vm.getInstanceId( ) + " " + vmLastState + " -> " + vmState );
     LOG.debug( logEx.getMessage( ) );
     Logs.extreme( ).info( logEx, logEx );
-    try {
-      if ( vm.getVpcId() == null ) {
-        try {
-          Address address = Addresses.getInstance( ).lookup( vm.getPublicAddress( ) );
-          if ( ( address.isAssigned( ) && vm.getInstanceId( ).equals( address.getInstanceId( ) ) ) //assigned to this instance explicitly
-               || ( !address.isReallyAssigned( ) && address.isAssigned( ) && VmState.PENDING.equals( vmLastState ) ) ) { //partial assignment implicitly associated with this failed (PENDING->SHUTTINGDOWN) instance
-            if ( address.isSystemOwned( ) ) {
-              EventRecord.caller( VmInstances.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ).debug( );
-            } else {
-              EventRecord.caller( VmInstances.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
-            }
-            unassignAddress( vm, address, rollbackNetworkingOnFailure );
-          }
-        } catch ( final NoSuchElementException e ) {
-          //PENDING->SHUTTINGDOWN might happen before address info reported in describe instances by CC, need to try finding address
-          if ( VmState.PENDING.equals( vmLastState ) || VmStateSet.DONE.contains( vmState ) ) {
-            for ( Address addr : Addresses.getInstance( ).listValues( ) ) {
-              if ( addr.getInstanceId( ).equals( vm.getInstanceId( ) ) ) {
-                unassignAddress( vm, addr, rollbackNetworkingOnFailure );
-                break;
-              }
-            }
-          }
-        } catch ( final Exception e1 ) {
-          LOG.debug( e1, e1 );
-        }
-      }
-    } catch ( final Exception e ) {
-      LOG.error( e );
-      Logs.extreme( ).error( e, e );
-    }
 
     try {
       VmInstances.cleanUpAttachedVolumes( vm );
@@ -948,47 +889,6 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
       LOG.error( ex );
       Logs.extreme( ).error( ex, ex );
     }
-  }
-
-  private static void unassignAddress( final VmInstance vm,
-                                       final Address address,
-                                       final boolean rollbackNetworkingOnFailure ) {
-    boolean wasPending = address.isPending();
-    if ( wasPending ) try {
-      address.clearPending( );
-    } catch ( IllegalStateException e ) {
-      wasPending = false;
-    }
-    RemoteCallback<?,?> callback = address.unassign().getCallback();
-    Callback.Failure failureHander;
-    if ( rollbackNetworkingOnFailure && !wasPending && !VmStateSet.DONE.apply( vm ) ) {
-      callback = DelegatingRemoteCallback.suppressException( callback );
-      failureHander = new Callback.Failure<java.lang.Object>() {
-        @Override
-        public void fireException( final Throwable t ) {
-          // Revert the cloud state change
-          LOG.info( "Unable to assign address " + address.getName() + " for " + vm.getInstanceId() + ", will retry."  );
-          if ( address.isPending( ) ) {
-            try {
-              address.clearPending( );
-            } catch ( Exception ex ) {
-            }
-          }
-          try {
-            if ( !address.isAllocated() ) {
-              address.pendingAssignment();
-            }
-            address.assign( vm ).clearPending();
-          } catch ( Exception e ) {
-            LOG.error( e, e );
-            LOG.warn( "Address potentially in an inconsistent state: " + LogUtil.dumpObject( address ) );
-          }
-        }
-      };
-    } else {
-      failureHander = Callbacks.noopFailure();
-    }
-    AddressingDispatcher.dispatch( AsyncRequests.newRequest( callback ).then( failureHander ), vm.getPartition() );
   }
 
   private static void cleanUpAttachedVolumes( final String instanceId,
@@ -1135,7 +1035,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
         }
       }, VmInstances.TX_RETRIES ).apply( instanceId );
     } catch ( Exception ex ) {
-      LOG.error( ex );
+      LOG.error( "Error deleting instance ("+instanceId+") :" + ex );
       Logs.extreme( ).error( ex, ex );
     }
   }

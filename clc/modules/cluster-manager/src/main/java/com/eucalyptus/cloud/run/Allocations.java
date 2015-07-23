@@ -543,7 +543,7 @@ public class Allocations {
       return context != null ?
           context.getAuthContext( ) :
           Permissions.createAuthContextSupplier(
-              Accounts.lookupPrincipalByUserId( getOwnerFullName( ).getUserId( ), null ),
+              Accounts.lookupPrincipalByUserId( getOwnerFullName( ).getUserId( ) ),
               Collections.<String,String>emptyMap( ) );
     }
   }

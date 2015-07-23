@@ -246,7 +246,7 @@ public class BucketFactoryTest {
     String location = ""
     String correlationId = "123456789"
 
-    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
     String canonicalId = user.getCanonicalId()
     def tmpAcp = new AccessControlPolicy()
     tmpAcp.setAccessControlList(new AccessControlList())

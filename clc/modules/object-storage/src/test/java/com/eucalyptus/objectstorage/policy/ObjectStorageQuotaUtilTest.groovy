@@ -58,12 +58,12 @@ public class ObjectStorageQuotaUtilTest {
   private static void initMetaData() {
     def name = "bucket"
     account1 = Accounts.lookupAccountIdentifiersByAlias(UnitTestSupport.getTestAccounts().first())
-    a1u1 = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
-    a1u2 = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).getAt(1), null)
+    a1u1 = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
+    a1u2 = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).getAt(1))
 
     account2 = Accounts.lookupAccountIdentifiersByAlias(UnitTestSupport.getTestAccounts().getAt(1))
-    a2u1 = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().getAt(1)).first(), null)
-    a2u2 = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().getAt(1)).getAt(1), null)
+    a2u1 = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().getAt(1)).first())
+    a2u2 = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().getAt(1)).getAt(1))
 
     def acl = ""
     def location = ""

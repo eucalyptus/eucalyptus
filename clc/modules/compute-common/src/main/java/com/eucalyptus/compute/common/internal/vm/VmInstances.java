@@ -71,9 +71,11 @@ import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Criterion;
+import org.hibernate.criterion.Example;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.auth.principal.OwnerFullName;
@@ -136,6 +138,33 @@ public class VmInstances {
    */
   public static Function<String,VmInstance> lookup() {
     return Functions.compose( TerminatedInstanceCheck.INSTANCE, PersistentLookup.INSTANCE );
+  }
+
+  /**
+   * Function for lookup of running VM instance by public IP.
+   *
+   * @param ip The public/elastic IP for the instance
+   * @return The instance
+   * @throws NoSuchElementException if an instance was not found with the IP
+   */
+  @Nonnull
+  public static VmInstance lookupByPublicIp( final String ip ) throws NoSuchElementException {
+    try ( TransactionResource db =
+              Entities.transactionFor( VmInstance.class ) ) {
+      VmInstance vmExample = VmInstance.exampleWithPublicIp( ip );
+      VmInstance vm = ( VmInstance ) Entities.createCriteriaUnique( VmInstance.class )
+          .add( Example.create( vmExample ) )
+          .add( VmInstance.criterion( VmInstance.VmState.RUNNING, VmInstance.VmState.PENDING ) )
+          .uniqueResult();
+      if ( vm == null ) {
+        throw new NoSuchElementException( "VmInstance with public ip: " + ip );
+      }
+      db.commit( );
+      return vm;
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      throw new NoSuchElementException( ex.getMessage( ) );
+    }
   }
 
   /**
