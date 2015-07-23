@@ -694,7 +694,7 @@ static void update_resource_locations(virtualMachine *vm, char ** resourceLocati
             if ((strstr(id_loc, vbr->id) == id_loc) // id_loc begins with ID
                 && (strlen(id_loc) > (strlen(vbr->id) + 1))) { // id_loc has more than ID and '='
                 char * loc = id_loc + strlen(vbr->id) + 1; // URL starts after ID and '='
-                strncpy(vbr->resourceLocation, loc, sizeof(vbr->resourceLocation)); // update the URL of in-memory struct
+                euca_strncpy(vbr->resourceLocation, loc, sizeof(vbr->resourceLocation)); // update the URL of in-memory struct
             }
         }
     }
