@@ -171,7 +171,7 @@ static int doInitialize(struct nc_state_t *nc);
 static void *rebooting_thread(void *arg);
 static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
 static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char **consoleOutput);
-static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials);
+static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials, char ** resourceLocations, int resourceLocationsLen);
 static int generate_migration_keys(char *host, char *credentials, boolean restart, ncInstance * instance);
 
 /*----------------------------------------------------------------------------*\
@@ -680,6 +680,29 @@ out:
 }
 
 //!
+//! Updates VBR[] of the instance struct (which must be locked by
+//! the caller) with new resource locations (URLs of images) if
+//! such are present in the new
+//!
+static void update_resource_locations(virtualMachine *vm, char ** resourceLocations, int resourceLocationsLen)
+{
+    for (int i = 0; i < EUCA_MAX_VBRS && i < vm->virtualBootRecordLen; i++) {
+        virtualBootRecord *vbr = &(vm->virtualBootRecord[i]);
+
+        // see if ID in the VBR is among IDs associated with resourceLocations to be updated
+        for (int j = 0; j < resourceLocationsLen; j++) {
+            char * id_loc = resourceLocations[j];
+
+            if ((strstr(id_loc, vbr->id) == id_loc) // id_loc begins with ID
+                && (strlen(id_loc) > (strlen(vbr->id) + 1))) { // id_loc has more than ID and '='
+                char * loc = id_loc + strlen(vbr->id) + 1; // URL starts after ID and '='
+                euca_strncpy(vbr->resourceLocation, loc, sizeof(vbr->resourceLocation)); // update the URL of in-memory struct
+            }
+        }
+    }
+}
+
+//!
 //! Handles the instance migration request.
 //!
 //! @param[in]  nc a pointer to the node controller (NC) state
@@ -694,7 +717,7 @@ out:
 //! @pre
 //!
 //! @post
-static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials)
+static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials, char ** resourceLocations, int resourceLocationsLen)
 {
     int ret = EUCA_OK;
     int credentials_prepared = 0;
@@ -750,6 +773,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
                 euca_strncpy(instance->migration_credentials, credentials, CREDENTIAL_SIZE);
                 instance->migrationTime = time(NULL);
+                update_resource_locations(&(instance->params), resourceLocations, resourceLocationsLen);
                 save_instance_struct(instance);
                 copy_instances();
                 sem_v(inst_sem);
@@ -857,6 +881,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             euca_strncpy(instance->migration_src, sourceNodeName, HOSTNAME_SIZE);
             euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
             euca_strncpy(instance->migration_credentials, credentials, CREDENTIAL_SIZE);
+            update_resource_locations(&(instance->params), resourceLocations, resourceLocationsLen);
             sem_v(inst_sem);
 
             // Establish migration-credential keys.

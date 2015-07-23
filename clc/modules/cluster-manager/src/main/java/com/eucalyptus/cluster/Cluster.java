@@ -69,10 +69,12 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.security.cert.X509Certificate;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
@@ -88,6 +90,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.annotation.Nullable;
 
+import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.component.*;
 
 import org.apache.log4j.Logger;
@@ -107,6 +110,7 @@ import com.eucalyptus.cluster.callback.VmStateCallback;
 import com.eucalyptus.component.Faults.CheckException;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.ClusterController.GatherLogService;
+import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.crypto.util.B64;
@@ -120,12 +124,14 @@ import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.empyrean.ServiceTransitionType;
 import com.eucalyptus.empyrean.StartServiceType;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.Listeners;
+import com.eucalyptus.images.Emis;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
@@ -165,15 +171,20 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.collect.ForwardingMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.ObjectArrays;
+import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
+import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ClusterMigrateInstancesType;
 import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
 import edu.ucsb.eucalyptus.msgs.NodeLogInfo;
+import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, EventListener, HasStateMachine<Cluster, Cluster.State, Cluster.Transition> {
   private static Logger                                  LOG            = Logger.getLogger( Cluster.class );
@@ -352,8 +363,8 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     
     @Override
     public void fire( DescribeServicesResponseType msg ) {
-      List<ServiceStatusType> serviceStatuses = msg.getServiceStatuses( );
-      Cluster parent = this.getSubject( );
+      List<ServiceStatusType> serviceStatuses = msg.getServiceStatuses();
+      Cluster parent = this.getSubject();
       LOG.debug( "DescribeServices for " + parent.getFullName( ) );
       if ( serviceStatuses.isEmpty( ) ) {
         throw new NoSuchElementException( "Failed to find service info for cluster: " + parent.getFullName( ) );
@@ -389,8 +400,9 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
           }
         }
       }
-      LOG.error( "Failed to find service info for cluster: " + parent.getFullName( ) + " instead found service status for: "
-                 + serviceStatuses );
+      LOG.error("Failed to find service info for cluster: " + parent.getFullName()
+                + " instead found service status for: "
+                + serviceStatuses);
       throw new NoSuchElementException( "Failed to find service info for cluster: " + parent.getFullName( ) );
     }
     
@@ -833,20 +845,20 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   }
   
   public X509Certificate getClusterCertificate( ) {
-    return Partitions.lookup( this.configuration ).getCertificate( );
+    return Partitions.lookup( this.configuration ).getCertificate();
   }
   
   public X509Certificate getNodeCertificate( ) {
-    return Partitions.lookup( this.configuration ).getNodeCertificate( );
+    return Partitions.lookup( this.configuration ).getNodeCertificate();
   }
   
   @Override
   public String getName( ) {
-    return this.configuration.getName( );
+    return this.configuration.getName();
   }
   
   public NavigableSet<String> getNodeTags( ) {
-    return this.nodeMap.navigableKeySet( );
+    return this.nodeMap.navigableKeySet();
   }
   
   public NodeInfo getNode( final String serviceTag ) {
@@ -909,10 +921,10 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
             Logs.extreme( ).debug( ex, ex );
           }
         }
-        Listeners.register( Hertz.class, this );
+        Listeners.register(Hertz.class, this);
       }
     } catch ( final NoSuchElementException ex ) {
-      Logs.extreme( ).debug( ex, ex );
+      Logs.extreme().debug(ex, ex);
       throw ex;
     } catch ( final Exception ex ) {
       Logs.extreme( ).debug( ex, ex );
@@ -969,7 +981,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
 //                                              + ex.getMessage( ), ex );
     } finally {
       try {
-        Clusters.getInstance( ).disable( this.getName( ) );
+        Clusters.getInstance( ).disable(this.getName());
       } catch ( Exception ex ) {}
     }
   }
@@ -1038,27 +1050,27 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   }
   
   public URI getUri( ) {
-    return ServiceUris.remote( this.configuration );
+    return ServiceUris.remote(this.configuration);
   }
   
   public String getHostName( ) {
-    return this.configuration.getHostName( );
+    return this.configuration.getHostName();
   }
   
   public String getInsecureServicePath( ) {
-    return this.configuration.getInsecureServicePath( );
+    return this.configuration.getInsecureServicePath();
   }
   
   public Integer getPort( ) {
-    return this.configuration.getPort( );
+    return this.configuration.getPort();
   }
   
   public String getServicePath( ) {
-    return this.configuration.getServicePath( );
+    return this.configuration.getServicePath();
   }
   
   public ThreadFactory getThreadFactory( ) {
-    return Threads.lookup( ClusterController.class, Cluster.class, this.getFullName( ).toString( ) );
+    return Threads.lookup(ClusterController.class, Cluster.class, this.getFullName().toString());
   }
   
   @Override
@@ -1099,7 +1111,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
          * this.getServiceEndpoint( ) );
          **/
       } catch ( final Throwable t ) {
-        LOG.error( t, t );
+        LOG.error(t, t);
       } finally {
         this.logUpdate.set( false );
       }
@@ -1151,7 +1163,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       return false;
     }
     
-    final X509Certificate clusterx509 = PEMFiles.getCert( B64.standard.dec( certs.getCcCert( ) ) );
+    final X509Certificate clusterx509 = PEMFiles.getCert(B64.standard.dec(certs.getCcCert()));
     final X509Certificate nodex509 = PEMFiles.getCert( B64.standard.dec( certs.getNcCert( ) ) );
     if ( "self".equals( certs.getServiceTag( ) ) || ( certs.getServiceTag( ) == null ) ) {
       return ( this.hasClusterCert = this.checkCerts( this.getClusterCertificate( ), clusterx509 ) )
@@ -1185,7 +1197,8 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   
   private AbstractTransitionAction<Cluster> newLogRefresh( final Class msgClass ) {//TODO:GRZE:REMOVE
     final Cluster cluster = this;
-    final SubjectRemoteCallbackFactory<RemoteCallback, Cluster> factory = newSubjectMessageFactory( msgClass, cluster );
+    final SubjectRemoteCallbackFactory<RemoteCallback, Cluster> factory = newSubjectMessageFactory(
+        msgClass, cluster);
     return new AbstractTransitionAction<Cluster>( ) {
       
       @Override
@@ -1205,9 +1218,9 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   @Override
   public void fireEvent( final Event event ) {
     if ( !Bootstrap.isFinished( ) ) {
-      LOG.info( this.getFullName( ) + " skipping clock event because bootstrap isn't finished" );
+      LOG.info(this.getFullName() + " skipping clock event because bootstrap isn't finished");
     } else if ( Hosts.isCoordinator( ) && event instanceof Hertz ) {
-      this.fireClockTick( ( Hertz ) event );
+      this.fireClockTick((Hertz) event);
     }
   }
   
@@ -1279,7 +1292,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   
   private <T extends Throwable> boolean swallowException( final T t ) {
     LOG.error( this.getConfiguration( ).getFullName( ) + " checking: " + Exceptions.causeString( t ) );
-    if ( Exceptions.isCausedBy( t, InterruptedException.class ) ) {
+    if ( Exceptions.isCausedBy(t, InterruptedException.class) ) {
       Thread.currentThread( ).interrupt( );
       return true;
     } else if ( Exceptions.isCausedBy( t, FailedRequestException.class ) ) {
@@ -1354,7 +1367,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   
   @Override
   public String getPartition( ) {
-    return this.configuration.getPartition( );
+    return this.configuration.getPartition();
   }
   
   public Partition lookupPartition( ) {
@@ -1363,7 +1376,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   
   @Override
   public FullName getFullName( ) {
-    return this.configuration.getFullName( );
+    return this.configuration.getFullName();
   }
   
   @Override
@@ -1425,13 +1438,17 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         //#3 Update node and resource information 
         this.retryCheck( );
         //#4 Find all VMs and update their migration state and volumes
-        this.prepareInstanceEvacuations( sourceHost );
+        List<String> instanceIds = this.prepareInstanceEvacuations( sourceHost );
         //#5 Send the MigrateInstances operation.
         try {
+          //Get updated download manifests for PV instances
+          final Map<Boolean, Set<String>> updatedResources = getFreshBootrecords(instanceIds, true);
+
           AsyncRequests.sendSync( this.getConfiguration( ), new ClusterMigrateInstancesType( ) {
             {
               this.setCorrelationId( Contexts.lookup( ).getCorrelationId( ) );
               this.setSourceHost( sourceHost );
+              this.setResourceLocations(Lists.newArrayList(updatedResources.get(true)));
               this.setAllowHosts( destHostsWhiteList );
               this.getDestinationHosts( ).addAll( destHosts );
             }
@@ -1453,6 +1470,62 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     } else {
       throw new ServiceStateException( "Failed to request migration in the zone " + this.getPartition( ) + ", it is currently locked for maintenance." );
     }
+  }
+
+  /**
+   * Given a list of instance IDs, return a list of VmTypeInfos with updated download manifest URLs
+   * that are valid for the default timeout (hours) for the instances in the id list that are PV
+   * instances. Thus, length of input and output lists may vary due to filtering.
+   * @param instanceIdsToRefresh
+   * @return map of true->Set of eki/eri=signedUrls and false->Set of instanceIds with some failure (e.g eri/eki not found)
+   */
+  protected static Map<Boolean, Set<String>> getFreshBootrecords(List<String> instanceIdsToRefresh, boolean pvOnly)
+      throws MetadataException {
+    VmInstance vm;
+    Map<Boolean, Set<String>> outputMap = Maps.newHashMap();
+    outputMap.put(true, new HashSet<String>());
+    outputMap.put(false, new HashSet<String>());
+
+    for(String id : instanceIdsToRefresh) {
+      try ( final TransactionResource db = Entities.transactionFor(VmInstance.class) ) {//scope for transaction
+        vm = VmInstances.lookup(id);
+        //Only update PV images, because NC needs URLs for ramdisk and kernels
+        if(pvOnly && ImageMetadata.VirtualizationType.paravirtualized.equals(
+            ImageMetadata.VirtualizationType.fromString().apply(vm.getVirtualizationType()))) {
+
+          Emis.BootableSet bs = Emis.recreateBootableSet(vm);
+
+          if(bs.hasKernel() && !outputMap.get(true).contains(bs.getKernel().getDisplayName())) {
+            try {
+              outputMap.get(true).add(bs.getKernel().getDisplayName() + "=" + bs
+                  .getKernelDownloadManifest(
+                      Partitions.lookupByName(vm.getPartition()).getNodeCertificate()
+                          .getPublicKey(), vm.getReservationId()));
+            } catch(MetadataException ex) {
+              LOG.warn("Could not get kernel download manifest for migration of instance: " + id + ". Migration may fail for this instance", ex);
+              throw ex;
+            }
+          }
+
+          if(bs.hasRamdisk() && !outputMap.get(true).contains(bs.getRamdisk().getDisplayName())) {
+            try {
+              outputMap.get(true).add(bs.getRamdisk().getDisplayName() + "=" + bs
+                  .getRamdiskDownloadManifest(
+                      Partitions.lookupByName(vm.getPartition()).getNodeCertificate()
+                          .getPublicKey(), vm.getReservationId()));
+            } catch(MetadataException ex) {
+              LOG.warn("Could not get ramdisk download manifest for migration of instance: " + id + ". Migration may fail for this instance", ex);
+              throw ex;
+            }
+          }
+        }
+      } catch (Exception e) {
+        LOG.warn("Failure during update of download manifest while building new bootset. May not be able migrate this instance: " + id, e);
+        outputMap.get(false).add(id);
+      }
+    }
+
+    return outputMap;
   }
 
   /**
@@ -1483,13 +1556,18 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         this.retryCheck( );
         //#4 Find all VMs and update their migration state and volumes
         this.prepareInstanceMigrations( instanceId );
-        //#5 Send the MigrateInstances operation.
+
         try {
+          //Get updated download manifests for PV instances
+          final Map<Boolean, Set<String>> updatedResources = getFreshBootrecords(ImmutableList.of(instanceId), true);
+
+          //#5 Send the MigrateInstances operation.
           AsyncRequests.sendSync( this.getConfiguration( ), new ClusterMigrateInstancesType( ) {
             {
-              this.setCorrelationId( Contexts.lookup( ).getCorrelationId( ) );
-              this.setInstanceId( instanceId );
-              this.setAllowHosts( destHostsWhiteList );
+              this.setCorrelationId( Contexts.lookup( ).getCorrelationId());
+              this.setInstanceId(instanceId);
+              this.setResourceLocations(Lists.newArrayList(updatedResources.get(true)));
+              this.setAllowHosts(destHostsWhiteList);
               this.getDestinationHosts( ).addAll( destHosts );
             }
           } );
@@ -1535,7 +1613,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   }
 
   @SuppressWarnings( "unchecked" )
-  private void prepareInstanceEvacuations( final String sourceHost ) {
+  private List<String> prepareInstanceEvacuations( final String sourceHost ) {
     Predicate<VmInstance> filterHost = new Predicate<VmInstance>( ) {
       
       @Override
@@ -1554,7 +1632,14 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     };
     Predicate<VmInstance> filterAndAbort = Predicates.and( this.filterPartition, startMigration );
     Predicate<VmInstance> startMigrationTx = Entities.asTransaction( VmInstance.class, filterAndAbort );
-    VmInstances.list( startMigrationTx );
+    return Lists.transform(VmInstances.list(startMigrationTx), new Function<VmInstance, String>() {
+      @Nullable
+      @Override
+      public String apply(@Nullable VmInstance vmInstance) {
+        return vmInstance.getInstanceId();
+      }
+    });
+
   }
 
   private void rollbackInstanceMigrations( final String instanceId ) {

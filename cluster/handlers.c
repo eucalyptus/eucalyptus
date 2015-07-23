@@ -1003,7 +1003,9 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             int instancesLen = va_arg(al, int);
             char *action = va_arg(al, char *);
             char *credentials = va_arg(al, char *);
-            rc = ncMigrateInstancesStub(ncs, localmeta, instances, instancesLen, action, credentials);
+            char **resourceLocations = va_arg(al, char **);
+            int resourceLocationsLen = va_arg(al, int);
+            rc = ncMigrateInstancesStub(ncs, localmeta, instances, instancesLen, action, credentials, resourceLocations, resourceLocationsLen);
             WRITE_REPLY_STRING;
         } else if (!strcmp(ncOp, "ncStartInstance")) {
             char *instanceId = va_arg(al, char *);
@@ -2965,10 +2967,10 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                 if (!strcmp(migration_action, "commit")) {
                     LOGDEBUG("[%s] notifying source %s to commit migration\n", migration_instance, migration_host);
                     // Note: Really only need to specify the instance here.
-                    doMigrateInstances(pMeta, migration_host, migration_instance, NULL, 0, 0, "commit");
+                    doMigrateInstances(pMeta, migration_host, migration_instance, NULL, 0, 0, "commit", NULL, 0);
                 } else if (!strcmp(migration_action, "rollback")) {
                     LOGDEBUG("[%s] notifying node %s to roll back migration\n", migration_instance, migration_host);
-                    doMigrateInstances(pMeta, migration_host, migration_instance, NULL, 0, 0, "rollback");
+                    doMigrateInstances(pMeta, migration_host, migration_instance, NULL, 0, 0, "rollback", NULL, 0);
                 } else {
                     LOGWARN("unexpected migration action '%s' for node %s -- doing nothing\n", migration_action, migration_host);
                 }
@@ -4897,6 +4899,8 @@ out:
 //! @param[in] destinationNodeCount the number of destinationNodes
 //! @param[in] allowHosts determines whether destinationNodes is used as a whitelist or blacklist
 //! @param[in] nodeAction the action to perform on the NC
+//! @param[in] resourceLocations ID=URL list of self-signed URLs for images potentially used on the source node
+//! @param[in] resourceLocationsLen number of URLs in the list
 //!
 //! @return
 //!
@@ -4904,7 +4908,7 @@ out:
 //!
 //! @note
 //!
-int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, char **destinationNodes, int destinationNodeCount, int allowHosts, char *nodeAction)
+int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, char **destinationNodes, int destinationNodeCount, int allowHosts, char *nodeAction, char **resourceLocations, int resourceLocationCount)
 {
     char credentials[CREDENTIAL_SIZE];
     int i, rc, ret = 0, timeout;
@@ -5077,7 +5081,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
         populateOutboundMeta(pMeta);
 
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
-                          nc_instances, found_instances, nodeAction, credentials);
+                          nc_instances, found_instances, nodeAction, credentials, resourceLocations, resourceLocationCount);
         if (rc) {
             LOGERROR("failed: request to prepare migration[s] from source %s\n", resourceCacheLocal.resources[src_index].hostname);
             if (pMeta->replyString == NULL) {   // NC did not send back an error string
@@ -5129,7 +5133,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
                 populateOutboundMeta(pMeta);
 
                 rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL, "ncMigrateInstances",
-                                  &(nc_instances[idx]), 1, nodeAction, credentials);
+                                  &(nc_instances[idx]), 1, nodeAction, credentials, resourceLocations, resourceLocationCount);
                 if (rc) {
                     LOGERROR("[%s] failed: request to prepare migration on destination %s\n", nc_instances[idx]->instanceId, resourceCacheLocal.resources[dst_index].hostname);
                     ++inst_fail;
@@ -5155,7 +5159,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
 
         // No need to send credentials with commit call: they were already passed to source and destination during prepare call.
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstances",
-                          nc_instances, found_instances, nodeAction, NULL);
+                          nc_instances, found_instances, nodeAction, NULL, NULL, 0);
         if (rc) {
             LOGERROR("failed: request to commit migration on source\n");
             ret = 1;
@@ -5191,7 +5195,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
         populateOutboundMeta(pMeta);
 
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL, "ncMigrateInstances",
-                          nc_instances, found_instances, nodeAction, NULL);
+                          nc_instances, found_instances, nodeAction, NULL, NULL, 0);
         if (rc) {
             LOGERROR("failed: request to roll back migration on node\n");
             ret = 1;
