@@ -1486,7 +1486,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     outputMap.put(true, new HashSet<String>());
     outputMap.put(false, new HashSet<String>());
 
-    Lists.newArrayList();
     for(String id : instanceIdsToRefresh) {
       try ( final TransactionResource db = Entities.transactionFor(VmInstance.class) ) {//scope for transaction
         vm = VmInstances.lookup(id);
@@ -1503,8 +1502,8 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
                       Partitions.lookupByName(vm.getPartition()).getNodeCertificate()
                           .getPublicKey(), vm.getReservationId()));
             } catch(MetadataException ex) {
-              LOG.warn("Could not get kernel download manifest for migration of instance " + id + ". Migration may fail for this instance", ex);
-              outputMap.get(false).add(id);
+              LOG.warn("Could not get kernel download manifest for migration of instance: " + id + ". Migration may fail for this instance", ex);
+              throw ex;
             }
           }
 
@@ -1515,33 +1514,15 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
                       Partitions.lookupByName(vm.getPartition()).getNodeCertificate()
                           .getPublicKey(), vm.getReservationId()));
             } catch(MetadataException ex) {
-              LOG.warn("Could not get ramdisk download manifest for migration of instance " + id + ". Migration may fail for this instance", ex);
-              outputMap.get(false).add(id);
+              LOG.warn("Could not get ramdisk download manifest for migration of instance: " + id + ". Migration may fail for this instance", ex);
+              throw ex;
             }
           }
-
-          /*
-          VmTypeInfo info = bs.populateVirtualBootRecord(vm.getVmType(), Partitions.lookupByName(vm.getPartition()), vm.getReservationId());
-          for(VirtualBootRecord vbr : info.getVirtualBootRecord()) {
-            try {
-              if (!vbr.isBlockStorage() && vbr.hasValidId()) {
-                resultSet.add(vbr.getId() + "=" + vbr.getResourceLocation());
-              }
-            } catch(NoSuchElementException e) {
-              //Some other vbr type (e.g. 'none'). No resource to use, so skip.
-              continue;
-            }
-          }*/
         }
-      } catch(NoSuchElementException e) {
-        LOG.warn("During update of download manifests for instance: " + id + ", found unexpected virt type. Skipping download manifest generation for this instance");
       } catch (Exception e) {
-        LOG.warn("During update of download manifest for instance: " + id
-                 + ", got metadata exception building new bootset. May not be able migrate this instance.",
-                 e);
-        throw e;
+        LOG.warn("Failure during update of download manifest while building new bootset. May not be able migrate this instance: " + id, e);
+        outputMap.get(false).add(id);
       }
-
     }
 
     return outputMap;
