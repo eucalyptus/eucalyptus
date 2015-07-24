@@ -673,6 +673,11 @@ public class CloudFormationService {
     return reply;
   }
 
+  public GetTemplateSummaryResponseType getTemplateSummary(GetTemplateSummaryType request)
+    throws CloudFormationException {
+    return request.getReply();
+  }
+
   public ListStackResourcesResponseType listStackResources(ListStackResourcesType request)
       throws CloudFormationException {
     ListStackResourcesResponseType reply = request.getReply();
@@ -786,6 +791,11 @@ public class CloudFormationService {
       handleException(ex);
     }
     return reply;
+  }
+
+  public SignalResourceResponseType signalResource(SignalResourceType request)
+    throws CloudFormationException {
+    return request.getReply();
   }
 
   public UpdateStackResponseType updateStack(UpdateStackType request)

@@ -120,6 +120,20 @@ public class Outputs extends EucalyptusData {
     return "Outputs [member=" + member + "]";
   }
 }
+public class ParameterDeclarations extends EucalyptusData {
+  @HttpEmbedded(multiple=true)
+  @HttpParameterMapping(parameter="member")
+  ArrayList<ParameterDeclaration> member = new ArrayList<ParameterDeclaration>();
+  public ParameterDeclarations() {  }
+  public ParameterDeclarations( ParameterDeclaration parameterDeclaration ) {
+    member.add( parameterDeclaration  )
+  }
+  @Override
+  public String toString() {
+    return "ParameterDeclarations [member=" + member + "]";
+  }
+}
+
 public class Parameters extends EucalyptusData {
   @HttpEmbedded(multiple=true)
   @HttpParameterMapping(parameter="member")
@@ -280,6 +294,25 @@ public class GetTemplateResult extends EucalyptusData {
   String templateBody;
   public GetTemplateResult() {  }
 }
+public class GetTemplateSummaryResult extends EucalyptusData {
+  @JsonProperty("Capabilities")
+  @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
+  ResourceList capabilities;
+  @JsonProperty("CapabilitiesReason")
+  String capabilitiesReason;
+  @JsonProperty("Description")
+  String description;
+  @JsonProperty("Metadata")
+  String metadata;
+  @JsonProperty("Parameters")
+  @JsonSerialize(using = ParameterDeclarationsRemoveMemberSerializer.class, as=ParameterDeclarations.class)
+  ParameterDeclarations parameters;
+  @JsonProperty("Version")
+  String version;
+  public GetTemplateSummaryResult() {  }
+}
+
+
 public class ListStackResourcesResult extends EucalyptusData {
   @JsonProperty("NextToken")
   String nextToken
@@ -315,6 +348,25 @@ public class Parameter extends EucalyptusData {
     this.parameterKey = key;
     this.parameterValue = value;
   }
+}
+public class ParameterDeclaration extends EucalyptusData {
+  @JsonProperty("DefaultValue")
+  String defaultValue;
+  @JsonProperty("Description")
+  String description;
+  @JsonProperty("NoEcho")
+  Boolean noEcho;
+  @JsonProperty("ParameterConstraints")
+  @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
+  ResourceList parameterConstraints;
+  @JsonProperty("ParameterKey")
+  String parameterKey;
+  @JsonProperty("ParameterType")
+  String parameterType;
+  public ParameterDeclaration() {  }
+}
+public class SignalResourceResult extends EucalyptusData {
+  public SignalResourceResult() {  }
 }
 public class Stack extends EucalyptusData {
   @JsonProperty("Capabilities")
@@ -638,6 +690,23 @@ public class GetStackPolicyResponseType extends CloudFormationMessage {
   @JsonProperty("ResponseMetadata")
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
+public class GetTemplateSummaryType extends CloudFormationMessage {
+  public GetTemplateSummaryType() {  }
+  @JsonProperty("StackName")
+  String stackName;
+  @JsonProperty("TemplateBody")
+  String templateBody;
+  @JsonProperty("TemplateURL")
+  String templateURL;
+}
+public class GetTemplateSummaryResponseType extends CloudFormationMessage {
+  public GetTemplateSummaryResponseType() {  }
+  @JsonProperty("GetTemplateSummaryResult")
+  GetTemplateSummaryResult getTemplateSummaryResult = new GetTemplateSummaryResult();
+  @JsonProperty("ResponseMetadata")
+  ResponseMetadata responseMetadata = new ResponseMetadata();
+}
+
 public class GetTemplateType extends CloudFormationMessage {
   @JsonProperty("StackName")
   String stackName;
@@ -690,6 +759,24 @@ public class SetStackPolicyType extends CloudFormationMessage {
 }
 public class SetStackPolicyResponseType extends CloudFormationMessage {
   public SetStackPolicyResponseType() {  }
+  @JsonProperty("ResponseMetadata")
+  ResponseMetadata responseMetadata = new ResponseMetadata();
+}
+public class SignalResourceType extends CloudFormationMessage {
+  @JsonProperty("LogicalResourceId")
+  String logicalResourceId;
+  @JsonProperty("StackName")
+  String stackName;
+  @JsonProperty("Status")
+  String status;
+  @JsonProperty("UniqueId")
+  String uniqueId;
+  public SignalResourceType() {  }
+}
+public class SignalResourceResponseType extends CloudFormationMessage {
+  public DeleteStackResponseType() {  }
+  @JsonProperty("SignalResourceResult")
+  SignalResourceResult signalResourceResult = new SignalResourceResult();
   @JsonProperty("ResponseMetadata")
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
@@ -762,6 +849,21 @@ public class OutputsRemoveMemberSerializer extends JsonSerializer<Outputs> {
     } else {
       jsonGenerator.writeStartArray();
       for (String item: outputs.getMember()) {
+        jsonGenerator.writeObject(item);
+      }
+      jsonGenerator.writeEndArray();
+    }
+  }
+}
+
+public class ParameterDeclarationsRemoveMemberSerializer extends JsonSerializer<ParameterDeclarations> {
+  @Override
+  void serialize(ParameterDeclarations parameterDeclarations, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException, JsonProcessingException {
+    if (parameterDeclarations == null) {
+      jsonGenerator.writeNull();
+    } else {
+      jsonGenerator.writeStartArray();
+      for (String item: parameterDeclarations.getMember()) {
         jsonGenerator.writeObject(item);
       }
       jsonGenerator.writeEndArray();
