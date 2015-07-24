@@ -94,8 +94,9 @@ class Euctl(PropertiesRequest):
                 is given, attempt to set it to the specified value.'''),
             Arg('-A', '--all-types', action='store_true', help='''List all
                 the known variable names, including structures.  Those with
-                string or integer values will be output; for the structured
-                values, the methods of retrieving them are given.'''),
+                string or integer values will be output as usual; for the
+                structured values, the methods of retrieving them are
+                given.'''),
             Arg('-r', '--reset', action='store_true',
                 help='Reset the given variables to their default values.'),
             Arg('-d', dest='show_default', action='store_true', help='''Show
