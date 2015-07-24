@@ -217,6 +217,10 @@
     <structure name="Parameters" field="parameters" usage="optional" type="com.eucalyptus.cloudformation.ParameterDeclarations"/>
     <value name="Version" field="version" usage="optional"/>
   </mapping>
+  <mapping class="com.eucalyptus.cloudformation.ListStackResourcesResult" abstract="true">
+      <value name="NextToken" field="nextToken" usage="optional"/>
+      <structure name="StackResourceSummaries" field="stackResourceSummaries" usage="optional" type="com.eucalyptus.cloudformation.StackResourceSummaries"/>
+  </mapping>
   <mapping class="com.eucalyptus.cloudformation.ListStacksResult" abstract="true">
     <value name="NextToken" field="nextToken" usage="optional"/>
     <structure name="StackSummaries" field="stackSummaries" usage="optional" type="com.eucalyptus.cloudformation.StackSummaries"/>
@@ -399,7 +403,7 @@
   </mapping>
   <mapping name="SignalResourceResponse" class="com.eucalyptus.cloudformation.SignalResourceResponseType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
     <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
-    <structure name="SignalResourceResult" field="deleteStackResult" usage="required" type="com.eucalyptus.cloudformation.SignalResourceResult"/>
+    <structure name="SignalResourceResult" field="signalResourceResult" usage="required" type="com.eucalyptus.cloudformation.SignalResourceResult"/>
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.ResponseMetadata"/>
   </mapping>
   <mapping name="UpdateStack" class="com.eucalyptus.cloudformation.UpdateStackType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
