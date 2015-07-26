@@ -158,6 +158,16 @@ class IPRangeSpecification extends Specification {
     '10.1.0.0'          | '10.1.0.1'                | false
   }
 
+  def 'should expose range size'(){
+    expect: 'range size correctly calculated'
+    Groovyness.expandoMetaClass( parse( range ) ).size( ) == size
+
+    where:
+    range               | size
+    '10.1.0.0'          | 1
+    '10.1.0.0-10.2.0.0' | 65536
+  }
+
   private static IPRange range( lower, upper ) {
     new IPRange( lower, upper )
   }

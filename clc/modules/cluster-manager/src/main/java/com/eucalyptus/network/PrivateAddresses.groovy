@@ -59,8 +59,14 @@ class PrivateAddresses {
    *
    * <p>There must not be an active transaction for private addresses.</p>
    */
-  static String allocate( String scope, String tag, Iterable<Integer> addresses ) throws NotEnoughResourcesException {
-    allocator.allocate( scope, tag, addresses )
+  static String allocate(
+      String scope,
+      String tag,
+      Iterable<Integer> addresses,
+      int addressCount,
+      int allocatedCount
+  ) throws NotEnoughResourcesException {
+    allocator.allocate( scope, tag, addresses, addressCount, allocatedCount )
   }
 
   static void associate( String address, VmInstance instance ) throws ResourceAllocationException {
