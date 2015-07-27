@@ -71,7 +71,6 @@ public class PasswordAuthentication {
         throw new AuthException(INVALID_USERNAME_OR_PASSWORD);
       } else {
         updatePassword( user, newPassword );
-        checkPasswordExpiration( user );
       }
       return Accounts.lookupPrincipalByUserId( user.getUserId( ) );
     } else { // can be remote region if not LDAP
