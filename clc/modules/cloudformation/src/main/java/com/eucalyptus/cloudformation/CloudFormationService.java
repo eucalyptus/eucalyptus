@@ -675,48 +675,52 @@ public class CloudFormationService {
 
   public GetTemplateSummaryResponseType getTemplateSummary(GetTemplateSummaryType request)
     throws CloudFormationException {
-    LOG.fatal("request.getStackName()=" + request.getStackName());
-    LOG.fatal("request.getTemplateBody()=" + request.getTemplateBody());
-    LOG.fatal("request.getTemplateURL()=" + request.getTemplateURL());
-    GetTemplateSummaryResponseType getTemplateSummaryResponseType = request.getReply();
-    GetTemplateSummaryResult getTemplateSummaryResult = new GetTemplateSummaryResult();
-    ResourceList capabilities= new ResourceList();
-    capabilities.setMember(Lists.newArrayList("cap1", "cap2"));
-    getTemplateSummaryResult.setCapabilities(capabilities);
-    getTemplateSummaryResult.setCapabilitiesReason("cap reason");
-    getTemplateSummaryResult.setDescription("description");
-    getTemplateSummaryResult.setMetadata("metadata");
-    ParameterDeclarations parameters = new ParameterDeclarations();
-    ArrayList<ParameterDeclaration> parameterMember = Lists.newArrayList();
-    ParameterDeclaration parameter1 = new ParameterDeclaration();
-    parameter1.setDescription("parm desc 1");
-    parameter1.setParameterKey("parm key 1");
-    parameter1.setDefaultValue("default value 1");
-    parameter1.setNoEcho(false);
-    ParameterConstraints parameterConstraints1 = new ParameterConstraints();
-    ResourceList allowedValues1 = new ResourceList();
-    allowedValues1.setMember(Lists.newArrayList("pc1-1","pc1-2"));
-    parameterConstraints1.setAllowedValues(allowedValues1);
-    parameter1.setParameterConstraints(parameterConstraints1);
-    parameter1.setParameterType("parm type 1");
-    parameterMember.add(parameter1);
-    ParameterDeclaration parameter2 = new ParameterDeclaration();
-    parameter2.setDescription("parm desc 2");
-    parameter2.setParameterKey("parm key 2");
-    parameter2.setDefaultValue("default value 2");
-    parameter2.setNoEcho(true);
-    ParameterConstraints parameterConstraints2 = new ParameterConstraints();
-    ResourceList allowedValues2 = new ResourceList();
-    allowedValues2.setMember(Lists.newArrayList("pc2-1","pc2-2"));
-    parameterConstraints2.setAllowedValues(allowedValues2);
-    parameter2.setParameterConstraints(parameterConstraints2);
-    parameter2.setParameterType("parm type 2");
-    parameterMember.add(parameter2);
-    parameters.setMember(parameterMember);
-    getTemplateSummaryResult.setParameters(parameters);
-    getTemplateSummaryResult.setVersion("version");
-    getTemplateSummaryResponseType.setGetTemplateSummaryResult(getTemplateSummaryResult);
-    return getTemplateSummaryResponseType;
+    GetTemplateSummaryResponseType reply = request.getReply();
+    try {
+      final Context ctx = Contexts.lookup();
+      final User user = ctx.getUser();
+      final String userId = user.getUserId();
+      final String accountId = user.getAccountNumber();
+      final String templateBody = request.getTemplateBody();
+      final String templateUrl = request.getTemplateURL();
+      final String stackName = request.getStackName();
+      if (templateBody == null && templateUrl == null && stackName == null) throw new ValidationErrorException("Either StackName or TemplateBody or TemplateURL must be set.");
+      if (templateBody != null && templateUrl != null && stackName != null) throw new ValidationErrorException("Exactly one of StackName or TemplateBody or TemplateURL must be set.");
+      String templateText;
+      // IAM Action Check
+      if (stackName != null) {
+        checkStackPermission( ctx, stackName, accountId );
+        final StackEntity stackEntity = StackEntityManager.getAnyStackByNameOrId(
+          stackName,
+          ctx.isAdministrator( ) && stackName.startsWith( STACK_ID_PREFIX ) ? null : accountId );
+        if (stackEntity == null) {
+          throw new ValidationErrorException("Stack " + stackName + " does not exist");
+        }
+        templateText = stackEntity.getTemplateBody();
+      } else {
+        checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_GETTEMPLATESUMMARY, ctx);
+        if (templateBody != null) {
+          if (templateBody.getBytes().length > Limits.REQUEST_TEMPLATE_BODY_MAX_LENGTH_BYTES) {
+            throw new ValidationErrorException("Template body may not exceed " + Limits.REQUEST_TEMPLATE_BODY_MAX_LENGTH_BYTES + " bytes in a request.");
+          }
+        }
+        templateText = (templateBody != null) ? templateBody : extractTemplateTextFromURL(templateUrl, user);
+      }
+      final String stackIdLocal = UUID.randomUUID().toString();
+      final String stackId = "arn:aws:cloudformation:" + REGION + ":" + accountId + ":stack/"+stackName+"/"+stackIdLocal;
+      final PseudoParameterValues pseudoParameterValues = new PseudoParameterValues();
+      pseudoParameterValues.setAccountId(accountId);
+      pseudoParameterValues.setStackName(stackName);
+      pseudoParameterValues.setStackId(stackId);
+      ArrayList<String> notificationArns = Lists.newArrayList();
+      pseudoParameterValues.setRegion(getRegion());
+      List<Parameter> parameters = Lists.newArrayList();
+      final GetTemplateSummaryResult getTemplateSummaryResult = new TemplateParser().getTemplateSummary(templateText, parameters, pseudoParameterValues, userId);
+      reply.setGetTemplateSummaryResult(getTemplateSummaryResult);
+    } catch (Exception ex) {
+      handleException(ex);
+    }
+    return reply;
   }
 
   public ListStackResourcesResponseType listStackResources(ListStackResourcesType request)
@@ -836,16 +840,7 @@ public class CloudFormationService {
 
   public SignalResourceResponseType signalResource(SignalResourceType request)
     throws CloudFormationException {
-    if (request != null) {
-      LOG.fatal("request.getStatus()="+request.getStatus());
-      LOG.fatal("request.getLogicalResourceId()="+request.getLogicalResourceId());
-      LOG.fatal("request.getStackName()="+request.getStackName());
-      LOG.fatal("request.getUniqueId()="+request.getUniqueId());
-    }
-    SignalResourceResponseType signalResourceResponseType = request.getReply();
-    SignalResourceResult signalResourceResult = new SignalResourceResult();
-    signalResourceResponseType.setSignalResourceResult(signalResourceResult);
-    return signalResourceResponseType;
+    return request.getReply();
   }
 
   public UpdateStackResponseType updateStack(UpdateStackType request)
@@ -930,7 +925,7 @@ public class CloudFormationService {
     throws AccessDeniedException {
     if (!Permissions.isAuthorized(CloudFormationPolicySpec.VENDOR_CLOUDFORMATION, actionType, "",
       ctx.getAccount(), actionType, ctx.getAuthContext())) {
-      throw new AccessDeniedException("User does not have permission");
+      throw new AccessDeniedException("Not authorized.");
     }
   }
 

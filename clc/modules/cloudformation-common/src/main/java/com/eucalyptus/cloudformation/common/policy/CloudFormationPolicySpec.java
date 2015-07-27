@@ -37,6 +37,7 @@ public interface CloudFormationPolicySpec {
   String CLOUDFORMATION_ESTIMATETEMPLATECOST = "estimatetemplatecost";
   String CLOUDFORMATION_GETSTACKPOLICY = "getstackpolicy";
   String CLOUDFORMATION_GETTEMPLATE = "gettemplate";
+  String CLOUDFORMATION_GETTEMPLATESUMMARY = "gettemplatesummary";
   String CLOUDFORMATION_LISTSTACKRESOURCES = "liststackresources";
   String CLOUDFORMATION_LISTSTACKS = "liststacks";
   String CLOUDFORMATION_SETSTACKPOLICY = "setstackpolicy";

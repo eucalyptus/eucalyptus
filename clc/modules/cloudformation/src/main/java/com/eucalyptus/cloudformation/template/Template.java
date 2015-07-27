@@ -19,10 +19,12 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.template;
 
+import com.eucalyptus.cloudformation.ParameterDeclaration;
 import com.eucalyptus.cloudformation.TemplateParameter;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.template.dependencies.DependencyManager;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -36,8 +38,13 @@ import java.util.Map;
  */
 public class Template {
   private Map<String, ResourceInfo> resourceInfoMap = Maps.newLinkedHashMap();
-  private ArrayList<TemplateParameter> templateParameters = Lists.newArrayList(); // used only for validate template
+  private ArrayList<ParameterDeclaration> parameterDeclarations = Lists.newArrayList(); // used only for validate template/get template summary
   private String templateBody;
+
+
+  // temporary representation of the top level metadata field (does not appear to need to be persisted as in body and not referenced otherwise for now)
+  private String metadataJSON;
+
 
   // All the below are "object" forms of items in the StackEntity
   private String description;
@@ -60,12 +67,20 @@ public class Template {
     this.resourceInfoMap = resourceInfoMap;
   }
 
-  public ArrayList<TemplateParameter> getTemplateParameters() {
-    return templateParameters;
+  public ArrayList<ParameterDeclaration> getParameterDeclarations() {
+    return parameterDeclarations;
   }
 
-  public void setTemplateParameters(ArrayList<TemplateParameter> templateParameters) {
-    this.templateParameters = templateParameters;
+  public void setParameterDeclarations(ArrayList<ParameterDeclaration> parameterDeclarations) {
+    this.parameterDeclarations = parameterDeclarations;
+  }
+
+  public String getMetadataJSON() {
+    return metadataJSON;
+  }
+
+  public void setMetadataJSON(String metadataJSON) {
+    this.metadataJSON = metadataJSON;
   }
 
   public void setTemplateBody(String templateBody) {
