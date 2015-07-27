@@ -349,6 +349,13 @@ public class Parameter extends EucalyptusData {
     this.parameterValue = value;
   }
 }
+public class ParameterConstraints extends EucalyptusData {
+  @JsonProperty("AllowedValues")
+  @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
+  ResourceList allowedValues;
+  public ParameterConstraints() {  }
+}
+
 public class ParameterDeclaration extends EucalyptusData {
   @JsonProperty("DefaultValue")
   String defaultValue;
@@ -357,14 +364,14 @@ public class ParameterDeclaration extends EucalyptusData {
   @JsonProperty("NoEcho")
   Boolean noEcho;
   @JsonProperty("ParameterConstraints")
-  @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
-  ResourceList parameterConstraints;
+  ParameterConstraints parameterConstraints;
   @JsonProperty("ParameterKey")
   String parameterKey;
   @JsonProperty("ParameterType")
   String parameterType;
   public ParameterDeclaration() {  }
 }
+
 public class SignalResourceResult extends EucalyptusData {
   public SignalResourceResult() {  }
 }
@@ -774,7 +781,7 @@ public class SignalResourceType extends CloudFormationMessage {
   public SignalResourceType() {  }
 }
 public class SignalResourceResponseType extends CloudFormationMessage {
-  public DeleteStackResponseType() {  }
+  public SignalResourceResponseType() {  }
   @JsonProperty("SignalResourceResult")
   SignalResourceResult signalResourceResult = new SignalResourceResult();
   @JsonProperty("ResponseMetadata")

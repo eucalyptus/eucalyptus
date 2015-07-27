@@ -675,7 +675,48 @@ public class CloudFormationService {
 
   public GetTemplateSummaryResponseType getTemplateSummary(GetTemplateSummaryType request)
     throws CloudFormationException {
-    return request.getReply();
+    LOG.fatal("request.getStackName()=" + request.getStackName());
+    LOG.fatal("request.getTemplateBody()=" + request.getTemplateBody());
+    LOG.fatal("request.getTemplateURL()=" + request.getTemplateURL());
+    GetTemplateSummaryResponseType getTemplateSummaryResponseType = request.getReply();
+    GetTemplateSummaryResult getTemplateSummaryResult = new GetTemplateSummaryResult();
+    ResourceList capabilities= new ResourceList();
+    capabilities.setMember(Lists.newArrayList("cap1", "cap2"));
+    getTemplateSummaryResult.setCapabilities(capabilities);
+    getTemplateSummaryResult.setCapabilitiesReason("cap reason");
+    getTemplateSummaryResult.setDescription("description");
+    getTemplateSummaryResult.setMetadata("metadata");
+    ParameterDeclarations parameters = new ParameterDeclarations();
+    ArrayList<ParameterDeclaration> parameterMember = Lists.newArrayList();
+    ParameterDeclaration parameter1 = new ParameterDeclaration();
+    parameter1.setDescription("parm desc 1");
+    parameter1.setParameterKey("parm key 1");
+    parameter1.setDefaultValue("default value 1");
+    parameter1.setNoEcho(false);
+    ParameterConstraints parameterConstraints1 = new ParameterConstraints();
+    ResourceList allowedValues1 = new ResourceList();
+    allowedValues1.setMember(Lists.newArrayList("pc1-1","pc1-2"));
+    parameterConstraints1.setAllowedValues(allowedValues1);
+    parameter1.setParameterConstraints(parameterConstraints1);
+    parameter1.setParameterType("parm type 1");
+    parameterMember.add(parameter1);
+    ParameterDeclaration parameter2 = new ParameterDeclaration();
+    parameter2.setDescription("parm desc 2");
+    parameter2.setParameterKey("parm key 2");
+    parameter2.setDefaultValue("default value 2");
+    parameter2.setNoEcho(true);
+    ParameterConstraints parameterConstraints2 = new ParameterConstraints();
+    ResourceList allowedValues2 = new ResourceList();
+    allowedValues2.setMember(Lists.newArrayList("pc2-1","pc2-2"));
+    parameterConstraints2.setAllowedValues(allowedValues2);
+    parameter2.setParameterConstraints(parameterConstraints2);
+    parameter2.setParameterType("parm type 2");
+    parameterMember.add(parameter2);
+    parameters.setMember(parameterMember);
+    getTemplateSummaryResult.setParameters(parameters);
+    getTemplateSummaryResult.setVersion("version");
+    getTemplateSummaryResponseType.setGetTemplateSummaryResult(getTemplateSummaryResult);
+    return getTemplateSummaryResponseType;
   }
 
   public ListStackResourcesResponseType listStackResources(ListStackResourcesType request)
@@ -795,7 +836,16 @@ public class CloudFormationService {
 
   public SignalResourceResponseType signalResource(SignalResourceType request)
     throws CloudFormationException {
-    return request.getReply();
+    if (request != null) {
+      LOG.fatal("request.getStatus()="+request.getStatus());
+      LOG.fatal("request.getLogicalResourceId()="+request.getLogicalResourceId());
+      LOG.fatal("request.getStackName()="+request.getStackName());
+      LOG.fatal("request.getUniqueId()="+request.getUniqueId());
+    }
+    SignalResourceResponseType signalResourceResponseType = request.getReply();
+    SignalResourceResult signalResourceResult = new SignalResourceResult();
+    signalResourceResponseType.setSignalResourceResult(signalResourceResult);
+    return signalResourceResponseType;
   }
 
   public UpdateStackResponseType updateStack(UpdateStackType request)

@@ -64,11 +64,14 @@
       <structure name="member" type="com.eucalyptus.cloudformation.Parameter"/>
     </collection>
   </mapping>
+  <mapping class="com.eucalyptus.cloudformation.ParameterConstraints" abstract="true">
+    <structure name="AllowedValues" field="allowedValues" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
+  </mapping>
   <mapping class="com.eucalyptus.cloudformation.ParameterDeclaration" abstract="true">
     <value name="DefaultValue" field="defaultValue" usage="optional"/>
     <value name="Description" field="description" usage="optional"/>
     <value name="NoEcho" field="noEcho" usage="optional"/>
-    <structure name="ParameterConstraints" field="parameterConstraints" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
+    <structure name="ParameterConstraints" field="parameterConstraints" usage="optional" type="com.eucalyptus.cloudformation.ParameterConstraints"/>
     <value name="ParameterKey" field="parameterKey" usage="optional"/>
     <value name="ParameterType" field="parameterType" usage="optional"/>
   </mapping>
