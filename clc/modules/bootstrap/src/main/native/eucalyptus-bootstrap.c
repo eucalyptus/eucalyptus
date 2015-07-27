@@ -129,7 +129,13 @@ static java_home_t *get_java_home(char *path)
     data->jvms = NULL;
     data->jnum = 0;
     while (libjvm_paths[++x] != NULL) {
-        __abort(NULL, ((k = snprintf(buf, 1024, libjvm_paths[x], path)) <= 0), "Error mangling jvm path");
+        if ((k = snprintf(buf, 1024, libjvm_paths[x], path)) <= 0) {
+            __error("Error mangling jvm path");
+            free(data->path);
+            free(data);
+            return NULL;
+        }
+
         __debug("Attempting to locate VM library %s", buf);
         if (CHECK_ISREG(buf) == 1) {
             data->jvms = (jvm_info_t **) malloc(2 * sizeof(jvm_info_t *));
