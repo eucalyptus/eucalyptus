@@ -255,6 +255,7 @@ public class TemplateParser {
     parseValidTopLevelKeys(templateJsonNode);
     parseVersion(template, templateJsonNode);
     parseDescription(template, templateJsonNode);
+    parseMetadata(template, templateJsonNode);
     parseMappings(template, templateJsonNode);
     ParameterParser.parseParameters(template, templateJsonNode, userParameters, true);
     parseConditions(template, templateJsonNode, true, effectiveUserId);

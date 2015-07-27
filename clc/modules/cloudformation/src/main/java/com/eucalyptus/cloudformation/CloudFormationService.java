@@ -684,8 +684,12 @@ public class CloudFormationService {
       final String templateBody = request.getTemplateBody();
       final String templateUrl = request.getTemplateURL();
       final String stackName = request.getStackName();
-      if (templateBody == null && templateUrl == null && stackName == null) throw new ValidationErrorException("Either StackName or TemplateBody or TemplateURL must be set.");
-      if (templateBody != null && templateUrl != null && stackName != null) throw new ValidationErrorException("Exactly one of StackName or TemplateBody or TemplateURL must be set.");
+      int numNonNullParamsInTemplateBodyTemplateURLAndStackName = 0;
+      if (templateBody != null) numNonNullParamsInTemplateBodyTemplateURLAndStackName++;
+      if (templateUrl != null) numNonNullParamsInTemplateBodyTemplateURLAndStackName++;
+      if (stackName != null) numNonNullParamsInTemplateBodyTemplateURLAndStackName++;
+      if (numNonNullParamsInTemplateBodyTemplateURLAndStackName == 0) throw new ValidationErrorException("Either StackName or TemplateBody or TemplateURL must be set.");
+      if (numNonNullParamsInTemplateBodyTemplateURLAndStackName > 1) throw new ValidationErrorException("Exactly one of StackName or TemplateBody or TemplateURL must be set.");
       String templateText;
       // IAM Action Check
       if (stackName != null) {
