@@ -69,26 +69,25 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageChunkedPUTLifecycleAndAclAggregatorStage;
 import com.eucalyptus.objectstorage.pipeline.stages.ObjectStoragePUTAggregatorStage;
 import com.eucalyptus.objectstorage.pipeline.stages.ObjectStoragePUTBindingStage;
 import com.eucalyptus.objectstorage.pipeline.stages.ObjectStoragePUTOutboundStage;
 import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageRESTExceptionStage;
 import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageUserAuthenticationStage;
+import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
 /**
- * The pipeline for all HTTP PUT requests to the OSG
+ * The pipeline for HTTP PUT data requests to the OSG
  * 
  * @author zhill
  *
  */
 @ComponentPart(ObjectStorage.class)
-public class ObjectStoragePUTPipeline extends ObjectStorageRESTPipeline {
-  private static Logger LOG = Logger.getLogger(ObjectStoragePUTPipeline.class);
+public class ObjectStoragePUTDataPipeline extends ObjectStorageRESTPipeline {
+  private static Logger LOG = Logger.getLogger(ObjectStoragePUTDataPipeline.class);
   private final UnrollableStage auth = new ObjectStorageUserAuthenticationStage();
-  private final UnrollableStage chunkedLCorACL = new ObjectStorageChunkedPUTLifecycleAndAclAggregatorStage();
   private final UnrollableStage bind = new ObjectStoragePUTBindingStage();
   private final UnrollableStage aggr = new ObjectStoragePUTAggregatorStage();
   private final UnrollableStage out = new ObjectStoragePUTOutboundStage();
@@ -96,7 +95,8 @@ public class ObjectStoragePUTPipeline extends ObjectStorageRESTPipeline {
 
   @Override
   public boolean checkAccepts(HttpRequest message) {
-    if (super.checkAccepts(message) && message.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.PUT.toString())) {
+    // Accept PUT object and upload part operations (only)
+    if (super.checkAccepts(message) && OSGUtil.isPUTDataRequest(message)) {
       return true;
     }
 
@@ -109,13 +109,12 @@ public class ObjectStoragePUTPipeline extends ObjectStorageRESTPipeline {
 
   @Override
   public String getName() {
-    return "objectstorage-put";
+    return "objectstorage-put-data";
   }
 
   @Override
   public ChannelPipeline addHandlers(ChannelPipeline pipeline) {
     auth.unrollStage(pipeline);
-    chunkedLCorACL.unrollStage(pipeline);
     bind.unrollStage(pipeline);
     aggr.unrollStage(pipeline);
     out.unrollStage(pipeline);

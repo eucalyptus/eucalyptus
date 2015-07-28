@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.network
 
+import com.google.common.base.Supplier
 import groovy.transform.CompileStatic
 import org.apache.log4j.Logger
 
@@ -39,7 +40,13 @@ class FirstFreePrivateAddressAllocator extends PrivateAddressAllocatorSupport {
   }
 
   @Override
-  protected String allocate(final Iterable<Integer> addresses, final Closure<String> allocator) {
+  protected String allocate(
+      final Iterable<Integer> addresses,
+      final int addressCount,
+      final int allocatedCount,
+      final Closure<String> allocator,
+      final Supplier<Set<Integer>> lister
+  ) {
     Iterator<Integer> iterator = addresses.iterator( )
     while ( iterator.hasNext( ) ) {
       String value = allocator.call( iterator.next( ) )

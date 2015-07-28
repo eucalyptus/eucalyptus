@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.network
 
+import com.google.common.base.Function
 import com.google.common.base.Optional
 import groovy.transform.CompileStatic
 
@@ -35,6 +36,8 @@ interface PrivateAddressPersistence {
   def <V> Optional<V> withFirstMatch( PrivateAddress address, String ownerId, Closure<V> closure )
 
   void withMatching( PrivateAddress address, Closure<?> closure )
+
+  def <T> List<T> list( String scope, String tag, Function<PrivateAddress,T> transform )
 
   PrivateAddressPersistence distinct( )
 }

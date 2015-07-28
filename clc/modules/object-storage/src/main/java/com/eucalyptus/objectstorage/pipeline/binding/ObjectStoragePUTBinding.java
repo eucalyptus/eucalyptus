@@ -73,53 +73,57 @@ import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 public class ObjectStoragePUTBinding extends ObjectStorageRESTBinding {
   private static Logger LOG = Logger.getLogger(ObjectStoragePUTBinding.class);
 
-  @Override
-  protected Map<String, String> populateOperationMap() {
-    Map<String, String> newMap = new HashMap<>();
-
-    //Bucket operations
-    newMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.acl.toString(), "SetBucketAccessControlPolicy");
-    newMap.put(BUCKET + HttpMethod.PUT.toString(), "CreateBucket");
-    newMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.logging.toString(), "SetBucketLoggingStatus");
-    newMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.versioning.toString(), "SetBucketVersioningStatus");
-    newMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "SetBucketLifecycle");
-    newMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "SetBucketTagging");
-    newMap.put(BUCKET + HttpMethod.POST.toString() + ObjectStorageProperties.BucketParameter.delete, "DeleteMultipleObjects");
+  private static final Map<String, String> SUPPORTED_OPS = new HashMap<>();
+  static {
+    // Bucket operations
+    SUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.acl.toString(), "SetBucketAccessControlPolicy");
+    SUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString(), "CreateBucket");
+    SUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.logging.toString(), "SetBucketLoggingStatus");
+    SUPPORTED_OPS
+        .put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.versioning.toString(), "SetBucketVersioningStatus");
+    SUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "SetBucketLifecycle");
+    SUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "SetBucketTagging");
+    SUPPORTED_OPS.put(BUCKET + HttpMethod.POST.toString() + ObjectStorageProperties.BucketParameter.delete, "DeleteMultipleObjects");
 
     // Object operations
-    newMap.put(OBJECT + HttpMethod.PUT.toString() + ObjectStorageProperties.ObjectParameter.acl.toString(), "SetObjectAccessControlPolicy");
-    newMap.put(OBJECT + HttpMethod.PUT.toString(), "PutObject");
-    newMap.put(OBJECT + HttpMethod.PUT.toString() + ObjectStorageProperties.COPY_SOURCE, "CopyObject");
+    SUPPORTED_OPS.put(OBJECT + HttpMethod.PUT.toString() + ObjectStorageProperties.ObjectParameter.acl.toString(), "SetObjectAccessControlPolicy");
+    SUPPORTED_OPS.put(OBJECT + HttpMethod.PUT.toString(), "PutObject");
+    SUPPORTED_OPS.put(OBJECT + HttpMethod.PUT.toString() + ObjectStorageProperties.COPY_SOURCE, "CopyObject");
 
     // Multipart Uploads
-    newMap.put(OBJECT + HttpMethod.PUT.toString() + ObjectStorageProperties.ObjectParameter.partNumber.toString().toLowerCase()
-               + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(), "UploadPart");
-    newMap.put(OBJECT + HttpMethod.PUT.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase()
-               + ObjectStorageProperties.ObjectParameter.partNumber.toString().toLowerCase(), "UploadPart");
-    newMap.put(OBJECT + HttpMethod.POST.toString() + ObjectStorageProperties.ObjectParameter.uploads.toString(), "InitiateMultipartUpload");
-    newMap.put(OBJECT + HttpMethod.POST.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(),
-               "CompleteMultipartUpload");
-
-    return newMap;
+    SUPPORTED_OPS.put(OBJECT + HttpMethod.PUT.toString() + ObjectStorageProperties.ObjectParameter.partNumber.toString().toLowerCase()
+        + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(), "UploadPart");
+    SUPPORTED_OPS.put(OBJECT + HttpMethod.PUT.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase()
+        + ObjectStorageProperties.ObjectParameter.partNumber.toString().toLowerCase(), "UploadPart");
+    SUPPORTED_OPS.put(OBJECT + HttpMethod.POST.toString() + ObjectStorageProperties.ObjectParameter.uploads.toString(), "InitiateMultipartUpload");
+    SUPPORTED_OPS.put(OBJECT + HttpMethod.POST.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(),
+        "CompleteMultipartUpload");
   }
 
-  protected Map<String, String> populateUnsupportedOperationMap() {
-    Map<String, String> opsMap = new HashMap<>();
-
+  private static final Map<String, String> UNSUPPORTED_OPS = new HashMap<>();
+  static {
     // Bucket operations
     // Cross-Origin Resource Sharing (cors)
-    opsMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "PUT Bucket cors");
+    UNSUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "PUT Bucket cors");
 
     // Policy
-    opsMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.policy.toString(), "PUT Bucket policy");
+    UNSUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.policy.toString(), "PUT Bucket policy");
 
     // Notification
     // opsMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.notification.toString(), "PUT Bucket notification");
 
     // Website
-    opsMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.website.toString(), "PUT Bucket website");
+    UNSUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.website.toString(), "PUT Bucket website");
 
     // Object operations
-    return opsMap;
+  }
+
+  @Override
+  protected Map<String, String> populateOperationMap() {
+    return SUPPORTED_OPS;
+  }
+
+  protected Map<String, String> populateUnsupportedOperationMap() {
+    return UNSUPPORTED_OPS;
   }
 }

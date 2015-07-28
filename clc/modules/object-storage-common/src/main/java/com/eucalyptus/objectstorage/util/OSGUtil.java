@@ -73,12 +73,14 @@ import org.bouncycastle.util.encoders.Base64;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferIndexFinder;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
 import com.eucalyptus.objectstorage.msgs.HeadObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
@@ -230,6 +232,40 @@ public class OSGUtil {
     if (osgResponse.getExpires() != null && !"".equals(osgResponse.getExpires())) {
       httpResponse.addHeader(HttpHeaders.Names.EXPIRES, osgResponse.getExpires());
     }
+  }
+
+  /**
+   * Utility method to determine type of PUT request. Returns true if the request is trying to upload an S3 object or S3 part, and false otherwise
+   */
+  public static boolean isPUTDataRequest(HttpRequest request) {
+    MappingHttpRequest mappingRequest = null;
+    if (request.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.PUT.toString())
+        && request instanceof MappingHttpRequest
+        && ((mappingRequest = ((MappingHttpRequest) request)).getParameters() == null || mappingRequest.getParameters().isEmpty()
+            || mappingRequest.getParameters().containsKey(ObjectStorageProperties.SubResource.uploadId.toString())
+            || mappingRequest.getParameters().containsKey(ObjectStorageProperties.SubResource.partNumber.toString())
+            || mappingRequest.getParameters().containsKey(ObjectStorageProperties.SubResource.uploadId.toString().toLowerCase()) || mappingRequest
+            .getParameters().containsKey(ObjectStorageProperties.SubResource.partNumber.toString().toLowerCase()))) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Utility method to determine type of PUT request. Returns true if the request is trying to set S3 metadata such as acl, lifecycle, tagging,
+   * notification, versioning etc
+   */
+  public static boolean isPUTMetadataRequest(HttpRequest request) {
+    MappingHttpRequest mappingRequest = null;
+    if (request.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.PUT.toString()) && request instanceof MappingHttpRequest
+        && (mappingRequest = ((MappingHttpRequest) request)).getParameters() != null && !mappingRequest.getParameters().isEmpty()
+        && !mappingRequest.getParameters().containsKey(ObjectStorageProperties.SubResource.uploadId.toString())
+        && !mappingRequest.getParameters().containsKey(ObjectStorageProperties.SubResource.partNumber.toString())
+        && !mappingRequest.getParameters().containsKey(ObjectStorageProperties.SubResource.uploadId.toString().toLowerCase())
+        && !mappingRequest.getParameters().containsKey(ObjectStorageProperties.SubResource.partNumber.toString().toLowerCase())) {
+      return true;
+    }
+    return false;
   }
 
 }
