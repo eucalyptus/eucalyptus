@@ -673,6 +673,60 @@ public class CloudFormationService {
     return reply;
   }
 
+  public GetTemplateSummaryResponseType getTemplateSummary(GetTemplateSummaryType request)
+    throws CloudFormationException {
+    GetTemplateSummaryResponseType reply = request.getReply();
+    try {
+      final Context ctx = Contexts.lookup();
+      final User user = ctx.getUser();
+      final String userId = user.getUserId();
+      final String accountId = user.getAccountNumber();
+      final String templateBody = request.getTemplateBody();
+      final String templateUrl = request.getTemplateURL();
+      final String stackName = request.getStackName();
+      int numNonNullParamsInTemplateBodyTemplateURLAndStackName = 0;
+      if (templateBody != null) numNonNullParamsInTemplateBodyTemplateURLAndStackName++;
+      if (templateUrl != null) numNonNullParamsInTemplateBodyTemplateURLAndStackName++;
+      if (stackName != null) numNonNullParamsInTemplateBodyTemplateURLAndStackName++;
+      if (numNonNullParamsInTemplateBodyTemplateURLAndStackName == 0) throw new ValidationErrorException("Either StackName or TemplateBody or TemplateURL must be set.");
+      if (numNonNullParamsInTemplateBodyTemplateURLAndStackName > 1) throw new ValidationErrorException("Exactly one of StackName or TemplateBody or TemplateURL must be set.");
+      String templateText;
+      // IAM Action Check
+      if (stackName != null) {
+        checkStackPermission( ctx, stackName, accountId );
+        final StackEntity stackEntity = StackEntityManager.getAnyStackByNameOrId(
+          stackName,
+          ctx.isAdministrator( ) && stackName.startsWith( STACK_ID_PREFIX ) ? null : accountId );
+        if (stackEntity == null) {
+          throw new ValidationErrorException("Stack " + stackName + " does not exist");
+        }
+        templateText = stackEntity.getTemplateBody();
+      } else {
+        checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_GETTEMPLATESUMMARY, ctx);
+        if (templateBody != null) {
+          if (templateBody.getBytes().length > Limits.REQUEST_TEMPLATE_BODY_MAX_LENGTH_BYTES) {
+            throw new ValidationErrorException("Template body may not exceed " + Limits.REQUEST_TEMPLATE_BODY_MAX_LENGTH_BYTES + " bytes in a request.");
+          }
+        }
+        templateText = (templateBody != null) ? templateBody : extractTemplateTextFromURL(templateUrl, user);
+      }
+      final String stackIdLocal = UUID.randomUUID().toString();
+      final String stackId = "arn:aws:cloudformation:" + REGION + ":" + accountId + ":stack/"+stackName+"/"+stackIdLocal;
+      final PseudoParameterValues pseudoParameterValues = new PseudoParameterValues();
+      pseudoParameterValues.setAccountId(accountId);
+      pseudoParameterValues.setStackName(stackName);
+      pseudoParameterValues.setStackId(stackId);
+      ArrayList<String> notificationArns = Lists.newArrayList();
+      pseudoParameterValues.setRegion(getRegion());
+      List<Parameter> parameters = Lists.newArrayList();
+      final GetTemplateSummaryResult getTemplateSummaryResult = new TemplateParser().getTemplateSummary(templateText, parameters, pseudoParameterValues, userId);
+      reply.setGetTemplateSummaryResult(getTemplateSummaryResult);
+    } catch (Exception ex) {
+      handleException(ex);
+    }
+    return reply;
+  }
+
   public ListStackResourcesResponseType listStackResources(ListStackResourcesType request)
       throws CloudFormationException {
     ListStackResourcesResponseType reply = request.getReply();
@@ -788,6 +842,11 @@ public class CloudFormationService {
     return reply;
   }
 
+  public SignalResourceResponseType signalResource(SignalResourceType request)
+    throws CloudFormationException {
+    return request.getReply();
+  }
+
   public UpdateStackResponseType updateStack(UpdateStackType request)
       throws CloudFormationException {
     return request.getReply();
@@ -870,7 +929,7 @@ public class CloudFormationService {
     throws AccessDeniedException {
     if (!Permissions.isAuthorized(CloudFormationPolicySpec.VENDOR_CLOUDFORMATION, actionType, "",
       ctx.getAccount(), actionType, ctx.getAuthContext())) {
-      throw new AccessDeniedException("User does not have permission");
+      throw new AccessDeniedException("Not authorized.");
     }
   }
 
