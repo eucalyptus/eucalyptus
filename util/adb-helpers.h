@@ -828,6 +828,7 @@ static inline void copy_instance_to_adb(adb_instanceType_t * instance, const axu
     adb_instanceType_set_stateName(instance, env, outInst->stateName);
     adb_instanceType_set_guestStateName(instance, env, outInst->guestStateName);
     adb_instanceType_set_bundleTaskStateName(instance, env, outInst->bundleTaskStateName);
+    adb_instanceType_set_bundleTaskProgress(instance, env, outInst->bundleTaskProgress);
     adb_instanceType_set_createImageStateName(instance, env, outInst->createImageTaskStateName);
 
     dt = axutil_date_time_create_with_offset(env, outInst->launchTime - time(NULL));
