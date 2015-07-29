@@ -40,6 +40,7 @@ public class S3Helper {
     // 1) http://<ip address>/<service_path>/bucket/key  (No address checks will be done)
     // 2) Valid external domain, including something with ".objectstorage" or ".walrus".  In this case bucket name is first, and key is path
     // 3) Valid external domain, must start with objectstorage or walrus.  In this case bucket name is part of the path
+    // 4) Valid external domain, with no objectstorage or walrus.  In this case there must be a service path, and /bucket/key will be assumed to be there.
     if (InetAddresses.isInetAddress(url.getHost())) {
       // must end in valid service path...
       for (String validServicePath : validServicePaths) {
@@ -68,6 +69,12 @@ public class S3Helper {
           String validHostNameBucketNameSuffixLower = validHostBucketSuffix.toLowerCase();
           if (hostLower.startsWith(validHostNameBucketNameSuffixLower + ".")) {
             return getBucketAndKeyFromPath(url.getPath(), url);
+          }
+        }
+        // check service path
+        for (String validServicePath : validServicePaths) {
+          if (url.getPath().startsWith(validServicePath)) {
+            return getBucketAndKeyFromPath(url.getPath().substring(validServicePath.length()), url);
           }
         }
       }
