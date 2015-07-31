@@ -70,6 +70,7 @@ import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -85,9 +86,7 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 	private static Logger    LOG     = Logger.getLogger( LoadBalancerBackendInstance.class );
 	@Transient
 	private static final long serialVersionUID = 1L;
-	@Transient
-	private String partition = null;
-	
+
 	@Transient
 	private LoadBalancerBackendInstanceRelationView view;
 	
@@ -100,24 +99,29 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 	public enum STATE {
 		InService, OutOfService, Error
 	}
-	
-    @ManyToOne()
-    @JoinColumn( name = "metadata_loadbalancer_fk" )
+
+	@ManyToOne()
+	@JoinColumn( name = "metadata_loadbalancer_fk" )
 	private LoadBalancer loadbalancer = null;
 
-    @ManyToOne()
-    @JoinColumn( name = "metadata_zone_fk")
-    private LoadBalancerZone zone = null;
-        
-    @Transient
-    private RunningInstancesItemType vmInstance = null;
-	
+	@ManyToOne()
+	@JoinColumn( name = "metadata_zone_fk")
+	private LoadBalancerZone zone = null;
+
+	@Transient
+	private RunningInstancesItemType vmInstance = null;
+
 	@Column( name = "reason_code", nullable=true)
 	private String reasonCode = null;
 	
 	@Column( name = "description", nullable=true)
 	private String description = null;
 
+	@Column( name = "ip_address", nullable=true)
+	private String ipAddress = null;
+
+  @Column( name = "partition", nullable=true)
+  private String partition = null;
 	
 	@Temporal(TemporalType.TIMESTAMP)
 	@Column(name = "instance_update_timestamp", nullable=true)
@@ -143,7 +147,6 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		try ( final TransactionResource db = Entities.transactionFor( LoadBalancerZone.class ) ) {
 			final LoadBalancerZone found = Entities.uniqueResult(LoadBalancerZone.named(lb, this.vmInstance.getPlacement()));
 			this.setAvailabilityZone(found);
-			db.commit();
 		}catch(final NoSuchElementException ex){
 		}catch(final Exception ex){
 			throw new InternalFailure400Exception("unable to find the zone");
@@ -186,11 +189,7 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		return this.getDisplayName();
 	}
 	
-	private void setVmInstance(final RunningInstancesItemType vmInstance){
-		this.vmInstance = vmInstance;
-	}
-	
-	public RunningInstancesItemType getVmInstance(){
+	private RunningInstancesItemType getVmInstance(){
 		try{
 			if(this.vmInstance==null){
 				List<RunningInstancesItemType> instanceIds = 
@@ -199,6 +198,7 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 				      if(instance.getInstanceId().equals(this.getDisplayName()) && instance.getStateName().equals("running")){
 				        this.vmInstance = instance;
 				        this.partition = instance.getPlacement();
+				        this.ipAddress = instance.getIpAddress();
 				        break;
 				      }
 				}
@@ -268,11 +268,18 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		}
 	}
 	
+	public void setPartition(final String partition) {
+	  this.partition = partition;
+	}
+	
 	public String getIpAddress(){
-		final RunningInstancesItemType vm = this.getVmInstance();
-		return vm!=null ? vm.getIpAddress() : null;
+	    return this.ipAddress;
 	}
 
+	public void setIpAddress(final String ipAddress) {
+	  this.ipAddress = ipAddress;
+	}
+	
 	@Override
 	public FullName getFullName() {
 		return FullName.create.vendor( "euca" )
@@ -351,8 +358,8 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 	 * by which to include only the non-faulty instances in the list delivered to servo.
 	 */
 	public static class BackendInstanceChecker implements EventListener<ClockTick> {
-		private static final int CHECK_EVERY_SECONDS = 5;
-
+		private final static int CHECK_EVERY_SECONDS = 120;
+		private final static int NUM_INSTANCES_TO_DESCRIBE = 8;
 		public static void register(){
 			Listeners.register(ClockTick.class, new BackendInstanceChecker() );
 		}
@@ -381,7 +388,6 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 					stateOutdated.add(be);
 				}
 			}
-			
 			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
 				for(final LoadBalancerBackendInstance be: stateOutdated){
 					final LoadBalancerBackendInstance update = Entities.uniqueResult(be);
@@ -390,33 +396,33 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 				db.commit();
 			}catch(final Exception ex){
 			}
-			
-			final List<String> instancesToCheck = 
-					Lists.transform(stateOutdated, new Function<LoadBalancerBackendInstance,String>(){
+			final Set<String> instancesToCheck = 
+					Sets.newHashSet(Lists.transform(stateOutdated, new Function<LoadBalancerBackendInstance,String>(){
 						@Override
 						@Nullable
 						public String apply(
 								@Nullable LoadBalancerBackendInstance arg0) {
 							return arg0.getInstanceId();
 						}
-			});
-			 	
-			List<RunningInstancesItemType> result  = null;
-			try{
-				result =
-						EucalyptusActivityTasks.getInstance().describeSystemInstancesWithVerbose(instancesToCheck);
-				if(result==null)
-					throw new Exception();
-			}catch(final Exception ex){
-				LOG.warn("failed to query instances", ex);
-				return;
+			}));
+			
+			final List<RunningInstancesItemType> result  = Lists.newArrayList();
+			for(final List<String> partition : Iterables.partition(instancesToCheck, NUM_INSTANCES_TO_DESCRIBE)) {
+			  try{
+			    result.addAll(
+			        EucalyptusActivityTasks.getInstance().describeSystemInstancesWithVerbose(partition));
+			  }catch(final Exception ex){
+			    LOG.warn("failed to query instances", ex);
+			    break;
+			  }
 			}
 			
 			//EUCA-9919: remove registered instances when terminated
 			final Set<String> instancesToDelete = 
 			    Sets.newHashSet();
 			final Map<String, STATE> stateMap = new HashMap<String, STATE>();
-			final Map<String, RunningInstancesItemType> instanceMap = new HashMap<String, RunningInstancesItemType>();
+			final Map<String, RunningInstancesItemType> instanceMap = 
+			    new HashMap<String, RunningInstancesItemType>();
 			for(final RunningInstancesItemType instance : result){
 				final String state = instance.getStateName();
 				if("pending".equals(state))
@@ -435,44 +441,51 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 			}
 			
 			final List<LoadBalancerBackendInstance> beToDelete = Lists.newArrayList();
-			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
-				for(final LoadBalancerBackendInstance be : stateOutdated){
-				  if(instancesToDelete.contains(be.getInstanceId())){
-				    beToDelete.add(be);
-				    continue;
-				  }
-				  if(stateMap.containsKey(be.getInstanceId())){ // OutOfService || Error
-						final STATE trueState = stateMap.get(be.getInstanceId());
-						final LoadBalancerBackendInstance update = Entities.uniqueResult(be);
-						update.setBackendState(trueState);
-						Entities.persist(update);
-						db.commit();
-						LoadBalancingServoCache.getInstance().invalidate(be);
-				  }else if (instanceMap.containsKey(be.getInstanceId()) &&  // when IP address is changed
-				      !instanceMap.get(be.getInstanceId()).getIpAddress().equals(be.getIpAddress())){
-				    final LoadBalancerBackendInstance update = Entities.uniqueResult(be);
-				    update.setVmInstance(instanceMap.get(be.getInstanceId()));
-				    Entities.persist(update);
-				    db.commit();
-				    LoadBalancingServoCache.getInstance().invalidate(be);
-					}
-				}
-			}catch(final Exception ex){
-			  ;
+
+			for(final LoadBalancerBackendInstance be : stateOutdated){
+			  if(instancesToDelete.contains(be.getInstanceId())){
+			    beToDelete.add(be);
+			    continue;
+			  }
+			  if(stateMap.containsKey(be.getInstanceId())){ // OutOfService || Error
+			    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
+			      final STATE trueState = stateMap.get(be.getInstanceId());
+			      final LoadBalancerBackendInstance update = Entities.uniqueResult(be);
+			      update.setBackendState(trueState);
+			      Entities.persist(update);
+			      db.commit();
+			    }catch(final Exception ex) {
+			      ;
+			    }finally{
+			      LoadBalancingServoCache.getInstance().invalidate(be);
+			    }
+			  }else if (instanceMap.containsKey(be.getInstanceId()) &&  // when IP address is changed
+			      !instanceMap.get(be.getInstanceId()).getIpAddress().equals(be.getIpAddress())){
+			    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
+			      final LoadBalancerBackendInstance update = Entities.uniqueResult(be);
+			      update.setIpAddress(instanceMap.get(be.getInstanceId()).getIpAddress());
+			      update.setPartition(instanceMap.get(be.getInstanceId()).getPlacement());
+			      Entities.persist(update);
+			      db.commit();
+			    }catch(final Exception ex) {
+			      ;
+			    }finally{
+			      LoadBalancingServoCache.getInstance().invalidate(be);
+			    }
+			  }
 			}
-			
-			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
-			  for(final LoadBalancerBackendInstance be : beToDelete) {
+
+			for(final LoadBalancerBackendInstance be : beToDelete) {
+			  try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
 			    final LoadBalancerBackendInstance entity = Entities.uniqueResult(be);
 			    Entities.delete(entity);
 			    LOG.info("Instance "+be.getInstanceId()+" is terminated and removed from ELB");
-			  }
-			  db.commit();
-			  for(final LoadBalancerBackendInstance be : beToDelete) {
+			    db.commit();
+			  }catch(final Exception ex) {
+			    ;
+			  }finally{
 			    LoadBalancingServoCache.getInstance().invalidate(be);
 			  }
-			}catch(final Exception ex) {
-			  ;
 			}
 		}
 	}
@@ -495,10 +508,6 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 			return this.instance.getInstanceId();
 		}
 		
-		public RunningInstancesItemType getVmInstance(){
-			return this.instance.getVmInstance();
-		}
-
 		public STATE getBackendState(){
 			return this.instance.getBackendState();
 		}
@@ -513,6 +522,10 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 	    
 		public String getIpAddress(){
 			return this.instance.getIpAddress();
+		}
+		
+		public String getPartition(){
+		  return this.instance.getPartition();
 		}
 		
 		public Date instanceStateLastUpdated(){

@@ -24,7 +24,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -38,14 +37,8 @@ import com.eucalyptus.cloudwatch.common.msgs.Dimensions;
 import com.eucalyptus.cloudwatch.common.msgs.MetricData;
 import com.eucalyptus.cloudwatch.common.msgs.MetricDatum;
 import com.eucalyptus.cloudwatch.common.msgs.StatisticSet;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerEntityTransform;
-import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneEntityTransform;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -213,19 +206,10 @@ public class LoadBalancerCwatchMetrics {
 			@Override
 			public boolean apply(@Nullable BackendInstance instance) {
 				try{
-					if(instance.getLoadBalancer()==null)
-						return false;
-					if(!userId.equals(instance.getLoadBalancer().getOwnerUserId()))
+					if(!userId.equals(instance.getUserId()))
 						return false; // only for the requested user
-					final LoadBalancer lb = LoadBalancerEntityTransform.INSTANCE.apply(instance.getLoadBalancer());
-					final LoadBalancerBackendInstance be = LoadBalancers.lookupBackendInstance(lb, instance.getInstanceId());
-					if(be==null)
-						return false;
-					if(be.getAvailabilityZone()==null || ! LoadBalancerZone.STATE.InService.equals(be.getAvailabilityZone().getState()))
-						return false;
 					
-					return (LoadBalancerBackendInstance.STATE.InService.equals(be.getState())||
-							LoadBalancerBackendInstance.STATE.OutOfService.equals(be.getState()));
+					return true;
 				}catch(final Exception ex){
 					return false;
 				}
@@ -489,12 +473,10 @@ public class LoadBalancerCwatchMetrics {
 	
 	private static class BackendInstance{
 		private String instanceId = null;
-		private LoadBalancerCoreView loadbalancer = null;
 		private String userId = null;
 		private String loadbalancerName = null;
 		
 		private BackendInstance(final LoadBalancerCoreView lb, final String instanceId){
-			this.loadbalancer = lb;
 			this.instanceId = instanceId;
 			this.userId = lb.getOwnerUserId();
 			this.loadbalancerName = lb.getDisplayName();
@@ -529,14 +511,10 @@ public class LoadBalancerCwatchMetrics {
 			return true;
 		}
 		
-		public String getInstanceId(){
-			return this.instanceId;
+		public String getUserId(){
+		  return this.userId;
 		}
 		
-		public LoadBalancerCoreView getLoadBalancer(){
-			return this.loadbalancer;
-		}
-	
 		@Override
 		public int hashCode(){
 			final int prime = 31;
