@@ -64,4 +64,30 @@ public class OSGChannelWriter {
     }
   }
 
+  public static void writeResponse(final Channel channel, final OSGMessageResponse response) throws InternalErrorException {
+    if (channel == null || (!channel.isConnected())) {
+      throw new InternalErrorException("Response: " + response + " requested, but no channel to write to.");
+    }
+
+    final HttpResponseStatus status = response.getHttpResponseStatus();
+    if (status != null) {
+      HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
+      channel.write(httpResponse).addListener(new ChannelFutureListener() {
+        public void operationComplete(ChannelFuture future) {
+          // no post processing here, but for debugging
+          LOG.debug("Wrote response status: " + status);
+        }
+      });
+    }
+    final String responseMessage = response.getHttpResponseBody();
+    if (responseMessage != null) {
+      channel.write(responseMessage).addListener(new ChannelFutureListener() {
+        public void operationComplete(ChannelFuture future) {
+          // no post processing here, but for debugging
+          LOG.debug("Wrote response body: " + responseMessage);
+        }
+      });
+    }
+  }
+
 }
