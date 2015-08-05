@@ -108,13 +108,13 @@ public final class ClusterClientPipelineFactory implements ChannelPipelineFactor
   };
 
   private static final Supplier<ChannelHandler> wsSecHandler = Suppliers.memoize( ClusterWsSec.INSTANCE );
-  public static final Supplier<Integer>                     CLUSTER_CLIENT_PERMITS = new Supplier<Integer>( ) {
+  public static final Supplier<Integer>                     CLUSTER_CLIENT_PERMITS = Suppliers.memoizeWithExpiration( new Supplier<Integer>( ) {
                                                                                      @Override
                                                                                      public Integer get( ) {
                                                                                        return Clusters.getConfiguration( )
                                                                                                       .getRequestWorkers( );
                                                                                      }
-                                                                                   };
+                                                                                   }, 5, TimeUnit.SECONDS );
   private static final CacheLoader<InetAddress, Semaphore>  loader                 = new CacheLoader<InetAddress, Semaphore>( ) {
                                                                                      @Override
                                                                                      public Semaphore load( InetAddress key ) throws Exception {

@@ -87,9 +87,13 @@ import javax.persistence.EntityTransaction;
 import javax.transaction.Status;
 import javax.transaction.Synchronization;
 
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Databases;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.compute.common.CloudMetadataLimitedType;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
+import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.criterion.SimpleExpression;
@@ -181,6 +185,9 @@ import com.eucalyptus.compute.common.internal.images.BootableImageInfo;
 import com.eucalyptus.compute.common.internal.images.ImageInfo;
 import com.eucalyptus.compute.common.internal.network.NetworkGroup;
 import com.eucalyptus.entities.TransientEntityException;
+import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Listeners;
 import com.eucalyptus.images.Emis;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.records.Logs;
@@ -2352,6 +2359,50 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
       return vmType;
     }
 
+  }
+
+  public static class VmInstanceExpiredStateEventListener implements EventListener<ClockTick> {
+
+    public static void register( ) {
+      Listeners.register( ClockTick.class, new VmInstanceExpiredStateEventListener( ) );
+    }
+
+    private static Criterion criterion( final Timeout timeout ) {
+      return Restrictions.and(
+          Restrictions.lt( "lastUpdateTimestamp", new Date( System.currentTimeMillis( ) - timeout.getMilliseconds( ) ) ),
+          VmInstance.criterion( timeout.states.toArray( new VmState[ timeout.states.size( ) ] ) )
+      );
+    }
+
+    @SuppressWarnings("UnnecessaryQualifiedReference")
+    @Override
+    public void fireEvent( final ClockTick event ) {
+      if ( Topology.isEnabledLocally( Eucalyptus.class ) &&
+          Hosts.isCoordinator( ) &&
+          Bootstrap.isOperational( ) &&
+          !Databases.isVolatile( ) ) {
+        final List<VmInstance> instances = Lists.newArrayList( );
+        try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( VmInstance.class ) ) {
+          instances.addAll( list( null,
+              Restrictions.or( criterion( Timeout.BURIED ), criterion( Timeout.TERMINATED ) ),
+              Collections.<String,String>emptyMap( ),
+              Predicates.or( Timeout.BURIED, Timeout.TERMINATED ) ) );
+        }
+        for ( final VmInstance instance : instances ) try {
+          switch ( instance.getState( ) ) {
+            case TERMINATED:
+              VmInstances.buried( instance );
+              break;
+            case BURIED:
+              VmInstances.delete( instance );
+              break;
+          }
+        } catch ( final Exception ex ) {
+          LOG.error( ex );
+          Logs.extreme( ).error( ex, ex );
+        }
+      }
+    }
   }
 
   enum InstanceStatusUpdate implements Function<VmInstance, VmInstance> {

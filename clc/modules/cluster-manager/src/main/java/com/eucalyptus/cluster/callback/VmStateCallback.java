@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,14 +64,12 @@ package com.eucalyptus.cluster.callback;
 
 import static com.eucalyptus.compute.common.internal.vm.VmInstances.TerminatedInstanceException;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
-import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.cluster.Cluster;
@@ -80,6 +78,7 @@ import com.eucalyptus.compute.common.network.Networking;
 import com.eucalyptus.compute.common.network.UpdateInstanceResourcesType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
@@ -125,16 +124,13 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       
       @Override
       public Set<String> get( ) {
-        final EntityTransaction db = Entities.get( VmInstance.class );
-        try {
-          Collection<VmInstance> clusterInstances =  VmInstances.list( null, Restrictions.conjunction( ), Collections.<String,String>emptyMap( ), filter );
+        try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( VmInstance.class ) ) {
+          Collection<VmInstance> clusterInstances =  VmInstances.list( null, filter );
           Collection<String> instanceNames = Collections2.transform( clusterInstances, CloudMetadatas.toDisplayName( ) );
           return Sets.newHashSet( instanceNames );
         } catch ( Exception ex ) {
           Logs.extreme( ).error( ex, ex );
           return Sets.newHashSet( );
-        } finally {
-          db.rollback();
         }
       }
     } );

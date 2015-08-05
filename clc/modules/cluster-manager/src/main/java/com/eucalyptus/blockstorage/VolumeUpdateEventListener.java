@@ -62,7 +62,6 @@
 package com.eucalyptus.blockstorage;
 
 import java.util.EnumSet;
-import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
@@ -88,12 +87,10 @@ import com.eucalyptus.reporting.event.VolumeEvent;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.base.Predicates;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
@@ -145,36 +142,26 @@ public class VolumeUpdateEventListener implements EventListener<ClockTick>, Call
       db.rollback( );
     }
     Logs.extreme( ).debug( "Volume state update: " + Joiner.on( "\n" ).join( partitionVolumeMap.entries( ) ) );
-    final EntityTransaction dbInstance = Entities.get( VmInstance.class );
+    for ( final String partition : partitionVolumeMap.keySet( ) ) {
     try {
-      final List<VmInstance> vms = VmInstances.list( Predicates.alwaysTrue( ) );
-      dbInstance.rollback();
-      for ( final String partition : partitionVolumeMap.keySet( ) ) {
-      try {
-          final Map<String, StorageVolume> idStorageVolumeMap = updateVolumesInPartition( partition );//TODO:GRZE: restoring volume state
-          for ( final String v : partitionVolumeMap.get( partition ) ) {
-            try {
-              final StorageVolume storageVolume = idStorageVolumeMap.get( v );
-              volumeStateUpdate( v, storageVolume, vms );
-            } catch ( final Exception ex ) {
-              LOG.error( ex );
-              Logs.extreme( ).error( ex, ex );
-            }
+        final Map<String, StorageVolume> idStorageVolumeMap = updateVolumesInPartition( partition );//TODO:GRZE: restoring volume state
+        for ( final String v : partitionVolumeMap.get( partition ) ) {
+          try {
+            final StorageVolume storageVolume = idStorageVolumeMap.get( v );
+            volumeStateUpdate( v, storageVolume );
+          } catch ( final Exception ex ) {
+            LOG.error( ex );
+            Logs.extreme( ).error( ex, ex );
           }
-        } catch ( final Exception ex ) {
-          LOG.error( ex );
-          Logs.extreme( ).error( ex, ex );
         }
+      } catch ( final Exception ex ) {
+        LOG.error( ex );
+        Logs.extreme( ).error( ex, ex );
       }
-    } catch (Exception ex) {
-      Logs.extreme( ).error( ex , ex );
-      throw ex;
-    } finally {
-      if ( dbInstance.isActive() ) dbInstance.rollback();
     }
   }
 
-  static void volumeStateUpdate( final String volumeId, final StorageVolume storageVolume, final List<VmInstance> vms ) {
+  static void volumeStateUpdate( final String volumeId, final StorageVolume storageVolume ) {
     final Function<String, Volume> updateVolume = new Function<String, Volume>( ) {
       @Override
       public Volume apply( final String input ) {
@@ -185,7 +172,7 @@ public class VolumeUpdateEventListener implements EventListener<ClockTick>, Call
           boolean maybeBusy = false;
           String vmId = null;
           try {
-            vmAttachedVol = VmInstances.lookupVolumeAttachment( v.getDisplayName( ), vms );
+            vmAttachedVol = VmInstances.lookupVolumeAttachment( v.getDisplayName( ) );
             maybeBusy = true;
             vmId = vmAttachedVol.getVmInstance( ).getInstanceId( );
           } catch ( final NoSuchElementException ex ) {
