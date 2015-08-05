@@ -41,6 +41,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.InvalidAccessKeyAuthException;
 import com.eucalyptus.auth.api.PrincipalProvider;
+import com.eucalyptus.auth.euare.EuareException;
 import com.eucalyptus.auth.euare.EuareServerCertificateUtil;
 import com.eucalyptus.auth.euare.UserPrincipalImpl;
 import com.eucalyptus.auth.euare.common.identity.Account;
@@ -384,6 +385,14 @@ public class IdentityService {
       }
       result.setContent( writer.toString( ) );
     } catch ( Exception e ) {
+      @SuppressWarnings( "ThrowableResultOfMethodCallIgnored" )
+      final EuareException euareException = Exceptions.findCause( e, EuareException.class );
+      if ( euareException != null ) {
+        throw new IdentityServiceStatusException(
+            euareException.getError( ),
+            euareException.getStatus( ).getCode( ),
+            euareException.getMessage( ) );
+      }
       throw handleException( e );
     }
 
