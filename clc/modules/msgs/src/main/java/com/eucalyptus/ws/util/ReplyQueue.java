@@ -74,6 +74,7 @@ import com.eucalyptus.system.Ats;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.eucalyptus.ws.WebServicesException;
 import com.eucalyptus.ws.protocol.QueryBindingInfo;
+import com.google.common.base.Optional;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import edu.ucsb.eucalyptus.msgs.HasRequest;
@@ -103,8 +104,10 @@ public class ReplyQueue {
       BaseMessage msg = convert( payload );
       if( msg != null ) {
         if ( cause instanceof EucalyptusWebServiceException ) {
-          final QueryBindingInfo info = Ats.inClassHierarchy( cause.getClass( ) ).get( QueryBindingInfo.class );
-          final HttpResponseStatus status = info == null ? HttpResponseStatus.INTERNAL_SERVER_ERROR : new HttpResponseStatus( info.statusCode(), "" );
+          final Optional<Integer> statusCodeOptional = ErrorHandlerSupport.getHttpResponseStatus( cause );
+          final HttpResponseStatus status = !statusCodeOptional.isPresent( ) ?
+              HttpResponseStatus.INTERNAL_SERVER_ERROR :
+              new HttpResponseStatus( statusCodeOptional.get(), "" );
           Contexts.response( new ExceptionResponseType( msg, ((EucalyptusWebServiceException) cause).getCode( ), cause.getMessage( ), status, cause )  );
         } else {
           Contexts.response( new ExceptionResponseType( msg, cause.getMessage( ), HttpResponseStatus.NOT_ACCEPTABLE, cause )  );
