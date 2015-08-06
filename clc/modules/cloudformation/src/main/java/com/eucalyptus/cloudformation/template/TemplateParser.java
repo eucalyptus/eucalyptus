@@ -20,9 +20,13 @@
 package com.eucalyptus.cloudformation.template;
 
 import com.eucalyptus.cloudformation.CloudFormationException;
+import com.eucalyptus.cloudformation.GetTemplateSummaryResult;
 import com.eucalyptus.cloudformation.InsufficientCapabilitiesException;
 import com.eucalyptus.cloudformation.Limits;
 import com.eucalyptus.cloudformation.Parameter;
+import com.eucalyptus.cloudformation.ParameterConstraints;
+import com.eucalyptus.cloudformation.ParameterDeclaration;
+import com.eucalyptus.cloudformation.ParameterDeclarations;
 import com.eucalyptus.cloudformation.ResourceList;
 import com.eucalyptus.cloudformation.TemplateParameter;
 import com.eucalyptus.cloudformation.TemplateParameters;
@@ -104,6 +108,7 @@ public class TemplateParser {
   }
 
   private enum TemplateSection {
+    Metadata,
     AWSTemplateFormatVersion,
     Description,
     Parameters,
@@ -177,6 +182,7 @@ public class TemplateParser {
     buildResourceMap(template, templateJsonNode);
     parseValidTopLevelKeys(templateJsonNode);
     parseVersion(template, templateJsonNode);
+    parseMetadata(template, templateJsonNode);
     parseDescription(template, templateJsonNode);
     parseMappings(template, templateJsonNode);
     ParameterParser.parseParameters(template, templateJsonNode, userParameters, false);
@@ -203,7 +209,35 @@ public class TemplateParser {
     return template;
   }
 
+  private void parseMetadata(Template template, JsonNode templateJsonNode) throws CloudFormationException {
+    JsonNode metadataResourcesJsonNode = JsonHelper.checkObject(templateJsonNode, TemplateSection.Metadata.toString());
+    template.setMetadataJSON(JsonHelper.getStringFromJsonNode(metadataResourcesJsonNode));
+  }
+
   public ValidateTemplateResult validateTemplate(String templateBody, List<Parameter> userParameters, PseudoParameterValues pseudoParameterValues, String effectiveUserId) throws CloudFormationException {
+    GetTemplateSummaryResult getTemplateSummaryResult = getTemplateSummary(templateBody, userParameters, pseudoParameterValues, effectiveUserId);
+    ValidateTemplateResult validateTemplateResult = new ValidateTemplateResult();
+    validateTemplateResult.setDescription(getTemplateSummaryResult.getDescription());
+    validateTemplateResult.setCapabilities(getTemplateSummaryResult.getCapabilities());
+    validateTemplateResult.setCapabilitiesReason(getTemplateSummaryResult.getCapabilitiesReason());
+
+    TemplateParameters templateParameters = new TemplateParameters();
+    if (getTemplateSummaryResult.getParameters() != null && getTemplateSummaryResult.getParameters().getMember() != null) {
+      templateParameters.setMember(Lists.<TemplateParameter>newArrayList());
+      for (ParameterDeclaration parameterDeclaration: getTemplateSummaryResult.getParameters().getMember()) {
+        TemplateParameter templateParameter = new TemplateParameter();
+        templateParameter.setDefaultValue(parameterDeclaration.getDefaultValue());
+        templateParameter.setDescription(parameterDeclaration.getDescription());
+        templateParameter.setNoEcho(parameterDeclaration.getNoEcho());
+        templateParameter.setParameterKey(parameterDeclaration.getParameterKey());
+        templateParameters.getMember().add(templateParameter);
+      }
+    }
+    validateTemplateResult.setParameters(templateParameters);
+    return validateTemplateResult;
+  }
+
+  public GetTemplateSummaryResult getTemplateSummary(String templateBody, List<Parameter> userParameters, PseudoParameterValues pseudoParameterValues, String effectiveUserId) throws CloudFormationException {
     Template template = new Template();
     template.setResourceInfoMap(Maps.<String, ResourceInfo>newLinkedHashMap());
     JsonNode templateJsonNode = null;
@@ -221,6 +255,7 @@ public class TemplateParser {
     parseValidTopLevelKeys(templateJsonNode);
     parseVersion(template, templateJsonNode);
     parseDescription(template, templateJsonNode);
+    parseMetadata(template, templateJsonNode);
     parseMappings(template, templateJsonNode);
     ParameterParser.parseParameters(template, templateJsonNode, userParameters, true);
     parseConditions(template, templateJsonNode, true, effectiveUserId);
@@ -235,16 +270,17 @@ public class TemplateParser {
         capabilitiesResourceTypes.add(resourceInfo.getType());
       }
     }
-    ValidateTemplateResult validateTemplateResult = new ValidateTemplateResult();
-    validateTemplateResult.setDescription(template.getDescription());
-    validateTemplateResult.setCapabilities(new ResourceList());
-    validateTemplateResult.getCapabilities().setMember(Lists.newArrayList(requiredCapabilities));
+    GetTemplateSummaryResult getTemplateSummaryResult = new GetTemplateSummaryResult();
+    getTemplateSummaryResult.setDescription(template.getDescription());
+    getTemplateSummaryResult.setCapabilities(new ResourceList());
+    getTemplateSummaryResult.getCapabilities().setMember(Lists.newArrayList(requiredCapabilities));
     if (!requiredCapabilities.isEmpty()) {
-      validateTemplateResult.setCapabilitiesReason("The following resource(s) require capabilities: " + capabilitiesResourceTypes);
+      getTemplateSummaryResult.setCapabilitiesReason("The following resource(s) require capabilities: " + capabilitiesResourceTypes);
     }
-    validateTemplateResult.setParameters(new TemplateParameters());
-    validateTemplateResult.getParameters().setMember(template.getTemplateParameters());
-    return validateTemplateResult;
+    getTemplateSummaryResult.setParameters(new ParameterDeclarations());
+    getTemplateSummaryResult.getParameters().setMember(template.getParameterDeclarations());
+    getTemplateSummaryResult.setMetadata(template.getMetadataJSON());
+    return getTemplateSummaryResult;
   }
 
 
@@ -387,7 +423,7 @@ public class TemplateParser {
               " exceeds the maximum parameter value length of " + Limits.PARAMETER_VALUE_MAX_LENGTH_BYTES + " bytes.");
           }
           template.getParameters().add(parameter.getParameter());
-          template.getTemplateParameters().add(parameter.getTemplateParameter());
+          template.getParameterDeclarations().add(parameter.getParameterDeclaration());
           if (parameter.getParameter().getStringValue() == null) {
             noValueParameters.add(parameter.getParameter().getKey());
           }
@@ -414,7 +450,8 @@ public class TemplateParser {
 
     private static Parameter parseParameter(String parameterName, JsonNode parameterJsonNode, Map<String, String> userParameterMap) throws CloudFormationException {
       validateParameterKeys(parameterJsonNode);
-      ParameterType actualParameterType = parseType(parameterJsonNode);
+      String actualParameterTypeStr = JsonHelper.getString(parameterJsonNode, ParameterKey.Type.toString());
+      ParameterType actualParameterType = parseType(actualParameterTypeStr);
       ParameterType parsedIndividualType = null; // String or Number, or CommaDelimitedList.  Other list cases, what the individual elements are.
       boolean isList = false;
       switch (actualParameterType) {
@@ -527,12 +564,20 @@ public class TemplateParser {
       parameter.setJsonValue(JsonHelper.getStringFromJsonNode(jsonValueNode));
       parameter.setStringValue(stringValue);
 
-      TemplateParameter templateParameter = new TemplateParameter();
-      templateParameter.setDescription(description);
-      templateParameter.setDefaultValue(defaultValue);
-      templateParameter.setNoEcho(noEcho);
-      templateParameter.setParameterKey(parameterName);
-      return new Parameter(parameter, templateParameter);
+      ParameterDeclaration parameterDeclaration = new ParameterDeclaration();
+      parameterDeclaration.setDescription(description);
+      parameterDeclaration.setDefaultValue(defaultValue);
+      parameterDeclaration.setNoEcho(noEcho);
+      parameterDeclaration.setParameterKey(parameterName);
+      if (allowedValues!=null) {
+        ParameterConstraints parameterConstraints = new ParameterConstraints();
+        ResourceList allowedValuesResourceList = new ResourceList();
+        allowedValuesResourceList.setMember(Lists.newArrayList(allowedValues));
+        parameterConstraints.setAllowedValues(allowedValuesResourceList);
+        parameterDeclaration.setParameterConstraints(parameterConstraints);
+      }
+      parameterDeclaration.setParameterType(actualParameterTypeStr);
+      return new Parameter(parameter, parameterDeclaration);
     }
 
     private static Collection<String> splitAndTrimCSVString(String stringValue) {
@@ -700,7 +745,10 @@ public class TemplateParser {
     }
 
     private static ParameterType parseType(JsonNode parameterJsonNode) throws CloudFormationException {
-      String typeStr = JsonHelper.getString(parameterJsonNode, ParameterKey.Type.toString());
+      return parseType(JsonHelper.getString(parameterJsonNode, ParameterKey.Type.toString()));
+
+    }
+    private static ParameterType parseType(String typeStr) throws CloudFormationException {
       if (typeStr == null) {
         throw new ValidationErrorException("Template format error: Every " + TemplateParser.TemplateSection.Parameters + " object "
           + "must contain a " + ParameterKey.Type + " member.");
@@ -716,20 +764,18 @@ public class TemplateParser {
 
     private static class Parameter {
       private StackEntity.Parameter stackEntityParameter;
-      private TemplateParameter templateParameter;
+      private ParameterDeclaration parameterDeclaration;
 
-      private Parameter(StackEntity.Parameter stackEntityParameter, TemplateParameter templateParameter) {
+      private Parameter(StackEntity.Parameter stackEntityParameter, ParameterDeclaration parameterDeclaration) {
         this.stackEntityParameter = stackEntityParameter;
-        this.templateParameter = templateParameter;
+        this.parameterDeclaration = parameterDeclaration;
       }
 
       StackEntity.Parameter getParameter() {
         return stackEntityParameter;
       }
 
-      TemplateParameter getTemplateParameter() {
-        return templateParameter;
-      }
+      ParameterDeclaration getParameterDeclaration() { return parameterDeclaration; }
     }
   }
 

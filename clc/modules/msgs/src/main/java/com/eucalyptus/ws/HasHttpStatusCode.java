@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,27 +17,36 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.network
+package com.eucalyptus.ws;
 
-import com.google.common.base.Function
-import com.google.common.base.Optional
-import groovy.transform.CompileStatic
+import javax.annotation.Nullable;
+import com.google.common.base.Function;
 
 /**
  *
  */
-@CompileStatic
-interface PrivateAddressPersistence {
+public interface HasHttpStatusCode {
 
-  Optional<PrivateAddress> tryCreate( String scope, final String tag, String address )
+  /**
+   * HTTP status code
+   *
+   * @return The code, null if not available.
+   */
+  Integer getHttpStatusCode( );
 
-  void teardown( PrivateAddress address )
+  class Utils {
+    private enum HttpStatusCodeTransform implements Function<HasHttpStatusCode,Integer> {
+      INSTANCE {
+        @Nullable
+        @Override
+        public Integer apply( final HasHttpStatusCode hasHttpStatusCode ) {
+          return hasHttpStatusCode == null ? null : hasHttpStatusCode.getHttpStatusCode( );
+        }
+      }
+    }
 
-  def <V> Optional<V> withFirstMatch( PrivateAddress address, String ownerId, Closure<V> closure )
-
-  void withMatching( PrivateAddress address, Closure<?> closure )
-
-  def <T> List<T> list( String scope, String tag, Function<PrivateAddress,T> transform )
-
-  PrivateAddressPersistence distinct( )
+    public static Function<HasHttpStatusCode,Integer> httpStatusCode( ) {
+      return HttpStatusCodeTransform.INSTANCE;
+    }
+  }
 }

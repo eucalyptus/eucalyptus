@@ -282,7 +282,7 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 		private static final int DEFAULT_HEALTHY_THRESHOLD = 3;
 		private static final int DEFAULT_INTERVAL = 30;
 		private static final int DEFAULT_TIMEOUT = 5;
-		private static final int DEFAULT_UNHEALTHY_THRESHOLD = 2;
+		private static final int DEFAULT_UNHEALTHY_THRESHOLD = 3;
 		
 		protected UpdateHealthCheckConfig(
 				EventHandlerChain<CreateListenerEvent> chain) {

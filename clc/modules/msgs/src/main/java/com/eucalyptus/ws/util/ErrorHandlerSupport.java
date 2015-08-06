@@ -29,12 +29,18 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
+import com.eucalyptus.ws.HasHttpStatusCode;
 import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.protocol.QueryBindingInfo;
+import com.google.common.base.Functions;
+import com.google.common.base.Optional;
+import com.google.common.base.Predicates;
+import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.BaseMessageSupplier;
 import edu.ucsb.eucalyptus.msgs.ErrorDetail;
@@ -77,8 +83,10 @@ public abstract class ErrorHandlerSupport {
           role = Role.Receiver;
           code = defaultCode;
         }
-        final QueryBindingInfo info = Ats.inClassHierarchy( cloudException.getClass() ).get( QueryBindingInfo.class );
-        status = info == null ? HttpResponseStatus.INTERNAL_SERVER_ERROR : new HttpResponseStatus( info.statusCode(), code );
+        final Optional<Integer> statusCodeOptional = getHttpResponseStatus( cloudException );
+        status = !statusCodeOptional.isPresent( ) ?
+            HttpResponseStatus.INTERNAL_SERVER_ERROR :
+            new HttpResponseStatus( statusCodeOptional.get( ), code );
         final BaseMessage errorResp = buildErrorResponse( 
             payload.getCorrelationId( ),
             role,
@@ -121,7 +129,19 @@ public abstract class ErrorHandlerSupport {
                                                      Role role,
                                                      String code,
                                                      String message );
-  
+
+  protected static Optional<Integer> getHttpResponseStatus( final Throwable t ) {
+    final QueryBindingInfo info = Ats.inClassHierarchy( t.getClass() ).get( QueryBindingInfo.class );
+    final Optional<Integer> status = info == null ?
+        Optional.<Integer>absent( ) :
+        Optional.of( info.statusCode( ) );
+    return Iterables.tryFind( Exceptions.causes( t ), Predicates.instanceOf( HasHttpStatusCode.class ) )
+            .transform( Functions.compose(
+                HasHttpStatusCode.Utils.httpStatusCode( ),
+                CollectionUtils.cast( HasHttpStatusCode.class ) ) )
+        .or( status );
+  }
+
   private BaseMessage parsePayload( final Object payload ) throws PayloadParseException {
     if ( payload instanceof BaseMessage ) {
       return ( BaseMessage ) payload;
@@ -142,5 +162,4 @@ public abstract class ErrorHandlerSupport {
       super(cause);
     }
   }
-
 }

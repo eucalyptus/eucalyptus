@@ -99,7 +99,7 @@ class NetworkConfigurationsTest {
         ],
         clusters: [
             new Cluster( name: 'cluster0', privateIps: [ '10.20.10.10-20.10.10.11' ] )
-        ] ), 'cluster1' ).with{ Iterable<Integer> ips ->
+        ] ), 'cluster1' ).left.with{ Iterable<Integer> ips ->
       assertEquals( 'private address list from top level', [ '10.10.10.10', '10.10.10.11' ], Lists.newArrayList( ips.collect( PrivateAddresses.&fromInteger ) ) )
     }
 
@@ -117,7 +117,7 @@ class NetworkConfigurationsTest {
             new Cluster( name: 'cluster0', privateIps: [ '10.20.10.10-20.10.10.11' ] ),
             new Cluster( name: 'cluster1', privateIps: [ '10.10.10.10-10.10.10.11' ] ),
             new Cluster( name: 'cluster2', privateIps: [ '10.30.10.10-10.30.10.11' ] )
-        ] ), 'cluster1' ).with{ Iterable<Integer> ips ->
+        ] ), 'cluster1' ).left.with{ Iterable<Integer> ips ->
       assertEquals( 'private address list from cluster level', [ '10.10.10.10', '10.10.10.11' ], Lists.newArrayList( ips.collect( PrivateAddresses.&fromInteger ) ) )
     }
   }

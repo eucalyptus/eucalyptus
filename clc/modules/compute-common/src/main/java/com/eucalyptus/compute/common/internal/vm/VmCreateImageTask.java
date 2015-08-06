@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,6 +63,7 @@
 package com.eucalyptus.compute.common.internal.vm;
 
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.Set;
 
 import javax.persistence.CollectionTable;
@@ -72,7 +73,12 @@ import javax.persistence.ElementCollection;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
+import org.hibernate.criterion.Criterion;
+import org.hibernate.criterion.Restrictions;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 public class VmCreateImageTask {
@@ -258,5 +264,17 @@ public class VmCreateImageTask {
     }
     return true;
   }
-  
+
+  /**
+   * Instance matching criterion.
+   */
+  public static Criterion inState( final Set<CreateImageState> states ) {
+    return Restrictions.in(
+        "runtimeState.createImageTask.state",
+        Lists.newArrayList( Iterables.transform( states, Functions.toStringFunction( ) ) ) );
+  }
+
+  public static Set<CreateImageState> idleStates( ) {
+    return EnumSet.of( CreateImageState.complete, CreateImageState.failed, CreateImageState.none );
+  }
 }

@@ -255,15 +255,6 @@ public class LoadBalancingServoCache {
     return cachedEntities.get(servoInstanceId).getBackendServerDescriptions();
   }
   
-  public boolean replaceBackendInstance(final String servoInstanceId, final LoadBalancerBackendInstance oldInstance, 
-      final LoadBalancerBackendInstance newInstance) throws Exception {
-    final CachedEntities entities = cachedEntities.get(servoInstanceId);
-    final List<LoadBalancerBackendInstance> backendInstances =  entities.getBackendInstances();
-    if(backendInstances.remove(oldInstance))
-      return backendInstances.add(newInstance);
-    return false;
-  }
-  
   private synchronized void invalidate(final String servoInstanceId) {
     cachedEntities.invalidate(servoInstanceId);
     recordVersion.putIfAbsent(servoInstanceId, 0L);

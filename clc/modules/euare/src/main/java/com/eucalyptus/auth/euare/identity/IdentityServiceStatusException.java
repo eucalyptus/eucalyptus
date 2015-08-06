@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,27 +17,29 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.network
+package com.eucalyptus.auth.euare.identity;
 
-import com.google.common.base.Function
-import com.google.common.base.Optional
-import groovy.transform.CompileStatic
+import com.eucalyptus.ws.HasHttpStatusCode;
+import com.eucalyptus.ws.Role;
 
 /**
  *
  */
-@CompileStatic
-interface PrivateAddressPersistence {
+public class IdentityServiceStatusException extends IdentityServiceException implements HasHttpStatusCode {
 
-  Optional<PrivateAddress> tryCreate( String scope, final String tag, String address )
+  private static final long serialVersionUID = 1L;
 
-  void teardown( PrivateAddress address )
+  private final int httpStatusCode;
 
-  def <V> Optional<V> withFirstMatch( PrivateAddress address, String ownerId, Closure<V> closure )
+  public IdentityServiceStatusException( final String code, final int httpStatusCode, final String message ) {
+    super( code,
+        httpStatusCode >= 400 && httpStatusCode < 500 ? Role.Sender : Role.Receiver,
+        message );
+    this.httpStatusCode = httpStatusCode;
+  }
 
-  void withMatching( PrivateAddress address, Closure<?> closure )
-
-  def <T> List<T> list( String scope, String tag, Function<PrivateAddress,T> transform )
-
-  PrivateAddressPersistence distinct( )
+  @Override
+  public Integer getHttpStatusCode( ) {
+    return httpStatusCode;
+  }
 }

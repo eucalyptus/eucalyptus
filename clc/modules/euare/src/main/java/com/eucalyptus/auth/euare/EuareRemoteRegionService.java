@@ -26,6 +26,7 @@ import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMOutputFormat;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.log4j.Logger;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.mule.api.MuleEventContext;
 import org.mule.api.lifecycle.Callable;
 import com.eucalyptus.auth.euare.common.identity.Identity;
@@ -43,6 +44,8 @@ import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LockResource;
+import com.eucalyptus.util.async.AsyncExceptions;
+import com.eucalyptus.util.async.AsyncExceptions.AsyncWebServiceError;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Optional;
 import com.google.common.collect.Iterables;
@@ -85,6 +88,11 @@ public class EuareRemoteRegionService implements Callable {
       euareResponse.setCorrelationId( euareRequest.getCorrelationId( ) );
       return euareResponse;
     } catch ( Exception e ) {
+      final Optional<AsyncWebServiceError> error = AsyncExceptions.asWebServiceError( e );
+      if ( error.isPresent( ) ) {
+        final AsyncWebServiceError webServiceError = error.get( );
+        throw new EuareException( HttpResponseStatus.valueOf( webServiceError.getHttpErrorCode( ) ), webServiceError.getCode( ), webServiceError.getMessage( ) );
+      }
       throw new EucalyptusCloudException( e );
     } finally {
       euareRequest.setUserId( previousUserId );

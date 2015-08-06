@@ -42,6 +42,7 @@ import com.eucalyptus.network.config.NetworkConfiguration
 import com.eucalyptus.network.config.NetworkConfigurations
 import com.eucalyptus.records.Logs
 import com.eucalyptus.util.Cidr
+import com.eucalyptus.util.Pair
 import com.eucalyptus.util.Strings
 import com.google.common.base.Function
 import com.google.common.base.Optional
@@ -166,9 +167,21 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
     final String zone = request.availabilityZone
     final String vpcId = request.vpc
     final String subnetId = request.subnet
-    final Iterable<Integer> addresses = vpcId != null ?
-        Iterables.skip( IPRange.fromCidr( cidrForSubnet( subnetId ) ), 3 ) :
-        NetworkConfigurations.getPrivateAddresses( zone )
+    final Iterable<Integer> addresses
+    final int addressCount
+    final int allocatedCount
+    if ( vpcId != null ) {
+      final Pair<Cidr,Integer> cidrAndAvailable = cidrForSubnet( subnetId )
+      final IPRange range = IPRange.fromCidr( cidrAndAvailable.getLeft( ) )
+      addresses = Iterables.skip( range, 3 )
+      addressCount = ((int)range.size( )) - 3
+      allocatedCount = addressCount - cidrAndAvailable.right
+    } else {
+      final Pair<Iterable<Integer>,Integer> addressPair = NetworkConfigurations.getPrivateAddresses( zone )
+      addresses = addressPair.left
+      addressCount = addressPair.right
+      allocatedCount = -1 // unknown
+    }
     final String scopeDescription = vpcId != null ? "subnet ${subnetId}" :  "zone ${zone}"
     if ( privateIPResource.value ) { // handle restore
       if ( Iterators.contains( addresses.iterator( ), PrivateAddresses.asInteger( privateIPResource.value ) ) ) {
@@ -178,7 +191,9 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
               value: PrivateAddresses.allocate(
                   vpcId,
                   subnetId,
-                  [ PrivateAddresses.asInteger( privateIPResource.value ) ] ),
+                  [ PrivateAddresses.asInteger( privateIPResource.value ) ],
+                  1,
+                  -1 ),
               ownerId: privateIPResource.ownerId )
         } catch ( NotEnoughResourcesException e ) {
           if ( PrivateAddresses.verify( vpcId, privateIPResource.value, privateIPResource.ownerId ) ) {
@@ -199,7 +214,7 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
     } else {
       resource = new PrivateIPResource(
           mac: mac( privateIPResource.ownerId  ),
-          value: PrivateAddresses.allocate( vpcId, subnetId, addresses ),
+          value: PrivateAddresses.allocate( vpcId, subnetId, addresses, addressCount, allocatedCount ),
           ownerId: privateIPResource.ownerId )
     }
 
@@ -226,11 +241,11 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
     }
   }
 
-  protected Cidr cidrForSubnet( final String subnetId ) {
-    Transactions.one( Subnet.exampleWithName( null, subnetId ), new Function<Subnet, Cidr>( ){
+  protected Pair<Cidr,Integer> cidrForSubnet( final String subnetId ) {
+    Transactions.one( Subnet.exampleWithName( null, subnetId ), new Function<Subnet, Pair<Cidr,Integer>>( ){
       @Override
-      Cidr apply( final Subnet subnet ) {
-        return subnet != null ? Cidr.parse( subnet.getCidr( ) ) : null;
+      Pair<Cidr,Integer> apply( final Subnet subnet ) {
+        return subnet != null ? Pair.pair( Cidr.parse( subnet.getCidr( ) ), subnet.getAvailableIpAddressCount( ) ) : null;
       }
     } )
   }

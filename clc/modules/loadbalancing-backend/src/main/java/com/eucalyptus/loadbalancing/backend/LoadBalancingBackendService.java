@@ -255,8 +255,7 @@ public class LoadBalancingBackendService {
       final DescribeLoadBalancersByServoType request
   ) throws EucalyptusCloudException {
     final DescribeLoadBalancersByServoResponseType reply = request.getReply( );
-    final String instanceId = request.getInstanceId( );
-    
+    final String instanceId = request.getInstanceId( );    
     LoadBalancerServoInstance instance = null;
     // lookup servo instance Id to see which LB zone it is assigned to
     try{
@@ -308,10 +307,8 @@ public class LoadBalancingBackendService {
               // Instance's service state can only be determined in the same zone. Cross-zone instances are enabled only when InService
               final boolean inService = LoadBalancerBackendInstance.STATE.InService.equals( arg0.getBackendState( ) ) && 
                    !(arg0.getIpAddress()==null || arg0.getIpAddress().length()<=0);
-              
               return inService &&
-                  arg0.getVmInstance()!=null &&
-                  !zone.getName().equals(arg0.getVmInstance().getPlacement()); // different zone
+                  !zone.getName().equals(arg0.getPartition()); // different zone
             }
           });
         }
@@ -501,7 +498,6 @@ public class LoadBalancingBackendService {
   public PutServoStatesResponseType putServoStates(PutServoStatesType request) throws EucalyptusCloudException {
     PutServoStatesResponseType reply = request.getReply();
 	  final String servoId = request.getInstanceId();
-
 	  final Instances instances = request.getInstances();
 	  final MetricData metric = request.getMetricData();	  
 	  LoadBalancer lb = null;
@@ -527,9 +523,6 @@ public class LoadBalancingBackendService {
 	  }
 	  if(lb==null || !LoadBalancingMetadatas.filterPrivileged().apply( lb ))
 		  return reply;
-	  
-	  final int healthyTimeoutSec = lb.getHealthCheckInterval() * lb.getHealthyThreshold();
-	  final long currentTime = System.currentTimeMillis();
 	  
 	  /// INSTANCE HEALTH CHECK UPDATE
 	  if(instances!= null && instances.getMember()!=null && instances.getMember().size()>0){
@@ -557,45 +550,32 @@ public class LoadBalancingBackendService {
 					  break;
 				  }  
 			  }
-			  boolean outdated = false;
-        Date lastUpdated;
-			  if(found!= null && (lastUpdated = found.instanceStateLastUpdated()) != null){
-		      final int diffSec = (int)((currentTime - lastUpdated.getTime())/1000.0);
-		      if(diffSec > healthyTimeoutSec){
-		        outdated = true;
-		      }
-		    }
+			  
 			  boolean stateChanged = false;
 			  if(found!=null && !state.equals(found.getState().name()))
 			    stateChanged = true;
-			  
-			  if(outdated || stateChanged ){
-			    // backend instances' state changed
-          try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
-					  final LoadBalancerBackendInstance update = Entities.uniqueResult(
-							  LoadBalancerBackendInstance.named(lb, found.getInstanceId()));
-				
-					  update.setState(Enum.valueOf(LoadBalancerBackendInstance.STATE.class, state));
-					  if(state.equals(LoadBalancerBackendInstance.STATE.OutOfService.name())){
-						  update.setReasonCode("Instance");
-						  update.setDescription("Instance has failed at least the UnhealthyThreshold number of health checks consecutively.");
-					  }else{
-						  update.setReasonCode("");
-						  update.setDescription("");
-					  }
-					  update.updateInstanceStateTimestamp();
-					  Entities.persist(update);
-					  db.commit();
-					  if (stateChanged) {
-					    LoadBalancingServoCache.getInstance().invalidate(lb);
-					  } else {
-					    LoadBalancingServoCache.getInstance().replaceBackendInstance(servoId, found, update);
-					  }
-				  }catch(final NoSuchElementException ex){
-					  LOG.error("unable to find the loadbancer backend instance");
-				  }catch(final Exception ex){
-					  LOG.error("unable to update the state of loadbalancer backend instance");
-				  }
+
+			  try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
+			    final LoadBalancerBackendInstance update = Entities.uniqueResult(
+			        LoadBalancerBackendInstance.named(lb, found.getInstanceId()));
+			    update.setState(Enum.valueOf(LoadBalancerBackendInstance.STATE.class, state));
+			    if(state.equals(LoadBalancerBackendInstance.STATE.OutOfService.name())){
+			      update.setReasonCode("Instance");
+			      update.setDescription("Instance has failed at least the UnhealthyThreshold number of health checks consecutively.");
+			    }else{
+			      update.setReasonCode("");
+			      update.setDescription("");
+			    }
+			    update.updateInstanceStateTimestamp();
+			    Entities.persist(update);
+			    db.commit();
+			    if (stateChanged) {
+			      LoadBalancingServoCache.getInstance().invalidate(lb);
+			    } 
+			  }catch(final NoSuchElementException ex){
+			    LOG.error("unable to find the loadbancer backend instance", ex);
+			  }catch(final Exception ex){
+			    LOG.error("unable to update the state of loadbalancer backend instance", ex);
 			  }
 		  }
 	  }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,43 +60,60 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.objectstorage.pipeline.handlers;
+package com.eucalyptus.objectstorage.pipeline;
 
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.handler.codec.http.HttpRequest;
 
-import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.objectstorage.OSGChannelWriter;
-import com.eucalyptus.objectstorage.OSGMessageResponse;
-import com.eucalyptus.ws.StackConfiguration;
+import com.eucalyptus.component.annotation.ComponentPart;
+import com.eucalyptus.objectstorage.ObjectStorage;
+import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageChunkedPUTLifecycleAndAclAggregatorStage;
+import com.eucalyptus.objectstorage.pipeline.stages.ObjectStoragePUTBindingStage;
+import com.eucalyptus.objectstorage.pipeline.stages.ObjectStoragePUTOutboundStage;
+import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageRESTExceptionStage;
+import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageUserAuthenticationStage;
+import com.eucalyptus.objectstorage.util.OSGUtil;
+import com.eucalyptus.ws.stages.UnrollableStage;
 
-/*
+/**
+ * The pipeline for HTTP PUT metadata requests to the OSG
+ * 
+ * @author swathi gangisetty
  *
  */
-public class ObjectStoragePUTLifecycleAndAclAggregatorHandler extends HttpChunkAggregator {
+@ComponentPart(ObjectStorage.class)
+public class ObjectStoragePUTMetadataPipeline extends ObjectStorageRESTPipeline {
+  private static Logger LOG = Logger.getLogger(ObjectStoragePUTMetadataPipeline.class);
+  private final UnrollableStage auth = new ObjectStorageUserAuthenticationStage();
+  private final UnrollableStage chunkedLCorACL = new ObjectStorageChunkedPUTLifecycleAndAclAggregatorStage();
+  private final UnrollableStage bind = new ObjectStoragePUTBindingStage();
+  private final UnrollableStage out = new ObjectStoragePUTOutboundStage();
+  private final UnrollableStage exHandler = new ObjectStorageRESTExceptionStage();
 
-  private static final int DEFAULT_MAX_CONTENT_LENGTH = StackConfiguration.CLIENT_HTTP_CHUNK_BUFFER_MAX;
+  @Override
+  public boolean checkAccepts(HttpRequest message) {
+    // Allow PUT metdata operations (only)
+    if (super.checkAccepts(message) && OSGUtil.isPUTMetadataRequest(message)) {
+      return true;
+    }
 
-  public ObjectStoragePUTLifecycleAndAclAggregatorHandler() {
-    super(DEFAULT_MAX_CONTENT_LENGTH);
-  }
-
-  public ObjectStoragePUTLifecycleAndAclAggregatorHandler(int maxContentLength) {
-    super(maxContentLength);
+    return false;
   }
 
   @Override
-  public void messageReceived(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
-    Object message = event.getMessage();
-    // handle "Expect: 100-continue" header before handing it off to HttpChunkAggregator
-    if (message instanceof MappingHttpRequest && HttpHeaders.is100ContinueExpected((MappingHttpRequest) message)) {
-      OSGChannelWriter.writeResponse(ctx.getChannel(), OSGMessageResponse.Continue);
-      // remove "Expect: 100-continue" header so HttpChunkAggregator does not have to deal with it.
-      // TODO this will remove all Expect headers, check if thats okay here
-      HttpHeaders.set100ContinueExpected((MappingHttpRequest) message, false);
-    }
-    super.messageReceived(ctx, event);
+  public String getName() {
+    return "objectstorage-put-metadata";
   }
+
+  @Override
+  public ChannelPipeline addHandlers(ChannelPipeline pipeline) {
+    auth.unrollStage(pipeline);
+    chunkedLCorACL.unrollStage(pipeline);
+    bind.unrollStage(pipeline);
+    out.unrollStage(pipeline);
+    exHandler.unrollStage(pipeline);
+    return pipeline;
+  }
+
 }

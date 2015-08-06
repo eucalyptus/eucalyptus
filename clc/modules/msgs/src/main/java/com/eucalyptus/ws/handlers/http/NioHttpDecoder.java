@@ -190,7 +190,7 @@ public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
 
           switch ( nextState ) {
             case READ_FIXED_LENGTH_CONTENT:
-              if ( contentLength > maxChunkSize ) {
+              if ( contentLength > maxChunkSize || HttpHeaders.is100ContinueExpected(message) ) {
                 checkpoint( State.READ_FIXED_LENGTH_CONTENT_AS_CHUNKS );
                 message.addHeader( HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED );
                 chunkSize = message.getContentLength( -1 );
@@ -198,7 +198,7 @@ public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
               }
               break;
             case READ_VARIABLE_LENGTH_CONTENT:
-              if ( buffer.readableBytes( ) > maxChunkSize ) {
+              if ( buffer.readableBytes( ) > maxChunkSize || HttpHeaders.is100ContinueExpected(message) ) {
                 checkpoint( State.READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS );
                 message.addHeader( HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED );
                 return message;

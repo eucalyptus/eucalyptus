@@ -22,6 +22,7 @@ package com.eucalyptus.vm;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nullable;
 
 import org.apache.log4j.Logger;
+import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.blockstorage.Storage;
@@ -164,7 +166,14 @@ public class CreateImageTask {
 			 * Check if CreateImageTask is held in memory.
 			 * If not, restore from VmInstance (i.e., when service restarts)
 			 */
-			final List<VmInstance> candidates = VmInstances.list(new Predicate<VmInstance>(){
+			final List<VmInstance> candidates = VmInstances.list(
+					null,
+					Restrictions.and(
+							VmInstance.criterion( VmState.RUNNING, VmState.STOPPED ),
+							Restrictions.not( VmCreateImageTask.inState( VmCreateImageTask.idleStates( ) ) )
+					),
+					Collections.<String,String>emptyMap( ),
+					new Predicate<VmInstance>(){
 				@Override
 				public boolean apply(@Nullable VmInstance input) {
 					if((VmState.RUNNING.equals(input.getState()) || VmState.STOPPED.equals(input.getState()))

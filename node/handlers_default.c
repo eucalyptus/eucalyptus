@@ -1789,6 +1789,50 @@ static int cleanup_bundling_task(ncInstance * pInstance, struct bundling_params_
     return ((result == BUNDLING_SUCCESS) ? EUCA_OK : EUCA_ERROR);
 }
 
+
+int update_bundle_progress(char *instanceId, int readPercent)
+{
+    ncInstance *pInstance = NULL;
+    // find the instance
+    if ((pInstance = find_instance(&global_instances, instanceId)) == NULL) {
+        LOGERROR("[%s] instance not found\n", instanceId);
+        return EUCA_NOT_FOUND_ERROR;
+    }
+    double progress = (readPercent * 1.0)/100;
+    sem_p(inst_sem);
+    {
+        pInstance->bundleTaskProgress = progress;
+        LOGDEBUG("[%s] bundle progress is [%f]\n", instanceId, progress);
+        copy_instances();
+        save_instance_struct(pInstance);
+    }
+    sem_v(inst_sem);
+    return 0;
+}
+
+int euca_run_bundle_parser(const char *line, char *instance_id)
+{
+    int read_percent;
+    char *s;
+
+    LOGTRACE("%s\n", line);            // log all output at TRACE level
+    if (instance_id == NULL) {
+        instance_id = "?";
+    }
+    // parse progress from lines like: 'Source file read: 12%'
+    if ((s = strstr(line, "Source file read: "))
+               && sscanf(s, "Source file read: %d", &read_percent) == 1) {
+        if (update_bundle_progress(instance_id, read_percent)) {
+            LOGERROR("[%s] can't update bundling progress\n", instance_id);
+        }
+    } else if (strcasestr(line, "error")) { // any line with 'error'
+        LOGERROR("%s\n", line);
+    } else if (strcasestr(line, "warn")) {  // any line with 'warn'
+        LOGWARN("%s\n", line);
+    }
+    return 0;
+}
+
 //!
 //! Defines the bundling thread
 //!
@@ -1841,6 +1885,8 @@ static void *bundling_thread(void *arg)
         return NULL;
     }
 
+    char totalSizeBytes[16];
+    sprintf(totalSizeBytes, "%lld", pInstance->params.root->sizeBytes);
     LOGINFO("[%s] starting to bundle\n", pInstance->instanceId);
     char node_pk_path[EUCA_MAX_PATH];
     snprintf(node_pk_path, sizeof(node_pk_path), EUCALYPTUS_KEYS_DIR "/node-pk.pem", pParams->eucalyptusHomePath);
@@ -1859,11 +1905,12 @@ static void *bundling_thread(void *arg)
         }
     }
 #define _COMMON_BUNDLING_PARAMS \
-                         euca_run_workflow_parser,\
+                         euca_run_bundle_parser,\
                          (void *)pInstance->instanceId,\
                          run_workflow_path,\
                          "read-raw/up-bundle",\
                          "--input-path", backing_dev,\
+                         "--image-size", totalSizeBytes, \
                          "--encryption-cert-path", cloud_cert_path,\
                          "--signing-key-path", node_pk_path,\
                          "--prefix", pParams->filePrefix,\

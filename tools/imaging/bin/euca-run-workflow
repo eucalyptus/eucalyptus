@@ -119,14 +119,14 @@ class Euca2ools(object):
         self.debug = True
 
     def bundle_and_upload(self,
-                          image_path,
                           destination_dir,
                           args,
                           acl=DEFAULT_UPLOAD_ACL,
+                          image_path=None,
                           fd_r=None):
         op_args = [PATHS['euca-bundle-and-upload-image'],
+                   '--image', image_path if image_path is not None else '-',
                    '--no-progress',
-                   '--image', image_path,
                    '--destination', destination_dir,
                    '--acl', acl,
                    '--prefix', args.prefix,
@@ -266,9 +266,11 @@ class WF_ReadRaw_UpBundle(WF_base):
         parser.add_argument('--input-path', required=True, metavar='PATH', help="Path to the file or block device to read from")
         _add_up_bundle_args(parser)
         parser.add_argument('--work-dir', required=True, metavar='PATH', help='Path to the directory where temporary work files are to reside')
+        parser.add_argument('--image-size', required=True, help='Size of the bundled image in bytes')
 
     def check_deps(self, args):
         self.problems = _check_euca2ools(self.problems)
+        self.problems = _check_pv(self.problems)
 
     def execute(self, args):
         WF_base.execute(self, args)
@@ -278,12 +280,32 @@ class WF_ReadRaw_UpBundle(WF_base):
 
         try:
             subprocess.call(["ls", "-l", args.input_path]) # sanity check, to ensure the disk exists
+            pipe_r, pipe_w = os.pipe()
+            fd_r = os.fdopen(pipe_r, 'r')
+            fd_w = os.fdopen(pipe_w, 'w')
+            count_ps = subprocess.Popen(['pv', '-n', args.input_path], stdout=fd_w,
+                                        close_fds=True, stderr=subprocess.PIPE)
             op_ps = euca2ools.bundle_and_upload(
-                image_path=args.input_path,
                 destination_dir=bundle_dir,
                 args=args, # the rest of the arguments are inherited from run-workflow's command-line
-                acl=Euca2ools.BUNDLE_INSTANCE_ACL)
-            op_ps.wait() # bundle and upload the disk
+                acl=Euca2ools.BUNDLE_INSTANCE_ACL,
+                fd_r=fd_r)
+            fd_r.close()
+            fd_w.close()
+            while count_ps.poll() is None and op_ps.poll() is None:
+                try:
+                    line = count_ps.stderr.readline()
+                    if line:
+                        line = line.strip()
+                        try:
+                            print "Source file read: {0}%".format( int(line) )
+                            sys.stdout.flush()
+                        except:
+                            pass
+                except:
+                    pass
+            count_ps.wait()
+            op_ps.wait()
             if op_ps.returncode != 0:
                 raise subprocess.CalledProcessError(op_ps.returncode, "euca-bundle-and-upload-image")
 
@@ -329,11 +351,15 @@ def _check_executable(problems, command, dep_name):
 
 def _check_euca2ools(problems):
     _check_executable(problems, [PATHS['euca-version']], "euca2ools (euca-version)")
-    _check_executable(problems, [PATHS['euca-bundle-and-upload-image'], '--help'], "euca2ools (bundle-and-upload)")
+    _check_executable(problems, [PATHS['euca-bundle-and-upload-image'], '--help'], "euca2ools (bundle-and-upload-image)")
     return problems
 
 def _check_imager(problems):
     _check_executable(problems, [PATHS['euca-imager'], 'work=/tmp'], "euca-imager") # /tmp is needed so PID file can be created
+    return problems
+
+def _check_pv(problems):
+    _check_executable(problems, [PATHS['pv']], "pv")
     return problems
 
 def _check_bundle_args(problems, args):
@@ -390,7 +416,8 @@ WORKFLOWS = {'down-bundle-fs/up-bundle': WF_DownBundleFS_UpBundle(),
 
 PATHS = {'euca-imager': os.path.join(get_euca_home(), "usr/libexec/eucalyptus", "euca-imager"),
          'euca-version': "euca-version",
-         'euca-bundle-and-upload-image': "euca-bundle-and-upload-image"}
+         'euca-bundle-and-upload-image': "euca-bundle-and-upload-image",
+         'pv': "pv"}
 
 # global arguments, apply to all workflows
 parser = argparse.ArgumentParser(prog='euca-run-workflow', description='Run an Imaging Toolkit workflow.')
