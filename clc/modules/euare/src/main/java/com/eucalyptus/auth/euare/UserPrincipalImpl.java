@@ -21,6 +21,8 @@ package com.eucalyptus.auth.euare;
 
 import static com.eucalyptus.auth.principal.Certificate.Util.active;
 import static com.eucalyptus.util.CollectionUtils.propertyPredicate;
+import java.nio.CharBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.Date;
@@ -51,7 +53,9 @@ import com.eucalyptus.auth.principal.PolicyVersions;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.auth.util.X509CertHelper;
+import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.util.NonNullFunction;
+import com.eucalyptus.util.Strings;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Objects;
@@ -59,6 +63,7 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.io.BaseEncoding;
 
 /**
  *
@@ -113,6 +118,17 @@ public class UserPrincipalImpl implements UserPrincipal {
 
   @Nonnull
   private final ImmutableList<PolicyVersion> principalPolicies;
+
+  /**
+   * TODO - When changing fields, update ptag calculation
+   * TODO - When changing fields, update ptag calculation
+   * TODO - When changing fields, update ptag calculation
+   * TODO - When changing fields, update ptag calculation
+   * TODO - When changing fields, update ptag calculation
+   * @see #ptag(UserPrincipal)
+   */
+  @Nullable
+  private final String ptag;
 
   public UserPrincipalImpl( final UserEntity user ) throws AuthException {
     final List<GroupEntity> groups = user.getGroups();
@@ -180,6 +196,7 @@ public class UserPrincipalImpl implements UserPrincipal {
     this.certificates = ImmutableList.copyOf(
         Iterables.filter( Iterables.transform( user.getCertificates( ), ecertWrapper( this ) ), propertyPredicate( true, active( ) ) ) );
     this.principalPolicies = ImmutableList.copyOf( policies );
+    this.ptag = null;
   }
 
   public UserPrincipalImpl( final EuareUser user ) throws AuthException {
@@ -236,6 +253,7 @@ public class UserPrincipalImpl implements UserPrincipal {
     this.certificates = ImmutableList.copyOf(
         Iterables.filter( user.getCertificates( ), propertyPredicate( true, active( ) ) ) );
     this.principalPolicies = ImmutableList.copyOf( policies );
+    this.ptag = null;
   }
 
   public UserPrincipalImpl( final EuareRole role ) throws AuthException {
@@ -270,6 +288,7 @@ public class UserPrincipalImpl implements UserPrincipal {
     this.keys = ImmutableList.copyOf( Collections.<AccessKey>emptyIterator( ) );
     this.certificates = ImmutableList.copyOf( Collections.<Certificate>emptyIterator() );
     this.principalPolicies = ImmutableList.copyOf( policies );
+    this.ptag = null;
   }
 
   public UserPrincipalImpl(
@@ -293,6 +312,7 @@ public class UserPrincipalImpl implements UserPrincipal {
     this.keys = ImmutableList.copyOf( keys );
     this.certificates = ImmutableList.copyOf( principal.getCertificates() );
     this.principalPolicies = ImmutableList.copyOf( principal.getPrincipalPolicies() );
+    this.ptag = null;
   }
 
   @Nonnull
@@ -379,6 +399,46 @@ public class UserPrincipalImpl implements UserPrincipal {
   @Nonnull
   public ImmutableList<PolicyVersion> getPrincipalPolicies( ) {
     return principalPolicies;
+  }
+
+  @Nullable
+  public String getPTag( ) {
+    return ptag;
+  }
+
+  /**
+   * Calculate the tag for the given principal.
+   */
+  public static String ptag( final UserPrincipal userPrincipal ) {
+    final List<CharSequence> sequences = Lists.newArrayList( );
+    sequences.add( userPrincipal.getAccountAlias( ) );
+    sequences.add( userPrincipal.getAccountNumber( ) );
+    sequences.add( userPrincipal.getAuthenticatedId( ) );
+    sequences.add( userPrincipal.getCanonicalId( ) );
+    sequences.add( userPrincipal.getName( ) );
+    sequences.add( String.valueOf( userPrincipal.getPassword( ) ) );
+    sequences.add( String.valueOf( userPrincipal.getPasswordExpires( ) ) );
+    sequences.add( userPrincipal.getPath( ) );
+    sequences.add( userPrincipal.getUserId( ) );
+    sequences.add( String.valueOf( userPrincipal.isAccountAdmin( ) ) );
+    sequences.add( String.valueOf( userPrincipal.isEnabled( ) ) );
+    sequences.add( String.valueOf( userPrincipal.isSystemAdmin( ) ) );
+    sequences.add( String.valueOf( userPrincipal.isSystemUser( ) ) );
+    for ( final AccessKey key : userPrincipal.getKeys( ) ) {
+      sequences.add( key.getAccessKey( ) );
+      sequences.add( String.valueOf( key.isActive( ) ) );
+    }
+    for ( final Certificate certificate : userPrincipal.getCertificates( ) ) {
+      sequences.add( certificate.getCertificateId( ) );
+      sequences.add( String.valueOf( certificate.isActive( ) ) );
+    }
+    for ( final PolicyVersion policyVersion : userPrincipal.getPrincipalPolicies( ) ) {
+      sequences.add( policyVersion.getPolicyVersionId( ) );
+      sequences.add( policyVersion.getPolicyHash( ) );
+    }
+    return BaseEncoding.base64( ).encode( Digest.SHA256.digestBinary( StandardCharsets.UTF_8.encode( CharBuffer.wrap( Strings.concat(
+        sequences
+    ) ) ) ) );
   }
 
   private static NonNullFunction<AccessKey,AccessKey> keyWrapper( final UserPrincipal userPrincipal ) {

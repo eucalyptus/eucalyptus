@@ -28,12 +28,12 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
+import com.eucalyptus.compute.common.internal.address.AllocatedAddressEntity;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import org.hibernate.Criteria;
 import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
 import com.eucalyptus.address.Address;
-import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
@@ -201,7 +201,7 @@ public final class ReportingDataVerifier {
       for ( ResourceWithRelation resource : holder.resources ) {
         if ( Address.class.equals( holder.type ) ) {
           final ReportingElasticIpEventStore store = ReportingElasticIpEventStore.getInstance();
-          final Address address = findAddress( resource.resourceKey.toString() );
+          final AllocatedAddressEntity address = findAddress( resource.resourceKey.toString() );
           if ( address != null && ensureUserAndAccount( verifiedUserIds, address.getUserId() ) ) {
             store.insertCreateEvent( address.getCreationTimestamp().getTime(), address.getUserId(), address.getDisplayName() );
           }
@@ -312,7 +312,7 @@ public final class ReportingDataVerifier {
       verified = true;
     } else {
       try {
-        final User user = Accounts.lookupPrincipalByUserId( userId, null );
+        final User user = Accounts.lookupPrincipalByUserId( userId );
         ReportingAccountCrud.getInstance().createOrUpdateAccount( user.getAccountNumber(), Accounts.lookupAccountAliasById( user.getName() ) );
         ReportingUserCrud.getInstance().createOrUpdateUser( user.getUserId(), user.getAccountNumber(), user.getName() );
         verified = true;
@@ -339,10 +339,12 @@ public final class ReportingDataVerifier {
     return user;
   }
 
-  private static Address findAddress( final String uuid ) {
-    return Iterables.getFirst( Iterables.filter(
-        Iterables.concat( Addresses.getInstance().listValues(), Addresses.getInstance().listDisabledValues() ),
-        Predicates.compose( Predicates.equalTo( uuid ), naturalId() ) ), null );
+  private static AllocatedAddressEntity findAddress( final String uuid ) {
+    try {
+      return Transactions.find( AllocatedAddressEntity.exampleWithNaturalId( uuid ) );
+    } catch ( TransactionException | NoSuchElementException e ) {
+      return null;
+    }
   }
 
   private static ObjectEntity findObjectInfo( final S3ObjectKey key ) {
@@ -500,7 +502,7 @@ public final class ReportingDataVerifier {
         final View view = new View();
 
         // Addresses
-        for ( final Address address : Iterables.concat( Addresses.getInstance().listValues(), Addresses.getInstance().listDisabledValues() ) ) {
+        for ( final AllocatedAddressEntity address : Transactions.findAll( AllocatedAddressEntity.exampleWithAddress( null ) ) ) {
           if ( address.isAllocated() && !address.isSystemOwned() ) {
             final String id = address.getNaturalId();
             String relatedId = null;

@@ -97,9 +97,9 @@ class NetworkInterfaceHelper {
   static void associate( final Address address,
                          final VpcNetworkInterface networkInterface,
                          final Optional<VmInstance> instanceOption ) {
-    address.assign( networkInterface )
+    Addresses.getInstance( ).assign( address, networkInterface )
     if ( instanceOption.present && VmInstance.VmStateSet.RUN.apply( instanceOption.get( ) ) ) {
-      address.start( instanceOption.get( ) )
+      Addresses.getInstance( ).start( address, instanceOption.get( ) )
     }
     networkInterface.associate( NetworkInterfaceAssociation.create(
         address.associationId,
@@ -120,16 +120,16 @@ class NetworkInterfaceHelper {
       List<NetworkResource> resources = Lists.newArrayList( );
 
       if ( networkInterface.associated ) try {
-        Address address = Addresses.getInstance( ).lookup( networkInterface.association.publicIp )
+        Address address = Addresses.getInstance( ).lookupActiveAddress( networkInterface.association.publicIp )
         try {
           if ( address.started ) {
-            address.stop( );
+            Addresses.getInstance( ).stop( address );
           }
         } catch ( final Exception e1 ) {
           logger.error( "Error stopping address '${networkInterface.association.publicIp}' for interface '${networkInterface.displayName}' clean up.", e1 )
         }
         try {
-          address.unassign( networkInterface )
+          Addresses.getInstance( ).unassign( address, null )
         } catch ( final Exception e2 ) {
           logger.error( "Error unassiging address '${networkInterface.association.publicIp}' for interface '${networkInterface.displayName}'.", e2 )
         }
@@ -155,9 +155,9 @@ class NetworkInterfaceHelper {
 
   static void start( final VpcNetworkInterface networkInterface, final VmInstance instance ) {
     if ( networkInterface.associated ) try {
-      Address address = Addresses.getInstance( ).lookup( networkInterface.association.publicIp )
+      Address address = Addresses.getInstance( ).lookupActiveAddress( networkInterface.association.publicIp )
       try {
-        address.start( instance )
+        Addresses.getInstance( ).start( address, instance )
       } catch ( final Exception e ) {
         logger.error( "Error starting address '${networkInterface.association.publicIp}' for interface '${networkInterface.displayName}, instance ${instance.displayName}'.", e )
       }
@@ -169,10 +169,10 @@ class NetworkInterfaceHelper {
 
   static void stop( final VpcNetworkInterface networkInterface ) {
     if ( networkInterface.associated ) try {
-      Address address = Addresses.getInstance( ).lookup( networkInterface.association.publicIp )
+      Address address = Addresses.getInstance( ).lookupActiveAddress( networkInterface.association.publicIp )
       try {
         if ( address.started ) {
-          address.stop( );
+          Addresses.getInstance( ).stop( address )
         }
       } catch ( final Exception e ) {
         logger.error( "Error stopping address '${networkInterface.association.publicIp}' for interface '${networkInterface.displayName}'.", e )
@@ -196,16 +196,16 @@ class NetworkInterfaceHelper {
       }
 
       if ( networkInterface.associated ) try {
-        Address address = Addresses.getInstance( ).lookup( networkInterface.association.publicIp )
+        Address address = Addresses.getInstance( ).lookupActiveAddress( networkInterface.association.publicIp )
         try {
           if ( address.started ) {
-            address.stop( )
+            Addresses.getInstance( ).stop( address )
           }
         } catch ( final Exception e1 ) {
           logger.error( "Error stopping address '${networkInterface.association.publicIp}' for interface '${networkInterface.displayName}' clean up.", e1 )
         }
         try {
-          address.unassign( networkInterface )
+          Addresses.getInstance( ).unassign( address, null )
         } catch ( final Exception e2 ) {
           logger.error( "Error unassiging address '${networkInterface.association.publicIp}' for interface '${networkInterface.displayName}' clean up.", e2 )
         }

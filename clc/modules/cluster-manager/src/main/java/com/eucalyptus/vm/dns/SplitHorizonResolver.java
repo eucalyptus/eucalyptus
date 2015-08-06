@@ -72,6 +72,7 @@ import org.apache.log4j.Logger;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
 
+import com.eucalyptus.address.AddressRegistry;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cluster.ClusterConfiguration;
@@ -123,7 +124,7 @@ public abstract class SplitHorizonResolver implements DnsResolver {
     public boolean apply( final InetAddress input ) {
       if ( !Bootstrap.isOperational( ) ) {
         return false;
-      } else if ( Addresses.getInstance( ).contains( input.getHostAddress( ) ) ) {
+      } else if ( AddressRegistry.getInstance( ).contains( input.getHostAddress( ) ) ) {
         return true;
       } else {
         try {

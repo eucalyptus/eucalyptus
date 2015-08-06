@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,35 +17,28 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.network
+package com.eucalyptus.util;
 
-import com.google.common.collect.Maps
-import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
+import java.util.concurrent.Callable;
+import com.google.common.base.Function;
 
 /**
- *
+ * Functional utility methods
  */
-@CompileStatic
-class PublicAddresses {
-  private static final Map<String,String> dirtyAddresses = Maps.newConcurrentMap( )
+public class FUtils {
 
-  static void markDirty( String address, String partition ) {
-    dirtyAddresses.put( address, partition )
-  }
-
-  @PackageScope
-  static void clearDirty( Collection<String> inUse, String partition ) {
-    dirtyAddresses.each{ String address, String addressPartition ->
-      if ( partition == addressPartition && !inUse.contains( address )) {
-        dirtyAddresses.remove( address )
+  /**
+   * Partially apply the function using the given parameter.
+   *
+   * @return Callable type thunk
+   */
+  public static <R,P> Callable<R> cpartial( final Function<? super P, ? extends R> function, final P param ) {
+    return new Callable<R>( ) {
+      @Override
+      public R call( ) throws Exception {
+        return function.apply( param );
       }
-    }
-  }
-
-  @PackageScope
-  static boolean isDirty( String address ) {
-    dirtyAddresses.containsKey( address )
+    };
   }
 
 }

@@ -67,7 +67,7 @@ import com.eucalyptus.compute.common.internal.vm.VmInstance
 import com.eucalyptus.vm.VmInstances
 
 
-return Addresses.getInstance( ).listValues( ).collect { Address it ->
+return Addresses.getInstance( ).listActiveAddresses( ).collect { Address it ->
   Address addr = Groovyness.expandoMetaClass( it );
   String ret = addr.toString( );
   if ( addr.isAssigned( ) ) {

@@ -88,7 +88,7 @@ public class ObjectFactoryTest {
    */
   @Test
   public void testCreateObject() throws Exception {
-    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
     String canonicalId = user.getCanonicalId()
     AccessControlPolicy acp = new AccessControlPolicy()
     acp.setAccessControlList(new AccessControlList())
@@ -141,7 +141,7 @@ public class ObjectFactoryTest {
    */
   @Test
   public void testCreateObjectOverwrite() throws Exception {
-    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
     String canonicalId = user.getCanonicalId()
     AccessControlPolicy acp = new AccessControlPolicy()
     acp.setAccessControlList(new AccessControlList())
@@ -205,7 +205,7 @@ public class ObjectFactoryTest {
    */
   @Test
   public void testCreateDuplicateObject() throws Exception {
-    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
     String canonicalId = user.getCanonicalId()
     AccessControlPolicy acp = new AccessControlPolicy()
     acp.setAccessControlList(new AccessControlList())
@@ -263,7 +263,7 @@ public class ObjectFactoryTest {
    */
   @Test
   public void testFullDeleteObject() throws Exception {
-    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
     String canonicalId = user.getCanonicalId()
     AccessControlPolicy acp = new AccessControlPolicy()
     acp.setAccessControlList(new AccessControlList())
@@ -322,7 +322,7 @@ public class ObjectFactoryTest {
    */
   @Test
   public void testDeleteAlreadyDeletingObject() throws Exception {
-    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
     String canonicalId = user.getCanonicalId()
     AccessControlPolicy acp = new AccessControlPolicy()
     acp.setAccessControlList(new AccessControlList())
@@ -370,7 +370,7 @@ public class ObjectFactoryTest {
    */
   @Test
   public void testDeleteNonExistentObject() throws Exception {
-    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
     String canonicalId = user.getCanonicalId()
     AccessControlPolicy acp = new AccessControlPolicy()
     acp.setAccessControlList(new AccessControlList())
@@ -405,7 +405,7 @@ public class ObjectFactoryTest {
     //Set the min part size to 1 to allow small tests
     ObjectStorageProperties.MPU_PART_MIN_SIZE = 1;
 
-    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
     String canonicalId = user.getCanonicalId()
     AccessControlPolicy acp = new AccessControlPolicy()
     acp.setAccessControlList(new AccessControlList())
@@ -487,7 +487,7 @@ public class ObjectFactoryTest {
     //Set the min part size to 1 to allow small tests
     ObjectStorageProperties.MPU_PART_MIN_SIZE = 1;
 
-    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
     String canonicalId = user.getCanonicalId()
     AccessControlPolicy acp = new AccessControlPolicy()
     acp.setAccessControlList(new AccessControlList())
@@ -586,7 +586,7 @@ public class ObjectFactoryTest {
     //Set the min part size to 1 to allow small tests
     ObjectStorageProperties.MPU_PART_MIN_SIZE = 1;
 
-    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
     String canonicalId = user.getCanonicalId()
     AccessControlPolicy acp = new AccessControlPolicy()
     acp.setAccessControlList(new AccessControlList())
@@ -652,7 +652,7 @@ public class ObjectFactoryTest {
    */
   @Test
   public void testCopyObject() throws Exception {
-    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
     String canonicalId = user.getCanonicalId()
     AccessControlPolicy acp = new AccessControlPolicy()
     acp.setAccessControlList(new AccessControlList())
@@ -707,7 +707,7 @@ public class ObjectFactoryTest {
    */
   @Test
   public void testDeleteMarker() throws Exception {
-    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first(), null)
+    UserPrincipal user = Accounts.lookupPrincipalByUserId(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
     String canonicalId = user.getCanonicalId()
     AccessControlPolicy acp = new AccessControlPolicy()
     acp.setAccessControlList(new AccessControlList())

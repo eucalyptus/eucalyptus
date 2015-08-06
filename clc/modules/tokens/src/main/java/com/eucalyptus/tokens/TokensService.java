@@ -222,7 +222,7 @@ public class TokensService {
     final AccountFullName impersonatedAccount;
     try {
       if ( !Strings.isNullOrEmpty( request.getImpersonatedUserId( ) ) ) {
-        impersonated = Accounts.lookupPrincipalByUserId( request.getImpersonatedUserId( ), null );
+        impersonated = Accounts.lookupPrincipalByUserId( request.getImpersonatedUserId( ) );
       } else {
         String accountNumber = Accounts.lookupAccountIdByAlias( request.getAccountAlias( ) );
         impersonated = Accounts.lookupPrincipalByAccountNumberAndUsername( accountNumber, request.getUserName( ) );

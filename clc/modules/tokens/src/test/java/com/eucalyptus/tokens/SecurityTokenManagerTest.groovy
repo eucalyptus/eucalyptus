@@ -237,7 +237,6 @@ class SecurityTokenManagerTest {
   private static AccessKey accessKey( long created, UserPrincipal owner, String accessKey, String secretKey ) {
     new AccessKey(){
       @Override Boolean isActive() { true }
-      @Override void setActive( final Boolean active) { }
       @Override String getAccessKey() { accessKey }
       @Override String getSecretKey() { secretKey }
       @Override Date getCreateDate() { new Date( created ) }
@@ -299,6 +298,7 @@ class SecurityTokenManagerTest {
       @Override List<PolicyVersion> getPrincipalPolicies() { [] }
       @Nonnull
       @Override String getName() { "test-user-1" }
+      @Override String getPTag() { null }
     }
   }
 }

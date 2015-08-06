@@ -19,6 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare.common.identity;
 
+import org.jboss.netty.bootstrap.ClientBootstrap;
+import org.jboss.netty.channel.ChannelPipelineFactory;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.Description;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
@@ -42,5 +44,12 @@ public class Identity extends ComponentId {
   @Override
   public boolean isUseServiceHostName( ) {
     return true;
+  }
+
+  @Override
+  public ClientBootstrap getClientBootstrap( final ChannelPipelineFactory factory ) {
+    final ClientBootstrap clientBootstrap = super.getClientBootstrap( factory );
+    clientBootstrap.setOption( "connectTimeoutMillis", 6000 );
+    return clientBootstrap;
   }
 }
