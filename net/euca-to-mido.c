@@ -1567,6 +1567,7 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                                     }
 
                                     snprintf(tmp_name4, 32, "%d", gnisecgroup->ingress_rules[k].protocol);
+                                    LOGTRACE("HALLO: %s | %s\n", gnisecgroup->name, gnisecgroup->ingress_rules[k].groupId);
                                     if (strlen(gnisecgroup->ingress_rules[k].groupId)) {
                                         // other group
                                         midoname *midos = NULL;
@@ -1575,7 +1576,7 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                                         int found = 0;
                                         rc = mido_get_ipaddrgroups("euca_tenant_1", &midos, &max_midos);
                                         for (r = 0; r < max_midos && !found; r++) {
-                                            snprintf(name, 32, "sg_all_%11s", vpcsecgroup->name);
+                                            snprintf(name, 32, "sg_all_%11s", gnisecgroup->ingress_rules[k].groupId);
                                             rc = mido_getel_midoname(&(midos[r]), "name", &mname);
                                             if (mname && !strcmp(name, mname)) {
                                                 LOGTRACE("FOUND: %s/%s\n", mname, midos[r].uuid);
