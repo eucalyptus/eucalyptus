@@ -360,6 +360,8 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 	public static class BackendInstanceChecker implements EventListener<ClockTick> {
 		private final static int CHECK_EVERY_SECONDS = 120;
 		private final static int NUM_INSTANCES_TO_DESCRIBE = 8;
+
+		private static Date lastCheckTime = new Date(System.currentTimeMillis());
 		public static void register(){
 			Listeners.register(ClockTick.class, new BackendInstanceChecker() );
 		}
@@ -370,32 +372,23 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 			          Topology.isEnabledLocally( LoadBalancingBackend.class ) &&
 			          Topology.isEnabled( Compute.class ) ))
 				return;
-		
+
+			final Date now = new Date(System.currentTimeMillis());
+			final int elapsedSec =  (int)((now.getTime() - lastCheckTime.getTime())/1000.0);
+			if(elapsedSec < CHECK_EVERY_SECONDS)
+			  return;
+			lastCheckTime = now;
+			
 			/// determine the BE instances to query
 			final List<LoadBalancerBackendInstance> allInstances = Lists.newArrayList();
-			final List<LoadBalancerBackendInstance> stateOutdated = Lists.newArrayList();
+			//final List<LoadBalancerBackendInstance> stateOutdated = Lists.newArrayList();
 			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
 				allInstances.addAll(
 						Entities.query(LoadBalancerBackendInstance.named()));
 			}catch(final Exception ex){
 			}
-			final Date current = new Date(System.currentTimeMillis());
-			// find the record eligible to check its status
-			for(final LoadBalancerBackendInstance be : allInstances){
-				final Date lastUpdate = be.getLastUpdateTimestamp();
-				int elapsedSec = (int)((current.getTime() - lastUpdate.getTime())/1000.0);
-				if(elapsedSec > CHECK_EVERY_SECONDS){
-					stateOutdated.add(be);
-				}
-			}
-			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
-				for(final LoadBalancerBackendInstance be: stateOutdated){
-					final LoadBalancerBackendInstance update = Entities.uniqueResult(be);
-					update.setLastUpdateTimestamp(current);
-				}
-				db.commit();
-			}catch(final Exception ex){
-			}
+
+			final List<LoadBalancerBackendInstance> stateOutdated = allInstances;
 			final Set<String> instancesToCheck = 
 					Sets.newHashSet(Lists.transform(stateOutdated, new Function<LoadBalancerBackendInstance,String>(){
 						@Override

@@ -646,8 +646,9 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	// periodically queries autoscaling group, finds the instances, and update the servo instance records
 	// based on the query result
 	public static class AutoscalingGroupInstanceChecker implements EventListener<ClockTick> {
-		private static int AUTOSCALE_GROUP_CHECK_INTERVAL_SEC = 10;
-		
+		private static int AUTOSCALE_GROUP_CHECK_INTERVAL_SEC = 60;
+		private static final int NUM_ASGS_TO_DESCRIBE = 8;
+		private static Date lastCheckTime = new Date(System.currentTimeMillis());
 		public static void register(){
 			Listeners.register(ClockTick.class, new AutoscalingGroupInstanceChecker() );
 		}
@@ -659,59 +660,45 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			          Topology.isEnabledLocally( LoadBalancingBackend.class ) &&
 			          Topology.isEnabled( AutoScaling.class ) &&
 			          Topology.isEnabled( Eucalyptus.class ) ) {
-				
+			  
+	      final Date now = new Date(System.currentTimeMillis());
+	      final int elapsedSec =  (int)((now.getTime() - lastCheckTime.getTime())/1000.0);
+	      if(elapsedSec < AUTOSCALE_GROUP_CHECK_INTERVAL_SEC)
+	        return;
+	      lastCheckTime = now;
+			  
 				// lookup all LoadBalancerAutoScalingGroup records
 				List<LoadBalancerAutoScalingGroup> groups = Lists.newArrayList();
 				Map<String, LoadBalancerAutoScalingGroup>  allGroupMap = new ConcurrentHashMap<>();
 				try ( final TransactionResource db = Entities.transactionFor( LoadBalancerAutoScalingGroup.class ) ) {
 					groups = Entities.query(LoadBalancerAutoScalingGroup.named(), true);
-					db.commit();
 					for(LoadBalancerAutoScalingGroup g : groups){
 						allGroupMap.put(g.getName(), g);
 					}
 				}catch(Exception ex){
 				}
-				
-				Map<String, LoadBalancerAutoScalingGroup> groupToQuery = new ConcurrentHashMap<>();
-				final Date current = new Date(System.currentTimeMillis());
-				
-				// find the record eligible to check its status
-				for(final LoadBalancerAutoScalingGroup group : groups){
-					final Date lastUpdate = group.getLastUpdateTimestamp();
-					int elapsedSec = (int)((current.getTime() - lastUpdate.getTime())/1000.0);
-					if(elapsedSec > AUTOSCALE_GROUP_CHECK_INTERVAL_SEC){
-						try ( final TransactionResource db = Entities.transactionFor( LoadBalancerAutoScalingGroup.class ) ) {
-							LoadBalancerAutoScalingGroup update = Entities.uniqueResult(group);
-							update.setLastUpdateTimestamp(current);
-							Entities.persist(update);
-							db.commit();
-						}catch(Exception ex){
-						}
-						groupToQuery.put(group.getName(), group);
-					}
-				}
-				 
-				if(groupToQuery.size() <= 0)
-					return;
-				
+			
+				final Map<String, LoadBalancerAutoScalingGroup> groupToQuery = allGroupMap;
 				// describe as group and find the unknown instance Ids
-				List<AutoScalingGroupType> queriedGroups;
-				try{
-					DescribeAutoScalingGroupsResponseType response = 
-							EucalyptusActivityTasks.getInstance().describeAutoScalingGroupsWithVerbose(Lists.newArrayList(groupToQuery.keySet()));
-					DescribeAutoScalingGroupsResult result = response.getDescribeAutoScalingGroupsResult();
-					AutoScalingGroupsType asgroups = result.getAutoScalingGroups();
-					queriedGroups = asgroups.getMember();
-				}catch(Exception ex){
-					LOG.error("Failed to describe autoscaling groups", ex);
-					return;
+				List<AutoScalingGroupType> queriedGroups = Lists.newArrayList();
+
+				for(final List<String> partition : Iterables.partition(groupToQuery.keySet(), NUM_ASGS_TO_DESCRIBE)) {
+				  try{
+				    DescribeAutoScalingGroupsResponseType response = 
+				        EucalyptusActivityTasks.getInstance().describeAutoScalingGroupsWithVerbose(partition);
+				    DescribeAutoScalingGroupsResult result = response.getDescribeAutoScalingGroupsResult();
+				    AutoScalingGroupsType asgroups = result.getAutoScalingGroups();
+				    queriedGroups.addAll(asgroups.getMember());
+				  }catch(Exception ex){
+				    LOG.error("Failed to describe autoscaling groups", ex);
+				    return;
+				  }
 				}
 				
 				/// lookup all servoInstances in the DB
 				Map<String, LoadBalancerServoInstance> servoMap = new ConcurrentHashMap<>();
 				try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
 					final List<LoadBalancerServoInstance> result = Entities.query(LoadBalancerServoInstance.named(), true);
-					db.commit();
 					for(LoadBalancerServoInstance inst : result){
 						servoMap.put(inst.getInstanceId(), inst);
 					}

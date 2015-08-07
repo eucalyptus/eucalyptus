@@ -26,6 +26,7 @@ import com.eucalyptus.loadbalancing.common.msgs.Instances
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage
 import com.eucalyptus.loadbalancing.common.msgs.PutServoStatesResult
 import com.eucalyptus.loadbalancing.common.msgs.ResponseMetadata
+import com.eucalyptus.loadbalancing.common.msgs.ServoResponseMetadata
 
 import com.eucalyptus.cloudwatch.common.msgs.MetricData
 import edu.ucsb.eucalyptus.msgs.BaseMessageMarker
@@ -46,6 +47,7 @@ class DescribeLoadBalancersByServoType extends LoadBalancingServoBackendMessage 
 class DescribeLoadBalancersByServoResponseType extends LoadBalancingServoBackendMessage {
   DescribeLoadBalancersByServoResult describeLoadBalancersResult = new DescribeLoadBalancersByServoResult( );
   ResponseMetadata responseMetadata = new ResponseMetadata();
+  ServoResponseMetadata servoResponseMetadata = new ServoResponseMetadata();
 }
 
 class PutServoStatesType extends LoadBalancingServoBackendMessage {
@@ -60,6 +62,7 @@ class PutServoStatesResponseType extends LoadBalancingServoBackendMessage {
   PutServoStatesResponseType() { }
   PutServoStatesResult putServoStatesResult = new PutServoStatesResult();
   ResponseMetadata responseMetadata = new ResponseMetadata();
+  ServoResponseMetadata servoResponseMetadata = new ServoResponseMetadata();
 }
 
 class Error extends EucalyptusData {

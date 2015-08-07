@@ -335,10 +335,11 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 	// make sure  InService servo instance has its IP registered to DNS
 	// also make sure Error or OutOfService servo instance has its IP deregistered from DNS
 	public static class ServoInstanceDnsCheck implements EventListener<ClockTick> {
-		static final int CHECK_EVERY_SECONDS = 10;
+		static final int CHECK_EVERY_SECONDS = 60;
+		static Date lastCheckTime = new Date(System.currentTimeMillis());
 		public static void register( ) {
 		      Listeners.register( ClockTick.class, new ServoInstanceDnsCheck() );
-		    }
+		}
 
 		@Override
 		public void fireEvent(ClockTick event) {
@@ -346,34 +347,23 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 			          Topology.isEnabledLocally( LoadBalancingBackend.class ) &&
 			          Topology.isEnabled( Compute.class ) ))
 				return;
-			
-			/// determine the servo instances to query
+
+			final Date now = new Date(System.currentTimeMillis());
+			final int elapsedSec =  (int)((now.getTime() - lastCheckTime.getTime())/1000.0);
+			if(elapsedSec < CHECK_EVERY_SECONDS)
+			  return;
+			lastCheckTime = now;
+
+	   /// determine the servo instances to query
 			final List<LoadBalancerServoInstance> allInstances = Lists.newArrayList();
-			final List<LoadBalancerServoInstance> stateOutdated = Lists.newArrayList();
+			//final List<LoadBalancerServoInstance> stateOutdated = Lists.newArrayList();
 			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
 				allInstances.addAll(
 						Entities.query(LoadBalancerServoInstance.named()));
 			}catch(final Exception ex){
 			}
-			final Date current = new Date(System.currentTimeMillis());
-
-			for(final LoadBalancerServoInstance se : allInstances){
-				final Date lastUpdate = se.getLastUpdateTimestamp();
-				int elapsedSec = (int)((current.getTime() - lastUpdate.getTime())/1000.0);
-				if(elapsedSec > CHECK_EVERY_SECONDS){
-					stateOutdated.add(se);
-				}
-			}
 			
-			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
-				for(final LoadBalancerServoInstance se: stateOutdated){
-					final LoadBalancerServoInstance update = Entities.uniqueResult(se);
-					update.setLastUpdateTimestamp(current);
-				}
-				db.commit();
-			}catch(final Exception ex){
-			}
-			
+			final List<LoadBalancerServoInstance> stateOutdated = allInstances;
 			for(final LoadBalancerServoInstance instance : stateOutdated){
 				if(LoadBalancerServoInstance.STATE.InService.equals(instance.getState())){
 					if(!LoadBalancerServoInstance.DNS_STATE.Registered.equals(instance.getDnsState())){

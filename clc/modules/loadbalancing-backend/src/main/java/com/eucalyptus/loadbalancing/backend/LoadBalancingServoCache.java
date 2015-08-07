@@ -103,11 +103,81 @@ public class LoadBalancingServoCache {
       changeListener = ElbCacheDurationChangeListener.class)
   public static String CACHE_DURATION = "3";
   
+
+  @ConfigurableField( displayName = "lb_poll_interval",
+      description = "interval for distributing ELB data to haproxy VM",
+      initial = "10", // 10 seconds 
+      readonly = false,
+      type = ConfigurableFieldType.KEYVALUE,
+      changeListener = ElbPollingIntervalChangeListener.class)
+  public static String LB_POLL_INTERVAL = "10";
+  
+  @ConfigurableField( displayName = "cw_put_interval",
+      description = "interval for updating CW metrics",
+      initial = "10", // 10 seconds 
+      readonly = false,
+      type = ConfigurableFieldType.KEYVALUE,
+      changeListener = ElbCWPutIntervalChangeListener.class)
+  public static String CW_PUT_INTERVAL = "10";
+
+  @ConfigurableField( displayName = "backend_instance_update_interval",
+      description = "interval for updating backend instance state",
+      initial = "60", // 10 seconds 
+      readonly = false,
+      type = ConfigurableFieldType.KEYVALUE,
+      changeListener = ElbBackendInstanceUpdateIntervalChangeListener.class)
+  public static String BACKEND_INSTANCE_UPDATE_INTERVAL = "60";
+  
   private static Integer getCacheDuration(){
     try{
       return Integer.parseInt((String) CACHE_DURATION);
     }catch(final Exception ex) {
       return 3;
+    }
+  }
+  
+  public static class ElbPollingIntervalChangeListener implements PropertyChangeListener {
+    @Override
+    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+      try {
+        if ( newValue instanceof String  ) {
+          final Integer newInterval = Integer.parseInt((String) newValue);
+          if(newInterval < 10)
+            throw new Exception("Interval must be bigger than 10 sec");
+        }
+      } catch ( final Exception e ) {
+        throw new ConfigurablePropertyException("Could not update ELB polling interval due to: " + e.getMessage());
+      }
+    }
+  }
+  
+  public static class ElbCWPutIntervalChangeListener implements PropertyChangeListener {
+    @Override
+    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+      try {
+        if ( newValue instanceof String  ) {
+          final Integer newInterval = Integer.parseInt((String) newValue);
+          if(newInterval < 10)
+            throw new Exception("Interval must be bigger than 10 sec");
+        }
+      } catch ( final Exception e ) {
+        throw new ConfigurablePropertyException("Could not update CW putMetric interval due to: " + e.getMessage());
+      }
+    }
+  }
+
+  public static class ElbBackendInstanceUpdateIntervalChangeListener implements PropertyChangeListener {
+    @Override
+    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+      try {
+        if ( newValue instanceof String  ) {
+          final Integer newInterval = Integer.parseInt((String) newValue);
+          if(newInterval < 10)
+            throw new Exception("Interval must be bigger than 10 sec");
+        }
+      } catch ( final Exception e ) {
+        throw new ConfigurablePropertyException("Could not update ELB backend instance update interval due to: " + e.getMessage());
+      }
     }
   }
   
@@ -294,4 +364,13 @@ public class LoadBalancingServoCache {
       LOG.warn("Failed invalidating caches");
     }
   } 
+
+  public boolean replaceBackendInstance(final String servoInstanceId, final LoadBalancerBackendInstance oldInstance, 
+      final LoadBalancerBackendInstance newInstance) throws Exception {
+    final CachedEntities entities = cachedEntities.get(servoInstanceId);
+    final List<LoadBalancerBackendInstance> backendInstances =  entities.getBackendInstances();
+    if(backendInstances.remove(oldInstance))
+      return backendInstances.add(newInstance);
+    return false;
+  }
 }

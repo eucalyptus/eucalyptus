@@ -391,7 +391,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 	public static class SecurityGroupCleanup implements EventListener<ClockTick> {
 		public static void register( ) {
 		      Listeners.register( ClockTick.class, new SecurityGroupCleanup() );
-		    }
+		}
 
 		@Override
 		public void fireEvent(ClockTick event) {
@@ -404,7 +404,6 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 			List<LoadBalancerSecurityGroup> allGroups = null;
 			try ( TransactionResource db = Entities.transactionFor( LoadBalancerSecurityGroup.class ) ) {
 				allGroups = Entities.query(LoadBalancerSecurityGroup.withState(LoadBalancerSecurityGroup.STATE.OutOfService));
-				db.commit();
 			}catch(Exception ex){ /* retry later */ }
 			if(allGroups==null || allGroups.size()<=0)
 				return;
@@ -465,7 +464,6 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 				retired = Entities.query(sample);
 				sample =  LoadBalancerServoInstance.withState(LoadBalancerServoInstance.STATE.Error.name());
 				retired.addAll(Entities.query(sample));
-				db.commit();
 			}catch(Exception ex){
 				LOG.warn("failed to query loadbalancer servo instance", ex);
 			}
