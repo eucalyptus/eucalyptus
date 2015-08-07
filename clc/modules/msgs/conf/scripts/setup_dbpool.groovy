@@ -119,6 +119,7 @@ def setupDbPool = { String db_name ->
           'default-sync': 'passive',
           dialect:Databases.getJdbcDialect( ),
           durability:'none',//(none|coarse|fine)
+          'input-sink': 'simple',//(file|simple)
           'meta-data-cache':'none',//(none|lazy|eager)
           'transaction-mode':'serial',//(parallel|serial)
           'detect-sequences':'false',
