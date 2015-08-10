@@ -139,20 +139,25 @@ public abstract class TagSupport {
    */
   public Map<String,List<Tag>> getResourceTagMap( final OwnerFullName owner,
                                                   final Iterable<String> identifiers ) {
-    final Map<String,List<Tag>> tagMap = Maps.newHashMap();
+    final int identifiersSize = Iterables.size( identifiers );
+    final Map<String,List<Tag>> tagMap = Maps.newHashMapWithExpectedSize( identifiersSize );
     for ( final String id : identifiers ) {
       tagMap.put( id, Lists.<Tag>newArrayList() );
     }
     if ( !tagMap.isEmpty() ) {
       final Tag example = example( owner );
-      final DetachedCriteria detachedCriteria = DetachedCriteria.forClass( resourceClass )
-          .add( Restrictions.in( resourceClassIdField, Lists.newArrayList( identifiers ) ) )
-          .setProjection( Projections.id() );
-      final Criterion idRestriction = Property.forName( tagClassResourceField ).in( detachedCriteria );
+      final Criterion idRestriction = identifiersSize < 1000 ?
+          Property.forName( tagClassResourceField ).in( DetachedCriteria.forClass( resourceClass )
+              .add( Restrictions.in( resourceClassIdField, Lists.newArrayList( identifiers ) ) )
+              .setProjection( Projections.id( ) ) ) :
+          Restrictions.conjunction( );
       try {
         final List<Tag> tags = Tags.list( example, Predicates.alwaysTrue(), idRestriction, Collections.<String,String>emptyMap()  );
         for ( final Tag tag : tags ) {
-          tagMap.get( tag.getResourceId() ).add( tag );
+          final List<Tag> keyTags = tagMap.get( tag.getResourceId( ) );
+          if ( keyTags != null ) {
+            keyTags.add( tag );
+          }
         }
       } catch ( Exception e ) {
         log.error( e, e );
