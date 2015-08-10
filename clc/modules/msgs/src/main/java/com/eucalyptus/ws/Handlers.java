@@ -119,6 +119,7 @@ import com.eucalyptus.ws.handlers.QueryTimestampHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.http.HttpUtils;
 import com.eucalyptus.ws.handlers.http.NioHttpDecoder;
+import com.eucalyptus.ws.handlers.http.HttpResponseHeaderHandler;
 import com.eucalyptus.ws.protocol.AddressingHandler;
 import com.eucalyptus.ws.protocol.SoapHandler;
 import com.eucalyptus.ws.server.NioServerHandler;
@@ -143,6 +144,7 @@ public class Handlers {
   private static final ChannelHandler                        soapHandler              = new SoapHandler( );
   private static final ChannelHandler                        addressingHandler        = new AddressingHandler( );
   private static final ChannelHandler                        bindingHandler           = new BindingHandler( BindingManager.getDefaultBinding( ) );
+  private static final ChannelHandler                        httpResponseHeaderHandler= new HttpResponseHeaderHandler( );
   private static final HashedWheelTimer                      timer                    = new HashedWheelTimer( )  { { this.start( ); } };   //TODO:GRZE: configurable
 
   enum ServerPipelineFactory implements ChannelPipelineFactory {
@@ -162,6 +164,7 @@ public class Handlers {
       if ( StackConfiguration.ASYNC_PIPELINE ) {
         pipeline.addLast( "async-pipeline-execution-handler", Handlers.pipelineExecutionHandler( ) );
       }
+      pipeline.addLast( "http-response-headers", Handlers.httpResponseHeaderhandler());
       return pipeline;
     }
 
@@ -741,6 +744,7 @@ public class Handlers {
   public static ChannelHandler queryTimestamphandler( ) {
     return queryTimestampHandler;
   }
+  public static ChannelHandler httpResponseHeaderhandler( ) { return httpResponseHeaderHandler; }
 
   public static ChannelHandler internalWsSecHandler( ) {
     return internalWsSecHandler;

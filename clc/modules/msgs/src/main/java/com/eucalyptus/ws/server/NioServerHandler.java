@@ -62,11 +62,13 @@
 
 package com.eucalyptus.ws.server;
 
+import java.util.Date;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.security.auth.login.LoginException;
+
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -92,6 +94,7 @@ import org.jboss.netty.handler.timeout.WriteTimeoutException;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.Logs;
@@ -241,6 +244,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
     final HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, status );
     response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
     response.setHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes() ) );
+    response.setHeader( HttpHeaders.Names.DATE, Timestamps.formatRfc822Timestamp( new Date()));
     for ( final Map.Entry<String,String> headerEntry : headers.entrySet( ) ) {
       response.setHeader( headerEntry.getKey( ), headerEntry.getValue( ) );
     }
