@@ -177,22 +177,26 @@ public class ServiceContext {
     } finally {
       if ( dispatcher != null ) dispatcher.dispose( );
     }
-    final long clearContextTime = System.currentTimeMillis( ) + TimeUnit.SECONDS.toMillis( CONTEXT_TIMEOUT );
-    Threads.enqueue( Empyrean.class, ServiceContext.class, new Callable<Boolean>( ) {
-      @Override
-      public Boolean call( ) {
-        try {
-          long sleepTime = clearContextTime - System.currentTimeMillis( );
-          if ( sleepTime > 1 ) {
-            Thread.sleep( sleepTime );
+    if ( ctx != null ) {
+      Threads.enqueue( Empyrean.class, ServiceContext.class, 8, new Callable<Boolean>( ) {
+        private final long clearContextTime = System.currentTimeMillis( ) + TimeUnit.SECONDS.toMillis( CONTEXT_TIMEOUT );
+        private final String contextCorrelationId = ctx.getCorrelationId( );
+
+        @Override
+        public Boolean call( ) {
+          try {
+            long sleepTime = clearContextTime - System.currentTimeMillis( );
+            if ( sleepTime > 1 ) {
+              Thread.sleep( sleepTime );
+            }
+            Contexts.clear( contextCorrelationId );
+          } catch ( InterruptedException ex ) {
+            Thread.currentThread( ).interrupt( );
           }
-          Contexts.clear( ctx );
-        } catch ( InterruptedException ex ) {
-          Thread.currentThread( ).interrupt( );
+          return true;
         }
-        return true;
-      }
-    } );
+      } );
+    }
   }
   
   public static <T> T send( ComponentId dest, Object msg ) throws Exception {
