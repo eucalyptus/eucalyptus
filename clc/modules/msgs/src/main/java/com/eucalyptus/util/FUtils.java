@@ -20,7 +20,10 @@
 package com.eucalyptus.util;
 
 import java.util.concurrent.Callable;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import com.google.common.base.Function;
+import com.google.common.base.Optional;
 
 /**
  * Functional utility methods
@@ -39,6 +42,21 @@ public class FUtils {
         return function.apply( param );
       }
     };
+  }
+
+  /**
+   * Flatten a nested optional.
+   *
+   * @param option The optional to flatten
+   * @param <T> The resulting optional type
+   * @return The optional
+   */
+  @Nonnull
+  public static <T> Optional<T> flatten( @Nullable final Optional<? extends Optional<T>> option ) {
+    if ( option != null && option.isPresent( ) ) {
+      return option.get( );
+    }
+    return Optional.absent( );
   }
 
 }
