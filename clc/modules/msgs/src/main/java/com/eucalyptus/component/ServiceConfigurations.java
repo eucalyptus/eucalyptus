@@ -226,8 +226,7 @@ public class ServiceConfigurations {
           public ServiceAccount apply(@Nullable UserPrincipal userPrincipal) {
             if(userPrincipal != null) {
               try {
-                return new ServiceAccount(Accounts.getAccountFullName(
-                    Accounts.lookupAccountIdentifiersById(userPrincipal.getAccountNumber())),
+                return new ServiceAccount(userPrincipal.getAccountAlias(),
                                           userPrincipal.getAccountNumber(),
                                           userPrincipal.getCanonicalId());
               } catch(Exception e) {
