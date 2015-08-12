@@ -80,6 +80,7 @@ import com.eucalyptus.blockstorage.async.FailedVolumeCleaner;
 import com.eucalyptus.blockstorage.async.SnapshotCreator;
 import com.eucalyptus.blockstorage.async.SnapshotDeleter;
 import com.eucalyptus.blockstorage.async.SnapshotTransferCleaner;
+import com.eucalyptus.blockstorage.async.ThreadPoolSizeUpdater;
 import com.eucalyptus.blockstorage.async.VolumeCreator;
 import com.eucalyptus.blockstorage.async.VolumeDeleter;
 import com.eucalyptus.blockstorage.async.VolumeStateChecker;
@@ -233,9 +234,10 @@ public class BlockStorageController {
     runStartUpChecks();
 
     // Initialize volume, snapshot, snapshot transfer and checker thread pools
-    VolumeThreadPool.initialize();
-    SnapshotThreadPool.initialize();
-    SnapshotTransferThreadPool.initialize();
+    StorageInfo info = StorageInfo.getStorageInfo();
+    VolumeThreadPool.initialize(info.getMaxConcurrentVolumes());
+    SnapshotThreadPool.initialize(info.getMaxConcurrentSnapshots());
+    SnapshotTransferThreadPool.initialize(info.getMaxConcurrentSnapshotTransfers());
     CheckerThreadPool.initialize();
 
     // Add checkers for volume and snapshot maintenance
@@ -247,6 +249,7 @@ public class BlockStorageController {
     CheckerThreadPool.add(new FailedSnapshotCleaner(blockManager));
     CheckerThreadPool.add(new ExpiredSnapshotCleaner());
     CheckerThreadPool.add(new SnapshotTransferCleaner());
+    CheckerThreadPool.add(new ThreadPoolSizeUpdater());
     // add any block manager checkers
     List<CheckerTask> backendCheckers = null;
     if ((backendCheckers = blockManager.getCheckers()) != null && !backendCheckers.isEmpty()) {

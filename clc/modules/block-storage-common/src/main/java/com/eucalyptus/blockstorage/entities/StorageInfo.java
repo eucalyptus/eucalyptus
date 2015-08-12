@@ -119,6 +119,8 @@ public class StorageInfo extends AbstractPersistent {
   private static final Integer DEFAULT_DELETED_VOL_EXPIRATION_TIME = 1440;// minutes
   private static final Integer DEFAULT_DELETED_SNAP_EXPIRATION_TIME = 60;// minutes
   private static final Integer MIN_RESOURCE_EXPIRATION_TIME = 10;// minutes
+  private static final String DEFAULT_MAX_CONCURRENT_VOLUMES = "10";
+  private static final String DEFAULT_MAX_CONCURRENT_SNAPSHOTS = "3";
 
   @Transient
   private static Logger LOG = Logger.getLogger(StorageInfo.class);
@@ -166,7 +168,7 @@ public class StorageInfo extends AbstractPersistent {
   @Column(name = "max_snapshot_parts_queue_size")
   private Integer maxSnapshotPartsQueueSize;
 
-  @ConfigurableField(description = "Maximum number of snapshots that can be uploaded concurrently",
+  @ConfigurableField(description = "Maximum number of snapshots that can be uploaded to or downloaded from objectstorage gateway at a given time",
       displayName = "Maximum Concurrent Snapshot Transfers", initial = "3", changeListener = PositiveIntegerChangeListener.class)
   @Column(name = "max_concurrent_snapshot_transfers")
   private Integer maxConcurrentSnapshotTransfers;
@@ -185,6 +187,16 @@ public class StorageInfo extends AbstractPersistent {
       displayName = "Write Buffer Size", initial = "100", changeListener = PositiveIntegerChangeListener.class)
   @Column(name = "write_buffer_size_mb")
   private Integer writeBufferSizeInMB;
+
+  @ConfigurableField(description = "Maximum number of volumes processed on the block storage backend at a given time",
+      displayName = "Maximum Concurrent Volumes", initial = DEFAULT_MAX_CONCURRENT_VOLUMES, changeListener = PositiveIntegerChangeListener.class)
+  @Column(name = "max_concurrent_volumes_processed")
+  private Integer maxConcurrentVolumes;
+
+  @ConfigurableField(description = "Maximum number of snapshots processed on the block storage backend at a given time",
+      displayName = "Maximum Concurrent Snapshots", initial = DEFAULT_MAX_CONCURRENT_SNAPSHOTS, changeListener = PositiveIntegerChangeListener.class)
+  @Column(name = "max_concurrent_snapshots")
+  private Integer maxConcurrentSnapshots;
 
   public StorageInfo() {
     this.name = StorageProperties.NAME;
@@ -298,6 +310,22 @@ public class StorageInfo extends AbstractPersistent {
     this.writeBufferSizeInMB = writeBufferSizeInMB;
   }
 
+  public Integer getMaxConcurrentVolumes() {
+    return maxConcurrentVolumes;
+  }
+
+  public void setMaxConcurrentVolumes(Integer maxConcurrentVolumesProcessed) {
+    this.maxConcurrentVolumes = maxConcurrentVolumesProcessed;
+  }
+
+  public Integer getMaxConcurrentSnapshots() {
+    return maxConcurrentSnapshots;
+  }
+
+  public void setMaxConcurrentSnapshots(Integer maxConcurrentSnapshotsProcessed) {
+    this.maxConcurrentSnapshots = maxConcurrentSnapshotsProcessed;
+  }
+
   @Override
   public boolean equals(Object obj) {
     if (this == obj)
@@ -367,6 +395,12 @@ public class StorageInfo extends AbstractPersistent {
     if (writeBufferSizeInMB == null) {
       writeBufferSizeInMB = DEFAULT_WRITE_BUFFER_SIZE_IN_MB;
     }
+    if (maxConcurrentVolumes == null) {
+      maxConcurrentVolumes = Integer.valueOf(DEFAULT_MAX_CONCURRENT_VOLUMES);
+    }
+    if (maxConcurrentSnapshots == null) {
+      maxConcurrentSnapshots = Integer.valueOf(DEFAULT_MAX_CONCURRENT_SNAPSHOTS);
+    }
   }
 
   private static StorageInfo getDefaultInstance() {
@@ -383,6 +417,8 @@ public class StorageInfo extends AbstractPersistent {
     info.setSnapshotTransferTimeoutInHours(DEFAULT_SNAPSHOT_TRANSFER_TIMEOUT);
     info.setReadBufferSizeInMB(DEFAULT_READ_BUFFER_SIZE_IN_MB);
     info.setWriteBufferSizeInMB(DEFAULT_WRITE_BUFFER_SIZE_IN_MB);
+    info.setMaxConcurrentVolumes(Integer.valueOf(DEFAULT_MAX_CONCURRENT_VOLUMES));
+    info.setMaxConcurrentSnapshots(Integer.valueOf(DEFAULT_MAX_CONCURRENT_SNAPSHOTS));
     return info;
   }
 
