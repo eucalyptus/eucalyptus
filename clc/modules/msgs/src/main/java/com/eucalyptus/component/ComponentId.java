@@ -78,9 +78,13 @@ import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
+
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.component.annotation.AdminService;
 import com.eucalyptus.component.annotation.AwsServiceName;
+import com.eucalyptus.component.annotation.PublicComponentAccounts;
 import com.eucalyptus.component.annotation.ComponentDatabase;
 import com.eucalyptus.component.annotation.DatabaseNamingStrategy;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
@@ -101,8 +105,12 @@ import com.eucalyptus.ws.StackConfiguration.BasicTransport;
 import com.eucalyptus.ws.TransportDefinition;
 import com.eucalyptus.ws.WebServices;
 import com.eucalyptus.ws.server.Pipelines;
+
+import com.google.common.base.Function;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -136,7 +144,30 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
                                                            ? "euca"
                                                            : this.ats.get( PolicyVendor.class ).value( ) );
   }
-  
+
+  /**
+   * Maps the componentId to an optional set of account Ids
+   * @return
+   */
+  public Optional<? extends Iterable<UserPrincipal>> getPublicComponentAccounts() {
+    PublicComponentAccounts accnts = this.getClass().getAnnotation(PublicComponentAccounts.class);
+    if (accnts != null) {
+      return Optional.of(Iterables.transform(Lists.newArrayList(accnts.value()), new Function<String, UserPrincipal>() {
+
+        @Nullable
+        @Override
+        public UserPrincipal apply(@Nullable String s) {
+          try {
+            return Accounts.lookupSystemAccountByAlias(s);
+          } catch (Exception e) {
+            return null;
+          }
+        }
+      }));
+    }
+    return Optional.absent();
+  }
+
   public List<? extends TransportDefinition> getTransports( ) {
     return Lists.newArrayList( BasicTransport.HTTP );
   }
@@ -176,22 +207,23 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   }
   
   public final String name( ) {
-    return this.capitalizedName.toLowerCase( );
+    return this.capitalizedName.toLowerCase();
   }
   
   @Override
   public final String getName( ) {
-    return this.name( );
+    return this.name();
   }
   
   @Override
   public final FullName getFullName( ) {
-    return ComponentFullName.getInstance( ServiceConfigurations.createEphemeral( this ), this.getPartition( ), this.name( ) );
+    return ComponentFullName.getInstance(ServiceConfigurations.createEphemeral(this),
+                                         this.getPartition(), this.name());
   }
   
   @Override
   public String getPartition( ) {
-    return this.partitionParent( ).name( );
+    return this.partitionParent( ).name();
   }
   
   public final boolean isRootService( ) {
@@ -339,7 +371,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   }
   
   public String getServiceModelFileName( ) {
-    return String.format( "%s-model.xml", this.getName( ) );
+    return String.format("%s-model.xml", this.getName());
   }
 
   public Set<String> getCertificateUsages( ) {
@@ -397,7 +429,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     } else if ( this.isAlwaysLocal( ) ) {
       builder.append( "alwaysLocal:" );
     }
-    return builder.toString( );
+    return builder.toString();
   }
   
   public final boolean isInternal( ) {
@@ -419,7 +451,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
    * @return true if does not require internal system privileges, false otherwise.
    */
   public boolean isAdminService( ) {
-    return this.ats.has( AdminService.class );
+    return this.ats.has(AdminService.class);
   }
 
   /**

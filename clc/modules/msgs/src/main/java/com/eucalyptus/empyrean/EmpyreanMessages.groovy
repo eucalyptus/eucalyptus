@@ -71,6 +71,7 @@ import com.google.common.collect.Lists
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
+import groovy.transform.Canonical
 
 public class AnonymousMessage extends BaseMessage implements Cloneable, Serializable {
 }
@@ -132,16 +133,32 @@ public class ServiceId extends EucalyptusData {
     this.host = serviceUri.host
   }
 }
-public class ServiceStatusType extends EucalyptusData {
-  ServiceId serviceId;
-  String localState;/** one of DISABLED, PRIMORDIAL, INITIALIZED, LOADED, RUNNING, STOPPED, PAUSED **/
-  Integer localEpoch;
-  ArrayList<String> details = new ArrayList<String>( );
-  ArrayList<ServiceStatusDetail> statusDetails = new ArrayList<ServiceStatusDetail>( );
-  @Override
-  public String toString( ) {
-    return "${this.serviceId.fullName} ${this.localState} ${this.localEpoch} ${this.statusDetails}";
+
+// For better mapping account ARNs to user-readable names
+public class ServiceAccount extends EucalyptusData {
+  String accountName
+  String accountNumber
+  String accountCanonicalId
+
+  public ServiceAccount(String name, String number, String canonicalId) {
+    this.accountName = name
+    this.accountNumber = number
+    this.accountCanonicalId = canonicalId
   }
+}
+
+public class ServiceStatusType extends EucalyptusData {
+    ServiceId serviceId;
+    String localState;/** one of DISABLED, PRIMORDIAL, INITIALIZED, LOADED, RUNNING, STOPPED, PAUSED **/
+    Integer localEpoch;
+    ArrayList<String> details = new ArrayList<String>( );
+    ArrayList<ServiceStatusDetail> statusDetails = new ArrayList<ServiceStatusDetail>( );
+    ArrayList<ServiceAccount> serviceAccounts = new ArrayList<ServiceAccount>();
+
+    @Override
+    public String toString( ) {
+        return "${this.serviceId.fullName} ${this.localState} ${this.localEpoch} ${this.statusDetails} ${this.serviceAccounts}";
+    }
 }
 public class ServiceStatusDetail extends EucalyptusData {
   String   severity;

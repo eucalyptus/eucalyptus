@@ -19,8 +19,15 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.common;
 
+import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
+
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.AwsServiceName;
+import com.eucalyptus.component.annotation.PublicComponentAccounts;
 import com.eucalyptus.component.annotation.Description;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
@@ -36,6 +43,17 @@ import com.eucalyptus.component.annotation.PublicService;
 @Partition( value = LoadBalancing.class, manyToOne = true )
 @FaultLogPrefix( "services" )
 @Description( "ELB API service" )
+@PublicComponentAccounts(AccountIdentifiers.ELB_SYSTEM_ACCOUNT)
 public class LoadBalancing extends ComponentId {
   private static final long serialVersionUID = 1L;
+
+  @Override
+  public Optional<? extends Iterable<UserPrincipal>> getPublicComponentAccounts() {
+    try {
+      return Optional.of(Lists.newArrayList(
+          Accounts.lookupSystemAccountByAlias(AccountIdentifiers.ELB_SYSTEM_ACCOUNT)));
+    } catch(Exception e) {
+      return Optional.absent();
+    }
+  }
 }

@@ -106,7 +106,7 @@ class DescribeServices(EucadminRequest):
 
     def __init__(self, **args):
       AWSQueryRequest.__init__(self, **args)
-      self.list_markers = ['euca:serviceStatuses', 'euca:statusDetails']
+      self.list_markers = ['euca:serviceStatuses', 'euca:statusDetails', 'euca:serviceAccounts']
       self.item_markers = ['euca:item', 'euca:item']
 
     def get_connection(self, **args):
@@ -153,7 +153,14 @@ class DescribeServices(EucadminRequest):
                                     detail_item.get('euca:message'))
                 if detail_item.get('euca:stackTrace'):
                     print detail_item['euca:stackTrace']
+            account_fmt = '\tSERVICEACCOUNT\t%-36.36s\t%s\t%s'
+            for service_account in s.get('euca:serviceAccounts', []):
+                print account_fmt % (service_account.get('euca:accountName'),
+                                     service_account.get('euca:accountNumber'),
+                                     service_account.get('euca:accountCanonicalId'))
 
+
+              
     def main(self, **args):
         return self.send(**args)
 
