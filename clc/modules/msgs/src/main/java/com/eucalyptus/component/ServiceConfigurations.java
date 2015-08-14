@@ -111,7 +111,7 @@ public class ServiceConfigurations {
   static Logger LOG = Logger.getLogger( ServiceConfigurations.class );
   
   public static <T extends ServiceConfiguration> List<ServiceConfiguration> list( ) throws PersistenceException {
-    Predicate<ServiceConfiguration> alwaysTrue = Predicates.alwaysTrue( );
+    Predicate<ServiceConfiguration> alwaysTrue = Predicates.alwaysTrue();
     return Lists.newArrayList( filter( alwaysTrue ) );
   }
   
@@ -275,12 +275,13 @@ public class ServiceConfigurations {
 
             //Populate the system accounts
             try {
-              this.getServiceAccounts().addAll(
-                  ServiceConfigurationToServiceAccounts.INSTANCE.apply(config));
-            } catch(Exception e) {
+              List<ServiceAccount> accnts = ServiceConfigurationToServiceAccounts.INSTANCE.apply(config);
+              if(accnts != null && accnts.size() > 0) {
+                this.getServiceAccounts().addAll(accnts);
+              }
+            } catch (Exception e) {
               LOG.warn("Failed finding service account for service: " + config.getName(), e);
             }
-
           }
         };
       }
