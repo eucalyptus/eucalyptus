@@ -221,33 +221,33 @@ public class DatabaseAuthProvider implements AccountProvider {
     try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
       if ( recursive ) {
         List<UserEntity> users = ( List<UserEntity> ) Entities
-            .createCriteria( UserEntity.class ).setCacheable( true )
-            .createCriteria( "groups" ).setCacheable( true ).add( Restrictions.eq( "userGroup", true ) )
-            .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
+            .createCriteria( UserEntity.class ).setFetchMode( "info", FetchMode.JOIN )
+            .createCriteria( "groups" ).add( Restrictions.eq( "userGroup", true ) )
+            .createCriteria( "account" ).add( Restrictions.eq( "name", accountName ) )
             .list( );
         for ( UserEntity u : users ) {
           Entities.delete( u );
         }
 
         List<InstanceProfileEntity> profiles = ( List<InstanceProfileEntity> ) Entities
-            .createCriteria( InstanceProfileEntity.class ).setCacheable( true )
-            .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
+            .createCriteria( InstanceProfileEntity.class )
+            .createCriteria( "account" ).add( Restrictions.eq( "name", accountName ) )
             .list( );
         for ( InstanceProfileEntity p : profiles ) {
           Entities.delete( p );
         }
 
         List<RoleEntity> roles = ( List<RoleEntity> ) Entities
-            .createCriteria( RoleEntity.class ).setCacheable( true )
-            .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
+            .createCriteria( RoleEntity.class ).setFetchMode( "policies", FetchMode.JOIN )
+            .createCriteria( "account" ).add( Restrictions.eq( "name", accountName ) )
             .list( );
         for ( RoleEntity r : roles ) {
           Entities.delete( r );
         }
 
         List<GroupEntity> groups = ( List<GroupEntity> ) Entities
-            .createCriteria( GroupEntity.class ).setCacheable( true )
-            .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
+            .createCriteria( GroupEntity.class ).setFetchMode( "policies", FetchMode.JOIN )
+            .createCriteria( "account" ).add( Restrictions.eq( "name", accountName ) )
             .list( );
         for ( GroupEntity g : groups ) {
           Entities.delete( g );
