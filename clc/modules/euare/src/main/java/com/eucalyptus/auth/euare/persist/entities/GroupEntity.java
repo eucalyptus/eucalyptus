@@ -62,8 +62,10 @@
 
 package com.eucalyptus.auth.euare.persist.entities;
 
+import static com.eucalyptus.upgrade.Upgrades.Version.v4_2_0;
 import java.io.Serializable;
 import java.util.List;
+import java.util.concurrent.Callable;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -79,17 +81,36 @@ import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Index;
 
 import com.eucalyptus.auth.util.Identifiers;
+import com.eucalyptus.component.id.Euare;
+import com.eucalyptus.entities.AuxiliaryDatabaseObject;
+import com.eucalyptus.entities.AuxiliaryDatabaseObjects;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.upgrade.Upgrades;
 import com.google.common.collect.Lists;
+import groovy.sql.Sql;
 
 /**
  * Database group entity.
  */
 @Entity
+@AuxiliaryDatabaseObjects({
+    @AuxiliaryDatabaseObject(
+        dialect = "org.hibernate.dialect.PostgreSQLDialect",
+        create = "create index auth_group_users_user_idx on ${schema}.auth_group_has_users ( auth_user_id )",
+        drop = "drop index if exists ${schema}.auth_group_users_user_idx"
+    ),
+    @AuxiliaryDatabaseObject(
+        dialect = "org.hibernate.dialect.PostgreSQLDialect",
+        create = "create index auth_group_users_group_idx on ${schema}.auth_group_has_users ( auth_group_id )",
+        drop = "drop index if exists ${schema}.auth_group_users_group_idx"
+    ),
+})
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_group" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -104,6 +125,7 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
 
   // Group name, not unique since different accounts can have the same group name
   @Column( name = "auth_group_name" )
+  @Index( name = "auth_group_name_idx" )
   String name;
   
   // Group path (prefix to organize group name space, see AWS spec)
@@ -130,6 +152,7 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
   
   // The owning account
   @ManyToOne( fetch = FetchType.LAZY )
+  @Index( name = "auth_group_owning_account_idx" )
   @JoinColumn( name = "auth_group_owning_account" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   AccountEntity account;
@@ -235,4 +258,25 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
     return this.groupId;
   }
   
+  @Upgrades.PreUpgrade( value = Euare.class, since = v4_2_0 )
+  public static class GroupPreUpgrade420 implements Callable<Boolean> {
+    private static final Logger logger = Logger.getLogger( GroupPreUpgrade420.class );
+
+    @Override
+    public Boolean call( ) throws Exception {
+      Sql sql = null;
+      try {
+        sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection("eucalyptus_auth");
+        sql.execute( "create index auth_group_users_user_idx on auth_group_has_users ( auth_user_id )" );
+        sql.execute( "create index auth_group_users_group_idx on auth_group_has_users ( auth_group_id )" );
+      } catch (Exception ex) {
+        logger.error( "Error creating indexes for user to group relations", ex );
+      } finally {
+        if (sql != null) {
+          sql.close();
+        }
+      }
+      return true;
+    }
+  }
 }

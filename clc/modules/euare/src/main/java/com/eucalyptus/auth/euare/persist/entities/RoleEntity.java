@@ -34,6 +34,7 @@ import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Index;
 import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.AbstractPersistent;
@@ -55,6 +56,7 @@ public class RoleEntity extends AbstractPersistent implements Serializable {
 
   // Role name
   @Column( name = "auth_role_name", nullable = false)
+  @Index( name = "auth_role_name_idx" )
   private String name;
 
   // Role path (prefix to organize role name space)

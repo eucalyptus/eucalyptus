@@ -30,6 +30,7 @@ import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Index;
 import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.entities.AbstractPersistent;
 
@@ -50,6 +51,7 @@ public class InstanceProfileEntity extends AbstractPersistent implements Seriali
 
     // Instance Profile name
   @Column( name = "auth_instance_profile_name", nullable = false)
+  @Index( name = "auth_instance_profile_name_idx" )
   private String name;
 
   // Instance Profile path (prefix to organize profile name space)

@@ -83,6 +83,7 @@ import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Index;
 import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.entities.AbstractPersistent;
@@ -109,6 +110,7 @@ public class UserEntity extends AbstractPersistent implements Serializable {
 
   // User name
   @Column( name = "auth_user_name" )
+  @Index( name = "auth_user_name_idx" )
   String name;
   
   // User path (prefix to organize user name space, see AWS spec)
