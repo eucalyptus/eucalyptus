@@ -252,7 +252,7 @@ public class VerifyMetadata {
               " in which the size " + bootSet.getMachine( ).getImageSizeBytes( ) +
               " bytes of the instance is greater than the vmType " + vmType.getDisplayName( ) +
               " size " + vmType.getDisk( ) + " GB." );
-          } else if ( bootSet.getMachine( ).getImageSizeBytes( ) >= ( ( 1024L * 1024L * 1024L * vmType.getDisk( ) ) ) ) {
+          } else if ( bootSet.getMachine( ).getImageSizeBytes( ) > ( ( 1024L * 1024L * 1024L * vmType.getDisk( ) ) ) ) {
             throw new ImageInstanceTypeVerificationException(
                 "Unable to run instance " + bootSet.getMachine( ).getDisplayName( ) +
                 " in which the size " + bootSet.getMachine( ).getImageSizeBytes( ) +
