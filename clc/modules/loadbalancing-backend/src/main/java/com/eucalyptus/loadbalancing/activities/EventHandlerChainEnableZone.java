@@ -21,7 +21,6 @@ package com.eucalyptus.loadbalancing.activities;
 
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Set;
 
 import javax.annotation.Nullable;
 
@@ -36,14 +35,11 @@ import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancers;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupEntityTransform;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 
 /**
  * @author Sang-Min Park
@@ -117,7 +113,7 @@ public class EventHandlerChainEnableZone extends EventHandlerChain<EnabledZoneEv
 		}
 	}
 
-	private static class CreateOrUpdateAutoscalingGroup extends 
+	 private static class CreateOrUpdateAutoscalingGroup extends 
 		AbstractEventHandler<EnabledZoneEvent> implements StoredResult<String> {
 
 		protected CreateOrUpdateAutoscalingGroup(
@@ -125,152 +121,53 @@ public class EventHandlerChainEnableZone extends EventHandlerChain<EnabledZoneEv
 			super(chain);
 		}
 
-		private String groupName = null;
-		private List<String> newZones = null;
-		private List<String> oldZones = null;
 		private EnabledZoneEvent event = null;
-		private LoadBalancerAutoScalingGroupCoreView group = null;
+		EventHandlerChain<NewLoadbalancerEvent> createAutoScaleGroupChain = null;
+		private List<String> updatedZones = Lists.newArrayList();
 		@Override
 		public void apply(EnabledZoneEvent evt) throws EventHandlerException {
 		  this.event = evt;
-			// check if there's the autoscaling group for the loadbalancer
-			final List<String> zones = Lists.newArrayList(evt.getZones());
-			if(zones==null || zones.size()<=0)
-				return;
-			
-			LoadBalancer lb;
-			try{
-				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
-			}catch(NoSuchElementException ex){
-				throw new EventHandlerException("Could not find the loadbalancer with name="+evt.getLoadBalancer(), ex);
-			}catch(Exception ex){
-				throw new EventHandlerException("Error while looking for loadbalancer with name="+evt.getLoadBalancer(), ex);
-			}
-			
-			group = lb.getAutoScaleGroup();
-			// if no autoscale group for the loadbalancer, create one with the specified zone
-			// this can happen when the create-load-balancer was called with empty zone
-			if(group==null) {
-				final EventHandlerChain<NewLoadbalancerEvent> newChain = (new EventHandlerChain<NewLoadbalancerEvent>(){
-					@Override
-					public EventHandlerChain<NewLoadbalancerEvent> build() {
-						this.insert(new EventHandlerChainNew.IAMRoleSetup(this));
-						this.insert(new EventHandlerChainNew.InstanceProfileSetup(this));
-						this.insert(new EventHandlerChainNew.SecurityGroupSetup(this));
-						this.insert(new LoadBalancerASGroupCreator(this, EventHandlerChainNew.getCapacityPerZone( )));
-						return this;
-					}
-				}).build();
-				try {
-					NewLoadbalancerEvent newEvt = new NewLoadbalancerEvent();
-					newEvt.setContext(evt.getContext());
-					newEvt.setLoadBalancer(evt.getLoadBalancer());
-					newEvt.setZones(evt.getZones());
-					newEvt.setZoneToSubnetIdMap(evt.getZoneToSubnetIdMap());
-					newChain.execute(newEvt);
-					this.newZones = Lists.newArrayList(evt.getZones());
-					this.oldZones = Lists.newArrayList();
-				} catch (EventHandlerChainException e) {
-					throw new EventHandlerException("failed to create autoscaling group", e);
-				}
-			}else{
-				this.groupName = group.getName();
-				// otherwise, update the group if the zone is not there
-				final List<String> requestedZones = Lists.newArrayList(evt.getZones());
-				final List<LoadBalancerZoneCoreView> currentZones = 
-						Lists.newArrayList(Collections2.filter(lb.getZones(), new Predicate<LoadBalancerZoneCoreView>(){
-							@Override
-							public boolean apply(@Nullable LoadBalancerZoneCoreView arg0) {
-								return arg0.getState().equals(LoadBalancerZone.STATE.InService);
-							}
-				}));
-				
-				final Set<String> availableZones =
-						Sets.newHashSet( Iterables.transform( currentZones, LoadBalancerZoneCoreView.name( ) ) );
-
-				final Set<String> newZones = Sets.newHashSet( Iterables.concat( availableZones, requestedZones ) );
-				if( Sets.difference( newZones, availableZones ).size( ) > 0 ){
-					try{
-						int capacityPerZone = Integer.parseInt(EventHandlerChainNew.VM_PER_ZONE);
-						if(capacityPerZone <= 0)
-							capacityPerZone = 1;
-						final int newCapacity = capacityPerZone * newZones.size();
-						
-						LoadBalancerAutoScalingGroup scaleGroup;
-						try{
-							scaleGroup = LoadBalancerAutoScalingGroupEntityTransform.INSTANCE.apply(this.group);
-						}catch(final Exception ex){
-							LOG.error("unable to transform scaling group from the view", ex);
-							throw ex;
-						}
-						EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(group.getName(), Lists.newArrayList(newZones), newCapacity, lb.useSystemAccount());
-						try ( TransactionResource db = Entities.transactionFor( LoadBalancerAutoScalingGroup.class ) ) {
-						  final LoadBalancerAutoScalingGroup update = Entities.uniqueResult(scaleGroup);
-						  update.setCapacity( newCapacity );
-						  db.commit();
-						}catch(NoSuchElementException ex){
-							LOG.error("failed to find the autoscaling group record", ex);
-						}catch(Exception ex){
-							LOG.error("failed to update the autoscaling group record", ex);
-						}
-						
-						this.newZones = Lists.newArrayList(newZones);
-						this.oldZones = Lists.newArrayList(availableZones);
-					}catch(final Exception ex){
-						throw new EventHandlerException("failed to update autoscaling group", ex);
-					}
-				}
-			}
+		
+		  createAutoScaleGroupChain = (new EventHandlerChain<NewLoadbalancerEvent>(){
+		      @Override
+		      public EventHandlerChain<NewLoadbalancerEvent> build() {
+		        /// these handlers are inserted because they are referred from autoscaling group creator
+		        /// the handlers will do 'describe-*' and the result will be available for use by asg creator
+		        this.insert(new EventHandlerChainNew.IAMRoleSetup(this));
+		        this.insert(new EventHandlerChainNew.InstanceProfileSetup(this));
+		        this.insert(new EventHandlerChainNew.SecurityGroupSetup(this));
+		        this.insert(new LoadBalancerASGroupCreator(this));
+		        return this;
+		      }
+		    }).build();
+		  
+		    try {
+		      NewLoadbalancerEvent newEvt = new NewLoadbalancerEvent();
+		      newEvt.setContext(evt.getContext());
+		      newEvt.setLoadBalancer(evt.getLoadBalancer());
+		      newEvt.setZones(evt.getZones());
+		      newEvt.setZoneToSubnetIdMap(evt.getZoneToSubnetIdMap());
+		      createAutoScaleGroupChain.execute(newEvt);
+		    } catch (EventHandlerChainException e) {
+		      throw new EventHandlerException("failed to create autoscaling group", e);
+		    }
+		    updatedZones.addAll(evt.getZones());
 		}
 
 		@Override
 		public void rollback() throws EventHandlerException {
 		  if (this.event == null)
 		    return;
-			if(this.oldZones != null && this.groupName !=null){
-				try{
-					int capacityPerZone = Integer.parseInt(EventHandlerChainNew.VM_PER_ZONE);
-					if(capacityPerZone <= 0)
-						capacityPerZone = 1;
-					final int oldCapacity = capacityPerZone * this.oldZones.size();
-
-					LoadBalancer lb;
-					try{
-					  lb = LoadBalancers.getLoadbalancer(this.event.getContext(), this.event.getLoadBalancer());
-					}catch(Exception ex){
-					  throw new EventHandlerException("Could not find the loadbalancer with name="+this.event.getLoadBalancer(), ex);
-					}
-					
-					EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(this.groupName, this.oldZones, oldCapacity, lb.useSystemAccount());
-
-					LoadBalancerAutoScalingGroup scaleGroup;
-					try{
-						scaleGroup = LoadBalancerAutoScalingGroupEntityTransform.INSTANCE.apply(this.group);
-					}catch(final Exception ex){
-						LOG.error("unable to transform scaling group from the view", ex);
-						throw ex;
-					}
-					try ( final TransactionResource db = Entities.transactionFor( LoadBalancerAutoScalingGroup.class ) ) {
-						final LoadBalancerAutoScalingGroup update = Entities.uniqueResult(scaleGroup);
-						update.setCapacity( oldCapacity );
-						db.commit();
-					}catch(NoSuchElementException ex){
-						LOG.error("failed to find the autoscaling group record", ex);
-					}catch(Exception ex){
-						LOG.error("failed to update the autoscaling group record", ex);
-					}
-				}catch(Exception ex){
-					throw new EventHandlerException("failed to update the zone to the original list", ex);
-				}
-			}
+		  if (createAutoScaleGroupChain != null)
+		    createAutoScaleGroupChain.rollback();
 		}
 
 		@Override
 		public List<String> getResult() {
-			return this.newZones != null ? this.newZones : Lists.<String>newArrayList();
+			return this.updatedZones;
 		}		
 	}
-	
+	 
 	private static class PersistUpdatedZones extends AbstractEventHandler<EnabledZoneEvent> {
 		protected PersistUpdatedZones(EventHandlerChain<EnabledZoneEvent> chain) {
 			super(chain);
@@ -370,6 +267,5 @@ public class EventHandlerChainEnableZone extends EventHandlerChain<EnabledZoneEv
 		@Override
 		public void rollback() throws EventHandlerException {
 		}
-		
 	}
 }

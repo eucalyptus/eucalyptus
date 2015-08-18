@@ -34,12 +34,13 @@ public abstract class EventHandlerChain<T extends LoadbalancingEvent> {
 	private static Logger    LOG     = Logger.getLogger( EventHandlerChain.class );
 	private final List<EventHandler<? super T>> handlers =
 			Lists.newArrayList();
+  LinkedList<EventHandler<? super T>> reverseHandler = 
+      Lists.newLinkedList();
 	protected void insert(EventHandler<? super T> next) {
 		handlers.add(next);
 	}
 
-	public void execute(T evt) throws EventHandlerChainException{
-		LinkedList<EventHandler<? super T>> reverseHandler = Lists.newLinkedList();
+	public void execute(T evt) throws EventHandlerChainException {
 		for (EventHandler<? super T> handler : this.handlers){
 			try{
 				reverseHandler.addFirst(handler); // failed handler will rollback too
@@ -48,24 +49,26 @@ public abstract class EventHandlerChain<T extends LoadbalancingEvent> {
 					LOG.info("skipping the remaining handlers");
 					break;
 				}
-			}catch(Exception e){
-				LOG.warn("starting to rollback");
-				final String msg = e.getMessage()!=null ? e.getMessage() : 
-					String.format("failed handling %s at %s", evt, handler);
-				final EventHandlerChainException toThrow = 
-						new EventHandlerChainException(msg, e, true);
-				for (EventHandler<? super T> h : reverseHandler){
-					try{
-						h.rollback();
-					}catch(Exception ex){
-						LOG.warn("rollback failed at " + h.toString(), ex);
-						toThrow.setRollback(false); // fail once, rollback status is set to false
-					}
-				}
-				LOG.info("finished rollback");
+			}catch(final Exception e){
+			  final String msg = e.getMessage()!=null ? e.getMessage() : String.format("failed handling %s at %s", evt, handler);
+			  final EventHandlerChainException toThrow = 
+		        new EventHandlerChainException(msg, e, true);
+			  rollback();
 				throw toThrow;
 			}
 		}
+	}
+	
+	public void rollback() {
+	  LOG.warn("starting to rollback");
+    for (EventHandler<? super T> h : reverseHandler){
+      try{
+        h.rollback();
+      }catch(Exception ex){
+        ;
+      }
+    }
+    LOG.info("finished rollback");
 	}
 	
 	public abstract EventHandlerChain<T> build();

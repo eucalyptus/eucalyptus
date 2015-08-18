@@ -48,13 +48,11 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.ClusterInfoType;
-import com.eucalyptus.compute.common.DescribeKeyPairsResponseItemType;
 import com.eucalyptus.compute.common.ImageDetails;
 import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
-import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
@@ -116,7 +114,6 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		this.insert(new InstanceProfileSetup(this));
 		this.insert(new IAMPolicySetup(this));
 		this.insert(new SecurityGroupSetup(this));
-		this.insert(new LoadBalancerASGroupCreator(this, EventHandlerChainNew.getCapacityPerZone( )));
 		this.insert(new TagCreator(this));
 	
 		return this;
@@ -236,6 +233,10 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			super(chain);
 			// TODO Auto-generated constructor stub
 		}
+		
+		static String getRoleName(final String accountNumber, final String loadbalancer) {
+		  return String.format("%s-%s-%s", ROLE_NAME_PREFIX, accountNumber, loadbalancer);
+		}
 
 		@Override
 		public List<String> getResult() {
@@ -245,7 +246,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		@Override
 		public void apply(NewLoadbalancerEvent evt)
 				throws EventHandlerException {
-	    final String roleName = String.format("%s-%s-%s", ROLE_NAME_PREFIX, evt.getContext().getAccount().getAccountNumber(), evt.getLoadBalancer());
+	    final String roleName = getRoleName(evt.getContext().getAccount().getAccountNumber(), evt.getLoadBalancer());
 	    // list-roles.
 			try{
 				List<RoleType> result = EucalyptusActivityTasks.getInstance().listRoles(DEFAULT_ROLE_PATH_PREFIX);
@@ -291,6 +292,9 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			super(chain);
 		}
 
+	  static public String getInstanceProfileName (final String accountNumber, final String loadbalancer) {
+	    return String.format("%s-%s-%s", INSTANCE_PROFILE_NAME_PREFIX, accountNumber, loadbalancer);
+	  }
 		@Override
 		public List<String> getResult() {
 			return this.instanceProfile!=null ? Lists.newArrayList(this.instanceProfile.getInstanceProfileName()) : Lists.<String>newArrayList();
@@ -299,9 +303,8 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		@Override
 		public void apply(NewLoadbalancerEvent evt)
 				throws EventHandlerException {
-		   final String instanceProfileName = 
-		       String.format("%s-%s-%s", INSTANCE_PROFILE_NAME_PREFIX, evt.getContext().getAccount().getAccountNumber(), evt.getLoadBalancer());
 		   
+		  final String instanceProfileName = getInstanceProfileName(evt.getContext().getAccount().getAccountNumber(), evt.getLoadBalancer());
 			// list instance profiles
 			try{
 				//   check if the instance profile for ELB VM is found
@@ -424,6 +427,8 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	public static class SecurityGroupSetup extends AbstractEventHandler<NewLoadbalancerEvent> implements StoredResult<String>{
 		private String createdGroup = null;
 		private String createdGroupId = null;
+		private String groupName = null;
+		private String groupId = null;
 		private String groupOwnerAccountId = null;
 		private boolean rollbackCreate = true;
 		private NewLoadbalancerEvent event = null;
@@ -463,8 +468,8 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 					if ( groups != null ) for ( final SecurityGroupItemType group : groups ) {
 						if ( groupName.equals( group.getGroupName() ) && group.getVpcId( ) == null ) {
 							groupFound = true;
-							this.createdGroup = groupName;
-							this.createdGroupId = group.getGroupId();
+							this.groupName = groupName;
+							this.groupId = group.getGroupId();
 							this.groupOwnerAccountId = group.getAccountId();
 							break;
 						}
@@ -478,10 +483,12 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 					try {
 						EucalyptusActivityTasks.getInstance().createSystemSecurityGroup( groupName, groupDesc );
 						this.createdGroup = groupName;
+						this.groupName = groupName;
 						List<SecurityGroupItemType> groups = EucalyptusActivityTasks.getInstance().describeSystemSecurityGroups( Lists.newArrayList( groupName ) );
 						if ( groups != null ) for ( final SecurityGroupItemType group : groups ) {
 							if ( groupName.equals( group.getGroupName() ) && group.getVpcId( ) == null ) {
 								this.createdGroupId = group.getGroupId();
+								this.groupId = group.getGroupId();
 								this.groupOwnerAccountId = group.getAccountId();
 								break;
 							}
@@ -491,14 +498,14 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 					}
 				}
 
-				if(this.createdGroup == null || this.groupOwnerAccountId == null)
+				if(this.groupName == null || this.groupOwnerAccountId == null)
 					throw new EventHandlerException("Failed to create the security group for loadbalancer");
 
 				try ( final TransactionResource db = Entities.transactionFor( LoadBalancerSecurityGroup.class ) ) {
 					try {
-						Entities.uniqueResult( LoadBalancerSecurityGroup.named( lbEntity, this.groupOwnerAccountId, this.createdGroup ) );
+						Entities.uniqueResult( LoadBalancerSecurityGroup.named( lbEntity, this.groupOwnerAccountId, this.groupName ) );
 					} catch( NoSuchElementException ex ){
-						Entities.persist( LoadBalancerSecurityGroup.create( lbEntity, this.groupOwnerAccountId, this.createdGroup ) );
+						Entities.persist( LoadBalancerSecurityGroup.create( lbEntity, this.groupOwnerAccountId, this.groupName ) );
 					}
 					db.commit();
 				}catch(Exception ex){
@@ -517,6 +524,8 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 					final List<SecurityGroupItemType> createdGroupList = EucalyptusActivityTasks.getInstance( )
 							.describeUserSecurityGroupsByName( accountFullName, lb.getVpcId( ), groupName );
 					elbVpcGroup = Iterables.getOnlyElement( createdGroupList );
+					this.createdGroupId = elbVpcGroup.getGroupId( );
+					this.createdGroup = elbVpcGroup.getGroupName( );
 				} else {
 					elbVpcGroup = Iterables.get( groups, 0 );
 				}
@@ -538,8 +547,8 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 				} ).apply( lb.getDisplayName( ) );
 
 				this.rollbackCreate = false;
-				this.createdGroupId = elbVpcGroup.getGroupId( );
-				this.createdGroup = elbVpcGroup.getGroupName( );
+				this.groupId = elbVpcGroup.getGroupId( );
+				this.groupName = elbVpcGroup.getGroupName( );
 				this.groupOwnerAccountId = elbVpcGroup.getAccountId( );
 			}
 		}
@@ -580,10 +589,10 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		@Override
 		public List<String> getResult() {
 			List<String> result = Lists.newArrayList();
-			if(this.createdGroup != null)
-				result.add(this.createdGroup);
-			if(this.createdGroupId != null)
-				result.add(this.createdGroupId);
+			if(this.groupName != null)
+				result.add(this.groupName);
+			if(this.groupId != null)
+				result.add(this.groupId);
 			return result;
 		}
 		
@@ -610,8 +619,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 						this.chain.findHandler(SecurityGroupSetup.class);
 				sgroup = result.getResult().get(1); // get(0) = group name, get(1)= id
 			}catch(final Exception ex){
-				LOG.warn("could not find the security group for the loadbalancer", ex);
-				sgroup = null;
+				sgroup = null; // in vpc mode
 			}
 			
 			if(sgroup!=null){

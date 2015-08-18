@@ -21,22 +21,25 @@ package com.eucalyptus.loadbalancing.activities;
 
 import java.util.Collection;
 import java.util.List;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
-import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PostLoad;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
@@ -73,10 +76,12 @@ public class LoadBalancerAutoScalingGroup extends AbstractPersistent {
 			this.view = new LoadBalancerAutoScalingGroupRelationView(this);
 	}
 	
-	@OneToOne
-	@JoinColumn( name = "metadata_loadbalancer_fk", nullable=true)
+
+  @ManyToOne
+  @JoinColumn( name = "metadata_loadbalancer_fk", nullable=false )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 	private LoadBalancer loadbalancer = null;
-	
+  
 	@OneToMany(fetch = FetchType.LAZY, orphanRemoval = false, mappedBy = "autoscaling_group")
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerServoInstance> servos = null;
@@ -92,26 +97,31 @@ public class LoadBalancerAutoScalingGroup extends AbstractPersistent {
 	@Column(name="metadata_launch_config_name", nullable=true)
 	private String launchConfig = null; // not used post 3.4.
 	
+  @Column(name="metadata_availability_zone", nullable=true)
+  private String availabilityZone = null;
+  
 	@Column(name="unique_name", nullable=false, unique=true)
 	private String uniqueName = null;
 	
 	private LoadBalancerAutoScalingGroup(){}
-	private LoadBalancerAutoScalingGroup(final LoadBalancer lb, final String groupName, final String launchConfig){
+	private LoadBalancerAutoScalingGroup(final LoadBalancer lb, final String availabilityZone, final String groupName, final String launchConfig){
 		this.loadbalancer = lb;
+		this.availabilityZone = availabilityZone;
 		this.groupName = groupName;		
 		this.launchConfig = launchConfig;
 		this.uniqueName = this.createUniqueName();
 		view = new LoadBalancerAutoScalingGroupRelationView(this);
 	}
 	
-	public static LoadBalancerAutoScalingGroup newInstance(final LoadBalancer lb, final String groupName, final String launchConfig){
-		final LoadBalancerAutoScalingGroup instance = new LoadBalancerAutoScalingGroup(lb, groupName, launchConfig);
+	public static LoadBalancerAutoScalingGroup newInstance(final LoadBalancer lb, final String availabilityZone, final String groupName, final String launchConfig){
+		final LoadBalancerAutoScalingGroup instance = new LoadBalancerAutoScalingGroup(lb, availabilityZone, groupName, launchConfig);
 		return instance;
 	}
 	
-	public static LoadBalancerAutoScalingGroup named(final LoadBalancer lb){
+	public static LoadBalancerAutoScalingGroup named(final LoadBalancer lb, final String availabilityZone){
 		LoadBalancerAutoScalingGroup instance = new LoadBalancerAutoScalingGroup();
 		instance.loadbalancer = lb;
+		instance.availabilityZone = availabilityZone;
 		instance.uniqueName = instance.createUniqueName();
 		return instance;
 	}
@@ -130,6 +140,14 @@ public class LoadBalancerAutoScalingGroup extends AbstractPersistent {
 	
 	public int getCapacity(){
 		return this.capacity;
+	}
+	
+	public String getAvailabilityZone() {
+	  return this.availabilityZone;
+	}
+	
+	public void setAvailabilityZone(final String zone) {
+	  this.availabilityZone = zone;
 	}
 	
 	public List<LoadBalancerServoInstanceCoreView> getServos(){
@@ -151,7 +169,10 @@ public class LoadBalancerAutoScalingGroup extends AbstractPersistent {
     }
 
     protected String createUniqueName( ) {
-    	return String.format("autoscale-group-%s-%s", this.loadbalancer.getOwnerAccountNumber(), this.loadbalancer.getDisplayName());
+    	return String.format("autoscale-group-%s-%s-%s", 
+    	    this.loadbalancer.getOwnerAccountNumber(), 
+    	    this.loadbalancer.getDisplayName(),
+    	    this.availabilityZone);
     }
     
     public static class LoadBalancerAutoScalingGroupCoreView {
@@ -169,6 +190,9 @@ public class LoadBalancerAutoScalingGroup extends AbstractPersistent {
     		return this.group.getCapacity();
     	}    	
     	
+    	public String getAvailabilityZone() {
+    	  return this.group.getAvailabilityZone();
+    	}
     }
     
 	@TypeMapper

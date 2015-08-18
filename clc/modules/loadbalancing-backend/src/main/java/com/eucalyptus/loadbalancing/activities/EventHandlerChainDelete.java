@@ -38,7 +38,6 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.loadbalancing.LoadBalancer;
-import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupEntityTransform;
@@ -150,96 +149,96 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 				LOG.warn("Failed to find the loadbalancer named " + evt.getLoadBalancer(), ex);
 				return;
 			}	
-			final LoadBalancerAutoScalingGroupCoreView group = lb.getAutoScaleGroup();
-			if(group == null){
+			final Collection<LoadBalancerAutoScalingGroupCoreView> groups = lb.getAutoScaleGroups();
+			if(groups == null || groups.isEmpty()){
 				LOG.warn(String.format("Loadbalancer %s had no autoscale group associated with it", lb.getDisplayName()));
 				return;
 			}
-			
-			final String groupName = group.getName();
-			String launchConfigName = null;
-			
-			try{
-				final DescribeAutoScalingGroupsResponseType resp = 
-				    EucalyptusActivityTasks.getInstance().describeAutoScalingGroups(Lists.newArrayList(groupName), lb.useSystemAccount());
-				final AutoScalingGroupType asgType = resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember().get(0);
-				launchConfigName = asgType.getLaunchConfigurationName();
-			}catch(final Exception ex){
-				LOG.warn(String.format("Unable to find the launch config associated with %s", groupName));
-			}
-			
-			try{
-			  EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(groupName, null, 0, lb.useSystemAccount());
-			}catch(final Exception ex){
-			  LOG.warn(String.format("Unable to set desired capacity for %s", groupName), ex);
-			}
-			
-			boolean error=false;
-			final int NUM_DELETE_ASG_RETRY = 4;
-			for(int i=0; i<NUM_DELETE_ASG_RETRY; i++){
-			  try{
-			    EucalyptusActivityTasks.getInstance().deleteAutoScalingGroup(groupName, true, lb.useSystemAccount());
-			    error = false;
-			    // willl terminate all instances
-			  }catch(final Exception ex){
-			    error = true;
-			    LOG.warn(String.format("Failed to delete autoscale group (%d'th attempt): %s", (i+1), groupName));
-			    try{
-			      long sleepMs = (i+1) * 500;
-			      Thread.sleep(sleepMs);
-			    }catch(final Exception ex2){
-			    }
-	      }
-			  if(!error)
-			    break;
-			}
-			
-			if(error){
-			  throw new EventHandlerException("Failed to delete autoscaling group; retry in a few seconds");
-			}
-			
-			if(launchConfigName!=null){
-				try{ 
-				  EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration(launchConfigName, lb.useSystemAccount());
-				}catch(Exception ex){
-					LOG.warn("Failed to delete launch configuration " + launchConfigName, ex);
-				}
-			}
 
-			LoadBalancerAutoScalingGroup scaleGroup = null;
-			try{
-				final LoadBalancerAutoScalingGroupCoreView groupView = lb.getAutoScaleGroup();
-				scaleGroup = LoadBalancerAutoScalingGroupEntityTransform.INSTANCE.apply(groupView);
-			}catch(final Exception ex){
-				LOG.error("falied to update servo instance record", ex);
+			for (final LoadBalancerAutoScalingGroupCoreView group : groups) {
+			  final String groupName = group.getName();
+			  String launchConfigName = null;
+
+			  try{
+			    final DescribeAutoScalingGroupsResponseType resp = 
+			        EucalyptusActivityTasks.getInstance().describeAutoScalingGroups(Lists.newArrayList(groupName), lb.useSystemAccount());
+			    final AutoScalingGroupType asgType = resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember().get(0);
+			    launchConfigName = asgType.getLaunchConfigurationName();
+			  }catch(final Exception ex){
+			    LOG.warn(String.format("Unable to find the launch config associated with %s", groupName));
+			  }
+
+			  try{
+			    EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(groupName, null, 0, lb.useSystemAccount());
+			  }catch(final Exception ex){
+			    LOG.warn(String.format("Unable to set desired capacity for %s", groupName), ex);
+			  }
+
+			  boolean error=false;
+			  final int NUM_DELETE_ASG_RETRY = 4;
+			  for(int i=0; i<NUM_DELETE_ASG_RETRY; i++){
+			    try{
+			      EucalyptusActivityTasks.getInstance().deleteAutoScalingGroup(groupName, true, lb.useSystemAccount());
+			      error = false;
+			      // will terminate all instances
+			    }catch(final Exception ex){
+			      error = true;
+			      LOG.warn(String.format("Failed to delete autoscale group (%d'th attempt): %s", (i+1), groupName));
+			      try{
+			        long sleepMs = (i+1) * 500;
+			        Thread.sleep(sleepMs);
+			      }catch(final Exception ex2){
+			      }
+			    }
+			    if(!error)
+			      break;
+			  }
+
+			  if(error){
+			    throw new EventHandlerException("Failed to delete autoscaling group; retry in a few seconds");
+			  }
+
+			  if(launchConfigName!=null){
+			    try{ 
+			      EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration(launchConfigName, lb.useSystemAccount());
+			    }catch(Exception ex){
+			      LOG.warn("Failed to delete launch configuration " + launchConfigName, ex);
+			    }
+			  }
+
+			  LoadBalancerAutoScalingGroup scaleGroup = null;
+			  try{
+			    scaleGroup = LoadBalancerAutoScalingGroupEntityTransform.INSTANCE.apply(group);
+			  }catch(final Exception ex){
+			    LOG.error("falied to update servo instance record", ex);
+			  }
+
+			  if(scaleGroup==null)
+			    return;
+
+			  try ( TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
+			    for(final LoadBalancerServoInstanceCoreView instanceView : scaleGroup.getServos()){
+			      LoadBalancerServoInstance instance;
+			      try{
+			        instance=LoadBalancerServoInstanceEntityTransform.INSTANCE.apply(instanceView);
+			      }catch(final Exception ex){
+			        continue;
+			      }
+			      final LoadBalancerServoInstance found = Entities.uniqueResult(instance);
+			      found.setAvailabilityZone(null);
+			      found.setAutoScalingGroup(null);
+			      // InService --> Retired
+			      // Pending --> Retired
+			      // OutOfService --> Retired
+			      // Error --> Retired
+			      found.setState(LoadBalancerServoInstance.STATE.Retired); 
+			      Entities.persist(found);
+			    }
+			    db.commit();
+			  }catch(final Exception ex){
+			    LOG.error("Failed to update servo instance record", ex);
+			  }
 			}
-			
-			if(scaleGroup==null)
-				return;
-			
-			try ( TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
-				for(final LoadBalancerServoInstanceCoreView instanceView : scaleGroup.getServos()){
-					LoadBalancerServoInstance instance;
-					try{
-						instance=LoadBalancerServoInstanceEntityTransform.INSTANCE.apply(instanceView);
-					}catch(final Exception ex){
-						continue;
-					}
-					final LoadBalancerServoInstance found = Entities.uniqueResult(instance);
-					found.setAvailabilityZone(null);
-					found.setAutoScalingGroup(null);
-					// InService --> Retired
-					// Pending --> Retired
-					// OutOfService --> Retired
-					// Error --> Retired
-					found.setState(LoadBalancerServoInstance.STATE.Retired); 
-					Entities.persist(found);
-				}
-				db.commit();
-			}catch(final Exception ex){
-				LOG.error("Failed to update servo instance record", ex);
-			}
-		
 			// AutoScalingGroup record will be deleted as a result of cascaded delete
 		}
 
@@ -257,9 +256,10 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 	    @Override
 	    public void apply(DeleteLoadbalancerEvent evt) throws EventHandlerException{
 	      // remove a role from the instance profile
-	      final String instanceProfileName = String.format("%s-%s-%s", EventHandlerChainNew.InstanceProfileSetup.INSTANCE_PROFILE_NAME_PREFIX,
-	          evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
-	      final String roleName = String.format("%s-%s-%s", EventHandlerChainNew.IAMRoleSetup.ROLE_NAME_PREFIX, evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
+	      final String instanceProfileName =  
+	          EventHandlerChainNew.InstanceProfileSetup.getInstanceProfileName(evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
+	      final String roleName = 
+	          EventHandlerChainNew.IAMRoleSetup.getRoleName(evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
 	   
 	      LoadBalancer lb = null;
 	      try{ 
@@ -298,7 +298,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 
     @Override
     public void apply(DeleteLoadbalancerEvent evt) throws EventHandlerException {
-      final String roleName = String.format("%s-%s-%s", EventHandlerChainNew.IAMRoleSetup.ROLE_NAME_PREFIX, evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
+      final String roleName = EventHandlerChainNew.IAMRoleSetup.getRoleName(evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
       LoadBalancer lb = null;
       try{ 
         lb= LoadBalancers.getLoadbalancer(evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());

@@ -845,18 +845,6 @@ public class LoadBalancingBackendService {
       }
     };
 
-    if(zones != null && zones.size()>0){
-      try{
-        LoadBalancers.addZone( lbName, ctx, zones, zoneToSubnetIdMap );
-      }catch(LoadBalancingException ex){
-        rollback.apply(lbName);
-        throw ex;
-      }catch(Exception ex){
-        rollback.apply(lbName);
-        throw new InternalFailure400Exception("Failed to persist the zone");
-      }
-    }
-
     Entities.evictCache( LoadBalancer.class );
 
     /// trigger new loadbalancer event 
@@ -890,6 +878,25 @@ public class LoadBalancingBackendService {
         // ideally, we should rollback the whole loadbalancer creation pipeline
         final String reason = e.getCause() != null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
         throw new InternalFailure400Exception(String.format("Failed to setup the listener: %s", reason), e);
+      }
+    }
+    
+    if ( !zones.isEmpty()) {
+      try{
+        EnabledZoneEvent evt = new EnabledZoneEvent();
+        evt.setLoadBalancer(lbName);
+        evt.setLoadBalancerAccountNumber( lb.getOwnerAccountNumber( ) );
+        evt.setZones(zones);
+        evt.setZoneToSubnetIdMap(zoneToSubnetIdMap);
+        evt.setContext(ctx);
+        ActivityManager.getInstance().fire(evt);
+      }catch(final Exception ex) {
+        LOG.error("failed to enable availability zones", ex);
+        // rollback.apply(lbName);
+        // TODO: this will leave the loadbalancer, which  will not be functional.
+        // ideally, we should rollback the whole loadbalancer creation pipeline
+        final String reason = ex.getCause() != null && ex.getCause().getMessage()!=null ? ex.getCause().getMessage() : "internal error";
+        throw new InternalFailure400Exception(String.format("Failed to enable ELB's availability zones: %s", reason), ex);
       }
     }
     

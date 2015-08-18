@@ -21,6 +21,7 @@ package com.eucalyptus.loadbalancing.backend;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
@@ -342,8 +343,10 @@ public class LoadBalancingServoCache {
           invalidate(servoView.getInstanceId());
         }
       }
+    }catch(final NoSuchElementException ex) {
+      ;
     }catch(final Exception ex) {
-      LOG.warn("Failed invalidating caches");
+      LOG.warn("Failed invalidating caches", ex);
     }
   }
  
@@ -352,7 +355,7 @@ public class LoadBalancingServoCache {
     try{
       invalidate(instance.getInstanceId());
     }catch(final Exception ex){
-      LOG.warn("Failed invalidating caches");
+      LOG.warn("Failed invalidating caches", ex);
     }
   }
   
@@ -360,8 +363,10 @@ public class LoadBalancingServoCache {
     try{
       final LoadBalancer lb = LoadBalancerEntityTransform.INSTANCE.apply(instance.getLoadBalancer());
       invalidate(lb);
+    }catch(final NoSuchElementException ex) {
+      ;
     }catch(final Exception ex){
-      LOG.warn("Failed invalidating caches");
+      LOG.warn("Failed invalidating caches", ex);
     }
   } 
 

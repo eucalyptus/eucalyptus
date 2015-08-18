@@ -19,8 +19,10 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.activities;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 import javax.annotation.Nullable;
 
@@ -36,7 +38,6 @@ import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancers;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupEntityTransform;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceEntityTransform;
 import com.google.common.base.Function;
@@ -196,10 +197,7 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 			super(chain);
 		}
 		
-		private LoadBalancerAutoScalingGroupCoreView group = null;
-		private String groupName = null;
-		private List<String> beforeUpdate = null;
-		private List<String> afterUpdate = null;
+		private List<String> updatedZones = Lists.newArrayList();
 		private DisabledZoneEvent event = null;
 		@Override
 		public void apply(DisabledZoneEvent evt) throws EventHandlerException {
@@ -213,65 +211,35 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 				throw new EventHandlerException("Error while looking for loadbalancer with name="+evt.getLoadBalancer(), ex);
 			}
 			
-			group = lb.getAutoScaleGroup();
-			if(group==null) {
-				LOG.warn(String.format("No autoscaling group found for %s-%s", evt.getContext().getUserFullName(), evt.getLoadBalancer()));
-				return;
-			}else{
-				this.groupName = group.getName();
-				final List<LoadBalancerZoneCoreView> currentZones = 
-						Lists.newArrayList(Collections2.filter(lb.getZones(), new Predicate<LoadBalancerZoneCoreView>(){
-							@Override
-							public boolean apply(@Nullable LoadBalancerZoneCoreView arg0) {
-								return arg0.getState().equals(LoadBalancerZone.STATE.InService);
-							}
-				}));
-				
-				final List<String> availableZones = Lists.newArrayList(Collections2.transform(currentZones, 
-						new Function<LoadBalancerZoneCoreView, String>(){
-					@Override
-					public String apply(@Nullable LoadBalancerZoneCoreView arg0) {
-						return arg0.getName();
-					}
-				}));
-				
-				final List<String> updatedZones = Lists.newArrayList();
-				updatedZones.addAll(availableZones);
-				
-				for (final String req : evt.getZones()){
-					updatedZones.remove(req);
-				}
-				
-				try{
-					int capacityPerZone = Integer.parseInt(EventHandlerChainNew.VM_PER_ZONE);
-					if(capacityPerZone <= 0)
-						capacityPerZone = 1;
-					final int newCapacity = capacityPerZone * updatedZones.size();
-					EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(this.groupName, updatedZones, newCapacity, lb.useSystemAccount());
-					this.beforeUpdate = availableZones;
-					this.afterUpdate = updatedZones;
-					
-					LoadBalancerAutoScalingGroup scaleGroup;
-					try{
-						scaleGroup = LoadBalancerAutoScalingGroupEntityTransform.INSTANCE.apply(this.group);
-					}catch(final Exception ex){
-						LOG.error("unable to transform autoscale group from the view", ex);
-						throw ex;
-					}
-					
-					try ( final TransactionResource db = Entities.transactionFor( LoadBalancerAutoScalingGroup.class ) ){
-						final LoadBalancerAutoScalingGroup update = Entities.uniqueResult(scaleGroup);
-						update.setCapacity(newCapacity);
-						Entities.persist(update);
-						db.commit();
-					}catch(NoSuchElementException ex){
-						LOG.error("failed to find the autoscaling group record", ex);
-					}catch(Exception ex){
-						LOG.error("failed to update the autoscaling group record", ex);
-					}
-				}catch(final Exception ex){
-					throw new EventHandlerException("failed to update the autoscaling group", ex);
-				}
+			final Set<String> zonesToDisable = Sets.newHashSet(evt.getZones());
+			final Collection<LoadBalancerAutoScalingGroupCoreView> groups = lb.getAutoScaleGroups();
+			
+			for(final LoadBalancerAutoScalingGroupCoreView group : groups) {
+			  if (! zonesToDisable.contains(group.getAvailabilityZone()))
+			      continue;
+
+			  final String groupName = group.getName();
+			  final int capacity = 0;
+			  try{
+			    EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(groupName, null, capacity, 
+			        lb.useSystemAccount());
+			  }catch(final Exception ex) {
+			    LOG.error("Failed to change the capacity of ELB's autoscaling group", ex);
+			  }
+			  
+			  try ( final TransactionResource db = Entities.transactionFor( LoadBalancerAutoScalingGroup.class ) ){
+			    final LoadBalancerAutoScalingGroup update = 
+			        Entities.uniqueResult(LoadBalancerAutoScalingGroup.named(lb, group.getAvailabilityZone()));
+          update.setCapacity(capacity);
+          Entities.persist(update);
+          db.commit();
+        }catch(NoSuchElementException ex){
+          LOG.error("failed to find the autoscaling group record", ex);
+        }catch(Exception ex){
+          LOG.error("failed to update the autoscaling group record", ex);
+        }
+			  
+			  updatedZones.add(group.getAvailabilityZone());
 			}
 		}
 
@@ -279,55 +247,49 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 		public void rollback() throws EventHandlerException {
 		  if(this.event == null)
 		    return;
-			if(this.groupName!=null && this.beforeUpdate != null){
-				try{
-					int capacityPerZone = Integer.parseInt(EventHandlerChainNew.VM_PER_ZONE);
-					if(capacityPerZone <= 0)
-						capacityPerZone = 1;
-					final int oldCapacity = capacityPerZone * this.beforeUpdate.size();
-				
-				  LoadBalancer lb = null;
-		      try{
-		        lb = LoadBalancers.getLoadbalancer(this.event.getContext(), this.event.getLoadBalancer());
-		      }catch(final Exception ex){
-		        LOG.error("Could not find the loadbalancer with name="+event.getLoadBalancer(), ex);
-		        throw ex;
-		      }
-		      
-				  EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(this.groupName, this.beforeUpdate, oldCapacity, lb.useSystemAccount());
-				  LoadBalancerAutoScalingGroup scaleGroup;
-					try{
-						scaleGroup = LoadBalancerAutoScalingGroupEntityTransform.INSTANCE.apply(this.group);
-					}catch(final Exception ex){
-						LOG.error("unable to transfrom scaling group from the view", ex);
-						throw ex;
-					}
-					
-					try ( final TransactionResource db = Entities.transactionFor( LoadBalancerAutoScalingGroup.class ) ) {
-						final LoadBalancerAutoScalingGroup update = Entities.uniqueResult(scaleGroup);
-						update.setCapacity(oldCapacity);
-						Entities.persist(update);
-						db.commit();
-					}catch(NoSuchElementException ex){
-						LOG.error("failed to find the autoscaling group record", ex);
-					}catch(Exception ex){
-						LOG.error("failed to update the autoscaling group record", ex);
-					}
-				}catch(Exception ex){
-					throw new EventHandlerException("failed to update the zone to the original list", ex);
-				}
-			}
+		  
+		  LoadBalancer lb;
+      try{
+        lb = LoadBalancers.getLoadbalancer(event.getContext(), event.getLoadBalancer());
+      }catch(NoSuchElementException ex){
+        throw new EventHandlerException("Could not find the loadbalancer with name="+event.getLoadBalancer(), ex);
+      }catch(Exception ex){
+        throw new EventHandlerException("Error while looking for loadbalancer with name="+event.getLoadBalancer(), ex);
+      }
+      
+      final Collection<LoadBalancerAutoScalingGroupCoreView> groups = lb.getAutoScaleGroups();
+      
+      for(final LoadBalancerAutoScalingGroupCoreView group : groups) {
+        if (! updatedZones.contains(group.getAvailabilityZone()))
+            continue;
+
+        final String groupName = group.getName();
+        final int capacity =  EventHandlerChainNew.getCapacityPerZone();
+        try{
+          EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(groupName, null, capacity, 
+              lb.useSystemAccount());
+        }catch(final Exception ex) {
+          LOG.error("Failed to change the capacity of ELB's autoscaling group", ex);
+        }
+        
+        try ( final TransactionResource db = Entities.transactionFor( LoadBalancerAutoScalingGroup.class ) ){
+          final LoadBalancerAutoScalingGroup update = 
+              Entities.uniqueResult(LoadBalancerAutoScalingGroup.named(lb, group.getAvailabilityZone()));
+          update.setCapacity(capacity);
+          Entities.persist(update);
+          db.commit();
+        }catch(NoSuchElementException ex){
+          LOG.error("failed to find the autoscaling group record", ex);
+        }catch(Exception ex){
+          LOG.error("failed to update the autoscaling group record", ex);
+        }
+      }
 		}
 
 		@Override
 		public List<String> getResult() {
 			// the list of zones that's removed
-			final List<String> removed = Lists.newArrayList(
-					Sets.difference(	
-							Sets.newHashSet(this.beforeUpdate),
-							Sets.newHashSet(this.afterUpdate))
-							);
-			return removed;
+			return updatedZones;
 		}
 	}
 	

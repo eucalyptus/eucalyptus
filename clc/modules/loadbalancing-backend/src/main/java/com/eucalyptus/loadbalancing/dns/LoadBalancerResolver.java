@@ -40,8 +40,7 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord;
 import com.eucalyptus.loadbalancing.LoadBalancers;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
+import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.dns.DnsResolvers;
 import com.eucalyptus.util.dns.DomainNameRecords;
@@ -100,13 +99,17 @@ public class LoadBalancerResolver implements DnsResolvers.DnsResolver {
             }
           };
 
+          final List<LoadBalancerServoInstanceCoreView> servos = Lists.newArrayList();
+          for(final LoadBalancerAutoScalingGroupCoreView group : loadBalancer.getAutoScaleGroups()) {
+            servos.addAll(INSTANCE.apply( group ).getServos());
+          }
           final Function<LoadBalancerServoInstanceCoreView,String> ipExtractor =
               loadBalancer.getScheme( ) == LoadBalancer.Scheme.Internal ?
                   LoadBalancerServoInstanceCoreView.privateIp( ) :
                     LoadBalancerServoInstanceCoreView.address( );
                   Iterables.addAll( ips, Iterables.transform(
                       Collections2.filter(
-                          INSTANCE.apply( loadBalancer.getAutoScaleGroup() ).getServos(),
+                          servos,
                           canResolve),
                           ipExtractor ) );
         }
