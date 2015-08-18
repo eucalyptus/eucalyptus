@@ -24,6 +24,7 @@ import com.eucalyptus.cloudwatch.common.msgs.Dimension;
 import com.eucalyptus.cloudwatch.common.msgs.MetricDatum;
 import com.eucalyptus.cloudwatch.common.msgs.StatisticSet;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.records.Logs;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.LinkedListMultimap;
@@ -108,8 +109,7 @@ public class DefaultAbsoluteMetricConverter {
       }
     }
     for (List<String> partialVolumeKeySet: Iterables.partition(volumeMetricMap.keySet(), AbsoluteMetricQueue.ABSOLUTE_METRIC_NUM_DB_OPERATIONS_PER_TRANSACTION)) {
-      EntityTransaction db = Entities.get(AbsoluteMetricHistory.class);
-      try {
+      try (final TransactionResource db = Entities.transactionFor(AbsoluteMetricHistory.class)) {
         int numVolumes = 0;
         for (String volumeId: partialVolumeKeySet) {
           AbsoluteMetricCache cache = new AbsoluteMetricCache(db);
@@ -150,17 +150,10 @@ public class DefaultAbsoluteMetricConverter {
           }
         }
         db.commit();
-      } catch (RuntimeException ex) {
-        Logs.extreme().error(ex, ex);
-        throw ex;
-      } finally {
-        if (db.isActive())
-          db.rollback();
       }
     }
     for (List<String> partialInstanceKeySet: Iterables.partition(instanceMetricMap.keySet(), AbsoluteMetricQueue.ABSOLUTE_METRIC_NUM_DB_OPERATIONS_PER_TRANSACTION)) {
-      EntityTransaction db = Entities.get(AbsoluteMetricHistory.class);
-      try {
+      try (final TransactionResource db = Entities.transactionFor(AbsoluteMetricHistory.class)) {
         int numInstances = 0;
         for (String instanceId: partialInstanceKeySet) {
           AbsoluteMetricCache cache = new AbsoluteMetricCache(db);
@@ -187,12 +180,6 @@ public class DefaultAbsoluteMetricConverter {
           }
         }
         db.commit();
-      } catch (RuntimeException ex) {
-        Logs.extreme().error(ex, ex);
-        throw ex;
-      } finally {
-        if (db.isActive())
-          db.rollback();
       }
     }
     return regularMetrics;

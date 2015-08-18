@@ -34,6 +34,7 @@ import javax.persistence.EntityTransaction;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.PropertyChangeListeners;
+import com.eucalyptus.entities.TransactionResource;
 import com.google.common.collect.Iterables;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
@@ -121,8 +122,7 @@ public class MetricManager {
   private static void addManyMetrics(Multimap<Class, MetricEntity> metricMap) {
     for (Class c : metricMap.keySet()) {
       for (List<MetricEntity> dataBatchPartial : Iterables.partition(metricMap.get(c), METRIC_DATA_NUM_DB_OPERATIONS_PER_TRANSACTION)) {
-        EntityTransaction db = Entities.get(c);
-        try {
+        try (final TransactionResource db = Entities.transactionFor(c)) {
           int numOperations = 0;
           for (MetricEntity me : dataBatchPartial) {
             numOperations++;
@@ -133,12 +133,6 @@ public class MetricManager {
             Entities.persist(me);
           }
           db.commit();
-        } catch (RuntimeException ex) {
-          Logs.extreme().error(ex, ex);
-          throw ex;
-        } finally {
-          if (db.isActive())
-            db.rollback();
         }
       }
     }
@@ -166,16 +160,9 @@ public class MetricManager {
 
   public static void deleteAllMetrics() {
     for (Class c : MetricEntityFactory.getAllClassesForEntitiesGet()) {
-      EntityTransaction db = Entities.get(c);
-      try {
+      try (final TransactionResource db = Entities.transactionFor(c)) {
         Entities.deleteAll(c);
         db.commit();
-      } catch (RuntimeException ex) {
-        Logs.extreme().error(ex, ex);
-        throw ex;
-      } finally {
-        if (db.isActive())
-          db.rollback();
       }
     }
   }
@@ -188,18 +175,11 @@ public class MetricManager {
    */
   public static void deleteMetrics(Date before) {
     for (Class c : MetricEntityFactory.getAllClassesForEntitiesGet()) {
-      EntityTransaction db = Entities.get(c);
-      try {
+      try (final TransactionResource db = Entities.transactionFor(c)) {
         Map<String, Date> criteria = new HashMap<String, Date>();
         criteria.put("before", before);
         Entities.deleteAllMatching(c, "WHERE timestamp < :before", criteria);
         db.commit();
-      } catch (RuntimeException ex) {
-        Logs.extreme().error(ex, ex);
-        throw ex;
-      } finally {
-        if (db.isActive())
-          db.rollback();
       }
     }
   }
@@ -256,8 +236,7 @@ public class MetricManager {
     String hash = hash(dimensions);
     Class metricEntityClass = MetricEntityFactory.getClassForEntitiesGet(metricType, hash);
     Map<GetMetricStatisticsAggregationKey, MetricStatistics> aggregationMap = new TreeMap<GetMetricStatisticsAggregationKey, MetricStatistics>(GetMetricStatisticsAggregationKey.COMPARATOR_WITH_NULLS.INSTANCE);
-    EntityTransaction db = Entities.get(metricEntityClass);
-    try {
+    try (final TransactionResource db = Entities.transactionFor(metricEntityClass)) {
       Criteria criteria = Entities.createCriteria(metricEntityClass);
       criteria = criteria.add(Restrictions.eq("accountId", accountId));
       criteria = criteria.add(Restrictions.eq("metricName", metricName));
@@ -288,12 +267,6 @@ public class MetricManager {
         }
       }
       db.commit();
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      if (db.isActive())
-        db.rollback();
     }
     return Lists.newArrayList(aggregationMap.values());
   }
@@ -301,8 +274,7 @@ public class MetricManager {
   public static Collection<MetricEntity> getAllMetrics() {
     ArrayList<MetricEntity> allResults = new ArrayList<MetricEntity>();
     for (Class c : MetricEntityFactory.getAllClassesForEntitiesGet()) {
-      EntityTransaction db = Entities.get(c);
-      try {
+      try (final TransactionResource db = Entities.transactionFor(c)) {
         Criteria criteria = Entities.createCriteria(c);
         criteria = criteria.addOrder( Order.asc("creationTimestamp") );
         criteria = criteria.addOrder( Order.asc("naturalId") );
@@ -311,12 +283,6 @@ public class MetricManager {
           allResults.add((MetricEntity) result);
         }
         db.commit();
-      } catch (RuntimeException ex) {
-        Logs.extreme().error(ex, ex);
-        throw ex;
-      } finally {
-        if (db.isActive())
-          db.rollback();
       }
     }
     return allResults;

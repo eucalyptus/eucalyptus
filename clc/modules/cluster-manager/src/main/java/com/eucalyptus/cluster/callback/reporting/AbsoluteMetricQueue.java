@@ -31,6 +31,7 @@ import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataResponseType;
 import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.collect.Lists;
@@ -61,8 +62,8 @@ public class AbsoluteMetricQueue {
   static {
     ScheduledExecutorService dbCleanupService = Executors
       .newSingleThreadScheduledExecutor();
-    dbCleanupService.scheduleAtFixedRate(new DBCleanupService(), 1, 24,
-      TimeUnit.HOURS);
+    dbCleanupService.scheduleAtFixedRate(new DBCleanupService(), 1, 30,
+      TimeUnit.MINUTES);
   }
 
 
@@ -224,21 +225,21 @@ public class AbsoluteMetricQueue {
   private static class DBCleanupService implements Runnable {
     @Override
     public void run() {
-      LOG.info("Calling absolute metric history (cloudwatch) db cleanup service");
-      if (!( Bootstrap.isFinished() &&
-        Topology.isEnabled(CloudWatchBackend.class) )) {
-        LOG.info("Cloudwatch service is not ENABLED");
+      LOG.info("Calling absolute metric history (cloud) db cleanup service");
+      if (!( Bootstrap.isOperational() &&
+        Topology.isEnabled(Eucalyptus.class) )) {
+        LOG.info("Eucalyptus service is not ENABLED");
         return;
       }
 
-      Date twoWeeksAgo = new Date(System.currentTimeMillis() - 2 * 7 * 24 * 60 * 60 * 1000L);
+      Date thirtyMinutesAgo = new Date(System.currentTimeMillis() - 30 * 60 * 1000L);
       try {
-        AbsoluteMetricHelper.deleteAbsoluteMetricHistory(twoWeeksAgo);
+        AbsoluteMetricHelper.deleteAbsoluteMetricHistory(thirtyMinutesAgo);
       } catch (Exception ex) {
         LOG.error(ex);
         LOG.error(ex, ex);
       }
-      LOG.info("Done cleaning up absolute metric history (cloudwatch) db");
+      LOG.info("Done cleaning up absolute metric history (cloud) db");
     }
   }
 

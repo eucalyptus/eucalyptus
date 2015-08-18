@@ -33,6 +33,7 @@ import com.eucalyptus.cloudwatch.common.msgs.Dimension;
 import com.eucalyptus.cloudwatch.common.msgs.Dimensions;
 import com.eucalyptus.cloudwatch.common.msgs.MetricDatum;
 import com.eucalyptus.cloudwatch.common.msgs.StatisticSet;
+import com.eucalyptus.entities.TransactionResource;
 import com.google.common.collect.ImmutableMap;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
@@ -210,8 +211,7 @@ public class AbsoluteMetricHelper {
   public static MetricDifferenceInfo calculateDifferenceSinceLastEvent(String namespace, String metricName, String dimensionName, String dimensionValue, Date newTimestamp, Double newMetricValue) {
     LOG.trace("namespace="+namespace+",metricName="+metricName+",dimensionName="+dimensionName+",dimensionValue="+dimensionValue+",newTimestamp="+newTimestamp+",newMetricValue="+newMetricValue);
     MetricDifferenceInfo returnValue = null;
-    EntityTransaction db = Entities.get(AbsoluteMetricHistory.class);
-    try {
+    try (final TransactionResource db = Entities.transactionFor(AbsoluteMetricHistory.class)) {
       Criteria criteria = Entities.createCriteria(AbsoluteMetricHistory.class)
           .add( Restrictions.eq( "namespace", namespace ) )
           .add( Restrictions.eq( "metricName", metricName ) )
@@ -272,12 +272,6 @@ public class AbsoluteMetricHelper {
         }
       }
       db.commit();
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      if (db.isActive())
-        db.rollback();
     }
     return returnValue;
   }
@@ -287,18 +281,11 @@ public class AbsoluteMetricHelper {
    * @param before the date to delete before (inclusive)
    */
   public static void deleteAbsoluteMetricHistory(Date before) {
-    EntityTransaction db = Entities.get(AbsoluteMetricHistory.class);
-    try {
+    try (final TransactionResource db = Entities.transactionFor(AbsoluteMetricHistory.class)) {
       Map<String, Date> criteria = new HashMap<String, Date>();
       criteria.put("before", before);
       Entities.deleteAllMatching(AbsoluteMetricHistory.class, "WHERE timestamp < :before", criteria);
       db.commit();
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      if (db.isActive())
-        db.rollback();
     }
   }
 }  

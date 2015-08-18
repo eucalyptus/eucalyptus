@@ -52,6 +52,7 @@ import com.eucalyptus.cloudwatch.common.internal.domain.alarms.AlarmManager;
 import com.eucalyptus.cloudwatch.common.internal.domain.alarms.AlarmState;
 import com.eucalyptus.cloudwatch.common.internal.domain.alarms.AlarmUtils;
 import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricUtils;
+import com.eucalyptus.entities.TransactionResource;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
@@ -78,8 +79,7 @@ public class AlarmStateEvaluationWorker implements Runnable {
   public void run() {
     if (!CloudWatchConfigProperties.isDisabledCloudWatchService() && Bootstrap.isOperational( ) && Topology.isEnabledLocally( CloudWatchBackend.class )) {
       LOG.debug("Kicking off alarm state evaluation for " + alarmName);
-      EntityTransaction db = Entities.get(AlarmEntity.class);
-      try {
+      try (final TransactionResource db = Entities.transactionFor(AlarmEntity.class)) {
         Criteria criteria = Entities.createCriteria(AlarmEntity.class)
             .add( Restrictions.eq( "accountId" , accountId ) )
             .add( Restrictions.eq( "alarmName" , alarmName ) );
@@ -94,12 +94,6 @@ public class AlarmStateEvaluationWorker implements Runnable {
           AlarmManager.executeActions(alarmEntity, currentState, false, evaluationDate);
         }
         db.commit();
-      } catch (RuntimeException ex) { // TODO: exception in a Runnable gets lost...
-        Logs.extreme().error(ex, ex);
-        throw ex;
-      } finally {
-        if (db.isActive())
-          db.rollback();
       }
     }
   }

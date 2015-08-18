@@ -24,6 +24,7 @@ import com.eucalyptus.cloudwatch.common.msgs.Dimension;
 import com.eucalyptus.cloudwatch.common.msgs.MetricDatum;
 import com.eucalyptus.cloudwatch.common.msgs.StatisticSet;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.records.Logs;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -50,8 +51,7 @@ public class FullTableScanAbsoluteMetricConverter {
     SortedAbsoluteMetrics sortedAbsoluteMetrics = sortAbsoluteMetrics(dataBatch);
     regularMetrics.addAll(sortedAbsoluteMetrics.getRegularMetrics());
     AbsoluteMetricMap absoluteMetricMap = sortedAbsoluteMetrics.getAbsoluteMetricMap();
-    EntityTransaction db = Entities.get(AbsoluteMetricHistory.class);
-    try {
+    try (final TransactionResource db = Entities.transactionFor(AbsoluteMetricHistory.class)) {
       int count = 0;
       Criteria criteria = Entities.createCriteria(AbsoluteMetricHistory.class);
       ScrollableResults absoluteMetrics = criteria.setCacheMode(CacheMode.IGNORE).scroll(ScrollMode.FORWARD_ONLY);
@@ -87,12 +87,6 @@ public class FullTableScanAbsoluteMetricConverter {
         }
       }
       db.commit();
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      if (db.isActive())
-        db.rollback();
     }
     // Now parse entries only in the map...
     for (AbsoluteMetricMap.NamespaceMetricNameAndDimension namespaceMetricNameAndDimension: absoluteMetricMap.keySet()) {
@@ -128,8 +122,7 @@ public class FullTableScanAbsoluteMetricConverter {
     }
 
     // insert all new points
-    db = Entities.get(AbsoluteMetricHistory.class);
-    try {
+    try (final TransactionResource db = Entities.transactionFor(AbsoluteMetricHistory.class)) {
       int count = 0;
       for (SimpleAbsoluteMetricHistory simpleAbsoluteMetricHistory : absoluteMetricsToInsert) {
         Entities.persist(convertToAbsoluteMetricHistory(simpleAbsoluteMetricHistory));
@@ -139,12 +132,6 @@ public class FullTableScanAbsoluteMetricConverter {
         }
       }
       db.commit();
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      if (db.isActive())
-        db.rollback();
     }
     return regularMetrics;
   }
