@@ -407,6 +407,9 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
     } finally {
       if (error) {
         abortUpload(snapUploadInfo);
+        if (partQueue != null) {
+          partQueue.clear();
+        }
         if (uploadPartsFuture != null && !uploadPartsFuture.isDone()) {
           uploadPartsFuture.cancel(true);
         }
@@ -657,7 +660,7 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
   private void initializeEucaS3Client() throws SnapshotTransferException {
     if (role == null) {
       try {
-        role = BlockStorageUtil.getBlockStorageRole( );
+        role = BlockStorageUtil.getBlockStorageRole();
       } catch (Exception e) {
         LOG.error("Failed to initialize account for snapshot transfers due to " + e);
         throw new SnapshotTransferException("Failed to initialize eucalyptus account for snapshot transfers", e);
@@ -993,48 +996,68 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 
     @Override
     public List<PartETag> call() throws Exception {
+      Boolean error = Boolean.FALSE;
       Boolean isLast = Boolean.FALSE;
-      do {
-        SnapshotPart part = null;
 
-        try {
-          part = partQueue.take();
-        } catch (InterruptedException ex) { // Should rarely happen
-          LOG.error("Failed to upload snapshot " + snapshotId + " due to an retrieving parts from queue", ex);
-          return null;
-        }
+      try {
+        do {
+          SnapshotPart part = null;
 
-        isLast = part.getIsLast();
-
-        if (part.getState().equals(SnapshotPartState.created) || part.getState().equals(SnapshotPartState.uploading)
-            || part.getState().equals(SnapshotPartState.failed)) {
           try {
-            PartETag partEtag = uploadPart(part);
-            partETags.add(partEtag);
-
-            progressCallback.updateUploadProgress(part.getInputFileBytesRead());
-            try {
-              part = part.updateStateUploaded(partEtag.getETag());
-            } catch (Exception e) {
-              LOG.debug("Failed to update part status in DB. Moving on. " + part);
-            }
-
-            LOG.debug("Uploaded " + part);
-          } catch (Exception e) {
-            LOG.warn("Failed to upload a part for " + snapshotId + ". Aborting the part upload process");
-            try {
-              part = part.updateStateFailed();
-            } catch (Exception ie) {
-              LOG.debug("Failed to update part status in DB. Moving on. " + part);
-            }
+            part = partQueue.take();
+          } catch (InterruptedException ex) { // Should rarely happen
+            error = Boolean.TRUE;
+            LOG.error("Failed to upload snapshot " + snapshotId + " due to an retrieving parts from queue", ex);
             return null;
           }
-        } else {
-          LOG.warn("Not sure what to do with this part, just keep going: " + part);
-        }
-      } while (!isLast);
 
-      return partETags;
+          if (part != null) {
+            if (part.getState().equals(SnapshotPartState.created) || part.getState().equals(SnapshotPartState.uploading)
+                || part.getState().equals(SnapshotPartState.failed)) {
+              isLast = part.getIsLast();
+              try {
+                PartETag partEtag = uploadPart(part);
+                partETags.add(partEtag);
+
+                progressCallback.updateUploadProgress(part.getInputFileBytesRead());
+                try {
+                  part = part.updateStateUploaded(partEtag.getETag());
+                } catch (Exception e) {
+                  LOG.debug("Failed to update part status in DB. Moving on. " + part);
+                }
+
+                LOG.debug("Uploaded " + part);
+              } catch (Exception e) {
+                error = Boolean.TRUE;
+                // update part status in database
+                try {
+                  part = part.updateStateFailed();
+                } catch (Throwable t) {
+                  LOG.debug("Failed to update part status in DB for " + part, t);
+                }
+                return null;
+              }
+            } else {
+              LOG.warn("Not sure what to do with part in state " + part.getState() + ". Ignoring " + part);
+            }
+          } else {
+            error = Boolean.TRUE;
+            LOG.warn("Null reference snapshot part found in queue for " + snapshotId + ". Aborting snapshot upload");
+            return null;
+          }
+        } while (!isLast);
+
+        return partETags;
+      } catch (Throwable t) {
+        error = Boolean.TRUE;
+        LOG.warn("Failed to process snapshot uplodad for " + snapshotId, t);
+        return null;
+      } finally {
+        if (error && partQueue != null) { // drain the queue so the upload process does not hang
+          LOG.debug("Clearing part queue for " + snapshotId + " due to a previous error uploading");
+          partQueue.clear();
+        }
+      }
     }
   }
 
