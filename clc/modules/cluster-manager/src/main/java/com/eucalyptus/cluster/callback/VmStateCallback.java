@@ -290,7 +290,10 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       try {
         final VmInstance vm = VmInstances.lookupAny( runVm.getInstanceId() );
         if ( !( VmStateSet.DONE.apply( vm ) && VmInstance.Reason.EXPIRED.apply( vm ) ) ) {
-          return false;
+          if ( VmStateSet.TORNDOWN.apply( vm ) ) {
+            VmInstances.RestoreHandler.Terminate.apply( runVm );
+          }
+          return true;
         }
       } catch ( NoSuchElementException ex ) {
         LOG.debug( "Instance record not found for restore: " + runVm.getInstanceId( ) );

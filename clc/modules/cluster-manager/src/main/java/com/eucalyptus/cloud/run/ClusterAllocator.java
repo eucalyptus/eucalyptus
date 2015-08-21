@@ -231,7 +231,7 @@ public class ClusterAllocator implements Runnable {
           if(baseReq!=null)
             break;
         }
-        Threads.enqueue( config, 32, runnable, baseReq == null ? null : baseReq.getCorrelationId() );
+        Threads.enqueue( config, SubmitAllocation.class, 32, runnable, baseReq == null ? null : baseReq.getCorrelationId() );
         return true;
       } catch ( final Exception ex ) {
         throw Exceptions.toUndeclared( ex );
