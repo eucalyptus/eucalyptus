@@ -375,18 +375,20 @@ int main(int argc, char **argv)
         fprintf(stderr, "could not read enough config to bootstrap eucanetd, exiting\n");
         exit(1);
     }
+
+    // daemonize this process!
+    rc = eucanetd_daemonize();
+    if (rc) {
+        fprintf(stderr, "failed to eucanetd_daemonize eucanetd, exiting\n");
+        exit(1);
+    }
+
     // Set to setup our local network view structure
     if (!pLni) {
         if ((pLni = lni_init(config->cmdprefix, config->sIptPreload)) == NULL) {
             LOGFATAL("out of memory\n");
             exit(1);
         }
-    }
-    // daemonize this process!
-    rc = eucanetd_daemonize();
-    if (rc) {
-        fprintf(stderr, "failed to eucanetd_daemonize eucanetd, exiting\n");
-        exit(1);
     }
 
     LOGINFO("eucanetd started\n");

@@ -125,6 +125,7 @@
 #include "dev_handler.h"
 #include "euca_gni.h"
 #include "euca_lni.h"
+#include "eucanetd_util.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -298,6 +299,13 @@ void lni_free(lni_t * pLni)
 {
     if (pLni) {
         lni_reinit(pLni);
+
+        // lni_reinit will recreate temporary files on disk. They should be removed.
+        unlink_handler_file(pLni->pIpTables->ipt_file);
+        unlink_handler_file(pLni->pIpSet->ips_file);
+        unlink_handler_file(pLni->pEbTables->ebt_filter_file);
+        unlink_handler_file(pLni->pEbTables->ebt_nat_file);
+        unlink_handler_file(pLni->pEbTables->ebt_asc_file);
 
         EUCA_FREE(pLni->pIpTables);
         EUCA_FREE(pLni->pIpSet);
