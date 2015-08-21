@@ -63,6 +63,7 @@
 package com.eucalyptus.entities;
 
 import java.lang.reflect.Modifier;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -111,54 +112,55 @@ import com.google.common.collect.Ordering;
 
 @SuppressWarnings( "unchecked" )
 public class PersistenceContexts {
-  private static Logger                                 LOG              = Logger.getLogger( PersistenceContexts.class );
-  private static Long                                   MAX_FAIL_SECONDS = 60L;                                                           //TODO:GRZE:@Configurable
-  private static final int                              MAX_EMF_RETRIES  = 20;
-  private static AtomicStampedReference<Long>           failCount        = new AtomicStampedReference<Long>( 0L, 0 );
-  private static final ArrayListMultimap<String, Class> entities         = ArrayListMultimap.create( );
+  private static Logger LOG = Logger.getLogger( PersistenceContexts.class );
+  private static Long MAX_FAIL_SECONDS = 60L;                                                           //TODO:GRZE:@Configurable
+  private static final int MAX_EMF_RETRIES = 20;
+  private static AtomicStampedReference<Long> failCount = new AtomicStampedReference<Long>( 0L, 0 );
+  private static final ArrayListMultimap<String, Class> entities = ArrayListMultimap.create( );
   private static final ArrayListMultimap<String, Class> remotableEntities = ArrayListMultimap.create( );
-  private static final List<Class>                      sharedEntities   = Lists.newArrayList( );
-  private static Map<String, EntityManagerFactoryImpl>  emf              = new ConcurrentSkipListMap<String, EntityManagerFactoryImpl>( );
-  private static Multimap<String, Exception>            illegalAccesses  = ArrayListMultimap.create( );
-  
+  private static final List<Class> sharedEntities = Lists.newArrayList( );
+  private static Map<String, EntityManagerFactoryImpl> emf = new ConcurrentSkipListMap<String, EntityManagerFactoryImpl>( );
+  private static Multimap<String, Exception> illegalAccesses = ArrayListMultimap.create( );
+
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.PersistenceInit )
   public static class PersistenceContextBootstrapper extends Bootstrapper.Simple {
-    
+
     @Override
-    public boolean load( ) throws Exception {
+    public boolean load() throws Exception {
       Groovyness.run( "setup_persistence.groovy" );
       return true;
     }
   }
-  
+
 
   /**
    * Interface for interception of persistence context lookup.
-   *
+   * <p/>
    * <p>The lookup method will be invoked prior to creation of
    * a persistence context. The lookup method is also invoked
    * for each subsequent (cached) lookup of the context.</p>
    */
   public static interface PersistenceContextEventInterceptor {
     void onLookup();
+
     void onConnectionError();
   }
 
   public static class PersistenceContextEventInterceptorDiscovery extends ServiceJarDiscovery {
-    static final List<PersistenceContextEventInterceptor> interceptors = new CopyOnWriteArrayList<PersistenceContextEventInterceptor>();
-    static final PersistenceContextEventInterceptor dispatcher = new PersistenceContextEventInterceptor() {
+    static final List<PersistenceContextEventInterceptor> interceptors = new CopyOnWriteArrayList<PersistenceContextEventInterceptor>( );
+    static final PersistenceContextEventInterceptor dispatcher = new PersistenceContextEventInterceptor( ) {
       @Override
       public void onLookup() {
         for ( final PersistenceContextEventInterceptor interceptor : interceptors ) {
-          interceptor.onLookup();
+          interceptor.onLookup( );
         }
       }
 
       @Override
       public void onConnectionError() {
         for ( final PersistenceContextEventInterceptor interceptor : interceptors ) {
-          interceptor.onConnectionError();
+          interceptor.onConnectionError( );
         }
       }
     };
@@ -169,31 +171,31 @@ public class PersistenceContexts {
 
     @Override
     public boolean processClass( final Class candidate ) throws Exception {
-      if ( PersistenceContextEventInterceptor.class.isAssignableFrom( candidate ) && Modifier.isPublic(candidate.getModifiers()) ) {
-        interceptors.add( ((Class<PersistenceContextEventInterceptor>) candidate).newInstance() );
+      if ( PersistenceContextEventInterceptor.class.isAssignableFrom( candidate ) && Modifier.isPublic( candidate.getModifiers( ) ) ) {
+        interceptors.add( ( (Class<PersistenceContextEventInterceptor>) candidate ).newInstance( ) );
         return true;
       }
       return false;
     }
 
     @Override
-    public Double getPriority( ) {
+    public Double getPriority() {
       return 1.0d;
     }
   }
-  
+
   public static boolean isPersistentClass( Class candidate ) {
-    return isSharedEntityClass( candidate ) || isEntityClass( candidate ) ;
+    return isSharedEntityClass( candidate ) || isEntityClass( candidate );
   }
-  
+
   public static boolean isSharedEntityClass( Class candidate ) {
     return Ats.from( candidate ).has( MappedSuperclass.class ) || Ats.from( candidate ).has( Embeddable.class );
   }
-  
-  private static boolean isRemotable (Class entity) {
-    return Ats.from( entity ).has( RemotablePersistence.class);
+
+  private static boolean isRemotable( Class entity ) {
+    return Ats.from( entity ).has( RemotablePersistence.class );
   }
-  
+
   public static boolean isEntityClass( Class candidate ) {
     if ( Ats.from( candidate ).has( Entity.class ) ) {
       if ( !Ats.from( candidate ).has( PersistenceContext.class ) ) {
@@ -218,12 +220,12 @@ public class PersistenceContexts {
 
     return DatabaseNamingStrategy.overrideStrategy( strategy );
   }
-  
-  public static Function<String,String> toDatabaseName( ) {
+
+  public static Function<String, String> toDatabaseName() {
     return PersistenceContextStringFunctions.CONTEXT_TO_DATABASE;
   }
 
-  public static Function<String,String> toSchemaName( ) {
+  public static Function<String, String> toSchemaName() {
     return PersistenceContextStringFunctions.CONTEXT_TO_SCHEMA;
   }
 
@@ -231,27 +233,27 @@ public class PersistenceContexts {
     if ( !isDuplicate( entity ) ) {
       String ctxName = Ats.from( entity ).get( PersistenceContext.class ).name( );
       EventRecord.here( PersistenceContextDiscovery.class, EventType.PERSISTENCE_ENTITY_REGISTERED, ctxName, entity.getCanonicalName( ) ).trace( );
-      if(isRemotable(entity))
-        remotableEntities.put( ctxName,  entity);
+      if ( isRemotable( entity ) )
+        remotableEntities.put( ctxName, entity );
       else
         entities.put( ctxName, entity );
     }
   }
-  
+
   static void addSharedEntity( Class entity ) {
     if ( !isDuplicate( entity ) ) {
       EventRecord.here( PersistenceContextDiscovery.class, EventType.PERSISTENCE_ENTITY_REGISTERED, "shared", entity.getCanonicalName( ) ).trace( );
       sharedEntities.add( entity );
     }
   }
-  
+
   private static boolean isDuplicate( Class entity ) {
     PersistenceContext ctx = Ats.from( entity ).get( PersistenceContext.class );
     if ( Ats.from( entity ).has( MappedSuperclass.class ) || Ats.from( entity ).has( Embeddable.class ) ) {
       return false;
     } else if ( ctx == null || ctx.name( ) == null ) {
       RuntimeException ex = new RuntimeException( "Failed to register broken entity class: " + entity.getCanonicalName( )
-                                                  + ".  Ensure that the class has a well-formed @PersistenceContext annotation." );
+          + ".  Ensure that the class has a well-formed @PersistenceContext annotation." );
       LOG.error( ex, ex );
       return false;
     } else if ( sharedEntities.contains( entity ) ) {
@@ -260,7 +262,7 @@ public class PersistenceContexts {
       LOG.error( "=> OLD: " + old.getProtectionDomain( ).getCodeSource( ).getLocation( ) );
       LOG.error( "=> NEW: " + entity.getProtectionDomain( ).getCodeSource( ).getLocation( ) );
       throw BootstrapException.throwFatal( "Duplicate entity definition in shared entities: " + entity.getCanonicalName( )
-                                           + ". See error logs for details." );
+          + ". See error logs for details." );
     } else if ( entities.get( ctx.name( ) ) != null && entities.get( ctx.name( ) ).contains( entity ) ) {
       List<Class> context = entities.get( ctx.name( ) );
       Class old = context.get( context.indexOf( entity ) );
@@ -268,19 +270,19 @@ public class PersistenceContexts {
       LOG.error( "=> OLD: " + old.getProtectionDomain( ).getCodeSource( ).getLocation( ) );
       LOG.error( "=> NEW: " + entity.getProtectionDomain( ).getCodeSource( ).getLocation( ) );
       throw BootstrapException.throwFatal( "Duplicate entity definition in '" + ctx.name( )
-                                           + "': "
-                                           + entity.getCanonicalName( )
-                                           + ". See error logs for details." );
+          + "': "
+          + entity.getCanonicalName( )
+          + ". See error logs for details." );
     } else {
       return false;
     }
   }
-  
+
   public static EntityManagerFactoryImpl registerPersistenceContext( final String persistenceContext, final Ejb3Configuration config ) {
     if ( !emf.containsKey( persistenceContext ) ) {
       try {
         LOG.trace( "-> Setting up persistence context for: " + persistenceContext );
-        EntityManagerFactoryImpl entityManagerFactory = ( EntityManagerFactoryImpl ) config.buildEntityManagerFactory( );
+        EntityManagerFactoryImpl entityManagerFactory = (EntityManagerFactoryImpl) config.buildEntityManagerFactory( );
         LOG.trace( LogUtil.subheader( LogUtil.dumpObject( config ) ) );
         emf.put( persistenceContext, entityManagerFactory );
         LOG.info( "-> Setup done for persistence context: " + persistenceContext );
@@ -290,74 +292,85 @@ public class PersistenceContexts {
     }
     return emf.get( persistenceContext );
   }
-  
+
   public static void flush( String ctx ) {
     emf.get( ctx ).getCache( ).evictAll( );
   }
-  
+
   public static void deregisterPersistenceContext( final String persistenceContext ) {
-    if( !emf.containsKey(persistenceContext))
+    if ( !emf.containsKey( persistenceContext ) )
       return;
-    
-    final EntityManagerFactoryImpl emfactory = emf.remove(persistenceContext);
-    if (emfactory != null && emfactory.isOpen()) {
-      try{
-        if(emfactory.getCache()!=null)
-          emfactory.getCache().evictAll();
-        emfactory.close();
-        LOG.info("Closed entity manager factory for "+persistenceContext);
-      }catch(final Exception ex){
-        LOG.warn("Failed to close entity manager factory", ex); 
+
+    final EntityManagerFactoryImpl emfactory = emf.remove( persistenceContext );
+    if ( emfactory != null && emfactory.isOpen( ) ) {
+      try {
+        if ( emfactory.getCache( ) != null )
+          emfactory.getCache( ).evictAll( );
+        emfactory.close( );
+        LOG.info( "Closed entity manager factory for " + persistenceContext );
+      } catch ( final Exception ex ) {
+        LOG.warn( "Failed to close entity manager factory", ex );
       }
     }
   }
-  
-  public static List<String> list( ) {
-    final List<String> persistences = Lists.newArrayList(entities.keySet());
+
+  public static List<String> list() {
+    final List<String> persistences = Lists.newArrayList( entities.keySet( ) );
     return persistences;
   }
-  
-  public static List<String> listRemotable( ) {
+
+  public static List<String> listRemotable() {
     return Lists.newArrayList( remotableEntities.keySet( ) );
   }
-  
-  public static boolean remoteConnected( ) {
-    for(final String remoteContext : listRemotable()) {
-      if(emf.containsKey(remoteContext))
+
+  public static boolean remoteConnected() {
+    for ( final String remoteContext : listRemotable( ) ) {
+      if ( emf.containsKey( remoteContext ) )
         return true;
     }
     return false;
   }
-  
-  public static String toRemoteDatabaseName ( final String persistenceContext ) {
-    if ("localhost".equals(DatabaseInfo.getDatabaseInfo().getAppendOnlyHost())) {
+
+  public static String toRemoteDatabaseName( final String persistenceContext ) {
+    if ( "localhost".equals( DatabaseInfo.getDatabaseInfo( ).getAppendOnlyHost( ) ) ) {
       return PersistenceContexts.toDatabaseName( ).apply( persistenceContext );
-    }else {
+    } else {
       return persistenceContext;
     }
   }
-  
-  public static String toRemoteSchemaName ( final String persistenceContext ) {
-    if ("localhost".equals(DatabaseInfo.getDatabaseInfo().getAppendOnlyHost())) {
-      return  PersistenceContexts.toSchemaName().apply( persistenceContext );
-    }else {
+
+  public static String toRemoteSchemaName( final String persistenceContext ) {
+    if ( "localhost".equals( DatabaseInfo.getDatabaseInfo( ).getAppendOnlyHost( ) ) ) {
+      return PersistenceContexts.toSchemaName( ).apply( persistenceContext );
+    } else {
       return null;
     }
   }
-  
+
   public static List<Class> listEntities( String persistenceContext ) {
-    final List<Class> ctxEntities = Lists.newArrayList();
-    if(entities.containsKey(persistenceContext)){
-      ctxEntities.addAll(Lists.newArrayList( entities.get( persistenceContext ) ));
+    final List<Class> ctxEntities = Lists.newArrayList( );
+    if ( entities.containsKey( persistenceContext ) ) {
+      ctxEntities.addAll( Lists.newArrayList( entities.get( persistenceContext ) ) );
     }
-    if (remotableEntities.containsKey(persistenceContext) ){
-      ctxEntities.addAll(Lists.newArrayList( remotableEntities.get( persistenceContext ) ));
+    if ( remotableEntities.containsKey( persistenceContext ) ) {
+      ctxEntities.addAll( Lists.newArrayList( remotableEntities.get( persistenceContext ) ) );
     }
-    
+
     Collections.sort( ctxEntities, Ordering.usingToString( ) );
     return ctxEntities;
   }
-  
+
+  public static List<AuxiliaryDatabaseObject> listAuxiliaryDatabaseObjects( String persistenceContext ) {
+    final List<AuxiliaryDatabaseObject> ados = Lists.newArrayList( );
+    for ( final Class entityClass : listEntities( persistenceContext ) ) {
+      final AuxiliaryDatabaseObjects adosAnno = Ats.from( entityClass ).get( AuxiliaryDatabaseObjects.class );
+      if ( adosAnno != null ) {
+        ados.addAll( Arrays.asList( adosAnno.value( ) ) );
+      }
+    }
+    return ados;
+  }
+
   private static void touchDatabase( ) {
     long failInterval = System.currentTimeMillis( ) - failCount.getReference( );
     if ( MAX_FAIL_SECONDS * 1000L > failInterval ) {
@@ -370,7 +383,7 @@ public class PersistenceContexts {
                 + " seconds." );
     }
   }
-  
+
   @SuppressWarnings( "deprecation" )
   public static EntityManagerFactoryImpl getEntityManagerFactory( final String persistenceContext ) {
     PersistenceContextEventInterceptorDiscovery.dispatcher().onLookup();
