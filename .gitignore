@@ -99,6 +99,8 @@ cluster/libEucalyptusCC.so
 cluster/libEucalyptusCCFake.so
 cluster/shutdownCC
 net/eucanetd
+net/euca_arp
+net/libeucanet.a
 gatherlog/libEucalyptusGL.so
 node/NCclient
 node/NCclient_local
