@@ -39,6 +39,7 @@
 
     <endpoint name="ComputeWS" address="vm://Compute" exchange-pattern="one-way"/>
     <endpoint name="ComputeInternalVM" address="vm://ComputeInternal" exchange-pattern="request-response"/>
+    <endpoint name="ComputeInternalService" address="vm://ComputeInternalService" exchange-pattern="request-response"/>
     <endpoint name="ComputeErrorQueueWS" address="vm://ComputeErrorQueue" exchange-pattern="one-way"/>
     <model name="compute">
 
@@ -91,10 +92,25 @@
 
     </model>
     <model name="compute-internal">
-        <service name="ComputeInternal">
+        <service name="ComputeInternalValidator">
             <inbound>
                 <inbound-endpoint ref="ComputeInternalWS" />
                 <inbound-endpoint ref="ComputeInternalVM" />
+            </inbound>
+            <component>
+                <singleton-object class="com.eucalyptus.compute.service.ComputeServiceValidator"/>
+            </component>
+            <outbound>
+                <filtering-router>
+                    <outbound-endpoint ref="ComputeInternalService" />
+                    <payload-type-filter expectedType="com.eucalyptus.compute.common.ComputeMessage" />
+                </filtering-router>
+            </outbound>
+        </service>
+
+        <service name="ComputeInternal">
+            <inbound>
+                <inbound-endpoint ref="ComputeInternalService" />
             </inbound>
             <component>
                 <entry-point-resolver-set>
