@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -849,6 +849,10 @@ public class Threads {
 
   public static <C> Future<C> enqueue( final ServiceConfiguration config, final Class<?> ownerType, final Integer workers, final Callable<C> callable ) {
     return enqueue( ServiceConfigurations.createBogus( config, ownerType ), workers, callable );
+  }
+
+  public static <C> Future<C> enqueue( final ServiceConfiguration config, final Class<?> ownerType, final Integer workers, final Callable<C> callable, String correlationId ) {
+    return enqueue( ServiceConfigurations.createBogus( config, ownerType ), workers, callable, correlationId );
   }
 
   @SuppressWarnings( "unchecked" )
