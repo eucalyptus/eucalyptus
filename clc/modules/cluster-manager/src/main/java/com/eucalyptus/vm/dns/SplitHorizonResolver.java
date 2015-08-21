@@ -116,7 +116,11 @@ public abstract class SplitHorizonResolver implements DnsResolver {
     INSTANCE {
       @Override
       public Boolean get() {
-        return Networking.getInstance( ).supports( NetworkingFeature.SiteLocalManaged );
+        try {
+          return Networking.getInstance( ).supports( NetworkingFeature.SiteLocalManaged );
+        } catch ( Exception e ) {
+          return false; 
+        }
       }
     }
   }
