@@ -270,6 +270,10 @@ public class Handlers {
     return new HttpChunkAggregator( StackConfiguration.CLIENT_HTTP_CHUNK_BUFFER_MAX );
   }
 
+  public static ChannelHandler newQueryHttpChunkAggregator( ) {
+    return new HttpChunkAggregator( StackConfiguration.PIPELINE_MAX_QUERY_REQUEST_SIZE );
+  }
+
   public static ChannelHandler addressingHandler( ) {//caching
     return addressingHandler;
   }
