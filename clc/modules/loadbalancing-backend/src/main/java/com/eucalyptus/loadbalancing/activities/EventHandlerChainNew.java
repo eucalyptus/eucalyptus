@@ -49,6 +49,7 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.ClusterInfoType;
 import com.eucalyptus.compute.common.ImageDetails;
+import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -61,7 +62,6 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
@@ -661,6 +661,66 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			Listeners.register(ClockTick.class, new AutoscalingGroupInstanceChecker() );
 		}
 		
+		private LoadBalancerServoInstance newInstance(final Instance instance, final LoadBalancerAutoScalingGroup group) throws Exception {
+		  final String instanceId = instance.getInstanceId();
+		  final LoadBalancerCoreView lbView = group.getLoadBalancer();
+		  LoadBalancer lb;
+		  try{
+		    lb=LoadBalancerEntityTransform.INSTANCE.apply(lbView);
+		  }catch(final Exception ex){
+		    LOG.error("unable to transfrom loadbalancer from the viewer", ex);
+		    throw ex;
+		  }
+
+		  LoadBalancerZoneCoreView zoneView = null;
+		  for(final LoadBalancerZoneCoreView z : lb.getZones()){
+		    if(z.getName().equals(instance.getAvailabilityZone())){
+		      zoneView = z;
+		      break;
+		    }
+		  }
+		  if(zoneView == null)
+		    throw new Exception("No availability zone with name="+instance.getAvailabilityZone()+" found for loadbalancer "+lb.getDisplayName());
+		  final LoadBalancerSecurityGroupCoreView sgroupView = lb.getGroup();
+		  if(sgroupView == null && lb.getVpcId()==null)
+		    throw new Exception("No security group is found for loadbalancer "+lb.getDisplayName());
+
+		  LoadBalancerZone zone;
+		  LoadBalancerSecurityGroup sgroup;
+		  try{
+		    zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(zoneView);
+		    sgroup = sgroupView == null ? null : LoadBalancerSecurityGroupEntityTransform.INSTANCE.apply(sgroupView);
+		  }catch(final Exception ex){
+		    LOG.error("unable to transform entity", ex);
+		    throw ex;
+		  }
+
+		  // for faster inclusion into DNS response, update status as soon as servo is running
+		  String ipAddr = null;
+		  String privateIpAddr = null;
+		  try{
+		    List<RunningInstancesItemType> result = null;
+		    result = EucalyptusActivityTasks.getInstance().describeSystemInstancesWithVerbose(Lists.newArrayList(instance.getInstanceId()));
+		    if(result!=null && result.size()>0){
+		      ipAddr = result.get(0).getIpAddress();
+		      privateIpAddr = result.get(0).getPrivateIpAddress();
+		    }
+		  }catch(Exception ex){
+		    LOG.warn("failed to run describe-instances", ex);
+		  }
+
+		  final LoadBalancerServoInstance newInstance = 
+		      LoadBalancerServoInstance.newInstance(zone, sgroup, group, instanceId);
+		  if("Healthy".equals(instance.getHealthStatus()) && 
+		      "InService".equals(instance.getLifecycleState()))
+		    newInstance.setState(LoadBalancerServoInstance.STATE.InService);
+		  newInstance.setAddress(ipAddr);
+		  newInstance.setPrivateIp(privateIpAddr);
+		  if (!(ipAddr == null && privateIpAddr == null))
+		    newInstance.setDnsState(LoadBalancerServoInstance.DNS_STATE.Registered);
+		  return newInstance;
+		}
+		
 		@Override
 		public void fireEvent(ClockTick event) {
 			
@@ -721,53 +781,19 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 					Instances instances = asg.getInstances();
 					if(instances!=null && instances.getMember() != null && instances.getMember().size() >0){
 						for(final Instance instance : instances.getMember()){
-							String instanceId = instance.getInstanceId();
+							final String instanceId = instance.getInstanceId();
 							foundInstances.put(instanceId, instance);
 							if(!servoMap.containsKey(instanceId)){ /// new instance found
-								try{
-									final LoadBalancerAutoScalingGroup group= allGroupMap.get(asg.getAutoScalingGroupName());
-									if(group==null)
-										throw new IllegalArgumentException("The group with name "+ asg.getAutoScalingGroupName()+ " not found in the database");
-									
-									final LoadBalancerCoreView lbView = group.getLoadBalancer();
-									LoadBalancer lb;
-									try{
-										lb=LoadBalancerEntityTransform.INSTANCE.apply(lbView);
-									}catch(final Exception ex){
-										LOG.error("unable to transfrom loadbalancer from the viewer", ex);
-										throw ex;
-									}
-									
-									LoadBalancerZoneCoreView zoneView = null;
-									for(final LoadBalancerZoneCoreView z : lb.getZones()){
-										if(z.getName().equals(instance.getAvailabilityZone())){
-											zoneView = z;
-											break;
-										}
-									}
-									if(zoneView == null)
-										throw new Exception("No availability zone with name="+instance.getAvailabilityZone()+" found for loadbalancer "+lb.getDisplayName());
-									final LoadBalancerSecurityGroupCoreView sgroupView = lb.getGroup();
-									if(sgroupView == null && lb.getVpcId()==null)
-										throw new Exception("No security group is found for loadbalancer "+lb.getDisplayName());
-
-									LoadBalancerZone zone;
-									LoadBalancerSecurityGroup sgroup;
-									LoadBalancerDnsRecord dns;
-									try{
-										zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(zoneView);
-										sgroup = sgroupView == null ? null : LoadBalancerSecurityGroupEntityTransform.INSTANCE.apply(sgroupView);
-									}catch(final Exception ex){
-										LOG.error("unable to transform entity", ex);
-										throw ex;
-									}
-									
-									final LoadBalancerServoInstance newInstance = 
-											LoadBalancerServoInstance.newInstance(zone, sgroup, group, instanceId);
-									newServos.add(newInstance); /// persist later
-								}catch(Exception ex){
-									LOG.error("Failed to construct new servo instance", ex);
-								}
+						    try{
+						      final LoadBalancerAutoScalingGroup group= allGroupMap.get(asg.getAutoScalingGroupName());
+	                if(group==null)
+	                  throw new IllegalArgumentException("The group with name "+ asg.getAutoScalingGroupName()+ " not found in the database");
+	                final LoadBalancerServoInstance newInstance = newInstance(instance, group);
+				          newServos.add(newInstance); /// persist later
+				        }catch(final Exception ex) {
+				          LOG.error("Failed to construct servo instance entity", ex);
+				          continue;
+				        }
 							}
 						}
 					}

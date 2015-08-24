@@ -48,12 +48,10 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.loadbalancing.LoadBalancer;
-import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneEntityTransform;
 import com.eucalyptus.loadbalancing.backend.LoadBalancingServoCache;
 import com.eucalyptus.loadbalancing.common.LoadBalancingBackend;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
@@ -372,9 +370,6 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 						if(instance.getAddress()==null){
 							try{
 								List<RunningInstancesItemType> result = null;
-								
-								final LoadBalancerZone lbZone = LoadBalancerZoneEntityTransform.INSTANCE.apply(instance.getAvailabilityZone());
-								final LoadBalancerCoreView lb = lbZone.getLoadbalancer();
 								result = EucalyptusActivityTasks.getInstance().describeSystemInstancesWithVerbose(Lists.newArrayList(instance.getInstanceId()));
 								if(result!=null && result.size()>0){
 								  ipAddr = result.get(0).getIpAddress();
@@ -382,10 +377,6 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 								}
 							}catch(Exception ex){
 								LOG.warn("failed to run describe-instances", ex);
-								continue;
-							}
-							if(ipAddr == null || ipAddr.length()<=0){
-								LOG.warn("no ipaddress found for instance "+instance.getInstanceId());
 								continue;
 							}
 						}else{
@@ -396,9 +387,9 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 						try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
 							final LoadBalancerServoInstance update = Entities.uniqueResult(instance);
 							update.setAddress(ipAddr);
-							if(privateIpAddr!=null)
-								update.setPrivateIp(privateIpAddr);
-							update.setDnsState(LoadBalancerServoInstance.DNS_STATE.Registered);
+							update.setPrivateIp(privateIpAddr);
+							if (!(ipAddr == null && privateIpAddr == null) )
+							  update.setDnsState(LoadBalancerServoInstance.DNS_STATE.Registered);
 							db.commit();
 							LoadBalancingServoCache.getInstance().invalidate(update);
 						}catch(NoSuchElementException ex){
