@@ -28,8 +28,6 @@ import java.net.InetAddress;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -81,7 +79,18 @@ public class LoadBalancerResolver implements DnsResolvers.DnsResolver {
           return resolveName(name);
         }
       });
-
+  
+  /// the LoadingCache is used to set the hard limit on memory usage
+  private static final LoadingCache<Name, IpPermutation> nameToIpPermutations = CacheBuilder.newBuilder()
+      .maximumSize(1000)
+      .expireAfterAccess(1, TimeUnit.HOURS)
+      .build(new CacheLoader<Name, IpPermutation> () {
+        @Override
+        public IpPermutation load(Name name) throws Exception {
+          final List<String> ips = cachedAnswers.get(name);
+          return new IpPermutation(ips);
+        }
+      });
   
   @ConfigurableField( description = "Enable the load balancing DNS resolver.  Note: dns.enable must also be 'true'" )
   public static Boolean dns_resolver_enabled = Boolean.TRUE;
@@ -161,16 +170,11 @@ public class LoadBalancerResolver implements DnsResolvers.DnsResolver {
     }
   }
   
-  private static ConcurrentMap<Name, IpPermutation> nameToIpPermutations = 
-      new ConcurrentHashMap<Name, IpPermutation>();
-  
   private static List<String> getIps (final Name name) throws ExecutionException{
     final List<String> ips = cachedAnswers.get(name);
-    if(!nameToIpPermutations.containsKey(name))
-      nameToIpPermutations.putIfAbsent(name, new IpPermutation(ips));
     final IpPermutation old = nameToIpPermutations.get(name);
     if(!old.isPermuatationFrom(ips))
-      nameToIpPermutations.replace(name, old, new IpPermutation(ips));
+      nameToIpPermutations.invalidate(name);
     return nameToIpPermutations.get(name).getNext();
   }
   
