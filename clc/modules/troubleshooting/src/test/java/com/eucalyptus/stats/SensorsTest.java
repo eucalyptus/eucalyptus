@@ -22,7 +22,6 @@ package com.eucalyptus.stats;
 
 import com.eucalyptus.stats.beans.EucaMonitoringMXBean;
 import com.eucalyptus.stats.sensors.SensorManagers;
-import net.sf.hajdbc.util.SystemProperties;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -64,8 +63,8 @@ public class SensorsTest {
 
   @BeforeClass
   public static void preSuiteSetup() {
-    SystemProperties.setSystemProperty("euca.conf.dir", "/opt/eucalyptus/etc/eucalyptus/cloud.d");
-    SystemProperties.setSystemProperty("euca.run.dir", "/opt/eucalyptus/var/run/eucalyptus");
+    System.setProperty("euca.conf.dir", "/opt/eucalyptus/etc/eucalyptus/cloud.d");
+    System.setProperty("euca.run.dir", "/opt/eucalyptus/var/run/eucalyptus");
   }
 
   @Before

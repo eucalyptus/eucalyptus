@@ -62,7 +62,6 @@
 
 package com.eucalyptus.bootstrap;
 
-import static com.eucalyptus.bootstrap.Host.DBStatus;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.net.InetAddress;
@@ -79,12 +78,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.event.EventListener;
-import com.eucalyptus.event.Hertz;
-import com.eucalyptus.event.Listeners;
-import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.async.Futures;
-import com.google.common.base.Optional;
 import com.google.common.collect.*;
 import org.apache.log4j.Logger;
 import org.jgroups.*;
@@ -461,17 +455,6 @@ public class Hosts {
     @Override
     public void entryRemoved( final String input ) {
       LOG.info( "Hosts.entryRemoved(): " + input );
-      dbActivation.submit( new Runnable( ) {
-
-        @Override
-        public void run( ) {
-          try {
-            Databases.disable( input );
-          } catch ( Exception ex ) {
-            LOG.error( ex , ex );
-          }
-        }
-      } );
     }
 
     @Override
@@ -489,28 +472,16 @@ public class Hosts {
       try {
         final String hostKey = host.getDisplayName( );
         if ( host.isLocalHost( ) && host.hasDatabase( ) && Bootstrap.isLoaded( ) ) {
-          final boolean wasSynched = Databases.isSynchronized( );
-          final boolean wasVolatile = Databases.isVolatile( );
           dbActivation.submit( new Runnable( ) {
 
             @Override
             public void run( ) {
-              if ( !wasSynched && !Databases.SyncState.SYNCING.isCurrent( ) && !Databases.isSynchronized( ) ) {
-                if ( Databases.enable( host ) && Databases.isSynchronized( ) ) {
-                  UpdateEntry.INSTANCE.apply( Hosts.lookup( hostKey ) );
-                }
-              } else if ( wasVolatile && Bootstrap.isLoaded( ) && !Databases.ActiveHostSet.ACTIVATED.get( ).contains( hostKey ) ) {
-                if ( Databases.enable( host ) && !Databases.isVolatile( ) ) {
-                  UpdateEntry.INSTANCE.apply( Hosts.lookup( hostKey ) );
-                }
-              } else if ( wasVolatile && Bootstrap.isLoaded( ) && !Databases.isVolatile( ) ) {
-                UpdateEntry.INSTANCE.apply( Hosts.lookup( hostKey ) );
-              } else if ( Bootstrap.isFinished( ) && !Databases.isVolatile( ) ) {
+              if ( Bootstrap.isFinished( ) ) {
                 BootstrapComponent.SETUP.apply( Hosts.lookup( hostKey ) );
               }
             }
           } );
-        } else if ( Bootstrap.isFinished( ) && !host.isLocalHost( ) && host.hasSynced( ) ) {
+        } else if ( Bootstrap.isFinished( ) && !host.isLocalHost( ) ) {
           BootstrapComponent.REMOTESETUP.apply( host );
         } else if ( InitializeAsCloudController.INSTANCE.apply( host ) ) {
           LOG.info( "Hosts.entrySet(): INITIALIZED CLC => " + host );
@@ -670,26 +641,6 @@ public class Hosts {
 
   }
 
-  enum SyncDatabases implements Predicate<Host> {
-    INSTANCE;
-
-    @Override
-    public boolean apply( final Host input ) {
-      if ( !Hosts.contains( input.getGroupsId() ) ) {
-        return false;
-      } else if ( Hosts.isCoordinator( input ) && input.hasBootstrapped( ) && !input.isLocalHost( ) ) {
-        return Databases.enable( input );
-      } else if ( input.hasDatabase( ) && input.hasSynced( ) && !input.isLocalHost( ) ) {
-        return Databases.enable( input );
-      } else if ( input.isLocalHost( ) && !Databases.isSynchronized( ) ) {
-        return Databases.enable( input );
-      } else {
-        return false;
-      }
-    }
-
-  }
-
   enum BootstrapComponent implements Predicate<Host> {
     SETUP {
       @Override
@@ -697,7 +648,6 @@ public class Hosts {
         if ( Bootstrap.isShuttingDown( ) ) {
           return false;
         } else if ( input.hasBootstrapped( ) ) {
-          SyncDatabases.INSTANCE.apply( input );
           setup( Empyrean.class, input.getBindAddress( ) );
           if ( input.hasDatabase( ) ) {
             return setup( Eucalyptus.class, input.getBindAddress( ) );
@@ -716,12 +666,7 @@ public class Hosts {
           return false;
         } else {
           try {
-            if ( input.hasDatabase( ) ) {
-              Databases.disable( input.getDisplayName( ) );
-              this.removeHost( input );
-            } else {
-              this.removeHost( input );
-            }
+            this.removeHost( input );
           } catch ( Exception ex ) {
             LOG.error( ex, ex );
             return false;
@@ -836,11 +781,7 @@ public class Hosts {
           return true;
         } else if ( that.getEpoch( ) > input.getEpoch( ) ) {
           return true;
-        } else if ( that.hasSynced( ) && !input.hasSynced( ) ) {
-          return true;
         } else if ( !that.getHostAddresses( ).equals( input.getHostAddresses( ) ) ) {
-          return true;
-        } else if ( !that.getDatabaseStatus().equals( input.getDatabaseStatus() ) ) {
           return true;
         } else {
           return false;
@@ -913,20 +854,7 @@ public class Hosts {
     }
 
   }
-
-  public static ImmutableList<DBStatus> getDBStatus( ) {
-    final List<DBStatus> status = Lists.newArrayList( );
-    for ( final String cluster : Databases.listRegisteredDatabases( ) ) {
-      status.add( new DBStatus(
-          cluster,
-          Databases.listPrimaryActiveDatabases( cluster ),
-          Databases.listSecondaryActiveDatabases( cluster ),
-          Databases.listInactiveDatabases( cluster )
-      ) );
-    }
-    return ImmutableList.copyOf( status );
-  }
-
+  
   public static Address getLocalGroupAddress( ) {
     return HostManager.getMembershipChannel( ).getAddress( );
   }
@@ -1163,11 +1091,10 @@ public class Hosts {
     return Hosts.list( DbFilter.INSTANCE );
   }
 
-  private static final Predicate<Host> FILTER_SYNCED_DBS        = Predicates.and( DbFilter.INSTANCE, SyncedDbFilter.INSTANCE );
-  private static final Predicate<Host> FILTER_BOOTED_SYNCED_DBS = Predicates.and( FILTER_SYNCED_DBS, BootedFilter.INSTANCE );
+  private static final Predicate<Host> FILTER_BOOTED_DBS = Predicates.and( DbFilter.INSTANCE, BootedFilter.INSTANCE );
 
   public static List<Host> listActiveDatabases( ) {
-    return Hosts.list( FILTER_SYNCED_DBS );
+    return Hosts.list( DbFilter.INSTANCE );
   }
 
   private static Host put( final Host newHost ) {
@@ -1316,15 +1243,6 @@ public class Hosts {
 
   }
 
-  enum SyncedDbFilter implements Predicate<Host> {
-    INSTANCE;
-    @Override
-    public boolean apply( final Host input ) {
-      return input.hasSynced( );
-    }
-
-  }
-
   enum NonLocalFilter implements Predicate<Host> {
     INSTANCE;
     @Override
@@ -1332,23 +1250,6 @@ public class Hosts {
       return !input.isLocalHost( );
     }
 
-  }
-
-  enum DbStatusErrorFilter implements Predicate<Host> {
-    INSTANCE;
-    @Override
-    public boolean apply( final Host input ) {
-      return !Iterables.isEmpty( Optional.presentInstances(
-          Iterables.transform( input.getDatabaseStatus( ), DbStatusErrorTransform.INSTANCE ) ) );
-    }
-  }
-
-  enum DbStatusErrorTransform implements Function<DBStatus,Optional<String>> {
-    INSTANCE;
-    @Override
-    public Optional<String> apply( final DBStatus status ) {
-      return status.getError( );
-    }
   }
 
   public static Long getStartTime( ) {
@@ -1388,8 +1289,6 @@ public class Hosts {
           return false;
         } else if ( !input.hasBootstrapped( ) ) {
           return true;
-        } else if ( !input.hasSynced( ) ) {
-          return true;
         } else {
           return false;
         }
@@ -1406,8 +1305,6 @@ public class Hosts {
         if ( input == null ) {
           return true;
         } else if ( !input.hasBootstrapped( ) ) {
-          return true;
-        } else if ( !input.hasSynced( ) ) {
           return true;
         } else {
           return false;
@@ -1468,13 +1365,8 @@ public class Hosts {
       if ( !BootstrapArgs.isCloudController( ) ) {
         Coordinator.loggedWait( JoinShouldWait.NON_CLOUD_CONTROLLER );
         return JoinShouldWait.NON_CLOUD_CONTROLLER.get( );
-      } else {//if ( BootstrapArgs.isCloudController( ) ) {
-        Coordinator.loggedWait( JoinShouldWait.CLOUD_CONTROLLER );
-        if ( coord == null ) {
-          return Hosts.localHost( );
-        } else {
-          return coord;
-        }
+      } else {
+        return Hosts.localHost( );
       }
     }
 
@@ -1567,35 +1459,9 @@ public class Hosts {
 
   }
 
-  private static Predicate<DBStatus> consistentWith( final DBStatus status1 ) {
-    return new Predicate<DBStatus>() {
-      @Override
-      public boolean apply( final DBStatus status2 ) {
-        return status2.consistentWith( status1 );
-      }
-    };
-  }
-
-  private static Function<List<DBStatus>,Function<DBStatus,List<DBStatus>>> distinctStatus( ) {
-    return new Function<List<DBStatus>,Function<DBStatus,List<DBStatus>>>(){
-      @Override
-      public Function<DBStatus, List<DBStatus>> apply( final List<DBStatus> statusList ) {
-        return new Function<DBStatus, List<DBStatus>>(){
-          @Override
-          public List<DBStatus> apply( final DBStatus input ) {
-            if ( !Iterables.any( statusList, consistentWith( input ) ) ) {
-              statusList.add( input );
-            }
-            return statusList;
-          }
-        };
-      }
-    };
-  }
-
   static void awaitDatabases( ) throws InterruptedException {
     if ( !BootstrapArgs.isCloudController( ) ) {
-      while ( list( FILTER_BOOTED_SYNCED_DBS ).isEmpty( ) ) {
+      while ( list( FILTER_BOOTED_DBS ).isEmpty( ) ) {
         TimeUnit.SECONDS.sleep( 3 );//GRZE: db state check sleep time
         LOG.info( "Waiting for system view with database..." );
         LOG.info( HostMapStateListener.INSTANCE.printMap( "Hosts.awaitDatabases():" ) );
@@ -1609,62 +1475,4 @@ public class Hosts {
     }
   }
 
-  public static List<String> getHostDatabaseErrors( ) {
-    List<String> errors = Collections.emptyList( );
-    if ( Bootstrap.isOperational( ) && !Databases.isVolatile( ) ) {
-      errors = getHostDatabaseErrors( Hosts.getCoordinator( ), Hosts.list( ) );
-    }
-    return errors;
-  }
-
-  static List<String> getHostDatabaseErrors( final Host coordinator,
-                                             final List<Host> hosts ) {
-    final List<String> errors = Lists.newArrayList( );
-    if ( coordinator != null ) {
-      final List<DBStatus> distinctStatus = CollectionUtils.reduce(
-          coordinator.getDatabaseStatus( ),
-          Lists.<DBStatus>newArrayList( ),
-          distinctStatus( ) );
-      final Iterable<String> coordinatorErrors = Optional.presentInstances(
-          Iterables.transform( coordinator.getDatabaseStatus(), DbStatusErrorTransform.INSTANCE ) );
-      if ( distinctStatus.size( ) > 1 || !Iterables.isEmpty( coordinatorErrors ) ) {
-        if ( distinctStatus.size( ) > 1 ) {
-          errors.add( String.format( "Host %s database error: Inconsistent primary/secondary databases %s",
-              coordinator.getDisplayName( ), distinctStatus ) );
-        }
-
-        // report per-host errors since we can't check for consistency against invalid primary
-        for ( final Host host : Iterables.filter( hosts, DbStatusErrorFilter.INSTANCE ) ) {
-          for ( final String error : Optional.presentInstances(
-              Iterables.transform( host.getDatabaseStatus(), DbStatusErrorTransform.INSTANCE ) ) ) {
-            errors.add( String.format( "Host %s database error: %s", host.getDisplayName( ), error ) );
-          }
-        }
-      } else if ( distinctStatus.size( ) == 1 ) for ( final Host host : hosts ) {
-        final List<DBStatus> inconsistentStatus = Lists.newArrayList( Iterables.filter(
-            host.getDatabaseStatus( ),
-            Predicates.not( consistentWith( distinctStatus.get( 0 ) ) ) ) );
-        if ( !inconsistentStatus.isEmpty( ) ) {
-          errors.add( String.format( "Host %s database error: Inconsistent primary/secondary databases %s",
-              host.getDisplayName( ), inconsistentStatus ) );
-        }
-      }
-    }
-    return errors;
-  }
-
-  public static class HostDatabaseCheckListener implements EventListener<Hertz> {
-    public static void register( ) {
-      Listeners.register( Hertz.class, new HostDatabaseCheckListener() );
-    }
-
-    @Override
-    public void fireEvent( final Hertz event ) {
-      if ( BootstrapArgs.isCloudController() && event.isAsserted( 60 ) ) {
-        for ( final String error : getHostDatabaseErrors( ) ) {
-          LOG.error( error );
-        }
-      }
-    }
-  }
 }

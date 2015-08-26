@@ -33,6 +33,5 @@ public class DatabasesPersistenceContextLookupInterceptor implements Persistence
 
   @Override
   public void onConnectionError() {
-    Databases.check();
   }
 }

@@ -171,32 +171,24 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
       @Override
       public boolean apply( ServiceConfiguration config ) {  
 	  if ( !Databases.isRunning( ) ) {
-	       LOG.fatal( "config.getFullName( )" + " : does not have a running database. Restarting process to force re-synchronization." );
+	       LOG.fatal( "config.getFullName( )" + " : does not have a running database. Restarting process." );
 	       System.exit(123);
 	  }
 	  return true;
       }
     },
     SECONDARY {
-      
       @Override
       public boolean apply( ServiceConfiguration config ) {
         if ( config.isVmLocal( ) ) {
 
           if ( BootstrapArgs.isCloudController( ) ) {
-            if ( !Databases.isRunning( ) ) {
-              LOG.fatal( "config.getFullName( )" + " : does not have a running database. Restarting process to force re-synchronization." );
-              System.exit( 123 );
-            }
+            LOG.fatal( "MULTIPLE CONTROLLERS -- FAIL-STOP FOR UNSUPPORTED TOPOLOGY." );
+            LOG.fatal( "MULTIPLE CONTROLLERS -- Shutting down secondary CLC." );
+            System.exit( 1 );
           }
-
-
-          if ( !Databases.isSynchronized( ) ) {
-            throw Faults.failure( config,
-                                  Exceptions.error( config.getFullName( )
-                                    + ":fireCheck(): eucalyptus service " + config.getFullName( ) + " is currently synchronizing: "
-                                    + Hosts.getCoordinator( ) ) );
-          } else if ( Topology.isEnabledLocally( Eucalyptus.class ) ) {
+          
+          if ( Topology.isEnabledLocally( Eucalyptus.class ) ) {
             throw Faults.failure( config,
                                   Exceptions.error( config.getFullName( )
                                     + ":fireCheck(): eucalyptus service " + config.getFullName( ) + " cant be enabled when it is not the coordinator: "

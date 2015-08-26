@@ -66,94 +66,52 @@ import groovy.sql.Sql;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.management.ManagementFactory;
-import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetAddress;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-import javax.management.InstanceAlreadyExistsException;
-import javax.management.InstanceNotFoundException;
-import javax.management.ObjectName;
-import javax.persistence.LockTimeoutException;
 
 import org.apache.log4j.Logger;
-import org.logicalcobwebs.proxool.ProxoolFacade;
 
-import com.eucalyptus.bootstrap.Hosts.DbFilter;
-import com.eucalyptus.bootstrap.Hosts.SyncedDbFilter;
 import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Database;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.entities.PersistenceContexts;
-import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.Mbeans;
 import com.eucalyptus.util.Strings;
-import com.eucalyptus.util.async.Futures;
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.MapDifference;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 public class Databases {
   
   private static final Logger                 LOG                       = Logger.getLogger( Databases.class );
-  private static final int                    MAX_DEACTIVATION_RETRIES  = 10;
   private static final int                    MAX_TX_START_SYNC_RETRIES = 120;
-  private static final AtomicInteger          counter                   = new AtomicInteger( 500 );
-  private static final Predicate<Host>        FILTER_SYNCING_DBS        = Predicates.and( DbFilter.INSTANCE, Predicates.not( SyncedDbFilter.INSTANCE ) );
   private static final ScriptedDbBootstrapper singleton                 = new ScriptedDbBootstrapper( );
-  private static final String                 jdbcJmxDomain             = "net.sf.hajdbc";
-  private static final ExecutorService        dbSyncExecutors           = Executors.newCachedThreadPool( );                                              //NOTE:GRZE:special case thread handling.
-  private static final ReentrantReadWriteLock canHas                    = new ReentrantReadWriteLock( );
-
-  private static Supplier<Set<String>>        activeHosts               = Suppliers.memoizeWithExpiration( ActiveHostSet.ACTIVATED, 2, TimeUnit.SECONDS );
-  private static Supplier<Set<String>>        hostDatabases             = Suppliers.memoizeWithExpiration( ActiveHostSet.DBHOSTS, 1, TimeUnit.SECONDS );
-
+  private static final AtomicBoolean          volatileAtomic            = new AtomicBoolean( true );
+  
   private static Predicate<StackTraceElement> notStackFilterYouAreLookingFor = Predicates.or(
       Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.entities\\..*" ),
       Threads.filterStackByQualifiedName( "java\\.lang\\.Thread.*" ),
       Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.system\\.Threads.*" ),
       Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.bootstrap\\.Databases.*" ) );
   private static Predicate<StackTraceElement> stackFilter                    = Predicates.not( notStackFilterYouAreLookingFor );
-
-  private static final int DATABASE_WEIGHT_PRIMARY = 100;
-  private static final int DATABASE_WEIGHT_SECONDARY = 1;
 
   public static class DatabaseStateException extends IllegalStateException {
     private static final long serialVersionUID = 1L;
@@ -263,53 +221,6 @@ public class Databases {
     }
   }
   
-  enum SyncState {
-    IRRELEVANT,
-    NOTSYNCED,
-    SYNCING {
-      
-      @Override
-      public boolean set( ) {
-        return syncState.compareAndSet( NOTSYNCED, SYNCING );
-      }
-    },
-    DESYNCING,
-    SYNCED {
-      
-      @Override
-      public boolean isCurrent( ) {
-        if ( Hosts.isCoordinator( ) ) {
-          syncState.set( this );
-        }
-        return super.isCurrent( );
-      }
-      
-    };
-    private static final AtomicReference<SyncState> syncState = new AtomicReference<>( SyncState.NOTSYNCED );
-    
-    public static SyncState get( ) {
-      return syncState.get( );
-    }
-    
-    public boolean set( ) {
-      syncState.set( this );
-      return true;
-    }
-    
-    public boolean isCurrent( ) {
-      return this.equals( syncState.get( ) );
-    }
-  }
-  
-  enum ExecuteRunnable implements Function<Runnable, Future<Runnable>> {
-    INSTANCE;
-    @Override
-    public Future<Runnable> apply( Runnable input ) {
-      Logs.extreme( ).debug( "SUBMIT: " + input );
-      return dbSyncExecutors.submit( input, input );
-    }
-  }
-
   public static Iterable<String> databases( ) {
     return Sets.newTreeSet( Iterables.transform( PersistenceContexts.list( ), PersistenceContexts.toDatabaseName( ) ) );
   }
@@ -321,7 +232,6 @@ public class Databases {
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.PoolInit )
   public static class DatabasePoolBootstrapper extends Bootstrapper.Simple {
-    private static final int INITIAL_DB_SYNC_RETRY_WAIT = 5;
     
     @Override
     public boolean load( ) throws Exception {
@@ -330,62 +240,7 @@ public class Databases {
       Locks.PARTITIONED.isLocked( );
 
       Groovyness.run( "setup_dbpool.groovy" );
-      OrderedShutdown.registerShutdownHook( Empyrean.class, new Runnable( ) {
-        
-        @Override
-        public void run( ) {
-          try {
-            for ( final String database : databases( ) ) {
-              try {
-                DatabaseClusterMBean db = Databases.lookup( database, TimeUnit.SECONDS.toMillis( 5 ) );
-                for ( String host : db.getinactiveDatabases() ) {
-                  Databases.disable( host );
-                }
-                for ( String host : db.getactiveDatabases() ) {
-                  Databases.disable( host );
-                }
-              } catch ( Exception ex ) {
-                LOG.error( ex );
-              }
-            }
-          } catch ( NoSuchElementException ex ) {
-            LOG.error( ex );
-          }
-        }
-      } );
-      TimeUnit.SECONDS.sleep( INITIAL_DB_SYNC_RETRY_WAIT );
-      if ( !Hosts.isCoordinator( ) && Hosts.localHost( ).hasDatabase( ) ) {
-        while ( !Databases.enable( Hosts.localHost( ) ) ) {
-          LOG.warn( LogUtil.subheader( "Synchronization of the database failed: " + Hosts.localHost( ) ) );
-          if ( counter.decrementAndGet( ) == 0 ) {
-            LOG.fatal( "Restarting process to force re-synchronization." );
-            System.exit( 123 );
-          } else {
-            LOG.warn( "Sleeping for " + INITIAL_DB_SYNC_RETRY_WAIT + " seconds before trying again." );
-            TimeUnit.SECONDS.sleep( INITIAL_DB_SYNC_RETRY_WAIT );
-          }
-        }
-
-        Locks.DISABLED.create( );
-
-        Hosts.UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
-        LOG.info( LogUtil.subheader( "Database synchronization complete: " + Hosts.localHost( ) ) );
-      }
       return true;
-    }
-    
-    @Override
-    public boolean check( ) throws Exception {
-      if ( Bootstrap.isOperational( ) &&
-           !Hosts.localHost( ).hasDatabase( ) ) {  // This check is redundant on hosts with DBs
-        final List<Host.DBStatus> statusList = Hosts.localHost().getDatabaseStatus( );
-        for ( final Host.DBStatus status : statusList ) {
-          for ( String error : status.getError( ).asSet( ) ) {
-            LOG.error( error );
-          }
-        }
-      }
-      return super.check( );
     }
   }
 
@@ -400,452 +255,6 @@ public class Databases {
         ;
       }
       return true;
-    }
-  }
-    
-  private static void runDbStateChange( Function<String, Runnable> runnableFunction ) {
-    Logs.extreme( ).info( "DB STATE CHANGE: " + runnableFunction );
-    try {
-      Logs.extreme( ).info( "Attempting to acquire db state lock: " + runnableFunction );
-      if ( canHas.writeLock( ).tryLock( 5, TimeUnit.MINUTES ) ) {
-
-        try {
-          Logs.extreme( ).info( "Acquired db state lock: " + runnableFunction );
-          Map<Runnable, Future<Runnable>> runnables = Maps.newHashMap( );
-          for ( final String database : listDatabases( ) ) {
-            Runnable run = runnableFunction.apply( database );
-            runnables.put( run, ExecuteRunnable.INSTANCE.apply( run ) );
-          }
-          Map<Runnable, Future<Runnable>> succeeded = Futures.waitAll( runnables );
-          MapDifference<Runnable, Future<Runnable>> failed = Maps.difference( runnables, succeeded );
-          StringBuilder builder = new StringBuilder( );
-          builder.append( Joiner.on( "\nSUCCESS: " ).join( succeeded.keySet() ) );
-          builder.append( Joiner.on( "\nFAILED:  " ).join( failed.entriesOnlyOnLeft( ).keySet( ) ) );
-          Logs.extreme( ).debug( builder.toString( ) );
-          if ( !failed.entriesOnlyOnLeft( ).isEmpty( ) ) {
-            throw Exceptions.toUndeclared( builder.toString( ) );
-          }
-        } finally {
-          canHas.writeLock( ).unlock( );
-        }
-      } else {
-        throw new LockTimeoutException( "DB STATE CHANGE ABORTED (failed to get lock): " + runnableFunction );
-      }
-    } catch ( RuntimeException ex ) {
-      LOG.error( ex );
-      Logs.extreme( ).error( ex, ex );
-      throw ex;
-    } catch ( InterruptedException ex ) {
-      Exceptions.maybeInterrupted( ex );
-      throw Exceptions.toUndeclared( ex );
-    }
-  }
-  
-  enum DeactivateHostFunction implements Function<String, Function<String, Runnable>> {
-    INSTANCE;
-    /**
-     * @see Function#apply(Object)
-     */
-    @Override
-    public Function<String, Runnable> apply( final String hostName ) {
-      return new Function<String, Runnable>( ) {
-        @Override
-        public Runnable apply( final String contextName ) {
-          return new Runnable( ) {
-            @Override
-            public void run( ) {
-              if ( Internets.testLocal( hostName ) ) {
-                return;
-              }
-              try {
-                final boolean wasPrimary;
-                try {
-                  wasPrimary = lookupDatabase( contextName, hostName ).getweight() == DATABASE_WEIGHT_PRIMARY;
-                } catch ( Exception ex1 ) {
-                  return;
-                }
-                
-                LOG.info( "Tearing down database connections for: " + hostName + " to context: " + contextName );
-                final DatabaseClusterMBean cluster = lookup( contextName, TimeUnit.SECONDS.toMillis( 5 ) );
-
-                // deactivate database
-                for ( int i = 0; 
-                      i < MAX_DEACTIVATION_RETRIES && cluster.getactiveDatabases().contains( hostName ); 
-                      i++ ) try {
-                  LOG.debug( "Deactivating database connections for: " + hostName + " to context: " + contextName );
-                  cluster.deactivate( hostName );
-                  LOG.debug( "Deactived database connections for: " + hostName + " to context: " + contextName );
-                  break;
-                } catch ( Exception ex ) {
-                  LOG.error( ex );
-                  Logs.extreme( ).error( ex, ex );
-                }
-                  
-                // remove database
-                for ( int i = 0; 
-                  i < MAX_DEACTIVATION_RETRIES && cluster.getinactiveDatabases().contains( hostName ) && !Hosts.contains( hostName ); 
-                  i++ ) try {
-                  LOG.debug( "Removing database registration for: " + hostName + " to context: " + contextName );
-                  cluster.remove( hostName );
-                  LOG.debug( "Removed database registration for: " + hostName + " to context: " + contextName );
-                  break;
-                } catch ( Exception ex ) {
-                  LOG.error( ex );
-                  Logs.extreme( ).error( ex, ex );
-                }
-
-                // promote other
-                final Host coordinator = Hosts.getCoordinator( );
-                if ( wasPrimary && coordinator != null ) {
-                  try {
-                    lookupDatabase( contextName, coordinator.getDisplayName( ) ).setweight( DATABASE_WEIGHT_PRIMARY );
-                  } catch ( NoSuchElementException e ) {
-                    // Weight will be set on activation
-                  } catch ( Exception e ) {
-                    LOG.error( "Error setting primary weight for host " + coordinator.getDisplayName( ) + " context " + contextName, e );
-                  }
-                }
-
-                // refresh pooled connections to ensure closed if removed
-                for ( int i = 0;
-                      i < MAX_DEACTIVATION_RETRIES && 
-                          !cluster.getactiveDatabases().contains( hostName ) &&
-                          !cluster.getinactiveDatabases().contains( hostName );
-                      i++ ) try {
-                  // Release any open connections
-                  LOG.debug( "Refreshing idle pooled connections for context: " + contextName );
-                  ProxoolFacade.killAllConnections( contextName, "Database deregistered", true );
-                  LOG.debug( "Refreshed idle pooled connections for context: " + contextName );
-                  break;
-                } catch ( Exception ex ) {
-                  LOG.error( ex );
-                  Logs.extreme( ).error( ex, ex );
-                }
-            } catch ( final Exception ex1 ) {
-                LOG.error( ex1 );
-                Logs.extreme( ).error( ex1, ex1 );
-              }
-            }
-            
-            @Override
-            public String toString( ) {
-              return "Databases.disable(): " + hostName + " " + contextName;
-            }
-          };
-        }
-        
-        @Override
-        public String toString( ) {
-          return "Databases.disable(): " + hostName;
-        }
-      };
-    }
-    
-    @Override
-    public String toString( ) {
-      return "Databases.disable()";
-    }
-  }
-  
-  enum ActivateHostFunction implements Function<Host, Function<String, Runnable>> {
-    INSTANCE;
-    private static void prepareConnections( final Host host, final String contextName ) throws NoSuchElementException {
-      final String dbUrl = "jdbc:" + ServiceUris.remote( Database.class, host.getBindAddress( ), contextName );
-      final String hostName = host.getDisplayName();
-      final DriverDatabaseMBean database = Databases.lookupDatabase( contextName, hostName );
-      database.setuser( getUserName() );
-      database.setpassword( getPassword() );
-      database.setweight( Hosts.isCoordinator( host )
-          ? DATABASE_WEIGHT_PRIMARY
-          : DATABASE_WEIGHT_SECONDARY );
-      database.setlocal( host.isLocalHost() );
-      database.setlocation( dbUrl );
-    }
-    
-    @Override
-    public Function<String, Runnable> apply( final Host host ) {
-      return new Function<String, Runnable>( ) {
-        @Override
-        public Runnable apply( final String database ) {
-          final String hostName = host.getBindAddress( ).getHostAddress( );
-          return new Runnable( ) {
-            @Override
-            public void run( ) {
-              try {
-                final boolean fullSync = !Hosts.isCoordinator( ) && host.isLocalHost( ) && BootstrapArgs.isCloudController( ) && !Databases.isSynchronized( );
-                final boolean passiveSync = !fullSync && host.hasSynced( );
-                if ( !fullSync && !passiveSync ) {
-                  throw Exceptions.toUndeclared( "Host is not ready to be activated: " + host );
-                } else {
-                  final DatabaseClusterMBean cluster = lookup( database, TimeUnit.SECONDS.toMillis( 30 ) );
-                  final boolean activated = cluster.getactiveDatabases().contains( hostName );
-                  final boolean deactivated = cluster.getinactiveDatabases().contains( hostName );
-                  final String passiveStrategy = cluster.getdefaultSynchronizationStrategy();
-                  final String fullStrategy = Iterables.getFirst( Sets.difference( 
-                      cluster.getsynchronizationStrategies(), 
-                      Collections.singleton( passiveStrategy ) ), "full" );
-                  final String syncStrategy = fullSync ? fullStrategy : passiveStrategy;
-                  if ( activated ) {
-                    resetDatabaseWeights( database );
-                    return;
-                  } else if ( deactivated ) {
-                    ActivateHostFunction.prepareConnections( host, database );
-                  } else {
-                    LOG.info( "Creating database " + database + " connections for: " + host );
-                    try {
-                      lookupDatabase( database, hostName );
-                    } catch ( NoSuchElementException e ) {
-                      try {
-                        cluster.add( hostName );
-                        Logs.extreme( ).debug( "Added database " + database + " connections for host: " + hostName );
-                      } catch ( IllegalArgumentException ex ) {
-                        Logs.extreme( ).debug( "Skipping addition of database " + database + " connections for host which already exists: " + hostName );
-                      } catch ( IllegalStateException ex ) {
-                        if ( Exceptions.isCausedBy( ex, InstanceAlreadyExistsException.class ) ) {
-                          ManagementFactory.getPlatformMBeanServer( ).unregisterMBean( new ObjectName( 
-                              jdbcJmxDomain, 
-                              new Hashtable<>( ImmutableMap.of( "cluster", database, "type", "Database", "database", hostName ) ) ) );
-                          cluster.add( hostName );
-                        } else {
-                          throw ex;
-                        }
-                      }
-                    }
-                    ActivateHostFunction.prepareConnections( host, database );
-                  }
-
-                  // demote others
-                  if ( Hosts.isCoordinator( host ) ) {
-                    for ( Host secondaryHost : Hosts.listActiveDatabases( ) ) if ( !secondaryHost.equals( host ) ) try {
-                      lookupDatabase( database, secondaryHost.getDisplayName( ) ).setweight( DATABASE_WEIGHT_SECONDARY );
-                    } catch ( NoSuchElementException e ) {
-                      // Weight will be set on activation
-                    } catch ( Exception e ) {
-                      LOG.error( "Error setting primary weight for host " + secondaryHost.getDisplayName( ) + " context " + database, e );
-                    }
-                  }
-
-                  try {
-                    if ( fullSync ) {
-                      LOG.info( "Full sync of database " + database + " on: " + host + " using: " + fullStrategy );
-                    } else {
-                      LOG.info( "Passive activation of database " + database + " connections to: " + host );
-                    }
-                    cluster.activate( hostName, syncStrategy );
-                    if ( fullSync ) {
-                      LOG.info( "Full sync of database " + database + " on: " + host + " using " + cluster.getactiveDatabases() );
-                    } else {
-                      LOG.info( "Passive activation of database " + database + " on: " + host + " using " + cluster.getactiveDatabases() );
-                    }
-                  } catch ( Exception ex ) {
-                    throw Exceptions.toUndeclared( ex );
-                  }
-
-                  // refresh pooled connections
-                  try {
-                    // Release any open connections
-                    LOG.debug( "Refreshing idle pooled connections for context: " + database );
-                    ProxoolFacade.killAllConnections( database, "Database registered", true );
-                    LOG.debug( "Refreshed idle pooled connections for context: " + database );
-                  } catch ( Exception ex ) {
-                    LOG.error( "Error refreshing connections on activation of context: " + database, ex );
-                  }
-                }
-              } catch ( final NoSuchElementException | IllegalStateException ex1 ) {
-                LOG.error( ex1 );
-                Logs.extreme( ).error( ex1, ex1 );
-                return;
-              } catch ( final Exception ex1 ) {
-                LOG.error( ex1 );
-                Logs.extreme( ).error( ex1, ex1 );
-                throw Exceptions.toUndeclared( "Failed to activate database " + database + " host " + host + " because of: " + ex1.getMessage( ), ex1 );
-              }
-            }
-            
-            @Override
-            public String toString( ) {
-              return "Databases.enable(): " + host.getDisplayName( ) + " " + database;
-            }
-          };
-        }
-        
-        @Override
-        public String toString( ) {
-          return "Databases.enable(): " + host;
-        }
-        
-      };
-    }
-    
-    @Override
-    public String toString( ) {
-      return "Databases.enable()";
-    }
-    
-    private static void rollback( final Host host, Exception ex ) {
-      try {
-        Databases.runDbStateChange( Databases.DeactivateHostFunction.INSTANCE.apply( host.getDisplayName( ) ) );
-      } catch ( LockTimeoutException ex1 ) {
-        Databases.LOG.error( "Databases.enable(): failed because of: " + ex.getMessage( ) );
-      } catch ( Exception ex1 ) {
-        Databases.LOG.error( "Databases.enable(): failed because of: " + ex.getMessage( ) );
-        Logs.extreme( ).error( ex, ex );
-      }
-    }
-  }
-
-  private static void resetDatabaseWeights( final String contextName ) {
-    for ( final Host host : Hosts.listActiveDatabases( ) ) try {
-      lookupDatabase( contextName, host.getDisplayName( ) ).setweight(
-          Hosts.isCoordinator( host ) ?
-              DATABASE_WEIGHT_PRIMARY :
-              DATABASE_WEIGHT_SECONDARY );
-    } catch ( NoSuchElementException e ) {
-      // Weight will be set on activation
-    } catch ( Exception e ) {
-      LOG.error( "Error resetting weight for host " + host.getDisplayName( ) + " context " + contextName, e );
-    }
-  }
-
-  private static DatabaseClusterMBean lookup( final String database, final long timeout ) throws NoSuchElementException {
-    return lookupMBean(
-        ImmutableMap.of( "cluster", database, "type", "DatabaseCluster" ),
-        DatabaseClusterMBean.class,
-        new Predicate<DatabaseClusterMBean>() {
-          @Override
-          public boolean apply( final DatabaseClusterMBean cluster ) {
-            cluster.getinactiveDatabases( );
-            return true;
-          }
-        },
-        timeout
-    );
-  }
-
-  private static DriverDatabaseMBean lookupDatabase( final String database,
-                                                     final String hostName 
-  ) throws NoSuchElementException {
-    return lookupMBean(
-        ImmutableMap.of( "cluster", database, "type", "Database", "database", hostName ),
-        DriverDatabaseMBean.class,
-        new Predicate<DriverDatabaseMBean>() {
-          @Override
-          public boolean apply( final DriverDatabaseMBean database ) {
-            database.getid( );
-            return true;
-          }
-        },
-        0
-    );
-  }
-
-  private static <T> T lookupMBean( final Map<String,String> props, 
-                                    final Class<T> type,
-                                    final Predicate<T> tester,
-                                    final long timeout ) {
-    long until = System.currentTimeMillis() + timeout;
-    do try {
-      final T bean = Mbeans.lookup( jdbcJmxDomain, props, type );
-      tester.apply( bean );
-      return bean;
-    } catch ( UndeclaredThrowableException e ) {
-      if ( Exceptions.isCausedBy( e, InstanceNotFoundException.class ) ) {
-        if ( System.currentTimeMillis() < until ) {
-          try {
-            TimeUnit.SECONDS.sleep( 5 );
-          } catch ( InterruptedException e1 ) {
-            Thread.interrupted( );
-            break;
-          }
-          LOG.debug( "Waiting for MBean " + type.getSimpleName( ) + "/" + props );
-          continue;
-        }
-        throw new NoSuchElementException( type.getSimpleName() + " " + props.toString() );
-      } else {
-        throw Exceptions.toUndeclared( e );
-      }
-    } while ( System.currentTimeMillis() < until );
-
-    throw new NoSuchElementException( type.getSimpleName() + " " + props.toString() );
-  }
-  
-  static boolean disable( final String hostName ) {
-    if ( !Bootstrap.isFinished( ) ) {
-      return false;
-    } else if ( Internets.testLocal( hostName ) ) {
-      return true;
-    } else {
-      try {
-        runDbStateChange( DeactivateHostFunction.INSTANCE.apply( hostName ) );
-        return true;
-      } catch ( Exception ex ) {
-        Logs.extreme( ).debug( ex );
-        return false;
-      }
-    }
-  }
-  
-  static boolean enable( final Host host ) {
-    if ( !host.hasDatabase( ) || Bootstrap.isShuttingDown( ) ) {
-      return false;
-    } else if ( !Hosts.contains(host.getGroupsId())  ) {
-      Hosts.remove( host.getGroupsId( ) );
-      return false;
-    } else {
-      if ( host.isLocalHost( ) ) {
-        if ( SyncState.SYNCING.set( ) ) {
-          try {
-            runDbStateChange( ActivateHostFunction.INSTANCE.apply( host ) );
-            SyncState.SYNCED.set( );
-            return true;
-          } catch ( LockTimeoutException ex ) {
-            SyncState.NOTSYNCED.set( );
-            return false;
-          } catch ( Exception ex ) {
-            SyncState.NOTSYNCED.set( );
-            LOG.error( ex );
-            Logs.extreme( ).error( ex, ex );
-            return false;
-          }
-        } else if ( !SyncState.SYNCING.isCurrent( ) ) {
-          try {
-            runDbStateChange( ActivateHostFunction.INSTANCE.apply( host ) );
-            return true;
-          } catch ( LockTimeoutException ex ) {
-            return false;
-          } catch ( Exception ex ) {
-            LOG.error( ex );
-            Logs.extreme( ).error( ex, ex );
-            return false;
-          }
-        } else {
-          try {
-            runDbStateChange( ActivateHostFunction.INSTANCE.apply( host ) );
-            SyncState.SYNCED.set( );
-            return true;
-          } catch ( LockTimeoutException ex ) {
-            SyncState.NOTSYNCED.set( );
-            return false;
-          } catch ( Exception ex ) {
-            SyncState.NOTSYNCED.set( );
-            LOG.error( ex, ex );
-            return false;
-          }
-        }
-      } else if ( !ActiveHostSet.ACTIVATED.get( ).contains( host.getDisplayName( ) ) ) {
-        try {
-          runDbStateChange( ActivateHostFunction.INSTANCE.apply( host ) );
-          return true;
-        } catch ( LockTimeoutException ex ) {
-          return false;
-        } catch ( Exception ex ) {
-          Logs.extreme( ).debug( ex );
-          ActivateHostFunction.rollback( host, ex );
-          return false;
-        }
-      } else {
-        return ActiveHostSet.ACTIVATED.get( ).contains( host.getDisplayName( ) );
-      }
     }
   }
   
@@ -875,47 +284,6 @@ public class Databases {
     return false;
   }
 
-  static Set<String> listPrimaryActiveDatabases( final String cluster ) {
-    return listDatabases( cluster, true, Optional.of( DATABASE_WEIGHT_PRIMARY ) );
-  }
-
-  static Set<String> listSecondaryActiveDatabases( final String cluster ) {
-    return listDatabases( cluster, true, Optional.of( DATABASE_WEIGHT_SECONDARY ) );
-  }
-
-  static Set<String> listInactiveDatabases( final String cluster ) {
-    return listDatabases( cluster, false, Optional.<Integer>absent( ) );
-  }
-
-  private static Set<String> listDatabases( final String clusterName,
-                                            final boolean active,
-                                            final Optional<Integer> weight ) {
-    final Set<String> databases = Sets.newLinkedHashSet( );
-    try {
-      final DatabaseClusterMBean cluster = lookup( clusterName, 0 );
-      final Iterable<String> databaseIds = active ?
-          cluster.getactiveDatabases( ) :
-          cluster.getinactiveDatabases( );
-      for ( final String databaseId : databaseIds ) try {
-        final DriverDatabaseMBean database = lookupDatabase( clusterName, databaseId );
-        if ( !weight.isPresent( ) || database.getweight( ) == weight.get( ) ) {
-          databases.add( databaseId );
-        }
-      } catch ( NoSuchElementException e ) {
-        // ignore database
-      }
-    } catch ( NoSuchElementException e ) {
-      // no databases
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-    }
-    return databases;
-  }
-
-  static Set<String> listRegisteredDatabases( ) {
-    return Mbeans.listPropertyValues( jdbcJmxDomain, "cluster", ImmutableMap.of( "type", "DatabaseCluster" ) );
-  }
-
   /**
    * List all known databases.
    */
@@ -935,81 +303,15 @@ public class Databases {
 
     return dbNames;
   }
-
-
-  /**
-   * @return
-   *         LockTimeoutException
-   */
-  public static Boolean isSynchronized( ) {
-    return SyncState.SYNCED.isCurrent( );
-  }
   
   public static Boolean isVolatile( ) {
-    if ( !Bootstrap.isFinished( ) || BootstrapArgs.isInitializeSystem( ) ) {
-      return false;
-    } else if ( !Hosts.isCoordinator( ) && BootstrapArgs.isCloudController( ) ) {
-      return !isSynchronized( ) || !activeHosts.get( ).containsAll( hostDatabases.get( ) );
-    } else if ( !activeHosts.get( ).equals( hostDatabases.get( ) ) ) {
-      return true;
-    } else {
-      return !Hosts.list( FILTER_SYNCING_DBS ).isEmpty( );
-    }
+    return volatileAtomic.get( );
   }
   
-  enum ActiveHostSet implements Supplier<Set<String>> {
-    ACTIVATED {
-      @Override
-      public Set<String> get( ) {
-        Set<String> hosts = DBHOSTS.get( );
-        Set<String> union = Sets.newHashSet( );
-        Set<String> intersection = Sets.newHashSet( hosts );
-        Logs.extreme( ).debug( "ActiveHostSet: universe of db hosts: " + hosts );
-        for ( final String database : databases( ) ) {
-          try {
-            Set<String> activeDatabases = Databases.lookup( database, 0 ).getactiveDatabases();
-            if ( BootstrapArgs.isCloudController( ) ) {
-              activeDatabases.add( Internets.localHostIdentifier( ) );//GRZE: use Internets.localHostIdentifier() which is static, rather than the Hosts reference as it is stateful
-            }
-            union.addAll( activeDatabases );
-            intersection.retainAll( activeDatabases );
-          } catch ( Exception ex ) {}
-        }
-        Logs.extreme( ).debug( "ActiveHostSet: union of activated db connections: " + union );
-        Logs.extreme( ).debug( "ActiveHostSet: intersection of db hosts and activated db connections: " + intersection );
-        boolean dbVolatile = !hosts.equals( intersection );
-        String msg = String.format( "ActiveHostSet: %-14.14s %s%s%s", dbVolatile
-          ? "volatile"
-          : "synchronized", hosts, dbVolatile
-          ? "!="
-          : "=", intersection );
-        if ( dbVolatile ) {
-          if ( last.compareAndSet( false, dbVolatile ) ) {
-            LOG.warn( msg );
-          } else {
-            LOG.debug( msg );
-          }
-        } else {
-          if ( last.compareAndSet( true, dbVolatile ) ) {
-            LOG.warn( msg );
-          } else {
-            Logs.extreme( ).info( msg );
-          }
-        }
-        return intersection;
-      }
-    },
-    DBHOSTS {
-      @Override
-      public Set<String> get( ) {
-        return Sets.newHashSet( Collections2.transform( Hosts.listDatabases( ), Hosts.NameTransform.INSTANCE ) );
-      }
-    };
-    private static final AtomicBoolean last = new AtomicBoolean( false );
-    
-    @Override
-    public abstract Set<String> get( );
-    
+  public static void setVolatile( boolean isVolatile ) {
+    if ( volatileAtomic.compareAndSet( !isVolatile, isVolatile ) ) {
+      LOG.error( "Database availability changed to: " + !isVolatile );
+    }
   }
 
   public static void awaitSynchronized( ) {
@@ -1266,66 +568,5 @@ public class Databases {
   public static String getJdbcScheme( ) {
     return singleton.getJdbcScheme( );
   }
-
-  public static void check( ) {
-    for ( final String database : databases( ) ) {
-      try {
-        DatabaseClusterMBean db = lookup( database, TimeUnit.SECONDS.toMillis( 5 ) );
-        for ( String host : db.getactiveDatabases() ) {
-          Host hostEntry = Hosts.lookup( host );
-          if ( hostEntry == null ) {
-            disable( host );
-          } else if ( !Hosts.contains( hostEntry.getGroupsId() ) ) {
-            Hosts.remove( host );//GRZE: this will clean up group state and de-activate db.
-          }
-        }
-      } catch ( NoSuchElementException ex ) {
-        LOG.error( ex, ex );
-      }
-    }
-  }
-
-  /**
-   * HA-JDBC Dynamic MBean proxy interface
-   */
-  private interface DatabaseClusterMBean {
-
-    Set<String> getinactiveDatabases();
-
-    Set<String> getactiveDatabases();
-
-    void add( String hostName );
-
-    void remove( String hostName );
-
-    void activate( String hostName, String syncStrategy );
-
-    void deactivate( String hostName );
-    
-    Set<String> getsynchronizationStrategies();
-    
-    String getdefaultSynchronizationStrategy();
-  }
-
-  /**
-   * HA-JDBC Dynamic MBean proxy interface
-   */
-  private interface DriverDatabaseMBean {
-
-    boolean isActive( );
-    
-    String getid( );
-    
-    void setuser( String userName );
-
-    void setpassword( String password );
-
-    int getweight( );
-
-    void setweight( int i );
-
-    void setlocal( boolean localHost );
-
-    void setlocation( String url );
-  }
+  
 }
