@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -72,8 +72,8 @@ import java.security.KeyPair;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
-import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -101,12 +101,13 @@ public class PEMFiles {
     return B64.url.encString( PEMFiles.getBytes( keyPair ) );
   }
   
+  @Nullable
   public static KeyPair toKeyPair( String keyPairB64PemString ) {
     return PEMFiles.getKeyPair( B64.url.dec( keyPairB64PemString ) );
   }
   
   public static void write( final String fileName, final Object securityToken ) {
-    PEMWriter privOut = null;
+    PEMWriter privOut;
     try {
       privOut = new PEMWriter( new FileWriter( fileName ) );
       EventRecord.caller( PEMFiles.class, EventType.CERTIFICATE_WRITE, fileName ).info( );
@@ -146,12 +147,16 @@ public class PEMFiles {
     return x509;
   }
 
+  @Nullable
   public static KeyPair getKeyPair( final byte[] o ) {
     KeyPair keyPair = null;
     ByteArrayInputStream pemByteIn = new ByteArrayInputStream( o );
     try ( PEMParser in = new PEMParser( new InputStreamReader( pemByteIn ) )  )  {
-      keyPair = new JcaPEMKeyConverter( ).setProvider( BouncyCastleProvider.PROVIDER_NAME )
-          .getKeyPair( (PEMKeyPair) in.readObject() );
+      final PEMKeyPair pemKeyPair = (PEMKeyPair) in.readObject( );
+      if ( pemKeyPair != null ) {
+        keyPair = 
+            new JcaPEMKeyConverter( ).setProvider( BouncyCastleProvider.PROVIDER_NAME ).getKeyPair( pemKeyPair );
+      }
     } catch ( IOException e ) {
       LOG.error( e, e );//this can never happen
     }
