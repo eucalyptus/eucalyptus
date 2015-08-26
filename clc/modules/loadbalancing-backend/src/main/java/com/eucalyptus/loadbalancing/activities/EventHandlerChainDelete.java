@@ -32,6 +32,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.RunningInstancesItemType;
+import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
@@ -413,32 +414,46 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 				if(instances == null || instances.size()<=0)
 					toDelete.add(group);
 			}
-			
+
 			/// delete them from euca
-			for(LoadBalancerSecurityGroup group : toDelete){
-				try{
-				  EucalyptusActivityTasks.getInstance().deleteSystemSecurityGroup( group.getName(), true);
-					LOG.info("deleted security group: "+group.getName());
-				}catch(final Exception ex){
-				  try{
-	          EucalyptusActivityTasks.getInstance().deleteSystemSecurityGroup( group.getName(), false);
-	          LOG.info("deleted security group: "+group.getName());
-				  }catch(final Exception ex2) {
-	          LOG.warn("failed to delete the security group from eucalyptus",ex2);
-				  }				  
-				}
-			}
-			try ( final TransactionResource db2 = Entities.transactionFor( LoadBalancerSecurityGroup.class ) ) {
-				for(LoadBalancerSecurityGroup group: toDelete){
-					LoadBalancerSecurityGroup g = 
-							Entities.uniqueResult(group);
-					Entities.delete(g);
-				}
-				db2.commit();
-			}catch(NoSuchElementException ex){
-				// nothing to delete
-			}catch(Exception ex){
-				LOG.warn("failed to delete the securty group from entity", ex);
+			for(final LoadBalancerSecurityGroup group : toDelete){
+			  boolean deleted = false;
+			  try{
+			    final List<SecurityGroupItemType> existingGroups = 
+			        EucalyptusActivityTasks.getInstance().describeSystemSecurityGroups( Lists.newArrayList(group.getName()), true);
+			    if(existingGroups == null || existingGroups.size()<=0)
+			      deleted =true;
+			    else {
+			      EucalyptusActivityTasks.getInstance().deleteSystemSecurityGroup( group.getName(), true);
+			      LOG.info("deleted security group: "+group.getName());
+			      deleted = true;
+			    }
+			  }catch(final Exception ex){
+			    try{
+			      final List<SecurityGroupItemType> existingGroups = 
+			          EucalyptusActivityTasks.getInstance().describeSystemSecurityGroups( Lists.newArrayList(group.getName()), false);
+			      if(existingGroups == null || existingGroups.size()<=0)
+			        deleted =true;
+			      else{
+			        EucalyptusActivityTasks.getInstance().deleteSystemSecurityGroup( group.getName(), false);
+			        LOG.info("deleted security group: "+group.getName());
+			        deleted = true;
+			      }
+			    }catch(final Exception ex2) {
+			      LOG.warn("failed to delete the security group from eucalyptus",ex2);
+			    }				  
+			  }
+			  if (deleted) {
+			    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerSecurityGroup.class ) ) {
+			      final LoadBalancerSecurityGroup g =  Entities.uniqueResult(group);
+			      Entities.delete(g);
+			      db.commit();
+			    }catch(NoSuchElementException ex){
+			      ;
+			    }catch(Exception ex){
+			      LOG.warn("failed to delete the securty group from DB", ex);
+			    }
+			  }		
 			}
 		}
 	}
@@ -470,17 +485,11 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 
 			if(retired == null || retired.size()<=0)
 				return;
-			final List<LoadBalancerServoInstance> retiredAndDnsClean = Lists.newArrayList();
-			for(final LoadBalancerServoInstance instance: retired){
-  		/// make sure DNS is deregistered
-        if(! LoadBalancerServoInstance.DNS_STATE.Registered.equals(instance.getDnsState()))
-          retiredAndDnsClean.add(instance);
-			}
 			/// for each:
 			// describe instances
 			final List<String> param = Lists.newArrayList();
 			final Map<String, String> latestState = Maps.newHashMap();
-			for(final LoadBalancerServoInstance instance : retiredAndDnsClean){
+			for(final LoadBalancerServoInstance instance : retired){
 			  /// 	call describe instance
 			  String instanceId = instance.getInstanceId();
 			  if(instanceId == null)
