@@ -105,7 +105,7 @@ public class UserEntity extends AbstractPersistent implements Serializable {
   private static final long serialVersionUID = 1L;
   
   // The User ID the user facing group id which conforms to length and character restrictions per spec.
-  @Column( name = "auth_user_id_external" )
+  @Column( name = "auth_user_id_external", unique = true )
   String userId;
 
   // User name
@@ -311,6 +311,7 @@ public class UserEntity extends AbstractPersistent implements Serializable {
       try {
         sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection("eucalyptus_auth");
         sql.execute( "update auth_user set auth_user_is_enabled = false where auth_user_name = 'admin' and not auth_user_reg_stat = 'CONFIRMED'" );
+        sql.execute( "alter table auth_user add constraint uk_k6jdkfa3tbxbv73bbjjf2g843 unique ( auth_user_id_external )" );
         sql.execute( "alter table auth_user drop column if exists auth_user_reg_stat" );
         return true;
       } catch (Exception ex) {

@@ -19,8 +19,10 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare.persist.entities;
 
+import static com.eucalyptus.upgrade.Upgrades.Version.v4_2_0;
 import java.io.Serializable;
 import java.util.List;
+import java.util.concurrent.Callable;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -32,12 +34,16 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Index;
 import com.eucalyptus.auth.util.Identifiers;
+import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.upgrade.Upgrades;
+import groovy.sql.Sql;
 
 /**
  * Database entity for a role.
@@ -51,7 +57,7 @@ public class RoleEntity extends AbstractPersistent implements Serializable {
   private static final long serialVersionUID = 1L;
 
   // The Role ID the user facing role id which conforms to length and character restrictions per spec.
-  @Column( name = "auth_role_id_external", nullable = false, updatable = false )
+  @Column( name = "auth_role_id_external", nullable = false, updatable = false, unique = true )
   private String roleId;
 
   // Role name
@@ -79,6 +85,7 @@ public class RoleEntity extends AbstractPersistent implements Serializable {
   private List<InstanceProfileEntity> instanceProfiles;
 
   @ManyToOne
+  @Index( name = "auth_role_owning_account_idx" )
   @JoinColumn( name = "auth_role_owning_account", nullable = false )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private AccountEntity account;
@@ -181,4 +188,26 @@ public class RoleEntity extends AbstractPersistent implements Serializable {
     sb.append( ")" );
     return sb.toString( );
   }
+
+  @Upgrades.PreUpgrade( value = Euare.class, since = v4_2_0 )
+  public static class RolePreUpgrade420 implements Callable<Boolean> {
+    private static final Logger logger = Logger.getLogger( RolePreUpgrade420.class );
+
+    @Override
+    public Boolean call( ) throws Exception {
+      Sql sql = null;
+      try {
+        sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection("eucalyptus_auth");
+        sql.execute( "alter table auth_role add constraint uk_en00jos6jjrjjxooo3mlhg3sn unique ( auth_role_id_external )" );
+        return true;
+      } catch (Exception ex) {
+        logger.error( ex, ex );
+        return false;
+      } finally {
+        if (sql != null) {
+          sql.close();
+        }
+      }
+    }
+  }  
 }

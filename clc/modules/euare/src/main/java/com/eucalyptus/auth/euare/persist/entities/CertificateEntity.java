@@ -79,6 +79,7 @@ import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Index;
 import org.hibernate.annotations.Type;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.euare.common.identity.Certificate;
@@ -116,6 +117,7 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
 
   // The certificate identifier derived from the certificate content.
   @Column( name = "auth_certificate_hash_id" )
+  @Index( name = "auth_certificate_hash_id_idx" )
   private String certificateHashId;
 
   // The certificate
@@ -130,6 +132,7 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
   
   // The owning user
   @ManyToOne( fetch = FetchType.LAZY )
+  @Index( name = "auth_certificate_owning_user_idx" )
   @JoinColumn( name = "auth_certificate_owning_user" )
   private UserEntity user;
   
