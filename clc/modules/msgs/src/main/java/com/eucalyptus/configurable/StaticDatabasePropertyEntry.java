@@ -502,11 +502,30 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       }
     }
 
+    private void migrateEc2ClassicProtocolExtensions() {
+      try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
+        try {
+          final StaticDatabasePropertyEntry property = Entities.uniqueResult( new StaticDatabasePropertyEntry( null, "cloud.network.ec2_classic_additional_protocols_allowed", null ) );
+          LOG.info( "Updating field and default value for cloud.network.ec2_classic_additional_protocols_allowed" );
+          property.setFieldName( "com.eucalyptus.compute.common.config.ExtendedNetworkingConfiguration.ec2_classic_additional_protocols_allowed" );
+        } catch ( NoSuchElementException e ) {
+          //Nothing to do.
+        }
+        db.commit( );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+
+    }
+
     @Override
     public boolean apply( Class arg0 ) {
       updateStackConfiguration( );
       updateLdapConfiguration( );
       deleteRemovedProperties( Lists.newArrayList( "www.httpProxyHost" , "www.httpProxyPort" ) );
+
+      //move ec2_classic network config from cluster-manager to compute-common property
+      migrateEc2ClassicProtocolExtensions();
       return true;
     }
   }

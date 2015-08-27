@@ -79,6 +79,8 @@ import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
+import com.eucalyptus.compute.common.config.ExtendedNetworkingConfiguration;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.util.Pair;
 import com.google.common.base.Optional;
@@ -187,8 +189,13 @@ public class NetworkRule extends AbstractPersistent {
         throw new IllegalArgumentException( "Provided lowPort is greater than highPort: lowPort=" + lowPort + " highPort=" + highPort );
       }
     }
-    this.lowPort = lowPort;
-    this.highPort = highPort;
+
+    //Only allow ports for icmp, tcp, and udp. This is consistent with AWS EC2|VPC behavior
+    if(this.protocol != null) {
+      this.lowPort = lowPort;
+      this.highPort = highPort;
+    }
+
     if ( ipRanges != null ) {
       this.ipRanges.addAll( ipRanges );
     }
@@ -241,14 +248,18 @@ public class NetworkRule extends AbstractPersistent {
   ) {
     Protocol protocol = null;
     try {
-      protocol = Protocol.fromString( protocolText );
-    } catch ( final IllegalArgumentException e ) {
-      if ( !vpc ) throw e;
+      protocol = Protocol.fromString(protocolText);
+      return Pair.lopair(protocol, protocol.getNumber());
+    } catch (final IllegalArgumentException e) {
+      Integer protocolNumber = protocol != null ?
+                               protocol.getNumber() :
+                               Integer.parseInt(protocolText);
+      if (vpc || ExtendedNetworkingConfiguration.isProtocolInExceptionList(protocolNumber)) {
+        return Pair.lopair(protocol, protocolNumber);
+      } else {
+        throw new IllegalArgumentException("Invalid protocol " + protocolText, e);
+      }
     }
-    Integer protocolNumber = protocol != null ?
-        protocol.getNumber( ) :
-        Integer.parseInt( protocolText );
-    return Pair.lopair( protocol, protocolNumber );
   }
 
   public static NetworkRule named( ) {
@@ -338,7 +349,8 @@ public class NetworkRule extends AbstractPersistent {
   }
 
   public boolean isVpcOnly( ) {
-    return getLowPort() == null || getHighPort() == null || getProtocol() == null;
+    return (getLowPort() == null || getHighPort() == null || getProtocol() == null) && !ExtendedNetworkingConfiguration
+        .isProtocolInExceptionList(getProtocolNumber());
   }
 
   public static Predicate<NetworkRule> egress( ) {

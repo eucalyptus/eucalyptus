@@ -112,6 +112,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
+import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -147,7 +148,6 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
   public static String        NETWORK_CONFIGURATION = "";
   @ConfigurableField( description = "Minimum interval between broadcasts of network information (seconds)." )
   public static Integer       MIN_BROADCAST_INTERVAL = 5;
-
 
   public static class NetworkRangeConfiguration {
     private Integer minNetworkTag   = GLOBAL_MIN_NETWORK_TAG;
