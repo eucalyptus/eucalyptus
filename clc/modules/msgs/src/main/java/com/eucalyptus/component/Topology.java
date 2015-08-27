@@ -1000,7 +1000,10 @@ public class Topology {
       if(partition != null) {
         res = Iterables.getFirst(ServiceConfigurations.filter(compClass, ServiceConfigurations.filterByPartition(partition)), null);
       } else {
-        res = Iterables.getFirst(ServiceConfigurations.filter(compClass, ServiceConfigurations.filterEnabled()), null);
+        final Iterable<ServiceConfiguration> configurations = ServiceConfigurations.filter( compClass, ServiceConfigurations.filterEnabled( ) );
+        res = Iterables.tryFind( configurations, ServiceConfigurations.filterHostLocal( ) )
+            .or( Iterables.tryFind( configurations, Predicates.alwaysTrue( ) ) )
+            .orNull( );
       }
     } else {
       res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( ComponentIds.lookup( compClass ), partition ) );
