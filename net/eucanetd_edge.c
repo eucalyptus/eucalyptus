@@ -1206,7 +1206,7 @@ static int update_l2_addressing(globalNetworkInfo * pGni)
     char cmd[EUCA_MAX_PATH] = "";
     char *strptra = NULL;
     char *strptrb = NULL;
-    char *vnetinterface = NULL;
+    char vnetinterface[64];
     char *gwip = NULL;
     char *brmac = NULL;
     gni_node *myself = NULL;
@@ -1297,9 +1297,10 @@ static int update_l2_addressing(globalNetworkInfo * pGni)
                 hex2mac(instances[i].macAddress, &strptrb);
 
                 // this one is a special case, which only gets identified once the VM is actually running on the hypervisor - need to give it some time to appear
-                vnetinterface = MAC2INTFC(strptrb);
+                //                vnetinterface = MAC2INTFC(strptrb);
+                snprintf(vnetinterface, 63, "vn_%s", instances[i].name);
 
-                if (strptra && strptrb && vnetinterface) {
+                if (strptra && strptrb) {
                     if (!config->disable_l2_isolation) {
                         //NOTE: much of this ruleset is a translation of libvirt FW example at http://libvirt.org/firewall.html
 
@@ -1415,7 +1416,7 @@ static int update_l2_addressing(globalNetworkInfo * pGni)
                             SP(strptrb), SP(gwip), SP(brmac));
                     ret = 1;
                 }
-                EUCA_FREE(vnetinterface);
+                //                EUCA_FREE(vnetinterface);
                 EUCA_FREE(strptra);
                 EUCA_FREE(strptrb);
             }
@@ -1424,14 +1425,16 @@ static int update_l2_addressing(globalNetworkInfo * pGni)
         LOGWARN("could not retrieve one of: gwip (%s), brmac (%s): skipping but will retry\n", SP(gwip), SP(brmac));
         ret = 1;
     }
-    // DROP everything from the instance by default
-    snprintf(cmd, EUCA_MAX_PATH, "-i vn_i+ -j DROP");
-    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
 
-    // DROP everything to the instance by default
-    snprintf(cmd, EUCA_MAX_PATH, "-o vn_i+ -j DROP");
-    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-
+    if (!config->disable_l2_isolation) {
+        // DROP everything from the instance by default
+        snprintf(cmd, EUCA_MAX_PATH, "-i vn_i+ -j DROP");
+        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+        
+        // DROP everything to the instance by default
+        snprintf(cmd, EUCA_MAX_PATH, "-o vn_i+ -j DROP");
+        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+    }
     EUCA_FREE(brmac);
     EUCA_FREE(gwip);
     EUCA_FREE(instances);
