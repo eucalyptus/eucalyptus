@@ -194,8 +194,13 @@ public class StackConfiguration extends AbstractPersistent {
   @ConfigurableField( description = "Client socket select timeout (ms)." )
   public static Long          CLIENT_POOL_TIMEOUT_MILLIS        = 500L;
   
-  @ConfigurableField( description = "Maximum HTTP chunk size (bytes)." )
+  @ConfigurableField( description = "Maximum HTTP chunk size (bytes).",
+                      initial = "102400")
   public static Integer       HTTP_MAX_CHUNK_BYTES              = 10 * 10 * 1024;
+
+  @ConfigurableField( description = "Maximum Query Pipeline http chunk size (bytes).",
+                      initial = "102400")
+  public static Integer       PIPELINE_MAX_QUERY_REQUEST_SIZE    = 10 * 10 * 1024;
   
   @ConfigurableField( description = "Maximum HTTP initial line size (bytes)." )
   public static Integer       HTTP_MAX_INITIAL_LINE_BYTES       = 4 * 1024;

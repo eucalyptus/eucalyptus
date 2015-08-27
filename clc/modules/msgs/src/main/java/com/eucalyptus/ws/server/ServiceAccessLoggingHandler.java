@@ -74,7 +74,6 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
-import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandler;
@@ -82,6 +81,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import com.eucalyptus.component.ComponentId;
@@ -92,6 +92,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.util.Strings;
 import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.protocol.OperationParameter;
 import com.eucalyptus.ws.protocol.RequestLoggingFilters;
@@ -102,6 +103,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -127,7 +129,7 @@ public enum ServiceAccessLoggingHandler implements ChannelUpstreamHandler, Chann
                                                          @Override
                                                          public boolean apply( String input ) {
                                                            try {
-                                                             return !ignoredParameters.contains( input.substring( 0, input.indexOf( "=" ) ) );
+                                                             return !ignoredParameters.contains( Strings.substringBefore( "=", input  ) );
                                                            } catch ( Exception e ) {
                                                              return false;
                                                            }
@@ -141,10 +143,14 @@ public enum ServiceAccessLoggingHandler implements ChannelUpstreamHandler, Chann
                                                          @Override
                                                          public Collection<String> apply( MappingHttpRequest input ) {
                                                            try {
-                                                             String query = Objects.toString( input.getQuery( ),
-                                                                                              "" );
+                                                             String query = Objects.toString( input.getQuery( ), "" );
                                                              if ( HttpMethod.POST.equals( input.getMethod( ) ) ) {
-                                                               query = input.getContentAsString( );
+                                                               query = !input.getContentAsString( ).isEmpty( ) &&
+                                                                   ( !Iterables.any( input.getHeaders( HttpHeaders.Names.CONTENT_TYPE ), Strings.startsWith( "application/x-www-form-urlencoded" ) ) ||
+                                                                       input.getContentAsString( ).length( ) >
+                                                                           StackConfiguration.HTTP_MAX_INITIAL_LINE_BYTES ) ?
+                                                                   REDACTED :
+                                                                   input.getContentAsString( );
                                                              }
                                                              return Collections2.filter(
                                                                  RequestLoggingFilters.get( ).apply( Arrays.asList( query.split( "&" ) ) ),
@@ -196,12 +202,6 @@ public enum ServiceAccessLoggingHandler implements ChannelUpstreamHandler, Chann
           MappingHttpRequest httpMessage = ( MappingHttpRequest ) ( ( MessageEvent ) e ).getMessage( );
           final String method = Objects.toString( httpMessage.getMethod( ), "HTTP-UNKNOWN" );
           String parameters = Joiner.on( "," ).join( createParameters.apply( httpMessage ) );
-
-          // Redact non-zero length POST *content* at any level other than TRACE
-          // Note that we still log at INFO with the createLogEntry() call.
-          if (!LOG.isTraceEnabled() && !parameters.isEmpty() && HttpMethod.POST.equals(httpMessage.getMethod())) { 
-            parameters = REDACTED;
-          }
           createLogEntry( ctx, httpMessage.getMessage( ), method, parameters );
         }
       }

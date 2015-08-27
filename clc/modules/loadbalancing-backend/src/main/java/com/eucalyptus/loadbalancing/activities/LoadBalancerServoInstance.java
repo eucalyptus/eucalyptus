@@ -48,12 +48,10 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.loadbalancing.LoadBalancer;
-import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneEntityTransform;
 import com.eucalyptus.loadbalancing.backend.LoadBalancingServoCache;
 import com.eucalyptus.loadbalancing.common.LoadBalancingBackend;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
@@ -335,10 +333,11 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 	// make sure  InService servo instance has its IP registered to DNS
 	// also make sure Error or OutOfService servo instance has its IP deregistered from DNS
 	public static class ServoInstanceDnsCheck implements EventListener<ClockTick> {
-		static final int CHECK_EVERY_SECONDS = 10;
+		static final int CHECK_EVERY_SECONDS = 60;
+		static Date lastCheckTime = new Date(System.currentTimeMillis());
 		public static void register( ) {
 		      Listeners.register( ClockTick.class, new ServoInstanceDnsCheck() );
-		    }
+		}
 
 		@Override
 		public void fireEvent(ClockTick event) {
@@ -346,34 +345,23 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 			          Topology.isEnabledLocally( LoadBalancingBackend.class ) &&
 			          Topology.isEnabled( Compute.class ) ))
 				return;
-			
-			/// determine the servo instances to query
+
+			final Date now = new Date(System.currentTimeMillis());
+			final int elapsedSec =  (int)((now.getTime() - lastCheckTime.getTime())/1000.0);
+			if(elapsedSec < CHECK_EVERY_SECONDS)
+			  return;
+			lastCheckTime = now;
+
+	   /// determine the servo instances to query
 			final List<LoadBalancerServoInstance> allInstances = Lists.newArrayList();
-			final List<LoadBalancerServoInstance> stateOutdated = Lists.newArrayList();
+			//final List<LoadBalancerServoInstance> stateOutdated = Lists.newArrayList();
 			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
 				allInstances.addAll(
 						Entities.query(LoadBalancerServoInstance.named()));
 			}catch(final Exception ex){
 			}
-			final Date current = new Date(System.currentTimeMillis());
-
-			for(final LoadBalancerServoInstance se : allInstances){
-				final Date lastUpdate = se.getLastUpdateTimestamp();
-				int elapsedSec = (int)((current.getTime() - lastUpdate.getTime())/1000.0);
-				if(elapsedSec > CHECK_EVERY_SECONDS){
-					stateOutdated.add(se);
-				}
-			}
 			
-			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
-				for(final LoadBalancerServoInstance se: stateOutdated){
-					final LoadBalancerServoInstance update = Entities.uniqueResult(se);
-					update.setLastUpdateTimestamp(current);
-				}
-				db.commit();
-			}catch(final Exception ex){
-			}
-			
+			final List<LoadBalancerServoInstance> stateOutdated = allInstances;
 			for(final LoadBalancerServoInstance instance : stateOutdated){
 				if(LoadBalancerServoInstance.STATE.InService.equals(instance.getState())){
 					if(!LoadBalancerServoInstance.DNS_STATE.Registered.equals(instance.getDnsState())){
@@ -382,9 +370,6 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 						if(instance.getAddress()==null){
 							try{
 								List<RunningInstancesItemType> result = null;
-								
-								final LoadBalancerZone lbZone = LoadBalancerZoneEntityTransform.INSTANCE.apply(instance.getAvailabilityZone());
-								final LoadBalancerCoreView lb = lbZone.getLoadbalancer();
 								result = EucalyptusActivityTasks.getInstance().describeSystemInstancesWithVerbose(Lists.newArrayList(instance.getInstanceId()));
 								if(result!=null && result.size()>0){
 								  ipAddr = result.get(0).getIpAddress();
@@ -392,10 +377,6 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 								}
 							}catch(Exception ex){
 								LOG.warn("failed to run describe-instances", ex);
-								continue;
-							}
-							if(ipAddr == null || ipAddr.length()<=0){
-								LOG.warn("no ipaddress found for instance "+instance.getInstanceId());
 								continue;
 							}
 						}else{
@@ -406,9 +387,9 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 						try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
 							final LoadBalancerServoInstance update = Entities.uniqueResult(instance);
 							update.setAddress(ipAddr);
-							if(privateIpAddr!=null)
-								update.setPrivateIp(privateIpAddr);
-							update.setDnsState(LoadBalancerServoInstance.DNS_STATE.Registered);
+							update.setPrivateIp(privateIpAddr);
+							if (!(ipAddr == null && privateIpAddr == null) )
+							  update.setDnsState(LoadBalancerServoInstance.DNS_STATE.Registered);
 							db.commit();
 							LoadBalancingServoCache.getInstance().invalidate(update);
 						}catch(NoSuchElementException ex){

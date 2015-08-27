@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,42 +17,29 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.postgresql;
+package com.eucalyptus.entities;
 
-import java.sql.SQLException;
-import javax.transaction.xa.XAException;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
 /**
- * Customized HA-JDBC PostgreSQL dialect that:
  *
- * 1) avoids use of truncate table.
- * 2) pretends everything is OK so we can handle db failure at the cluster level.
  */
-@SuppressWarnings("nls")
-public class PostgreSQLDialect extends net.sf.hajdbc.dialect.postgresql.PostgreSQLDialect
-{
-  @Override
-  protected String truncateTableFormat( ) {
-    return "DELETE FROM {0}";
-  }
+@Retention( RetentionPolicy.RUNTIME)
+public @interface AuxiliaryDatabaseObject {
 
-  @Override
-  protected boolean indicatesFailure( final int code ) {
-    return false;
-  }
+  /**
+   * Dialects this object is used with.
+   */
+  String[] dialect( );
 
-  @Override
-  public boolean indicatesFailure( final SQLException e ) {
-    return false;
-  }
+  /**
+   * Create SQL
+   */
+  String create( );
 
-  @Override
-  public boolean indicatesFailure( final XAException e ) {
-    return false;
-  }
-
-  @Override
-  protected boolean indicatesFailure( final String sqlState ) {
-    return false;
-  }
+  /**
+   * Drop SQL
+   */
+  String drop( );
 }

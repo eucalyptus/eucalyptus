@@ -33,6 +33,11 @@ public enum NetworkingFeature {
    * EC2-VPC platform
    */
   Vpc,
+
+  /**
+   * Flag indicating all site local addresses are managed
+   */
+  SiteLocalManaged,
   ;
 
 }

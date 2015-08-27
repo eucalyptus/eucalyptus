@@ -123,11 +123,13 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
   @Override
   DescribeNetworkingFeaturesResponseType describeFeatures(final DescribeNetworkingFeaturesType request) {
     final Optional<NetworkConfiguration> configurationOptional = NetworkConfigurations.networkConfiguration
+    final boolean vpc = configurationOptional.isPresent( ) &&
+        NetworkMode.VPCMIDO.toString( ) == configurationOptional.get( ).mode;
     DescribeNetworkingFeaturesResponseType.cast( request.reply( new DescribeNetworkingFeaturesResponseType(
         describeNetworkingFeaturesResult : new DescribeNetworkingFeaturesResult(
-            networkingFeatures: Lists.newArrayList(
-                configurationOptional.isPresent( ) && NetworkMode.VPCMIDO.toString( ) == configurationOptional.get( ).mode ? Vpc : Classic
-            )
+            networkingFeatures: vpc ?
+                Lists.newArrayList( Vpc, SiteLocalManaged ) :
+                Lists.newArrayList( Classic )
         )
     ) ) )
   }

@@ -92,7 +92,7 @@ public class CheckerThreadPool {
     try {
       shutdown();
       LOG.info("Initializing SC thread pool catering to blockstorage checker service");
-      executor = Executors.newSingleThreadScheduledExecutor(Threads.lookup(Storage.class, CheckerThreadPool.class).limitTo(1));
+      executor = Executors.newSingleThreadScheduledExecutor(Threads.lookup(Storage.class, CheckerThreadPool.class));
       checkers = new ConcurrentHashMap<String, CheckerTask>();
       futures = new HashMap<String, ScheduledFuture<?>>();
     } finally {

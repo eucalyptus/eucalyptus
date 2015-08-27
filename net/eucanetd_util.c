@@ -516,15 +516,16 @@ int eucanetd_kill_program(pid_t pid, const char *psProgramName, const char *psRo
 }
 
 //!
-//! Function description.
+//! Removes a handler file on disk.
 //!
-//! @param[in] ipth pointer to the IP table handler structure
+//! @param[in] Filename of file to remove.
 //!
 //! @return 0 on success or 1 if any failure occured
 //!
 //! @see
 //!
 //! @pre
+//!    - Filename should not be NULL, but function can handle it. 
 //!
 //! @post
 //!
@@ -550,3 +551,36 @@ int unlink_handler_file(char *filename)
     return (0);
 }
 
+//!
+//! Truncates a file on disk to 0 bytes, or creates the file if it doesn't exist
+//!
+//! @param[in] Filename of file to truncate or create
+//!
+//! @return 0 on success or 1 if any failure occured
+//!
+//! @see
+//!
+//! @pre
+//!    - filename should not be NULL
+//!
+//! @post
+//!    - Filedescriptor associated with file is closed and not returned to the caller.
+//!
+//! @note 
+//!
+int truncate_file(char *filename) {
+    int fd = 0;
+    
+    if (filename == NULL) {
+        LOGTRACE("NULL filename passed\n");
+        return (0);
+    }
+    if ((fd = open(filename, O_CREAT|O_TRUNC|O_WRONLY, S_IRUSR|S_IWUSR)) < 0) {
+        LOGERROR("Unable to truncate file: %s errno: %d\n", filename, errno);
+        return (1);
+    } else {
+        LOGTRACE("File %s truncated successfully\n",filename);
+    }
+    close(fd);
+    return (0);
+}

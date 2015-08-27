@@ -37,6 +37,7 @@ import com.eucalyptus.cloudwatch.common.internal.domain.InvalidTokenException;
 import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricEntity;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.entities.TransactionResource;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Multimap;
@@ -64,16 +65,9 @@ public class ListMetricManager {
 
   private static final Logger LOG = Logger.getLogger(ListMetricManager.class);
   public static void addMetric(String accountId, String metricName, String namespace, Map<String, String> dimensionMap, MetricType metricType) {
-    EntityTransaction db = Entities.get(ListMetric.class);
-    try {
+    try (final TransactionResource db = Entities.transactionFor(ListMetric.class)) {
       addMetric(db, accountId, metricName, namespace, dimensionMap, metricType);
       db.commit();
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      if (db.isActive())
-        db.rollback();
     }
   }
   private static ListMetric createMetric(String accountId, String metricName, String namespace, Map<String, String> dimensionMap, MetricType metricType) {
@@ -125,16 +119,9 @@ public class ListMetricManager {
   }
   
   public static void deleteAllMetrics() {
-    EntityTransaction db = Entities.get(ListMetric.class);
-    try {
+    try (final TransactionResource db = Entities.transactionFor(ListMetric.class)) {
       Entities.deleteAll(ListMetric.class);
       db.commit();
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      if (db.isActive())
-        db.rollback();
     }
   }
 
@@ -143,18 +130,11 @@ public class ListMetricManager {
    * @param before the date to delete before (inclusive)
    */
   public static void deleteMetrics(Date before) {
-    EntityTransaction db = Entities.get(ListMetric.class);
-    try {
+    try (final TransactionResource db = Entities.transactionFor(ListMetric.class)) {
       Map<String, Date> criteria = new HashMap<String, Date>();
       criteria.put("before", before);
       Entities.deleteAllMatching(ListMetric.class, "WHERE lastUpdateTimestamp < :before", criteria);
       db.commit();
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      if (db.isActive())
-        db.rollback();
     }
   }
    
@@ -174,8 +154,7 @@ public class ListMetricManager {
     if (dimensionMap != null && dimensionMap.size() > ListMetric.MAX_DIM_NUM) {
       throw new IllegalArgumentException("Too many dimensions " + dimensionMap.size());
     }
-    EntityTransaction db = Entities.get(ListMetric.class);
-    try {
+    try (final TransactionResource db = Entities.transactionFor(ListMetric.class)) {
       Date nextTokenCreatedTime = NextTokenUtils.getNextTokenCreatedTime(nextToken, ListMetric.class);
       Map<String, String> sortedDimensionMap = new TreeMap<String, String>();
       Criteria criteria = Entities.createCriteria(ListMetric.class);
@@ -220,12 +199,6 @@ public class ListMetricManager {
       List<ListMetric> dbResult = (List<ListMetric>) criteria.list();
       db.commit();
       return dbResult;
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      if (db.isActive())
-        db.rollback();
     }
   }
 
@@ -340,8 +313,7 @@ public class ListMetricManager {
     }
     // do db stuff in a certain number of operations per connection
     for (List<PrefetchFields> prefetchFieldsListPartial : Iterables.partition(dataBatchPrefetchMap.keySet(), LIST_METRIC_NUM_DB_OPERATIONS_PER_TRANSACTION)) {
-      EntityTransaction db = Entities.get(ListMetric.class);
-      try {
+      try (final TransactionResource db = Entities.transactionFor(ListMetric.class)) {
         int numOperations = 0;
         for (PrefetchFields prefetchFields: prefetchFieldsListPartial) {
           // Prefetch all list metrics with same metric name/namespace/account id
@@ -370,12 +342,6 @@ public class ListMetricManager {
           }
         }
         db.commit();
-      } catch (RuntimeException ex) {
-        Logs.extreme().error(ex, ex);
-        throw ex;
-      } finally {
-        if (db.isActive())
-          db.rollback();
       }
     }
   }

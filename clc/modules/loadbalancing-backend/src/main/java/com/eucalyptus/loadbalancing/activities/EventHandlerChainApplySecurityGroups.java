@@ -19,8 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.activities;
 
-import static com.eucalyptus.loadbalancing.activities.LoadBalancerASGroupCreator.getAutoScalingGroupName;
-
 import java.util.NoSuchElementException;
 
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupsType;
@@ -29,6 +27,7 @@ import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResult;
 import com.eucalyptus.autoscaling.common.msgs.Instance;
 import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancers;
+import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
 import com.google.common.collect.Lists;
 
 /**
@@ -38,7 +37,7 @@ public class EventHandlerChainApplySecurityGroups extends EventHandlerChain<Appl
 
   @Override
   public EventHandlerChain<ApplySecurityGroupsEvent> build( ) {
-    this.insert( new LoadBalancerASGroupCreator( this, EventHandlerChainNew.getCapacityPerZone( ) ){
+    this.insert( new LoadBalancerASGroupCreator( this ){
       @Override
       public void rollback() throws EventHandlerException {
         // do not rollback on failures, leave any existing autoscaling resources in place
@@ -56,30 +55,32 @@ public class EventHandlerChainApplySecurityGroups extends EventHandlerChain<Appl
 
     @Override
     public void apply( final ApplySecurityGroupsEvent evt ) throws EventHandlerException {
-      final LoadBalancer.LoadBalancerCoreView lb;
+      final LoadBalancer lb;
       try{
-        lb = LoadBalancers.getLoadbalancer( evt.getContext(), evt.getLoadBalancer() ).getCoreView();
+        lb = LoadBalancers.getLoadbalancer( evt.getContext(), evt.getLoadBalancer() );
       }catch(NoSuchElementException ex){
         throw new EventHandlerException("Failed to find the loadbalancer "+evt.getLoadBalancer(), ex);
       }catch(Exception ex){
         throw new EventHandlerException("Unable to access loadbalancer metadata", ex);
       }
 
-      final String groupName = getAutoScalingGroupName( lb.getOwnerAccountNumber(), lb.getDisplayName() );
-      final DescribeAutoScalingGroupsResponseType response = EucalyptusActivityTasks.getInstance().describeAutoScalingGroups( Lists.newArrayList( groupName ), lb.useSystemAccount() );
-      
-      final DescribeAutoScalingGroupsResult describeAutoScalingGroupsResult =
-          response.getDescribeAutoScalingGroupsResult();
-      if ( describeAutoScalingGroupsResult != null ) {
-        final AutoScalingGroupsType autoScalingGroupsType = describeAutoScalingGroupsResult.getAutoScalingGroups( );
-        if ( autoScalingGroupsType != null &&
-            autoScalingGroupsType.getMember( ) != null &&
-            !autoScalingGroupsType.getMember( ).isEmpty( ) &&
-            autoScalingGroupsType.getMember( ).get( 0 ).getInstances( ) != null ) {
-          for ( final Instance instance : autoScalingGroupsType.getMember( ).get( 0 ).getInstances( ).getMember( ) ) {
+      for(final LoadBalancerAutoScalingGroupCoreView group : lb.getAutoScaleGroups()) {
+        final String groupName = group.getName();
+        final DescribeAutoScalingGroupsResponseType response = 
+            EucalyptusActivityTasks.getInstance().describeAutoScalingGroups( Lists.newArrayList( groupName ), lb.useSystemAccount() );
+        final DescribeAutoScalingGroupsResult describeAutoScalingGroupsResult =
+            response.getDescribeAutoScalingGroupsResult();
+        if ( describeAutoScalingGroupsResult != null ) {
+          final AutoScalingGroupsType autoScalingGroupsType = describeAutoScalingGroupsResult.getAutoScalingGroups( );
+          if ( autoScalingGroupsType != null &&
+              autoScalingGroupsType.getMember( ) != null &&
+              !autoScalingGroupsType.getMember( ).isEmpty( ) &&
+              autoScalingGroupsType.getMember( ).get( 0 ).getInstances( ) != null ) {
+            for ( final Instance instance : autoScalingGroupsType.getMember( ).get( 0 ).getInstances( ).getMember( ) ) {
               EucalyptusActivityTasks.getInstance( ).modifySecurityGroups(
-                instance.getInstanceId( ),
-                evt.getSecurityGroupIdsToNames( ).keySet( ), lb.useSystemAccount() );
+                  instance.getInstanceId( ),
+                  evt.getSecurityGroupIdsToNames( ).keySet( ), lb.useSystemAccount() );
+            }
           }
         }
       }

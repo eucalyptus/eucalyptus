@@ -106,21 +106,15 @@ import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
 import com.eucalyptus.compute.common.internal.images.BootableImageInfo;
 import com.eucalyptus.compute.common.internal.images.DeviceMapping;
 import com.eucalyptus.images.Emis;
-import com.eucalyptus.compute.common.internal.images.MachineImageInfo;
 import com.eucalyptus.images.Emis.BootableSet;
-import com.eucalyptus.images.Emis.LookupMachine;
 import com.eucalyptus.compute.common.internal.images.ImageInfo;
 import com.eucalyptus.images.Images;
-import com.eucalyptus.imaging.ImagingServiceProperties;
-import com.eucalyptus.imaging.common.ImagingBackend;
 import com.eucalyptus.compute.common.internal.keys.KeyPairs;
 import com.eucalyptus.compute.common.internal.keys.SshKeyPair;
-import com.eucalyptus.resources.client.EucalyptusClient;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.compute.common.internal.vmtypes.VmType;
-import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
@@ -252,7 +246,7 @@ public class VerifyMetadata {
               " in which the size " + bootSet.getMachine( ).getImageSizeBytes( ) +
               " bytes of the instance is greater than the vmType " + vmType.getDisplayName( ) +
               " size " + vmType.getDisk( ) + " GB." );
-          } else if ( bootSet.getMachine( ).getImageSizeBytes( ) >= ( ( 1024L * 1024L * 1024L * vmType.getDisk( ) ) ) ) {
+          } else if ( bootSet.getMachine( ).getImageSizeBytes( ) > ( ( 1024L * 1024L * 1024L * vmType.getDisk( ) ) ) ) {
             throw new ImageInstanceTypeVerificationException(
                 "Unable to run instance " + bootSet.getMachine( ).getDisplayName( ) +
                 " in which the size " + bootSet.getMachine( ).getImageSizeBytes( ) +

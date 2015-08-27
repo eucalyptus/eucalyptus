@@ -380,12 +380,17 @@ public class EucalyptusActivityTasks {
 	  final EucalyptusDeleteGroupTask task = new EucalyptusDeleteGroupTask(groupName);
 	  checkResult( task, new EucalyptusSystemActivity(useELBSystemAccount), "failed to delete the group "+groupName );
 	}
-	
+	public List<SecurityGroupItemType> describeSystemSecurityGroups( List<String> groupNames, boolean useElbSystemAccount ){
+    return describeSystemSecurityGroupsImpl(groupNames, useElbSystemAccount);
+  }
 	public List<SecurityGroupItemType> describeSystemSecurityGroups( List<String> groupNames ){
-		final EucalyptusDescribeSecurityGroupTask task = new EucalyptusDescribeSecurityGroupTask(null,groupNames,null);
-		return resultOf( task, new ComputeSystemActivity(), "failed to describe security groups" );
+		return describeSystemSecurityGroupsImpl(groupNames, true);
 	}
-	
+	private List<SecurityGroupItemType> describeSystemSecurityGroupsImpl( List<String> groupNames, boolean useELBSystemAccount ){
+	  final EucalyptusDescribeSecurityGroupTask task = new EucalyptusDescribeSecurityGroupTask(null,groupNames,null);
+	  return resultOf( task, new ComputeSystemActivity(useELBSystemAccount), "failed to describe security groups" );
+	}
+
 	public void authorizeSystemSecurityGroup( String groupNameOrId, String protocol, int portNum ){
 	  this.authorizeSystemSecurityGroupImpl( groupNameOrId, protocol, portNum,  new EucalyptusSystemActivity());
 	}

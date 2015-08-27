@@ -78,6 +78,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
 #include <limits.h>
 
 #include <eucalyptus.h>
@@ -87,6 +89,7 @@
 #include "ipt_handler.h"
 #include "ips_handler.h"
 #include "ebt_handler.h"
+#include "eucanetd_util.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -174,34 +177,63 @@
 //!     -
 //!
 //! @note
+//!     - Once temporary file is initialized the filename will be reused throughout the process
+//!       lifetime. The file will be truncated/created on each successive calls to the *_handler_init()
+//!       method. 
 //!
 int ipt_handler_init(ipt_handler * pIpt, const char *psCmdPrefix, const char *psPreloadPath)
 {
     int fd = 0;
     char sCommand[EUCA_MAX_PATH] = "";
-
+    char sTempFileName[EUCA_MAX_PATH] = "";  // Used to temporarily hold name while we zero out the struct
+    
     // Make sure our pointers are valid
     if (!pIpt) {
         return (1);
     }
+
+    //
+    // Initialize the temporary file *ONCE* per process execution
+    // This handler init function is called many times, but the temporary file
+    // will always be the same for the associated handler struct.
+    //
+    if (pIpt->init) {
+        //
+        // Copy filename out of the current ipt_handler struct.
+        //
+        snprintf(sTempFileName, EUCA_MAX_PATH, pIpt->ipt_file);
+        
+        //  Truncate the file to ensure we're dealing with a clean slate.
+        if (truncate_file(sTempFileName)){
+           return (1);
+        }
+        LOGDEBUG("Using already allocated temporary filename: %s\n", sTempFileName);
+        
+    } else {
+        //
+        // Initialize a new temporaty file name
+        //
+        snprintf(sTempFileName, EUCA_MAX_PATH, "/tmp/ipt_file-XXXXXX");
+        if ((fd = safe_mkstemp(sTempFileName)) < 0) {
+            LOGERROR("cannot create tmpfile '%s': check permissions\n", sTempFileName);
+            return (1);
+        }
+
+        // Check to see if we can set the permissions to 0600
+        if (chmod(sTempFileName, 0600) < 0) {
+            LOGWARN("chmod failed: ipt_file '%s' errno: %d\n", sTempFileName, errno);
+        }
+
+        LOGDEBUG("Using newly created temporary filename: %s\n", sTempFileName);
+        close(fd);
+    }
+    
     // Empty this structure
     bzero(pIpt, sizeof(ipt_handler));
 
-    // Initialize the temporaty file name
-    snprintf(pIpt->ipt_file, EUCA_MAX_PATH, "/tmp/ipt_file-XXXXXX");
-
-    // Test to see that we can create these temporary files
-    if ((fd = safe_mkstemp(pIpt->ipt_file)) < 0) {
-        LOGERROR("cannot create tmpfile '%s': check permissions\n", pIpt->ipt_file);
-        return (1);
-    }
-    // Check to see if we can set the permissions to 0600
-    if (chmod(pIpt->ipt_file, 0600)) {
-        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", pIpt->ipt_file);
-    }
-    // We're done
-    close(fd);
-
+    // Populate the temporary filename
+    snprintf(pIpt->ipt_file, EUCA_MAX_PATH, sTempFileName);
+    
     // If we have a command prefix (like euca_rootwrap) set it
     pIpt->cmdprefix[0] = '\0';
     if (psCmdPrefix) {

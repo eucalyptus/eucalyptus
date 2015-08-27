@@ -62,8 +62,10 @@
 
 package com.eucalyptus.blockstorage.threadpool;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.List;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.log4j.Logger;
@@ -75,19 +77,19 @@ import com.eucalyptus.system.Threads;
 
 public class SnapshotThreadPool {
   private static Logger LOG = Logger.getLogger(SnapshotThreadPool.class);
-  private static ExecutorService pool;
-  private static final int NUM_THREADS = 3; // TODO get this from configuration
-
+  private static ThreadPoolExecutor pool;
   private static final ReentrantLock RLOCK = new ReentrantLock();
 
   private SnapshotThreadPool() {}
 
-  public static void initialize() {
+  public static void initialize(Integer poolSize) {
     RLOCK.lock();
     try {
       shutdown();
       LOG.info("Initializing SC thread pool catering to snapshot creation");
-      pool = Executors.newFixedThreadPool(NUM_THREADS, Threads.lookup(Storage.class, SnapshotCreator.class).limitTo(NUM_THREADS));
+      pool =
+          new ThreadPoolExecutor(poolSize, poolSize, 10, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), Threads.lookup(Storage.class,
+              SnapshotCreator.class), new ThreadPoolExecutor.AbortPolicy());
     } finally {
       RLOCK.unlock();
     }
@@ -102,12 +104,31 @@ public class SnapshotThreadPool {
     }
   }
 
+  public static Integer getPoolSize() {
+    if (pool != null && !pool.isShutdown()) {
+      return pool.getCorePoolSize();
+    } else {
+      return null;
+    }
+  }
+
+  public static void updatePoolSize(Integer newSize) {
+    if (pool != null && !pool.isShutdown() && newSize != null && pool.getCorePoolSize() != newSize) {
+      pool.setCorePoolSize(newSize);
+      pool.setMaximumPoolSize(newSize);
+    } else {
+      // nothing to do here
+    }
+  }
+
   public static void shutdown() {
     RLOCK.lock();
     try {
       if (pool != null) {
         LOG.info("Shutting down SC thread pool catering to snapshot creation");
-        pool.shutdownNow();
+        LOG.debug("Number of snapshots in progress on block storage backend: " + pool.getActiveCount());
+        List<Runnable> awaitingExecution = pool.shutdownNow();
+        LOG.debug("Number of queued snapshots for block storage backend: " + awaitingExecution.size());
         pool = null;
       }
     } finally {

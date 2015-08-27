@@ -74,6 +74,7 @@ import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreViewTra
 import com.eucalyptus.loadbalancing.LoadBalancers.DeploymentVersion;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
+import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreViewTransform;
 import com.eucalyptus.loadbalancing.common.msgs.AccessLog;
 import com.eucalyptus.loadbalancing.common.msgs.ConnectionDraining;
 import com.eucalyptus.loadbalancing.common.msgs.ConnectionSettings;
@@ -227,9 +228,9 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
 	private LoadBalancerSecurityGroup group = null;
 
-	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
+	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
-	private LoadBalancerAutoScalingGroup autoscale_group = null;
+	private Collection<LoadBalancerAutoScalingGroup> autoscale_groups = null;
 	
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -374,8 +375,8 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		return this.relationView.getGroup();
 	}
 	
-	public LoadBalancerAutoScalingGroupCoreView getAutoScaleGroup(){
-		return this.relationView.getAutoScaleGroup();
+	public Collection<LoadBalancerAutoScalingGroupCoreView> getAutoScaleGroups(){
+		return this.relationView.getAutoScaleGroups();
 	}
 	
 	public void addPolicyDescription(final LoadBalancerPolicyDescription desc){
@@ -570,8 +571,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	public static class LoadBalancerRelationView {
 		private LoadBalancer loadbalancer = null;
 		private LoadBalancerSecurityGroupCoreView group = null;
-		private LoadBalancerAutoScalingGroupCoreView autoscale_group = null;
-
+		private ImmutableList<LoadBalancerAutoScalingGroupCoreView> autoscale_groups = null;
 		private ImmutableList<LoadBalancerBackendInstanceCoreView> backendInstances = null;
 		private ImmutableList<LoadBalancerListenerCoreView> listeners = null;
 		private ImmutableList<LoadBalancerZoneCoreView> zones = null;
@@ -582,8 +582,8 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 
 			if(lb.group!=null)
 				this.group = TypeMappers.transform(lb.group, LoadBalancerSecurityGroupCoreView.class);
-			if(lb.autoscale_group!=null)
-				this.autoscale_group = TypeMappers.transform(lb.autoscale_group, LoadBalancerAutoScalingGroupCoreView.class);
+			if(lb.autoscale_groups!=null)
+				this.autoscale_groups = ImmutableList.copyOf(Collections2.transform(lb.autoscale_groups, LoadBalancerAutoScalingGroupCoreViewTransform.INSTANCE));
 			if(lb.backendInstances!=null)
 				this.backendInstances = ImmutableList.copyOf(Collections2.transform(lb.backendInstances, LoadBalancerBackendInstanceCoreViewTransform.INSTANCE));
 			if(lb.listeners!=null)
@@ -654,8 +654,8 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 			return this.group;
 		}
 		
-		public LoadBalancerAutoScalingGroupCoreView getAutoScaleGroup(){
-			return this.autoscale_group;
+		public Collection<LoadBalancerAutoScalingGroupCoreView> getAutoScaleGroups(){
+			return this.autoscale_groups;
 		}
 		
 		public Collection<LoadBalancerPolicyDescriptionCoreView> getPolicies(){

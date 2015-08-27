@@ -2770,27 +2770,32 @@ static int init(void)
             LOGFATAL("failed to find hostname\n");
             return (EUCA_FATAL_ERROR);
         }
+        LOGDEBUG("Searching for IP by hostname %s\n", hostname);
 
-        struct hostent *he;
-        if ((he = gethostbyname(hostname)) == NULL) {
-            LOGFATAL("failed to obtain host information for %s\n", hostname);
+        struct addrinfo hints, *servinfo, *p;
+        struct sockaddr_in *h;
+        memset(&hints, 0, sizeof hints);
+        hints.ai_family = AF_INET;
+        hints.ai_socktype = SOCK_STREAM;
+        int rv;
+        if ((rv = getaddrinfo(hostname, "http", &hints, &servinfo)) != 0) {
+            LOGFATAL("getaddrinfo: %s\n", gai_strerror(rv));
             return (EUCA_FATAL_ERROR);
         }
-
         int found = 0;
-        struct in_addr **addr_list = (struct in_addr **)he->h_addr_list;
-        for (int i = 0; !found && addr_list[i] != NULL; i++) {
+        for(p = servinfo; !found && p != NULL; p = p->ai_next) {
             if (!found) {
-                euca_strncpy(nc_state.ip, inet_ntoa(*addr_list[i]), sizeof(nc_state.ip));
+                h = (struct sockaddr_in *) p->ai_addr;
+                euca_strncpy(nc_state.ip, inet_ntoa(h->sin_addr), sizeof(nc_state.ip));
                 found = 1;
             }
         }
+        freeaddrinfo(servinfo);
         if (!found) {
             LOGFATAL("failed to obtain IP for %s\n", hostname);
             return (EUCA_FATAL_ERROR);
         }
         LOGINFO("using IP %s\n", nc_state.ip);
-
         LOGINFO("Initializing localhost info for vbr processing\n");
         if (vbr_init_hostconfig
             (nc_state.iqn, nc_state.ip, nc_state.config_sc_policy_file, nc_state.config_use_ws_sec, nc_state.config_use_virtio_root, nc_state.config_use_virtio_disk) != 0) {

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,20 +67,23 @@ import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.NoSuchElementException;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
 
 import com.eucalyptus.address.AddressRegistry;
-import com.eucalyptus.address.Addresses;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.compute.common.network.Networking;
+import com.eucalyptus.compute.common.network.NetworkingFeature;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Subnets;
 import com.eucalyptus.util.Subnets.SystemSubnetPredicate;
@@ -92,7 +95,10 @@ import com.eucalyptus.util.dns.DomainNameRecords;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
 import com.google.common.net.InetAddresses;
 
@@ -100,10 +106,25 @@ import com.google.common.net.InetAddresses;
                     description = "Options controlling Split-Horizon DNS resolution." )
 public abstract class SplitHorizonResolver implements DnsResolver {
   private static final Logger LOG     = Logger.getLogger( SplitHorizonResolver.class );
+  private static final Supplier<Boolean> privateNetworksManagedSupplier =
+      Suppliers.memoizeWithExpiration( PrivateNetworksManaged.INSTANCE, 15, TimeUnit.SECONDS );
   @ConfigurableField( description = "Enable the split-horizon DNS resolution for internal instance public DNS name queries.  "
                                     + "Note: dns.enable must also be 'true'" )
   public static Boolean       enabled = Boolean.TRUE;
-  
+
+  private enum PrivateNetworksManaged implements Supplier<Boolean> {
+    INSTANCE {
+      @Override
+      public Boolean get() {
+        try {
+          return Networking.getInstance( ).supports( NetworkingFeature.SiteLocalManaged );
+        } catch ( Exception e ) {
+          return false; 
+        }
+      }
+    }
+  }
+
   /**
    * Test whether the address is one which belongs to an instance or is external.
    * 
@@ -126,19 +147,23 @@ public abstract class SplitHorizonResolver implements DnsResolver {
         return false;
       } else if ( AddressRegistry.getInstance( ).contains( input.getHostAddress( ) ) ) {
         return true;
+      } else if ( privateNetworksManagedSupplier.get( ) && input.isSiteLocalAddress( ) ) {
+        return true;
       } else {
         try {
           VmInstances.lookupByPublicIp( input.getHostAddress( ) );
           return true;
         } catch ( NoSuchElementException ex1 ) {
-          for ( final ServiceConfiguration clusterService : ServiceConfigurations.list( ClusterController.class ) ) {
-            final ClusterConfiguration cluster = ( ClusterConfiguration ) clusterService;
-            try {
-              if ( Subnets.internalPredicate( cluster.getVnetSubnet( ), cluster.getVnetNetmask( ) ).apply( input ) ) {
-                return true;
+          if ( !privateNetworksManagedSupplier.get( ) ) {
+            for ( final ServiceConfiguration clusterService : ServiceConfigurations.list( ClusterController.class ) ) {
+              final ClusterConfiguration cluster = ( ClusterConfiguration ) clusterService;
+              try {
+                if ( Subnets.internalPredicate( cluster.getVnetSubnet( ), cluster.getVnetNetmask( ) ).apply( input ) ) {
+                  return true;
+                }
+              } catch ( final UnknownHostException ex ) {
+                LOG.trace( ex );
               }
-            } catch ( final UnknownHostException ex ) {
-              LOG.trace( ex );
             }
           }
           return false;
@@ -195,7 +220,8 @@ public abstract class SplitHorizonResolver implements DnsResolver {
         final Name name = query.getName( );
         final Name instanceDomain = InstanceDomainNames.lookupInstanceDomain( name );
         final InetAddress ip = InstanceDomainNames.toInetAddress( name.relativize( instanceDomain ) );
-        if ( VmInstances.privateIpInUse( ip.getHostAddress( ) ) ) {
+        if ( ( privateNetworksManagedSupplier.get( ) && ip.isSiteLocalAddress( ) ) ||
+            VmInstances.privateIpInUse( ip.getHostAddress( ) ) ) {
           if ( RequestType.A.apply( query ) ) {
             final Record rec = DomainNameRecords.addressRecord( name, ip );
             return DnsResponse.forName( name ).answer( rec );
@@ -220,7 +246,10 @@ public abstract class SplitHorizonResolver implements DnsResolver {
     }
     
   }
-  
+
+  /**
+   * Handle instance public DNS name lookup from instances
+   */
   public static class HorizonARecordResolver extends SplitHorizonResolver implements DnsResolver {
     
     @Override
@@ -230,10 +259,10 @@ public abstract class SplitHorizonResolver implements DnsResolver {
       return RequestType.PTR.apply( query ) ?
         super.checkAccepts( request ) :
         super.checkAccepts( request )
-            && Subnets.isSystemManagedAddress( source )
+            && InstanceNetworkResolver.tryResolve( source ).isPresent( )
             && query.getName( ).subdomain( InstanceDomainNames.EXTERNAL.get( ) );
     }
-    
+
     @Override
     public DnsResponse lookupRecords( DnsRequest request ) {
       final Record query = request.getQuery( );
@@ -242,10 +271,13 @@ public abstract class SplitHorizonResolver implements DnsResolver {
       try {
         final Name name = query.getName( );
         final InetAddress requestIp = InstanceDomainNames.toInetAddress( name.relativize( InstanceDomainNames.EXTERNAL.get( ) ) );
-        //GRZE: here it is not necessary to lookup the instance -- they public address assignment must have the needed information
+        final Optional<Cidr> instanceNetwork = InstanceNetworkResolver.tryResolve( request.getRemoteAddress( ) );
         final VmInstance vm = VmInstances.lookupByPublicIp( requestIp.getHostAddress( ) );
-        final InetAddress instanceAddress = InetAddresses.forString( vm.getPrivateAddress( ) );
-        if (RequestType.A.apply(query)) {
+        final InetAddress instanceAddress =
+            instanceNetwork.isPresent( ) && instanceNetwork.get( ).contains( vm.getPrivateAddress( ) ) ?
+                InetAddresses.forString( vm.getPrivateAddress( ) ) :
+                requestIp;
+        if ( RequestType.A.apply(query) ) {
           final Record rec = DomainNameRecords.addressRecord( name, instanceAddress );
           return DnsResponse.forName( name ).answer( rec );
         } else { 
@@ -258,7 +290,10 @@ public abstract class SplitHorizonResolver implements DnsResolver {
     }
     
   }
-  
+
+  /**
+   * Handle instance public DNS name lookup from external hosts
+   */
   public static class ExternalARecordResolver extends SplitHorizonResolver implements DnsResolver {
     @Override
     public boolean checkAccepts( DnsRequest request ) {
@@ -267,7 +302,7 @@ public abstract class SplitHorizonResolver implements DnsResolver {
       return RequestType.PTR.apply( query ) ?
         super.checkAccepts( request ) :
         super.checkAccepts( request )
-            && !Subnets.isSystemManagedAddress( source )
+            && !InstanceNetworkResolver.tryResolve( source ).isPresent( )
             && query.getName( ).subdomain( InstanceDomainNames.EXTERNAL.get( ) );
     }
     

@@ -32,13 +32,13 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.RunningInstancesItemType;
+import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.loadbalancing.LoadBalancer;
-import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupEntityTransform;
@@ -150,96 +150,96 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 				LOG.warn("Failed to find the loadbalancer named " + evt.getLoadBalancer(), ex);
 				return;
 			}	
-			final LoadBalancerAutoScalingGroupCoreView group = lb.getAutoScaleGroup();
-			if(group == null){
+			final Collection<LoadBalancerAutoScalingGroupCoreView> groups = lb.getAutoScaleGroups();
+			if(groups == null || groups.isEmpty()){
 				LOG.warn(String.format("Loadbalancer %s had no autoscale group associated with it", lb.getDisplayName()));
 				return;
 			}
-			
-			final String groupName = group.getName();
-			String launchConfigName = null;
-			
-			try{
-				final DescribeAutoScalingGroupsResponseType resp = 
-				    EucalyptusActivityTasks.getInstance().describeAutoScalingGroups(Lists.newArrayList(groupName), lb.useSystemAccount());
-				final AutoScalingGroupType asgType = resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember().get(0);
-				launchConfigName = asgType.getLaunchConfigurationName();
-			}catch(final Exception ex){
-				LOG.warn(String.format("Unable to find the launch config associated with %s", groupName));
-			}
-			
-			try{
-			  EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(groupName, null, 0, lb.useSystemAccount());
-			}catch(final Exception ex){
-			  LOG.warn(String.format("Unable to set desired capacity for %s", groupName), ex);
-			}
-			
-			boolean error=false;
-			final int NUM_DELETE_ASG_RETRY = 4;
-			for(int i=0; i<NUM_DELETE_ASG_RETRY; i++){
-			  try{
-			    EucalyptusActivityTasks.getInstance().deleteAutoScalingGroup(groupName, true, lb.useSystemAccount());
-			    error = false;
-			    // willl terminate all instances
-			  }catch(final Exception ex){
-			    error = true;
-			    LOG.warn(String.format("Failed to delete autoscale group (%d'th attempt): %s", (i+1), groupName));
-			    try{
-			      long sleepMs = (i+1) * 500;
-			      Thread.sleep(sleepMs);
-			    }catch(final Exception ex2){
-			    }
-	      }
-			  if(!error)
-			    break;
-			}
-			
-			if(error){
-			  throw new EventHandlerException("Failed to delete autoscaling group; retry in a few seconds");
-			}
-			
-			if(launchConfigName!=null){
-				try{ 
-				  EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration(launchConfigName, lb.useSystemAccount());
-				}catch(Exception ex){
-					LOG.warn("Failed to delete launch configuration " + launchConfigName, ex);
-				}
-			}
 
-			LoadBalancerAutoScalingGroup scaleGroup = null;
-			try{
-				final LoadBalancerAutoScalingGroupCoreView groupView = lb.getAutoScaleGroup();
-				scaleGroup = LoadBalancerAutoScalingGroupEntityTransform.INSTANCE.apply(groupView);
-			}catch(final Exception ex){
-				LOG.error("falied to update servo instance record", ex);
+			for (final LoadBalancerAutoScalingGroupCoreView group : groups) {
+			  final String groupName = group.getName();
+			  String launchConfigName = null;
+
+			  try{
+			    final DescribeAutoScalingGroupsResponseType resp = 
+			        EucalyptusActivityTasks.getInstance().describeAutoScalingGroups(Lists.newArrayList(groupName), lb.useSystemAccount());
+			    final AutoScalingGroupType asgType = resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember().get(0);
+			    launchConfigName = asgType.getLaunchConfigurationName();
+			  }catch(final Exception ex){
+			    LOG.warn(String.format("Unable to find the launch config associated with %s", groupName));
+			  }
+
+			  try{
+			    EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(groupName, null, 0, lb.useSystemAccount());
+			  }catch(final Exception ex){
+			    LOG.warn(String.format("Unable to set desired capacity for %s", groupName), ex);
+			  }
+
+			  boolean error=false;
+			  final int NUM_DELETE_ASG_RETRY = 4;
+			  for(int i=0; i<NUM_DELETE_ASG_RETRY; i++){
+			    try{
+			      EucalyptusActivityTasks.getInstance().deleteAutoScalingGroup(groupName, true, lb.useSystemAccount());
+			      error = false;
+			      // will terminate all instances
+			    }catch(final Exception ex){
+			      error = true;
+			      LOG.warn(String.format("Failed to delete autoscale group (%d'th attempt): %s", (i+1), groupName));
+			      try{
+			        long sleepMs = (i+1) * 500;
+			        Thread.sleep(sleepMs);
+			      }catch(final Exception ex2){
+			      }
+			    }
+			    if(!error)
+			      break;
+			  }
+
+			  if(error){
+			    throw new EventHandlerException("Failed to delete autoscaling group; retry in a few seconds");
+			  }
+
+			  if(launchConfigName!=null){
+			    try{ 
+			      EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration(launchConfigName, lb.useSystemAccount());
+			    }catch(Exception ex){
+			      LOG.warn("Failed to delete launch configuration " + launchConfigName, ex);
+			    }
+			  }
+
+			  LoadBalancerAutoScalingGroup scaleGroup = null;
+			  try{
+			    scaleGroup = LoadBalancerAutoScalingGroupEntityTransform.INSTANCE.apply(group);
+			  }catch(final Exception ex){
+			    LOG.error("falied to update servo instance record", ex);
+			  }
+
+			  if(scaleGroup==null)
+			    return;
+
+			  try ( TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
+			    for(final LoadBalancerServoInstanceCoreView instanceView : scaleGroup.getServos()){
+			      LoadBalancerServoInstance instance;
+			      try{
+			        instance=LoadBalancerServoInstanceEntityTransform.INSTANCE.apply(instanceView);
+			      }catch(final Exception ex){
+			        continue;
+			      }
+			      final LoadBalancerServoInstance found = Entities.uniqueResult(instance);
+			      found.setAvailabilityZone(null);
+			      found.setAutoScalingGroup(null);
+			      // InService --> Retired
+			      // Pending --> Retired
+			      // OutOfService --> Retired
+			      // Error --> Retired
+			      found.setState(LoadBalancerServoInstance.STATE.Retired); 
+			      Entities.persist(found);
+			    }
+			    db.commit();
+			  }catch(final Exception ex){
+			    LOG.error("Failed to update servo instance record", ex);
+			  }
 			}
-			
-			if(scaleGroup==null)
-				return;
-			
-			try ( TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
-				for(final LoadBalancerServoInstanceCoreView instanceView : scaleGroup.getServos()){
-					LoadBalancerServoInstance instance;
-					try{
-						instance=LoadBalancerServoInstanceEntityTransform.INSTANCE.apply(instanceView);
-					}catch(final Exception ex){
-						continue;
-					}
-					final LoadBalancerServoInstance found = Entities.uniqueResult(instance);
-					found.setAvailabilityZone(null);
-					found.setAutoScalingGroup(null);
-					// InService --> Retired
-					// Pending --> Retired
-					// OutOfService --> Retired
-					// Error --> Retired
-					found.setState(LoadBalancerServoInstance.STATE.Retired); 
-					Entities.persist(found);
-				}
-				db.commit();
-			}catch(final Exception ex){
-				LOG.error("Failed to update servo instance record", ex);
-			}
-		
 			// AutoScalingGroup record will be deleted as a result of cascaded delete
 		}
 
@@ -257,9 +257,10 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 	    @Override
 	    public void apply(DeleteLoadbalancerEvent evt) throws EventHandlerException{
 	      // remove a role from the instance profile
-	      final String instanceProfileName = String.format("%s-%s-%s", EventHandlerChainNew.InstanceProfileSetup.INSTANCE_PROFILE_NAME_PREFIX,
-	          evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
-	      final String roleName = String.format("%s-%s-%s", EventHandlerChainNew.IAMRoleSetup.ROLE_NAME_PREFIX, evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
+	      final String instanceProfileName =  
+	          EventHandlerChainNew.InstanceProfileSetup.getInstanceProfileName(evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
+	      final String roleName = 
+	          EventHandlerChainNew.IAMRoleSetup.getRoleName(evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
 	   
 	      LoadBalancer lb = null;
 	      try{ 
@@ -298,7 +299,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 
     @Override
     public void apply(DeleteLoadbalancerEvent evt) throws EventHandlerException {
-      final String roleName = String.format("%s-%s-%s", EventHandlerChainNew.IAMRoleSetup.ROLE_NAME_PREFIX, evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
+      final String roleName = EventHandlerChainNew.IAMRoleSetup.getRoleName(evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
       LoadBalancer lb = null;
       try{ 
         lb= LoadBalancers.getLoadbalancer(evt.getLoadBalancerAccountNumber(), evt.getLoadBalancer());
@@ -391,7 +392,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 	public static class SecurityGroupCleanup implements EventListener<ClockTick> {
 		public static void register( ) {
 		      Listeners.register( ClockTick.class, new SecurityGroupCleanup() );
-		    }
+		}
 
 		@Override
 		public void fireEvent(ClockTick event) {
@@ -404,7 +405,6 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 			List<LoadBalancerSecurityGroup> allGroups = null;
 			try ( TransactionResource db = Entities.transactionFor( LoadBalancerSecurityGroup.class ) ) {
 				allGroups = Entities.query(LoadBalancerSecurityGroup.withState(LoadBalancerSecurityGroup.STATE.OutOfService));
-				db.commit();
 			}catch(Exception ex){ /* retry later */ }
 			if(allGroups==null || allGroups.size()<=0)
 				return;
@@ -414,32 +414,46 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 				if(instances == null || instances.size()<=0)
 					toDelete.add(group);
 			}
-			
+
 			/// delete them from euca
-			for(LoadBalancerSecurityGroup group : toDelete){
-				try{
-				  EucalyptusActivityTasks.getInstance().deleteSystemSecurityGroup( group.getName(), true);
-					LOG.info("deleted security group: "+group.getName());
-				}catch(final Exception ex){
-				  try{
-	          EucalyptusActivityTasks.getInstance().deleteSystemSecurityGroup( group.getName(), false);
-	          LOG.info("deleted security group: "+group.getName());
-				  }catch(final Exception ex2) {
-	          LOG.warn("failed to delete the security group from eucalyptus",ex2);
-				  }				  
-				}
-			}
-			try ( final TransactionResource db2 = Entities.transactionFor( LoadBalancerSecurityGroup.class ) ) {
-				for(LoadBalancerSecurityGroup group: toDelete){
-					LoadBalancerSecurityGroup g = 
-							Entities.uniqueResult(group);
-					Entities.delete(g);
-				}
-				db2.commit();
-			}catch(NoSuchElementException ex){
-				// nothing to delete
-			}catch(Exception ex){
-				LOG.warn("failed to delete the securty group from entity", ex);
+			for(final LoadBalancerSecurityGroup group : toDelete){
+			  boolean deleted = false;
+			  try{
+			    final List<SecurityGroupItemType> existingGroups = 
+			        EucalyptusActivityTasks.getInstance().describeSystemSecurityGroups( Lists.newArrayList(group.getName()), true);
+			    if(existingGroups == null || existingGroups.size()<=0)
+			      deleted =true;
+			    else {
+			      EucalyptusActivityTasks.getInstance().deleteSystemSecurityGroup( group.getName(), true);
+			      LOG.info("deleted security group: "+group.getName());
+			      deleted = true;
+			    }
+			  }catch(final Exception ex){
+			    try{
+			      final List<SecurityGroupItemType> existingGroups = 
+			          EucalyptusActivityTasks.getInstance().describeSystemSecurityGroups( Lists.newArrayList(group.getName()), false);
+			      if(existingGroups == null || existingGroups.size()<=0)
+			        deleted =true;
+			      else{
+			        EucalyptusActivityTasks.getInstance().deleteSystemSecurityGroup( group.getName(), false);
+			        LOG.info("deleted security group: "+group.getName());
+			        deleted = true;
+			      }
+			    }catch(final Exception ex2) {
+			      LOG.warn("failed to delete the security group from eucalyptus",ex2);
+			    }				  
+			  }
+			  if (deleted) {
+			    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerSecurityGroup.class ) ) {
+			      final LoadBalancerSecurityGroup g =  Entities.uniqueResult(group);
+			      Entities.delete(g);
+			      db.commit();
+			    }catch(NoSuchElementException ex){
+			      ;
+			    }catch(Exception ex){
+			      LOG.warn("failed to delete the securty group from DB", ex);
+			    }
+			  }		
 			}
 		}
 	}
@@ -465,24 +479,17 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 				retired = Entities.query(sample);
 				sample =  LoadBalancerServoInstance.withState(LoadBalancerServoInstance.STATE.Error.name());
 				retired.addAll(Entities.query(sample));
-				db.commit();
 			}catch(Exception ex){
 				LOG.warn("failed to query loadbalancer servo instance", ex);
 			}
 
 			if(retired == null || retired.size()<=0)
 				return;
-			final List<LoadBalancerServoInstance> retiredAndDnsClean = Lists.newArrayList();
-			for(final LoadBalancerServoInstance instance: retired){
-  		/// make sure DNS is deregistered
-        if(! LoadBalancerServoInstance.DNS_STATE.Registered.equals(instance.getDnsState()))
-          retiredAndDnsClean.add(instance);
-			}
 			/// for each:
 			// describe instances
 			final List<String> param = Lists.newArrayList();
 			final Map<String, String> latestState = Maps.newHashMap();
-			for(final LoadBalancerServoInstance instance : retiredAndDnsClean){
+			for(final LoadBalancerServoInstance instance : retired){
 			  /// 	call describe instance
 			  String instanceId = instance.getInstanceId();
 			  if(instanceId == null)

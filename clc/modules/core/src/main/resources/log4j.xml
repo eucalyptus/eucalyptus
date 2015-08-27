@@ -320,6 +320,10 @@
     <priority value="OFF" />
     <appender-ref ref="cloud-exhaust" />
   </category>
+  <category name="org.mule.lifecycle.AbstractLifecycleManager">
+    <priority value="OFF" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
   <category name="org.jboss" additivity="false">
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />

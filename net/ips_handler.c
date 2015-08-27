@@ -78,6 +78,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
 #include <limits.h>
 
 #include <eucalyptus.h>
@@ -87,6 +89,7 @@
 #include "ipt_handler.h"
 #include "ips_handler.h"
 #include "ebt_handler.h"
+#include "eucanetd_util.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -151,49 +154,71 @@
 \*----------------------------------------------------------------------------*/
 
 //!
-//! Function description.
+//! Initialize the IP Set handler structure
 //!
 //! @param[in] ipsh pointer to the IP set handler structure
 //! @param[in] cmdprefix a string pointer to the prefix to use to run commands
 //!
 //! @return
 //!
-//! @see
+//! @see ipt_handler_init()
 //!
 //! @pre
+//!    - The ipsh pointer should not be NULL
+//!     - We should be able to create temporary files on the system
+//!     - We should be able to execute ebtables commands.
 //!
 //! @post
+//!     - Temporary files on disk: /tmp/ips_file-XXXXXX
+//!     - If cmdprefix was provided, the table's cmdprefix field will be set with it
 //!
 //! @note
+//!     - Once temporary file is initialized the filename will be reused throughout the process
+//!       lifetime. The file will be truncated/created on each successive calls to the *_handler_init()
+//!       method.
 //!
 int ips_handler_init(ips_handler * ipsh, const char *cmdprefix)
 {
     int fd;
     char cmd[EUCA_MAX_PATH];
+    char sTempFileName[EUCA_MAX_PATH] = "";
 
     if (!ipsh) {
         LOGERROR("invalid input\n");
         return (1);
     }
+
+    if (ipsh->init) {
+        snprintf(sTempFileName, EUCA_MAX_PATH, ipsh->ips_file);
+        if (truncate_file(sTempFileName)) {
+            return (1);
+        }
+        LOGDEBUG("Using already allocated temporary filename: %s\n", sTempFileName);
+    } else {
+        // Initialize new temp filename, only done once. 
+        snprintf(sTempFileName, EUCA_MAX_PATH, "/tmp/ips_file-XXXXXX");
+        if ((fd = safe_mkstemp(sTempFileName)) < 0) {
+            LOGERROR("cannot create tmpfile '%s': check permissions\n", sTempFileName);
+            return (1);
+        }
+        if (chmod(sTempFileName, 0600)) {
+            LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", sTempFileName);
+        }
+
+        LOGDEBUG("Using Newly created temporary filename: %s\n", sTempFileName);
+        close(fd);
+    }
+
     bzero(ipsh, sizeof(ips_handler));
 
-    snprintf(ipsh->ips_file, EUCA_MAX_PATH, "/tmp/ips_file-XXXXXX");
-    fd = safe_mkstemp(ipsh->ips_file);
-    if (fd < 0) {
-        LOGERROR("cannot create tmpfile '%s': check permissions\n", ipsh->ips_file);
-        return (1);
-    }
-    if (chmod(ipsh->ips_file, 0600)) {
-        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", ipsh->ips_file);
-    }
-    close(fd);
+    snprintf(ipsh->ips_file, EUCA_MAX_PATH, sTempFileName);
 
     if (cmdprefix) {
         snprintf(ipsh->cmdprefix, EUCA_MAX_PATH, "%s", cmdprefix);
     } else {
         ipsh->cmdprefix[0] = '\0';
     }
-
+    
     // test required shell-outs
     snprintf(cmd, EUCA_MAX_PATH, "%s ipset -L >/dev/null 2>&1", ipsh->cmdprefix);
     if (system(cmd)) {

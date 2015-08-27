@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,7 +60,10 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-import java.util.Properties
+
+import com.eucalyptus.entities.AuxiliaryDatabaseObject
+import org.hibernate.mapping.SimpleAuxiliaryDatabaseObject
+
 import org.apache.log4j.Logger
 import org.hibernate.ejb.Ejb3Configuration
 import com.eucalyptus.bootstrap.Bootstrap
@@ -102,7 +105,7 @@ try {
           "hibernate.show_sql": "false",
           "hibernate.format_sql": "false",
           "hibernate.connection.autocommit": "true",
-          "hibernate.hbm2ddl.auto": "update",
+          "hibernate.hbm2ddl.auto": "create",
           "hibernate.generate_statistics": "false",
           "hibernate.connection.driver_class": Databases.getDriverName( ),
           "hibernate.connection.username": "eucalyptus",
@@ -128,6 +131,10 @@ try {
       config.setProperties( p );
       for ( Class c : PersistenceContexts.listEntities( ctx ) ) {
         config.addAnnotatedClass( c );
+      }
+      PersistenceContexts.listAuxiliaryDatabaseObjects( ctx ).each{ AuxiliaryDatabaseObject ado ->
+        config.addAuxiliaryDatabaseObject(
+            new SimpleAuxiliaryDatabaseObject( ado.create( ) , ado.drop( ), ado.dialect( ) as HashSet ) )
       }
       PersistenceContexts.registerPersistenceContext( ctx, config );
     }

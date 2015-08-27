@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.activities;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -27,10 +28,12 @@ import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.LoadBalancer;
+import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancers;
 import com.eucalyptus.loadbalancing.common.msgs.Instance;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -87,7 +90,15 @@ public class EventHandlerChainRegisterInstances extends EventHandlerChain<Regist
         throw new EventHandlerException("Error while looking for loadbalancer with name="+evt.getLoadBalancer(), ex);
       } 
 
-      final Set<String> lbZones = Sets.newHashSet(Collections2.transform(lb.getZones(), new Function<LoadBalancerZoneCoreView, String>(){
+      final Collection<LoadBalancerZoneCoreView> enabledZones = Collections2.filter(lb.getZones(), 
+          new Predicate<LoadBalancerZoneCoreView>() {
+            @Override
+            public boolean apply(LoadBalancerZoneCoreView arg0) {
+              return LoadBalancerZone.STATE.InService.equals(arg0.getState());
+            } });
+      final Set<String> lbZones = 
+          Sets.newHashSet(Collections2.transform(enabledZones, 
+              new Function<LoadBalancerZoneCoreView, String>(){
         @Override
         public String apply(LoadBalancerZoneCoreView arg0) {
           return arg0.getName();

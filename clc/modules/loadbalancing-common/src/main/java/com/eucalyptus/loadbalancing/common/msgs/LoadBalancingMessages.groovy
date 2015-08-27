@@ -48,10 +48,18 @@ class DescribeLoadBalancersByServoType extends LoadBalancingServoMessage {
 	DescribeLoadBalancersByServoType() {  }
 }
 
+class ServoResponseMetadata extends EucalyptusData {
+  Integer getLBInterval;
+  Integer putMetricInterval;
+  Integer putInstanceHealthInterval;
+  ServoResponseMetadata() { }
+}
+
 class DescribeLoadBalancersByServoResponseType extends LoadBalancingServoMessage {
 	DescribeLoadBalancersByServoResponseType() {  }
   DescribeLoadBalancersByServoResult describeLoadBalancersResult = new DescribeLoadBalancersByServoResult();
-	ResponseMetadata responseMetadata = new ResponseMetadata();
+  ResponseMetadata responseMetadata = new ResponseMetadata();
+  ServoResponseMetadata servoResponseMetadata = new ServoResponseMetadata();
 }
 
 class DescribeLoadBalancersByServoResult extends EucalyptusData {
@@ -129,6 +137,7 @@ class PutServoStatesResponseType extends LoadBalancingServoMessage {
 	PutServoStatesResponseType() { }
 	PutServoStatesResult putServoStatesResult = new PutServoStatesResult();
 	ResponseMetadata responseMetadata = new ResponseMetadata();
+  ServoResponseMetadata servoResponseMetadata = new ServoResponseMetadata();
 }
 
 class PutServoStatesResult extends EucalyptusData {

@@ -22,12 +22,15 @@ package com.eucalyptus.compute.common;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.Set;
+
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.AwsServiceName;
 import com.eucalyptus.component.annotation.Description;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.auth.policy.annotation.PolicyVendor;
+import com.eucalyptus.component.annotation.PublicComponentAccounts;
 import com.eucalyptus.component.annotation.PublicService;
 import com.eucalyptus.component.annotation.ServiceNames;
 import com.eucalyptus.component.auth.SystemCredentials;
@@ -43,6 +46,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 @Partition( value = Compute.class, manyToOne = true )
 @FaultLogPrefix( "services" )
 @Description( "the Eucalyptus EC2 API service" )
+@PublicComponentAccounts(AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT)
 public class Compute extends ComponentId {
   private static final long serialVersionUID = 1L;
 

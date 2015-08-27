@@ -44,6 +44,7 @@ import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.cloudwatch.common.config.CloudWatchConfigProperties;
 import com.eucalyptus.cloudwatch.common.internal.domain.alarms.AlarmEntity;
+import com.eucalyptus.entities.TransactionResource;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 
@@ -66,8 +67,7 @@ public class AlarmStateEvaluationDispatcher implements Runnable {
   public void run() {
     if (!CloudWatchConfigProperties.isDisabledCloudWatchService() && Bootstrap.isOperational( ) && Topology.isEnabledLocally( CloudWatchBackend.class )) {
       LOG.debug("Kicking off AlarmStateEvaluationDispatcher");
-      EntityTransaction db = Entities.get(AlarmEntity.class);
-      try {
+      try (final TransactionResource db = Entities.transactionFor(AlarmEntity.class)) {
         Criteria criteria = Entities.createCriteria(AlarmEntity.class);
         List<AlarmEntity> results = (List<AlarmEntity>) criteria.list();
         for (AlarmEntity alarmEntity: results) {
@@ -75,12 +75,6 @@ public class AlarmStateEvaluationDispatcher implements Runnable {
           executorService.submit(new AlarmStateEvaluationWorker(alarmEntity.getAccountId(), alarmEntity.getAlarmName()));
         }
         db.commit();
-      } catch (RuntimeException ex) {
-        Logs.extreme().error(ex, ex); // TODO the exception will be swallowed...
-        throw ex;
-      } finally {
-        if (db.isActive())
-          db.rollback();
       }
     }
   }

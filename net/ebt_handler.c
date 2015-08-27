@@ -78,6 +78,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
 #include <limits.h>
 
 #include <eucalyptus.h>
@@ -87,7 +89,7 @@
 #include "ipt_handler.h"
 #include "ips_handler.h"
 #include "ebt_handler.h"
-
+#include "eucanetd_util.h"
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  DEFINES                                   |
@@ -151,65 +153,102 @@
 \*----------------------------------------------------------------------------*/
 
 //!
-//! Function description.
+//! Initialize the Ebtables handler structure.
 //!
 //! @param[in] ebth pointer to the EB table handler structure
 //! @param[in] cmdprefix a string pointer to the prefix to use for each system commands
 //!
 //! @return
 //!
-//! @see
+//! @see ipt_handler_init() 
 //!
 //! @pre
+//!     - The ebth pointer should not be NULL
+//!     - We should be able to create temporary files on the system
+//!     - We should be able to execute ebtables commands.
 //!
 //! @post
+//!     - Temporary files on disk: /tmp/ebt_filter_file-XXXXXX, /tmp/ebt_nat_file-XXXXXX
+//!       and /tmp/ebt_asc_file-XXXXXX.
+//!     - If cmdprefix was provided, the table's cmdprefix field will be set with it
 //!
 //! @note
+//!     - Once temporary files are initialized the filename will be reused throughout the process
+//!       lifetime. The files will be truncated/created on each successive calls to the *_handler_init()
+//!       method. 
 //!
 int ebt_handler_init(ebt_handler * ebth, const char *cmdprefix)
 {
     int fd;
-    char cmd[EUCA_MAX_PATH];
-
+    char cmd[EUCA_MAX_PATH] = "";
+    char sTempFilterFile[EUCA_MAX_PATH] = "";
+    char sTempNatFile[EUCA_MAX_PATH] = "";
+    char sTempAscFile[EUCA_MAX_PATH] = "";
+    
     if (!ebth) {
         return (1);
     }
+
+    if (ebth->init) {
+        snprintf(sTempFilterFile, EUCA_MAX_PATH, ebth->ebt_filter_file);
+        snprintf(sTempNatFile, EUCA_MAX_PATH, ebth->ebt_nat_file);
+        snprintf(sTempAscFile, EUCA_MAX_PATH, ebth->ebt_asc_file);
+
+        if (truncate_file(sTempFilterFile)) {            
+            return (1);
+        }
+
+        if (truncate_file(sTempNatFile)) {
+            unlink(sTempFilterFile);
+            return (1);
+        }
+
+        if (truncate_file(sTempAscFile)) {
+            unlink(sTempFilterFile);
+            unlink(sTempNatFile);
+            return (1);
+        }
+    } else {
+        snprintf(sTempFilterFile, EUCA_MAX_PATH, "/tmp/ebt_filter_file-XXXXXX");
+        if ((fd = safe_mkstemp(sTempFilterFile))< 0) {
+            LOGERROR("cannot create tmpfile '%s': check permissions\n", sTempFilterFile);
+            return (1);
+        }
+        if (chmod(sTempFilterFile, 0600)) {
+            LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", sTempFilterFile);
+        }
+        close(fd);
+        
+        snprintf(sTempNatFile, EUCA_MAX_PATH, "/tmp/ebt_nat_file-XXXXXX");
+        if ((fd = safe_mkstemp(sTempNatFile)) < 0) {
+            LOGERROR("cannot create tmpfile '%s': check permissions\n", sTempNatFile);
+            unlink(sTempFilterFile);
+            return (1);
+        }
+        if (chmod(sTempNatFile, 0600)) {
+            LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", sTempNatFile);
+        }
+        close(fd);
+        
+        snprintf(sTempAscFile, EUCA_MAX_PATH, "/tmp/ebt_asc_file-XXXXXX");
+        if ((fd = safe_mkstemp(sTempAscFile)) < 0) {
+            LOGERROR("cannot create tmpfile '%s': check permissions\n", sTempAscFile);
+            unlink(sTempFilterFile);
+            unlink(sTempNatFile);
+            return (1);
+        }
+        if (chmod(sTempAscFile, 0600)) {
+            LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", sTempAscFile);
+        }
+        close(fd);
+    }
+    
     bzero(ebth, sizeof(ebt_handler));
 
-    snprintf(ebth->ebt_filter_file, EUCA_MAX_PATH, "/tmp/ebt_filter_file-XXXXXX");
-    fd = safe_mkstemp(ebth->ebt_filter_file);
-    if (fd < 0) {
-        LOGERROR("cannot create tmpfile '%s': check permissions\n", ebth->ebt_filter_file);
-        return (1);
-    }
-    if (chmod(ebth->ebt_filter_file, 0600)) {
-        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", ebth->ebt_filter_file);
-    }
-    close(fd);
-
-    snprintf(ebth->ebt_nat_file, EUCA_MAX_PATH, "/tmp/ebt_nat_file-XXXXXX");
-    fd = safe_mkstemp(ebth->ebt_nat_file);
-    if (fd < 0) {
-        LOGERROR("cannot create tmpfile '%s': check permissions\n", ebth->ebt_nat_file);
-        return (1);
-    }
-    if (chmod(ebth->ebt_nat_file, 0600)) {
-        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", ebth->ebt_nat_file);
-    }
-    close(fd);
-
-    snprintf(ebth->ebt_asc_file, EUCA_MAX_PATH, "/tmp/ebt_asc_file-XXXXXX");
-    fd = safe_mkstemp(ebth->ebt_asc_file);
-    if (fd < 0) {
-        LOGERROR("cannot create tmpfile '%s': check permissions\n", ebth->ebt_asc_file);
-        unlink(ebth->ebt_filter_file);
-        unlink(ebth->ebt_nat_file);
-        return (1);
-    }
-    if (chmod(ebth->ebt_asc_file, 0600)) {
-        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", ebth->ebt_asc_file);
-    }
-    close(fd);
+    // Copy names back into handler
+    snprintf(ebth->ebt_filter_file, EUCA_MAX_PATH, sTempFilterFile);
+    snprintf(ebth->ebt_nat_file, EUCA_MAX_PATH, sTempNatFile);
+    snprintf(ebth->ebt_asc_file, EUCA_MAX_PATH, sTempAscFile);
 
     if (cmdprefix) {
         snprintf(ebth->cmdprefix, EUCA_MAX_PATH, "%s", cmdprefix);

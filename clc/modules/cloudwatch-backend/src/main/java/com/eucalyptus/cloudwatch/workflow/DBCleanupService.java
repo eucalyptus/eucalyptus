@@ -38,7 +38,7 @@ public class DBCleanupService implements Runnable {
   @Override
   public void run() {
     LOG.info("Calling cloudwatch db cleanup service");
-    if (!( Bootstrap.isFinished() &&
+    if (!( Bootstrap.isOperational() &&
         Topology.isEnabled( CloudWatchBackend.class ) )) {
       LOG.info("Cloudwatch service is not ENABLED");
       return;

@@ -63,9 +63,10 @@
 package com.eucalyptus.blockstorage.threadpool;
 
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.log4j.Logger;
@@ -75,32 +76,34 @@ import com.eucalyptus.blockstorage.S3SnapshotTransfer.CompleteUpload;
 import com.eucalyptus.blockstorage.S3SnapshotTransfer.StorageWriter;
 import com.eucalyptus.blockstorage.S3SnapshotTransfer.UploadPart;
 import com.eucalyptus.blockstorage.Storage;
-import com.eucalyptus.blockstorage.entities.StorageInfo;
 import com.eucalyptus.blockstorage.exceptions.ThreadPoolNotInitializedException;
 import com.eucalyptus.system.Threads;
 
 public class SnapshotTransferThreadPool {
   private static Logger LOG = Logger.getLogger(SnapshotTransferThreadPool.class);
-  private static ExecutorService uploadPartPool;
-  private static ExecutorService completeMpuPool;
-  private static ExecutorService backendWriterPool;
+  private static ThreadPoolExecutor uploadPartPool;
+  private static ThreadPoolExecutor completeMpuPool;
+  private static ThreadPoolExecutor backendWriterPool;
 
   private static final ReentrantLock RLOCK = new ReentrantLock();
 
   private SnapshotTransferThreadPool() {}
 
-  public static void initialize() {
+  public static void initialize(Integer poolSize) {
     RLOCK.lock();
     try {
       shutdown();
-
       LOG.info("Initializing SC thread pool catering to snapshot transfers");
-      StorageInfo info = StorageInfo.getStorageInfo();
-      Integer size = info.getMaxConcurrentSnapshotTransfers();
 
-      uploadPartPool = Executors.newFixedThreadPool(size, Threads.lookup(Storage.class, UploadPart.class).limitTo(size));
-      completeMpuPool = Executors.newFixedThreadPool(size, Threads.lookup(Storage.class, CompleteUpload.class).limitTo(size));
-      backendWriterPool = Executors.newFixedThreadPool(size, Threads.lookup(Storage.class, StorageWriter.class).limitTo(size));
+      uploadPartPool =
+          new ThreadPoolExecutor(poolSize, poolSize, 10, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), Threads.lookup(Storage.class,
+              UploadPart.class), new ThreadPoolExecutor.AbortPolicy());
+      completeMpuPool =
+          new ThreadPoolExecutor(poolSize, poolSize, 10, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), Threads.lookup(Storage.class,
+              CompleteUpload.class), new ThreadPoolExecutor.AbortPolicy());
+      backendWriterPool =
+          new ThreadPoolExecutor(poolSize, poolSize, 10, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), Threads.lookup(Storage.class,
+              StorageWriter.class), new ThreadPoolExecutor.AbortPolicy());
     } finally {
       RLOCK.unlock();
     }
@@ -136,22 +139,49 @@ public class SnapshotTransferThreadPool {
     }
   }
 
+  public static Integer getPoolSize() {
+    if (uploadPartPool != null && !uploadPartPool.isShutdown() && completeMpuPool != null && !completeMpuPool.isShutdown()
+        && backendWriterPool != null && !backendWriterPool.isShutdown()) {
+      return uploadPartPool.getCorePoolSize();
+    } else {
+      return null;
+    }
+  }
+
+  public static void updatePoolSize(Integer newSize) {
+    if (uploadPartPool != null && !uploadPartPool.isShutdown() && completeMpuPool != null && !completeMpuPool.isShutdown()
+        && backendWriterPool != null && !backendWriterPool.isShutdown() && newSize != null && uploadPartPool.getCorePoolSize() != newSize) {
+      uploadPartPool.setCorePoolSize(newSize);
+      uploadPartPool.setMaximumPoolSize(newSize);
+      completeMpuPool.setCorePoolSize(newSize);
+      completeMpuPool.setMaximumPoolSize(newSize);
+      backendWriterPool.setCorePoolSize(newSize);
+      backendWriterPool.setMaximumPoolSize(newSize);
+    }
+  }
+
   public static void shutdown() {
     RLOCK.lock();
     try {
       if (uploadPartPool != null) {
         LOG.info("Shutting down SC thread pool catering to snapshot transfers (upload part pool)");
-        uploadPartPool.shutdownNow();
+        LOG.debug("Number of snapshots in progress for upload: " + uploadPartPool.getActiveCount());
+        List<Runnable> awaitingExecution = uploadPartPool.shutdownNow();
+        LOG.debug("Number of queued snapshots for upload: " + awaitingExecution.size());
         uploadPartPool = null;
       }
       if (completeMpuPool != null) {
         LOG.info("Shutting down SC thread pool catering to snapshot transfers (complete mpu pool)");
-        completeMpuPool.shutdownNow();
+        LOG.debug("Number of snapshots in progress for multipart upload completion: " + completeMpuPool.getActiveCount());
+        List<Runnable> awaitingExecution = completeMpuPool.shutdownNow();
+        LOG.debug("Number of queued snapshots for multipart upload completion: " + awaitingExecution.size());
         completeMpuPool = null;
       }
       if (backendWriterPool != null) {
         LOG.info("Shutting down SC thread pool catering to snapshot transfers (backend writer pool)");
-        backendWriterPool.shutdownNow();
+        LOG.debug("Number of snapshots in progress for download: " + backendWriterPool.getActiveCount());
+        List<Runnable> awaitingExecution = backendWriterPool.shutdownNow();
+        LOG.debug("Number of queued snapshots for download: " + awaitingExecution.size());
         backendWriterPool = null;
       }
     } finally {

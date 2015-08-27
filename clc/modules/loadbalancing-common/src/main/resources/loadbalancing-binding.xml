@@ -3,7 +3,12 @@
   <namespace uri="http://elasticloadbalancing.amazonaws.com/doc/2012-06-01/" default="elements"/>
   <mapping class="com.eucalyptus.loadbalancing.common.msgs.ResponseMetadata" abstract="true">
     <value name="RequestId" field="requestId" usage="required"/>
-  </mapping>
+  </mapping> 
+  <mapping class="com.eucalyptus.loadbalancing.common.msgs.ServoResponseMetadata" abstract="true">
+    <value name="GetLBInterval" field="getLBInterval" usage="optional"/>
+    <value name="PutMetricInterval" field="putMetricInterval" usage="optional"/>
+    <value name="PutInstanceHealthInterval" field="putInstanceHealthInterval" usage="optional"/>
+  </mapping> 
   <mapping class="com.eucalyptus.loadbalancing.common.msgs.Error" abstract="true">
     <value name="Type" field="type" usage="required"/>
     <value name="Code" field="code" usage="required"/>
@@ -26,6 +31,7 @@
     <structure map-as="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage"/>
     <structure name="DescribeLoadBalancersResult" field="describeLoadBalancersResult" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancersByServoResult"/>
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.ResponseMetadata"/>
+    <structure name="ServoResponseMetadata" field="servoResponseMetadata" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.ServoResponseMetadata"/>
   </mapping>
   <mapping class="com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancersByServoResult" abstract="true">
     <structure name="LoadBalancerDescriptions" field="loadBalancerDescriptions" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.LoadBalancerServoDescriptions"/>
@@ -66,6 +72,7 @@
     <structure map-as="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage"/>
     <structure name="PutServoStatesResult" field="putServoStatesResult" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.PutServoStatesResult"/>
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.ResponseMetadata"/>
+    <structure name="ServoResponseMetadata" field="servoResponseMetadata" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.ServoResponseMetadata"/>
   </mapping>
   <mapping class="com.eucalyptus.loadbalancing.common.msgs.PutServoStatesResult" abstract="true">
   </mapping>

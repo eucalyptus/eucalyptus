@@ -265,6 +265,7 @@ public class DatabaseRoleProxy implements EuareRole {
       List<InstanceProfileEntity> instanceProfiles = ( List<InstanceProfileEntity> ) Entities
           .createCriteria( InstanceProfileEntity.class )
           .createCriteria( "role" ).add( Restrictions.eq( "name", this.delegate.getName( ) ) )
+          .createCriteria( "account" ).add( Restrictions.eq( "accountNumber", this.delegate.getAccount( ).getAccountNumber( ) ) )
           .setCacheable( true )
           .list( );
       for ( final InstanceProfileEntity instanceProfile : instanceProfiles ) {

@@ -72,6 +72,7 @@ import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
+import com.eucalyptus.ws.StackConfiguration;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -483,10 +484,48 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       }
     }
 
+    private void updateStackConfiguration ( ) {
+      try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
+        try {
+          final StaticDatabasePropertyEntry pipeline_max_query_property = Entities.uniqueResult( new StaticDatabasePropertyEntry( null, "bootstrap.webservices.pipeline_max_query_request_size", null ) );
+          final StaticDatabasePropertyEntry max_chunk_property = Entities.uniqueResult( new StaticDatabasePropertyEntry( null, "bootstrap.webservices.http_max_chunk_bytes", null ) );
+          LOG.info( " Checking to make sure default pipeline_max_query_request_size is not smaller than http_max_chunk_bytes." );
+          if ( Integer.parseInt(max_chunk_property.getValue()) > Integer.parseInt(pipeline_max_query_property.getValue())) {
+            pipeline_max_query_property.setValue(max_chunk_property.getValue());
+          }
+        } catch ( NoSuchElementException e ) {
+          LOG.info( "Property not found, skipped size check for : bootstrap.webservices.pipeline_max_query_request_size" );
+        }
+        db.commit( );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+
+    private void migrateEc2ClassicProtocolExtensions() {
+      try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
+        try {
+          final StaticDatabasePropertyEntry property = Entities.uniqueResult( new StaticDatabasePropertyEntry( null, "cloud.network.ec2_classic_additional_protocols_allowed", null ) );
+          LOG.info( "Updating field and default value for cloud.network.ec2_classic_additional_protocols_allowed" );
+          property.setFieldName( "com.eucalyptus.compute.common.config.ExtendedNetworkingConfiguration.ec2_classic_additional_protocols_allowed" );
+        } catch ( NoSuchElementException e ) {
+          //Nothing to do.
+        }
+        db.commit( );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+
+    }
+
     @Override
     public boolean apply( Class arg0 ) {
+      updateStackConfiguration( );
       updateLdapConfiguration( );
       deleteRemovedProperties( Lists.newArrayList( "www.httpProxyHost" , "www.httpProxyPort" ) );
+
+      //move ec2_classic network config from cluster-manager to compute-common property
+      migrateEc2ClassicProtocolExtensions();
       return true;
     }
   }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,28 +60,23 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-
-import com.eucalyptus.component.annotation.DatabaseNamingStrategy
-import groovy.xml.MarkupBuilder
-import net.sf.hajdbc.xml.SchemaGenerator
-import org.apache.log4j.Logger
-import org.logicalcobwebs.proxool.ProxoolFacade
-import com.eucalyptus.bootstrap.Databases
+import com.eucalyptus.bootstrap.BootstrapArgs
 import com.eucalyptus.bootstrap.Host
 import com.eucalyptus.bootstrap.Hosts
+import com.eucalyptus.component.annotation.DatabaseNamingStrategy
+import org.apache.log4j.Logger
+import org.logicalcobwebs.proxool.ProxoolFacade
+import org.logicalcobwebs.proxool.StateListenerIF
+import com.eucalyptus.bootstrap.Databases
 import com.eucalyptus.component.ServiceUris
 import com.eucalyptus.component.id.Database
-import com.eucalyptus.system.SubDirectory
-import com.eucalyptus.util.LogUtil
 
 
 Logger LOG = Logger.getLogger( 'com.eucalyptus.scripts.setup_dbpool' );
 
 ClassLoader.getSystemClassLoader().loadClass('org.logicalcobwebs.proxool.ProxoolDriver');
-ClassLoader.getSystemClassLoader().loadClass('net.sf.hajdbc.state.simple.SimpleStateManager');
 
-String pool_db_driver = 'net.sf.hajdbc.sql.Driver';
-String pool_db_url = 'jdbc:ha-jdbc';
+String pool_db_driver = Databases.driverName;
 String db_user = Databases.userName
 String db_pass = Databases.password
 
@@ -92,56 +87,15 @@ default_pool_props = [
       'proxool.prototype-count': '8',
       'proxool.house-keeping-test-sql': 'SELECT 1=1;',
       'proxool.house-keeping-sleep-time': '5000',
+      'proxool.recently-started-threshold': '10000',
       'proxool.test-before-use': 'false',
       'proxool.test-after-use': 'false',
       'proxool.trace': 'false',
       'user': db_user,
       'password': db_pass,
-    ]
+]
 
 def setupDbPool = { String db_name ->
-  String ha_jdbc_config_file_name = SubDirectory.TX.toString( ) + "/ha_jdbc_${db_name}.xml";
-  LogUtil.logHeader( "${db_name} Setting up database connection pool -> ${ha_jdbc_config_file_name}" )
-
-  LOG.info( "${db_name} Preparing jdbc cluster:        ${ha_jdbc_config_file_name}" )
-  new File( ha_jdbc_config_file_name ).withWriter{ writer ->
-    def xml = new MarkupBuilder(writer);
-    xml.'ha-jdbc'(xmlns: SchemaGenerator.NAMESPACE) {
-      sync(id:'dump-restore')
-      sync(id:'full') {
-        'property'(name:'fetchSize', '1000')
-        'property'(name:'maxBatchSize', '1000')
-      }
-      sync(id:'passive');
-      state(id:'simple');
-      cluster(
-          balancer:'simple', //(simple|random|round-robin|load)
-          'default-sync': 'passive',
-          dialect:Databases.getJdbcDialect( ),
-          durability:'none',//(none|coarse|fine)
-          'meta-data-cache':'none',//(none|lazy|eager)
-          'transaction-mode':'serial',//(parallel|serial)
-          'detect-sequences':'false',
-          'detect-identity-columns':'false',
-          'eval-current-date':'true',
-          'eval-current-time':'true',
-          'eval-current-timestamp':'true',
-          'eval-rand':'true'
-          ) {
-            Hosts.listActiveDatabases( ).each{ Host host ->
-              database(id:host.getBindAddress().getHostAddress( ),
-                  local:host.isLocalHost( ),
-                  weight:(Hosts.isCoordinator(host)?100:1),
-                  location:("jdbc:${ServiceUris.remote(Database.class,host.isLocalHost()?InetAddress.getByName('127.0.0.1'):host.getBindAddress( ), db_name ).toASCIIString( )}")
-                  ) {
-                    user(db_user)
-                    password(db_pass)
-                  }
-            }
-          }
-    }
-  }
-
   // Setup proxool
   proxool_config = new Properties();
   proxool_config.putAll(default_pool_props);
@@ -154,13 +108,21 @@ def setupDbPool = { String db_name ->
     proxool_config.setProperty( 'proxool.maximum-connection-count', '8' )
     proxool_config.setProperty( 'proxool.prototype-count', '1' )
   }
-  proxool_config.put('config',"file://"+ha_jdbc_config_file_name);
-  String url = "proxool.${db_name}:${pool_db_driver}:${pool_db_url}:${db_name}";
+  Host host = BootstrapArgs.cloudController ? 
+      Hosts.localHost( ) : 
+      Hosts.listActiveDatabases( ).get( 0 )
+  String url = "proxool.${db_name}:${pool_db_driver}:jdbc:${ServiceUris.remote(Database.class,host.isLocalHost()?InetAddress.getByName('127.0.0.1'):host.getBindAddress( ), db_name ).toASCIIString( )}";
   LOG.info( "${db_name} Preparing connection pool:     ${url}" )
-  
+
   // Register proxool
   LOG.trace( proxool_config )
   ProxoolFacade.registerConnectionPool(url, proxool_config);
+  ProxoolFacade.addStateListener( 
+      db_name, 
+      { Integer state -> Databases.setVolatile( 
+          state == StateListenerIF.STATE_DOWN ||
+          state == StateListenerIF.STATE_OVERLOADED ) 
+      } as StateListenerIF )
   ProxoolFacade.disableShutdownHook();
 }
 

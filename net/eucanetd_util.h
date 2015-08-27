@@ -143,6 +143,7 @@ int eucanetd_run_program(const char *psPidFilePath, const char *psRootWrap, bool
 int eucanetd_kill_program(pid_t pid, const char *psProgramName, const char *psRootwrap);
 
 int unlink_handler_file(char *filename);
+int truncate_file(char *filename);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

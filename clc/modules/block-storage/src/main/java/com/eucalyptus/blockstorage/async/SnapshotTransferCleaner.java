@@ -118,7 +118,7 @@ public class SnapshotTransferCleaner extends CheckerTask {
             if (StringUtils.isNotBlank(part.getFileName())) {
               LOG.debug("Deleting snapshot part from disk: " + part.getFileName());
               if (!Files.deleteIfExists(Paths.get(part.getFileName()))) {
-                LOG.warn("Could not delete snapshot part from disk: " + part.getFileName());
+                LOG.debug(part.getFileName() + " not found, skipping delete");
               }
             }
             part.setState(SnapshotPartState.cleaned);

@@ -353,7 +353,7 @@ public class Pipelines {
     
     @Override
     public ChannelPipeline addHandlers( final ChannelPipeline pipeline ) {
-      pipeline.addLast( "hmac-v2-verify",  new HmacHandler( EnumSet.of(TemporaryKeyType.Role) ) );
+      pipeline.addLast( "hmac-v2-verify",  new HmacHandler( EnumSet.of(TemporaryKeyType.Role, TemporaryKeyType.Access, TemporaryKeyType.Session) ) );
       pipeline.addLast( "timestamp-verify", Handlers.queryTimestamphandler() );
       pipeline.addLast( "restful-binding", new InternalQueryBinding( ) );
       return pipeline;

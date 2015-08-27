@@ -20,6 +20,7 @@
 package com.eucalyptus.loadbalancing;
 
 import java.util.Collection;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
@@ -34,8 +35,10 @@ import javax.persistence.PostLoad;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
@@ -110,6 +113,10 @@ public class LoadBalancerZone extends AbstractPersistent {
 	@JoinColumn( name = "metadata_loadbalancer_fk", nullable=false )
 	@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 	private LoadBalancer loadbalancer = null;
+	
+	
+	@Column(name="autoscaling_group", nullable=true)
+	private String autoscalingGroup = null;	
 
 	@Column(name="zone_name", nullable=false)
 	private String zoneName;
@@ -142,7 +149,7 @@ public class LoadBalancerZone extends AbstractPersistent {
   public LoadBalancerCoreView getLoadbalancer(){
 		return this.view.getLoadBalancer();
 	} 
-	
+  
 	public Collection<LoadBalancerServoInstanceCoreView> getServoInstances(){
 		return this.view.getServoInstances();
 	}
@@ -157,6 +164,14 @@ public class LoadBalancerZone extends AbstractPersistent {
 	
 	public STATE getState(){
 		return Enum.valueOf(STATE.class, this.zoneState);
+	}
+	
+	public String getAutoscalingGroup() {
+	  return this.autoscalingGroup;
+	}
+	
+	public void setAutoscalingGroup(final String group) {
+	  this.autoscalingGroup = group;
 	}
 
 	@PrePersist
@@ -193,6 +208,10 @@ public class LoadBalancerZone extends AbstractPersistent {
 
 		public STATE getState( ){
 			return this.zone.getState( );
+		}
+		
+		public String getAutoscalingGroup(){
+		  return this.zone.getAutoscalingGroup();
 		}
 
 		public static NonNullFunction<LoadBalancerZoneCoreView,String> name( ) {
@@ -256,6 +275,7 @@ public class LoadBalancerZone extends AbstractPersistent {
 				Entities.initialize( zone.loadbalancer );
 				loadbalancer = zone.loadbalancer;
 			}
+			
 			if(zone.backendInstances!=null)
 				this.backendInstances = ImmutableList.copyOf(Collections2.transform(zone.backendInstances, LoadBalancerBackendInstanceCoreViewTransform.INSTANCE));
 			

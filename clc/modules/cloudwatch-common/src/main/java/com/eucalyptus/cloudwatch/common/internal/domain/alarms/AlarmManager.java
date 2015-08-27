@@ -51,6 +51,7 @@ import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.cloudwatch.common.internal.domain.InvalidTokenException;
+import com.eucalyptus.entities.TransactionResource;
 import net.sf.json.JSONObject;
 
 import org.apache.log4j.Logger;
@@ -96,19 +97,13 @@ import com.google.common.collect.Sets;
 public class AlarmManager {
   private static final Logger LOG = Logger.getLogger(AlarmManager.class);
   public static Long countMetricAlarms(String accountId) {
-    EntityTransaction db = Entities.get(AlarmEntity.class);
-    try {
+    try (final TransactionResource db = Entities.transactionFor(AlarmEntity.class)) {
       Criteria criteria = Entities.createCriteria(AlarmEntity.class);
       criteria = criteria.setProjection(Projections.rowCount());
       if (accountId != null) {
         criteria = criteria.add( Restrictions.eq( "accountId" , accountId ) );
       }
       return (Long) criteria.uniqueResult();
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      db.rollback();
     }
   }
   public static void putMetricAlarm(String accountId, Boolean actionsEnabled,
@@ -128,9 +123,8 @@ public class AlarmManager {
     AlarmEntity alarmEntity = new AlarmEntity();
     alarmEntity.setAccountId(accountId);
     alarmEntity.setAlarmName(alarmName);
-    EntityTransaction db = Entities.get(AlarmEntity.class);
-    boolean inDb = false;
-    try {
+    try (final TransactionResource db = Entities.transactionFor(AlarmEntity.class)) {
+      boolean inDb = false;
       Criteria criteria = Entities.createCriteria(AlarmEntity.class)
           .add( Restrictions.eq( "accountId" , accountId ) )
           .add( Restrictions.eq( "alarmName" , alarmName ) );
@@ -189,12 +183,6 @@ public class AlarmManager {
             HistoryItemType.ConfigurationUpdate, "Alarm \"" + alarmName + "\" updated", now);
       }
       db.commit();
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      if (db.isActive())
-        db.rollback();
     }
   }
 
@@ -202,8 +190,7 @@ public class AlarmManager {
       String historyData, HistoryItemType historyItemType, String historySummary,
       Date now) {
     if (now == null) now = new Date();
-    EntityTransaction db = Entities.get(AlarmHistory.class);
-    try {
+    try (final TransactionResource db = Entities.transactionFor(AlarmHistory.class)) {
       AlarmHistory alarmHistory = new AlarmHistory();
       alarmHistory.setAccountId(accountId);
       alarmHistory.setAlarmName(alarmName);
@@ -213,12 +200,6 @@ public class AlarmManager {
       alarmHistory.setTimestamp(now);
       Entities.persist(alarmHistory);
       db.commit();
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      if (db.isActive())
-        db.rollback();
     }
   }
   
@@ -347,8 +328,7 @@ public class AlarmManager {
   ) {
     final Map<String,Collection<String>> accountToNamesMap =
         buildAccountIdToAlarmNamesMap( accountId, alarmNames );
-    final EntityTransaction db = Entities.get( AlarmEntity.class );
-    try {
+    try (final TransactionResource db = Entities.transactionFor(AlarmEntity.class)) {
       final Criteria criteria = Entities.createCriteria(AlarmEntity.class);
       final Junction disjunction = Restrictions.disjunction();
       for ( final Map.Entry<String,Collection<String>> entry : accountToNamesMap.entrySet( ) ) {
@@ -367,12 +347,6 @@ public class AlarmManager {
       CollectionUtils.each( alarmEntities, update );
       db.commit();
       return true;
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      if (db.isActive())
-        db.rollback();
     }
   }
 
@@ -405,8 +379,7 @@ public class AlarmManager {
       final StateValue stateValue,
       final Predicate<CloudWatchMetadata.AlarmMetadata> filter
   ) throws AlarmNotFoundException {
-    final EntityTransaction db = Entities.get(AlarmEntity.class);
-    try {
+    try (final TransactionResource db = Entities.transactionFor(AlarmEntity.class)) {
       AlarmEntity alarmEntity = (AlarmEntity) Entities.createCriteria( AlarmEntity.class )
           .add( Restrictions.eq( "accountId" , accountId ) )
           .add( Restrictions.eq( "alarmName" , alarmName ) )
@@ -431,12 +404,6 @@ public class AlarmManager {
         AlarmManager.executeActions(alarmEntity, newState, true, evaluationDate);
       }
       db.commit();
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      if (db.isActive())
-        db.rollback();
     }
   }
 
@@ -451,8 +418,7 @@ public class AlarmManager {
                 final Predicate<? super CloudWatchMetadata.AlarmMetadata> filter
   ) throws InvalidTokenException {
     final List<AlarmEntity> results = Lists.newArrayList();
-    final EntityTransaction db = Entities.get(AlarmEntity.class);
-    try {
+    try (final TransactionResource db = Entities.transactionFor(AlarmEntity.class)) {
       boolean first = true;
       String token = nextToken;
       while ( token != null || first ) {
@@ -493,12 +459,6 @@ public class AlarmManager {
             alarmEntities.get(alarmEntities.size() - 1).getNaturalId();
       }
       db.commit();
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      if (db.isActive())
-        db.rollback();
     }
     return results;
   }
@@ -515,8 +475,7 @@ public class AlarmManager {
     @Nonnull  final Predicate<? super CloudWatchMetadata.AlarmMetadata> filter
   ) {
     final List<AlarmEntity> results = Lists.newArrayList();
-    final EntityTransaction db = Entities.get(AlarmEntity.class);
-    try {
+    try (final TransactionResource db = Entities.transactionFor(AlarmEntity.class)) {
       final Criteria criteria = Entities.createCriteria(AlarmEntity.class);
       if (accountId != null) {
         criteria.add( Restrictions.eq( "accountId" , accountId ) );
@@ -558,12 +517,6 @@ public class AlarmManager {
       final List<AlarmEntity> alarmEntities = (List<AlarmEntity>) criteria.list();
       Iterables.addAll( results, Iterables.filter( alarmEntities, filter ) );
       db.commit();
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      if (db.isActive())
-        db.rollback();
     }
     return results;
   }
@@ -578,8 +531,7 @@ public class AlarmManager {
       @Nullable final String nextToken,
       final Predicate<AlarmHistory> filter ) throws InvalidTokenException {
     final List<AlarmHistory> results = Lists.newArrayList();
-    final EntityTransaction db = Entities.get(AlarmHistory.class);
-    try {
+    try (final TransactionResource db = Entities.transactionFor(AlarmHistory.class)) {
       final Map<String,Collection<String>> accountToNamesMap = alarmName == null ?
           Collections.<String,Collection<String>>emptyMap( ) :
           buildAccountIdToAlarmNamesMap( accountId, Collections.singleton( alarmName ) );
@@ -615,12 +567,6 @@ public class AlarmManager {
             alarmHistoryEntities.get(alarmHistoryEntities.size() - 1).getNaturalId();
       }
       db.commit();
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      if (db.isActive())
-        db.rollback();
     }
     return results;
   }
@@ -630,18 +576,11 @@ public class AlarmManager {
    * @param before the date to delete before (inclusive)
    */
   public static void deleteAlarmHistory(Date before) {
-    EntityTransaction db = Entities.get(AlarmHistory.class);
-    try {
+    try (final TransactionResource db = Entities.transactionFor(AlarmHistory.class)) {
       Map<String, Date> criteria = Maps.newHashMap();
       criteria.put("before", before);
       Entities.deleteAllMatching(AlarmHistory.class, "WHERE timestamp < :before", criteria);
       db.commit();
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      if (db.isActive())
-        db.rollback();
     }
   }
 

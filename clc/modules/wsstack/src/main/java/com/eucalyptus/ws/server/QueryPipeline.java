@@ -24,9 +24,13 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+
+import com.eucalyptus.ws.Handlers;
+import com.eucalyptus.ws.handlers.MessageStackHandler;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.net.URLCodec;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
@@ -73,55 +77,55 @@ public abstract class QueryPipeline extends FilteredPipeline {
 
   @Override
   public ChannelPipeline addHandlers( final ChannelPipeline pipeline ) {
+    pipeline.addLast( "aggregator", Handlers.newQueryHttpChunkAggregator());
+    pipeline.addLast( "parse-query-parameters",new MessageStackHandler( ){
+      @Override
+      public void incomingMessage( final MessageEvent event ) throws Exception {
+        if ( event.getMessage( ) instanceof  MappingHttpRequest ) {
+          final MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
+          if ( httpRequest.getMethod( ).equals( HttpMethod.POST ) ) {
+            final Map<String, String> parameters = new HashMap<String, String>( httpRequest.getParameters( ) );
+            final Set<String> nonQueryParameters = Sets.newHashSet( );
+            final String query = httpRequest.getContentAsString( true );
+            for ( String p : query.split( "&" ) ) {
+              String[] splitParam = p.split( "=", 2 );
+              String lhs = splitParam[ 0 ];
+              String rhs = splitParam.length == 2 ? splitParam[ 1 ] : null;
+              try {
+                if ( lhs != null ) lhs = new URLCodec( ).decode( lhs );
+              } catch ( DecoderException e ) {
+              }
+              try {
+                if ( rhs != null ) rhs = new URLCodec( ).decode( rhs );
+              } catch ( DecoderException e ) {
+              }
+              parameters.put( lhs, rhs );
+              nonQueryParameters.add( lhs );
+            }
+            httpRequest.getParameters( ).putAll( parameters );
+            httpRequest.addNonQueryParameterKeys( nonQueryParameters );
+          }
+        }
+      }
+    } );
     getAuthenticationStage( ).unrollStage( pipeline );
     return null;
   }
 
   @Override
   public boolean checkAccepts( final HttpRequest message ) {
-    if ( message instanceof MappingHttpRequest) {
+    if ( message instanceof MappingHttpRequest && !message.getHeaderNames().contains( "SOAPAction" )) {
       final MappingHttpRequest httpRequest = ( MappingHttpRequest ) message;
       final boolean usesServicePath = Iterables.any( servicePathPrefixes, Strings.isPrefixOf( message.getUri( ) ) );
       final boolean noPath = message.getUri( ).isEmpty( ) || message.getUri( ).equals( "/" ) || message.getUri( ).startsWith( "/?" );
       if ( !usesServicePath && !( noPath && resolvesByHost( message.getHeader( HttpHeaders.Names.HOST ) ) ) ) {
         return false;
       }
-      if ( httpRequest.getMethod( ).equals( HttpMethod.POST ) && !message.getHeaderNames().contains( "SOAPAction" ) ) {
-        Map<String,String> parameters = new HashMap<String,String>( httpRequest.getParameters( ) );
-        Set<String> nonQueryParameters = Sets.newHashSet();
-        final String query = httpRequest.getContentAsString( );
-        for ( String p : query.split( "&" ) ) {
-          String[] splitParam = p.split( "=", 2 );
-          String lhs = splitParam[0];
-          String rhs = splitParam.length == 2 ? splitParam[1] : null;
-          try {
-            if( lhs != null ) lhs = new URLCodec().decode(lhs);
-          } catch ( DecoderException e ) {}
-          try {
-            if( rhs != null ) rhs = new URLCodec().decode(rhs);
-          } catch ( DecoderException e ) {}
-          parameters.put( lhs, rhs );
-          nonQueryParameters.add( lhs );
-        }
-        for ( RequiredQueryParams p : requiredQueryParams ) {
-          if ( !parameters.containsKey( p.toString( ) ) ) {
-            return false;
-          }
-        }
-        httpRequest.getParameters( ).putAll( parameters );
-        httpRequest.addNonQueryParameterKeys( nonQueryParameters );
-      } else {
-        for ( RequiredQueryParams p : requiredQueryParams ) {
-          if ( !httpRequest.getParameters( ).containsKey( p.toString( ) ) ) {
-            return false;
-          }
-        }
-      }
       return true;
+    }  else {
+      return false;
     }
-    return false;
   }
-
   @Override
   public String getName( ) {
     return name;

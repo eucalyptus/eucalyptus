@@ -557,7 +557,8 @@ public class VmTypes {
         vmTypeInfo.setEphemeral( 0, "sdb", diskSize - imgSize, "none" );
       } else if( !ImageManager.isPathAPartition( img.getRootDeviceName() ) ){
         vmTypeInfo = VmTypes.InstanceStoreLinuxHvmVmTypeInfoMapper.INSTANCE.apply(vmType);
-        vmTypeInfo.setEphemeral( 0, "sdb", diskSize - imgSize, "ext3" );
+        if (diskSize - imgSize > 0)
+          vmTypeInfo.setEphemeral( 0, "sdb", diskSize - imgSize, "ext3" );
       } else {
         vmTypeInfo = VmTypes.InstanceStoreVmTypeInfoMapper.INSTANCE.apply( vmType );
         long ephemeralSize = diskSize - imgSize - SWAP_SIZE_BYTES;

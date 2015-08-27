@@ -67,6 +67,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
@@ -75,9 +76,12 @@ import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
+import com.eucalyptus.empyrean.ServiceAccount;
 import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.NonNullFunction;
@@ -107,7 +111,7 @@ public class ServiceConfigurations {
   static Logger LOG = Logger.getLogger( ServiceConfigurations.class );
   
   public static <T extends ServiceConfiguration> List<ServiceConfiguration> list( ) throws PersistenceException {
-    Predicate<ServiceConfiguration> alwaysTrue = Predicates.alwaysTrue( );
+    Predicate<ServiceConfiguration> alwaysTrue = Predicates.alwaysTrue();
     return Lists.newArrayList( filter( alwaysTrue ) );
   }
   
@@ -211,7 +215,35 @@ public class ServiceConfigurations {
   public static Function<ServiceConfiguration, ServiceStatusType> asServiceStatus( ) {
     return asServiceStatus( false, false );
   }
-  
+
+  public static enum ServiceConfigurationToServiceAccounts implements Function<ServiceConfiguration, ArrayList<ServiceAccount>> {
+    INSTANCE;
+    public ArrayList<ServiceAccount> apply(ServiceConfiguration conf) {
+      if(conf.getComponentId().getPublicComponentAccounts().isPresent()) {
+        return Lists.newArrayList(Iterables.transform(conf.getComponentId().getPublicComponentAccounts().get(), new Function<UserPrincipal, ServiceAccount>() {
+          @Nullable
+          @Override
+          public ServiceAccount apply(@Nullable UserPrincipal userPrincipal) {
+            if(userPrincipal != null) {
+              try {
+                return new ServiceAccount(userPrincipal.getAccountAlias(),
+                                          userPrincipal.getAccountNumber(),
+                                          userPrincipal.getCanonicalId());
+              } catch(Exception e) {
+                LOG.warn("Exception looking up account info for system account number: " + userPrincipal.getAccountNumber(), e);
+                return null;
+              }
+            } else {
+              return null;
+            }
+          }
+        }));
+      } else {
+        return null;
+      }
+    }
+  }
+
   public static Function<ServiceConfiguration, ServiceStatusType> asServiceStatus( final boolean showEvents, final boolean showEventStacks ) {
     return new Function<ServiceConfiguration, ServiceStatusType>( ) {
       
@@ -239,6 +271,16 @@ public class ServiceConfigurations {
                   a.setStackTrace( "" );
                 }
               }
+            }
+
+            //Populate the system accounts
+            try {
+              List<ServiceAccount> accnts = ServiceConfigurationToServiceAccounts.INSTANCE.apply(config);
+              if(accnts != null && accnts.size() > 0) {
+                this.getServiceAccounts().addAll(accnts);
+              }
+            } catch (Exception e) {
+              LOG.warn("Failed finding service account for service: " + config.getName(), e);
             }
           }
         };
@@ -352,9 +394,12 @@ public class ServiceConfigurations {
           this.setType( config.getComponentId( ).name( ) );
           this.setFullName( config.getFullName().toString() );
           if ( config.isVmLocal( ) ) {
-            this.setServiceUri( ServiceUris.remote( config.getComponentId( ), maphost( Internets.localHostInetAddress( ) ) ) );
+            this.setServiceUri(ServiceUris.remote(config.getComponentId(),
+                                                  maphost(Internets.localHostInetAddress())));
           } else {
-            this.setServiceUri( ServiceUris.remote( config.getComponentId( ), maphost( config.getInetAddress( ) ), config.getPort( ) ) );
+            this.setServiceUri(ServiceUris.remote(config.getComponentId(),
+                                                  maphost(config.getInetAddress()),
+                                                  config.getPort()));
           }
         }
       };

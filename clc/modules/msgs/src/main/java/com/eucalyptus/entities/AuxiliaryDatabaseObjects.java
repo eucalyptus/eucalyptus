@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,24 +17,20 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.postgresql;
+package com.eucalyptus.entities;
 
-import net.sf.hajdbc.dialect.Dialect;
-import net.sf.hajdbc.dialect.DialectFactory;
-
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  *
  */
-public class PostgreSQLDialectFactory implements DialectFactory { 
+@Target( ElementType.TYPE )
+@Retention( RetentionPolicy.RUNTIME)
+public @interface AuxiliaryDatabaseObjects {
 
-  @Override
-  public String getId( ) {
-    return "eucalyptus-postgresql";
-  }
+  AuxiliaryDatabaseObject[] value( );
 
-  @Override
-  public Dialect createDialect() {
-    return new PostgreSQLDialect( );
-  }
 }

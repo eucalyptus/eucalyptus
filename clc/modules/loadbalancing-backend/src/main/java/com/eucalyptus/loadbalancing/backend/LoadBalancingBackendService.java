@@ -37,6 +37,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.EntityNotFoundException;
 import javax.persistence.OptimisticLockException;
+import javax.persistence.RollbackException;
 
 import org.apache.log4j.Logger;
 
@@ -490,6 +491,9 @@ public class LoadBalancingBackendService {
     final LoadBalancerServoDescriptions lbDescs = new LoadBalancerServoDescriptions( );
     lbDescs.getMember().addAll( descs.asSet( ) );
     reply.getDescribeLoadBalancersResult( ).setLoadBalancerDescriptions( lbDescs );
+    reply.getServoResponseMetadata().setGetLBInterval(Integer.parseInt(LoadBalancingServoCache.LB_POLL_INTERVAL));
+    reply.getServoResponseMetadata().setPutMetricInterval(Integer.parseInt(LoadBalancingServoCache.CW_PUT_INTERVAL));
+    reply.getServoResponseMetadata().setPutInstanceHealthInterval(Integer.parseInt(LoadBalancingServoCache.BACKEND_INSTANCE_UPDATE_INTERVAL));
     reply.set_return(true);
     return reply;
   }
@@ -550,32 +554,51 @@ public class LoadBalancingBackendService {
 					  break;
 				  }  
 			  }
+
+			  if (found == null)
+			    continue;
 			  
 			  boolean stateChanged = false;
-			  if(found!=null && !state.equals(found.getState().name()))
+			  if(!state.equals(found.getState().name()))
 			    stateChanged = true;
-
-			  try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
-			    final LoadBalancerBackendInstance update = Entities.uniqueResult(
-			        LoadBalancerBackendInstance.named(lb, found.getInstanceId()));
-			    update.setState(Enum.valueOf(LoadBalancerBackendInstance.STATE.class, state));
-			    if(state.equals(LoadBalancerBackendInstance.STATE.OutOfService.name())){
-			      update.setReasonCode("Instance");
-			      update.setDescription("Instance has failed at least the UnhealthyThreshold number of health checks consecutively.");
-			    }else{
-			      update.setReasonCode("");
-			      update.setDescription("");
+			  
+			  boolean outdated = false;
+			  final Date lastUpdate = found.instanceStateLastUpdated();
+			  if(lastUpdate != null) {
+			    final int healthyTimeoutSec = lb.getHealthCheckInterval() * lb.getHealthyThreshold();
+			    final long expireMs = lastUpdate.getTime() + healthyTimeoutSec*1000;
+			    if (System.currentTimeMillis() > expireMs) {
+			      outdated = true;
 			    }
-			    update.updateInstanceStateTimestamp();
-			    Entities.persist(update);
-			    db.commit();
-			    if (stateChanged) {
-			      LoadBalancingServoCache.getInstance().invalidate(lb);
-			    } 
-			  }catch(final NoSuchElementException ex){
-			    LOG.error("unable to find the loadbancer backend instance", ex);
-			  }catch(final Exception ex){
-			    LOG.error("unable to update the state of loadbalancer backend instance", ex);
+			  }else
+			    outdated = true;
+			  
+			  if( stateChanged || outdated) {
+			    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
+	          final LoadBalancerBackendInstance update = Entities.merge(found);
+	          update.setState(Enum.valueOf(LoadBalancerBackendInstance.STATE.class, state));
+			      if(state.equals(LoadBalancerBackendInstance.STATE.OutOfService.name())){
+			        update.setReasonCode("Instance");
+			        update.setDescription("Instance has failed at least the UnhealthyThreshold number of health checks consecutively.");
+			      }else{
+			        update.setReasonCode("");
+			        update.setDescription("");
+			      }
+			      update.updateInstanceStateTimestamp();
+			      db.commit();
+			      if (stateChanged) {
+			        LoadBalancingServoCache.getInstance().invalidate(lb);
+			      } else if (outdated) {
+			        // invalidating cache is too costly
+			        LoadBalancingServoCache.getInstance().replaceBackendInstance(servoId, found, update);
+			      }
+			    }catch(final RollbackException ex) {
+			      ;
+			    }catch(final NoSuchElementException ex){
+			      LOG.error("unable to find the loadbancer backend instance", ex);
+			    }catch(final Exception ex){
+			      LOG.error("unable to update the state of loadbalancer backend instance", ex);
+			    }
 			  }
 		  }
 	  }
@@ -603,7 +626,12 @@ public class LoadBalancingBackendService {
 	      LOG.error("Failed to add ELB cloudwatch metric", ex);
 	    }
 	  }
-	  return reply;
+	  
+	  reply.getServoResponseMetadata().setGetLBInterval(Integer.parseInt(LoadBalancingServoCache.LB_POLL_INTERVAL));
+    reply.getServoResponseMetadata().setPutMetricInterval(Integer.parseInt(LoadBalancingServoCache.CW_PUT_INTERVAL));
+    reply.getServoResponseMetadata().setPutInstanceHealthInterval(Integer.parseInt(LoadBalancingServoCache.BACKEND_INSTANCE_UPDATE_INTERVAL));
+    reply.set_return(true);
+    return reply;
   }
  
   public CreateLoadBalancerResponseType createLoadBalancer(
@@ -817,18 +845,6 @@ public class LoadBalancingBackendService {
       }
     };
 
-    if(zones != null && zones.size()>0){
-      try{
-        LoadBalancers.addZone( lbName, ctx, zones, zoneToSubnetIdMap );
-      }catch(LoadBalancingException ex){
-        rollback.apply(lbName);
-        throw ex;
-      }catch(Exception ex){
-        rollback.apply(lbName);
-        throw new InternalFailure400Exception("Failed to persist the zone");
-      }
-    }
-
     Entities.evictCache( LoadBalancer.class );
 
     /// trigger new loadbalancer event 
@@ -862,6 +878,25 @@ public class LoadBalancingBackendService {
         // ideally, we should rollback the whole loadbalancer creation pipeline
         final String reason = e.getCause() != null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
         throw new InternalFailure400Exception(String.format("Failed to setup the listener: %s", reason), e);
+      }
+    }
+    
+    if ( !zones.isEmpty()) {
+      try{
+        EnabledZoneEvent evt = new EnabledZoneEvent();
+        evt.setLoadBalancer(lbName);
+        evt.setLoadBalancerAccountNumber( lb.getOwnerAccountNumber( ) );
+        evt.setZones(zones);
+        evt.setZoneToSubnetIdMap(zoneToSubnetIdMap);
+        evt.setContext(ctx);
+        ActivityManager.getInstance().fire(evt);
+      }catch(final Exception ex) {
+        LOG.error("failed to enable availability zones", ex);
+        // rollback.apply(lbName);
+        // TODO: this will leave the loadbalancer, which  will not be functional.
+        // ideally, we should rollback the whole loadbalancer creation pipeline
+        final String reason = ex.getCause() != null && ex.getCause().getMessage()!=null ? ex.getCause().getMessage() : "internal error";
+        throw new InternalFailure400Exception(String.format("Failed to enable ELB's availability zones: %s", reason), ex);
       }
     }
     
@@ -1788,7 +1823,9 @@ public class LoadBalancingBackendService {
 	List<LoadBalancerBackendInstanceCoreView> instancesFound;
 	List<LoadBalancerBackendInstanceCoreView> stateOutdated= Lists.newArrayList();
 	
-	final int healthyTimeoutSec = 3*(lb.getHealthCheckInterval() * lb.getHealthyThreshold());
+	int healthyTimeoutSec = lb.getHealthCheckInterval() * lb.getHealthyThreshold();
+	final int UPDATE_INTERVAL =Integer.parseInt(LoadBalancingServoCache.BACKEND_INSTANCE_UPDATE_INTERVAL); 
+	healthyTimeoutSec = Math.max(3*healthyTimeoutSec, 3*UPDATE_INTERVAL);
 	long currentTime = System.currentTimeMillis();
 	
  	if(instances != null && instances.getMember()!= null && instances.getMember().size()>0){

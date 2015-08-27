@@ -153,6 +153,10 @@ public class Subnets extends ServiceJarDiscovery {
   public static Subnet create( String subnet, String netmask ) throws UnknownHostException {
     return new Subnet( InetAddress.getByName( subnet ), InetAddress.getByName( netmask ) );
   }
+
+  public static Cidr cidr( String subnet, String netmask ) throws UnknownHostException {
+    return new Subnet( InetAddress.getByName( subnet ), InetAddress.getByName( netmask ) ).toCidr( );
+  }
   
   private static class Subnet {
     private final InetAddress            subnet;
@@ -215,7 +219,10 @@ public class Subnets extends ServiceJarDiscovery {
     public Predicate<InetAddress> getPredicate( ) {
       return this.predicate;
     }
-    
+
+    public Cidr toCidr( ) {
+      return Cidr.of( networkId, prefix );
+    }
   }
   
   @SuppressWarnings( "unchecked" )
