@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -93,17 +93,14 @@ import javax.persistence.Version;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
-import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.NaturalId;
 import org.hibernate.annotations.Type;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
@@ -190,7 +187,6 @@ public class Faults {
     @Temporal( TemporalType.TIMESTAMP )
     @Column( name = "last_update_timestamp" )
     Date                          lastUpdateTimestamp;
-    @NaturalId
     @Column( name = "metadata_perm_uuid",
              unique = true,
              updatable = false,

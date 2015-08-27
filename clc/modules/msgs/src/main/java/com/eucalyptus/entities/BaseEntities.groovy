@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,8 +62,6 @@
 
 package com.eucalyptus.entities;
 
-import java.io.Serializable
-import java.util.Date
 import javax.persistence.Column
 import javax.persistence.GeneratedValue
 import javax.persistence.Id
@@ -75,7 +73,6 @@ import javax.persistence.TemporalType
 import javax.persistence.Transient
 import javax.persistence.Version
 import org.hibernate.annotations.GenericGenerator
-import org.hibernate.annotations.NaturalId
 import com.eucalyptus.util.HasNaturalId
 
 
@@ -97,7 +94,6 @@ public class AbstractPersistent implements Serializable, HasNaturalId {
   @Temporal(TemporalType.TIMESTAMP)
   @Column(name = "last_update_timestamp")
   Date lastUpdateTimestamp;
-  @NaturalId
   @Column( name = "metadata_perm_uuid", unique = true, updatable = false, nullable = false )
   private String   naturalId;
   

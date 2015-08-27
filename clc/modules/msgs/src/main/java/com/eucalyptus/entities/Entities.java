@@ -662,13 +662,15 @@ public class Entities {
   private static <T> T maybeNaturalId( final T example ) throws HibernateException, NoSuchElementException {
     final String natId = ( ( HasNaturalId ) example ).getNaturalId( );
     @SuppressWarnings( "unchecked" )
-    final T ret = ( T ) Entities.getTransaction( example ).getTxState( )
+    final T ret = ( T ) Entities.getTransaction( example )
+                                .getTxState( )
                                 .getSession( )
-                                .byNaturalId( example.getClass( ) )
-                                .using( "naturalId", natId )
-                                .load( );
+                                .createCriteria( example.getClass( ) )
+                                .add( Restrictions.eq( "naturalId", natId ) )
+                                .setCacheable( true )         
+                                .uniqueResult( );
     if ( ret == null ) {
-      throw new NoSuchElementException( "@NaturalId: " + natId );
+      throw new NoSuchElementException( "NaturalId: " + natId );
     }
     return ret;
   }
