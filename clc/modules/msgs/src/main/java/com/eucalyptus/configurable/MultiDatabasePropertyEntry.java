@@ -68,7 +68,6 @@ import java.lang.reflect.Modifier;
 import javax.persistence.Entity;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.NaturalId;
 import com.eucalyptus.util.Classes;
 
 public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty implements ConfigurableProperty {
@@ -159,11 +158,6 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
       for ( Class ancestor : Classes.classAncestors( c ) ) {
         for ( Field field : ancestor.getDeclaredFields( ) ) {
           if ( field.isAnnotationPresent( ConfigurableIdentifier.class ) ) {
-            return field;
-          }
-        }
-        for ( Field field : c.getFields( ) ) {
-          if ( field.isAnnotationPresent( NaturalId.class ) ) {
             return field;
           }
         }
