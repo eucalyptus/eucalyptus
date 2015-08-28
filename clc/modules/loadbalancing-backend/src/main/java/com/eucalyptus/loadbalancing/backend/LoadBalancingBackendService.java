@@ -2421,6 +2421,10 @@ public class LoadBalancingBackendService {
       throw new InternalFailure400Exception(String.format("Failed to apply security groups to loadbalancer: %s", reason), e);
     }
 
+    reply.getApplySecurityGroupsToLoadBalancerResult( ).setSecurityGroups( 
+        new SecurityGroups( Collections2.transform( groups, SecurityGroupItemType.groupId( ) ) ) 
+    );
+    
     return reply;
   }
   
