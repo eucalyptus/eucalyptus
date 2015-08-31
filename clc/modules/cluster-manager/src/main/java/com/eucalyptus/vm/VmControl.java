@@ -825,7 +825,7 @@ public class VmControl {
         final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
         for ( final SecurityGroupIdSetItemType groupIdItemType : request.getGroupIdSet( ).getItem( ) ) try {
           final String groupId = ResourceIdentifiers.tryNormalize().apply( groupIdItemType.getGroupId( ) );
-          final NetworkGroup networkGroup = NetworkGroups.lookupByGroupId( accountFullName, groupId );
+          final NetworkGroup networkGroup = NetworkGroups.lookupByGroupId( ctx.isAdministrator( ) ? null : accountFullName, groupId );
           if ( !RestrictedTypes.filterPrivileged( ).apply( networkGroup ) ) {
             throw new IllegalAccessException( "Not authorized to access security group " + groupId + " for " + ctx.getUserFullName( ) );
           }
