@@ -1641,7 +1641,7 @@ public class LoadBalancingBackendService {
     // check for a default VPC
     final Optional<VpcType> vpcOptional = EucalyptusActivityTasks.getInstance( ).defaultVpc( ctx.getAccount() );
     final Map<String,String> zoneToSubnetIdMap = Maps.newHashMap( );
-    if ( vpcOptional.isPresent( ) && Objects.equals( lb.getVpcId( ), vpcOptional.get( ) ) ) {
+    if ( vpcOptional.isPresent( ) && Objects.equals( lb.getVpcId( ), vpcOptional.get( ).getVpcId() ) ) {
       final List<SubnetType> subnets = EucalyptusActivityTasks.getInstance( ).describeSubnetsByZone( lb.getVpcId( ), true, requestedZones );
       CollectionUtils.putAll( subnets, zoneToSubnetIdMap, SubnetType.zone( ), SubnetType.id( ) );
       if ( requestedZones.size( ) != zoneToSubnetIdMap.size( ) ) {
@@ -1696,6 +1696,19 @@ public class LoadBalancingBackendService {
 	  if( !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
 		  throw new AccessPointNotFoundException();
 	  }
+	  
+	  // check for a default VPC
+    final Optional<VpcType> vpcOptional = EucalyptusActivityTasks.getInstance( ).defaultVpc( ctx.getAccount() );
+    final Map<String,String> zoneToSubnetIdMap = Maps.newHashMap( );
+    if ( vpcOptional.isPresent( ) && Objects.equals( lb.getVpcId( ), vpcOptional.get( ).getVpcId() ) ) {
+      final List<SubnetType> subnets = EucalyptusActivityTasks.getInstance( ).describeSubnetsByZone( lb.getVpcId( ), true, zones );
+      CollectionUtils.putAll( subnets, zoneToSubnetIdMap, SubnetType.zone( ), SubnetType.id( ) );
+      if ( zones.size( ) != zoneToSubnetIdMap.size( ) ) {
+        throw new InvalidConfigurationRequestException( "Cannot disable zone for VPC loadbalancer, default subnet not found." );
+      }
+    } else if ( lb.getVpcId( ) != null ) {
+      throw new InvalidConfigurationRequestException( "Cannot disable zone for VPC loadbalancer" );
+    }
 
 	  if(zones != null && zones.size()>0){
 		 try{
@@ -2488,9 +2501,29 @@ public class LoadBalancingBackendService {
       final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
       throw new InternalFailure400Exception(String.format("Failed to enable zones: %s", reason),e );
     }
-
+    
+    final List<String> attachedSubnets = Lists.newArrayList();
+    try{
+      final LoadBalancer lbEntity = LoadBalancers.getLoadbalancer( ctx, lbName );
+      attachedSubnets.addAll(
+          Collections2.transform(Collections2.filter(lbEntity.getZones(), new Predicate<LoadBalancerZoneCoreView>() {
+            @Override
+            public boolean apply(LoadBalancerZoneCoreView zone) {
+              return LoadBalancerZone.STATE.InService.equals(zone.getState()) 
+                  && zoneToSubnetIdMap.containsKey(zone.getName());
+            } 
+          }), new Function<LoadBalancerZoneCoreView, String> () {
+            @Override
+            public String apply(LoadBalancerZoneCoreView zone) {
+              return zoneToSubnetIdMap.get(zone.getName());
+            } })
+          );
+    }catch(final Exception ex) {
+      ;
+    }
+    
     final Subnets replySubnets = new Subnets( );
-    replySubnets.getMember().addAll( zoneToSubnetIdMap.values( ) );
+    replySubnets.getMember().addAll( attachedSubnets );
     reply.getAttachLoadBalancerToSubnetsResult( ).setSubnets( replySubnets );
     return reply;
   }
@@ -2541,20 +2574,28 @@ public class LoadBalancingBackendService {
       }
     }
 
-    List<String> availableZones = Lists.newArrayList();
+    final List<String> attachedSubnets = Lists.newArrayList();
     try{
-      final LoadBalancer updatedLb = LoadBalancers.getLoadbalancer(ctx, lbName);
-      availableZones = Lists.transform(LoadBalancers.findZonesInService(updatedLb), new Function<LoadBalancerZoneCoreView, String>(){
-        @Override
-        public String apply(@Nullable LoadBalancerZoneCoreView arg0) {
-          return arg0.getName();
-        }
-      });
-    }catch(Exception ex){
+      final LoadBalancer lbEntity = LoadBalancers.getLoadbalancer( ctx, lbName );
+      attachedSubnets.addAll(
+          Collections2.transform(Collections2.filter(lbEntity.getZones(), new Predicate<LoadBalancerZoneCoreView>() {
+            @Override
+            public boolean apply(LoadBalancerZoneCoreView zone) {
+              return LoadBalancerZone.STATE.InService.equals(zone.getState()) 
+                  && zoneToSubnetIdMap.containsKey(zone.getName());
+            } 
+          }), new Function<LoadBalancerZoneCoreView, String> () {
+            @Override
+            public String apply(LoadBalancerZoneCoreView zone) {
+              return zoneToSubnetIdMap.get(zone.getName());
+            } })
+          );
+    }catch(final Exception ex) {
+      ;
     }
 
     final Subnets replySubnets = new Subnets( );
-    replySubnets.getMember().addAll( zoneToSubnetIdMap.values( ) );
+    replySubnets.getMember().addAll( attachedSubnets );
     reply.getDetachLoadBalancerFromSubnetsResult( ).setSubnets( replySubnets );
     return reply;
   }
