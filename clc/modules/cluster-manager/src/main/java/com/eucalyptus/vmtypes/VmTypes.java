@@ -91,6 +91,7 @@ import com.eucalyptus.compute.common.internal.vmtypes.EphemeralDisk;
 import com.eucalyptus.compute.common.internal.vmtypes.VmType;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
 import com.eucalyptus.compute.common.internal.images.BootableImageInfo;
@@ -116,7 +117,11 @@ public class VmTypes {
   private static Logger LOG = Logger.getLogger( VmTypes.class );
   @ConfigurableField( description = "Default type used when no instance type is specified for run instances.",
                       initial = "m1.small" )
-  public static String         DEFAULT_TYPE_NAME        = "m1.small";         //TODO:GRZE:@Configurable
+  public static String         DEFAULT_TYPE_NAME        = "m1.small";
+
+  @ConfigurableField( description = "Format first ephemeral disk by defaut with ext3", initial = "true",
+      changeListener = PropertyChangeListeners.IsBoolean.class)
+  public static Boolean        FORMAT_EPHEMERAL_STORAGE = true;
   @Deprecated
   //GRZE: this and all its references must be removed to complete the vm type support
   protected static final Long  SWAP_SIZE_BYTES          = 512 * 1024l * 1024l; // swap is hardcoded at 512MB for now
@@ -558,7 +563,8 @@ public class VmTypes {
       } else if( !ImageManager.isPathAPartition( img.getRootDeviceName() ) ){
         vmTypeInfo = VmTypes.InstanceStoreLinuxHvmVmTypeInfoMapper.INSTANCE.apply(vmType);
         if (diskSize - imgSize > 0)
-          vmTypeInfo.setEphemeral( 0, "sdb", diskSize - imgSize, "ext3" );
+          vmTypeInfo.setEphemeral( 0, "sdb", diskSize - imgSize,
+              FORMAT_EPHEMERAL_STORAGE ? EphemeralDisk.Format.ext3.toString() : EphemeralDisk.Format.none.toString() );
       } else {
         vmTypeInfo = VmTypes.InstanceStoreVmTypeInfoMapper.INSTANCE.apply( vmType );
         long ephemeralSize = diskSize - imgSize - SWAP_SIZE_BYTES;
@@ -573,7 +579,8 @@ public class VmTypes {
                                               * 1024l
                                               + "MB]" );
         }
-        vmTypeInfo.setEphemeral( 0, "sda2", ephemeralSize, "ext3" );
+        vmTypeInfo.setEphemeral( 0, "sda2", ephemeralSize,
+            FORMAT_EPHEMERAL_STORAGE ? EphemeralDisk.Format.ext3.toString() : EphemeralDisk.Format.none.toString());
       }
     } else if ( img instanceof BlockStorageImageInfo ) { // bfEBS
       vmTypeInfo = VmTypes.BlockStorageVmTypeInfoMapper.INSTANCE.apply( vmType );

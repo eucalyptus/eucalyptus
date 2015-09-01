@@ -85,7 +85,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define LOG_FILE_PERM                        0660   //!< Backing file default permission
+#define LOG_FILE_PERM                        0640   //!< Backing file default permission
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
