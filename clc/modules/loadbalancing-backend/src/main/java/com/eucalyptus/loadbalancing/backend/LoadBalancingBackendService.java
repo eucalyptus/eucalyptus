@@ -2393,6 +2393,13 @@ public class LoadBalancingBackendService {
             if ( loadBalancer.getVpcId( ) == null ) {
               throw Exceptions.toUndeclared( new InvalidConfigurationRequestException( "VPC only" ) );
             }
+            
+            for(final SecurityGroupItemType group : groups) {
+              if (!loadBalancer.getVpcId( ).equals(group.getVpcId()))
+                  throw Exceptions.toUndeclared(new InvalidConfigurationRequestException( 
+                      String.format("Security group \"%s\" does not belong to VPC \"%s\"", group.getGroupId(), loadBalancer.getVpcId())));
+            }
+
             final List<SecurityGroupItemType> sortedGroups =
                 Ordering.natural( ).onResultOf( SecurityGroupItemType.groupId( ) ).sortedCopy( groups );
             loadBalancer.setSecurityGroupRefs( Lists.newArrayList( Iterables.transform(
