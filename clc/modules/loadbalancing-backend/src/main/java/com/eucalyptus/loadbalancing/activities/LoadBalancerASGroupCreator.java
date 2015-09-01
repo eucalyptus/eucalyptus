@@ -55,6 +55,7 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.ImageDetails;
 import com.eucalyptus.compute.common.ResourceTag;
+import com.eucalyptus.compute.common.VmTypeDetails;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
@@ -76,6 +77,7 @@ import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.SecurityGrou
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.TagCreator;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
 import com.eucalyptus.resources.client.Ec2Client;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -187,12 +189,123 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
     }
 	}
 	
+	private static class AsyncPropertyChanger implements Callable<Boolean> {
+	  private String emi = null;
+	  private String instanceType = null;
+	  private String keyname = null;
+	  private String initScript = null;
+	
+	  private AsyncPropertyChanger (final String emi, final String instanceType,
+	      final String keyname, String initScript) {
+	    this.emi = emi;
+	    this.instanceType = instanceType;
+	    this.keyname = keyname;
+	    this.initScript = initScript;
+	  }
+	  
+    @Override
+    public synchronized Boolean call() throws Exception {
+      final List<LoadBalancer> lbs = LoadBalancers.listLoadbalancers();
+      for(final LoadBalancer lb : lbs){
+        final Collection<LoadBalancerAutoScalingGroupCoreView> groups = lb.getAutoScaleGroups();
+        for(final LoadBalancerAutoScalingGroupCoreView asg : groups) {
+          if(asg==null || asg.getName()==null)
+            continue;
+
+          final String asgName = asg.getName();
+          try{
+            AutoScalingGroupType asgType = null;
+            try{
+              final DescribeAutoScalingGroupsResponseType resp = 
+                  EucalyptusActivityTasks.getInstance().describeAutoScalingGroups(Lists.newArrayList(asgName), lb.useSystemAccount());
+
+              if(resp.getDescribeAutoScalingGroupsResult() != null && 
+                  resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups()!=null &&
+                  resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember()!=null &&
+                  resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember().size()>0){
+                asgType = resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember().get(0);
+              }
+            }catch(final Exception ex){
+              LOG.warn("can't find autoscaling group named "+asgName);
+              continue;
+            }
+            if(asgType!=null){
+              final String lcName = asgType.getLaunchConfigurationName();
+              final LaunchConfigurationType lc =          
+                  EucalyptusActivityTasks.getInstance().describeLaunchConfiguration(lcName, lb.useSystemAccount());
+
+              String launchConfigName;
+              do{
+                launchConfigName = String.format("lc-euca-internal-elb-%s-%s-%s", 
+                    lb.getOwnerAccountNumber(), lb.getDisplayName(), UUID.randomUUID().toString().substring(0, 8));
+
+                if(launchConfigName.length()>255)
+                  launchConfigName = launchConfigName.substring(0, 255);
+              }while(launchConfigName.equals(asgType.getLaunchConfigurationName()));
+
+              final String newEmi = emi != null? emi : lc.getImageId();
+              final String newType = instanceType != null? instanceType : lc.getInstanceType();
+              String newKeyname = keyname != null ? keyname : lc.getKeyName();
+
+              final String newUserdata = B64.standard.encString(String.format(
+                  "%s\n%s",
+                  getCredentialsString(),
+                  getLoadBalancerUserData(initScript, lb.getOwnerAccountNumber())));
+
+              try{
+                EucalyptusActivityTasks.getInstance().createLaunchConfiguration(newEmi, newType, lc.getIamInstanceProfile(), 
+                    launchConfigName, lc.getSecurityGroups().getMember(), newKeyname, newUserdata,
+                    lc.getAssociatePublicIpAddress( ), lb.useSystemAccount() );
+              }catch(final Exception ex){
+                throw new EucalyptusCloudException("failed to create new launch config", ex);
+              }
+              try{
+                EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(asgName, null,asgType.getDesiredCapacity(), launchConfigName, lb.useSystemAccount());
+              }catch(final Exception ex){
+                throw new EucalyptusCloudException("failed to update the autoscaling group", ex);
+              }
+              try{
+                EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration(asgType.getLaunchConfigurationName(), lb.useSystemAccount());
+              }catch(final Exception ex){
+                LOG.warn("unable to delete the old launch configuration", ex);
+              } 
+              // copy all tags from new image to ASG
+              if ( emi != null) {
+                try {
+                  final List<ImageDetails> images =
+                      EucalyptusActivityTasks.getInstance().describeImagesWithVerbose(Lists.newArrayList(emi));
+                  // image should exist at this point
+                  for(ResourceTag tag:images.get(0).getTagSet()){
+                    EucalyptusActivityTasks.getInstance().createOrUpdateAutoscalingTags(tag.getKey(), tag.getValue(), asgName, lb.useSystemAccount());
+                  }
+                } catch (final Exception ex) {
+                  LOG.warn("unable to propogate tags from image to ASG", ex);
+                }
+              }
+              LOG.debug(String.format("autoscaling group '%s' was updated", asgName));
+            }
+          }catch(final EucalyptusCloudException ex){
+            LOG.error("Failed to apply ELB property changes", ex);
+            return false;
+          }catch(final Exception ex){
+            LOG.error("Failed to apply ELB property changes", ex);
+            return false;
+          }
+        } // for all autoscaling groups of LB
+      } // for all LBs      
+      return true;
+    }
+	}
+	
 	private static void onPropertyChange(final String emi, final String instanceType,
 	    final String keyname, String initScript) throws EucalyptusCloudException{
 	  if (!( Bootstrap.isFinished() && Topology.isEnabled( Compute.class ) ) )
 			return;
 		
 		// should validate the parameters
+
+    // keyname is validated by caller
+    // validate image id
 		if(emi!=null){
 			try{
 				final List<ImageDetails> images =
@@ -207,99 +320,30 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 				throw new EucalyptusCloudException("Failed to verify EMI in the system");
 			}
 		}
-		// keyname is validated by caller
+		// validate instance type
+		if(instanceType!=null){
+		  try{
+		    final List<VmTypeDetails> vmTypes =
+		        EucalyptusActivityTasks.getInstance().describeInstanceTypes(Lists.newArrayList(instanceType));
+		    if(vmTypes.size()<=0)
+		      throw new EucalyptusCloudException("Invalid instance type -- " + instanceType);
+		  }catch(final EucalyptusCloudException ex){
+        throw ex;
+      }catch(final Exception ex) {
+		    throw new EucalyptusCloudException("Failed to verify instance type -- " + instanceType);
+		  }
+		}
+		
+		//
 		if( !Topology.isEnabledLocally( LoadBalancingBackend.class ) )
-		  return;
-
+		  throw new EucalyptusCloudException("Internal error");
+		
+		
 		if ((emi!=null && emi.length()>0) ||
 		      (instanceType!=null && instanceType.length()>0) ||
 		      (keyname!=null) || (initScript != null) ){
-			final List<LoadBalancer> lbs = LoadBalancers.listLoadbalancers();
-			for(final LoadBalancer lb : lbs){
-			  final Collection<LoadBalancerAutoScalingGroupCoreView> groups = lb.getAutoScaleGroups();
-			  for(final LoadBalancerAutoScalingGroupCoreView asg : groups) {
-			    if(asg==null || asg.getName()==null)
-			      continue;
-
-			    final String asgName = asg.getName();
-			    try{
-			      AutoScalingGroupType asgType = null;
-			      try{
-			        final DescribeAutoScalingGroupsResponseType resp = 
-			            EucalyptusActivityTasks.getInstance().describeAutoScalingGroups(Lists.newArrayList(asgName), lb.useSystemAccount());
-
-			        if(resp.getDescribeAutoScalingGroupsResult() != null && 
-			            resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups()!=null &&
-			            resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember()!=null &&
-			            resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember().size()>0){
-			          asgType = resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember().get(0);
-			        }
-			      }catch(final Exception ex){
-			        LOG.warn("can't find autoscaling group named "+asgName);
-			        continue;
-			      }
-			      if(asgType!=null){
-			        final String lcName = asgType.getLaunchConfigurationName();
-			        final LaunchConfigurationType lc = 					
-			            EucalyptusActivityTasks.getInstance().describeLaunchConfiguration(lcName, lb.useSystemAccount());
-
-			        String launchConfigName;
-			        do{
-			          launchConfigName = String.format("lc-euca-internal-elb-%s-%s-%s", 
-			              lb.getOwnerAccountNumber(), lb.getDisplayName(), UUID.randomUUID().toString().substring(0, 8));
-
-			          if(launchConfigName.length()>255)
-			            launchConfigName = launchConfigName.substring(0, 255);
-			        }while(launchConfigName.equals(asgType.getLaunchConfigurationName()));
-
-			        final String newEmi = emi != null? emi : lc.getImageId();
-			        final String newType = instanceType != null? instanceType : lc.getInstanceType();
-			        String newKeyname = keyname != null ? keyname : lc.getKeyName();
-
-			        final String newUserdata = B64.standard.encString(String.format(
-			            "%s\n%s",
-			            getCredentialsString(),
-			            getLoadBalancerUserData(initScript, lb.getOwnerAccountNumber())));
-
-			        try{
-			          EucalyptusActivityTasks.getInstance().createLaunchConfiguration(newEmi, newType, lc.getIamInstanceProfile(), 
-			              launchConfigName, lc.getSecurityGroups().getMember(), newKeyname, newUserdata,
-			              lc.getAssociatePublicIpAddress( ), lb.useSystemAccount() );
-			        }catch(final Exception ex){
-			          throw new EucalyptusCloudException("failed to create new launch config", ex);
-			        }
-			        try{
-			          EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(asgName, null,asgType.getDesiredCapacity(), launchConfigName, lb.useSystemAccount());
-			        }catch(final Exception ex){
-			          throw new EucalyptusCloudException("failed to update the autoscaling group", ex);
-			        }
-			        try{
-			          EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration(asgType.getLaunchConfigurationName(), lb.useSystemAccount());
-			        }catch(final Exception ex){
-			          LOG.warn("unable to delete the old launch configuration", ex);
-			        }	
-			        // copy all tags from new image to ASG
-			        if ( emi != null) {
-			          try {
-			            final List<ImageDetails> images =
-			                EucalyptusActivityTasks.getInstance().describeImagesWithVerbose(Lists.newArrayList(emi));
-			            // image should exist at this point
-			            for(ResourceTag tag:images.get(0).getTagSet()){
-			              EucalyptusActivityTasks.getInstance().createOrUpdateAutoscalingTags(tag.getKey(), tag.getValue(), asgName, lb.useSystemAccount());
-			            }
-			          } catch (final Exception ex) {
-			            LOG.warn("unable to propogate tags from image to ASG", ex);
-			          }
-			        }
-			        LOG.debug(String.format("autoscaling group '%s' was updated", asgName));
-			      }
-			    }catch(final EucalyptusCloudException ex){
-			      throw ex;
-			    }catch(final Exception ex){
-			      throw new EucalyptusCloudException("Unable to update the autoscaling group", ex);
-			    }
-			  } // for all autoscaling groups of LB
-			} // for all LBs
+		  Threads.enqueue(LoadBalancingBackend.class, LoadBalancerASGroupCreator.class, 1, 
+		      new AsyncPropertyChanger(emi, instanceType, keyname, initScript));
 		}
 	}
 

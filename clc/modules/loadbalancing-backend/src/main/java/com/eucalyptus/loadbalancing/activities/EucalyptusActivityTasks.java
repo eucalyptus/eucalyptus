@@ -92,6 +92,8 @@ import com.eucalyptus.compute.common.ComputeMessage;
 import com.eucalyptus.compute.common.DeleteResourceTag;
 import com.eucalyptus.compute.common.DescribeImagesResponseType;
 import com.eucalyptus.compute.common.DescribeImagesType;
+import com.eucalyptus.compute.common.DescribeInstanceTypesResponseType;
+import com.eucalyptus.compute.common.DescribeInstanceTypesType;
 import com.eucalyptus.compute.common.DescribeInstancesResponseType;
 import com.eucalyptus.compute.common.DescribeInstancesType;
 import com.eucalyptus.compute.common.DescribeInternetGatewaysResponseType;
@@ -120,6 +122,7 @@ import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.compute.common.SubnetIdSetItemType;
 import com.eucalyptus.compute.common.SubnetIdSetType;
 import com.eucalyptus.compute.common.SubnetType;
+import com.eucalyptus.compute.common.VmTypeDetails;
 import com.eucalyptus.compute.common.VpcType;
 import com.eucalyptus.compute.common.backend.AuthorizeSecurityGroupIngressType;
 import com.eucalyptus.compute.common.backend.CreateSecurityGroupResponseType;
@@ -832,6 +835,14 @@ public class EucalyptusActivityTasks {
 		);
 	}
 	
+	public List<VmTypeDetails> describeInstanceTypes(final List<String> instanceTypes) {
+	  return resultOf(
+	      new EucaDescribeInstanceTypesTask(instanceTypes),
+	      new ComputeSystemActivity(),
+	      "failed to describe instance types"
+	      );
+	}
+	
 	public List<ImageDetails> describeImagesWithVerbose(final List<String> imageIds){
 	  final List<String> idsWithVerbose = Lists.newArrayList(imageIds);
 	  idsWithVerbose.add("verbose");
@@ -877,6 +888,30 @@ public class EucalyptusActivityTasks {
 			final DescribeImagesResponseType resp = (DescribeImagesResponseType) response;
 			return resp.getImagesSet();
 		}
+	}
+	
+	private class EucaDescribeInstanceTypesTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<VmTypeDetails>> {
+	  private List<String> instanceTypes = Lists.newArrayList();
+	  
+	  private EucaDescribeInstanceTypesTask() {
+	  }
+	  
+	  private EucaDescribeInstanceTypesTask(final List<String> instanceTypes) {
+	    this.instanceTypes.addAll(instanceTypes);
+	  }
+	  
+    @Override
+    List<VmTypeDetails> extractResult(ComputeMessage response) {
+      final DescribeInstanceTypesResponseType resp = (DescribeInstanceTypesResponseType) response;
+      return resp.getInstanceTypeDetails();
+    }
+
+    @Override
+    DescribeInstanceTypesType getRequest() {
+      final DescribeInstanceTypesType req = new DescribeInstanceTypesType();
+      req.setInstanceTypes((ArrayList<String>) instanceTypes);
+      return req;
+    }
 	}
 	
 	private class EucaDeleteTagsTask extends EucalyptusActivityTask<ComputeMessage, Eucalyptus>{
