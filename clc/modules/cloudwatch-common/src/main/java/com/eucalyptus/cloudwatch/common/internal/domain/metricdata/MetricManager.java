@@ -127,8 +127,8 @@ public class MetricManager {
           for (MetricEntity me : dataBatchPartial) {
             numOperations++;
             if (numOperations % METRIC_DATA_NUM_DB_OPERATIONS_UNTIL_SESSION_FLUSH == 0) {
-              Entities.flushSession(me);
-              Entities.clearSession(me);
+              Entities.flushSession(c);
+              Entities.clearSession(c);
             }
             Entities.persist(me);
           }
