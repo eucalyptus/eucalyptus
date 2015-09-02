@@ -92,7 +92,7 @@ public class StorageProperties {
   public static final long KB = 1024;
   public static final String iface = "eth0";
   public static final int MAX_TOTAL_VOLUME_SIZE = 500;
-  public static final int MAX_VOLUME_SIZE = 30;
+  public static final int MAX_VOLUME_SIZE = 100;
   public static int TRANSFER_CHUNK_SIZE = 8192;
   public static final boolean zeroFillVolumes = false;
   public static final long timeoutInMillis = 10000;
