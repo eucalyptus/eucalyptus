@@ -3102,17 +3102,6 @@ int ruleconvert(char *rulebuf, char *outrule)
             strncat(newrule, buf, 2048);
         }
 
-        if (strlen(sourceowner) && strlen(sourcegroup)) {
-            char ug[64], *chainhash = NULL;
-            snprintf(ug, 64, "%s-%s", sourceowner, sourcegroup);
-            hash_b64enc_string(ug, &chainhash);
-            if (chainhash) {
-                snprintf(buf, 2048, "-m set --set EU_%s src ", chainhash);
-                strncat(newrule, buf, 2048);
-                EUCA_FREE(chainhash);
-            }
-        }
-
         //Only allow port ranges for tcp and udp
         if ((TCP_PROTOCOL_NUMBER == protocol_number || UDP_PROTOCOL_NUMBER == protocol_number) && strlen(portrange)) {
             snprintf(buf, 2048, "--dport %s ", portrange);
