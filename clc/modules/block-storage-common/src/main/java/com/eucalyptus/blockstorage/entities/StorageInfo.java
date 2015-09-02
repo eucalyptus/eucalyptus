@@ -363,7 +363,7 @@ public class StorageInfo extends AbstractPersistent {
       maxTotalVolumeSizeInGb = StorageProperties.MAX_TOTAL_VOLUME_SIZE;
     }
     if (maxVolumeSizeInGB == null) {
-      maxVolumeSizeInGB = StorageProperties.MAX_TOTAL_VOLUME_SIZE;
+      maxVolumeSizeInGB = StorageProperties.MAX_VOLUME_SIZE;
     }
     if (shouldTransferSnapshots == null) {
       shouldTransferSnapshots = DEFAULT_SHOULD_TRANSFER_SNAPSHOTS;
