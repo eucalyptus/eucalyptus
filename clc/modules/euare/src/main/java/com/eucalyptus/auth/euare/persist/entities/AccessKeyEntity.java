@@ -62,8 +62,10 @@
 
 package com.eucalyptus.auth.euare.persist.entities;
 
+import static com.eucalyptus.upgrade.Upgrades.Version.v4_2_0;
 import java.io.Serializable;
 import java.util.Date;
+import java.util.concurrent.Callable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -73,11 +75,16 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Index;
 import com.eucalyptus.auth.util.Identifiers;
+import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.upgrade.Upgrades;
+import groovy.sql.Sql;
 
 /**
  * Database secret key entity.
@@ -96,7 +103,7 @@ public class AccessKeyEntity extends AbstractPersistent implements Serializable 
   Boolean active;
   
   // The Access Key ID
-  @Column( name = "auth_access_key_query_id" )
+  @Column( name = "auth_access_key_query_id", unique = true  )
   String accessKey;
   // The SECRET key
   @Column( name = "auth_access_key_key" )
@@ -108,6 +115,7 @@ public class AccessKeyEntity extends AbstractPersistent implements Serializable 
   
   // The owning user
   @ManyToOne( fetch = FetchType.LAZY )
+  @Index( name = "auth_access_key_owning_user_idx" )
   @JoinColumn( name = "auth_access_key_owning_user" )
   UserEntity user;
   
@@ -204,5 +212,26 @@ public class AccessKeyEntity extends AbstractPersistent implements Serializable 
   public void setUser( UserEntity user ) {
     this.user = user;
   }
-  
+
+  @Upgrades.PreUpgrade( value = Euare.class, since = v4_2_0 )
+  public static class AccessKeyPreUpgrade420 implements Callable<Boolean> {
+    private static final Logger logger = Logger.getLogger( AccessKeyPreUpgrade420.class );
+
+    @Override
+    public Boolean call( ) throws Exception {
+      Sql sql = null;
+      try {
+        sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection("eucalyptus_auth");
+        sql.execute( "alter table auth_access_key add constraint uk_8n6ryppss5fpcb09w867acb1w unique ( auth_access_key_query_id )" );
+        return true;
+      } catch (Exception ex) {
+        logger.error( ex, ex );
+        return false;
+      } finally {
+        if (sql != null) {
+          sql.close();
+        }
+      }
+    }
+  }
 }

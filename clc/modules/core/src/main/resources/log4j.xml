@@ -77,58 +77,65 @@
       <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%C.%M(%F):%L] %m%n" />
     </layout>
   </appender>
-  <appender name="console-log" class="org.apache.log4j.RollingFileAppender">
+  <appender name="console-log" class="com.eucalyptus.util.PermissionedRollingFileAppender">
     <param name="Threshold" value="${euca.log.level}" />
     <param name="File" value="${euca.log.dir}/cloud-output.log" />
     <param name="MaxFileSize" value="10MB" />
     <param name="MaxBackupIndex" value="10" />
+    <param name="Permissions" value="rw-r-----" />
     <layout class="com.eucalyptus.system.EucaLayout" />
   </appender>
-  <appender name="tracking-log-file" class="org.apache.log4j.RollingFileAppender">
+  <appender name="tracking-log-file" class="com.eucalyptus.util.PermissionedRollingFileAppender">
     <param name="Threshold" value="${euca.log.level}" />
     <param name="File" value="${euca.log.dir}/cloud-tracking.log" />
     <param name="MaxFileSize" value="10MB" />
     <param name="MaxBackupIndex" value="10" />
+    <param name="Permissions" value="rw-r-----" />
     <layout class="com.eucalyptus.system.RequestTrackingLayout" /> 
   </appender>
-  <appender name="cloud-debug-file" class="org.apache.log4j.RollingFileAppender">
+  <appender name="cloud-debug-file" class="com.eucalyptus.util.PermissionedRollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-debug.log" />
     <param name="MaxFileSize" value="10MB" />
     <param name="MaxBackupIndex" value="10" />
+    <param name="Permissions" value="rw-r-----" />
     <layout class="org.apache.log4j.PatternLayout">
       <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%t] %m%n" />
     </layout>
   </appender>
-  <appender name="cloud-error-file" class="org.apache.log4j.RollingFileAppender">
+  <appender name="cloud-error-file" class="com.eucalyptus.util.PermissionedRollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-error.log" />
     <param name="MaxFileSize" value="10MB" />
     <param name="MaxBackupIndex" value="10" />
     <param name="Threshold" value="ERROR" />
+    <param name="Permissions" value="rw-r-----" />
     <layout class="org.apache.log4j.PatternLayout">
       <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%t] [%C.%M(%F):%L] %m%n" />
     </layout>
   </appender>
-  <appender name="cloud-cluster-file" class="org.apache.log4j.RollingFileAppender">
+  <appender name="cloud-cluster-file" class="com.eucalyptus.util.PermissionedRollingFileAppender">
     <param name="Threshold" value="${euca.log.level}" />
     <param name="File" value="${euca.log.dir}/cloud-cluster.log" />
     <param name="MaxFileSize" value="10MB" />
     <param name="MaxBackupIndex" value="10" />
+    <param name="Permissions" value="rw-r-----" />
     <layout class="com.eucalyptus.system.EucaLayout" />
   </appender>
-  <appender name="cloud-exhaust-file" class="org.apache.log4j.RollingFileAppender">
+  <appender name="cloud-exhaust-file" class="com.eucalyptus.util.PermissionedRollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-exhaust.log" />
     <param name="MaxFileSize" value="10MB" />
     <param name="MaxBackupIndex" value="2" />
     <param name="Threshold" value="${euca.exhaust.level}" />
+    <param name="Permissions" value="rw-r-----" />
     <layout class="org.apache.log4j.PatternLayout">
       <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%c:%t] %m%n" />
     </layout>
   </appender>
-  <appender name="cloud-extreme-file" class="org.apache.log4j.RollingFileAppender">
+  <appender name="cloud-extreme-file" class="com.eucalyptus.util.PermissionedRollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-extreme.log" />
     <param name="MaxFileSize" value="10MB" />
     <param name="MaxBackupIndex" value="10" />
     <param name="Threshold" value="${euca.exhaust.level}" />
+    <param name="Permissions" value="rw-r-----" />
     <layout class="org.apache.log4j.PatternLayout">
       <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%c:%t] %m%n" />
     </layout>

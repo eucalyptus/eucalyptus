@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -77,7 +77,6 @@ import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.NaturalId;
 import com.eucalyptus.bootstrap.CanBootstrap;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Component.State;
@@ -92,6 +91,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableIdentifier;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.auth.principal.FullName;
@@ -112,7 +112,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
 
   @Column( name = "config_component_partition" )
   private String            partition;
-  @NaturalId
+  @ConfigurableIdentifier
   @Column( name = "config_component_name", updatable = false, unique = true, nullable = false )
   private String            name;
   @ConfigurableField( description = "Address which the cloud controller should use to contact this service.", displayName = "Host name", readonly = true )

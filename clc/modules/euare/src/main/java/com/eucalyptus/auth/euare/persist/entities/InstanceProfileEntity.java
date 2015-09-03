@@ -22,6 +22,7 @@ package com.eucalyptus.auth.euare.persist.entities;
 import java.io.Serializable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
@@ -58,12 +59,14 @@ public class InstanceProfileEntity extends AbstractPersistent implements Seriali
   @Column( name = "auth_instance_profile_path", nullable = false )
   private String path;
 
-  @ManyToOne
+  @ManyToOne( fetch = FetchType.LAZY )
+  @Index( name = "auth_instance_profile_role_idx" )
   @JoinColumn( name = "auth_instance_profile_role", nullable = true )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private RoleEntity role;
 
   @ManyToOne
+  @Index( name = "auth_instance_profile_owning_account_idx" )
   @JoinColumn( name = "auth_instance_profile_owning_account", nullable = false )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private AccountEntity account;

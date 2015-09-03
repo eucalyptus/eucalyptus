@@ -64,6 +64,7 @@
 
 package com.eucalyptus.vm.dns;
 
+import static com.eucalyptus.vm.VmInstances.INSTANCE_SUBDOMAIN;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.NoSuchElementException;
@@ -74,7 +75,6 @@ import org.xbill.DNS.Name;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.dns.DomainNames;
-import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -198,20 +198,7 @@ public enum InstanceDomainNames implements Function<Name, InetAddress> {
   public abstract Name get( );
   
   private static Name lookupInstanceSubdomainProperty( ) {
-    return Name.fromConstantString( VmInstances.INSTANCE_SUBDOMAIN.replaceFirst( "^\\.", "" ) );
-  }
-  
-  /**
-   * This is an existence check and not an attempt to access the state
-   */
-  public static boolean isInstance( InetAddress ip ) {
-    try {
-      return
-          VmInstances.privateIpInUse( ip.getHostAddress( ) ) ||
-          VmInstances.lookupByPublicIp( ip.getHostAddress( ) ) != null;//this is an existence check and not an attempt to access the state
-    } catch ( NoSuchElementException ex1 ) {
-      return false;
-    }
+    return Name.fromConstantString( INSTANCE_SUBDOMAIN.replaceFirst( "^\\.", "" ) );
   }
   
   /**

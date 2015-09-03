@@ -194,8 +194,7 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 	@ConfigurableField( description = "Fault id last used to trigger test", initial = "", changeListener = TriggerFaultListener.class, displayName = "trigger.fault" )
 	public static String TRIGGER_FAULT = "";
 
-	// TODO: figure out how to link initial value to System.property("euca.log.level")
-	@ConfigurableField(description = "Log level for dynamic override.", initial = "", changeListener = LogLevelListener.class, displayName = "euca.log.level")
+	@ConfigurableField(description = "Log level for dynamic override.", initial = "INFO", changeListener = LogLevelListener.class, displayName = "euca.log.level")
 	public static String EUCA_LOG_LEVEL = Logs.isExtrrreeeme() ? "EXTREME" : System.getProperty("euca.log.level", "");
 
 }

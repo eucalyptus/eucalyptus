@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -71,6 +71,7 @@ import org.apache.log4j.Logger;
 import org.apache.ws.security.WSConstants;
 import org.apache.ws.security.WSEncryptionPart;
 import org.jboss.netty.channel.ChannelHandler;
+import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.component.auth.SystemCredentials;
@@ -115,6 +116,14 @@ public class InternalWsSecHandler extends WsSecHandler {
       }
       
       Contexts.lookup( ( ( MappingHttpMessage ) o ).getCorrelationId( ) ).setUser( Principals.systemUser() );
+    }
+  }
+
+  @Override
+  public void outgoingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) {
+    final Object o = event.getMessage( );
+    if ( o instanceof MappingHttpRequest ) {
+      super.outgoingMessage( ctx, event );
     }
   }
 }
