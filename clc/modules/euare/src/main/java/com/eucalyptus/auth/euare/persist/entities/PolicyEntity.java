@@ -65,6 +65,7 @@ package com.eucalyptus.auth.euare.persist.entities;
 import java.io.Serializable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
@@ -103,13 +104,13 @@ public class PolicyEntity extends AbstractPersistent implements Serializable {
   String text;
   
   // The owning group
-  @ManyToOne
+  @ManyToOne( fetch = FetchType.LAZY  )
   @Index( name = "auth_policy_owning_group_idx" )
   @JoinColumn( name = "auth_policy_owning_group" )
   GroupEntity group;
 
   // The owning role
-  @ManyToOne
+  @ManyToOne( fetch = FetchType.LAZY )
   @Index( name = "auth_policy_owning_role_idx" )
   @JoinColumn( name = "auth_policy_owning_role" )
   RoleEntity role;
