@@ -100,6 +100,8 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.criterion.Criterion;
+import org.hibernate.criterion.Projection;
+import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.auth.Accounts;
@@ -232,7 +234,19 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public static Criterion criterion( VmState... state ) {
     return Restrictions.in( "state", state );
   }
+  
+  public static Criterion zoneCriterion( String... zone ) {
+    return Restrictions.in( "placement.partitionName", zone );
+  }
+  
+  public static Criterion nonNullNodeCriterion( ) {
+    return Restrictions.isNotNull( "runtimeState.serviceTag" );  
+  }
 
+  public static Projection instanceIdProjection( ) {
+    return Projections.property( "displayName" );
+  }
+  
   /**
    *
    */
