@@ -21,11 +21,12 @@ package com.eucalyptus.auth.euare.persist.entities;
 
 import static com.eucalyptus.upgrade.Upgrades.Version.v4_2_0;
 import java.io.Serializable;
-import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
@@ -78,13 +79,13 @@ public class RoleEntity extends AbstractPersistent implements Serializable {
 
   @OneToMany( cascade = CascadeType.ALL, mappedBy = "role" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private List<PolicyEntity> policies;
+  private Set<PolicyEntity> policies;
 
   @OneToMany( mappedBy = "role" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private List<InstanceProfileEntity> instanceProfiles;
+  private Set<InstanceProfileEntity> instanceProfiles;
 
-  @ManyToOne
+  @ManyToOne( fetch = FetchType.LAZY )
   @Index( name = "auth_role_owning_account_idx" )
   @JoinColumn( name = "auth_role_owning_account", nullable = false )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -141,19 +142,19 @@ public class RoleEntity extends AbstractPersistent implements Serializable {
     this.assumeRolePolicy = assumeRolePolicy;
   }
 
-  public List<PolicyEntity> getPolicies() {
+  public Set<PolicyEntity> getPolicies() {
     return policies;
   }
 
-  public void setPolicies( final List<PolicyEntity> policies ) {
+  public void setPolicies( final Set<PolicyEntity> policies ) {
     this.policies = policies;
   }
 
-  public List<InstanceProfileEntity> getInstanceProfiles() {
+  public Set<InstanceProfileEntity> getInstanceProfiles() {
     return instanceProfiles;
   }
 
-  public void setInstanceProfiles( final List<InstanceProfileEntity> instanceProfiles ) {
+  public void setInstanceProfiles( final Set<InstanceProfileEntity> instanceProfiles ) {
     this.instanceProfiles = instanceProfiles;
   }
 

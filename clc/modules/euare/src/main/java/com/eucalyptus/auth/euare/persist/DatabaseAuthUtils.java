@@ -62,6 +62,7 @@
 
 package com.eucalyptus.auth.euare.persist;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -75,7 +76,6 @@ import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.euare.principal.EuareAccountScopedPrincipal;
-import com.eucalyptus.auth.principal.AccountScopedPrincipal;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.Entities;
@@ -203,7 +203,7 @@ public class DatabaseAuthUtils {
     return removeNamedPolicy( group.getPolicies(), name );
   }
 
-  public static PolicyEntity removeNamedPolicy( List<PolicyEntity> policyEntities, String name ) throws Exception {
+  public static PolicyEntity removeNamedPolicy( Collection<PolicyEntity> policyEntities, String name ) throws Exception {
     PolicyEntity policy = null;
     for ( PolicyEntity p : policyEntities ) {
       if ( name.equals( p.getName( ) ) ) {

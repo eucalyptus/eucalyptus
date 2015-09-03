@@ -64,7 +64,7 @@ package com.eucalyptus.auth.euare.persist.entities;
 
 import static com.eucalyptus.upgrade.Upgrades.Version.v4_2_0;
 import java.io.Serializable;
-import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Callable;
 
 import javax.persistence.CascadeType;
@@ -92,7 +92,7 @@ import com.eucalyptus.entities.AuxiliaryDatabaseObject;
 import com.eucalyptus.entities.AuxiliaryDatabaseObjects;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.upgrade.Upgrades;
-import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import groovy.sql.Sql;
 
 /**
@@ -120,7 +120,7 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
   private static final long serialVersionUID = 1L;
 
   // The Group ID: the user facing group id which conforms to length and character restrictions per spec.
-  @Column( name = "auth_group_id_external" )
+  @Column( name = "auth_group_id_external", unique = true )
   String groupId;
 
   // Group name, not unique since different accounts can have the same group name
@@ -143,12 +143,12 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
   @ManyToMany( fetch = FetchType.LAZY )
   @JoinTable( name = "auth_group_has_users", joinColumns = { @JoinColumn( name = "auth_group_id" ) }, inverseJoinColumns = @JoinColumn( name = "auth_user_id" ) )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  List<UserEntity> users;
+  Set<UserEntity> users;
 
   // Policies for the group
   @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "group" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  List<PolicyEntity> policies;
+  Set<PolicyEntity> policies;
   
   // The owning account
   @ManyToOne( fetch = FetchType.LAZY )
@@ -158,8 +158,8 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
   AccountEntity account;
   
   public GroupEntity( ) {
-    this.users = Lists.newArrayList( );
-    this.policies = Lists.newArrayList( );
+    this.users = Sets.newHashSet( );
+    this.policies = Sets.newHashSet( );
   }
   
   public GroupEntity( final String accountId, final String name ) {
@@ -246,11 +246,11 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
     this.userGroup = userGroup;
   }
   
-  public List<PolicyEntity> getPolicies( ) {
+  public Set<PolicyEntity> getPolicies( ) {
     return this.policies;
   }
   
-  public List<UserEntity> getUsers( ) {
+  public Set<UserEntity> getUsers( ) {
     return this.users;
   }
 
@@ -267,10 +267,11 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
       Sql sql = null;
       try {
         sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection("eucalyptus_auth");
+        sql.execute( "alter table auth_group add constraint uk_4ns2wloivviwxjbx7jeg5ip31 unique ( auth_group_id_external )" );
         sql.execute( "create index auth_group_users_user_idx on auth_group_has_users ( auth_user_id )" );
         sql.execute( "create index auth_group_users_group_idx on auth_group_has_users ( auth_group_id )" );
       } catch (Exception ex) {
-        logger.error( "Error creating indexes for user to group relations", ex );
+        logger.error( "Error creating group indexes", ex );
       } finally {
         if (sql != null) {
           sql.close();

@@ -64,6 +64,7 @@ package com.eucalyptus.auth.euare.persist.entities;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Set;
 import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -114,7 +115,7 @@ public class AccountEntity extends AbstractPersistent implements Serializable {
   // Groups for this account
   @OneToMany( fetch = FetchType.LAZY, mappedBy = "account" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  List<GroupEntity> groups;
+  Set<GroupEntity> groups;
 
   public AccountEntity( ) {
   }
