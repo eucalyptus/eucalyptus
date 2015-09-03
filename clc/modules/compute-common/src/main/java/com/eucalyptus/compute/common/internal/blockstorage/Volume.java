@@ -78,6 +78,7 @@ import javax.persistence.Transient;
 
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Index;
 import org.hibernate.annotations.Type;
 
 import com.eucalyptus.auth.principal.UserFullName;
@@ -92,6 +93,11 @@ import com.eucalyptus.auth.principal.OwnerFullName;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_volumes" )
+@org.hibernate.annotations.Table( appliesTo = "metadata_volumes", indexes = {
+    @Index( name = "metadata_volumes_user_id_idx", columnNames = "metadata_user_id" ),
+    @Index( name = "metadata_volumes_account_id_idx", columnNames = "metadata_account_id" ),
+    @Index( name = "metadata_volumes_display_name_idx", columnNames = "metadata_display_name" ),
+} )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Volume extends UserMetadata<State> implements VolumeMetadata {
   public  static final String ID_PREFIX = "vol";

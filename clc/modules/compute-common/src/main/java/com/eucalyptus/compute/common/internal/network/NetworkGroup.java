@@ -92,6 +92,7 @@ import javax.persistence.Table;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Index;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.compute.common.CloudMetadata.NetworkGroupMetadata;
 import com.eucalyptus.component.ComponentIds;
@@ -118,6 +119,11 @@ import groovy.sql.Sql;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_group" )
+@org.hibernate.annotations.Table( appliesTo = "metadata_network_group", indexes = {
+    @Index( name = "metadata_network_group_user_id_idx", columnNames = "metadata_user_id" ),
+    @Index( name = "metadata_network_group_account_id_idx", columnNames = "metadata_account_id" ),
+    @Index( name = "metadata_network_group_display_name_idx", columnNames = "metadata_display_name" ),
+} )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements NetworkGroupMetadata {
   private static final long   serialVersionUID = 1L;

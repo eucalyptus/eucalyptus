@@ -37,6 +37,7 @@ import javax.persistence.PostLoad;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Index;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import com.eucalyptus.component.ComponentIds;
@@ -54,6 +55,11 @@ import com.google.common.collect.Sets;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_interfaces" )
+@org.hibernate.annotations.Table( appliesTo = "metadata_network_interfaces", indexes = {
+    @Index( name = "metadata_network_interfaces_user_id_idx", columnNames = "metadata_user_id" ),
+    @Index( name = "metadata_network_interfaces_account_id_idx", columnNames = "metadata_account_id" ),
+    @Index( name = "metadata_network_interfaces_display_name_idx", columnNames = "metadata_display_name" ),
+} )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class NetworkInterface extends UserMetadata<NetworkInterface.State> implements NetworkInterfaceMetadata {
 

@@ -31,6 +31,7 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Index;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.auth.principal.OwnerFullName;
 
@@ -40,6 +41,10 @@ import com.eucalyptus.auth.principal.OwnerFullName;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_internet_gateways" )
+@org.hibernate.annotations.Table( appliesTo = "metadata_internet_gateways", indexes = {
+    @Index( name = "metadata_internet_gateways_account_id_idx", columnNames = "metadata_account_id" ),
+    @Index( name = "metadata_internet_gateways_display_name_idx", columnNames = "metadata_display_name" ),
+} )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class InternetGateway extends AbstractOwnedPersistent implements InternetGatewayMetadata {
 

@@ -89,6 +89,7 @@ import com.google.common.collect.Sets;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Index;
 import com.eucalyptus.compute.common.CloudMetadata.SnapshotMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -104,6 +105,11 @@ import com.google.common.base.Predicate;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_snapshots" )
+@org.hibernate.annotations.Table( appliesTo = "metadata_snapshots", indexes = {
+    @Index( name = "metadata_snapshots_user_id_idx", columnNames = "metadata_user_id" ),
+    @Index( name = "metadata_snapshots_account_id_idx", columnNames = "metadata_account_id" ),
+    @Index( name = "metadata_snapshots_display_name_idx", columnNames = "metadata_display_name" ),
+} )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
   @Transient
