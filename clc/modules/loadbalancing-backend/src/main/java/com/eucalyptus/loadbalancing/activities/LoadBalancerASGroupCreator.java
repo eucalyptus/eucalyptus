@@ -336,8 +336,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 		
 		//
 		if( !Topology.isEnabledLocally( LoadBalancingBackend.class ) )
-		  throw new EucalyptusCloudException("Internal error");
-		
+		  return;
 		
 		if ((emi!=null && emi.length()>0) ||
 		      (instanceType!=null && instanceType.length()>0) ||
