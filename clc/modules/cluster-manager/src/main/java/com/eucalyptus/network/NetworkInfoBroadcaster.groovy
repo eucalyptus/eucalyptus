@@ -695,7 +695,8 @@ class NetworkInfoBroadcaster {
   private static boolean validInstanceMetadata( final VmInstance instance) {
     !Strings.isNullOrEmpty( instance.privateAddress ) && 
         !VmNetworkConfig.DEFAULT_IP.equals( instance.privateAddress ) &&
-        !instance.networkGroups.isEmpty( )
+        !instance.networkGroups.isEmpty( ) &&
+        !Strings.isNullOrEmpty( VmInstances.toNodeHost( ).apply( instance ) )
   }
   
   @Immutable
