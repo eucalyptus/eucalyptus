@@ -163,6 +163,10 @@ public class VirtualBootRecord extends EucalyptusData implements Cloneable {
     this.size = sizeBytes;
     this.format = format;
   }
+
+    public boolean hasValidId() {
+        return !"none".equals(this.id);
+    }
   
   public VirtualBootRecord clone( ) {
     return (VirtualBootRecord) super.clone();

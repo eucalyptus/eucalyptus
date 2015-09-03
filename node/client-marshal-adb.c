@@ -1531,12 +1531,14 @@ int ncModifyNodeStub(ncStub * pStub, ncMetadata * pMeta, char *stateName)
 //! @param[in]  instancesLen number of instances in the instance list
 //! @param[in]  action IP of the destination Node Controller
 //! @param[in]  credentials credentials that enable the migration
+//! @param[in]  resourceLocations ID=URL list of self-signed URLs (only relevant for 'prepare' on source node)
+//! @param[in]  resourceLocationsLen number of URLs in the list (only relevant for 'prepare' on source node)
 //!
 //! @return 0 for success, non-zero for error
 //!
 //! @see ncMigrateInstances()
 //!
-int ncMigrateInstancesStub(ncStub * pStub, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials)
+int ncMigrateInstancesStub(ncStub * pStub, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials, char ** resourceLocations, int resourceLocationsLen)
 {
     int status = 0;
     axutil_env_t *env = NULL;
@@ -1574,6 +1576,9 @@ int ncMigrateInstancesStub(ncStub * pStub, ncMetadata * pMeta, ncInstance ** ins
     adb_ncMigrateInstancesType_set_action(request, env, action);
     if (credentials != NULL)
         adb_ncMigrateInstancesType_set_credentials(request, env, credentials);
+    for (int i=0; i < resourceLocationsLen; i++) {
+        adb_ncMigrateInstancesType_add_resourceLocation(request, env, resourceLocations[i]);
+    }
     adb_ncMigrateInstances_set_ncMigrateInstances(input, env, request);
 
     // do it

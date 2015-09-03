@@ -1529,6 +1529,8 @@ adb_ncMigrateInstancesResponse_t *ncMigrateInstancesMarshal(adb_ncMigrateInstanc
     int instancesLen = 0;
     axis2_char_t *action = NULL;
     axis2_char_t *credentials = NULL;
+    char **resourceLocations = NULL;
+    int resourceLocationsLen = 0;
     adb_ncMigrateInstancesType_t *input = NULL;
     adb_ncMigrateInstancesResponse_t *response = NULL;
     adb_ncMigrateInstancesResponseType_t *output = NULL;
@@ -1546,6 +1548,11 @@ adb_ncMigrateInstancesResponse_t *ncMigrateInstancesMarshal(adb_ncMigrateInstanc
             LOGERROR("out of memory\n");
             goto mi_error;
         }
+        resourceLocationsLen = adb_ncMigrateInstancesType_sizeof_resourceLocation(input, env);
+        if ((resourceLocations = EUCA_ZALLOC(resourceLocationsLen, sizeof(char *))) == NULL) {
+            LOGERROR("out of memory\n");
+            goto mi_error;
+        }
         for (int i = 0; i < instancesLen; i++) {
             adb_instanceType_t *instance_adb = adb_ncMigrateInstancesType_get_instances_at(input, env, i);
             ncInstance *instance = copy_instance_from_adb(instance_adb, env);
@@ -1557,6 +1564,9 @@ adb_ncMigrateInstancesResponse_t *ncMigrateInstancesMarshal(adb_ncMigrateInstanc
         }
         action = adb_ncMigrateInstancesType_get_action(input, env);
         credentials = adb_ncMigrateInstancesType_get_credentials(input, env);
+        for (int i = 0; i < resourceLocationsLen; i++) {
+            resourceLocations[i] = adb_ncMigrateInstancesType_get_resourceLocation_at(input, env, i);
+        }
 
         // get standard fields from input
         EUCA_MESSAGE_UNMARSHAL(ncMigrateInstancesType, input, (&meta));
@@ -1566,7 +1576,7 @@ adb_ncMigrateInstancesResponse_t *ncMigrateInstancesMarshal(adb_ncMigrateInstanc
 
         // do it
         threadCorrelationId *corr_id = set_corrid(meta.correlationId);
-        error = doMigrateInstances(&meta, instances, instancesLen, action, credentials);
+        error = doMigrateInstances(&meta, instances, instancesLen, action, credentials, resourceLocations, resourceLocationsLen);
         unset_corrid(corr_id);
         if (error != EUCA_OK) {
             LOGERROR("failed error=%d\n", error);
@@ -1592,6 +1602,7 @@ mi_error:
             EUCA_FREE(instances[i]);
         }
         EUCA_FREE(instances);
+        EUCA_FREE(resourceLocations);
     }
     pthread_mutex_unlock(&ncHandlerLock);
 
