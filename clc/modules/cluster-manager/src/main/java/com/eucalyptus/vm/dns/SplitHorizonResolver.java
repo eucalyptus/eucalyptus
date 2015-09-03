@@ -68,7 +68,6 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -108,11 +107,11 @@ import com.eucalyptus.util.dns.DnsResolvers.DnsResolver;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResponse;
 import com.eucalyptus.util.dns.DnsResolvers.RequestType;
 import com.eucalyptus.util.dns.DomainNameRecords;
-import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.cache.CacheBuilder;
@@ -163,7 +162,7 @@ public abstract class SplitHorizonResolver implements DnsResolver {
             InetAddresses.forString( vmInfo.get( ).getPrivateIp( ) ) :
             address;
         for ( final Cidr cidr : clusterSubnetsSupplier.get( ) ) {
-          if ( cidr.contains( privateAddress.getHostAddress( ) ) ) {
+          if ( cidr.apply( privateAddress ) ) {
             return Optional.of( cidr );
           }
         }
@@ -198,24 +197,8 @@ public abstract class SplitHorizonResolver implements DnsResolver {
       } else if ( privateNetworksManagedSupplier.get( ) && input.isSiteLocalAddress( ) ) {
         return true;
       } else {
-        try {
-          VmInstances.lookupByPublicIp( input.getHostAddress( ) );
-          return true;
-        } catch ( NoSuchElementException ex1 ) {
-          if ( !privateNetworksManagedSupplier.get( ) ) {
-            for ( final ServiceConfiguration clusterService : ServiceConfigurations.list( ClusterController.class ) ) {
-              final ClusterConfiguration cluster = ( ClusterConfiguration ) clusterService;
-              try {
-                if ( Subnets.internalPredicate( cluster.getVnetSubnet( ), cluster.getVnetNetmask( ) ).apply( input ) ) {
-                  return true;
-                }
-              } catch ( final UnknownHostException ex ) {
-                LOG.trace( ex );
-              }
-            }
-          }
-          return false;
-        }
+        return lookupPublic( input ).isPresent( ) ||
+            !privateNetworksManagedSupplier.get( ) && Predicates.or( clusterSubnetsSupplier.get( ) ).apply( input );
       }
     }
     
