@@ -1,4 +1,4 @@
-.Dd March 2015
+.Dd 2015-09-03
 .Dt EUCTL 1
 .Os Eucalyptus 4.2
 .Sh NAME
@@ -6,7 +6,8 @@
 .Nd get or set cloud state
 .Sh SYNOPSIS
 .Nm
-.Op Fl A\&n
+.Op Fl A\&nr
+.Op Fl d | s
 .Ar NAME ...
 .Nm
 .Op Fl nq
@@ -77,6 +78,9 @@ methods of retrieving them are given.
 .It Fl d
 Output variables' default values rather than their
 current values.  Note that not all variables have default
+values.
+.It Fl s
+Output variables' descriptions rather than their current
 values.
 .It Fl n
 Suppress output of the variable name. This is useful
