@@ -85,7 +85,7 @@ public class RoleEntity extends AbstractPersistent implements Serializable {
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<InstanceProfileEntity> instanceProfiles;
 
-  @ManyToOne( fetch = FetchType.LAZY )
+  @ManyToOne
   @Index( name = "auth_role_owning_account_idx" )
   @JoinColumn( name = "auth_role_owning_account", nullable = false )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

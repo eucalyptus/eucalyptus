@@ -65,7 +65,7 @@ public class InstanceProfileEntity extends AbstractPersistent implements Seriali
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private RoleEntity role;
 
-  @ManyToOne( fetch = FetchType.LAZY )
+  @ManyToOne
   @Index( name = "auth_instance_profile_owning_account_idx" )
   @JoinColumn( name = "auth_instance_profile_owning_account", nullable = false )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
