@@ -97,6 +97,7 @@ import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Index;
 
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.component.ComponentIds;
@@ -115,6 +116,11 @@ import com.google.common.collect.Sets;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_images" )
+@org.hibernate.annotations.Table( appliesTo = "metadata_images", indexes = {
+    @Index( name = "metadata_image_user_id_idx", columnNames = "metadata_user_id" ),
+    @Index( name = "metadata_image_account_id_idx", columnNames = "metadata_account_id" ),
+    @Index( name = "metadata_image_display_name_idx", columnNames = "metadata_display_name" ),
+} )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @Inheritance( strategy = InheritanceType.SINGLE_TABLE )
 @DiscriminatorColumn( name = "metadata_image_discriminator", discriminatorType = DiscriminatorType.STRING )

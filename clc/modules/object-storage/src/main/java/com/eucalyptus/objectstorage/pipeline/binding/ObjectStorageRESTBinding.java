@@ -62,10 +62,39 @@
 
 package com.eucalyptus.objectstorage.pipeline.binding;
 
-import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
+import java.io.ByteArrayOutputStream;
+import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.nio.charset.StandardCharsets;
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.apache.axiom.om.OMElement;
+import org.apache.commons.httpclient.util.DateUtil;
+import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
+import org.apache.tools.ant.util.DateUtils;
+import org.apache.xml.dtm.ref.DTMNodeList;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.w3c.dom.Node;
 
 import com.eucalyptus.auth.policy.key.Iso8601DateParser;
 import com.eucalyptus.auth.principal.User;
@@ -122,46 +151,15 @@ import com.eucalyptus.util.ChannelBufferStreamingInputStream;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.XMLParser;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
-
-import groovy.lang.GroovyObject;
-
-import org.apache.axiom.om.OMElement;
-import org.apache.commons.httpclient.util.DateUtil;
-import org.apache.commons.lang.StringUtils;
-import org.apache.log4j.Logger;
-import org.apache.tools.ant.util.DateUtils;
-import org.apache.xml.dtm.ref.DTMNodeList;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.w3c.dom.Node;
-
-import java.io.ByteArrayOutputStream;
-import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.lang.reflect.ParameterizedType;
-import java.nio.charset.StandardCharsets;
-import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
+import groovy.lang.GroovyObject;
 
 public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
   protected static Logger LOG = Logger.getLogger(ObjectStorageRESTBinding.class);
@@ -382,10 +380,10 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
           if (params.containsKey(ObjectStorageProperties.BucketParameter.delete.toString())) {
             operationParams.put("delete", getMultiObjectDeleteMessage(httpRequest));
           } else {
-            //Handle POST form upload.
-            /* For multipart-form uploads we get the metadata from the form fields
-               and the first data chunk from the "file" form field
-            */
+            // Handle POST form upload.
+            /*
+             * For multipart-form uploads we get the metadata from the form fields and the first data chunk from the "file" form field
+             */
             Map formFields = httpRequest.getFormFields();
             String objectKey = null;
             String file = (String) formFields.get(ObjectStorageProperties.FormField.file.toString());
@@ -412,7 +410,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
               if (successActionStatus == 200 || successActionStatus == 201) {
                 operationParams.put("SuccessActionStatus", successActionStatus);
               } else {
-                //Default is 204, as per S3 spec
+                // Default is 204, as per S3 spec
                 operationParams.put("SuccessActionStatus", 204);
               }
             } else {
@@ -868,7 +866,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         }
       }
     } else {
-      operationParams.put(headerString, value);
+      operationParams.put(headerString, StringUtils.strip(value, "\""));
     }
   }
 
@@ -1514,9 +1512,8 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         XMLParser xmlParser = new XMLParser(rawMessage);
         String quietVal = xmlParser.getValue("//Delete/Quiet");
         if (quietVal != null && !"".equals(quietVal) && quietVal.trim().startsWith("true")) {
-           message.setQuiet(Boolean.TRUE);
-        }
-        else {
+          message.setQuiet(Boolean.TRUE);
+        } else {
           message.setQuiet(Boolean.FALSE);
         }
         DTMNodeList deletes = xmlParser.getNodes("//Delete/Object");
@@ -1525,15 +1522,13 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         }
         List<DeleteMultipleObjectsEntry> deleteObjList = Lists.newArrayList();
         for (int idx = 0; idx < deletes.getLength(); idx++) {
-          //lifecycleConfigurationType.getRules().add( extractLifecycleRule( xmlParser, deletes.item(idx) ) );
+          // lifecycleConfigurationType.getRules().add( extractLifecycleRule( xmlParser, deletes.item(idx) ) );
           deleteObjList.add(extractDeleteObjectEntry(xmlParser, deletes.item(idx)));
         }
         message.setObjects(deleteObjList);
-      }
-      catch (S3Exception e) {
+      } catch (S3Exception e) {
         throw e;
-      }
-      catch (Exception ex) {
+      } catch (Exception ex) {
         MalformedXMLException e = new MalformedXMLException("/LifecycleConfiguration");
         ex.initCause(ex);
         throw e;

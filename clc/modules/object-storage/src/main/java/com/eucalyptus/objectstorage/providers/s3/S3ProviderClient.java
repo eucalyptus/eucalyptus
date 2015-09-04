@@ -456,8 +456,8 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
     LOG.debug("Disable completed successfully");
   }
 
-  protected CanonicalUser getCanonicalUser( UserPrincipal usr ) {
-    return AclUtils.buildCanonicalUser( usr );
+  protected CanonicalUser getCanonicalUser(UserPrincipal usr) {
+    return AclUtils.buildCanonicalUser(usr);
   }
 
   /*
@@ -771,37 +771,14 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
     User requestUser = getRequestUser(request);
     OsgInternalS3Client internalS3Client = null;
 
-    Boolean getMetaData = request.getGetMetaData();
     Long byteRangeStart = request.getByteRangeStart();
     Long byteRangeEnd = request.getByteRangeEnd();
-    Date ifModifiedSince = request.getIfModifiedSince();
-    Date ifUnmodifiedSince = request.getIfUnmodifiedSince();
-    String ifMatch = request.getIfMatch();
-    String ifNoneMatch = request.getIfNoneMatch();
 
     GetObjectRequest getRequest = new GetObjectRequest(request.getBucket(), request.getKey());
     if (byteRangeStart != null && byteRangeEnd != null) {
       getRequest.setRange(byteRangeStart, byteRangeEnd);
     }
-    if (getMetaData != null) {
-      // Get object metadata
-    }
-    if (ifModifiedSince != null) {
-      getRequest.setModifiedSinceConstraint(ifModifiedSince);
-    }
-    if (ifUnmodifiedSince != null) {
-      getRequest.setUnmodifiedSinceConstraint(ifUnmodifiedSince);
-    }
-    if (ifMatch != null) {
-      List matchList = new ArrayList();
-      matchList.add(ifMatch);
-      getRequest.setMatchingETagConstraints(matchList);
-    }
-    if (ifNoneMatch != null) {
-      List nonMatchList = new ArrayList();
-      nonMatchList.add(ifNoneMatch);
-      getRequest.setNonmatchingETagConstraints(nonMatchList);
-    }
+
     try {
       internalS3Client = getS3Client(requestUser);
       AmazonS3Client s3Client = internalS3Client.getS3Client();

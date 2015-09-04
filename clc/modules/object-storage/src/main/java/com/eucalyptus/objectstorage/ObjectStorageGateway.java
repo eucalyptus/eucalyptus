@@ -38,6 +38,8 @@ import javax.annotation.Nullable;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.joda.time.DateTimeComparator;
+import org.joda.time.DateTimeFieldType;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
@@ -56,21 +58,8 @@ import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.objectstorage.auth.OsgAuthorizationHandler;
 import com.eucalyptus.objectstorage.bittorrent.Tracker;
-import com.eucalyptus.objectstorage.entities.BucketTags;
-import com.eucalyptus.objectstorage.exceptions.s3.NoSuchTagSetException;
-import com.eucalyptus.objectstorage.exceptions.s3.UnresolvableGrantByEmailAddressException;
-import com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingResponseType;
-import com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingType;
-import com.eucalyptus.objectstorage.msgs.DeleteMultipleObjectsResponseType;
-import com.eucalyptus.objectstorage.msgs.DeleteMultipleObjectsType;
-import com.eucalyptus.objectstorage.msgs.GetBucketTaggingResponseType;
-import com.eucalyptus.objectstorage.msgs.GetBucketTaggingType;
-import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
-import com.eucalyptus.objectstorage.msgs.SetBucketTaggingResponseType;
-import com.eucalyptus.objectstorage.msgs.SetBucketTaggingType;
-import com.eucalyptus.records.Logs;
-import com.eucalyptus.storage.config.ConfigurationCache;
 import com.eucalyptus.objectstorage.entities.Bucket;
+import com.eucalyptus.objectstorage.entities.BucketTags;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
 import com.eucalyptus.objectstorage.entities.ObjectStorageGlobalConfiguration;
 import com.eucalyptus.objectstorage.entities.PartEntity;
@@ -117,6 +106,8 @@ import com.eucalyptus.objectstorage.msgs.DeleteBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketType;
+import com.eucalyptus.objectstorage.msgs.DeleteMultipleObjectsResponseType;
+import com.eucalyptus.objectstorage.msgs.DeleteMultipleObjectsType;
 import com.eucalyptus.objectstorage.msgs.DeleteObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteObjectType;
 import com.eucalyptus.objectstorage.msgs.DeleteVersionResponseType;
@@ -229,6 +220,7 @@ import edu.ucsb.eucalyptus.util.SystemUtil;
 public class ObjectStorageGateway implements ObjectStorageService {
   private static Logger LOG = Logger.getLogger(ObjectStorageGateway.class);
   private static ObjectStorageProviderClient ospClient = null;
+  private static final DateTimeComparator DATE_TIME_COMPARATOR = DateTimeComparator.getInstance(DateTimeFieldType.secondOfMinute());
 
   public ObjectStorageGateway() {}
 
@@ -429,8 +421,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
       Map<String, String> storedHeaders = objectEntity.getStoredHeaders();
       populateStoredHeaders(response, storedHeaders);
       try {
-        fireObjectCreationEvent(bucket.getBucketName(), objectEntity.getObjectKey(), objectEntity.getVersionId(),
-            requestUser.getUserId(), requestUser.getName(), requestUser.getAccountNumber(), objectEntity.getSize(), null);
+        fireObjectCreationEvent(bucket.getBucketName(), objectEntity.getObjectKey(), objectEntity.getVersionId(), requestUser.getUserId(),
+            requestUser.getName(), requestUser.getAccountNumber(), objectEntity.getSize(), null);
       } catch (Exception ex) {
         LOG.debug("Failed to fire reporting event for OSG object creation", ex);
       }
@@ -540,8 +532,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
    * @return
    * @throws Exception
    */
-  protected AccessControlPolicy getFullAcp(@Nonnull AccessControlList acl, @Nonnull UserPrincipal requestUser, @Nullable String extantBucketOwnerCanonicalId)
-      throws Exception {
+  protected AccessControlPolicy getFullAcp(@Nonnull AccessControlList acl, @Nonnull UserPrincipal requestUser,
+      @Nullable String extantBucketOwnerCanonicalId) throws Exception {
     // Generate a full ACP based on the request. If empty or null acl, generates a 'private' acl with fullcontrol for owner
     AccessControlPolicy tmpPolicy = new AccessControlPolicy();
     tmpPolicy.setAccessControlList(acl);
@@ -562,7 +554,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     logRequest(request);
     try {
       final UserPrincipal requestUser = getRequestUser(request);
-      final String canonicalId = requestUser.getCanonicalId( );
+      final String canonicalId = requestUser.getCanonicalId();
 
       // Check the validity of the bucket name.
       if (!checkBucketNameValidity(request.getBucket())) {
@@ -687,7 +679,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
   public ListAllMyBucketsResponseType listAllMyBuckets(ListAllMyBucketsType request) throws S3Exception {
     logRequest(request);
 
-    CanonicalUser canonicalUser = AclUtils.buildCanonicalUser( Contexts.lookup( ).getUser( ) );
+    CanonicalUser canonicalUser = AclUtils.buildCanonicalUser(Contexts.lookup().getUser());
 
     // Create a fake bucket record just for IAM verification. The IAM policy is only valid for arn:s3:* so empty should match
     /*
@@ -1162,6 +1154,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     }
     populateStoredHeaders(reply, objectEntity.getStoredHeaders());
     reply.setResponseHeaderOverrides(request.getResponseHeaderOverrides());
+    reply.setStatus(HttpResponseStatus.OK);
     return reply;
   }
 
@@ -1172,7 +1165,68 @@ public class ObjectStorageGateway implements ObjectStorageService {
    */
   @Override
   public GetObjectExtendedResponseType getObjectExtended(GetObjectExtendedType request) throws S3Exception {
-    ObjectEntity objectEntity = getObjectEntityAndCheckPermissions(request, null);
+    ObjectEntity objectEntity = getObjectEntityAndCheckPermissions(request, request.getVersionId());
+    if (objectEntity.getIsDeleteMarker()) {
+      throw new NoSuchKeyException(request.getKey());
+    }
+
+    request.setKey(objectEntity.getObjectUuid());
+    request.setBucket(objectEntity.getBucket().getBucketUuid());
+
+    // Precondition computation. Why do it here instead of delegating it to backends?
+    // 1. AWS Java SDK, used to interact with backend, swallows 412 and 304 responses and returns null objects.
+    // 2. S3 backend may or may not implement the checks for all preconditions
+    // 3. All the metadata required to process preconditions is available in OSG database for now. Using it might save time and or network trip
+
+    Date ifModifiedSince = request.getIfModifiedSince();
+    Date ifUnmodifiedSince = request.getIfUnmodifiedSince();
+    String ifMatch = request.getIfMatch();
+    String ifNoneMatch = request.getIfNoneMatch();
+
+    // Evaluating conditions in the order S3 seems to be evaluating
+    // W3 spec for headers - http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html
+
+    if (ifMatch != null && !objectEntity.geteTag().equals(ifMatch)) {
+      throw new PreconditionFailedException("If-Match");
+    }
+
+    if (DATE_TIME_COMPARATOR.compare(objectEntity.getObjectModifiedTimestamp(), ifUnmodifiedSince) > 0) {
+      throw new PreconditionFailedException("If-Unmodified-Since");
+    }
+
+    boolean shortReply = false;
+    // This if-else ladder is for evaluating If-No-Match and If-Modified-Since in conjunction
+
+    if (ifNoneMatch != null) {
+      if (objectEntity.geteTag().equals(ifNoneMatch)) {
+        if (ifModifiedSince != null) {
+          if (DATE_TIME_COMPARATOR.compare(objectEntity.getObjectModifiedTimestamp(), ifModifiedSince) <= 0) {
+            shortReply = true;
+          } else { // Object was modified since the specified time, return object
+            shortReply = false;
+          }
+        } else { // If-Modified-Since is absent
+          shortReply = true;
+        }
+      } else { // If-None-Match != object etag
+        shortReply = false;
+      }
+    } else if (ifModifiedSince != null && DATE_TIME_COMPARATOR.compare(objectEntity.getObjectModifiedTimestamp(), ifModifiedSince) <= 0) { // If-None-Match
+                                                                                                                                      // == null
+      shortReply = true;
+    } else {
+      shortReply = false; // return object since If-None-Match and If-Modified are invalid
+    }
+
+    if (shortReply) { // return 304 Not Modified response to client
+      return generateNotModifiedResponse(request, objectEntity);
+    }
+
+    // remove all preconditions before forwarding request to backend
+    request.setIfModifiedSince(null);
+    request.setIfUnmodifiedSince(null);
+    request.setIfMatch(null);
+    request.setIfNoneMatch(null);
 
     // Byte range computation
     // Why do it here instead of delegating it to backends?
@@ -1224,17 +1278,16 @@ public class ObjectStorageGateway implements ObjectStorageService {
       byteRangeEnd = lastIndex; // Set the end byte position to object-size-1
     }
 
-    request.setKey(objectEntity.getObjectUuid());
-    request.setBucket(objectEntity.getBucket().getBucketUuid());
     request.setByteRangeStart(byteRangeStart); // Populate the computed byte range before firing request to backend
     request.setByteRangeEnd(byteRangeEnd); // Populate the computed byte range before firing request to backend
+
     try {
       GetObjectExtendedResponseType response = ospClient.getObjectExtended(request);
-
       response.setVersionId(objectEntity.getVersionId());
       response.setLastModified(objectEntity.getObjectModifiedTimestamp());
       populateStoredHeaders(response, objectEntity.getStoredHeaders());
       response.setResponseHeaderOverrides(request.getResponseHeaderOverrides());
+      response.setStatus(HttpResponseStatus.OK);
       return response;
     } catch (S3Exception e) {
       LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with: ", e);
@@ -1243,6 +1296,32 @@ public class ObjectStorageGateway implements ObjectStorageService {
       // Wrap the error from back-end with a 500 error
       LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", e);
       throw new InternalErrorException(request.getBucket() + "/" + request.getKey(), e);
+    }
+  }
+
+  private GetObjectExtendedResponseType generateNotModifiedResponse(GetObjectExtendedType request, ObjectEntity objectEntity) throws S3Exception {
+    try {
+      GetObjectExtendedResponseType reply = request.getReply();
+
+      // Get metadata from backend
+      HeadObjectType headRequest = new HeadObjectType();
+      headRequest.setKey(objectEntity.getObjectUuid());
+      headRequest.setBucket(objectEntity.getBucket().getBucketUuid());
+      HeadObjectResponseType headReply = ospClient.headObject(headRequest);
+      reply.setMetaData(headReply.getMetaData());
+
+      // populate other stuff from osg database
+      reply.setStatus(HttpResponseStatus.NOT_MODIFIED);
+      reply.setEtag(objectEntity.geteTag());
+      reply.setVersionId(objectEntity.getVersionId());
+      reply.setLastModified(objectEntity.getObjectModifiedTimestamp());
+      populateStoredHeaders(reply, objectEntity.getStoredHeaders());
+
+      return reply;
+    } catch (Exception e) {
+      LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", e);
+      // We don't dispatch unless it exists and should be available. An error from the backend would be confusing. This is an internal issue.
+      throw new InternalErrorException(e);
     }
   }
 
@@ -1365,8 +1444,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       }
 
       // Check authorization for PUT operation on destination bucket and object
-      if (OsgAuthorizationHandler.getInstance().operationAllowed(request.getPutObjectRequest(), destBucket, destObject,
-          srcObject.getSize())) {
+      if (OsgAuthorizationHandler.getInstance().operationAllowed(request.getPutObjectRequest(), destBucket, destObject, srcObject.getSize())) {
 
         String metadataDirective = request.getMetadataDirective();
         String copyIfMatch = request.getCopySourceIfMatch();
@@ -1465,9 +1543,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
           try {
             // send the event if we aren't doing a metadata update only
             if (!updateMetadataOnly) {
-              fireObjectCreationEvent(destinationBucket, destinationKey, destObject.getVersionId(),
-                  requestUser.getUserId(), requestUser.getName(), requestUser.getAccountNumber(), destObject.getSize(),
-                  null);
+              fireObjectCreationEvent(destinationBucket, destinationKey, destObject.getVersionId(), requestUser.getUserId(), requestUser.getName(),
+                  requestUser.getAccountNumber(), destObject.getSize(), null);
             }
           } catch (Exception ex) {
             LOG.debug("Failed to fire reporting event for OSG COPY object operation", ex);
@@ -2050,8 +2127,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
         ObjectEntity completedEntity =
             OsgObjectFactory.getFactory().completeMultipartUpload(ospClient, objectEntity, request.getParts(), requestUser);
         try {
-          fireObjectCreationEvent(bucket.getBucketName(), completedEntity.getObjectKey(), completedEntity.getVersionId(),
-              requestUser.getUserId(), requestUser.getName(), requestUser.getAccountNumber(), completedEntity.getSize(), null);
+          fireObjectCreationEvent(bucket.getBucketName(), completedEntity.getObjectKey(), completedEntity.getVersionId(), requestUser.getUserId(),
+              requestUser.getName(), requestUser.getAccountNumber(), completedEntity.getSize(), null);
         } catch (Exception ex) {
           LOG.debug("Failed to fire reporting event for OSG object creation while completing multipart upload", ex);
         }
@@ -2238,9 +2315,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
         for (ObjectEntity obj : result.getEntityList()) {
           reply.getUploads().add(
-              new Upload(obj.getObjectKey(), obj.getUploadId(), new Initiator(Accounts.getUserArn(Accounts.lookupPrincipalByUserId(obj.getOwnerIamUserId())),
-                  obj.getOwnerIamUserDisplayName()), new CanonicalUser(obj.getOwnerCanonicalId(), obj.getOwnerDisplayName()), obj.getStorageClass(),
-                  obj.getCreationTimestamp()));
+              new Upload(obj.getObjectKey(), obj.getUploadId(), new Initiator(Accounts.getUserArn(Accounts.lookupPrincipalByUserId(obj
+                  .getOwnerIamUserId())), obj.getOwnerIamUserDisplayName()), new CanonicalUser(obj.getOwnerCanonicalId(), obj.getOwnerDisplayName()),
+                  obj.getStorageClass(), obj.getCreationTimestamp()));
         }
 
         if (result.getCommonPrefixes() != null && result.getCommonPrefixes().size() > 0) {
@@ -2271,27 +2348,26 @@ public class ObjectStorageGateway implements ObjectStorageService {
    *
    * If an object (version) is being overwritten then there will not be a corresponding delete event so we fire one prior to the create event.
    */
-  private void fireObjectCreationEvent(final String bucketName, final String objectKey, final String version,
-                                       final String ownerUserId, final String ownerUserName,
-                                       final String ownerAccountNumber, final Long size,
-      final Long oldSize) {
+  private void fireObjectCreationEvent(final String bucketName, final String objectKey, final String version, final String ownerUserId,
+      final String ownerUserName, final String ownerAccountNumber, final Long size, final Long oldSize) {
     try {
       if (oldSize != null && oldSize > 0) {
-        fireObjectUsageEvent(S3ObjectEvent.S3ObjectAction.OBJECTDELETE, bucketName, objectKey, version, ownerUserId, ownerUserName, ownerAccountNumber, oldSize);
+        fireObjectUsageEvent(S3ObjectEvent.S3ObjectAction.OBJECTDELETE, bucketName, objectKey, version, ownerUserId, ownerUserName,
+            ownerAccountNumber, oldSize);
       }
 
       /* Send an event to reporting to report this S3 usage. */
       if (size != null && size > 0) {
-        fireObjectUsageEvent(S3ObjectEvent.S3ObjectAction.OBJECTCREATE, bucketName, objectKey, version, ownerUserId, ownerUserName, ownerAccountNumber, size);
+        fireObjectUsageEvent(S3ObjectEvent.S3ObjectAction.OBJECTCREATE, bucketName, objectKey, version, ownerUserId, ownerUserName,
+            ownerAccountNumber, size);
       }
     } catch (final Exception e) {
       LOG.error(e, e);
     }
   }
 
-  private void fireObjectUsageEvent(S3ObjectEvent.S3ObjectAction actionInfo, String bucketName, String objectKey,
-                                    String version, String ownerUserId, String ownerUserName, String ownerAccountNumber,
-                                    Long sizeInBytes) {
+  private void fireObjectUsageEvent(S3ObjectEvent.S3ObjectAction actionInfo, String bucketName, String objectKey, String version, String ownerUserId,
+      String ownerUserName, String ownerAccountNumber, Long sizeInBytes) {
     try {
       ListenerRegistry.getInstance().fireEvent(
           S3ObjectEvent.with(actionInfo, bucketName, objectKey, version, ownerUserId, ownerUserName, ownerAccountNumber, sizeInBytes));
@@ -2348,8 +2424,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
               responseEntity = OsgObjectFactory.getFactory().logicallyDeleteObject(ospClient, object, currentUser);
               try {
                 final User user = Contexts.lookup().getUser();
-                fireObjectUsageEvent(S3ObjectEvent.S3ObjectAction.OBJECTDELETE, bucket.getBucketName(), key, versionId,
-                                     user.getUserId(), user.getName(), user.getAccountNumber(), object.getSize());
+                fireObjectUsageEvent(S3ObjectEvent.S3ObjectAction.OBJECTDELETE, bucket.getBucketName(), key, versionId, user.getUserId(),
+                    user.getName(), user.getAccountNumber(), object.getSize());
               } catch (Exception e) {
                 LOG.warn("caught exception while attempting to fire reporting event, exception message - " + e.getMessage());
               }

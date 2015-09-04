@@ -33,6 +33,7 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Index;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
@@ -47,6 +48,11 @@ import com.eucalyptus.auth.principal.OwnerFullName;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_subnets" )
+@org.hibernate.annotations.Table( appliesTo = "metadata_subnets", indexes = {
+    @Index( name = "metadata_subnets_user_id_idx", columnNames = "metadata_user_id" ),
+    @Index( name = "metadata_subnets_account_id_idx", columnNames = "metadata_account_id" ),
+    @Index( name = "metadata_subnets_display_name_idx", columnNames = "metadata_display_name" ),
+} )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Subnet extends UserMetadata<Subnet.State> implements SubnetMetadata {
 

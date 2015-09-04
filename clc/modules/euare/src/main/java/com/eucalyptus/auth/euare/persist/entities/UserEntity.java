@@ -66,6 +66,7 @@ import static com.eucalyptus.upgrade.Upgrades.Version.v4_2_0;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
@@ -90,6 +91,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.upgrade.Upgrades;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import groovy.sql.Sql;
 
 /**
@@ -143,12 +145,12 @@ public class UserEntity extends AbstractPersistent implements Serializable {
   // List of secret keys
   @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "user" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  List<AccessKeyEntity> keys;
+  Set<AccessKeyEntity> keys;
   
   // List of certificates
   @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "user" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  List<CertificateEntity> certificates;
+  Set<CertificateEntity> certificates;
   
   // Customizable user info in key-value pairs
   @ElementCollection
@@ -165,8 +167,8 @@ public class UserEntity extends AbstractPersistent implements Serializable {
 
   
   public UserEntity( ) {
-    this.keys = Lists.newArrayList( );
-    this.certificates = Lists.newArrayList( );
+    this.keys = Sets.newHashSet( );
+    this.certificates = Sets.newHashSet( );
     this.info = Maps.newHashMap( );
     this.groups = Lists.newArrayList( );
   }
@@ -281,11 +283,11 @@ public class UserEntity extends AbstractPersistent implements Serializable {
     this.passwordExpires = passwordExpires;
   }
   
-  public List<AccessKeyEntity> getKeys( ) {
+  public Set<AccessKeyEntity> getKeys( ) {
     return this.keys;
   }
   
-  public List<CertificateEntity> getCertificates( ) {
+  public Set<CertificateEntity> getCertificates( ) {
     return this.certificates;
   }
   

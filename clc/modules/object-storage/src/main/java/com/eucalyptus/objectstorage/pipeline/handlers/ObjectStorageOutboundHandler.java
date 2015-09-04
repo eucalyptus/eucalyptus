@@ -92,7 +92,6 @@ import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyResponseTyp
 import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.common.DateFormatter;
-import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsMessageReply;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -178,20 +177,18 @@ public class ObjectStorageOutboundHandler extends MessageStackHandler {
         }
       } else if (msg instanceof ObjectStorageResponseType) { // Filter for GETs and PUTs *NOT* related to data
         // Remove the content in response for certain operations
-        if (msg instanceof SetBucketAccessControlPolicyResponseType || msg instanceof SetBucketLifecycleResponseType
-            || msg instanceof SetBucketLoggingStatusResponseType || msg instanceof SetBucketVersioningStatusResponseType
-            || msg instanceof SetObjectAccessControlPolicyResponseType || msg instanceof SetBucketTaggingResponseType
-            || (msg instanceof DeleteMultipleObjectsResponseType && ((DeleteMultipleObjectsResponseType)msg).getQuiet() != null
-                && ((DeleteMultipleObjectsResponseType)msg).getQuiet().booleanValue())) {
+        if (msg instanceof SetBucketAccessControlPolicyResponseType
+            || msg instanceof SetBucketLifecycleResponseType
+            || msg instanceof SetBucketLoggingStatusResponseType
+            || msg instanceof SetBucketVersioningStatusResponseType
+            || msg instanceof SetObjectAccessControlPolicyResponseType
+            || msg instanceof SetBucketTaggingResponseType
+            || (msg instanceof DeleteMultipleObjectsResponseType && ((DeleteMultipleObjectsResponseType) msg).getQuiet() != null && ((DeleteMultipleObjectsResponseType) msg)
+                .getQuiet().booleanValue())) {
           if (msg instanceof SetObjectAccessControlPolicyResponseType && ((SetObjectAccessControlPolicyResponseType) msg).getVersionId() != null) {
             httpResponse.setHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, ((SetObjectAccessControlPolicyResponseType) msg).getVersionId());
           }
 
-          // Moved the below logic to the actual operation in ObjectStorageGateway.java.
-          /*
-           * // AWS returns in a 204, rather than a 200 like other requests for SetBucketTaggingResponseType if ( msg instanceof
-           * SetBucketTaggingResponseType ) { httpResponse.setStatus( HttpResponseStatus.NO_CONTENT ); }
-           */
           removeResponseBody(msg, httpResponse);
         }
       }
@@ -200,8 +197,7 @@ public class ObjectStorageOutboundHandler extends MessageStackHandler {
 
   private void removeResponseBody(BaseMessage msg, MappingHttpResponse httpResponse) {
     // Populate all the common fields. These fields normally get populated in the outbound stage of the parent handler but get skipped in this case
-    // due to
-    // an empty message body
+    // due to an empty message body
     httpResponse.setHeader(HttpHeaders.Names.DATE, DateFormatter.dateToHeaderFormattedString(new Date()));
     httpResponse.setHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(0));
     if (msg.getCorrelationId() != null) {

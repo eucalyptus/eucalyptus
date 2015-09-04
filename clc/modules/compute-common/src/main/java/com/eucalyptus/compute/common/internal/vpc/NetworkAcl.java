@@ -34,6 +34,7 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Index;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.collect.Lists;
@@ -44,6 +45,10 @@ import com.google.common.collect.Lists;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_acls" )
+@org.hibernate.annotations.Table( appliesTo = "metadata_network_acls", indexes = {
+    @Index( name = "metadata_network_acls_account_id_idx", columnNames = "metadata_account_id" ),
+    @Index( name = "metadata_network_acls_display_name_idx", columnNames = "metadata_display_name" ),
+} )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class NetworkAcl extends AbstractOwnedPersistent implements NetworkAclMetadata {
 
