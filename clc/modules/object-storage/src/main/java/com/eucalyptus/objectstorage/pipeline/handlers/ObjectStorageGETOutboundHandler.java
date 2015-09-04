@@ -195,25 +195,45 @@ public class ObjectStorageGETOutboundHandler extends ObjectStorageBasicOutboundH
 
   // TODO: zhill - this should all be done in bindings, just need 2-way bindings
   protected DefaultHttpResponse createHttpResponse(ObjectStorageDataGetResponseType reply) {
-    DefaultHttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-    long contentLength = reply.getSize();
-    String contentType = reply.getContentType();
+    DefaultHttpResponse httpResponse = null;
+
+    if (reply.getStatus() == HttpResponseStatus.OK) {
+      httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+
+      String contentType = reply.getContentType();
+      httpResponse.addHeader(HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream");
+
+      String contentDisposition = reply.getContentDisposition();
+      if (contentDisposition != null) {
+        httpResponse.addHeader("Content-Disposition", contentDisposition);
+      }
+
+      long contentLength = reply.getSize();
+      httpResponse.addHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(contentLength));
+
+      // write extra headers
+      if (reply.getByteRangeEnd() != null) {
+        httpResponse.addHeader(HttpHeaders.Names.CONTENT_RANGE, reply.getByteRangeStart() + "-" + reply.getByteRangeEnd() + "/" + reply.getSize());
+      }
+
+      overrideHeaders(reply, httpResponse);
+    } else {
+      httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_MODIFIED);
+    }
+
+    httpResponse.addHeader(ObjectStorageProperties.AMZ_REQUEST_ID, reply.getCorrelationId());
+
     String etag = reply.getEtag();
-    String contentDisposition = reply.getContentDisposition();
-    httpResponse.addHeader(HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream");
     if (etag != null) {
       httpResponse.addHeader(HttpHeaders.Names.ETAG, "\"" + etag + "\""); // etag in quotes, per s3-spec.
     }
     httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, DateFormatter.dateToHeaderFormattedString(reply.getLastModified()));
 
-    if (contentDisposition != null) {
-      httpResponse.addHeader("Content-Disposition", contentDisposition);
-    }
-    httpResponse.addHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(contentLength));
     String versionId = reply.getVersionId();
     if (versionId != null && !ObjectStorageProperties.NULL_VERSION_ID.equals(versionId)) {
       httpResponse.addHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, versionId);
     }
+
     httpResponse.setHeader(HttpHeaders.Names.DATE, DateFormatter.dateToHeaderFormattedString(new Date()));
 
     // Add user metadata
@@ -224,11 +244,6 @@ public class ObjectStorageGETOutboundHandler extends ObjectStorageBasicOutboundH
     // add copied headers
     OSGUtil.addCopiedHeadersToResponse(httpResponse, reply);
 
-    // write extra headers
-    if (reply.getByteRangeEnd() != null) {
-      httpResponse.addHeader(HttpHeaders.Names.CONTENT_RANGE, reply.getByteRangeStart() + "-" + reply.getByteRangeEnd() + "/" + reply.getSize());
-    }
-    overrideHeaders(reply, httpResponse);
     return httpResponse;
   }
 

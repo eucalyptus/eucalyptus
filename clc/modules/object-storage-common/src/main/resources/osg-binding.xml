@@ -430,6 +430,7 @@
         <value name="IfMatch" field="ifMatch"/>
         <value name="IfNoneMatch" field="ifNoneMatch"/>
         <value name="ReturnCompleteObjectOnConditionFailure" field="returnCompleteObjectOnConditionFailure"/>
+        <value name="VersionId" field="versionId" usage="optional"/>
         <structure
                 map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
                 usage="optional"/>

@@ -175,6 +175,7 @@ public class ObjectStorageDataGetRequestType extends ObjectStorageDataRequestTyp
 }
 
 public class ObjectStorageDataGetResponseType extends ObjectStorageDataResponseType {
+  HttpResponseStatus status;
   InputStream dataInputStream; //Stream to read data from to then write to wire
   Long byteRangeStart;
   Long byteRangeEnd;
@@ -455,6 +456,7 @@ public class GetObjectExtendedType extends ObjectStorageDataGetRequestType {
   String ifMatch;
   String ifNoneMatch;
   Boolean returnCompleteObjectOnConditionFailure;
+  String versionId;
 }
 
 public class GetObjectExtendedResponseType extends ObjectStorageDataGetResponseType {
@@ -976,10 +978,10 @@ public class ListMultipartUploadsResponseType extends ObjectStorageDataResponseT
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [], ownerOnly = true)
 public class DeleteMultipleObjectsType extends ObjectStorageRequestType {
-    DeleteMultipleObjectsMessage delete;
+  DeleteMultipleObjectsMessage delete;
 }
 
 public class DeleteMultipleObjectsResponseType extends ObjectStorageResponseType {
-    DeleteMultipleObjectsMessageReply deleteResult;
-    Boolean quiet;
+  DeleteMultipleObjectsMessageReply deleteResult;
+  Boolean quiet;
 }
