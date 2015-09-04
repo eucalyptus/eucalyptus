@@ -138,6 +138,30 @@ show the program's version and exit
 .El
 .Sh ENVIRONMENT
 .Bl -tag -width Ds
+.It Ev AWS_ACCESS_KEY_ID
+The access key ID to use when authenticating web
+service requests.  This takes precedence over
+.Rl -region
+and
+.Xr euca2ools.ini 5 ,
+but not
+.Fl I .
+.It Ev AWS_SECRET_ACCESS_KEY
+The secret key to use when authenticating web
+service requests.  This takes precedence over
+.Fl -region
+and
+.Xr euca2ools.ini 5 ,
+but not
+.Fl S .
+.It Ev PROPERTIES_URL
+The URL of the service to contact.  This takes precedence
+over
+.Fl -region
+and
+.Xr euca2ools.ini 5 ,
+but not
+.Fl U .
 .It Ev VISUAL
 The editor to invoke when using the
 .Fl -edit
@@ -148,7 +172,17 @@ The editor to invoke when using the
 option when
 .Ev VISUAL is not set.
 .El
+.Sh SEE ALSO
+.Xr euca2ools.ini 5 ,
+.Xr eucalyptus-admin 7
 .Sh HISTORY
 The
 .Nm
 command first appeared in Eucalyptus 4.2.
+.Sh NOTES
+.Nm
+requires access keys and knowledge of where to locate
+the web services it needs to contact.  It can obtain
+these from several locations.  See
+.Xr eucalyptus-admin 7
+for more information.
