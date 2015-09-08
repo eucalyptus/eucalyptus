@@ -25,8 +25,11 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import sys
+
 from eucadmin.exportreportdata import ExportReportData
 
 if __name__ == "__main__":
+    print >> sys.stderr, 'warning: eureport-export-data is deprecated'
     r = ExportReportData()
     r.main_cli()
