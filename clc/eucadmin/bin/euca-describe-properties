@@ -25,8 +25,12 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import sys
+
 import eucadmin.describeproperties
 
 if __name__ == "__main__":
+    print >> sys.stderr, "warning: euca-describe-properties is", \
+        "deprecated; use ``euctl'' instead"
     r = eucadmin.describeproperties.DescribeProperties()
     r.main_cli()
