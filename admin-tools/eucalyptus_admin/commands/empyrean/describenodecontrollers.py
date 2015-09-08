@@ -23,6 +23,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from requestbuilder import Arg
 from requestbuilder.mixins.formatting import TableOutputMixin
 
 from eucalyptus_admin.commands.ec2.describeinstances import DescribeInstances
@@ -33,6 +34,15 @@ from eucalyptus_admin.commands.empyrean.describeservices import \
 
 class DescribeNodeControllers(EmpyreanRequest, TableOutputMixin):
     DESCRIPTION = "List the cloud's node controllers and their instances"
+    ARGS = [Arg('--ec2-url', metavar='URL', route_to=None,
+                help='compute service endpoint URL')]
+
+    def configure(self):
+        EmpyreanRequest.configure(self)
+        if not self.args.get('ec2_service'):
+            self.args['ec2_service'] = \
+                DescribeInstances.SERVICE_CLASS.from_other(
+                    self.service, url=self.args.get('ec2_url'))
 
     def main(self):
         req = DescribeServices.from_other(self, ListAll=True)
@@ -47,7 +57,8 @@ class DescribeNodeControllers(EmpyreanRequest, TableOutputMixin):
                     'state': service.get('localState'),
                     'details': service.get('details') or {},
                     'instances': {}}
-        req = DescribeInstances.from_other(self, InstanceId=['verbose'])
+        req = DescribeInstances.from_other(self, service=self.args['ec2_service'],
+                                           InstanceId=['verbose'])
         reservations = req.main().get('reservationSet')
         for reservation in reservations:
             for instance in reservation.get('instancesSet') or []:

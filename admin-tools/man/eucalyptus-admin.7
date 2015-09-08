@@ -1,0 +1,61 @@
+.Dd 2015-09-03
+.Dt EUCALYPTUS-ADMIN 7
+.Os eucalyptus 4.2
+.Sh NAME
+.Nm eucalyptus-admin
+.Nd eucalyptus administration tools
+.Sh DESCRIPTION
+The
+.Nm
+suite is a set of command line tools that interact with
+Eucalyptus's cloud administration web services.
+.Pp
+The URL for each web service can be set with a
+.Va Em SERVICE Ns No -url
+region option, where
+.Em SERVICE
+is the name of the service, in a
+.Xr euca2ools.ini 5
+configuration file and then chosen with the
+.Fl -region
+command line option or the
+.Ev AWS_DEFAULT_REGION
+environment variable.  Alternatively, the URL can be
+set at the command line or with an environment variable
+that is specific to the service.  Environment variables
+take precedence over configuration file data.
+.Pp
+.Nm
+tools are designed to make managing multiple eucalyptus
+clouds from the command line simple and a natural complement to
+.Xr euca2ools 7 ,
+eucalyptus's command line tool set for end user-facing services.
+.Ss List of Web Services
+.Bl -column "properties" "Environment variable"
+.It Sy Name Ta Sy "Environment variable" Ta Sy Commands
+.It ec2 Ta EC2_URL Ta Xr empyrean-migrate-instances 1
+.It empyrean Ta EMPYREAN_URL Ta Xr empyrean-*
+.It properties Ta PROPERTIES_URL Ta Xr euctl 1
+.El
+.Sh ENVIRONMENT
+.Bl -tag -width Ds
+.It Ev AWS_ACCESS_KEY_ID
+The access key ID to use when authenticating web
+service requests.  This takes precedence over
+.Fl -region
+and
+.Xr euca2ools.ini 5 ,
+but not
+.Fl I .
+.It Ev AWS_SECRET_ACCESS_KEY
+The secret key to use when authenticating web
+service requests.  This takes precedence over
+.Fl -region
+and
+.Xr euca2ools.ini 5 ,
+but not
+.Fl S .
+.Sh SEE ALSO
+.Bl
+.Xr euca2ools.ini 5
+.El

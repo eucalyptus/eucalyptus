@@ -80,7 +80,6 @@ import org.hibernate.criterion.Restrictions;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
 
-import com.eucalyptus.address.AddressRegistry;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.cluster.ClusterConfiguration;
@@ -98,6 +97,9 @@ import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.network.IPRange;
+import com.eucalyptus.network.config.NetworkConfiguration;
+import com.eucalyptus.network.config.NetworkConfigurations;
 import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Subnets;
@@ -132,6 +134,9 @@ public abstract class SplitHorizonResolver implements DnsResolver {
   private static final Supplier<Boolean> privateNetworksManagedSupplier =
       Suppliers.memoizeWithExpiration( PrivateNetworksManaged.INSTANCE, 15, TimeUnit.SECONDS );
 
+  private static final Supplier<Predicate<InetAddress>> publicAddressPredicateSupplier =
+      Suppliers.memoizeWithExpiration( PublicAddresses.INSTANCE, 15, TimeUnit.SECONDS );
+
   private static final Supplier<Iterable<Cidr>> clusterSubnetsSupplier =
       Suppliers.memoizeWithExpiration( ClusterSubnets.INSTANCE, 1, TimeUnit.MINUTES );
 
@@ -152,15 +157,15 @@ public abstract class SplitHorizonResolver implements DnsResolver {
    * Resolve the network (cidr) for an instance (i.e. a VPC or EC2-Classic)
    */
   public static Optional<Cidr> lookupNetwork( final InetAddress address ) {
-    final Optional<VmDnsInfo> vmInfo = lookupPublic( address );
+    final Optional<VmDnsInfo> vmInfo = privateNetworksManagedSupplier.get() ?
+        lookupPublic( address ) :
+        lookupAny( address );
     if ( vmInfo.isPresent( ) ) {
       final String vpcId = vmInfo.get( ).getVpcId( );
       if (  vpcId != null ) {
         return vpcCache.getUnchecked( vpcId ).transform( VpcDnsInfo.cidr( ) );  
       } else {
-        final InetAddress privateAddress = AddressRegistry.getInstance( ).contains( address.getHostAddress( ) ) ?
-            InetAddresses.forString( vmInfo.get( ).getPrivateIp( ) ) :
-            address;
+        final InetAddress privateAddress = InetAddresses.forString( vmInfo.get( ).getPrivateIp( ) );
         for ( final Cidr cidr : clusterSubnetsSupplier.get( ) ) {
           if ( cidr.apply( privateAddress ) ) {
             return Optional.of( cidr );
@@ -170,7 +175,6 @@ public abstract class SplitHorizonResolver implements DnsResolver {
     }
     return Optional.absent( );
   }
-
 
   /**
    * Test whether the address is one which belongs to an instance or is external.
@@ -192,7 +196,7 @@ public abstract class SplitHorizonResolver implements DnsResolver {
     public boolean apply( final InetAddress input ) {
       if ( !Bootstrap.isOperational( ) ) {
         return false;
-      } else if ( AddressRegistry.getInstance( ).contains( input.getHostAddress( ) ) ) {
+      } else if ( publicAddressPredicateSupplier.get( ).apply( input ) ) {
         return true;
       } else if ( privateNetworksManagedSupplier.get( ) && input.isSiteLocalAddress( ) ) {
         return true;
@@ -643,6 +647,37 @@ public abstract class SplitHorizonResolver implements DnsResolver {
         } catch ( Exception e ) {
           return false;
         }
+      }
+    }
+  }
+
+  private enum PublicAddresses implements Supplier<Predicate<InetAddress>> {
+    INSTANCE {
+      @Override
+      public Predicate<InetAddress> get() {
+        Predicate<InetAddress> predicate = Predicates.alwaysFalse( );
+        final Optional<NetworkConfiguration> config = NetworkConfigurations.getNetworkConfiguration( );
+        if ( config.isPresent( ) ) try {
+          final List<IPRange> ranges = ImmutableList.copyOf( Optional.presentInstances(
+              Iterables.transform(
+                  config.get( ).getPublicIps( ),
+                  IPRange.parse( ) ) ) );
+          predicate = new Predicate<InetAddress>( ) {
+            @Override
+            public boolean apply( @Nullable final InetAddress inetAddress ) {
+              final IPRange addressAsRange = IPRange.parse( inetAddress.getHostAddress( ) );
+              boolean contained = false;
+              for ( final IPRange range : ranges ) {
+                contained = range.contains( addressAsRange );
+                if ( contained ) break;
+              }
+              return contained;
+            }
+          };
+        } catch ( Exception e ) {
+          LOG.error( "Error building public address predicate", e );
+        }
+        return predicate;
       }
     }
   }

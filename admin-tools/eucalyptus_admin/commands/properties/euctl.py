@@ -91,7 +91,10 @@ class Euctl(PropertiesRequest):
     ARGS = [Arg('prop_pairs', metavar='NAME[=VALUE|=@FILE]', nargs='*',
                 type=_property_key_value,
                 help='''Output the specified variable, and where a value
-                is given, attempt to set it to the specified value.'''),
+                is given, attempt to set it to the specified value.  If
+                the value begins with an @ character then instead use
+                the contents of the specified file as the variable's
+                new value.'''),
             Arg('-A', '--all-types', action='store_true', help='''List all
                 the known variable names, including structures.  Those with
                 string or integer values will be output as usual; for the
@@ -99,8 +102,13 @@ class Euctl(PropertiesRequest):
                 given.'''),
             Arg('-r', '--reset', action='store_true',
                 help='Reset the given variables to their default values.'),
-            Arg('-d', dest='show_default', action='store_true', help='''Show
-                variables' default values instead of their current values.'''),
+            MutuallyExclusiveArgList(
+                Arg('-d', dest='show_defaults', action='store_true',
+                    help='''Show variables' default values instead of
+                    their current values.'''),
+                Arg('-s', dest='show_descriptions',
+                    action='store_true', help='''Show variables'
+                    descriptions instead of their current values.''')),
             Arg('-n', dest='suppress_name', action='store_true',
                 help='''Suppress output of the variable name.  This is
                 useful for setting shell variables.'''),
@@ -180,11 +188,18 @@ class Euctl(PropertiesRequest):
                 req = DescribeProperties.from_other(self, Property=[key])
                 response = req.main()
                 for prop_dict in response.get('properties') or []:
-                    if self.args.get('show_default'):
-                        value = prop_dict.get('defaultValue')
+                    if self.args.get('show_defaults'):
+                        prop = _build_property(prop_dict.get('name'),
+                                               prop_dict.get('defaultValue'))
+                    elif self.args.get('show_descriptions'):
+                        # Descriptions are plain text, so force plain
+                        # text handling.
+                        prop = _build_property(prop_dict.get('name'),
+                                               prop_dict.get('description'),
+                                               prop_type=_Property)
                     else:
-                        value = prop_dict.get('value')
-                    prop = _build_property(prop_dict.get('name'), value)
+                        prop = _build_property(prop_dict.get('name'),
+                                               prop_dict.get('value'))
                     if not self.args.get('suppress_all'):
                         prop.print_(
                             suppress_name=self.args.get('suppress_name'),
@@ -267,8 +282,10 @@ class Euctl(PropertiesRequest):
                                   .format(self.args.get('format')))
 
 
-def _build_property(prop_name, prop_value):
-    if PROPERTY_TYPES.get(prop_name) == 'json':
+def _build_property(prop_name, prop_value, prop_type=None):
+    if prop_type:
+        prop = prop_type(prop_name)
+    elif PROPERTY_TYPES.get(prop_name) == 'json':
         prop = _JSONProperty(prop_name)
     else:
         prop = _Property(prop_name)
