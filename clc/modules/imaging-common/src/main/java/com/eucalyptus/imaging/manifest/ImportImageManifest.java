@@ -51,6 +51,11 @@ public enum ImportImageManifest implements ImageManifest {
   }
 
   @Override
+  public String getDigestElement() {
+    return null;
+  }
+
+  @Override
   public boolean signPartUrl() {
     return false;
   }

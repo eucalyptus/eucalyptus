@@ -57,6 +57,7 @@ import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
@@ -251,11 +252,24 @@ public class DownloadManifestFactory {
                 "Some parts in the manifest are not stored in the OS. Its location is outside Eucalyptus:"
                     + partDownloadUrl);
         }
+        Node digestNode = null;
+        if (baseManifest.getManifestType().getDigestElement() != null)
+          digestNode = ((Node) xpath.evaluate(baseManifest.getManifestType()
+            .getDigestElement(), part, XPathConstants.NODE));
         Element aPart = manifestDoc.createElement("part");
         Element getUrl = manifestDoc.createElement("get-url");
         getUrl.appendChild(manifestDoc.createTextNode(partDownloadUrl));
         aPart.setAttribute("index", partIndex);
         aPart.appendChild(getUrl);
+        if (digestNode != null) {
+          NamedNodeMap nm = digestNode.getAttributes();
+          if (nm == null)
+            throw new DownloadManifestException("Some parts in manifest don't have digest's verification algorithm");
+          Element digest = manifestDoc.createElement("digest");
+          digest.setAttribute("algorithm", nm.getNamedItem("algorithm").getTextContent());
+          digest.appendChild(manifestDoc.createTextNode(digestNode.getTextContent()));
+          aPart.appendChild(digest);
+        }
         partsEl.appendChild(aPart);
       }
       root.appendChild(el);

@@ -28,6 +28,8 @@ public interface ImageManifest {
 
   String getPartUrlElement();
 
+  String getDigestElement();
+
   boolean signPartUrl();
 
   String getSizePath();
