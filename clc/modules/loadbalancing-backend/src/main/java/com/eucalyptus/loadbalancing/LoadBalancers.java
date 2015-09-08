@@ -175,19 +175,24 @@ public class LoadBalancers {
 	}
 	
 	public enum DeploymentVersion {
-	 v4_2_0;
+	 v4_1_0,
+	 v4_2_0; // the version is checked from 4.2.0
 	 
 	 public String toVersionString(){
 	   return this.name( ).substring( 1 ).replace( "_", "." );
 	 }
 	 
 	 public static DeploymentVersion getVersion(final String version) {
+	   if( version == null || version.length() <= 0)
+	     return DeploymentVersion.v4_1_0;
+	   
 	   return DeploymentVersion.valueOf( "v" + version.replace( ".", "_" ) );
 	 }
 	 
 	 public boolean isLaterThan(final DeploymentVersion other) {
 	   if(other==null)
 	     return false;
+	   
 	   String[] thisVersionDigits = this.name().substring(1).split("_");
 	   String[] otherVersionDigits = other.name().substring(1).split("_");
 	   
