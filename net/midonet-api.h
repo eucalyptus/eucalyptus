@@ -206,7 +206,7 @@ int mido_print_chain(midoname * name);
 int mido_delete_chain(midoname * name);
 int mido_get_chains(char *tenant, midoname ** outnames, int *outnames_max);
 
-int mido_create_rule(midoname * chain, midoname * outname, ...);
+int mido_create_rule(midoname * chain, midoname * outname, int *next_position, ...);
 //int mido_create_rule_v1(midoname *chain, midorule *rule, midoname *outname);
 //int mido_read_rule(midoname * name);
 int mido_update_rule(midoname * name, ...);

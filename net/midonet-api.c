@@ -1355,13 +1355,13 @@ int mido_allocate_midorule(char *position, char *type, char *action, char *proto
 //!
 //! @note
 //!
-int mido_create_rule(midoname * chain, midoname * outname, ...)
+int mido_create_rule(midoname * chain, midoname * outname, int * next_position, ...)
 {
     int rc = 0, ret = 0, max_rules = 0, found = 0, i = 0;
     midoname myname, *rules = NULL;
     va_list ap = {{0}}, ap1 = {{0}}, ap2 = {{0}};
 
-    va_start(ap, outname);
+    va_start(ap, next_position);
     va_copy(ap1, ap);
     va_copy(ap2, ap);
 
@@ -1373,7 +1373,6 @@ int mido_create_rule(midoname * chain, midoname * outname, ...)
     myname.vers = strdup("v2");
     
     // check if host already has a rule in place
-    //    rc = mido_get_resources(chain, 1, myname.tenant, "rules", "application/vnd.org.midonet.collection.Rule-v2+json", &rules, &max_rules);
     rc = mido_get_rules(chain, &rules, &max_rules);
     if (!rc) {
         found = 0;
@@ -1391,11 +1390,16 @@ int mido_create_rule(midoname * chain, midoname * outname, ...)
     mido_free_midoname_list(rules, max_rules);
     EUCA_FREE(rules);
 
+    LOGTRACE("MAX_RULE %s: %d\n", chain->name, max_rules);
+    if (next_position) *next_position = max_rules + 1;
+
     if (!found) {
         rc = mido_create_resource_v(chain, 1, &myname, outname, &ap2);
         va_end(ap2);
         if (rc) {
             ret = 1;
+        } else {
+            if (next_position) *next_position = max_rules + 2;
         }
     }
 
