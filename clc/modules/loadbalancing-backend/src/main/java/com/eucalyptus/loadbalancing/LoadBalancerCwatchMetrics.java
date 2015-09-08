@@ -92,10 +92,10 @@ public class LoadBalancerCwatchMetrics {
 	public void updateHealthy(final LoadBalancerCoreView lb, final String zone, final String instanceId){
 		final ElbDimension dim = new ElbDimension(lb.getOwnerUserId(), lb.getDisplayName(), zone);
 		final BackendInstance key = new BackendInstance(lb, instanceId);
+
 		synchronized(lock){
 			if(!this.instanceToDimensionMap.containsKey(key))
 				this.instanceToDimensionMap.put(key, dim);
-			
 			this.instanceHealthMap.put(key, Boolean.TRUE);
 			if(!metricsMap.containsKey(dim))
 				metricsMap.put(dim, new ElbAggregate(lb.getDisplayName(), zone)); 
@@ -221,15 +221,14 @@ public class LoadBalancerCwatchMetrics {
             if (! this.instanceHealthMap.containsKey(instance))
               continue;
         	  final ElbDimension thisDim = this.instanceToDimensionMap.get(instance);
-        		if(this.instanceHealthMap.get(instance).booleanValue()){ // healthy	
-        			if(!healthyCountMap.containsKey(thisDim))
-        				healthyCountMap.put(thisDim, 0);
+        	  if(!healthyCountMap.containsKey(thisDim))
+              healthyCountMap.put(thisDim, 0);
+            if(!unhealthyCountMap.containsKey(thisDim))
+              unhealthyCountMap.put(thisDim,  0);
+        		if(this.instanceHealthMap.get(instance).booleanValue()) // healthy	
         			healthyCountMap.put(thisDim, healthyCountMap.get(thisDim)+1);
-        		}else{
-        			if(!unhealthyCountMap.containsKey(thisDim))
-        				unhealthyCountMap.put(thisDim,  0);
+        		else
         			unhealthyCountMap.put(thisDim, unhealthyCountMap.get(thisDim)+1);
-        		}
         	}
         	
 			for (final ElbDimension dim : this.metricsMap.keySet()){
@@ -250,7 +249,7 @@ public class LoadBalancerCwatchMetrics {
 	        		
 				if(healthyCountMap.containsKey(dim)){
 		        	int numHealthy = healthyCountMap.get(dim);
-		        	if(numHealthy > 0){
+		        	if(numHealthy >= 0){
 						MetricDatum datum = new MetricDatum();
 						datum.setDimensions(dims);
 						datum.setMetricName("HealthyHostCount");
@@ -266,7 +265,7 @@ public class LoadBalancerCwatchMetrics {
 				}
 				if(unhealthyCountMap.containsKey(dim)){
 					int numUnhealthy = unhealthyCountMap.get(dim);
-					if(numUnhealthy > 0){
+					if(numUnhealthy >= 0){
 						MetricDatum datum = new MetricDatum();
 						datum.setDimensions(dims);
 						datum.setMetricName("UnHealthyHostCount");
