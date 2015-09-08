@@ -22,6 +22,7 @@ package com.eucalyptus.loadbalancing.activities;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.entities.Entities;
@@ -69,6 +70,10 @@ public class EventHandlerChainModifyAttributes extends EventHandlerChain<ModifyA
         if(emitInterval < 5 || emitInterval > 60) {
           throw new EventHandlerException("Access log's emit interval must be between 5 and 60 minutes");
         }
+      }
+      
+      if (accessLog.getS3BucketPrefix() != null) {
+        accessLog.setS3BucketPrefix(StringEscapeUtils.escapeJavaScript(accessLog.getS3BucketPrefix()));
       }
       /* End verifying AccessLog attributes */
     }
