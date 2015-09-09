@@ -69,11 +69,12 @@ class DescribeServices(EmpyreanRequest, TableOutputMixin):
                       help='''whether the service is a member of any
                       service group (true or false)'''),
                Filter('service-type', help='the type of service'),
-               Filter('state', help="the service's state"),
-               # TODO:  this is wrong!
+               Filter('state', help="the service's state")]
+               # A "user-service" filter used to appear here, but it was
+               # a mirror of an option with that name in the old admin
+               # tool set that doesn't match what that term means today,
+               # so we removed it at least for now.  See
                # https://eucalyptus.atlassian.net/browse/EUCA-11006
-               Filter('user-service', help='''whether the service is
-                      user-facing (true or false)''')]
     LIST_TAGS = ['serviceStatuses', 'uris', 'serviceAccounts']
 
     def print_result(self, result):
