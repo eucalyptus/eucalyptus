@@ -345,6 +345,7 @@ int gni_hostnames_get_hostname(gni_hostname_info *host_info, const char *ip_addr
 int cmpipaddr(const void *p1, const void *p2);
 
 int ruleconvert(char *rulebuf, char *outrule);
+int ingress_gni_to_iptables_rule(char *scidr, gni_rule *iggnirule, char *outrule, int flags);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

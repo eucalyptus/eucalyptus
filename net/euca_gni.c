@@ -3140,6 +3140,121 @@ int ruleconvert(char *rulebuf, char *outrule)
 }
 
 //!
+//! Creates an iptables rule using the source CIDR specified in the argument, and
+//! based on the ingress rule entry in the argument.
+//!
+//! @param[in] scidr a string containing a CIDR to be used in the output iptables rule to match the source (can ba a single IP address).
+//! If null, the source address within the ingress rule will be used.
+//! @param[in] ingress_rule gni_rule structure containing an ingress rule.
+//! @param[in] flags integer containing extra conditions that will be added to the output iptables rule.
+//! If 0, no condition is added. If 1 the output iptables rule will allow traffic between VMs on the same NC (see EUCA-11083).
+//! @param[out] outrule a string containing the converted rule. A buffer with at least 1024 chars is expected.
+//!
+//! @return 0 on success or 1 on failure.
+//!
+//! @see
+//!
+//! @pre ingress_rule and outrule pointers MUST not be NULL
+//!
+//! @post \li uppon success the outrule contains the converted iptables rule.
+//!       \li uppon failure, outrule does not contain any valid data
+//!
+//! @note
+//!
+int ingress_gni_to_iptables_rule(char *scidr, gni_rule *ingress_rule, char *outrule, int flags) {
+#define MAX_RULE_LEN     1024
+#define MAX_NEWRULE_LEN  2049
+    char newrule[MAX_NEWRULE_LEN], buf[MAX_RULE_LEN];
+    char *strptr = NULL;
+    struct protoent *proto_info = NULL;
+
+    if (!ingress_rule || !outrule) {
+        LOGERROR("Invalid pointer(s) to ingress_gni_rule and/or iptables rule buffer.\n");
+        return 1;
+    }
+
+    // Check for protocol all (-1) - should not happen in non-VPC
+    if (-1 != ingress_rule->protocol) {
+        proto_info = getprotobynumber(ingress_rule->protocol);
+        if (proto_info == NULL) {
+            LOGWARN("Invalid protocol (%d) - cannot create iptables rule.", ingress_rule->protocol);
+            return 1;
+        }
+    }
+
+    newrule[0] = '\0';
+    if (scidr) {
+        strptr = scidr;
+    } else {
+        strptr = ingress_rule->cidr;
+    }
+    if (strptr && strlen(strptr)) {
+        snprintf(buf, MAX_RULE_LEN, "-s %s ", strptr);
+        strncat(newrule, buf, MAX_NEWRULE_LEN);
+    }
+    switch (ingress_rule->protocol) {
+        case 1: // ICMP
+            snprintf(buf, MAX_RULE_LEN, "-p %s -m %s ", proto_info->p_name, proto_info->p_name);
+            strncat(newrule, buf, MAX_NEWRULE_LEN);
+            if (ingress_rule->icmpType == -1) {
+                snprintf(buf, MAX_RULE_LEN, "--icmp-type any ");
+                strncat(newrule, buf, MAX_NEWRULE_LEN);
+            } else {
+                snprintf(buf, MAX_RULE_LEN, "--icmp-type %d", ingress_rule->icmpType);
+                strncat(newrule, buf, MAX_NEWRULE_LEN);
+                if (ingress_rule->icmpCode != -1) {
+                    snprintf(buf, MAX_RULE_LEN, "/%d", ingress_rule->icmpCode);
+                    strncat(newrule, buf, MAX_NEWRULE_LEN);
+                }
+                snprintf(buf, MAX_RULE_LEN, " ");
+                strncat(newrule, buf, MAX_NEWRULE_LEN);
+            }
+            break;
+        case 6: // TCP
+        case 17: // UDP
+            snprintf(buf, MAX_RULE_LEN, "-p %s -m %s ", proto_info->p_name, proto_info->p_name);
+            strncat(newrule, buf, MAX_NEWRULE_LEN);
+            if (ingress_rule->fromPort) {
+                snprintf(buf, MAX_RULE_LEN, "--dport %d", ingress_rule->fromPort);
+                strncat(newrule, buf, MAX_NEWRULE_LEN);
+                if ((ingress_rule->toPort) && (ingress_rule->toPort > ingress_rule->fromPort)) {
+                    snprintf(buf, MAX_RULE_LEN, ":%d", ingress_rule->toPort);
+                    strncat(newrule, buf, MAX_NEWRULE_LEN);
+                }
+                snprintf(buf, MAX_RULE_LEN, " ");
+                strncat(newrule, buf, MAX_NEWRULE_LEN);
+            }
+            break;            
+        default:
+            // Protocols accepted by EC2 non-VPC are ICMP/TCP/UDP. Other protocols will default to numeric values on euca.
+            // snprintf(buf, MAX_RULE_LEN, "-p %s ", proto_info->p_name);
+            snprintf(buf, MAX_RULE_LEN, "-p %d ", proto_info->p_proto);
+            strncat(newrule, buf, MAX_NEWRULE_LEN);
+            break;
+    }
+
+    switch (flags) {
+        case 0: // no condition
+            break;
+        case 1: // Add condition to the rule to accept the packet if it would be SNATed.
+            snprintf(buf, MAX_RULE_LEN, "-m mark ! --mark 0x2a ");
+            strncat(newrule, buf, MAX_NEWRULE_LEN);
+            break;
+        default:
+            LOGINFO("Call with invalid flags: %d - ignored.\n", flags);
+    }
+    
+    while (newrule[strlen(newrule) - 1] == ' ') {
+        newrule[strlen(newrule) - 1] = '\0';
+    }
+
+    snprintf(outrule, MAX_RULE_LEN, "%s", newrule);
+    LOGTRACE("IPTABLES RULE: %s\n", outrule);
+
+    return 0;
+}
+
+//!
 //! Clears a gni_cluster structure. This will free member's allocated memory and zero
 //! out the structure itself.
 //!

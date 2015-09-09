@@ -498,6 +498,7 @@ static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni)
 
     int i = 0;
     int j = 0;
+    int k = 0;
     int rc = 0;
     int ret = 0;
     int slashnet = 0;
@@ -508,6 +509,10 @@ static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni)
     gni_cluster *mycluster = NULL;
     gni_secgroup *secgroup = NULL;
     gni_instance *instances = NULL;
+    int max_myinstances = 0;
+    gni_instance *myinstances = NULL;
+    gni_node *myself = NULL;
+    u32 cidrnm = 0xffffffff;
 
     LOGINFO("Implementing security-group artifacts for '%s' network driver.\n", DRIVER_NAME());
 
@@ -582,6 +587,15 @@ static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni)
         EUCA_FREE(strptra);
     }
 
+    // find all instances that are local to this NC
+    rc = gni_find_self_node(pGni, &myself);
+    if (!rc) {
+        rc = gni_node_get_instances(pGni, myself, NULL, 0, NULL, 0, &myinstances, &max_myinstances);
+    } else {
+        LOGWARN("Failed to retrieve list of local instances.\n");
+        max_myinstances = 0;
+    }
+
     // add chains/rules
     for (i = 0; i < pGni->max_secgroups; i++) {
         chainname = NULL;
@@ -645,8 +659,8 @@ static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni)
             ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
 
             // then put all the group specific IPT rules (temporary one here)
-            if (secgroup->max_grouprules) {
-                for (j = 0; j < secgroup->max_grouprules; j++) {
+            if (secgroup->max_ingress_rules) {
+                for (j = 0; j < secgroup->max_ingress_rules; j++) {
                     // If this rule is in reference to another group, lets add this IP set here
                     if (strlen(secgroup->ingress_rules[j].groupId) != 0) {
                         // Create the IP set first and add localhost as a holder
@@ -654,17 +668,49 @@ static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni)
                         ips_set_add_ip(config->ips, secgroup->ingress_rules[j].groupId, "127.0.0.1");
 
                         // Next add the rule
-                        snprintf(rule, MAX_RULE_LEN, "-A %s -m set --set %s src %s -j ACCEPT", chainname, secgroup->ingress_rules[j].groupId, secgroup->grouprules[j].name);
+                        //snprintf(rule, MAX_RULE_LEN, "-A %s -m set --set %s src %s -j ACCEPT", chainname, secgroup->ingress_rules[j].groupId, secgroup->grouprules[j].name);
+                        //ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
+                        ingress_gni_to_iptables_rule(NULL, &(secgroup->ingress_rules[j]), rule, 0);
+                        strptra = strdup(rule);
+                        snprintf(rule, MAX_RULE_LEN, "-A %s -m set --set %s src %s -j ACCEPT", chainname, secgroup->ingress_rules[j].groupId, strptra);
                         ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
+                        EUCA_FREE(strptra);
                     } else {
-                        snprintf(rule, MAX_RULE_LEN, "-A %s %s -j ACCEPT", chainname, secgroup->grouprules[j].name);
+                        ingress_gni_to_iptables_rule(NULL, &(secgroup->ingress_rules[j]), rule, 0);
+                        strptra = strdup(rule);
+                        snprintf(rule, MAX_RULE_LEN, "-A %s %s -j ACCEPT", chainname, strptra);
                         ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
+                        EUCA_FREE(strptra);
+
+                        // Check if this rule refers to a public IP that this NC is responsible for
+                        if (secgroup->ingress_rules[j].cidr) {
+                            // Ignoring potential shift by 32 on a u32. If cidrsn is 0, the rule will not be processed (it allows all)
+                            cidrnm = (u32) 0xffffffff << (32 - secgroup->ingress_rules[j].cidrSlashnet);
+                            if (secgroup->ingress_rules[j].cidrSlashnet != 0) {
+                                // Search for public IPs that this NC is responsible
+                                for (k = 0; k < max_myinstances; k++) {
+                                    if (((myinstances[k].publicIp & cidrnm) == (secgroup->ingress_rules[j].cidrNetaddr & cidrnm)) &&
+                                            ((myinstances[k].privateIp & cidrnm) != (secgroup->ingress_rules[j].cidrNetaddr & cidrnm))) {
+                                        strptra = hex2dot(myinstances[k].privateIp);
+                                        LOGDEBUG("Found instance private IP (%s) local to this NC affected by rule (%s).\n", strptra, secgroup->grouprules[j].name);
+                                        ingress_gni_to_iptables_rule(strptra, &(secgroup->ingress_rules[j]), rule, 1);
+                                        LOGDEBUG("Created new iptables rule: %s\n", rule);
+                                        EUCA_FREE(strptra);
+                                        strptra = strdup(rule);
+                                        snprintf(rule, MAX_RULE_LEN, "-A %s %s -j ACCEPT", chainname, strptra);
+                                        ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
+                                        EUCA_FREE(strptra);
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
             EUCA_FREE(chainname);
         }
     }
+    EUCA_FREE(myinstances);
 
     // last rule in place is to DROP if no accepts have made it past the FWD chains, and the dst IP is in the ALLPRIVATE ipset
     snprintf(rule, MAX_RULE_LEN, "-A EUCA_FILTER_FWD -m set --match-set EUCA_ALLPRIVATE dst -j DROP");
