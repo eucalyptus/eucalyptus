@@ -3817,9 +3817,10 @@ int instance_network_gate(ncInstance *instance, time_t timeout_seconds) {
     time_t max_time=0;
     
     max_time = time(NULL) + timeout_seconds;
-    LOGDEBUG("[%s] waiting at most %d seconds for required instance networking to exist before booting instance\n", instance->instanceId, (int)timeout_seconds);
-    while(time(NULL) < max_time) {
-        if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_EDGE)) {
+
+    if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_EDGE)) {
+        LOGDEBUG("[%s] waiting at most %d seconds for required instance networking to exist before booting instance\n", instance->instanceId, (int)timeout_seconds);
+        while(time(NULL) < max_time) {
             // check to ensure that dhcpd config contains the mac for the instance
             snprintf(path, EUCA_MAX_PATH, "%s/var/run/eucalyptus/net/euca-dhcp.conf", nc_state.home);
             snprintf(needle, EUCA_MAX_PATH, "node-%s", instance->ncnet.privateIp);
@@ -3834,7 +3835,8 @@ int instance_network_gate(ncInstance *instance, time_t timeout_seconds) {
             EUCA_FREE(filebuf);
             sleep(1);
         }
+        LOGERROR("[%s] timed out waiting for instance network information to appear before booting instance\n", instance->instanceId);
+        return(1);
     }
-    LOGERROR("[%s] timed out waiting for instance network information to appear before booting instance\n", instance->instanceId);
-    return(1);
+    return(0);
 }
