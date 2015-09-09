@@ -140,6 +140,7 @@
 #define MAX_CREATE_TRYS                              5
 #define CREATE_TIMEOUT_SEC                           60
 #define LIBVIRT_TIMEOUT_SEC                          5
+#define NETWORK_GATE_TIMEOUT_SEC                     120
 #define PER_INSTANCE_BUFFER_MB                       20 //!< by default reserve this much extra room (in MB) per instance (for kernel, ramdisk, and metadata overhead)
 #define MAX_SENSOR_RESOURCES                         MAXINSTANCES_PER_NC
 #define SEC_PER_MB                                   ((1024 * 1024) / 512)
@@ -1780,6 +1781,11 @@ void *startup_thread(void *arg)
 
     if (call_hooks(NC_EVENT_PRE_BOOT, instance->instancePath)) {
         LOGERROR("[%s] cancelled instance startup via hooks\n", instance->instanceId);
+        goto shutoff;
+    }
+
+    if (instance_network_gate(instance, NETWORK_GATE_TIMEOUT_SEC)) {
+        LOGERROR("[%s] cancelled instance startup via network_gate\n", instance->instanceId);
         goto shutoff;
     }
 
@@ -3802,4 +3808,33 @@ int migration_rollback(ncInstance * instance)
     save_instance_struct(instance);
     copy_instances();
     return FALSE;
+}
+
+
+// function that performs any local checks to determine that networking is in place enough to boot instance
+int instance_network_gate(ncInstance *instance, time_t timeout_seconds) {
+    char *filebuf=NULL, path[EUCA_MAX_PATH], needle[EUCA_MAX_PATH];
+    time_t max_time=0;
+    
+    max_time = time(NULL) + timeout_seconds;
+    LOGDEBUG("[%s] waiting at most %d seconds for required instance networking to exist before booting instance\n", instance->instanceId, (int)timeout_seconds);
+    while(time(NULL) < max_time) {
+        if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_EDGE)) {
+            // check to ensure that dhcpd config contains the mac for the instance
+            snprintf(path, EUCA_MAX_PATH, "%s/var/run/eucalyptus/net/euca-dhcp.conf", nc_state.home);
+            snprintf(needle, EUCA_MAX_PATH, "node-%s", instance->ncnet.privateIp);
+            filebuf = file2str(path);
+            if (filebuf && strstr(filebuf, needle)) {
+                LOGDEBUG("[%s] local dhcpd config contains required instance record, continuing\n", instance->instanceId);
+                EUCA_FREE(filebuf);
+                return(0);
+            } else {
+                LOGTRACE("[%s] local dhcpd config does not (yet) contain required instance record, waiting...(%d seconds remaining)\n", instance->instanceId, (int)(max_time - time(NULL)));
+            }
+            EUCA_FREE(filebuf);
+            sleep(1);
+        }
+    }
+    LOGERROR("[%s] timed out waiting for instance network information to appear before booting instance\n", instance->instanceId);
+    return(1);
 }

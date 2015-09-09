@@ -372,6 +372,8 @@ int connect_ebs(const char *dev_name, const char *dev_serial, const char *dev_bu
 int disconnect_ebs(struct nc_state_t *nc, char *instanceId, char *volumeId, char *attachmentToken, char *connect_string);
 void set_serial_and_bus(const char *vol, const char *dev, char *serial, int serial_len, char *bus, int bus_len);
 
+int instance_network_gate(ncInstance *instance, time_t timeout_seconds);
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                           STATIC INLINE PROTOTYPES                         |
