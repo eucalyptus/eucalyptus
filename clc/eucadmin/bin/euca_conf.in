@@ -1148,6 +1148,45 @@ class EucaConf(object):
             print RegisterHelp
 
 
+def show_deprecation_warning():
+    if '--register-nodes' in sys.argv:
+        replacement = ("``clusteradmin-register-nodes'' and "
+                       "``clusteradmin-copy-keys''")
+    elif '--register-cluster' in sys.argv:
+        replacement = ("``empyrean-register-service -t cluster'' and "
+                       "``clcadmin-copy-keys -z''")
+    elif '--register-sc' in sys.argv:
+        replacement = ("``empyrean-register-service -t storage'' and "
+                       "``clcadmin-copy-keys -z''")
+    elif '--register-walrusbackend' in sys.argv:
+        replacement = ("``empyrean-register-service -t walrusbackend'' and "
+                       "``clcadmin-copy-keys''")
+    elif '--register-service' in sys.argv:
+        replacement = "``empyrean-register-service''"
+    elif '--deregister-nodes' in sys.argv:
+        replacement = "``clusteradmin-deregister-nodes''"
+    elif '--deregister-cluster' in sys.argv:
+        replacement = "``empyrean-deregister-service -t cluster''"
+    elif '--deregister-sc' in sys.argv:
+        replacement = "``empyrean-deregister-service -t storage''"
+    elif '--deregister-walrusbackend' in sys.argv:
+        replacement = "``empyrean-deregister-service -t walrusbackend''"
+    elif '--get-credentials' in sys.argv:
+        replacement = ("``eval `clcadmin-assume-system-credentials`'' or "
+                       "``euare-useraddkey''")
+    elif '--synckey' in sys.argv:
+        replacement = "``clcadmin-copy-keys''"
+    elif any(arg.startswith('--list-') for arg in sys.argv):
+        replacement = "``empyrean-describe-services''"
+    else:
+        replacement = None
+    msg = 'warning: euca_conf is deprecated'
+    if replacement:
+        msg += '; use {0} instead'.format(replacement)
+    print >> sys.stderr, msg
+
+
 if __name__ == "__main__":
+    show_deprecation_warning()
     ec = EucaConf()
     ec.main()

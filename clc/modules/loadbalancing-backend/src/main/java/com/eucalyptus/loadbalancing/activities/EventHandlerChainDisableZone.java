@@ -36,6 +36,7 @@ import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBack
 import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneEntityTransform;
+import com.eucalyptus.loadbalancing.LoadBalancers.DeploymentVersion;
 import com.eucalyptus.loadbalancing.LoadBalancers;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
@@ -79,6 +80,12 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 			}catch(Exception ex){
 				throw new EventHandlerException("Error while looking for loadbalancer with name="+evt.getLoadBalancer(), ex);
 			}	
+			if(lb.getLoadbalancerDeploymentVersion() == null || 
+          ! DeploymentVersion.getVersion(
+              lb.getLoadbalancerDeploymentVersion()).isEqualOrLaterThan(DeploymentVersion.v4_2_0)) {
+        throw new EventHandlerException("Disabling zone is not supported for loadbalancers created prior to 4.2. Please create a new loadbalancer.");
+      }
+			
 			final List<LoadBalancerZoneCoreView> currentZones = 
 					Lists.newArrayList(Collections2.filter(lb.getZones(), new Predicate<LoadBalancerZoneCoreView>(){
 						@Override

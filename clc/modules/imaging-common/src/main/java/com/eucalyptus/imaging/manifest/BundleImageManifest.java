@@ -46,6 +46,11 @@ public enum BundleImageManifest implements ImageManifest {
   }
 
   @Override
+  public String getDigestElement() {
+    return "digest";
+  }
+
+  @Override
   public boolean signPartUrl() {
     return true;
   }
