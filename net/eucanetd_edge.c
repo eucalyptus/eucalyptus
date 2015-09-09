@@ -652,11 +652,11 @@ static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni)
             // populate forward chain
 
             // this one needs to be first
-            snprintf(rule, MAX_RULE_LEN, "-A %s -m set --match-set %s src,dst -j ACCEPT", chainname, chainname);
+            snprintf(rule, MAX_RULE_LEN, "-A %s -m set --match-set %s src -j ACCEPT", chainname, chainname);
             ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
             // make sure conntrack rule is in place
-            snprintf(rule, MAX_RULE_LEN, "-A %s -m conntrack --ctstate ESTABLISHED -j ACCEPT", chainname);
-            ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
+            //snprintf(rule, MAX_RULE_LEN, "-A %s -m conntrack --ctstate ESTABLISHED -j ACCEPT", chainname);
+            //ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
 
             // then put all the group specific IPT rules (temporary one here)
             if (secgroup->max_ingress_rules) {
