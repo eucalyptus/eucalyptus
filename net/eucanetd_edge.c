@@ -746,22 +746,25 @@ static int network_driver_implement_addressing(globalNetworkInfo * pGni, lni_t *
         LOGERROR("Failed to implement addressing artifacts for '%s' network driver. Invalid parameters provided.\n", DRIVER_NAME());
         return (1);
     }
-    // Install the private IPs artifacts for instances
-    rc = update_private_ips(pGni);
-    if (rc) {
-        LOGERROR("could not complete update of private IPs: check above log errors for details\n");
-        ret = 1;
-    }
+
     // Install the elastic IPs artifacts for instances
     rc = update_elastic_ips(pGni);
     if (rc) {
         LOGERROR("could not complete update of public IPs: check above log errors for details\n");
         ret = 1;
     }
+
     // Install the L2 addressing artifacts for instances
     rc = update_l2_addressing(pGni);
     if (rc) {
         LOGERROR("could not complete update of public IPs: check above log errors for details\n");
+        ret = 1;
+    }
+
+    // Install the private IPs artifacts for instances
+    rc = update_private_ips(pGni);
+    if (rc) {
+        LOGERROR("could not complete update of private IPs: check above log errors for details\n");
         ret = 1;
     }
     return (ret);
@@ -1140,16 +1143,38 @@ static int update_elastic_ips(globalNetworkInfo * pGni)
         LOGERROR("could not apply new ipt handler rules: check above log errors for details\n");
         ret = 1;
     }
+
     // if all has gone well, now clear any public IPs that have not been mapped to private IPs
     if (!ret) {
+        u32 *ips=NULL, *nms=NULL;
+        int max_nets;
+        
+        if (getdevinfo(config->pubInterface, &ips, &nms, &max_nets)) {
+            // could not get interface info - only check below against instances
+            max_nets = 0;
+            ips = NULL;
+            nms = NULL;
+        }
+
         for (i = 0; i < globalnetworkinfo->max_public_ips; i++) {
             found = 0;
-
-            if (max_instances > 0) {
-                // only clear IPs that are not assigned to instances running on this node
+            // only clear IPs that are not assigned to instances running on this node
+            if (!found && max_instances > 0) {
                 for (j = 0; j < max_instances && !found; j++) {
                     if (instances[j].publicIp == globalnetworkinfo->public_ips[i]) {
+                        // this global public IP is assigned to an instance on this node, do not delete
                         found = 1;
+                    }
+                }
+            }
+
+            // only clear IPs that are assigned on the public interface already
+            if (!found && max_nets > 0) {
+                found = 1;
+                for (j = 0; j < max_nets && found; j++) {
+                    if (ips[j] == globalnetworkinfo->public_ips[i]) {
+                        // this global public IP is assigned to the public interface currently (but not to an instance) - do the delete
+                        found = 0;
                     }
                 }
             }
@@ -1171,8 +1196,9 @@ static int update_elastic_ips(globalNetworkInfo * pGni)
                 se_free(&cmds);
             }
         }
+        EUCA_FREE(ips);
+        EUCA_FREE(nms);
     }
-
     EUCA_FREE(instances);
     return (ret);
 
