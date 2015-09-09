@@ -1694,6 +1694,7 @@ int gni_populate(globalNetworkInfo * gni, gni_hostname_info *host_info, char *xm
     xmlXPathContextPtr ctxptr;
     char expression[2048], *strptra = NULL;
     char **results = NULL;
+    char *scidrnetaddr = NULL;
     int max_results = 0, i, j, k, l;
     gni_hostname *gni_hostname_ptr = NULL;
     int hostnames_need_reset = 0;
@@ -1904,7 +1905,12 @@ int gni_populate(globalNetworkInfo * gni, gni_hostname_info *host_info, char *xm
             rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
             for (i = 0; i < max_results; i++) {
                 LOGTRACE("after function: %d: %s\n", i, results[i]);
-                snprintf(gni->secgroups[j].ingress_rules[k].cidr, INET_ADDR_LEN, "%s", results[i]);
+                snprintf(gni->secgroups[j].ingress_rules[k].cidr, NETWORK_ADDR_LEN, "%s", results[i]);
+                strptra = strdup(gni->secgroups[j].ingress_rules[k].cidr);
+                cidrsplit(strptra, &scidrnetaddr, &(gni->secgroups[j].ingress_rules[k].cidrSlashnet));
+                gni->secgroups[j].ingress_rules[k].cidrNetaddr = dot2hex(scidrnetaddr);
+                EUCA_FREE(strptra);
+                EUCA_FREE(scidrnetaddr);
                 EUCA_FREE(results[i]);
             }
             EUCA_FREE(results);
@@ -2000,7 +2006,12 @@ int gni_populate(globalNetworkInfo * gni, gni_hostname_info *host_info, char *xm
             rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
             for (i = 0; i < max_results; i++) {
                 LOGTRACE("after function: %d: %s\n", i, results[i]);
-                snprintf(gni->secgroups[j].egress_rules[k].cidr, INET_ADDR_LEN, "%s", results[i]);
+                snprintf(gni->secgroups[j].egress_rules[k].cidr, NETWORK_ADDR_LEN, "%s", results[i]);
+                strptra = strdup(gni->secgroups[j].egress_rules[k].cidr);
+                cidrsplit(strptra, &scidrnetaddr, &(gni->secgroups[j].egress_rules[k].cidrSlashnet));
+                gni->secgroups[j].egress_rules[k].cidrNetaddr = dot2hex(scidrnetaddr);
+                EUCA_FREE(strptra);
+                EUCA_FREE(scidrnetaddr);
                 EUCA_FREE(results[i]);
             }
             EUCA_FREE(results);

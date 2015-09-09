@@ -127,8 +127,9 @@ typedef struct gni_rule_t {
     int toPort;
     int icmpType;
     int icmpCode;
-    int slashnet;
-    char cidr[INET_ADDR_LEN];
+    int cidrSlashnet;
+    u32 cidrNetaddr;
+    char cidr[NETWORK_ADDR_LEN];
     char groupId[SECURITY_GROUP_ID_LEN];
     char groupOwnerId[16];
 } gni_rule;
