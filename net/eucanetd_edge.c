@@ -596,10 +596,6 @@ static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni)
             LOGERROR("cannot get chain name from security group: check above log errors for details\n");
             ret = 1;
         } else {
-#ifdef USE_SG_ID_IN_CHAIN
-            EUCA_FREE(chainname);
-            chainname = strdup(secgroup->name);
-#endif /* USE_SG_ID_IN_CHAIN */
 
             ips_handler_add_set(config->ips, chainname);
             ips_set_flush(config->ips, chainname);
