@@ -3051,8 +3051,7 @@ int populate_mido_core(mido_config * mido, mido_core * midocore)
         }
     }
 
-    // search all ports for RT/BR ports, and GW ports
-    gwidx=0;
+    // search all ports for RT/BR ports
     for (i = 0; i < midocore->max_brports; i++) {
         for (j = 0; j < midocore->max_rtports; j++) {
             rc = mido_getel_midoname(&(midocore->rtports[j]), "peerId", &url);
@@ -3063,21 +3062,24 @@ int populate_mido_core(mido_config * mido, mido_core * midocore)
                 }
             }
             EUCA_FREE(url);
-            url = NULL;
-            rc = mido_getel_midoname(&(midocore->rtports[j]), "portAddress", &url);
-            if (!rc && url) {
-                for (k=0; k<mido->ext_rthostarrmax; k++) {
-                    if (!strcmp(url, mido->ext_rthostaddrarr[k])) {
-                        mido_copy_midoname(&(midocore->gwports[gwidx]), &(midocore->rtports[j]));
-                        gwidx++;
-                        midocore->max_gws++;
-                    }
+        }
+    }
+
+    // search for mido GW ports
+    gwidx=0;
+    for (j = 0; j < midocore->max_rtports; j++) {
+        url = NULL;
+        rc = mido_getel_midoname(&(midocore->rtports[j]), "portAddress", &url);
+        if (!rc && url) {
+            for (k=0; k<mido->ext_rthostarrmax; k++) {
+                if (!strcmp(url, mido->ext_rthostaddrarr[k])) {
+                    mido_copy_midoname(&(midocore->gwports[gwidx]), &(midocore->rtports[j]));
+                    gwidx++;
+                    midocore->max_gws++;
                 }
             }
-            
-
-            EUCA_FREE(url);
         }
+        EUCA_FREE(url);
     }
 
     // search all hosts for GW host(s)
