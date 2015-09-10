@@ -69,46 +69,46 @@ class DescribeServices(EmpyreanRequest, TableOutputMixin):
                       help='''whether the service is a member of any
                       service group (true or false)'''),
                Filter('service-type', help='the type of service'),
-               Filter('state', help="the service's state"),
-               # TODO:  this is wrong!
+               Filter('state', help="the service's state")]
+               # A "user-service" filter used to appear here, but it was
+               # a mirror of an option with that name in the old admin
+               # tool set that doesn't match what that term means today,
+               # so we removed it at least for now.  See
                # https://eucalyptus.atlassian.net/browse/EUCA-11006
-               Filter('user-service', help='''whether the service is
-                      user-facing (true or false)''')]
-    LIST_TAGS = ['serviceStatuses', 'uris', 'serviceAccounts']
+    LIST_TAGS = ['serviceAccounts', 'serviceStatuses', 'uris']
 
     def print_result(self, result):
         services = result.get('serviceStatuses') or []
         if self.args.get('expert'):
-            table = self.get_table(('SERVICE', 'arn', 'state', 'epoch', 'uri', 'service-accounts'))
+            table = self.get_table(('SERVICE', 'arn', 'state', 'epoch', 'uri', 'accounts'))
             table.sortby = 'arn'
             for service in services:
                 svcid = service.get('serviceId') or {}
-                accounts = service.get('serviceAccounts') or {}
-                accounts_str = ','.join([account.get('accountName') 
-                                         + ':' + account.get('accountNumber') 
-                                         + ':' + account.get('accountCanonicalId') for account in accounts])
+                accounts = []
+                for account in service.get('serviceAccounts') or []:
+                    accounts.append('{0}={1}:{2}'.format(
+                        account.get('accountName'),
+                        account.get('accountNumber'),
+                        account.get('accountCanonicalId')))
                 table.add_row((
                     'SERVICE', svcid.get('fullName'),
                     _colorize_state(service.get('localState').lower()),
-                    service.get('localEpoch'), svcid.get('uri'), accounts_str ))
+                    service.get('localEpoch'), svcid.get('uri'),
+                    ','.join(sorted(accounts))))
         elif self.args.get('by_host'):
             hosts = {}
             for service in services:
                 svcid = service.get('serviceId') or {}
                 hosts.setdefault(svcid.get('host'), [])
                 hosts[svcid.get('host')].append(service)
-            table = self.get_table(('SERVICE', 'host', 'type', 'name', 'state', 'service-accounts'))
+            table = self.get_table(('SERVICE', 'host', 'type', 'name', 'state'))
             for host, services in sorted(hosts.iteritems()):
                 host = _colorize(host, _get_service_list_color(services))
                 for service in services:
                     svcid = service.get('serviceId') or {}
-                    accounts = service.get('serviceAccounts') or {}
-                    accounts_str = ','.join([account.get('accountName') 
-                                             + ':' + account.get('accountNumber') 
-                                             + ':' + account.get('accountCanonicalId') for account in accounts])
                     table.add_row((
                         'SERVICE', host, svcid.get('type'), svcid.get('name'),
-                        _colorize_state(service.get('localState').lower()), accounts_str))
+                        _colorize_state(service.get('localState').lower())))
         elif self.args.get('by_zone'):
             by_zone = {}
             for service in services:
@@ -118,7 +118,7 @@ class DescribeServices(EmpyreanRequest, TableOutputMixin):
                     svcid.get('type'), [])
                 by_zone[svcid.get('partition')][svcid.get('type')].append(
                     service)
-            table = self.get_table(('SERVICE', 'zone', 'type', 'name', 'state', 'service-accounts'))
+            table = self.get_table(('SERVICE', 'zone', 'type', 'name', 'state'))
             for zone, svctypes in sorted(by_zone.iteritems()):
                 if not zone:
                     continue
@@ -136,13 +136,9 @@ class DescribeServices(EmpyreanRequest, TableOutputMixin):
                     for service in services:
                         svcid = service.get('serviceId') or {}
                         state = service.get('localState').lower()
-                        accounts = service.get('serviceAccounts') or {}
-                        accounts_str = ','.join([account.get('accountName') 
-                                                 + ':' + account.get('accountNumber') 
-                                                 + ':' + account.get('accountCanonicalId') for account in accounts])
                         table.add_row((
                             'SERVICE', zone, svctype, svcid.get('name'),
-                            _colorize_state(state), accounts_str))
+                            _colorize_state(state)))
         # TODO:  by_group (needs EUCA-10816)
         # https://eucalyptus.atlassian.net/browse/EUCA-10816
         else:  # by_type
@@ -151,19 +147,15 @@ class DescribeServices(EmpyreanRequest, TableOutputMixin):
                 svcid = service.get('serviceId') or {}
                 svctypes.setdefault(svcid.get('type'), [])
                 svctypes[svcid.get('type')].append(service)
-            table = self.get_table(('SERVICE', 'type', 'zone', 'name', 'state', 'accounts'))
+            table = self.get_table(('SERVICE', 'type', 'zone', 'name', 'state'))
             for svctype, services in sorted(svctypes.iteritems()):
                 svctype = _colorize(svctype, _get_service_list_color(services))
                 for service in services:
                     svcid = service.get('serviceId') or {}
-                    accounts = service.get('serviceAccounts') or {}
-                    accounts_str = ','.join([account.get('accountName') 
-                                             + ':' + account.get('accountNumber') 
-                                             + ':' + account.get('accountCanonicalId') for account in accounts])
                     table.add_row((
                         'SERVICE', svctype, svcid.get('partition'),
                         svcid.get('name'),
-                        _colorize_state(service.get('localState').lower()), accounts_str))
+                        _colorize_state(service.get('localState').lower())))
         print table
 
 
