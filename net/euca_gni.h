@@ -127,8 +127,9 @@ typedef struct gni_rule_t {
     int toPort;
     int icmpType;
     int icmpCode;
-    int slashnet;
-    char cidr[INET_ADDR_LEN];
+    int cidrSlashnet;
+    u32 cidrNetaddr;
+    char cidr[NETWORK_ADDR_LEN];
     char groupId[SECURITY_GROUP_ID_LEN];
     char groupOwnerId[16];
 } gni_rule;
@@ -344,6 +345,7 @@ int gni_hostnames_get_hostname(gni_hostname_info *host_info, const char *ip_addr
 int cmpipaddr(const void *p1, const void *p2);
 
 int ruleconvert(char *rulebuf, char *outrule);
+int ingress_gni_to_iptables_rule(char *scidr, gni_rule *iggnirule, char *outrule, int flags);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
