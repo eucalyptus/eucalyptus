@@ -1624,15 +1624,7 @@ int doConfigureNetwork(ncMetadata * pMeta, char *accountId, char *type, int name
 //!
 int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
 {
-#define EUCANETD_GNI_FILE         EUCALYPTUS_STATE_DIR "/global_network_info.xml"
-
-    int i = 0;
     int rc = 0;
-    char *xmlbuf = NULL;
-    char xmlfile[EUCA_MAX_PATH] = "";
-    globalNetworkInfo *gni = NULL;
-    gni_hostname_info *host_info = NULL;
-    gni_cluster *myself = NULL;
 
     rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
@@ -1645,87 +1637,6 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
         LOGDEBUG("bad input params\n");
         return (1);
     }
-    // init the XML
-    xmlbuf = base64_dec((unsigned char *)networkInfo, strlen(networkInfo));
-    if (xmlbuf) {
-        LOGEXTREME("%s\n", xmlbuf);
-        snprintf(xmlfile, EUCA_MAX_PATH, "/tmp/euca-global-net-XXXXXX");
-
-        if (str2file(xmlbuf, xmlfile, O_CREAT | O_EXCL | O_RDWR, 0644, TRUE) == EUCA_OK) {
-            LOGDEBUG("created and populated tmpfile '%s'\n", xmlfile);
-
-            gni = gni_init();
-            host_info = gni_init_hostname_info();
-            if (gni && host_info) {
-                // decode/read/parse the globalnetworkinfo, assign any incorrect public/private IP mappings based on global view
-                rc = gni_populate(gni,host_info,xmlfile);
-                LOGDEBUG("done with gni_populate()\n");
-
-                // do any CC actions based on contents of new network view
-
-                // reset macprefix
-                if ((rc = gni_find_self_cluster(gni, &myself)) != 0) {
-                    LOGWARN("failed to find local host IP in list of enabled clusters, skipping macPrefix update\n");
-                } else {
-                    sem_mywait(NETCONFIG);
-                    {
-                        if (myself && strlen(myself->macPrefix) && strcmp(gpEucaNet->sMacPrefix, myself->macPrefix)) {
-                            LOGDEBUG("reset local cluster macPrefix from '%s' to '%s'\n", gpEucaNet->sMacPrefix, myself->macPrefix);
-                            snprintf(gpEucaNet->sMacPrefix, ENET_MACPREFIX_LEN, "%s", myself->macPrefix);
-                        }
-                    }
-                    sem_mypost(NETCONFIG);
-                }
-
-                LOGTRACE("gni->max_instances == %d\n", gni->max_instances);
-                for (i = 0; i < gni->max_instances; i++) {
-                    char *strptra = NULL, *strptrb = NULL;
-                    ccInstance *myInstance = NULL;
-                    strptra = hex2dot(gni->instances[i].publicIp);
-                    strptrb = hex2dot(gni->instances[i].privateIp);
-
-                    if (gni->instances[i].publicIp && gni->instances[i].privateIp) {
-                        LOGDEBUG("found instance in broadcast network info: %s (%s/%s)\n", gni->instances[i].name, SP(strptra), SP(strptrb));
-                        // here, we should decide if we need to send the mapping, or not
-                        rc = find_instanceCacheIP(strptrb, &myInstance);
-                        if (myInstance && !strcmp(myInstance->ccnet.privateIp, strptrb)) {
-                            if (!strcmp(myInstance->ccnet.publicIp, strptra)) {
-                                LOGTRACE("instance '%s' cached pub/priv IP mappings match input pub/priv IP (publicIp=%s privateIp=%s)\n", myInstance->instanceId,
-                                         myInstance->ccnet.publicIp, myInstance->ccnet.privateIp);
-                            } else {
-                                LOGTRACE("instance '%s' cached pub/priv IP mappings do not match input pub/priv IP, updating ground-truth (cached_publicIp=%s input_publicIp=%s)\n",
-                                         myInstance->instanceId, myInstance->ccnet.publicIp, strptra);
-                                rc = doAssignAddress(pMeta, NULL, strptra, strptrb);
-                            }
-                        }
-                        if (myInstance) {
-                            EUCA_FREE(myInstance);
-                        }
-
-                        LOGDEBUG("instance '%s' has assigned address: (%s -> %s) rc: %d\n", gni->instances[i].name, strptra, strptrb, rc);
-                    } else {
-                        LOGDEBUG("instance does not have either public or private IP set (id=%s pub=%s priv=%s)\n", gni->instances[i].name, SP(strptra), SP(strptrb));
-                    }
-                    EUCA_FREE(strptra);
-                    EUCA_FREE(strptrb);
-                }
-
-            }
-
-            // Free up gni and host_info memory
-            rc = gni_free(gni);
-            rc = gni_hostnames_free(host_info);
-
-            unlink(xmlfile);
-        }
-
-        snprintf(xmlfile, EUCA_MAX_PATH, EUCANETD_GNI_FILE, config->eucahome);
-        if (str2file(xmlbuf, xmlfile, O_CREAT | O_TRUNC | O_WRONLY, 0600, FALSE) != EUCA_OK) {
-            LOGDEBUG("Failed to populate GNI file '%s'\n", xmlfile);
-        }
-
-        EUCA_FREE(xmlbuf);
-    }
 
     sem_mywait(GLOBALNETWORKINFO);
 
@@ -1737,8 +1648,6 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
 
     LOGTRACE("done.\n");
     return (0);
-
-#undef EUCANETD_GNI_FILE
 }
 
 //!
@@ -2125,6 +2034,7 @@ int changeState(ccResource * in, int newstate)
 //!
 int broadcast_network_info(ncMetadata * pMeta, int timeout, int dolock)
 {
+#define EUCANETD_GNI_FILE         EUCALYPTUS_STATE_DIR "/global_network_info.xml"
     int i = 0;
     int rc = 0;
     int pid = 0;
@@ -2132,12 +2042,107 @@ int broadcast_network_info(ncMetadata * pMeta, int timeout, int dolock)
     int status = 0;
     time_t op_start = { 0 };
     char *networkInfo = NULL;
+    char *xmlbuf = NULL;
+    char xmlfile[EUCA_MAX_PATH] = "";
+    globalNetworkInfo *gni = NULL;
+    gni_hostname_info *host_info = NULL;
+    gni_cluster *myself = NULL;
 
     if (timeout <= 0)
         timeout = 1;
 
     op_start = time(NULL);
     LOGDEBUG("invoked: timeout=%d, dolock=%d\n", timeout, dolock);
+
+    // here is where we will convert the globalnetworkinfo into the broadcast string
+    sem_mywait(GLOBALNETWORKINFO);
+    networkInfo = strdup(globalnetworkinfo->networkInfo);
+    sem_mypost(GLOBALNETWORKINFO);
+
+    // first, send any required assignAddress() calls to NCs.
+    // init the XML
+    xmlbuf = base64_dec((unsigned char *)networkInfo, strlen(networkInfo));
+    if (xmlbuf) {
+        LOGEXTREME("%s\n", xmlbuf);
+        snprintf(xmlfile, EUCA_MAX_PATH, "/tmp/euca-global-net-XXXXXX");
+
+        if (str2file(xmlbuf, xmlfile, O_CREAT | O_EXCL | O_RDWR, 0644, TRUE) == EUCA_OK) {
+            LOGDEBUG("created and populated tmpfile '%s'\n", xmlfile);
+
+            gni = gni_init();
+            host_info = gni_init_hostname_info();
+            if (gni && host_info) {
+                // decode/read/parse the globalnetworkinfo, assign any incorrect public/private IP mappings based on global view
+                rc = gni_populate(gni,host_info,xmlfile);
+                LOGDEBUG("done with gni_populate()\n");
+
+                // do any CC actions based on contents of new network view
+
+                // reset macprefix
+                if ((rc = gni_find_self_cluster(gni, &myself)) != 0) {
+                    LOGWARN("failed to find local host IP in list of enabled clusters, skipping macPrefix update\n");
+                } else {
+                    sem_mywait(NETCONFIG);
+                    {
+                        if (myself && strlen(myself->macPrefix) && strcmp(gpEucaNet->sMacPrefix, myself->macPrefix)) {
+                            LOGDEBUG("reset local cluster macPrefix from '%s' to '%s'\n", gpEucaNet->sMacPrefix, myself->macPrefix);
+                            snprintf(gpEucaNet->sMacPrefix, ENET_MACPREFIX_LEN, "%s", myself->macPrefix);
+                        }
+                    }
+                    sem_mypost(NETCONFIG);
+                }
+
+                LOGTRACE("gni->max_instances == %d\n", gni->max_instances);
+                for (i = 0; i < gni->max_instances; i++) {
+                    char *strptra = NULL, *strptrb = NULL;
+                    ccInstance *myInstance = NULL;
+                    strptra = hex2dot(gni->instances[i].publicIp);
+                    strptrb = hex2dot(gni->instances[i].privateIp);
+
+                    if (gni->instances[i].publicIp && gni->instances[i].privateIp) {
+                        LOGDEBUG("found instance in broadcast network info: %s (%s/%s)\n", gni->instances[i].name, SP(strptra), SP(strptrb));
+                        // here, we should decide if we need to send the mapping, or not
+                        rc = find_instanceCacheIP(strptrb, &myInstance);
+                        if (myInstance && !strcmp(myInstance->ccnet.privateIp, strptrb)) {
+                            if (!strcmp(myInstance->ccnet.publicIp, strptra)) {
+                                LOGTRACE("instance '%s' cached pub/priv IP mappings match input pub/priv IP (publicIp=%s privateIp=%s)\n", myInstance->instanceId,
+                                         myInstance->ccnet.publicIp, myInstance->ccnet.privateIp);
+                            } else {
+                                LOGTRACE("instance '%s' cached pub/priv IP mappings do not match input pub/priv IP, updating ground-truth (cached_publicIp=%s input_publicIp=%s)\n",
+                                         myInstance->instanceId, myInstance->ccnet.publicIp, strptra);
+                                rc = doAssignAddress(pMeta, NULL, strptra, strptrb);
+                            }
+                        }
+                        if (myInstance) {
+                            EUCA_FREE(myInstance);
+                        }
+
+                        LOGDEBUG("instance '%s' has assigned address: (%s -> %s) rc: %d\n", gni->instances[i].name, strptra, strptrb, rc);
+                    } else {
+                        LOGDEBUG("instance does not have either public or private IP set (id=%s pub=%s priv=%s)\n", gni->instances[i].name, SP(strptra), SP(strptrb));
+                    }
+                    EUCA_FREE(strptra);
+                    EUCA_FREE(strptrb);
+                }
+
+            }
+
+            // Free up gni and host_info memory
+            rc = gni_free(gni);
+            rc = gni_hostnames_free(host_info);
+
+            unlink(xmlfile);
+        }
+
+        snprintf(xmlfile, EUCA_MAX_PATH, EUCANETD_GNI_FILE, config->eucahome);
+        if (str2file(xmlbuf, xmlfile, O_CREAT | O_TRUNC | O_WRONLY, 0600, FALSE) != EUCA_OK) {
+            LOGDEBUG("Failed to populate GNI file '%s'\n", xmlfile);
+        }
+
+        EUCA_FREE(xmlbuf);
+    }
+
+    // now, broadcast the network XML to NCs
 
     // critical NC call section
     sem_mywait(RESCACHE);
@@ -2152,10 +2157,6 @@ int broadcast_network_info(ncMetadata * pMeta, int timeout, int dolock)
         LOGFATAL("out of memory!\n");
         unlock_exit(1);
     }
-    // here is where we will convert the globalnetworkinfo into the broadcast string
-    sem_mywait(GLOBALNETWORKINFO);
-    networkInfo = strdup(globalnetworkinfo->networkInfo);
-    sem_mypost(GLOBALNETWORKINFO);
 
     for (i = 0; i < resourceCacheStage->numResources; i++) {
         sem_mywait(REFRESHLOCK);
@@ -2204,6 +2205,7 @@ int broadcast_network_info(ncMetadata * pMeta, int timeout, int dolock)
     EUCA_FREE(pids);
     LOGTRACE("done\n");
     return (0);
+#undef EUCANETD_GNI_FILE
 }
 
 //!
@@ -2819,6 +2821,8 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ccIn
         return (1);
     }
 
+    print_instanceCache();
+
     *outInsts = NULL;
     *outInstsLen = 0;
 
@@ -2838,6 +2842,8 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ccIn
                     count = 0;
                 }
                 memcpy(&((*outInsts)[count]), &(instanceCache->instances[i]), sizeof(ccInstance));
+                instanceCache->described[i] = 1;
+
                 // We only report a subset of possible migration statuses upstream to the CLC.
                 if ((*outInsts)[count].migration_state == MIGRATION_READY) {
                     (*outInsts)[count].migration_state = MIGRATION_PREPARING;
@@ -5598,23 +5604,23 @@ void *monitor_thread(void *in)
                 }
                 sem_mypost(RESCACHE);
 
-                int num_pending = 0, num_extant = 0, num_teardown = 0;
-                sem_mywait(INSTCACHE);
-                if (instanceCache->numInsts) {
-                    for (int i = 0; i < MAXINSTANCES_PER_CC; i++) {
-                        if (!strcmp(instanceCache->instances[i].state, "Pending")) {
-                            num_teardown++;
-                        } else if (!strcmp(instanceCache->instances[i].state, "Extant")) {
-                            num_extant++;
-                        } else if (!strcmp(instanceCache->instances[i].state, "Teardown")) {
-                            num_teardown++;
-                        }
-                    }
-                }
-                sem_mypost(INSTCACHE);
-
                 time_t now = time(NULL);
                 if ((now - last_log_update) > LOG_INTERVAL_SUMMARY_SEC) {
+                    int num_pending = 0, num_extant = 0, num_teardown = 0;
+                    sem_mywait(INSTCACHE);
+                    if (instanceCache->numInsts) {
+                        for (int i = 0; i < MAXINSTANCES_PER_CC; i++) {
+                            if (!strcmp(instanceCache->instances[i].state, "Pending")) {
+                                num_teardown++;
+                            } else if (!strcmp(instanceCache->instances[i].state, "Extant")) {
+                                num_extant++;
+                            } else if (!strcmp(instanceCache->instances[i].state, "Teardown")) {
+                                num_teardown++;
+                            }
+                        }
+                    }
+                    sem_mypost(INSTCACHE);
+
                     last_log_update = now;
                     LOGINFO("instances: %04d (%04d extant + %04d pending + %04d terminated)\n", (num_pending + num_extant + num_teardown), num_extant, num_pending, num_teardown);
                     LOGINFO("    nodes: %04d (%04d busy + %04d idle + %04d unresponsive)\n", (res_busy + res_idle + res_bad), res_busy, res_idle, res_bad);
@@ -7423,7 +7429,9 @@ int is_clean_instanceCache(void)
 //!
 void invalidate_instanceCache(void)
 {
-    int i;
+    int i, do_invalidate=0;
+
+    LOGDEBUG("current instance counts (total in cache/maximum cache size): %d/%d\n", instanceCache->numInsts, MAXINSTANCES_PER_CC);
 
     sem_mywait(INSTCACHE);
     for (i = 0; i < MAXINSTANCES_PER_CC; i++) {
@@ -7431,12 +7439,23 @@ void invalidate_instanceCache(void)
         if (!strcmp(instanceCache->instances[i].state, "Teardown")) {
             free_instanceNetwork(instanceCache->instances[i].ccnet.privateMac, instanceCache->instances[i].ccnet.vlan, 0, 0);
         }
-        if ((instanceCache->cacheState[i] == INSTVALID) && ((time(NULL) - instanceCache->lastseen[i]) > config->instanceTimeout)) {
-            LOGDEBUG("invalidating instance '%s' (last seen %ld seconds ago)\n", instanceCache->instances[i].instanceId, (time(NULL) - instanceCache->lastseen[i]));
-            bzero(&(instanceCache->instances[i]), sizeof(ccInstance));
-            instanceCache->lastseen[i] = 0;
-            instanceCache->cacheState[i] = INSTINVALID;
-            instanceCache->numInsts--;
+        if ((instanceCache->cacheState[i] == INSTVALID)) {            
+            if ((time(NULL) - instanceCache->lastseen[i]) > config->instanceTimeout) {
+                LOGDEBUG("invalidating instance '%s' (last seen %ld seconds ago)\n", instanceCache->instances[i].instanceId, (time(NULL) - instanceCache->lastseen[i]));
+                do_invalidate = 1;
+            } else if (!strlen(instanceCache->instances[i].instanceId)) {
+                LOGDEBUG("invalidating instance with invalid instanceId\n");
+                do_invalidate = 1;
+            } else {
+                do_invalidate = 0;
+            }
+            if (do_invalidate) {
+                bzero(&(instanceCache->instances[i]), sizeof(ccInstance));
+                instanceCache->described[i] = 0;
+                instanceCache->lastseen[i] = 0;
+                instanceCache->cacheState[i] = INSTINVALID;
+                instanceCache->numInsts--;
+            }
         }
     }
     sem_mypost(INSTCACHE);
@@ -7502,13 +7521,23 @@ int refresh_instanceCache(char *instanceId, ccInstance * in)
 //!
 int add_instanceCache(char *instanceId, ccInstance * in)
 {
-    int i, done, firstNull = 0;
+    int i=0, done=0, firstNull = 0, idxDescribedTeardown = 0, idxNotDescribedTeardown = 0, idxDescribedExtant = 0, cacheIdx = 0, ret=0;
 
     if (!instanceId || !in) {
         return (1);
     }
 
+    ret = 0;
+
+    /*
+    if (instanceCache->numInsts >= MAXINSTANCES_PER_CC) {
+        LOGERROR("out of instance cache space for instance %s\n", instanceId);
+        return(1);
+    }
+    */
+
     sem_mywait(INSTCACHE);
+    firstNull = idxDescribedTeardown = idxNotDescribedTeardown = idxDescribedExtant = -1;
     done = 0;
     for (i = 0; i < MAXINSTANCES_PER_CC && !done; i++) {
         if ((instanceCache->cacheState[i] == INSTVALID) && (!strcmp(instanceCache->instances[i].instanceId, instanceId))) {
@@ -7520,19 +7549,48 @@ int add_instanceCache(char *instanceId, ccInstance * in)
         } else if (instanceCache->cacheState[i] == INSTINVALID) {
             firstNull = i;
             done++;
+        } else if (!strcmp(instanceCache->instances[i].state, "Teardown") && instanceCache->described[i] == 1) {
+            idxDescribedTeardown = i;
+        } else if (!strcmp(instanceCache->instances[i].state, "Teardown") && instanceCache->described[i] == 0) {
+            idxNotDescribedTeardown = i;
         }
     }
-    LOGDEBUG("adding '%s/%s/%s/%d' to cache\n", instanceId, in->ccnet.publicIp, in->ccnet.privateIp, in->volumesSize);
-    allocate_ccInstance(&(instanceCache->instances[firstNull]), in->instanceId, in->amiId, in->kernelId, in->ramdiskId, in->amiURL, in->kernelURL,
-                        in->ramdiskURL, in->ownerId, in->accountId, in->state, in->ccState, in->ts, in->reservationId, &(in->ccnet), &(in->ncnet),
-                        &(in->ccvm), in->ncHostIdx, in->keyName, in->serviceTag, in->userData, in->launchIndex, in->platform, in->guestStateName, in->bundleTaskStateName,
-                        in->groupNames, in->groupIds, in->volumes, in->volumesSize, in->bundleTaskProgress);
-    instanceCache->numInsts++;
-    instanceCache->lastseen[firstNull] = time(NULL);
-    instanceCache->cacheState[firstNull] = INSTVALID;
 
+    if (firstNull >= 0) {
+        LOGTRACE("ADD CACHE: caching %s to free slot\n", instanceId);
+        cacheIdx = firstNull;
+    } else if (idxDescribedTeardown >= 0) {
+        cacheIdx = idxDescribedTeardown;
+        LOGTRACE("ADD CACHE: caching %s at described Teardown dest %s\n", instanceId, instanceCache->instances[cacheIdx].instanceId);
+    } else if (idxNotDescribedTeardown >= 0) {
+        cacheIdx = idxNotDescribedTeardown;
+        LOGTRACE("ADD CACHE: caching %s at not described Teardown dest %s\n", instanceId, instanceCache->instances[cacheIdx].instanceId);
+    } else {
+        LOGWARN("ADD CACHE: caching %s cannot find free or replacement slot\n", instanceId);
+        cacheIdx = -1;
+    }
+    
+    if ( (cacheIdx >= 0) && (cacheIdx < MAXINSTANCES_PER_CC) ) {
+        LOGDEBUG("adding '%s/%s/%s/%d' to cache\n", instanceId, in->ccnet.publicIp, in->ccnet.privateIp, in->volumesSize);
+
+        // only add if the cache value is not replacing an existing instance
+        if (instanceCache->cacheState[cacheIdx] == INSTINVALID) {
+            instanceCache->numInsts++;
+        }
+
+        allocate_ccInstance(&(instanceCache->instances[cacheIdx]), in->instanceId, in->amiId, in->kernelId, in->ramdiskId, in->amiURL, in->kernelURL,
+                            in->ramdiskURL, in->ownerId, in->accountId, in->state, in->ccState, in->ts, in->reservationId, &(in->ccnet), &(in->ncnet),
+                            &(in->ccvm), in->ncHostIdx, in->keyName, in->serviceTag, in->userData, in->launchIndex, in->platform, in->guestStateName, in->bundleTaskStateName,
+                            in->groupNames, in->groupIds, in->volumes, in->volumesSize, in->bundleTaskProgress);
+        instanceCache->described[cacheIdx] = 0;
+        instanceCache->lastseen[cacheIdx] = time(NULL);
+        instanceCache->cacheState[cacheIdx] = INSTVALID;
+    } else {
+        LOGERROR("not enough cache space for storing instance [%s]: skipping update\n", instanceId);
+        ret = 1;
+    }
     sem_mypost(INSTCACHE);
-    return (0);
+    return (ret);
 }
 
 //!
@@ -7555,6 +7613,7 @@ int del_instanceCacheId(char *instanceId)
         if ((instanceCache->cacheState[i] == INSTVALID) && (!strcmp(instanceCache->instances[i].instanceId, instanceId))) {
             // del from cache
             bzero(&(instanceCache->instances[i]), sizeof(ccInstance));
+            instanceCache->described[i] = 0;
             instanceCache->lastseen[i] = 0;
             instanceCache->cacheState[i] = INSTINVALID;
             instanceCache->numInsts--;
