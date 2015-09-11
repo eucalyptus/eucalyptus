@@ -106,10 +106,6 @@
 
 //! @}
 
-//! Defined to use the SG name in chain names instead of hash
-//! TODO: Remove after upgrade test
-#define USE_SG_ID_IN_CHAIN
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  TYPEDEFS                                  |
