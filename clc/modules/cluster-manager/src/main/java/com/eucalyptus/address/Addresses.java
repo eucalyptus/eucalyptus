@@ -65,10 +65,13 @@ package com.eucalyptus.address;
 import static com.eucalyptus.compute.common.internal.address.AllocatedAddressEntity.FilterFunctions.*;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -130,6 +133,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Sets;
 
 public class Addresses {
 
@@ -142,6 +146,14 @@ public class Addresses {
   private static final Addresses instance = new Addresses( new AllocatedAddressPersistenceImpl( ) );
 
   private static ThreadLocal<AddressingBatch> batchThreadLocal = new ThreadLocal<>( );
+
+  private final Supplier<Void> storedAddressLoadingSupplier = Suppliers.memoizeWithExpiration( new Supplier<Void>(){
+    @Override
+    public Void get( ) {
+      loadStoredAddresses( );
+      return null;
+    }
+  }, 1, TimeUnit.MINUTES );
 
   private final AllocatedAddressPersistence allocatedAddressPersistence;
   private final AddressRegistry addressRegistry = AddressRegistry.getInstance( );
@@ -583,9 +595,10 @@ public class Addresses {
   /**
    * Update addresses from the list assign (system) to instances if necessary.
    */
-  public void update( final Iterable<String> addresses ) {
+  public void update( final Iterable<String> addressIterable ) {
+    final Collection<String> addresses = Collections.unmodifiableCollection( Sets.newLinkedHashSet( addressIterable ) );
     Addresses.configuredAddresses.set( addresses );
-    loadStoredAddresses( );
+    storedAddressLoadingSupplier.get( );
     for ( final String address : addresses ) {
       lookupOrCreate( address );
     }
