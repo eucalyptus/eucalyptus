@@ -926,17 +926,16 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 goto failed_dest;
             }
             // set up networking
-            char *brname = NULL;
+            char brname[32];
             if (!strcmp(nc->pEucaNet->sMode, NETMODE_MANAGED)) {
                 snprintf(brname, 32, "%s", instance->groupIds[0]);
             } else {
                 snprintf(brname, 32, "%s", nc->pEucaNet->sBridgeDevice);
             }
             euca_strncpy(instance->params.guestNicDeviceName, brname, sizeof(instance->params.guestNicDeviceName));
-            EUCA_FREE(brname);
-
+            
             // TODO: move stuff in startup_thread() into a function?
-
+            
             set_instance_params(instance);
 
             if ((error = create_instance_backing(instance, TRUE))   // create files that back the disks
