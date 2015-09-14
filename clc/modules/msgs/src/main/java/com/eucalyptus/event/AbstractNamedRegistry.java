@@ -62,21 +62,18 @@
 
 package com.eucalyptus.event;
 
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import com.eucalyptus.util.HasFullName;
-import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LockResource;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 
 @SuppressWarnings( "rawtypes" )
 public abstract class AbstractNamedRegistry<TYPE extends HasFullName> {
@@ -227,7 +224,11 @@ public abstract class AbstractNamedRegistry<TYPE extends HasFullName> {
   public TYPE enableFirst( Predicate<TYPE> filter ) throws NoSuchElementException {
     this.canHas.writeLock( ).lock( );
     try {
-      TYPE first = Maps.filterValues( this.disabledMap, filter ).values( ).iterator( ).next( );
+      final List<TYPE> selection = Lists.newArrayList(
+          Iterables.limit( Iterables.filter( this.disabledMap.values( ), filter ), 10_000 ) );
+      TYPE first = selection.isEmpty( ) ?
+          null :
+          selection.get( ThreadLocalRandom.current( ).nextInt( 0, selection.size( ) ) );
       if ( first == null ) {
         throw new NoSuchElementException( "Disabled map is empty." );
       }
