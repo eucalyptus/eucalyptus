@@ -22,7 +22,6 @@ package com.eucalyptus.loadbalancing.activities;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.entities.Entities;
@@ -30,6 +29,7 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.common.msgs.AccessLog;
 import com.eucalyptus.objectstorage.ObjectStorageGateway;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 
 public class EventHandlerChainModifyAttributes extends EventHandlerChain<ModifyAttributesEvent> {
@@ -71,9 +71,15 @@ public class EventHandlerChainModifyAttributes extends EventHandlerChain<ModifyA
           throw new EventHandlerException("Access log's emit interval must be between 5 and 60 minutes");
         }
       }
-      
+
       if (accessLog.getS3BucketPrefix() != null) {
-        accessLog.setS3BucketPrefix(StringEscapeUtils.escapeJavaScript(accessLog.getS3BucketPrefix()));
+        try{
+          String escapedPrefix = new ObjectMapper().writeValueAsString(accessLog.getS3BucketPrefix());
+          escapedPrefix = escapedPrefix.replaceAll("^\"|\"$", "");
+          accessLog.setS3BucketPrefix(escapedPrefix);
+        }catch(final Exception ex) {
+          throw new EventHandlerException("Could not verify bucket prefix text string");
+        }
       }
       /* End verifying AccessLog attributes */
     }
