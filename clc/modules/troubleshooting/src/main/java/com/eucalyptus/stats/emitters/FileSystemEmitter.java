@@ -20,8 +20,6 @@
 
 package com.eucalyptus.stats.emitters;
 
-import com.eucalyptus.component.Faults;
-import com.eucalyptus.component.fault.FaultLogger;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.stats.SystemMetric;
@@ -29,9 +27,11 @@ import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+
 import org.apache.log4j.Logger;
 
 import javax.annotation.Nonnull;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -44,6 +44,7 @@ import java.nio.file.attribute.GroupPrincipal;
 import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -61,6 +62,7 @@ public class FileSystemEmitter implements EventEmitter {
     private static SubDirectory defaultFsRoot = FileSystemEmitterConfiguration.dataOutputFSRoot;
     private Path fsRoot;
     private boolean isEnabled = false;
+    private static HashSet<Path> pathCache = new HashSet<Path>();
 
     public FileSystemEmitter() throws IOException {
         this(defaultFsRoot.toString());
@@ -101,19 +103,37 @@ public class FileSystemEmitter implements EventEmitter {
             Path filePath = FileSystems.getDefault().getPath(path);
             //Temp file to do the write, then a swap.
             Path tmpPath = FileSystems.getDefault().getPath(path + ".new");
-            try {
-                Files.createDirectories(filePath.getParent());
-            } catch (Exception e) {
-                //cannot create parent paths of entry name
-                throw new RuntimeException("Could not create file path for sensor output. Path='" + path + "'");
+            if ( !pathCache.contains(tmpPath) ) {
+              try {
+                  LOG.debug("Creating directories tree up to " +  filePath.getParent());
+                  Files.createDirectories(filePath.getParent());
+              } catch (Exception e) {
+                  //cannot create parent paths of entry name
+                  throw new RuntimeException("Could not create file path for sensor output. Path='" + path + "'");
+              }
+              // Set group permissions to directories
+              Path c = filePath.getParent();
+              while(!c.equals(fsRoot)) {
+                  try {
+                      LOG.debug("Checking dir " + c);
+                      Files.getFileAttributeView(c, PosixFileAttributeView.class).setGroup(FileSystemEmitterConfiguration.getGroup());
+                  } catch (Exception ex) {
+                      LOG.error("Can't set group permission for " + c);
+                  }
+                  c = c.getParent();
+              }
+              pathCache.add(tmpPath);
             }
-
-            //Set group
             tmpPath = Files.createFile(tmpPath, PosixFilePermissions.asFileAttribute(FileSystemEmitterConfiguration.getDataFilePermissions()));
-            Files.getFileAttributeView(tmpPath, PosixFileAttributeView.class).setGroup(FileSystemEmitterConfiguration.getGroup());
             BufferedWriter fileOut = Files.newBufferedWriter(tmpPath, StandardCharsets.UTF_8);
             fileOut.write(event.toString());
             fileOut.close();
+            try {
+               Files.getFileAttributeView(tmpPath, PosixFileAttributeView.class).setGroup(FileSystemEmitterConfiguration.getGroup());
+            } catch (Exception ex) {
+               LOG.error("Can't set group permission for " + tmpPath + " Please make sure that " +
+                   System.getProperty( "euca.user" ) + " user is part of " + FileSystemEmitterConfiguration.getGroup() + " group.");
+            }
             Files.move(tmpPath, filePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
             return true;
         } catch (Exception e) {

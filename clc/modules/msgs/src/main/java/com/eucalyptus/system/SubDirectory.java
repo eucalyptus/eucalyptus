@@ -131,11 +131,10 @@ public enum SubDirectory {
   STATUS( BaseDirectory.RUN, "status") {
     @Override
     protected void assertPermissions () {
-      super.assertPermissions();
       try {
-        Groovyness.exec( "chmod -R 760 " + this.toString( ) );
-        //Same as loaded in com.eucalyptus.monitoring.MonitoringConfiguration
-        Groovyness.exec( "chgrp -R -L " + System.getProperty( "euca.status_group" ) + " " + this.toString( ) );
+        // set 750 permission only to directories
+        Groovyness.exec( "chmod 750 $(find " + this.toString( ) + " -type d)");
+        Groovyness.exec( "chgrp -R -L " + System.getProperty( "euca.status_group", "eucalyptus-status" ) + " " + this.toString( ) );
         Groovyness.exec( "chown -R -L " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
       } catch ( ScriptExecutionFailedException ex ) {
         LOG.error( ex, ex );
