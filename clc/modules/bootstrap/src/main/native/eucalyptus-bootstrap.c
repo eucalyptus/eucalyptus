@@ -749,6 +749,16 @@ char *java_library_path(euca_opts * args)
     return jar_list;
 }
 
+static size_t getMemoryTotalSize( )
+{
+    #if defined(_SC_PHYS_PAGES) && defined(_SC_PAGESIZE)
+        return (size_t)sysconf( _SC_PHYS_PAGES ) *
+                (size_t)sysconf( _SC_PAGESIZE );
+    #else
+        return 0L;
+    #endif
+}
+
 int java_init(euca_opts * args, java_home_t * data)
 {
     jint(*hotspot_main) (JavaVM **, JNIEnv **, JavaVMInitArgs *);
@@ -779,6 +789,51 @@ int java_init(euca_opts * args, java_home_t * data)
     i = -1;
     while (jvm_default_opts[++i] != NULL)
         JVM_ARG(opt[++x], jvm_default_opts[i], GETARG(args, home));
+
+    // setting heap size to half of total memory if it was not set by user
+    char *s, str[16], size_i;
+    long size;
+    str[0] = 0;
+    for (i = 0; i < args->jvm_args_given; i++) {
+      if ((s = strstr(args->jvm_args_arg[i], "mx"))
+             && sscanf(s, "mx%s",  str) == 1) {
+        break;
+      }
+    }
+    if (str[0] != 0) {
+        sscanf (str,"%ld%c", &size, &size_i);
+        switch(size_i) {
+            case 'k' :
+            case 'K' :
+                  size = size * 1024L;
+                  break;
+            case 'm' :
+            case 'M' :
+                  size = size * 1024L * 1024L;
+                  break;
+            case 'g' :
+            case 'G' :
+                  size = size * GIG;
+                  break;
+            default:
+                  size = size * 1L;
+        }
+        __debug("User defined heap size is %ld bytes", size);
+        if (size < GIG) {
+           __error("User defined heap size of %ld bytes is set too low and system might now work properly", size);
+        }
+    } else {
+        size_t total_memory = getMemoryTotalSize();
+        double heap_size_gb = 2;
+        if (total_memory <= 32 * GIG && total_memory >= 4 * GIG)
+           heap_size_gb = ceil(total_memory/GIG/2.0);
+        else if (total_memory > 32 * GIG)
+           heap_size_gb = 16.0;
+        __info("User did not set heap size. Setting it automatically to %.0lfGB base on total memory of %zu bytes", heap_size_gb, total_memory);
+        JVM_ARG(opt[++x], "-Xms%.0lfg", heap_size_gb);
+        JVM_ARG(opt[++x], "-Xmx%.0lfg", heap_size_gb);
+    }
+
     if (args->exhaustive_flag) {
         JVM_ARG(opt[++x], "-Deuca.log.exhaustive=TRACE");
         JVM_ARG(opt[++x], "-Deuca.log.exhaustive.db=TRACE");
