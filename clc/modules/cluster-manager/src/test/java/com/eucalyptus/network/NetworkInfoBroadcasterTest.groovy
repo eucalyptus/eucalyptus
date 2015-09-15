@@ -61,23 +61,23 @@ class NetworkInfoBroadcasterTest {
   @BeforeClass
   static void setup( ) {
     TypeMappers.TypeMapperDiscovery discovery = new TypeMappers.TypeMapperDiscovery()
-    discovery.processClass( NetworkInfoBroadcaster.NetworkConfigurationToNetworkInfo )
-    discovery.processClass( NetworkInfoBroadcaster.NetworkGroupToNetworkGroupNetworkView )
-    discovery.processClass( NetworkInfoBroadcaster.VmInstanceToVmInstanceNetworkView )
-    discovery.processClass( NetworkInfoBroadcaster.VpcToVpcNetworkView )
-    discovery.processClass( NetworkInfoBroadcaster.SubnetToSubnetNetworkView )
-    discovery.processClass( NetworkInfoBroadcaster.DhcpOptionSetToDhcpOptionSetNetworkView )
-    discovery.processClass( NetworkInfoBroadcaster.RouteTableToRouteTableNetworkView )
-    discovery.processClass( NetworkInfoBroadcaster.NetworkAclToNetworkAclNetworkView )
-    discovery.processClass( NetworkInfoBroadcaster.VpcNetworkInterfaceToNetworkInterfaceNetworkView )
-    discovery.processClass( NetworkInfoBroadcaster.RouteNetworkViewToNIRoute )
-    discovery.processClass( NetworkInfoBroadcaster.NetworkAclEntryNetworkViewToNINetworkAclRule )
-    discovery.processClass( NetworkInfoBroadcaster.InternetGatewayToInternetGatewayNetworkView )
+    discovery.processClass( NetworkInfoBroadcasts.NetworkConfigurationToNetworkInfo )
+    discovery.processClass( NetworkInfoBroadcasts.NetworkGroupToNetworkGroupNetworkView )
+    discovery.processClass( NetworkInfoBroadcasts.VmInstanceToVmInstanceNetworkView )
+    discovery.processClass( NetworkInfoBroadcasts.VpcToVpcNetworkView )
+    discovery.processClass( NetworkInfoBroadcasts.SubnetToSubnetNetworkView )
+    discovery.processClass( NetworkInfoBroadcasts.DhcpOptionSetToDhcpOptionSetNetworkView )
+    discovery.processClass( NetworkInfoBroadcasts.RouteTableToRouteTableNetworkView )
+    discovery.processClass( NetworkInfoBroadcasts.NetworkAclToNetworkAclNetworkView )
+    discovery.processClass( NetworkInfoBroadcasts.VpcNetworkInterfaceToNetworkInterfaceNetworkView )
+    discovery.processClass( NetworkInfoBroadcasts.RouteNetworkViewToNIRoute )
+    discovery.processClass( NetworkInfoBroadcasts.NetworkAclEntryNetworkViewToNINetworkAclRule )
+    discovery.processClass( NetworkInfoBroadcasts.InternetGatewayToInternetGatewayNetworkView )
   }
 
   @Test
   void testBasicBroadcast( ) {
-    NetworkInfo info = NetworkInfoBroadcaster.buildNetworkConfiguration(
+    NetworkInfo info = NetworkInfoBroadcasts.buildNetworkConfiguration(
       Optional.of( new NetworkConfiguration(
           instanceDnsDomain: 'eucalyptus.internal',
           instanceDnsServers: [ '1.2.3.4' ],
@@ -107,33 +107,36 @@ class NetworkInfoBroadcasterTest {
               )
           ]
       ) ),
-      new NetworkInfoBroadcaster.NetworkInfoSource( ) {
-        @Override Iterable<NetworkInfoBroadcaster.VmInstanceNetworkView> getInstances() {
+      new NetworkInfoBroadcasts.NetworkInfoSource( ) {
+        @Override Iterable<NetworkInfoBroadcasts.VmInstanceNetworkView> getInstances() {
           [ instance( 'i-00000001', 'cluster1', 'node1', '000000000002', '00:00:00:00:00:00', '2.0.0.2', '10.0.0.0' ) ]
         }
-        @Override Iterable<NetworkInfoBroadcaster.NetworkGroupNetworkView> getSecurityGroups() {
+        @Override Iterable<NetworkInfoBroadcasts.NetworkGroupNetworkView> getSecurityGroups() {
           [ group( 'sg-00000001', '000000000002', [], [], [] ) ]
         }
-        @Override Iterable<NetworkInfoBroadcaster.VpcNetworkView> getVpcs() {
+        @Override Iterable<NetworkInfoBroadcasts.VpcNetworkView> getVpcs() {
           []
         }
-        @Override Iterable<NetworkInfoBroadcaster.SubnetNetworkView> getSubnets() {
+        @Override Iterable<NetworkInfoBroadcasts.SubnetNetworkView> getSubnets() {
          []
         }
-        @Override Iterable<NetworkInfoBroadcaster.DhcpOptionSetNetworkView> getDhcpOptionSets() {
+        @Override Iterable<NetworkInfoBroadcasts.DhcpOptionSetNetworkView> getDhcpOptionSets() {
          []
         }
-        @Override Iterable<NetworkInfoBroadcaster.NetworkAclNetworkView> getNetworkAcls() {
+        @Override Iterable<NetworkInfoBroadcasts.NetworkAclNetworkView> getNetworkAcls() {
           []
         }
-        @Override Iterable<NetworkInfoBroadcaster.RouteTableNetworkView> getRouteTables() {
+        @Override Iterable<NetworkInfoBroadcasts.RouteTableNetworkView> getRouteTables() {
           []
         }
-        @Override Iterable<NetworkInfoBroadcaster.InternetGatewayNetworkView> getInternetGateways() {
+        @Override Iterable<NetworkInfoBroadcasts.InternetGatewayNetworkView> getInternetGateways() {
           []
         }
-        @Override Iterable<NetworkInfoBroadcaster.NetworkInterfaceNetworkView> getNetworkInterfaces() {
+        @Override Iterable<NetworkInfoBroadcasts.NetworkInterfaceNetworkView> getNetworkInterfaces() {
           []
+        }
+        @Override Map<String,Iterable<? extends NetworkInfoBroadcasts.VmInstanceNetworkView>> getView() {
+          [:]
         }
       },
       { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
@@ -201,7 +204,7 @@ class NetworkInfoBroadcasterTest {
 
   @Test
   void testBroadcastDefaults( ) {
-    NetworkInfo info = NetworkInfoBroadcaster.buildNetworkConfiguration(
+    NetworkInfo info = NetworkInfoBroadcasts.buildNetworkConfiguration(
         Optional.of( new NetworkConfiguration(
             publicIps: [ '2.0.0.0-2.0.0.255' ],
             privateIps: [ '10.0.0.0-10.0.0.255' ],
@@ -218,33 +221,36 @@ class NetworkInfoBroadcasterTest {
                 )
             ]
         ) ),
-        new NetworkInfoBroadcaster.NetworkInfoSource( ) {
-          @Override Iterable<NetworkInfoBroadcaster.VmInstanceNetworkView> getInstances() {
+        new NetworkInfoBroadcasts.NetworkInfoSource( ) {
+          @Override Iterable<NetworkInfoBroadcasts.VmInstanceNetworkView> getInstances() {
             [ instance( 'i-00000001', 'cluster1', 'node1', '000000000002', '00:00:00:00:00:00', '2.0.0.0', '10.0.0.0' ) ]
           }
-          @Override Iterable<NetworkInfoBroadcaster.NetworkGroupNetworkView> getSecurityGroups() {
+          @Override Iterable<NetworkInfoBroadcasts.NetworkGroupNetworkView> getSecurityGroups() {
             []
           }
-          @Override Iterable<NetworkInfoBroadcaster.VpcNetworkView> getVpcs() {
+          @Override Iterable<NetworkInfoBroadcasts.VpcNetworkView> getVpcs() {
             []
           }
-          @Override Iterable<NetworkInfoBroadcaster.SubnetNetworkView> getSubnets() {
+          @Override Iterable<NetworkInfoBroadcasts.SubnetNetworkView> getSubnets() {
             []
           }
-          @Override Iterable<NetworkInfoBroadcaster.DhcpOptionSetNetworkView> getDhcpOptionSets() {
+          @Override Iterable<NetworkInfoBroadcasts.DhcpOptionSetNetworkView> getDhcpOptionSets() {
             []
           }
-          @Override Iterable<NetworkInfoBroadcaster.NetworkAclNetworkView> getNetworkAcls() {
+          @Override Iterable<NetworkInfoBroadcasts.NetworkAclNetworkView> getNetworkAcls() {
             []
           }
-          @Override Iterable<NetworkInfoBroadcaster.RouteTableNetworkView> getRouteTables() {
+          @Override Iterable<NetworkInfoBroadcasts.RouteTableNetworkView> getRouteTables() {
             []
           }
-          @Override Iterable<NetworkInfoBroadcaster.InternetGatewayNetworkView> getInternetGateways() {
+          @Override Iterable<NetworkInfoBroadcasts.InternetGatewayNetworkView> getInternetGateways() {
             []
           }
-          @Override Iterable<NetworkInfoBroadcaster.NetworkInterfaceNetworkView> getNetworkInterfaces() {
+          @Override Iterable<NetworkInfoBroadcasts.NetworkInterfaceNetworkView> getNetworkInterfaces() {
             []
+          }
+          @Override Map<String,Iterable<? extends NetworkInfoBroadcasts.VmInstanceNetworkView>> getView() {
+            [:]
           }
         },
         { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
@@ -382,39 +388,42 @@ class NetworkInfoBroadcasterTest {
   }
 
   private void vpcBroadcastTest( final Midonet midoConfig, final NIMidonet midoNetworkInformation ) {
-    NetworkInfo info = NetworkInfoBroadcaster.buildNetworkConfiguration(
+    NetworkInfo info = NetworkInfoBroadcasts.buildNetworkConfiguration(
         Optional.of( new NetworkConfiguration(
             mode: 'VPCMIDO',
             mido: midoConfig,
             publicIps: [ '2.0.0.0-2.0.0.255' ],
         ) ),
-        new NetworkInfoBroadcaster.NetworkInfoSource( ) {
-          @Override Iterable<NetworkInfoBroadcaster.VmInstanceNetworkView> getInstances() {
+        new NetworkInfoBroadcasts.NetworkInfoSource( ) {
+          @Override Iterable<NetworkInfoBroadcasts.VmInstanceNetworkView> getInstances() {
             [ instance( 'i-00000001', 'cluster1', 'node1', '000000000002', '00:00:00:00:00:00', '2.0.0.0', '10.0.0.0' ) ]
           }
-          @Override Iterable<NetworkInfoBroadcaster.NetworkGroupNetworkView> getSecurityGroups() {
+          @Override Iterable<NetworkInfoBroadcasts.NetworkGroupNetworkView> getSecurityGroups() {
             []
           }
-          @Override Iterable<NetworkInfoBroadcaster.VpcNetworkView> getVpcs() {
+          @Override Iterable<NetworkInfoBroadcasts.VpcNetworkView> getVpcs() {
             []
           }
-          @Override Iterable<NetworkInfoBroadcaster.SubnetNetworkView> getSubnets() {
+          @Override Iterable<NetworkInfoBroadcasts.SubnetNetworkView> getSubnets() {
             []
           }
-          @Override Iterable<NetworkInfoBroadcaster.DhcpOptionSetNetworkView> getDhcpOptionSets() {
+          @Override Iterable<NetworkInfoBroadcasts.DhcpOptionSetNetworkView> getDhcpOptionSets() {
             []
           }
-          @Override Iterable<NetworkInfoBroadcaster.NetworkAclNetworkView> getNetworkAcls() {
+          @Override Iterable<NetworkInfoBroadcasts.NetworkAclNetworkView> getNetworkAcls() {
             []
           }
-          @Override Iterable<NetworkInfoBroadcaster.RouteTableNetworkView> getRouteTables() {
+          @Override Iterable<NetworkInfoBroadcasts.RouteTableNetworkView> getRouteTables() {
             []
           }
-          @Override Iterable<NetworkInfoBroadcaster.InternetGatewayNetworkView> getInternetGateways() {
+          @Override Iterable<NetworkInfoBroadcasts.InternetGatewayNetworkView> getInternetGateways() {
             []
           }
-          @Override Iterable<NetworkInfoBroadcaster.NetworkInterfaceNetworkView> getNetworkInterfaces() {
+          @Override Iterable<NetworkInfoBroadcasts.NetworkInterfaceNetworkView> getNetworkInterfaces() {
             []
+          }
+          @Override Map<String,Iterable<? extends NetworkInfoBroadcasts.VmInstanceNetworkView>> getView() {
+            [:]
           }
         },
         { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
@@ -473,7 +482,7 @@ class NetworkInfoBroadcasterTest {
 
   @Test
   void testBroadcastManaged( ) {
-    NetworkInfo info = NetworkInfoBroadcaster.buildNetworkConfiguration(
+    NetworkInfo info = NetworkInfoBroadcasts.buildNetworkConfiguration(
         Optional.of( new NetworkConfiguration(
             mode: 'MANAGED',
             clusters: [
@@ -491,33 +500,36 @@ class NetworkInfoBroadcasterTest {
             ),
             publicIps: [ '2.0.0.0-2.0.0.255' ],
         ) ),
-        new NetworkInfoBroadcaster.NetworkInfoSource( ) {
-          @Override Iterable<NetworkInfoBroadcaster.VmInstanceNetworkView> getInstances() {
+        new NetworkInfoBroadcasts.NetworkInfoSource( ) {
+          @Override Iterable<NetworkInfoBroadcasts.VmInstanceNetworkView> getInstances() {
             [ instance( 'i-00000001', 'cluster1', 'node1', '000000000002', '00:00:00:00:00:00', '2.0.0.0', '10.0.0.0' ) ]
           }
-          @Override Iterable<NetworkInfoBroadcaster.NetworkGroupNetworkView> getSecurityGroups() {
+          @Override Iterable<NetworkInfoBroadcasts.NetworkGroupNetworkView> getSecurityGroups() {
             []
           }
-          @Override Iterable<NetworkInfoBroadcaster.VpcNetworkView> getVpcs() {
+          @Override Iterable<NetworkInfoBroadcasts.VpcNetworkView> getVpcs() {
             []
           }
-          @Override Iterable<NetworkInfoBroadcaster.SubnetNetworkView> getSubnets() {
+          @Override Iterable<NetworkInfoBroadcasts.SubnetNetworkView> getSubnets() {
             []
           }
-          @Override Iterable<NetworkInfoBroadcaster.DhcpOptionSetNetworkView> getDhcpOptionSets() {
+          @Override Iterable<NetworkInfoBroadcasts.DhcpOptionSetNetworkView> getDhcpOptionSets() {
             []
           }
-          @Override Iterable<NetworkInfoBroadcaster.NetworkAclNetworkView> getNetworkAcls() {
+          @Override Iterable<NetworkInfoBroadcasts.NetworkAclNetworkView> getNetworkAcls() {
             []
           }
-          @Override Iterable<NetworkInfoBroadcaster.RouteTableNetworkView> getRouteTables() {
+          @Override Iterable<NetworkInfoBroadcasts.RouteTableNetworkView> getRouteTables() {
             []
           }
-          @Override Iterable<NetworkInfoBroadcaster.InternetGatewayNetworkView> getInternetGateways() {
+          @Override Iterable<NetworkInfoBroadcasts.InternetGatewayNetworkView> getInternetGateways() {
             []
           }
-          @Override Iterable<NetworkInfoBroadcaster.NetworkInterfaceNetworkView> getNetworkInterfaces() {
+          @Override Iterable<NetworkInfoBroadcasts.NetworkInterfaceNetworkView> getNetworkInterfaces() {
             []
+          }
+          @Override Map<String,Iterable<? extends NetworkInfoBroadcasts.VmInstanceNetworkView>> getView() {
+            [:]
           }
         },
         { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
@@ -583,9 +595,10 @@ class NetworkInfoBroadcasterTest {
     cluster
   }
 
-  private static NetworkInfoBroadcaster.VmInstanceNetworkView instance( String id, String partition, String node, String ownerAccountNumber, String mac, String publicAddress, String privateAddress ) {
-    new NetworkInfoBroadcaster.VmInstanceNetworkView(
+  private static NetworkInfoBroadcasts.VmInstanceNetworkView instance( String id, String partition, String node, String ownerAccountNumber, String mac, String publicAddress, String privateAddress ) {
+    new NetworkInfoBroadcasts.VmInstanceNetworkView(
       id,
+      1,
       VmState.RUNNING,
       false,
       ownerAccountNumber,
@@ -600,15 +613,16 @@ class NetworkInfoBroadcasterTest {
     )
   }
 
-  private static NetworkInfoBroadcaster.NetworkGroupNetworkView group(
+  private static NetworkInfoBroadcasts.NetworkGroupNetworkView group(
       String id,
       String ownerAccountNumber,
       List<String> rules,
-      List<NetworkInfoBroadcaster.IPPermissionNetworkView> ingressRules,
-      List<NetworkInfoBroadcaster.IPPermissionNetworkView> egressRules
+      List<NetworkInfoBroadcasts.IPPermissionNetworkView> ingressRules,
+      List<NetworkInfoBroadcasts.IPPermissionNetworkView> egressRules
   ) {
-    new NetworkInfoBroadcaster.NetworkGroupNetworkView(
+    new NetworkInfoBroadcasts.NetworkGroupNetworkView(
       id,
+      1,
       ownerAccountNumber,
       rules,
       ingressRules,
