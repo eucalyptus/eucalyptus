@@ -349,7 +349,7 @@ public class Emis {
                   BundleImageManifest.INSTANCE,
                   ImageConfiguration.getInstance( ).getMaxManifestSizeBytes( ) ),
                 partition.getNodeCertificate().getPublicKey(),
-                this.getKernel( ).getDisplayName( ) + "-" + reservationId, true);
+                this.getKernel( ).getDisplayName( ) + "-" + partition.getName(), true);
             vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), manifestLocation,
                                   this.getKernel( ).getImageSizeBytes() );
           }
@@ -364,7 +364,7 @@ public class Emis {
                   BundleImageManifest.INSTANCE,
                   ImageConfiguration.getInstance( ).getMaxManifestSizeBytes( )),
                 partition.getNodeCertificate().getPublicKey(),
-                this.getRamdisk( ).getDisplayName( ) + "-" + reservationId, true);
+                this.getRamdisk( ).getDisplayName( ) + "-" + partition.getName(), true);
             vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), manifestLocation,
                                    this.getRamdisk( ).getImageSizeBytes() );
           }
@@ -381,7 +381,7 @@ public class Emis {
                   BundleImageManifest.INSTANCE,
                   ImageConfiguration.getInstance( ).getMaxManifestSizeBytes( ) ),
                   partition.getNodeCertificate( ).getPublicKey( ),
-                  reservationId, true);
+                  diskImage.getDisplayName() + "-" + partition.getName(), true);
           vmTypeInfo.setRoot( diskImage.getDisplayName( ), manifestLocation,
                               this.getMachine( ).getImageSizeBytes() );
         }
