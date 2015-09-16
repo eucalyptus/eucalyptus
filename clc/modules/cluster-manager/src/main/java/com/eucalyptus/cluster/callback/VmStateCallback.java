@@ -66,10 +66,12 @@ import static com.eucalyptus.compute.common.internal.vm.VmInstance.VmState.PENDI
 import static com.eucalyptus.compute.common.internal.vm.VmInstance.VmState.RUNNING;
 import static com.eucalyptus.compute.common.internal.vm.VmInstance.VmState.SHUTTING_DOWN;
 import static com.eucalyptus.compute.common.internal.vm.VmInstance.VmState.STOPPING;
+import static com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet.TORNDOWN;
 import static com.eucalyptus.compute.common.internal.vm.VmInstances.TerminatedInstanceException;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentMap;
@@ -79,17 +81,26 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.compute.common.internal.vm.VmRuntimeState.ReachabilityStatus;
+import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
+import com.eucalyptus.entities.EntityCache;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Either;
+import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.NonNullFunction;
+import com.google.common.base.Functions;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
+import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.compute.common.network.InstanceResourceReportType;
@@ -119,12 +130,24 @@ import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.VmDescribeType;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
+import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescribeType, VmDescribeResponseType> {
   private static Logger               LOG                       = Logger.getLogger( VmStateCallback.class );
 
-  private static ConcurrentMap<String, Long> pendingUpdates = Maps.newConcurrentMap( );
+  private static final ConcurrentMap<String, Long> pendingUpdates = Maps.newConcurrentMap( );
+
+  private static final Supplier<Iterable<VmStateView>> instanceViewSupplier =
+      Suppliers.memoizeWithExpiration(
+          new EntityCache<>(
+              VmInstance.named(null),
+              Restrictions.not( VmInstance.criterion( TORNDOWN.array( ) ) ),
+              Sets.newHashSet( "transientVolumeState.attachments"),
+              Sets.newHashSet( "bootRecord.machineImage", "bootRecord.vmType", "networkGroups" ),
+              TypeMappers.lookup( VmInstance.class, VmStateView.class )  ),
+          10,
+          TimeUnit.SECONDS );
 
   private final Supplier<Set<String>> initialInstances;
   
@@ -174,8 +197,14 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       return;
     }
 
+    final Map<String,VmStateView> localState = ImmutableMap.copyOf( CollectionUtils.putAll(
+        instanceViewSupplier.get( ),
+        Maps.<String,VmStateView>newHashMapWithExpectedSize( reply.getVms( ).size( ) ),
+        HasName.GET_NAME,
+        Functions.<VmStateView>identity( ) ) );
+
     reply.setOriginCluster( this.getSubject( ).getConfiguration( ).getName( ) );
-    final Set<String> reportedInstances = Sets.newHashSet( );
+    final Set<String> reportedInstances = Sets.newHashSetWithExpectedSize( reply.getVms( ).size( ) );
     for ( VmInfo vmInfo : reply.getVms( ) ) {
       reportedInstances.add( vmInfo.getInstanceId( ) );
       vmInfo.setPlacement( this.getSubject( ).getConfiguration( ).getName( ) );
@@ -203,13 +232,13 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
 
     for ( final VmInfo runVm : reply.getVms( ) ) {
       if ( this.initialInstances.get( ).contains( runVm.getInstanceId( ) ) ) {
-        taskList.add( UpdateTaskFunction.REPORTED.apply( Either.<String, VmInfo>right( runVm ) ) );
+        taskList.add( UpdateTaskFunction.REPORTED.apply( context( localState, runVm ) ) );
       } else if ( unknownInstances.contains( runVm.getInstanceId( ) ) ) {
-        taskList.add( UpdateTaskFunction.UNKNOWN.apply( Either.<String, VmInfo>right( runVm ) ) );
+        taskList.add( UpdateTaskFunction.UNKNOWN.apply( context( localState, runVm ) ) );
       }
     }
     for ( final String vmId : unreportedInstances ) {
-      taskList.add( UpdateTaskFunction.UNREPORTED.apply( Either.<String,VmInfo>left( vmId ) ) );
+      taskList.add( UpdateTaskFunction.UNREPORTED.apply( context( localState, vmId ) ) );
     }
     for ( final Runnable task : Optional.presentInstances( taskList ) ) {
       Threads.enqueue(
@@ -221,10 +250,17 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     }
   }
   
-  private static void handleUnreported( final String vmId ) {
+  private static void handleUnreported( final VmStateContext vmStateContext ) {
     try {
+      final String vmId = vmStateContext.input.getLeft( );
+      final long intitialReportTimeoutMillis = VmInstances.VM_INITIAL_REPORT_TIMEOUT * 1000;
+      final VmStateView vmView = vmStateContext.getLocalState( ).get( vmId );
+      if ( vmView != null && vmView.getState( ) == VmState.PENDING && (System.currentTimeMillis( ) - vmView.getLastUpdated( )) < intitialReportTimeoutMillis ) {
+        return;
+      }
+
       final VmInstance vm = VmInstances.lookupAny( vmId );
-      if ( VmState.PENDING.apply( vm ) && vm.lastUpdateMillis( ) < ( VmInstances.VM_INITIAL_REPORT_TIMEOUT * 1000 ) ) {
+      if ( VmState.PENDING.apply( vm ) && vm.lastUpdateMillis( ) < intitialReportTimeoutMillis ) {
         //do nothing during first VM_INITIAL_REPORT_TIMEOUT millis of instance life
         return;
       } else if ( vm.isBlockStorage( ) && VmInstances.Timeout.UNREPORTED.apply( vm ) ) {
@@ -252,21 +288,47 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     }
   }
   
-  private static void handleReportedState( final VmInfo runVm ) {
+  private static void handleReportedState( final VmStateContext vmStateContext ) {
+    final VmInfo runVm = vmStateContext.getInput( ).getRight( );
     final VmState runVmState = VmState.Mapper.get( runVm.getStateName( ) );
     try {
-      try ( final TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
-        VmInstance vm = VmInstances.lookupAny( runVm.getInstanceId() );
-        if ( VmStateSet.DONE.apply( vm ) ) {
-          db.rollback( );
-          if ( VmInstance.Reason.EXPIRED.apply( vm ) ) {
-            VmStateCallback.handleUnknown( runVm );
+      final VmStateView vmView = vmStateContext.getLocalState( ).get( runVm.getInstanceId( ) );
+      boolean updateRequired = false;
+      if ( vmView != null ) {
+        if ( vmView.inState( VmStateSet.DONE ) ) {
+          if ( vmView.getReason( ) == VmInstance.Reason.EXPIRED ) {
+            VmStateCallback.handleUnknown( vmStateContext );
           } else {
             LOG.trace( "Ignore state update to terminated instance: " + runVm.getInstanceId( ) );
           }
           return;
+        } else if ( vmView.getState( ) == VmState.RUNNING && System.currentTimeMillis( ) > vmView.getExpires( )  ) {
+          updateRequired = true;
+        } else if ( VmState.SHUTTING_DOWN.equals( runVmState ) ) {
+          updateRequired = true;
+        } else if ( !vmView.inState( VmStateSet.RUN ) && VmStateSet.RUN.contains( runVmState )
+            && ( System.currentTimeMillis( ) - vmView.getLastUpdated( ) ) > ( VmInstances.VOLATILE_STATE_TIMEOUT_SEC * 1000l ) ) {
+          updateRequired = true;
+        } else if ( vmView.inState( VmStateSet.RUN ) ) {
+          updateRequired =
+                  vmView.isBundling( ) ||
+                  vmView.isMigrating( ) ||
+                  runVmState != vmView.getState( ) ||
+                  !Objects.equals( vmView.getGuestState( ), runVm.getGuestStateName( ) ) ||
+                  !Objects.equals( vmView.getServiceTag( ), runVm.getServiceTag( ) ) ||
+                  ( System.currentTimeMillis( ) - vmView.getLastUpdated( ) ) > VmInstances.Timeout.UNTOUCHED.getMilliseconds( ) || // for running and pending states
+                  vmView.getReachabilityStatus( ) != ReachabilityStatus.Passed ||
+                  ( vmView.getState( ) == VmState.RUNNING && !vmView.getVolumeAttachments( ).equals(
+                      CollectionUtils.putAll(
+                          Iterables.transform( runVm.getVolumes( ), TypeMappers.lookup( AttachedVolume.class, VmStateVolumeAttachmentView.class ) ),
+                          Maps.<String,VmStateVolumeAttachmentView>newHashMap( ),
+                          HasName.GET_NAME,
+                          Functions.<VmStateVolumeAttachmentView>identity( ) ) ) );
         }
+      }
 
+      if ( updateRequired ) try ( final TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
+        VmInstance vm = VmInstances.lookupAny( runVm.getInstanceId() );
         if ( VmInstances.Timeout.EXPIRED.apply( vm ) ) {
           if ( vm.isBlockStorage( ) ) {
             VmInstances.stopped( vm );
@@ -277,13 +339,8 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
           db.rollback();
           VmStateCallback.handleReportedTeardown( vm, runVm );
           return;
-        } else if ( VmStateSet.RUN.apply( vm ) ) {
-          VmInstances.doUpdate( vm ).apply( runVm );
-        } else if ( !VmStateSet.RUN.apply( vm ) && VmStateSet.RUN.contains( runVmState )
-                    && vm.lastUpdateMillis( ) > ( VmInstances.VOLATILE_STATE_TIMEOUT_SEC * 1000l ) ) {
-          VmInstances.doUpdate( vm ).apply( runVm );
         } else {
-          return;
+          VmInstances.doUpdate( vm ).apply( runVm );
         }
         Entities.commit( db );
       } catch ( Exception ex ) {
@@ -301,39 +358,39 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     }
   }
 
-  enum UpdateTaskFunction implements NonNullFunction<Either<String,VmInfo>, Optional<Runnable>> {
+  enum UpdateTaskFunction implements NonNullFunction<VmStateContext, Optional<Runnable>> {
     REPORTED {
-      void task( final Either<String,VmInfo> idOrVmInfo ) {
-        VmStateCallback.handleReportedState( idOrVmInfo.getRight( ) );
+      void task( final VmStateContext context ) {
+        VmStateCallback.handleReportedState( context );
       }
     },
     UNKNOWN {
       @Override
-      void task( final Either<String,VmInfo> idOrVmInfo ) {
-        VmStateCallback.handleUnknown( idOrVmInfo.getRight( ) );
+      void task( final VmStateContext context ) {
+        VmStateCallback.handleUnknown( context );
       }
     },
     UNREPORTED {
       @Override
-      void task( final Either<String,VmInfo> idOrVmInfo ) {
-        VmStateCallback.handleUnreported( idOrVmInfo.getLeft( ) );
+      void task( final VmStateContext context ) {
+        VmStateCallback.handleUnreported( context );
       }
     };
 
-    abstract void task( Either<String,VmInfo> idOrVmInfo );
+    abstract void task( final VmStateContext context );
 
     @Nonnull
     @Override
-    public Optional<Runnable> apply( final Either<String,VmInfo> input ) {
-      final String instanceId = input == null ?
+    public Optional<Runnable> apply( final VmStateContext context ) {
+      final String instanceId = context == null ?
           null :
-          input.isLeft( ) ? input.getLeft( ) : input.getRight( ).getInstanceId( );
+          context.input.isLeft( ) ? context.input.getLeft( ) : context.input.getRight( ).getInstanceId( );
       try {
         final Runnable run = new Runnable( ) {
           @Override
           public void run() {
             try {
-              UpdateTaskFunction.this.task( input );
+              UpdateTaskFunction.this.task( context );
             } catch ( Exception e ) {
               LOG.error(
                   "Failed to handle "
@@ -348,7 +405,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
             }
           }
         };
-        if ( input != null
+        if ( context != null
              && instanceId != null
              && pendingUpdates.putIfAbsent( instanceId, System.currentTimeMillis( ) ) == null ) {
           return Optional.of( run );
@@ -361,10 +418,10 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     }
   }
   
-  private static void handleUnknown( final VmInfo runVm ) {
+  private static void handleUnknown( final VmStateContext vmStateContext ) {
     for ( final Optional<VmInstances.RestoreHandler> restoreHandler :
         VmInstances.RestoreHandler.parseList( VmInstances.UNKNOWN_INSTANCE_HANDLERS ) ) {
-      if ( restoreHandler.isPresent( ) && handleRestore( runVm, restoreHandler.get( ) ) ) {
+      if ( restoreHandler.isPresent( ) && handleRestore( vmStateContext.getInput().getRight(), restoreHandler.get( ) ) ) {
         break;
       }
     }
@@ -443,11 +500,17 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
 
     @Override
     public void fire( VmDescribeResponseType reply ) {
+      final Map<String,VmStateView> localState = ImmutableMap.copyOf( CollectionUtils.putAll(
+          instanceViewSupplier.get( ),
+          Maps.<String, VmStateView>newHashMapWithExpectedSize( reply.getVms( ).size( ) ),
+          HasName.GET_NAME,
+          Functions.<VmStateView>identity( ) ) );
+
       for ( final VmInfo runVm : reply.getVms( ) ) {
         if ( Databases.isVolatile( ) ) {
           return;
         } else if ( this.initialInstances.get( ).contains( runVm.getInstanceId( ) ) ) {
-          VmStateCallback.handleReportedState( runVm );
+          VmStateCallback.handleReportedState( context( localState, runVm ) );
         }
       }
     }
@@ -462,6 +525,14 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
   public void setSubject( Cluster subject ) {
     super.setSubject( subject );
     this.initialInstances.get( );
+  }
+
+  private static VmStateContext context( final Map<String,VmStateView> localState, final String vmId ) {
+    return new VmStateContext( localState, vmId );
+  }
+
+  private static VmStateContext context( final Map<String,VmStateView> localState, final VmInfo vmInfo ) {
+    return new VmStateContext( localState, vmInfo );
   }
 
   @TypeMapper
@@ -481,6 +552,265 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       }
 
       return report;
+    }
+  }
+
+  public static final class VmStateVolumeAttachmentView implements HasName<VmStateVolumeAttachmentView> {
+    private final String id;
+    private final String device;
+    private final String removeDevice;
+    private final String status;
+    private final Long attachTime;
+
+    public VmStateVolumeAttachmentView(
+        final String id,
+        final String device,
+        final String removeDevice,
+        final String status,
+        final Long attachTime ) {
+      this.id = id;
+      this.device = device;
+      this.removeDevice = removeDevice;
+      this.status = status;
+      this.attachTime = attachTime;
+    }
+
+    public String getId( ) {
+      return id;
+    }
+
+    @Override
+    public String getName( ) {
+      return id;
+    }
+
+    @Override
+    public int compareTo( final VmStateVolumeAttachmentView o ) {
+      return id.compareTo( o.id );
+    }
+
+    @Override
+    public boolean equals( final Object o ) {
+      if ( this == o ) return true;
+      if ( o == null || getClass( ) != o.getClass( ) ) return false;
+      final VmStateVolumeAttachmentView that = (VmStateVolumeAttachmentView) o;
+      return Objects.equals( id, that.id ) &&
+          Objects.equals( device, that.device ) &&
+          Objects.equals( removeDevice, that.removeDevice ) &&
+          Objects.equals( status, that.status ) &&
+          Objects.equals( attachTime, that.attachTime );
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash( id, device, removeDevice, status, attachTime );
+    }
+  }
+
+  public static final class VmStateView implements HasName<VmStateView> {
+    private final String id;
+    private final int version;
+    private final String partition;
+    private final String serviceTag;
+    private final VmState state;
+    private final String guestState;
+    private final ReachabilityStatus reachabilityStatus;
+    private final VmInstance.Reason reason;
+    private final Map<String,VmStateVolumeAttachmentView> volumeAttachments;
+    private final long lastUpdated;
+    private final long expires;
+    private final boolean bundling;
+    private final boolean migrating;
+
+    public VmStateView(
+        final String id,
+        final int version,
+        final String partition,
+        final String serviceTag,
+        final VmState state,
+        final String guestState,
+        final ReachabilityStatus reachabilityStatus,
+        final VmInstance.Reason reason,
+        final Map<String, VmStateVolumeAttachmentView> volumeAttachments,
+        final long lastUpdated,
+        final long expires,
+        final boolean bundling,
+        final boolean migrating
+    ) {
+      this.id = id;
+      this.version = version;
+      this.partition = partition;
+      this.serviceTag = serviceTag;
+      this.state = state;
+      this.guestState = guestState;
+      this.reachabilityStatus = reachabilityStatus;
+      this.reason = reason;
+      this.volumeAttachments = volumeAttachments;
+      this.lastUpdated = lastUpdated;
+      this.expires = expires;
+      this.bundling = bundling;
+      this.migrating = migrating;
+    }
+
+    public String getId( ) {
+      return id;
+    }
+
+    public int getVersion( ) {
+      return version;
+    }
+
+    public String getPartition( ) {
+      return partition;
+    }
+
+    public String getServiceTag( ) {
+      return serviceTag;
+    }
+
+    public VmState getState( ) {
+      return state;
+    }
+
+    public String getGuestState( ) {
+      return guestState;
+    }
+
+    public ReachabilityStatus getReachabilityStatus( ) {
+      return reachabilityStatus;
+    }
+
+    public VmInstance.Reason getReason( ) {
+      return reason;
+    }
+
+    public Map<String, VmStateVolumeAttachmentView> getVolumeAttachments( ) {
+      return volumeAttachments;
+    }
+
+    public long getLastUpdated( ) {
+      return lastUpdated;
+    }
+
+    public long getExpires( ) {
+      return expires;
+    }
+
+    public boolean isBundling( ) {
+      return bundling;
+    }
+
+    public boolean isMigrating( ) {
+      return migrating;
+    }
+
+    @Override
+    public String getName( ) {
+      return id;
+    }
+
+    @Override
+    public int compareTo( final VmStateView o ) {
+      return id.compareTo( o.id );
+    }
+
+    public boolean inState( final VmStateSet stateSet ) {
+      return stateSet.set( ).contains( state );
+    }
+  }
+
+  @TypeMapper
+  public enum VmInstanceToVmStateView implements Function<VmInstance,VmStateView> {
+    INSTANCE;
+
+    @Override
+    public VmStateView apply( final VmInstance vmInstance ) {
+      final Map<String,VmStateVolumeAttachmentView> volumes = Maps.newHashMap( );
+      CollectionUtils.putAll(
+          Iterables.transform(
+              Iterables.concat(
+                  vmInstance.getBootRecord( ).getPersistentVolumes( ),
+                  vmInstance.getTransientVolumeState( ).getAttachments( ) ),
+              TypeMappers.lookup( VmVolumeAttachment.class, VmStateVolumeAttachmentView.class ) ),
+          volumes,
+          HasName.GET_NAME,
+          Functions.<VmStateVolumeAttachmentView>identity( ) );
+      return new VmStateView(
+          vmInstance.getInstanceId( ),
+          vmInstance.getVersion( ),
+          vmInstance.getPartition( ),
+          vmInstance.getServiceTag( ),
+          vmInstance.getState( ),
+          vmInstance.getRuntimeState( ).getGuestState( ),
+          vmInstance.getRuntimeState( ).getReachabilityStatus( ),
+          vmInstance.getRuntimeState( ).getReason( ),
+          ImmutableMap.copyOf( volumes ),
+          vmInstance.getLastUpdateTimestamp( ).getTime( ),
+          vmInstance.getExpiration( ) == null ? Long.MAX_VALUE : vmInstance.getExpiration( ).getTime( ),
+          vmInstance.getRuntimeState( ).isBundling( ),
+          vmInstance.getMigrationTask( ).getState( ).isMigrating( )
+      );
+    }
+  }
+
+  private static final class VmStateContext {
+    private final Map<String,VmStateView> localState;
+    private final Either<String,VmInfo> input;
+
+    VmStateContext(
+        final Map<String,VmStateView> localState,
+        final String vmId
+    ) {
+      this.localState = localState;
+      this.input = Either.left( vmId );
+    }
+
+    VmStateContext(
+        final Map<String,VmStateView> localState,
+        final VmInfo vmInfo
+    ) {
+      this.localState = localState;
+      this.input = Either.right( vmInfo );
+    }
+
+    public Map<String, VmStateView> getLocalState( ) {
+      return localState;
+    }
+
+    public Either<String, VmInfo> getInput( ) {
+      return input;
+    }
+  }
+
+  @TypeMapper
+  public enum AttachedVolumeToVmStateVolumeAttachmentView implements Function<AttachedVolume,VmStateVolumeAttachmentView> {
+    INSTANCE;
+
+    @Override
+    public VmStateVolumeAttachmentView apply( final AttachedVolume attachedVolume ) {
+      return new VmStateVolumeAttachmentView(
+          attachedVolume.getVolumeId( ),
+          attachedVolume.getDevice( ),
+          attachedVolume.getRemoteDevice( ),
+          attachedVolume.getStatus( ),
+          attachedVolume.getAttachTime( ) == null ? null : attachedVolume.getAttachTime( ).getTime( )
+      );
+    }
+  }
+
+  @TypeMapper
+  public enum VmVolumeAttachmentToVmStateVolumeAttachmentView implements Function<VmVolumeAttachment,VmStateVolumeAttachmentView> {
+    INSTANCE;
+
+    @Override
+    public VmStateVolumeAttachmentView apply( final VmVolumeAttachment volumeAttachment ) {
+      return new VmStateVolumeAttachmentView(
+          volumeAttachment.getVolumeId( ),
+          volumeAttachment.getDevice( ),
+          volumeAttachment.getRemoteDevice( ),
+          volumeAttachment.getStatus( ),
+          volumeAttachment.getAttachTime( ) == null ? null : volumeAttachment.getAttachTime( ).getTime( )
+      );
     }
   }
 
