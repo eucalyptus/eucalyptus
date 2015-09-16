@@ -74,6 +74,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.DescribeSensorsResponse;
@@ -451,9 +452,14 @@ public class CloudWatchHelper {
         });
 
     @Override
-    public Iterable<String> getRunningInstanceUUIDList() {
-      return Iterables.transform(VmInstances.list(VmState.RUNNING), VmInstances.toInstanceUuid());
+    public Iterable<String> getRunningInstanceUUIDList( ) {
+      return Sets.newHashSet( VmInstances.listWithProjection(
+          VmInstances.instanceUuidProjection( ),
+          VmInstance.criterion( VmState.RUNNING ),
+          VmInstance.nonNullNodeCriterion( )
+      ) );
     }
+
     private VmInstance lookupInstance(String instanceId) {
       if (cachedInstances.containsKey(instanceId)) {
         return cachedInstances.get(instanceId);

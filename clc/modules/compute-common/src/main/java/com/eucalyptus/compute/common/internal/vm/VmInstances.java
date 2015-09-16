@@ -70,8 +70,10 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
+import org.hibernate.Criteria;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Example;
+import org.hibernate.criterion.Projection;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.entities.Entities;
@@ -263,6 +265,55 @@ public class VmInstances {
       return Lists.newArrayList( );
     } finally {
       if ( db.isActive() ) db.rollback();
+    }
+  }
+
+  public interface InstanceProjection<T> {
+    Projection getProjection( );
+    List<T> results( List<?> listing );
+  }
+
+  public static InstanceProjection<String> instanceIdProjection( ) {
+    return StringInstanceProjections.INSTANCE_ID;
+  }
+
+  public static InstanceProjection<String> instanceUuidProjection( ) {
+    return StringInstanceProjections.INSTANCE_UUID;
+  }
+
+  private enum StringInstanceProjections implements InstanceProjection<String> {
+    INSTANCE_ID {
+      @Override
+      public Projection getProjection() {
+        return VmInstance.instanceIdProjection( );
+      }
+    },
+    INSTANCE_UUID {
+      @Override
+      public Projection getProjection() {
+        return VmInstance.instanceUuidProjection( );
+      }
+    },
+    ;
+
+    @Override
+    public List<String> results( final List<?> listing ) {
+      //noinspection unchecked
+      return ( List<String> ) listing;
+    }
+  }
+
+  public static <T> List<T> listWithProjection(
+      @Nonnull final InstanceProjection<T> projection,
+               final Criterion... criterions
+  ) {
+    try ( final TransactionResource db = Entities.readOnlyDistinctTransactionFor( VmInstance.class ) ) {
+      final Criteria query = Entities.createCriteria( VmInstance.class )
+          .setReadOnly( true )
+          .setFetchSize( 25_000 )
+          .add( Restrictions.and( criterions ) )
+          .setProjection( projection.getProjection( ) );
+      return projection.results( query.list( ) );
     }
   }
 

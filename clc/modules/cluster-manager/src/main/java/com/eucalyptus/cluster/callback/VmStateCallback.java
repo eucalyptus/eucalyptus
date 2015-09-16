@@ -140,20 +140,12 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     return Suppliers.memoize( new Supplier<Set<String>>( ) {
       @Override
       public Set<String> get( ) {
-        try ( final TransactionResource db = Entities.readOnlyDistinctTransactionFor( VmInstance.class ) ) {
-          final Criteria query = Entities.createCriteria( VmInstance.class )
-              .setReadOnly( true )
-              .setFetchSize( 50_000 )
-              .add( VmInstance.criterion( states ) )
-              .add( VmInstance.nonNullNodeCriterion( ) )
-              .add( VmInstance.zoneCriterion( cb.getSubject( ).getConfiguration( ).getPartition( ) ) )
-              .setProjection( VmInstance.instanceIdProjection( ) );
-          //noinspection unchecked
-          return Sets.newHashSet( (List<String>) query.list( ) );
-        } catch ( Exception ex ) {
-          Logs.extreme( ).error( ex, ex );
-          return Sets.newHashSet( );
-        }
+        return Sets.newHashSet( VmInstances.listWithProjection(
+            VmInstances.instanceIdProjection( ),
+            VmInstance.criterion( states ),
+            VmInstance.nonNullNodeCriterion( ),
+            VmInstance.zoneCriterion( cb.getSubject( ).getConfiguration( ).getPartition( ) )
+        ) );
       }
     } );
   }
