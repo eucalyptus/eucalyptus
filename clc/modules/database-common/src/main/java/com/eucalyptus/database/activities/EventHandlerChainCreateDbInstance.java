@@ -158,6 +158,9 @@ public class EventHandlerChainCreateDbInstance extends
         if (DatabaseInfo.getDatabaseInfo().getAppendOnlyPort() != null &&
             !DatabaseInfo.getDatabaseInfo().getAppendOnlyPort().isEmpty())
           params.add(new Parameter("DBPort", Integer.toString(evt.getPort())));
+        if (DatabaseServerProperties.INIT_SCRIPT != null) {
+          params.add(new Parameter("InitScript", DatabaseServerProperties.INIT_SCRIPT));
+        }
         List<String> zones = DatabaseServerProperties.listConfiguredZones();
         params.add(new Parameter("AvailabilityZones",
             Joiner.on(",").join( zones )));
