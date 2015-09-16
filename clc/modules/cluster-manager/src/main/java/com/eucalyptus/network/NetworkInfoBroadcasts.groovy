@@ -19,20 +19,18 @@
  ************************************************************************/
 package com.eucalyptus.network
 
-import com.eucalyptus.bootstrap.Bootstrap
-import com.eucalyptus.bootstrap.Databases
-import com.eucalyptus.bootstrap.Hosts
 import com.eucalyptus.cluster.Cluster
-import com.eucalyptus.cluster.Clusters
 import com.eucalyptus.cluster.NICluster
 import com.eucalyptus.cluster.NIClusters
 import com.eucalyptus.cluster.NIConfiguration
 import com.eucalyptus.cluster.NIDhcpOptionSet
-import com.eucalyptus.cluster.NIMidonetGateway
-import com.eucalyptus.cluster.NIMidonetGateways
 import com.eucalyptus.cluster.NIInstance
 import com.eucalyptus.cluster.NIInternetGateway
+import com.eucalyptus.cluster.NIManagedSubnet
+import com.eucalyptus.cluster.NIManagedSubnets
 import com.eucalyptus.cluster.NIMidonet
+import com.eucalyptus.cluster.NIMidonetGateway
+import com.eucalyptus.cluster.NIMidonetGateways
 import com.eucalyptus.cluster.NINetworkAcl
 import com.eucalyptus.cluster.NINetworkAclEntry
 import com.eucalyptus.cluster.NINetworkInterface
@@ -45,232 +43,64 @@ import com.eucalyptus.cluster.NISecurityGroup
 import com.eucalyptus.cluster.NISecurityGroupIpPermission
 import com.eucalyptus.cluster.NISubnet
 import com.eucalyptus.cluster.NISubnets
-import com.eucalyptus.cluster.NIManagedSubnet
-import com.eucalyptus.cluster.NIManagedSubnets
 import com.eucalyptus.cluster.NIVpc
 import com.eucalyptus.cluster.NIVpcSubnet
 import com.eucalyptus.cluster.NetworkInfo
-import com.eucalyptus.cluster.callback.BroadcastNetworkInfoCallback
-import com.eucalyptus.component.Topology
-import com.eucalyptus.component.id.Eucalyptus
 import com.eucalyptus.compute.common.internal.network.NetworkGroup
 import com.eucalyptus.compute.common.internal.network.NetworkPeer
 import com.eucalyptus.compute.common.internal.network.NetworkRule
+import com.eucalyptus.compute.common.internal.vm.VmInstance
+import com.eucalyptus.compute.common.internal.vm.VmNetworkConfig
 import com.eucalyptus.compute.common.internal.vpc.DhcpOption
 import com.eucalyptus.compute.common.internal.vpc.DhcpOptionSet
 import com.eucalyptus.compute.common.internal.vpc.InternetGateway
 import com.eucalyptus.compute.common.internal.vpc.NetworkAcl
 import com.eucalyptus.compute.common.internal.vpc.NetworkAclEntry
 import com.eucalyptus.compute.common.internal.vpc.NetworkAcls
-import com.eucalyptus.compute.common.internal.vpc.NetworkInterface as VpcNetworkInterface
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterface
 import com.eucalyptus.compute.common.internal.vpc.Route
 import com.eucalyptus.compute.common.internal.vpc.RouteTable
 import com.eucalyptus.compute.common.internal.vpc.RouteTableAssociation
+import com.eucalyptus.compute.common.internal.vpc.Subnet
 import com.eucalyptus.compute.common.internal.vpc.Vpc
-import com.eucalyptus.compute.common.internal.vpc.Subnet as VpcSubnet
-import com.eucalyptus.entities.EntityCache
-import com.eucalyptus.event.ClockTick
-import com.eucalyptus.event.Listeners
-import com.eucalyptus.event.EventListener as EucaEventListener
-import com.eucalyptus.network.config.Cluster as ConfigCluster
+import com.eucalyptus.network.config.Cluster as ConfigCluster;
+import com.eucalyptus.network.config.EdgeSubnet
+import com.eucalyptus.network.config.ManagedSubnet
 import com.eucalyptus.network.config.MidonetGateway
 import com.eucalyptus.network.config.NetworkConfiguration
 import com.eucalyptus.network.config.NetworkConfigurations
-import com.eucalyptus.network.config.EdgeSubnet
-import com.eucalyptus.network.config.ManagedSubnet
-import com.eucalyptus.system.BaseDirectory
-import com.eucalyptus.system.Threads
-import com.eucalyptus.util.Strings as EucaStrings
 import com.eucalyptus.util.TypeMapper
 import com.eucalyptus.util.TypeMappers
-import com.eucalyptus.util.async.AsyncRequests
-import com.eucalyptus.util.async.Request
-import com.eucalyptus.util.async.UnconditionalCallback
-import com.eucalyptus.compute.common.internal.vm.VmInstance
-import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState
+import com.eucalyptus.util.Strings as EucaStrings;
 import com.eucalyptus.vm.VmInstances
-import com.eucalyptus.compute.common.internal.vm.VmNetworkConfig
-import com.google.common.base.Charsets
 import com.google.common.base.Function
-import com.google.common.base.Objects as GObjects
+import com.google.common.base.Objects
 import com.google.common.base.Optional
 import com.google.common.base.Predicate
 import com.google.common.base.Strings
 import com.google.common.base.Supplier
-import com.google.common.base.Suppliers
 import com.google.common.collect.ArrayListMultimap
 import com.google.common.collect.HashMultimap
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.Iterables
 import com.google.common.collect.ListMultimap
 import com.google.common.collect.Lists
-import com.google.common.collect.Maps
 import com.google.common.collect.Multimap
 import com.google.common.collect.Sets
-import com.google.common.io.Files as GFiles
 import edu.ucsb.eucalyptus.cloud.NodeInfo
-import edu.ucsb.eucalyptus.msgs.BroadcastNetworkInfoResponseType
-import groovy.transform.CompileStatic
 import groovy.transform.Immutable
 import groovy.transform.PackageScope
 import org.apache.log4j.Logger
-import org.hibernate.criterion.Restrictions
 
 import javax.annotation.Nullable
-import javax.xml.bind.JAXBContext
-import java.nio.file.Files as JFiles
-import java.nio.file.StandardCopyOption
-import java.util.concurrent.Callable
-import java.util.concurrent.ConcurrentMap
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicLong
 
 import static com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet.TORNDOWN
+import static com.google.common.collect.Iterables.tryFind
 
-/**
- *
- */
-@CompileStatic
-class NetworkInfoBroadcaster {
-  private static final Logger logger = Logger.getLogger( NetworkInfoBroadcaster )
+@PackageScope
+class NetworkInfoBroadcasts {
 
-  private static final AtomicLong lastBroadcastTime = new AtomicLong( 0L );
-  private static final ConcurrentMap<String,Long> activeBroadcastMap = Maps.<String,Long>newConcurrentMap( ) as ConcurrentMap<String, Long>
-  private static final EntityCache<VmInstance,VmInstanceNetworkView> instanceCache = new EntityCache<>(
-      VmInstance.named(null),
-      Restrictions.not( VmInstance.criterion( TORNDOWN.array( ) ) ),
-      ['networkGroups'] as Set<String>,
-      ['bootRecord.machineImage', 'bootRecord.vmType'] as Set<String>,
-      TypeMappers.lookup( VmInstance, VmInstanceNetworkView )  );
-  private static final EntityCache<NetworkGroup,NetworkGroupNetworkView> securityGroupCache =
-      new EntityCache<>( NetworkGroup.withNaturalId( null ), TypeMappers.lookup( NetworkGroup, NetworkGroupNetworkView )  );
-  private static final EntityCache<Vpc,VpcNetworkView> vpcCache =
-      new EntityCache<>( Vpc.exampleWithOwner( null ), TypeMappers.lookup( Vpc, VpcNetworkView )  );
-  private static final EntityCache<VpcSubnet,SubnetNetworkView> subnetCache =
-      new EntityCache<>( VpcSubnet.exampleWithOwner( null ), TypeMappers.lookup( VpcSubnet, SubnetNetworkView )  );
-  private static final EntityCache<DhcpOptionSet,DhcpOptionSetNetworkView> dhcpOptionsCache =
-      new EntityCache<>( DhcpOptionSet.exampleWithOwner( null ), TypeMappers.lookup( DhcpOptionSet, DhcpOptionSetNetworkView )  );
-  private static final EntityCache<NetworkAcl,NetworkAclNetworkView> networkAclCache =
-      new EntityCache<>( NetworkAcl.exampleWithOwner( null ), TypeMappers.lookup( NetworkAcl, NetworkAclNetworkView )  );
-  private static final EntityCache<RouteTable,RouteTableNetworkView> routeTableCache =
-      new EntityCache<>( RouteTable.exampleWithOwner( null ), TypeMappers.lookup( RouteTable, RouteTableNetworkView )  );
-  private static final EntityCache<InternetGateway,InternetGatewayNetworkView> internetGatewayCache =
-      new EntityCache<>( InternetGateway.exampleWithOwner( null ), TypeMappers.lookup( InternetGateway, InternetGatewayNetworkView )  );
-  private static final EntityCache<VpcNetworkInterface,NetworkInterfaceNetworkView> networkInterfaceCache =
-      new EntityCache<>( VpcNetworkInterface.exampleWithOwner( null ), TypeMappers.lookup( VpcNetworkInterface, NetworkInterfaceNetworkView )  );
-
-  interface NetworkInfoSource {
-    Iterable<VmInstanceNetworkView> getInstances( );
-    Iterable<NetworkGroupNetworkView> getSecurityGroups( );
-    Iterable<VpcNetworkView> getVpcs( );
-    Iterable<SubnetNetworkView> getSubnets( );
-    Iterable<DhcpOptionSetNetworkView> getDhcpOptionSets( );
-    Iterable<NetworkAclNetworkView> getNetworkAcls( );
-    Iterable<RouteTableNetworkView> getRouteTables( );
-    Iterable<InternetGatewayNetworkView> getInternetGateways( );
-    Iterable<NetworkInterfaceNetworkView> getNetworkInterfaces( );
-  }
-
-  private static NetworkInfoSource cacheSource( ) {
-    final Supplier<Iterable<VmInstanceNetworkView>> instanceSupplier = Suppliers.memoize( instanceCache ) as Supplier<Iterable<VmInstanceNetworkView>>;
-    final Supplier<Iterable<NetworkGroupNetworkView>> securityGroupSupplier = Suppliers.memoize( securityGroupCache ) as Supplier<Iterable<NetworkGroupNetworkView>>;
-    final Supplier<Iterable<VpcNetworkView>> vpcSupplier = Suppliers.memoize( vpcCache ) as Supplier<Iterable<VpcNetworkView>>;
-    final Supplier<Iterable<SubnetNetworkView>> subnetSupplier = Suppliers.memoize( subnetCache ) as Supplier<Iterable<SubnetNetworkView>>;
-    final Supplier<Iterable<DhcpOptionSetNetworkView>> dhcpOptionsSupplier = Suppliers.memoize( dhcpOptionsCache ) as Supplier<Iterable<DhcpOptionSetNetworkView>>;
-    final Supplier<Iterable<NetworkAclNetworkView>> networkAclSupplier = Suppliers.memoize( networkAclCache ) as Supplier<Iterable<NetworkAclNetworkView>>;
-    final Supplier<Iterable<RouteTableNetworkView>> routeTableSupplier = Suppliers.memoize( routeTableCache ) as Supplier<Iterable<RouteTableNetworkView>>;
-    final Supplier<Iterable<InternetGatewayNetworkView>> internetGatewaySupplier = Suppliers.memoize( internetGatewayCache ) as Supplier<Iterable<InternetGatewayNetworkView>>;
-    final Supplier<Iterable<NetworkInterfaceNetworkView>> networkInterfaceSupplier = Suppliers.memoize( networkInterfaceCache ) as Supplier<Iterable<NetworkInterfaceNetworkView>>;
-    new NetworkInfoSource( ) {
-      @Override Iterable<VmInstanceNetworkView> getInstances( ) { instanceSupplier.get( ) }
-      @Override Iterable<NetworkGroupNetworkView> getSecurityGroups( ) { securityGroupSupplier.get( ) }
-      @Override Iterable<VpcNetworkView> getVpcs( ) { vpcSupplier.get( ) }
-      @Override Iterable<SubnetNetworkView> getSubnets( ) { subnetSupplier.get( ) }
-      @Override Iterable<DhcpOptionSetNetworkView> getDhcpOptionSets( ) { dhcpOptionsSupplier.get( ) }
-      @Override Iterable<NetworkAclNetworkView> getNetworkAcls( ) { networkAclSupplier.get( ) }
-      @Override Iterable<RouteTableNetworkView> getRouteTables( ) { routeTableSupplier.get( ) }
-      @Override Iterable<InternetGatewayNetworkView> getInternetGateways( ) { internetGatewaySupplier.get( ) }
-      @Override Iterable<NetworkInterfaceNetworkView> getNetworkInterfaces( ) { networkInterfaceSupplier.get( ) }
-    }
-  }
-
-  static void requestNetworkInfoBroadcast( ) {
-    final long requestedTime = System.currentTimeMillis( )
-    Callable broadcastRequest = Closure.IDENTITY
-    broadcastRequest = {
-          final long currentTime = System.currentTimeMillis( )
-          final long lastBroadcast = lastBroadcastTime.get( )
-          if ( requestedTime >= lastBroadcast &&
-              lastBroadcast + TimeUnit.SECONDS.toMillis( NetworkGroups.MIN_BROADCAST_INTERVAL ) < currentTime  ) {
-            if ( lastBroadcastTime.compareAndSet( lastBroadcast, currentTime ) ) {
-              try {
-                broadcastNetworkInfo( )
-              } catch( e ) {
-                logger.error( "Error broadcasting network information", e )
-              }
-            } else { // re-evaluate
-              broadcastTask( broadcastRequest )
-            }
-          } else if ( requestedTime >= lastBroadcastTime.get() ) {
-            sleep( 100 ) // pause and re-evaluate to allow for min time between broadcasts
-            broadcastTask( broadcastRequest )
-          }
-        }
-    broadcastTask( broadcastRequest )
-  }
-
-  private static void broadcastTask( Callable task ) {
-    Threads.enqueue( Eucalyptus, NetworkInfoBroadcaster, 5, task )
-  }
-
-  @SuppressWarnings("UnnecessaryQualifiedReference")
-  static void broadcastNetworkInfo( ){
-    // populate with info directly from configuration
-    final Optional<NetworkConfiguration> networkConfiguration = NetworkConfigurations.networkConfiguration
-    final List<Cluster> clusters = Clusters.getInstance( ).listValues( )
-
-    final NetworkInfo info = NetworkInfoBroadcaster.buildNetworkConfiguration(
-        networkConfiguration,
-        cacheSource( ),
-        Suppliers.ofInstance( clusters ) as Supplier<List<Cluster>>,
-        { Topology.lookup(Eucalyptus).inetAddress.hostAddress } as Supplier<String>,
-        NetworkConfigurations.&loadSystemNameservers as Function<List<String>,List<String>> )
-
-    final JAXBContext jc = JAXBContext.newInstance( "com.eucalyptus.cluster" )
-    final StringWriter writer = new StringWriter( 8192 )
-    jc.createMarshaller().marshal( info, writer )
-
-    final String networkInfo = writer.toString( )
-    if ( logger.isTraceEnabled( ) ) {
-      logger.trace( "Broadcasting network information:\n${networkInfo}" )
-    }
-
-    final File newView = BaseDirectory.RUN.getChildFile( "global_network_info.xml.temp" )
-    if ( newView.exists( ) && !newView.delete( ) ) logger.warn( "Error deleting stale network view ${newView.getAbsolutePath()}" )
-    GFiles.write( networkInfo, newView, Charsets.UTF_8 )
-    JFiles.move( newView.toPath( ), BaseDirectory.RUN.getChildFile( "global_network_info.xml" ).toPath( ), StandardCopyOption.REPLACE_EXISTING )
-
-    final BroadcastNetworkInfoCallback callback = new BroadcastNetworkInfoCallback( networkInfo )
-    clusters.each { Cluster cluster ->
-      final Long broadcastTime = System.currentTimeMillis( )
-      if ( null == activeBroadcastMap.putIfAbsent( cluster.partition, broadcastTime ) ) {
-        try {
-          AsyncRequests.newRequest( callback.newInstance( ) ).then( new UnconditionalCallback<BroadcastNetworkInfoResponseType>() {
-            @Override
-            void fire() {
-              activeBroadcastMap.remove( cluster.partition, broadcastTime )
-            }
-          } ).dispatch( cluster.configuration )
-        } catch ( e ) {
-          activeBroadcastMap.remove( cluster.partition, broadcastTime )
-          logger.error( "Error broadcasting network information to cluster ${cluster.partition} (${cluster.name})" as String, e )
-        }
-      } else {
-        logger.warn( "Skipping network information broadcast for active partition ${cluster.partition}" )
-      }
-      void
-    }
-  }
+  private static final Logger logger = Logger.getLogger( NetworkInfoBroadcasts )
 
   @PackageScope
   static NetworkInfo buildNetworkConfiguration( final Optional<NetworkConfiguration> configuration,
@@ -294,45 +124,45 @@ class NetworkInfoBroadcaster {
         clusters: clusters.findResults{ Cluster cluster ->
           ConfigCluster configCluster = networkConfiguration.orNull()?.clusters?.find{ ConfigCluster configCluster -> cluster.partition == configCluster.name }
           configCluster && ( vpcmido || configCluster.subnet ) ?
-            new NICluster(
-                name: configCluster.name,
-                subnet: vpcmido ? new NISubnet(
-                    name: '172.31.0.0',
-                    properties: [
-                        new NIProperty( name: 'subnet', values: [ '172.31.0.0' ]),
-                        new NIProperty( name: 'netmask', values: [ '255.255.0.0' ]),
-                        new NIProperty( name: 'gateway', values: [ '172.31.0.1' ])
-                    ]
-                ) : new NISubnet(
-                    name: configCluster.subnet.subnet, // broadcast name is always the subnet value
-                    properties: [
-                        new NIProperty( name: 'subnet', values: [ configCluster.subnet.subnet ]),
-                        new NIProperty( name: 'netmask', values: [ configCluster.subnet.netmask ]),
-                        new NIProperty( name: 'gateway', values: [ configCluster.subnet.gateway ])
-                    ]
-                ),
-                properties: [
-                    new NIProperty( name: 'enabledCCIp', values: [ InetAddress.getByName(cluster.hostName).hostAddress ] ),
-                    new NIProperty( name: 'macPrefix', values: [ configCluster.macPrefix ] ),
-                    vpcmido ? new NIProperty( name: 'privateIps', values: [ '172.31.0.5' ] ) : new NIProperty( name: 'privateIps', values: configCluster.privateIps )
-                ],
-                nodes: new NINodes(
-                    name: 'nodes',
-                    nodes: cluster.nodeMap.values().collect{ NodeInfo nodeInfo -> new NINode( name: nodeInfo.name ) }
-                )
-            ) :
-            configCluster && managed ? new NICluster(
-                name: configCluster.name,
-                properties: [
-                    new NIProperty( name: 'enabledCCIp', values: [ InetAddress.getByName(cluster.hostName).hostAddress ] ),
-                    new NIProperty( name: 'macPrefix', values: [ configCluster.macPrefix ] )
-                ],
-                nodes: new NINodes(
-                    name: 'nodes',
-                    nodes: cluster.nodeMap.values().collect{ NodeInfo nodeInfo -> new NINode( name: nodeInfo.name ) }
-                )
-            ) :
-            null
+              new NICluster(
+                  name: configCluster.name,
+                  subnet: vpcmido ? new NISubnet(
+                      name: '172.31.0.0',
+                      properties: [
+                          new NIProperty( name: 'subnet', values: [ '172.31.0.0' ]),
+                          new NIProperty( name: 'netmask', values: [ '255.255.0.0' ]),
+                          new NIProperty( name: 'gateway', values: [ '172.31.0.1' ])
+                      ]
+                  ) : new NISubnet(
+                      name: configCluster.subnet.subnet, // broadcast name is always the subnet value
+                      properties: [
+                          new NIProperty( name: 'subnet', values: [ configCluster.subnet.subnet ]),
+                          new NIProperty( name: 'netmask', values: [ configCluster.subnet.netmask ]),
+                          new NIProperty( name: 'gateway', values: [ configCluster.subnet.gateway ])
+                      ]
+                  ),
+                  properties: [
+                      new NIProperty( name: 'enabledCCIp', values: [ InetAddress.getByName(cluster.hostName).hostAddress ] ),
+                      new NIProperty( name: 'macPrefix', values: [ configCluster.macPrefix ] ),
+                      vpcmido ? new NIProperty( name: 'privateIps', values: [ '172.31.0.5' ] ) : new NIProperty( name: 'privateIps', values: configCluster.privateIps )
+                  ],
+                  nodes: new NINodes(
+                      name: 'nodes',
+                      nodes: cluster.nodeMap.values().collect{ NodeInfo nodeInfo -> new NINode( name: nodeInfo.name ) }
+                  )
+              ) :
+              configCluster && managed ? new NICluster(
+                  name: configCluster.name,
+                  properties: [
+                      new NIProperty( name: 'enabledCCIp', values: [ InetAddress.getByName(cluster.hostName).hostAddress ] ),
+                      new NIProperty( name: 'macPrefix', values: [ configCluster.macPrefix ] )
+                  ],
+                  nodes: new NINodes(
+                      name: 'nodes',
+                      nodes: cluster.nodeMap.values().collect{ NodeInfo nodeInfo -> new NINode( name: nodeInfo.name ) }
+                  )
+              ) :
+                  null
         } as List<NICluster>
     )
 
@@ -347,7 +177,7 @@ class NetworkInfoBroadcaster {
     boolean hasEdgePublicGateway = networkConfiguration.orNull()?.publicGateway != null
     if ( hasEdgePublicGateway ) {
       info.configuration.properties.add(
-        new NIProperty( name: 'publicGateway', values: [networkConfiguration.orNull()?.publicGateway] )
+          new NIProperty( name: 'publicGateway', values: [networkConfiguration.orNull()?.publicGateway] )
       )
     }
 
@@ -358,7 +188,7 @@ class NetworkInfoBroadcaster {
     // populate nodes
     ((Multimap<List<String>,String>) instances.inject( HashMultimap.create( ) ){
       Multimap<List<String>,String> map, VmInstanceNetworkView instance ->
-        map.put( [ instance.partition, instance.node ], instance.instanceId )
+        map.put( [ instance.partition, instance.node ], instance.id )
         map
     }).asMap().each{ Map.Entry<List<String>,Collection<String>> entry ->
       info.configuration.clusters.clusters.find{ NICluster cluster -> cluster.name == entry.key[0] }?.with{
@@ -382,43 +212,43 @@ class NetworkInfoBroadcaster {
     }
     Map<String,Collection<String>> vpcIdToInternetGatewayIds = (Map<String,Collection<String>> ) ((ArrayListMultimap<String,String>)internetGateways.inject(ArrayListMultimap.<String,String>create()){
       ListMultimap<String,String> map, InternetGatewayNetworkView internetGateway ->
-        if ( internetGateway.vpcId ) map.put( internetGateway.vpcId, internetGateway.internetGatewayId )
+        if ( internetGateway.vpcId ) map.put( internetGateway.vpcId, internetGateway.id )
         map
     }).asMap( )
-    info.vpcs.addAll( vpcs.findAll{ VpcNetworkView vpc -> activeVpcs.contains(vpc.vpcId) }.collect{ VpcNetworkView vpc ->
+    info.vpcs.addAll( vpcs.findAll{ VpcNetworkView vpc -> activeVpcs.contains(vpc.id) }.collect{ VpcNetworkView vpc ->
       new NIVpc(
-        vpc.vpcId,
-        vpc.ownerAccountNumber,
-        vpc.cidr,
-        vpc.dhcpOptionSetId,
-        subnets.findAll{ SubnetNetworkView subnet -> subnet.vpcId == vpc.vpcId }.collect{ SubnetNetworkView subnet ->
-          new NIVpcSubnet(
-              name: subnet.subnetId,
-              ownerId: subnet.ownerAccountNumber,
-              cidr: subnet.cidr,
-              cluster: subnet.availabilityZone,
-              networkAcl: subnet.networkAcl,
-              routeTable:
-                  Iterables.tryFind( routeTables, { RouteTableNetworkView routeTable -> routeTable.subnetIds.contains( subnet.subnetId ) } as Predicate<RouteTableNetworkView> ).or(
-                  Iterables.find( routeTables, { RouteTableNetworkView routeTable -> routeTable.main && routeTable.vpcId == vpc.vpcId } as Predicate<RouteTableNetworkView> ) ).routeTableId
-          )
-        },
-        networkAcls.findAll{ NetworkAclNetworkView networkAcl -> networkAcl.vpcId == vpc.vpcId }.collect { NetworkAclNetworkView networkAcl ->
-          new NINetworkAcl(
-              name: networkAcl.networkAclId,
-              ownerId: networkAcl.ownerAccountNumber,
-              ingressEntries: Lists.transform( networkAcl.ingressRules, TypeMappers.lookup( NetworkAclEntryNetworkView, NINetworkAclEntry ) ) as List<NINetworkAclEntry>,
-              egressEntries: Lists.transform( networkAcl.egressRules, TypeMappers.lookup( NetworkAclEntryNetworkView, NINetworkAclEntry ) ) as List<NINetworkAclEntry>
-          )
-        },
-        routeTables.findAll{ RouteTableNetworkView routeTable -> routeTable.vpcId == vpc.vpcId }.collect { RouteTableNetworkView routeTable ->
-          new NIRouteTable(
-              name: routeTable.routeTableId,
-              ownerId: routeTable.ownerAccountNumber,
-              routes: Lists.transform( routeTable.routes, TypeMappers.lookup( RouteNetworkView, NIRoute ) ) as List<NIRoute>
-          )
-        },
-        vpcIdToInternetGatewayIds.get( vpc.vpcId ) as List<String>?:[] as List<String>
+          vpc.id,
+          vpc.ownerAccountNumber,
+          vpc.cidr,
+          vpc.dhcpOptionSetId,
+          subnets.findAll{ SubnetNetworkView subnet -> subnet.vpcId == vpc.id }.collect{ SubnetNetworkView subnet ->
+            new NIVpcSubnet(
+                name: subnet.id,
+                ownerId: subnet.ownerAccountNumber,
+                cidr: subnet.cidr,
+                cluster: subnet.availabilityZone,
+                networkAcl: subnet.networkAcl,
+                routeTable:
+                    tryFind( routeTables, { RouteTableNetworkView routeTable -> routeTable.subnetIds.contains( subnet.id ) } as Predicate<RouteTableNetworkView>).or(
+                        Iterables.find( routeTables, { RouteTableNetworkView routeTable -> routeTable.main && routeTable.vpcId == vpc.id } as Predicate<RouteTableNetworkView> ) ).id
+            )
+          },
+          networkAcls.findAll{ NetworkAclNetworkView networkAcl -> networkAcl.vpcId == vpc.id }.collect { NetworkAclNetworkView networkAcl ->
+            new NINetworkAcl(
+                name: networkAcl.id,
+                ownerId: networkAcl.ownerAccountNumber,
+                ingressEntries: Lists.transform( networkAcl.ingressRules, TypeMappers.lookup( NetworkAclEntryNetworkView, NINetworkAclEntry ) ) as List<NINetworkAclEntry>,
+                egressEntries: Lists.transform( networkAcl.egressRules, TypeMappers.lookup( NetworkAclEntryNetworkView, NINetworkAclEntry ) ) as List<NINetworkAclEntry>
+            )
+          },
+          routeTables.findAll{ RouteTableNetworkView routeTable -> routeTable.vpcId == vpc.id }.collect { RouteTableNetworkView routeTable ->
+            new NIRouteTable(
+                name: routeTable.id,
+                ownerId: routeTable.ownerAccountNumber,
+                routes: Lists.transform( routeTable.routes, TypeMappers.lookup( RouteNetworkView, NIRoute ) ) as List<NIRoute>
+            )
+          },
+          vpcIdToInternetGatewayIds.get( vpc.id ) as List<String>?:[] as List<String>
       )
     } )
 
@@ -431,7 +261,7 @@ class NetworkInfoBroadcaster {
     }).asMap( )
     info.instances.addAll( instances.collect{ VmInstanceNetworkView instance ->
       new NIInstance(
-          name: instance.instanceId,
+          name: instance.id,
           ownerId: instance.ownerAccountNumber,
           vpc: instance.vpcId,
           subnet: instance.subnetId,
@@ -439,9 +269,9 @@ class NetworkInfoBroadcaster {
           publicIp: VmNetworkConfig.DEFAULT_IP==instance.publicAddress||PublicAddresses.isDirty(instance.publicAddress) ? null : instance.publicAddress,
           privateIp: instance.privateAddress,
           securityGroups: instance.securityGroupIds,
-          networkInterfaces: instanceIdToNetworkInterfaces.get( instance.instanceId )?.collect{ NetworkInterfaceNetworkView networkInterface ->
+          networkInterfaces: instanceIdToNetworkInterfaces.get( instance.id )?.collect{ NetworkInterfaceNetworkView networkInterface ->
             new NINetworkInterface(
-                name: networkInterface.networkInterfaceId,
+                name: networkInterface.id,
                 ownerId: networkInterface.ownerAccountNumber,
                 deviceIndex: networkInterface.deviceIndex,
                 macAddress: networkInterface.macAddress,
@@ -458,7 +288,7 @@ class NetworkInfoBroadcaster {
     Iterable<DhcpOptionSetNetworkView> dhcpOptionSets = networkInfoSource.dhcpOptionSets
     info.dhcpOptionSets.addAll( dhcpOptionSets.collect { DhcpOptionSetNetworkView dhcpOptionSet ->
       new NIDhcpOptionSet(
-          name: dhcpOptionSet.dhcpOptionSetId,
+          name: dhcpOptionSet.id,
           ownerId: dhcpOptionSet.ownerAccountNumber,
           properties: dhcpOptionSet.options.collect{ DhcpOptionNetworkView option ->
             if ( 'domain-name-servers' == option.key && 'AmazonProvidedDNS' == option.values?.getAt( 0 ) ) {
@@ -475,7 +305,7 @@ class NetworkInfoBroadcaster {
       activeVpcs.contains(gateway.vpcId)
     }.collect { InternetGatewayNetworkView internetGateway ->
       new NIInternetGateway(
-          name: internetGateway.internetGatewayId,
+          name: internetGateway.id,
           ownerId: internetGateway.ownerAccountNumber,
       )
     } )
@@ -485,9 +315,9 @@ class NetworkInfoBroadcaster {
       Set<String> groups, VmInstanceNetworkView instance -> groups.addAll( instance.securityGroupIds ); groups
     }
     Iterable<NetworkGroupNetworkView> groups = networkInfoSource.securityGroups
-    info.securityGroups.addAll( groups.findAll{  NetworkGroupNetworkView group -> activeSecurityGroups.contains( group.groupId ) }.collect{ NetworkGroupNetworkView group ->
+    info.securityGroups.addAll( groups.findAll{  NetworkGroupNetworkView group -> activeSecurityGroups.contains( group.id ) }.collect{ NetworkGroupNetworkView group ->
       new NISecurityGroup(
-          name: group.groupId,
+          name: group.id,
           ownerId: group.ownerAccountNumber,
           rules: group.rules,
           ingressRules: group.ingressPermissions.collect{ IPPermissionNetworkView ipPermission ->
@@ -524,25 +354,26 @@ class NetworkInfoBroadcaster {
     info
   }
 
+
   private static Set<String> explodeRules( NetworkRule networkRule ) {
     Set<String> rules = Sets.newLinkedHashSet( )
     // Only EC2-Classic rules supported by this format
     if ( !networkRule.isVpcOnly( ) ) {
-        String rule = "";
-        if (networkRule.protocol == null) {
-            //Special case where ports are not present, but
-            // we support that as an exception to EC2-Classic spec
-            rule = String.format("-P %d", networkRule.getProtocolNumber());
-        } else {
-            rule = String.format(
-                    "-P %d -%s %d%s%d ",
-                    networkRule.protocol.getNumber(),
-                    NetworkRule.Protocol.icmp == networkRule.protocol ? "t" : "p",
-                    networkRule.lowPort,
-                    NetworkRule.Protocol.icmp == networkRule.protocol ? ":" : "-",
-                    networkRule.highPort);
-        }
-        rules.addAll(networkRule.networkPeers.collect { NetworkPeer peer ->
+      String rule = "";
+      if (networkRule.protocol == null) {
+        //Special case where ports are not present, but
+        // we support that as an exception to EC2-Classic spec
+        rule = String.format("-P %d", networkRule.getProtocolNumber());
+      } else {
+        rule = String.format(
+            "-P %d -%s %d%s%d ",
+            networkRule.protocol.getNumber(),
+            NetworkRule.Protocol.icmp == networkRule.protocol ? "t" : "p",
+            networkRule.lowPort,
+            NetworkRule.Protocol.icmp == networkRule.protocol ? ":" : "-",
+            networkRule.highPort);
+      }
+      rules.addAll(networkRule.networkPeers.collect { NetworkPeer peer ->
         String.format("%s -o %s -u %s", rule, peer.groupId, peer.userQueryKey)
       })
       rules.addAll(networkRule.ipRanges.collect { String cidr ->
@@ -591,6 +422,26 @@ class NetworkInfoBroadcaster {
     }
 
     rules
+  }
+
+  private static boolean validInstanceMetadata( final VmInstance instance) {
+    !Strings.isNullOrEmpty( instance.privateAddress ) &&
+        !VmNetworkConfig.DEFAULT_IP.equals( instance.privateAddress ) &&
+        !instance.networkGroups.isEmpty( ) &&
+        !Strings.isNullOrEmpty( VmInstances.toNodeHost( ).apply( instance ) )
+  }
+
+  static interface NetworkInfoSource {
+    Iterable<VmInstanceNetworkView> getInstances( );
+    Iterable<NetworkGroupNetworkView> getSecurityGroups( );
+    Iterable<VpcNetworkView> getVpcs( );
+    Iterable<SubnetNetworkView> getSubnets( );
+    Iterable<DhcpOptionSetNetworkView> getDhcpOptionSets( );
+    Iterable<NetworkAclNetworkView> getNetworkAcls( );
+    Iterable<RouteTableNetworkView> getRouteTables( );
+    Iterable<InternetGatewayNetworkView> getInternetGateways( );
+    Iterable<NetworkInterfaceNetworkView> getNetworkInterfaces( );
+    Map<String,Iterable<? extends VersionedNetworkView>> getView( );
   }
 
   @TypeMapper
@@ -664,14 +515,14 @@ class NetworkInfoBroadcaster {
               subnets: networkConfiguration.subnets ? new NISubnets(
                   name: "subnets",
                   subnets: networkConfiguration.subnets.collect{ EdgeSubnet subnet ->
-                      new NISubnet(
-                          name: subnet.subnet,  // broadcast name is always the subnet value
-                          properties: [
-                              new NIProperty( name: 'subnet', values: [ subnet.subnet ]),
-                              new NIProperty( name: 'netmask', values: [ subnet.netmask ]),
-                              new NIProperty( name: 'gateway', values: [ subnet.gateway ])
-                          ]
-                      )
+                    new NISubnet(
+                        name: subnet.subnet,  // broadcast name is always the subnet value
+                        properties: [
+                            new NIProperty( name: 'subnet', values: [ subnet.subnet ]),
+                            new NIProperty( name: 'netmask', values: [ subnet.netmask ]),
+                            new NIProperty( name: 'gateway', values: [ subnet.gateway ])
+                        ]
+                    )
                   }
               ) : null,
               managedSubnet: managedSubnet ? new NIManagedSubnets(
@@ -684,25 +535,24 @@ class NetworkInfoBroadcaster {
                           new NIProperty( name: 'minVlan', values: [ ( managedSubnet.minVlan ?: ManagedSubnet.MIN_VLAN )  as String ] ),
                           new NIProperty( name: 'maxVlan', values: [ ( managedSubnet.maxVlan ?: ManagedSubnet.MAX_VLAN ) as String ] ),
                           new NIProperty( name: 'segmentSize', values: [ ( managedSubnet.segmentSize ?: ManagedSubnet.DEF_SEGMENT_SIZE ) as String ] )
-                  ]
-                )
-             ) : null
+                      ]
+                  )
+              ) : null
           )
       )
     }
   }
 
-  private static boolean validInstanceMetadata( final VmInstance instance) {
-    !Strings.isNullOrEmpty( instance.privateAddress ) && 
-        !VmNetworkConfig.DEFAULT_IP.equals( instance.privateAddress ) &&
-        !instance.networkGroups.isEmpty( ) &&
-        !Strings.isNullOrEmpty( VmInstances.toNodeHost( ).apply( instance ) )
+  interface VersionedNetworkView {
+    String getId( )
+    int getVersion( )
   }
-  
+
   @Immutable
-  static class VmInstanceNetworkView implements Comparable<VmInstanceNetworkView> {
-    String instanceId
-    VmState state
+  static class VmInstanceNetworkView implements Comparable<VmInstanceNetworkView>, VersionedNetworkView {
+    String id
+    int version
+    VmInstance.VmState state
     Boolean omit
     String ownerAccountNumber
     String vpcId
@@ -715,7 +565,7 @@ class NetworkInfoBroadcaster {
     List<String> securityGroupIds
 
     int compareTo( VmInstanceNetworkView o ) {
-      this.instanceId <=> o.instanceId
+      this.id <=> o.id
     }
   }
 
@@ -727,8 +577,9 @@ class NetworkInfoBroadcaster {
     VmInstanceNetworkView apply( final VmInstance instance ) {
       new VmInstanceNetworkView(
           instance.instanceId,
+          instance.version,
           instance.state,
-          GObjects.firstNonNull( instance.runtimeState.zombie, false ) || !validInstanceMetadata( instance ),
+          Objects.firstNonNull( instance.runtimeState.zombie, false ) || !validInstanceMetadata( instance ),
           instance.ownerAccountNumber,
           instance.bootRecord.vpcId,
           instance.bootRecord.subnetId,
@@ -786,15 +637,16 @@ class NetworkInfoBroadcaster {
   }
 
   @Immutable
-  static class NetworkGroupNetworkView implements Comparable<NetworkGroupNetworkView> {
-    String groupId
+  static class NetworkGroupNetworkView implements Comparable<NetworkGroupNetworkView>, VersionedNetworkView {
+    String id
+    int version
     String ownerAccountNumber
     List<String> rules
     List<IPPermissionNetworkView> ingressPermissions
     List<IPPermissionNetworkView> egressPermissions
 
     int compareTo( NetworkGroupNetworkView o ) {
-      this.groupId <=> o.groupId
+      this.id <=> o.id
     }
   }
 
@@ -807,23 +659,25 @@ class NetworkInfoBroadcaster {
     NetworkGroupNetworkView apply( final NetworkGroup group ) {
       new NetworkGroupNetworkView(
           group.groupId,
+          group.version,
           group.ownerAccountNumber,
-          group.ingressNetworkRules.collect{ NetworkRule networkRule -> NetworkInfoBroadcaster.explodeRules( networkRule ) }.flatten( ) as List<String>,
-          group.ingressNetworkRules.collect{ NetworkRule networkRule -> NetworkInfoBroadcaster.explodePermissions( networkRule ) }.flatten( ) as List<IPPermissionNetworkView>,
-          group.egressNetworkRules.collect{ NetworkRule networkRule -> NetworkInfoBroadcaster.explodePermissions( networkRule ) }.flatten( ) as List<IPPermissionNetworkView>
+          group.ingressNetworkRules.collect{ NetworkRule networkRule -> NetworkInfoBroadcasts.explodeRules( networkRule ) }.flatten( ) as List<String>,
+          group.ingressNetworkRules.collect{ NetworkRule networkRule -> NetworkInfoBroadcasts.explodePermissions( networkRule ) }.flatten( ) as List<IPPermissionNetworkView>,
+          group.egressNetworkRules.collect{ NetworkRule networkRule -> NetworkInfoBroadcasts.explodePermissions( networkRule ) }.flatten( ) as List<IPPermissionNetworkView>
       )
     }
   }
 
   @Immutable
-  static class VpcNetworkView implements Comparable<VpcNetworkView> {
-    String vpcId
+  static class VpcNetworkView implements Comparable<VpcNetworkView>, VersionedNetworkView {
+    String id
+    int version
     String ownerAccountNumber
     String cidr
     String dhcpOptionSetId
 
     int compareTo( VpcNetworkView o ) {
-      this.vpcId <=> o.vpcId
+      this.id <=> o.id
     }
   }
 
@@ -835,6 +689,7 @@ class NetworkInfoBroadcaster {
     VpcNetworkView apply( final Vpc vpc ) {
       new VpcNetworkView(
           vpc.displayName,
+          vpc.version,
           vpc.ownerAccountNumber,
           vpc.cidr,
           vpc.dhcpOptionSet.displayName
@@ -843,8 +698,9 @@ class NetworkInfoBroadcaster {
   }
 
   @Immutable
-  static class SubnetNetworkView implements Comparable<SubnetNetworkView> {
-    String subnetId
+  static class SubnetNetworkView implements Comparable<SubnetNetworkView>, VersionedNetworkView {
+    String id
+    int version
     String ownerAccountNumber
     String vpcId
     String cidr
@@ -852,18 +708,19 @@ class NetworkInfoBroadcaster {
     String networkAcl
 
     int compareTo( SubnetNetworkView o ) {
-      this.subnetId <=> o.subnetId
+      this.id <=> o.id
     }
   }
 
   @TypeMapper
-  enum SubnetToSubnetNetworkView implements Function<VpcSubnet,SubnetNetworkView> {
+  enum SubnetToSubnetNetworkView implements Function<Subnet,SubnetNetworkView> {
     INSTANCE;
 
     @Override
-    SubnetNetworkView apply( final VpcSubnet subnet ) {
+    SubnetNetworkView apply( final Subnet subnet ) {
       new SubnetNetworkView(
           subnet.displayName,
+          subnet.version,
           subnet.ownerAccountNumber,
           subnet.vpc.displayName,
           subnet.cidr,
@@ -874,13 +731,14 @@ class NetworkInfoBroadcaster {
   }
 
   @Immutable
-  static class DhcpOptionSetNetworkView implements Comparable<DhcpOptionSetNetworkView> {
-    String dhcpOptionSetId
+  static class DhcpOptionSetNetworkView implements Comparable<DhcpOptionSetNetworkView>, VersionedNetworkView {
+    String id
+    int version
     String ownerAccountNumber
     List<DhcpOptionNetworkView> options
 
     int compareTo( DhcpOptionSetNetworkView o ) {
-      this.dhcpOptionSetId <=> o.dhcpOptionSetId
+      this.id <=> o.id
     }
   }
 
@@ -898,6 +756,7 @@ class NetworkInfoBroadcaster {
     DhcpOptionSetNetworkView apply( final DhcpOptionSet dhcpOptionSet ) {
       new DhcpOptionSetNetworkView(
           dhcpOptionSet.displayName,
+          dhcpOptionSet.version,
           dhcpOptionSet.ownerAccountNumber,
           ImmutableList.copyOf( dhcpOptionSet.dhcpOptions.collect{ DhcpOption option -> new DhcpOptionNetworkView(
               option.key,
@@ -908,15 +767,16 @@ class NetworkInfoBroadcaster {
   }
 
   @Immutable
-  static class NetworkAclNetworkView implements Comparable<NetworkAclNetworkView> {
-    String networkAclId
+  static class NetworkAclNetworkView implements Comparable<NetworkAclNetworkView>, VersionedNetworkView {
+    String id
+    int version
     String ownerAccountNumber
     String vpcId
     List<NetworkAclEntryNetworkView> ingressRules
     List<NetworkAclEntryNetworkView> egressRules
 
     int compareTo( NetworkAclNetworkView o ) {
-      this.networkAclId <=> o.networkAclId
+      this.id <=> o.id
     }
   }
 
@@ -941,6 +801,7 @@ class NetworkInfoBroadcaster {
       List<NetworkAclEntry> orderedEntries = NetworkAcls.ENTRY_ORDERING.sortedCopy( networkAcl.entries )
       new NetworkAclNetworkView(
           networkAcl.displayName,
+          networkAcl.version,
           networkAcl.ownerAccountNumber,
           networkAcl.vpc.displayName,
           ImmutableList.copyOf( orderedEntries.findAll{ NetworkAclEntry entry -> !entry.egress }.collect{ NetworkAclEntry entry -> TypeMappers.transform( entry, NetworkAclEntryNetworkView  ) } ),
@@ -975,21 +836,22 @@ class NetworkInfoBroadcaster {
     @Override
     NINetworkAclEntry apply(@Nullable final NetworkAclEntryNetworkView networkAclEntry ) {
       new NINetworkAclEntry(
-        networkAclEntry.number,
-        networkAclEntry.protocol,
-        networkAclEntry.action,
-        networkAclEntry.cidr,
-        networkAclEntry.icmpCode,
-        networkAclEntry.icmpType,
-        networkAclEntry.portRangeFrom,
-        networkAclEntry.portRangeTo
+          networkAclEntry.number,
+          networkAclEntry.protocol,
+          networkAclEntry.action,
+          networkAclEntry.cidr,
+          networkAclEntry.icmpCode,
+          networkAclEntry.icmpType,
+          networkAclEntry.portRangeFrom,
+          networkAclEntry.portRangeTo
       )
     }
   }
 
   @Immutable
-  static class RouteTableNetworkView implements Comparable<RouteTableNetworkView> {
-    String routeTableId
+  static class RouteTableNetworkView implements Comparable<RouteTableNetworkView>, VersionedNetworkView {
+    String id
+    int version
     String ownerAccountNumber
     String vpcId
     boolean main
@@ -997,7 +859,7 @@ class NetworkInfoBroadcaster {
     List<RouteNetworkView> routes
 
     int compareTo( RouteTableNetworkView o ) {
-      this.routeTableId <=> o.routeTableId
+      this.id <=> o.id
     }
   }
 
@@ -1015,6 +877,7 @@ class NetworkInfoBroadcaster {
     RouteTableNetworkView apply( final RouteTable routeTable ) {
       new RouteTableNetworkView(
           routeTable.displayName,
+          routeTable.version,
           routeTable.ownerAccountNumber,
           routeTable.vpc.displayName,
           routeTable.main,
@@ -1051,13 +914,14 @@ class NetworkInfoBroadcaster {
   }
 
   @Immutable
-  static class InternetGatewayNetworkView implements Comparable<InternetGatewayNetworkView> {
-    String internetGatewayId
+  static class InternetGatewayNetworkView implements Comparable<InternetGatewayNetworkView>, VersionedNetworkView {
+    String id
+    int version
     String ownerAccountNumber
     String vpcId
 
     int compareTo( InternetGatewayNetworkView o ) {
-      this.internetGatewayId <=> o.internetGatewayId
+      this.id <=> o.id
     }
   }
 
@@ -1069,6 +933,7 @@ class NetworkInfoBroadcaster {
     InternetGatewayNetworkView apply( final InternetGateway internetGateway ) {
       new InternetGatewayNetworkView(
           internetGateway.displayName,
+          internetGateway.version,
           internetGateway.ownerAccountNumber,
           internetGateway.vpc?.displayName
       )
@@ -1076,8 +941,9 @@ class NetworkInfoBroadcaster {
   }
 
   @Immutable
-  static class NetworkInterfaceNetworkView implements Comparable<NetworkInterfaceNetworkView> {
-    String networkInterfaceId
+  static class NetworkInterfaceNetworkView implements Comparable<NetworkInterfaceNetworkView>, VersionedNetworkView {
+    String id
+    int version
     String ownerAccountNumber
     String instanceId
     Integer deviceIndex
@@ -1088,18 +954,19 @@ class NetworkInfoBroadcaster {
     List<String> securityGroupIds
 
     int compareTo( NetworkInterfaceNetworkView o ) {
-      this.networkInterfaceId <=> o.networkInterfaceId
+      this.id <=> o.id
     }
   }
 
   @TypeMapper
-  enum VpcNetworkInterfaceToNetworkInterfaceNetworkView implements Function<VpcNetworkInterface,NetworkInterfaceNetworkView> {
+  enum VpcNetworkInterfaceToNetworkInterfaceNetworkView implements Function<NetworkInterface,NetworkInterfaceNetworkView> {
     INSTANCE;
 
     @Override
-    NetworkInterfaceNetworkView apply( final VpcNetworkInterface networkInterface ) {
+    NetworkInterfaceNetworkView apply( final NetworkInterface networkInterface ) {
       new NetworkInterfaceNetworkView(
           networkInterface.displayName,
+          networkInterface.version,
           networkInterface.ownerAccountNumber,
           networkInterface.attachment?.instanceId,
           networkInterface.attachment?.deviceIndex,
@@ -1109,35 +976,6 @@ class NetworkInfoBroadcaster {
           networkInterface.sourceDestCheck,
           networkInterface.networkGroups.collect{ NetworkGroup group -> group.groupId }
       )
-    }
-  }
-
-  public static class NetworkInfoBroadcasterEventListener implements EucaEventListener<ClockTick> {
-    private final int intervalTicks = 3
-    private final int activeBroadcastTimeoutMins = 3
-    private volatile int counter = 0
-
-    public static void register( ) {
-      Listeners.register( ClockTick.class, new NetworkInfoBroadcasterEventListener( ) )
-    }
-
-    @SuppressWarnings("UnnecessaryQualifiedReference")
-    @Override
-    public void fireEvent( final ClockTick event ) {
-      NetworkInfoBroadcaster.activeBroadcastMap.each{ Map.Entry<String,Long> entry ->
-        if ( entry.value + TimeUnit.MINUTES.toMillis( activeBroadcastTimeoutMins ) < System.currentTimeMillis( ) &&
-            NetworkInfoBroadcaster.activeBroadcastMap.remove( entry.key, entry.value ) ) {
-          logger.warn( "Timed out active network information broadcast for partition ${entry.key}" )
-        }
-      }
-
-      if ( counter++%intervalTicks == 0 &&
-          Topology.isEnabledLocally( Eucalyptus ) &&
-          Hosts.isCoordinator() &&
-          !Bootstrap.isShuttingDown() &&
-          !Databases.isVolatile() ) {
-        requestNetworkInfoBroadcast( )
-      }
     }
   }
 }

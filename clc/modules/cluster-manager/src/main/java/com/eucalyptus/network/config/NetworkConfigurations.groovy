@@ -26,8 +26,6 @@ import com.eucalyptus.bootstrap.Hosts
 import com.eucalyptus.cluster.ClusterConfiguration
 import com.eucalyptus.component.Components
 import com.eucalyptus.component.id.ClusterController
-import com.eucalyptus.configurable.ConfigurableClass
-import com.eucalyptus.configurable.ConfigurableField
 import com.eucalyptus.configurable.ConfigurableProperty
 import com.eucalyptus.configurable.ConfigurablePropertyException
 import com.eucalyptus.configurable.PropertyChangeListener
@@ -65,9 +63,6 @@ import org.springframework.validation.ValidationUtils
 
 import javax.annotation.Nullable
 import javax.persistence.EntityTransaction
-import java.util.concurrent.TimeUnit
-import java.util.regex.Matcher
-import java.util.regex.Pattern
 
 /**
  *
@@ -96,7 +91,6 @@ class NetworkConfigurations {
     configuration
   }
 
-  @PackageScope
   static List<String> loadSystemNameservers( final List<String> fallback ) {
     final String dnsServersProperty = SystemConfiguration.getSystemConfiguration( ).getNameserverAddress( )
     '127.0.0.1'.equals( dnsServersProperty ) ?
