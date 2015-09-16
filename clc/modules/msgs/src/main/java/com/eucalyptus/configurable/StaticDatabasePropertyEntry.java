@@ -496,6 +496,26 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
         } catch ( NoSuchElementException e ) {
           LOG.info( "Property not found, skipped size check for : bootstrap.webservices.pipeline_max_query_request_size" );
         }
+        try {
+          final String expect =
+              "RSA:DSS:ECDSA:+RC4:+3DES:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES";
+          final String update =
+              "RSA:DSS:ECDSA:+3DES:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES:!RC4";
+          for ( final String propName : Lists.newArrayList(
+              "bootstrap.webservices.ssl.user_ssl_ciphers",
+              "www.https_ciphers",
+              "bootstrap.webservices.ssl.server_ssl_ciphers"
+          ) ) {
+            final StaticDatabasePropertyEntry ciphersProperty =
+                Entities.uniqueResult( new StaticDatabasePropertyEntry( null, propName, null ) );
+            if ( expect.equals( ciphersProperty.getValue( ) ) ) {
+              LOG.info( "Updating ciphers property " + propName + " with value " + update );
+              ciphersProperty.setValue( update );
+            }
+          }
+        } catch ( Exception e ) {
+          LOG.error( "Error updating cipher suite configuration to remove RC4", e );
+        }
         db.commit( );
       } catch ( Exception ex ) {
         throw Exceptions.toUndeclared( ex );
