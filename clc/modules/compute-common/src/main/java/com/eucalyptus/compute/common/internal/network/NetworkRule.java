@@ -62,9 +62,11 @@
 
 package com.eucalyptus.compute.common.internal.network;
 
+import static com.eucalyptus.upgrade.Upgrades.Version.v4_2_0;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 import javax.persistence.CollectionTable;
@@ -73,22 +75,43 @@ import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Index;
 
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.config.ExtendedNetworkingConfiguration;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.AuxiliaryDatabaseObject;
+import com.eucalyptus.entities.AuxiliaryDatabaseObjects;
+import com.eucalyptus.upgrade.Upgrades;
 import com.eucalyptus.util.Pair;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+import groovy.sql.Sql;
 
 @Entity
+@AuxiliaryDatabaseObjects({
+    @AuxiliaryDatabaseObject(
+        dialect = "org.hibernate.dialect.PostgreSQLDialect",
+        create = "create index metadata_group_ips_rule_id_idx on ${schema}.metadata_network_rule_ip_ranges ( networkrule_id )",
+        drop = "drop index if exists ${schema}.metadata_group_ips_rule_id_idx"
+    ),
+    @AuxiliaryDatabaseObject(
+        dialect = "org.hibernate.dialect.PostgreSQLDialect",
+        create = "create index metadata_group_peers_rule_id_idx on ${schema}.metadata_network_group_rule_peers ( networkrule_id )",
+        drop = "drop index if exists ${schema}.metadata_group_peers_rule_id_idx"
+    ),
+})
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_rule" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -147,6 +170,10 @@ public class NetworkRule extends AbstractPersistent {
   
   private static final long serialVersionUID = 1L;
 
+  @ManyToOne( optional = false )
+  @Index( name = "metadata_network_group_rule_fk_idx" )
+  @JoinColumn( name = "metadata_network_group_rule_fk", updatable = false, nullable = false )
+  private NetworkGroup      group;
   @Column( name = "metadata_network_rule_egress", updatable = false )
   private Boolean           egress;
   @Enumerated( EnumType.STRING )
@@ -264,6 +291,14 @@ public class NetworkRule extends AbstractPersistent {
 
   public static NetworkRule named( ) {
     return new NetworkRule( );
+  }
+
+  public NetworkGroup getGroup( ) {
+    return group;
+  }
+
+  public void setGroup( final NetworkGroup group ) {
+    this.group = group;
   }
 
   /**
@@ -442,6 +477,28 @@ public class NetworkRule extends AbstractPersistent {
       public boolean apply( @Nullable final NetworkRule networkRule ) {
         return networkRule != null && networkRule.isEgress( );
       }
+    }
+  }
+
+  @Upgrades.PreUpgrade( value = Eucalyptus.class, since = v4_2_0 )
+  public static class NetworkRulePreUpgrade420 implements Callable<Boolean> {
+    private static final Logger logger = Logger.getLogger( NetworkRulePreUpgrade420.class );
+
+    @Override
+    public Boolean call( ) throws Exception {
+      Sql sql = null;
+      try {
+        sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection( "eucalyptus_cloud" );
+        sql.execute( "create index metadata_group_ips_rule_id_idx on metadata_network_rule_ip_ranges ( networkrule_id )" );
+        sql.execute( "create index metadata_group_peers_rule_id_idx on metadata_network_group_rule_peers ( networkrule_id )" );
+      } catch (Exception ex) {
+        logger.error( "Error creating network rule indexes", ex );
+      } finally {
+        if (sql != null) {
+          sql.close();
+        }
+      }
+      return true;
     }
   }
 
