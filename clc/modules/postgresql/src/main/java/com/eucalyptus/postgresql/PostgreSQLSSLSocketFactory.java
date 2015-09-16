@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,9 +68,7 @@ import static com.eucalyptus.crypto.util.SslUtils.getEnabledCipherSuites;
 import static com.google.common.base.Throwables.propagate;
 import static com.google.common.collect.Iterables.toArray;
 import java.net.Socket;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
+import java.security.GeneralSecurityException;
 import java.util.List;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
@@ -80,6 +78,7 @@ import com.eucalyptus.component.id.Database;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.SSLSocketFactoryWrapper;
 import com.eucalyptus.crypto.util.SimpleClientX509TrustManager;
+import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 
@@ -95,10 +94,11 @@ public class PostgreSQLSSLSocketFactory extends SSLSocketFactoryWrapper {
   private static final String PROP_POSTGRESQL_SSL_CIPHER_SUITES = "com.eucalyptus.postgresql.sslCipherSuites";
   private static final String DEFAULT_CIPHER_STRINGS = "RSA+AES:+SHA:!EXPORT:!EXPORT1025:!MD5";
   private static final String DEFAULT_PROTOCOL = "TLS";
+  private static final Supplier<SSLSocketFactory> delegateSupplier = Suppliers.ofInstance( buildDelegate( ) );
   private final List<String> cipherSuites;
 
   public PostgreSQLSSLSocketFactory() {
-    super(Suppliers.ofInstance(buildDelegate()) );
+    super( delegateSupplier );
 
     this.cipherSuites = ImmutableList.copyOf(getEnabledCipherSuites(getCipherStrings(), getSupportedCipherSuites()));
   }
@@ -129,11 +129,7 @@ public class PostgreSQLSSLSocketFactory extends SSLSocketFactoryWrapper {
           new SimpleClientX509TrustManager(lookup(Database.class).getCertificate(), false);
       sslContext.init( null, new TrustManager[]{ trustManager }, Crypto.getSecureRandomSupplier( ).get( ) );
       return sslContext.getSocketFactory();
-    } catch ( NoSuchAlgorithmException e ) {
-      throw propagate(e);
-    } catch (KeyManagementException e) {
-      throw propagate(e);
-    } catch (NoSuchProviderException e) {
+    } catch ( GeneralSecurityException e ) {
       throw propagate(e);
     }
   }
