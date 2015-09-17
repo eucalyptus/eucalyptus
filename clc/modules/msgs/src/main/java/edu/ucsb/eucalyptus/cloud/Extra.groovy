@@ -164,10 +164,6 @@ public class VirtualBootRecord extends EucalyptusData implements Cloneable {
     this.format = format;
   }
   
-  public boolean isBlockStorage() {
-    return "ebs".equals( this.type );
-  }
-  
   public VirtualBootRecord clone( ) {
     return (VirtualBootRecord) super.clone();
   }

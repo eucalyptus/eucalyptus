@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,9 +21,9 @@
 package com.eucalyptus.reporting.modules.backend;
 
 import com.eucalyptus.component.id.Reporting;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.HasName;
 import edu.ucsb.eucalyptus.msgs.DescribeSensorsResponse;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -101,14 +101,15 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
                   @Override
                   public Object call() throws Exception {
                     try {
-                      final Iterable<List<String>> processInts = Iterables.partition(
-                          Iterables.transform( VmInstances.list( VmState.RUNNING ), HasName.GET_NAME ),
-                          SENSOR_QUERY_BATCH_SIZE );
-
+                      List<String> allInstanceIds = VmInstances.listWithProjection(
+                          VmInstances.instanceIdProjection( ),
+                          VmInstance.criterion( VmState.RUNNING ),
+                          VmInstance.nonNullNodeCriterion( )
+                      );
+                      final Iterable<List<String>> processInts = Iterables.partition(  allInstanceIds, SENSOR_QUERY_BATCH_SIZE );
                       for ( final ServiceConfiguration ccConfig : Topology.enabledServices( ClusterController.class ) ) {
                         for ( final List<String> instIds : processInts ) {
                           ArrayList<String> instanceIds = Lists.newArrayList( instIds );
-                          //                  LOG.info("DecribeSensorCallback about to be sent");
                           /**
                            * Here this is hijacking the sensor callback in order to control the thread of execution used when invoking the
                            */
@@ -127,7 +128,6 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
                           try {
                             new DescribeSensorCallback( HISTORY_SIZE,
                                                         COLLECTION_INTERVAL_TIME_MS, instanceIds ).fire( ret.get( ) );
-        //                  LOG.info("DecribeSensorCallback has been successfully executed");
                           } catch ( Exception e ) {
                             Exceptions.maybeInterrupted( e );
                           }

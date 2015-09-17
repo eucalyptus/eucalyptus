@@ -225,7 +225,7 @@ public class VmRunType extends CloudClusterMessage {
   private Long         networkIndex = -1l;
   private String       privateAddress;
   
-  VmRunType( ) {}
+  protected VmRunType( ) {}
   
   private VmRunType( final String reservationId, final String userData, final int amount,
                      final VmTypeInfo vmTypeInfo, final VmKeyInfo keyInfo, final String platform,
@@ -270,14 +270,6 @@ public class VmRunType extends CloudClusterMessage {
   
   void setPlatform( final String platform ) {
     this.platform = platform;
-  }
-  
-  void setVlan( final int vlan ) {
-    this.vlan = vlan;
-  }
-  
-  void setLaunchIndex( final int launchIndex ) {
-    this.launchIndex = launchIndex;
   }
   
   void setVmTypeInfo( final VmTypeInfo vmTypeInfo ) {
@@ -341,12 +333,16 @@ public class VmRunType extends CloudClusterMessage {
   public Integer getAmount( ) {
     return this.minCount;
   }
-  
+
+  public void setAmount( final Integer minCount ) {
+    this.minCount = minCount;
+  }
+
   public Integer getVlan( ) {
     return this.vlan;
   }
   
-  public int getLaunchIndex( ) {
+  public Integer getLaunchIndex( ) {
     return this.launchIndex;
   }
   
