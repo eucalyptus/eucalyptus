@@ -505,6 +505,7 @@ static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni)
     int max_instances = 0;
     char *strptra = NULL;
     char *chainname = NULL;
+    char *refchainname = NULL;
     char rule[MAX_RULE_LEN] = "";
     gni_cluster *mycluster = NULL;
     gni_secgroup *secgroup = NULL;
@@ -660,17 +661,27 @@ static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni)
                     // If this rule is in reference to another group, lets add this IP set here
                     if (strlen(secgroup->ingress_rules[j].groupId) != 0) {
                         // Create the IP set first and add localhost as a holder
-                        ips_handler_add_set(config->ips, secgroup->ingress_rules[j].groupId);
-                        ips_set_add_ip(config->ips, secgroup->ingress_rules[j].groupId, "127.0.0.1");
+                        //ips_handler_add_set(config->ips, secgroup->ingress_rules[j].groupId);
+                        //ips_set_add_ip(config->ips, secgroup->ingress_rules[j].groupId, "127.0.0.1");
+                        refchainname = NULL;
+                        rc = gni_secgroup_get_chainname(pGni, &(secgroup->ingress_rules[j].groupId), &refchainname);
+                        if (rc) {
+                            LOGERROR("cannot get chain name from security group: check above log errors for details\n");
+                            ret = 1;
+                        } else {
+                            ips_handler_add_set(config->ips, refchainname);
+                            ips_set_add_ip(config->ips, refchainname, "127.0.0.1");
+                            // Next add the rule
+                            //snprintf(rule, MAX_RULE_LEN, "-A %s -m set --set %s src %s -j ACCEPT", chainname, secgroup->ingress_rules[j].groupId, secgroup->grouprules[j].name);
+                            //ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
+                            ingress_gni_to_iptables_rule(NULL, &(secgroup->ingress_rules[j]), rule, 0);
+                            strptra = strdup(rule);
+                            snprintf(rule, MAX_RULE_LEN, "-A %s -m set --set %s src %s -j ACCEPT", chainname, refchainname, strptra);
+                            ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
+                            EUCA_FREE(strptra);
+                        }
+                        EUCA_FREE(refchainname);
 
-                        // Next add the rule
-                        //snprintf(rule, MAX_RULE_LEN, "-A %s -m set --set %s src %s -j ACCEPT", chainname, secgroup->ingress_rules[j].groupId, secgroup->grouprules[j].name);
-                        //ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
-                        ingress_gni_to_iptables_rule(NULL, &(secgroup->ingress_rules[j]), rule, 0);
-                        strptra = strdup(rule);
-                        snprintf(rule, MAX_RULE_LEN, "-A %s -m set --set %s src %s -j ACCEPT", chainname, secgroup->ingress_rules[j].groupId, strptra);
-                        ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
-                        EUCA_FREE(strptra);
                     } else {
                         ingress_gni_to_iptables_rule(NULL, &(secgroup->ingress_rules[j]), rule, 0);
                         strptra = strdup(rule);
