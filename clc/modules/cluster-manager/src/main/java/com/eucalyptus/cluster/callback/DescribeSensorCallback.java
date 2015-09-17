@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,10 +43,8 @@ import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.InstanceUsageEvent;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.async.BroadcastCallback;
-import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState;
-import com.eucalyptus.vm.VmInstances;
 
+import com.eucalyptus.util.async.MessageCallback;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
@@ -54,23 +52,22 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 
 public class DescribeSensorCallback extends
-    BroadcastCallback<DescribeSensorsType, DescribeSensorsResponse> {
+    MessageCallback<DescribeSensorsType, DescribeSensorsResponse> {
 
   private static final Logger LOG = Logger.getLogger(DescribeSensorCallback.class);
   private static final String RESOURCE_TYPE_INSTANCE = "instance";
-  private final int historySize;
-  private final int collectionIntervalTimeMs;
   private final ArrayList<String> instanceIds;
   private final ListenerRegistry listener = ListenerRegistry.getInstance();
 
-  public DescribeSensorCallback(final int historySize,
-                                final int collectionIntervalTimeMS, final ArrayList<String> instanceIds) {
-    this.historySize = historySize;
-    this.collectionIntervalTimeMs = collectionIntervalTimeMS;
+  public DescribeSensorCallback(
+      final int historySize,
+      final int collectionIntervalTimeMS,
+      final ArrayList<String> instanceIds
+  ) {
     this.instanceIds = instanceIds;
 
     final DescribeSensorsType msg =
-        new DescribeSensorsType(this.historySize, this.collectionIntervalTimeMs, this.instanceIds);
+        new DescribeSensorsType( historySize, collectionIntervalTimeMS, this.instanceIds );
 
     this.setRequest(msg);
   }
@@ -80,19 +77,12 @@ public class DescribeSensorCallback extends
   }
 
   @Override
-  public BroadcastCallback<DescribeSensorsType, DescribeSensorsResponse> newInstance() {
-    return new DescribeSensorCallback(this.historySize, this.collectionIntervalTimeMs, this.instanceIds);
-  }
-
-  @Override
   public void fireException(Throwable e) {
     LOG.debug("Request failed: "
         + LogUtil.subheader(this.getRequest().toString(
         "eucalyptus_ucsb_edu")));
     Logs.extreme().error(e, e);
   }
-
-
 
   @Override
   public void fire(final DescribeSensorsResponse msg) {
@@ -111,17 +101,15 @@ public class DescribeSensorCallback extends
 
   private void processCloudWatchStats(final DescribeSensorsResponse msg) throws Exception {
     CloudWatchHelper cloudWatchHelper = new CloudWatchHelper(new CloudWatchHelper.DefaultInstanceInfoProvider());
-    List<AbsoluteMetricQueueItem> queueItems = cloudWatchHelper.collectMetricData(msg);
+    List<AbsoluteMetricQueueItem> queueItems = cloudWatchHelper.collectMetricData(instanceIds, msg);
     AbsoluteMetricQueue.getInstance().addQueueItems(queueItems);
   }
 
 
   private void processReportingStats(final DescribeSensorsResponse msg) throws Exception {
-    final Iterable<String> uuidList =
-        Iterables.transform(VmInstances.list(VmState.RUNNING), VmInstances.toInstanceUuid());
     for (final SensorsResourceType sensorData : msg.getSensorsResources()) {
       if (!RESOURCE_TYPE_INSTANCE.equals(sensorData.getResourceType()) ||
-          !Iterables.contains(uuidList, sensorData.getResourceUuid()))
+          !instanceIds.contains( sensorData.getResourceName( )))
         continue;
       
       for (final MetricsResourceType metricType : sensorData.getMetrics()) {
@@ -167,8 +155,7 @@ public class DescribeSensorCallback extends
   
 
   private void fireUsageEvent(Supplier<InstanceUsageEvent> instanceUsageEventSupplier) {
-    InstanceUsageEvent event = null;
-    event = instanceUsageEventSupplier.get();
+    InstanceUsageEvent event = instanceUsageEventSupplier.get();
     try {
       listener.fireEvent(event);
     } catch (EventFailedException e) {

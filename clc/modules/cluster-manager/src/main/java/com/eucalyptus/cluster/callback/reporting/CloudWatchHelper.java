@@ -57,7 +57,6 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.compute.common.internal.vm.VmInstanceTag;
 import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState;
 import com.eucalyptus.compute.common.internal.vm.VmRuntimeState;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -74,7 +73,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.DescribeSensorsResponse;
@@ -424,7 +422,6 @@ public class CloudWatchHelper {
   }
 
   public interface InstanceInfoProvider {
-    public Iterable<String> getRunningInstanceUUIDList();
     public String getAutoscalingGroupName(String instanceId);
     public String getInstanceId(String instanceId);
     public String getImageId(String instanceId);
@@ -438,7 +435,7 @@ public class CloudWatchHelper {
 
   public static class DefaultInstanceInfoProvider implements InstanceInfoProvider {
     Map<String, VmInstance> cachedInstances = new HashMap<String, VmInstance>();
-    LoadingCache<String,String> instanceIdToAutoscalingGroupNameCache =  CacheBuilder.newBuilder().build(
+    LoadingCache<String,String> instanceIdToAutoscalingGroupNameCache = CacheBuilder.newBuilder().build(
         new CacheLoader<String,String>() {
           @Override
           public String load( @Nonnull final String instanceId ) {
@@ -450,15 +447,6 @@ public class CloudWatchHelper {
             }
           }
         });
-
-    @Override
-    public Iterable<String> getRunningInstanceUUIDList( ) {
-      return Sets.newHashSet( VmInstances.listWithProjection(
-          VmInstances.instanceUuidProjection( ),
-          VmInstance.criterion( VmState.RUNNING ),
-          VmInstance.nonNullNodeCriterion( )
-      ) );
-    }
 
     private VmInstance lookupInstance(String instanceId) {
       if (cachedInstances.containsKey(instanceId)) {
@@ -522,9 +510,11 @@ public class CloudWatchHelper {
     }
   }
 
-  public List<AbsoluteMetricQueueItem> collectMetricData(DescribeSensorsResponse msg) throws Exception {
+  public List<AbsoluteMetricQueueItem> collectMetricData(
+      final Collection<String> expectedInstanceIds,
+      final DescribeSensorsResponse msg
+  ) throws Exception {
     ArrayList<AbsoluteMetricQueueItem> absoluteMetricQueueItems = new ArrayList<>();
-    final Iterable<String> uuidList = instanceInfoProvider.getRunningInstanceUUIDList();
 
     // cloudwatch metric caches
     final ConcurrentMap<String, DiskReadWriteMetricTypeCache> metricCacheMap = Maps.newConcurrentMap();
@@ -533,7 +523,7 @@ public class CloudWatchHelper {
 
     for (final SensorsResourceType sensorData : msg.getSensorsResources()) {
       if (!RESOURCE_TYPE_INSTANCE.equals(sensorData.getResourceType()) ||
-          !Iterables.contains(uuidList, sensorData.getResourceUuid()))
+          !expectedInstanceIds.contains( sensorData.getResourceName()))
         continue;
       
       for (final MetricsResourceType metricType : sensorData.getMetrics()) {

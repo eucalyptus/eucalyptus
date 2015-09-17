@@ -70,7 +70,6 @@ import java.util.NoSuchElementException;
 
 import javax.annotation.Nullable;
 import javax.persistence.EntityNotFoundException;
-import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.ClientUnauthorizedComputeException;
@@ -330,7 +329,6 @@ public class NetworkGroupManager {
     } catch ( Exception ex ) {
       Exceptions.findAndRethrow( ex, EucalyptusCloudException.class, EucalyptusWebServiceException.class );
       Logs.exhaust( ).error( ex, ex );
-      Logger.getLogger( NetworkGroupManager.class ).error( ex, ex );
       throw ex;
     }    
     return reply;
