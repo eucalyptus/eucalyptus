@@ -24,13 +24,24 @@ import java.util.Date;
 import javax.persistence.Column;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
 import javax.persistence.MappedSuperclass;
+import javax.persistence.Transient;
 
 import com.eucalyptus.cloudwatch.common.internal.domain.AbstractPersistentWithDimensions;
+import org.hibernate.annotations.GenericGenerator;
 
 @MappedSuperclass
-public abstract class MetricEntity extends AbstractPersistentWithDimensions {
+public abstract class MetricEntity {
 
+  @Transient
+  private static final long serialVersionUID = 1;
+  @Id
+  @GeneratedValue(generator = "system-uuid")
+  @GenericGenerator(name="system-uuid", strategy = "uuid")
+  @Column( name = "id" )
+  String id;
   @Column(name = "account_id", nullable = false)
   private String accountId;
   @Column(name = "namespace", nullable = false)
@@ -63,7 +74,14 @@ public abstract class MetricEntity extends AbstractPersistentWithDimensions {
   public String getAccountId() {
     return accountId;
   }
-  
+
+  public String getId() {
+    return id;
+  }
+
+  public void setId(String id) {
+    this.id = id;
+  }
 
   public void setAccountId(String accountId) {
     this.accountId = accountId;
@@ -156,7 +174,6 @@ public abstract class MetricEntity extends AbstractPersistentWithDimensions {
         + ", dimensionHash=" + dimensionHash + ", units=" + units
         + ", metricType=" + metricType + ", timestamp=" + timestamp
         + ", sampleSize=" + sampleSize + ", sampleMax=" + sampleMax
-        + ", sampleMin=" + sampleMin + ", sampleSum=" + sampleSum
-        + ", getDimensions()=" + getDimensions() + "]";
+        + ", sampleMin=" + sampleMin + ", sampleSum=" + sampleSum + "]";
   }
 }

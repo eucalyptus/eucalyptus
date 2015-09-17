@@ -31,6 +31,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricEntity.MetricType;
 import com.eucalyptus.component.annotation.RemotablePersistence;
 import com.google.common.collect.ImmutableSet;
+import org.hibernate.annotations.Index;
 
 public class MetricEntityFactory {
   private static MetricFactoryDelegate delegate = new MetricFactoryDelegate32();
@@ -70,6 +71,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "metric_data")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "metric_data", indexes = {
+    @Index( name = "metric_data_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class MetricEntitySingle extends MetricEntity {
     public MetricEntitySingle() {
       super();
@@ -361,6 +365,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "custom_metric_data_0")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "custom_metric_data_0", indexes = {
+    @Index( name = "custom_metric_data_0_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class CustomMetricEntity0 extends MetricEntity {
     public CustomMetricEntity0() {
       super();
@@ -372,6 +379,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "custom_metric_data_1")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "custom_metric_data_1", indexes = {
+    @Index( name = "custom_metric_data_1_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class CustomMetricEntity1 extends MetricEntity {
     public CustomMetricEntity1() {
       super();
@@ -383,6 +393,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "custom_metric_data_2")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "custom_metric_data_2", indexes = {
+    @Index( name = "custom_metric_data_2_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class CustomMetricEntity2 extends MetricEntity {
     public CustomMetricEntity2() {
       super();
@@ -394,6 +407,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "custom_metric_data_3")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "custom_metric_data_3", indexes = {
+    @Index( name = "custom_metric_data_3_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class CustomMetricEntity3 extends MetricEntity {
     public CustomMetricEntity3() {
       super();
@@ -405,6 +421,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "custom_metric_data_4")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "custom_metric_data_4", indexes = {
+    @Index( name = "custom_metric_data_4_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class CustomMetricEntity4 extends MetricEntity {
     public CustomMetricEntity4() {
       super();
@@ -416,6 +435,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "custom_metric_data_5")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "custom_metric_data_5", indexes = {
+    @Index( name = "custom_metric_data_5_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class CustomMetricEntity5 extends MetricEntity {
     public CustomMetricEntity5() {
       super();
@@ -427,6 +449,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "custom_metric_data_6")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "custom_metric_data_6", indexes = {
+    @Index( name = "custom_metric_data_6_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class CustomMetricEntity6 extends MetricEntity {
     public CustomMetricEntity6() {
       super();
@@ -438,6 +463,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "custom_metric_data_7")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "custom_metric_data_7", indexes = {
+    @Index( name = "custom_metric_data_7_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class CustomMetricEntity7 extends MetricEntity {
     public CustomMetricEntity7() {
       super();
@@ -449,6 +477,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "custom_metric_data_8")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "custom_metric_data_8", indexes = {
+    @Index( name = "custom_metric_data_8_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class CustomMetricEntity8 extends MetricEntity {
     public CustomMetricEntity8() {
       super();
@@ -460,6 +491,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "custom_metric_data_9")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "custom_metric_data_9", indexes = {
+    @Index( name = "custom_metric_data_9_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class CustomMetricEntity9 extends MetricEntity {
     public CustomMetricEntity9() {
       super();
@@ -471,6 +505,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "custom_metric_data_a")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "custom_metric_data_a", indexes = {
+    @Index( name = "custom_metric_data_a_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class CustomMetricEntityA extends MetricEntity {
     public CustomMetricEntityA() {
       super();
@@ -482,6 +519,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "custom_metric_data_b")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "custom_metric_data_b", indexes = {
+    @Index( name = "custom_metric_data_b_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class CustomMetricEntityB extends MetricEntity {
     public CustomMetricEntityB() {
       super();
@@ -492,6 +532,9 @@ public class MetricEntityFactory {
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
   @RemotablePersistence
   @Table(name = "custom_metric_data_c")
+  @org.hibernate.annotations.Table( appliesTo = "custom_metric_data_c", indexes = {
+    @Index( name = "custom_metric_data_c_timestamp_idx", columnNames = "timestamp" )
+  } )
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   public static class CustomMetricEntityC extends MetricEntity {
     public CustomMetricEntityC() {
@@ -504,6 +547,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "custom_metric_data_d")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "custom_metric_data_d", indexes = {
+    @Index( name = "custom_metric_data_d_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class CustomMetricEntityD extends MetricEntity {
     public CustomMetricEntityD() {
       super();
@@ -515,6 +561,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "custom_metric_data_e")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "custom_metric_data_e", indexes = {
+    @Index( name = "custom_metric_data_e_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class CustomMetricEntityE extends MetricEntity {
     public CustomMetricEntityE() {
       super();
@@ -526,6 +575,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "custom_metric_data_f")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "custom_metric_data_f", indexes = {
+    @Index( name = "custom_metric_data_f_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class CustomMetricEntityF extends MetricEntity {
     public CustomMetricEntityF() {
       super();
@@ -537,6 +589,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "System_metric_data_0")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "System_metric_data_0", indexes = {
+    @Index( name = "System_metric_data_0_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class SystemMetricEntity0 extends MetricEntity {
     public SystemMetricEntity0() {
       super();
@@ -548,6 +603,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "System_metric_data_1")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "System_metric_data_1", indexes = {
+    @Index( name = "System_metric_data_1_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class SystemMetricEntity1 extends MetricEntity {
     public SystemMetricEntity1() {
       super();
@@ -559,6 +617,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "System_metric_data_2")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "System_metric_data_2", indexes = {
+    @Index( name = "System_metric_data_2_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class SystemMetricEntity2 extends MetricEntity {
     public SystemMetricEntity2() {
       super();
@@ -570,6 +631,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "System_metric_data_3")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "System_metric_data_3", indexes = {
+    @Index( name = "System_metric_data_3_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class SystemMetricEntity3 extends MetricEntity {
     public SystemMetricEntity3() {
       super();
@@ -581,6 +645,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "System_metric_data_4")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "System_metric_data_4", indexes = {
+    @Index( name = "System_metric_data_4_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class SystemMetricEntity4 extends MetricEntity {
     public SystemMetricEntity4() {
       super();
@@ -592,6 +659,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "System_metric_data_5")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "System_metric_data_5", indexes = {
+    @Index( name = "System_metric_data_5_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class SystemMetricEntity5 extends MetricEntity {
     public SystemMetricEntity5() {
       super();
@@ -603,6 +673,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "System_metric_data_6")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "System_metric_data_6", indexes = {
+    @Index( name = "System_metric_data_6_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class SystemMetricEntity6 extends MetricEntity {
     public SystemMetricEntity6() {
       super();
@@ -614,6 +687,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "System_metric_data_7")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "System_metric_data_7", indexes = {
+    @Index( name = "System_metric_data_7_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class SystemMetricEntity7 extends MetricEntity {
     public SystemMetricEntity7() {
       super();
@@ -625,6 +701,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "System_metric_data_8")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "System_metric_data_8", indexes = {
+    @Index( name = "System_metric_data_8_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class SystemMetricEntity8 extends MetricEntity {
     public SystemMetricEntity8() {
       super();
@@ -636,6 +715,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "System_metric_data_9")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "System_metric_data_9", indexes = {
+    @Index( name = "System_metric_data_9_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class SystemMetricEntity9 extends MetricEntity {
     public SystemMetricEntity9() {
       super();
@@ -647,6 +729,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "System_metric_data_a")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "System_metric_data_a", indexes = {
+    @Index( name = "System_metric_data_a_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class SystemMetricEntityA extends MetricEntity {
     public SystemMetricEntityA() {
       super();
@@ -658,6 +743,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "System_metric_data_b")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "System_metric_data_b", indexes = {
+    @Index( name = "System_metric_data_b_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class SystemMetricEntityB extends MetricEntity {
     public SystemMetricEntityB() {
       super();
@@ -669,6 +757,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "System_metric_data_c")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "System_metric_data_c", indexes = {
+    @Index( name = "System_metric_data_c_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class SystemMetricEntityC extends MetricEntity {
     public SystemMetricEntityC() {
       super();
@@ -680,6 +771,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "System_metric_data_d")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "System_metric_data_d", indexes = {
+    @Index( name = "System_metric_data_d_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class SystemMetricEntityD extends MetricEntity {
     public SystemMetricEntityD() {
       super();
@@ -691,6 +785,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "System_metric_data_e")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "System_metric_data_e", indexes = {
+    @Index( name = "System_metric_data_e_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class SystemMetricEntityE extends MetricEntity {
     public SystemMetricEntityE() {
       super();
@@ -702,6 +799,9 @@ public class MetricEntityFactory {
   @RemotablePersistence
   @Table(name = "System_metric_data_f")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+  @org.hibernate.annotations.Table( appliesTo = "System_metric_data_f", indexes = {
+    @Index( name = "System_metric_data_f_timestamp_idx", columnNames = "timestamp" )
+  } )
   public static class SystemMetricEntityF extends MetricEntity {
     public SystemMetricEntityF() {
       super();
