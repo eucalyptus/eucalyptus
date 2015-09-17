@@ -71,6 +71,7 @@ import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Iterables;
@@ -84,6 +85,13 @@ public class SecurityTokenManagerImpl implements SecurityTokenManager.SecurityTo
 
   private static final Logger log = Logger.getLogger( SecurityTokenManagerImpl.class );
   private static final Supplier<SecureRandom> randomSupplier = Crypto.getSecureRandomSupplier();
+  private static final Supplier<String> securityTokenPasswordSupplier = Suppliers.memoize(
+      new Supplier<String>( ) {
+        @Override
+        public String get() {
+          return SystemIds.securityTokenPassword( );
+        }
+      } );
   private static final SecurityTokenManagerImpl instance = new SecurityTokenManagerImpl( );
   private static final long creationSkewMillis = Objects.firstNonNull(
       Longs.tryParse( System.getProperty( "com.eucalyptus.auth.tokens.creationSkewMillis", "5000" ) ),
@@ -313,7 +321,7 @@ public class SecurityTokenManagerImpl implements SecurityTokenManager.SecurityTo
   }
 
   protected String getSecurityTokenPassword() {
-    return SystemIds.securityTokenPassword();
+    return securityTokenPasswordSupplier.get( );
   }
 
   private long restrictDuration( final int maximumDurationHours,
