@@ -32,7 +32,7 @@ public class ExtendedNetworkingConfiguration {
   /**
    * Enforces a format of a comma delimited list of integers between 0-255
    */
-  static class ProtocolListPropertyChangeListener implements PropertyChangeListener<String> {
+  public static class ProtocolListPropertyChangeListener implements PropertyChangeListener<String> {
     static Pattern commaListPattern = Pattern.compile(
         "\\s*(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\s*,\\s*)*([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])?\\s*");
     @Override

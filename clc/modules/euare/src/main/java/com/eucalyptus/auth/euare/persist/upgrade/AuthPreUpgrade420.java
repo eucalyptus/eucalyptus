@@ -37,13 +37,13 @@ public class AuthPreUpgrade420 implements Callable<Boolean> {
   private static final Logger logger = Logger.getLogger( AuthPreUpgrade420.class );
 
   private static final List<String> DROP_TABLES = ImmutableList.of(
-      "auth_auth",
       "auth_auth_action_list",
       "auth_auth_resource_list",
-      "auth_condition",
+      "auth_auth",
       "auth_condition_value_list",
-      "auth_principal",
+      "auth_condition",
       "auth_principal_value_list",
+      "auth_principal",
       "auth_statement"
   );
 

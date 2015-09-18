@@ -252,7 +252,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public static Projection instanceIdProjection( ) {
     return Projections.property( "displayName" );
   }
-  
+
+  public static Projection instanceUuidProjection( ) {
+    return Projections.property( "naturalId" );
+  }
+
   /**
    *
    */

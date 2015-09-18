@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -893,15 +893,14 @@ public class Topology {
         /** make promotion decisions **/
         Predicate<ServiceConfiguration> alwaysTrue = Predicates.alwaysTrue( );
         Collections.shuffle( allServices );
-        
-        Collection<ServiceConfiguration> doPass1 = Collections2.filter( allServices, Predicates.and( CheckServiceFilter.INSTANCE, Component.State.NOTREADY ) );
-        Collection<ServiceConfiguration>  disabledPass1 = submitTransitions( Lists.newArrayList( doPass1 ), alwaysTrue, SubmitDisable.INSTANCE );
+
+        Collection<ServiceConfiguration> doPass1 = Lists.newArrayList( Iterables.filter( allServices, Predicates.and( CheckServiceFilter.INSTANCE, Component.State.NOTREADY ) ) );
+        Collection<ServiceConfiguration> disabledPass1 = submitTransitions( Lists.newArrayList( doPass1 ), alwaysTrue, SubmitDisable.INSTANCE );
 
         List<ServiceConfiguration> doPass2 = Lists.newArrayList( doPass1 ); 
         submitTransitions( doPass2, Predicates.not( Predicates.in( disabledPass1 ) ), SubmitDisable.INSTANCE );
         
         final Predicate<ServiceConfiguration> canPromote = Predicates.and( Predicates.not( Predicates.in( doPass1 ) ), Component.State.DISABLED, FailoverPredicate.INSTANCE );
-        final Collection<ServiceConfiguration> promoteServices = Collections2.filter( allServices, canPromote );
         List<ServiceConfiguration> result = submitTransitions( allServices, canPromote, SubmitEnable.INSTANCE );
         
         /** advance other components as needed **/
@@ -913,12 +912,12 @@ public class Topology {
     }
     
     private static List<ServiceConfiguration> submitTransitions( final List<ServiceConfiguration> services,
-                                                                       final Predicate<ServiceConfiguration> serviceFilter,
-                                                                       final Function<ServiceConfiguration, Future<ServiceConfiguration>> submitFunction ) {
-      final Collection<ServiceConfiguration> filteredServices = Collections2.filter( services, serviceFilter );
-      final Collection<Future<ServiceConfiguration>> submittedCallables = Collections2.transform( filteredServices, submitFunction );
-      final Collection<Future<ServiceConfiguration>> completedServices = Collections2.filter( submittedCallables, WaitForResults.INSTANCE );
-      List<ServiceConfiguration> results = Lists.newArrayList( Collections2.transform( completedServices, ExtractFuture.INSTANCE ) );
+                                                                 final Predicate<ServiceConfiguration> serviceFilter,
+                                                                 final Function<ServiceConfiguration, Future<ServiceConfiguration>> submitFunction ) {
+      final Iterable<ServiceConfiguration> filteredServices = Iterables.filter( services, serviceFilter );
+      final Iterable<Future<ServiceConfiguration>> submittedCallables = Iterables.transform( filteredServices, submitFunction );
+      final Iterable<Future<ServiceConfiguration>> completedServices = Iterables.filter( submittedCallables, WaitForResults.INSTANCE );
+      final List<ServiceConfiguration> results = Lists.newArrayList( Iterables.transform( completedServices, ExtractFuture.INSTANCE ) );
       printCheckInfo( submitFunction.toString( ), results );
       return results;
     }

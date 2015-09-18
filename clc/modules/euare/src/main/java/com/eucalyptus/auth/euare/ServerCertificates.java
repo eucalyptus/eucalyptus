@@ -29,6 +29,7 @@ import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 
+import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.AuthException;
@@ -54,6 +55,8 @@ import com.google.common.base.Function;
  * 
  */
 public class ServerCertificates {
+  private static Logger LOG = Logger.getLogger( ServerCertificates.class );
+
   public static void verifyCertificate(final String certBody, final String pk, final String certChain) 
       throws AuthException{
     try{
@@ -71,6 +74,7 @@ public class ServerCertificates {
       if(kp == null)
         throw new Exception("Malformed pk");
     }catch(final Exception ex){
+      LOG.error("Invalid private key is given", ex);
       throw new AuthException(
           String.format("%s (%s)", AuthException.SERVER_CERT_INVALID_FORMAT,
           "Private key is invalid - is the key in PEM format?"));

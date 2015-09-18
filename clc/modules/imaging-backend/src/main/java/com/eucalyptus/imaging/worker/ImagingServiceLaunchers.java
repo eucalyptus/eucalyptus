@@ -33,7 +33,6 @@ import com.eucalyptus.auth.euare.ServerCertificateMetadataType;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.cloudformation.CloudFormation;
 import com.eucalyptus.cloudformation.Parameter;
-import com.eucalyptus.cloudformation.Stack;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -133,6 +132,8 @@ public class ImagingServiceLaunchers {
       params.add(new Parameter("KeyName", ImagingServiceProperties.KEYNAME));
       params.add(new Parameter("CERTARN", metadata.getArn()));
       params.add(new Parameter("ImageId", ImagingServiceProperties.IMAGE));
+      if (ImagingServiceProperties.INIT_SCRIPT != null)
+        params.add(new Parameter("InitScript", ImagingServiceProperties.INIT_SCRIPT));
       params.add(new Parameter("VmExpirationDays",
           ImagingServiceProperties.EXPIRATION_DAYS));
       params.add(new Parameter("InstanceType",

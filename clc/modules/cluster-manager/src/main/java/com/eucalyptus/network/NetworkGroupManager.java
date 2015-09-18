@@ -158,7 +158,7 @@ public class NetworkGroupManager {
                 Entities.uniqueResult( Vpc.exampleWithName( userFullName.asAccountFullName( ), vpcId ) );
             final NetworkGroup group = NetworkGroups.create( ctx.getUserFullName( ), vpc, groupName, groupDescription );
             if ( vpc != null ) {
-              group.getNetworkRules().addAll( Lists.newArrayList(
+              group.addNetworkRules( Lists.newArrayList(
                   NetworkRule.createEgress( null/*protocol name*/, -1, null/*low port*/, null/*high port*/, null/*peers*/, Collections.singleton( "0.0.0.0/0" ) )
               ) );
             }
@@ -230,9 +230,11 @@ public class NetworkGroupManager {
             if ( RestrictedTypes.filterPrivileged().apply( ruleGroup ) ) {
               try {
                 NetworkGroups.resolvePermissions( ipPermissions, ctx.getUser( ).getAccountNumber( ), ruleGroup.getVpcId( ), true );
-                Iterators.removeAll( // iterator used to work around broken equals/hashCode in NetworkRule
+                if ( Iterators.removeAll( // iterator used to work around broken equals/hashCode in NetworkRule
                     ruleGroup.getNetworkRules( ).iterator( ),
-                    NetworkGroups.ipPermissionsAsNetworkRules( ipPermissions, ruleGroup.getVpcId( ) != null ) );
+                    NetworkGroups.ipPermissionsAsNetworkRules( ipPermissions, ruleGroup.getVpcId( ) != null ) ) ) {
+                  ruleGroup.updateTimeStamps( );
+                }
               } catch ( IllegalArgumentException e ) {
                 throw new ClientComputeException( "InvalidPermission.Malformed", e.getMessage( ) ); 
               } catch ( NoSuchMetadataException e ) {
@@ -309,7 +311,7 @@ public class NetworkGroupManager {
           } ) ) {
             return false;
           } else {
-            ruleGroup.getNetworkRules().addAll( ruleList );
+            ruleGroup.addNetworkRules(  ruleList );
             if ( ruleGroup.getVpcId() != null && ruleGroup.getNetworkRules().size() > VpcConfiguration.getRulesPerSecurityGroup() ) {
               throw new ClientComputeException( "RulesPerSecurityGroupLimitExceeded", "Rules limit exceeded for " + request.getGroupId() );
             }
@@ -376,7 +378,7 @@ public class NetworkGroupManager {
           } ) ) {
             return false;
           } else {
-            ruleGroup.getNetworkRules( ).addAll( ruleList );
+            ruleGroup.addNetworkRules( ruleList );
             if ( ruleGroup.getVpcId( ) != null && ruleGroup.getNetworkRules( ).size( ) > VpcConfiguration.getRulesPerSecurityGroup( ) ) {
               throw new ClientComputeException("RulesPerSecurityGroupLimitExceeded", "Rules limit exceeded for " + request.getGroupId( ) );
             }
@@ -416,9 +418,11 @@ public class NetworkGroupManager {
               final List<NetworkRule> rules = NetworkGroups.ipPermissionsAsNetworkRules( ipPermissions, true );
               for ( final NetworkRule rule : rules ) rule.setEgress( true );
               NetworkGroups.resolvePermissions( ipPermissions, ctx.getUser( ).getAccountNumber( ), ruleGroup.getVpcId( ), true );
-              Iterators.removeAll( // iterator used to work around broken equals/hashCode in NetworkRule
+              if ( Iterators.removeAll( // iterator used to work around broken equals/hashCode in NetworkRule
                   ruleGroup.getNetworkRules( ).iterator( ),
-                  rules );
+                  rules ) ) {
+                ruleGroup.updateTimeStamps( );
+              }
             } catch ( IllegalArgumentException e ) {
               throw new ClientComputeException( "InvalidPermission.Malformed", e.getMessage( ) );
             } catch ( NoSuchMetadataException e ) {

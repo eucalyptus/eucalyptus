@@ -34,6 +34,7 @@ import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.PolicyResourceContext;
 import com.eucalyptus.auth.PolicyResourceContext.PolicyResourceInfo;
 import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
@@ -135,7 +136,7 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
       try {
         Context ctx = Contexts.lookup(request.getCorrelationId());
         requestUser = ctx.getUser();
-        requestAccountNumber = ctx.getAccountNumber( );
+        requestAccountNumber = ctx.getAccountNumber();
         authContext = ctx.getAuthContext();
       } catch (NoSuchContextException e) {
         requestUser = null;
@@ -146,16 +147,16 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
       // This is not an expected path, but if no context found use the request credentials itself
       if (requestUser == null && !Strings.isNullOrEmpty(request.getEffectiveUserId())) {
         requestUser = Accounts.lookupPrincipalByUserId(request.getEffectiveUserId());
-        requestAccountNumber = requestUser.getAccountNumber( );
+        requestAccountNumber = requestUser.getAccountNumber();
       }
 
       if (requestUser == null) {
         // Set to anonymous user since all else failed
         requestUser = Principals.nobodyUser();
-        requestAccountNumber = requestUser.getAccountNumber( );
+        requestAccountNumber = requestUser.getAccountNumber();
       }
 
-      requestCanonicalId = requestUser.getCanonicalId( );
+      requestCanonicalId = requestUser.getCanonicalId();
     } catch (AuthException e) {
       LOG.error("Failed to get user for request, cannot verify authorization: " + e.getMessage(), e);
       return false;
@@ -185,7 +186,7 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
               LOG.error("Could not check access for operation due to no bucket resource entity found");
               return false;
             } else {
-              resourceOwnerAccountNumber = Accounts.lookupPrincipalByCanonicalId(bucketResourceEntity.getOwnerCanonicalId()).getAccountNumber( );
+              resourceOwnerAccountNumber = Accounts.lookupPrincipalByCanonicalId(bucketResourceEntity.getOwnerCanonicalId()).getAccountNumber();
               policyResourceInfo = PolicyResourceContext.resourceInfo(resourceOwnerAccountNumber, bucketResourceEntity);
             }
             break;
@@ -194,7 +195,7 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
               LOG.error("Could not check access for operation due to no object resource entity found");
               return false;
             } else {
-              resourceOwnerAccountNumber = Accounts.lookupPrincipalByCanonicalId(objectResourceEntity.getOwnerCanonicalId()).getAccountNumber( );
+              resourceOwnerAccountNumber = Accounts.lookupPrincipalByCanonicalId(objectResourceEntity.getOwnerCanonicalId()).getAccountNumber();
               policyResourceInfo = PolicyResourceContext.resourceInfo(resourceOwnerAccountNumber, objectResourceEntity);
             }
             break;
@@ -218,10 +219,11 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
       }
     }
 
-    if (allowAdmin && requestUser.isSystemUser()
-        && iamPermissionsAllow(authContext, requiredActions, policyResourceInfo, resourceType, resourceId, resourceAllocationSize)) {
-      // Admin override
-      return true;
+    // Override for 'eucalyptus' account and workaroud for EUCA-11346
+    // Skip ACL checks for 'eucalyptus' account only. ACL checks must be performed for all other accounts including system accounts
+    // IAM checks must be performed for all accounts
+    if (allowAdmin && requestUser.getAccountAlias() != null && AccountIdentifiers.SYSTEM_ACCOUNT.equals(requestUser.getAccountAlias())) {
+      return iamPermissionsAllow(authContext, requiredActions, policyResourceInfo, resourceType, resourceId, resourceAllocationSize);
     }
 
     if (requiredBucketACLPermissions == null && requiredObjectACLPermissions == null) {

@@ -152,8 +152,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   @Column( name = "metadata_vpc_id", updatable = false )
   private String           vpcId;
 
-  @OneToMany( cascade = CascadeType.ALL, orphanRemoval = true )
-  @JoinColumn( name = "metadata_network_group_rule_fk" )
+  @OneToMany( cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "group" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<NetworkRule> networkRules = new HashSet<>( );
 
@@ -274,7 +273,6 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     if ( this.getState( ) == null ) {
       this.setState( State.PENDING );
     }
-    
   }
 
   @Nullable
@@ -306,7 +304,15 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   protected void setDescription( final String description ) {
     this.description = description;
   }
-  
+
+  public void addNetworkRules( final Collection<NetworkRule> rules ) {
+    for ( final NetworkRule rule : rules ) {
+      rule.setGroup( this );
+    }
+    getNetworkRules( ).addAll( rules );
+    updateTimeStamps( );
+  }
+
   public Set<NetworkRule> getNetworkRules( ) {
     return this.networkRules;
   }

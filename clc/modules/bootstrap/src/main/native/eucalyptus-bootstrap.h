@@ -121,6 +121,7 @@ static int debug = 0;
 #define __abort(r,condition,format,...) do { if(condition) {get_timestamp(ts_buff,sizeof(ts_buff));fprintf(stderr,"%s ERROR %04d ",ts_buff, __LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ ); fflush(stderr); return r;} } while(0)
 #define __debug(format,...) do { if(debug){get_timestamp(ts_buff,sizeof(ts_buff));fprintf(stdout,"%s DEBUG %04d ",ts_buff,__LINE__);fprintf(stdout, format "\n", ##__VA_ARGS__ );fflush(stdout); } } while(0)
 #define __error(format,...) do { get_timestamp(ts_buff,sizeof(ts_buff));fprintf(stderr,"%s ERROR %04d ",ts_buff,__LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ );fflush(stderr); } while(0)
+#define __info(format,...) do { get_timestamp(ts_buff,sizeof(ts_buff));fprintf(stderr,"%s INFO %04d ",ts_buff,__LINE__);fprintf(stdout, format "\n", ##__VA_ARGS__ );fflush(stdout); } while(0)
 #define EUCA_MAIN "com/eucalyptus/bootstrap/SystemBootstrapper"
 #define EUCA_RET_RELOAD 123
 
@@ -154,6 +155,7 @@ static int debug = 0;
 #define EUCALYPTUS_JAVA_LIB_DIR    EUCALYPTUS_DATA_DIR
 #define EUCALYPTUS_CLASSCACHE_DIR  EUCALYPTUS_RUN_DIR "/classcache"
 #define java_load_bootstrapper euca_load_bootstrapper
+#define GIG  1073741824.0
 
 void euca_load_bootstrapper(void);
 
@@ -193,7 +195,6 @@ typedef struct {
 } while(0)
 static char *jvm_default_opts[] = {
     "-Xbootclasspath/p:%1$s" EUCALYPTUS_DATA_DIR "/openjdk-crypto.jar",
-    "-Xmx2g",
     "-XX:MaxPermSize=512m",
     "-XX:+UseConcMarkSweepGC",
     "-Djava.net.preferIPv4Stack=true",

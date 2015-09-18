@@ -69,11 +69,14 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.security.KeyPair;
+import java.security.PrivateKey;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
 import javax.annotation.Nullable;
+
 import org.apache.log4j.Logger;
+import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -152,10 +155,19 @@ public class PEMFiles {
     KeyPair keyPair = null;
     ByteArrayInputStream pemByteIn = new ByteArrayInputStream( o );
     try ( PEMParser in = new PEMParser( new InputStreamReader( pemByteIn ) )  )  {
-      final PEMKeyPair pemKeyPair = (PEMKeyPair) in.readObject( );
-      if ( pemKeyPair != null ) {
-        keyPair = 
-            new JcaPEMKeyConverter( ).setProvider( BouncyCastleProvider.PROVIDER_NAME ).getKeyPair( pemKeyPair );
+      final Object keyObj = in.readObject();
+      if (keyObj instanceof PEMKeyPair) {
+        final PEMKeyPair pemKeyPair = (PEMKeyPair) keyObj;
+        if ( pemKeyPair != null ) {
+          keyPair = 
+              new JcaPEMKeyConverter( ).setProvider( BouncyCastleProvider.PROVIDER_NAME ).getKeyPair( pemKeyPair );
+        }
+      }else if (keyObj instanceof PrivateKeyInfo) {
+        final PrivateKeyInfo pKeyInfo = (PrivateKeyInfo) keyObj;
+        final PrivateKey pKey = new JcaPEMKeyConverter( ).setProvider( BouncyCastleProvider.PROVIDER_NAME ).getPrivateKey(pKeyInfo);
+        if( pKey != null ) {
+          keyPair = new KeyPair(null, pKey);
+        }
       }
     } catch ( IOException e ) {
       LOG.error( e, e );//this can never happen

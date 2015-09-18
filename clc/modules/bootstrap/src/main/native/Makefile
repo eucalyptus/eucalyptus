@@ -65,7 +65,7 @@ CFLAGS = -g -O2 -DOS_LINUX -DDSO_DLFCN \
 		 -I$(JAVA_HOME)/include/linux \
 		 -I../../../../../../util \
 		 -Wall -Wstrict-prototypes
-LDFLAGS =  -ldl -lpthread
+LDFLAGS =  -ldl -lpthread -lm
 JAVACFLAGS = 
 RANLIB = ranlib
 LDCMD = gcc
