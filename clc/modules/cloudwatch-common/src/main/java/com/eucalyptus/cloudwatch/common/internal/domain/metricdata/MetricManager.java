@@ -262,16 +262,9 @@ public class MetricManager {
       projectionList.add(Projections.sum("sampleSum"));
       projectionList.add(Projections.groupProperty("units"));
       projectionList.add(Projections.groupProperty("timestamp"));
-//    Aggregate better
-//      DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-//      projectionList.add(Projections.alias(Projections.sqlGroupProjection(
-//        "timestamp - (interval '1 second' * ((date_part('epoch', timestamp - '" + df.format(startTime) + "'::timestamp))::int % " + period + ")) as period_start",
-//        "period_start", new String[]{"period_start"}, new Type[]{TimestampType.INSTANCE}), "periodStart"));
       criteria.setProjection(projectionList);
-////      criteria.addOrder(Order.asc("periodStart"));
       criteria.addOrder(Order.asc("timestamp"));
       ScrollableResults results = criteria.setCacheMode(CacheMode.IGNORE).scroll(ScrollMode.FORWARD_ONLY);
-      int numOperations = 0;
       while (results.next()) {
         MetricEntity me = getMetricEntity(accountId, metricName, namespace, metricType, hash, results);
         GetMetricStatisticsAggregationKey key = new GetMetricStatisticsAggregationKey(me, startTime, period, hash);
@@ -284,11 +277,6 @@ public class MetricManager {
           totalSoFar.setSampleMin(Math.min(item.getSampleMin(), totalSoFar.getSampleMin()));
           totalSoFar.setSampleSize(totalSoFar.getSampleSize() + item.getSampleSize());
           totalSoFar.setSampleSum(totalSoFar.getSampleSum() + item.getSampleSum());
-        }
-        numOperations++;
-        if (numOperations % METRIC_DATA_NUM_DB_OPERATIONS_UNTIL_SESSION_FLUSH == 0) {
-          Entities.flushSession(metricEntityClass);
-          Entities.clearSession(metricEntityClass);
         }
       }
     }

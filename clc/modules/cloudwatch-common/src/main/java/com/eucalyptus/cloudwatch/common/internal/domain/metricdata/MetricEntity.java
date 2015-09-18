@@ -35,8 +35,6 @@ import org.hibernate.annotations.GenericGenerator;
 @MappedSuperclass
 public abstract class MetricEntity {
 
-  @Transient
-  private static final long serialVersionUID = 1;
   @Id
   @GeneratedValue(generator = "system-uuid")
   @GenericGenerator(name="system-uuid", strategy = "uuid")
