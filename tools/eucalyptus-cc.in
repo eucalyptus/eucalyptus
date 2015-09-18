@@ -167,14 +167,6 @@ do_start() {
 		echo "cannot find httpd (was set to <$HTTPD>)!"
 		exit 1
 	fi
-	if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then
-		echo "Some eucalyptus components are missing"
-		exit 1
-	fi
-
-	if ! $EUCALYPTUS/usr/sbin/euca_conf --check cc ; then
-		exit 1
-	fi
 
         # logic to detect if required proc parameters will be reset by
         # a sysctl update: succeed and continue if default values are
