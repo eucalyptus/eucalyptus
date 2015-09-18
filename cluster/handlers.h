@@ -315,7 +315,7 @@ typedef struct ccInstanceCache_t {
     time_t lastseen[MAXINSTANCES_PER_CC];
     int cacheState[MAXINSTANCES_PER_CC];
     int described[MAXINSTANCES_PER_CC];
-    int numInsts;
+    int numInsts, numInstsActive;
     int instanceCacheUpdate;
     int dirty;
 } ccInstanceCache;

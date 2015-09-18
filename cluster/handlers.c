@@ -1971,6 +1971,9 @@ int doDescribeResources(ncMetadata * pMeta, virtualMachine ** ccvms, int vmLen, 
                 corepool -= (*ccvms)[j].cores;
                 while (mempool >= 0 && diskpool >= 0 && corepool >= 0) {
                     (*outTypesMax)[j]++;
+                    if ( (*outTypesMax)[j] > MAXINSTANCES_PER_CC) {
+                        (*outTypesMax)[j] = MAXINSTANCES_PER_CC;
+                    }
                     mempool -= (*ccvms)[j].mem;
                     diskpool -= (*ccvms)[j].disk;
                     corepool -= (*ccvms)[j].cores;
@@ -1979,10 +1982,31 @@ int doDescribeResources(ncMetadata * pMeta, virtualMachine ** ccvms, int vmLen, 
         }
     }
 
-    if (vmLen >= 5) {
-        LOGDEBUG("resources summary ({avail/max}): %s{%d/%d} %s{%d/%d} %s{%d/%d} %s{%d/%d} %s{%d/%d}\n", (*ccvms)[0].name,
-                 (*outTypesAvail)[0], (*outTypesMax)[0], (*ccvms)[1].name, (*outTypesAvail)[1], (*outTypesMax)[1], (*ccvms)[2].name,
-                 (*outTypesAvail)[2], (*outTypesMax)[2], (*ccvms)[3].name, (*outTypesAvail)[3], (*outTypesMax)[3], (*ccvms)[4].name, (*outTypesAvail)[4], (*outTypesMax)[4]);
+    {
+        char logStr[2048], typeStr[128];
+        int numInstsActive=0;
+
+        sem_mywait(INSTCACHE);
+        numInstsActive = instanceCache->numInstsActive;
+        sem_mypost(INSTCACHE);
+        
+        snprintf(logStr, 2047, "resources summary ({avail/max}):");
+        for (i=0; i<vmLen; i++) {
+            if ( (*outTypesAvail)[i] > (MAXINSTANCES_PER_CC - numInstsActive) ) {
+                (*outTypesAvail)[i] = MAXINSTANCES_PER_CC - numInstsActive;
+            }
+            snprintf(typeStr, 127, " %s{%d/%d}", (*ccvms)[i].name, (*outTypesAvail)[i], (*outTypesMax)[i]);
+            euca_strncat(logStr, typeStr, 2047);
+        }
+        euca_strncat(logStr, "\n", 2047);
+        LOGDEBUG(logStr);
+        /*
+        if (vmLen >= 5) {
+            LOGDEBUG("resources summary ({avail/max}): %s{%d/%d} %s{%d/%d} %s{%d/%d} %s{%d/%d} %s{%d/%d}\n", (*ccvms)[0].name,
+                     (*outTypesAvail)[0], (*outTypesMax)[0], (*ccvms)[1].name, (*outTypesAvail)[1], (*outTypesMax)[1], (*ccvms)[2].name,
+                     (*outTypesAvail)[2], (*outTypesMax)[2], (*ccvms)[3].name, (*outTypesAvail)[3], (*outTypesMax)[3], (*ccvms)[4].name, (*outTypesAvail)[4], (*outTypesMax)[4]);
+        }
+        */
     }
 
     LOGTRACE("done\n");
@@ -2621,7 +2645,6 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                             sensor_set_resource_alias(myInstance->instanceId, myInstance->ncnet.privateIp);
                             EUCA_FREE(myInstance);
                         }
-
                     }
                 }
                 if (ncOutInsts) {
@@ -3752,7 +3775,7 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                 // could not find resource
                 LOGERROR("scheduler could not find resource to run the instance on\n");
                 // couldn't run this VM, remove networking information from system
-                free_instanceNetwork(mac, vlan, 1, 1);
+                //                free_instanceNetwork(mac, vlan, 1, 1);
             } else {
                 int ret;
 
@@ -3870,7 +3893,7 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                     res->state = RESDOWN;
                     i--;
                     // couldn't run this VM, remove networking information from system
-                    free_instanceNetwork(mac, vlan, 1, 1);
+                    //                    free_instanceNetwork(mac, vlan, 1, 1);
                 } else {
                     res->availMemory -= ccvm->mem;
                     res->availDisk -= ccvm->disk;
@@ -5611,13 +5634,14 @@ void *monitor_thread(void *in)
                     if (instanceCache->numInsts) {
                         for (int i = 0; i < MAXINSTANCES_PER_CC; i++) {
                             if (!strcmp(instanceCache->instances[i].state, "Pending")) {
-                                num_teardown++;
+                                num_pending++;
                             } else if (!strcmp(instanceCache->instances[i].state, "Extant")) {
                                 num_extant++;
                             } else if (!strcmp(instanceCache->instances[i].state, "Teardown")) {
                                 num_teardown++;
                             }
                         }
+                        //                        instanceCache->numInstsActive = num_pending+num_extant;
                     }
                     sem_mypost(INSTCACHE);
 
@@ -6130,6 +6154,8 @@ int update_config(void)
             LOGINFO("refreshing node list\n");
             res = NULL;
             rc = refreshNodes(config, &res, &numHosts);
+
+            sem_mypost(CONFIG);
             if (rc) {
                 LOGERROR("cannot read list of nodes, check your config file\n");
                 reconfigure_resourceCache(NULL, 0);
@@ -6137,6 +6163,8 @@ int update_config(void)
             } else {
                 reconfigure_resourceCache(res, numHosts);
             }
+            sem_mywait(CONFIG);
+
             config->schedState = 0;
             EUCA_FREE(res);
 
@@ -7309,7 +7337,7 @@ void print_instanceCache(void)
     sem_mywait(INSTCACHE);
     for (i = 0; i < MAXINSTANCES_PER_CC; i++) {
         if (instanceCache->cacheState[i] == INSTVALID) {
-            LOGDEBUG("\tcache: %d/%d %s %s %s %s\n", i, instanceCache->numInsts, instanceCache->instances[i].instanceId,
+            LOGDEBUG("\tcache: %d/%d/%d %s %s %s %s\n", i, instanceCache->numInsts, instanceCache->numInstsActive, instanceCache->instances[i].instanceId,
                      instanceCache->instances[i].ccnet.publicIp, instanceCache->instances[i].ccnet.privateIp, instanceCache->instances[i].state);
         }
     }
@@ -7431,14 +7459,18 @@ void invalidate_instanceCache(void)
 {
     int i, do_invalidate=0;
 
-    LOGDEBUG("current instance counts (total in cache/maximum cache size): %d/%d\n", instanceCache->numInsts, MAXINSTANCES_PER_CC);
+    LOGDEBUG("current instance counts (total in cache/total active in cache/maximum cache size): %d/%d/%d\n", instanceCache->numInsts, instanceCache->numInstsActive, MAXINSTANCES_PER_CC);
 
     sem_mywait(INSTCACHE);
+
+    instanceCache->numInsts = instanceCache->numInstsActive = 0;
+
     for (i = 0; i < MAXINSTANCES_PER_CC; i++) {
         // if instance is in teardown, free up network information
-        if (!strcmp(instanceCache->instances[i].state, "Teardown")) {
-            free_instanceNetwork(instanceCache->instances[i].ccnet.privateMac, instanceCache->instances[i].ccnet.vlan, 0, 0);
-        }
+        //        if (!strcmp(instanceCache->instances[i].state, "Teardown")) {
+            //            free_instanceNetwork(instanceCache->instances[i].ccnet.privateMac, instanceCache->instances[i].ccnet.vlan, 0, 0);
+            //            instanceCache->numInstsActive--;
+        //        }
         if ((instanceCache->cacheState[i] == INSTVALID)) {            
             if ((time(NULL) - instanceCache->lastseen[i]) > config->instanceTimeout) {
                 LOGDEBUG("invalidating instance '%s' (last seen %ld seconds ago)\n", instanceCache->instances[i].instanceId, (time(NULL) - instanceCache->lastseen[i]));
@@ -7450,14 +7482,25 @@ void invalidate_instanceCache(void)
                 do_invalidate = 0;
             }
             if (do_invalidate) {
+                //                if (!strcmp(instanceCache->instances[i].state, "Pending") || !strcmp(instanceCache->instances[i].state, "Extant")) {
+                    //                    instanceCache->numInstsActive--;
+                //                }
                 bzero(&(instanceCache->instances[i]), sizeof(ccInstance));
                 instanceCache->described[i] = 0;
                 instanceCache->lastseen[i] = 0;
                 instanceCache->cacheState[i] = INSTINVALID;
-                instanceCache->numInsts--;
+                //                instanceCache->numInsts--;
             }
         }
+
+        if ((instanceCache->cacheState[i] == INSTVALID)) {
+            if ( !strcmp(instanceCache->instances[i].state, "Extant") || !strcmp(instanceCache->instances[i].state, "Pending") ) {
+                instanceCache->numInstsActive++;
+            }
+            instanceCache->numInsts++;
+        }
     }
+    LOGDEBUG("instance counts: %d/%d\n", instanceCache->numInsts, instanceCache->numInstsActive);
     sem_mypost(INSTCACHE);
 }
 
@@ -7496,13 +7539,30 @@ int refresh_instanceCache(char *instanceId, ccInstance * in)
                 memcpy(&(instanceCache->instances[i]), in, sizeof(ccInstance));
                 instanceCache->lastseen[i] = time(NULL);
             }
-            sem_mypost(INSTCACHE);
-            return (0);
+            //            sem_mypost(INSTCACHE);
+            //            return (0);
+            done++;
         }
     }
-    sem_mypost(INSTCACHE);
 
-    add_instanceCache(instanceId, in);
+    if (!done) {
+        // did not find the instance already in cache
+        add_instanceCache(instanceId, in);
+    }
+
+
+    instanceCache->numInsts = instanceCache->numInstsActive = 0;
+    for (i = 0; i < MAXINSTANCES_PER_CC; i++) {
+        if ((instanceCache->cacheState[i] == INSTVALID)) {
+            if ( !strcmp(instanceCache->instances[i].state, "Extant") || !strcmp(instanceCache->instances[i].state, "Pending") ) {
+                instanceCache->numInstsActive++;
+            }
+            instanceCache->numInsts++;
+        }
+    }
+    LOGDEBUG("instance counts: %d/%d\n", instanceCache->numInsts, instanceCache->numInstsActive);
+
+    sem_mypost(INSTCACHE);
 
     return (0);
 }
@@ -7529,14 +7589,7 @@ int add_instanceCache(char *instanceId, ccInstance * in)
 
     ret = 0;
 
-    /*
-    if (instanceCache->numInsts >= MAXINSTANCES_PER_CC) {
-        LOGERROR("out of instance cache space for instance %s\n", instanceId);
-        return(1);
-    }
-    */
-
-    sem_mywait(INSTCACHE);
+    //    sem_mywait(INSTCACHE);
     firstNull = idxDescribedTeardown = idxNotDescribedTeardown = idxDescribedExtant = -1;
     done = 0;
     for (i = 0; i < MAXINSTANCES_PER_CC && !done; i++) {
@@ -7544,7 +7597,7 @@ int add_instanceCache(char *instanceId, ccInstance * in)
             // already in cache
             LOGDEBUG("'%s/%s/%s' already in cache\n", instanceId, in->ccnet.publicIp, in->ccnet.privateIp);
             instanceCache->lastseen[i] = time(NULL);
-            sem_mypost(INSTCACHE);
+            //            sem_mypost(INSTCACHE);
             return (0);
         } else if (instanceCache->cacheState[i] == INSTINVALID) {
             firstNull = i;
@@ -7574,9 +7627,9 @@ int add_instanceCache(char *instanceId, ccInstance * in)
         LOGDEBUG("adding '%s/%s/%s/%d' to cache\n", instanceId, in->ccnet.publicIp, in->ccnet.privateIp, in->volumesSize);
 
         // only add if the cache value is not replacing an existing instance
-        if (instanceCache->cacheState[cacheIdx] == INSTINVALID) {
-            instanceCache->numInsts++;
-        }
+        //        if (instanceCache->cacheState[cacheIdx] == INSTINVALID) {
+        //            instanceCache->numInsts++;
+        //        }
 
         allocate_ccInstance(&(instanceCache->instances[cacheIdx]), in->instanceId, in->amiId, in->kernelId, in->ramdiskId, in->amiURL, in->kernelURL,
                             in->ramdiskURL, in->ownerId, in->accountId, in->state, in->ccState, in->ts, in->reservationId, &(in->ccnet), &(in->ncnet),
@@ -7589,7 +7642,7 @@ int add_instanceCache(char *instanceId, ccInstance * in)
         LOGERROR("not enough cache space for storing instance [%s]: skipping update\n", instanceId);
         ret = 1;
     }
-    sem_mypost(INSTCACHE);
+    //    sem_mypost(INSTCACHE);
     return (ret);
 }
 
@@ -7616,7 +7669,8 @@ int del_instanceCacheId(char *instanceId)
             instanceCache->described[i] = 0;
             instanceCache->lastseen[i] = 0;
             instanceCache->cacheState[i] = INSTINVALID;
-            instanceCache->numInsts--;
+            //            instanceCache->numInsts--;
+            //            instanceCache->numInstsActive = instanceCache->numInsts;
             sem_mypost(INSTCACHE);
             return (0);
         }
