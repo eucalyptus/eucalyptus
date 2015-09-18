@@ -28,6 +28,7 @@ import java.security.PublicKey;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnull;
@@ -45,7 +46,6 @@ import javax.xml.xpath.XPathFactory;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.model.Bucket;
 import com.amazonaws.services.s3.model.BucketLifecycleConfiguration;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
@@ -64,6 +64,7 @@ import org.w3c.dom.NodeList;
 import com.amazonaws.HttpMethod;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -83,6 +84,38 @@ public class DownloadManifestFactory {
   private static String DOWNLOAD_MANIFEST_PREFIX = "DM-";
   private static String MANIFEST_EXPIRATION = "expire";
   private static int DEFAULT_EXPIRE_TIME_HR = 3;
+  private static EucaS3Client s3Client = null;
+  private static long lastCreateTime = 0;
+  private static long HOUR_IN_SEC = 60 * 60 * 1000L;
+  private static HashMap<String, ReentrantLock> locks = new HashMap<String, ReentrantLock>();
+
+  // S3Client is expensive to create so let's reuse one until it has one hour till token expiration
+  private synchronized static EucaS3Client getS3Client() throws DownloadManifestException {
+    if (System.currentTimeMillis() > lastCreateTime + HOUR_IN_SEC) {
+      LOG.debug("Refreshing S3Client");
+      try {
+        if (s3Client != null)
+          s3Client.close();
+        s3Client = EucaS3ClientFactory.getEucaS3ClientForUser(
+          Accounts.lookupSystemAccountByAlias( AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT ),
+          (int)TimeUnit.HOURS.toSeconds( DEFAULT_EXPIRE_TIME_HR ));
+        lastCreateTime = System.currentTimeMillis();
+      } catch(AuthException ex) {
+        throw new DownloadManifestException(ex);
+      }
+    }
+    return s3Client;
+  }
+
+  private synchronized static ReentrantLock getLock(String manifestKey) {
+    if (locks.containsKey(manifestKey)) {
+      return locks.get(manifestKey);
+    } else {
+      LOG.debug("Creating lock for " + manifestKey);
+      locks.put(manifestKey, new ReentrantLock());
+      return locks.get(manifestKey);
+    }
+  }
 
   public static String generateDownloadManifest(
       final ImageManifestFile baseManifest, final PublicKey keyToUse,
@@ -113,12 +146,15 @@ public class DownloadManifestFactory {
       final ImageManifestFile baseManifest, final PublicKey keyToUse,
       final String manifestName, int expirationHours, boolean urlForNc)
       throws DownloadManifestException {
-    try (final EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3ClientForUser(
-        Accounts.lookupSystemAccountByAlias( AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT ),
-        (int)TimeUnit.HOURS.toSeconds( expirationHours )) ) {
+    final ReentrantLock lock = getLock(manifestName);
+    try {
+      lock.lock();
+      final EucaS3Client s3Client = getS3Client();
       // prepare to do pre-signed urls
       if (!urlForNc)
         s3Client.refreshEndpoint(true);
+      else
+        s3Client.refreshEndpoint();
 
       Date expiration = new Date();
       long msec = expiration.getTime() + 1000 * 60 * 60 * expirationHours;
@@ -293,26 +329,8 @@ public class DownloadManifestFactory {
     } catch (Exception ex) {
       LOG.error("Got an error", ex);
       throw new DownloadManifestException("Can't generate download manifest");
-    }
-  }
-
-  public static String generatePresignedUrl(final String manifestName)
-      throws DownloadManifestException {
-    final long expirationHours = DEFAULT_EXPIRE_TIME_HR * 2;
-    try (final EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3ClientForUser(
-        Accounts.lookupSystemAccountByAlias( AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT ),
-        (int)TimeUnit.HOURS.toSeconds( expirationHours )) ) {
-      Date expiration = new Date();
-      long msec = expiration.getTime() + 1000 * 60 * 60 * expirationHours;
-      expiration.setTime(msec);
-      URL s = s3Client.generatePresignedUrl(DOWNLOAD_MANIFEST_BUCKET_NAME,
-          DOWNLOAD_MANIFEST_PREFIX + manifestName, expiration, HttpMethod.GET);
-      return String.format("%s://imaging@%s%s?%s", s.getProtocol(),
-          s.getAuthority(), s.getPath(), s.getQuery());
-    } catch (final Exception ex) {
-      LOG.error("Failed to generate presigned url", ex);
-      throw new DownloadManifestException("Failed to generate presigned url",
-          ex);
+    } finally {
+      lock.unlock();
     }
   }
 
