@@ -120,7 +120,7 @@ install: deploy
 	@$(INSTALL) -d $(DESTDIR)$(vardir)/run/eucalyptus/net
 	@$(INSTALL) -d $(DESTDIR)$(vardir)/lib/eucalyptus/keys
 	@$(INSTALL) -d $(DESTDIR)$(vardir)/lib/eucalyptus/CC
-	@$(INSTALL) -d $(DESTDIR)$(vardir)/log/eucalyptus
+	@$(INSTALL) -d $(DESTDIR)$(vardir)/log/eucalyptus -m 750
 	@$(INSTALL) -d $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -d $(DESTDIR)$(datarootdir)/eucalyptus/doc
 	@$(INSTALL) -d $(DESTDIR)$(usrdir)/sbin
