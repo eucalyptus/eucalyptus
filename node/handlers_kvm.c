@@ -684,16 +684,25 @@ out:
 //!
 static void update_resource_locations(virtualMachine *vm, char ** resourceLocations, int resourceLocationsLen)
 {
+    virtualBootRecord *vbr = NULL;
+    char *id_loc = NULL;
+    char *loc = NULL;
+
     for (int i = 0; i < EUCA_MAX_VBRS && i < vm->virtualBootRecordLen; i++) {
-        virtualBootRecord *vbr = &(vm->virtualBootRecord[i]);
+        vbr = &(vm->virtualBootRecord[i]);
+
+        //Skip invalid vbr or any entry without an id since the below match will not behave correctly.
+        if(vbr == NULL || strlen(vbr->id) <= 0) {
+            continue;
+        }
 
         // see if ID in the VBR is among IDs associated with resourceLocations to be updated
         for (int j = 0; j < resourceLocationsLen; j++) {
-            char * id_loc = resourceLocations[j];
+            id_loc = resourceLocations[j];
 
             if ((strstr(id_loc, vbr->id) == id_loc) // id_loc begins with ID
                 && (strlen(id_loc) > (strlen(vbr->id) + 1))) { // id_loc has more than ID and '='
-                char * loc = id_loc + strlen(vbr->id) + 1; // URL starts after ID and '='
+                loc = id_loc + strlen(vbr->id) + 1; // URL starts after ID and '='
                 euca_strncpy(vbr->resourceLocation, loc, sizeof(vbr->resourceLocation)); // update the URL of in-memory struct
             }
         }
