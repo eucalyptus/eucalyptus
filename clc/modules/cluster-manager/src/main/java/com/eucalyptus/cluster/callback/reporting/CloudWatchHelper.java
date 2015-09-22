@@ -450,9 +450,11 @@ public class CloudWatchHelper {
             TypeMappers.lookup( VmInstanceTag.class, CloudWatchInstanceGroupInfo.class ) );
 
 
-    private static final AtomicReference<Map<String,CloudWatchInstanceInfo>> instances = new AtomicReference<>( );
+    private static final AtomicReference<Map<String,CloudWatchInstanceInfo>> instances =
+        new AtomicReference<>( Collections.<String,CloudWatchInstanceInfo>emptyMap( ) );
 
-    private static final AtomicReference<Map<String,CloudWatchInstanceGroupInfo>> instanceGroups = new AtomicReference<>( );
+    private static final AtomicReference<Map<String,CloudWatchInstanceGroupInfo>> instanceGroups =
+        new AtomicReference<>( Collections.<String,CloudWatchInstanceGroupInfo>emptyMap( ) );
 
     @TypeMapper
     public enum VmInstanceToCloudWatchInstanceInfo implements Function<VmInstance,CloudWatchInstanceInfo> {
