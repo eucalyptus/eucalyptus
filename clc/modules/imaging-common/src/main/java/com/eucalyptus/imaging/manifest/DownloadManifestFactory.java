@@ -28,7 +28,6 @@ import java.security.PublicKey;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnull;
@@ -54,6 +53,8 @@ import com.eucalyptus.imaging.common.UrlValidator;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 
+import org.apache.commons.pool.PoolableObjectFactory;
+import org.apache.commons.pool.impl.GenericObjectPool;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -64,7 +65,7 @@ import org.w3c.dom.NodeList;
 import com.amazonaws.HttpMethod;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.tokens.SecurityTokenAWSCredentialsProvider;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -73,6 +74,7 @@ import com.eucalyptus.crypto.Signatures;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.XMLParser;
 import com.google.common.base.Function;
+
 
 public class DownloadManifestFactory {
   private static Logger LOG = Logger.getLogger(DownloadManifestFactory.class);
@@ -84,38 +86,42 @@ public class DownloadManifestFactory {
   private static String DOWNLOAD_MANIFEST_PREFIX = "DM-";
   private static String MANIFEST_EXPIRATION = "expire";
   private static int DEFAULT_EXPIRE_TIME_HR = 3;
-  private static EucaS3Client s3Client = null;
-  private static long lastCreateTime = 0;
-  private static long HOUR_IN_SEC = 60 * 60 * 1000L;
-  private static HashMap<String, ReentrantLock> locks = new HashMap<String, ReentrantLock>();
+  private static int TOKEN_REFRESH_MINS = 60;
 
-  // S3Client is expensive to create so let's reuse one until it has one hour till token expiration
-  private synchronized static EucaS3Client getS3Client() throws DownloadManifestException {
-    if (System.currentTimeMillis() > lastCreateTime + HOUR_IN_SEC) {
-      LOG.debug("Refreshing S3Client");
-      try {
-        if (s3Client != null)
-          s3Client.close();
-        s3Client = EucaS3ClientFactory.getEucaS3ClientForUser(
-          Accounts.lookupSystemAccountByAlias( AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT ),
-          (int)TimeUnit.HOURS.toSeconds( DEFAULT_EXPIRE_TIME_HR ));
-        lastCreateTime = System.currentTimeMillis();
-      } catch(AuthException ex) {
-        throw new DownloadManifestException(ex);
-      }
+  private static class S3ClientFactory implements PoolableObjectFactory<EucaS3Client> {
+
+    @Override
+    public void destroyObject(EucaS3Client obj) throws Exception {
+      obj.close();
     }
-    return s3Client;
+
+    @Override
+    public EucaS3Client makeObject() throws Exception {
+      return EucaS3ClientFactory.getEucaS3Client(
+          new SecurityTokenAWSCredentialsProvider(
+              Accounts.lookupSystemAccountByAlias( AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT ),
+          (int) ( TimeUnit.HOURS.toSeconds( DEFAULT_EXPIRE_TIME_HR ) + TimeUnit.MINUTES.toSeconds( TOKEN_REFRESH_MINS ) ),
+          (int) ( TimeUnit.HOURS.toSeconds( DEFAULT_EXPIRE_TIME_HR ) ) ) );
+    }
+
+    @Override
+    public void activateObject(EucaS3Client client) throws Exception {
+    }
+
+    @Override
+    public void passivateObject(EucaS3Client client) throws Exception {
+    }
+
+    @Override
+    public boolean validateObject(EucaS3Client client) {
+      return true;
+    }
   }
 
-  private synchronized static ReentrantLock getLock(String manifestKey) {
-    if (locks.containsKey(manifestKey)) {
-      return locks.get(manifestKey);
-    } else {
-      LOG.debug("Creating lock for " + manifestKey);
-      locks.put(manifestKey, new ReentrantLock());
-      return locks.get(manifestKey);
-    }
-  }
+  // pool with up to 10 clients, a wait for client time up to 5 min and at most 2 idle clients
+  private static GenericObjectPool<EucaS3Client> s3ClientsPool =
+      new GenericObjectPool<EucaS3Client>(new S3ClientFactory(), 10,
+          GenericObjectPool.WHEN_EXHAUSTED_BLOCK, 5 * 60 * 1000, 2);
 
   public static String generateDownloadManifest(
       final ImageManifestFile baseManifest, final PublicKey keyToUse,
@@ -146,10 +152,13 @@ public class DownloadManifestFactory {
       final ImageManifestFile baseManifest, final PublicKey keyToUse,
       final String manifestName, int expirationHours, boolean urlForNc)
       throws DownloadManifestException {
-    final ReentrantLock lock = getLock(manifestName);
+    EucaS3Client s3Client = null;
     try {
-      lock.lock();
-      final EucaS3Client s3Client = getS3Client();
+      try {
+        s3Client = s3ClientsPool.borrowObject();
+      } catch (Exception ex) {
+        throw new DownloadManifestException("Can't borrow s3Client from the pool");
+      }
       // prepare to do pre-signed urls
       if (!urlForNc)
         s3Client.refreshEndpoint(true);
@@ -330,7 +339,13 @@ public class DownloadManifestFactory {
       LOG.error("Got an error", ex);
       throw new DownloadManifestException("Can't generate download manifest");
     } finally {
-      lock.unlock();
+      if (s3Client != null)
+        try {
+          s3ClientsPool.returnObject(s3Client);
+        } catch (Exception e) {
+          // sad, but let's not break instances run
+          LOG.warn("Could not return s3Client to the pool");
+        }
     }
   }
 
