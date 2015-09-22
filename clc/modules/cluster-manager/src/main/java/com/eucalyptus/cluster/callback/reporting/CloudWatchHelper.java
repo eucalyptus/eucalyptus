@@ -19,25 +19,25 @@
  ************************************************************************/
 package com.eucalyptus.cluster.callback.reporting;
 
+import static com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet.TORNDOWN;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicReference;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import org.apache.log4j.Logger;
+import org.hibernate.criterion.Restrictions;
 
-import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.cloudwatch.common.CloudWatch;
 import com.eucalyptus.cloudwatch.common.msgs.Dimension;
 import com.eucalyptus.cloudwatch.common.msgs.Dimensions;
@@ -48,24 +48,24 @@ import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataType;
 import com.eucalyptus.cluster.callback.DescribeSensorCallback.GetTimestamp;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.compute.common.internal.vm.VmRuntimeState;
+import com.eucalyptus.entities.EntityCache;
 import com.eucalyptus.reporting.event.InstanceUsageEvent;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Pair;
+import com.eucalyptus.util.TypeMapper;
+import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.compute.common.internal.vm.VmInstanceTag;
-import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.compute.common.internal.vm.VmRuntimeState;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -73,6 +73,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.DescribeSensorsResponse;
@@ -422,69 +423,211 @@ public class CloudWatchHelper {
   }
 
   public interface InstanceInfoProvider {
-    public String getAutoscalingGroupName(String instanceId);
-    public String getInstanceId(String instanceId);
-    public String getImageId(String instanceId);
-    public String getVmTypeDisplayName(String instanceId);
-    public AccountFullName getEffectiveUserId(String instanceId) throws Exception;
-    public Integer getStatusCheckFailed(String instanceId);
-    public Integer getInstanceStatusCheckFailed(String instanceId);
-    public Integer getSystemStatusCheckFailed(String instanceId);
-    public boolean getMonitoring(String instanceId);
+    String getAutoscalingGroupName(String instanceId);
+    String getInstanceId(String instanceId);
+    String getImageId(String instanceId);
+    String getVmTypeDisplayName(String instanceId);
+    String getAccountNumber(String instanceId);
+    Integer getStatusCheckFailed(String instanceId);
+    Integer getInstanceStatusCheckFailed(String instanceId);
+    Integer getSystemStatusCheckFailed(String instanceId);
+    boolean getMonitoring(String instanceId);
   }
 
   public static class DefaultInstanceInfoProvider implements InstanceInfoProvider {
-    Map<String, VmInstance> cachedInstances = new HashMap<String, VmInstance>();
-    LoadingCache<String,String> instanceIdToAutoscalingGroupNameCache = CacheBuilder.newBuilder().build(
-        new CacheLoader<String,String>() {
-          @Override
-          public String load( @Nonnull final String instanceId ) {
-            VmInstance instance = lookupInstance(instanceId);
-            try {
-              return Transactions.find(VmInstanceTag.named(instance, instance.getOwner(), "aws:autoscaling:groupName")).getValue();
-            } catch (Exception ex) {
-              return null;
-            }
-          }
-        });
 
-    private VmInstance lookupInstance(String instanceId) {
-      if (cachedInstances.containsKey(instanceId)) {
-        return cachedInstances.get(instanceId);
-      } else {
-        VmInstance instance = VmInstances.lookup(instanceId);
-        cachedInstances.put(instanceId, instance);
-        return instance;
+    private static final EntityCache<VmInstance,CloudWatchInstanceInfo> instanceInfoCache =
+        new EntityCache<>(
+            VmInstance.named(null),
+            Restrictions.not( VmInstance.criterion( TORNDOWN.array( ) ) ),
+            Sets.newHashSet( "bootRecord.vmType" ),
+            Sets.newHashSet( "networkGroups","bootRecord.machineImage" ),
+            TypeMappers.lookup( VmInstance.class, CloudWatchInstanceInfo.class ) );
+
+    private static final EntityCache<VmInstanceTag,CloudWatchInstanceGroupInfo> instanceGroupInfoCache =
+        new EntityCache<>(
+            VmInstanceTag.key( "aws:autoscaling:groupName" ),
+            TypeMappers.lookup( VmInstanceTag.class, CloudWatchInstanceGroupInfo.class ) );
+
+
+    private static final AtomicReference<Map<String,CloudWatchInstanceInfo>> instances =
+        new AtomicReference<>( Collections.<String,CloudWatchInstanceInfo>emptyMap( ) );
+
+    private static final AtomicReference<Map<String,CloudWatchInstanceGroupInfo>> instanceGroups =
+        new AtomicReference<>( Collections.<String,CloudWatchInstanceGroupInfo>emptyMap( ) );
+
+    @TypeMapper
+    public enum VmInstanceToCloudWatchInstanceInfo implements Function<VmInstance,CloudWatchInstanceInfo> {
+      INSTANCE;
+
+      @Override
+      public CloudWatchInstanceInfo apply( final VmInstance instance ) {
+        return new CloudWatchInstanceInfo(
+            instance.getInstanceId( ),
+            instance.getBootRecord( ).getDisplayMachineImageId( ),
+            instance.getBootRecord( ).getVmType( ).getDisplayName( ),
+            instance.getOwnerAccountNumber( ),
+            instance.getRuntimeState( ).getInstanceStatus( ) == VmRuntimeState.InstanceStatus.Ok ? 0 : 1,
+            Objects.firstNonNull( instance.getMonitoring( ), Boolean.FALSE )
+        );
       }
     }
-    
+
+    @TypeMapper
+    public enum VmInstanceTagToCloudWatchInstanceGroupInfo implements Function<VmInstanceTag,CloudWatchInstanceGroupInfo> {
+      INSTANCE;
+
+      @Override
+      public CloudWatchInstanceGroupInfo apply( final VmInstanceTag instanceTag ) {
+        return new CloudWatchInstanceGroupInfo(
+            instanceTag.getResourceId( ),
+            instanceTag.getValue( )
+        );
+      }
+    }
+
+    private static class CloudWatchInstanceInfo implements HasName<CloudWatchInstanceInfo> {
+      private final String instanceId;
+      private final String imageId;
+      private final String vmTypeDisplayName;
+      private final String accountId;
+      private final Integer systemStatusCheckFailed; //
+      private final boolean monitoring;
+
+      public CloudWatchInstanceInfo(
+          final String instanceId,
+          final String imageId,
+          final String vmTypeDisplayName,
+          final String accountId,
+          final Integer systemStatusCheckFailed,
+          final boolean monitoring
+      ) {
+        this.instanceId = instanceId;
+        this.imageId = imageId;
+        this.vmTypeDisplayName = vmTypeDisplayName;
+        this.accountId = accountId;
+        this.systemStatusCheckFailed = systemStatusCheckFailed;
+        this.monitoring = monitoring;
+      }
+
+      public String getInstanceId( ) {
+        return instanceId;
+      }
+
+      public String getImageId( ) {
+        return imageId;
+      }
+
+      public String getVmTypeDisplayName( ) {
+        return vmTypeDisplayName;
+      }
+
+      public String getAccountId( ) {
+        return accountId;
+      }
+
+      public Integer getSystemStatusCheckFailed( ) {
+        return systemStatusCheckFailed;
+      }
+
+      public boolean getMonitoring( ) {
+        return monitoring;
+      }
+
+      @Override
+      public String getName() {
+        return getInstanceId( );
+      }
+
+      @Override
+      public int compareTo( final CloudWatchInstanceInfo o ) {
+        return getInstanceId( ).compareTo( o.getInstanceId( ) );
+      }
+    }
+
+    private static class CloudWatchInstanceGroupInfo implements HasName<CloudWatchInstanceGroupInfo> {
+      private final String instanceId;
+      private final String autoScalingGroup;
+
+      public CloudWatchInstanceGroupInfo(
+          final String instanceId,
+          final String autoScalingGroup
+      ) {
+        this.instanceId = instanceId;
+        this.autoScalingGroup = autoScalingGroup;
+      }
+
+      public String getAutoScalingGroup( ) {
+        return autoScalingGroup;
+      }
+
+      public String getInstanceId( ) {
+        return instanceId;
+      }
+
+      @Override
+      public String getName() {
+        return getInstanceId( );
+      }
+
+      @Override
+      public int compareTo( final CloudWatchInstanceGroupInfo o ) {
+        return getInstanceId( ).compareTo( o.getInstanceId( ) );
+      }
+    }
+
+    public static synchronized void refresh( ) {
+      instances.set( ImmutableMap.copyOf( CollectionUtils.putAll(
+          instanceInfoCache.get( ),
+          Maps.<String,CloudWatchInstanceInfo>newHashMap( ),
+          HasName.GET_NAME,
+          Functions.<CloudWatchInstanceInfo>identity( ) ) ) );
+      instanceGroups.set( ImmutableMap.copyOf( CollectionUtils.putAll(
+          instanceGroupInfoCache.get( ),
+          Maps.<String,CloudWatchInstanceGroupInfo>newHashMap( ),
+          HasName.GET_NAME,
+          Functions.<CloudWatchInstanceGroupInfo>identity( ) ) ) );
+    }
+
+    private CloudWatchInstanceInfo lookupInstance(String instanceId) {
+      final CloudWatchInstanceInfo instance = instances.get( ).get( instanceId );
+      if ( instance == null ) {
+        throw new NoSuchElementException( instanceId );
+      }
+      return instance;
+    }
+
+    private CloudWatchInstanceGroupInfo lookupInstanceGroup(String instanceId) {
+      final CloudWatchInstanceGroupInfo instanceGroupInfo = instanceGroups.get( ).get( instanceId );
+      if ( instanceGroupInfo == null ) {
+        throw new NoSuchElementException( instanceId );
+      }
+      return instanceGroupInfo;
+    }
+
     @Override
-    public String getAutoscalingGroupName(String instanceId) {
-      return instanceIdToAutoscalingGroupNameCache.getUnchecked( instanceId );
+    public String getAutoscalingGroupName( String instanceId ) {
+      return lookupInstanceGroup( instanceId ).getAutoScalingGroup( );
     }
 
     @Override
     public String getInstanceId(String instanceId) {
-      VmInstance instance = lookupInstance(instanceId);
-      return instance.getInstanceId();
+      return lookupInstance( instanceId ).getInstanceId( );
     }
 
     @Override
-    public String getImageId(String instanceId) {
-      VmInstance instance = lookupInstance(instanceId);
-      return instance.getImageId();
+    public String getImageId( String instanceId ) {
+      return lookupInstance( instanceId ).getImageId( );
     }
 
     @Override
     public String getVmTypeDisplayName(String instanceId) {
-      VmInstance instance = lookupInstance(instanceId);
-      return instance.getVmType().getDisplayName();
+      return lookupInstance( instanceId ).getVmTypeDisplayName( );
     }
 
     @Override
-    public AccountFullName getEffectiveUserId(String instanceId) throws Exception {
-      VmInstance instance = lookupInstance(instanceId);
-      return AccountFullName.getInstance( instance.getOwnerAccountNumber( ) );
+    public String getAccountNumber(String instanceId) {
+      return lookupInstance( instanceId ).getAccountId( );
     }
 
     @Override
@@ -499,14 +642,12 @@ public class CloudWatchHelper {
 
     @Override
     public Integer getSystemStatusCheckFailed(String instanceId) {
-      VmInstance instance = lookupInstance(instanceId);
-      return instance.getRuntimeState( ).getInstanceStatus( ) == VmRuntimeState.InstanceStatus.Ok ? 0 : 1;
+      return lookupInstance( instanceId ).getSystemStatusCheckFailed( );
     }
 
     @Override
     public boolean getMonitoring(String instanceId) {
-      VmInstance instance = lookupInstance(instanceId);
-      return instance.getMonitoring();
+      return lookupInstance( instanceId ).getMonitoring( );
     }
   }
 
@@ -724,7 +865,7 @@ public class CloudWatchHelper {
       }
       
       newQueueItem.setMetricDatum(metricDatum);
-      newQueueItem.setAccountId(instanceInfoProvider.getEffectiveUserId(event.getInstanceId()).getAccountNumber());
+      newQueueItem.setAccountId(instanceInfoProvider.getAccountNumber( event.getInstanceId( ) ));
       queueItems.add(newQueueItem);
     }
   }
@@ -787,8 +928,8 @@ public class CloudWatchHelper {
       final AbsoluteMetricQueueItem queueItem = new AbsoluteMetricQueueItem( );
       queueItem.setNamespace("AWS/EC2");
       queueItem.setMetricDatum(metricDatum);
-      queueItem.setAccountId(instanceInfoProvider.getEffectiveUserId(instanceId).getAccountNumber());
-      queueItems.add(queueItem);
+      queueItem.setAccountId(instanceInfoProvider.getAccountNumber(instanceId));
+      queueItems.add(queueItem );
     }
     return queueItems;
   }
