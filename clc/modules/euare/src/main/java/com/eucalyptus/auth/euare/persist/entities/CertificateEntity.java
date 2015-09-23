@@ -203,7 +203,7 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
     return this.certificateId;
   }
 
-  @Upgrades.EntityUpgrade(entities = Certificate.class,  since = Upgrades.Version.v4_2_0, value = Euare.class)
+  @Upgrades.EntityUpgrade(entities = CertificateEntity.class,  since = Upgrades.Version.v4_2_0, value = Euare.class)
   public enum CertificateEntityUpgrade420 implements Predicate<Class> {
     INSTANCE;
     private static Logger logger = Logger.getLogger( CertificateEntityUpgrade420.class );

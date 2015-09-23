@@ -19,6 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.cloudwatch.common.internal.domain.metricdata;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -31,14 +33,20 @@ import java.util.TreeSet;
 
 import javax.persistence.EntityTransaction;
 
+import com.eucalyptus.cloudwatch.common.internal.domain.AbstractPersistentWithDimensions;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.entities.TransactionResource;
 import com.google.common.collect.Iterables;
 import org.apache.log4j.Logger;
+import org.hibernate.CacheMode;
 import org.hibernate.Criteria;
+import org.hibernate.ScrollMode;
+import org.hibernate.ScrollableResults;
 import org.hibernate.criterion.Order;
+import org.hibernate.criterion.ProjectionList;
+import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.cloudwatch.common.internal.domain.DimensionEntity;
@@ -106,7 +114,6 @@ public class MetricManager {
     metric.setAccountId(simpleMetricEntity.getAccountId());
     metric.setMetricName(simpleMetricEntity.getMetricName());
     metric.setNamespace(simpleMetricEntity.getNamespace());
-    metric.setDimensions(dimensions);
     metric.setDimensionHash(dimensionHash);
     metric.setMetricType(simpleMetricEntity.getMetricType());
     metric.setUnits(simpleMetricEntity.getUnits());
@@ -190,7 +197,7 @@ public class MetricManager {
       MetricType metricType, Units units, Date startTime, Date endTime, Integer period) {
     if (dimensionMap == null) {
       dimensionMap = new HashMap<String, String>();
-    } else if (dimensionMap.size() > MetricEntity.MAX_DIM_NUM) {
+    } else if (dimensionMap.size() > AbstractPersistentWithDimensions.MAX_DIM_NUM) {
       throw new IllegalArgumentException("Too many dimensions for metric, "
           + dimensionMap.size());
     }
@@ -247,13 +254,19 @@ public class MetricManager {
       if (units != null) {
         criteria = criteria.add(Restrictions.eq("units", units));
       }
-      criteria = criteria.addOrder( Order.asc("creationTimestamp") );
-      criteria = criteria.addOrder( Order.asc("naturalId") );
-      Collection results = criteria.list();
-      for (Object o: results) {
-        MetricEntity me = (MetricEntity) o;
-        // Note: dimensions from metric entity are the actual dimensions for the point.  dimensions passed in are from the
-        // hash (used for aggregation).  The hash dimensions are what we want.
+
+      ProjectionList projectionList = Projections.projectionList();
+      projectionList.add(Projections.max("sampleMax"));
+      projectionList.add(Projections.min("sampleMin"));
+      projectionList.add(Projections.sum("sampleSize"));
+      projectionList.add(Projections.sum("sampleSum"));
+      projectionList.add(Projections.groupProperty("units"));
+      projectionList.add(Projections.groupProperty("timestamp"));
+      criteria.setProjection(projectionList);
+      criteria.addOrder(Order.asc("timestamp"));
+      ScrollableResults results = criteria.setCacheMode(CacheMode.IGNORE).scroll(ScrollMode.FORWARD_ONLY);
+      while (results.next()) {
+        MetricEntity me = getMetricEntity(accountId, metricName, namespace, metricType, hash, results);
         GetMetricStatisticsAggregationKey key = new GetMetricStatisticsAggregationKey(me, startTime, period, hash);
         MetricStatistics item = new MetricStatistics(me, startTime, period, dimensions);
         if (!aggregationMap.containsKey(key)) {
@@ -266,9 +279,30 @@ public class MetricManager {
           totalSoFar.setSampleSum(totalSoFar.getSampleSum() + item.getSampleSum());
         }
       }
-      db.commit();
     }
     return Lists.newArrayList(aggregationMap.values());
+  }
+
+  private static MetricEntity getMetricEntity(String accountId, String metricName, String namespace, MetricType metricType, String hash, ScrollableResults results) {
+    Double sampleMax = (Double) results.get(0);
+    Double sampleMin = (Double) results.get(1);
+    Double sampleSize = (Double) results.get(2);
+    Double sampleSum = (Double) results.get(3);
+    Units resultUnits = (Units) results.get(4);
+    Date timestamp = (Date) results.get(5);
+    MetricEntity me = MetricEntityFactory.getNewMetricEntity(metricType, hash);
+    me.setAccountId(accountId);
+    me.setNamespace(namespace);
+    me.setMetricName(metricName);
+    me.setMetricType(metricType);
+    me.setDimensionHash(hash);
+    me.setSampleMax(sampleMax);
+    me.setSampleMin(sampleMin);
+    me.setSampleSize(sampleSize);
+    me.setSampleSum(sampleSum);
+    me.setTimestamp(timestamp);
+    me.setUnits(resultUnits);
+    return me;
   }
 
   public static Collection<MetricEntity> getAllMetrics() {
@@ -276,8 +310,8 @@ public class MetricManager {
     for (Class c : MetricEntityFactory.getAllClassesForEntitiesGet()) {
       try (final TransactionResource db = Entities.transactionFor(c)) {
         Criteria criteria = Entities.createCriteria(c);
-        criteria = criteria.addOrder( Order.asc("creationTimestamp") );
-        criteria = criteria.addOrder( Order.asc("naturalId") );
+        criteria = criteria.addOrder( Order.asc("timestamp") );
+        criteria = criteria.addOrder( Order.asc("id") );
         Collection dbResults = criteria.list();
         for (Object result : dbResults) {
           allResults.add((MetricEntity) result);
@@ -311,7 +345,7 @@ public class MetricManager {
   
     if (simpleMetricEntity.getDimensionMap() == null) {
       simpleMetricEntity.setDimensionMap(new HashMap<String, String>());
-    } else if (simpleMetricEntity.getDimensionMap().size() > MetricEntity.MAX_DIM_NUM) {
+    } else if (simpleMetricEntity.getDimensionMap().size() > AbstractPersistentWithDimensions.MAX_DIM_NUM) {
       throw new IllegalArgumentException("Too many dimensions for metric, "
         + simpleMetricEntity.getDimensionMap().size());
     }

@@ -305,7 +305,7 @@ public class Databases {
   }
   
   public static Boolean isVolatile( ) {
-    return volatileAtomic.get( );
+    return  !BootstrapArgs.isUpgradeSystem() && volatileAtomic.get( );
   }
   
   public static void setVolatile( boolean isVolatile ) {

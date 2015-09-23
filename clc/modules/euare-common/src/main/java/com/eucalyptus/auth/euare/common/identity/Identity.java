@@ -35,7 +35,6 @@ import com.eucalyptus.component.annotation.PublicService;
 @PublicService
 @PolicyVendor( "euid" )
 @Partition( value = Identity.class, manyToOne=true )
-@GenerateKeys
 @FaultLogPrefix( "services" )
 @Description( "Eucalyptus identity service" )
 public class Identity extends ComponentId {

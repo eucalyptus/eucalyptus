@@ -20,6 +20,7 @@
 
 package com.eucalyptus.reporting.modules.backend;
 
+import com.eucalyptus.cluster.callback.reporting.CloudWatchHelper;
 import com.eucalyptus.component.id.Reporting;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.system.Threads;
@@ -33,9 +34,9 @@ import com.eucalyptus.cluster.callback.DescribeSensorCallback;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.vm.VmInstances;
@@ -51,13 +52,13 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 @ConfigurableClass( root = "cloud.monitor", description = "Parameters controlling cloud watch and reporting")
 public class DescribeSensorsListener implements EventListener<Hertz> {
 
   @ConfigurableField(initial = "5", description = "How often the reporting system requests information from the cluster controller")
   public static Long DEFAULT_POLL_INTERVAL_MINS = 5L;
-  public static final int REPORTING_NUM_THREADS = 4;
 
   private Integer COLLECTION_INTERVAL_TIME_MS;
 
@@ -67,7 +68,7 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
   private Integer MAX_WRITE_INTERVAL_MS = 86400000;
   private Integer SENSOR_QUERY_BATCH_SIZE = 10;
 
-  private static final AtomicBoolean busy = new AtomicBoolean( false );
+  private static final ConcurrentMap<String, Boolean> busyHosts = Maps.newConcurrentMap( );
   private static final Logger LOG = Logger.getLogger(DescribeSensorsListener.class);
   
   public static void register() {
@@ -95,26 +96,31 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
         try {
           if (event.isAsserted(defaultPollIntervalSeconds)) {
             if (Bootstrap.isFinished() && Hosts.isCoordinator()) {
-              if ( busy.compareAndSet( false, true ) ) {
-                Threads.lookup( Reporting.class ).limitTo( REPORTING_NUM_THREADS ).submit( new Callable<Object>() {
+              CloudWatchHelper.DefaultInstanceInfoProvider.refresh( );
+              for ( final ServiceConfiguration ccConfig : Topology.enabledServices( ClusterController.class ) ) {
+                final String ccHost = ccConfig.getHostName( );
+                if ( busyHosts.replace( ccHost, false, true ) || busyHosts.putIfAbsent( ccHost, true ) == null ) {
+                  Threads.lookup( Reporting.class, DescribeSensorsListener.class ).submit( new Callable<Object>() {
 
-                  @Override
-                  public Object call() throws Exception {
-                    try {
-                      List<String> allInstanceIds = VmInstances.listWithProjection(
-                          VmInstances.instanceIdProjection( ),
-                          VmInstance.criterion( VmState.RUNNING ),
-                          VmInstance.nonNullNodeCriterion( )
-                      );
-                      final Iterable<List<String>> processInts = Iterables.partition(  allInstanceIds, SENSOR_QUERY_BATCH_SIZE );
-                      for ( final ServiceConfiguration ccConfig : Topology.enabledServices( ClusterController.class ) ) {
+                    @Override
+                    public Object call() throws Exception {
+                      final ExecutorService executorService = Threads.lookup( Reporting.class, DescribeSensorsListener.class, "response-processing" ).limitTo( 4 );
+                      final long startTime = System.currentTimeMillis( );
+                      try {
+                        final List<String> allInstanceIds = VmInstances.listWithProjection(
+                            VmInstances.instanceIdProjection( ),
+                            VmInstance.criterion( VmState.RUNNING ),
+                            VmInstance.zoneCriterion( ccConfig.getPartition( ) ),
+                            VmInstance.nonNullNodeCriterion( )
+                        );
+                        final Iterable<List<String>> processInts = Iterables.partition(  allInstanceIds, SENSOR_QUERY_BATCH_SIZE );
                         for ( final List<String> instIds : processInts ) {
-                          ArrayList<String> instanceIds = Lists.newArrayList( instIds );
+                          final ArrayList<String> instanceIds = Lists.newArrayList( instIds );
                           /**
-                           * Here this is hijacking the sensor callback in order to control the thread of execution used when invoking the
+                           * Here this is hijacking the sensor callback in order to control the thread of execution used when firing
                            */
                           final DescribeSensorCallback msgCallback = new DescribeSensorCallback( HISTORY_SIZE,
-                                                                                                 COLLECTION_INTERVAL_TIME_MS, instanceIds ) {
+                              COLLECTION_INTERVAL_TIME_MS, instanceIds ) {
                             @Override
                             public void fireException( Throwable e ) {}
 
@@ -122,26 +128,34 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
                             public void fire( DescribeSensorsResponse msg ) {}
                           };
                           /**
-                           * Here we actually get the future reference to the result and, from this thread, invoke .fire().
+                           * Here we actually get the future reference to the result and on a response processing thread, invoke .fire().
                            */
-                          Future<DescribeSensorsResponse> ret = AsyncRequests.newRequest( msgCallback ).dispatch( ccConfig );
-                          try {
-                            new DescribeSensorCallback( HISTORY_SIZE,
-                                                        COLLECTION_INTERVAL_TIME_MS, instanceIds ).fire( ret.get( ) );
-                          } catch ( Exception e ) {
-                            Exceptions.maybeInterrupted( e );
-                          }
+                          final DescribeSensorsResponse response = AsyncRequests.newRequest( msgCallback ).dispatch( ccConfig ).get( );
+                          executorService.submit( new Runnable( ){
+                            @Override
+                            public void run() {
+                              try {
+                                new DescribeSensorCallback( HISTORY_SIZE,
+                                    COLLECTION_INTERVAL_TIME_MS, instanceIds ).fire( response );
+                              } catch ( Exception e ) {
+                                Exceptions.maybeInterrupted( e );
+                              }
+                            }
+                          } );
                         }
+                      } finally {
+                        /**
+                         * Only and finally set the busy bit back to false.
+                         */
+                        busyHosts.put( ccHost, false );
+                        LOG.debug( "Sensor polling for " + ccHost + " took " + ( System.currentTimeMillis( ) - startTime ) + "ms" );
                       }
-                    } finally {
-                      /**
-                       * Only and finally set the busy bit back to false.
-                       */
-                      busy.set( false );
+                      return null;
                     }
-                    return null;
-                  }
-                } );
+                  } );
+                } else {
+                  LOG.warn( "Skipping sensors polling for "+ccHost+", previous poll not complete." );
+                }
               }
             }
 

@@ -37,12 +37,13 @@ import com.google.common.base.Suppliers;
  */
 public class SecurityTokenAWSCredentialsProvider implements AWSCredentialsProvider {
 
-  private static final int EXPIRATION_SECS = 900;
-  private static final int PRE_EXPIRY = 60;
+  private static final int DEFAULT_EXPIRATION_SECS = 900;
+  private static final int DEFAULT_PRE_EXPIRY_SECS = 60;
 
   private final AtomicReference<Supplier<AWSCredentials>> credentialsSupplier = new AtomicReference<>( );
   private final Supplier<User> user;
   private final int expirationSecs;
+  private final int preExpirySecs;
 
   public SecurityTokenAWSCredentialsProvider( final AccountFullName accountFullName ) {
     this( new Supplier<User>() {
@@ -62,12 +63,25 @@ public class SecurityTokenAWSCredentialsProvider implements AWSCredentialsProvid
   }
 
   public SecurityTokenAWSCredentialsProvider( final Supplier<User> user ) {
-    this( user, EXPIRATION_SECS );
+    this( user, DEFAULT_EXPIRATION_SECS );
   }
 
   public SecurityTokenAWSCredentialsProvider( final Supplier<User> user, final int expirationSecs ) {
+    this( user, Math.max( expirationSecs, DEFAULT_PRE_EXPIRY_SECS * 2 ), DEFAULT_PRE_EXPIRY_SECS );
+  }
+
+  public SecurityTokenAWSCredentialsProvider( final User user, final int expirationSecs, final int preExpirySecs ) {
+    this( Suppliers.ofInstance( user ), expirationSecs, preExpirySecs );
+  }
+
+  public SecurityTokenAWSCredentialsProvider(
+      final Supplier<User> user,
+      final int expirationSecs,
+      final int preExpirySecs
+  ) {
     this.user = user;
-    this.expirationSecs = Math.max( expirationSecs, PRE_EXPIRY * 2 );
+    this.expirationSecs = Math.max( expirationSecs, DEFAULT_PRE_EXPIRY_SECS * 2 );
+    this.preExpirySecs = preExpirySecs;
     refresh( );
   }
 
@@ -95,6 +109,6 @@ public class SecurityTokenAWSCredentialsProvider implements AWSCredentialsProvid
           throw Exceptions.toUndeclared( e );
         }
       }
-    }, expirationSecs - PRE_EXPIRY, TimeUnit.SECONDS );
+    }, expirationSecs - preExpirySecs, TimeUnit.SECONDS );
   }
 }

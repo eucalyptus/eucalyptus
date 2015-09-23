@@ -77,6 +77,14 @@ public class VmInstanceTag extends Tag<VmInstanceTag> {
   }
 
   @Nonnull
+  public static VmInstanceTag key( @Nonnull final String key ) {
+    Preconditions.checkNotNull( key, "key" );
+    final VmInstanceTag tag = new VmInstanceTag( );
+    tag.setKey( key );
+    return tag;
+  }
+
+  @Nonnull
   public static Tag named( @Nonnull final VmInstance instance,
                            @Nonnull final OwnerFullName ownerFullName,
                            @Nullable final String key ) {

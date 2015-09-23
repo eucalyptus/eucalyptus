@@ -45,7 +45,6 @@ import javax.xml.xpath.XPathFactory;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.model.Bucket;
 import com.amazonaws.services.s3.model.BucketLifecycleConfiguration;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
@@ -54,6 +53,8 @@ import com.eucalyptus.imaging.common.UrlValidator;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 
+import org.apache.commons.pool.PoolableObjectFactory;
+import org.apache.commons.pool.impl.GenericObjectPool;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -64,6 +65,7 @@ import org.w3c.dom.NodeList;
 import com.amazonaws.HttpMethod;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.tokens.SecurityTokenAWSCredentialsProvider;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -72,6 +74,7 @@ import com.eucalyptus.crypto.Signatures;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.XMLParser;
 import com.google.common.base.Function;
+
 
 public class DownloadManifestFactory {
   private static Logger LOG = Logger.getLogger(DownloadManifestFactory.class);
@@ -83,6 +86,42 @@ public class DownloadManifestFactory {
   private static String DOWNLOAD_MANIFEST_PREFIX = "DM-";
   private static String MANIFEST_EXPIRATION = "expire";
   private static int DEFAULT_EXPIRE_TIME_HR = 3;
+  private static int TOKEN_REFRESH_MINS = 60;
+
+  private static class S3ClientFactory implements PoolableObjectFactory<EucaS3Client> {
+
+    @Override
+    public void destroyObject(EucaS3Client obj) throws Exception {
+      obj.close();
+    }
+
+    @Override
+    public EucaS3Client makeObject() throws Exception {
+      return EucaS3ClientFactory.getEucaS3Client(
+          new SecurityTokenAWSCredentialsProvider(
+              Accounts.lookupSystemAccountByAlias( AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT ),
+          (int) ( TimeUnit.HOURS.toSeconds( DEFAULT_EXPIRE_TIME_HR ) + TimeUnit.MINUTES.toSeconds( TOKEN_REFRESH_MINS ) ),
+          (int) ( TimeUnit.HOURS.toSeconds( DEFAULT_EXPIRE_TIME_HR ) ) ) );
+    }
+
+    @Override
+    public void activateObject(EucaS3Client client) throws Exception {
+    }
+
+    @Override
+    public void passivateObject(EucaS3Client client) throws Exception {
+    }
+
+    @Override
+    public boolean validateObject(EucaS3Client client) {
+      return true;
+    }
+  }
+
+  // pool with up to 10 clients, a wait for client time up to 5 min and at most 2 idle clients
+  private static GenericObjectPool<EucaS3Client> s3ClientsPool =
+      new GenericObjectPool<EucaS3Client>(new S3ClientFactory(), 10,
+          GenericObjectPool.WHEN_EXHAUSTED_BLOCK, 5 * 60 * 1000, 2);
 
   public static String generateDownloadManifest(
       final ImageManifestFile baseManifest, final PublicKey keyToUse,
@@ -113,12 +152,18 @@ public class DownloadManifestFactory {
       final ImageManifestFile baseManifest, final PublicKey keyToUse,
       final String manifestName, int expirationHours, boolean urlForNc)
       throws DownloadManifestException {
-    try (final EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3ClientForUser(
-        Accounts.lookupSystemAccountByAlias( AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT ),
-        (int)TimeUnit.HOURS.toSeconds( expirationHours )) ) {
+    EucaS3Client s3Client = null;
+    try {
+      try {
+        s3Client = s3ClientsPool.borrowObject();
+      } catch (Exception ex) {
+        throw new DownloadManifestException("Can't borrow s3Client from the pool");
+      }
       // prepare to do pre-signed urls
       if (!urlForNc)
         s3Client.refreshEndpoint(true);
+      else
+        s3Client.refreshEndpoint();
 
       Date expiration = new Date();
       long msec = expiration.getTime() + 1000 * 60 * 60 * expirationHours;
@@ -293,26 +338,14 @@ public class DownloadManifestFactory {
     } catch (Exception ex) {
       LOG.error("Got an error", ex);
       throw new DownloadManifestException("Can't generate download manifest");
-    }
-  }
-
-  public static String generatePresignedUrl(final String manifestName)
-      throws DownloadManifestException {
-    final long expirationHours = DEFAULT_EXPIRE_TIME_HR * 2;
-    try (final EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3ClientForUser(
-        Accounts.lookupSystemAccountByAlias( AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT ),
-        (int)TimeUnit.HOURS.toSeconds( expirationHours )) ) {
-      Date expiration = new Date();
-      long msec = expiration.getTime() + 1000 * 60 * 60 * expirationHours;
-      expiration.setTime(msec);
-      URL s = s3Client.generatePresignedUrl(DOWNLOAD_MANIFEST_BUCKET_NAME,
-          DOWNLOAD_MANIFEST_PREFIX + manifestName, expiration, HttpMethod.GET);
-      return String.format("%s://imaging@%s%s?%s", s.getProtocol(),
-          s.getAuthority(), s.getPath(), s.getQuery());
-    } catch (final Exception ex) {
-      LOG.error("Failed to generate presigned url", ex);
-      throw new DownloadManifestException("Failed to generate presigned url",
-          ex);
+    } finally {
+      if (s3Client != null)
+        try {
+          s3ClientsPool.returnObject(s3Client);
+        } catch (Exception e) {
+          // sad, but let's not break instances run
+          LOG.warn("Could not return s3Client to the pool");
+        }
     }
   }
 
