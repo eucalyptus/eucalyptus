@@ -129,7 +129,6 @@
 
 #define SUPERUSER                                "eucalyptus"
 #define MAX_SENSOR_RESOURCES                     MAXINSTANCES_PER_CC
-#define POLL_INTERVAL_SAFETY_MARGIN_SEC          3
 #define POLL_INTERVAL_MINIMUM_SEC                6
 #define STATS_INTERVAL_SEC                       60
 
@@ -4324,7 +4323,7 @@ int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionI
 
     if ((historySize > 0) && (collectionIntervalTimeMs > 0)) {
         col_interval_sec = collectionIntervalTimeMs / 1000;
-        nc_poll_interval_sec = ((col_interval_sec * historySize) - POLL_INTERVAL_SAFETY_MARGIN_SEC);
+        nc_poll_interval_sec = ((col_interval_sec * (historySize > 1 ? historySize - 1 : 1)));
         nc_poll_interval_sec = ((nc_poll_interval_sec < POLL_INTERVAL_MINIMUM_SEC) ? POLL_INTERVAL_MINIMUM_SEC : nc_poll_interval_sec);
 
         if (config->ncSensorsPollingInterval != nc_poll_interval_sec) {
@@ -5306,7 +5305,7 @@ int ccGetStateString(char *statestr, int n)
 //!
 //! @note
 //!
-int ccCheckState(int clcTimer)
+int ccCheckState(int checkArbitrator)
 {
     int rc = EUCA_OK;
     int ret = 0;
@@ -5354,7 +5353,7 @@ int ccCheckState(int clcTimer)
 
     // network
     // arbitrators
-    if (clcTimer == 1 && strlen(config->arbitrators)) {
+    if (checkArbitrator == 1 && strlen(config->arbitrators)) {
         char *tok, buf[256], *host;
         uint32_t hostint;
         int count = 0;
@@ -5505,7 +5504,7 @@ int doBrokerPairing(void)
 //!
 void *monitor_thread(void *in)
 {
-    int rc, ncTimer, clcTimer, ncSensorsTimer, ncRefresh = 0, clcRefresh = 0, ncSensorsRefresh = 0;
+    int rc, ncRefresh = 0, ccCheck = 0;
     ncMetadata pMeta;
     char pidfile[EUCA_MAX_PATH], *pidstr = NULL;
 
@@ -5524,12 +5523,12 @@ void *monitor_thread(void *in)
     sigprocmask(SIG_SETMASK, &newsigact.sa_mask, NULL);
     sigaction(SIGTERM, &newsigact, NULL);
 
-    // add 1 to each Timer so they will all fire upon the first loop iteration
-    ncTimer = config->ncPollingFrequency + 1;
-    clcTimer = config->clcPollingFrequency + 1;
-    ncSensorsTimer = config->ncSensorsPollingInterval + 1;
-
+    time_t cycleStartTime = time(NULL);
+    time_t nextSensorsRunTime = cycleStartTime;
+    time_t nextNcPullRunTime = cycleStartTime;
+    time_t nextClcPollingTime = cycleStartTime;
     while (1) {
+        cycleStartTime = time(NULL);
         LOGTRACE("running\n");
 
         if (config->kick_enabled) {
@@ -5545,25 +5544,10 @@ void *monitor_thread(void *in)
         if (config->ccState == ENABLED) {
 
             // NC Polling operations
-            if (ncTimer >= config->ncPollingFrequency) {
-                ncTimer = 0;
-                ncRefresh = 1;
+            if (cycleStartTime >= nextNcPullRunTime) {
+                 nextNcPullRunTime = cycleStartTime + config->ncPollingFrequency;
+                 ncRefresh = 1;
             }
-            ncTimer++;
-
-            // CLC Polling operations
-            if (clcTimer >= config->clcPollingFrequency) {
-                clcTimer = 0;
-                clcRefresh = 1;
-            }
-            clcTimer++;
-
-            // NC Sensors Polling operation
-            if (ncSensorsTimer >= config->ncSensorsPollingInterval) {
-                ncSensorsTimer = 0;
-                ncSensorsRefresh = 1;
-            }
-            ncSensorsTimer++;
 
             if (ncRefresh) {
                 rc = refresh_resources(&pMeta, 60, 1);
@@ -5627,7 +5611,7 @@ void *monitor_thread(void *in)
                 }
             }
 
-            if (ncSensorsRefresh) {
+            if (cycleStartTime >= nextSensorsRunTime) {
                 rc = refresh_sensors(&pMeta, 60, 1);
                 if (rc == 0) {
                     // refresh_sensors() only returns non-zero when sensor subsystem has not been initialized.
@@ -5635,7 +5619,7 @@ void *monitor_thread(void *in)
                     // initialized soon after it is initialized on the CC (otherwise it may take a while and NC
                     // may miss initial measurements from early instances). Once initialized, refresh can happen
                     // as configured by config->ncSensorsPollingInterval.
-                    ncSensorsRefresh = 0;
+                    nextSensorsRunTime = time(NULL) + config->ncSensorsPollingInterval;
                 }
             }
 
@@ -5669,12 +5653,16 @@ void *monitor_thread(void *in)
                 }
             }
 
-            if (clcRefresh) {
+            if (cycleStartTime >= nextClcPollingTime) {
+                nextClcPollingTime = time(NULL) + config->clcPollingFrequency;
                 LOGDEBUG("syncing CLC network rules ground truth with local state\n");
                 rc = reconfigureNetworkFromCLC();
                 if (rc) {
                     LOGWARN("cannot get network ground truth from CLC\n");
                 }
+                ccCheck = TRUE;
+            } else {
+                ccCheck = FALSE;
             }
 
             if (ncRefresh) {
@@ -5711,7 +5699,7 @@ void *monitor_thread(void *in)
         }
         // do state checks under CONFIG lock
         sem_mywait(CONFIG);
-        if (ccCheckState(clcTimer)) {
+        if (ccCheckState(ccCheck)) {
             LOGERROR("ccCheckState() returned failures\n");
             config->kick_enabled = 0;
             ccChangeState(NOTREADY);
@@ -5722,8 +5710,7 @@ void *monitor_thread(void *in)
         shawn();
 
         LOGTRACE("localState=%s - done.\n", config->ccStatus.localState);
-        //sleep(config->ncPollingFrequency);
-        ncRefresh = clcRefresh = 0;
+        ncRefresh = 0;
         sleep(1);
     }
 
