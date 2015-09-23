@@ -1,6 +1,6 @@
 #!/usr/bin/python -tt
 
-import eucalyptus_admin.commands.empyrean.describenodecontrollers
+import eucalyptus_admin.commands.bootstrap.describenodecontrollers
 
 if __name__ == '__main__':
-    eucalyptus_admin.commands.empyrean.describenodecontrollers.DescribeNodeControllers.run()
+    eucalyptus_admin.commands.bootstrap.describenodecontrollers.DescribeNodeControllers.run()

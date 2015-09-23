@@ -28,7 +28,7 @@ import sys
 from requestbuilder import Arg, Filter, MutuallyExclusiveArgList
 from requestbuilder.mixins.formatting import TableOutputMixin
 
-from eucalyptus_admin.commands.empyrean import EmpyreanRequest
+from eucalyptus_admin.commands.bootstrap import BootstrapRequest
 
 
 class _RenamingFilter(Filter):
@@ -41,7 +41,7 @@ class _RenamingFilter(Filter):
         return (self.__server_name, value)
 
 
-class DescribeServices(EmpyreanRequest, TableOutputMixin):
+class DescribeServices(BootstrapRequest, TableOutputMixin):
     DESCRIPTION = "Show information about the cloud's services"
     ARGS = [Arg('ServiceName', metavar='SVCINSTANCE', nargs='*',
                 help='limit results to specific instances of services'),

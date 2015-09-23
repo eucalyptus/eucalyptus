@@ -1,6 +1,6 @@
 #!/usr/bin/python -tt
 
-import eucalyptus_admin.commands.empyrean.describeavailableservicetypes
+import eucalyptus_admin.commands.bootstrap.describeavailableservicetypes
 
 if __name__ == '__main__':
-    eucalyptus_admin.commands.empyrean.describeavailableservicetypes.DescribeAvailableServiceTypes.run()
+    eucalyptus_admin.commands.bootstrap.describeavailableservicetypes.DescribeAvailableServiceTypes.run()

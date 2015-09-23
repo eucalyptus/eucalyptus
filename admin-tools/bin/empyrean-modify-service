@@ -1,6 +1,6 @@
 #!/usr/bin/python -tt
 
-import eucalyptus_admin.commands.empyrean.modifyservice
+import eucalyptus_admin.commands.bootstrap.modifyservice
 
 if __name__ == '__main__':
-    eucalyptus_admin.commands.empyrean.modifyservice.ModifyService.run()
+    eucalyptus_admin.commands.bootstrap.modifyservice.ModifyService.run()

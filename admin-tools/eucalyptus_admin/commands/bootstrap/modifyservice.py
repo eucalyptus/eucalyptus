@@ -25,10 +25,10 @@
 
 from requestbuilder import Arg
 
-from eucalyptus_admin.commands.empyrean import EmpyreanRequest
+from eucalyptus_admin.commands.bootstrap import BootstrapRequest
 
 
-class ModifyService(EmpyreanRequest):
+class ModifyService(BootstrapRequest):
     DESCRIPTION = "Attempt to change the state of an instance of a service"
     ARGS = [Arg('Name', metavar='SVCINSTANCE',
                 help='name of the service instance to modify'),

@@ -1,6 +1,6 @@
 #!/usr/bin/python -tt
 
-import eucalyptus_admin.commands.empyrean.registerservice
+import eucalyptus_admin.commands.bootstrap.registerservice
 
 if __name__ == '__main__':
-    eucalyptus_admin.commands.empyrean.registerservice.RegisterService.run()
+    eucalyptus_admin.commands.bootstrap.registerservice.RegisterService.run()
