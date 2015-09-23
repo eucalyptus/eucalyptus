@@ -164,6 +164,7 @@ int ebt_chain_add_rule(ebt_handler * ebth, char *tablename, char *chainname, cha
 ebt_rule *ebt_chain_find_rule(ebt_handler * ebth, char *tablename, char *chainname, char *findrule);
 
 int ebt_chain_flush(ebt_handler * ebth, char *tablename, char *chainname);
+int ebt_chain_flush_rule(ebt_handler * ebth, char *tablename, char *chainname, char *findrule);
 
 int ebt_table_deletechainmatch(ebt_handler * ebth, char *tablename, char *chainmatch);
 int ebt_table_deletechainempty(ebt_handler * ebth, char *tablename);

@@ -992,6 +992,78 @@ int ebt_chain_flush(ebt_handler * ebth, char *tablename, char *chainname)
 }
 
 //!
+//! Deletes a ebtables rule specified in the argument.
+//!
+//! @param[in] ebth pointer to the EB table handler structure
+//! @param[in] tablename a string pointer to the table name
+//! @param[in] chainname a string pointer to the chain name
+//! @param[in] findrule a string pointer to the rule to be deleted
+//!
+//! @return 0 if the rule given in the argument is successfully deleted. 1 otherwise.
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int ebt_chain_flush_rule(ebt_handler * ebth, char *tablename, char *chainname, char *findrule) {
+    ebt_table *table = NULL;
+    ebt_chain *chain = NULL;
+    ebt_rule *rule = NULL;
+    ebt_rule *newrules = NULL;
+    int i;
+    int nridx;
+
+    if (!ebth || !tablename || !chainname || !findrule || !ebth->init) {
+        return (EUCA_INVALID_ERROR);
+    }
+
+    table = ebt_handler_find_table(ebth, tablename);
+    if (!table) {
+        return (EUCA_INVALID_ERROR);
+    }
+
+    chain = ebt_table_find_chain(ebth, tablename, chainname);
+    if (!chain) {
+        return (EUCA_INVALID_ERROR);
+    }
+
+    rule = ebt_chain_find_rule(ebth, tablename, chainname, findrule);
+    if (rule) {
+        if (chain->max_rules > 1) {
+            newrules = realloc(newrules, sizeof (ebt_rule) * (chain->max_rules - 1));
+            if (!newrules) {
+                LOGFATAL("out of memory!\n");
+                exit(1);
+            }
+
+            bzero(newrules, sizeof (ebt_rule) * (chain->max_rules - 1));
+            nridx = 0;
+            for (i = 0; i < chain->max_rules; i++) {
+                if (strcmp(chain->rules[i].ebtrule, findrule)) {
+                    snprintf(newrules[nridx].ebtrule, 1024, "%s", chain->rules[i].ebtrule);
+                    nridx++;
+                }
+            }
+            EUCA_FREE(chain->rules);
+            chain->rules = newrules;
+            chain->max_rules = nridx;
+        } else {
+            EUCA_FREE(chain->rules);
+            chain->max_rules = 0;
+            chain->counters[0] = '\0';
+        }
+    } else {
+        LOGDEBUG("Could not find (%s) from chain %s at table %s\n", findrule, chainname, tablename);
+        return (2);
+    }
+    return (0);
+}
+
+//!
 //! Function description.
 //!
 //! @param[in] ebth pointer to the EB table handler structure

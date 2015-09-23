@@ -371,6 +371,23 @@ static int network_driver_system_flush(globalNetworkInfo * pGni)
     rc |= ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_POST");
     rc |= ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_OUT");
     rc |= ipt_table_deletechainmatch(config->ipt, "filter", "EU_");
+    // Flush core artifacts
+    if (config->flushmode == FLUSH_ALL) {
+        rc |= ipt_table_deletechainmatch(config->ipt, "filter", "EUCA_");
+        rc |= ipt_table_deletechainmatch(config->ipt, "nat", "EUCA_");
+        rc |= ipt_chain_flush_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -j EUCA_FILTER_FWD_PREUSERHOOK");
+        rc |= ipt_chain_flush_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -j EUCA_FILTER_FWD");
+        rc |= ipt_chain_flush_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -j EUCA_FILTER_FWD_POSTUSERHOOK");
+        rc |= ipt_chain_flush_rule(config->ipt, "nat", "PREROUTING", "-A PREROUTING -j EUCA_NAT_PRE_PREUSERHOOK");
+        rc |= ipt_chain_flush_rule(config->ipt, "nat", "PREROUTING", "-A PREROUTING -j EUCA_NAT_PRE");
+        rc |= ipt_chain_flush_rule(config->ipt, "nat", "PREROUTING", "-A PREROUTING -j EUCA_NAT_PRE_POSTUSERHOOK");
+        rc |= ipt_chain_flush_rule(config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j EUCA_NAT_POST_PREUSERHOOK");
+        rc |= ipt_chain_flush_rule(config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j EUCA_NAT_POST");
+        rc |= ipt_chain_flush_rule(config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j EUCA_NAT_POST_POSTUSERHOOK");
+        rc |= ipt_chain_flush_rule(config->ipt, "nat", "OUTPUT", "-A OUTPUT -j EUCA_NAT_OUT_PREUSERHOOK");
+        rc |= ipt_chain_flush_rule(config->ipt, "nat", "OUTPUT", "-A OUTPUT -j EUCA_NAT_OUT");
+        rc |= ipt_chain_flush_rule(config->ipt, "nat", "OUTPUT", "-A OUTPUT -j EUCA_NAT_OUT_POSTUSERHOOK");
+    }
     rc |= ipt_handler_print(config->ipt);
     rc |= ipt_handler_deploy(config->ipt);
     if (rc) {
@@ -378,6 +395,7 @@ static int network_driver_system_flush(globalNetworkInfo * pGni)
         ret = 1;
     }
     // ipsets
+    rc = 0;
     rc |= ips_handler_init(config->ips, config->cmdprefix);
     rc |= ips_handler_repopulate(config->ips);
     rc |= ips_handler_deletesetmatch(config->ips, "EU_");
@@ -389,18 +407,69 @@ static int network_driver_system_flush(globalNetworkInfo * pGni)
         ret = 1;
     }
     // ebtables
+    rc = 0;
     rc |= ebt_handler_init(config->ebt, config->cmdprefix);
     rc |= ebt_handler_repopulate(config->ebt);
     rc |= ebt_chain_flush(config->ebt, "filter", "EUCA_EBT_FWD");
     rc |= ebt_chain_flush(config->ebt, "nat", "EUCA_EBT_NAT_PRE");
     rc |= ebt_chain_flush(config->ebt, "nat", "EUCA_EBT_NAT_POST");
+    // Flush core artifacts
+    if (config->flushmode == FLUSH_ALL) {
+        rc |= ebt_table_deletechainmatch(config->ebt, "filter", "EUCA_");
+        rc |= ebt_table_deletechainmatch(config->ebt, "nat", "EUCA_");
+        rc |= ebt_chain_flush_rule(config->ebt, "filter", "FORWARD", "-j EUCA_EBT_FWD");
+        rc |= ebt_chain_flush_rule(config->ebt, "nat", "PREROUTING", "-j EUCA_EBT_NAT_PRE");
+        rc |= ebt_chain_flush_rule(config->ebt, "nat", "POSTROUTING", "-j EUCA_EBT_NAT_POST");
+    }
     rc |= ebt_handler_deploy(config->ebt);
     if (rc) {
         LOGERROR("Failed to flush the EB Tables artifact in '%s' networking mode.\n", DRIVER_NAME());
         ret = 1;
     }
 
-    return (0);
+    // Clear public IPs that have been mapped
+    u32 *ips = NULL, *nms = NULL;
+    int max_nets = 0;
+    rc = 0;
+    int i = 0;
+    int j = 0;
+    char cmd[EUCA_MAX_PATH] = "";
+    sequence_executor cmds = { {0} };
+    char *strptra = NULL;
+
+    if (getdevinfo(config->pubInterface, &ips, &nms, &max_nets)) {
+        // could not get interface info - skip public IP flush
+        max_nets = 0;
+        ips = NULL;
+        nms = NULL;
+        ret = 1;
+        LOGERROR("Failed to flush public IP address(es) in '%s' networking mode.\n", DRIVER_NAME());
+    } else {
+        for (i = 0; i < globalnetworkinfo->max_public_ips; i++) {
+            for (j = 0; j < max_nets; j++) {
+                if (ips[j] == globalnetworkinfo->public_ips[i]) {
+                    // this global public IP is assigned to the public interface
+                    se_init(&cmds, config->cmdprefix, 2, 1);
+
+                    strptra = hex2dot(globalnetworkinfo->public_ips[i]);
+                    snprintf(cmd, EUCA_MAX_PATH, "ip addr del %s/%d dev %s >/dev/null 2>&1", strptra, 32, config->pubInterface);
+                    EUCA_FREE(strptra);
+
+                    rc = se_add(&cmds, cmd, NULL, ignore_exit2);
+                    se_print(&cmds);
+                    rc = se_execute(&cmds);
+                    if (rc) {
+                        LOGERROR("could not execute command sequence (check above log errors for details): flushing public ips\n");
+                        ret = 1;
+                    }
+                    se_free(&cmds);
+                }
+            }
+        }
+        EUCA_FREE(ips);
+        EUCA_FREE(nms);
+    }
+    return (ret);
 }
 
 //!
