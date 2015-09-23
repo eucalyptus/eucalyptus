@@ -318,7 +318,7 @@ int main(int argc, char **argv)
     int epoch_updates = 0;
     int epoch_failed_updates = 0;
     int epoch_checks = 0;
-    time_t epoch_timer = 0;
+    time_t epoch_timer = 0, loop_start = 0;
     boolean update_globalnet = FALSE;
     boolean update_globalnet_failed = FALSE;
 
@@ -414,6 +414,7 @@ int main(int argc, char **argv)
     while (gIsRunning) {
         update_globalnet = FALSE;
 
+        loop_start = time(NULL);
         counter++;
 
         // fetch all latest networking information from various sources
@@ -565,10 +566,10 @@ int main(int argc, char **argv)
         }
         // do it all over again...
         if (update_globalnet_failed) {
-            LOGDEBUG("main loop complete: failures detected sleeping %d seconds before next poll\n", 1);
+            LOGDEBUG("main loop complete (%ld seconds): failures detected sleeping %d seconds before next poll\n", time(NULL) - loop_start, 1);
             sleep(1);
         } else {
-            LOGDEBUG("main loop complete: sleeping %d seconds before next poll\n", config->polling_frequency);
+            LOGDEBUG("main loop complete (%ld seconds): sleeping %d seconds before next poll\n", time(NULL) - loop_start, config->polling_frequency);
             sleep(config->polling_frequency);
         }
 

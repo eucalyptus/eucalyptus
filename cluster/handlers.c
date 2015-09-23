@@ -2058,7 +2058,7 @@ int changeState(ccResource * in, int newstate)
 //!
 int broadcast_network_info(ncMetadata * pMeta, int timeout, int dolock)
 {
-#define EUCANETD_GNI_FILE         EUCALYPTUS_STATE_DIR "/global_network_info.xml"
+#define EUCANETD_GNI_FILE         EUCALYPTUS_RUN_DIR "/cc_global_network_info.xml"
     int i = 0;
     int rc = 0;
     int pid = 0;
@@ -2160,7 +2160,7 @@ int broadcast_network_info(ncMetadata * pMeta, int timeout, int dolock)
 
         snprintf(xmlfile, EUCA_MAX_PATH, EUCANETD_GNI_FILE, config->eucahome);
         if (str2file(xmlbuf, xmlfile, O_CREAT | O_TRUNC | O_WRONLY, 0600, FALSE) != EUCA_OK) {
-            LOGDEBUG("Failed to populate GNI file '%s'\n", xmlfile);
+            LOGWARN("failed to populate GNI file '%s': check permissions and disk capacity\n", xmlfile);
         }
 
         EUCA_FREE(xmlbuf);

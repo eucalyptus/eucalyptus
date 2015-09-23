@@ -895,6 +895,9 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
     mido_vpc_instance *vpcinstance = NULL;
     mido_vpc_subnet *vpcsubnet = NULL;
     mido_vpc *vpc = NULL;
+    FILE *PFH = NULL;
+    char mapfile[EUCA_MAX_PATH];
+    time_t timer = 0;
 
     if (!gni || !mido) {
         return (1);
@@ -902,12 +905,14 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
 
     mido->enabledCLCIp = gni->enabledCLCIp;
 
+    timer = time(NULL);
     rc = do_midonet_populate(mido);
     if (rc) {
         LOGERROR("could not populate prior to update: see above log entries for details\n");
         return (1);
     }
-
+    LOGDEBUG("MARK1: %ld\n", time(NULL) - timer);
+    /*
     // temporary print
     LOGDEBUG("TOTAL SEC. GROUPS: %d\n", mido->max_vpcsecgroups);
     for (i = 0; i < mido->max_vpcsecgroups; i++) {
@@ -928,8 +933,11 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
             }
         }
     }
+    */
 
-    // new thing: pass1 - tag everything that is both in GNI and in MIDO
+    // pass1 - tag everything that is both in GNI and in MIDO
+    timer = time(NULL);
+    // pass1: do vpcs and subnets
     for (i = 0; i < gni->max_vpcs; i++) {
         gni_vpc *gnivpc = NULL;
         gnivpc = &(gni->vpcs[i]);
@@ -957,10 +965,23 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
             
         }
     }
+    LOGDEBUG("MARK2: %ld\n", time(NULL) - timer);
 
+    timer = time(NULL);
+    // pass1: ensure that the meta-data map is populated right away
+    snprintf(mapfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/eucanetd_vpc_instance_ip_map", mido->eucahome);
+    unlink(mapfile);
+    PFH = fopen(mapfile, "w");
+
+    // pass1: do instances 
     for (i = 0; i < gni->max_instances; i++) {
         gni_instance *gniinstance = NULL;
         gniinstance = &(gni->instances[i]);
+
+        char *privIp = NULL;
+        privIp = hex2dot(gniinstance->privateIp);
+        fprintf(PFH, "%s %s %s\n", SP(gniinstance->vpc), SP(gniinstance->name), SP(privIp));
+        EUCA_FREE(privIp);
 
         rc = find_mido_vpc_instance_global(mido, gniinstance->name, &vpcinstance);
         if (rc) {
@@ -971,7 +992,11 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
             vpcinstance->gnipresent = 1;
         }
     }
+    fclose(PFH);
+    LOGDEBUG("MARK3: %ld\n", time(NULL) - timer);
 
+    // pass1: do security groups
+    timer = time(NULL);
     for (i = 0; i < gni->max_secgroups; i++) {
         gni_secgroup *gnisecgroup = NULL;
         gnisecgroup = &(gni->secgroups[i]);
@@ -984,9 +1009,10 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
             vpcsecgroup->gnipresent = 1;
         }
     }
+    LOGDEBUG("MARK4: %ld\n", time(NULL) - timer);
 
-
-    // new thing: pass2 - remove anything in MIDO that is not in GNI
+    // pass2 - remove anything in MIDO that is not in GNI
+    timer = time(NULL);
     for (i = 0; i < mido->max_vpcsecgroups; i++) {
         vpcsecgroup = &(mido->vpcsecgroups[i]);
         if (!vpcsecgroup->gnipresent) {
@@ -1092,7 +1118,9 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
             }
         }
     }
+    LOGDEBUG("MARK5: %ld\n", time(NULL) - timer);
     
+    timer = time(NULL);
     for (i = 0; i < mido->max_vpcs; i++) {
         vpc = &(mido->vpcs[i]);        
         for (j = 0; j < vpc->max_subnets; j++) {
@@ -1124,10 +1152,11 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
             LOGDEBUG("pass2: mido VPC %s in global: Y\n", vpc->name);
         }
     }
+    LOGDEBUG("MARK6: %ld\n", time(NULL) - timer);
 
     // now, go through GNI and create new VPCs
+    timer = time(NULL);
     LOGINFO("initializing VPCs (%d)\n", gni->max_vpcs);
-
     for (i = 0; i < gni->max_vpcs; i++) {
         gni_vpc *gnivpc = NULL;
         gni_vpcsubnet *gnivpcsubnet = NULL;
@@ -1186,7 +1215,18 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
             vpcsubnet->gnipresent = 1;
         }
     }
+    LOGDEBUG("MARK7: %ld\n", time(NULL) - timer);
 
+    // set up metadata proxies once vpcs/subnets are all set up
+    timer = time(NULL);
+    rc = do_metaproxy_setup(mido);
+    if (rc) {
+        LOGERROR("cannot set up metadata proxies: see above log for details\n");
+        //    ret = 1;
+    }
+    LOGDEBUG("MARK8: %ld\n", time(NULL) - timer);
+
+    timer = time(NULL);
     // now add sec. groups
     for (i = 0; i < gni->max_secgroups; i++) {
         gni_secgroup *gnisecgroup = &(gni->secgroups[i]);
@@ -1213,16 +1253,16 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
         }
         vpcsecgroup->gnipresent = 1;
     }
+    LOGDEBUG("MARK9: %ld\n", time(NULL) - timer);
 
     // now do instances
-    FILE *PFH = NULL;
-    char mapfile[EUCA_MAX_PATH];
-    snprintf(mapfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/eucanetd_vpc_instance_ip_map", mido->eucahome);
-    unlink(mapfile);
-    PFH = fopen(mapfile, "w");
-
+    //    snprintf(mapfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/eucanetd_vpc_instance_ip_map", mido->eucahome);
+    //    unlink(mapfile);
+    //    PFH = fopen(mapfile, "w");
+    timer = time(NULL);
+    gni_instance *gniinstance = NULL;
     for (i = 0; i < gni->max_instances; i++) {
-        gni_instance *gniinstance = &(gni->instances[i]);
+        gniinstance = &(gni->instances[i]);
 
         LOGDEBUG("inspecting gni instance '%s'\n", gni->instances[i].name);
 
@@ -1255,10 +1295,10 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                     vpcinstance->gnipresent = 1;
 
                     // add to proxy instance-map
-                    char *privIp = NULL;
-                    privIp = hex2dot(gniinstance->privateIp);
-                    fprintf(PFH, "%s %s %s\n", vpc->name, vpcinstance->name, privIp);
-                    EUCA_FREE(privIp);
+                    //                    char *privIp = NULL;
+                    //                    privIp = hex2dot(gniinstance->privateIp);
+                    //                    fprintf(PFH, "%s %s %s\n", vpc->name, vpcinstance->name, privIp);
+                    //                    EUCA_FREE(privIp);
 
                     // do instance<->port connection and elip
                     if (vpcinstance->midos[VMHOST].init) {
@@ -1300,9 +1340,9 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                     } else {
                         LOGERROR("could not find midonet host for instance '%s': check midonet/euca node/host mappings\n", vpcinstance->name);
                     }
-
-                    // do sec. group rule application for instance
-                    {
+                    
+                    // do SGs
+                    if (1) {
                         gni_secgroup *gnisecgroups = NULL;
                         int max_gnisecgroups, rulepos = 1, sgrulepos = 1;
                         char tmp_name1[32], tmp_name2[32], tmp_name3[32], tmp_name4[32];
@@ -1320,21 +1360,18 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                                               "31337", "natTargets:portTo", "31337", "natTargets:END", "END", NULL);
                         if (rc) {
                         } else {
-                            //                            rulepos++;
                         }
 
                         snprintf(tmp_name3, 32, "%d", rulepos);
                         rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, &rulepos, "position", tmp_name3, "type", "accept", "matchReturnFlow", "true", NULL);
                         if (rc) {
                         } else {
-                            //                            rulepos++;
                         }
 
                         snprintf(tmp_name3, 32, "%d", rulepos);
                         rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, &rulepos, "position", tmp_name3, "type", "accept", "nwDstAddress", pt_buf, "nwDstLength", "32", NULL);
                         if (rc) {
                         } else {
-                            //                            rulepos++;
                         }
 
                         rc = gni_instance_get_secgroups(gni, gniinstance, NULL, 0, NULL, 0, &gnisecgroups, &max_gnisecgroups);
@@ -1380,7 +1417,6 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                                                       vpcsecgroup->midos[VPCSG_EGRESS].uuid, NULL);
                                 if (rc) {
                                 } else {
-                                    //                                    rulepos++;
                                 }
                                 
                                 sgrulepos = 1;
@@ -1442,7 +1478,6 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                                         }
                                         if (rc) {
                                         } else {
-                                            //                                            sgrulepos++;
                                         }
                                         
                                     } else if (gnisecgroup->egress_rules[k].protocol == 1) {
@@ -1463,7 +1498,6 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                                             }
                                             if (rc) {
                                             } else {
-                                                //                                                sgrulepos++;
                                             }
                                         } else {
                                             // its the all rule
@@ -1477,7 +1511,6 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                                             }
                                             if (rc) {
                                             } else {
-                                                //                                                sgrulepos++;
                                             }
                                         }
                                         
@@ -1494,7 +1527,6 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                                         }
                                         if (rc) {
                                         } else {
-                                            //                                            sgrulepos++;
                                         }
                                     } else {
                                         // all other protos cannot specify port range
@@ -1509,7 +1541,6 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                                         }
                                         if (rc) {
                                         } else {
-                                            //                                            sgrulepos++;
                                         }
                                     }
                                 }
@@ -1523,7 +1554,6 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                         rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, &rulepos, "position", tmp_name3, "type", "drop", "invDlType", "true", "dlType", "2054", NULL);
                         if (rc) {
                         } else {
-                            //                            rulepos++;
                         }
 
                         
@@ -1733,16 +1763,15 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
 
                         }
                         EUCA_FREE(gnisecgroups);
-
                     }
-
+                    
                     // done
                 }
             }
         }
     }
-    fclose(PFH);
-
+    LOGDEBUG("MARK10: %ld\n", time(NULL) - timer);
+    /*
     // temporary print
     for (i = 0; i < mido->max_vpcs; i++) {
         vpc = &(mido->vpcs[i]);
@@ -1760,12 +1789,15 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
         vpcsecgroup = &(mido->vpcsecgroups[i]);
         print_mido_vpc_secgroup(vpcsecgroup);
     }
-    
+    */
+
+    /*
     rc = do_metaproxy_setup(mido);
     if (rc) {
         LOGERROR("cannot set up metadata proxies: see above log for details\n");
         //    ret = 1;
     }
+    */
 
     return (0);
 }
@@ -3301,20 +3333,10 @@ int connect_mido_vpc_instance(mido_vpc_subnet * vpcsubnet, mido_vpc_instance * v
     // apply the chains to the instance port
     //    rc = mido_update_port(&(vpcinstance->midos[VPCBR_VMPORT]), "inboundFilterId", vpcinstance->midos[INST_PRECHAIN].uuid, "type", "Bridge", NULL);
     rc = mido_update_port(&(vpcinstance->midos[VPCBR_VMPORT]), "inboundFilterId", vpcinstance->midos[INST_PRECHAIN].uuid, "outboundFilterId", vpcinstance->midos[INST_POSTCHAIN].uuid, "id", vpcinstance->midos[VPCBR_VMPORT].uuid, "type", "Bridge", NULL);
-    //    rc = mido_update_port(&(vpcinstance->midos[VPCBR_VMPORT]), "inboundFilterId", "f6fa20cb-841c-4422-b747-ecd1ec877d9d", "id", vpcinstance->midos[VPCBR_VMPORT].uuid, "type", "Bridge", NULL);
-    //    rc = mido_update_port(&(vpcinstance->midos[VPCBR_VMPORT]), "inboundFilterId", "f1c362f2-314f-4639-aba3-8e91a5a8f80f", NULL);
     if (rc) {
         LOGERROR("cannot attach midonet chain to midonet port: check midonet health\n");
         return (1);
     }
-
-    /*
-    rc = mido_update_port(&(vpcinstance->midos[VPCBR_VMPORT]), "outboundFilterId", vpcinstance->midos[INST_POSTCHAIN].uuid, "id", vpcinstance->midos[VPCBR_VMPORT].uuid, "type", "Bridge", NULL);
-    if (rc) {
-        LOGERROR("cannot attach midonet chain to midonet port: check midonet health\n");
-        return (1);
-    }
-    */
 
     return (ret);
 }
