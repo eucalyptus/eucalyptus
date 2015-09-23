@@ -209,6 +209,7 @@ int ipt_chain_insert_rule(ipt_handler * ipth, char *tablename, char *chainname, 
 ipt_rule *ipt_chain_find_rule(ipt_handler * ipth, char *tablename, char *chainname, char *findrule);
 
 int ipt_chain_flush(ipt_handler * ipth, char *tablename, char *chainname);
+int ipt_chain_flush_rule(ipt_handler * ipth, char *tablename, char *chainname, char *findrule);
 
 int ipt_table_deletechainmatch(ipt_handler * ipth, char *tablename, char *chainmatch);
 int ipt_table_deletechainempty(ipt_handler * ipth, char *tablename);
