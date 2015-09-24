@@ -86,7 +86,9 @@ public class AWSAutoScalingLaunchConfigurationResourceAction extends ResourceAct
         if (action.properties.getBlockDeviceMappings() != null) {
           createLaunchConfigurationType.setBlockDeviceMappings(action.convertBlockDeviceMappings(action.properties.getBlockDeviceMappings()));
         }
-        // Ignore AssociatePublicIpAddress for now (VPC)
+        if (action.properties.getAssociatePublicIpAddress() != null) {
+          createLaunchConfigurationType.setAssociatePublicIpAddress(action.properties.getAssociatePublicIpAddress());
+        }
         createLaunchConfigurationType.setEbsOptimized(action.properties.getEbsOptimized() != null ? action.properties.getEbsOptimized() : Boolean.FALSE);
         createLaunchConfigurationType.setIamInstanceProfile(action.properties.getIamInstanceProfile());
         createLaunchConfigurationType.setImageId(action.properties.getImageId());
