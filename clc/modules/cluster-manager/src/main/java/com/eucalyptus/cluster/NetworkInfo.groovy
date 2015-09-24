@@ -38,6 +38,9 @@ import javax.xml.bind.annotation.XmlRootElement
 @XmlRootElement(name = "network-data")
 @XmlAccessorType( XmlAccessType.NONE )
 class NetworkInfo {
+  @XmlAttribute String version
+  @XmlAttribute(name="applied-version") String appliedVersion
+  @XmlAttribute(name="applied-time") String appliedTime
   @XmlElement NIConfiguration configuration = new NIConfiguration()
   @XmlElementWrapper @XmlElement(name="vpc") List<NIVpc> vpcs = Lists.newArrayList()
   @XmlElementWrapper @XmlElement(name="instance") List<NIInstance> instances = Lists.newArrayList()

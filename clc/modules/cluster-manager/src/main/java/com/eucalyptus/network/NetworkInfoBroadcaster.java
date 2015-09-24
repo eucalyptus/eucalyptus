@@ -36,6 +36,7 @@ import com.eucalyptus.compute.common.internal.vpc.RouteTable;
 import com.eucalyptus.compute.common.internal.vpc.Vpc;
 import com.eucalyptus.compute.common.internal.vpc.Subnet;
 import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.entities.EntityCache;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Listeners;
@@ -75,6 +76,8 @@ import com.google.common.hash.Funnel;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.PrimitiveSink;
+import com.google.common.io.BaseEncoding;
+import com.google.common.primitives.Ints;
 import edu.ucsb.eucalyptus.msgs.BroadcastNetworkInfoResponseType;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Restrictions;
@@ -85,8 +88,10 @@ import javax.xml.bind.JAXBException;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -105,7 +110,8 @@ public class NetworkInfoBroadcaster {
   private static final Logger logger = Logger.getLogger( NetworkInfoBroadcaster.class );
 
   private static final AtomicLong lastBroadcastTime = new AtomicLong( 0L );
-  private static final AtomicReference<Pair<Integer,String>> lastEncodedNetworkInformation = new AtomicReference<>( );
+  private static final AtomicReference<LastBroadcastInfo> lastBroadcastInformation = new AtomicReference<>( );
+  private static final AtomicReference<Pair<Long,String>> lastAppliedNetworkInformation = new AtomicReference<>( );
   private static final ConcurrentMap<String,Long> activeBroadcastMap = Maps.newConcurrentMap( );
   private static final EntityCache<VmInstance,NetworkInfoBroadcasts.VmInstanceNetworkView> instanceCache = new EntityCache<>(
       VmInstance.named(null),
@@ -129,6 +135,28 @@ public class NetworkInfoBroadcaster {
       new EntityCache<>( InternetGateway.exampleWithOwner( null ), TypeMappers.lookup( InternetGateway.class, InternetGatewayNetworkView.class )  );
   private static final EntityCache<NetworkInterface,NetworkInterfaceNetworkView> networkInterfaceCache =
       new EntityCache<>( NetworkInterface.exampleWithOwner( null ), TypeMappers.lookup( NetworkInterface.class, NetworkInterfaceNetworkView.class )  );
+
+  private static final class LastBroadcastInfo {
+    private final int version;
+    private final String appliedVersion;
+    private final NetworkInfo networkInfo;
+    private final String encodedNetworkInfo;
+    private final long lastConvergedTimestamp;
+
+    public LastBroadcastInfo(
+        final int version,
+        final String appliedVersion,
+        final NetworkInfo networkInfo,
+        final String encodedNetworkInfo,
+        final long lastConvergedTimestamp
+    ) {
+      this.version = version;
+      this.appliedVersion = appliedVersion;
+      this.networkInfo = networkInfo;
+      this.encodedNetworkInfo = encodedNetworkInfo;
+      this.lastConvergedTimestamp = lastConvergedTimestamp;
+    }
+  }
 
   private static NetworkInfoSource cacheSource( ) {
     final Supplier<Iterable<VmInstanceNetworkView>> instanceSupplier = Suppliers.memoize( instanceCache );
@@ -207,29 +235,43 @@ public class NetworkInfoBroadcaster {
 
       final NetworkInfoSource source = cacheSource( );
       final int sourceFingerprint = fingerprint( source, clusters, NetworkGroups.NETWORK_CONFIGURATION );
-      final Pair<Integer,String> lastBroadcast = lastEncodedNetworkInformation.get( );
+      final LastBroadcastInfo lastBroadcast = lastBroadcastInformation.get( );
+      final Pair<Long,String> appliedVersion = lastAppliedNetworkInformation.get( );
       final String encodedNetworkInfo;
-      if ( lastBroadcast != null && lastBroadcast.getLeft( ) == sourceFingerprint ) {
-        encodedNetworkInfo = lastBroadcast.getRight( );
+      if ( lastBroadcast != null && lastBroadcast.version == sourceFingerprint &&
+          ( appliedVersion == null || appliedVersion.getRight( ).equals( lastBroadcast.appliedVersion ) ) ) {
+        encodedNetworkInfo = lastBroadcast.encodedNetworkInfo;
       } else {
-        final NetworkInfo info = NetworkInfoBroadcasts.buildNetworkConfiguration(
-            networkConfiguration,
-            source,
-            Suppliers.ofInstance( clusters ),
-            new Supplier<String>( ){
-              @Override
-              public String get( ) {
-                return Topology.lookup(Eucalyptus.class).getInetAddress( ).getHostAddress( );
+        final NetworkInfo info;
+        final boolean converged = lastBroadcast != null &&
+            ( System.currentTimeMillis() - lastBroadcast.lastConvergedTimestamp > TimeUnit.SECONDS.toMillis( 150 ) );
+        if ( converged ) {
+          info =  lastBroadcast.networkInfo;
+        } else {
+          info = NetworkInfoBroadcasts.buildNetworkConfiguration(
+              networkConfiguration,
+              source,
+              Suppliers.ofInstance( clusters ),
+              new Supplier<String>( ){
+                @Override
+                public String get( ) {
+                  return Topology.lookup(Eucalyptus.class).getInetAddress( ).getHostAddress( );
+                }
+              },
+              new Function<List<String>,List<String>>(){
+                @Nullable
+                @Override
+                public List<String> apply( final List<String> defaultServers ) {
+                  return NetworkConfigurations.loadSystemNameservers( defaultServers );
+                }
               }
-            },
-            new Function<List<String>,List<String>>(){
-              @Nullable
-              @Override
-              public List<String> apply( final List<String> defaultServers ) {
-                return NetworkConfigurations.loadSystemNameservers( defaultServers );
-              }
-            }
-        );
+          );
+          info.setVersion( BaseEncoding.base16( ).lowerCase( ).encode( Ints.toByteArray( sourceFingerprint ) ) );
+        }
+        if ( appliedVersion != null ) {
+          info.setAppliedTime( Timestamps.formatIso8601Timestamp( new Date( appliedVersion.getLeft( ) ) ) );
+          info.setAppliedVersion( appliedVersion.getRight( ) );
+        }
 
         final JAXBContext jc = JAXBContext.newInstance( "com.eucalyptus.cluster" );
         final StringWriter writer = new StringWriter( 8192 );
@@ -248,7 +290,13 @@ public class NetworkInfoBroadcaster {
         Files.move( newView.toPath( ), BaseDirectory.RUN.getChildFile( "global_network_info.xml" ).toPath( ), StandardCopyOption.REPLACE_EXISTING );
 
         encodedNetworkInfo = new String( B64.standard.enc( networkInfo.getBytes( Charsets.UTF_8 ) ), Charsets.UTF_8 );
-        lastEncodedNetworkInformation.compareAndSet( lastBroadcast, Pair.pair( sourceFingerprint, encodedNetworkInfo ) );
+        lastBroadcastInformation.set( new LastBroadcastInfo(
+            sourceFingerprint,
+            appliedVersion == null ? null : appliedVersion.getRight( ),
+            info,
+            encodedNetworkInfo,
+            info.getAppliedVersion( ) != null && info.getAppliedVersion( ).equals( info.getVersion( ) ) ? System.currentTimeMillis( ) : lastBroadcast == null ? 0 : lastBroadcast.lastConvergedTimestamp
+        ) );
       }
 
       final BroadcastNetworkInfoCallback callback = new BroadcastNetworkInfoCallback( encodedNetworkInfo );
@@ -299,6 +347,29 @@ public class NetworkInfoBroadcaster {
     hasher.putString( Joiner.on( ',' ).join( Sets.newTreeSet( Iterables.transform( clusters, HasName.GET_NAME ) ) ) );
     hasher.putInt( networkConfiguration.hashCode( ) );
     return hasher.hash( ).asInt( );
+  }
+
+  public static class AppliedNetworkInfoEventListener implements EventListener<ClockTick> {
+
+    public static void register( ) {
+      Listeners.register( ClockTick.class, new AppliedNetworkInfoEventListener( ) );
+    }
+
+    @SuppressWarnings("UnnecessaryQualifiedReference")
+    @Override
+    public void fireEvent( final ClockTick event ) {
+      final Pair<Long,String> appliedVersion = lastAppliedNetworkInformation.get( );
+      final File newView = BaseDirectory.RUN.getChildFile( "global_network_info.version" );
+      if ( newView.isFile( ) && ( appliedVersion == null || appliedVersion.getLeft( ) != newView.lastModified( ) ) ) {
+        try {
+          final String version = com.google.common.io.Files.toString( newView, StandardCharsets.UTF_8 ).trim( );
+          lastAppliedNetworkInformation.set( Pair.pair( newView.lastModified( ), version ) );
+          requestNetworkInfoBroadcast( );
+        } catch ( IOException e ) {
+          logger.error( "Error reading last applied network broadcast version" );
+        }
+      }
+    }
   }
 
   public static class NetworkInfoBroadcasterEventListener implements EventListener<ClockTick> {
