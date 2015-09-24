@@ -27,18 +27,18 @@ from requestbuilder import Arg
 from requestbuilder.mixins.formatting import TableOutputMixin
 
 from eucalyptus_admin.commands.ec2.describeinstances import DescribeInstances
-from eucalyptus_admin.commands.empyrean import EmpyreanRequest
-from eucalyptus_admin.commands.empyrean.describeservices import \
+from eucalyptus_admin.commands.bootstrap import BootstrapRequest
+from eucalyptus_admin.commands.bootstrap.describeservices import \
     DescribeServices
 
 
-class DescribeNodeControllers(EmpyreanRequest, TableOutputMixin):
+class DescribeNodeControllers(BootstrapRequest, TableOutputMixin):
     DESCRIPTION = "List the cloud's node controllers and their instances"
     ARGS = [Arg('--ec2-url', metavar='URL', route_to=None,
                 help='compute service endpoint URL')]
 
     def configure(self):
-        EmpyreanRequest.configure(self)
+        BootstrapRequest.configure(self)
         if not self.args.get('ec2_service'):
             self.args['ec2_service'] = \
                 DescribeInstances.SERVICE_CLASS.from_other(

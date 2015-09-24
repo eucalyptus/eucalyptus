@@ -25,10 +25,10 @@
 
 from requestbuilder import Arg
 
-from eucalyptus_admin.commands.empyrean import EmpyreanRequest
+from eucalyptus_admin.commands.bootstrap import BootstrapRequest
 
 
-class DeregisterService(EmpyreanRequest):
+class DeregisterService(BootstrapRequest):
     DESCRIPTION = 'De-register an instance of a service'
     ARGS = [Arg('Name', metavar='SVCINSTANCE',
                 help='name of the service instance to de-register')]

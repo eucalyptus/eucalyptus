@@ -1,6 +1,0 @@
-#!/usr/bin/python -tt
-
-import eucalyptus_admin.commands.empyrean.deregisterservice
-
-if __name__ == '__main__':
-    eucalyptus_admin.commands.empyrean.deregisterservice.DeregisterService.run()
