@@ -66,7 +66,7 @@ import com.google.common.net.InetAddresses;
     root = "services.loadbalancing",
     description = "Parameters controlling loadbalancing"
 )
-public class LoadBalancerResolver implements DnsResolvers.DnsResolver {
+public class LoadBalancerResolver extends DnsResolvers.DnsResolver {
 
   private static final Logger logger = Logger.getLogger( LoadBalancerResolver.class );
   private static final int QUERY_ANSWER_EXPIRE_AFTER_SEC = 5;

@@ -65,10 +65,13 @@ package com.eucalyptus.util.dns;
 import java.lang.reflect.Modifier;
 import java.net.InetAddress;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.log4j.Logger;
+import org.springframework.core.OrderComparator;
 import org.xbill.DNS.Flags;
 import org.xbill.DNS.Message;
 import org.xbill.DNS.Name;
@@ -76,10 +79,12 @@ import org.xbill.DNS.RRset;
 import org.xbill.DNS.Rcode;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.SetResponse;
+
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.util.Ordered;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -87,6 +92,7 @@ import com.google.common.collect.ClassToInstanceMap;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.LinkedHashMultimap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.MutableClassToInstanceMap;
 
@@ -423,19 +429,23 @@ public class DnsResolvers extends ServiceJarDiscovery {
     InetAddress getLocalAddress( );
   }
 
-  public interface DnsResolver {
-    boolean checkAccepts( DnsRequest request );
+  public static abstract class DnsResolver implements Ordered {
+    public abstract boolean checkAccepts( DnsRequest request );
     
-    DnsResponse lookupRecords( DnsRequest request );
+    public abstract DnsResponse lookupRecords( DnsRequest request );
     
-    String toString( );
+    protected static final int DEFAULT_ORDER = 0;
+    @Override
+    public int getOrder( ) {
+      return DEFAULT_ORDER;
+    }
   }
   
   /**
    * Returns the list of resolvers which accept the name from the given source address.
    */
   private static Iterable<DnsResolver> resolversFor( final DnsRequest request ) {
-    return Iterables.filter( resolvers.values( ), new Predicate<DnsResolver>( ) {
+    final List<DnsResolver> acceptingResolvers = Lists.newArrayList(Collections2.filter( resolvers.values( ), new Predicate<DnsResolver>( ) {
       @Override
       public boolean apply( final DnsResolver input ) {
         try {
@@ -444,7 +454,9 @@ public class DnsResolvers extends ServiceJarDiscovery {
           return false;
         }
       }
-    } );
+    } ));
+    Collections.sort(acceptingResolvers, new OrderComparator( ) );
+    return acceptingResolvers;
   }
   
   private static SetResponse lookupRecords( final Message response,

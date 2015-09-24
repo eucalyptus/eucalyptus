@@ -128,7 +128,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 
 @ConfigurableClass( root = "dns.split_horizon",
                     description = "Options controlling Split-Horizon DNS resolution." )
-public abstract class SplitHorizonResolver implements DnsResolver {
+public abstract class SplitHorizonResolver extends DnsResolver {
   private static final Logger LOG     = Logger.getLogger( SplitHorizonResolver.class );
 
   private static final Supplier<Boolean> privateNetworksManagedSupplier =
@@ -198,14 +198,11 @@ public abstract class SplitHorizonResolver implements DnsResolver {
         return false;
       } else if ( publicAddressPredicateSupplier.get( ).apply( input ) ) {
         return true;
-      } else if ( privateNetworksManagedSupplier.get( ) && input.isSiteLocalAddress( ) ) {
-        return true;
       } else {
         return lookupPublic( input ).isPresent( ) ||
             !privateNetworksManagedSupplier.get( ) && Predicates.or( clusterSubnetsSupplier.get( ) ).apply( input );
       }
     }
-    
   }
   
   /**
@@ -230,13 +227,18 @@ public abstract class SplitHorizonResolver implements DnsResolver {
         final Optional<VmDnsInfo> vmInfo = lookupAny( ip );
         if ( vmInfo.isPresent( ) ) {
           final String hostAddress = ip.getHostAddress( );
-          if ( hostAddress.equals( vmInfo.get( ).getPrivateIp( ) ) ) {
+          if ( hostAddress.equals( vmInfo.get( ).getPrivateIp( ) ) && ip.isSiteLocalAddress()) {
             final Name dnsName = InstanceDomainNames.fromInetAddress( InstanceDomainNames.INTERNAL, ip );
             return DnsResponse.forName( query.getName( ) ).answer( DomainNameRecords.ptrRecord( dnsName, ip ) );
           } else if ( hostAddress.equals( vmInfo.get( ).getPublicIp( ) ) ) {
             final Name dnsName = InstanceDomainNames.fromInetAddress( InstanceDomainNames.EXTERNAL, ip );
             return DnsResponse.forName( query.getName( ) ).answer( DomainNameRecords.ptrRecord( dnsName, ip ) );
+          }else {
+            return null;
           }
+        } else {
+          // reverse lookup of non-EUCA ip will be resolved by recursive resolver
+          return null;
         }
       } 
     }catch( final Exception ex ){
@@ -262,8 +264,7 @@ public abstract class SplitHorizonResolver implements DnsResolver {
       return false;
     } else if ( InstanceDomainNames.isInstanceDomainName( query.getName( ) ) ) {
       return true;
-    } else if ( RequestType.PTR.apply( query )
-        && Subnets.isSystemManagedAddress( DomainNameRecords.inAddrArpaToInetAddress( query.getName( ) ) ) ) {
+    } else if ( RequestType.PTR.apply( query ) ) {
       return true;
     }
     return false;
@@ -292,7 +293,7 @@ public abstract class SplitHorizonResolver implements DnsResolver {
     return this.getClass( ).equals( Objects.firstNonNull( Classes.typeOf( obj ), Object.class ) );
   }  
 
-  public static class InternalARecordResolver extends SplitHorizonResolver implements DnsResolver {
+  public static class InternalARecordResolver extends SplitHorizonResolver {
     
     @Override
     public DnsResponse lookupRecords( DnsRequest request ) {
@@ -333,7 +334,7 @@ public abstract class SplitHorizonResolver implements DnsResolver {
   /**
    * Handle instance public DNS name lookup from instances
    */
-  public static class HorizonARecordResolver extends SplitHorizonResolver implements DnsResolver {
+  public static class HorizonARecordResolver extends SplitHorizonResolver {
     
     @Override
     public boolean checkAccepts( DnsRequest request ) {
@@ -379,7 +380,7 @@ public abstract class SplitHorizonResolver implements DnsResolver {
   /**
    * Handle instance public DNS name lookup from external hosts
    */
-  public static class ExternalARecordResolver extends SplitHorizonResolver implements DnsResolver {
+  public static class ExternalARecordResolver extends SplitHorizonResolver {
     @Override
     public boolean checkAccepts( DnsRequest request ) {
       final Record query = request.getQuery( );
