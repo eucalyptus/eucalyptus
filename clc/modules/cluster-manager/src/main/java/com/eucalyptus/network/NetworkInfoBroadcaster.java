@@ -295,7 +295,7 @@ public class NetworkInfoBroadcaster {
             appliedVersion == null ? null : appliedVersion.getRight( ),
             info,
             encodedNetworkInfo,
-            info.getAppliedVersion( ) != null && info.getAppliedVersion( ).equals( info.getVersion( ) ) ? System.currentTimeMillis( ) : lastBroadcast == null ? 0 : lastBroadcast.lastConvergedTimestamp
+            info.getAppliedVersion( ) == null || info.getAppliedVersion( ).equals( info.getVersion( ) ) ? System.currentTimeMillis( ) : lastBroadcast == null ? 0 : lastBroadcast.lastConvergedTimestamp
         ) );
       }
 
