@@ -870,76 +870,25 @@ int do_midonet_teardown(mido_config * mido)
     return (ret);
 }
 
-//!
-//!
-//!
-//! @param[in] gni
-//! @param[in] mido
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
-{
-    int i = 0, j = 0, k = 0, rc = 0, srcMode = 0;
-    char subnet_buf[24], slashnet_buf[8], gw_buf[24], pt_buf[24];
-    char grpUUID[128];
+
+int do_midonet_update_pass1(globalNetworkInfo * gni, mido_config * mido) {
+    int ret = 0, i = 0, j = 0, rc = 0;
+    char *privIp = NULL, mapfile[EUCA_MAX_PATH];;
+    FILE *PFH = NULL;
+
+    mido_vpc *vpc = NULL;
     mido_vpc_secgroup *vpcsecgroup = NULL;
     mido_vpc_instance *vpcinstance = NULL;
     mido_vpc_subnet *vpcsubnet = NULL;
-    mido_vpc *vpc = NULL;
-    FILE *PFH = NULL;
-    char mapfile[EUCA_MAX_PATH];
-    time_t timer = 0;
 
-    if (!gni || !mido) {
-        return (1);
-    }
-
-    mido->enabledCLCIp = gni->enabledCLCIp;
-
-    timer = time(NULL);
-    rc = do_midonet_populate(mido);
-    if (rc) {
-        LOGERROR("could not populate prior to update: see above log entries for details\n");
-        return (1);
-    }
-    LOGDEBUG("MARK1: %ld\n", time(NULL) - timer);
-    /*
-    // temporary print
-    LOGDEBUG("TOTAL SEC. GROUPS: %d\n", mido->max_vpcsecgroups);
-    for (i = 0; i < mido->max_vpcsecgroups; i++) {
-        vpcsecgroup = &(mido->vpcsecgroups[i]);
-        print_mido_vpc_secgroup(vpcsecgroup);
-    }
-
-    LOGDEBUG("TOTAL VPCS: %d\n", mido->max_vpcs);
-    for (i = 0; i < mido->max_vpcs; i++) {
-        vpc = &(mido->vpcs[i]);
-        print_mido_vpc(vpc);
-        for (j = 0; j < vpc->max_subnets; j++) {
-            vpcsubnet = &(vpc->subnets[j]);
-            print_mido_vpc_subnet(vpcsubnet);
-            for (k = 0; k < vpcsubnet->max_instances; k++) {
-                vpcinstance = &(vpcsubnet->instances[k]);
-                print_mido_vpc_instance(vpcinstance);
-            }
-        }
-    }
-    */
+    gni_vpc *gnivpc = NULL;
+    gni_vpcsubnet *gnivpcsubnet = NULL;
+    gni_instance *gniinstance = NULL;
+    gni_secgroup *gnisecgroup = NULL;
 
     // pass1 - tag everything that is both in GNI and in MIDO
-    timer = time(NULL);
     // pass1: do vpcs and subnets
     for (i = 0; i < gni->max_vpcs; i++) {
-        gni_vpc *gnivpc = NULL;
         gnivpc = &(gni->vpcs[i]);
         rc = find_mido_vpc(mido, gnivpc->name, &vpc);
 
@@ -952,7 +901,6 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
         }
 
         for (j = 0; j < gnivpc->max_subnets; j++) {
-            gni_vpcsubnet *gnivpcsubnet = NULL;
             gnivpcsubnet = &(gnivpc->subnets[j]);
             rc = find_mido_vpc_subnet(vpc, gnivpcsubnet->name, &vpcsubnet);
             if (rc) {
@@ -965,22 +913,21 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
             
         }
     }
-    LOGDEBUG("MARK2: %ld\n", time(NULL) - timer);
 
-    timer = time(NULL);
     // pass1: ensure that the meta-data map is populated right away
     snprintf(mapfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/eucanetd_vpc_instance_ip_map", mido->eucahome);
     unlink(mapfile);
     PFH = fopen(mapfile, "w");
-
+    if (!PFH) {
+        LOGERROR("cannot open VPC map file '%s': check permissions and disk capacity\n", mapfile);
+        ret = 1;
+    }
+    
     // pass1: do instances 
     for (i = 0; i < gni->max_instances; i++) {
-        gni_instance *gniinstance = NULL;
         gniinstance = &(gni->instances[i]);
-
-        char *privIp = NULL;
         privIp = hex2dot(gniinstance->privateIp);
-        fprintf(PFH, "%s %s %s\n", SP(gniinstance->vpc), SP(gniinstance->name), SP(privIp));
+        if (PFH) fprintf(PFH, "%s %s %s\n", SP(gniinstance->vpc), SP(gniinstance->name), SP(privIp));
         EUCA_FREE(privIp);
 
         rc = find_mido_vpc_instance_global(mido, gniinstance->name, &vpcinstance);
@@ -992,13 +939,10 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
             vpcinstance->gnipresent = 1;
         }
     }
-    fclose(PFH);
-    LOGDEBUG("MARK3: %ld\n", time(NULL) - timer);
+    if (PFH) fclose(PFH);
 
     // pass1: do security groups
-    timer = time(NULL);
     for (i = 0; i < gni->max_secgroups; i++) {
-        gni_secgroup *gnisecgroup = NULL;
         gnisecgroup = &(gni->secgroups[i]);
         rc = find_mido_vpc_secgroup(mido, gnisecgroup->name, &vpcsecgroup);
         if (rc) {
@@ -1009,10 +953,20 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
             vpcsecgroup->gnipresent = 1;
         }
     }
-    LOGDEBUG("MARK4: %ld\n", time(NULL) - timer);
+
+    return(ret);
+}
+
+
+int do_midonet_update_pass2(globalNetworkInfo * gni, mido_config * mido) {
+    int i = 0, j = 0, k = 0, rc = 0, ret = 0;
+
+    mido_vpc *vpc = NULL;
+    mido_vpc_secgroup *vpcsecgroup = NULL;
+    mido_vpc_instance *vpcinstance = NULL;
+    mido_vpc_subnet *vpcsubnet = NULL;
 
     // pass2 - remove anything in MIDO that is not in GNI
-    timer = time(NULL);
     for (i = 0; i < mido->max_vpcsecgroups; i++) {
         vpcsecgroup = &(mido->vpcsecgroups[i]);
         if (!vpcsecgroup->gnipresent) {
@@ -1118,9 +1072,7 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
             }
         }
     }
-    LOGDEBUG("MARK5: %ld\n", time(NULL) - timer);
-    
-    timer = time(NULL);
+
     for (i = 0; i < mido->max_vpcs; i++) {
         vpc = &(mido->vpcs[i]);        
         for (j = 0; j < vpc->max_subnets; j++) {
@@ -1146,22 +1098,35 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
             rc = do_metaproxy_teardown(mido);
             if (rc) {
                 LOGERROR("cannot teardown metadata proxies: see above log for details\n");
+                ret = 1;
             }
             rc = delete_mido_vpc(mido, vpc);
         } else {
             LOGDEBUG("pass2: mido VPC %s in global: Y\n", vpc->name);
         }
     }
-    LOGDEBUG("MARK6: %ld\n", time(NULL) - timer);
+
+    return(ret);
+}
+
+int do_midonet_update_pass3_vpcs(globalNetworkInfo * gni, mido_config * mido) {
+    int i = 0, j = 0, rc = 0, ret = 0;
+
+    char subnet_buf[24], slashnet_buf[8], gw_buf[24];
+
+    mido_vpc *vpc = NULL;
+    mido_vpc_subnet *vpcsubnet = NULL;
+
+    gni_vpc *gnivpc = NULL;
+    gni_vpcsubnet *gnivpcsubnet = NULL;
 
     // now, go through GNI and create new VPCs
-    timer = time(NULL);
     LOGINFO("initializing VPCs (%d)\n", gni->max_vpcs);
     for (i = 0; i < gni->max_vpcs; i++) {
-        gni_vpc *gnivpc = NULL;
-        gni_vpcsubnet *gnivpcsubnet = NULL;
-        mido_vpc *vpc = NULL;
-        mido_vpc_subnet *vpcsubnet = NULL;
+        gnivpc = NULL;
+        gnivpcsubnet = NULL;
+        vpc = NULL;
+        vpcsubnet = NULL;
 
         gnivpc = &(gni->vpcs[i]);
         LOGINFO("initializing VPC '%s' with '%d' subnets\n", gnivpc->name, gnivpc->max_subnets);
@@ -1183,6 +1148,7 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
         rc = create_mido_vpc(mido, mido->midocore, vpc);
         if (rc) {
             LOGERROR("failed to create VPC '%s': check midonet health\n", gnivpc->name);
+            ret = 1;
         }
         vpc->gnipresent = 1;
 
@@ -1211,25 +1177,32 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
             rc = create_mido_vpc_subnet(mido, vpc, vpcsubnet, subnet_buf, slashnet_buf, gw_buf, gni->instanceDNSDomain, gni->instanceDNSServers, gni->max_instanceDNSServers);
             if (rc) {
                 LOGERROR("failed to create VPC '%s' subnet '%s': check midonet health\n", gnivpc->name, gnivpc->subnets[j].name);
+                ret = 1;
             }
             vpcsubnet->gnipresent = 1;
         }
     }
-    LOGDEBUG("MARK7: %ld\n", time(NULL) - timer);
 
     // set up metadata proxies once vpcs/subnets are all set up
-    timer = time(NULL);
     rc = do_metaproxy_setup(mido);
     if (rc) {
         LOGERROR("cannot set up metadata proxies: see above log for details\n");
-        //    ret = 1;
+        ret = 1;
     }
-    LOGDEBUG("MARK8: %ld\n", time(NULL) - timer);
 
-    timer = time(NULL);
+    return(ret);
+}
+
+int do_midonet_update_pass3_sgs(globalNetworkInfo * gni, mido_config * mido) {
+    int rc = 0, ret = 0, i = 0;
+    
+    mido_vpc_secgroup *vpcsecgroup = NULL;
+
+    gni_secgroup *gnisecgroup = &(gni->secgroups[i]);
+
     // now add sec. groups
     for (i = 0; i < gni->max_secgroups; i++) {
-        gni_secgroup *gnisecgroup = &(gni->secgroups[i]);
+        gnisecgroup = &(gni->secgroups[i]);
         
         // create the SG
         rc = find_mido_vpc_secgroup(mido, gnisecgroup->name, &vpcsecgroup);
@@ -1249,18 +1222,28 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
         
         rc = create_mido_vpc_secgroup(mido, vpcsecgroup);
         if (rc) {
-            // TODO
+            LOGERROR("cannot create mido security group '%s': check midonet health\n", vpcsecgroup->name);
+            ret = 1;
         }
         vpcsecgroup->gnipresent = 1;
     }
-    LOGDEBUG("MARK9: %ld\n", time(NULL) - timer);
+
+    return(ret);
+}
+
+
+int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
+    int rc = 0, ret = 0, i = 0, j = 0, k = 0, srcMode = 0;
+    char subnet_buf[24], slashnet_buf[8], gw_buf[24], pt_buf[24], grpUUID[128];
+
+    mido_vpc_secgroup *vpcsecgroup = NULL;
+    mido_vpc_instance *vpcinstance = NULL;
+    mido_vpc_subnet *vpcsubnet = NULL;
+    mido_vpc *vpc = NULL;
+
+    gni_instance *gniinstance = NULL;
 
     // now do instances
-    //    snprintf(mapfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/eucanetd_vpc_instance_ip_map", mido->eucahome);
-    //    unlink(mapfile);
-    //    PFH = fopen(mapfile, "w");
-    timer = time(NULL);
-    gni_instance *gniinstance = NULL;
     for (i = 0; i < gni->max_instances; i++) {
         gniinstance = &(gni->instances[i]);
 
@@ -1289,7 +1272,8 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                     LOGDEBUG("ABOUT TO CREATE INSTANCE '%s' ON HOST '%s'\n", vpcinstance->name, gniinstance->nodehostname);
                     rc = create_mido_vpc_instance(mido, vpcinstance, gniinstance->nodehostname);
                     if (rc) {
-                        // TODO
+                        LOGERROR("cannot create VPC instance '%s': check midonet health\n", vpcinstance->name);
+                        ret = 1;
                     }
 
                     vpcinstance->gnipresent = 1;
@@ -1308,6 +1292,7 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                         rc = connect_mido_vpc_instance(vpcsubnet, vpcinstance, &(vpcinstance->midos[VMHOST]), gni->instanceDNSDomain);
                         if (rc) {
                             LOGERROR("cannot connect instance to midonet: check midonet health\n");
+                            ret = 1;
                         } else {
                             // check to see if something has changed before running the DC
                             {
@@ -1325,6 +1310,7 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                                         rc = disconnect_mido_vpc_instance_elip(vpcinstance);
                                         if (rc) {
                                             LOGERROR("cannot remove prior midonet floating IP for instance: check midonet health\n");
+                                            ret = 1;
                                         }
                                         LOGDEBUG("disconnect done\n");
                                     }
@@ -1335,10 +1321,12 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                             rc = connect_mido_vpc_instance_elip(mido, mido->midocore, vpc, vpcsubnet, vpcinstance);
                             if (rc) {
                                 LOGERROR("cannot setup midonet floating IP <-> instance mapping: check midonet health\n");
+                                ret = 1;
                             }
                         }
                     } else {
                         LOGERROR("could not find midonet host for instance '%s': check midonet/euca node/host mappings\n", vpcinstance->name);
+                        ret = 1;
                     }
                     
                     // do SGs
@@ -1764,13 +1752,102 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
                         }
                         EUCA_FREE(gnisecgroups);
                     }
-                    
-                    // done
                 }
             }
         }
     }
-    LOGDEBUG("MARK10: %ld\n", time(NULL) - timer);
+    
+    return(ret);
+}
+
+
+//!
+//!
+//!
+//! @param[in] gni
+//! @param[in] mido
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
+{
+    int rc = 0, ret = 0;
+
+    if (!gni || !mido) {
+        return (1);
+    }
+
+    mido->enabledCLCIp = gni->enabledCLCIp;
+
+    rc = do_midonet_populate(mido);
+    if (rc) {
+        LOGERROR("could not populate prior to update: see above log entries for details\n");
+        return (1);
+    }
+
+    /*
+    // temporary print
+    LOGDEBUG("TOTAL SEC. GROUPS: %d\n", mido->max_vpcsecgroups);
+    for (i = 0; i < mido->max_vpcsecgroups; i++) {
+        vpcsecgroup = &(mido->vpcsecgroups[i]);
+        print_mido_vpc_secgroup(vpcsecgroup);
+    }
+
+    LOGDEBUG("TOTAL VPCS: %d\n", mido->max_vpcs);
+    for (i = 0; i < mido->max_vpcs; i++) {
+        vpc = &(mido->vpcs[i]);
+        print_mido_vpc(vpc);
+        for (j = 0; j < vpc->max_subnets; j++) {
+            vpcsubnet = &(vpc->subnets[j]);
+            print_mido_vpc_subnet(vpcsubnet);
+            for (k = 0; k < vpcsubnet->max_instances; k++) {
+                vpcinstance = &(vpcsubnet->instances[k]);
+                print_mido_vpc_instance(vpcinstance);
+            }
+        }
+    }
+    */
+
+    rc = do_midonet_update_pass1(gni, mido);
+    if (rc) {
+        LOGERROR("pass1: failed update - check midonet health\n");
+        return(1);
+    }
+
+    rc = do_midonet_update_pass2(gni, mido);
+    if (rc) {
+        LOGERROR("pass2: failed update - check midonet health\n");
+        return(1);
+    }
+
+    rc = do_midonet_update_pass3_vpcs(gni, mido);
+    if (rc) {
+        LOGERROR("pass3_vpcs: failed update - check midonet health\n");
+        return(1);
+    }
+
+    rc = do_midonet_update_pass3_sgs(gni, mido);
+    if (rc) {
+        LOGERROR("pass3_sgs: failed update - check midonet health\n");
+        return(1);
+    }
+
+    rc = do_midonet_update_pass3_insts(gni, mido);
+    if (rc) {
+        LOGERROR("pass3_insts: failed update - check midonet health\n");
+        return(1);
+    }
+
+    
+
     /*
     // temporary print
     for (i = 0; i < mido->max_vpcs; i++) {
@@ -1799,7 +1876,7 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido)
     }
     */
 
-    return (0);
+    return (ret);
 }
 
 //!

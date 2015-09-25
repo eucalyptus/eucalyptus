@@ -310,7 +310,7 @@ static int eucanetd_detect_peer(globalNetworkInfo * pGni);
 //!
 int main(int argc, char **argv)
 {
-    u8 scrubResult = EUCANETD_RUN_NO_API;
+    u32 scrubResult = EUCANETD_RUN_NO_API;
     int rc = 0;
     int opt = 0;
     int firstrun = 1;
@@ -428,7 +428,7 @@ int main(int argc, char **argv)
             firstrun = 0;
         }
         // if the last update operations failed, regardless of new info, force an update
-        if (update_globalnet_failed) {
+        if (update_globalnet_failed == TRUE) {
             LOGDEBUG("last update of network state failed, forcing a retry: update_globalnet_failed=%d\n", update_globalnet_failed);
             update_globalnet = TRUE;
         }
@@ -501,7 +501,9 @@ int main(int argc, char **argv)
                     // Scrub the system so see what needs to be done
                     scrubResult = pDriverHandler->system_scrub(globalnetworkinfo, pLni);
                 }
-
+                
+                LOGDEBUG("WTF1: %d %d %d\n", scrubResult, EUCANETD_RUN_ERROR_API, scrubResult != EUCANETD_RUN_ERROR_API);
+                
                 // Make sure the scrub did not fail
                 if (scrubResult != EUCANETD_RUN_ERROR_API) {
                     // update network artifacts (devices, tunnels, etc.) if the scrub indicate so
@@ -548,10 +550,11 @@ int main(int argc, char **argv)
                 LOGERROR("Failed to populate our local network view. Check above logs for details.\n");
                 update_globalnet_failed = TRUE;
             }
+            LOGDEBUG("WTF2: %d %d\n", scrubResult, update_globalnet_failed);
         }
 
         if (update_globalnet) {
-            if (update_globalnet_failed) {
+            if (update_globalnet_failed == TRUE) {
                 epoch_failed_updates++;
             } else {
                 epoch_updates++;
@@ -564,8 +567,10 @@ int main(int argc, char **argv)
                     epoch_updates + epoch_failed_updates, epoch_updates, epoch_failed_updates, (float)epoch_timer / 60.0);
             epoch_checks = epoch_updates = epoch_failed_updates = epoch_timer = 0;
         }
+
         // do it all over again...
-        if (update_globalnet_failed) {
+        LOGDEBUG("WTF3: %d %d\n", scrubResult, update_globalnet_failed == TRUE);
+        if (update_globalnet_failed == TRUE) {
             LOGDEBUG("main loop complete (%ld seconds): failures detected sleeping %d seconds before next poll\n", time(NULL) - loop_start, 1);
             sleep(1);
         } else {

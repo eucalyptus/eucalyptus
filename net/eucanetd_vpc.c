@@ -401,18 +401,18 @@ static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni)
 {
     int rc = 0;
     u32 ret = EUCANETD_RUN_NO_API;
-
+    
     LOGINFO("Scrubbing for '%s' network driver.\n", DRIVER_NAME());
 
     // Is the driver initialized?
     if (!IS_INITIALIZED()) {
         LOGERROR("Failed to scub the system for network artifacts. Driver '%s' not initialized.\n", DRIVER_NAME());
-        return (EUCANETD_RUN_NO_API);
+        return (ret);
     }
     // Are the global and local network view structures NULL?
     if (!pGni || !pLni) {
         LOGERROR("Failed to implement security-group artifacts for '%s' network driver. Invalid parameters provided.\n", DRIVER_NAME());
-        return (EUCANETD_RUN_NO_API);
+        return (ret);
     }
 
     //    if (PEER_IS_NC(eucanetdPeer)) {
@@ -436,5 +436,6 @@ static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni)
         }
         //    }
 
-    return (EUCANETD_RUN_NO_API);
+        //    return (EUCANETD_RUN_NO_API);
+        return (ret);
 }
