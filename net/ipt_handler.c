@@ -766,16 +766,18 @@ int ipt_handler_update_refcounts(ipt_handler * ipth)
             for (k = 0; k < chain->max_rules; k++) {
                 rule = &(chain->rules[k]);
 
-                jumpptr = strstr(rule->iptrule, "-j");
-                if (jumpptr) {
-                    jumpchain[0] = '\0';
-                    sscanf(jumpptr, "%[-j] %s", tmp, jumpchain);
-                    if (strlen(jumpchain)) {
-                        refchain = ipt_table_find_chain(ipth, table->name, jumpchain);
-                        if (refchain) {
-                            LOGDEBUG("FOUND REF TO CHAIN (name=%s sourcechain=%s jumpchain=%s currref=%d) (rule=%s)\n",
-                                     refchain->name, chain->name, jumpchain, refchain->ref_count, rule->iptrule);
-                            refchain->ref_count++;
+                if (0 == rule->flushed) {
+                    jumpptr = strstr(rule->iptrule, "-j");
+                    if (jumpptr) {
+                        jumpchain[0] = '\0';
+                        sscanf(jumpptr, "%[-j] %s", tmp, jumpchain);
+                        if (strlen(jumpchain)) {
+                            refchain = ipt_table_find_chain(ipth, table->name, jumpchain);
+                            if (refchain) {
+                                LOGDEBUG("FOUND REF TO CHAIN (name=%s sourcechain=%s jumpchain=%s currref=%d) (rule=%s)\n",
+                                        refchain->name, chain->name, jumpchain, refchain->ref_count, rule->iptrule);
+                                refchain->ref_count++;
+                            }
                         }
                     }
                 }
@@ -1077,6 +1079,51 @@ int ipt_chain_flush(ipt_handler * ipth, char *tablename, char *chainname)
     chain->ruleorder = 0;
 
     return (0);
+}
+
+//!
+//! Flushes/removes the rule of interest from a chain.
+//!
+//! @param[in] ipth pointer to the IP table handler structure
+//! @param[in] tablename a string pointer to the table name
+//! @param[in] chainname a string pointer to the chain name
+//! @param[in] findrule a string pointer to the rule we're looking for
+//!
+//! @return 0 on success or 1 if any failure occurred
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int ipt_chain_flush_rule(ipt_handler * ipth, char *tablename, char *chainname, char *findrule) {
+    int i, found = 0, ruleidx = 0;
+    ipt_chain *chain;
+
+    if (!ipth || !tablename || !chainname || !findrule || !ipth->init) {
+        return (EUCA_INVALID_ERROR);
+    }
+
+    chain = ipt_table_find_chain(ipth, tablename, chainname);
+    if (!chain) {
+        return (EUCA_INVALID_ERROR);
+    }
+
+    for (i = 0; i < chain->max_rules && !found; i++) {
+        ruleidx = i;
+        if (!strcmp(chain->rules[i].iptrule, findrule)) {
+            found++;
+            chain->rules[i].flushed = 1;
+            chain->rules[i].order = 0;
+        }
+    }
+    if (!found) {
+        return (EUCA_NOT_FOUND_ERROR);
+    }
+    return (EUCA_OK);
 }
 
 //!

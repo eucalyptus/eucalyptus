@@ -129,7 +129,7 @@ import com.google.common.collect.Maps;
  */
 @ConfigurableClass( root = "dns.services",
                     description = "Options controlling DNS name resolution for Eucalyptus services." )
-public class TopologyDnsResolver implements DnsResolver {
+public class TopologyDnsResolver extends DnsResolver {
   private static Logger LOG = Logger.getLogger( TopologyDnsResolver.class );
 
   @ConfigurableField( description = "Enable the service topology resolver.  Note: dns.enable must also be 'true'" )

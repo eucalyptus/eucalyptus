@@ -42,7 +42,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 
-public class ObjectStorageBucketResolver implements DnsResolver {
+public class ObjectStorageBucketResolver extends DnsResolver {
 
   @Override
   public boolean checkAccepts(DnsRequest request) {

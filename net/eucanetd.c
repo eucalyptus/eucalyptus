@@ -357,13 +357,9 @@ int main(int argc, char **argv)
             config->debug = 1;
             break;
         case 'h':
-            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n\t%-12s| flush - clear all iptables/ebtables/ipset rules and continue\n"
-                   "\t%-12s| flush & stop - clear all iptables/ebtables/ipset rules and return\n", argv[0], "-d", "-F", "-f");
-            exit(1);
-            break;
         default:
-            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n\t%-12s| flush - clear all iptables/ebtables/ipset rules and continue\n"
-                   "\t%-12s| flush & stop - clear all iptables/ebtables/ipset rules and return\n", argv[0], "-d", "-F", "-f");
+            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n\t%-12s| flush - clear all eucanetd artifacts and exit\n"
+                   "\t%-12s| flush dynamic - clear only dynamic eucanetd artifacts and exit\n", argv[0], "-d", "-F", "-f");
             exit(1);
             break;
         }

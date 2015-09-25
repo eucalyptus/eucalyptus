@@ -33,11 +33,11 @@ from eucalyptus_admin.exceptions import AWSError
 from eucalyptus_admin.util import add_fake_region_name
 
 
-class Empyrean(requestbuilder.service.BaseService):
-    NAME = 'empyrean'
+class Bootstrap(requestbuilder.service.BaseService):
+    NAME = 'bootstrap'
     DESCRIPTION = 'Bootstrap service'
     REGION_ENVVAR = 'AWS_DEFAULT_REGION'
-    URL_ENVVAR = 'EMPYREAN_URL'
+    URL_ENVVAR = 'EUCA_BOOTSTRAP_URL'
 
     ARGS = [Arg('-U', '--url', metavar='URL',
                 help='bootstrap service endpoint URL')]
@@ -50,9 +50,9 @@ class Empyrean(requestbuilder.service.BaseService):
         raise AWSError(response)
 
 
-class EmpyreanRequest(requestbuilder.request.AWSQueryRequest):
+class BootstrapRequest(requestbuilder.request.AWSQueryRequest):
     SUITE = EucalyptusAdmin
-    SERVICE_CLASS = Empyrean
+    SERVICE_CLASS = Bootstrap
     AUTH_CLASS = requestbuilder.auth.aws.HmacV4Auth
     API_VERSION = 'eucalyptus'
     METHOD = 'POST'

@@ -24,29 +24,28 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from requestbuilder import Arg
+from requestbuilder.mixins.formatting import TableOutputMixin
 
-from eucalyptus_admin.commands.empyrean import EmpyreanRequest
+from eucalyptus_admin.commands.bootstrap import BootstrapRequest
 
 
-class RegisterService(EmpyreanRequest):
-    DESCRIPTION = 'Register a new instance of a service'
-    ARGS = [Arg('Name', metavar='SVCINSTANCE',
-                help='a name for the new instance of a service'),
-            Arg('-t', '--type', dest='Type', required=True,
-                help="the new service instance's type (required)"),
-            Arg('-h', '--host', metavar='IP', dest='Host', required=True,
-                help='''the host the new instance of the service runs on
-                (required)'''),
-            Arg('--port', dest='Port', type=int,
-                help='''the port the new instance of the service runs on
-                (default for cluster: 8774, otherwise: 8773)'''),
-            Arg('-z', '--availability-zone', metavar='ZONE', dest='Partition',
-                help='''availability zone to register the new service instance
-                in.  This is required only for services of certain types.''')]
+class DescribeAvailableServiceTypes(BootstrapRequest, TableOutputMixin):
+    DESCRIPTION = 'List available service types'
+    ARGS = [Arg('-a', '--all', dest='show_all', action='store_true',
+                route_to=None,
+                help='show all service types regardless of their properties')]
+    LIST_TAGS = ['available', 'serviceGroups', 'serviceGroupMembers']
 
-    def preprocess(self):
-        if not self.params['Port']:
-            if self.args.get('Type').lower() == 'cluster':
-                self.params['Port'] = 8774
-            else:
-                self.params['Port'] = 8773
+    def print_result(self, result):
+        svctypes = result.get('available') or []
+        table = self.get_table(('SVCTYPE', 'type', 'groups', 'description'))
+        table.sortby = 'type'
+        for svctype in svctypes:
+            if (svctype.get('registerable', '').lower() != 'false' or
+                    self.args.get('all')):
+                parent_groups = [item['entry'] for item in
+                                 svctype.get('serviceGroups') or {}]
+                table.add_row(('SVCTYPE', svctype.get('componentName'),
+                               ','.join(sorted(parent_groups)),
+                               svctype.get('description')))
+        print table

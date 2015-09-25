@@ -45,7 +45,7 @@ import com.google.common.collect.Lists;
  *  -- SOA
  *
  */
-public class GenericDnsResolver implements DnsResolver {
+public class GenericDnsResolver extends DnsResolver {
   @Override
   public boolean checkAccepts( DnsRequest request ) {
     final Record query = request.getQuery( );

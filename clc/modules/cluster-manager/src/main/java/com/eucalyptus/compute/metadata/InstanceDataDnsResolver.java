@@ -86,7 +86,7 @@ import com.google.common.collect.Lists;
 
 @ConfigurableClass( root = "dns.instancedata",
                     description = "Options controlling DNS name resolution for the instance metadata service." )
-public class InstanceDataDnsResolver implements DnsResolver {
+public class InstanceDataDnsResolver extends DnsResolver {
   @ConfigurableField( description = "Enable the instance-data resolver.  Note: dns.enable must also be 'true'" )
   public static Boolean            enabled                = Boolean.TRUE;
   private static final Name        INSTANCE_DATA          = Name.fromConstantString( "instance-data." );

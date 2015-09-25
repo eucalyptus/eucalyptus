@@ -74,7 +74,7 @@ public class VmBootVolumeAttachment extends VmVolumeAttachment {
       super(
           "metadata_instances_persistent_volumes",
           "metadata_instances_persistent_volumes_pkey",
-          "uk_qhck6noa8fca18b72q1hf7vh9"
+          "uk_muacb67gpe742w0bfxdyk64c5"
       );
     }
   }

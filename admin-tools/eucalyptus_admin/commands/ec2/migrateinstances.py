@@ -27,7 +27,7 @@ from requestbuilder import Arg, MutuallyExclusiveArgList
 from requestbuilder.exceptions import ArgumentError
 
 from eucalyptus_admin.commands.ec2 import EC2Request
-from eucalyptus_admin.commands.empyrean.modifyservice import ModifyService
+from eucalyptus_admin.commands.bootstrap.modifyservice import ModifyService
 
 
 class MigrateInstances(EC2Request):

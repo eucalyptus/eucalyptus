@@ -115,7 +115,7 @@ import com.google.common.net.InetAddresses;
  */
 @ConfigurableClass( root = "dns.recursive",
                     description = "Options controlling recursive DNS resolution and caching." )
-public class RecursiveDnsResolver implements DnsResolver {
+public class RecursiveDnsResolver extends DnsResolver {
   private static Logger LOG = Logger.getLogger( RecursiveDnsResolver.class );
   @ConfigurableField( description = "Enable the recursive DNS resolver.  Note: dns.enable must also be 'true'" )
   public static Boolean enabled = Boolean.TRUE;
@@ -153,6 +153,12 @@ public class RecursiveDnsResolver implements DnsResolver {
     final Record query = request.getQuery( );
     final Name name = query.getName( );
     final int type = query.getType( );
+    final InetAddress source = request.getRemoteAddress( );
+    if (! enabled || !Subnets.isSystemManagedAddress( source ))
+      return DnsResponse.forName( query.getName( ) )
+      .recursive( )
+      .refused();
+    
     final Cache cache = new Cache( );
     Lookup aLookup = new Lookup( name, type );
     aLookup.setCache( cache );
@@ -164,12 +170,6 @@ public class RecursiveDnsResolver implements DnsResolver {
     final Set<Record> answer = Sets.newLinkedHashSet( );
     final Set<Record> authority = Sets.newLinkedHashSet( );
     final Set<Record> additional = Sets.newLinkedHashSet( );
-    final InetAddress source = request.getRemoteAddress( );
-
-    if (!Subnets.isSystemManagedAddress( source ))
-      return DnsResponse.forName( query.getName( ) )
-      .recursive( )
-      .refused();
     
     boolean iamAuthority = false;
     for ( Record aRec : queriedrrs ) {
@@ -268,7 +268,7 @@ public class RecursiveDnsResolver implements DnsResolver {
   public boolean checkAccepts( final DnsRequest request ) {
     final Record query = request.getQuery( );
     final InetAddress source = request.getRemoteAddress( );
-    if ( !Bootstrap.isOperational( ) || !enabled ) {
+    if ( !Bootstrap.isOperational( ) ) {
       return false;
     } else if ( ( RequestType.A.apply( query ) || RequestType.AAAA.apply( query ) || RequestType.MX.apply(query))
                 && query.getName( ).isAbsolute( )
@@ -279,6 +279,11 @@ public class RecursiveDnsResolver implements DnsResolver {
       return true;
     }
     return false;
+  }
+  
+  @Override
+  public int getOrder( ) {
+    return DEFAULT_ORDER + 1;
   }
   
   @Override

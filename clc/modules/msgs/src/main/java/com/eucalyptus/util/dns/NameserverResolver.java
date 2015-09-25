@@ -101,7 +101,7 @@ import com.google.common.primitives.Ints;
 
 @ConfigurableClass( root = "dns.ns",
                     description = "Options controlling DNS name resolution for the system's nameservers." )
-public class NameserverResolver implements DnsResolver {
+public class NameserverResolver extends DnsResolver {
   @ConfigurableField( description = "Enable the NS resolver.  Note: dns.enable must also be 'true'" )
   public static Boolean enabled = Boolean.TRUE;
 
@@ -168,7 +168,7 @@ public class NameserverResolver implements DnsResolver {
   }
 
 
-  public static class NameserverReverseResolver implements DnsResolver {
+  public static class NameserverReverseResolver extends DnsResolver {
     
     @Override
     public boolean checkAccepts( DnsRequest request ) {
