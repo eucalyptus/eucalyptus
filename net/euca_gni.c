@@ -100,6 +100,7 @@
 #include "dev_handler.h"
 #include "euca_gni.h"
 #include "euca_lni.h"
+#include "eucanetd_util.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -309,6 +310,27 @@ int gni_find_secgroup(globalNetworkInfo * gni, const char *psGroupId, gni_secgro
         }
     }
     return (1);
+}
+
+int gni_find_instance(globalNetworkInfo * gni, const char *psInstanceId, gni_instance ** pInstance) {
+    int i = 0;
+
+    if (!gni || !psInstanceId || !pInstance) {
+        LOGERROR("invalid input\n");
+        return (1);
+    }
+    // Initialize to NULL
+    (*pInstance) = NULL;
+
+    // Go through our instance list and look for that instance
+    for (i = 0; i < gni->max_instances; i++) {
+        if (!strcmp(psInstanceId, gni->instances[i].name)) {
+            (*pInstance) = &(gni->instances[i]);
+            return (0);
+        }
+    }
+
+    return(1);
 }
 
 //!
@@ -1721,6 +1743,25 @@ int gni_populate(globalNetworkInfo * gni, gni_hostname_info *host_info, char *xm
     }
 
     LOGDEBUG("begin parsing XML into data structures\n");
+
+    // get version and applied version
+    snprintf(expression, 2048, "/network-data/@version");
+    rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+    for (i = 0; i < max_results; i++) {
+        LOGTRACE("after function: %d: %s\n", i, results[i]);
+        snprintf(gni->version, 32, "%s", results[i]);
+        EUCA_FREE(results[i]);
+    }
+    EUCA_FREE(results);
+
+    snprintf(expression, 2048, "/network-data/@applied-version");
+    rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+    for (i = 0; i < max_results; i++) {
+        LOGTRACE("after function: %d: %s\n", i, results[i]);
+        snprintf(gni->appliedVersion, 32, "%s", results[i]);
+        EUCA_FREE(results[i]);
+    }
+    EUCA_FREE(results);
 
     // begin instance
     snprintf(expression, 2048, "/network-data/instances/instance");

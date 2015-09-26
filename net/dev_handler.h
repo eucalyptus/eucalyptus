@@ -253,9 +253,6 @@ int dev_remove_ip(const char *psDeviceName, in_addr_t address, in_addr_t netmask
 int dev_remove_ips(in_addr_entry * pIps, int nbIps);
 //! @}
 
-//! TODO: For EDGE mode, replace with proper API from dev_handler.h
-int getdevinfo(char *dev, u32 ** outips, u32 ** outnms, int *len);
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                           STATIC INLINE PROTOTYPES                         |

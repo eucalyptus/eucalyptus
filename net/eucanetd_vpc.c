@@ -105,6 +105,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <fcntl.h>
 #include <pwd.h>
 #include <dirent.h>
 #include <errno.h>
@@ -401,8 +402,11 @@ static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni)
 {
     int rc = 0;
     u32 ret = EUCANETD_RUN_NO_API;
+    char versionFile[EUCA_MAX_PATH];
     
     LOGINFO("Scrubbing for '%s' network driver.\n", DRIVER_NAME());
+
+    bzero(versionFile, EUCA_MAX_PATH);
 
     // Is the driver initialized?
     if (!IS_INITIALIZED()) {
@@ -432,6 +436,11 @@ static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni)
                 ret = EUCANETD_RUN_ERROR_API;
             } else {
                 LOGINFO("new Eucalyptus/Midonet networking state sync: updated successfully\n");
+                snprintf(versionFile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/global_network_info.version", config->eucahome);
+                LOGDEBUG("HELLO: %s %s\n", versionFile, pGni->version);
+                if (!strlen(pGni->version) || (str2file(pGni->version, versionFile, O_CREAT | O_TRUNC | O_WRONLY, 0644, FALSE) != EUCA_OK) ) {
+                    LOGWARN("failed to populate GNI version file '%s': check permissions and disk capacity\n", versionFile);
+                }
             }
         }
         //    }

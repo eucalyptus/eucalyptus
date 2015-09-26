@@ -145,6 +145,11 @@ int eucanetd_kill_program(pid_t pid, const char *psProgramName, const char *psRo
 int unlink_handler_file(char *filename);
 int truncate_file(char *filename);
 
+int cidrsplit(char *ipname, char **ippart, int *nmpart);
+
+//! TODO: For EDGE mode, replace with proper API from dev_handler.h
+int getdevinfo(char *dev, u32 ** outips, u32 ** outnms, int *len);
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                           STATIC INLINE PROTOTYPES                         |

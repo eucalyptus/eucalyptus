@@ -984,7 +984,7 @@ static int doBroadcastNetworkInfo(struct nc_state_t *nc, ncMetadata * pMeta, cha
     }
 
     LOGTRACE("encoded networkInfo=%s\n", networkInfo);
-    snprintf(xmlpath, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/global_network_info.xml", nc->home);
+    snprintf(xmlpath, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/global_network_info.xml", nc->home);
     LOGDEBUG("decoding/writing buffer to (%s)\n", xmlpath);
     xmlbuf = base64_dec((unsigned char *)networkInfo, strlen(networkInfo));
     if (xmlbuf) {

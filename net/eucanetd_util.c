@@ -584,3 +584,117 @@ int truncate_file(char *filename) {
     close(fd);
     return (0);
 }
+
+//!
+//! Function description.
+//!
+//! @param[in]  ipname pointer to the IP set handler structure
+//! @param[out] ippart
+//! @param[out] nmpart
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int cidrsplit(char *ipname, char **ippart, int *nmpart)
+{
+    char *idx = NULL;
+    if (!ipname || !ippart || !nmpart) {
+        LOGERROR("invalid input\n");
+        return (1);
+    }
+
+    *ippart = NULL;
+    *nmpart = 0;
+
+    idx = strchr(ipname, '/');
+    if (idx) {
+        //nm part is present
+        *idx = '\0';
+        idx++;
+        *nmpart = atoi(idx);
+        if (*nmpart < 0 || *nmpart > 32) {
+            LOGERROR("invalid netmask specified from input '%s': setting netmask to '/32'\n", ipname);
+            *nmpart = 32;
+        }
+        *ippart = strdup(ipname);
+    } else {
+        // nm part is not present, use \32
+        *nmpart = 32;
+        *ippart = strdup(ipname);
+    }
+    return (0);
+}
+
+//!
+//! Retrieves a given device information (assigned IPs and NMS).
+//!
+//! @param[in]  dev
+//! @param[out] outips
+//! @param[out] outnms
+//! @param[out] len
+//!
+//! @return EUCA_OK on success and the out fields will be set properly. On failure the
+//!         following error codes are returned:
+//!         - EUCA_ERROR: if we fail to retrieve the interfaces addresses.
+//!         - EUCA_INVALID_ERROR: if any parameter does not meet the preconditions
+//!
+//! @pre dev, outips, outnms and len must not be NULL.
+//!
+//! @note
+//! @todo replace with a better version.
+//!
+int getdevinfo(char *dev, u32 ** outips, u32 ** outnms, int *len)
+{
+    int rc = 0;
+    int count = 0;
+    char host[NI_MAXHOST] = "";
+    char buf[32] = "";
+    void *tmpAddrPtr = NULL;
+    struct ifaddrs *ifaddr = NULL;
+    struct ifaddrs *ifa = NULL;
+    struct sockaddr_in *ifs = NULL;
+
+    if ((dev == NULL) || (outips == NULL) || (outnms == NULL) || (len == NULL))
+        return (EUCA_INVALID_ERROR);
+
+    if ((rc = getifaddrs(&ifaddr)) != 0) {
+        return (EUCA_ERROR);
+    }
+
+    *outips = *outnms = NULL;
+    *len = 0;
+
+    count = 0;
+    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+        if (!strcmp(dev, "all") || !strcmp(ifa->ifa_name, dev)) {
+            if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET) {
+                if ((rc = getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST)) == 0) {
+                    count++;
+
+                    //! @todo handle graceful out of memory condition and report it
+                    *outips = EUCA_REALLOC(*outips, count, sizeof(u32));
+                    *outnms = EUCA_REALLOC(*outnms, count, sizeof(u32));
+
+                    (*outips)[count - 1] = dot2hex(host);
+
+                    ifs = ((struct sockaddr_in *)ifa->ifa_netmask);
+                    tmpAddrPtr = &ifs->sin_addr;
+                    if (inet_ntop(AF_INET, tmpAddrPtr, buf, 32)) {
+                        (*outnms)[count - 1] = dot2hex(buf);
+                    }
+                }
+            }
+        }
+    }
+
+    freeifaddrs(ifaddr);
+    *len = count;
+    return (EUCA_OK);
+}

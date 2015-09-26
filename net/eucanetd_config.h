@@ -81,6 +81,10 @@
 
 #include <config.h>
 #include <data.h>
+#include <ipt_handler.h>
+#include <ips_handler.h>
+#include <ebt_handler.h>
+#include <atomic_file.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

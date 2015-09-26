@@ -3302,8 +3302,8 @@ int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mid
     char ip[32];
 
     if (!vpcinstance->gniInst->publicIp || !vpcinstance->gniInst->privateIp) {
-        LOGERROR("input ip is 0.0.0.0\n");
-        return (1);
+        LOGWARN("input ip is 0.0.0.0: nothing to do\n");
+        return (0);
     }
 
     cidr_split(vpcsubnet->gniSubnet->cidr, NULL, NULL, NULL, pt_buf);

@@ -219,9 +219,6 @@ int ipt_handler_print(ipt_handler * ipth);
 int ipt_ruleordercmp(const void *p1, const void *p2);
 //! @}
 
-// TODO: Move somewhere more global as a utility
-int cidrsplit(char *ipname, char **ippart, int *nmpart);
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                           STATIC INLINE PROTOTYPES                         |

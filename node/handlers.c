@@ -110,6 +110,8 @@
 #include <euca_auth.h>
 #include <euca_axis.h>
 #include <euca_network.h>
+#include <euca_gni.h>
+#include <eucanetd_config.h>
 
 #include <vbr.h>
 #include <iscsi.h>
@@ -190,6 +192,8 @@ extern struct handlers default_libvirt_handlers;
 const char *euca_this_component_name = "nc";    //!< Name of this component
 const char *euca_client_component_name = "cc";  //!< Name of this component's client
 #endif /* NO_COMP */
+
+eucanetdConfig *config = NULL;
 
 /* used by lower level handlers */
 
@@ -1842,7 +1846,6 @@ void *startup_thread(void *arg)
                     virDomainFree(dom); // To be safe. Docs are not clear on whether the handle exists outside the process.
 
                     // DAN TEMPORARY FOR VPC TESTING
-                    //                if (!strcmp(nc_state.vnetconfig->mode, NETMODE_SYSTEM)) {
                     if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_VPCMIDO)) {
                         char iface[16], cmd[EUCA_MAX_PATH], obuf[256], ebuf[256];
                         snprintf(iface, 16, "vn_%s", instance->instanceId);
@@ -3837,6 +3840,54 @@ int instance_network_gate(ncInstance *instance, time_t timeout_seconds) {
         }
         LOGERROR("[%s] timed out waiting for instance network information to appear before booting instance\n", instance->instanceId);
         return(1);
+    } else if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_VPCMIDO)) {
+        LOGDEBUG("[%s] waiting at most %d seconds for required instance networking to exist before booting instance\n", instance->instanceId, (int)timeout_seconds);
+        while(time(NULL) < max_time) {
+            globalNetworkInfo *gni = NULL;
+            gni_hostname_info *host_info = NULL;
+            char xmlfile[EUCA_MAX_PATH] = "";
+            int rc = 0;
+
+            gni = gni_init();
+            host_info = gni_init_hostname_info();
+            if (gni && host_info) {
+                // decode/read/parse the globalnetworkinfo, assign any incorrect public/private IP mappings based on global view
+                snprintf(xmlfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/global_network_info.xml", nc_state.home);
+                rc = gni_populate(gni,host_info,xmlfile);
+                LOGDEBUG("done with gni_populate()\n");
+                if (rc) {
+                    // error
+                } else {
+                    // compare version/applied-version and search for instance record
+                    if (strlen(gni->version) && strlen(gni->appliedVersion) && !strcmp(gni->version, gni->appliedVersion)) {
+                        LOGDEBUG("GATE: version and applied version match\n");
+                        // look for instance record
+                        gni_instance *gniInstance = NULL;
+                        rc = gni_find_instance(gni, instance->instanceId, &gniInstance);
+                        if (gniInstance) {
+                            LOGDEBUG("[%s] global network config contains required instance record, continuing\n", instance->instanceId);
+
+                            // Free up gni and host_info memory
+                            rc = gni_free(gni);
+                            rc = gni_hostnames_free(host_info);
+
+                            return(0);
+                        } else {
+                            LOGTRACE("[%s] global network config does not (yet) contain required instance record, waiting...(%d seconds remaining)\n", instance->instanceId, (int)(max_time - time(NULL)));
+                        }
+                    } else {
+                        LOGDEBUG("GATE: version (%s) and applied version (%s) do not match: waiting\n", SP(gni->version), SP(gni->appliedVersion));
+                    }
+                }
+            }
+            // Free up gni and host_info memory
+            rc = gni_free(gni);
+            rc = gni_hostnames_free(host_info);
+            sleep(1);
+        }
+        LOGERROR("[%s] timed out waiting for instance network information to appear before booting instance\n", instance->instanceId);
+        return(1);
     }
+    
     return(0);
 }

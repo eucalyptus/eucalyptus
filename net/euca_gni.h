@@ -246,6 +246,8 @@ typedef struct gni_hostname_info_t {
 typedef struct globalNetworkInfo_t {
     boolean init;                      //!< has the structure been initialized successfully?
     char networkInfo[MAX_NETWORK_INFO_LEN]; //!< XML content used to build this structure
+    char version[32];                  //! latest version ID of the document
+    char appliedVersion[32];          //! latest known applied version ID of the document
     char sMode[NETMODE_LEN];           //! The network mode string passed in the GNI
     u32 enabledCLCIp;                  //!< IP address of the enabled CLC
     char EucanetdHost[HOSTNAME_LEN];
@@ -304,6 +306,7 @@ int gni_vpc_clear(gni_vpc * vpc);
 int gni_find_self_node(globalNetworkInfo * gni, gni_node ** outnodeptr);
 int gni_find_self_cluster(globalNetworkInfo * gni, gni_cluster ** outclusterptr);
 int gni_find_secgroup(globalNetworkInfo * gni, const char *psGroupId, gni_secgroup ** pSecGroup);
+int gni_find_instance(globalNetworkInfo * gni, const char *psInstanceId, gni_instance ** pInstance);
 
 int gni_cloud_get_clusters(globalNetworkInfo * gni, char **cluster_names, int max_cluster_names, char ***out_cluster_names, int *out_max_cluster_names, gni_cluster ** out_clusters,
                            int *out_max_clusters);
