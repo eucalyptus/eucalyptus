@@ -169,7 +169,7 @@
 //!     \li    EUCA-2201 NC: race condition exists between instance cache copy and operations that update global instance list
 //!     \li    EUCA-2209 Cannot "euca_conf --initialize" on Ubuntu Lucid
 //!     \li    EUCA-2222 euca-clone-volume fails to bind host / component fields
-//!     \li    EUCA-2224 latest eucalytpus-cloud produced error when starting. Causes faststart to fail out.
+//!     \li    EUCA-2224 latest eucalyptus-cloud produced error when starting. Causes faststart to fail out.
 //!     \li    EUCA-2226 Upgrade to 3.1.0 fails when accounts or users have been deleted from a cloud
 //!     \li    EUCA-2228 Failing to create snapshots using netapp
 //!     \li    EUCA-2232 Loop device warning message when starting NC on Lucid
@@ -279,7 +279,7 @@
 //! @subsection RELEASE_1_5_2 Fri Jul 17 2009 Eucalyptus Systems (support@eucalyptus.com)
 //!     * Version 1.5.2
 //!     * A lot of bug fixes and improvements
-//!     * Eucalytpus now runs as user 'eucalyptus' by default
+//!     * Eucalyptus now runs as user 'eucalyptus' by default
 //!     * added new UI tab 'Extras' that includes links to pre-packaged images
 //!       and client tools
 //!     * Fixed support for client tools (including fixes to the REST interface).

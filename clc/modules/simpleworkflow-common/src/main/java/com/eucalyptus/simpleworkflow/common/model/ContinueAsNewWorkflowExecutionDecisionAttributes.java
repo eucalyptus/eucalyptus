@@ -120,7 +120,7 @@ public class ContinueAsNewWorkflowExecutionDecisionAttributes implements Seriali
     /**
      * Specifies the maximum duration of decision tasks for the new workflow
      * execution. This parameter overrides the
-     * <code>defaultTaskStartToCloseTimout</code> specified when registering
+     * <code>defaultTaskStartToCloseTimeout</code> specified when registering
      * the workflow type using <a>RegisterWorkflowType</a>. <p>The valid
      * values are integers greater than or equal to <code>0</code>. An
      * integer value can be used to specify the duration in seconds while
@@ -358,7 +358,7 @@ public class ContinueAsNewWorkflowExecutionDecisionAttributes implements Seriali
     /**
      * Specifies the maximum duration of decision tasks for the new workflow
      * execution. This parameter overrides the
-     * <code>defaultTaskStartToCloseTimout</code> specified when registering
+     * <code>defaultTaskStartToCloseTimeout</code> specified when registering
      * the workflow type using <a>RegisterWorkflowType</a>. <p>The valid
      * values are integers greater than or equal to <code>0</code>. An
      * integer value can be used to specify the duration in seconds while
@@ -374,7 +374,7 @@ public class ContinueAsNewWorkflowExecutionDecisionAttributes implements Seriali
      *
      * @return Specifies the maximum duration of decision tasks for the new workflow
      *         execution. This parameter overrides the
-     *         <code>defaultTaskStartToCloseTimout</code> specified when registering
+     *         <code>defaultTaskStartToCloseTimeout</code> specified when registering
      *         the workflow type using <a>RegisterWorkflowType</a>. <p>The valid
      *         values are integers greater than or equal to <code>0</code>. An
      *         integer value can be used to specify the duration in seconds while
@@ -392,7 +392,7 @@ public class ContinueAsNewWorkflowExecutionDecisionAttributes implements Seriali
     /**
      * Specifies the maximum duration of decision tasks for the new workflow
      * execution. This parameter overrides the
-     * <code>defaultTaskStartToCloseTimout</code> specified when registering
+     * <code>defaultTaskStartToCloseTimeout</code> specified when registering
      * the workflow type using <a>RegisterWorkflowType</a>. <p>The valid
      * values are integers greater than or equal to <code>0</code>. An
      * integer value can be used to specify the duration in seconds while
@@ -408,7 +408,7 @@ public class ContinueAsNewWorkflowExecutionDecisionAttributes implements Seriali
      *
      * @param taskStartToCloseTimeout Specifies the maximum duration of decision tasks for the new workflow
      *         execution. This parameter overrides the
-     *         <code>defaultTaskStartToCloseTimout</code> specified when registering
+     *         <code>defaultTaskStartToCloseTimeout</code> specified when registering
      *         the workflow type using <a>RegisterWorkflowType</a>. <p>The valid
      *         values are integers greater than or equal to <code>0</code>. An
      *         integer value can be used to specify the duration in seconds while
@@ -426,7 +426,7 @@ public class ContinueAsNewWorkflowExecutionDecisionAttributes implements Seriali
     /**
      * Specifies the maximum duration of decision tasks for the new workflow
      * execution. This parameter overrides the
-     * <code>defaultTaskStartToCloseTimout</code> specified when registering
+     * <code>defaultTaskStartToCloseTimeout</code> specified when registering
      * the workflow type using <a>RegisterWorkflowType</a>. <p>The valid
      * values are integers greater than or equal to <code>0</code>. An
      * integer value can be used to specify the duration in seconds while
@@ -444,7 +444,7 @@ public class ContinueAsNewWorkflowExecutionDecisionAttributes implements Seriali
      *
      * @param taskStartToCloseTimeout Specifies the maximum duration of decision tasks for the new workflow
      *         execution. This parameter overrides the
-     *         <code>defaultTaskStartToCloseTimout</code> specified when registering
+     *         <code>defaultTaskStartToCloseTimeout</code> specified when registering
      *         the workflow type using <a>RegisterWorkflowType</a>. <p>The valid
      *         values are integers greater than or equal to <code>0</code>. An
      *         integer value can be used to specify the duration in seconds while
