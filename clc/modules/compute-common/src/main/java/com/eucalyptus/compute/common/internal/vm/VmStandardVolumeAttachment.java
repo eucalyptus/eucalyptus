@@ -26,6 +26,7 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Index;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.upgrade.Upgrades;
 import com.google.common.base.Function;
@@ -37,6 +38,10 @@ import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_instances_volume_attachments" )
+@org.hibernate.annotations.Table(
+    appliesTo = "metadata_instances_volume_attachments",
+    indexes =  @Index( name = "metadata_instances_volume_attachments_vmid_idx", columnNames = "vminstance_id" )
+)
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class VmStandardVolumeAttachment extends VmVolumeAttachment {
   private static final long serialVersionUID = 1L;
