@@ -96,6 +96,7 @@
 
 #include <netinet/in.h>
 #include <euca_network.h>
+#include <eucanetd_config.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -134,7 +135,7 @@
 \*----------------------------------------------------------------------------*/
 
 //! common API to restart the DHCP server
-int eucanetd_kick_dhcpd_server(void);
+int eucanetd_kick_dhcpd_server(eucanetdConfig *config);
 
 //! API to run a program and make sure only one copy of the program is running
 int eucanetd_run_program(const char *psPidFilePath, const char *psRootWrap, boolean force, const char *psProgram, ...);

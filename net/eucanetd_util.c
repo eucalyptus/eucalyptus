@@ -220,7 +220,7 @@
 //!
 //! @note
 //!
-int eucanetd_kick_dhcpd_server(void)
+int eucanetd_kick_dhcpd_server(eucanetdConfig *config)
 {
     int ret = 0;
     int rc = 0;

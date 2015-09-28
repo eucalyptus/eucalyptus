@@ -1070,7 +1070,7 @@ static int update_private_ips(globalNetworkInfo * pGni)
         return (1);
     }
     // Restart the DHCP server so it can pick up the new configuration
-    if ((rc = eucanetd_kick_dhcpd_server()) != 0) {
+    if ((rc = eucanetd_kick_dhcpd_server(config)) != 0) {
         LOGERROR("unable to (re)configure local dhcpd server: check above log errors for details\n");
         return (1);
     }

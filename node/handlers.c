@@ -193,8 +193,6 @@ const char *euca_this_component_name = "nc";    //!< Name of this component
 const char *euca_client_component_name = "cc";  //!< Name of this component's client
 #endif /* NO_COMP */
 
-eucanetdConfig *config = NULL;
-
 /* used by lower level handlers */
 
 sem *hyp_sem = NULL;                   //!< semaphore for serializing domain creation

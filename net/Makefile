@@ -76,7 +76,7 @@ LIBNETDEPS   := $(LIBNETOBJS) $(STDDEPS)
 LIBNETNAME   := libeucanet.a
 
 # The EUCANETD Cloud Component
-EUCANETD     := eucanetd eucanetd_util eucanetd_edge eucanetd_managed eucanetd_managednv 
+EUCANETD     := eucanetd eucanetd_edge eucanetd_managed eucanetd_managednv 
 EUCANETD     += eucanetd_system eucanetd_static eucanetd_vpc midonet-api euca-to-mido
 EUCANETDOBJS := $(EUCANETD:=.o)
 EUCANETDDEPS := $(EUCANETDOBJS) $(LIBNETNAME) $(STDDEPS)

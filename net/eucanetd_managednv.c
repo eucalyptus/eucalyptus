@@ -758,7 +758,7 @@ static int network_driver_implement_addressing(globalNetworkInfo * pGni, lni_t *
     }
     // Restart the DHCP server so it can pick up the new configuration
     LOGDEBUG("Restarting DHCP service.\n");
-    if ((rc = eucanetd_kick_dhcpd_server()) != 0) {
+    if ((rc = eucanetd_kick_dhcpd_server(config)) != 0) {
         LOGERROR("unable to (re)configure local dhcpd server: check above log errors for details\n");
         return (1);
     }
