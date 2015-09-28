@@ -99,7 +99,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.log4j.Logger;
-import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.cluster.Cluster;
@@ -589,13 +588,12 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       return Objects.equals( id, that.id ) &&
           Objects.equals( device, that.device ) &&
           Objects.equals( removeDevice, that.removeDevice ) &&
-          Objects.equals( status, that.status ) &&
-          Objects.equals( attachTime, that.attachTime );
+          Objects.equals( status, that.status );
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash( id, device, removeDevice, status, attachTime );
+      return Objects.hash( id, device, removeDevice, status );
     }
   }
 
