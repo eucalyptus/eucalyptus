@@ -37,14 +37,22 @@
 
 package com.eucalyptus.cloudwatch.workflow.alarms;
 
+import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 
 import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.cloudwatch.common.config.CloudWatchConfigProperties;
 import com.eucalyptus.cloudwatch.common.internal.domain.alarms.AlarmEntity;
+import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricEntityFactory;
+import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricManager;
 import com.eucalyptus.entities.TransactionResource;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.LinkedListMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 
@@ -67,15 +75,53 @@ public class AlarmStateEvaluationDispatcher implements Runnable {
   public void run() {
     if (!CloudWatchConfigProperties.isDisabledCloudWatchService() && Bootstrap.isOperational( ) && Topology.isEnabledLocally( CloudWatchBackend.class )) {
       LOG.debug("Kicking off AlarmStateEvaluationDispatcher");
+      int size = 0;
+      long before = 0;
+      List<List<AlarmEntity>> resultsList = null;
       try (final TransactionResource db = Entities.transactionFor(AlarmEntity.class)) {
         Criteria criteria = Entities.createCriteria(AlarmEntity.class);
         List<AlarmEntity> results = (List<AlarmEntity>) criteria.list();
-        for (AlarmEntity alarmEntity: results) {
-          LOG.debug("Submitting job for " + alarmEntity.getAlarmName());
-          executorService.submit(new AlarmStateEvaluationWorker(alarmEntity.getAccountId(), alarmEntity.getAlarmName()));
+        resultsList = makeResultsList(results);
+        before = System.currentTimeMillis();
+        size = results.size();
+      }
+      try {
+        if (resultsList != null) {
+          LOG.debug("Evaluating " + size + " alarms");
+          CountDownLatch countDownLatch = new CountDownLatch(resultsList.size());
+          for (List<AlarmEntity> alarmEntityList: resultsList) {
+            executorService.submit(new AlarmStateEvaluationWorker(alarmEntityList, countDownLatch));//.getAccountId(), alarmEntity.getAlarmName(), countDownLatch));
+          }
+          countDownLatch.await();
+          long after = System.currentTimeMillis();
+          LOG.debug("Done evaluating " + size + " alarms, time = " + (after - before) + " ms");
         }
-        db.commit();
+      } catch (InterruptedException e) {
+        LOG.debug(e,e);
       }
     }
+  }
+
+  private List<List<AlarmEntity>> makeResultsList(List<AlarmEntity> results) {
+    Multimap<Class, AlarmEntity> classMultiMap = LinkedListMultimap.create();
+    for (AlarmEntity alarmEntity: results) {
+      classMultiMap.put(MetricEntityFactory.getClassForEntitiesGet(alarmEntity.getMetricType(), MetricManager.hash(alarmEntity.getDimensionMap())), alarmEntity);
+    }
+    List<Iterator<List<AlarmEntity>>> iterators = Lists.newArrayList();
+    for (Class clazz: classMultiMap.keySet()) {
+      iterators.add(Iterables.partition(classMultiMap.get(clazz), 2).iterator());
+    }
+    List<List<AlarmEntity>> retVal = Lists.newArrayList();
+    boolean atLeastOneMightHaveMore = true;
+    while (atLeastOneMightHaveMore) {
+      atLeastOneMightHaveMore = false;
+      for (Iterator<List<AlarmEntity>> iterator : iterators) {
+        if (iterator.hasNext()) {
+          atLeastOneMightHaveMore = true;
+          retVal.add(iterator.next());
+        }
+      }
+    }
+    return retVal;
   }
 }
