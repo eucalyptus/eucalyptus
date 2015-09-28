@@ -305,7 +305,9 @@ public class Pipelines {
     public boolean checkAccepts( final HttpRequest message ) {
       if ( message instanceof MappingHttpRequest ) {
         final MappingHttpRequest httpRequest = ( MappingHttpRequest ) message;
-        if ( !( message.getUri( ).startsWith( this.servicePath ) || message.getUri( ).startsWith( this.internalServicePath ) ) ) {
+        final boolean noPath = message.getUri( ).isEmpty( ) || message.getUri( ).equals( "/" ) || message.getUri( ).startsWith( "/?" );
+        if ( !( message.getUri( ).startsWith( this.servicePath ) || message.getUri( ).startsWith( this.internalServicePath ) ) &&
+             !(noPath && resolvesByHost( message.getHeader( HttpHeaders.Names.HOST ) ) ) ) {
           return false;
         }
         if ( httpRequest.getMethod( ).equals( HttpMethod.POST ) && !message.getHeaderNames().contains( "SOAPAction" ) ) {
