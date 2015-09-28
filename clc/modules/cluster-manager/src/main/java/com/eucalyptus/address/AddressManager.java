@@ -251,6 +251,9 @@ public class AddressManager {
         }
 
         if ( address.isAssigned( ) ) { // clear current assignment for address
+          if ( oldVm != null ) {
+            PublicAddresses.markDirty( address.getDisplayName( ), oldVm.getPartition( ) );
+          }
           addresses.unassign( address );
           if ( oldVm != null ) {
             addresses.system( oldVm );
@@ -258,6 +261,7 @@ public class AddressManager {
         }
 
         if ( oldAddr != null ) { // clear current address for vm assigning to
+          PublicAddresses.markDirty( oldAddr.getDisplayName( ), vm.getPartition( ) );
           addresses.unassign( oldAddr );
         }
 
@@ -313,11 +317,11 @@ public class AddressManager {
                 CloudMetadatas.toDisplayName( ) );
 
             if ( eni.isAssociated( ) ) {
+              PublicAddresses.markDirty( eni.getAssociation( ).getPublicIp( ), eni.getAvailabilityZone( ) );
               NetworkInterfaceHelper.releasePublic( eni );
               eni.disassociate( );
               if ( eni.isAttached( ) ) {
                 final VmInstance instance = eni.getAttachment( ).getInstance( );
-                PublicAddresses.markDirty( address.getAddress( ), instance.getPartition( ) );
                 VmInstances.updatePublicAddress( instance, VmNetworkConfig.DEFAULT_IP );
               }
             }
@@ -362,6 +366,7 @@ public class AddressManager {
         try {
           addresses.unassign( address );
           final VmInstance instance = VmInstances.lookup( vmId );
+          PublicAddresses.markDirty( address.getDisplayName( ), instance.getPartition( ) );
           if ( address.getAddress( ).equals( instance.getPublicAddress( ) ) ) {
             Addresses.updatePublicIpByInstanceId( instance.getDisplayName( ), null );
             try {
