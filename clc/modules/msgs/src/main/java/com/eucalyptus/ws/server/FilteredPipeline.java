@@ -97,15 +97,22 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
 
   protected abstract static class InternalPipeline extends FilteredPipeline {
     private final ComponentId componentId;
-    
+    private final Supplier<Set<Name>> internalNameSupplier;
+
     InternalPipeline( ComponentId componentId ) {
       this.componentId = componentId;
+      this.internalNameSupplier =
+          Suppliers.memoizeWithExpiration( new NamesSupplier( componentId ), 15, TimeUnit.SECONDS );
     }
         
     private ComponentId getComponentId( ) {
       return this.componentId;
     }
-    
+
+    @Override
+    protected Supplier<Set<Name>> getNameSupplier() {
+      return internalNameSupplier;
+    }
   }
   
   public FilteredPipeline( ) {}
@@ -143,24 +150,32 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
     if ( host != null ) try {
       final Name hostName =
           Name.fromString( Iterables.getFirst( hostSplitter.split( host ), host ) );
-      match = nameSupplier.get( ).contains( DomainNames.absolute( hostName ) );
+      match = getNameSupplier( ).get( ).contains( DomainNames.absolute( hostName ) );
     } catch ( TextParseException e ) {
       Logs.exhaust( ).error( "Invalid host: " + host, e );
     }
     return match;
   }
 
+  protected Supplier<Set<Name>> getNameSupplier( ) {
+    return nameSupplier;
+  }
+
   private static class NamesSupplier implements Supplier<Set<Name>> {
-    private final Class<?> componentClass;
+    private final Class<? extends ComponentId> componentIdClass;
 
     private NamesSupplier( final Class<?> componentClass ) {
-      this.componentClass = componentClass;
+      final ComponentPart part = Ats.inClassHierarchy( componentClass ).get( ComponentPart.class );
+      this.componentIdClass = part == null ? null : part.value( );
+    }
+
+    private NamesSupplier( final ComponentId componentId ) {
+      this.componentIdClass = componentId.getClass( );
     }
 
     @Override
     public Set<Name> get( ) {
-      final ComponentPart part = Ats.inClassHierarchy( componentClass ).get( ComponentPart.class );
-      final Class<? extends ComponentId> component = part == null ? null : part.value( );
+      final Class<? extends ComponentId> component = componentIdClass;
       final Set<Name> names;
       if ( component != null ) {
         names = ImmutableSet.copyOf( Iterables.concat(
