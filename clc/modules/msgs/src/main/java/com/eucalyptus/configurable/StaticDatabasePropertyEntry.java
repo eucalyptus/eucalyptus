@@ -321,6 +321,33 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     }
   }
 
+  @EntityUpgrade( entities = { StaticPropertyEntry.class }, since = Version.v4_2_0, value = Empyrean.class )
+  public enum StaticPropertyEntryRenamePropertyCloudWatchUpgrade42 implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( StaticPropertyEntryRenamePropertyUpgrade.class );
+    @Override
+    public boolean apply( Class arg0 ) {
+      final String CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_OLD_FIELD_NAME = "com.eucalyptus.cloudwatch.backend.CloudWatchBackendService.disable_cloudwatch_service";
+      final String CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_NEW_FIELD_NAME = "com.eucalyptus.cloudwatch.common.config.CloudWatchConfigProperties.disable_cloudwatch_service";
+      final String CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_PROP_NAME = "cloudwatch.disable_cloudwatch_service";
+      EntityTransaction db = Entities.get( StaticDatabasePropertyEntry.class );
+      try {
+        List<StaticDatabasePropertyEntry> entities = Entities.query( new StaticDatabasePropertyEntry( ) );
+        for ( StaticDatabasePropertyEntry entry : entities ) {
+          if (CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_OLD_FIELD_NAME.equals(entry.getFieldName()) &&
+            CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_PROP_NAME.equals(entry.getPropName())) {
+            entry.setFieldName(CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_NEW_FIELD_NAME);
+            LOG.debug( "Upgrading: Changing property " + CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_PROP_NAME + " field name'"+CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_OLD_FIELD_NAME+"' to '"+CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_NEW_FIELD_NAME+"'");
+          }
+        }
+        db.commit( );
+        return true;
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+  }
+
   @EntityUpgrade( entities = StaticPropertyEntry.class, since = Version.v4_0_0, value = Empyrean.class )
   public enum StaticPropertyEntryUpgrade40 implements Predicate<Class> {
     INSTANCE;
