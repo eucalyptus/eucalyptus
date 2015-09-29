@@ -422,7 +422,7 @@ public class RestrictedTypes {
       String action = getIamActionByMessageType();
       AuthContextSupplier userContext = ctx.getAuthContext( );
       try {
-        if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, userContext ) ) {
+        if ( RestrictedType.class.isAssignableFrom( rscType ) && !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, userContext ) ) {
           throw new AuthException( "Not authorized to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
         } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, userContext, amount ) ) {
           throw new AuthQuotaException( type.value( ), "Quota exceeded while trying to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
