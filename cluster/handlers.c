@@ -1944,7 +1944,6 @@ int doDescribeResources(ncMetadata * pMeta, virtualMachine ** ccvms, int vmLen, 
                     diskpool = res->availDisk;
                     corepool = res->availCores;
                 }
-
                 mempool -= (*ccvms)[j].mem;
                 diskpool -= (*ccvms)[j].disk;
                 corepool -= (*ccvms)[j].cores;
@@ -1964,7 +1963,6 @@ int doDescribeResources(ncMetadata * pMeta, virtualMachine ** ccvms, int vmLen, 
                     diskpool = res->maxDisk;
                     corepool = res->maxCores;
                 }
-
                 mempool -= (*ccvms)[j].mem;
                 diskpool -= (*ccvms)[j].disk;
                 corepool -= (*ccvms)[j].cores;
@@ -1976,6 +1974,24 @@ int doDescribeResources(ncMetadata * pMeta, virtualMachine ** ccvms, int vmLen, 
                 }
             }
         }
+    }
+
+    sem_mywait(INSTCACHE);
+    int instCount = 0;
+    if (instanceCache->numInsts) {
+        for (i = 0; i < MAXINSTANCES_PER_CC; i++) {
+            if (instanceCache->cacheState[i] == INSTVALID
+                && strcmp(instanceCache->instances[i].state, "Teardown"))
+                instCount++;
+        }
+    }
+    sem_mypost(INSTCACHE);
+
+    for (j = 0; j < vmLen; j++) {
+       if ((*outTypesMax)[j] > MAXINSTANCES_PER_CC)
+           (*outTypesMax)[j] = MAXINSTANCES_PER_CC;
+       if ((*outTypesAvail)[j] + instCount > MAXINSTANCES_PER_CC)
+           (*outTypesAvail)[j] = MAXINSTANCES_PER_CC - instCount;
     }
 
     if (vmLen >= 5) {
