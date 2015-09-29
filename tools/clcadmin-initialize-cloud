@@ -64,7 +64,7 @@ def set_db_sysctls():
         sys.exit('{0}: {1} does not exist'.format(
             os.path.basename(sys.argv[0]), exepath))
     try:
-        subprocess.check_call([exepath, 'start'])
+        subprocess.check_call(['sh', exepath, 'start'])
     except subprocess.CalledProcessError:
         sys.exit('{0}: sysctl verification failed'.format(sys.argv[0]))
 
