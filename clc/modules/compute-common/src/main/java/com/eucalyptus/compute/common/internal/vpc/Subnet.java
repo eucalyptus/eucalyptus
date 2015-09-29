@@ -90,7 +90,7 @@ public class Subnet extends UserMetadata<Subnet.State> implements SubnetMetadata
   }
 
   public static int usableAddressesForSubnet( final String cidr ) {
-    return ((int) Math.pow( 2, 32 - Cidr.parse( cidr ).getPrefix( ) )) - 5; // 5 reserved
+    return Math.max( ((int) Math.pow( 2, 32 - Cidr.parse( cidr ).getPrefix( ) )) - 5, 0 ); // 5 reserved
   }
 
   public static Subnet exampleWithOwner( final OwnerFullName owner ) {
