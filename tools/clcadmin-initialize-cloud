@@ -34,10 +34,12 @@ import sys
 
 CONF_PATH = 'etc/eucalyptus/eucalyptus.conf'
 CLC_EXE_PATH = 'usr/sbin/eucalyptus-cloud'
+DB_SYSCTLS_EXE_PATH = 'etc/eucalyptus/cloud.d/init.d/01_pg_kernel_params'
 
 
-def get_cloud_opts(confpath):
+def get_cloud_opts():
     cloud_opts = []
+    confpath = os.path.join(os.getenv('EUCALYPTUS') or '/', CONF_PATH)
     try:
         with open(confpath) as conf:
             for line in conf:
@@ -52,20 +54,33 @@ def get_cloud_opts(confpath):
     return cloud_opts
 
 
-def initialize_cloud(exepath, opts):
+def set_db_sysctls():
+    """
+    Run the script that ensures the kernel has enough semaphores/shared
+    memory/etc for postgresql to work.
+    """
+    exepath = os.path.join(os.getenv('EUCALYPTUS') or '/', DB_SYSCTLS_EXE_PATH)
+    if not os.path.isfile(exepath):
+        sys.exit('{0}: {1} does not exist'.format(
+            os.path.basename(sys.argv[0]), exepath))
+    try:
+        subprocess.check_call([exepath, 'start'])
+    except subprocess.CalledProcessError:
+        sys.exit('{0}: sysctl verification failed'.format(sys.argv[0]))
+
+
+def initialize_cloud(opts):
+    exepath = os.path.join(os.getenv('EUCALYPTUS') or '/', CLC_EXE_PATH)
     if not os.path.isfile(exepath):
         sys.exit('{0}: {1} does not exist'.format(
             os.path.basename(sys.argv[0]), exepath))
     try:
         subprocess.check_call([exepath, '--initialize'] + opts)
     except subprocess.CalledProcessError:
-        sys.exit('{0}: cloud initialization failed')
+        sys.exit('{0}: cloud initialization failed'.format(sys.argv[0]))
 
 
 def main():
-    confpath = os.path.join(os.getenv('EUCALYPTUS') or '/', CONF_PATH)
-    exepath = os.path.join(os.getenv('EUCALYPTUS') or '/', CLC_EXE_PATH)
-
     parser = argparse.ArgumentParser(
         add_help=False,
         description=('Create a new cloud on this system.  This can '
@@ -80,8 +95,9 @@ def main():
     if args.ignore_cloud_opts:
         cloud_opts = []
     else:
-        cloud_opts = get_cloud_opts(confpath)
-    initialize_cloud(exepath, cloud_opts + forwarded_args)
+        cloud_opts = get_cloud_opts()
+    set_db_sysctls()
+    initialize_cloud(cloud_opts + forwarded_args)
 
 
 if __name__ == '__main__':
