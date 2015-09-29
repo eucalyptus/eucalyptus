@@ -102,12 +102,16 @@ class NetworkInfoBroadcasts {
 
   private static final Logger logger = Logger.getLogger( NetworkInfoBroadcasts )
 
+  /**
+   * All state used for building network configuration must be passed in (and be part of the fingerprint)
+   */
   @PackageScope
   static NetworkInfo buildNetworkConfiguration( final Optional<NetworkConfiguration> configuration,
                                                 final NetworkInfoSource networkInfoSource,
                                                 final Supplier<List<Cluster>> clusterSupplier,
                                                 final Supplier<String> clcHostSupplier,
-                                                final Function<List<String>,List<String>> systemNameserverLookup ) {
+                                                final Function<List<String>,List<String>> systemNameserverLookup,
+                                                final Set<String> dirtyPublicAddresses ) {
     Iterable<Cluster> clusters = clusterSupplier.get( )
     Optional<NetworkConfiguration> networkConfiguration = configuration.isPresent( ) ?
         Optional.of( NetworkConfigurations.explode( configuration.get( ), clusters.collect{ Cluster cluster -> cluster.partition } ) ) :
@@ -266,7 +270,7 @@ class NetworkInfoBroadcasts {
           vpc: instance.vpcId,
           subnet: instance.subnetId,
           macAddress: Strings.emptyToNull( instance.macAddress ),
-          publicIp: VmNetworkConfig.DEFAULT_IP==instance.publicAddress||PublicAddresses.isDirty(instance.publicAddress) ? null : instance.publicAddress,
+          publicIp: VmNetworkConfig.DEFAULT_IP==instance.publicAddress||dirtyPublicAddresses.contains(instance.publicAddress) ? null : instance.publicAddress,
           privateIp: instance.privateAddress,
           securityGroups: instance.securityGroupIds,
           networkInterfaces: instanceIdToNetworkInterfaces.get( instance.id )?.collect{ NetworkInterfaceNetworkView networkInterface ->
@@ -276,7 +280,7 @@ class NetworkInfoBroadcasts {
                 deviceIndex: networkInterface.deviceIndex,
                 macAddress: networkInterface.macAddress,
                 privateIp: networkInterface.privateIp,
-                publicIp: networkInterface.publicIp,
+                publicIp: dirtyPublicAddresses.contains(networkInterface.publicIp) ? null : networkInterface.publicIp,
                 sourceDestCheck: networkInterface.sourceDestCheck,
                 securityGroups: networkInterface.securityGroupIds
             )

@@ -89,6 +89,7 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
@@ -206,7 +207,8 @@ public class NetworkInfoBroadcaster {
       final List<com.eucalyptus.cluster.Cluster> clusters = Clusters.getInstance( ).listValues( );
 
       final NetworkInfoSource source = cacheSource( );
-      final int sourceFingerprint = fingerprint( source, clusters, NetworkGroups.NETWORK_CONFIGURATION );
+      final Set<String> dirtyPublicAddresses = PublicAddresses.dirtySnapshot( );
+      final int sourceFingerprint = fingerprint( source, clusters, dirtyPublicAddresses, NetworkGroups.NETWORK_CONFIGURATION );
       final Pair<Integer,String> lastBroadcast = lastEncodedNetworkInformation.get( );
       final String encodedNetworkInfo;
       if ( lastBroadcast != null && lastBroadcast.getLeft( ) == sourceFingerprint ) {
@@ -228,7 +230,8 @@ public class NetworkInfoBroadcaster {
               public List<String> apply( final List<String> defaultServers ) {
                 return NetworkConfigurations.loadSystemNameservers( defaultServers );
               }
-            }
+            },
+            dirtyPublicAddresses
         );
 
         final JAXBContext jc = JAXBContext.newInstance( "com.eucalyptus.cluster" );
@@ -278,6 +281,7 @@ public class NetworkInfoBroadcaster {
   private static int fingerprint(
       final NetworkInfoSource source,
       final List<com.eucalyptus.cluster.Cluster> clusters,
+      final Set<String> dirtyPublicAddresses,
       final String networkConfiguration
   ) {
     final HashFunction hashFunction = goodFastHash( 32 );
@@ -297,6 +301,7 @@ public class NetworkInfoBroadcaster {
       }
     }
     hasher.putString( Joiner.on( ',' ).join( Sets.newTreeSet( Iterables.transform( clusters, HasName.GET_NAME ) ) ) );
+    hasher.putString( Joiner.on( ',' ).join( Sets.newTreeSet( dirtyPublicAddresses ) ) );
     hasher.putInt( networkConfiguration.hashCode( ) );
     return hasher.hash( ).asInt( );
   }
