@@ -39,13 +39,11 @@ package com.eucalyptus.cloudwatch.workflow.alarms;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.CountDownLatch;
 
 import com.eucalyptus.cloudwatch.common.config.CloudWatchConfigProperties;
 import com.eucalyptus.cloudwatch.common.internal.domain.alarms.AlarmEntity;
@@ -64,16 +62,13 @@ import com.eucalyptus.cloudwatch.common.internal.domain.alarms.AlarmEntity.State
 import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricManager;
 import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricStatistics;
 import com.eucalyptus.component.Topology;
-import org.jibx.schema.types.Count;
 
 public class AlarmStateEvaluationWorker implements Runnable {
   private Collection<AlarmEntity> alarmEntities;
-  private CountDownLatch countDownLatch;
   private static final Logger LOG = Logger.getLogger(AlarmStateEvaluationWorker.class);
-  public AlarmStateEvaluationWorker(Collection<AlarmEntity> alarmEntities, CountDownLatch countdownLatch) {
+  public AlarmStateEvaluationWorker(Collection<AlarmEntity> alarmEntities) {
     super();
     this.alarmEntities = alarmEntities;
-    this.countDownLatch = countdownLatch;
   }
   @Override
   public void run() {
@@ -82,30 +77,22 @@ public class AlarmStateEvaluationWorker implements Runnable {
         Date evaluationDate = new Date();
         Map<AlarmEntity, AlarmState> currentStates = evaluateStates(alarmEntities);
         Map<String, AlarmState> statesToUpdate = Maps.newHashMap();
-        List<AlarmHistory> historyList = Collections.<AlarmHistory>synchronizedList(new ArrayList<AlarmHistory>());
-        CountDownLatch alarmHistoryCountdownLatch = new CountDownLatch(currentStates != null && currentStates.keySet() != null ? currentStates.keySet().size() : 0);
+        List<AlarmHistory> historyList = Lists.newArrayList();
         for (AlarmEntity alarmEntity : currentStates.keySet()) {
           AlarmState currentState = currentStates.get(alarmEntity);
           if (currentState.getStateValue() != alarmEntity.getStateValue()) {
             statesToUpdate.put(alarmEntity.getNaturalId(), currentState);
             historyList.add(AlarmManager.createChangeAlarmStateHistoryItem(alarmEntity, currentState, evaluationDate));
-            AlarmManager.executeActionsAndRecord(alarmEntity, currentState, true, evaluationDate, historyList, alarmHistoryCountdownLatch);
+            historyList.addAll(AlarmManager.executeActionsAndRecord(alarmEntity, currentState, true, evaluationDate, historyList));
           } else if (moreThanOnePeriodHasPassed(alarmEntity, evaluationDate)) {
-            AlarmManager.executeActionsAndRecord(alarmEntity, currentState, false, evaluationDate, historyList, alarmHistoryCountdownLatch);
-          } else {
-            alarmHistoryCountdownLatch.countDown();
+            historyList.addAll(AlarmManager.executeActionsAndRecord(alarmEntity, currentState, false, evaluationDate, historyList));
           }
         }
-        try {
-          alarmHistoryCountdownLatch.await();
-          AlarmManager.changeAlarmStateBatch(statesToUpdate, evaluationDate);
-          AlarmManager.addAlarmHistoryEvents(historyList);
-        } catch(InterruptedException e) {
-          LOG.error(e);
-        }
+        AlarmManager.changeAlarmStateBatch(statesToUpdate, evaluationDate);
+        AlarmManager.addAlarmHistoryEvents(historyList);
       }
-    } finally {
-      countDownLatch.countDown();
+    } catch(Exception e) {
+      LOG.error(e);
     }
   }
 

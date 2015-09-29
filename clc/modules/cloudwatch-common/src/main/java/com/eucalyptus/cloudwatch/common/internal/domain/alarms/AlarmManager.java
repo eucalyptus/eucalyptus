@@ -45,16 +45,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.eucalyptus.cloudwatch.common.internal.domain.InvalidTokenException;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.util.async.CheckedListenableFuture;
+import com.eucalyptus.util.async.Futures;
 import net.sf.json.JSONObject;
 
 import org.apache.log4j.Logger;
+import org.apache.tools.ant.taskdefs.Exec;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Junction;
 import org.hibernate.criterion.Order;
@@ -641,33 +644,24 @@ public class AlarmManager {
     alarmEntity.setLastActionsUpdatedTimestamp(now);
   }
 
-  public static void executeActionsAndRecord(AlarmEntity alarmEntity, AlarmState state,
-                                             boolean stateJustChanged, Date now, List<AlarmHistory> historyList, CountDownLatch alarmHistoryCountDownLatch) {
-    try {
-      if (alarmEntity.getActionsEnabled()) {
-        Collection<String> actions = AlarmUtils.getActionsByState(alarmEntity, state);
-        CountDownLatch actionCountDownLatch = new CountDownLatch(actions != null ? actions.size() : 0);
-        for (String action : actions) {
-          Action actionToExecute = ActionManager.getAction(action, alarmEntity.getDimensionMap());
-          if (actionToExecute == null) {
-            LOG.warn("Unsupported action " + action); // TODO: do not let it in to start with...
-            actionCountDownLatch.countDown();
-          }
-          // always execute autoscaling actions, but others only on state change...
-          else if (actionToExecute.alwaysExecute() || stateJustChanged) {
-            LOG.debug("Executing alarm " + alarmEntity.getAccountId() + "/" + alarmEntity.getAlarmName() + " action " + action);
-            actionToExecute.executeActionAndRecord(action, alarmEntity.getDimensionMap(), alarmEntity, now, historyList, actionCountDownLatch);
-          } else {
-            actionCountDownLatch.countDown();
-          }
+  public static Collection<AlarmHistory> executeActionsAndRecord(AlarmEntity alarmEntity, AlarmState state,
+                                             boolean stateJustChanged, Date now, List<AlarmHistory> historyList) {
+    List<AlarmHistory> alarmHistoryList = Lists.newArrayList();
+    if (alarmEntity.getActionsEnabled()) {
+      Collection<String> actions = AlarmUtils.getActionsByState(alarmEntity, state);
+      for (String action : actions) {
+        Action actionToExecute = ActionManager.getAction(action, alarmEntity.getDimensionMap());
+        if (actionToExecute == null) {
+          LOG.warn("Unsupported action " + action); // TODO: do not let it in to start with...
         }
-        actionCountDownLatch.await();
+        // always execute autoscaling actions, but others only on state change...
+        else if (actionToExecute.alwaysExecute() || stateJustChanged) {
+          LOG.debug("Executing alarm " + alarmEntity.getAccountId() + "/" + alarmEntity.getAlarmName() + " action " + action);
+          alarmHistoryList.add(actionToExecute.executeActionAndRecord(action, alarmEntity.getDimensionMap(), alarmEntity, now));
+        }
       }
-    } catch (InterruptedException e) {
-      LOG.error(e);
-    } finally {
-      alarmHistoryCountDownLatch.countDown();
     }
+    return alarmHistoryList;
   }
 
 
@@ -748,6 +742,7 @@ public class AlarmManager {
   }
 
   public static void changeAlarmStateBatch(Map<String, AlarmState> statesToUpdate, Date evaluationDate) {
+    if (statesToUpdate.isEmpty()) return;
     try (final TransactionResource db = Entities.transactionFor(AlarmEntity.class)) {
       Criteria criteria = Entities.createCriteria(AlarmEntity.class);
       criteria = criteria.add(Restrictions.in("naturalId", statesToUpdate.keySet()));
@@ -813,16 +808,16 @@ public class AlarmManager {
       };
     }
 
-    <R> Callback.Checked<R> getRecordCallback(final String action, final AlarmEntity alarmEntity, final Date now, final List<AlarmHistory> historyList, final CountDownLatch actionCountDownLatch) {
+    <R> Callback.Checked<R> getRecordCallback(final String action, final AlarmEntity alarmEntity, final Date now, final CheckedListenableFuture<AlarmHistory> resultFuture) {
       return new Callback.Checked<R>() {
         @Override
         public void fire(R input) {
-          recordSuccess(action, alarmEntity, now, historyList, actionCountDownLatch);
+          resultFuture.set(recordSuccess(action, alarmEntity, now));
         }
 
         @Override
         public void fireException(Throwable t) {
-          recordFailure(action, alarmEntity, now, t, historyList, actionCountDownLatch);
+          resultFuture.setException(t);
         }
       };
     }
@@ -860,21 +855,19 @@ public class AlarmManager {
       return historyDataJSON;
     }
 
-    public void recordSuccess(final String actionARN, final AlarmEntity alarmEntity, final Date now, List<AlarmHistory> historyList, CountDownLatch actionCountDownLatch) {
+    public AlarmHistory recordSuccess(final String actionARN, final AlarmEntity alarmEntity, final Date now) {
       JSONObject historyDataJSON = getSuccessJSON(actionARN, alarmEntity);
       String historyData = historyDataJSON.toString();
-      historyList.add(AlarmManager.createAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData,
-        HistoryItemType.Action, " Successfully executed action " + actionARN, now));
-      actionCountDownLatch.countDown();;
+      return AlarmManager.createAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData,
+        HistoryItemType.Action, " Successfully executed action " + actionARN, now);
     }
-    public void recordFailure(final String actionARN, final AlarmEntity alarmEntity, final Date now, Throwable cause, List<AlarmHistory> historyList, CountDownLatch actionCountDownLatch) {
+    public AlarmHistory recordFailure(final String actionARN, final AlarmEntity alarmEntity, final Date now, Throwable cause) {
       JSONObject historyDataJSON = getFailureJSON(actionARN, alarmEntity, cause);
       String historyData = historyDataJSON.toString();
-      historyList.add(AlarmManager.createAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData,
-        HistoryItemType.Action, " Failed to execute action " + actionARN, now));
-      actionCountDownLatch.countDown();;
+      return AlarmManager.createAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData,
+        HistoryItemType.Action, " Failed to execute action " + actionARN, now);
     }
-    public abstract void executeActionAndRecord(final String action, final Map<String, String> dimensionMap, final AlarmEntity alarmEntity, final Date now, final List<AlarmHistory> historyList, final CountDownLatch actionCountDownLatch) ;
+    public abstract AlarmHistory executeActionAndRecord(final String action, final Map<String, String> dimensionMap, final AlarmEntity alarmEntity, final Date now);
   }
   private static class ExecuteAutoScalingPolicyAction extends Action {
     @Override
@@ -897,19 +890,25 @@ public class AlarmManager {
       }
     }
     @Override
-    public void executeActionAndRecord(final String action, final Map<String, String> dimensionMap, final AlarmEntity alarmEntity, final Date now, final List<AlarmHistory> historyList, final CountDownLatch actionCountDownLatch) {
+    public AlarmHistory executeActionAndRecord(final String action, final Map<String, String> dimensionMap, final AlarmEntity alarmEntity, final Date now) {
       ExecutePolicyType executePolicyType = new ExecutePolicyType();
       executePolicyType.setPolicyName(action);
       executePolicyType.setHonorCooldown(true);
-      Callback.Checked<AutoScalingMessage> callback = getRecordCallback(action, alarmEntity, now, historyList, actionCountDownLatch);
+      CheckedListenableFuture<AlarmHistory> alarmHistoryFuture = Futures.newGenericeFuture();
+      Callback.Checked<AutoScalingMessage> callback = getRecordCallback(action, alarmEntity, now, alarmHistoryFuture);
       try {
         AutoScalingClient client = new AutoScalingClient(AccountFullName.getInstance( alarmEntity.getAccountId() ));
         client.init();
         client.dispatch(executePolicyType, callback);
       } catch (Exception ex) {
-        recordFailure(action, alarmEntity, now, ex, historyList, actionCountDownLatch);
+        alarmHistoryFuture.set(recordFailure(action, alarmEntity, now, ex));
       }
-
+      try {
+        return alarmHistoryFuture.get();
+      } catch (InterruptedException | ExecutionException e) {
+        Throwable cause = (e instanceof ExecutionException) ? e.getCause() : e;
+        return recordFailure(action, alarmEntity, now, e);
+      }
     }
 
     @Override
@@ -953,18 +952,24 @@ public class AlarmManager {
     }
 
     @Override
-    public void executeActionAndRecord(final String action, final Map<String, String> dimensionMap, final AlarmEntity alarmEntity, final Date now, final List<AlarmHistory> historyList, final CountDownLatch actionCountDownLatch) {
+    public AlarmHistory executeActionAndRecord(final String action, final Map<String, String> dimensionMap, final AlarmEntity alarmEntity, final Date now) {
       TerminateInstancesType terminateInstances = new TerminateInstancesType();
       terminateInstances.getInstancesSet().add( dimensionMap.get("InstanceId"));
-      Callback.Checked<ComputeMessage> callback = getRecordCallback(action, alarmEntity, now, historyList, actionCountDownLatch);
+      CheckedListenableFuture<AlarmHistory> alarmHistoryFuture = Futures.newGenericeFuture();
+      Callback.Checked<ComputeMessage> callback = getRecordCallback(action, alarmEntity, now, alarmHistoryFuture);
       try {
         EucalyptusClient client = new EucalyptusClient( AccountFullName.getInstance( alarmEntity.getAccountId( ) ) );
         client.init();
         client.dispatch(terminateInstances, callback);
       } catch (Exception ex) {
-        recordFailure(action, alarmEntity, now, ex, historyList, actionCountDownLatch);
+        alarmHistoryFuture.set(recordFailure(action, alarmEntity, now, ex));
       }
-
+      try {
+        return alarmHistoryFuture.get();
+      } catch (InterruptedException | ExecutionException e) {
+        Throwable cause = (e instanceof ExecutionException) ? e.getCause() : e;
+        return recordFailure(action, alarmEntity, now, e);
+      }
     }
   }
   private static class StopInstanceAction extends Action {
@@ -1000,16 +1005,23 @@ public class AlarmManager {
     }
 
     @Override
-    public void executeActionAndRecord(String action, Map<String, String> dimensionMap, AlarmEntity alarmEntity, Date now, List<AlarmHistory> historyList, CountDownLatch actionCountDownLatch) {
+    public AlarmHistory executeActionAndRecord(String action, Map<String, String> dimensionMap, AlarmEntity alarmEntity, Date now) {
       StopInstancesType stopInstances = new StopInstancesType();
       stopInstances.getInstancesSet().add( dimensionMap.get("InstanceId"));
-      Callback.Checked<ComputeMessage> callback = getRecordCallback(action, alarmEntity, now, historyList, actionCountDownLatch);
+      CheckedListenableFuture<AlarmHistory> alarmHistoryFuture = Futures.newGenericeFuture();
+      Callback.Checked<ComputeMessage> callback = getRecordCallback(action, alarmEntity, now, alarmHistoryFuture);
       try {
         EucalyptusClient client = new EucalyptusClient(AccountFullName.getInstance( alarmEntity.getAccountId( ) ));
         client.init();
         client.dispatch(stopInstances, callback);
       } catch (Exception ex) {
-        recordFailure(action, alarmEntity, now, ex, historyList, actionCountDownLatch);
+        alarmHistoryFuture.set(recordFailure(action, alarmEntity, now, ex));
+      }
+      try {
+        return alarmHistoryFuture.get();
+      } catch (InterruptedException | ExecutionException e) {
+        Throwable cause = (e instanceof ExecutionException) ? e.getCause() : e;
+        return recordFailure(action, alarmEntity, now, e);
       }
     }
   }
