@@ -72,6 +72,10 @@ public class VmStandardVolumeAttachment extends VmVolumeAttachment {
     );
   }
 
+  public static VmStandardVolumeAttachment example( ) {
+    return new VmStandardVolumeAttachment( );
+  }
+
   public static VmStandardVolumeAttachment exampleWithVolumeId( final String volumeId ) {
     final VmStandardVolumeAttachment ex = new VmStandardVolumeAttachment( );
     ex.setVolumeId( volumeId );

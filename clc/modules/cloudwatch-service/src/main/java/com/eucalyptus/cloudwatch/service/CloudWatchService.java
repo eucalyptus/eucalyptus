@@ -195,10 +195,10 @@ public class CloudWatchService implements Callable {
       final Map<String, String> dimensionMap = TransformationFunctions.DimensionsToMap.INSTANCE
         .apply(CloudWatchServiceFieldValidator.validateDimensions(request.getDimensions()));
       Collection<MetricStatistics> metrics;
-      metrics = MetricManager.getMetricStatistics(
+      metrics = MetricManager.getMetricStatistics(new MetricManager.GetMetricStatisticsParams(
         ownerFullName.getAccountNumber(), metricName, namespace,
         dimensionMap, CloudWatchServiceFieldValidator.getMetricTypeFromNamespace(namespace), units,
-        startTime, endTime, period);
+        startTime, endTime, period));
       reply.getGetMetricStatisticsResult().setLabel(metricName);
       ArrayList<Datapoint> datapoints = CloudWatchServiceFieldValidator.convertMetricStatisticsToDatapoints(
         statistics, metrics);

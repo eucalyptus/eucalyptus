@@ -252,15 +252,16 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
     } )
   }
 
-  protected void updateFreeAddressesForSubnet( final String subnetId ) {
-    Transactions.one( Subnet.exampleWithName( null, subnetId ), new Function<Subnet, Void>( ){
+  protected void updateFreeAddressesForSubnet( final String subnetIdForUpdate ) {
+    Entities.asDistinctTransaction( Subnet, new Function<String, Void>( ){
       @Override
-      Void apply( final Subnet subnet ) {
+      Void apply( final String subnetId ) {
+        final Subnet subnet = Entities.uniqueResult( Subnet.exampleWithName( null, subnetId ) )
         subnet.setAvailableIpAddressCount(
-          Subnet.usableAddressesForSubnet( subnet.getCidr( ) ) - (int) Entities.count( PrivateAddress.tagged( subnetId ) )
+            Subnet.usableAddressesForSubnet( subnet.getCidr( ) ) - (int) Entities.count( PrivateAddress.tagged( subnetId ) )
         )
         null
       }
-    } )
+    } ).apply( subnetIdForUpdate );
   }
 }

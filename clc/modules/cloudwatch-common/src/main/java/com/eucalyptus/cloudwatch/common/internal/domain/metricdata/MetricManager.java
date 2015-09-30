@@ -39,11 +39,13 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.entities.TransactionResource;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.LinkedListMultimap;
 import org.apache.log4j.Logger;
 import org.hibernate.CacheMode;
 import org.hibernate.Criteria;
 import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
+import org.hibernate.criterion.Junction;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.ProjectionList;
 import org.hibernate.criterion.Projections;
@@ -192,67 +194,268 @@ public class MetricManager {
   }
 
 
-  public static Collection<MetricStatistics> getMetricStatistics(String accountId,
-      String metricName, String namespace, Map<String, String> dimensionMap,
-      MetricType metricType, Units units, Date startTime, Date endTime, Integer period) {
-    if (dimensionMap == null) {
-      dimensionMap = new HashMap<String, String>();
-    } else if (dimensionMap.size() > AbstractPersistentWithDimensions.MAX_DIM_NUM) {
-      throw new IllegalArgumentException("Too many dimensions for metric, "
+  public static class GetMetricStatisticsParams {
+    String accountId;
+    String metricName;
+    String namespace;
+    Map<String, String> dimensionMap;
+    MetricType metricType;
+    Units units;
+    Date startTime;
+    Date endTime;
+    Integer period;
+    Collection<DimensionEntity> dimensions;
+    String dimensionHash;
+    public GetMetricStatisticsParams(String accountId, String metricName, String namespace, Map<String, String> dimensionMap, MetricType metricType, Units units, Date startTime, Date endTime, Integer period) {
+      this.accountId = accountId;
+      this.metricName = metricName;
+      this.namespace = namespace;
+      this.dimensionMap = dimensionMap;
+      this.metricType = metricType;
+      this.units = units;
+      this.startTime = startTime;
+      this.endTime = endTime;
+      this.period = period;
+      this.dimensions = getDimensionsFromMap(dimensionMap);
+      this.dimensionHash = hash(dimensionMap);
+    }
+
+    private static Collection<DimensionEntity> getDimensionsFromMap(Map<String, String> dimensionMap) {
+      TreeSet<DimensionEntity> dimensions = new TreeSet<DimensionEntity>();
+      for (Map.Entry<String, String> entry : dimensionMap.entrySet()) {
+        DimensionEntity d = new DimensionEntity();
+        d.setName(entry.getKey());
+        d.setValue(entry.getValue());
+        dimensions.add(d);
+      }
+      return dimensions;
+    }
+
+    @Override
+    public String toString() {
+      return "GetMetricStatisticsParams{" +
+        "accountId='" + accountId + '\'' +
+        ", metricName='" + metricName + '\'' +
+        ", namespace='" + namespace + '\'' +
+        ", dimensionMap=" + dimensionMap +
+        ", metricType=" + metricType +
+        ", units=" + units +
+        ", startTime=" + startTime +
+        ", endTime=" + endTime +
+        ", period=" + period +
+        '}';
+    }
+
+    public String getAccountId() {
+      return accountId;
+    }
+
+    public String getMetricName() {
+      return metricName;
+    }
+
+    public String getNamespace() {
+      return namespace;
+    }
+
+    public Map<String, String> getDimensionMap() {
+      return dimensionMap;
+    }
+
+    public MetricType getMetricType() {
+      return metricType;
+    }
+
+    public Units getUnits() {
+      return units;
+    }
+
+    public Date getStartTime() {
+      return startTime;
+    }
+
+    public Date getEndTime() {
+      return endTime;
+    }
+
+    public Integer getPeriod() {
+      return period;
+    }
+
+    public void validate(Date now) {
+      if (dimensionMap == null) {
+        dimensionMap = new HashMap<String, String>();
+      } else if (dimensionMap.size() > AbstractPersistentWithDimensions.MAX_DIM_NUM) {
+        throw new IllegalArgumentException("Too many dimensions for metric, "
           + dimensionMap.size());
+      }
+      if (endTime == null) endTime = now;
+      if (startTime == null) startTime = new Date(now.getTime() - 60 * 60 * 1000L);
+      startTime = MetricUtils.stripSeconds(startTime);
+      endTime = MetricUtils.stripSeconds(endTime);
+      if (startTime.after(endTime)) {
+        throw new IllegalArgumentException("Start time must be after end time");
+      }
+      if (period == null) {
+        period = 60;
+      }
+      if (period % 60 != 0) {
+        throw new IllegalArgumentException("Period must be a multiple of 60");
+      }
+      if (period < 0) {
+        throw new IllegalArgumentException("Period must be greater than 0");
+      }
+      if (period == 0) {
+        throw new IllegalArgumentException("Period must not equal 0");
+      }
+      if (metricType == null) {
+        throw new IllegalArgumentException("metricType must not be null");
+      }
+      if (accountId == null) {
+        throw new IllegalArgumentException("accountId must not be null");
+      }
+      if (metricName == null) {
+        throw new IllegalArgumentException("metricName must not be null");
+      }
+      if (namespace == null) {
+        throw new IllegalArgumentException("namespace must not be null");
+      }
     }
-    TreeSet<DimensionEntity> dimensions = new TreeSet<DimensionEntity>();
-    for (Map.Entry<String, String> entry : dimensionMap.entrySet()) {
-      DimensionEntity d = new DimensionEntity();
-      d.setName(entry.getKey());
-      d.setValue(entry.getValue());
-      dimensions.add(d);
+
+    public Collection<DimensionEntity> getDimensions() {
+      return dimensions;
     }
+
+    public String getDimensionHash() {
+      return dimensionHash;
+    }
+
+    public GetMetricStatisticsParams() {
+    }
+  }
+
+  public static List<Collection<MetricStatistics>> getManyMetricStatistics(List<GetMetricStatisticsParams> getMetricStatisticsParamses) {
+    if (getMetricStatisticsParamses == null) throw new IllegalArgumentException("getMetricStatisticsParamses can not be null");
     Date now = new Date();
-    if (endTime == null) endTime = now;
-    if (startTime == null) startTime = new Date(now.getTime() - 60 * 60 * 1000L);
-    startTime = MetricUtils.stripSeconds(startTime);
-    endTime = MetricUtils.stripSeconds(endTime);
-    if (startTime.after(endTime)) {
-      throw new IllegalArgumentException("Start time must be after end time");
+    Map<GetMetricStatisticsParams, Collection<MetricStatistics>> resultMap = Maps.newHashMap();
+    Multimap<Class, GetMetricStatisticsParams> hashGroupMap = LinkedListMultimap.create();
+    for (GetMetricStatisticsParams getMetricStatisticsParams : getMetricStatisticsParamses) {
+      if (getMetricStatisticsParams == null) throw new IllegalArgumentException("getMetricStatisticsParams can not be null");
+      getMetricStatisticsParams.validate(now);
+      Class metricEntityClass = MetricEntityFactory.getClassForEntitiesGet(getMetricStatisticsParams.getMetricType(), getMetricStatisticsParams.getDimensionHash());
+      hashGroupMap.put(metricEntityClass, getMetricStatisticsParams);
     }
-    if (period == null) {
-      period = 60;
+    for (Class metricEntityClass: hashGroupMap.keySet()) {
+      try (final TransactionResource db = Entities.transactionFor(metricEntityClass)) {
+        // set some global criteria to start (for narrowing?)
+        Date minDate = null;
+        Date maxDate = null;
+        Junction disjunction = Restrictions.disjunction();
+        Map<GetMetricStatisticsParams, TreeMap<GetMetricStatisticsAggregationKey, MetricStatistics>> multiAggregationMap = Maps.newHashMap();
+        for (GetMetricStatisticsParams getMetricStatisticsParams : hashGroupMap.get(metricEntityClass)) {
+          multiAggregationMap.put(getMetricStatisticsParams, new TreeMap<GetMetricStatisticsAggregationKey, MetricStatistics>(GetMetricStatisticsAggregationKey.COMPARATOR_WITH_NULLS.INSTANCE));
+          Junction conjunction = Restrictions.conjunction();
+          conjunction = conjunction.add(Restrictions.lt("timestamp", getMetricStatisticsParams.getEndTime()));
+          conjunction = conjunction.add(Restrictions.ge("timestamp", getMetricStatisticsParams.getStartTime()));
+          conjunction = conjunction.add(Restrictions.eq("accountId", getMetricStatisticsParams.getAccountId()));
+          conjunction = conjunction.add(Restrictions.eq("metricName", getMetricStatisticsParams.getMetricName()));
+          conjunction = conjunction.add(Restrictions.eq("namespace", getMetricStatisticsParams.getNamespace()));
+          conjunction = conjunction.add(Restrictions.eq("dimensionHash", hash(getMetricStatisticsParams.getDimensionMap())));
+          if (getMetricStatisticsParams.getUnits() != null) {
+            conjunction = conjunction.add(Restrictions.eq("units", getMetricStatisticsParams.getUnits()));
+          }
+          disjunction = disjunction.add(conjunction);
+          if (minDate == null || getMetricStatisticsParams.getStartTime().before(minDate)) {
+            minDate = getMetricStatisticsParams.getStartTime();
+          }
+          if (maxDate == null || getMetricStatisticsParams.getEndTime().after(maxDate)) {
+            maxDate = getMetricStatisticsParams.getEndTime();
+          }
+        }
+        Criteria criteria = Entities.createCriteria(metricEntityClass);
+        criteria = criteria.add(Restrictions.lt("timestamp", maxDate));
+        criteria = criteria.add(Restrictions.ge("timestamp", minDate));
+        criteria = criteria.add(disjunction);
+
+        ProjectionList projectionList = Projections.projectionList();
+        projectionList.add(Projections.max("sampleMax"));
+        projectionList.add(Projections.min("sampleMin"));
+        projectionList.add(Projections.sum("sampleSize"));
+        projectionList.add(Projections.sum("sampleSum"));
+        projectionList.add(Projections.groupProperty("units"));
+        projectionList.add(Projections.groupProperty("timestamp"));
+        projectionList.add(Projections.groupProperty("accountId"));
+        projectionList.add(Projections.groupProperty("metricName"));
+        projectionList.add(Projections.groupProperty("metricType"));
+        projectionList.add(Projections.groupProperty("namespace"));
+        projectionList.add(Projections.groupProperty("dimensionHash"));
+        criteria.setProjection(projectionList);
+        criteria.addOrder(Order.asc("timestamp"));
+
+        ScrollableResults results = criteria.setCacheMode(CacheMode.IGNORE).scroll(ScrollMode.FORWARD_ONLY);
+        while (results.next()) {
+          MetricEntity me = getMetricEntity(results);
+          for (GetMetricStatisticsParams getMetricStatisticsParams : hashGroupMap.get(metricEntityClass)) {
+            if (metricDataMatches(getMetricStatisticsParams, me)) {
+              Map<GetMetricStatisticsAggregationKey, MetricStatistics> aggregationMap = multiAggregationMap.get(getMetricStatisticsParams);
+              GetMetricStatisticsAggregationKey key = new GetMetricStatisticsAggregationKey(me, getMetricStatisticsParams.getStartTime(), getMetricStatisticsParams.getPeriod(), getMetricStatisticsParams.getDimensionHash());
+              MetricStatistics item = new MetricStatistics(me, getMetricStatisticsParams.getStartTime(), getMetricStatisticsParams.getPeriod(), getMetricStatisticsParams.getDimensions());
+              if (!aggregationMap.containsKey(key)) {
+                aggregationMap.put(key, item);
+              } else {
+                MetricStatistics totalSoFar = aggregationMap.get(key);
+                totalSoFar.setSampleMax(Math.max(item.getSampleMax(), totalSoFar.getSampleMax()));
+                totalSoFar.setSampleMin(Math.min(item.getSampleMin(), totalSoFar.getSampleMin()));
+                totalSoFar.setSampleSize(totalSoFar.getSampleSize() + item.getSampleSize());
+                totalSoFar.setSampleSum(totalSoFar.getSampleSum() + item.getSampleSum());
+              }
+            }
+          }
+        }
+        for (GetMetricStatisticsParams getMetricStatisticsParams : multiAggregationMap.keySet()) {
+          resultMap.put(getMetricStatisticsParams, multiAggregationMap.get(getMetricStatisticsParams).values());
+        }
+      }
     }
-    if (period % 60 != 0) {
-      throw new IllegalArgumentException("Period must be a multiple of 60");
+    List<Collection<MetricStatistics>> resultList = Lists.newArrayList();
+    for (GetMetricStatisticsParams getMetricStatisticsParams : getMetricStatisticsParamses) {
+      if (resultMap.get(getMetricStatisticsParams) == null) {
+        resultList.add(new ArrayList<MetricStatistics>());
+      } else {
+        resultList.add(resultMap.get(getMetricStatisticsParams));
+      }
     }
-    if (period < 0) {
-      throw new IllegalArgumentException("Period must be greater than 0");
-    }
-    if (period == 0) {
-      throw new IllegalArgumentException("Period must not equal 0");
-    }
-    if (metricType == null) {
-      throw new IllegalArgumentException("metricType must not be null");
-    }
-    if (accountId == null) {
-      throw new IllegalArgumentException("accountId must not be null");
-    }
-    if (metricName == null) {
-      throw new IllegalArgumentException("metricName must not be null");
-    }
-    if (namespace == null) {
-      throw new IllegalArgumentException("namespace must not be null");
-    }
-    String hash = hash(dimensions);
-    Class metricEntityClass = MetricEntityFactory.getClassForEntitiesGet(metricType, hash);
+    return resultList;
+  }
+
+  private static boolean metricDataMatches(GetMetricStatisticsParams getMetricStatisticsParams, MetricEntity metricEntity) {
+    if (getMetricStatisticsParams == null || metricEntity == null) return false;
+    if (getMetricStatisticsParams.getStartTime() == null || getMetricStatisticsParams.getStartTime().after(metricEntity.getTimestamp())) return false;
+    if (metricEntity.getTimestamp() == null || !metricEntity.getTimestamp().before(getMetricStatisticsParams.getEndTime())) return false;
+    if (getMetricStatisticsParams.getAccountId() == null || !getMetricStatisticsParams.getAccountId().equals(metricEntity.getAccountId())) return false;
+    if (getMetricStatisticsParams.getMetricName() == null || !getMetricStatisticsParams.getMetricName().equals(metricEntity.getMetricName())) return false;
+    if (getMetricStatisticsParams.getNamespace() == null || !getMetricStatisticsParams.getNamespace().equals(metricEntity.getNamespace())) return false;
+    if (getMetricStatisticsParams.getMetricType() == null || !getMetricStatisticsParams.getMetricType().equals(metricEntity.getMetricType())) return false;
+    if (getMetricStatisticsParams.getDimensionHash() == null || !getMetricStatisticsParams.getDimensionHash().equals(metricEntity.getDimensionHash())) return false;
+    return true;
+  }
+
+  public static Collection<MetricStatistics> getMetricStatistics(GetMetricStatisticsParams getMetricStatisticsParams) {
+    if (getMetricStatisticsParams == null) throw new IllegalArgumentException("getMetricStatisticsParams can not be null");
+    Date now = new Date();
+    getMetricStatisticsParams.validate(now);
+    Class metricEntityClass = MetricEntityFactory.getClassForEntitiesGet(getMetricStatisticsParams.getMetricType(), getMetricStatisticsParams.getDimensionHash());
     Map<GetMetricStatisticsAggregationKey, MetricStatistics> aggregationMap = new TreeMap<GetMetricStatisticsAggregationKey, MetricStatistics>(GetMetricStatisticsAggregationKey.COMPARATOR_WITH_NULLS.INSTANCE);
     try (final TransactionResource db = Entities.transactionFor(metricEntityClass)) {
       Criteria criteria = Entities.createCriteria(metricEntityClass);
-      criteria = criteria.add(Restrictions.eq("accountId", accountId));
-      criteria = criteria.add(Restrictions.eq("metricName", metricName));
-      criteria = criteria.add(Restrictions.eq("namespace", namespace));
-      criteria = criteria.add(Restrictions.lt("timestamp", endTime));
-      criteria = criteria.add(Restrictions.ge("timestamp", startTime));
-      criteria = criteria.add(Restrictions.eq("dimensionHash", hash));
-      if (units != null) {
-        criteria = criteria.add(Restrictions.eq("units", units));
+      criteria = criteria.add(Restrictions.eq("accountId", getMetricStatisticsParams.getAccountId()));
+      criteria = criteria.add(Restrictions.eq("metricName", getMetricStatisticsParams.getMetricName()));
+      criteria = criteria.add(Restrictions.eq("namespace", getMetricStatisticsParams.getNamespace()));
+      criteria = criteria.add(Restrictions.lt("timestamp", getMetricStatisticsParams.getEndTime()));
+      criteria = criteria.add(Restrictions.ge("timestamp", getMetricStatisticsParams.getStartTime()));
+      criteria = criteria.add(Restrictions.eq("dimensionHash", getMetricStatisticsParams.getDimensionHash()));
+      if (getMetricStatisticsParams.getUnits() != null) {
+        criteria = criteria.add(Restrictions.eq("units", getMetricStatisticsParams.getUnits()));
       }
 
       ProjectionList projectionList = Projections.projectionList();
@@ -266,9 +469,9 @@ public class MetricManager {
       criteria.addOrder(Order.asc("timestamp"));
       ScrollableResults results = criteria.setCacheMode(CacheMode.IGNORE).scroll(ScrollMode.FORWARD_ONLY);
       while (results.next()) {
-        MetricEntity me = getMetricEntity(accountId, metricName, namespace, metricType, hash, results);
-        GetMetricStatisticsAggregationKey key = new GetMetricStatisticsAggregationKey(me, startTime, period, hash);
-        MetricStatistics item = new MetricStatistics(me, startTime, period, dimensions);
+        MetricEntity me = getMetricEntity(getMetricStatisticsParams.getAccountId(), getMetricStatisticsParams.getMetricName(), getMetricStatisticsParams.getNamespace(), getMetricStatisticsParams.getMetricType(), getMetricStatisticsParams.getDimensionHash(), results);
+        GetMetricStatisticsAggregationKey key = new GetMetricStatisticsAggregationKey(me, getMetricStatisticsParams.getStartTime(), getMetricStatisticsParams.getPeriod(), getMetricStatisticsParams.getDimensionHash());
+        MetricStatistics item = new MetricStatistics(me, getMetricStatisticsParams.getStartTime(), getMetricStatisticsParams.getPeriod(), getMetricStatisticsParams.getDimensions());
         if (!aggregationMap.containsKey(key)) {
           aggregationMap.put(key, item);
         } else {
@@ -281,6 +484,33 @@ public class MetricManager {
       }
     }
     return Lists.newArrayList(aggregationMap.values());
+  }
+
+  private static MetricEntity getMetricEntity(ScrollableResults results) {
+    Double sampleMax = (Double) results.get(0);
+    Double sampleMin = (Double) results.get(1);
+    Double sampleSize = (Double) results.get(2);
+    Double sampleSum = (Double) results.get(3);
+    Units resultUnits = (Units) results.get(4);
+    Date timestamp = (Date) results.get(5);
+    String accountId = (String) results.get(6);
+    String metricName = (String) results.get(7);
+    MetricType metricType = (MetricType) results.get(8);
+    String namespace = (String) results.get(9);
+    String hash = (String) results.get(10);
+    MetricEntity me = MetricEntityFactory.getNewMetricEntity(metricType, hash);
+    me.setAccountId(accountId);
+    me.setNamespace(namespace);
+    me.setMetricName(metricName);
+    me.setMetricType(metricType);
+    me.setDimensionHash(hash);
+    me.setSampleMax(sampleMax);
+    me.setSampleMin(sampleMin);
+    me.setSampleSize(sampleSize);
+    me.setSampleSum(sampleSum);
+    me.setTimestamp(timestamp);
+    me.setUnits(resultUnits);
+    return me;
   }
 
   private static MetricEntity getMetricEntity(String accountId, String metricName, String namespace, MetricType metricType, String hash, ScrollableResults results) {
