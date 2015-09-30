@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -142,7 +142,7 @@ public class PersistenceAutoScalingGroups extends AutoScalingGroups {
   public void update( final OwnerFullName ownerFullName,
                       final String autoScalingGroupName,
                       final Callback<AutoScalingGroup> groupUpdateCallback ) throws AutoScalingMetadataException {
-    persistenceSupport.update( ownerFullName, autoScalingGroupName, groupUpdateCallback );
+    persistenceSupport.updateWithRetries( ownerFullName, autoScalingGroupName, groupUpdateCallback );
   }
 
   @Override
