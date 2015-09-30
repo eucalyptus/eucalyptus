@@ -32,6 +32,7 @@ import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.entities.Entities;
 import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 
 /**
  *
@@ -94,17 +95,26 @@ public class StorageUtil {
     return size;
   }
 
-  static void setMappedState( final Snapshot snapshot, final String state ) {
+  static Optional<State> mapState( final String state ) {
+    Optional<State> mappedState = Optional.absent( );
     if ( StorageProperties.Status.creating.toString( ).equals( state ) ) {
-      snapshot.setState( State.GENERATING );
+      mappedState = Optional.of( State.GENERATING );
     } else if ( StorageProperties.Status.pending.toString( ).equals( state ) ) {
-      snapshot.setState( State.GENERATING );
+      mappedState = Optional.of( State.GENERATING );
     } else if ( StorageProperties.Status.completed.toString( ).equals( state ) ) {
-      snapshot.setState( State.EXTANT );
+      mappedState = Optional.of( State.EXTANT );
     } else if ( StorageProperties.Status.available.toString( ).equals( state ) ) {
-      snapshot.setState( State.EXTANT );
+      mappedState = Optional.of( State.EXTANT );
     } else if ( StorageProperties.Status.failed.toString( ).equals( state ) ) {
-      snapshot.setState( State.FAIL );
+      mappedState = Optional.of( State.FAIL );
+    }
+    return mappedState;
+  }
+
+  static void setMappedState( final Snapshot snapshot, final String state ) {
+    final Optional<State> mapped = mapState( state );
+    if ( mapped.isPresent( ) ) {
+      snapshot.setState( mapped.get( ) );
     }
   }
 }

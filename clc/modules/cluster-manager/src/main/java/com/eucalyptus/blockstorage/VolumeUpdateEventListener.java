@@ -74,6 +74,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.blockstorage.msgs.DescribeStorageVolumesResponseType;
 import com.eucalyptus.blockstorage.msgs.DescribeStorageVolumesType;
 import com.eucalyptus.blockstorage.msgs.StorageVolume;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
@@ -118,7 +119,7 @@ public class VolumeUpdateEventListener implements EventListener<ClockTick>, Call
 
   @Override
   public void fireEvent( final ClockTick event ) {
-    if ( Topology.isEnabledLocally( Eucalyptus.class ) && ready.compareAndSet( true, false ) ) {
+    if ( Topology.isEnabledLocally( Eucalyptus.class ) && Bootstrap.isOperational( ) && ready.compareAndSet( true, false ) ) {
       try {
         Threads.enqueue( Eucalyptus.class, Volumes.class, this );
       } catch ( final Exception ex ) {
