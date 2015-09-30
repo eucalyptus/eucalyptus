@@ -71,6 +71,7 @@ import javax.persistence.Table;
 
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Index;
 
 import com.eucalyptus.entities.AbstractPersistent;
 
@@ -83,10 +84,12 @@ public class VolumeExportRecord extends AbstractPersistent {
 
   @ManyToOne
   @JoinColumn(name = "token", nullable = false)
+  @Index( name = "volume_exports_volume_token_idx" )
   private VolumeToken token;
 
   @ManyToOne
   @JoinColumn(name = "volume", nullable = false)
+  @Index( name = "volume_exports_volume_idx" )
   private VolumeInfo volume;
 
   @Column(name = "host_ip", updatable = false, nullable = false)
