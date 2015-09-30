@@ -84,9 +84,19 @@ def copy_keys(desthost, path_map, rsync):
                 [srcpath, '{0}:{1}'.format(desthost, destpath)]
             try:
                 subprocess.check_call(cmd)
-            except subprocess.CalledProcessError:
-                sys.exit('{0}: failed to copy {1}; aborting'.format(
-                    os.path.basename(sys.argv[0]), srcpath))
+            except subprocess.CalledProcessError as err:
+                destdir = os.path.dirname(destpath)
+                if err.returncode == 12:
+                    # Error in rsync protocol data stream
+                    # This is probably caused by a nonexistent dest dir
+                    msg = ('{exe}: failed to copy {srcpath} to {desthost}; '
+                           'ensure eucalyptus is installed on the target '
+                           'host and {destdir} exists')
+                else:
+                    msg = '{exe}: failed to copy {srcpath} to {desthost}'
+                sys.exit(msg.format(exe=os.path.basename(sys.argv[0]),
+                                    desthost=desthost, srcpath=srcpath,
+                                    destdir=destdir))
 
 
 def main():
