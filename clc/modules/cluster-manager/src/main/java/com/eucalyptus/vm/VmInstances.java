@@ -1111,6 +1111,10 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
     return VmInstanceFilterFunctions.NODE_HOST;
   }
 
+  public static Function<VmInstance,String> toServiceTag() {
+    return VmInstanceFilterFunctions.SERVICE_TAG;
+  }
+
   public static Function<VmInstance,String> toInstanceUuid() {
     return Functions.compose( HasNaturalId.Utils.toNaturalId(), Functions.<VmInstance>identity() );
   }
@@ -1528,7 +1532,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
   }
 
   public static void setServiceTag( final VmInstance vm, final String serviceTag ) {
-    if ( !com.google.common.base.Strings.nullToEmpty( vm.getRuntimeState( ).getServiceTag( ) ).equals( serviceTag ) ) {
+    if ( serviceTag != null && !com.google.common.base.Strings.nullToEmpty( vm.getRuntimeState( ).getServiceTag( ) ).equals( serviceTag ) ) {
       vm.getRuntimeState( ).setServiceTag( serviceTag );
       setNodeTag( vm, serviceTag );
     }
@@ -2384,12 +2388,28 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
         final List<VmInstance> instances = Lists.newArrayList( );
         try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( VmInstance.class ) ) {
           instances.addAll( list( null,
-              Restrictions.or( criterion( Timeout.BURIED ), criterion( Timeout.TERMINATED ) ),
-              Collections.<String,String>emptyMap( ),
-              Predicates.or( Timeout.BURIED, Timeout.TERMINATED ) ) );
+              Restrictions.or(
+                  criterion( Timeout.BURIED ),
+                  criterion( Timeout.TERMINATED ),
+                  Restrictions.and( criterion( Timeout.STOPPING ), VmInstance.nullNodeCriterion( ) ),
+                  Restrictions.and( criterion( Timeout.SHUTTING_DOWN ), VmInstance.nullNodeCriterion( ) )
+              ),
+              Collections.<String, String>emptyMap( ),
+              Predicates.or(
+                  Timeout.BURIED,
+                  Timeout.TERMINATED,
+                  Predicates.and( Timeout.STOPPING, Predicates.compose( Predicates.isNull( ), toServiceTag( ) ) ),
+                  Predicates.and( Timeout.SHUTTING_DOWN, Predicates.compose( Predicates.isNull( ), toServiceTag( ) ) )
+              ) ) );
         }
         for ( final VmInstance instance : instances ) try {
           switch ( instance.getState( ) ) {
+            case STOPPING:
+              VmInstances.stopped( instance );
+              break;
+            case SHUTTING_DOWN:
+              VmInstances.terminated( instance );
+              break;
             case TERMINATED:
               VmInstances.buried( instance );
               break;
@@ -3234,6 +3254,12 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
       public String apply( final VmInstance instance ) {
         final BootableImageInfo imageInfo = instance.getBootRecord().getMachine();
         return imageInfo == null ? null : imageInfo.getRootDeviceType();
+      }
+    },
+    SERVICE_TAG { // Eucalyptus specific, not for filtering
+      @Override
+      public String apply( final VmInstance instance ) {
+        return instance.getServiceTag( );
       }
     },
     SUBNET_ID {
