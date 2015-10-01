@@ -56,6 +56,7 @@ import com.eucalyptus.network.NetworkInfoBroadcasts.VersionedNetworkView;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.LockResource;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -95,6 +96,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet.TORNDOWN;
 import static com.google.common.hash.Hashing.goodFastHash;
@@ -106,6 +109,7 @@ public class NetworkInfoBroadcaster {
   private static final Logger logger = Logger.getLogger( NetworkInfoBroadcaster.class );
 
   private static final AtomicLong lastBroadcastTime = new AtomicLong( 0L );
+  private static final Lock lastBroadcastTimeLock = new ReentrantLock( );
   private static final AtomicReference<Pair<Integer,String>> lastEncodedNetworkInformation = new AtomicReference<>( );
   private static final ConcurrentMap<String,Long> activeBroadcastMap = Maps.newConcurrentMap( );
   private static final EntityCache<VmInstance,NetworkInfoBroadcasts.VmInstanceNetworkView> instanceCache = new EntityCache<>(
@@ -172,20 +176,29 @@ public class NetworkInfoBroadcaster {
     final Callable<Void> broadcastRequest = new Callable<Void>( ) {
       @Override
       public Void call( ) throws Exception {
-        final long currentTime = System.currentTimeMillis( );
-        final long lastBroadcast = lastBroadcastTime.get( );
-        if ( requestedTime >= lastBroadcast &&
-            lastBroadcast + TimeUnit.SECONDS.toMillis( NetworkGroups.MIN_BROADCAST_INTERVAL ) < currentTime  ) {
-          if ( lastBroadcastTime.compareAndSet( lastBroadcast, currentTime ) ) {
-            try {
-              broadcastNetworkInfo( );
-            } catch( Exception e ) {
-              logger.error( "Error broadcasting network information", e );
+        boolean shouldBroadcast = false;
+        boolean shouldRetryWithDelay = false;
+        try ( final LockResource lock = LockResource.lock( lastBroadcastTimeLock ) ) {
+          final long currentTime = System.currentTimeMillis( );
+          final long lastBroadcast = lastBroadcastTime.get( );
+          if ( requestedTime >= lastBroadcast &&
+              lastBroadcast + TimeUnit.SECONDS.toMillis( NetworkGroups.MIN_BROADCAST_INTERVAL ) < currentTime  ) {
+            if ( lastBroadcastTime.compareAndSet( lastBroadcast, currentTime ) ) {
+              shouldBroadcast = true;
+            } else { // re-evaluate
+              broadcastTask( this );
             }
-          } else { // re-evaluate
-            broadcastTask( this );
+          } else if ( requestedTime >= lastBroadcastTime.get() ) {
+            shouldRetryWithDelay = true;
           }
-        } else if ( requestedTime >= lastBroadcastTime.get() ) {
+        }
+        if ( shouldBroadcast ) {
+          try {
+            broadcastNetworkInfo( );
+          } catch( Exception e ) {
+            logger.error( "Error broadcasting network information", e );
+          }
+        } else if ( shouldRetryWithDelay ) {
           Thread.sleep( 100 ); // pause and re-evaluate to allow for min time between broadcasts
           broadcastTask( this );
         }
