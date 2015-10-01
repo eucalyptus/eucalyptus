@@ -33,6 +33,7 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.StackActivity;
+import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
 import com.eucalyptus.cloudformation.workflow.steps.CreateMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
@@ -51,8 +52,12 @@ import com.eucalyptus.compute.common.DescribeSubnetsType;
 import com.eucalyptus.compute.common.DescribeVpcsResponseType;
 import com.eucalyptus.compute.common.DescribeVpcsType;
 import com.eucalyptus.compute.common.Filter;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.netflix.glisten.WorkflowOperations;
 
@@ -62,7 +67,10 @@ import javax.annotation.Nullable;
 /**
  * Created by ethomas on 2/3/14.
  */
+@ConfigurableClass( root = "cloudformation", description = "Parameters controlling cloud formation")
 public class AWSEC2SubnetResourceAction extends ResourceAction {
+  @ConfigurableField(initial = "300", description = "The amount of time (in seconds) to retry subnet deletes")
+  public static volatile Integer SUBNET_MAX_DELETE_RETRY_SECS = 300;
 
   private AWSEC2SubnetProperties properties = new AWSEC2SubnetProperties();
   private AWSEC2SubnetResourceInfo info = new AWSEC2SubnetResourceInfo();
@@ -157,15 +165,19 @@ public class AWSEC2SubnetResourceAction extends ResourceAction {
         }
         DeleteSubnetType deleteSubnetType = MessageHelper.createMessage(DeleteSubnetType.class, action.info.getEffectiveUserId());
         deleteSubnetType.setSubnetId(action.info.getPhysicalResourceId());
-        AsyncRequests.<DeleteSubnetType,DeleteSubnetResponseType> sendSync(configuration, deleteSubnetType);
+        try {
+          AsyncRequests.<DeleteSubnetType,DeleteSubnetResponseType> sendSync(configuration, deleteSubnetType);
+        } catch (Exception ex) {
+          throw new ValidationFailedException(AsyncExceptions.asWebServiceErrorMessage(ex,"Error deleting subnet"));
+        }
         return action;
       }
     };
 
     @Nullable
     @Override
-    public Integer getTimeout() {
-      return null;
+    public Integer getTimeout( ) {
+      return SUBNET_MAX_DELETE_RETRY_SECS;
     }
   }
 
