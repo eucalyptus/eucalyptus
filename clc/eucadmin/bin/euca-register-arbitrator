@@ -31,6 +31,6 @@ import eucadmin.registerarbitrator
 
 if __name__ == "__main__":
     print >> sys.stderr, "warning: euca-register-arbitrator is", \
-        "deprecated; use ``empyrean-register-service -t arbitrator'' instead"
+        "deprecated; use ``euserv-register-service -t arbitrator'' instead"
     r = eucadmin.registerarbitrator.RegisterArbitrator()
     r.main_cli()
