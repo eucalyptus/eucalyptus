@@ -77,6 +77,7 @@ import javax.persistence.Table;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Index;
 
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.AbstractPersistent;
@@ -102,6 +103,7 @@ public class VolumeToken extends AbstractPersistent {
 
   @ManyToOne
   @JoinColumn(name = "volume", nullable = true)
+  @Index( name = "volume_tokens_volume_idx" )
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   private VolumeInfo volume;
 

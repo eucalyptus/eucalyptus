@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,10 +27,12 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
 import com.eucalyptus.autoscaling.common.AutoScalingResourceName;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
+import com.eucalyptus.entities.AbstractPersistentSupport;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.auth.type.RestrictedType;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 
@@ -81,10 +83,31 @@ public abstract class AbstractOwnedPersistentsWithResourceNameSupport<AOP extend
      return update( ownerFullName, null, nameOrArn, updateCallback );
   }
 
+  public AOP updateWithRetries( final OwnerFullName ownerFullName,
+                                final String nameOrArn,
+                                final Callback<AOP> updateCallback ) throws AutoScalingMetadataException {
+    return updateWithRetries( ownerFullName, null, nameOrArn, updateCallback );
+  }
+
   public AOP update( final OwnerFullName ownerFullName,
                      @Nullable final String scopeNameOrArn,
                      final String nameOrArn,
                      final Callback<AOP> updateCallback ) throws AutoScalingMetadataException {
+    return update( ownerFullName, scopeNameOrArn, nameOrArn, updateCallback, Functions.<AbstractPersistentSupport<AutoScalingMetadata, AOP, AutoScalingMetadataException>>identity( ) );
+  }
+
+  public AOP updateWithRetries( final OwnerFullName ownerFullName,
+                                @Nullable final String scopeNameOrArn,
+                                final String nameOrArn,
+                                final Callback<AOP> updateCallback ) throws AutoScalingMetadataException {
+    return update( ownerFullName, scopeNameOrArn, nameOrArn, updateCallback, retries( ) );
+  }
+
+  private AOP update( final OwnerFullName ownerFullName,
+                      @Nullable final String scopeNameOrArn,
+                      final String nameOrArn,
+                      final Callback<AOP> updateCallback,
+                      final Function<AbstractPersistentSupport<AutoScalingMetadata, AOP, AutoScalingMetadataException>,AbstractPersistentSupport<AutoScalingMetadata, AOP, AutoScalingMetadataException>> persistenceTransformer ) throws AutoScalingMetadataException {
     final AOP example;
     if ( AutoScalingResourceName.isResourceName().apply( nameOrArn ) ) {
       example = exampleWithUuid( AutoScalingResourceName.parse( nameOrArn, type ).getUuid() );
@@ -92,7 +115,8 @@ public abstract class AbstractOwnedPersistentsWithResourceNameSupport<AOP extend
       final String scopeName = getNameFromScopeNameOrArn( scopeNameOrArn );
       example = exampleWithName( ownerFullName, scopeName, nameOrArn );
     }
-    return updateByExample( example, ownerFullName, nameOrArn, updateCallback );
+    //noinspection ConstantConditions
+    return persistenceTransformer.apply( this ).updateByExample( example, ownerFullName, nameOrArn, updateCallback );
   }
   
   protected AOP exampleWithName( OwnerFullName ownerFullName, String scope, String name ) {
@@ -135,6 +159,17 @@ public abstract class AbstractOwnedPersistentsWithResourceNameSupport<AOP extend
   }
 
   protected abstract AOP exampleWithUuid( String uuid );
+
+  private Function<AbstractPersistentSupport<AutoScalingMetadata, AOP, AutoScalingMetadataException>,AbstractPersistentSupport<AutoScalingMetadata, AOP, AutoScalingMetadataException>> retries( ) {
+    return new Function<AbstractPersistentSupport<AutoScalingMetadata, AOP, AutoScalingMetadataException>,AbstractPersistentSupport<AutoScalingMetadata, AOP, AutoScalingMetadataException>>(){
+      @Override
+      public AbstractPersistentSupport<AutoScalingMetadata, AOP, AutoScalingMetadataException> apply(
+          final AbstractPersistentSupport<AutoScalingMetadata, AOP, AutoScalingMetadataException> persistence
+      ) {
+        return persistence.withRetries( );
+      }
+    };
+  }
 
   private String getNameFromScopeNameOrArn( final String scopeNameOrArn ) {
     final String scopeName;

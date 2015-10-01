@@ -444,7 +444,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
   @EntityUpgrade( entities = StaticPropertyEntry.class, since = Version.v4_2_0, value = Empyrean.class )
   public enum StaticPropertyEntryUpgrade42 implements Predicate<Class> {
     INSTANCE;
-    private static Logger LOG = Logger.getLogger( StaticPropertyEntryUpgrade40.class );
+    private static Logger LOG = Logger.getLogger( StaticPropertyEntryUpgrade42.class );
 
     private void updateLdapConfiguration( ) {
       try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
@@ -535,10 +535,28 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       } catch ( Exception ex ) {
         throw Exceptions.toUndeclared( ex );
       }
-
     }
 
-    @Override
+    private void migrateDisableCloudWatchProperty() {
+      final String CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_OLD_FIELD_NAME = "com.eucalyptus.cloudwatch.backend.CloudWatchBackendService.disable_cloudwatch_service";
+      final String CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_NEW_FIELD_NAME = "com.eucalyptus.cloudwatch.common.config.CloudWatchConfigProperties.disable_cloudwatch_service";
+      final String CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_PROP_NAME = "cloudwatch.disable_cloudwatch_service";
+      try (final TransactionResource db = Entities.transactionFor(StaticDatabasePropertyEntry.class)) {
+        List<StaticDatabasePropertyEntry> entities = Entities.query(new StaticDatabasePropertyEntry());
+        for (StaticDatabasePropertyEntry entry : entities) {
+          if (CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_OLD_FIELD_NAME.equals(entry.getFieldName()) &&
+            CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_PROP_NAME.equals(entry.getPropName())) {
+            entry.setFieldName(CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_NEW_FIELD_NAME);
+            LOG.debug("Upgrading: Changing property " + CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_PROP_NAME + " field name'" + CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_OLD_FIELD_NAME + "' to '" + CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_NEW_FIELD_NAME + "'");
+          }
+        }
+        db.commit();
+      } catch (Exception ex) {
+        throw Exceptions.toUndeclared(ex);
+      }
+    }
+
+      @Override
     public boolean apply( Class arg0 ) {
       updateStackConfiguration( );
       updateLdapConfiguration( );
@@ -546,6 +564,8 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
 
       //move ec2_classic network config from cluster-manager to compute-common property
       migrateEc2ClassicProtocolExtensions();
+
+      migrateDisableCloudWatchProperty();
       return true;
     }
   }
