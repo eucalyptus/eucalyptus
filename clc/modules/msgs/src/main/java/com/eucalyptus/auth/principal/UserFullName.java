@@ -64,6 +64,7 @@ package com.eucalyptus.auth.principal;
 
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.*;
+import javax.annotation.Nonnull;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
@@ -79,9 +80,9 @@ public class UserFullName implements OwnerFullName {
   private final String                               userId;
   private final String                               userName;
   private final String                               accountNumber;
-  private final String                                     authority;
-  private final String                                     relativeId;
-  String                                             qName;
+  private final String                               authority;
+  private final String                               relativeId;
+  private final String                               qName;
   
   private UserFullName( final User user ) throws AuthException {
     this.userId = user.getUserId( );
@@ -93,7 +94,18 @@ public class UserFullName implements OwnerFullName {
     this.relativeId = FullName.ASSEMBLE_PATH_PARTS.apply( new String[] { "user", user.getName( ) } );
     this.qName = this.authority + this.relativeId;
   }
-  
+
+  private UserFullName( final String accountNumber, final String userId ) {
+    this.userId = userId;
+    checkParam( "userId", this.userId, notNullValue() );
+    this.userName = null;
+    this.accountNumber = accountNumber;
+    checkParam( "accountNumber", this.accountNumber, notNullValue() );
+    this.authority = new StringBuilder( ).append( FullName.PREFIX ).append( FullName.SEP ).append( VENDOR ).append( FullName.SEP ).append( FullName.SEP ).append( this.accountNumber ).append( FullName.SEP ).toString( );
+    this.relativeId = FullName.ASSEMBLE_PATH_PARTS.apply( new String[] { "userId", userId } );
+    this.qName = this.authority + this.relativeId;
+  }
+
   public static UserFullName getInstance( final String userId, final String... relativePath ) {
     if ( userIdMap.asMap().containsKey( userId ) ) {
       return userIdMap.getIfPresent( userId );
@@ -107,7 +119,29 @@ public class UserFullName implements OwnerFullName {
       }
     }
   }
-  
+
+  /**
+   * Get an instance of a user full name with the given account.
+   *
+   * <p>If the account or user have been deleted this will preserve the
+   * given accountNumber and userId rather than returning a fake identity.</p>
+   *
+   * @param accountNumber The account number to use
+   * @param userId The user identifier to use
+   * @return the UserFullName, which will include the userName when available
+   */
+  public static UserFullName getInstanceForAccount(
+      @Nonnull final String accountNumber,
+      @Nonnull final String userId
+  ) {
+    UserFullName userFullName = getInstance( userId );
+    if ( !accountNumber.equals( userFullName.getAccountNumber( ) ) ) {
+      // not cached as this type of name has no external information
+      userFullName = new UserFullName( accountNumber, userId );
+    }
+    return userFullName;
+  }
+
   public static UserFullName getInstance( final User user, final String... relativePath ) {
     try {
       if ( ( user != null ) && !Principals.isFakeIdentify( user.getUserId( ) ) ) {
