@@ -1362,7 +1362,7 @@ int mido_create_rule(midoname * chain, midoname * outname, int * next_position, 
     va_list ap = {{0}}, ap1 = {{0}}, ap2 = {{0}};
 
     va_start(ap, next_position);
-    va_copy(ap1, ap);
+    //va_copy(ap1, ap);
     va_copy(ap2, ap);
 
     bzero(&myname, sizeof(midoname));
@@ -1377,6 +1377,7 @@ int mido_create_rule(midoname * chain, midoname * outname, int * next_position, 
     if (!rc) {
         found = 0;
         for (i = 0; i < max_rules && !found; i++) {
+            va_copy(ap1, ap);
             rc = mido_cmp_midoname_to_input_json_v(&(rules[i]), &ap1);
             va_end(ap1);
             if (!rc) {
@@ -3069,12 +3070,12 @@ int json_object_cmp(json_object * one, json_object * two)
     twotype = json_object_get_type(two);
     if (onetype != twotype) {
         LOGTRACE("types differ\n");
-        //        return(1);
+        return(1);
     }
 
     if (onetype == json_type_object) {
         json_object_object_foreach(one, onekey, oneval) {
-            LOGTRACE("evaling key %s\n", onekey);
+            LOGTRACE("evaluating key %s\n", onekey);
             onesubtype = json_object_get_type(oneval);
             //            twoval = json_object_object_get(two, onekey);
             json_object_object_get_ex(two, onekey, &twoval);
@@ -3093,6 +3094,10 @@ int json_object_cmp(json_object * one, json_object * two)
                 rc = strcmp(oneel, twoel);
                 EUCA_FREE(oneel);
                 EUCA_FREE(twoel);
+                if (rc != 0) {
+                    ret = 1;
+                    break;
+                }
             }
             //            json_object_put(twoval);
             if (rc) {

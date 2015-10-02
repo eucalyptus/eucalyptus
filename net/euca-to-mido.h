@@ -110,7 +110,9 @@ enum {
     VPCBR_DHCPHOST,
     VMHOST,
     ELIP_PRE,
+    ELIP_PRE_PUB,
     ELIP_POST,
+    ELIP_POST_PRIV,
     ELIP_PRE_IPADDRGROUP,
     ELIP_POST_IPADDRGROUP,
     ELIP_PRE_IPADDRGROUP_IP,
@@ -293,6 +295,7 @@ int get_next_router_id(mido_config * mido, int *nextid);
 int set_router_id(mido_config * mido, int id);
 
 int cidr_split(char *cidr, char *outnet, char *outslashnet, char *outgw, char *outplustwo);
+int isMidoVpcPlusTwo(mido_config *mido, char *iptocheck);
 
 int initialize_mido(mido_config * mido, char *eucahome, int flushmode, char *ext_eucanetdhostname, char *ext_rthosts, char *ext_pubnw,
                     char *ext_pubgwip, char *int_rtnetwork, char *int_rtslashnet);
