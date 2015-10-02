@@ -1070,8 +1070,8 @@ public class Topology {
 	  enabledServices.addAll(activePassiveServices);
 	  //Add the manyToOne services that have at least one enabled
 	  for(Component comp : Components.whichAreManyToOneEnabled() ) {
-		  for(ServiceConfiguration serv : comp.services()) {							  
-			  if(!enabledServices.contains(serv)) {
+		  for(ServiceConfiguration serv : Iterables.filter( comp.services( ), State.ENABLED )) {
+			  if( !enabledServices.contains(serv)) {
 				  enabledServices.add(serv);
 			  }
 		  }
