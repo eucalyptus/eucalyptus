@@ -57,6 +57,7 @@ import com.eucalyptus.network.NetworkInfoBroadcasts.VersionedNetworkView;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.LockResource;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -94,11 +95,14 @@ import java.nio.file.StandardCopyOption;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet.TORNDOWN;
 import static com.google.common.hash.Hashing.goodFastHash;
@@ -110,6 +114,7 @@ public class NetworkInfoBroadcaster {
   private static final Logger logger = Logger.getLogger( NetworkInfoBroadcaster.class );
 
   private static final AtomicLong lastBroadcastTime = new AtomicLong( 0L );
+  private static final Lock lastBroadcastTimeLock = new ReentrantLock( );
   private static final AtomicReference<LastBroadcastInfo> lastBroadcastInformation = new AtomicReference<>( );
   private static final AtomicReference<Pair<Long,String>> lastAppliedNetworkInformation = new AtomicReference<>( );
   private static final ConcurrentMap<String,Long> activeBroadcastMap = Maps.newConcurrentMap( );
@@ -199,20 +204,29 @@ public class NetworkInfoBroadcaster {
     final Callable<Void> broadcastRequest = new Callable<Void>( ) {
       @Override
       public Void call( ) throws Exception {
-        final long currentTime = System.currentTimeMillis( );
-        final long lastBroadcast = lastBroadcastTime.get( );
-        if ( requestedTime >= lastBroadcast &&
-            lastBroadcast + TimeUnit.SECONDS.toMillis( NetworkGroups.MIN_BROADCAST_INTERVAL ) < currentTime  ) {
-          if ( lastBroadcastTime.compareAndSet( lastBroadcast, currentTime ) ) {
-            try {
-              broadcastNetworkInfo( );
-            } catch( Exception e ) {
-              logger.error( "Error broadcasting network information", e );
+        boolean shouldBroadcast = false;
+        boolean shouldRetryWithDelay = false;
+        try ( final LockResource lock = LockResource.lock( lastBroadcastTimeLock ) ) {
+          final long currentTime = System.currentTimeMillis( );
+          final long lastBroadcast = lastBroadcastTime.get( );
+          if ( requestedTime >= lastBroadcast &&
+              lastBroadcast + TimeUnit.SECONDS.toMillis( NetworkGroups.MIN_BROADCAST_INTERVAL ) < currentTime  ) {
+            if ( lastBroadcastTime.compareAndSet( lastBroadcast, currentTime ) ) {
+              shouldBroadcast = true;
+            } else { // re-evaluate
+              broadcastTask( this );
             }
-          } else { // re-evaluate
-            broadcastTask( this );
+          } else if ( requestedTime >= lastBroadcastTime.get() ) {
+            shouldRetryWithDelay = true;
           }
-        } else if ( requestedTime >= lastBroadcastTime.get() ) {
+        }
+        if ( shouldBroadcast ) {
+          try {
+            broadcastNetworkInfo( );
+          } catch( Exception e ) {
+            logger.error( "Error broadcasting network information", e );
+          }
+        } else if ( shouldRetryWithDelay ) {
           Thread.sleep( 100 ); // pause and re-evaluate to allow for min time between broadcasts
           broadcastTask( this );
         }
@@ -234,7 +248,8 @@ public class NetworkInfoBroadcaster {
       final List<com.eucalyptus.cluster.Cluster> clusters = Clusters.getInstance( ).listValues( );
 
       final NetworkInfoSource source = cacheSource( );
-      final int sourceFingerprint = fingerprint( source, clusters, NetworkGroups.NETWORK_CONFIGURATION );
+      final Set<String> dirtyPublicAddresses = PublicAddresses.dirtySnapshot( );
+      final int sourceFingerprint = fingerprint( source, clusters, dirtyPublicAddresses, NetworkGroups.NETWORK_CONFIGURATION );
       final LastBroadcastInfo lastBroadcast = lastBroadcastInformation.get( );
       final Pair<Long,String> appliedVersion = lastAppliedNetworkInformation.get( );
       final String encodedNetworkInfo;
@@ -252,19 +267,20 @@ public class NetworkInfoBroadcaster {
               networkConfiguration,
               source,
               Suppliers.ofInstance( clusters ),
-              new Supplier<String>( ){
+              new Supplier<String>( ) {
                 @Override
-                public String get( ) {
-                  return Topology.lookup(Eucalyptus.class).getInetAddress( ).getHostAddress( );
+                public String get() {
+                  return Topology.lookup( Eucalyptus.class ).getInetAddress( ).getHostAddress( );
                 }
               },
-              new Function<List<String>,List<String>>(){
+              new Function<List<String>, List<String>>( ) {
                 @Nullable
                 @Override
                 public List<String> apply( final List<String> defaultServers ) {
                   return NetworkConfigurations.loadSystemNameservers( defaultServers );
                 }
-              }
+              },
+              dirtyPublicAddresses
           );
           info.setVersion( BaseEncoding.base16( ).lowerCase( ).encode( Ints.toByteArray( sourceFingerprint ) ) );
         }
@@ -326,6 +342,7 @@ public class NetworkInfoBroadcaster {
   private static int fingerprint(
       final NetworkInfoSource source,
       final List<com.eucalyptus.cluster.Cluster> clusters,
+      final Set<String> dirtyPublicAddresses,
       final String networkConfiguration
   ) {
     final HashFunction hashFunction = goodFastHash( 32 );
@@ -345,6 +362,7 @@ public class NetworkInfoBroadcaster {
       }
     }
     hasher.putString( Joiner.on( ',' ).join( Sets.newTreeSet( Iterables.transform( clusters, HasName.GET_NAME ) ) ) );
+    hasher.putString( Joiner.on( ',' ).join( Sets.newTreeSet( dirtyPublicAddresses ) ) );
     hasher.putInt( networkConfiguration.hashCode( ) );
     return hasher.hash( ).asInt( );
   }
