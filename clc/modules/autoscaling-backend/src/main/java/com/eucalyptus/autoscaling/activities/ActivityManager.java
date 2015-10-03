@@ -1951,11 +1951,7 @@ public class ActivityManager {
 
     private void handleInstanceTerminated( ) {
       try {
-        final AutoScalingInstance instance = autoScalingInstances.lookup(
-            getOwner(),
-            instanceId,
-            Functions.<AutoScalingInstance>identity() );
-        autoScalingInstances.delete( instance );
+        autoScalingInstances.delete( getOwner( ), instanceId );
         terminated = true;
       } catch ( AutoScalingMetadataNotFoundException e ) {
         // no need to delete it then

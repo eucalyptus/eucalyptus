@@ -57,20 +57,27 @@ public abstract class AbstractOwnedPersistents<AOP extends AbstractOwnedPersiste
     try {
       return Entities.asTransaction( entityType, workFunction ).apply( null );
     } catch ( Exception e ) {
-      final AutoScalingMetadataException cause = Exceptions.findCause( e, AutoScalingMetadataException.class );
-      if ( cause != null ) {
-        throw cause;
-      }
-      throw new AutoScalingMetadataException( "Transaction failed", e );
+      throw metadataException( "Transaction failed", e );
     }
   }
 
   protected AutoScalingMetadataException notFoundException( String message, Throwable cause ) {
-    return new AutoScalingMetadataNotFoundException( message, cause );
+    final AutoScalingMetadataNotFoundException existingException =
+        Exceptions.findCause( cause, AutoScalingMetadataNotFoundException.class );
+    if ( existingException != null ) {
+      return existingException;
+    } else {
+      return new AutoScalingMetadataNotFoundException( message, cause );
+    }
   }
 
   protected AutoScalingMetadataException metadataException( String message, Throwable cause ) {
-    return new AutoScalingMetadataException( message, cause );
+    final AutoScalingMetadataException existingException =
+        Exceptions.findCause( cause, AutoScalingMetadataException.class );
+    if ( existingException != null ) {
+      return existingException;
+    } else {
+      return new AutoScalingMetadataException( message, cause );
+    }
   }
-
 }

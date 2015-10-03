@@ -1521,8 +1521,9 @@ class ActivityManagerTest {
       }
 
       @Override
-      boolean delete(AutoScalingMetadata.AutoScalingInstanceMetadata autoScalingInstance) {
-        instances.remove( autoScalingInstance )
+      boolean delete(OwnerFullName ownerFullName,
+                     String instanceId) {
+        instances.remove( lookup( ownerFullName, instanceId, Functions.identity( ) ) )
       }
 
       @Override

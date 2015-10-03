@@ -93,6 +93,7 @@ import com.eucalyptus.util.Consumer
 import com.eucalyptus.auth.principal.OwnerFullName
 import com.eucalyptus.util.TypeMappers
 import com.google.common.base.Function
+import com.google.common.base.Functions
 import com.google.common.base.Predicate
 import com.google.common.base.Predicates
 import com.google.common.base.Suppliers
@@ -661,8 +662,9 @@ class AutoScalingServiceTest {
       }
 
       @Override
-      boolean delete(AutoScalingMetadata.AutoScalingInstanceMetadata autoScalingInstance) {
-        instances.remove( 0 ) != null
+      boolean delete(OwnerFullName ownerFullName,
+                     String instanceId) {
+        instances.remove( lookup( ownerFullName, instanceId, Functions.identity( ) ) )
       }
 
       @Override

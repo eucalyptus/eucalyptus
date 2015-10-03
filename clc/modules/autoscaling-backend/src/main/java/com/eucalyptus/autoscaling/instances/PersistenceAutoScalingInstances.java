@@ -20,7 +20,6 @@
 package com.eucalyptus.autoscaling.instances;
 
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingGroupMetadata;
-import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingInstanceMetadata;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -253,14 +252,17 @@ public class PersistenceAutoScalingInstances extends AutoScalingInstances {
   }
 
   @Override
-  public boolean delete( final AutoScalingInstanceMetadata autoScalingInstance ) throws AutoScalingMetadataException {
-    return persistenceSupport.delete( autoScalingInstance );
+  public boolean delete( final OwnerFullName ownerFullName,
+                         final String instanceId ) throws AutoScalingMetadataException {
+    return !persistenceSupport.withRetries( ).deleteByExample(
+        persistenceSupport.exampleWithName( ownerFullName, instanceId )
+    ).isEmpty( );
   }
 
   @Override
   public boolean deleteByGroup( final AutoScalingGroupMetadata group ) throws AutoScalingMetadataException {
     final AutoScalingInstance example = exampleForGroup( group );
-    return !persistenceSupport.deleteByExample( example ).isEmpty();
+    return !persistenceSupport.withRetries( ).deleteByExample( example ).isEmpty( );
   }
 
   @Override
