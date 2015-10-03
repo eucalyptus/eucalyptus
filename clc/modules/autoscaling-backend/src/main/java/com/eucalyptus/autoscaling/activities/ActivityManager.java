@@ -744,7 +744,14 @@ public class ActivityManager {
     }
 
     if ( group.getCapacity() > group.getDesiredCapacity() ) {
-      if ( !Iterables.all( currentInstances, Predicates.and( LifecycleState.InService.forView(), ConfigurationState.Registered.forView(), HealthStatus.Healthy.forView() ) ) ) {
+      final List<Predicate<AutoScalingInstanceCoreView>> configAndLifecyclePredicates = Lists.newArrayList( );
+      if ( group.getDesiredCapacity() == 0 ) {
+        configAndLifecyclePredicates.add(
+            Predicates.and( LifecycleState.Pending.forView( ), ConfigurationState.Instantiated.forView( ) ) );
+      }
+      configAndLifecyclePredicates.add(
+          Predicates.and( LifecycleState.InService.forView( ), ConfigurationState.Registered.forView( ) ) );
+      if ( !Iterables.all( currentInstances, Predicates.and( Predicates.or( configAndLifecyclePredicates ), HealthStatus.Healthy.forView( ) ) ) ) {
         // Wait for terminations / launches to complete before further scaling.
         if ( logger.isTraceEnabled() ) {
           logger.trace( "Group over desired capacity ("+group.getCapacity()+"/"+group.getDesiredCapacity()+"), waiting for scaling operations to complete." );
