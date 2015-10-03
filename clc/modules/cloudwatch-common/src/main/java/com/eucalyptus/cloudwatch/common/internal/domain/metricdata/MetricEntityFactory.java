@@ -20,11 +20,19 @@
 package com.eucalyptus.cloudwatch.common.internal.domain.metricdata;
 
 import java.util.Collection;
+import java.util.concurrent.Callable;
 
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
+import com.eucalyptus.cloudwatch.common.CloudWatchBackend;
+import static com.eucalyptus.upgrade.Upgrades.Version.v4_2_0;
+import com.eucalyptus.upgrade.Upgrades.PreUpgrade;
+import com.eucalyptus.upgrade.Upgrades.DatabaseFilters;
+import com.google.common.collect.Lists;
+import groovy.sql.Sql;
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
@@ -807,5 +815,52 @@ public class MetricEntityFactory {
       super();
     }
   }
+
+
+
+  @PreUpgrade(since = v4_2_0, value = CloudWatchBackend.class)
+  public static class RemoveMetricDataAbstractPersistentWithDimensionsColumns420 implements Callable<Boolean> {
+
+    private static final Logger LOG = Logger.getLogger(RemoveMetricDataAbstractPersistentWithDimensionsColumns420.class);
+
+    @Override
+    public Boolean call() throws Exception {
+
+      LOG.info("Removing AbstractPersistentWithDimensions columns from metric_data tables in cloudwatch_backend");
+      Sql sql = null;
+
+      try {
+
+        sql = DatabaseFilters.NEWVERSION.getConnection("eucalyptus_cloudwatch_backend");
+        Collection<String> tables = Lists.newArrayList("metric_data");
+        for (String prefix: new String[]{"custom", "system"}) {
+          for (int i=0;i<16;i++) {
+            tables.add(prefix + "_metric_data_" + Integer.toHexString(i));
+          }
+        }
+        Collection<String> columns = Lists.newArrayList(
+          "creation_timestamp", "last_update_timestamp", "metadata_perm_uuid", "version");
+        for (int i=1;i<=10;i++) {
+          columns.add("dim_" + i + "_name");
+          columns.add("dim_" + i + "_value");
+        }
+        for (String table: tables) {
+          for (String column : columns) {
+            LOG.info("Dropping column " + column + " from " + table + " if it exists ");
+            sql.execute(String.format("alter table %s drop column if exists %s", table, column));
+          }
+        }
+        return Boolean.TRUE;
+      } catch (Exception e) {
+        LOG.warn("Failed to remove AbstractPersistentWithDimensions columns from metric_data tables in cloudwatch_backend", e);
+        return Boolean.TRUE;
+      } finally {
+        if (sql != null) {
+          sql.close();
+        }
+      }
+    }
+  }
+
 
 }

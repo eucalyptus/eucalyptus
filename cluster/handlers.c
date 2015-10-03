@@ -1944,7 +1944,6 @@ int doDescribeResources(ncMetadata * pMeta, virtualMachine ** ccvms, int vmLen, 
                     diskpool = res->availDisk;
                     corepool = res->availCores;
                 }
-
                 mempool -= (*ccvms)[j].mem;
                 diskpool -= (*ccvms)[j].disk;
                 corepool -= (*ccvms)[j].cores;
@@ -1964,7 +1963,6 @@ int doDescribeResources(ncMetadata * pMeta, virtualMachine ** ccvms, int vmLen, 
                     diskpool = res->maxDisk;
                     corepool = res->maxCores;
                 }
-
                 mempool -= (*ccvms)[j].mem;
                 diskpool -= (*ccvms)[j].disk;
                 corepool -= (*ccvms)[j].cores;

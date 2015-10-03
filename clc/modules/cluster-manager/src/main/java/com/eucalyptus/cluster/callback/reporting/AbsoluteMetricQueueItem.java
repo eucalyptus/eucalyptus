@@ -22,8 +22,10 @@ package com.eucalyptus.cluster.callback.reporting;
 
 
 import com.eucalyptus.cloudwatch.common.msgs.MetricDatum;
+import com.google.common.base.Predicate;
 
 public class AbsoluteMetricQueueItem {
+  private final long itemCreated = System.currentTimeMillis( );
   private String accountId;
   private MetricDatum metricDatum;
   private String namespace;
@@ -44,5 +46,14 @@ public class AbsoluteMetricQueueItem {
   }
   public void setNamespace(String namespace) {
     this.namespace = namespace;
+  }
+
+  public static Predicate<AbsoluteMetricQueueItem> createdBefore( final long timestamp ) {
+    return new Predicate<AbsoluteMetricQueueItem>( ) {
+      @Override
+      public boolean apply( final AbsoluteMetricQueueItem absoluteMetricQueueItem ) {
+        return absoluteMetricQueueItem.itemCreated < timestamp;
+      }
+    };
   }
 }

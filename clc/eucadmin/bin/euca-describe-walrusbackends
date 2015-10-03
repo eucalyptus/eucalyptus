@@ -31,6 +31,6 @@ import eucadmin.describewalrusbackends
 
 if __name__ == "__main__":
     print >> sys.stderr, "warning: euca-describe-walrusbackends is", \
-        "deprecated; use ``empyrean-describe-services'' instead"
+        "deprecated; use ``euserv-describe-services'' instead"
     r = eucadmin.describewalrusbackends.DescribeWalrusBackends()
     r.main_cli()

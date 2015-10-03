@@ -141,7 +141,8 @@ class NetworkInfoBroadcasterTest {
       },
       { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
       { '1.1.1.1' } as Supplier<String>,
-      { [ '127.0.0.1' ] } as Function<List<String>, List<String>>
+      { [ '127.0.0.1' ] } as Function<List<String>, List<String>>,
+      [] as Set<String>
     )
     assertEquals( 'basic broadcast', new NetworkInfo(
         configuration: new NIConfiguration(
@@ -255,7 +256,8 @@ class NetworkInfoBroadcasterTest {
         },
         { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
         { '1.1.1.1' } as Supplier<String>,
-        { [ '127.0.0.1' ] } as Function<List<String>, List<String>>
+        { [ '127.0.0.1' ] } as Function<List<String>, List<String>>,
+        [] as Set<String>
     )
     assertEquals( 'broadcast defaults', new NetworkInfo(
         configuration: new NIConfiguration(
@@ -428,7 +430,8 @@ class NetworkInfoBroadcasterTest {
         },
         { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
         { '1.1.1.1' } as Supplier<String>,
-        { [ '127.0.0.1' ] } as Function<List<String>, List<String>>
+        { [ '127.0.0.1' ] } as Function<List<String>, List<String>>,
+        [] as Set<String>
     )
 
     assertEquals( 'broadcast vpc midonet', new NetworkInfo(
@@ -534,7 +537,8 @@ class NetworkInfoBroadcasterTest {
         },
         { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
         { '1.1.1.1' } as Supplier<String>,
-        { [ '127.0.0.1' ] } as Function<List<String>, List<String>>
+        { [ '127.0.0.1' ] } as Function<List<String>, List<String>>,
+        [] as Set<String>
     )
 
     assertEquals( 'broadcast managed', new NetworkInfo(

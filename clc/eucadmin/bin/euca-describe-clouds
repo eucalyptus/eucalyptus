@@ -31,6 +31,6 @@ import eucadmin.describeeucalyptus
 
 if __name__ == "__main__":
     print >> sys.stderr, "warning: euca-describe-clouds is", \
-        "deprecated; use ``empyrean-describe-services'' instead"
+        "deprecated; use ``euserv-describe-services'' instead"
     r = eucadmin.describeeucalyptus.DescribeEucalyptus()
     r.main_cli()

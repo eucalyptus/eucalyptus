@@ -25,7 +25,6 @@ import com.eucalyptus.cloudwatch.common.msgs.MetricDatum;
 import com.eucalyptus.cloudwatch.common.msgs.StatisticSet;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.records.Logs;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.log4j.Logger;
@@ -34,7 +33,6 @@ import org.hibernate.Criteria;
 import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
 
-import javax.persistence.EntityTransaction;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -45,7 +43,7 @@ public class FullTableScanAbsoluteMetricConverter {
 
   private static final Logger LOG = Logger.getLogger(FullTableScanAbsoluteMetricConverter.class);
 
-  protected static List<AbsoluteMetricQueueItem> dealWithAbsoluteMetrics(List<AbsoluteMetricQueueItem> dataBatch) {
+  protected static List<AbsoluteMetricQueueItem> dealWithAbsoluteMetrics(Iterable<AbsoluteMetricQueueItem> dataBatch) {
     List<AbsoluteMetricQueueItem> regularMetrics = Lists.newArrayList();
     List<SimpleAbsoluteMetricHistory> absoluteMetricsToInsert = Lists.newArrayList();
     SortedAbsoluteMetrics sortedAbsoluteMetrics = sortAbsoluteMetrics(dataBatch);
@@ -242,7 +240,7 @@ public class FullTableScanAbsoluteMetricConverter {
     return sequentialMetrics;
   }
 
-  private static SortedAbsoluteMetrics sortAbsoluteMetrics(List<AbsoluteMetricQueueItem> dataBatch) {
+  private static SortedAbsoluteMetrics sortAbsoluteMetrics(Iterable<AbsoluteMetricQueueItem> dataBatch) {
     SortedAbsoluteMetrics sortedAbsoluteMetrics = new SortedAbsoluteMetrics();
     for (AbsoluteMetricQueueItem item : dataBatch) {
       String accountId = item.getAccountId();

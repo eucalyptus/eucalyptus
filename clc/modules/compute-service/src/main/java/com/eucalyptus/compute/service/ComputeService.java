@@ -36,6 +36,7 @@ import javax.persistence.EntityNotFoundException;
 
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
+import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Restrictions;
 import org.mule.api.MuleEventContext;
 import org.mule.api.lifecycle.Callable;
@@ -77,8 +78,10 @@ import com.eucalyptus.compute.common.internal.tags.TagSupport;
 import com.eucalyptus.compute.common.internal.tags.Tags;
 import com.eucalyptus.compute.common.internal.util.MetadataException;
 import com.eucalyptus.compute.common.internal.vm.NetworkGroupId;
+import com.eucalyptus.compute.common.internal.vm.VmBootVolumeAttachment;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.compute.common.internal.vm.VmInstances;
+import com.eucalyptus.compute.common.internal.vm.VmStandardVolumeAttachment;
 import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
 import com.eucalyptus.compute.common.network.Networking;
 import com.eucalyptus.compute.common.network.NetworkingFeature;
@@ -106,6 +109,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.auth.principal.OwnerFullName;
@@ -744,7 +748,6 @@ public class ComputeService implements Callable {
       public Pair<Set<String>,ArrayList<com.eucalyptus.compute.common.Volume>> apply( final Set<String> input ) {
         final Set<String> allowedVolumeIds = Sets.newHashSet();
         final ArrayList<com.eucalyptus.compute.common.Volume> replyVolumes = Lists.newArrayList();
-        final List<VmInstance> vms = VmInstances.list( ownerFullName, Predicates.alwaysTrue() );
         final List<Volume> volumes = Entities.query(
             Volume.named( ownerFullName, null ),
             true,
@@ -753,17 +756,45 @@ public class ComputeService implements Callable {
         final Iterable<Volume> filteredVolumes = Iterables.filter(
             volumes,
             Predicates.and( new TrackingPredicate<Volume>( volumeIds ), requestedAndAccessible ) );
+
+        // load attachment info
+        final Criterion attachmentCriterion;
+        final Map<String,String> attachmentAliases;
+        if ( Iterables.isEmpty( filteredVolumes ) ) {
+          attachmentCriterion = Restrictions.disjunction( );
+          attachmentAliases = Collections.emptyMap( );
+        } else if ( Iterables.size( Iterables.limit( filteredVolumes, 51 ) ) < 50 ) {  // small # load by id
+          attachmentCriterion = Restrictions.in(
+              "volumeId",
+              Sets.newHashSet( Iterables.transform( filteredVolumes, RestrictedTypes.toDisplayName( ) ) ) );
+          attachmentAliases = Collections.emptyMap( );
+        } else if ( ownerFullName == null ) { // load attachments for all accounts
+          attachmentCriterion = Restrictions.conjunction( );
+          attachmentAliases = Collections.emptyMap( );
+        } else { // load all attachments for account
+          attachmentCriterion = Restrictions.eq( "vmInstance.ownerAccountNumber", ownerFullName.getAccountNumber( ) );;
+          attachmentAliases = Collections.singletonMap( "vmInstance", "vmInstance" );
+        }
+        final Map<String,VmVolumeAttachment> attachmentMap = CollectionUtils.putAll(
+            Iterables.concat(
+                Entities.query( VmBootVolumeAttachment.example( ), true, attachmentCriterion, attachmentAliases ),
+                Entities.query( VmStandardVolumeAttachment.example( ), true, attachmentCriterion, attachmentAliases ) ),
+            Maps.<String,VmVolumeAttachment>newHashMap( ),
+            VmVolumeAttachment.volumeId( ),
+            Functions.<VmVolumeAttachment>identity( ) );
+
+        // build response volumes
         for ( final Volume foundVol : filteredVolumes ) {
           allowedVolumeIds.add( foundVol.getDisplayName( ) );
           if ( State.ANNIHILATED.equals( foundVol.getState( ) ) ) {
             Entities.delete( foundVol );
             replyVolumes.add( foundVol.morph( new com.eucalyptus.compute.common.Volume() ) );
           } else {
+            VmVolumeAttachment attachment = attachmentMap.get( foundVol.getDisplayName( ) );
             AttachedVolume attachedVolume = null;
-            try {
-              VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( foundVol.getDisplayName( ) , vms );
+            if ( attachment != null ) {
               attachedVolume = VmVolumeAttachment.asAttachedVolume( attachment.getVmInstance( ) ).apply( attachment );
-            } catch ( NoSuchElementException ex ) {
+            } else {
               if ( State.BUSY.equals( foundVol.getState( ) ) ) {
                 foundVol.setState( State.EXTANT );
               }

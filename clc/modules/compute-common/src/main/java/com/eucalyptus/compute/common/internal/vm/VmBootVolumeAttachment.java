@@ -72,6 +72,10 @@ public class VmBootVolumeAttachment extends VmVolumeAttachment {
     );
   }
 
+  public static VmBootVolumeAttachment example( ) {
+    return new VmBootVolumeAttachment( );
+  }
+
   @Upgrades.PreUpgrade( since = v4_2_0, value = Compute.class )
   public static class SchemaUpgradeForEntity extends SchemaUpgradeForEntitySupport  {
 

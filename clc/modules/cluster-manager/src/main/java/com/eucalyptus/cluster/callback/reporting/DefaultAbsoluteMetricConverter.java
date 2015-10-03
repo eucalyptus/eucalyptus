@@ -25,7 +25,6 @@ import com.eucalyptus.cloudwatch.common.msgs.MetricDatum;
 import com.eucalyptus.cloudwatch.common.msgs.StatisticSet;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.records.Logs;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Maps;
@@ -46,7 +45,7 @@ public class DefaultAbsoluteMetricConverter {
   private static final Logger LOG = Logger.getLogger(DefaultAbsoluteMetricConverter.class);
 
   protected static List<AbsoluteMetricQueueItem> dealWithAbsoluteMetrics(
-    List<AbsoluteMetricQueueItem> dataBatch) {
+    Iterable<AbsoluteMetricQueueItem> dataBatch) {
     List<AbsoluteMetricQueueItem> regularMetrics = new ArrayList<AbsoluteMetricQueueItem>();
     // We need to do some sorting to allow fewer db lookups.  There is also logic for different metric types, so they will be sorted now.
 

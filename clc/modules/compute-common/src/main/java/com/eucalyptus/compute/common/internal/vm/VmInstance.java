@@ -249,6 +249,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return Restrictions.isNotNull( "runtimeState.serviceTag" );  
   }
 
+  public static Criterion nullNodeCriterion( ) {
+    return Restrictions.isNull( "runtimeState.serviceTag" );
+  }
+
   public static Projection instanceIdProjection( ) {
     return Projections.property( "displayName" );
   }

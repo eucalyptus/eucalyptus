@@ -31,7 +31,7 @@ import eucadmin.modifyservice
 
 if __name__ == "__main__":
     print >> sys.stderr, "warning: euca-modify-service is", \
-        "deprecated; use ``empyrean-modify-service'' instead"
+        "deprecated; use ``euserv-modify-service'' instead"
     r = eucadmin.modifyservice.ModifyService()
     r.main_cli()
 

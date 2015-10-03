@@ -1028,8 +1028,12 @@ int do_midonet_update_pass2(globalNetworkInfo * gni, mido_config * mido) {
                         EUCA_FREE(privip_gni);
                     }
                     if (!found) {
-                        LOGDEBUG("pass2: mido VPC SECGROUP %s member private IP %s in global: N\n", vpcsecgroup->name, privip_mido);
-                        mido_delete_ipaddrgroup_ip(&(vpcsecgroup->midos[VPCSG_IAGPRIV]), &(privips[k]));
+                        if (isMidoVpcPlusTwo(mido, privip_mido) == 0) {
+                            LOGDEBUG("pass2: mido VPC SECGROUP %s member private IP %s is a VPC subnet+2 address.\n", vpcsecgroup->name, privip_mido);
+                        } else {
+                            LOGDEBUG("pass2: mido VPC SECGROUP %s member private IP %s in global: N\n", vpcsecgroup->name, privip_mido);
+                            mido_delete_ipaddrgroup_ip(&(vpcsecgroup->midos[VPCSG_IAGPRIV]), &(privips[k]));
+                        }
                     }
                 }
                 
@@ -1580,6 +1584,9 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                                 rc = mido_create_ipaddrgroup_ip(&(vpcsecgroup->midos[VPCSG_IAGPRIV]), tmpstr, NULL);
                                 rc = mido_create_ipaddrgroup_ip(&(vpcsecgroup->midos[VPCSG_IAGALL]), tmpstr, NULL);
                                 EUCA_FREE(tmpstr);
+                                // Add the subnet plus two address to the SG-private IP address group.
+                                cidr_split(vpcsubnet->gniSubnet->cidr, NULL, NULL, NULL, pt_buf);
+                                rc = mido_create_ipaddrgroup_ip(&(vpcsecgroup->midos[VPCSG_IAGPRIV]), pt_buf, NULL);
                                 
                                 tmpstr = hex2dot(gniinstance->publicIp);
                                 if (tmpstr && strcmp(tmpstr, "0.0.0.0")) {
@@ -3242,6 +3249,8 @@ int disconnect_mido_vpc_instance_elip(mido_vpc_instance * vpcinstance)
     mido_print_midoname(&(vpcinstance->midos[ELIP_ROUTE]));
     rc = mido_delete_route(&(vpcinstance->midos[ELIP_ROUTE]));
     if (rc) {
+        //TODO
+        LOGWARN("Failed to delete ELIP_ROUTE, name:%s rtype:%s uuid:%s\n", vpcinstance->midos[ELIP_ROUTE].name, vpcinstance->midos[ELIP_ROUTE].resource_type, vpcinstance->midos[ELIP_ROUTE].uuid);
         ret = 1;
     }
 
@@ -3249,6 +3258,7 @@ int disconnect_mido_vpc_instance_elip(mido_vpc_instance * vpcinstance)
     rc = mido_delete_rule(&(vpcinstance->midos[ELIP_PRE]));
     if (rc) {
         //TODO
+        LOGWARN("Failed to delete ELIP_PRE, name:%s rtype:%s uuid:%s\n", vpcinstance->midos[ELIP_PRE].name, vpcinstance->midos[ELIP_PRE].resource_type, vpcinstance->midos[ELIP_PRE].uuid);
         ret = 1;
     }
 
@@ -3256,20 +3266,39 @@ int disconnect_mido_vpc_instance_elip(mido_vpc_instance * vpcinstance)
     rc = mido_delete_rule(&(vpcinstance->midos[ELIP_POST]));
     if (rc) {
         //TODO
+        LOGWARN("Failed to delete ELIP_POST, name:%s rtype:%s uuid:%s\n", vpcinstance->midos[ELIP_POST].name, vpcinstance->midos[ELIP_POST].resource_type, vpcinstance->midos[ELIP_POST].uuid);
+        ret = 1;
+    }
+
+    LOGDEBUG("going to delete ELIP_PRE_PUB");
+    mido_print_midoname(&(vpcinstance->midos[ELIP_PRE_PUB]));
+    rc = mido_delete_rule(&(vpcinstance->midos[ELIP_PRE_PUB]));
+    if (rc) {
+        //TODO
+        LOGWARN("Failed to delete ELIP_PRE_PUB, name:%s rtype:%s uuid:%s\n", vpcinstance->midos[ELIP_PRE_PUB].name, vpcinstance->midos[ELIP_PRE_PUB].resource_type, vpcinstance->midos[ELIP_PRE_PUB].uuid);
+        ret = 1;
+    }
+
+    LOGDEBUG("going to delete ELIP_POST_PRIV");
+    mido_print_midoname(&(vpcinstance->midos[ELIP_POST_PRIV]));
+    rc = mido_delete_rule(&(vpcinstance->midos[ELIP_POST_PRIV]));
+    if (rc) {
+        //TODO
+        LOGWARN("Failed to delete ELIP_POST_PRIV, name:%s rtype:%s uuid:%s\n", vpcinstance->midos[ELIP_POST_PRIV].name, vpcinstance->midos[ELIP_POST_PRIV].resource_type, vpcinstance->midos[ELIP_POST_PRIV].uuid);
         ret = 1;
     }
 
     mido_print_midoname(&(vpcinstance->midos[ELIP_PRE_IPADDRGROUP_IP]));
     rc = mido_delete_ipaddrgroup_ip(&(vpcinstance->midos[ELIP_PRE_IPADDRGROUP]), &(vpcinstance->midos[ELIP_PRE_IPADDRGROUP_IP]));
     if (rc) {
-        LOGERROR("could not delete instance IP addr from ipaddrgroup\n");
+        LOGERROR("could not delete instance (%s) IP addr (%s) from ipaddrgroup\n", vpcinstance->name, vpcinstance->midos[ELIP_PRE_IPADDRGROUP_IP].name);
         ret = 1;
     }
 
     mido_print_midoname(&(vpcinstance->midos[ELIP_POST_IPADDRGROUP_IP]));
     rc = mido_delete_ipaddrgroup_ip(&(vpcinstance->midos[ELIP_POST_IPADDRGROUP]), &(vpcinstance->midos[ELIP_POST_IPADDRGROUP_IP]));
     if (rc) {
-        LOGERROR("could not delete instance IP addr from ipaddrgroup\n");
+        LOGERROR("could not delete instance (%s) IP addr (%s) from ipaddrgroup\n", vpcinstance->name, vpcinstance->midos[ELIP_POST_IPADDRGROUP_IP].name);
         ret = 1;
     }
 
@@ -3322,8 +3351,15 @@ int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mid
     rc = mido_create_ipaddrgroup_ip(&(vpcinstance->midos[ELIP_POST_IPADDRGROUP]), ipAddr_priv, &(vpcinstance->midos[ELIP_POST_IPADDRGROUP_IP]));
     if (rc) {
     }
-
-    rc = mido_create_rule(&(vpc->midos[VPCRT_PREELIPCHAIN]), &(vpcinstance->midos[ELIP_PRE]), NULL, "type", "dnat", "flowAction", "continue", "ipAddrGroupDst",
+    midoname *rules = NULL;
+    int max_rules = 0;
+    char s_max_rules[6];
+    rc = mido_get_rules(&(vpc->midos[VPCRT_PREELIPCHAIN]), &rules, &max_rules);
+    if (!rc) {
+        LOGDEBUG("Chain %s has %d rules.\n", vpc->midos[VPCRT_PREELIPCHAIN].name, max_rules);
+    }
+    snprintf(s_max_rules, 6, "%d", max_rules + 1);
+    rc = mido_create_rule(&(vpc->midos[VPCRT_PREELIPCHAIN]), &(vpcinstance->midos[ELIP_PRE]), NULL, "type", "dnat", "flowAction", "continue", "position", s_max_rules, "ipAddrGroupDst",
                           vpcinstance->midos[ELIP_PRE_IPADDRGROUP].uuid, "natTargets", "jsonlist", "natTargets:addressTo", ipAddr_priv, "natTargets:addressFrom", ipAddr_priv,
                           "natTargets:portFrom", "0", "natTargets:portTo", "0", "natTargets:END", "END", NULL);
     if (rc) {
@@ -3331,9 +3367,51 @@ int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mid
         ret = 1;
     }
 
+/* Chain rule changed to address EUCA-11328. See rule(s) below.
     rc = mido_create_rule(&(vpc->midos[VPCRT_POSTCHAIN]), &(vpcinstance->midos[ELIP_POST]), NULL, "type", "snat", "nwDstAddress", pt_buf, "invNwDst", "true", "nwDstLength", "32",
                           "flowAction", "continue", "ipAddrGroupSrc", vpcinstance->midos[ELIP_POST_IPADDRGROUP].uuid, "natTargets", "jsonlist", "natTargets:addressTo", ipAddr_pub,
                           "natTargets:addressFrom", ipAddr_pub, "natTargets:portFrom", "0", "natTargets:portTo", "0", "natTargets:END", "END", NULL);
+*/
+    // perform SNAT
+    // Put the rule at the last position
+    rules = NULL;
+    max_rules = 0;
+    rc = mido_get_rules(&(vpc->midos[VPCRT_POSTCHAIN]), &rules, &max_rules);
+    if (!rc) {
+        LOGDEBUG("Chain %s has %d rules.\n", vpc->midos[VPCRT_POSTCHAIN].name, max_rules);
+    }
+    snprintf(s_max_rules, 6, "%d", max_rules + 1);
+    rc = mido_create_rule(&(vpc->midos[VPCRT_POSTCHAIN]), &(vpcinstance->midos[ELIP_POST]), NULL, "type", "snat", "position", s_max_rules,
+                          "flowAction", "continue", "ipAddrGroupSrc", vpcinstance->midos[ELIP_POST_IPADDRGROUP].uuid, "natTargets", "jsonlist", "natTargets:addressTo", ipAddr_pub,
+                          "natTargets:addressFrom", ipAddr_pub, "natTargets:portFrom", "0", "natTargets:portTo", "0", "natTargets:END", "END", NULL);
+    // Find security group associated with the instance.
+    int i = 0;
+    mido_vpc_secgroup *vpcsecgroup = NULL;
+    LOGDEBUG("Searching for an instance (%s) SG\n", vpcinstance->name);
+    for (i = 0; i < vpcinstance->gniInst->max_secgroup_names; i++) {
+        find_mido_vpc_secgroup(mido, vpcinstance->gniInst->secgroup_names[i].name, &vpcsecgroup);
+        if (vpcsecgroup) {
+            LOGDEBUG("Found SG %s for instance %s\n", vpcsecgroup->name, vpcinstance->name);
+            // SNAT - exclude subnets plustwo addresses and private addresses of instances in the same security group (enable vm-vm private communication)
+            rc = mido_create_rule(&(vpc->midos[VPCRT_POSTCHAIN]), &(vpcinstance->midos[ELIP_POST_PRIV]), NULL, "type", "accept",
+                    "ipAddrGroupSrc", vpcinstance->midos[ELIP_POST_IPADDRGROUP].uuid, "ipAddrGroupDst", vpcsecgroup->midos[VPCSG_IAGPRIV].uuid, NULL);
+            // Would like the following rule, but midonet-cli fails to list rules if inverse ip-address-group matching is used.
+            // Wait until midokura solves this. For now, use 2 rules to address EUCA-11328.
+            // Once in place, vpcinstance->midos[ELIP_POST_PRIV] entry should be removed.
+/*
+            rc = mido_create_rule(&(vpc->midos[VPCRT_POSTCHAIN]), &(vpcinstance->midos[ELIP_POST]), NULL, "type", "snat", "ipAddrGroupDst", vpcsecgroup->midos[VPCSG_IAGPRIV].uuid, "invIpAddrGroupDst", "true",
+                    "flowAction", "continue", "ipAddrGroupSrc", vpcinstance->midos[ELIP_POST_IPADDRGROUP].uuid, "natTargets", "jsonlist", "natTargets:addressTo", ipAddr_pub,
+                    "natTargets:addressFrom", ipAddr_pub, "natTargets:portFrom", "0", "natTargets:portTo", "0", "natTargets:END", "END", NULL);
+*/
+            // SNAT - if destination is a public IP address within SG, perform SNAT early to support vm-vm public communication
+            rc = mido_create_rule(&(vpc->midos[VPCRT_PREELIPCHAIN]), &(vpcinstance->midos[ELIP_PRE_PUB]), NULL,
+                    "type", "snat", "flowAction", "continue", "ipAddrGroupDst", vpcsecgroup->midos[VPCSG_IAGPUB].uuid,
+                    "ipAddrGroupSrc", vpcinstance->midos[ELIP_POST_IPADDRGROUP].uuid, "natTargets", "jsonlist",
+                    "natTargets:addressTo", ipAddr_pub, "natTargets:addressFrom", ipAddr_pub,
+                    "natTargets:portFrom", "0", "natTargets:portTo", "0", "natTargets:END", "END", NULL);
+            break;
+        }
+    }
     if (rc) {
         LOGERROR("cannot create midonet rule: check midonet health\n");
         ret = 1;
@@ -4203,4 +4281,50 @@ int cidr_split(char *cidr, char *outnet, char *outslashnet, char *outgw, char *o
     }
 
     return (0);
+}
+
+//!
+//! Checks if the IP address in the argument is a MidoNet VPC subnet +2 address.
+//! For example, if subnets 172.16.0.0/20 and 172.16.16.0/20 are valid subnets in
+//! MidoNet configuration, this function will return 0 iff the argument IP address
+//! is 172.16.0.2 or 172.16.16.2
+//!
+//! @param[in] mido - pointer to MidoNet configuration data structure.
+//! @param[in] iptocheck - IP address to check.
+//!
+//! @return 0 iff the argument IP address matches a MidoNet VPC subnetwork address
+//!         +2. Returns a value != 0 otherwise.
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int isMidoVpcPlusTwo(mido_config *mido, char *iptocheck) {
+    int rc = 0;
+    int i = 0, j = 0;
+    mido_vpc *vpc = NULL;
+    mido_vpc_subnet *vpcsubnet;
+    char tmpip[32];
+    
+    for (i = 0; i < mido->max_vpcs; i++) {
+        vpc = &(mido->vpcs[i]);        
+        for (j = 0; j < vpc->max_subnets; j++) {
+            vpcsubnet = &(vpc->subnets[j]);
+            if (vpc->gnipresent && vpcsubnet->gnipresent) {
+                tmpip[0] = '\0';
+                rc = cidr_split(vpcsubnet->gniSubnet->cidr, NULL, NULL, NULL, tmpip);
+                if (!rc) {
+                    LOGDEBUG("cidr_split() failed.\n");
+                }
+                if (strcmp(tmpip, iptocheck) == 0) {
+                    return 0;
+                }
+            }
+        }
+    }
+    return 1;
 }

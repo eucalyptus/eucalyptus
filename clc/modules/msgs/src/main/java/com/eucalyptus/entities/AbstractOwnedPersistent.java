@@ -116,7 +116,7 @@ public class AbstractOwnedPersistent extends AbstractPersistent implements Restr
       } else if ( Principals.systemFullName( ).getUserId().equals( this.getOwnerUserId() ) ) {
         tempOwner = Principals.systemFullName( );
       } else {
-        tempOwner = UserFullName.getInstance( this.getOwnerUserId() );
+        tempOwner = UserFullName.getInstanceForAccount( this.getOwnerAccountNumber( ), this.getOwnerUserId( ) );
       }
       return ( this.ownerFullNameCached = tempOwner );
     } else if ( this.getOwnerAccountNumber( ) != null ) {

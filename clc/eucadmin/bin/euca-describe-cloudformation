@@ -31,6 +31,6 @@ from eucadmin.describecloudformation import DescribeCloudFormation
 
 if __name__ == "__main__":
     print >> sys.stderr, "warning: euca-describe-cloudformation is", \
-        "deprecated; use ``empyrean-describe-services'' instead"
+        "deprecated; use ``euserv-describe-services'' instead"
     r = DescribeCloudFormation()
     r.main_cli()

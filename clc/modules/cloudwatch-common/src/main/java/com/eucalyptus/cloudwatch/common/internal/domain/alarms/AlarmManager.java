@@ -45,16 +45,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ExecutionException;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.cloudwatch.common.internal.domain.InvalidTokenException;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.util.async.CheckedListenableFuture;
+import com.eucalyptus.util.async.Futures;
 import net.sf.json.JSONObject;
 
 import org.apache.log4j.Logger;
+import org.apache.tools.ant.taskdefs.Exec;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Junction;
 import org.hibernate.criterion.Order;
@@ -81,7 +84,6 @@ import com.eucalyptus.compute.common.backend.StopInstancesType;
 import com.eucalyptus.compute.common.backend.TerminateInstancesType;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.DispatchingClient;
@@ -107,12 +109,12 @@ public class AlarmManager {
     }
   }
   public static void putMetricAlarm(String accountId, Boolean actionsEnabled,
-      Collection<String> alarmActions, String alarmDescription,
-      String alarmName, ComparisonOperator comparisonOperator,
-      Map<String, String> dimensionMap, Integer evaluationPeriods,
-      Collection<String> insufficientDataActions, String metricName,
-      MetricType metricType, String namespace, Collection<String> okActions,
-      Integer period, Statistic statistic, Double threshold, Units unit) {
+                                    Collection<String> alarmActions, String alarmDescription,
+                                    String alarmName, ComparisonOperator comparisonOperator,
+                                    Map<String, String> dimensionMap, Integer evaluationPeriods,
+                                    Collection<String> insufficientDataActions, String metricName,
+                                    MetricType metricType, String namespace, Collection<String> okActions,
+                                    Integer period, Statistic statistic, Double threshold, Units unit) {
 
     if (dimensionMap == null) {
       dimensionMap = Maps.newHashMap();
@@ -126,13 +128,13 @@ public class AlarmManager {
     try (final TransactionResource db = Entities.transactionFor(AlarmEntity.class)) {
       boolean inDb = false;
       Criteria criteria = Entities.createCriteria(AlarmEntity.class)
-          .add( Restrictions.eq( "accountId" , accountId ) )
-          .add( Restrictions.eq( "alarmName" , alarmName ) );
+        .add( Restrictions.eq( "accountId" , accountId ) )
+        .add( Restrictions.eq( "alarmName" , alarmName ) );
       AlarmEntity inDbAlarm = (AlarmEntity) criteria.uniqueResult();
       if (inDbAlarm != null) {
         inDb = true;
         alarmEntity = inDbAlarm;
-      } 
+      }
       alarmEntity.setActionsEnabled(actionsEnabled);
       alarmEntity.setAlarmActions(alarmActions);
       alarmEntity.setAlarmDescription(alarmDescription);
@@ -162,15 +164,15 @@ public class AlarmManager {
         alarmEntity.setStateReason("Unchecked: Initial alarm creation");
         alarmEntity.setStateUpdatedTimestamp(now);
         // TODO: revisit (we are not firing actions on alarm creation, but may after one period)
-        alarmEntity.setLastActionsUpdatedTimestamp(now); 
+        alarmEntity.setLastActionsUpdatedTimestamp(now);
         JSONObject historyDataJSON = new JSONObject();
         historyDataJSON.element("version", "1.0");
         historyDataJSON.element("type", "Create");
         JSONObject historyDataDeletedAlarmJSON = getJSONObjectFromAlarmEntity(alarmEntity);
         historyDataJSON.element("createdAlarm", historyDataDeletedAlarmJSON);
         String historyData = historyDataJSON.toString();
-        AlarmManager.addAlarmHistoryItem(accountId, alarmName, historyData, 
-            HistoryItemType.ConfigurationUpdate, "Alarm \"" + alarmName + "\" created", now);
+        AlarmManager.addAlarmHistoryItem(accountId, alarmName, historyData,
+          HistoryItemType.ConfigurationUpdate, "Alarm \"" + alarmName + "\" created", now);
         Entities.persist(alarmEntity);
       } else {
         JSONObject historyDataJSON = new JSONObject();
@@ -179,34 +181,39 @@ public class AlarmManager {
         JSONObject historyDataDeletedAlarmJSON = getJSONObjectFromAlarmEntity(alarmEntity);
         historyDataJSON.element("updatedAlarm", historyDataDeletedAlarmJSON);
         String historyData = historyDataJSON.toString();
-        AlarmManager.addAlarmHistoryItem(accountId, alarmName, historyData, 
-            HistoryItemType.ConfigurationUpdate, "Alarm \"" + alarmName + "\" updated", now);
+        AlarmManager.addAlarmHistoryItem(accountId, alarmName, historyData,
+          HistoryItemType.ConfigurationUpdate, "Alarm \"" + alarmName + "\" updated", now);
       }
       db.commit();
     }
   }
 
   static void addAlarmHistoryItem(String accountId, String alarmName,
-      String historyData, HistoryItemType historyItemType, String historySummary,
-      Date now) {
+                                  String historyData, HistoryItemType historyItemType, String historySummary,
+                                  Date now) {
     if (now == null) now = new Date();
     try (final TransactionResource db = Entities.transactionFor(AlarmHistory.class)) {
-      AlarmHistory alarmHistory = new AlarmHistory();
-      alarmHistory.setAccountId(accountId);
-      alarmHistory.setAlarmName(alarmName);
-      alarmHistory.setHistoryData(historyData);
-      alarmHistory.setHistoryItemType(historyItemType);
-      alarmHistory.setHistorySummary(historySummary);
-      alarmHistory.setTimestamp(now);
+      AlarmHistory alarmHistory = createAlarmHistoryItem(accountId, alarmName, historyData, historyItemType, historySummary, now);
       Entities.persist(alarmHistory);
       db.commit();
     }
   }
-  
+
+  public static AlarmHistory createAlarmHistoryItem(String accountId, String alarmName, String historyData, HistoryItemType historyItemType, String historySummary, Date now) {
+    AlarmHistory alarmHistory = new AlarmHistory();
+    alarmHistory.setAccountId(accountId);
+    alarmHistory.setAlarmName(alarmName);
+    alarmHistory.setHistoryData(historyData);
+    alarmHistory.setHistoryItemType(historyItemType);
+    alarmHistory.setHistorySummary(historySummary);
+    alarmHistory.setTimestamp(now);
+    return alarmHistory;
+  }
+
   public static boolean deleteAlarms(
-      final String accountId,
-      final Collection<String> alarmNames,
-      final Predicate<CloudWatchMetadata.AlarmMetadata> filter
+    final String accountId,
+    final Collection<String> alarmNames,
+    final Predicate<CloudWatchMetadata.AlarmMetadata> filter
   ) {
     return modifySelectedAlarms( accountId, alarmNames, filter, new Predicate<AlarmEntity>() {
       private final Date now = new Date();
@@ -221,7 +228,7 @@ public class AlarmManager {
         historyDataJSON.element( "deletedAlarm", historyDataDeletedAlarmJSON );
         String historyData = historyDataJSON.toString();
         AlarmManager.addAlarmHistoryItem( alarmEntity.getAccountId(), alarmName, historyData,
-            HistoryItemType.ConfigurationUpdate, "Alarm \"" + alarmName + "\" deleted", now );
+          HistoryItemType.ConfigurationUpdate, "Alarm \"" + alarmName + "\" deleted", now );
         Entities.delete( alarmEntity );
         return true;
       }
@@ -264,9 +271,9 @@ public class AlarmManager {
    * @return False if enable rejected due to filter
    */
   public static boolean enableAlarmActions(
-      final String accountId,
-      final Collection<String> alarmNames,
-      final Predicate<CloudWatchMetadata.AlarmMetadata> filter
+    final String accountId,
+    final Collection<String> alarmNames,
+    final Predicate<CloudWatchMetadata.AlarmMetadata> filter
   ) {
     return modifySelectedAlarms( accountId, alarmNames, filter, new Predicate<AlarmEntity>() {
       private final Date now = new Date();
@@ -282,7 +289,7 @@ public class AlarmManager {
           historyDataJSON.element( "updatedAlarm", historyDataDeletedAlarmJSON );
           String historyData = historyDataJSON.toString();
           AlarmManager.addAlarmHistoryItem( alarmEntity.getAccountId(), alarmName, historyData,
-              HistoryItemType.ConfigurationUpdate, "Alarm \"" + alarmName + "\" updated", now );
+            HistoryItemType.ConfigurationUpdate, "Alarm \"" + alarmName + "\" updated", now );
           alarmEntity.setActionsEnabled( Boolean.TRUE );
         }
         return true;
@@ -294,9 +301,9 @@ public class AlarmManager {
    * @return False if disable rejected due to filter
    */
   public static boolean disableAlarmActions(
-      final String accountId,
-      final Collection<String> alarmNames,
-      final Predicate<CloudWatchMetadata.AlarmMetadata> filter
+    final String accountId,
+    final Collection<String> alarmNames,
+    final Predicate<CloudWatchMetadata.AlarmMetadata> filter
   ) {
     return modifySelectedAlarms( accountId, alarmNames, filter, new Predicate<AlarmEntity>() {
       private final Date now = new Date();
@@ -312,7 +319,7 @@ public class AlarmManager {
           historyDataJSON.element( "updatedAlarm", historyDataDeletedAlarmJSON );
           String historyData = historyDataJSON.toString();
           AlarmManager.addAlarmHistoryItem( alarmEntity.getAccountId(), alarmName, historyData,
-              HistoryItemType.ConfigurationUpdate, "Alarm \"" + alarmName + "\" updated", now );
+            HistoryItemType.ConfigurationUpdate, "Alarm \"" + alarmName + "\" updated", now );
           alarmEntity.setActionsEnabled( Boolean.FALSE );
         }
         return true;
@@ -321,13 +328,13 @@ public class AlarmManager {
   }
 
   private static boolean modifySelectedAlarms(
-      final String accountId,
-      final Collection<String> alarmNames,
-      final Predicate<CloudWatchMetadata.AlarmMetadata> filter,
-      final Predicate<AlarmEntity> update
+    final String accountId,
+    final Collection<String> alarmNames,
+    final Predicate<CloudWatchMetadata.AlarmMetadata> filter,
+    final Predicate<AlarmEntity> update
   ) {
     final Map<String,Collection<String>> accountToNamesMap =
-        buildAccountIdToAlarmNamesMap( accountId, alarmNames );
+      buildAccountIdToAlarmNamesMap( accountId, alarmNames );
     try (final TransactionResource db = Entities.transactionFor(AlarmEntity.class)) {
       final Criteria criteria = Entities.createCriteria(AlarmEntity.class);
       final Junction disjunction = Restrictions.disjunction();
@@ -351,8 +358,8 @@ public class AlarmManager {
   }
 
   private static Map<String,Collection<String>> buildAccountIdToAlarmNamesMap(
-      @Nullable final String accountId,
-      @Nullable final Collection<String> alarmNames
+    @Nullable final String accountId,
+    @Nullable final Collection<String> alarmNames
   ) {
     final Multimap<String,String> alarmNamesMultimap = HashMultimap.create( );
     if ( alarmNames != null ) {
@@ -360,33 +367,33 @@ public class AlarmManager {
         alarmNamesMultimap.putAll( accountId, alarmNames ); // An ARN is also a valid name
       }
       CollectionUtils.putAll(
-          Optional.presentInstances( Iterables.transform(
-              alarmNames,
-              CloudWatchResourceName.asArnOfType( CloudWatchResourceName.Type.alarm ) ) ),
-          alarmNamesMultimap,
-          CloudWatchResourceName.toNamespace( ),
-          CloudWatchResourceName.toName( )
+        Optional.presentInstances( Iterables.transform(
+          alarmNames,
+          CloudWatchResourceName.asArnOfType( CloudWatchResourceName.Type.alarm ) ) ),
+        alarmNamesMultimap,
+        CloudWatchResourceName.toNamespace( ),
+        CloudWatchResourceName.toName( )
       );
     }
     return alarmNamesMultimap.asMap();
   }
 
   public static void setAlarmState(
-      final String accountId,
-      final String alarmName,
-      final String stateReason,
-      final String stateReasonData,
-      final StateValue stateValue,
-      final Predicate<CloudWatchMetadata.AlarmMetadata> filter
+    final String accountId,
+    final String alarmName,
+    final String stateReason,
+    final String stateReasonData,
+    final StateValue stateValue,
+    final Predicate<CloudWatchMetadata.AlarmMetadata> filter
   ) throws AlarmNotFoundException {
     try (final TransactionResource db = Entities.transactionFor(AlarmEntity.class)) {
       AlarmEntity alarmEntity = (AlarmEntity) Entities.createCriteria( AlarmEntity.class )
-          .add( Restrictions.eq( "accountId" , accountId ) )
-          .add( Restrictions.eq( "alarmName" , alarmName ) )
-          .uniqueResult();
+        .add( Restrictions.eq( "accountId" , accountId ) )
+        .add( Restrictions.eq( "alarmName" , alarmName ) )
+        .uniqueResult();
       if ( alarmEntity == null && CloudWatchResourceName.isResourceName().apply( alarmName ) ) try {
         final CloudWatchResourceName arn =
-            CloudWatchResourceName.parse( alarmName, CloudWatchResourceName.Type.alarm );
+          CloudWatchResourceName.parse( alarmName, CloudWatchResourceName.Type.alarm );
         alarmEntity = (AlarmEntity) Entities.createCriteria(AlarmEntity.class)
           .add( Restrictions.eq( "accountId", arn.getNamespace() ) )
           .add( Restrictions.eq( "alarmName", arn.getName() ) )
@@ -394,7 +401,7 @@ public class AlarmManager {
       } catch ( CloudWatchResourceName.InvalidResourceNameException e ) {
       }
       if ( alarmEntity == null || !filter.apply( alarmEntity ) ) {
-          throw new AlarmNotFoundException("Could not find alarm with name '" + alarmName + "'");
+        throw new AlarmNotFoundException("Could not find alarm with name '" + alarmName + "'");
       }
       StateValue oldStateValue = alarmEntity.getStateValue();
       if (stateValue != oldStateValue) {
@@ -408,14 +415,14 @@ public class AlarmManager {
   }
 
   public static List<AlarmEntity> describeAlarms(
-      @Nullable final String accountId,
-      @Nullable final String actionPrefix,
-      @Nullable final String alarmNamePrefix,
-      @Nullable final Collection<String> alarmNames,
-      @Nullable final Integer maxRecords,
-      @Nullable final StateValue stateValue,
-      @Nullable final String nextToken,
-                final Predicate<? super CloudWatchMetadata.AlarmMetadata> filter
+    @Nullable final String accountId,
+    @Nullable final String actionPrefix,
+    @Nullable final String alarmNamePrefix,
+    @Nullable final Collection<String> alarmNames,
+    @Nullable final Integer maxRecords,
+    @Nullable final StateValue stateValue,
+    @Nullable final String nextToken,
+    final Predicate<? super CloudWatchMetadata.AlarmMetadata> filter
   ) throws InvalidTokenException {
     final List<AlarmEntity> results = Lists.newArrayList();
     try (final TransactionResource db = Entities.transactionFor(AlarmEntity.class)) {
@@ -451,12 +458,12 @@ public class AlarmManager {
           criteria.add( Restrictions.eq( "stateValue" , stateValue ) );
         }
         NextTokenUtils.addNextTokenConstraints(
-            maxRecords == null ? null : maxRecords - results.size( ), token, nextTokenCreatedTime, criteria);
+          maxRecords == null ? null : maxRecords - results.size( ), token, nextTokenCreatedTime, criteria);
         final List<AlarmEntity> alarmEntities = (List<AlarmEntity>) criteria.list();
         Iterables.addAll( results, Iterables.filter( alarmEntities, filter ) );
         token = maxRecords==null || ( maxRecords!=null && ( results.size() >= maxRecords || alarmEntities.size() < maxRecords ) )  ?
-            null :
-            alarmEntities.get(alarmEntities.size() - 1).getNaturalId();
+          null :
+          alarmEntities.get(alarmEntities.size() - 1).getNaturalId();
       }
       db.commit();
     }
@@ -522,19 +529,19 @@ public class AlarmManager {
   }
 
   public static List<AlarmHistory> describeAlarmHistory(
-      @Nullable final String accountId,
-      @Nullable final String alarmName,
-      @Nullable final Date endDate,
-      @Nullable final HistoryItemType historyItemType,
-      @Nullable final Integer maxRecords,
-      @Nullable final Date startDate,
-      @Nullable final String nextToken,
-      final Predicate<AlarmHistory> filter ) throws InvalidTokenException {
+    @Nullable final String accountId,
+    @Nullable final String alarmName,
+    @Nullable final Date endDate,
+    @Nullable final HistoryItemType historyItemType,
+    @Nullable final Integer maxRecords,
+    @Nullable final Date startDate,
+    @Nullable final String nextToken,
+    final Predicate<AlarmHistory> filter ) throws InvalidTokenException {
     final List<AlarmHistory> results = Lists.newArrayList();
     try (final TransactionResource db = Entities.transactionFor(AlarmHistory.class)) {
       final Map<String,Collection<String>> accountToNamesMap = alarmName == null ?
-          Collections.<String,Collection<String>>emptyMap( ) :
-          buildAccountIdToAlarmNamesMap( accountId, Collections.singleton( alarmName ) );
+        Collections.<String,Collection<String>>emptyMap( ) :
+        buildAccountIdToAlarmNamesMap( accountId, Collections.singleton( alarmName ) );
       boolean first = true;
       String token = nextToken;
       while ( token != null || first ) {
@@ -559,12 +566,12 @@ public class AlarmManager {
           criteria.add( Restrictions.le( "timestamp" , endDate ) );
         }
         NextTokenUtils.addNextTokenConstraints(
-            maxRecords == null ? null : maxRecords - results.size( ), token, nextTokenCreatedTime, criteria);
+          maxRecords == null ? null : maxRecords - results.size( ), token, nextTokenCreatedTime, criteria);
         final List<AlarmHistory> alarmHistoryEntities = (List<AlarmHistory>) criteria.list();
         Iterables.addAll( results, Iterables.filter( alarmHistoryEntities, filter ) );
         token = maxRecords==null || ( maxRecords!=null && ( results.size() >= maxRecords || alarmHistoryEntities.size() < maxRecords ) ) ?
-            null :
-            alarmHistoryEntities.get(alarmHistoryEntities.size() - 1).getNaturalId();
+          null :
+          alarmHistoryEntities.get(alarmHistoryEntities.size() - 1).getNaturalId();
       }
       db.commit();
     }
@@ -584,26 +591,31 @@ public class AlarmManager {
     }
   }
 
-  
+
   public static void changeAlarmState(AlarmEntity alarmEntity, AlarmState newState, Date now) {
-    LOG.info("Updating alarm " + alarmEntity.getAlarmName() + " from " + alarmEntity.getStateValue() + " to " + newState.getStateValue());
+    LOG.debug("Updating alarm " + alarmEntity.getAlarmName() + " from " + alarmEntity.getStateValue() + " to " + newState.getStateValue());
     alarmEntity.setStateUpdatedTimestamp(now);
-    JSONObject historyDataJSON = new JSONObject();
-    historyDataJSON.element("version", "1.0");
-    historyDataJSON.element("oldState", getJSONObjectFromState(alarmEntity.getStateValue(), alarmEntity.getStateReason(), alarmEntity.getStateReasonData()));
-    historyDataJSON.element("newState", getJSONObjectFromState(newState.getStateValue(), newState.getStateReason(), newState.getStateReasonData()));
+    JSONObject historyDataJSON = getJSONObjectForStateChange(alarmEntity, newState);
     String historyData = historyDataJSON.toString();
-    AlarmManager.addAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData, 
-        HistoryItemType.StateUpdate, " Alarm updated from " + alarmEntity.getStateValue() + " to " + newState.getStateValue(), now);
+    AlarmManager.addAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData,
+      HistoryItemType.StateUpdate, " Alarm updated from " + alarmEntity.getStateValue() + " to " + newState.getStateValue(), now);
     alarmEntity.setStateReason(newState.getStateReason());
     alarmEntity.setStateReasonData(newState.getStateReasonData());
     alarmEntity.setStateValue(newState.getStateValue());
     alarmEntity.setStateUpdatedTimestamp(now);
   }
 
+  private static JSONObject getJSONObjectForStateChange(AlarmEntity alarmEntity, AlarmState newState) {
+    JSONObject historyDataJSON = new JSONObject();
+    historyDataJSON.element("version", "1.0");
+    historyDataJSON.element("oldState", getJSONObjectFromState(alarmEntity.getStateValue(), alarmEntity.getStateReason(), alarmEntity.getStateReasonData()));
+    historyDataJSON.element("newState", getJSONObjectFromState(newState.getStateValue(), newState.getStateReason(), newState.getStateReasonData()));
+    return historyDataJSON;
+  }
+
 
   private static JSONObject getJSONObjectFromState(StateValue stateValue,
-      String stateReason, String stateReasonData) {
+                                                   String stateReason, String stateReasonData) {
     JSONObject jsonObject = new JSONObject();
     jsonObject.element("stateValue", stateValue.toString());
     jsonObject.element("stateReason", stateReason);
@@ -621,10 +633,10 @@ public class AlarmManager {
         Action actionToExecute = ActionManager.getAction(action, alarmEntity.getDimensionMap());
         if (actionToExecute == null) {
           LOG.warn("Unsupported action " + action); // TODO: do not let it in to start with...
-        } 
+        }
         // always execute autoscaling actions, but others only on state change...
         else if (actionToExecute.alwaysExecute() || stateJustChanged) {
-          LOG.info("Executing alarm " + alarmEntity.getAlarmName() + " action " + action);
+          LOG.debug("Executing alarm " + alarmEntity.getAccountId() + "/" + alarmEntity.getAlarmName() + " action " + action);
           actionToExecute.executeAction(action, alarmEntity.getDimensionMap(), alarmEntity, now);
         }
       }
@@ -632,9 +644,32 @@ public class AlarmManager {
     alarmEntity.setLastActionsUpdatedTimestamp(now);
   }
 
+  public static Collection<AlarmHistory> executeActionsAndRecord(AlarmEntity alarmEntity, AlarmState state,
+                                             boolean stateJustChanged, Date now, List<AlarmHistory> historyList) {
+    List<AlarmHistory> alarmHistoryList = Lists.newArrayList();
+    if (alarmEntity.getActionsEnabled()) {
+      Collection<String> actions = AlarmUtils.getActionsByState(alarmEntity, state);
+      for (String action : actions) {
+        Action actionToExecute = ActionManager.getAction(action, alarmEntity.getDimensionMap());
+        if (actionToExecute == null) {
+          LOG.warn("Unsupported action " + action); // TODO: do not let it in to start with...
+        }
+        // always execute autoscaling actions, but others only on state change...
+        else if (actionToExecute.alwaysExecute() || stateJustChanged) {
+          LOG.debug("Executing alarm " + alarmEntity.getAccountId() + "/" + alarmEntity.getAlarmName() + " action " + action);
+          alarmHistoryList.add(actionToExecute.executeActionAndRecord(action, alarmEntity.getDimensionMap(), alarmEntity, now));
+        }
+      }
+    }
+    return alarmHistoryList;
+  }
+
+
+
+
   private static String createStateReasonData(StateValue stateValue,
-      List<Double> relevantDataPoints, List<Double> recentDataPoints,
-      ComparisonOperator comparisonOperator, Double threshold, String stateReason, Integer period, Date queryDate, Statistic statistic) {
+                                              List<Double> relevantDataPoints, List<Double> recentDataPoints,
+                                              ComparisonOperator comparisonOperator, Double threshold, String stateReason, Integer period, Date queryDate, Statistic statistic) {
     JSONObject stateReasonDataJSON = new JSONObject();
     stateReasonDataJSON.element("version", "1.0");
     stateReasonDataJSON.element("queryDate", Timestamps.formatIso8601UTCLongDateMillisTimezone(queryDate));
@@ -645,7 +680,7 @@ public class AlarmManager {
     String stateReasonData = stateReasonDataJSON.toString();
     return stateReasonData;
   }
-  
+
   private static List<Double> pruneNullsAtBeginning(List<Double> recentDataPoints) {
     ArrayList<Double> returnValue = new ArrayList<Double>();
     boolean foundNotNull = false;
@@ -661,20 +696,20 @@ public class AlarmManager {
   }
 
   private static String createStateReason(StateValue stateValue, List<Double> relevantDataPoints,
-      ComparisonOperator comparisonOperator, Double threshold) {
+                                          ComparisonOperator comparisonOperator, Double threshold) {
     String stateReason = null;
     if (stateValue == StateValue.INSUFFICIENT_DATA) {
       stateReason = "Insufficient Data: " + relevantDataPoints.size() +
-          AlarmUtils.matchSingularPlural(relevantDataPoints.size(), " datapoint was ", " datapoints were ") +
-          "unknown.";
+        AlarmUtils.matchSingularPlural(relevantDataPoints.size(), " datapoint was ", " datapoints were ") +
+        "unknown.";
     } else {
-      stateReason = "Threshold Crossed: " + relevantDataPoints.size() + 
-          AlarmUtils.matchSingularPlural(relevantDataPoints.size(), " datapoint ", " datapoints ") +
-          AlarmUtils.makeDoubleList(relevantDataPoints) + 
-          AlarmUtils.matchSingularPlural(relevantDataPoints.size(), " was ", " were ") +
-          (stateValue == StateValue.OK ? " not " : "") + 
-          AlarmUtils.comparisonOperatorString(comparisonOperator) + 
-          " the threshold (" + threshold + ").";
+      stateReason = "Threshold Crossed: " + relevantDataPoints.size() +
+        AlarmUtils.matchSingularPlural(relevantDataPoints.size(), " datapoint ", " datapoints ") +
+        AlarmUtils.makeDoubleList(relevantDataPoints) +
+        AlarmUtils.matchSingularPlural(relevantDataPoints.size(), " was ", " were ") +
+        (stateValue == StateValue.OK ? " not " : "") +
+        AlarmUtils.comparisonOperatorString(comparisonOperator) +
+        " the threshold (" + threshold + ").";
     }
     return stateReason;
   }
@@ -685,19 +720,55 @@ public class AlarmManager {
     String stateReason = createStateReason(stateValue, relevantDataPoints, comparisonOperator, threshold);
     return createAlarmState(stateValue, relevantDataPoints, recentDataPoints, comparisonOperator, threshold, stateReason, period, queryDate, statistic);
   }
-  
+
   static AlarmState createAlarmState(StateValue stateValue,
-      List<Double> relevantDataPoints, List<Double> recentDataPoints,
-      ComparisonOperator comparisonOperator, Double threshold, String stateReason, Integer period, Date queryDate, Statistic statistic) {
+                                     List<Double> relevantDataPoints, List<Double> recentDataPoints,
+                                     ComparisonOperator comparisonOperator, Double threshold, String stateReason, Integer period, Date queryDate, Statistic statistic) {
     String stateReasonData = createStateReasonData(stateValue, relevantDataPoints, recentDataPoints, comparisonOperator, threshold, stateReason, period, queryDate, statistic);
     return new AlarmState(stateValue, stateReason, stateReasonData);
   }
 
   private static AlarmState createAlarmState(StateValue stateValue,
-      String stateReason, String stateReasonData) {
+                                             String stateReason, String stateReasonData) {
     return new AlarmState(stateValue, stateReason, stateReasonData);
   }
-  
+
+  public static AlarmHistory createChangeAlarmStateHistoryItem(AlarmEntity alarmEntity, AlarmState newState, Date evaluationDate)
+  {
+    JSONObject historyDataJSON = getJSONObjectForStateChange(alarmEntity, newState);
+    String historyData = historyDataJSON.toString();
+    return createAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData,
+      HistoryItemType.StateUpdate, " Alarm updated from " + alarmEntity.getStateValue() + " to " + newState.getStateValue(), evaluationDate);
+  }
+
+  public static void changeAlarmStateBatch(Map<String, AlarmState> statesToUpdate, Date evaluationDate) {
+    if (statesToUpdate.isEmpty()) return;
+    try (final TransactionResource db = Entities.transactionFor(AlarmEntity.class)) {
+      Criteria criteria = Entities.createCriteria(AlarmEntity.class);
+      criteria = criteria.add(Restrictions.in("naturalId", statesToUpdate.keySet()));
+      List<AlarmEntity> result = criteria.list();
+      for (AlarmEntity alarmEntity: result) {
+        AlarmState newState = statesToUpdate.get(alarmEntity.getNaturalId());
+        if (newState != null) {
+          alarmEntity.setStateReason(newState.getStateReason());
+          alarmEntity.setStateReasonData(newState.getStateReasonData());
+          alarmEntity.setStateValue(newState.getStateValue());
+          alarmEntity.setStateUpdatedTimestamp(evaluationDate);
+        }
+      }
+      db.commit();
+    }
+  }
+
+  public static void addAlarmHistoryEvents(List<AlarmHistory> historyList) {
+    try (final TransactionResource db = Entities.transactionFor(AlarmHistory.class)) {
+      for (AlarmHistory alarmHistory: historyList) {
+        Entities.persist(alarmHistory);
+      }
+      db.commit();
+    }
+  }
+
   private static class AutoScalingClient extends DispatchingClient<AutoScalingMessage,AutoScaling> {
     public AutoScalingClient( final String userId ) {
       super( userId, AutoScaling.class );
@@ -717,31 +788,87 @@ public class AlarmManager {
       super( accountFullName, Eucalyptus.class );
     }
   }
-  
+
   private static abstract class Action {
     public abstract boolean filter(final String actionURN, final Map<String, String> dimensionMap);
     public abstract void executeAction(final String actionARN, final Map<String, String> dimensionMap, final AlarmEntity alarmEntity, final Date now);
     public abstract boolean alwaysExecute();
+
+    <R> Callback.Checked<R> getCallback(final String action, final AlarmEntity alarmEntity, final Date now) {
+      return new Callback.Checked<R>() {
+        @Override
+        public void fire(R input) {
+          success(action, alarmEntity, now);
+        }
+
+        @Override
+        public void fireException(Throwable t) {
+          failure(action, alarmEntity, now, t);
+        }
+      };
+    }
+
+    <R> Callback.Checked<R> getRecordCallback(final String action, final AlarmEntity alarmEntity, final Date now, final CheckedListenableFuture<AlarmHistory> resultFuture) {
+      return new Callback.Checked<R>() {
+        @Override
+        public void fire(R input) {
+          resultFuture.set(recordSuccess(action, alarmEntity, now));
+        }
+
+        @Override
+        public void fireException(Throwable t) {
+          resultFuture.setException(t);
+        }
+      };
+    }
+
+
+
     public void success(final String actionARN, final AlarmEntity alarmEntity, final Date now) {
+      JSONObject historyDataJSON = getSuccessJSON(actionARN, alarmEntity);
+      String historyData = historyDataJSON.toString();
+      AlarmManager.addAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData,
+        HistoryItemType.Action, " Successfully executed action " + actionARN, now);
+    }
+
+    private JSONObject getSuccessJSON(String actionARN, AlarmEntity alarmEntity) {
       JSONObject historyDataJSON = new JSONObject();
       historyDataJSON.element("actionState", "Succeeded");
       historyDataJSON.element("notificationResource", actionARN);
       historyDataJSON.element("stateUpdateTimestamp", Timestamps.formatIso8601UTCLongDateMillisTimezone(alarmEntity.getStateUpdatedTimestamp()));
-      String historyData = historyDataJSON.toString();
-      AlarmManager.addAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData, 
-        HistoryItemType.Action, " Successfully executed action " + actionARN, now);
+      return historyDataJSON;
     }
+
     public void failure(final String actionARN, final AlarmEntity alarmEntity, final Date now, Throwable cause) {
+      JSONObject historyDataJSON = getFailureJSON(actionARN, alarmEntity, cause);
+      String historyData = historyDataJSON.toString();
+      AlarmManager.addAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData,
+        HistoryItemType.Action, " Failed to execute action " + actionARN, now);
+    }
+
+    private JSONObject getFailureJSON(String actionARN, AlarmEntity alarmEntity, Throwable cause) {
       JSONObject historyDataJSON = new JSONObject();
       historyDataJSON.element("actionState", "Failed");
       historyDataJSON.element("notificationResource", actionARN);
       historyDataJSON.element("stateUpdateTimestamp", Timestamps.formatIso8601UTCLongDateMillisTimezone(alarmEntity.getStateUpdatedTimestamp()));
       historyDataJSON.element("error", cause.getMessage() != null ? cause.getMessage() : cause.getClass().getName());
+      return historyDataJSON;
+    }
+
+    public AlarmHistory recordSuccess(final String actionARN, final AlarmEntity alarmEntity, final Date now) {
+      JSONObject historyDataJSON = getSuccessJSON(actionARN, alarmEntity);
       String historyData = historyDataJSON.toString();
-      AlarmManager.addAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData, 
+      return AlarmManager.createAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData,
+        HistoryItemType.Action, " Successfully executed action " + actionARN, now);
+    }
+    public AlarmHistory recordFailure(final String actionARN, final AlarmEntity alarmEntity, final Date now, Throwable cause) {
+      JSONObject historyDataJSON = getFailureJSON(actionARN, alarmEntity, cause);
+      String historyData = historyDataJSON.toString();
+      return AlarmManager.createAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData,
         HistoryItemType.Action, " Failed to execute action " + actionARN, now);
     }
-   }
+    public abstract AlarmHistory executeActionAndRecord(final String action, final Map<String, String> dimensionMap, final AlarmEntity alarmEntity, final Date now);
+  }
   private static class ExecuteAutoScalingPolicyAction extends Action {
     @Override
     public boolean filter(String action, Map<String, String> dimensionMap) {
@@ -753,17 +880,7 @@ public class AlarmManager {
       ExecutePolicyType executePolicyType = new ExecutePolicyType();
       executePolicyType.setPolicyName(action);
       executePolicyType.setHonorCooldown(true);
-      Callback.Checked<AutoScalingMessage> callback = new Callback.Checked<AutoScalingMessage>() {
-        @Override
-        public void fire(AutoScalingMessage input) {
-          success(action, alarmEntity, now);
-        }
-
-        @Override
-        public void fireException(Throwable t) {
-          failure(action, alarmEntity, now, t);
-        }
-      };
+      Callback.Checked<AutoScalingMessage> callback = getCallback(action, alarmEntity, now);
       try {
         AutoScalingClient client = new AutoScalingClient(AccountFullName.getInstance( alarmEntity.getAccountId() ));
         client.init();
@@ -772,14 +889,36 @@ public class AlarmManager {
         failure(action, alarmEntity, now, ex);
       }
     }
+    @Override
+    public AlarmHistory executeActionAndRecord(final String action, final Map<String, String> dimensionMap, final AlarmEntity alarmEntity, final Date now) {
+      ExecutePolicyType executePolicyType = new ExecutePolicyType();
+      executePolicyType.setPolicyName(action);
+      executePolicyType.setHonorCooldown(true);
+      CheckedListenableFuture<AlarmHistory> alarmHistoryFuture = Futures.newGenericeFuture();
+      Callback.Checked<AutoScalingMessage> callback = getRecordCallback(action, alarmEntity, now, alarmHistoryFuture);
+      try {
+        AutoScalingClient client = new AutoScalingClient(AccountFullName.getInstance( alarmEntity.getAccountId() ));
+        client.init();
+        client.dispatch(executePolicyType, callback);
+      } catch (Exception ex) {
+        alarmHistoryFuture.set(recordFailure(action, alarmEntity, now, ex));
+      }
+      try {
+        return alarmHistoryFuture.get();
+      } catch (InterruptedException | ExecutionException e) {
+        Throwable cause = (e instanceof ExecutionException) ? e.getCause() : e;
+        return recordFailure(action, alarmEntity, now, e);
+      }
+    }
 
     @Override
     public boolean alwaysExecute() {
       return true;
     }
 
+
   }
- 
+
   private static class TerminateInstanceAction extends Action {
 
     @Override
@@ -797,17 +936,7 @@ public class AlarmManager {
     public void executeAction(final String action, final Map<String, String> dimensionMap, final AlarmEntity alarmEntity, final Date now) {
       TerminateInstancesType terminateInstances = new TerminateInstancesType();
       terminateInstances.getInstancesSet().add( dimensionMap.get("InstanceId"));
-      Callback.Checked<ComputeMessage> callback = new Callback.Checked<ComputeMessage>() {
-        @Override
-        public void fire(ComputeMessage input) {
-          success(action, alarmEntity, now);
-        }
-
-        @Override
-        public void fireException(Throwable t) {
-          failure(action, alarmEntity, now, t);
-        }
-      };
+      Callback.Checked<ComputeMessage> callback = getCallback(action, alarmEntity, now);
       try {
         EucalyptusClient client = new EucalyptusClient( AccountFullName.getInstance( alarmEntity.getAccountId( ) ) );
         client.init();
@@ -820,6 +949,27 @@ public class AlarmManager {
     @Override
     public boolean alwaysExecute() {
       return false;
+    }
+
+    @Override
+    public AlarmHistory executeActionAndRecord(final String action, final Map<String, String> dimensionMap, final AlarmEntity alarmEntity, final Date now) {
+      TerminateInstancesType terminateInstances = new TerminateInstancesType();
+      terminateInstances.getInstancesSet().add( dimensionMap.get("InstanceId"));
+      CheckedListenableFuture<AlarmHistory> alarmHistoryFuture = Futures.newGenericeFuture();
+      Callback.Checked<ComputeMessage> callback = getRecordCallback(action, alarmEntity, now, alarmHistoryFuture);
+      try {
+        EucalyptusClient client = new EucalyptusClient( AccountFullName.getInstance( alarmEntity.getAccountId( ) ) );
+        client.init();
+        client.dispatch(terminateInstances, callback);
+      } catch (Exception ex) {
+        alarmHistoryFuture.set(recordFailure(action, alarmEntity, now, ex));
+      }
+      try {
+        return alarmHistoryFuture.get();
+      } catch (InterruptedException | ExecutionException e) {
+        Throwable cause = (e instanceof ExecutionException) ? e.getCause() : e;
+        return recordFailure(action, alarmEntity, now, e);
+      }
     }
   }
   private static class StopInstanceAction extends Action {
@@ -839,17 +989,7 @@ public class AlarmManager {
     public void executeAction(final String action, final Map<String, String> dimensionMap, final AlarmEntity alarmEntity, final Date now) {
       StopInstancesType stopInstances = new StopInstancesType();
       stopInstances.getInstancesSet().add( dimensionMap.get("InstanceId"));
-      Callback.Checked<ComputeMessage> callback = new Callback.Checked<ComputeMessage>() {
-        @Override
-        public void fire(ComputeMessage input) {
-          success(action, alarmEntity, now);
-        }
-
-        @Override
-        public void fireException(Throwable t) {
-          failure(action, alarmEntity, now, t);
-        }
-      };
+      Callback.Checked<ComputeMessage> callback = getCallback(action, alarmEntity, now);
       try {
         EucalyptusClient client = new EucalyptusClient(AccountFullName.getInstance( alarmEntity.getAccountId( ) ));
         client.init();
@@ -863,6 +1003,27 @@ public class AlarmManager {
     public boolean alwaysExecute() {
       return false;
     }
+
+    @Override
+    public AlarmHistory executeActionAndRecord(String action, Map<String, String> dimensionMap, AlarmEntity alarmEntity, Date now) {
+      StopInstancesType stopInstances = new StopInstancesType();
+      stopInstances.getInstancesSet().add( dimensionMap.get("InstanceId"));
+      CheckedListenableFuture<AlarmHistory> alarmHistoryFuture = Futures.newGenericeFuture();
+      Callback.Checked<ComputeMessage> callback = getRecordCallback(action, alarmEntity, now, alarmHistoryFuture);
+      try {
+        EucalyptusClient client = new EucalyptusClient(AccountFullName.getInstance( alarmEntity.getAccountId( ) ));
+        client.init();
+        client.dispatch(stopInstances, callback);
+      } catch (Exception ex) {
+        alarmHistoryFuture.set(recordFailure(action, alarmEntity, now, ex));
+      }
+      try {
+        return alarmHistoryFuture.get();
+      } catch (InterruptedException | ExecutionException e) {
+        Throwable cause = (e instanceof ExecutionException) ? e.getCause() : e;
+        return recordFailure(action, alarmEntity, now, e);
+      }
+    }
   }
 
   public static class ActionManager {
@@ -871,13 +1032,13 @@ public class AlarmManager {
       actions.add(new StopInstanceAction());
       actions.add(new TerminateInstanceAction());
       actions.add(new ExecuteAutoScalingPolicyAction());
-      
+
     }
     public static Action getAction(String action, Map<String, String> dimensionMap) {
       for (Action actionFromList :actions) {
         if (actionFromList.filter(action, dimensionMap)) {
           return actionFromList;
-        } 
+        }
       }
       return null;
     }

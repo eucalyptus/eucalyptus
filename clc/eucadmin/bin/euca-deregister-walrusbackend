@@ -31,7 +31,7 @@ import eucadmin.deregisterwalrusbackend
 
 if __name__ == "__main__":
     print >> sys.stderr, "warning: euca-deregister-walrusbackend is", \
-        "deprecated; use ``empyrean-deregister-service -t walrusbackend''", \
+        "deprecated; use ``euserv-deregister-service -t walrusbackend''", \
         "instead"
     r = eucadmin.deregisterwalrusbackend.DeregisterWalrusBackend()
     r.main_cli()
