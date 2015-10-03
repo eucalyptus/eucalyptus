@@ -163,6 +163,7 @@ extern sem *inst_sem;
 extern sem *inst_copy_sem;
 extern bunchOfInstances *global_instances;
 extern bunchOfInstances *global_instances_copy;
+extern struct nc_state_t nc_state;    //!< Global NC state structure
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -726,6 +727,17 @@ int find_and_start_instance(char *psInstanceId)
             LOGERROR("[%s] failed to start instance\n", psInstanceId);
         } else {
             virDomainFree(dom);
+
+            if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_VPCMIDO)) {
+                char iface[16], cmd[EUCA_MAX_PATH], obuf[256], ebuf[256];
+                int rc;
+                snprintf(iface, 16, "vn_%s", pInstance->instanceId);
+                snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc_state.rootwrap_cmd_path, pInstance->params.guestNicDeviceName, iface);
+                rc = timeshell(cmd, obuf, ebuf, 256, 10);
+                if (rc) {
+                    LOGERROR("[%s] unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n", SP(pInstance->instanceId));
+                }
+            }
         }
         unlock_hypervisor_conn();
 

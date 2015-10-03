@@ -1843,7 +1843,6 @@ void *startup_thread(void *arg)
                 if ((dom = virDomainCreateLinux(conn, xml, 0)) != NULL) {
                     virDomainFree(dom); // To be safe. Docs are not clear on whether the handle exists outside the process.
 
-                    // DAN TEMPORARY FOR VPC TESTING
                     if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_VPCMIDO)) {
                         char iface[16], cmd[EUCA_MAX_PATH], obuf[256], ebuf[256];
                         snprintf(iface, 16, "vn_%s", instance->instanceId);
