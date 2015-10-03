@@ -731,7 +731,14 @@ public class ActivityManager {
     } catch ( final Exception e ) {
       logger.error( e, e );
     }
-    return removeFromLoadBalancerOrTerminate( group, group.getCapacity(), anyRegisteredInstances, instancesToTerminate, Collections.singletonList( new ActivityCause( "an instance was taken out of service in response to a health-check" ) ), true );
+    return removeFromLoadBalancerOrTerminate(
+        group,
+        group.getCapacity( ),
+        anyRegisteredInstances,
+        instancesToTerminate,
+        Collections.singletonList( new ActivityCause( "an instance was taken out of service in response to a health-check" ) ),
+        instancesToTerminate.size( ) > ( group.getCapacity( ) - group.getDesiredCapacity( ) ) // replace unless we need to reduce capacity by >= #unhealthy
+    );
   }
 
   private ScalingProcessTask<?,?> perhapsScale( final AutoScalingGroupScalingView group ) {
