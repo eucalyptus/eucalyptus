@@ -192,10 +192,11 @@ public class LoadBalancingServoCache {
             throw new Exception("Duration must be larger than 0");
           if(newDuration == Integer.parseInt((String)t.getValue()))
             return;
-          
-          cachedEntities.cleanUp();
-          cachedEntities.invalidateAll();
-          cachedEntities = null;
+          if (cachedEntities != null) {
+            cachedEntities.cleanUp();
+            cachedEntities.invalidateAll();
+            cachedEntities = null;
+          }
         }
       } catch ( final Exception e ) {
         throw new ConfigurablePropertyException("Could not update cache dueration due to: " + e.getMessage());
