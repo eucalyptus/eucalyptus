@@ -259,6 +259,7 @@ public class NetworkInfoBroadcaster {
       } else {
         final NetworkInfo info;
         final boolean converged = lastBroadcast != null &&
+            ( appliedVersion != null && !appliedVersion.getRight( ).equals( lastBroadcast.appliedVersion ) ) &&
             ( System.currentTimeMillis() - lastBroadcast.lastConvergedTimestamp > TimeUnit.SECONDS.toMillis( 150 ) );
         if ( converged ) {
           info =  lastBroadcast.networkInfo;
