@@ -73,8 +73,10 @@ def build_key_path_map(local_keydir, remote_keydir, zone=None):
 def copy_keys(desthost, path_map, rsync):
     for srcpath in path_map:
         try:
-            with open(srcpath):
-                pass
+            if not os.path.isdir(srcpath):
+                # It's either a file or nonexistent (the latter raises OSError)
+                with open(srcpath):
+                    pass
         except OSError as err:
             sys.exit('{0}: cannot access {1}: {2}'.format(
                 os.path.basename(sys.argv[0]), err.filename, err.strerror))
