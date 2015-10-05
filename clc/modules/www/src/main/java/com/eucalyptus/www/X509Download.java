@@ -95,6 +95,8 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.empyrean.PropertiesService;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
 import com.eucalyptus.cloudwatch.common.CloudWatch;
 import com.eucalyptus.component.ServiceBuilder;
@@ -290,6 +292,12 @@ public class X509Download extends HttpServlet {
         remotePublicify( LoadBalancing.class ) ) );
     sb.append( entryFor( "AWS_SIMPLEWORKFLOW_URL", null,
         remotePublicify( SimpleWorkflow.class ) ) );
+    if ( u.isSystemAdmin( ) ) {
+      sb.append( entryFor( "EUCA_BOOTSTRAP_URL", null,
+          Optional.of( ServiceUris.remote( Topology.lookup( Empyrean.class ) ).toString( ) ) ) );
+      sb.append( entryFor( "EUCA_PROPERTIES_URL", null,
+          Optional.of( ServiceUris.remote( Topology.lookup( PropertiesService.class ) ).toString( ) ) ) );
+    }
     sb.append( "\nexport EUSTORE_URL=" + StackConfiguration.DEFAULT_EUSTORE_URL );
     String baseName = null;
     if ( x509 != null && keyPair != null ) {
