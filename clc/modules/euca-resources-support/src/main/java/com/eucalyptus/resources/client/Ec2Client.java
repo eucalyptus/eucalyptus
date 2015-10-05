@@ -26,16 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
-
 import com.eucalyptus.compute.common.*;
-import com.eucalyptus.compute.common.backend.CreateSnapshotResponseType;
-import com.eucalyptus.compute.common.backend.CreateSnapshotType;
-import com.eucalyptus.compute.common.backend.CreateVolumeResponseType;
-import com.eucalyptus.compute.common.backend.CreateVolumeType;
-import com.eucalyptus.compute.common.backend.DeleteVolumeType;
-import com.eucalyptus.compute.common.backend.RegisterImageResponseType;
-import com.eucalyptus.compute.common.backend.RegisterImageType;
-
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.principal.AccountFullName;
@@ -54,7 +45,7 @@ import com.google.common.collect.Lists;
 
 /**
  * @author Sang-Min Park
- *
+ * 
  */
 public class Ec2Client {
   private static final Logger LOG = Logger.getLogger(Ec2Client.class);
@@ -88,7 +79,7 @@ public class Ec2Client {
 
     private DescribeInstancesType describeInstances() {
       final DescribeInstancesType req = new DescribeInstancesType();
-      req.getFilterSet( ).add( Filter.filter( "instance-id", this.instanceIds ) );
+      req.getFilterSet().add(Filter.filter("instance-id", this.instanceIds));
       return req;
     }
 
@@ -327,7 +318,8 @@ public class Ec2Client {
     }
 
     private RunInstancesType runInstances() {
-      OwnerFullName systemAcct = AccountFullName.getInstance(Principals.systemAccount( ).getAccountNumber( ));
+      OwnerFullName systemAcct = AccountFullName.getInstance(Principals
+          .systemAccount().getAccountNumber());
       LOG.debug("runInstances with zone=" + availabilityZone + ", account="
           + systemAcct);
       final RunInstancesType req = new RunInstancesType();
@@ -455,7 +447,8 @@ public class Ec2Client {
     private DescribeImagesType describeImages() {
       final DescribeImagesType req = new DescribeImagesType();
       if (this.imageIds != null && this.imageIds.size() > 0) {
-        req.setFilterSet( Lists.newArrayList( Filter.filter( "image-id", this.imageIds ) ) );
+        req.setFilterSet(Lists.newArrayList(Filter.filter("image-id",
+            this.imageIds)));
       }
       return req;
     }
@@ -567,7 +560,7 @@ public class Ec2Client {
 
     private DescribeKeyPairsType describeKeyPairs() {
       final DescribeKeyPairsType req = new DescribeKeyPairsType();
-      req.setKeySet( keyNames );
+      req.setKeySet(keyNames);
       return req;
     }
 
@@ -833,18 +826,19 @@ public class Ec2Client {
     private List<String> volumeIds = null;
     private List<Volume> result = null;
 
-    private DescribeVolumesTask( final boolean verbose, final List<String> volumeIds) {
+    private DescribeVolumesTask(final boolean verbose,
+        final List<String> volumeIds) {
       this.verbose = verbose;
       this.volumeIds = volumeIds;
     }
 
     private DescribeVolumesType describeVolumes() {
       final DescribeVolumesType req = new DescribeVolumesType();
-      if ( verbose ) {
-        req.setVolumeSet( Lists.newArrayList( "verbose" ) );
+      if (verbose) {
+        req.setVolumeSet(Lists.newArrayList("verbose"));
       }
       if (this.volumeIds != null && this.volumeIds.size() > 0) {
-        req.getFilterSet( ).add( Filter.filter( "volume-id", volumeIds ) );
+        req.getFilterSet().add(Filter.filter("volume-id", volumeIds));
       }
       return req;
     }
@@ -858,12 +852,15 @@ public class Ec2Client {
     }
 
     @Override
-    boolean dispatchFailure( final ClientContext<ComputeMessage, Compute> context, final Throwable throwable ) {
-      if ( AsyncExceptions.isWebServiceErrorCode( throwable, "InvalidVolume.NotFound" ) ) {
-        this.result = Lists.newArrayList( );
+    boolean dispatchFailure(
+        final ClientContext<ComputeMessage, Compute> context,
+        final Throwable throwable) {
+      if (AsyncExceptions.isWebServiceErrorCode(throwable,
+          "InvalidVolume.NotFound")) {
+        this.result = Lists.newArrayList();
         return true;
       } else {
-        return super.dispatchFailure( context, throwable );
+        return super.dispatchFailure(context, throwable);
       }
     }
 
@@ -885,17 +882,18 @@ public class Ec2Client {
     private List<String> snapshots = null;
     private List<Snapshot> results = null;
 
-    private DescribeSnapshotsTask( final boolean verbose, final List<String> subnetIds) {
+    private DescribeSnapshotsTask(final boolean verbose,
+        final List<String> subnetIds) {
       this.verbose = verbose;
       this.snapshots = subnetIds;
     }
 
     private DescribeSnapshotsType describeSnapshots() {
       final DescribeSnapshotsType req = new DescribeSnapshotsType();
-      if ( verbose ) {
-        req.setSnapshotSet( Lists.newArrayList( "verbose" ) );
+      if (verbose) {
+        req.setSnapshotSet(Lists.newArrayList("verbose"));
       }
-      req.getFilterSet( ).add( Filter.filter( "snapshot-id", this.snapshots ) );
+      req.getFilterSet().add(Filter.filter("snapshot-id", this.snapshots));
 
       return req;
     }
@@ -1136,7 +1134,8 @@ public class Ec2Client {
       throws EucalyptusActivityException {
     if (userId == null) // run in verbose mode for system user
       keyNames.add("verbose");
-    final ComputeDescribeKeyPairsTask task = new ComputeDescribeKeyPairsTask(keyNames);
+    final ComputeDescribeKeyPairsTask task = new ComputeDescribeKeyPairsTask(
+        keyNames);
     final CheckedListenableFuture<Boolean> result = task
         .dispatch(new Ec2Context(userId));
     try {
@@ -1212,10 +1211,11 @@ public class Ec2Client {
 
   public void deleteTags(final String userId, final List<String> resources,
       ArrayList<String> tags) throws EucalyptusActivityException {
-    Map<String,String> tagsMap = new HashMap<String,String>();
-    for(String s:tags) {
+    Map<String, String> tagsMap = new HashMap<String, String>();
+    for (String s : tags) {
       tagsMap.put(s, null);
-    };
+    }
+    ;
     deleteTags(userId, resources, tagsMap);
   }
 
@@ -1344,15 +1344,16 @@ public class Ec2Client {
   public List<Volume> describeVolumes(final String userId,
       final List<String> volumeIds) throws EucalyptusActivityException {
     // run in verbose mode for system user
-    final DescribeVolumesTask task = new DescribeVolumesTask( userId == null, volumeIds );
+    final DescribeVolumesTask task = new DescribeVolumesTask(userId == null,
+        volumeIds);
     final CheckedListenableFuture<Boolean> result = task
         .dispatch(new Ec2Context(userId));
     try {
-      if ( result.get( ) ) {
+      if (result.get()) {
         return task.getVolumes();
       } else {
         throw new EucalyptusActivityException(
-            task.getErrorMessage( ) != null ? task.getErrorMessage( )
+            task.getErrorMessage() != null ? task.getErrorMessage()
                 : "failed to describe volumes");
       }
     } catch (Exception ex) {
@@ -1382,7 +1383,8 @@ public class Ec2Client {
   public List<Snapshot> describeSnapshots(final String userId,
       final List<String> snapshotIds) throws EucalyptusActivityException {
     // run in verbose mode for system user
-    final DescribeSnapshotsTask task = new DescribeSnapshotsTask(userId == null, snapshotIds);
+    final DescribeSnapshotsTask task = new DescribeSnapshotsTask(
+        userId == null, snapshotIds);
     final CheckedListenableFuture<Boolean> result = task
         .dispatch(new Ec2Context(userId));
     try {

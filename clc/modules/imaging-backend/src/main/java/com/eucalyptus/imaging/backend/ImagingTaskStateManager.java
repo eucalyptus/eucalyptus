@@ -56,7 +56,6 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.images.ImageConfiguration;
-import com.eucalyptus.imaging.common.Imaging;
 import com.eucalyptus.imaging.common.ImagingBackend;
 import com.eucalyptus.imaging.common.UrlValidator;
 import com.eucalyptus.imaging.manifest.ImportImageManifest;
@@ -80,7 +79,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
   @Override
   public void fireEvent(ClockTick event) {
     if (!( Bootstrap.isFinished() &&
-         Topology.isEnabledLocally( Imaging.class ) ) )
+         Topology.isEnabledLocally( ImagingBackend.class ) ) )
        return;
     
     final Map <ImportTaskState, List<ImagingTask>> taskByState =
