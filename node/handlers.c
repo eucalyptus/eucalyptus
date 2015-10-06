@@ -3815,43 +3815,57 @@ int migration_rollback(ncInstance * instance)
 int instance_network_gate(ncInstance *instance, time_t timeout_seconds) {
     char *filebuf=NULL, path[EUCA_MAX_PATH], needle[EUCA_MAX_PATH];
     time_t max_time=0;
+    int count = 1;
     
-    max_time = time(NULL) + timeout_seconds;
+    if (!instance || timeout_seconds < 0 || timeout_seconds > 3600) {
+        LOGERROR("invalid input params\n");
+        return(0);
+    }
 
-    if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_EDGE)) {
-        LOGDEBUG("[%s] waiting at most %d seconds for required instance networking to exist before booting instance\n", instance->instanceId, (int)timeout_seconds);
-        while(time(NULL) < max_time) {
+    max_time = time(NULL) + timeout_seconds;
+    
+    LOGDEBUG("[%s] waiting at most %d seconds for required instance networking to exist before booting instance\n", SP(instance->instanceId), (int)timeout_seconds);
+    while(time(NULL) < max_time) {
+        
+        LOGTRACE("[%s] instance state code %d\n", SP(instance->instanceId), instance->state);
+        
+        if (instance == NULL) {
+            LOGWARN("[%s] instance no longer valid - aborting instance gate\n", SP(instance->instanceId));
+            return(0);
+        }
+        
+        LOGTRACE("[%s] instance state code new=%d orig=%d\n", SP(instance->instanceId), instance->state, instance->state);
+
+        if (instance->state != STAGING) {
+            LOGINFO("[%s] returning from gate since instance is no longer STAGING\n", SP(instance->instanceId));
+            return(0);
+        }
+        
+        if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_EDGE)) {
             // check to ensure that dhcpd config contains the mac for the instance
             snprintf(path, EUCA_MAX_PATH, "%s/var/run/eucalyptus/net/euca-dhcp.conf", nc_state.home);
             snprintf(needle, EUCA_MAX_PATH, "node-%s", instance->ncnet.privateIp);
             filebuf = file2str(path);
             if (filebuf && strstr(filebuf, needle)) {
-                LOGDEBUG("[%s] local dhcpd config contains required instance record, continuing\n", instance->instanceId);
+                LOGDEBUG("[%s] local dhcpd config contains required instance record, continuing\n", SP(instance->instanceId));
                 EUCA_FREE(filebuf);
                 return(0);
             } else {
-                LOGTRACE("[%s] local dhcpd config does not (yet) contain required instance record, waiting...(%d seconds remaining)\n", instance->instanceId, (int)(max_time - time(NULL)));
+                LOGTRACE("[%s] local dhcpd config does not (yet) contain required instance record, waiting...(%d seconds remaining)\n", SP(instance->instanceId), (int)(max_time - time(NULL)));
             }
             EUCA_FREE(filebuf);
-            sleep(1);
-        }
-        LOGERROR("[%s] timed out waiting for instance network information to appear before booting instance\n", instance->instanceId);
-        return(1);
-    } else if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_VPCMIDO)) {
-        LOGDEBUG("[%s] waiting at most %d seconds for required instance networking to exist before booting instance\n", instance->instanceId, (int)timeout_seconds);
-        while(time(NULL) < max_time) {
+        } else if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_VPCMIDO)) {
             globalNetworkInfo *gni = NULL;
             gni_hostname_info *host_info = NULL;
             char xmlfile[EUCA_MAX_PATH] = "";
             int rc = 0;
-
+            
             gni = gni_init();
             host_info = gni_init_hostname_info();
             if (gni && host_info) {
                 // decode/read/parse the globalnetworkinfo, assign any incorrect public/private IP mappings based on global view
                 snprintf(xmlfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/global_network_info.xml", nc_state.home);
                 rc = gni_populate(gni,host_info,xmlfile);
-                LOGDEBUG("done with gni_populate()\n");
                 if (rc) {
                     // error
                 } else {
@@ -3862,29 +3876,32 @@ int instance_network_gate(ncInstance *instance, time_t timeout_seconds) {
                         gni_instance *gniInstance = NULL;
                         rc = gni_find_instance(gni, instance->instanceId, &gniInstance);
                         if (gniInstance) {
-                            LOGDEBUG("[%s] global network config contains required instance record, continuing\n", instance->instanceId);
-
+                            LOGDEBUG("[%s] global network config contains required instance record, continuing\n", SP(instance->instanceId));
+                            
                             // Free up gni and host_info memory
                             rc = gni_free(gni);
                             rc = gni_hostnames_free(host_info);
-
+                            
                             return(0);
                         } else {
-                            LOGTRACE("[%s] global network config does not (yet) contain required instance record, waiting...(%d seconds remaining)\n", instance->instanceId, (int)(max_time - time(NULL)));
+                            LOGTRACE("[%s] global network config does not (yet) contain required instance record, waiting...(%d seconds remaining)\n", SP(instance->instanceId), (int)(max_time - time(NULL)));
                         }
                     } else {
-                        LOGDEBUG("GATE: version (%s) and applied version (%s) do not match: waiting\n", SP(gni->version), SP(gni->appliedVersion));
+                        LOGDEBUG("[%s] GATE: version (%s) and applied version (%s) do not match: waiting\n", SP(instance->instanceId), SP(gni->version), SP(gni->appliedVersion));
                     }
                 }
             }
             // Free up gni and host_info memory
             rc = gni_free(gni);
             rc = gni_hostnames_free(host_info);
-            sleep(1);
+        } else {
+            return(0);
         }
-        LOGERROR("[%s] timed out waiting for instance network information to appear before booting instance\n", instance->instanceId);
-        return(1);
+        
+        count++;
+        sleep(1);
     }
     
-    return(0);
+    LOGERROR("[%s] timed out waiting for instance network information to appear before booting instance\n", SP(instance->instanceId));
+    return(1);
 }
