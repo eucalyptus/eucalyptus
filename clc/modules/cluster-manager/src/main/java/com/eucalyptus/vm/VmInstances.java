@@ -1677,6 +1677,16 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
     return action;
   }
 
+  private static void restoreServiceTag( final String serviceTag, final String instanceId ) {
+    try ( final TransactionResource tx = Entities.transactionFor( VmInstance.class ) ) {
+      final VmInstance vm = VmInstances.lookup( instanceId );
+      VmInstances.setServiceTag( vm, serviceTag );
+      tx.commit( );
+    } catch ( final Exception e ) {
+      LOG.error( "Error restoring service tag ("+serviceTag+") for instance ("+instanceId+")", e );
+    }
+  }
+
   /**
    * Caller must have session for given vm
    */
@@ -2049,6 +2059,8 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
             final ResourceToken token = Iterables.getOnlyElement( allocation.getAllocationTokens() );
             VmInstanceLifecycleHelpers.get().restoreInstanceResources( token, input );
 
+            restoreServiceTag( input.getServiceTag( ), input.getInstanceId( ) );
+
             return true;
           } catch ( final Exception ex ) {
             if ( allocation != null ) allocation.abort( );
@@ -2092,6 +2104,9 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
             token.setZombie( true );
 
             allocation.commit( );
+
+            restoreServiceTag( input.getServiceTag( ), input.getInstanceId( ) );
+
             return true;
           } catch ( final Exception ex ) {
             if ( allocation != null ) allocation.abort( );
