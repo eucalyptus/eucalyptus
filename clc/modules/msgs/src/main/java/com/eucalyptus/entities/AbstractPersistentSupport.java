@@ -314,6 +314,20 @@ public abstract class AbstractPersistentSupport<RT extends RestrictedType, AP ex
     }
 
     @Override
+    public <T> T updateByExample( final AP example, final Criterion criterion, final Map<String, String> aliases, final OwnerFullName ownerFullName, final String key, final Function<? super AP, T> updateTransform ) throws PE {
+      return updateWithRetries( example.getClass( ), new Function<Void, T>() {
+        @Override
+        public T apply( @Nullable final Void nothing ) {
+          try {
+            return RetryingAbstractPersistentSupport.super.updateByExample( example, criterion, aliases, ownerFullName, key, updateTransform );
+          } catch ( final Exception e ) {
+            throw Exceptions.toUndeclared( e );
+          }
+        }
+      }, ownerFullName, key );
+    }
+
+    @Override
     public List<AP> deleteByExample( final AP example ) throws PE {
       return deleteWithRetries( example.getClass( ), new Function<Void, List<AP>>() {
         @Override
@@ -431,12 +445,22 @@ public abstract class AbstractPersistentSupport<RT extends RestrictedType, AP ex
       return delegate.updateByExample( example, ownerFullName, key, updateTransform );
     }
 
+    @Override
+    public <T> T updateByExample( final AP example, final Criterion criterion, final Map<String, String> aliases, final OwnerFullName ownerFullName, final String key, final Function<? super AP, T> updateTransform ) throws PE {
+      return delegate.updateByExample( example, criterion, aliases, ownerFullName, key, updateTransform );
+    }
+
     public AP save( final AP metadata ) throws PE {
       return delegate.save( metadata );
     }
 
     public boolean delete( final RT metadata ) throws PE {
       return delegate.delete( metadata );
+    }
+
+    @Override
+    public boolean delete( final RT metadata, final Predicate<? super AP> precondition ) throws PE {
+      return delegate.delete( metadata, precondition );
     }
 
     public List<AP> deleteByExample( final AP example ) throws PE {

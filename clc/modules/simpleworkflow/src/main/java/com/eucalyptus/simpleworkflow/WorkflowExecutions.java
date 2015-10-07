@@ -93,11 +93,11 @@ public interface WorkflowExecutions {
                                                    final String workflowId ) {
       try {
         final AccountFullName accountFullName = AccountFullName.getInstance( accountNumber );
-        workflowExecutions.updateByExample(
+        workflowExecutions.withRetries( ).updateByExample(
             WorkflowExecution.exampleForOpenWorkflow( accountFullName, domain, workflowId ),
             accountFullName,
             workflowId,
-            new Function<WorkflowExecution,Void>( ){
+            new Function<WorkflowExecution, Void>( ) {
               @Override
               public Void apply( final WorkflowExecution workflowExecution ) {
                 workflowExecution.closeWorkflow(
