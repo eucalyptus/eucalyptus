@@ -24,10 +24,8 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from requestbuilder import Arg, MutuallyExclusiveArgList
-from requestbuilder.exceptions import ArgumentError
 
 from eucalyptus_admin.commands.ec2 import EC2Request
-from eucalyptus_admin.commands.bootstrap.modifyservice import ModifyService
 
 
 class MigrateInstances(EC2Request):
@@ -45,16 +43,7 @@ class MigrateInstances(EC2Request):
                     specific host (may be used more than once)'''),
                 Arg('--exclude-dest', action='append', route_to=None,
                     metavar='HOST', help='''allow migration to any host
-                    except a specific one (may be used more than once)''')),
-            Arg('--stop-source', action='store_true', route_to=None,
-                help='''also stop the source host to prevent new instances
-                from running on it (requires -s/--source)''')]
-
-    def configure(self):
-        EC2Request.configure(self)
-        if self.args.get('stop_source') and not self.args.get('source'):
-            raise ArgumentError('argument --stop-source: only allowed '
-                                'with -s/--source')
+                    except a specific one (may be used more than once)'''))]
 
     def preprocess(self):
         if self.args.get('include_dest'):
@@ -63,9 +52,3 @@ class MigrateInstances(EC2Request):
         elif self.args.get('exclude_dest'):
             self.params['AllowHosts'] = False
             self.params['DestinationHost'] = self.args['exclude_dest']
-
-    def postprocess(self, _):
-        if self.args.get('stop_source'):
-            req = ModifyService.from_other(self, Name=self.args['source'],
-                                           State='STOP')
-            req.main()
