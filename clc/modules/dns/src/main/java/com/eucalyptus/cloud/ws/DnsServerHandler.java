@@ -70,7 +70,6 @@ public class DnsServerHandler extends SimpleChannelUpstreamHandler {
       } catch ( Exception ex ) {
         LOG.debug( ex, ex );
         byte[] outbuf = legacyDns.errorMessage(query, Rcode.SERVFAIL);
-        LOG.info(outbuf);
         ChannelBuffer chanOutBuf = ChannelBuffers.wrappedBuffer( outbuf );
         ctx.getChannel().write(chanOutBuf,e.getRemoteAddress( ));
         throw ex;
@@ -80,7 +79,6 @@ public class DnsServerHandler extends SimpleChannelUpstreamHandler {
     } catch ( Exception ex ) {
       LOG.debug( ex, ex);
       byte[] outbuf = legacyDns.formerrMessage(inbuf);
-      LOG.info(outbuf);
       ChannelBuffer chanOutBuf = ChannelBuffers.wrappedBuffer( outbuf );
       ctx.getChannel().write(chanOutBuf,e.getRemoteAddress( ));
       throw ex;

@@ -37,7 +37,7 @@ class Properties(requestbuilder.service.BaseService):
     NAME = 'properties'
     DESCRIPTION = 'Cloud property management service'
     REGION_ENVVAR = 'AWS_DEFAULT_REGION'
-    URL_ENVVAR = 'PROPERTIES_URL'
+    URL_ENVVAR = 'EUCA_PROPERTIES_URL'
 
     ARGS = [Arg('-U', '--url', metavar='URL', help='''Connect to the
                 service using a specific URL.''')]

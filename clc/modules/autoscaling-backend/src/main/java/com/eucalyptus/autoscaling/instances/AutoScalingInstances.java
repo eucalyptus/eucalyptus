@@ -78,7 +78,7 @@ public abstract class AutoScalingInstances {
 
   public abstract int registrationFailure( AutoScalingGroupMetadata group, Collection<String> instanceIds ) throws AutoScalingMetadataException;
 
-  public abstract boolean delete( AutoScalingInstanceMetadata autoScalingInstance ) throws AutoScalingMetadataException;
+  public abstract boolean delete( OwnerFullName ownerFullName, String instanceId ) throws AutoScalingMetadataException;
 
   public abstract boolean deleteByGroup( final AutoScalingGroupMetadata group ) throws AutoScalingMetadataException;
 

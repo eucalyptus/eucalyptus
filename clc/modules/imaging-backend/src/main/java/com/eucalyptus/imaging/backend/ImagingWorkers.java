@@ -40,8 +40,8 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
-import com.eucalyptus.imaging.common.Imaging;
 import com.eucalyptus.imaging.ImagingServiceProperties;
+import com.eucalyptus.imaging.common.ImagingBackend;
 import com.eucalyptus.resources.client.Ec2Client;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Lists;
@@ -63,7 +63,7 @@ public class ImagingWorkers {
     @Override
     public void fireEvent(ClockTick event) {
       if (!( Bootstrap.isFinished() &&
-          Topology.isEnabledLocally( Imaging.class ) ) )
+          Topology.isEnabledLocally( ImagingBackend.class ) ) )
         return;
       if(!ImagingServiceProperties.HEALTHCHECK)
         return;

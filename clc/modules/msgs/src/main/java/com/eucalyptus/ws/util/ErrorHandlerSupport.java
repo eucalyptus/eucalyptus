@@ -98,7 +98,6 @@ public abstract class ErrorHandlerSupport {
         LOG.error( "Failed to parse payload ", e.getCause() );
       }
     } else {
-      LOG.error( "Unable to handle exception", exception );
       final BaseMessage errorResp = buildFatalResponse( exception );
       Contexts.response( new BaseMessageSupplier( errorResp, HttpResponseStatus.INTERNAL_SERVER_ERROR ) );
     }
