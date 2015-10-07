@@ -498,8 +498,6 @@ int main(int argc, char **argv)
                     scrubResult = pDriverHandler->system_scrub(globalnetworkinfo, pLni);
                 }
                 
-                LOGDEBUG("WTF1: %d %d %d\n", scrubResult, EUCANETD_RUN_ERROR_API, scrubResult != EUCANETD_RUN_ERROR_API);
-                
                 // Make sure the scrub did not fail
                 if (scrubResult != EUCANETD_RUN_ERROR_API) {
                     // update network artifacts (devices, tunnels, etc.) if the scrub indicate so
@@ -546,7 +544,6 @@ int main(int argc, char **argv)
                 LOGERROR("Failed to populate our local network view. Check above logs for details.\n");
                 update_globalnet_failed = TRUE;
             }
-            LOGDEBUG("WTF2: %d %d\n", scrubResult, update_globalnet_failed);
         }
 
         if (update_globalnet) {
@@ -565,7 +562,6 @@ int main(int argc, char **argv)
         }
 
         // do it all over again...
-        LOGDEBUG("WTF3: %d %d\n", scrubResult, update_globalnet_failed == TRUE);
         if (update_globalnet_failed == TRUE) {
             LOGDEBUG("main loop complete (%ld seconds): failures detected sleeping %d seconds before next poll\n", time(NULL) - loop_start, 1);
             sleep(1);
