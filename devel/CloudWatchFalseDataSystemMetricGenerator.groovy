@@ -326,7 +326,7 @@ public class CloudWatchFalseDataSystemMetricGenerator {
     String imageId;
     String vmType;
     boolean monitoring;
-    AccountFullName effectiveUserId;
+    String accountNumber;
     String autoscalingGroupName;
     InstanceMetrics metrics;
     List<VolumeMetrics> volumeMetricsList;
@@ -383,8 +383,8 @@ public class CloudWatchFalseDataSystemMetricGenerator {
     }
 
     @Override
-    public AccountFullName getEffectiveUserId(String instanceId) throws Exception {
-      return instanceMap.get(instanceId).getEffectiveUserId();
+    public String getAccountNumber(String instanceId) throws Exception {
+      return instanceMap.get(instanceId).getAccountNumber();
     }
 
     @Override
@@ -452,7 +452,7 @@ public class CloudWatchFalseDataSystemMetricGenerator {
     final int NUM_EBS_VOLUMES_PER_INSTANCE = 2;
     final double MB_PER_SEC = 1024.0 * 1024.0 / 10000.0;
     DecimalFormat df = new DecimalFormat("00000");
-    AccountFullName admin = AccountFullName.getInstance(Accounts.lookupSystemAdmin().getUserId());
+    String adminAccountId = Accounts.lookupSystemAdmin().getAccountNumber();
     for (long i=0L;i<numInstances;i++) {
       String uuid = "00000000-0000-0000-0000-0000000" + df.format(i);
       String instanceId = "i-"+df.format(i);
@@ -464,7 +464,7 @@ public class CloudWatchFalseDataSystemMetricGenerator {
       instance.setImageId(imageId);
       instance.setVmType(vmType);
       instance.setMonitoring(true);
-      instance.setEffectiveUserId(admin);
+      instance.setAccountNumber(adminAccountId);
       instance.setAutoscalingGroupName(null);
       instance.setStatusCheckedFailed(0);
       instance.setSystemStatusCheckedFailed(0);
@@ -539,7 +539,7 @@ public class CloudWatchFalseDataSystemMetricGenerator {
         Instance instance = instanceMap.get(instanceId);
         sensorResources.add(generateInstanceSensorResource(instance, currentTime, putNum));
         msg.setSensorsResources(sensorResources );
-        absoluteMetricQueueItemList.addAll(cloudWatchHelper.collectMetricData(msg));
+        absoluteMetricQueueItemList.addAll(cloudWatchHelper.collectMetricData(Collections.singleton(instanceId), msg));
         numTogether = numTogether + 1;
         if (numTogether == FOLD_NUMBER) {
           AbsoluteMetricQueue.getInstance().addQueueItems(absoluteMetricQueueItemList);

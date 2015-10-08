@@ -268,6 +268,9 @@ do_start() {
 	    $EUCALYPTUS/usr/sbin/euca-generate-fault -c cloud 1008 daemon ntp
         fi
 
+	# Ensure sysctl settings are set correctly
+	check_set_sysctls
+
 	# Check the current euca.p12 creds and backup if they have changed
 	check_creds
 
@@ -384,6 +387,36 @@ check_creds() {
 		echo "Warning: your database credentials have changed"
 		echo "Warning: most recent backup: $backupfile"
 	fi
+}
+
+check_set_sysctls() {
+
+	#
+	# Allow larger ARP tables to avoid communication failures with large number of internal clients.
+	#
+	BASE_PATH='/proc/sys/net/ipv4/neigh/default'
+	declare -A SETTINGS=( [gc_interval]=3600 [gc_stale_time]=3600 [gc_thresh1]=1024 [gc_thresh2]=2048 [gc_thresh3]=4096 )
+
+	for i in "${!SETTINGS[@]}";
+	do
+		FNAME=${BASE_PATH}/${i}
+		SYSCTL_NAME=${FNAME##/proc/sys/} # strip /proc/sys/ from the filename
+		SYSCTL_NAME=${SYSCTL_NAME//\//.} # convert path to sysctl format
+		EXPECTED_VALUE=${SETTINGS[$i]}
+
+		if [ -r ${FNAME} ] && [ -w ${FNAME} ]; then
+			VAL=$(cat ${FNAME})
+			if [ ${VAL} -lt ${EXPECTED_VALUE} ]; then
+				echo
+				echo "WARN: ${SYSCTL_NAME} is lower than the expected value of ${EXPECTED_VALUE}"
+				echo "To ensure that the settings are persisted, set ${SYSCTL_NAME} = ${EXPECTED_VALUE} in /etc/sysctl.conf."
+				echo "Setting ${FNAME} dynamically to ${EXPECTED_VALUE}"
+				echo -n ${EXPECTED_VALUE} > ${FNAME}
+			fi
+		else
+			echo "WARN: Unable to read or write to file: ${FNAME}: check permissions or existence of file"
+		fi
+	done
 }
 
 # let's get the user to use

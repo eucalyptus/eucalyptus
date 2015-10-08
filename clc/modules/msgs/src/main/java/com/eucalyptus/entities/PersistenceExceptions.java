@@ -86,6 +86,7 @@ import org.hibernate.PropertyAccessException;
 import org.hibernate.QueryException;
 import org.hibernate.QueryTimeoutException;
 import org.hibernate.SessionException;
+import org.hibernate.StaleObjectStateException;
 import org.hibernate.StaleStateException;
 import org.hibernate.TransactionException;
 import org.hibernate.TransientObjectException;
@@ -155,14 +156,14 @@ public class PersistenceExceptions {
                                                              MultipleBagFetchException.class, NonUniqueObjectException.class, QueryException.class,
                                                              PersistentObjectException.class, PropertyAccessException.class, SerializationException.class,
                                                              SessionException.class, TooManyRowsAffectedException.class, TransientObjectException.class,
-                                                             StaleStateException.class, TypeMismatchException.class, UnresolvableObjectException.class,
+                                                             TypeMismatchException.class, UnresolvableObjectException.class,
                                                              WrongClassException.class, SQLGrammarException.class, TransactionRequiredException.class,
                                                              HibernateException.class ) );
     map.get( ErrorCategory.CONSTRAINT ).addAll( Lists.newArrayList( ConstraintViolationException.class, NonUniqueResultException.class,
                                                                     NoResultException.class, NonUniqueResultException.class ) );
     map.get( ErrorCategory.RUNTIME ).addAll( Lists.newArrayList( TransactionException.class, IllegalStateException.class, RollbackException.class,
                                                                  PessimisticLockException.class, OptimisticLockException.class, EntityNotFoundException.class,
-                                                                 EntityExistsException.class ) );
+                                                                 StaleStateException.class, EntityExistsException.class ) );
     map.get( ErrorCategory.CONNECTION ).addAll( Lists.newArrayList( JDBCConnectionException.class, QueryTimeoutException.class, LockTimeoutException.class ) );
     return map;
   }
@@ -171,29 +172,22 @@ public class PersistenceExceptions {
     INSTANCE;
     @Override
     public ErrorCategory apply( final Throwable input ) {
-      final SortedSet<ErrorCategory> results = Sets.newTreeSet( );
       for ( final Class<?> p : Classes.classAncestors( input ) ) {
         for ( final ErrorCategory category : ErrorCategory.values( ) ) {
           if ( errorCategorization.get( category ).contains( p ) ) {
-            if ( category.isRecoverable( ) ) {
-              return category;
-            } else {
-              results.add( category );
-            }
+            return category;
           }
         }
       }
-      if ( results.isEmpty( ) ) {
-        return ErrorCategory.APPLICATION;
-      } else {
-        return results.first( );
-      }
+      return ErrorCategory.APPLICATION;
     }
     
   }
 
   public static boolean isStaleUpdate( final Throwable throwable ) {
-    return Exceptions.isCausedBy( throwable, OptimisticLockException.class );
+    return 
+        Exceptions.isCausedBy( throwable, OptimisticLockException.class ) ||
+        Exceptions.isCausedBy( throwable, StaleObjectStateException.class );
   }
 
   public static boolean isLockError( final Throwable throwable ) {

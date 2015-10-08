@@ -7,9 +7,8 @@ from a specific host
 euserv\-migrate\-instances (\fB\-s\fR HOST | \fB\-i\fR INSTANCE)
 .TP
 [\-\-include\-dest HOST | \fB\-\-exclude\-dest\fR HOST]
-[\-\-stop\-source] [\-U URL]
-[\-\-region USER@REGION] [\-I KEY_ID] [\-S KEY]
-[\-\-security\-token TOKEN] [\-\-debug]
+[\-U URL] [\-\-region USER@REGION] [\-I KEY_ID]
+[\-S KEY] [\-\-security\-token TOKEN] [\-\-debug]
 [\-\-debugger] [\-\-version] [\-h]
 .SH DESCRIPTION
 Migrate one instance from its current host, or migrate all instances
@@ -29,10 +28,6 @@ more than once)
 \fB\-\-exclude\-dest\fR HOST
 allow migration to any host except a specific one (may
 be used more than once)
-.TP
-\fB\-\-stop\-source\fR
-also stop the source host to prevent new instances
-from running on it (requires \fB\-s\fR/\-\-source)
 .TP
 \fB\-U\fR URL, \fB\-\-url\fR URL
 compute service endpoint URL

@@ -1674,6 +1674,7 @@ int mido_unlink_host_port(midoname * host, midoname * port)
     rc = midonet_http_delete(url);
     if (rc) {
         ret = 1;
+        LOGERROR("Failed to unlink %s %s\n", host->name, port->name);
     }
     return (ret);
 }
@@ -1847,7 +1848,7 @@ int mido_update_resource(char *resource_type, char *content_type, char *vers, mi
         json_object_put(jobj);
         ret = mido_update_midoname(name);
     } else {
-        printf("ERROR: json_tokener_parse(...): returned NULL\n");
+        LOGERROR("ERROR: json_tokener_parse(...): returned NULL\n");
         ret = 1;
     }
 
@@ -1923,12 +1924,12 @@ int mido_print_resource(char *resource_type, midoname * name)
 
     jobj = json_tokener_parse(name->jsonbuf);
     if (!jobj) {
-        printf("ERROR: json_tokener_parse(...): returned NULL\n");
+        LOGERROR("ERROR: json_tokener_parse(...): returned NULL\n");
         ret = 1;
     } else {
-        printf("TYPE: %s NAME: %s UUID: %s\n", resource_type, SP(name->name), name->uuid);
+        LOGDEBUG("TYPE: %s NAME: %s UUID: %s\n", resource_type, SP(name->name), name->uuid);
         json_object_object_foreach(jobj, key, val) {
-            printf("\t%s: %s\n", key, SP(json_object_get_string(val)));
+            LOGDEBUG("\t%s: %s\n", key, SP(json_object_get_string(val)));
         }
         json_object_put(jobj);
     }
@@ -1961,7 +1962,7 @@ char *mido_jsonize(char *tenant, va_list * al)
 
     jobj = json_object_new_object();
     if (!jobj) {
-        printf("ERROR: json_object_new_object(...): returned NULL\n");
+        LOGERROR("ERROR: json_object_new_object(...): returned NULL\n");
         payload = NULL;
     } else {
         if (tenant) {
@@ -2594,7 +2595,7 @@ static size_t mem_reader(void *contents, size_t size, size_t nmemb, void *in_par
     }
 
     if (!contents) {
-        printf("ERROR: no mem to write into\n");
+        LOGERROR("ERROR: no mem to write into\n");
         params->size = 0;
         return (0);
     }
@@ -2657,7 +2658,7 @@ int midonet_http_get(char *url, char *apistr, char **out_payload)
 
     curlret = curl_easy_perform(curl);
     if (curlret != CURLE_OK) {
-        printf("ERROR: curl_easy_perform(): %s\n", curl_easy_strerror(curlret));
+        LOGERROR("ERROR: curl_easy_perform(): %s\n", curl_easy_strerror(curlret));
         ret = 1;
     }
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcode);
@@ -2675,7 +2676,7 @@ int midonet_http_get(char *url, char *apistr, char **out_payload)
             *out_payload = calloc(mem_writer_params.size + 1, sizeof(char));
             memcpy(*out_payload, mem_writer_params.mem, mem_writer_params.size + 1);
         } else {
-            printf("ERROR: no data to return after successful curl operation\n");
+            LOGERROR("ERROR: no data to return after successful curl operation\n");
             ret = 1;
         }
     }
@@ -2742,7 +2743,7 @@ int midonet_http_put(char *url, char *resource_type, char *vers, char *payload)
     LOGTRACE("PUT PAYLOAD: %s\n", SP(payload));
     curlret = curl_easy_perform(curl);
     if (curlret != CURLE_OK) {
-        printf("ERROR: curl_easy_perform(): %s\n", curl_easy_strerror(curlret));
+        LOGERROR("ERROR: curl_easy_perform(): %s\n", curl_easy_strerror(curlret));
         ret = 1;
     }
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcode);
@@ -2853,7 +2854,7 @@ int midonet_http_post(char *url, char *resource_type, char *vers, char *payload,
 
     curlret = curl_easy_perform(curl);
     if (curlret != CURLE_OK) {
-        printf("ERROR: curl_easy_perform(): %s\n", curl_easy_strerror(curlret));
+        LOGERROR("ERROR: curl_easy_perform(): %s\n", curl_easy_strerror(curlret));
         ret = 1;
     }
 
@@ -2903,7 +2904,7 @@ int midonet_http_delete(char *url)
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
     curlret = curl_easy_perform(curl);
     if (curlret != CURLE_OK) {
-        printf("ERROR: curl_easy_perform(): %s\n", curl_easy_strerror(curlret));
+        LOGERROR("ERROR: curl_easy_perform(): %s\n", curl_easy_strerror(curlret));
         ret = 1;
     }
     curl_easy_cleanup(curl);
@@ -3455,7 +3456,7 @@ int mido_get_hosts(midoname ** outnames, int *outnames_max)
 
         jobj = json_tokener_parse(payload);
         if (!jobj) {
-            printf("NOU\n");
+            LOGERROR("NOU\n");
         } else {
             if (json_object_is_type(jobj, json_type_array)) {
                 //                printf("HMM: %s, %d\n", json_object_to_json_string(jobj), json_object_array_length(jobj));

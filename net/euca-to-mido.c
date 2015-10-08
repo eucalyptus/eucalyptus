@@ -1008,7 +1008,10 @@ int do_midonet_update_pass2(globalNetworkInfo * gni, mido_config * mido) {
                     }
                     if (!found) {
                         LOGDEBUG("pass2: mido VPC SECGROUP %s member public IP %s in global: N\n", vpcsecgroup->name, pubip_mido);
-                        mido_delete_ipaddrgroup_ip(&(vpcsecgroup->midos[VPCSG_IAGPUB]), &(pubips[k]));
+                        rc = mido_delete_ipaddrgroup_ip(&(vpcsecgroup->midos[VPCSG_IAGPUB]), &(pubips[k]));
+                        if (rc) {
+                            LOGWARN("Failed to remove %s from ip address group %s\n", pubips[k].name, vpcsecgroup->midos[VPCSG_IAGPUB].name);
+                        }
                     }
                 }
                 
@@ -1032,7 +1035,10 @@ int do_midonet_update_pass2(globalNetworkInfo * gni, mido_config * mido) {
                             LOGDEBUG("pass2: mido VPC SECGROUP %s member private IP %s is a VPC subnet+2 address.\n", vpcsecgroup->name, privip_mido);
                         } else {
                             LOGDEBUG("pass2: mido VPC SECGROUP %s member private IP %s in global: N\n", vpcsecgroup->name, privip_mido);
-                            mido_delete_ipaddrgroup_ip(&(vpcsecgroup->midos[VPCSG_IAGPRIV]), &(privips[k]));
+                            rc = mido_delete_ipaddrgroup_ip(&(vpcsecgroup->midos[VPCSG_IAGPRIV]), &(privips[k]));
+                            if (rc) {
+                                LOGWARN("Failed to remove %s from ip address group %s\n", privips[k].name, vpcsecgroup->midos[VPCSG_IAGPRIV].name);
+                            }
                         }
                     }
                 }
@@ -1062,10 +1068,13 @@ int do_midonet_update_pass2(globalNetworkInfo * gni, mido_config * mido) {
                     }
                     if (!found) {
                         LOGDEBUG("pass2: mido VPC SECGROUP %s member all IP %s in global: N\n", vpcsecgroup->name, allip_mido);
-                        mido_delete_ipaddrgroup_ip(&(vpcsecgroup->midos[VPCSG_IAGALL]), &(allips[k]));
+                        rc = mido_delete_ipaddrgroup_ip(&(vpcsecgroup->midos[VPCSG_IAGALL]), &(allips[k]));
+                        if (rc) {
+                            LOGWARN("Failed to remove %s from ip address group %s\n", allips[k].name, vpcsecgroup->midos[VPCSG_IAGALL].name);
+                        }
                     }
                 }
-                    
+                
                 EUCA_FREE(secgroupinstances);
                 mido_free_midoname_list(pubips, max_pubips);
                 EUCA_FREE(pubips);
@@ -2109,6 +2118,7 @@ int find_mido_vpc_instance(mido_vpc_subnet * vpcsubnet, char *instancename, mido
 
     *outvpcinstance = NULL;
     for (i = 0; i < vpcsubnet->max_instances; i++) {
+        LOGDEBUG("Is (mido) %s == (gni) %s\n", vpcsubnet->instances[i].name, instancename);
         if (!strcmp(instancename, vpcsubnet->instances[i].name)) {
             *outvpcinstance = &(vpcsubnet->instances[i]);
             return (0);
@@ -2405,11 +2415,26 @@ int delete_mido_vpc_secgroup(mido_vpc_secgroup * vpcsecgroup)
     }
 
     rc = mido_delete_chain(&(vpcsecgroup->midos[VPCSG_INGRESS]));
+    if (rc) {
+        LOGWARN("Failed to delete chain %s\n", vpcsecgroup->midos[VPCSG_INGRESS].name);
+    }
     rc = mido_delete_chain(&(vpcsecgroup->midos[VPCSG_EGRESS]));
+    if (rc) {
+        LOGWARN("Failed to delete chain %s\n", vpcsecgroup->midos[VPCSG_EGRESS].name);
+    }
 
     rc = mido_delete_ipaddrgroup(&(vpcsecgroup->midos[VPCSG_IAGPRIV]));
+    if (rc) {
+        LOGWARN("Failed to delete ipaddrgroup %s\n", vpcsecgroup->midos[VPCSG_IAGPRIV].name);
+    }
     rc = mido_delete_ipaddrgroup(&(vpcsecgroup->midos[VPCSG_IAGPUB]));
+    if (rc) {
+        LOGWARN("Failed to delete ipaddrgroup %s\n", vpcsecgroup->midos[VPCSG_IAGPUB].name);
+    }
     rc = mido_delete_ipaddrgroup(&(vpcsecgroup->midos[VPCSG_IAGALL]));
+    if (rc) {
+        LOGWARN("Failed to delete ipaddrgroup %s\n", vpcsecgroup->midos[VPCSG_IAGALL].name);
+    }
 
     free_mido_vpc_secgroup(vpcsecgroup);
 
@@ -2594,6 +2619,27 @@ int populate_mido_vpc_instance(mido_config * mido, mido_core * midocore, mido_vp
                     snprintf(matchStr, 64, "\"addressTo\": \"%s\"", ip);
                     if (targetIP && ip && strstr(targetIP, matchStr)) {
                         mido_copy_midoname(&(vpcinstance->midos[ELIP_PRE]), &(rules[j]));
+                    }
+                    if (targetIP) EUCA_FREE(targetIP);
+                    rc = mido_getel_midoname(&(rules[j]), "ipAddrGroupSrc", &targetIP);
+                    if (targetIP && strstr(targetIP, vpcinstance->midos[ELIP_POST_IPADDRGROUP].uuid)) {
+                        EUCA_FREE(targetIP);
+                        targetIP = NULL;
+                        rc = mido_getel_midoname(&(rules[j]), "ipAddrGroupDst", &targetIP);
+                        if (targetIP) {
+                            mido_copy_midoname(&(vpcinstance->midos[ELIP_POST_PRIV]), &(rules[j]));
+                }
+                    }
+                    if (targetIP) EUCA_FREE(targetIP);
+                }
+                mido_free_midoname_list(rules, max_rules);
+                EUCA_FREE(rules);
+                rc = mido_get_rules(&(vpc->midos[VPCRT_PREELIPCHAIN]), &rules, &max_rules);
+                for (j = 0; j < max_rules; j++) {
+                    rc = mido_getel_midoname(&(rules[j]), "natTargets", &targetIP);
+                    snprintf(matchStr, 64, "\"addressTo\": \"%s\"", ip);
+                    if (targetIP && ip && strstr(targetIP, matchStr)) {
+                        mido_copy_midoname(&(vpcinstance->midos[ELIP_PRE_PUB]), &(rules[j]));
                     }
                     if (targetIP) EUCA_FREE(targetIP);
                 }

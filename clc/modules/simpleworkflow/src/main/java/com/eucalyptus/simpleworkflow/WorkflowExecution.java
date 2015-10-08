@@ -273,6 +273,8 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
     workflowExecution.setTaskList( taskList );
     workflowExecution.setDecisionStatus( DecisionStatus.Pending );
     workflowExecution.setState( ExecutionStatus.Open );
+    workflowExecution.setStateChangeStack( null );
+    workflowExecution.setLastState( null );
     return workflowExecution;
   }
 

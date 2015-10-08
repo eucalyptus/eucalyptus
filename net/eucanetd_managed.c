@@ -248,7 +248,7 @@ static int network_driver_implement_addressing(globalNetworkInfo * pGni, lni_t *
 //! @}
 
 //! @{
-//! @name Methods to check wether or not some of the APIs needs to be called
+//! @name Methods to check whether or not some of the APIs needs to be called
 static boolean managed_has_network_changed(globalNetworkInfo * pGni, lni_t * pLni);
 // @}
 
@@ -1271,6 +1271,14 @@ boolean managed_has_addressing_changed(globalNetworkInfo * pGni, lni_t * pLni)
 
         // Only install NAT rules if we have a valid public IP
         if (pInstances[i].publicIp) {
+            // Mark packets that requires SNAT
+            snprintf(sRule, MAX_RULE_LEN, "-A PREROUTING -s %s/%d -d %s/32 -j MARK --set-xmark 0x15/0xffffffff",
+                    psSubnetIp, slashnet, psPublicIp);
+            ret |= ((ipt_chain_find_rule(pLni->pIpTables, IPT_TABLE_NAT, IPT_CHAIN_PREROUTING, sRule) == NULL) ? 1 : 0);
+            snprintf(sRule, MAX_RULE_LEN, "-A OUTPUT -s %s/%d -d %s/32 -j MARK --set-xmark 0x15/0xffffffff",
+                    psSubnetIp, slashnet, psPublicIp);
+            ret |= ((ipt_chain_find_rule(pLni->pIpTables, IPT_TABLE_NAT, IPT_CHAIN_OUTPUT, sRule) == NULL) ? 1 : 0);
+
             // DNAT public to private on the pre-routing chain
             snprintf(sRule, MAX_RULE_LEN, "-A PREROUTING -d %s -j DNAT --to-destination %s", psPublicIp, psPrivateIp);
             ret |= ((ipt_chain_find_rule(pLni->pIpTables, IPT_TABLE_NAT, IPT_CHAIN_PREROUTING, sRule) == NULL) ? 1 : 0);
@@ -1281,6 +1289,9 @@ boolean managed_has_addressing_changed(globalNetworkInfo * pGni, lni_t * pLni)
 
             // SNAT private to public on the post-routing chain
             snprintf(sRule, MAX_RULE_LEN, "-I POSTROUTING -s %s/32 ! -d %s/%d -j SNAT --to-source %s", psPrivateIp, psSubnetIp, slashnet, psPublicIp);
+            ret |= ((ipt_chain_find_rule(pLni->pIpTables, IPT_TABLE_NAT, IPT_CHAIN_POSTROUTING, sRule) == NULL) ? 1 : 0);
+            snprintf(sRule, MAX_RULE_LEN, "-I POSTROUTING -s %s/32 -m mark --mark 0x15 -j SNAT --to-source %s",
+                    psPrivateIp, psPublicIp);
             ret |= ((ipt_chain_find_rule(pLni->pIpTables, IPT_TABLE_NAT, IPT_CHAIN_POSTROUTING, sRule) == NULL) ? 1 : 0);
 
             // SNAT for the instance itself
@@ -1686,6 +1697,14 @@ int managed_setup_addressing(globalNetworkInfo * pGni)
 
                     // Only install NAT rules if we have a valid public IP
                     if (pInstances[j].publicIp) {
+                        // Mark packets that requires SNAT
+                        snprintf(sRule, MAX_RULE_LEN, "-A PREROUTING -s %s/%d -d %s/32 -j MARK --set-xmark 0x15/0xffffffff",
+                                psSubnetIp, slashnet, psPublicIp);
+                        ipt_chain_add_rule(config->ipt, IPT_TABLE_NAT, IPT_CHAIN_PREROUTING, sRule);
+                        snprintf(sRule, MAX_RULE_LEN, "-A OUTPUT -s %s/%d -d %s/32 -j MARK --set-xmark 0x15/0xffffffff",
+                                psSubnetIp, slashnet, psPublicIp);
+                        ipt_chain_add_rule(config->ipt, IPT_TABLE_NAT, IPT_CHAIN_OUTPUT, sRule);
+
                         // DNAT public to private on the pre-routing chain
                         snprintf(sRule, MAX_RULE_LEN, "-A PREROUTING -d %s -j DNAT --to-destination %s", psPublicIp, psPrivateIp);
                         ipt_chain_add_rule(config->ipt, IPT_TABLE_NAT, IPT_CHAIN_PREROUTING, sRule);
@@ -1696,6 +1715,9 @@ int managed_setup_addressing(globalNetworkInfo * pGni)
 
                         // SNAT private to public on the post-routing chain
                         snprintf(sRule, MAX_RULE_LEN, "-I POSTROUTING -s %s/32 ! -d %s/%d -j SNAT --to-source %s", psPrivateIp, psSubnetIp, slashnet, psPublicIp);
+                        ipt_chain_add_rule(config->ipt, IPT_TABLE_NAT, IPT_CHAIN_POSTROUTING, sRule);
+                        snprintf(sRule, MAX_RULE_LEN, "-I POSTROUTING -s %s/32 -m mark --mark 0x15 -j SNAT --to-source %s",
+                                psPrivateIp, psPublicIp);
                         ipt_chain_add_rule(config->ipt, IPT_TABLE_NAT, IPT_CHAIN_POSTROUTING, sRule);
 
                         // SNAT for the instance itself
@@ -2077,7 +2099,7 @@ int managed_initialize_tunnels(eucanetdConfig * pConfig)
     }
     // Is vtund present?
     if (check_path(VTUND_PATH)) {
-        LOGERROR("Fail to initialize tunneling. Tuneling application '%s' not found. Check installed packages.\n", VTUND_PATH);
+        LOGERROR("Fail to initialize tunneling. Tunneling application '%s' not found. Check installed packages.\n", VTUND_PATH);
         return (1);
     }
     // Do we know our local IP address?
@@ -2088,7 +2110,7 @@ int managed_initialize_tunnels(eucanetdConfig * pConfig)
     // Check that the tunnel password is present
     snprintf(sFileName, EUCA_MAX_PATH, VTUND_PASSWORD_PATH, pConfig->eucahome);
     if (check_file(sFileName)) {
-        LOGERROR("Fail to initalize tunneling. Cannot locate tunnel password file '%s'.\n", sFileName);
+        LOGERROR("Fail to initialize tunneling. Cannot locate tunnel password file '%s'.\n", sFileName);
         return (1);
     }
     // Can we get the password?
@@ -2102,7 +2124,7 @@ int managed_initialize_tunnels(eucanetdConfig * pConfig)
 
     snprintf(sFileName, EUCA_MAX_PATH, VTUND_TEMPLATE_CONFIG_PATH, pConfig->eucahome);
     if ((psTemplate = file2str(sFileName)) == NULL) {
-        LOGERROR("Fail to intialize tunneling. Cannot retrieve tunnel template configuration from '%s'.\n", sFileName);
+        LOGERROR("Fail to initialize tunneling. Cannot retrieve tunnel template configuration from '%s'.\n", sFileName);
         EUCA_FREE(psPassword);
         return (1);
     }

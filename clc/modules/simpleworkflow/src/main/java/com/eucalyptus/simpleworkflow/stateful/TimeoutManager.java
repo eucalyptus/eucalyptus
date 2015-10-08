@@ -27,6 +27,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
@@ -100,37 +101,53 @@ public class TimeoutManager {
             timer.getOwnerAccountNumber( ),
             timer.getDomainUuid( ),
             timer.getWorkflowRunId( ) ) ) {
-          timers.withRetries( ).updateByExample(
-              timer,
+          workflowExecutions.withRetries( ).updateByExample(
+              WorkflowExecution.exampleWithName( timer.getOwner( ), timer.getWorkflowRunId( ) ),
               timer.getOwner( ),
-              timer.getDisplayName( ),
-              new Function<Timer, Void>( ) {
-            @Override
-            public Void apply( final Timer timer ) {
-              final WorkflowExecution workflowExecution = timer.getWorkflowExecution( );
-              workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
-                  workflowExecution,
-                  new TimerFiredEventAttributes( )
-                      .withStartedEventId( timer.getStartedEventId( ) )
-                      .withTimerId( timer.getDisplayName( ) )
-              ) );
-              if ( workflowExecution.getDecisionStatus() != Pending ) {
-                workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
-                    workflowExecution,
-                    new DecisionTaskScheduledEventAttributes( )
-                        .withTaskList( new TaskList( ).withName( workflowExecution.getTaskList( ) ) )
-                        .withStartToCloseTimeout( String.valueOf( workflowExecution.getTaskStartToCloseTimeout( ) ) )
-                ) );
-                if ( workflowExecution.getDecisionStatus() == Idle ) {
-                  workflowExecution.setDecisionStatus( Pending );
-                  workflowExecution.setDecisionTimestamp( new Date( ) );
-                  addToNotifyLists( taskLists, workflowExecution );
+              timer.getWorkflowRunId( ),
+              new Function<WorkflowExecution, Void>( ){
+                @Nullable
+                @Override
+                public Void apply( final WorkflowExecution workflowExecution ) {
+                  try {
+                    timers.updateByExample(
+                        timer,
+                        timer.getOwner( ),
+                        timer.getDisplayName( ),
+                        new Function<Timer, Void>( ) {
+                          @Override
+                          public Void apply( final Timer timer ) {
+                            final WorkflowExecution workflowExecution = timer.getWorkflowExecution( );
+                            workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                                workflowExecution,
+                                new TimerFiredEventAttributes( )
+                                    .withStartedEventId( timer.getStartedEventId( ) )
+                                    .withTimerId( timer.getDisplayName( ) )
+                            ) );
+                            if ( workflowExecution.getDecisionStatus() != Pending ) {
+                              workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                                  workflowExecution,
+                                  new DecisionTaskScheduledEventAttributes( )
+                                      .withTaskList( new TaskList( ).withName( workflowExecution.getTaskList( ) ) )
+                                      .withStartToCloseTimeout( String.valueOf( workflowExecution.getTaskStartToCloseTimeout( ) ) )
+                              ) );
+                              if ( workflowExecution.getDecisionStatus() == Idle ) {
+                                workflowExecution.setDecisionStatus( Pending );
+                                workflowExecution.setDecisionTimestamp( new Date( ) );
+                                addToNotifyLists( taskLists, workflowExecution );
+                              }
+                            }
+                            Entities.delete( timer );
+                            return null;
+                          }
+                        } );
+                  } catch ( SwfMetadataException e ) {
+                    throw Exceptions.toUndeclared( e );
+                  }
+                  return null;
                 }
               }
-              Entities.delete( timer );
-              return null;
-            }
-          } );
+          );
         }
       } catch ( SwfMetadataException e ) {
         if ( !handleException( e ) ) {

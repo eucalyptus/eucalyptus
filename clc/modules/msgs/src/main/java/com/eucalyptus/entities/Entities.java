@@ -98,9 +98,6 @@ import org.hibernate.ejb.EntityManagerFactoryImpl;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.exception.LockAcquisitionException;
-import org.hibernate.jdbc.Work;
-import org.hibernate.metadata.ClassMetadata;
-import org.hibernate.persister.entity.AbstractEntityPersister;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.sql.JoinType;
 import com.eucalyptus.bootstrap.Databases;
@@ -1362,6 +1359,8 @@ public class Entities {
             rootCause = Exceptions.findCause( ex, OptimisticLockException.class );
           } else if ( Exceptions.isCausedBy( ex, LockAcquisitionException.class ) ) {
             rootCause = Exceptions.findCause( ex, LockAcquisitionException.class );
+          } else if ( Exceptions.isCausedBy( ex, StaleObjectStateException.class ) ) {
+            rootCause = Exceptions.findCause( ex, StaleObjectStateException.class );
           } else if ( Exceptions.isCausedBy( ex, RetryTransactionException.class ) ) {
             rootCause = Exceptions.findCause( ex, RetryTransactionException.class );
             for ( final Class<?> entityClass : ((RetryTransactionException)rootCause).getEntitiesToEvict( ) ) {
