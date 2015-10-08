@@ -765,3 +765,23 @@ int euca_tokenizer(char *list, char *delim, char *tokens[], int nbTokens)
     EUCA_FREE(dupList);
     return (count);
 }
+
+char *euca_gettok(char *haystack, char *needle) {
+    char *ret = NULL;
+    char *ptr=NULL, *endptr=NULL, *tmpbuf=NULL;
+
+    ptr = strstr(haystack, needle);
+    if (ptr) {
+        tmpbuf = strdup(ptr);
+        ptr = tmpbuf;
+        ptr += strlen(needle);
+        endptr = strstr(ptr, "\"");
+        if (endptr) {
+            *endptr='\0';
+            ret = strdup(ptr);
+        }
+        free(tmpbuf);
+    }
+
+    return(ret);
+}

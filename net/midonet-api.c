@@ -1384,6 +1384,8 @@ int mido_create_rule(midoname * chain, midoname * outname, int * next_position, 
                 if (outname) {
                     mido_copy_midoname(outname, &(rules[i]));
                 }
+                LOGDEBUG("HELLO: rule found: %s\n", rules[i].jsonbuf);
+
                 found = 1;
             }
         }

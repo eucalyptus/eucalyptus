@@ -140,6 +140,7 @@ int euca_machexcmp(const char *psMac, u8 aMac[6]);
 //! @}
 
 int euca_tokenizer(char *list, char *delim, char *tokens[], int nbTokens);
+char *euca_gettok(char *haystack, char *needle);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
