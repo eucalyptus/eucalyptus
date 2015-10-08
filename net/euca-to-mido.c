@@ -3442,6 +3442,7 @@ int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mid
     rc = mido_create_ipaddrgroup_ip(&(vpcinstance->midos[ELIP_POST_IPADDRGROUP]), ipAddr_priv, &(vpcinstance->midos[ELIP_POST_IPADDRGROUP_IP]));
     if (rc) {
     }
+
     midoname *rules = NULL;
     int max_rules = 0;
     char s_max_rules[6];
@@ -3463,6 +3464,11 @@ int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mid
                           "flowAction", "continue", "ipAddrGroupSrc", vpcinstance->midos[ELIP_POST_IPADDRGROUP].uuid, "natTargets", "jsonlist", "natTargets:addressTo", ipAddr_pub,
                           "natTargets:addressFrom", ipAddr_pub, "natTargets:portFrom", "0", "natTargets:portTo", "0", "natTargets:END", "END", NULL);
 */
+
+    rc = mido_create_rule(&(vpc->midos[VPCRT_POSTCHAIN]), &(vpcinstance->midos[ELIP_POST]), NULL, "type", "snat", "nwDstAddress", pt_buf, "invNwDst", "true", "nwDstLength", "32",
+                          "flowAction", "continue", "ipAddrGroupSrc", vpcinstance->midos[ELIP_POST_IPADDRGROUP].uuid, "natTargets", "jsonlist", "natTargets:addressTo", ipAddr_pub,
+                          "natTargets:addressFrom", ipAddr_pub, "natTargets:portFrom", "0", "natTargets:portTo", "0", "natTargets:END", "END", NULL);
+
     // perform SNAT
     // Put the rule at the last position
     rules = NULL;
@@ -3472,9 +3478,12 @@ int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mid
         LOGDEBUG("Chain %s has %d rules.\n", vpc->midos[VPCRT_POSTCHAIN].name, max_rules);
     }
     snprintf(s_max_rules, 6, "%d", max_rules + 1);
+    /* dan here
     rc = mido_create_rule(&(vpc->midos[VPCRT_POSTCHAIN]), &(vpcinstance->midos[ELIP_POST]), NULL, "type", "snat", "position", s_max_rules,
                           "flowAction", "continue", "ipAddrGroupSrc", vpcinstance->midos[ELIP_POST_IPADDRGROUP].uuid, "natTargets", "jsonlist", "natTargets:addressTo", ipAddr_pub,
                           "natTargets:addressFrom", ipAddr_pub, "natTargets:portFrom", "0", "natTargets:portTo", "0", "natTargets:END", "END", NULL);
+    */
+
     // Find security group associated with the instance.
     int i = 0;
     mido_vpc_secgroup *vpcsecgroup = NULL;
@@ -3484,8 +3493,10 @@ int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mid
         if (vpcsecgroup) {
             LOGDEBUG("Found SG %s for instance %s\n", vpcsecgroup->name, vpcinstance->name);
             // SNAT - exclude subnets plustwo addresses and private addresses of instances in the same security group (enable vm-vm private communication)
+            /* dan here
             rc = mido_create_rule(&(vpc->midos[VPCRT_POSTCHAIN]), &(vpcinstance->midos[ELIP_POST_PRIV]), NULL, "type", "accept",
                     "ipAddrGroupSrc", vpcinstance->midos[ELIP_POST_IPADDRGROUP].uuid, "ipAddrGroupDst", vpcsecgroup->midos[VPCSG_IAGPRIV].uuid, NULL);
+            */
             // Would like the following rule, but midonet-cli fails to list rules if inverse ip-address-group matching is used.
             // Wait until midokura solves this. For now, use 2 rules to address EUCA-11328.
             // Once in place, vpcinstance->midos[ELIP_POST_PRIV] entry should be removed.
@@ -3495,11 +3506,14 @@ int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mid
                     "natTargets:addressFrom", ipAddr_pub, "natTargets:portFrom", "0", "natTargets:portTo", "0", "natTargets:END", "END", NULL);
 */
             // SNAT - if destination is a public IP address within SG, perform SNAT early to support vm-vm public communication
+
+            /* dan here
             rc = mido_create_rule(&(vpc->midos[VPCRT_PREELIPCHAIN]), &(vpcinstance->midos[ELIP_PRE_PUB]), NULL,
                     "type", "snat", "flowAction", "continue", "ipAddrGroupDst", vpcsecgroup->midos[VPCSG_IAGPUB].uuid,
                     "ipAddrGroupSrc", vpcinstance->midos[ELIP_POST_IPADDRGROUP].uuid, "natTargets", "jsonlist",
                     "natTargets:addressTo", ipAddr_pub, "natTargets:addressFrom", ipAddr_pub,
                     "natTargets:portFrom", "0", "natTargets:portTo", "0", "natTargets:END", "END", NULL);
+            */
             break;
         }
     }
