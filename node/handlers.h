@@ -373,6 +373,7 @@ int disconnect_ebs(struct nc_state_t *nc, char *instanceId, char *volumeId, char
 void set_serial_and_bus(const char *vol, const char *dev, char *serial, int serial_len, char *bus, int bus_len);
 
 int instance_network_gate(ncInstance *instance, time_t timeout_seconds);
+char *gettok(char *haystack, char *needle);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

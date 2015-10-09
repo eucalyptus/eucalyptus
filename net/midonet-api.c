@@ -526,13 +526,14 @@ int mido_create_portgroup(char *tenant, char *name, midoname *outname) {
 
     bzero(&myname, sizeof(midoname));
     myname.tenant = strdup(tenant);
+    myname.name = strdup(name);
     myname.resource_type = strdup("port_groups");
     myname.content_type = strdup("PortGroup");
     myname.vers = strdup("v1");
 
     found = 0;
     if (!found) {
-        rc = mido_create_resource(NULL, 0, &myname, outname, "name", name, "stateful", "true", NULL);
+        rc = mido_create_resource(NULL, 0, &myname, outname, "name", myname.name, "stateful", "true", NULL);
     } else {
         rc = 0;
     }
@@ -637,12 +638,13 @@ int mido_create_ipaddrgroup(char *tenant, char *name, midoname * outname)
 
     bzero(&myname, sizeof(midoname));
     myname.tenant = strdup(tenant);
+    myname.name = strdup(name);
     myname.resource_type = strdup("ip_addr_groups");
     myname.content_type = strdup("IpAddrGroup");
 
     found=0;
     if (!found) {
-        rc = mido_create_resource(NULL, 0, &myname, outname, "name", name, NULL);
+        rc = mido_create_resource(NULL, 0, &myname, outname, "name", myname.name, NULL);
     } else {
         rc = 0;
     }
@@ -1384,6 +1386,8 @@ int mido_create_rule(midoname * chain, midoname * outname, int * next_position, 
                 if (outname) {
                     mido_copy_midoname(outname, &(rules[i]));
                 }
+                LOGDEBUG("HELLO: rule found: %s\n", rules[i].jsonbuf);
+
                 found = 1;
             }
         }

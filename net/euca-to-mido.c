@@ -1346,7 +1346,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                     if (1) {
                         gni_secgroup *gnisecgroups = NULL;
                         int max_gnisecgroups, rulepos = 1, sgrulepos = 1;
-                        char tmp_name1[32], tmp_name2[32], tmp_name3[32], tmp_name4[32];
+                        char tmp_name1[32], tmp_name2[32], tmp_name3[32], tmp_name4[32], *instMac=NULL, *instIp=NULL;
 
                         subnet_buf[0] = slashnet_buf[0] = gw_buf[0] = '\0';
                         cidr_split(vpcsubnet->gniSubnet->cidr, subnet_buf, slashnet_buf, gw_buf, pt_buf);
@@ -1354,6 +1354,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                         // for egress
                         rulepos = 1;
 
+                        // allow DHCP
                         snprintf(tmp_name3, 32, "%d", rulepos);
                         rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, &rulepos, "position", tmp_name3, "type", "dnat", "flowAction", "continue", "ipAddrGroupDst",
                                               mido->midocore->midos[METADATA_IPADDRGROUP].uuid, "nwProto", "6", "tpDst", "jsonjson", "tpDst:start", "80", "tpDst:end", "80",
@@ -1369,11 +1370,55 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                         } else {
                         }
 
+                        /*
+                        snprintf(tmp_name3, 32, "%d", rulepos);
+                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, &rulepos, "position", tmp_name3, "type", "accept", "nwProto", "17", "tpDst", "jsonjson", "tpDst:start", "67", "tpDst:end", "68", "tpDst:END", "END", NULL);
+                        if (rc) {
+                        } else {
+                        }
+                        snprintf(tmp_name3, 32, "%d", rulepos);
+                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, &rulepos, "position", tmp_name3, "type", "accept", "nwProto", "17", "tpSrc", "jsonjson", "tpSrc:start", "67", "tpSrc:end", "68", "tpSrc:END", "END", NULL);
+                        if (rc) {
+                        } else {
+                        }
+
+                        snprintf(tmp_name3, 32, "%d", rulepos);
+                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, &rulepos, "position", tmp_name3, "type", "accept", "nwProto", "6", "tpDst", "jsonjson", "tpDst:start", "67", "tpDst:end", "68", "tpDst:END", "END", NULL);
+                        if (rc) {
+                        } else {
+                        }
+                        snprintf(tmp_name3, 32, "%d", rulepos);
+                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, &rulepos, "position", tmp_name3, "type", "accept", "nwProto", "6", "tpSrc", "jsonjson", "tpSrc:start", "67", "tpSrc:end", "68", "tpSrc:END", "END", NULL);
+                        if (rc) {
+                        } else {
+                        }
+                        */
+
                         snprintf(tmp_name3, 32, "%d", rulepos);
                         rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, &rulepos, "position", tmp_name3, "type", "accept", "nwDstAddress", pt_buf, "nwDstLength", "32", NULL);
                         if (rc) {
                         } else {
                         }
+
+                        // block any source mac that isn't the registered instance mac
+                        hex2mac(gniinstance->macAddress, &instMac);
+                        snprintf(tmp_name3, 32, "%d", rulepos);
+                        //                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, &rulepos, "position", tmp_name3, "type", "drop", "dlSrc", instMac, "invDlSrc", "true", "inPorts", "jsonarr", "inPorts:", vpcinstance->midos[VPCBR_VMPORT].uuid, "inPorts:END", "END", NULL);
+                        //                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, &rulepos, "position", tmp_name3, "type", "drop", "dlSrc", instMac, "invDlSrc", "true", NULL);
+                        if (rc) {
+                        } else {
+                        }
+                        EUCA_FREE(instMac);
+
+                        // block any source IP that isn't the registered instance IP
+                        instIp = hex2dot(gniinstance->privateIp);
+                        snprintf(tmp_name3, 32, "%d", rulepos);
+                        //                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, &rulepos, "position", tmp_name3, "type", "drop", "nwSrcAddress", instIp, "nwSrcLength", "32", "invNwSrc", "true", "inPorts", "jsonarr", "inPorts:", vpcinstance->midos[VPCBR_VMPORT].uuid, "inPorts:END", "END", NULL);
+                        //                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, &rulepos, "position", tmp_name3, "type", "drop", "nwProto", "6", "nwSrcAddress", instIp, "nwSrcLength", "32", "invNwSrc", "true", NULL);
+                        if (rc) {
+                        } else {
+                        }
+                        EUCA_FREE(instIp);
 
                         rc = gni_instance_get_secgroups(gni, gniinstance, NULL, 0, NULL, 0, &gnisecgroups, &max_gnisecgroups);
                         for (j = 0; j < max_gnisecgroups; j++) {
@@ -3397,6 +3442,7 @@ int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mid
     rc = mido_create_ipaddrgroup_ip(&(vpcinstance->midos[ELIP_POST_IPADDRGROUP]), ipAddr_priv, &(vpcinstance->midos[ELIP_POST_IPADDRGROUP_IP]));
     if (rc) {
     }
+
     midoname *rules = NULL;
     int max_rules = 0;
     char s_max_rules[6];
@@ -3418,6 +3464,11 @@ int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mid
                           "flowAction", "continue", "ipAddrGroupSrc", vpcinstance->midos[ELIP_POST_IPADDRGROUP].uuid, "natTargets", "jsonlist", "natTargets:addressTo", ipAddr_pub,
                           "natTargets:addressFrom", ipAddr_pub, "natTargets:portFrom", "0", "natTargets:portTo", "0", "natTargets:END", "END", NULL);
 */
+
+    rc = mido_create_rule(&(vpc->midos[VPCRT_POSTCHAIN]), &(vpcinstance->midos[ELIP_POST]), NULL, "type", "snat", "nwDstAddress", pt_buf, "invNwDst", "true", "nwDstLength", "32",
+                          "flowAction", "continue", "ipAddrGroupSrc", vpcinstance->midos[ELIP_POST_IPADDRGROUP].uuid, "natTargets", "jsonlist", "natTargets:addressTo", ipAddr_pub,
+                          "natTargets:addressFrom", ipAddr_pub, "natTargets:portFrom", "0", "natTargets:portTo", "0", "natTargets:END", "END", NULL);
+
     // perform SNAT
     // Put the rule at the last position
     rules = NULL;
@@ -3427,9 +3478,12 @@ int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mid
         LOGDEBUG("Chain %s has %d rules.\n", vpc->midos[VPCRT_POSTCHAIN].name, max_rules);
     }
     snprintf(s_max_rules, 6, "%d", max_rules + 1);
+    /* dan here
     rc = mido_create_rule(&(vpc->midos[VPCRT_POSTCHAIN]), &(vpcinstance->midos[ELIP_POST]), NULL, "type", "snat", "position", s_max_rules,
                           "flowAction", "continue", "ipAddrGroupSrc", vpcinstance->midos[ELIP_POST_IPADDRGROUP].uuid, "natTargets", "jsonlist", "natTargets:addressTo", ipAddr_pub,
                           "natTargets:addressFrom", ipAddr_pub, "natTargets:portFrom", "0", "natTargets:portTo", "0", "natTargets:END", "END", NULL);
+    */
+
     // Find security group associated with the instance.
     int i = 0;
     mido_vpc_secgroup *vpcsecgroup = NULL;
@@ -3439,8 +3493,10 @@ int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mid
         if (vpcsecgroup) {
             LOGDEBUG("Found SG %s for instance %s\n", vpcsecgroup->name, vpcinstance->name);
             // SNAT - exclude subnets plustwo addresses and private addresses of instances in the same security group (enable vm-vm private communication)
+            /* dan here
             rc = mido_create_rule(&(vpc->midos[VPCRT_POSTCHAIN]), &(vpcinstance->midos[ELIP_POST_PRIV]), NULL, "type", "accept",
                     "ipAddrGroupSrc", vpcinstance->midos[ELIP_POST_IPADDRGROUP].uuid, "ipAddrGroupDst", vpcsecgroup->midos[VPCSG_IAGPRIV].uuid, NULL);
+            */
             // Would like the following rule, but midonet-cli fails to list rules if inverse ip-address-group matching is used.
             // Wait until midokura solves this. For now, use 2 rules to address EUCA-11328.
             // Once in place, vpcinstance->midos[ELIP_POST_PRIV] entry should be removed.
@@ -3450,11 +3506,14 @@ int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mid
                     "natTargets:addressFrom", ipAddr_pub, "natTargets:portFrom", "0", "natTargets:portTo", "0", "natTargets:END", "END", NULL);
 */
             // SNAT - if destination is a public IP address within SG, perform SNAT early to support vm-vm public communication
+
+            /* dan here
             rc = mido_create_rule(&(vpc->midos[VPCRT_PREELIPCHAIN]), &(vpcinstance->midos[ELIP_PRE_PUB]), NULL,
                     "type", "snat", "flowAction", "continue", "ipAddrGroupDst", vpcsecgroup->midos[VPCSG_IAGPUB].uuid,
                     "ipAddrGroupSrc", vpcinstance->midos[ELIP_POST_IPADDRGROUP].uuid, "natTargets", "jsonlist",
                     "natTargets:addressTo", ipAddr_pub, "natTargets:addressFrom", ipAddr_pub,
                     "natTargets:portFrom", "0", "natTargets:portTo", "0", "natTargets:END", "END", NULL);
+            */
             break;
         }
     }

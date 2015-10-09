@@ -3855,6 +3855,42 @@ int instance_network_gate(ncInstance *instance, time_t timeout_seconds) {
             }
             EUCA_FREE(filebuf);
         } else if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_VPCMIDO)) {
+            char *fileBuf = NULL, *vers=NULL, *appvers=NULL, *startBuf=NULL;
+            char xmlfile[EUCA_MAX_PATH] = "";
+
+            snprintf(xmlfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/global_network_info.xml", nc_state.home);
+
+            fileBuf = file2str(xmlfile);
+            if (fileBuf) startBuf = strstr(fileBuf, "network-data");
+            
+            if (startBuf) {
+                vers = euca_gettok(startBuf, "version=\"");
+                appvers = euca_gettok(startBuf, "applied-version=\"");
+                
+                if (vers && appvers && !strcmp(vers, appvers)) {
+                    LOGDEBUG("[%s] version (%s) and applied version (%s) match\n", instance->instanceId, vers, appvers);
+                    
+                    if (strstr(fileBuf, instance->instanceId)) {
+                        LOGDEBUG("[%s] global network config contains required instance record\n", SP(instance->instanceId));
+                        EUCA_FREE(vers);
+                        EUCA_FREE(appvers);
+                        EUCA_FREE(fileBuf);
+                        return(0);
+                    } else {
+                        LOGTRACE("[%s] global network config does not (yet) contain required instance record, waiting...(%d seconds remaining)\n", SP(instance->instanceId), (int)(max_time - time(NULL)));
+                    }
+                } else {
+                    LOGDEBUG("[%s] version (%s) and applied version (%s) do not match (yet), waiting\n", instance->instanceId, vers, appvers);
+                }
+                
+                EUCA_FREE(vers);
+                EUCA_FREE(appvers);
+            } else {
+                LOGDEBUG("[%s] cannot read valid global network view file '%s' (yet), waiting\n", instance->instanceId, xmlfile);
+            }
+            EUCA_FREE(fileBuf);
+            
+            /*
             globalNetworkInfo *gni = NULL;
             gni_hostname_info *host_info = NULL;
             char xmlfile[EUCA_MAX_PATH] = "";
@@ -3865,6 +3901,7 @@ int instance_network_gate(ncInstance *instance, time_t timeout_seconds) {
             if (gni && host_info) {
                 // decode/read/parse the globalnetworkinfo, assign any incorrect public/private IP mappings based on global view
                 snprintf(xmlfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/global_network_info.xml", nc_state.home);
+
                 rc = gni_populate(gni,host_info,xmlfile);
                 if (rc) {
                     // error
@@ -3894,6 +3931,7 @@ int instance_network_gate(ncInstance *instance, time_t timeout_seconds) {
             // Free up gni and host_info memory
             rc = gni_free(gni);
             rc = gni_hostnames_free(host_info);
+            */
         } else {
             return(0);
         }
