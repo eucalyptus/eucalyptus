@@ -425,7 +425,7 @@ public class UserPrincipalImpl implements UserPrincipal {
     sequences.add( String.valueOf( userPrincipal.isSystemAdmin( ) ) );
     sequences.add( String.valueOf( userPrincipal.isSystemUser( ) ) );
     for ( final AccessKey key : userPrincipal.getKeys( ) ) {
-      sequences.add( key.getAccessKey( ) );
+      sequences.add( String.valueOf( key.getAccessKey( ) ) );
       sequences.add( String.valueOf( key.isActive( ) ) );
     }
     for ( final Certificate certificate : userPrincipal.getCertificates( ) ) {
