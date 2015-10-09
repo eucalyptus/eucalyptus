@@ -203,9 +203,12 @@ public abstract class AbstractPersistentSupport<RT extends RestrictedType, AP ex
 
   public boolean delete( final RT metadata, final Predicate<? super AP> precondition ) throws PE {
     try {
+      final String accountNumber = metadata instanceof RestrictedType.AccountRestrictedType ?
+          ( (RestrictedType.AccountRestrictedType) metadata ).getOwnerAccountNumber( ) :
+          metadata.getOwner( ).getAccountNumber( );
       return Transactions.delete(
           exampleWithName(
-              AccountFullName.getInstance( metadata.getOwner( ).getAccountNumber( ) ),
+              AccountFullName.getInstance( accountNumber ),
               metadata.getDisplayName( ) ),
           precondition );
     } catch ( NoSuchElementException e ) {
