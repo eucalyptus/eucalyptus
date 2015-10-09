@@ -935,11 +935,11 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 goto failed_dest;
             }
             // set up networking
-            char brname[32];
+            char brname[IF_NAME_LEN] = "";
             if (!strcmp(nc->pEucaNet->sMode, NETMODE_MANAGED)) {
-                snprintf(brname, 32, "%s", instance->groupIds[0]);
+                snprintf(brname, IF_NAME_LEN, "%s", instance->groupIds[0]);
             } else {
-                snprintf(brname, 32, "%s", nc->pEucaNet->sBridgeDevice);
+                snprintf(brname, IF_NAME_LEN, "%s", nc->pEucaNet->sBridgeDevice);
             }
             euca_strncpy(instance->params.guestNicDeviceName, brname, sizeof(instance->params.guestNicDeviceName));
             
