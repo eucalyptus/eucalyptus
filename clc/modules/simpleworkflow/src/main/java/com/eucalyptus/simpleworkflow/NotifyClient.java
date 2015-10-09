@@ -19,7 +19,12 @@
  ************************************************************************/
 package com.eucalyptus.simpleworkflow;
 
+import java.net.ConnectException;
 import java.util.concurrent.ExecutionException;
+
+import com.eucalyptus.util.async.ConnectionException;
+import com.eucalyptus.ws.WebServicesException;
+import com.google.common.base.Throwables;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.component.Topology;
@@ -146,9 +151,11 @@ public class NotifyClient {
       public void run( ) {
         try {
           final PollForNotificationResponseType response = dispatchFuture.get( );
-          consumer.accept( Objects.firstNonNull( response.getNotified(), false ) );
+          consumer.accept(Objects.firstNonNull(response.getNotified(), false));
         } catch ( final InterruptedException e ) {
           logger.info( "Interrupted while polling for task " + poll.getChannel( ), e );
+        } catch ( final ExecutionException e ) {
+          handleExecutionExceptionForPolling(e, poll);
         } catch ( final Exception e ) {
           logger.error( "Error polling for task " + poll.getChannel( ), e );
         } finally {
@@ -156,5 +163,26 @@ public class NotifyClient {
         }
       }
     } );
+  }
+
+  private static void handleExecutionExceptionForPolling(ExecutionException e, PollForNotificationType poll) {
+    Throwable cause = Throwables.getRootCause(e);
+    // The following errors occur when the CLC is down or rebooting.
+    // com.eucalyptus.ws.WebServicesException: Failed to marshall response:
+    // com.eucalyptus.util.async.ConnectionException: Channel was closed before the response was received.:PollForNotificationType
+    //java.net.ConnectException: Connection refused:
+    // At this point, we just wait a couple of seconds to allow the CLC to reboot.  It will probably take more than a couple of seconds,
+    // but this way we will also slow the rate of log error accrual, as otherwise this method is called again immediately.
+    if (cause instanceof WebServicesException || cause instanceof ConnectionException || cause instanceof ConnectException) {
+      logger.info("Error polling for task " + poll.getChannel() + ", CLC likely down.  Will sleep for 5 seconds");
+      logger.info(cause.getClass() + ":" + cause.getMessage());
+      try {
+        Thread.sleep(5000L);
+      } catch (InterruptedException e1) {
+        logger.info("Interrupted while polling for task " + poll.getChannel(), e1);
+      }
+    } else {
+      logger.error( "Error polling for task " + poll.getChannel( ), e );
+    }
   }
 }
