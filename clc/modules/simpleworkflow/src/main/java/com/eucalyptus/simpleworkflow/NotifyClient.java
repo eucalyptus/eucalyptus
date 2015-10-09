@@ -22,6 +22,7 @@ package com.eucalyptus.simpleworkflow;
 import java.net.ConnectException;
 import java.util.concurrent.ExecutionException;
 
+import com.ctc.wstx.exc.WstxEOFException;
 import com.eucalyptus.util.async.ConnectionException;
 import com.eucalyptus.ws.WebServicesException;
 import com.google.common.base.Throwables;
@@ -171,9 +172,10 @@ public class NotifyClient {
     // com.eucalyptus.ws.WebServicesException: Failed to marshall response:
     // com.eucalyptus.util.async.ConnectionException: Channel was closed before the response was received.:PollForNotificationType
     //java.net.ConnectException: Connection refused:
+    // com.ctc.wstx.exc.WstxEOFException: Unexpected EOF in prolog
     // At this point, we just wait a couple of seconds to allow the CLC to reboot.  It will probably take more than a couple of seconds,
     // but this way we will also slow the rate of log error accrual, as otherwise this method is called again immediately.
-    if (cause instanceof WebServicesException || cause instanceof ConnectionException || cause instanceof ConnectException) {
+    if (cause instanceof WebServicesException || cause instanceof ConnectionException || cause instanceof ConnectException || cause instanceof WstxEOFException) {
       logger.info("Error polling for task " + poll.getChannel() + ", CLC likely down.  Will sleep for 5 seconds");
       logger.info(cause.getClass() + ":" + cause.getMessage());
       try {

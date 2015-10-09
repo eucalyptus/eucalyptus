@@ -25,7 +25,6 @@ import static com.eucalyptus.simpleworkflow.WorkflowExecution.WorkflowHistorySiz
 import static com.eucalyptus.simpleworkflow.WorkflowExecutions.WorkflowHistoryEventStringFunctions.EVENT_TYPE;
 import static com.eucalyptus.simpleworkflow.common.model.ScheduleActivityTaskFailedCause.*;
 import java.lang.System;
-import java.net.ConnectException;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.Date;
@@ -34,13 +33,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
-
-import com.eucalyptus.util.async.ConnectionException;
-import com.eucalyptus.ws.WebServicesException;
-import com.google.common.base.Throwables;
 import org.apache.log4j.Logger;
 import org.hibernate.StaleObjectStateException;
 import org.hibernate.criterion.Conjunction;
@@ -937,7 +931,7 @@ public class SimpleWorkflowService {
         };
 
     try {
-      handleTaskPolling(accountFullName, domain, "activity", taskList, request.getCorrelationId(), new com.eucalyptus.simpleworkflow.common.model.ActivityTask(), taskCallable);
+      handleTaskPolling( accountFullName, domain, "activity", taskList, request.getCorrelationId( ), new com.eucalyptus.simpleworkflow.common.model.ActivityTask( ), taskCallable );
     } catch ( Exception e ) {
       throw handleException( e );
     }
@@ -1297,7 +1291,7 @@ public class SimpleWorkflowService {
     };
 
     try {
-      handleTaskPolling(accountFullName, domain, "decision", taskList, request.getCorrelationId(), new DecisionTask(), taskCallable);
+      handleTaskPolling( accountFullName, domain, "decision", taskList, request.getCorrelationId(), new DecisionTask(), taskCallable );
     } catch ( Exception e ) {
       throw handleException( e );
     }
@@ -2215,8 +2209,6 @@ public class SimpleWorkflowService {
             }
           } catch ( final InterruptedException e ) {
             logger.info( "Interrupted while polling for task " + list, e );
-          } catch ( final ExecutionException e ) {
-            handleExecutionExceptionForPolling(e, list);
           } catch ( final Exception e ) {
             logger.error( "Error polling for task " + list, e );
           }
@@ -2224,33 +2216,10 @@ public class SimpleWorkflowService {
           Contexts.response( emptyResponse );
         }
       } ) );
-    } catch ( ExecutionException e ) {
-      handleExecutionExceptionForPolling(e, list);
     } catch ( Exception e ) {
       logger.error( "Error polling for task " + list, e );
       emptyResponse.setCorrelationId( correlationId );
       Contexts.response( emptyResponse );
-    }
-  }
-
-  private static void handleExecutionExceptionForPolling(ExecutionException e, String list) {
-    Throwable cause = Throwables.getRootCause(e);
-    // The following errors occur when the CLC is down or rebooting.
-    // com.eucalyptus.ws.WebServicesException: Failed to marshall response:
-    // com.eucalyptus.util.async.ConnectionException: Channel was closed before the response was received.:PollForNotificationType
-    //java.net.ConnectException: Connection refused:
-    // At this point, we just wait a couple of seconds to allow the CLC to reboot.  It will probably take more than a couple of seconds,
-    // but this way we will also slow the rate of log error accrual, as otherwise this method is called again immediately.
-    if (cause instanceof WebServicesException || cause instanceof ConnectionException || cause instanceof ConnectException) {
-      logger.error( "Error polling for task " + list + ", CLC likely down.  Will sleep for 5 seconds");
-      logger.info(cause.getClass().getName() + ":" + cause.getMessage());
-      try {
-        Thread.sleep(5000L);
-      } catch (InterruptedException e1) {
-        logger.info( "Interrupted while polling for task " + list, e );
-      }
-    } else {
-      logger.error( "Error polling for task " + list, e );
     }
   }
 
