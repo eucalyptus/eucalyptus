@@ -75,25 +75,34 @@ import org.jboss.netty.buffer.ChannelBufferIndexFinder;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.xbill.DNS.Name;
+import org.xbill.DNS.TextParseException;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidAddressingHeaderException;
 import com.eucalyptus.objectstorage.msgs.HeadObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.dns.DomainNames;
+import com.google.common.base.Optional;
+import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
+import com.google.common.collect.Iterables;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
 public class OSGUtil {
+  private static final Splitter hostSplitter = Splitter.on(':').limit(2);
 
   public static BaseMessage convertErrorMessage(ExceptionResponseType errorMessage) {
     Throwable ex = errorMessage.getException();
@@ -268,4 +277,21 @@ public class OSGUtil {
     return false;
   }
 
+  public static String getBucketFromHostHeader(MappingHttpRequest httpRequest) throws InvalidAddressingHeaderException, TextParseException {
+    String hostBucket = null;
+    String targetHost = httpRequest.getHeader(HttpHeaders.Names.HOST);
+    if (!Strings.isNullOrEmpty(targetHost)) {
+      final String host = Iterables.getFirst(hostSplitter.split(targetHost), targetHost);
+      final Name hostDnsName = DomainNames.absolute(Name.fromString(host));
+      final Optional<Name> systemDomain = DomainNames.systemDomainFor(ObjectStorage.class, hostDnsName);
+      if (systemDomain.isPresent()) {
+        // dns-style request
+        hostBucket = hostDnsName.relativize(systemDomain.get()).toString();
+        if (hostBucket.length() == 0) {
+          throw new InvalidAddressingHeaderException("Invalid Host header: " + targetHost);
+        }
+      }
+    }
+    return hostBucket;
+  }
 }
