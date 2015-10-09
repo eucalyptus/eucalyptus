@@ -863,25 +863,35 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
       Logs.extreme( ).error( ex, ex );
     }
 
-    try ( final TransactionResource db = Entities.distinctTransactionFor( VmInstance.class ) ) {
-      VmInstanceLifecycleHelpers.get().cleanUpInstance( Entities.merge( vm ), vmState );
-      db.commit();
+    try {
+       Entities.asDistinctTransaction( VmInstance.class, new Predicate<VmInstance>( ) {
+         @Override
+         public boolean apply( @Nullable final VmInstance vmInstance ) {
+           VmInstanceLifecycleHelpers.get( ).cleanUpInstance( Entities.merge( vm ), vmState );
+           return true;
+         }
+       } ).apply( vm );
     } catch ( Exception ex ) {
-      LOG.error( ex );
+      LOG.error( "Lifecycle clean up error for instance: " + vm.getInstanceId( ), ex );
       Logs.extreme( ).error( ex, ex );
     }
-
+    
     if ( !rollbackNetworkingOnFailure && VmStateSet.TORNDOWN.apply( vm ) ) {
-      try ( final TransactionResource db = Entities.distinctTransactionFor( VmInstance.class ) ) {
-        clearServiceTag( vm );
-        if ( VmStateSet.DONE.apply( vm ) ) {
-          Entities.merge( vm ).clearReferences( );
-        } else {
-          Entities.merge( vm ).clearRunReferences( );
-        }
-        db.commit();
+      clearServiceTag( vm );
+      try {
+        Entities.asDistinctTransaction( VmInstance.class, new Predicate<VmInstance>( ) {
+          @Override
+          public boolean apply( @Nullable final VmInstance vmInstance ) {
+            if ( VmStateSet.DONE.apply( vm ) ) {
+              Entities.merge( vm ).clearReferences( );
+            } else {
+              Entities.merge( vm ).clearRunReferences( );
+            }
+            return true;
+          }
+        } ).apply( vm );
       } catch ( Exception ex ) {
-        LOG.error( ex );
+        LOG.error( "Error clearing references for instance: " + vm.getInstanceId( ), ex );
         Logs.extreme( ).error( ex, ex );
       }
     }
