@@ -1147,14 +1147,16 @@ int do_midonet_update_pass3_vpcs(globalNetworkInfo * gni, mido_config * mido) {
         rc = find_mido_vpc(mido, gnivpc->name, &vpc);
         if (vpc) {
             LOGINFO("found gni VPC '%s' already extant\n", gnivpc->name);
+            vpc->gniVpc = gnivpc;
         } else {
             LOGINFO("creating new VPC '%s'\n", gnivpc->name);
             mido->vpcs = realloc(mido->vpcs, sizeof(mido_vpc) * (mido->max_vpcs + 1));
             vpc = &(mido->vpcs[mido->max_vpcs]);
             bzero(vpc, sizeof(mido_vpc));
             mido->max_vpcs++;
-
             snprintf(vpc->name, 16, "%s", gnivpc->name);
+            vpc->gniVpc = gnivpc;
+
             get_next_router_id(mido, &(vpc->rtid));
         }
 
@@ -3418,7 +3420,7 @@ int disconnect_mido_vpc_instance_elip(mido_vpc_instance * vpcinstance)
 int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mido_vpc * vpc, mido_vpc_subnet * vpcsubnet, mido_vpc_instance * vpcinstance)
 {
     int rc = 0, ret = 0;
-    char *ipAddr_pub = NULL, *ipAddr_priv = NULL, *tmpstr = NULL, pt_buf[24];
+    char *ipAddr_pub = NULL, *ipAddr_priv = NULL, *tmpstr = NULL, pt_buf[24], vpc_nw[24], vpc_nm[24];
     char ip[32];
 
     if (!vpcinstance->gniInst->publicIp || !vpcinstance->gniInst->privateIp) {
@@ -3426,7 +3428,8 @@ int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mid
         return (0);
     }
 
-    cidr_split(vpcsubnet->gniSubnet->cidr, NULL, NULL, NULL, pt_buf);
+    //    cidr_split(vpcsubnet->gniSubnet->cidr, NULL, NULL, NULL, pt_buf);
+    cidr_split(vpc->gniVpc->cidr, vpc_nw, vpc_nm, NULL, NULL);
 
     tmpstr = hex2dot(mido->int_rtnw + vpc->rtid);
     snprintf(ip, 32, "%s", tmpstr);
@@ -3465,10 +3468,15 @@ int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mid
                           "natTargets:addressFrom", ipAddr_pub, "natTargets:portFrom", "0", "natTargets:portTo", "0", "natTargets:END", "END", NULL);
 */
 
-    rc = mido_create_rule(&(vpc->midos[VPCRT_POSTCHAIN]), &(vpcinstance->midos[ELIP_POST]), NULL, "type", "snat", "nwDstAddress", pt_buf, "invNwDst", "true", "nwDstLength", "32",
+    rc = mido_create_rule(&(vpc->midos[VPCRT_POSTCHAIN]), &(vpcinstance->midos[ELIP_POST]), NULL, "type", "snat", "nwDstAddress", vpc_nw, "invNwDst", "true", "nwDstLength", vpc_nm,
                           "flowAction", "continue", "ipAddrGroupSrc", vpcinstance->midos[ELIP_POST_IPADDRGROUP].uuid, "natTargets", "jsonlist", "natTargets:addressTo", ipAddr_pub,
                           "natTargets:addressFrom", ipAddr_pub, "natTargets:portFrom", "0", "natTargets:portTo", "0", "natTargets:END", "END", NULL);
 
+/*
+    rc = mido_create_rule(&(vpc->midos[VPCRT_POSTCHAIN]), &(vpcinstance->midos[ELIP_POST]), NULL, "type", "snat", "nwDstAddress", pt_buf, "invNwDst", "true", "nwDstLength", "32",
+                          "flowAction", "continue", "ipAddrGroupSrc", vpcinstance->midos[ELIP_POST_IPADDRGROUP].uuid, "natTargets", "jsonlist", "natTargets:addressTo", ipAddr_pub,
+                          "natTargets:addressFrom", ipAddr_pub, "natTargets:portFrom", "0", "natTargets:portTo", "0", "natTargets:END", "END", NULL);
+*/
     // perform SNAT
     // Put the rule at the last position
     rules = NULL;
@@ -3978,6 +3986,14 @@ int create_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet *
         return (1);
     }
 
+    //    rc = mido_update_router(&(vpc->midos[VPCRT]), "inboundFilterId", vpc->midos[VPCRT_PRECHAIN].uuid, "outboundFilterId", vpc->midos[VPCRT_POSTCHAIN].uuid, "name", vpc->midos[VPCRT].name, NULL);
+    //    rc = mido_update_port(&(vpcinstance->midos[VPCBR_VMPORT]), "inboundFilterId", vpcinstance->midos[INST_PRECHAIN].uuid, "outboundFilterId", vpcinstance->midos[INST_POSTCHAIN].uuid, "id", vpcinstance->midos[VPCBR_VMPORT].uuid, "type", "Bridge", NULL);
+    rc = mido_update_port(&(vpcsubnet->midos[VPCBR_RTPORT]), "outboundFilterId", vpc->midos[VPCRT_POSTCHAIN].uuid, "id", vpcsubnet->midos[VPCBR_RTPORT].uuid, "type", "Bridge", NULL);
+    if (rc) {
+        LOGERROR("cannot update bridge port outboundFilterId: check midonet health\n");
+        return(1);
+    }
+
     // setup DHCP on the bridge for this subnet
     rc = mido_create_dhcp(&(vpcsubnet->midos[VPCBR]), subnet, slashnet, gw, instanceDNSServers, max_instanceDNSServers, &(vpcsubnet->midos[VPCBR_DHCP]));
     if (rc) {
@@ -4131,7 +4147,8 @@ int create_mido_vpc(mido_config * mido, mido_core * midocore, mido_vpc * vpc)
     }
 
     // apply the chains to the vpc router
-    rc = mido_update_router(&(vpc->midos[VPCRT]), "inboundFilterId", vpc->midos[VPCRT_PRECHAIN].uuid, "outboundFilterId", vpc->midos[VPCRT_POSTCHAIN].uuid, "name", vpc->midos[VPCRT].name, NULL);
+    //    rc = mido_update_router(&(vpc->midos[VPCRT]), "inboundFilterId", vpc->midos[VPCRT_PRECHAIN].uuid, "outboundFilterId", vpc->midos[VPCRT_POSTCHAIN].uuid, "name", vpc->midos[VPCRT].name, NULL);
+    rc = mido_update_router(&(vpc->midos[VPCRT]), "inboundFilterId", vpc->midos[VPCRT_PRECHAIN].uuid, "name", vpc->midos[VPCRT].name, NULL);
     if (rc) {
         LOGERROR("cannot attach midonet chain to midonet router: check midonet health\n");
         return (1);
@@ -4353,6 +4370,10 @@ int cidr_split(char *cidr, char *outnet, char *outslashnet, char *outgw, char *o
     char *tok = NULL;
     char *cpy = NULL;
     u32 nw = 0, gw = 0;
+
+    if (!cidr) {
+        return(1);
+    }
 
     cpy = strdup(cidr);
     tok = strchr(cpy, '/');
