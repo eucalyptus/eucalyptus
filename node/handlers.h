@@ -144,6 +144,7 @@ struct nc_state_t {
     int disable_snapshots;
     int staging_cleanup_threshold;
     int booting_cleanup_threshold;
+    int booting_envwait_threshold;
     int bundling_cleanup_threshold;
     int createImage_cleanup_threshold;
     int teardown_state_duration;

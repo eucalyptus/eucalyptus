@@ -209,6 +209,7 @@ bunchOfInstances *global_instances_copy = NULL; //!< pointer to the copied insta
 
 const int default_staging_cleanup_threshold = 60 * 60 * 2;  //!< after this many seconds any STAGING domains will be cleaned up
 const int default_booting_cleanup_threshold = 60;   //!< after this many seconds any BOOTING domains will be cleaned up
+const int default_booting_envwait_threshold = NETWORK_GATE_TIMEOUT_SEC;   //!< after this many seconds an instance will fail to boot unless network environment is ready
 const int default_bundling_cleanup_threshold = 60 * 60 * 2; //!< after this many seconds any BUNDLING domains will be cleaned up
 const int default_createImage_cleanup_threshold = 60 * 60 * 2;  //!< after this many seconds any CREATEIMAGE domains will be cleaned up
 const int default_teardown_state_duration = 60 * 3; //!< after this many seconds in TEARDOWN state (no resources), we'll forget about the instance
@@ -1786,7 +1787,7 @@ void *startup_thread(void *arg)
         goto shutoff;
     }
 
-    if (instance_network_gate(instance, NETWORK_GATE_TIMEOUT_SEC)) {
+    if (instance_network_gate(instance, nc_state.booting_envwait_threshold)) {
         LOGERROR("[%s] cancelled instance startup via network_gate\n", instance->instanceId);
         goto shutoff;
     }
@@ -2330,6 +2331,7 @@ static int init(void)
     strcpy(nc_state.admin_user_id, EUCALYPTUS_ADMIN);
     GET_VAR_INT(nc_state.staging_cleanup_threshold, CONFIG_NC_STAGING_CLEANUP_THRESHOLD, default_staging_cleanup_threshold);
     GET_VAR_INT(nc_state.booting_cleanup_threshold, CONFIG_NC_BOOTING_CLEANUP_THRESHOLD, default_booting_cleanup_threshold);
+    GET_VAR_INT(nc_state.booting_envwait_threshold, CONFIG_NC_BOOTING_ENVWAIT_THRESHOLD, default_booting_envwait_threshold);
     GET_VAR_INT(nc_state.bundling_cleanup_threshold, CONFIG_NC_BUNDLING_CLEANUP_THRESHOLD, default_bundling_cleanup_threshold);
     GET_VAR_INT(nc_state.createImage_cleanup_threshold, CONFIG_NC_CREATEIMAGE_CLEANUP_THRESHOLD, default_createImage_cleanup_threshold);
     GET_VAR_INT(nc_state.teardown_state_duration, CONFIG_NC_TEARDOWN_STATE_DURATION, default_teardown_state_duration);
@@ -3817,6 +3819,11 @@ int instance_network_gate(ncInstance *instance, time_t timeout_seconds) {
     time_t max_time=0;
     int count = 1;
     
+    if (timeout_seconds == 0) {
+        LOGDEBUG("skipping network gate (NC_BOOTING_ENVWAIT_THRESHOLD has been manually set to 0 seconds in eucalyptus.conf)\n");
+        return(0);
+    }
+
     if (!instance || timeout_seconds < 0 || timeout_seconds > 3600) {
         LOGERROR("invalid input params\n");
         return(0);
