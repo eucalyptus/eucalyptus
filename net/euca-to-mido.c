@@ -1726,10 +1726,10 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                     // do inst->sg maps
                     gni_secgroup *gnisecgroups = NULL;
                     int max_gnisecgroups, in_rulepos = 1, eg_rulepos = 1;
-                    char tmp_name3[32];
+                    char tmp_name3[32], *instMac=NULL, *instIp=NULL;
                     midoname *pre_rules=NULL, *post_rules=NULL;
                     int max_pre_rules=0, max_post_rules=0;
-
+                    
                     mido_get_rules(&(vpcinstance->midos[INST_PRECHAIN]), &pre_rules, &max_pre_rules);
                     mido_get_rules(&(vpcinstance->midos[INST_POSTCHAIN]), &post_rules, &max_post_rules);
                     
@@ -1741,65 +1741,74 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                     // for ingress
                     in_rulepos = 1;
                     
-                    // metadata redirect egress
-                    snprintf(tmp_name3, 32, "%d", eg_rulepos);
-                    rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, pre_rules, max_pre_rules, &eg_rulepos, "position", tmp_name3, "type", "dnat", "flowAction", "continue", "ipAddrGroupDst",
-                                          mido->midocore->midos[METADATA_IPADDRGROUP].uuid, "nwProto", "6", "tpDst", "jsonjson", "tpDst:start", "80", "tpDst:end", "80",
-                                          "tpDst:END", "END", "natTargets", "jsonlist", "natTargets:addressTo", pt_buf, "natTargets:addressFrom", pt_buf, "natTargets:portFrom",
-                                          "31337", "natTargets:portTo", "31337", "natTargets:END", "END", NULL);
-                    if (rc) {
-                    } else {
+                    // anti-spoof
+                    {
+                        // block any source mac that isn't the registered instance mac
+                        hex2mac(gniinstance->macAddress, &instMac); 
+                        for (int i = 0; i < strlen(instMac); i++) {
+                            instMac[i] = tolower(instMac[i]);
+                        }
+                        snprintf(tmp_name3, 32, "%d", eg_rulepos);
+                        //                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, &eg_rulepos, "position", tmp_name3, "type", "drop", "dlSrc", instMac, "invDlSrc", "true", "inPorts", "jsonarr", "inPorts:", vpcinstance->midos[VPCBR_VMPORT].uuid, "inPorts:END", "END", NULL);
+                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, pre_rules, max_pre_rules, &eg_rulepos, "position", tmp_name3, "type", "drop", "dlSrc", instMac, "invDlSrc", "true", NULL);
+                        if (rc) {
+                        } else {
+                        }
+                        EUCA_FREE(instMac);
+                        
+                        // block any outgoing IP traffic that isn't from the VM private IP
+                        instIp = hex2dot(gniinstance->privateIp);
+                        snprintf(tmp_name3, 32, "%d", eg_rulepos);
+                        //                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, &eg_rulepos, "position", tmp_name3, "type", "drop", "nwSrcAddress", instIp, "nwSrcLength", "32", "invNwSrc", "true", "inPorts", "jsonarr", "inPorts:", vpcinstance->midos[VPCBR_VMPORT].uuid, "inPorts:END", "END", NULL);
+                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, pre_rules, max_pre_rules, &eg_rulepos, "position", tmp_name3, "type", "drop", "dlType", "2048", "nwSrcAddress", instIp, "nwSrcLength", "32", "invNwSrc", "true", NULL);
+                        if (rc) {
+                        } else {
+                        }
+                        EUCA_FREE(instIp);
                     }
-                    
-                    // metadata redirect ingress
-                    snprintf(tmp_name3, 32, "%d", in_rulepos);
-                    rc = mido_create_rule(&(vpcinstance->midos[INST_POSTCHAIN]), NULL, post_rules, max_post_rules, &in_rulepos, "position", tmp_name3, "type", "snat", "flowAction", "continue", "nwSrcAddress", pt_buf,
-                                          "nwSrcLength", "32", "nwProto", "6", "tpSrc", "jsonjson", "tpSrc:start", "31337", "tpSrc:end", "31337", "tpSrc:END", "END",
-                                          "natTargets", "jsonlist", "natTargets:addressTo", "169.254.169.254", "natTargets:addressFrom", "169.254.169.254",
-                                          "natTargets:portFrom", "80", "natTargets:portTo", "80", "natTargets:END", "END", NULL);
-                    if (rc) {
-                    } else {
+
+
+                    // metadata
+                    {
+                        // metadata redirect egress
+                        snprintf(tmp_name3, 32, "%d", eg_rulepos);
+                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, pre_rules, max_pre_rules, &eg_rulepos, "position", tmp_name3, "type", "dnat", "flowAction", "continue", "ipAddrGroupDst",
+                                              mido->midocore->midos[METADATA_IPADDRGROUP].uuid, "nwProto", "6", "tpDst", "jsonjson", "tpDst:start", "80", "tpDst:end", "80",
+                                              "tpDst:END", "END", "natTargets", "jsonlist", "natTargets:addressTo", pt_buf, "natTargets:addressFrom", pt_buf, "natTargets:portFrom",
+                                              "31337", "natTargets:portTo", "31337", "natTargets:END", "END", NULL);
+                        if (rc) {
+                        } else {
+                        }
+
+                        // metadata redirect ingress
+                        snprintf(tmp_name3, 32, "%d", in_rulepos);
+                        rc = mido_create_rule(&(vpcinstance->midos[INST_POSTCHAIN]), NULL, post_rules, max_post_rules, &in_rulepos, "position", tmp_name3, "type", "snat", "flowAction", "continue", "nwSrcAddress", pt_buf,
+                                              "nwSrcLength", "32", "nwProto", "6", "tpSrc", "jsonjson", "tpSrc:start", "31337", "tpSrc:end", "31337", "tpSrc:END", "END",
+                                              "natTargets", "jsonlist", "natTargets:addressTo", "169.254.169.254", "natTargets:addressFrom", "169.254.169.254",
+                                              "natTargets:portFrom", "80", "natTargets:portTo", "80", "natTargets:END", "END", NULL);
+                        if (rc) {
+                        } else {
+                        }
                     }
-                    
-                    // conntrack egress
-                    snprintf(tmp_name3, 32, "%d", eg_rulepos);
-                    rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, pre_rules, max_pre_rules, &eg_rulepos, "position", tmp_name3, "type", "accept", "matchReturnFlow", "true", NULL);
-                    if (rc) {
-                    } else {
+
+                    // contrack
+                    { 
+                        // conntrack egress
+                        snprintf(tmp_name3, 32, "%d", eg_rulepos);
+                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, pre_rules, max_pre_rules, &eg_rulepos, "position", tmp_name3, "type", "accept", "matchReturnFlow", "true", NULL);
+                        if (rc) {
+                        } else {
+                        }
+                        
+                        // conn track ingress
+                        snprintf(tmp_name3, 32, "%d", in_rulepos);
+                        rc = mido_create_rule(&(vpcinstance->midos[INST_POSTCHAIN]), NULL, post_rules, max_post_rules, &in_rulepos, "position", tmp_name3, "type", "accept", "matchReturnFlow", "true", NULL);
+                        if (rc) {
+                        } else {
+                        }
                     }
-                    
-                    // conn track ingress
-                    snprintf(tmp_name3, 32, "%d", in_rulepos);
-                    rc = mido_create_rule(&(vpcinstance->midos[INST_POSTCHAIN]), NULL, post_rules, max_post_rules, &in_rulepos, "position", tmp_name3, "type", "accept", "matchReturnFlow", "true", NULL);
-                    if (rc) {
-                    } else {
-                    }
-                    
-                    
-                    /*
-                      snprintf(tmp_name3, 32, "%d", eg_rulepos);
-                      rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, &eg_rulepos, "position", tmp_name3, "type", "accept", "nwProto", "17", "tpDst", "jsonjson", "tpDst:start", "67", "tpDst:end", "68", "tpDst:END", "END", NULL);
-                      if (rc) {
-                      } else {
-                      }
-                      snprintf(tmp_name3, 32, "%d", eg_rulepos);
-                      rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, &eg_rulepos, "position", tmp_name3, "type", "accept", "nwProto", "17", "tpSrc", "jsonjson", "tpSrc:start", "67", "tpSrc:end", "68", "tpSrc:END", "END", NULL);
-                      if (rc) {
-                      } else {
-                      }
-                      
-                      snprintf(tmp_name3, 32, "%d", eg_rulepos);
-                      rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, &eg_rulepos, "position", tmp_name3, "type", "accept", "nwProto", "6", "tpDst", "jsonjson", "tpDst:start", "67", "tpDst:end", "68", "tpDst:END", "END", NULL);
-                      if (rc) {
-                      } else {
-                      }
-                      snprintf(tmp_name3, 32, "%d", eg_rulepos);
-                      rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, &eg_rulepos, "position", tmp_name3, "type", "accept", "nwProto", "6", "tpSrc", "jsonjson", "tpSrc:start", "67", "tpSrc:end", "68", "tpSrc:END", "END", NULL);
-                      if (rc) {
-                      } else {
-                      }
-                    */
-                    
+
+
                     // plus two accept for metadata egress
                     snprintf(tmp_name3, 32, "%d", eg_rulepos);
                     rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, pre_rules, max_pre_rules, &eg_rulepos, "position", tmp_name3, "type", "accept", "nwDstAddress", pt_buf, "nwDstLength", "32", NULL);
@@ -1808,33 +1817,32 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                     }
                     
                     /*
-                    // anti-spoof
-                    // block any source mac that isn't the registered instance mac
-                    hex2mac(gniinstance->macAddress, &instMac);
                     snprintf(tmp_name3, 32, "%d", eg_rulepos);
-                    //                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, &eg_rulepos, "position", tmp_name3, "type", "drop", "dlSrc", instMac, "invDlSrc", "true", "inPorts", "jsonarr", "inPorts:", vpcinstance->midos[VPCBR_VMPORT].uuid, "inPorts:END", "END", NULL);
-                    //                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, &eg_rulepos, "position", tmp_name3, "type", "drop", "dlSrc", instMac, "invDlSrc", "true", NULL);
+                    rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, pre_rules, max_pre_rules, &eg_rulepos, "position", tmp_name3, "type", "accept", "nwProto", "17", "tpDst", "jsonjson", "tpDst:start", "67", "tpDst:end", "68", "tpDst:END", "END", NULL);
                     if (rc) {
                     } else {
                     }
-                    EUCA_FREE(instMac);
+
+                    snprintf(tmp_name3, 32, "%d", eg_rulepos);
+                    rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, pre_rules, max_pre_rules, &eg_rulepos, "position", tmp_name3, "type", "accept", "nwProto", "17", "tpSrc", "jsonjson", "tpSrc:start", "67", "tpSrc:end", "68", "tpSrc:END", "END", NULL);
+                    if (rc) {
+                    } else {
+                    }
                     
-                    // block any source IP that isn't the registered instance IP
-                    instIp = hex2dot(gniinstance->privateIp);
                     snprintf(tmp_name3, 32, "%d", eg_rulepos);
-                    //                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, &eg_rulepos, "position", tmp_name3, "type", "drop", "nwSrcAddress", instIp, "nwSrcLength", "32", "invNwSrc", "true", "inPorts", "jsonarr", "inPorts:", vpcinstance->midos[VPCBR_VMPORT].uuid, "inPorts:END", "END", NULL);
-                    //                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, &eg_rulepos, "position", tmp_name3, "type", "drop", "nwProto", "6", "nwSrcAddress", instIp, "nwSrcLength", "32", "invNwSrc", "true", NULL);
+                    rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, pre_rules, max_pre_rules, &eg_rulepos, "position", tmp_name3, "type", "accept", "nwProto", "6", "tpDst", "jsonjson", "tpDst:start", "67", "tpDst:end", "68", "tpDst:END", "END", NULL);
                     if (rc) {
                     } else {
                     }
-                    EUCA_FREE(instIp);
+                    snprintf(tmp_name3, 32, "%d", eg_rulepos);
+                    rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, pre_rules, max_pre_rules, &eg_rulepos, "position", tmp_name3, "type", "accept", "nwProto", "6", "tpSrc", "jsonjson", "tpSrc:start", "67", "tpSrc:end", "68", "tpSrc:END", "END", NULL);
+                    if (rc) {
+                    } else {
+                    }
                     */
-                    
-                    //                    rc = gni_instance_get_secgroups(gni, gniinstance, NULL, 0, NULL, 0, &gnisecgroups, &max_gnisecgroups);
-                    //                    for (j = 0; j < max_gnisecgroups; j++) {
+
+                    // now set up the jumps to SG chains
                     for (j = 0; j < gniinstance->max_secgroup_names; j++) {
-                        //                        gni_secgroup *gnisecgroup = &(gnisecgroups[j]);
-                        
                         char *tmpstr = NULL;
                         
                         // find the SG
@@ -1869,28 +1877,28 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                                                   vpcsecgroup->midos[VPCSG_INGRESS].uuid, NULL);
                             if (rc) {
                             } else {
-                                //                                    in_rulepos++;
                             }
                             
                         } else {
-                            //                            LOGWARN("cannot locate extant security group in mido for group %s\n", gnisecgroup->name);
                             LOGWARN("cannot locate extant security group in mido for group %s\n", gniinstance->secgroup_names[j].name);
                         }
                     }
-                    //                    EUCA_FREE(gnisecgroups);
                     
-                    // default drop all else egress
-                    snprintf(tmp_name3, 32, "%d", eg_rulepos);
-                    rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, pre_rules, max_pre_rules, &eg_rulepos, "position", tmp_name3, "type", "drop", "invDlType", "true", "dlType", "2054", NULL);
-                    if (rc) {
-                    } else {
-                    }
-                    
-                    // default drop all else ingress
-                    snprintf(tmp_name3, 32, "%d", in_rulepos);
-                    rc = mido_create_rule(&(vpcinstance->midos[INST_POSTCHAIN]), NULL, post_rules, max_post_rules, &in_rulepos, "type", "drop", "invDlType", "true", "position", tmp_name3, "dlType", "2054", NULL);
-                    if (rc) {
-                    } else {
+                    // drops
+                    {
+                        // default drop all else egress
+                        snprintf(tmp_name3, 32, "%d", eg_rulepos);
+                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, pre_rules, max_pre_rules, &eg_rulepos, "position", tmp_name3, "type", "drop", "invDlType", "true", "dlType", "2054", NULL);
+                        if (rc) {
+                        } else {
+                        }
+                        
+                        // default drop all else ingress
+                        snprintf(tmp_name3, 32, "%d", in_rulepos);
+                        rc = mido_create_rule(&(vpcinstance->midos[INST_POSTCHAIN]), NULL, post_rules, max_post_rules, &in_rulepos, "type", "drop", "invDlType", "true", "position", tmp_name3, "dlType", "2054", NULL);
+                        if (rc) {
+                        } else {
+                        }
                     }
 
                     mido_free_midoname_list(pre_rules, max_pre_rules);
@@ -1898,7 +1906,6 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                     
                     mido_free_midoname_list(post_rules, max_post_rules);
                     EUCA_FREE(post_rules);
-
                 }
             }
         }
