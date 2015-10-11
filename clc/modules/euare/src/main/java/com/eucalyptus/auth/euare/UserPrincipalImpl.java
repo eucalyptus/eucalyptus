@@ -172,7 +172,7 @@ public class UserPrincipalImpl implements UserPrincipal {
                 policies,
                 Iterables.transform(
                     group.getPolicies( ),
-                    Functions.compose( PolicyVersions.policyVersion( PolicyScope.Account, account.getAccountNumber( ) ), PolicyTransform.INSTANCE ) ) ); //TODO:STEVE: ARN for account?
+                    Functions.compose( PolicyVersions.policyVersion( PolicyScope.Account, account.getAccountNumber( ) ), PolicyTransform.INSTANCE ) ) );
           }
         }
       }
@@ -231,7 +231,7 @@ public class UserPrincipalImpl implements UserPrincipal {
             policies,
             Iterables.transform(
                 admin.getPolicies(),
-                PolicyVersions.policyVersion( PolicyScope.Account, user.getAccountNumber() ) ) ) ; //TODO:STEVE: ARN for account?
+                PolicyVersions.policyVersion( PolicyScope.Account, user.getAccountNumber() ) ) ) ;
       }
     }
 
@@ -269,7 +269,7 @@ public class UserPrincipalImpl implements UserPrincipal {
         policies,
         Iterables.transform(
             user.getPolicies(),
-            PolicyVersions.policyVersion( PolicyScope.Account, user.getAccountNumber( ) ) ) ); //TODO:STEVE: ARN for account?
+            PolicyVersions.policyVersion( PolicyScope.Account, user.getAccountNumber( ) ) ) );
 
     this.name = user.getName( );
     this.path = user.getPath();

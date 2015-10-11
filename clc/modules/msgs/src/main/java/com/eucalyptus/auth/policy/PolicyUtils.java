@@ -92,7 +92,7 @@ public class PolicyUtils {
    * Convert an IAM policy pattern (action pattern or resource pattern with * and ?)
    * to a canonical Java regex Pattern.
    */
-  public static String toJavaPattern( String pattern ) { //TODO:STEVE: caching for patterns
+  public static String toJavaPattern( String pattern ) {
     String result = pattern;
     
     if ( pattern == null ) {

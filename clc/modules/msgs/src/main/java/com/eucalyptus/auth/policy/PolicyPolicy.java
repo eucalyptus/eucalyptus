@@ -27,7 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
 /**
- * TODO:STEVE: naming ...
+ *
  */
 public class PolicyPolicy {
 
