@@ -1357,7 +1357,7 @@ int mido_allocate_midorule(char *position, char *type, char *action, char *proto
 //!
 //! @note
 //!
-int mido_create_rule(midoname * chain, midoname * outname, int * next_position, ...)
+int mido_create_rule(midoname * chain, midoname * outname, midoname *memorules, int max_memorules, int * next_position, ...)
 {
     int rc = 0, ret = 0, max_rules = 0, found = 0, i = 0;
     midoname myname, *rules = NULL;
@@ -1374,8 +1374,15 @@ int mido_create_rule(midoname * chain, midoname * outname, int * next_position, 
     myname.content_type = strdup("Rule");
     myname.vers = strdup("v2");
     
+    if (memorules) {
+        rules = memorules;
+        max_rules = max_memorules;
+        rc = 0;
+    } else {
+        rc = mido_get_rules(chain, &rules, &max_rules);
+    }    
     // check if host already has a rule in place
-    rc = mido_get_rules(chain, &rules, &max_rules);
+
     if (!rc) {
         found = 0;
         for (i = 0; i < max_rules && !found; i++) {
@@ -1386,14 +1393,16 @@ int mido_create_rule(midoname * chain, midoname * outname, int * next_position, 
                 if (outname) {
                     mido_copy_midoname(outname, &(rules[i]));
                 }
-                LOGDEBUG("HELLO: rule found: %s\n", rules[i].jsonbuf);
-
                 found = 1;
+                LOGDEBUG("FOUND RULE: %s\n", rules[i].jsonbuf);
             }
         }
     }
-    mido_free_midoname_list(rules, max_rules);
-    EUCA_FREE(rules);
+    
+    if (!memorules) {
+        mido_free_midoname_list(rules, max_rules);
+        EUCA_FREE(rules);
+    }
 
     LOGTRACE("MAX_RULE %s: %d\n", chain->name, max_rules);
     if (next_position) *next_position = max_rules + 1;
@@ -2974,6 +2983,7 @@ int mido_create_route(midoname * router, midoname * rport, char *src, char *src_
         mido_free_midoname_list(routes, max_routes);
         EUCA_FREE(routes);
     }
+
     // route doesn't already exist, create it
     if (!found) {
         // delete old resource, if present
@@ -3376,7 +3386,7 @@ int mido_get_resources(midoname * parents, int max_parents, char *tenant, char *
 
         jobj = json_tokener_parse(payload);
         if (!jobj) {
-            printf("NOU\n");
+            LOGWARN("cannot tokenize midonet response: check midonet health\n");
         } else {
             //            jobj = json_object_get(jobj);
             if (json_object_is_type(jobj, json_type_array)) {
@@ -3456,7 +3466,7 @@ int mido_get_hosts(midoname ** outnames, int *outnames_max)
 
         jobj = json_tokener_parse(payload);
         if (!jobj) {
-            LOGERROR("NOU\n");
+            LOGWARN("cannot tokenize midonet response: check midonet health\n");
         } else {
             if (json_object_is_type(jobj, json_type_array)) {
                 //                printf("HMM: %s, %d\n", json_object_to_json_string(jobj), json_object_array_length(jobj));

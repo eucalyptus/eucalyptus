@@ -366,4 +366,6 @@ int delete_mido_meta_core(mido_config * mido);
 int delete_mido_meta_vpc_namespace(mido_config * mido, mido_vpc * vpc);
 int delete_mido_meta_subnet_veth(mido_config * mido, char *name);
 
+int read_mido_meta_vpc_namespace(mido_config * mido, mido_vpc * vpc);
+
 #endif /* ! _INCLUDE_EUCA_TO_MIDO_H_ */
