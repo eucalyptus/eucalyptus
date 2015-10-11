@@ -344,13 +344,9 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     String path = getOperationPath(httpRequest);
     boolean objectstorageInternalOperation = false;
 
-    String targetHost = httpRequest.getHeader(HttpHeaders.Names.HOST);
-    if (targetHost.contains(".objectstorage")) {
-      String bucket = targetHost.substring(0, targetHost.indexOf(".objectstorage"));
-      path = "/" + bucket + path;
-    } else if (targetHost.contains(".walrus")) {
-      String bucket = targetHost.substring(0, targetHost.indexOf(".walrus"));
-      path = "/" + bucket + path;
+    String hostBucket = null;
+    if ((hostBucket = OSGUtil.getBucketFromHostHeader(httpRequest)) != null) {
+      path = "/" + hostBucket + path;
     }
 
     if (path.length() > 0) {
