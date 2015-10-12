@@ -3538,7 +3538,7 @@ int mido_get_hosts(midoname ** outnames, int *outnames_max)
 }
 
 int mido_check_state(void) {
-    int ret = 0, rc = 0, mido = 0, retries = 120, i;
+    int ret = 0, rc = 0, mido = 0, retries = 300, i;
     char url[EUCA_MAX_PATH];
     char *outbuf = NULL;
     

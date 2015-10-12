@@ -760,12 +760,17 @@ int do_midonet_populate(mido_config * mido)
     mido_vpc_subnet *vpcsubnet = NULL;
     mido_vpc *vpc = NULL;
 
+    mido_check_state();
+
     // mido discovery
     rc = discover_mido_resources(mido);
     if (rc) {
         LOGERROR("could not discover resources from midonet: check midonet health\n");
         return (1);
     }
+
+    mido_check_state();
+
     // always populate the core from that which was discovered
     rc = populate_mido_core(mido, mido->midocore);
     if (rc) {
