@@ -231,6 +231,7 @@ typedef struct mido_config_t {
     u32 enabledCLCIp;
     int int_rtsn;
     int flushmode;
+    int disable_l2_isolation;
 
     midoname *hosts;
     midoname *routers;
@@ -297,7 +298,7 @@ int set_router_id(mido_config * mido, int id);
 int cidr_split(char *cidr, char *outnet, char *outslashnet, char *outgw, char *outplustwo);
 int isMidoVpcPlusTwo(mido_config *mido, char *iptocheck);
 
-int initialize_mido(mido_config * mido, char *eucahome, int flushmode, char *ext_eucanetdhostname, char *ext_rthosts, char *ext_pubnw,
+int initialize_mido(mido_config * mido, char *eucahome, int flushmode, int disable_l2_isolation, char *ext_eucanetdhostname, char *ext_rthosts, char *ext_pubnw,
                     char *ext_pubgwip, char *int_rtnetwork, char *int_rtslashnet);
 int discover_mido_resources(mido_config * mido);
 
