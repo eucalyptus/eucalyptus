@@ -1741,7 +1741,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                     in_rulepos = 1;
                     
                     // anti-spoof
-                    {
+                    if (!mido->disable_l2_isolation) {
                         // block any source mac that isn't the registered instance mac
                         hex2mac(gniinstance->macAddress, &instMac); 
                         for (int i = 0; i < strlen(instMac); i++) {
@@ -2986,7 +2986,7 @@ int delete_mido_vpc_instance(mido_vpc_instance * vpcinstance)
 //!
 //! @note
 //!
-int initialize_mido(mido_config * mido, char *eucahome, int flushmode, char *ext_eucanetdhostname, char *ext_rthosts, char *ext_pubnw,
+int initialize_mido(mido_config * mido, char *eucahome, int flushmode, int disable_l2_isolation, char *ext_eucanetdhostname, char *ext_rthosts, char *ext_pubnw,
                     char *ext_pubgwip, char *int_rtnetwork, char *int_rtslashnet)
 {
     int ret = 0;
@@ -3008,6 +3008,8 @@ int initialize_mido(mido_config * mido, char *eucahome, int flushmode, char *ext
     mido->eucahome = strdup(eucahome);
 
     mido->flushmode = flushmode;
+    
+    mido->disable_l2_isolation = disable_l2_isolation;
 
     mido->ext_eucanetdhostname = strdup(ext_eucanetdhostname);
 
