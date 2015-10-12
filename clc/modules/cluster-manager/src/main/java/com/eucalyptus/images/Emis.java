@@ -335,7 +335,7 @@ public class Emis {
                                   BundleImageManifest.INSTANCE,
                                   ImageConfiguration.getInstance().getMaxManifestSizeBytes()),
             signingKey,
-            partitionName, true);
+            img.getDisplayName() + "-" + partitionName, true);
       } catch (Exception ex){
         throw new MetadataException(ex);
       }
