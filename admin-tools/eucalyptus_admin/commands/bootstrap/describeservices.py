@@ -48,12 +48,12 @@ class DescribeServices(BootstrapRequest, TableOutputMixin):
             Arg('-a', '--all', dest='ListAll', action='store_true',
                 help='show all services regardless of type'),
             MutuallyExclusiveArgList(
-                Arg('--by-type', action='store_true', route_to=None,
-                    help='show services by service type (default)'),
-                Arg('--by-zone', action='store_true', route_to=None,
-                    help='show services by availability zone'),
-                Arg('--by-host', action='store_true', route_to=None,
-                    help='show services by host'),
+                Arg('--group-by-type', action='store_true', route_to=None,
+                    help='collate services by service type (default)'),
+                Arg('--group-by-zone', action='store_true', route_to=None,
+                    help='collate services by availability zone'),
+                Arg('--group-by-host', action='store_true', route_to=None,
+                    help='collate services by host'),
                 Arg('--expert', action='store_true', route_to=None,
                     help='show advanced information'))]
     FILTERS = [_RenamingFilter('availability-zone', 'partition',
@@ -95,7 +95,7 @@ class DescribeServices(BootstrapRequest, TableOutputMixin):
                     _colorize_state(service.get('localState').lower()),
                     service.get('localEpoch'), svcid.get('uri'),
                     ','.join(sorted(accounts))))
-        elif self.args.get('by_host'):
+        elif self.args.get('group_by_host'):
             hosts = {}
             for service in services:
                 svcid = service.get('serviceId') or {}
@@ -109,7 +109,7 @@ class DescribeServices(BootstrapRequest, TableOutputMixin):
                     table.add_row((
                         'SERVICE', host, svcid.get('type'), svcid.get('name'),
                         _colorize_state(service.get('localState').lower())))
-        elif self.args.get('by_zone'):
+        elif self.args.get('group_by_zone'):
             by_zone = {}
             for service in services:
                 svcid = service.get('serviceId') or {}
@@ -139,9 +139,9 @@ class DescribeServices(BootstrapRequest, TableOutputMixin):
                         table.add_row((
                             'SERVICE', zone, svctype, svcid.get('name'),
                             _colorize_state(state)))
-        # TODO:  by_group (needs EUCA-10816)
+        # TODO:  group_by_group (needs EUCA-10816)
         # https://eucalyptus.atlassian.net/browse/EUCA-10816
-        else:  # by_type
+        else:  # group_by_type
             svctypes = {}
             for service in services:
                 svcid = service.get('serviceId') or {}

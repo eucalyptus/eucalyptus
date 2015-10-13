@@ -5,7 +5,7 @@ euserv-describe-services \- Show information about the cloud's services
 .SH SYNOPSIS
 euserv\-describe\-services [\-a]
 .TP
-[\-\-by\-type | \fB\-\-by\-zone\fR | \fB\-\-by\-host\fR | \fB\-\-expert]\fR
+[\-\-group\-by\-type | \fB\-\-group\-by\-zone\fR | \fB\-\-group\-by\-host\fR | \fB\-\-expert]\fR
 [\-\-show\-headers] [\-\-show\-empty\-fields]
 [\-U URL] [\-\-region USER@REGION] [\-I KEY_ID]
 [\-S KEY] [\-\-security\-token TOKEN]
@@ -23,14 +23,14 @@ limit results to specific instances of services
 \fB\-a\fR, \fB\-\-all\fR
 show all services regardless of type
 .TP
-\fB\-\-by\-type\fR
-show services by service type (default)
+\fB\-\-group\-by\-type\fR
+collate services by service type (default)
 .TP
-\fB\-\-by\-zone\fR
-show services by availability zone
+\fB\-\-group\-by\-zone\fR
+collate services by availability zone
 .TP
-\fB\-\-by\-host\fR
-show services by host
+\fB\-\-group\-by\-host\fR
+collate services by host
 .TP
 \fB\-\-expert\fR
 show advanced information
