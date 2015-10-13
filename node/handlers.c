@@ -142,7 +142,7 @@
 #define MAX_CREATE_TRYS                              5
 #define CREATE_TIMEOUT_SEC                           60
 #define LIBVIRT_TIMEOUT_SEC                          5
-#define NETWORK_GATE_TIMEOUT_SEC                     120
+#define NETWORK_GATE_TIMEOUT_SEC                     300
 #define PER_INSTANCE_BUFFER_MB                       20 //!< by default reserve this much extra room (in MB) per instance (for kernel, ramdisk, and metadata overhead)
 #define MAX_SENSOR_RESOURCES                         MAXINSTANCES_PER_NC
 #define SEC_PER_MB                                   ((1024 * 1024) / 512)
@@ -209,6 +209,7 @@ bunchOfInstances *global_instances_copy = NULL; //!< pointer to the copied insta
 
 const int default_staging_cleanup_threshold = 60 * 60 * 2;  //!< after this many seconds any STAGING domains will be cleaned up
 const int default_booting_cleanup_threshold = 60;   //!< after this many seconds any BOOTING domains will be cleaned up
+const int default_booting_envwait_threshold = NETWORK_GATE_TIMEOUT_SEC;   //!< after this many seconds an instance will fail to boot unless network environment is ready
 const int default_bundling_cleanup_threshold = 60 * 60 * 2; //!< after this many seconds any BUNDLING domains will be cleaned up
 const int default_createImage_cleanup_threshold = 60 * 60 * 2;  //!< after this many seconds any CREATEIMAGE domains will be cleaned up
 const int default_teardown_state_duration = 60 * 3; //!< after this many seconds in TEARDOWN state (no resources), we'll forget about the instance
@@ -1786,7 +1787,7 @@ void *startup_thread(void *arg)
         goto shutoff;
     }
 
-    if (instance_network_gate(instance, NETWORK_GATE_TIMEOUT_SEC)) {
+    if (instance_network_gate(instance, nc_state.booting_envwait_threshold)) {
         LOGERROR("[%s] cancelled instance startup via network_gate\n", instance->instanceId);
         goto shutoff;
     }
@@ -2330,6 +2331,7 @@ static int init(void)
     strcpy(nc_state.admin_user_id, EUCALYPTUS_ADMIN);
     GET_VAR_INT(nc_state.staging_cleanup_threshold, CONFIG_NC_STAGING_CLEANUP_THRESHOLD, default_staging_cleanup_threshold);
     GET_VAR_INT(nc_state.booting_cleanup_threshold, CONFIG_NC_BOOTING_CLEANUP_THRESHOLD, default_booting_cleanup_threshold);
+    GET_VAR_INT(nc_state.booting_envwait_threshold, CONFIG_NC_BOOTING_ENVWAIT_THRESHOLD, default_booting_envwait_threshold);
     GET_VAR_INT(nc_state.bundling_cleanup_threshold, CONFIG_NC_BUNDLING_CLEANUP_THRESHOLD, default_bundling_cleanup_threshold);
     GET_VAR_INT(nc_state.createImage_cleanup_threshold, CONFIG_NC_CREATEIMAGE_CLEANUP_THRESHOLD, default_createImage_cleanup_threshold);
     GET_VAR_INT(nc_state.teardown_state_duration, CONFIG_NC_TEARDOWN_STATE_DURATION, default_teardown_state_duration);
@@ -3817,6 +3819,11 @@ int instance_network_gate(ncInstance *instance, time_t timeout_seconds) {
     time_t max_time=0;
     int count = 1;
     
+    if (timeout_seconds == 0) {
+        LOGDEBUG("skipping network gate (NC_BOOTING_ENVWAIT_THRESHOLD has been manually set to 0 seconds in eucalyptus.conf)\n");
+        return(0);
+    }
+
     if (!instance || timeout_seconds < 0 || timeout_seconds > 3600) {
         LOGERROR("invalid input params\n");
         return(0);
@@ -3855,6 +3862,42 @@ int instance_network_gate(ncInstance *instance, time_t timeout_seconds) {
             }
             EUCA_FREE(filebuf);
         } else if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_VPCMIDO)) {
+            char *fileBuf = NULL, *vers=NULL, *appvers=NULL, *startBuf=NULL;
+            char xmlfile[EUCA_MAX_PATH] = "";
+
+            snprintf(xmlfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/global_network_info.xml", nc_state.home);
+
+            fileBuf = file2str(xmlfile);
+            if (fileBuf) startBuf = strstr(fileBuf, "network-data");
+            
+            if (startBuf) {
+                vers = euca_gettok(startBuf, "version=\"");
+                appvers = euca_gettok(startBuf, "applied-version=\"");
+                
+                if (vers && appvers && !strcmp(vers, appvers)) {
+                    LOGDEBUG("[%s] version (%s) and applied version (%s) match\n", instance->instanceId, vers, appvers);
+                    
+                    if (strstr(fileBuf, instance->instanceId)) {
+                        LOGDEBUG("[%s] global network config contains required instance record\n", SP(instance->instanceId));
+                        EUCA_FREE(vers);
+                        EUCA_FREE(appvers);
+                        EUCA_FREE(fileBuf);
+                        return(0);
+                    } else {
+                        LOGTRACE("[%s] global network config does not (yet) contain required instance record, waiting...(%d seconds remaining)\n", SP(instance->instanceId), (int)(max_time - time(NULL)));
+                    }
+                } else {
+                    LOGDEBUG("[%s] version (%s) and applied version (%s) do not match (yet), waiting\n", instance->instanceId, vers, appvers);
+                }
+                
+                EUCA_FREE(vers);
+                EUCA_FREE(appvers);
+            } else {
+                LOGDEBUG("[%s] cannot read valid global network view file '%s' (yet), waiting\n", instance->instanceId, xmlfile);
+            }
+            EUCA_FREE(fileBuf);
+            
+            /*
             globalNetworkInfo *gni = NULL;
             gni_hostname_info *host_info = NULL;
             char xmlfile[EUCA_MAX_PATH] = "";
@@ -3865,6 +3908,7 @@ int instance_network_gate(ncInstance *instance, time_t timeout_seconds) {
             if (gni && host_info) {
                 // decode/read/parse the globalnetworkinfo, assign any incorrect public/private IP mappings based on global view
                 snprintf(xmlfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/global_network_info.xml", nc_state.home);
+
                 rc = gni_populate(gni,host_info,xmlfile);
                 if (rc) {
                     // error
@@ -3894,6 +3938,7 @@ int instance_network_gate(ncInstance *instance, time_t timeout_seconds) {
             // Free up gni and host_info memory
             rc = gni_free(gni);
             rc = gni_hostnames_free(host_info);
+            */
         } else {
             return(0);
         }

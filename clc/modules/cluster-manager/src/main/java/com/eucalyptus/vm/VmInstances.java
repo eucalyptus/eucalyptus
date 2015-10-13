@@ -177,6 +177,7 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.PersistenceExceptions;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.entities.TransactionResource;
@@ -862,25 +863,35 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
       Logs.extreme( ).error( ex, ex );
     }
 
-    try ( final TransactionResource db = Entities.distinctTransactionFor( VmInstance.class ) ) {
-      VmInstanceLifecycleHelpers.get().cleanUpInstance( Entities.merge( vm ), vmState );
-      db.commit();
+    try {
+       Entities.asDistinctTransaction( VmInstance.class, new Predicate<VmInstance>( ) {
+         @Override
+         public boolean apply( @Nullable final VmInstance vmInstance ) {
+           VmInstanceLifecycleHelpers.get( ).cleanUpInstance( Entities.merge( vm ), vmState );
+           return true;
+         }
+       } ).apply( vm );
     } catch ( Exception ex ) {
-      LOG.error( ex );
+      LOG.error( "Lifecycle clean up error for instance: " + vm.getInstanceId( ), ex );
       Logs.extreme( ).error( ex, ex );
     }
-
+    
     if ( !rollbackNetworkingOnFailure && VmStateSet.TORNDOWN.apply( vm ) ) {
-      try ( final TransactionResource db = Entities.distinctTransactionFor( VmInstance.class ) ) {
-        clearServiceTag( vm );
-        if ( VmStateSet.DONE.apply( vm ) ) {
-          Entities.merge( vm ).clearReferences( );
-        } else {
-          Entities.merge( vm ).clearRunReferences( );
-        }
-        db.commit();
+      clearServiceTag( vm );
+      try {
+        Entities.asDistinctTransaction( VmInstance.class, new Predicate<VmInstance>( ) {
+          @Override
+          public boolean apply( @Nullable final VmInstance vmInstance ) {
+            if ( VmStateSet.DONE.apply( vm ) ) {
+              Entities.merge( vm ).clearReferences( );
+            } else {
+              Entities.merge( vm ).clearRunReferences( );
+            }
+            return true;
+          }
+        } ).apply( vm );
       } catch ( Exception ex ) {
-        LOG.error( ex );
+        LOG.error( "Error clearing references for instance: " + vm.getInstanceId( ), ex );
         Logs.extreme( ).error( ex, ex );
       }
     }
@@ -1024,26 +1035,38 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
   }
   
   public static void delete( final String instanceId ) {
-    try {
-      Entities.asTransaction( VmInstance.class, new Function<String, String>( ) {
-        @Override
-        public String apply( String input ) {
-          try {
-            VmInstance entity = Entities.uniqueResult( VmInstance.named( null, input ) );
-            Entities.delete( entity );
-          } catch ( final NoSuchElementException ex ) {
-            LOG.debug( "Instance not found for deletion: " + instanceId );
-            Logs.extreme( ).error( ex, ex );
-          } catch ( final Exception ex ) {
-            LOG.error( "Error deleting instance: " + instanceId + "; " + ex );
-            Logs.extreme( ).error( ex, ex );
-          }
-          return input;
+    final Function<String, String> delete = Entities.asTransaction( VmInstance.class, new Function<String, String>( ) {
+      @Override
+      public String apply( String input ) {
+        try {
+          VmInstance entity = Entities.uniqueResult( VmInstance.named( null, input ) );
+          Entities.delete( entity );
+        } catch ( final NoSuchElementException ex ) {
+          LOG.debug( "Instance not found for deletion: " + instanceId );
+          Logs.extreme( ).error( ex, ex );
+        } catch ( final Exception ex ) {
+          LOG.error( "Error deleting instance: " + instanceId + "; " + ex );
+          Logs.extreme( ).error( ex, ex );
         }
-      }, VmInstances.TX_RETRIES ).apply( instanceId );
+        return input;
+      }
+    }, VmInstances.TX_RETRIES );
+    try {
+      delete.apply( instanceId );
     } catch ( Exception ex ) {
-      LOG.error( "Error deleting instance ("+instanceId+") :" + ex );
-      Logs.extreme( ).error( ex, ex );
+      if ( PersistenceExceptions.classify( ex ) == PersistenceExceptions.ErrorCategory.CONSTRAINT ) {
+        LOG.error( "Error deleting instance (" + instanceId + ") due to constraints, retrying after clean up", ex );
+        try {
+          cleanUp( lookupAny( instanceId ) );
+          delete.apply( instanceId );
+        } catch ( Exception ex2 ) {
+          LOG.error( "Error deleting instance (" + instanceId + ") :" + ex2 );
+          Logs.extreme( ).error( ex2, ex2 );
+        }
+      } else {
+        LOG.error( "Error deleting instance (" + instanceId + ") :" + ex );
+        Logs.extreme( ).error( ex, ex );
+      }
     }
   }
 

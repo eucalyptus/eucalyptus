@@ -393,9 +393,6 @@ int main(int argc, char **argv)
     gIsRunning = TRUE;
     eucanetd_install_signal_handlers();
 
-    // temporary
-    //    system("cp /opt/eucalyptus/var/run/eucalyptus/global_network_info.xml /opt/eucalyptus/var/lib/eucalyptus/global_network_info.xml");
-
     // spin here until we get the latest config from active CC
     rc = 1;
     while (rc) {
@@ -979,13 +976,20 @@ static int eucanetd_read_config(void)
     // search for the global state file from eucalyptue
     snprintf(sourceuri, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/global_network_info.xml", home);
     if (check_file(sourceuri)) {
-        snprintf(sourceuri, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/global_network_info.xml", home);
+        snprintf(sourceuri, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/cc_global_network_info.xml", home);
         if (check_file(sourceuri)) {
-            LOGWARN("cannot find global_network_info.xml state file in $EUCALYPTUS/var/lib/eucalyptus or $EUCALYPTUS/var/run/eucalyptus yet.\n");
-            return (1);
+            snprintf(sourceuri, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/global_network_info.xml", home);
+            if (check_file(sourceuri)) {
+                LOGWARN("cannot find global_network_info.xml state file in $EUCALYPTUS/var/lib/eucalyptus or $EUCALYPTUS/var/run/eucalyptus yet.\n");
+                return (1);
+            } else {
+                snprintf(sourceuri, EUCA_MAX_PATH, "file://" EUCALYPTUS_STATE_DIR "/global_network_info.xml", home);
+                snprintf(destfile, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/eucanetd_global_network_info.xml", home);
+                LOGDEBUG("found global_network_info.xml state file: setting source URI to '%s'\n", sourceuri);
+            }
         } else {
-            snprintf(sourceuri, EUCA_MAX_PATH, "file://" EUCALYPTUS_STATE_DIR "/global_network_info.xml", home);
-            snprintf(destfile, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/eucanetd_global_network_info.xml", home);
+            snprintf(sourceuri, EUCA_MAX_PATH, "file://" EUCALYPTUS_RUN_DIR "/cc_global_network_info.xml", home);
+            snprintf(destfile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/eucanetd_global_network_info.xml", home);
             LOGDEBUG("found global_network_info.xml state file: setting source URI to '%s'\n", sourceuri);
         }
     } else {
@@ -993,10 +997,6 @@ static int eucanetd_read_config(void)
         snprintf(destfile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/eucanetd_global_network_info.xml", home);
         LOGDEBUG("found global_network_info.xml state file: setting source URI to '%s'\n", sourceuri);
     }
-
-    // TODO: tmp
-    //    snprintf(sourceuri, EUCA_MAX_PATH, "file:///tmp/meh.xml");
-
 
     // initialize and populate data from global_network_info.xml file
     atomic_file_init(&(config->global_network_info_file), sourceuri, destfile, 0);

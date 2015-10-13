@@ -3231,46 +3231,46 @@ int ingress_gni_to_iptables_rule(char *scidr, gni_rule *ingress_rule, char *outr
     }
     if (strptr && strlen(strptr)) {
         snprintf(buf, MAX_RULE_LEN, "-s %s ", strptr);
-        strncat(newrule, buf, MAX_NEWRULE_LEN);
+        strncat(newrule, buf, MAX_RULE_LEN);
     }
     switch (ingress_rule->protocol) {
         case 1: // ICMP
             snprintf(buf, MAX_RULE_LEN, "-p %s -m %s ", proto_info->p_name, proto_info->p_name);
-            strncat(newrule, buf, MAX_NEWRULE_LEN);
+            strncat(newrule, buf, MAX_RULE_LEN);
             if (ingress_rule->icmpType == -1) {
                 snprintf(buf, MAX_RULE_LEN, "--icmp-type any ");
-                strncat(newrule, buf, MAX_NEWRULE_LEN);
+                strncat(newrule, buf, MAX_RULE_LEN);
             } else {
                 snprintf(buf, MAX_RULE_LEN, "--icmp-type %d", ingress_rule->icmpType);
-                strncat(newrule, buf, MAX_NEWRULE_LEN);
+                strncat(newrule, buf, MAX_RULE_LEN);
                 if (ingress_rule->icmpCode != -1) {
                     snprintf(buf, MAX_RULE_LEN, "/%d", ingress_rule->icmpCode);
-                    strncat(newrule, buf, MAX_NEWRULE_LEN);
+                    strncat(newrule, buf, MAX_RULE_LEN);
                 }
                 snprintf(buf, MAX_RULE_LEN, " ");
-                strncat(newrule, buf, MAX_NEWRULE_LEN);
+                strncat(newrule, buf, MAX_RULE_LEN);
             }
             break;
         case 6: // TCP
         case 17: // UDP
             snprintf(buf, MAX_RULE_LEN, "-p %s -m %s ", proto_info->p_name, proto_info->p_name);
-            strncat(newrule, buf, MAX_NEWRULE_LEN);
+            strncat(newrule, buf, MAX_RULE_LEN);
             if (ingress_rule->fromPort) {
                 snprintf(buf, MAX_RULE_LEN, "--dport %d", ingress_rule->fromPort);
-                strncat(newrule, buf, MAX_NEWRULE_LEN);
+                strncat(newrule, buf, MAX_RULE_LEN);
                 if ((ingress_rule->toPort) && (ingress_rule->toPort > ingress_rule->fromPort)) {
                     snprintf(buf, MAX_RULE_LEN, ":%d", ingress_rule->toPort);
-                    strncat(newrule, buf, MAX_NEWRULE_LEN);
+                    strncat(newrule, buf, MAX_RULE_LEN);
                 }
                 snprintf(buf, MAX_RULE_LEN, " ");
-                strncat(newrule, buf, MAX_NEWRULE_LEN);
+                strncat(newrule, buf, MAX_RULE_LEN);
             }
             break;            
         default:
             // Protocols accepted by EC2 non-VPC are ICMP/TCP/UDP. Other protocols will default to numeric values on euca.
             // snprintf(buf, MAX_RULE_LEN, "-p %s ", proto_info->p_name);
             snprintf(buf, MAX_RULE_LEN, "-p %d ", proto_info->p_proto);
-            strncat(newrule, buf, MAX_NEWRULE_LEN);
+            strncat(newrule, buf, MAX_RULE_LEN);
             break;
     }
 
@@ -3279,7 +3279,7 @@ int ingress_gni_to_iptables_rule(char *scidr, gni_rule *ingress_rule, char *outr
             break;
         case 1: // Add condition to the rule to accept the packet if it would be SNATed.
             snprintf(buf, MAX_RULE_LEN, "-m mark ! --mark 0x2a ");
-            strncat(newrule, buf, MAX_NEWRULE_LEN);
+            strncat(newrule, buf, MAX_RULE_LEN);
             break;
         default:
             LOGINFO("Call with invalid flags: %d - ignored.\n", flags);

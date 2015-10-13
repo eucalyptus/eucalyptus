@@ -40,7 +40,7 @@ import net.sf.json.JSONException;
  */
 @PolicyKey( TargetImageKey.KEY_NAME )
 public class TargetImageKey implements ComputeKey {
-  static final String KEY_NAME = "ec2:targetimage"; //TODO:STEVE: or request(ed)image?
+  static final String KEY_NAME = "ec2:targetimage";
   private static final Set<String> actions = ImmutableSet.<String>builder()
       .add( qualifiedName( VENDOR_EC2, EC2_RUNINSTANCES ) )
       .build( );

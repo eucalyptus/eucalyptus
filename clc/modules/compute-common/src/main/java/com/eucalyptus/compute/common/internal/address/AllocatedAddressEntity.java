@@ -19,8 +19,10 @@
  ************************************************************************/
 package com.eucalyptus.compute.common.internal.address;
 
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
+
 import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -30,9 +32,11 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
+
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Index;
+
 import com.eucalyptus.auth.principal.FullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.auth.principal.Principals;
@@ -379,6 +383,7 @@ public class AllocatedAddressEntity extends UserMetadata<AddressState> implement
 
     @Override
     public boolean apply( final Class entityClass ) {
+      final List<VmInstance> vmInstances = VmInstances.list( Predicates.alwaysTrue( ) );
       try ( final TransactionResource tx = Entities.transactionFor( AllocatedAddressEntity.class ) ) {
         // Populate Elastic IP info
         final Set<String> addresses = Sets.newHashSetWithExpectedSize( 128 );
@@ -409,14 +414,13 @@ public class AllocatedAddressEntity extends UserMetadata<AddressState> implement
                 }
               }
             }
-            Entities.evict( instance );
           } catch ( NoSuchElementException e ) {
             entity.setState( AddressState.allocated );
           }
         }
 
         // Add missing public IPs for instances
-        for ( final VmInstance instance : VmInstances.list( Predicates.alwaysTrue( ) ) ) {
+        for ( final VmInstance instance : vmInstances ) {
           if ( !VmNetworkConfig.DEFAULT_IP.equals( instance.getPublicAddress( ) ) && !addresses.contains( instance.getPublicAddress( ) )  ) {
             if ( instance.getVpcId( ) == null ) {
               final AllocatedAddressEntity entity = AllocatedAddressEntity.create( );
@@ -450,7 +454,6 @@ public class AllocatedAddressEntity extends UserMetadata<AddressState> implement
               }
             }
           }
-          Entities.evict( instance );
         }
 
         tx.commit() ;

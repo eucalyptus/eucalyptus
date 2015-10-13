@@ -34,7 +34,6 @@ import javax.security.auth.login.LoginException;
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.xbill.DNS.Name;
 
 import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.component.ComponentIds;
@@ -43,17 +42,14 @@ import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
 import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidAccessKeyIdException;
-import com.eucalyptus.objectstorage.exceptions.s3.InvalidAddressingHeaderException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidSecurityException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.exceptions.s3.SignatureDoesNotMatchException;
 import com.eucalyptus.objectstorage.pipeline.auth.ObjectStorageWrappedCredentials;
+import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
-import com.eucalyptus.util.dns.DomainNames;
-import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
-import com.google.common.collect.Iterables;
 
 /**
  * Primary implementation of S3 authentication. Both REST and Query.
@@ -369,7 +365,6 @@ public class S3Authentication {
      */
     try {
       String addr = httpRequest.getUri();
-      String targetHost = httpRequest.getHeader(HttpHeaders.Names.HOST);
       String osgServicePath = ComponentIds.lookup(ObjectStorage.class).getServicePath();
       String bucket, key;
 
@@ -377,21 +372,13 @@ public class S3Authentication {
 
       // Normalize the URI
       boolean foundName = false;
-      if ( !Strings.isNullOrEmpty( targetHost ) ) {
-        final String host = Iterables.getFirst( hostSplitter.split( targetHost ), targetHost );
-        final Name hostDnsName = DomainNames.absolute( Name.fromString( host ) );
-        final Optional<Name> systemDomain = DomainNames.systemDomainFor( ObjectStorage.class, hostDnsName );
-        if ( systemDomain.isPresent( ) ) {
-          foundName = true;
-          // dns-style request
-          final String hostBucket = hostDnsName.relativize( systemDomain.get( ) ).toString( );
-          if ( hostBucket.length( ) == 0 ) {
-            throw new InvalidAddressingHeaderException( "Invalid Host header: " + targetHost );
-          } else {
-            addrString.append("/" + hostBucket);
-          }
-        }
+      String hostBucket = null;
+      if ((hostBucket = OSGUtil.getBucketFromHostHeader(httpRequest)) != null) {
+        // dns-style request
+        foundName = true;
+        addrString.append("/" + hostBucket);
       }
+      
       if ( !foundName ) {
         // path-style request (or service request that won't have a bucket anyway)
         if (removeServicePath) {

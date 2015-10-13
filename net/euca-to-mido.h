@@ -110,9 +110,9 @@ enum {
     VPCBR_DHCPHOST,
     VMHOST,
     ELIP_PRE,
-    ELIP_PRE_PUB,
+    //    ELIP_PRE_PUB,
     ELIP_POST,
-    ELIP_POST_PRIV,
+    //    ELIP_POST_PRIV,
     ELIP_PRE_IPADDRGROUP,
     ELIP_POST_IPADDRGROUP,
     ELIP_PRE_IPADDRGROUP_IP,
@@ -231,6 +231,7 @@ typedef struct mido_config_t {
     u32 enabledCLCIp;
     int int_rtsn;
     int flushmode;
+    int disable_l2_isolation;
 
     midoname *hosts;
     midoname *routers;
@@ -297,7 +298,7 @@ int set_router_id(mido_config * mido, int id);
 int cidr_split(char *cidr, char *outnet, char *outslashnet, char *outgw, char *outplustwo);
 int isMidoVpcPlusTwo(mido_config *mido, char *iptocheck);
 
-int initialize_mido(mido_config * mido, char *eucahome, int flushmode, char *ext_eucanetdhostname, char *ext_rthosts, char *ext_pubnw,
+int initialize_mido(mido_config * mido, char *eucahome, int flushmode, int disable_l2_isolation, char *ext_eucanetdhostname, char *ext_rthosts, char *ext_pubnw,
                     char *ext_pubgwip, char *int_rtnetwork, char *int_rtslashnet);
 int discover_mido_resources(mido_config * mido);
 
@@ -365,5 +366,7 @@ int create_mido_meta_subnet_veth(mido_config * mido, mido_vpc * vpc, char *name,
 int delete_mido_meta_core(mido_config * mido);
 int delete_mido_meta_vpc_namespace(mido_config * mido, mido_vpc * vpc);
 int delete_mido_meta_subnet_veth(mido_config * mido, char *name);
+
+int read_mido_meta_vpc_namespace(mido_config * mido, mido_vpc * vpc);
 
 #endif /* ! _INCLUDE_EUCA_TO_MIDO_H_ */
