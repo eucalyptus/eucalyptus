@@ -439,13 +439,12 @@ static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush)
 }
 
 //!
-//! Upgrades a 4.0.X system to 4.1.0. We need to move the vnetX network devices from
-//! the old bridge to the new bridge naming style and the new instance vnet naming
-//! style.
+//! Upgrades a 4.1.2 system to 4.2.0. We need to move the vn_i* network devices from
+//! the old bridge (eucabrVLANID) to the new bridge naming style (sg-xxxxxxxx).
 //!
 //! @param[in] pGni a pointer to our global network information structure
 //!
-//! @return 0 on success or 1 if any failure occured
+//! @return 0 on success or 1 if any failure occurred
 //!
 //! @see
 //!
@@ -455,16 +454,15 @@ static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush)
 //!
 //! @post
 //!     - On success all eucabrXXX device have been renamed with the proper sg-XXXXXXXX name
-//!     - On failure, the system is left in an undeterminstic state
+//!     - On failure, the system is left in an undetermined state
 //!
 //! @note
 //!
 //! @TODO:
-//!     We need to remove this stuff for 4.2.0
+//!     Remove this code for 4.2.0+ releases
 //!
 static int network_driver_upgrade(globalNetworkInfo * pGni)
 {
-#define OLD_VNET_NAME_PREFIX           "vnet"
 #define OLD_BRIDGE_NAME_PREFIX         "eucabr"
 
     int i = 0;
@@ -473,7 +471,6 @@ static int network_driver_upgrade(globalNetworkInfo * pGni)
     int nbVnetDevices = 0;
     int nbBridgeDevices = 0;
     char sMac[ENET_ADDR_LEN] = "";
-    char sNewVnetName[IF_NAME_LEN] = "";
     char *psBridgeName = NULL;
     char *psInstanceId = NULL;
     char *psInstanceMac = NULL;
@@ -485,30 +482,25 @@ static int network_driver_upgrade(globalNetworkInfo * pGni)
 
     // Is our driver initialized?
     if (!IS_INITIALIZED()) {
-        LOGERROR("Fail to upgrade the system for '%s' network driver. Driver not initialized.\n", DRIVER_NAME());
+        LOGERROR("Failed to upgrade the system for '%s' network driver. Driver not initialized.\n", DRIVER_NAME());
         return (1);
     }
     // Is the given pGni NULL?
     if (!pGni) {
-        LOGERROR("Fail to upgrade the system for '%s' network driver. GNI not provided.\n", DRIVER_NAME());
+        LOGERROR("Failed to upgrade the system for '%s' network driver. GNI not provided.\n", DRIVER_NAME());
         return (1);
     }
 
-    LOGINFO("Upgrading network system.\n");
+    LOGINFO("Upgrading network system for %s network driver.\n", DRIVER_NAME());
 
-    // The upgrade is only for NC this time
+    // Upgrade for NC need to search for instances interfaces
     if (PEER_IS_NC(eucanetdPeer)) {
         // Retrieve our node information
         if (gni_find_self_node(pGni, &pNode) != 0) {
-            LOGERROR("Fail to upgrade the system for '%s' network driver. Cannot find node: check network configuration settings\n", DRIVER_NAME());
+            LOGERROR("Upgrade fail: Cannot find node: check network configuration settings\n");
             return (1);
         }
-        //
-        // if we have any existing vnetX network devices, than process them and
-        // convert them to vn_i-XXXXXXXX where i-XXXXXXXX is the matching instance
-        // ID for this VM.
-        //
-        if (dev_get_list(OLD_VNET_NAME_PREFIX "*", &pVnetDevices, &nbVnetDevices) == 0) {
+        if (dev_get_list("vn_*", &pVnetDevices, &nbVnetDevices) == 0) {
             // retrieve our instances and process our known instances
             if (gni_node_get_instances(pGni, pNode, NULL, 0, NULL, 0, &pInstances, &nbInstances) == 0) {
                 for (i = 0; i < nbInstances; i++) {
@@ -519,29 +511,22 @@ static int network_driver_upgrade(globalNetworkInfo * pGni)
                     psInstanceId = pInstances[i].name;
                     psInstanceMac = euca_strtolower(sMac + 6);
 
-                    // Create the new device name
-                    snprintf(sNewVnetName, IF_NAME_LEN, "vn_%s", psInstanceId);
-
                     // Find the matching VNET device
                     for (j = 0, found = FALSE; ((j < nbVnetDevices) && !found); j++) {
                         // Do we have a MAC address match?
                         if (strstr(pVnetDevices[j].sMacAddress, psInstanceMac)) {
-                            LOGDEBUG("Renaming network interface device '%s' to '%s'\n", pVnetDevices[j].sDevName, sNewVnetName)
-                                if (dev_rename(pVnetDevices[j].sDevName, sNewVnetName) != 0) {
-                                LOGWARN("Fail to rename device '%s' to '%s'.\n", pVnetDevices[j].sDevName, sNewVnetName);
-                            }
                             // Now try to get its associated bridge device and change its name
-                            if ((psBridgeName = dev_get_interface_bridge(sNewVnetName)) != NULL) {
+                            if ((psBridgeName = dev_get_interface_bridge(pVnetDevices[j].sDevName)) != NULL) {
                                 // Does the associated bridge have the old name style?
                                 if (strstr(psBridgeName, OLD_BRIDGE_NAME_PREFIX)) {
                                     // Then fix it but only if we have a security-group (i.e. check for NULL just in case)
                                     if (pInstances[i].max_secgroup_names > 0) {
                                         LOGDEBUG("Renaming network bridge device '%s' to '%s'.\n", psBridgeName, pInstances[i].secgroup_names[0].name);
                                         if (dev_rename(psBridgeName, pInstances[i].secgroup_names[0].name) != 0) {
-                                            LOGWARN("Fail to rename device '%s' to '%s'.\n", psBridgeName, pInstances[i].secgroup_names[0].name);
+                                            LOGWARN("Failed to rename device '%s' to '%s'.\n", psBridgeName, pInstances[i].secgroup_names[0].name);
                                         }
                                     } else {
-                                        LOGWARN("Fail to rename bridge device '%s'. No security-group found for instance '%s'\n", psBridgeName, psInstanceId)
+                                        LOGWARN("Failed to rename bridge device '%s'. No security-group found for instance '%s'\n", psBridgeName, psInstanceId)
                                     }
                                 }
                                 EUCA_FREE(psBridgeName);
@@ -554,9 +539,9 @@ static int network_driver_upgrade(globalNetworkInfo * pGni)
                 // We're done with the instances...
                 EUCA_FREE(pInstances);
             } else {
-                LOGWARN("Fail to update network for instances. Cannot retrieve instances from the view!\n");
+                LOGWARN("Failed to update network for instances. Cannot retrieve instances from the view!\n");
             }
-            // Don't forget to release the memory
+            // Release the memory
             dev_free_list(&pVnetDevices, nbVnetDevices);
         }
         //
@@ -572,24 +557,38 @@ static int network_driver_upgrade(globalNetworkInfo * pGni)
                     LOGDEBUG("Removing unused network bridge device '%s'\n", pBridgeDevices[i].sDevName);
                     if (dev_remove_bridge(pBridgeDevices[i].sDevName, TRUE) != 0) {
                         // Log the error and go on
-                        LOGERROR("Fail to remove unused bridge device '%s' during upgrade procedure.\n", pBridgeDevices[i].sDevName);
+                        LOGERROR("Failed to remove unused bridge device '%s' during upgrade procedure.\n", pBridgeDevices[i].sDevName);
                     }
                     // Done with this. Go on to the next one
                     continue;
                 }
             }
 
-            // Don't forget to release the memory
+            // Release the memory
             dev_free_list(&pBridgeDevices, nbBridgeDevices);
         }
-    } else if (!PEER_IS_CC(eucanetdPeer)) {
+    } else if (PEER_IS_CC(eucanetdPeer)) {
+        if (dev_get_bridges(OLD_BRIDGE_NAME_PREFIX "*", &pBridgeDevices, &nbBridgeDevices) == 0) {
+            for (i = 0; i < nbBridgeDevices; i++) {
+                LOGDEBUG("Removing network bridge device '%s'\n", pBridgeDevices[i].sDevName);
+                if (dev_remove_bridge(pBridgeDevices[i].sDevName, TRUE) != 0) {
+                    // Log the error and go on
+                    LOGERROR("Failed to remove unused bridge device '%s' during upgrade procedure.\n", pBridgeDevices[i].sDevName);
+                }
+                // Done with this. Go on to the next one
+                continue;
+            }
+        }
+
+        // Release the memory
+        dev_free_list(&pBridgeDevices, nbBridgeDevices);
+    } else {
         LOGERROR("Running network upgrade for '%s' network driver on unknown component!\n", DRIVER_NAME());
         return (1);
     }
 
-    return (0);
+   return (0);
 
-#undef OLD_VNET_NAME_PREFIX
 #undef OLD_BRIDGE_NAME_PREFIX
 }
 
