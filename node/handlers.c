@@ -142,7 +142,7 @@
 #define MAX_CREATE_TRYS                              5
 #define CREATE_TIMEOUT_SEC                           60
 #define LIBVIRT_TIMEOUT_SEC                          5
-#define NETWORK_GATE_TIMEOUT_SEC                     900
+#define NETWORK_GATE_TIMEOUT_SEC                     1200
 #define PER_INSTANCE_BUFFER_MB                       20 //!< by default reserve this much extra room (in MB) per instance (for kernel, ramdisk, and metadata overhead)
 #define MAX_SENSOR_RESOURCES                         MAXINSTANCES_PER_NC
 #define SEC_PER_MB                                   ((1024 * 1024) / 512)
