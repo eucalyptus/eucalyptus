@@ -82,7 +82,7 @@ class ManagedSubnets {
     final UnsignedInteger segmentSizeInt = segmentSize( managedSubnet )
 
     final UnsignedInteger privateIp = subnetInt
-        .plus( segmentSizeInt.times( unsigned( segmentId ) ) )
+        .plus( segmentSizeInt.times( unsigned( segmentId ).minus( unsigned( ManagedSubnet.MIN_VLAN ) ) ) )
         .plus( unsigned( ipIndex.intValue( ) ) )
 
     PrivateAddresses.fromInteger( privateIp )
@@ -99,7 +99,7 @@ class ManagedSubnets {
     final UnsignedInteger rebasedAddressInt = unsigned( PrivateAddresses.asInteger( address ) ).minus( subnetInt )
 
     Pair.pair(
-      rebasedAddressInt.dividedBy( segmentSizeInt ).intValue( ),
+      rebasedAddressInt.dividedBy( segmentSizeInt ).plus( unsigned( ManagedSubnet.MIN_VLAN ) ).intValue( ),
       rebasedAddressInt.mod( segmentSizeInt ).longValue( )
     )
   }
