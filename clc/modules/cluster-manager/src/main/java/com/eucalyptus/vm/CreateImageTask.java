@@ -99,12 +99,14 @@ public class CreateImageTask {
 	/* from CreateImage request */
 	private String accountNumber = null;
 	private String instanceId = null;
+	private String imageId = null;
 	private Boolean noReboot = null;
 	private List<BlockDeviceMappingItemType> blockDevices = null;
 	
-	public CreateImageTask(final String accountNumber, final String instanceId, final Boolean noReboot, List<BlockDeviceMappingItemType> blockDevices){
+	public CreateImageTask(final String accountNumber, final String instanceId, final String imageId, final Boolean noReboot, List<BlockDeviceMappingItemType> blockDevices){
 		this.accountNumber = accountNumber;
 		this.instanceId = instanceId;
+		this.imageId = imageId;
 		this.noReboot = noReboot;
 		this.blockDevices  = blockDevices;
 	}
@@ -131,9 +133,7 @@ public class CreateImageTask {
 			}
 			
 			noReboot = vmTask.getNoReboot();
-			final CreateImageTask newTask =
-					new CreateImageTask(input.getOwnerAccountNumber(), instanceId, noReboot, deviceMaps);
-
+			final CreateImageTask newTask = new CreateImageTask(input.getOwnerAccountNumber(), instanceId, vmTask.getImageId(), noReboot, deviceMaps);
 			try{
 				final String partition = input.getPartition();
 				final ServiceConfiguration sc = Topology.lookup(Storage.class, 
@@ -420,7 +420,8 @@ public class CreateImageTask {
 	  try ( TransactionResource db =
         Entities.transactionFor( VmInstance.class ) ) {
       final VmInstance vm = Entities.uniqueResult(VmInstance.named(this.instanceId));
-      db.commit();
+      if(VmState.TERMINATED.equals(vm.getState()) || VmState.BURIED.equals(vm.getState()))
+          throw new NoSuchElementException();
       return vm;
     }catch(NoSuchElementException ex){
       LOG.error("Unable to find the vm instance (terminated?) - " + this.instanceId);
@@ -560,8 +561,7 @@ public class CreateImageTask {
 	}
 	
 	private String getImageId(){
-		final VmInstance vm = this.getVmInstance();
-		return vm.getRuntimeState().getVmCreateImageTask().getImageId();
+		return this.imageId;
 	}
 	
 	private List<String> getSnapshotIds(){

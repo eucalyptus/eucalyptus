@@ -471,7 +471,13 @@ public class Addresses {
     final Optional<AddressStateTransition> pendingTransition = address.get( ).pendingAssignment( );
     if ( pendingTransition.isPresent( ) ) {
       try {
-        allocatedAddressPersistence.save( createEntity( pendingTransition.get( ).newAddressInfo( ) ) );
+        call( new Callable<Void>( ) {
+           @Override
+           public Void call( ) throws Exception {
+             allocatedAddressPersistence.save( createEntity( pendingTransition.get( ).newAddressInfo( ) ) );
+             return null;
+           }
+         } );
       } catch ( final Exception e ) {
         LOG.error( "Persistence error for system address, attempting rollback " + address.get( ).getDisplayName( ), e );
         if ( pendingTransition.get( ).rollback( ) ) {

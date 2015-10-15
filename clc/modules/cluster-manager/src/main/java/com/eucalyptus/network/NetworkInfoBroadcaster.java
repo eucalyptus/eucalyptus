@@ -257,12 +257,14 @@ public class NetworkInfoBroadcaster {
           ( appliedVersion == null || appliedVersion.getRight( ).equals( lastBroadcast.appliedVersion ) ) ) {
         encodedNetworkInfo = lastBroadcast.encodedNetworkInfo;
       } else {
+        final int networkInfoFingerprint;
         final NetworkInfo info;
         final boolean converged = lastBroadcast != null &&
             ( appliedVersion != null && !appliedVersion.getRight( ).equals( lastBroadcast.appliedVersion ) ) &&
             ( System.currentTimeMillis() - lastBroadcast.lastConvergedTimestamp > TimeUnit.SECONDS.toMillis( 150 ) );
         if ( converged ) {
           info =  lastBroadcast.networkInfo;
+          networkInfoFingerprint = lastBroadcast.version;
         } else {
           info = NetworkInfoBroadcasts.buildNetworkConfiguration(
               networkConfiguration,
@@ -284,6 +286,7 @@ public class NetworkInfoBroadcaster {
               dirtyPublicAddresses
           );
           info.setVersion( BaseEncoding.base16( ).lowerCase( ).encode( Ints.toByteArray( sourceFingerprint ) ) );
+          networkInfoFingerprint = sourceFingerprint;
         }
         if ( appliedVersion != null ) {
           info.setAppliedTime( Timestamps.formatIso8601Timestamp( new Date( appliedVersion.getLeft( ) ) ) );
@@ -308,7 +311,7 @@ public class NetworkInfoBroadcaster {
 
         encodedNetworkInfo = new String( B64.standard.enc( networkInfo.getBytes( Charsets.UTF_8 ) ), Charsets.UTF_8 );
         lastBroadcastInformation.set( new LastBroadcastInfo(
-            sourceFingerprint,
+            networkInfoFingerprint,
             appliedVersion == null ? null : appliedVersion.getRight( ),
             info,
             encodedNetworkInfo,
