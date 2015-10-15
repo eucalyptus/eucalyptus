@@ -1828,9 +1828,6 @@ int mido_update_resource(char *resource_type, char *content_type, char *vers, mi
     return(ret);
     
     
-    //    LOGDEBUG("MEHMEH: input jsonbuf: %s\n", name->jsonbuf);
-    //    LOGDEBUG("MEHMEH: payload to parse: %s\n", payload);
-
     jobj = json_tokener_parse(name->jsonbuf);
     //jobj = json_tokener_parse(payload);
     if (jobj) {
@@ -3379,6 +3376,7 @@ int mido_get_resources(midoname * parents, int max_parents, char *tenant, char *
         snprintf(tmpbuf, EUCA_MAX_PATH, "%s?tenant_id=%s", resource_type, tenant);
         strcat(url, tmpbuf);
     }
+
 
     rc = midonet_http_get(url, apistr, &payload);
     if (!rc) {

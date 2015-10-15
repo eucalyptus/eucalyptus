@@ -459,6 +459,9 @@ int delete_mido_meta_vpc_namespace(mido_config * mido, mido_vpc * vpc)
 
     rc = se_init(&cmds, rr, 10, 1);
 
+    //    snprintf(cmd, EUCA_MAX_PATH, "ip link set vn2_%s down", sid);
+    //    rc = se_add(&cmds, cmd, NULL, ignore_exit);
+
     snprintf(cmd, EUCA_MAX_PATH, "ip link del vn2_%s", sid);
     rc = se_add(&cmds, cmd, NULL, ignore_exit);
 
@@ -640,6 +643,9 @@ int delete_mido_meta_subnet_veth(mido_config * mido, char *name)
     sscanf(name, "subnet-%8s", sid);
 
     rc = se_init(&cmds, rr, 2, 1);
+
+    //    snprintf(cmd, EUCA_MAX_PATH, "ip link set vn0_%s down", sid);
+    //    rc = se_add(&cmds, cmd, NULL, ignore_exit);
 
     snprintf(cmd, EUCA_MAX_PATH, "ip link del vn0_%s", sid);
     rc = se_add(&cmds, cmd, NULL, ignore_exit);
