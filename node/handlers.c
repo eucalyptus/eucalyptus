@@ -1501,6 +1501,26 @@ void *monitoring_thread(void *arg)
             // query for current state, if any
             refresh_instance_info(nc, instance);
 
+            if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_VPCMIDO)) {
+                char iface[16], cmd[EUCA_MAX_PATH], obuf[256], ebuf[256], sPath[EUCA_MAX_PATH];
+                snprintf(iface, 16, "vn_%s", instance->instanceId);
+                LOGTRACE("checking if VM interface is attached to a bridge (%s/%s)\n", iface, instance->params.guestNicDeviceName);
+
+                // If this device does not have a 'brport' path, this isn't a bridge device
+                snprintf(sPath, EUCA_MAX_PATH, "/sys/class/net/%s/brport/", iface);
+                if (!check_directory(sPath)) {
+                //                if (dev_is_bridge_interface(iface, instance->params.guestNicDeviceName) == FALSE) {
+                    LOGTRACE("VM interface is attached to a bridge (%s/%s)\n", iface, instance->params.guestNicDeviceName);
+                    snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc_state.rootwrap_cmd_path, instance->params.guestNicDeviceName, iface);
+                    if (timeshell(cmd, obuf, ebuf, 256, 10)) {
+                        LOGERROR("unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n");
+                    } else {
+                        LOGTRACE("VM interface removed from bridge (%s/%s)\n", iface, instance->params.guestNicDeviceName);
+                    }
+                }
+            }
+        
+
             // time out logic for migration-ready instances
             if (!strcmp(instance->stateName, "Extant") && ((instance->migration_state == MIGRATION_READY) || (instance->migration_state == MIGRATION_PREPARING))
                 && ((now - instance->migrationTime) > nc_state.migration_ready_threshold)) {

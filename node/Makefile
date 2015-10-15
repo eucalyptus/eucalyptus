@@ -178,7 +178,7 @@ server: $(SCLIBS) $(SERVICE_SO)
 
 $(SERVICE_SO): generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/euca_file.o ../util/euca_system.o ../util/sensor.o ../util/hash.o ../util/data.o server-marshal.o handlers.o $(NC_HANDLERS) ../util/eucalyptus.h ../util/euca_auth.o ../storage/http.o $(STATS_OBJS)
 #	$(CC) -shared generated/*.o server-marshal.o handlers.o $(NC_HANDLERS) $(STORAGE_OBJS) $(STATS_OBJS) ../util/*.o ../storage/http.o ../storage/storage-windows.o ../net/euca_gni.o ../net/eucanetd_util.o $(SCLIBS) $(NC_LIBS) $(STATS_LIBS) $(EFENCE) -o $(SERVICE_SO)
-	$(CC) -shared generated/*.o server-marshal.o handlers.o $(NC_HANDLERS) $(STORAGE_OBJS) $(STATS_OBJS) ../util/*.o ../storage/http.o ../storage/storage-windows.o ../net/libeucanet.a $(SCLIBS) $(NC_LIBS) $(STATS_LIBS) $(EFENCE) -o $(SERVICE_SO)
+	$(CC) -shared generated/*.o server-marshal.o handlers.o $(NC_HANDLERS) $(STORAGE_OBJS) $(STATS_OBJS) ../util/*.o ../storage/http.o ../storage/storage-windows.o $(SCLIBS) $(NC_LIBS) $(STATS_LIBS) $(EFENCE) -o $(SERVICE_SO)
 
 ../util/stats/%.o:
 	make -C ../util/stats
