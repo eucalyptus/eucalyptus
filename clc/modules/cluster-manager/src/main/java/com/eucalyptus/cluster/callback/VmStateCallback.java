@@ -94,6 +94,7 @@ import com.eucalyptus.util.Either;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.NonNullFunction;
 import com.google.common.base.Functions;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -304,6 +305,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
           updateRequired =
                   vmView.isBundling( ) ||
                   vmView.isMigrating( ) ||
+                  !"none".equals( Objects.toString( Strings.emptyToNull( runVm.getMigrationStateName( ) ), "none" ) ) ||    
                   runVmState != vmView.getState( ) ||
                   !Objects.equals( vmView.getGuestState( ), runVm.getGuestStateName( ) ) ||
                   !Objects.equals( vmView.getServiceTag( ), runVm.getServiceTag( ) ) ||
