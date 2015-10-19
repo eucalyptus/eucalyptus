@@ -414,6 +414,12 @@ int create_mido_meta_core(mido_config * mido)
     snprintf(cmd, EUCA_MAX_PATH, "brctl addbr metabr");
     rc = se_add(&cmds, cmd, NULL, ignore_exit);
 
+    snprintf(cmd, EUCA_MAX_PATH, "brctl setfd metabr 2");
+    rc = se_add(&cmds, cmd, NULL, ignore_exit);
+    
+    snprintf(cmd, EUCA_MAX_PATH, "brctl sethello metabr 2");
+    rc = se_add(&cmds, cmd, NULL, ignore_exit);
+    
     snprintf(cmd, EUCA_MAX_PATH, "ip addr add 169.254.0.1/16 dev metabr");
     rc = se_add(&cmds, cmd, NULL, ignore_exit2);
 
