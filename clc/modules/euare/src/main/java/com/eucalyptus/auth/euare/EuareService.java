@@ -87,6 +87,7 @@ import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.ServerCertificate;
 import com.eucalyptus.auth.euare.persist.entities.ServerCertificateEntity;
 import com.eucalyptus.auth.euare.ldap.LdapSync;
+import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareGroup;
 import com.eucalyptus.auth.euare.principal.EuareRole;
@@ -104,6 +105,8 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
@@ -1749,11 +1752,11 @@ public class EuareService {
     }
     reply.getListRolesResult( ).setIsTruncated( false );
     final ArrayList<RoleType> roles = reply.getListRolesResult( ).getRoles().getMember();
-    try {
+    try ( final AutoCloseable euareTx = readonlyTx( ) ) {
       for ( final EuareRole role : account.getRoles() ) {
         if ( role.getPath( ).startsWith( path ) ) {
           if ( Privileged.allowListRole( requestUser, account, role ) ) {
-            roles.add( fillRoleResult( new RoleType(), role ) );
+            roles.add( fillRoleResult( new RoleType( ), role ) );
           }
         }
       }
@@ -1978,7 +1981,7 @@ public class EuareService {
     final EuareRole roleFound = lookupRoleByName( account, request.getRoleName() );
     reply.getListInstanceProfilesForRoleResult().setIsTruncated( false );
     final ArrayList<InstanceProfileType> instanceProfiles = reply.getListInstanceProfilesForRoleResult().getInstanceProfiles().getMember();
-    try {
+    try ( final AutoCloseable euareTx = readonlyTx( ) ) {
       for ( final EuareInstanceProfile instanceProfile : Privileged.listInstanceProfilesForRole( requestUser, account, roleFound ) ) {
         if ( Privileged.allowListInstanceProfileForRole( requestUser, account, instanceProfile ) ) {
           instanceProfiles.add( fillInstanceProfileResult( new InstanceProfileType(), instanceProfile ) );
@@ -2027,7 +2030,7 @@ public class EuareService {
     }
     reply.getListInstanceProfilesResult().setIsTruncated( false );
     final ArrayList<InstanceProfileType> instanceProfiles = reply.getListInstanceProfilesResult( ).getInstanceProfiles().getMember();
-    try {
+    try ( final AutoCloseable euareTx = readonlyTx( ) ) {
       for ( final EuareInstanceProfile instanceProfile : (List<EuareInstanceProfile>)(List)account.getInstanceProfiles() ) {
         if ( instanceProfile.getPath( ).startsWith( path ) ) {
           if ( Privileged.allowListInstanceProfile( requestUser, account, instanceProfile ) ) {
@@ -2361,5 +2364,9 @@ public class EuareService {
     } catch ( final UnsupportedEncodingException e ) {
       throw Exceptions.toUndeclared( e );
     }
+  }
+  
+  protected AutoCloseable readonlyTx( ) {
+    return Entities.readOnlyDistinctTransactionFor( UserEntity.class );
   }
 }
