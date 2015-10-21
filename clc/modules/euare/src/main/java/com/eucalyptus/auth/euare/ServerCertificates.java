@@ -126,34 +126,16 @@ public class ServerCertificates {
     INSTANCE;
     @Override
     public ServerCertificate apply(ServerCertificateEntity entity) {
-      try {
-        final ServerCertificate cert = new ServerCertificate(
-            entity.getOwnerAccountNumber(),
-            entity.getCertName(), entity.getCreationTimestamp());
-        cert.setCertificatePath(entity.getCertPath());
-        cert.setCertificateBody(entity.getCertBody());
-        cert.setCertificateChain(entity.getCertChain());
-        cert.setCertificateId(entity.getCertId());
+      return toServerCertificate( entity, false );
+    }
+  }
 
-        byte[] encText = Base64.decode(entity.getPrivateKey());
-        byte[] iv = Arrays.copyOfRange(encText, 0, 32);
-        byte[] encPk = Arrays.copyOfRange(encText, 32, encText.length);
-
-        byte[] symKeyWrapped = Base64.decode(entity.getSessionKey());
-        // get session key
-        final PrivateKey euarePk = SystemCredentials.lookup(Euare.class)
-            .getPrivateKey();
-        Cipher cipher = Ciphers.RSA_PKCS1.get();
-        cipher.init(Cipher.UNWRAP_MODE, euarePk, Crypto.getSecureRandomSupplier().get( ));
-        SecretKey sessionKey = (SecretKey) cipher.unwrap(symKeyWrapped,
-            "AES/GCM/NoPadding", Cipher.SECRET_KEY);
-        cipher = Ciphers.AES_GCM.get();
-        cipher.init(Cipher.DECRYPT_MODE, sessionKey, new IvParameterSpec(iv), Crypto.getSecureRandomSupplier( ).get( ) );
-        cert.setPrivateKey(new String(cipher.doFinal(encPk)));
-        return cert;
-      } catch (final Exception ex) {
-        throw Exceptions.toUndeclared(ex);
-      }
+  public enum ToServerCertificateWithSecrets implements
+      Function<ServerCertificateEntity, ServerCertificate> {
+    INSTANCE;
+    @Override
+    public ServerCertificate apply(ServerCertificateEntity entity) {
+      return toServerCertificate( entity, true );
     }
   }
 
@@ -178,6 +160,44 @@ public class ServerCertificates {
       }
       Entities.persist(found);
       db.commit();
+    } catch (final Exception ex) {
+      throw Exceptions.toUndeclared(ex);
+    }
+  }  
+  
+  private static ServerCertificate toServerCertificate( 
+      final ServerCertificateEntity entity, 
+      final boolean includeSecrets
+  ) {
+    try {
+      final ServerCertificate cert = new ServerCertificate(
+          entity.getOwnerAccountNumber( ),
+          entity.getCertName( ), 
+          entity.getCreationTimestamp( )
+      );
+      cert.setCertificatePath(entity.getCertPath());
+      cert.setCertificateBody(entity.getCertBody());
+      cert.setCertificateChain(entity.getCertChain());
+      cert.setCertificateId(entity.getCertId());
+
+      if ( includeSecrets ) {
+        byte[] encText = Base64.decode( entity.getPrivateKey( ) );
+        byte[] iv = Arrays.copyOfRange( encText, 0, 32 );
+        byte[] encPk = Arrays.copyOfRange( encText, 32, encText.length );
+
+        byte[] symKeyWrapped = Base64.decode( entity.getSessionKey( ) );
+        // get session key
+        final PrivateKey euarePk = SystemCredentials.lookup( Euare.class )
+            .getPrivateKey( );
+        Cipher cipher = Ciphers.RSA_PKCS1.get( );
+        cipher.init( Cipher.UNWRAP_MODE, euarePk, Crypto.getSecureRandomSupplier( ).get( ) );
+        SecretKey sessionKey = (SecretKey) cipher.unwrap( symKeyWrapped,
+            "AES/GCM/NoPadding", Cipher.SECRET_KEY );
+        cipher = Ciphers.AES_GCM.get( );
+        cipher.init( Cipher.DECRYPT_MODE, sessionKey, new IvParameterSpec( iv ), Crypto.getSecureRandomSupplier( ).get( ) );
+        cert.setPrivateKey( new String( cipher.doFinal( encPk ) ) );
+      }
+      return cert;
     } catch (final Exception ex) {
       throw Exceptions.toUndeclared(ex);
     }
