@@ -2211,6 +2211,9 @@ w_out:
                 LOGERROR("[%s] failed to generate artifact id\n", current_instanceId);
                 goto i_out;
             }
+            if (is_migration_dest) {
+                bb_size_bytes = vbr->sizeBytes + 1048576; // TODO idially add 1M only in PV cases
+            }
             // allocate artifact struct
             a = art_alloc(art_id, art_id, bb_size_bytes, !is_migration_dest, must_be_file, FALSE, imaging_creator, vbr);
 

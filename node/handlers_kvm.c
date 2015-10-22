@@ -992,29 +992,7 @@ unroll:
             change_state(instance, BOOTING);    // not STAGING, since in that mode we don't poll hypervisor for info
             LOGINFO("[%s] migration destination ready %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
             save_instance_struct(instance);
-
-            error = add_instance(&global_instances, instance);
             copy_instances();
-            sem_v(inst_sem);
-            if (error) {
-                if (error == EUCA_DUPLICATE_ERROR) {
-                    LOGINFO("[%s] instance struct already exists (from previous migration?), deleting and re-adding...\n", instance->instanceId);
-                    error = remove_instance(&global_instances, instance);
-                    if (error) {
-                        LOGERROR("[%s] could not replace (remove) instance struct, failing...\n", instance->instanceId);
-                        goto failed_dest;
-                    }
-                    error = add_instance(&global_instances, instance);
-                    if (error) {
-                        LOGERROR("[%s] could not replace (add) instance struct, failing...\n", instance->instanceId);
-                        goto failed_dest;
-                    }
-                } else {
-                    LOGERROR("[%s] could not add instance struct, failing...\n", instance->instanceId);
-                    goto failed_dest;
-                }
-            }
-
             continue;
 
 failed_dest:
