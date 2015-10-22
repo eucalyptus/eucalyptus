@@ -442,7 +442,7 @@ public class DatabaseAuthProvider implements AccountProvider {
             if ( info != null ) {
                 for (Map.Entry<String,String> entry : info.entrySet()) {
                     if (entry.getKey() != null
-                            && User.EMAIL.equals( entry.getKey() )
+                            && EuareUser.EMAIL.equals( entry.getKey() )
                             && entry.getValue() != null
                             && email.equalsIgnoreCase(entry.getValue())) {
                         emailMatched = true;

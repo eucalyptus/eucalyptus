@@ -131,7 +131,8 @@ public class DatabaseAccountProxy implements EuareAccount {
   private static Logger LOG = Logger.getLogger( DatabaseAccountProxy.class );
 
   private static final ValueChecker ACCOUNT_NAME_CHECKER = ValueCheckerFactory.createAccountNameChecker( );
-  private static final ValueChecker USER_GROUP_NAME_CHECKER = ValueCheckerFactory.createUserAndGroupNameChecker( );
+  private static final ValueChecker USER_NAME_CHECKER = ValueCheckerFactory.createUserNameChecker( );
+  private static final ValueChecker GROUP_NAME_CHECKER = ValueCheckerFactory.createGroupNameChecker( );
   private static final ValueChecker PATH_CHECKER = ValueCheckerFactory.createPathChecker( );
 
   private AccountEntity delegate;
@@ -313,7 +314,7 @@ public class DatabaseAccountProxy implements EuareAccount {
   public EuareUser addUser( String userName, String path, boolean enabled, Map<String, String> info ) throws AuthException {
     synchronized(getLock()) {
       try {
-        USER_GROUP_NAME_CHECKER.check( userName );
+        USER_NAME_CHECKER.check( userName );
       } catch ( InvalidValueException e ) {
         Debugging.logError( LOG, e, "Invalid user name " + userName );
         throw new AuthException( AuthException.INVALID_NAME, e );
@@ -417,7 +418,7 @@ public class DatabaseAccountProxy implements EuareAccount {
   public EuareRole addRole( final String roleName, final String path, final String assumeRolePolicy ) throws AuthException, PolicyParseException {
     synchronized(getLock()) {
       try {
-        USER_GROUP_NAME_CHECKER.check( roleName );
+        USER_NAME_CHECKER.check( roleName );
       } catch ( InvalidValueException e ) {
         Debugging.logError( LOG, e, "Invalid role name " + roleName );
         throw new AuthException( AuthException.INVALID_NAME, e );
@@ -476,7 +477,7 @@ public class DatabaseAccountProxy implements EuareAccount {
   public EuareGroup addGroup( String groupName, String path ) throws AuthException {
     synchronized(getLock()) {
       try {
-        USER_GROUP_NAME_CHECKER.check( groupName );
+        GROUP_NAME_CHECKER.check( groupName );
       } catch ( InvalidValueException e ) {
         Debugging.logError( LOG, e, "Invalid group name " + groupName );
         throw new AuthException( AuthException.INVALID_NAME, e );
@@ -547,7 +548,7 @@ public class DatabaseAccountProxy implements EuareAccount {
   public EuareInstanceProfile addInstanceProfile( final String instanceProfileName, final String path ) throws AuthException {
     synchronized(getLock()) {
       try {
-        USER_GROUP_NAME_CHECKER.check( instanceProfileName );
+        GROUP_NAME_CHECKER.check( instanceProfileName );
       } catch ( InvalidValueException e ) {
         Debugging.logError( LOG, e, "Invalid instance profile name " + instanceProfileName );
         throw new AuthException( AuthException.INVALID_NAME, e );

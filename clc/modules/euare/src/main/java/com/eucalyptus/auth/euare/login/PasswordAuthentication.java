@@ -92,7 +92,7 @@ public class PasswordAuthentication {
   }
 
   private static void updatePassword( EuareUser user, String newPassword ) throws AuthException {
-    if ( Strings.isNullOrEmpty( newPassword ) || user.getName( ).equals( newPassword ) ) {
+    if ( Strings.isNullOrEmpty( newPassword ) || user.getName( ).equals( newPassword ) || newPassword.length( ) > EuareUser.MAX_PASSWORD_LENGTH ) {
       throw new AuthException( AuthException.INVALID_PASSWORD );
     }
     String newEncrypted = Crypto.generateEncryptedPassword( newPassword );

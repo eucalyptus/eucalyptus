@@ -138,7 +138,7 @@ public class EuareService {
         } else if ( AuthException.ACCOUNT_ALREADY_EXISTS.equals( e.getMessage( ) ) || AuthException.CONFLICT.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Account " + request.getAccountName( ) + " already exists." );
         } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid account name " + request.getAccountName( ) );
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid account name " + request.getAccountName( ) );
         }
       }
       LOG.error( e, e );
@@ -369,7 +369,7 @@ public class EuareService {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to put user policy for " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy name " + request.getPolicyName( ) );
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid policy name " + request.getPolicyName( ) );
         }
       }
       LOG.error( e, e );
@@ -527,9 +527,9 @@ public class EuareService {
         } else if ( AuthException.USER_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "User name " + request.getNewUserName( ) + " already exists." );
         } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid new name " + request.getNewUserName( ) );
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid new name " + request.getNewUserName( ) );
         } else if ( AuthException.INVALID_PATH.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_PATH, "Invalid new path " + request.getNewPath( ) );
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid new path " + request.getNewPath( ) );
         }        
       }      
       LOG.error( e, e );
@@ -661,9 +661,9 @@ public class EuareService {
         } else if ( AuthException.GROUP_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Group name " + request.getNewGroupName( ) + " already exists." );
         } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid new name " + request.getNewGroupName( ) );
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid new name " + request.getNewGroupName( ) );
         } else if ( AuthException.INVALID_PATH.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_PATH, "Invalid new path " + request.getNewPath( ) );
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid new path " + request.getNewPath( ) );
         }        
       }   
       LOG.error( e, e );
@@ -725,7 +725,7 @@ public class EuareService {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to put group policy for " + groupFound.getName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy name " + request.getPolicyName( ) );
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid policy name " + request.getPolicyName( ) );
         }
       }
       LOG.error( e, e );
@@ -753,9 +753,9 @@ public class EuareService {
         } else if ( AuthException.USER_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "User " + request.getUserName( ) + " already exists." );
         } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid user name " + request.getUserName( ) );
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid user name " + request.getUserName( ) );
         } else if ( AuthException.INVALID_PATH.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_PATH, "Invalid user path " + request.getPath( ) );
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid user path " + request.getPath( ) );
         }        
       }
       LOG.error( e, e );
@@ -929,9 +929,9 @@ public class EuareService {
         } else if ( AuthException.GROUP_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Group " + request.getGroupName( ) + " already exists." );
         } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid group name " + request.getGroupName( ) );
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid group name " + request.getGroupName( ) );
         } else if ( AuthException.INVALID_PATH.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_PATH, "Invalid group path " + request.getPath( ) );
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid group path " + request.getPath( ) );
         }        
       }
       LOG.error( e, e );
@@ -959,9 +959,9 @@ public class EuareService {
       else if(AuthException.SERVER_CERT_ALREADY_EXISTS.equals(ex.getMessage()))
         throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Server certificate "+ certName+ " already exists.");
       else if(AuthException.INVALID_SERVER_CERT_NAME.equals(ex.getMessage()))
-        throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Server certificate name "+certName+" is invalid format.");
+        throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Server certificate name "+certName+" is invalid format.");
       else if(AuthException.INVALID_SERVER_CERT_PATH.equals(ex.getMessage()))
-        throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_PATH, "Path "+path+" is invalid.");
+        throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Path "+path+" is invalid.");
       else if ( AuthException.QUOTA_EXCEEDED.equals( ex.getMessage( ) ) )
         throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Server certificate quota exceeded" );
       else if ( AuthException.SERVER_CERT_INVALID_FORMAT.equals(ex.getMessage()) ||
@@ -1151,7 +1151,7 @@ public class EuareService {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create login profile for " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.INVALID_PASSWORD.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.BAD_REQUEST, "Invalid password", "Invalid password" );
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid password" );
         }
       }
       LOG.error( e, e );
@@ -1355,7 +1355,7 @@ public class EuareService {
         } else if ( AuthException.ACCOUNT_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Account alias " + request.getAccountAlias( ) + " already exists." );
         } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid account alias " + request.getAccountAlias( ) );
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid account alias " + request.getAccountAlias( ) );
         }
       }    
       LOG.error( e, e );
@@ -1545,7 +1545,7 @@ public class EuareService {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to put account policy for " + accountFound.getName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy name " + request.getPolicyName( ) );
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid policy name " + request.getPolicyName( ) );
         }
       }
       LOG.error( e, e );
@@ -1654,9 +1654,9 @@ public class EuareService {
         } else if ( AuthException.ROLE_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Role " + request.getRoleName( ) + " already exists." );
         } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid role name " + request.getRoleName() );
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid role name " + request.getRoleName() );
         } else if ( AuthException.INVALID_PATH.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_PATH, "Invalid role path " + request.getPath( ) );
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid role path " + request.getPath( ) );
         }
       }
       LOG.error( e, e );
@@ -1781,7 +1781,7 @@ public class EuareService {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to put role policy for " + roleFound.getName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy name " + request.getPolicyName( ) );
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid policy name " + request.getPolicyName( ) );
         }
       }
       LOG.error( e, e );
@@ -1890,9 +1890,9 @@ public class EuareService {
         } else if ( AuthException.INSTANCE_PROFILE_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Instance profile " + request.getInstanceProfileName() + " already exists." );
         } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid instance profile name " + request.getInstanceProfileName() );
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid instance profile name " + request.getInstanceProfileName() );
         } else if ( AuthException.INVALID_PATH.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_PATH, "Invalid instance profile path " + request.getPath( ) );
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid instance profile path " + request.getPath( ) );
         }
       }
       LOG.error( e, e );

@@ -205,12 +205,12 @@ public class LdapSync {
       String login = null;
       if ( LicParser.LDAP_AUTH_METHOD_SIMPLE.equals( lic.getRealUserAuthMethod( ) ) ) {
         // Simple requires full user DN
-        login = user.getInfo( User.DN );
+        login = user.getInfo( EuareUser.DN );
       } else {
         // SASL requires a different ID:
         // Pick the specified ID first. If not exist, pick the user name.
         // TODO(wenye): possible other formats of user ID, like "u:..." or "dn:..."
-        login = user.getInfo( User.SASLID );
+        login = user.getInfo( EuareUser.SASLID );
         if ( Strings.isNullOrEmpty( login ) ) {
           login = user.getName( );
         }
@@ -323,8 +323,8 @@ public class LdapSync {
       users.remove( User.ACCOUNT_ADMIN );
     }
     for ( String group : groups.keySet( ) ) {
-      if ( group.startsWith( User.USER_GROUP_PREFIX ) ) {
-        LOG.error( "Group name starting with " + User.USER_GROUP_PREFIX + " is reserved for Eucalyptus only. Sync will skip this group " + group );
+      if ( group.startsWith( EuareUser.USER_GROUP_PREFIX ) ) {
+        LOG.error( "Group name starting with " + EuareUser.USER_GROUP_PREFIX + " is reserved for Eucalyptus only. Sync will skip this group " + group );
         groups.remove( group );
       }
     }
@@ -790,9 +790,9 @@ public class LdapSync {
             infoMap.put( infoKey, infoVal );
           }
         }
-        infoMap.put( User.DN, dn );
+        infoMap.put( EuareUser.DN, dn );
         if ( !Strings.isNullOrEmpty( lic.getUserSaslIdAttribute( ) ) ) {
-          infoMap.put( User.SASLID, getAttrWithNullCheck( attrs, lic.getUserSaslIdAttribute( ) ) );
+          infoMap.put( EuareUser.SASLID, getAttrWithNullCheck( attrs, lic.getUserSaslIdAttribute( ) ) );
         }
         users.put( id, infoMap );
       }

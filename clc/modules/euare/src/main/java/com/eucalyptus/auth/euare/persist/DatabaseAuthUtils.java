@@ -76,6 +76,7 @@ import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.euare.principal.EuareAccountScopedPrincipal;
+import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.Entities;
@@ -94,11 +95,11 @@ public class DatabaseAuthUtils {
   }
   
   public static String getUserGroupName( String userName ) {
-    return User.USER_GROUP_PREFIX + userName;
+    return EuareUser.USER_GROUP_PREFIX + userName;
   }
   
   public static boolean isUserGroupName( String groupName ) {
-    return groupName.startsWith( User.USER_GROUP_PREFIX );
+    return groupName.startsWith( EuareUser.USER_GROUP_PREFIX );
   }
 
   /**

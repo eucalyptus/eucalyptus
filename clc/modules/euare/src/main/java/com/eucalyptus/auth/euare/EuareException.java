@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -84,6 +84,7 @@ public class EuareException extends EucalyptusCloudException {
   public static final String INVALID_ID = "InvalidId";
   public static final String INVALID_PATH = "InvalidPath";
   public static final String INVALID_VALUE = "InvalidValue";
+  public static final String VALIDATION_ERROR = "ValidationError";
   
   private HttpResponseStatus status;
   private String error;
