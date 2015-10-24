@@ -64,6 +64,8 @@ public class PolicyAuthorization implements Authorization {
 
   private final Set<String> resources;
 
+  private final Set<String> policyVariables;
+
   public PolicyAuthorization(
       @Nullable final String statementId,
       @Nonnull  final Authorization.EffectType effect,
@@ -75,12 +77,14 @@ public class PolicyAuthorization implements Authorization {
       @Nonnull  final Set<String> actions,
                 final boolean notAction,
       @Nonnull  final Set<String> resources,
-                final boolean notResource
+                final boolean notResource,
+      @Nonnull  final Set<String> policyVariables
   ) {
     checkParam( "effect", effect, notNullValue() );
     checkParam( "conditions", conditions, notNullValue() );
     checkParam( "actions", actions, notNullValue() );
     checkParam( "resources", resources, notNullValue() );
+    checkParam( "policyVariables", policyVariables, notNullValue() );
     this.statementId = PolicyUtils.intern( statementId );
     this.effect = effect;
     this.region = PolicyUtils.intern( region );
@@ -92,6 +96,7 @@ public class PolicyAuthorization implements Authorization {
     this.notAction = notAction;
     this.resources = ImmutableSet.copyOf( Iterables.transform( resources, PolicyUtils.internString( ) ) );
     this.notResource = notResource;
+    this.policyVariables = ImmutableSet.copyOf( Iterables.transform( policyVariables, PolicyUtils.internString( ) ) );
   }
 
   public PolicyAuthorization(
@@ -100,7 +105,8 @@ public class PolicyAuthorization implements Authorization {
       final PolicyPrincipal principal,
       final List<PolicyCondition> conditions,
       final Set<String> actions,
-      final boolean notAction
+      final boolean notAction,
+      final Set<String> policyVariables
   ) {
     this(
         statementId,
@@ -113,7 +119,8 @@ public class PolicyAuthorization implements Authorization {
         actions,
         notAction,
         Collections.<String>emptySet( ),
-        false
+        false,
+        policyVariables
     );
   }
 
@@ -159,6 +166,12 @@ public class PolicyAuthorization implements Authorization {
     return conditions;
   }
 
+  @Nonnull
+  @Override
+  public Set<String> getPolicyVariables( ) {
+    return policyVariables;
+  }
+
   @Override
   public Principal getPrincipal( ) {
     return principal;
@@ -180,6 +193,7 @@ public class PolicyAuthorization implements Authorization {
     if ( effect != that.effect ) return false;
     if ( principal != null ? !principal.equals( that.principal ) : that.principal != null ) return false;
     if ( !resources.equals( that.resources ) ) return false;
+    if ( !policyVariables.equals( that.policyVariables ) ) return false;
     if ( statementId != null ? !statementId.equals( that.statementId ) : that.statementId != null ) return false;
     if ( type != null ? !type.equals( that.type ) : that.type != null ) return false;
 
@@ -199,6 +213,7 @@ public class PolicyAuthorization implements Authorization {
     result = 31 * result + actions.hashCode();
     result = 31 * result + ( notResource ? 1 : 0 );
     result = 31 * result + resources.hashCode();
+    result = 31 * result + policyVariables.hashCode();
     return result;
   }
 }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,11 +63,14 @@
 package com.eucalyptus.auth.policy;
 
 import java.io.File;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import com.eucalyptus.auth.PolicyParseException;
+import com.eucalyptus.auth.policy.ern.Ern;
+import com.eucalyptus.auth.policy.ern.EuareErnBuilder;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Condition;
 import com.eucalyptus.auth.principal.Principal;
@@ -101,6 +104,11 @@ public class PolicyParserTest {
       }
     }
   }
+  
+  @BeforeClass
+  public static void beforeClass( ) {
+    Ern.registerServiceErnBuilder( new EuareErnBuilder( ) );
+  }
 
   @Test
   public void testParseUserPolicy() throws Exception {
@@ -126,7 +134,8 @@ public class PolicyParserTest {
     assertEquals( "Authorization resource count", 1, authorization.getResources().size() );
     assertEquals( "Authorization resources", Sets.newHashSet("*"), authorization.getResources() );
     assertNotNull( "Authorization conditions", authorization.getConditions() );
-    assertEquals( "Authorization condition count", 0, authorization.getConditions().size() );  }
+    assertEquals( "Authorization condition count", 0, authorization.getConditions().size() );  
+  }
 
   @Test(expected = PolicyParseException.class )
   public void testParseUserPolicyMissingResource() throws Exception {
@@ -186,4 +195,96 @@ public class PolicyParserTest {
 
     PolicyParser.getResourceInstance().parse( policyJson );
   }
+  
+  @Test
+  public void testParsePolicyWithVariables( ) throws Exception {
+    String policyJson =
+            "{\n" +
+            "  \"Version\": \"2012-10-17\",\n" +
+            "  \"Statement\": [{\n" +
+            "    \"Action\": [\"iam:*AccessKey*\"],\n" +
+            "    \"Effect\": \"Allow\",\n" +
+            "    \"Resource\": [\"arn:aws:iam::012345678912:user/${aws:username}\"]\n" +
+            "  }]\n" +
+            "}";
+
+    PolicyPolicy policy = PolicyParser.getInstance().parse( policyJson );
+    assertNotNull( "Policy null", policy );
+    assertNotNull( "Policy authorizations", policy.getAuthorizations() );
+    assertEquals( "Policy authorization count", 1, policy.getAuthorizations().size() );
+    Authorization authorization = policy.getAuthorizations().get( 0 );
+    assertNotNull( "Authorization null", authorization );
+    assertNull( "Authorization principal", authorization.getPrincipal( ) );
+    assertEquals( "Authorization actions", Sets.newHashSet( "iam:*accesskey*" ), authorization.getActions() );
+    assertEquals( "Authorization effect", Authorization.EffectType.Allow, authorization.getEffect() );
+    assertNotNull( "Authorization resources", authorization.getResources() );
+    assertEquals( "Authorization resource count", 1, authorization.getResources().size() );
+    assertEquals( "Authorization resources", Sets.newHashSet("/${aws:username}"), authorization.getResources() );
+    assertNotNull( "Authorization conditions", authorization.getConditions() );
+    assertEquals( "Authorization condition count", 0, authorization.getConditions().size() );
+    assertNotNull( "Authorization policy variables", authorization.getPolicyVariables( ) );
+    assertEquals( "Authorization policy variable count", 1, authorization.getPolicyVariables().size() );
+    assertEquals( "Authorization policy variable[0]", "${aws:username}", authorization.getPolicyVariables().iterator().next() );
+  }
+
+  @Test
+  public void testParsePolicyWithPredefinedVariables( ) throws Exception {
+    String policyJson =
+        "{\n" +
+            "  \"Version\": \"2012-10-17\",\n" +
+            "  \"Statement\": [{\n" +
+            "    \"Action\": [\"iam:*AccessKey*\"],\n" +
+            "    \"Effect\": \"Allow\",\n" +
+            "    \"Resource\": [\"arn:aws:iam::012345678912:user/${*}${?}${$}\"]\n" +
+            "  }]\n" +
+            "}";
+
+    PolicyPolicy policy = PolicyParser.getInstance().parse( policyJson );
+    assertNotNull( "Policy null", policy );
+    assertNotNull( "Policy authorizations", policy.getAuthorizations() );
+    assertEquals( "Policy authorization count", 1, policy.getAuthorizations().size() );
+    Authorization authorization = policy.getAuthorizations().get( 0 );
+    assertNotNull( "Authorization null", authorization );
+    assertNull( "Authorization principal", authorization.getPrincipal( ) );
+    assertEquals( "Authorization actions", Sets.newHashSet( "iam:*accesskey*" ), authorization.getActions() );
+    assertEquals( "Authorization effect", Authorization.EffectType.Allow, authorization.getEffect() );
+    assertNotNull( "Authorization resources", authorization.getResources() );
+    assertEquals( "Authorization resource count", 1, authorization.getResources().size() );
+    assertEquals( "Authorization resources", Sets.newHashSet("/${*}${?}${$}"), authorization.getResources() );
+    assertNotNull( "Authorization conditions", authorization.getConditions() );
+    assertEquals( "Authorization condition count", 0, authorization.getConditions().size() );
+    assertNotNull( "Authorization policy variables", authorization.getPolicyVariables( ) );
+    assertEquals( "Authorization policy variable count", 3, authorization.getPolicyVariables().size() );
+    assertEquals( "Authorization policy variables", Sets.newHashSet( "${*}", "${?}", "${$}" ), authorization.getPolicyVariables() );
+  }
+
+  @Test
+  public void testParsePolicyNoVariableVersion( ) throws Exception {
+    String policyJson =
+            "{\n" +
+            "  \"Statement\": [{\n" +
+            "    \"Action\": [\"iam:*AccessKey*\"],\n" +
+            "    \"Effect\": \"Allow\",\n" +
+            "    \"Resource\": [\"arn:aws:iam::012345678912:user/${aws:username}\"]\n" +
+            "  }]\n" +
+            "}";
+
+    PolicyPolicy policy = PolicyParser.getInstance().parse( policyJson );
+    assertNotNull( "Policy null", policy );
+    assertNotNull( "Policy authorizations", policy.getAuthorizations() );
+    assertEquals( "Policy authorization count", 1, policy.getAuthorizations().size() );
+    Authorization authorization = policy.getAuthorizations().get( 0 );
+    assertNotNull( "Authorization null", authorization );
+    assertNull( "Authorization principal", authorization.getPrincipal( ) );
+    assertEquals( "Authorization actions", Sets.newHashSet( "iam:*accesskey*" ), authorization.getActions() );
+    assertEquals( "Authorization effect", Authorization.EffectType.Allow, authorization.getEffect() );
+    assertNotNull( "Authorization resources", authorization.getResources() );
+    assertEquals( "Authorization resource count", 1, authorization.getResources().size() );
+    assertEquals( "Authorization resources", Sets.newHashSet("/${aws:username}"), authorization.getResources() );
+    assertNotNull( "Authorization conditions", authorization.getConditions() );
+    assertEquals( "Authorization condition count", 0, authorization.getConditions().size() );
+    assertNotNull( "Authorization policy variables", authorization.getPolicyVariables( ) );
+    assertEquals( "Authorization policy variable count", 0, authorization.getPolicyVariables().size() );
+  }
+
 }
