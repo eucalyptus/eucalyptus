@@ -63,7 +63,7 @@ public class TokensQueryPipeline extends QueryPipeline {
     super(
         "tokens-query-pipeline",
         "/services/Tokens",
-        EnumSet.of( TemporaryKeyType.Role ) );
+        EnumSet.of( TemporaryKeyType.Access, TemporaryKeyType.Role ) );
   }
 
   @Override

@@ -42,6 +42,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.BaseRole;
+import com.eucalyptus.auth.principal.TemporaryAccessKey;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.tokens.SecurityToken;
 import com.eucalyptus.auth.tokens.SecurityTokenManager;
@@ -122,7 +123,9 @@ public class TokensService {
     final Set<QueryIdCredential> queryIdCreds = subject == null ?
         Collections.<QueryIdCredential>emptySet( ) :
         subject.getPublicCredentials( QueryIdCredential.class );
-    if ( queryIdCreds.size( ) == 1 && Iterables.get( queryIdCreds, 0 ).getType( ).isPresent( ) ) {
+    if ( queryIdCreds.size( ) == 1 && 
+        Iterables.get( queryIdCreds, 0 ).getType( ).isPresent( ) && 
+        Iterables.get( queryIdCreds, 0 ).getType( ).get( ) != TemporaryAccessKey.TemporaryKeyType.Access ) {
       throw new TokensException( TokensException.Code.MissingAuthenticationToken, "Temporary credential not permitted." );
     }
     rejectPasswordCredentials( );
