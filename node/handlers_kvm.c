@@ -993,6 +993,7 @@ unroll:
             LOGINFO("[%s] migration destination ready %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
             save_instance_struct(instance);
             copy_instances();
+            sem_v(inst_sem);
             continue;
 
 failed_dest:
