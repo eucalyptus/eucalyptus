@@ -26,7 +26,6 @@ import java.util.Map;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.AccountScopedPrincipal;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
@@ -36,6 +35,16 @@ import com.eucalyptus.auth.principal.User;
  */
 public interface EuareUser extends User, EuareAccountScopedPrincipal {
 
+  String USER_GROUP_PREFIX = "_";
+
+  String EMAIL = "email";
+  // LDAP user full DN
+  String DN = "dn";
+  // LDAP user SASL ID
+  String SASLID = "saslid";
+
+  int MAX_PASSWORD_LENGTH = 128;
+  
   EuareAccount getAccount( ) throws AuthException;
 
   void setName( String name ) throws AuthException;

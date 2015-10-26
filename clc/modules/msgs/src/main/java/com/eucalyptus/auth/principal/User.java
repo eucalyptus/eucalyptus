@@ -73,16 +73,9 @@ import com.eucalyptus.auth.AuthException;
  */
 public interface User extends AccountScopedPrincipal, Serializable {
   
-  String USER_GROUP_PREFIX = "_";  
   String ACCOUNT_ADMIN = "admin";
   String ACCOUNT_NOBODY = "nobody";
-  
-  String EMAIL = "email";
-  // LDAP user full DN
-  String DN = "dn";
-  // LDAP user SASL ID
-  String SASLID = "saslid";
-  
+
   String getUserId( );
 
   String getPath( );

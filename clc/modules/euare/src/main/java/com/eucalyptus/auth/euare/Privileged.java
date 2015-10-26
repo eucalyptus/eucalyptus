@@ -126,7 +126,7 @@ class Privileged {
     Map<String, String> info = null;
     if ( email != null ) {
       info = Maps.newHashMap( );
-      info.put( User.EMAIL, email );
+      info.put( EuareUser.EMAIL, email );
     }
     EuareUser admin = newAccount.addUser( User.ACCOUNT_ADMIN, "/", true/*enabled*/, info );
     admin.resetToken();
@@ -163,6 +163,9 @@ class Privileged {
       Accounts.reserveGlobalName( GlobalNamespace.Account_Alias, newName );
       account.setName( newName );
     } catch ( AuthException ae ) {
+      if ( AuthException.INVALID_NAME.equals( ae.getMessage( ) ) ) {
+        throw ae;
+      }
       throw new AuthException( AuthException.CONFLICT );
     }
   }
@@ -829,7 +832,7 @@ class Privileged {
   }
 
   private static void setUserPassword( EuareUser user, String newPass ) throws AuthException {
-    if ( Strings.isNullOrEmpty( newPass ) || user.getName( ).equals( newPass ) ) {
+    if ( Strings.isNullOrEmpty( newPass ) || user.getName( ).equals( newPass ) || newPass.length( ) > EuareUser.MAX_PASSWORD_LENGTH ) {
       throw new AuthException( AuthException.INVALID_PASSWORD );
     }
     String newEncrypted = Crypto.generateEncryptedPassword( newPass );

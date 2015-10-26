@@ -110,7 +110,7 @@ public class DatabaseUserProxy implements EuareUser {
   
   private static Logger LOG = Logger.getLogger( DatabaseUserProxy.class );
   
-  private static final ValueChecker NAME_CHECKER = ValueCheckerFactory.createUserAndGroupNameChecker( );
+  private static final ValueChecker NAME_CHECKER = ValueCheckerFactory.createUserNameChecker( );
   private static final ValueChecker PATH_CHECKER = ValueCheckerFactory.createPathChecker( );
   private static final ValueChecker POLICY_NAME_CHECKER = ValueCheckerFactory.createPolicyNameChecker( );
   

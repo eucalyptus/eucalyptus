@@ -94,7 +94,7 @@ public class DatabaseGroupProxy implements EuareGroup {
   
   private static final long serialVersionUID = 1L;
 
-  private static final ValueChecker NAME_CHECKER = ValueCheckerFactory.createUserAndGroupNameChecker( );
+  private static final ValueChecker NAME_CHECKER = ValueCheckerFactory.createGroupNameChecker( );
   private static final ValueChecker PATH_CHECKER = ValueCheckerFactory.createPathChecker( );
   private static final ValueChecker POLICY_NAME_CHECKER = ValueCheckerFactory.createPolicyNameChecker( );
 
