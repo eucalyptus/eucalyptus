@@ -141,14 +141,18 @@ public class DatabaseRoleProxy implements EuareRole {
 
   @Override
   public Policy getAssumeRolePolicy() throws AuthException {
-    final List<Policy> results = Lists.newArrayList();
-    dbCallback( "getAssumeRolePolicy", new Callback<RoleEntity>() {
-      @Override
-      public void fire( final RoleEntity roleEntity ) {
-        results.add( new DatabasePolicyProxy( roleEntity.getAssumeRolePolicy() ) );
-      }
-    } );
-    return results.get( 0 );
+    if ( Entities.isReadable( delegate.getAssumeRolePolicy( ) ) ) {
+      return new DatabasePolicyProxy( delegate.getAssumeRolePolicy( ) );  
+    } else {
+      final List<Policy> results = Lists.newArrayList( );
+      dbCallback( "getAssumeRolePolicy", new Callback<RoleEntity>( ) {
+        @Override
+        public void fire( final RoleEntity roleEntity ) {
+          results.add( new DatabasePolicyProxy( roleEntity.getAssumeRolePolicy( ) ) );
+        }
+      } );
+      return results.get( 0 );
+    }
   }
 
   @Override
@@ -180,15 +184,19 @@ public class DatabaseRoleProxy implements EuareRole {
     return DatabaseAuthUtils.extract( accountNumberSupplier );
   }
 
-  public EuareAccount getAccount() throws AuthException {
-    final List<EuareAccount> results = Lists.newArrayList();
-    dbCallback( "getAccount", new Callback<RoleEntity>() {
-      @Override
-      public void fire( final RoleEntity roleEntity ) {
-        results.add( new DatabaseAccountProxy( roleEntity.getAccount() ) );
-      }
-    } );
-    return results.get( 0 );
+  public EuareAccount getAccount( ) throws AuthException {
+    if ( Entities.isReadable( delegate.getAccount( ) ) ) {
+      return new DatabaseAccountProxy( delegate.getAccount( ) );  
+    } else {
+      final List<EuareAccount> results = Lists.newArrayList( );
+      dbCallback( "getAccount", new Callback<RoleEntity>( ) {
+        @Override
+        public void fire( final RoleEntity roleEntity ) {
+          results.add( new DatabaseAccountProxy( roleEntity.getAccount( ) ) );
+        }
+      } );
+      return results.get( 0 );
+    }
   }
 
   @Override

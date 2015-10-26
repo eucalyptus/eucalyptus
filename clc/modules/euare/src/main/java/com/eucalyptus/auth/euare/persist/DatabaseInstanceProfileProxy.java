@@ -74,14 +74,18 @@ public class DatabaseInstanceProfileProxy implements EuareInstanceProfile {
 
   @Override
   public EuareAccount getAccount() throws AuthException {
-    final List<EuareAccount> results = Lists.newArrayList();
-    dbCallback( "getAccount", new Callback<InstanceProfileEntity>() {
-      @Override
-      public void fire( final InstanceProfileEntity instanceProfileEntity ) {
-        results.add( new DatabaseAccountProxy( instanceProfileEntity.getAccount() ) );
-      }
-    } );
-    return results.get( 0 );
+    if ( Entities.isReadable( delegate.getAccount( ) ) ) {
+      return new DatabaseAccountProxy( delegate.getAccount( ) );
+    } else {
+      final List<EuareAccount> results = Lists.newArrayList( );
+      dbCallback( "getAccount", new Callback<InstanceProfileEntity>( ) {
+        @Override
+        public void fire( final InstanceProfileEntity instanceProfileEntity ) {
+          results.add( new DatabaseAccountProxy( instanceProfileEntity.getAccount( ) ) );
+        }
+      } );
+      return results.get( 0 );
+    }
   }
 
   @Override
@@ -105,19 +109,25 @@ public class DatabaseInstanceProfileProxy implements EuareInstanceProfile {
   }
 
   @Override
-  public EuareRole getRole() throws AuthException {
-    final List<EuareRole> results = Lists.newArrayList();
-    dbCallback( "getRole", new Callback<InstanceProfileEntity>() {
-      @Override
-      public void fire( final InstanceProfileEntity instanceProfileEntity ) {
-        if ( instanceProfileEntity.getRole() == null ) {
-          results.add( null );
-        } else {
-          results.add( new DatabaseRoleProxy( instanceProfileEntity.getRole() ) );
+  public EuareRole getRole( ) throws AuthException {
+    if ( Entities.isPersistent( delegate ) && delegate.getRole( ) == null ) {
+      return null;
+    } else if ( Entities.isReadable( delegate.getRole( ) ) ) {
+      return new DatabaseRoleProxy( delegate.getRole( ) );
+    } else {
+      final List<EuareRole> results = Lists.newArrayList( );
+      dbCallback( "getRole", new Callback<InstanceProfileEntity>( ) {
+        @Override
+        public void fire( final InstanceProfileEntity instanceProfileEntity ) {
+          if ( instanceProfileEntity.getRole( ) == null ) {
+            results.add( null );
+          } else {
+            results.add( new DatabaseRoleProxy( instanceProfileEntity.getRole( ) ) );
+          }
         }
-      }
-    } );
-    return results.get( 0 );
+      } );
+      return results.get( 0 );
+    }
   }
 
   @Override

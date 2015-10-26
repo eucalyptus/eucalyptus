@@ -778,7 +778,7 @@ public class DatabaseAccountProxy implements EuareAccount {
         throw new AuthException(AuthException.SERVER_CERT_NO_SUCH_ENTITY);
       found=result.get(0);
       db.rollback();
-      return ServerCertificates.ToServerCertificate.INSTANCE.apply(found);
+      return ServerCertificates.ToServerCertificateWithSecrets.INSTANCE.apply(found);
     } catch(final NoSuchElementException ex){
       throw new AuthException(AuthException.SERVER_CERT_NO_SUCH_ENTITY);
     } catch(final AuthException ex){
