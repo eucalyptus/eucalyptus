@@ -94,6 +94,7 @@ import com.eucalyptus.auth.policy.key.ContractKeyEvaluator;
 import com.eucalyptus.auth.policy.key.Key;
 import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.QuotaKey;
+import com.eucalyptus.auth.policy.variable.PolicyVariables;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Condition;
@@ -144,7 +145,7 @@ public class PolicyEngineImpl implements PolicyEngine {
     ALLOW,   // explicit allow
   }
   
-  private static interface Matcher {
+  private interface Matcher {
     boolean match( String pattern, String instance );
   }
   
@@ -257,7 +258,6 @@ public class PolicyEngineImpl implements PolicyEngine {
       final ContractKeyEvaluator contractEval = new ContractKeyEvaluator( contracts );
       final CachedKeyEvaluator keyEval = new CachedKeyEvaluator( context.getEvaluatedKeys( ) );
       final String action = evaluationContext.getAction( );
-      final User requestUser = evaluationContext.getRequestUser( );
 
       // System admin can do everything
       if ( !evaluationContext.isSystemAdmin() ) {
@@ -354,7 +354,6 @@ public class PolicyEngineImpl implements PolicyEngine {
     final ContractKeyEvaluator contractEval = new ContractKeyEvaluator( contracts );
     final CachedKeyEvaluator keyEval = new CachedKeyEvaluator( context.getEvaluatedKeys( ) );
     final String action = evaluationContext.getAction( );
-    final User requestUser = evaluationContext.getRequestUser( );
     final String resourceType = evaluationContext.getResourceType( );
     resourceName = PolicySpec.canonicalizeResourceName( resourceType, resourceName );
 
@@ -431,7 +430,7 @@ public class PolicyEngineImpl implements PolicyEngine {
       if ( !matchResources( auth, region, resourceAccountNumber, resourceType, resource ) ) {
         continue;
       }
-      if ( !evaluateConditions( auth.getConditions( ), action, keyEval, contractEval ) ) {
+      if ( !evaluateConditions( auth.getPolicyVariables(), auth.getConditions( ), action, keyEval, contractEval ) ) {
         continue;
       }
       if ( auth.getEffect( ) == EffectType.Deny ) {
@@ -477,19 +476,37 @@ public class PolicyEngineImpl implements PolicyEngine {
     } else if ( String.format("%s:%s", PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_SERVER_CERTIFICATE).equals ( auth.getType( ))){
       return evaluateElement( matchOne( auth.getResources( ), resource, SERVER_CERTIFICATE_MATCHER ), auth.isNotResource( ) );
     }else {
-      return evaluateElement( matchOne( auth.getResources( ), resource, PATTERN_MATCHER ), auth.isNotResource( ) );
+      return evaluateElement( matchOne( auth.getPolicyVariables( ), auth.getResources( ), resource, PATTERN_MATCHER ), auth.isNotResource( ) );
     }
   }
   
-  private static boolean matchOne( Set<String> patterns, String instance, Matcher matcher ) {
+  private static boolean matchOne( Set<String> patterns, String instance, Matcher matcher ) throws AuthException {
+    return matchOne( Collections.<String>emptySet( ), patterns, instance, matcher );
+  }
+  
+  private static boolean matchOne( Set<String> variables, Set<String> patterns, String instance, Matcher matcher ) throws AuthException {
     for ( String pattern : patterns ) {
-      if ( matcher.match( pattern, instance ) ) {
+      if ( matcher.match( variableExplode( variables, pattern ) , instance ) ) {
         return true;
       }
     }
     return false;
   }
 
+  private static String variableExplode( Set<String> variables, String text ) throws AuthException {
+    if ( variables.isEmpty( ) ) return text;
+    
+    String result = text;
+    for ( final String variable : variables ) {
+      final String variableValue = PolicyVariables.getPolicyVariable( variable ).evaluate( );
+      //TODO: variable values cannot currently contain ? or *, if they could we would need
+      //TODO: to escape the values when they were used in regex matches
+      result = result.replace( variable, variableValue ); 
+    }
+    
+    return result;
+  }
+  
   private String resolveAccount( final String accountNumberOrAlias ) {
     return accountResolver.apply( accountNumberOrAlias );
   }
@@ -501,7 +518,13 @@ public class PolicyEngineImpl implements PolicyEngine {
   /**
    * Evaluate conditions for an authorization.
    */
-  private boolean evaluateConditions( List<? extends Condition> conditions, String action, CachedKeyEvaluator keyEval, ContractKeyEvaluator contractEval ) throws AuthException {
+  private boolean evaluateConditions( 
+      final Set<String> policyVariables,
+      final List<? extends Condition> conditions, 
+      final String action, 
+      final CachedKeyEvaluator keyEval, 
+      final ContractKeyEvaluator contractEval 
+  ) throws AuthException {
     for ( Condition cond : conditions ) {
       ConditionOp op = Conditions.getOpInstance( cond.getType( ) );
       Key key = Keys.getKeyInstance( Keys.getKeyClass( cond.getKey( ) ) );
@@ -512,7 +535,7 @@ public class PolicyEngineImpl implements PolicyEngine {
       }
       boolean condValue = false;
       for ( String value : cond.getValues( ) ) {
-        if ( op.check( applies ? keyEval.getValue( key ) : null, value ) ) {
+        if ( op.check( applies ? keyEval.getValue( key ) : null, variableExplode( policyVariables, value ) ) ) {
           condValue = true;
           break;
         }

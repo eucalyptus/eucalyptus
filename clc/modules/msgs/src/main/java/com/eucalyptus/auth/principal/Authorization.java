@@ -64,6 +64,7 @@ package com.eucalyptus.auth.principal;
 
 import java.util.List;
 import java.util.Set;
+import javax.annotation.Nonnull;
 
 public interface Authorization {
 
@@ -91,5 +92,13 @@ public interface Authorization {
   
   List<Condition> getConditions( );
 
+  /**
+   * Get the policy variables used in resource ARNs and Condition values.
+   * 
+   * @return The variables with wrapper ${...}
+   */
+  @Nonnull
+  Set<String> getPolicyVariables( );  
+  
   Principal getPrincipal();
 }
