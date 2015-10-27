@@ -76,7 +76,7 @@ public abstract class Ern {
   public static final String ARN_PREFIX = "arn:aws:";
   public static final String ARN_WILDCARD = "*";
   public static final Pattern ARN_PATTERN =
-      Pattern.compile( "arn:aws:([a-z][a-z0-9-]*):(\\*|[a-z0-9-]+)?:([0-9]{12}|eucalyptus)?:(.*)" );
+      Pattern.compile( "arn:aws:([a-z][a-z0-9-]*):(\\*|[a-z0-9-]+)?:([0-9]{12}|eucalyptus|[*])?:(.*)" );
 
   private static List<ServiceErnBuilder> ernBuilders = new CopyOnWriteArrayList<>( );
 
@@ -113,7 +113,11 @@ public abstract class Ern {
       final String resource = matcher.group( ARN_PATTERNGROUP_RESOURCE );
       for ( final ServiceErnBuilder builder : ernBuilders ) {
         if ( builder.supports( service ) ) {
-          return builder.build( ern, service, "*".equals( region ) ? null : region, account, resource );
+          return builder.build(
+              ern, service,
+              "*".equals( region ) ? null : region,
+              "*".equals( account ) ? null : account,
+              resource );
         }
       }
     }
