@@ -249,6 +249,8 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete access key of " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.EMPTY_KEY_ID.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_ID, "Empty key id" );
+        } else if ( AuthException.NO_SUCH_KEY.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Access Key with id "+request.getAccessKeyId( )+" not found for user" );
         }
       }
       LOG.error( e, e );

@@ -95,6 +95,7 @@ import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.Entities;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.Tx;
@@ -412,9 +413,15 @@ public class DatabaseUserProxy implements EuareUser {
     try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
       UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, "userId", this.delegate.getUserId( ) );
       AccessKeyEntity keyEntity = DatabaseAuthUtils.getUnique( AccessKeyEntity.class, "accessKey", keyId );
-      user.getKeys( ).remove( keyEntity );
+      if ( !user.getKeys( ).remove( keyEntity ) ) {
+        throw new AuthException( AuthException.NO_SUCH_KEY );
+      }
       Entities.delete( keyEntity );
       db.commit( );
+    } catch ( AuthException e ) {
+      throw e;
+    } catch ( NoSuchElementException e ) {
+      throw new AuthException( AuthException.NO_SUCH_KEY, e );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to get delete key " + keyId );
       throw new AuthException( e );
