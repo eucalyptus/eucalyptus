@@ -562,7 +562,7 @@ public class PutObjectInlineResponseType extends ObjectStorageDataResponseType {
 
 @AdminOverrideAllowed
 @RequiresPermission([PolicySpec.S3_DELETEOBJECT])
-@ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
+@ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.WRITE])
 public class DeleteObjectType extends ObjectStorageRequestType {}
 
