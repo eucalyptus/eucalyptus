@@ -62,10 +62,13 @@
 
 package com.eucalyptus.auth.policy.ern;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.google.common.base.Strings;
@@ -138,6 +141,20 @@ public abstract class Ern {
   public abstract String getResourceType( );
   
   public abstract String getResourceName( );
+
+  /**
+   * Explode this Ern to a collection suitable for matching against resources.
+   *
+   * <p>ARNs used in IAM policy can match multiple resource types. Exploding
+   * the Ern results in a service specific collection according to the services
+   * resource matching semantics.</p>
+   *
+   * @return The collection of Erns, which must contain at least this Ern.
+   */
+  @Nonnull
+  public Collection<Ern> explode( ) {
+    return Collections.singleton( this );
+  }
 
   protected String qualifiedName( String name ) {
     return PolicySpec.qualifiedName( getService( ), name );
