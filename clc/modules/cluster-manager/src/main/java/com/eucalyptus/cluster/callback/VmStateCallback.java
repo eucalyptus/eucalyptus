@@ -88,6 +88,7 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
+import com.eucalyptus.network.NetworkInfoBroadcaster;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Either;
@@ -183,7 +184,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     UpdateInstanceResourcesType update = new UpdateInstanceResourcesType( );
     update.setPartition( this.getSubject().getPartition() );
     update.setResources( TypeMappers.transform( reply, InstanceResourceReportType.class ) );
-    Networking.getInstance( ).update( update );
+    final boolean requestBroadcast = Networking.getInstance( ).update( update );
 
     if ( Databases.isVolatile( ) ) {
       return;
@@ -232,7 +233,17 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     for ( final String vmId : unreportedInstances ) {
       taskList.add( UpdateTaskFunction.UNREPORTED.apply( context( localState, vmId ) ) );
     }
-    for ( final Runnable task : Optional.presentInstances( taskList ) ) {
+    final Optional<Runnable> broadcastRequestRunnable = requestBroadcast ?
+        Optional.<Runnable>of( new Runnable( ) {
+          @Override
+          public void run( ) {
+            NetworkInfoBroadcaster.requestNetworkInfoBroadcast( );
+          }
+        } ) :
+        Optional.<Runnable>absent( );
+
+    for ( final Runnable task :
+        Iterables.concat( Optional.presentInstances( taskList ), broadcastRequestRunnable.asSet( ) ) ) {
       Threads.enqueue(
           ClusterController.class,
           VmStateCallback.class,

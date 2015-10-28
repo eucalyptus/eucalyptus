@@ -183,9 +183,11 @@ class ManagedNetworkingService extends NetworkingServiceSupport {
 
   @Override
   UpdateInstanceResourcesResponseType update( final UpdateInstanceResourcesType request ) {
-    PublicAddresses.clearDirty( request.resources.publicIps, request.partition )
+    boolean updated = PublicAddresses.clearDirty( request.resources.publicIps, request.partition )
     timeoutPrivateNetworkIndexes( request.resources.privateIps, request.partition )
-    UpdateInstanceResourcesResponseType.cast( request.reply( new UpdateInstanceResourcesResponseType( ) ) )
+    UpdateInstanceResourcesResponseType.cast( request.reply( new UpdateInstanceResourcesResponseType(
+      updated: updated
+    ) ) )
   }
 
   private Collection<NetworkResource> prepareSecurityGroup( final PrepareNetworkResourcesType request,

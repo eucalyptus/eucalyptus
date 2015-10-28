@@ -36,12 +36,14 @@ class PublicAddresses {
   }
 
   @PackageScope
-  static void clearDirty( Collection<String> inUse, String partition ) {
+  static boolean clearDirty( Collection<String> inUse, String partition ) {
+    boolean cleared = false;
     dirtyAddresses.each{ String address, String addressPartition ->
       if ( partition == addressPartition && !inUse.contains( address )) {
-        dirtyAddresses.remove( address )
+        cleared = dirtyAddresses.remove( address ) || cleared
       }
     }
+    cleared
   }
 
   @PackageScope
