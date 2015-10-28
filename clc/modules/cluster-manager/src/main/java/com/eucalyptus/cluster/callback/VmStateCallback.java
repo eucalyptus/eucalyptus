@@ -68,6 +68,7 @@ import static com.eucalyptus.compute.common.internal.vm.VmInstance.VmState.SHUTT
 import static com.eucalyptus.compute.common.internal.vm.VmInstance.VmState.STOPPING;
 import static com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet.TORNDOWN;
 import static com.eucalyptus.compute.common.internal.vm.VmInstances.TerminatedInstanceException;
+
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -77,11 +78,13 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.compute.common.internal.vm.VmRuntimeState.ReachabilityStatus;
+import com.eucalyptus.compute.common.internal.vm.MigrationState;
 import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
 import com.eucalyptus.entities.EntityCache;
 import com.eucalyptus.entities.TransactionResource;
@@ -98,8 +101,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Restrictions;
+
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.compute.common.network.InstanceResourceReportType;
@@ -126,6 +131,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Sets;
+
 import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.VmDescribeType;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
@@ -284,6 +290,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     final VmState runVmState = VmState.Mapper.get( runVm.getStateName( ) );
     try {
       final VmStateView vmView = vmStateContext.getLocalState( ).get( runVm.getInstanceId( ) );
+      MigrationState migrationState = MigrationState.defaultValueOf( runVm.getMigrationStateName() );
       boolean updateRequired = false;
       if ( vmView != null ) {
         if ( vmView.inState( VmStateSet.DONE ) ) {
@@ -304,6 +311,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
           updateRequired =
                   vmView.isBundling( ) ||
                   vmView.isMigrating( ) ||
+                  migrationState.isMigrating( ) ||
                   runVmState != vmView.getState( ) ||
                   !Objects.equals( vmView.getGuestState( ), runVm.getGuestStateName( ) ) ||
                   !Objects.equals( vmView.getServiceTag( ), runVm.getServiceTag( ) ) ||
@@ -317,7 +325,6 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
                           Functions.<VmStateVolumeAttachmentView>identity( ) ) ) );
         }
       }
-
       if ( updateRequired ) try ( final TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
         VmInstance vm = VmInstances.lookupAny( runVm.getInstanceId() );
         if ( VmInstances.Timeout.EXPIRED.apply( vm ) ) {
@@ -738,7 +745,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
           vmInstance.getLastUpdateTimestamp( ).getTime( ),
           vmInstance.getExpiration( ) == null ? Long.MAX_VALUE : vmInstance.getExpiration( ).getTime( ),
           vmInstance.getRuntimeState( ).isBundling( ),
-          vmInstance.getMigrationTask( ).getState( ).isMigrating( )
+          vmInstance.getRuntimeState().getMigrationTask( ).getState( ).isMigrating( )
       );
     }
   }

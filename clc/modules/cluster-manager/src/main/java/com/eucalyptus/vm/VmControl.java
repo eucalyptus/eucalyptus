@@ -334,7 +334,7 @@ public class VmControl {
               throw Exceptions.toUndeclared( "Cannot terminate an instance which is currently migrating: "
                                              + vm.getInstanceId( )
                                              + " "
-                                             + vm.getMigrationTask( ) );
+                                             + vm.getRuntimeState().getMigrationTask( ) );
             }
             oldCode = vm.getState( ).getCode( );
             oldState = vm.getState( ).getName( );
