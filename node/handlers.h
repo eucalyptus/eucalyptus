@@ -246,7 +246,7 @@ struct handlers {
     int (*doDescribeSensors) (struct nc_state_t * nc, ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds,
                               int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
     int (*doModifyNode) (struct nc_state_t * nc, ncMetadata * pMeta, char *stateName);
-    int (*doMigrateInstances) (struct nc_state_t * nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials);
+    int (*doMigrateInstances) (struct nc_state_t * nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials, char **resourceLocations, int resourceLocationsLen);
     int (*doStartInstance) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId);
     int (*doStopInstance) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId);
 };
@@ -332,7 +332,7 @@ int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *re
 int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds,
                       int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
 int doModifyNode(ncMetadata * pMeta, char *stateName);
-int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials);
+int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials, char **resourceLocations, int resourceLocationsLen);
 int doStartInstance(ncMetadata * pMeta, char *instanceId);
 int doStopInstance(ncMetadata * pMeta, char *instanceId);
 #endif /* HANDLERS_FANOUT */
