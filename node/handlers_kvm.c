@@ -171,7 +171,7 @@ static int doInitialize(struct nc_state_t *nc);
 static void *rebooting_thread(void *arg);
 static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
 static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char **consoleOutput);
-static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials);
+static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials, char ** resourceLocations, int resourceLocationsLen);
 static int generate_migration_keys(char *host, char *credentials, boolean restart, ncInstance * instance);
 
 /*----------------------------------------------------------------------------*\
@@ -678,6 +678,38 @@ out:
 }
 
 //!
+//! Updates VBR[] of the instance struct (which must be locked by
+//! the caller) with new resource locations (URLs of images) if
+//! such are present in the new
+//!
+static void update_resource_locations(virtualMachine *vm, char ** resourceLocations, int resourceLocationsLen)
+{
+    virtualBootRecord *vbr = NULL;
+    char *id_loc = NULL;
+    char *loc = NULL;
+
+    for (int i = 0; i < EUCA_MAX_VBRS && i < vm->virtualBootRecordLen; i++) {
+        vbr = &(vm->virtualBootRecord[i]);
+
+        //Skip invalid vbr or any entry without an id since the below match will not behave correctly.
+        if(vbr == NULL || strlen(vbr->id) <= 0) {
+            continue;
+        }
+
+        // see if ID in the VBR is among IDs associated with resourceLocations to be updated
+        for (int j = 0; j < resourceLocationsLen; j++) {
+            id_loc = resourceLocations[j];
+
+            if ((strstr(id_loc, vbr->id) == id_loc) // id_loc begins with ID
+                && (strlen(id_loc) > (strlen(vbr->id) + 1))) { // id_loc has more than ID and '='
+                loc = id_loc + strlen(vbr->id) + 1; // URL starts after ID and '='
+                euca_strncpy(vbr->resourceLocation, loc, sizeof(vbr->resourceLocation)); // update the URL of in-memory struct
+            }
+        }
+    }
+}
+
+//!
 //! Handles the instance migration request.
 //!
 //! @param[in]  nc a pointer to the node controller (NC) state
@@ -692,7 +724,7 @@ out:
 //! @pre
 //!
 //! @post
-static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials)
+static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials, char ** resourceLocations, int resourceLocationsLen)
 {
     int ret = EUCA_OK;
     int credentials_prepared = 0;
@@ -748,6 +780,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
                 euca_strncpy(instance->migration_credentials, credentials, CREDENTIAL_SIZE);
                 instance->migrationTime = time(NULL);
+                update_resource_locations(&(instance->params), resourceLocations, resourceLocationsLen);
                 save_instance_struct(instance);
                 copy_instances();
                 sem_v(inst_sem);
@@ -855,6 +888,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
             euca_strncpy(instance->migration_src, sourceNodeName, HOSTNAME_SIZE);
             euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
             euca_strncpy(instance->migration_credentials, credentials, CREDENTIAL_SIZE);
+            update_resource_locations(&(instance->params), resourceLocations, resourceLocationsLen);
             sem_v(inst_sem);
 
             // Establish migration-credential keys.
@@ -901,16 +935,15 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 goto failed_dest;
             }
             // set up networking
-            char brname[32] = "";
+            char brname[IF_NAME_LEN] = "";
             if (!strcmp(nc->pEucaNet->sMode, NETMODE_MANAGED)) {
-                snprintf(brname, 32, "%s", instance->groupIds[0]);
+                snprintf(brname, IF_NAME_LEN, "%s", instance->groupIds[0]);
             } else {
-                snprintf(brname, 32, "%s", nc->pEucaNet->sBridgeDevice);
+                snprintf(brname, IF_NAME_LEN, "%s", nc->pEucaNet->sBridgeDevice);
             }
             euca_strncpy(instance->params.guestNicDeviceName, brname, sizeof(instance->params.guestNicDeviceName));
-
             // TODO: move stuff in startup_thread() into a function?
-
+            
             set_instance_params(instance);
 
             if ((error = create_instance_backing(instance, TRUE))   // create files that back the disks
@@ -958,29 +991,8 @@ unroll:
             change_state(instance, BOOTING);    // not STAGING, since in that mode we don't poll hypervisor for info
             LOGINFO("[%s] migration destination ready %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
             save_instance_struct(instance);
-
-            error = add_instance(&global_instances, instance);
             copy_instances();
             sem_v(inst_sem);
-            if (error) {
-                if (error == EUCA_DUPLICATE_ERROR) {
-                    LOGINFO("[%s] instance struct already exists (from previous migration?), deleting and re-adding...\n", instance->instanceId);
-                    error = remove_instance(&global_instances, instance);
-                    if (error) {
-                        LOGERROR("[%s] could not replace (remove) instance struct, failing...\n", instance->instanceId);
-                        goto failed_dest;
-                    }
-                    error = add_instance(&global_instances, instance);
-                    if (error) {
-                        LOGERROR("[%s] could not replace (add) instance struct, failing...\n", instance->instanceId);
-                        goto failed_dest;
-                    }
-                } else {
-                    LOGERROR("[%s] could not add instance struct, failing...\n", instance->instanceId);
-                    goto failed_dest;
-                }
-            }
-
             continue;
 
 failed_dest:

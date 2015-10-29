@@ -3645,12 +3645,14 @@ int doModifyNode(ncMetadata * pMeta, char *stateName)
 //! @param[in]  instancesLen number of instances in the instance list
 //! @param[in]  action IP of the destination Node Controller
 //! @param[in]  credentials credentials that enable the migration
+//! @param[in]  resourceLocations ID=URL list of self-signed URLs (only relevant for 'prepare' on source node)
+//! @param[in]  resourceLocationsLen number of URLs in the list (only relevant for 'prepare' on source node)
 //!
 //! @return EUCA_OK on sucess or EUCA_ERROR on failure
 //!
 //! TODO: doxygen
 //!
-int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials)
+int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials, char ** resourceLocations, int resourceLocationsLen)
 {
     int ret = EUCA_OK;
 
@@ -3681,9 +3683,9 @@ int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instance
     }
 
     if (nc_state.H->doMigrateInstances) {
-        ret = nc_state.H->doMigrateInstances(&nc_state, pMeta, instances, instancesLen, action, credentials);
+        ret = nc_state.H->doMigrateInstances(&nc_state, pMeta, instances, instancesLen, action, credentials, resourceLocations, resourceLocationsLen);
     } else {
-        ret = nc_state.D->doMigrateInstances(&nc_state, pMeta, instances, instancesLen, action, credentials);
+        ret = nc_state.D->doMigrateInstances(&nc_state, pMeta, instances, instancesLen, action, credentials, resourceLocations, resourceLocationsLen);
     }
 
     LOGTRACE("done\n");

@@ -140,7 +140,7 @@ public class VmInfo extends EucalyptusData {
   
   @Override
   public String toString( ) {
-    return "VmInfo ${reservationId} ${instanceId} ${ownerId} ${stateName} ${instanceType} ${imageId} ${kernelId} ${ramdiskId} ${launchIndex} ${serviceTag} ${netParams} ${volumes}";
+    return "VmInfo ${reservationId} ${instanceId} ${ownerId} ${stateName} ${instanceType} ${imageId} ${kernelId} ${ramdiskId} ${launchIndex} ${serviceTag} ${netParams} ${volumes} ${migrationStateName}";
   }
 }
 
@@ -163,6 +163,10 @@ public class VirtualBootRecord extends EucalyptusData implements Cloneable {
     this.size = sizeBytes;
     this.format = format;
   }
+
+    public boolean hasValidId() {
+        return !"none".equals(this.id);
+    }
   
   public VirtualBootRecord clone( ) {
     return (VirtualBootRecord) super.clone();

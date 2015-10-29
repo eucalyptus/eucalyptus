@@ -1537,6 +1537,10 @@ static int disk_expander(artifact * a)
     struct partition_table_entry parts[4];  // 4 is maximum for primary partitions
     int parts_entries = 0;
 
+    if (a->do_not_download) {
+        LOGINFO("[%s] skipping construction of %s\n", a->instanceId, a->id);
+        return (EUCA_OK);
+    }
     for (int i = 0; i < MAX_ARTIFACT_DEPS && a->deps[i]; i++) {
         artifact *dep = a->deps[i];
         if (dep->vbr &&                // TODO: write a more robust check
@@ -1587,10 +1591,6 @@ static int disk_expander(artifact * a)
         map_entries++;
     }
 
-    if (a->do_not_download) {
-        LOGINFO("[%s] skipping construction of %s\n", a->instanceId, a->id);
-        return (EUCA_OK);
-    }
     LOGINFO("[%s] expanding disk to size %lld bytes in %s (%s)\n", a->instanceId, a->size_bytes, a->id, blockblob_get_dev(a->bb));
 
     // map the partitions to the disk
@@ -2211,6 +2211,9 @@ w_out:
                 LOGERROR("[%s] failed to generate artifact id\n", current_instanceId);
                 goto i_out;
             }
+            if (is_migration_dest) {
+                bb_size_bytes = vbr->sizeBytes + 1048576; // TODO idially add 1M only in PV cases
+            }
             // allocate artifact struct
             a = art_alloc(art_id, art_id, bb_size_bytes, !is_migration_dest, must_be_file, FALSE, imaging_creator, vbr);
 
@@ -2281,7 +2284,23 @@ f_out:
         break;
     }
     if (a) {
+        // Normally, we don't want to download artifacts to the
+        // migration destination. Disks that instance is using on
+        // the source node will be copied to the destination node
+        // by the migration logic.
         a->do_not_download = is_migration_dest;
+
+        // But, there is an exception: migration logic does not copy
+        // kernel and ramdisk of paravirtual instances. So, for PV
+        // migration to work, we'll need to download those EKI and ERI
+        // on the destination. To ensure that self-signed URLs for
+        // those images aren't expired, new ones are sent in the
+        // migrateInstances request. Those new values update the VBR[]
+        // of instance on the source, which ultimately makes it to
+        // the destination.
+        if (vbr->type == NC_RESOURCE_RAMDISK || vbr->type == NC_RESOURCE_KERNEL) {
+            a->do_not_download = FALSE;
+        }
     }
     // allocate another artifact struct if a work copy is requested
     // or if an SSH key is supplied
@@ -2316,7 +2335,7 @@ f_out:
 
         a2 = art_alloc(art_id, art_sig, a->size_bytes, !do_make_work_copy, must_be_file, FALSE, copy_creator, vbr);
         if (a2) {
-            a2->do_not_download = is_migration_dest;
+            a2->do_not_download = a->do_not_download;
             if (sshkey)
                 euca_strncpy(a2->sshkey, sshkey, sizeof(a2->sshkey));
 

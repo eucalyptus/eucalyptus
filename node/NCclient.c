@@ -916,7 +916,7 @@ static int ncClientMigrateInstance(ncStub * pStub, ncMetadata * pMeta, char *psI
     euca_strncpy(instance.instanceId, psInstanceId, sizeof(instance.instanceId));
     euca_strncpy(instance.migration_src, psSrcNodeName, sizeof(instance.migration_src));
     euca_strncpy(instance.migration_dst, psDstNodeName, sizeof(instance.migration_dst));
-    if ((rc = ncMigrateInstancesStub(pStub, pMeta, &pInstance, 1, psStateName, psMigrationCreds)) != EUCA_OK) {
+    if ((rc = ncMigrateInstancesStub(pStub, pMeta, &pInstance, 1, psStateName, psMigrationCreds, NULL, 0)) != EUCA_OK) {
         printf("ncMigrateInstancesStub = %d\n", rc);
         exit(1);
     }

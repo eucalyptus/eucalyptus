@@ -314,7 +314,7 @@ public class VolumeManager {
       throw Exceptions.toUndeclared( "Cannot attach a volume to an instance which is currently migrating: "
                                      + vm.getInstanceId( )
                                      + " "
-                                     + vm.getMigrationTask( ) );
+                                     + vm.getRuntimeState().getMigrationTask( ) );
     }
 
     AccountFullName ownerFullName = ctx.getUserFullName( ).asAccountFullName( );
@@ -457,7 +457,7 @@ public class VolumeManager {
       throw Exceptions.toUndeclared( "Cannot detach a volume from an instance which is currently migrating: "
                                      + vm.getInstanceId( )
                                      + " "
-                                     + vm.getMigrationTask( ) );
+                                     + vm.getRuntimeState().getMigrationTask( ) );
     }
     if ( volume == null ) {
       throw new ClientComputeException( "IncorrectState", "Volume is not attached: " + volumeId );
