@@ -78,6 +78,7 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.LockResource;
 import com.eucalyptus.util.XMLParser;
 import com.google.common.base.Function;
 
@@ -198,9 +199,7 @@ public class DownloadManifestFactory {
       final String manifestName, int expirationHours, boolean urlForNc)
       throws DownloadManifestException {
     EucaS3Client s3Client = null;
-    ReentrantLock manifestLock = getLock(manifestName);
-    try {
-      manifestLock.lock();
+    try ( final LockResource manifestLock = LockResource.lock(getLock(manifestName)) ) {
       try {
         s3Client = s3ClientsPool.borrowObject();
       } catch (Exception ex) {
@@ -386,11 +385,6 @@ public class DownloadManifestFactory {
       LOG.error("Got an error", ex);
       throw new DownloadManifestException("Can't generate download manifest");
     } finally {
-      try {
-        manifestLock.unlock();
-      } catch (IllegalMonitorStateException ex) {
-        LOG.warn("Something wrong with manifest locking");
-      }
       if (s3Client != null)
         try {
           s3ClientsPool.returnObject(s3Client);
