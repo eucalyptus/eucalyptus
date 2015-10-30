@@ -231,10 +231,6 @@ do_start() {
 		echo "cannot find httpd (was set to <$HTTPD>)!"
 		exit 1
 	fi
-	if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then
-		echo "Some eucalyptus components are missing"
-		exit 1
-	fi
 
 	# Add loop devices if necessary (and possible)
 	[ -z "$CREATE_NC_LOOP_DEVICES" ] && CREATE_NC_LOOP_DEVICES=256
@@ -260,10 +256,6 @@ do_start() {
 		# *cannot* be 0 on Linux < 2.6.22, so we perform this check on those
 		# systems so it will hopefully cover the majority of cases.
 		echo "warning: found fewer loop devices in /sys/block than in /dev ($LOOP_AVL_SYS < $LOOP_AVL_DEV); expect problems"
-	fi
-
-	if ! $EUCALYPTUS/usr/sbin/euca_conf --check nc ; then
-		exit 1
 	fi
 
         # Ensure libvirtd can start up in "--listen" mode by generating unusable stub keys if none are already present.
