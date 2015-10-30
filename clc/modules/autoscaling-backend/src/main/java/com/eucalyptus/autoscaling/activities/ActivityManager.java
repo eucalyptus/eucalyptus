@@ -967,17 +967,11 @@ public class ActivityManager {
   }
 
   private Filter filter( final String name, final String... values ) {
-    final Filter filter = new Filter();
-    filter.setName( name );
-    filter.getValueSet().addAll( Arrays.asList( values ) );
-    return filter;
+    return filter( name, Arrays.asList( values ) );
   }
 
   private Filter filter( final String name, final Collection<String> values ) {
-    final Filter filter = new Filter();
-    filter.setName( name );
-    filter.getValueSet().addAll( values );
-    return filter;
+    return Filter.filter( name, values );
   }
 
   private void transitionToRegistered( final AutoScalingGroupMetadata group, final List<String> instanceIds ) {
