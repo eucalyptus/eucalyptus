@@ -57,7 +57,7 @@ class Networking {
     service.release( releaseNetworkResourcesType )
   }
 
-  void update( final UpdateInstanceResourcesType updateInstanceResourcesType ) {
-    service.update( updateInstanceResourcesType )
+  boolean update( final UpdateInstanceResourcesType updateInstanceResourcesType ) {
+    service.update( updateInstanceResourcesType ).updated ?: false
   }
 }
