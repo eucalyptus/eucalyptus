@@ -77,7 +77,6 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.objectstorage.msgs.CopyObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.CreateBucketResponseType;
-import com.eucalyptus.objectstorage.msgs.DeleteMultipleObjectsResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageResponseType;
@@ -177,14 +176,9 @@ public class ObjectStorageOutboundHandler extends MessageStackHandler {
         }
       } else if (msg instanceof ObjectStorageResponseType) { // Filter for GETs and PUTs *NOT* related to data
         // Remove the content in response for certain operations
-        if (msg instanceof SetBucketAccessControlPolicyResponseType
-            || msg instanceof SetBucketLifecycleResponseType
-            || msg instanceof SetBucketLoggingStatusResponseType
-            || msg instanceof SetBucketVersioningStatusResponseType
-            || msg instanceof SetObjectAccessControlPolicyResponseType
-            || msg instanceof SetBucketTaggingResponseType
-            || (msg instanceof DeleteMultipleObjectsResponseType && ((DeleteMultipleObjectsResponseType) msg).getQuiet() != null && ((DeleteMultipleObjectsResponseType) msg)
-                .getQuiet().booleanValue())) {
+        if (msg instanceof SetBucketAccessControlPolicyResponseType || msg instanceof SetBucketLifecycleResponseType
+            || msg instanceof SetBucketLoggingStatusResponseType || msg instanceof SetBucketVersioningStatusResponseType
+            || msg instanceof SetObjectAccessControlPolicyResponseType || msg instanceof SetBucketTaggingResponseType) {
           if (msg instanceof SetObjectAccessControlPolicyResponseType && ((SetObjectAccessControlPolicyResponseType) msg).getVersionId() != null) {
             httpResponse.setHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, ((SetObjectAccessControlPolicyResponseType) msg).getVersionId());
           }

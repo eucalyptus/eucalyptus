@@ -64,7 +64,6 @@ package com.eucalyptus.objectstorage.pipeline;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
 import com.eucalyptus.component.annotation.ComponentPart;
@@ -74,7 +73,7 @@ import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageFormPOSTBinding
 import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageFormPOSTOutboundStage;
 import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageFormPOSTUserAuthenticationStage;
 import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageRESTExceptionStage;
-import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
 @ComponentPart(ObjectStorage.class)
@@ -88,10 +87,11 @@ public class ObjectStorageFormPOSTPipeline extends ObjectStorageRESTPipeline {
 
   @Override
   public boolean checkAccepts(HttpRequest message) {
-    if (super.checkAccepts(message) && message.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.POST.toString())) {
-      String contentType = message.getHeader(HttpHeaders.Names.CONTENT_TYPE);
-      return contentType != null && contentType.startsWith("multipart/form-data;");
+    // Accept form POST requests only
+    if (super.checkAccepts(message) && OSGUtil.isFormPOSTRequest(message)) {
+      return true;
     }
+
     return false;
   }
 

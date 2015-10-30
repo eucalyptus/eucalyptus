@@ -64,7 +64,6 @@ package com.eucalyptus.objectstorage.pipeline;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
 import com.eucalyptus.component.annotation.ComponentPart;
@@ -75,7 +74,6 @@ import com.eucalyptus.objectstorage.pipeline.stages.ObjectStoragePUTOutboundStag
 import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageRESTExceptionStage;
 import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageUserAuthenticationStage;
 import com.eucalyptus.objectstorage.util.OSGUtil;
-import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
 /**
@@ -95,15 +93,11 @@ public class ObjectStoragePUTDataPipeline extends ObjectStorageRESTPipeline {
 
   @Override
   public boolean checkAccepts(HttpRequest message) {
-    // Accept PUT object and upload part operations (only)
+    // Accept PUT object or upload part operations only
     if (super.checkAccepts(message) && OSGUtil.isPUTDataRequest(message)) {
       return true;
     }
 
-    if (super.checkAccepts(message) && message.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.POST.toString())) {
-      String contentType = message.getHeader(HttpHeaders.Names.CONTENT_TYPE);
-      return contentType == null || !contentType.startsWith("multipart/form-data;");
-    }
     return false;
   }
 
