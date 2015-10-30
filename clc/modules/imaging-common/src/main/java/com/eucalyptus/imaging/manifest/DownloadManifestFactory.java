@@ -27,7 +27,10 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnull;
@@ -71,7 +74,11 @@ import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Signatures;
+import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Listeners;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.LockResource;
 import com.eucalyptus.util.XMLParser;
 import com.google.common.base.Function;
 
@@ -87,6 +94,7 @@ public class DownloadManifestFactory {
   private static String MANIFEST_EXPIRATION = "expire";
   private static int DEFAULT_EXPIRE_TIME_HR = 3;
   private static int TOKEN_REFRESH_MINS = 60;
+  private static HashMap<String, ReentrantLock> manifestLocks = new HashMap<String, ReentrantLock>();
 
   private static class S3ClientFactory implements PoolableObjectFactory<EucaS3Client> {
 
@@ -123,6 +131,44 @@ public class DownloadManifestFactory {
       new GenericObjectPool<EucaS3Client>(new S3ClientFactory(), 10,
           GenericObjectPool.WHEN_EXHAUSTED_BLOCK, 5 * 60 * 1000, 2);
 
+  private static ReentrantLock getLock(String manifestName) {
+    synchronized(manifestLocks) {
+      if (manifestLocks.get(manifestName) != null)
+        return manifestLocks.get(manifestName);
+      else {
+        ReentrantLock lock = new ReentrantLock();
+        manifestLocks.put(manifestName, lock);
+        return lock;
+      }
+    }
+  }
+
+  public static class ManifestLocksEventListener implements EventListener<ClockTick> {
+    private static long lastCleanUp = System.currentTimeMillis();
+    private static long CLENAUP_INTERVAL = 5 * 60 * 1000L;
+
+    public static void register( ) {
+      Listeners.register( ClockTick.class, new ManifestLocksEventListener() );
+    }
+
+    @Override
+    public void fireEvent( final ClockTick event ) {
+      if (lastCleanUp + CLENAUP_INTERVAL < System.currentTimeMillis()) {
+        synchronized(manifestLocks) {
+          Iterator<Entry<String, ReentrantLock>> itr = manifestLocks.entrySet().iterator();
+          while (itr.hasNext()) {
+            Map.Entry<String, ReentrantLock> entry = itr.next();
+            if (entry.getValue().tryLock()) {
+              entry.getValue().unlock();
+              itr.remove();
+            }
+          }
+        }
+        lastCleanUp = System.currentTimeMillis();
+      }
+    }
+  }
+
   public static String generateDownloadManifest(
       final ImageManifestFile baseManifest, final PublicKey keyToUse,
       final String manifestName, boolean urlForNc)
@@ -153,7 +199,7 @@ public class DownloadManifestFactory {
       final String manifestName, int expirationHours, boolean urlForNc)
       throws DownloadManifestException {
     EucaS3Client s3Client = null;
-    try {
+    try ( final LockResource manifestLock = LockResource.lock(getLock(manifestName)) ) {
       try {
         s3Client = s3ClientsPool.borrowObject();
       } catch (Exception ex) {

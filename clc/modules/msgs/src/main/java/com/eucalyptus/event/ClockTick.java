@@ -77,9 +77,4 @@ public class ClockTick extends GenericEvent<Long>{
   public boolean isBackEdge() {
     return super.getMessage( ) > 0;
   }
-  
-  
-  
-  
-  
 }
