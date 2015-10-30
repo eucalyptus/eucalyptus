@@ -315,10 +315,11 @@ public class PolicyParser {
     // Group resources by type, key is a pair of (optional) account + resource type
     final SetMultimap<PolicyResourceSetKey, String> resourceMap = HashMultimap.create( );
     for ( final String resource : resources ) {
-      final Ern ern = Ern.parse( resource );
-      resourceMap.put(
-          key( ern.getRegion( ), ern.getAccount( ), ern.getResourceType( ) ),
-          ern.getResourceName() );
+      for ( final Ern ern : Ern.parse( resource ).explode( ) ) {
+        resourceMap.put(
+            key( ern.getRegion( ), ern.getAccount( ), ern.getResourceType( ) ),
+            ern.getResourceName( ) );
+      }
     }
     final boolean notAction = PolicySpec.NOTACTION.equals( actionElement );
     final boolean notResource = PolicySpec.NOTRESOURCE.equals( resourceElement );

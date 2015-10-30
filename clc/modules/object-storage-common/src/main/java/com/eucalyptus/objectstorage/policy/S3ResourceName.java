@@ -62,8 +62,11 @@
 
 package com.eucalyptus.objectstorage.policy;
 
+import java.util.Collection;
+import javax.annotation.Nonnull;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.Ern;
+import com.google.common.collect.ImmutableList;
 
 public class S3ResourceName extends Ern {
 
@@ -119,4 +122,23 @@ public class S3ResourceName extends Ern {
     return resourceName;
   }
 
+  /**
+   * The following ARN uses '*' to indicate all Amazon S3 resource (all bucket and objects in your account)
+   *
+   *   arn:aws:s3:::*
+   *
+   * Explode bucket * to match objects also.
+   */
+  @Nonnull
+  @Override
+  public Collection<Ern> explode() {
+    if ( isBucket( ) && "*".equals( bucket ) ) {
+      return ImmutableList.<Ern>of(
+          this,
+          new S3ResourceName( getAccount( ), "*", "/*" )
+      );
+    } else {
+      return super.explode( );
+    }
+  }
 }
