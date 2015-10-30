@@ -64,16 +64,16 @@ package com.eucalyptus.objectstorage.pipeline.stages;
 
 import org.jboss.netty.channel.ChannelPipeline;
 
-import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStoragePUTLifecycleAndAclAggregatorHandler;
+import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageMetadataAggregatorHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
 /*
  *
  */
-public class ObjectStorageChunkedPUTLifecycleAndAclAggregatorStage implements UnrollableStage {
+public class ObjectStorageMetadataAggregatorStage implements UnrollableStage {
   @Override
   public void unrollStage(ChannelPipeline pipeline) {
-    pipeline.addLast("objectstorage-aggregate-chunked-puts-of-lifecycle-and-acl", new ObjectStoragePUTLifecycleAndAclAggregatorHandler());
+    pipeline.addLast("objectstorage-aggregate-chunked-puts-of-lifecycle-and-acl", new ObjectStorageMetadataAggregatorHandler());
   }
 
   @Override

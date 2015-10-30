@@ -68,7 +68,7 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageChunkedPUTLifecycleAndAclAggregatorStage;
+import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageMetadataAggregatorStage;
 import com.eucalyptus.objectstorage.pipeline.stages.ObjectStoragePUTBindingStage;
 import com.eucalyptus.objectstorage.pipeline.stages.ObjectStoragePUTOutboundStage;
 import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageRESTExceptionStage;
@@ -86,14 +86,15 @@ import com.eucalyptus.ws.stages.UnrollableStage;
 public class ObjectStoragePUTMetadataPipeline extends ObjectStorageRESTPipeline {
   private static Logger LOG = Logger.getLogger(ObjectStoragePUTMetadataPipeline.class);
   private final UnrollableStage auth = new ObjectStorageUserAuthenticationStage();
-  private final UnrollableStage chunkedLCorACL = new ObjectStorageChunkedPUTLifecycleAndAclAggregatorStage();
+  private final UnrollableStage metadataAggregator = new ObjectStorageMetadataAggregatorStage();
   private final UnrollableStage bind = new ObjectStoragePUTBindingStage();
   private final UnrollableStage out = new ObjectStoragePUTOutboundStage();
   private final UnrollableStage exHandler = new ObjectStorageRESTExceptionStage();
 
   @Override
   public boolean checkAccepts(HttpRequest message) {
-    // Allow PUT metdata operations (only)
+    // Accept PUT acl, versioning, lifecycle, tagging, notification, initiate mpu - POST uploads, complete mpu - POST uploadId, multi delete - POST
+    // delete
     if (super.checkAccepts(message) && OSGUtil.isPUTMetadataRequest(message)) {
       return true;
     }
@@ -109,7 +110,7 @@ public class ObjectStoragePUTMetadataPipeline extends ObjectStorageRESTPipeline 
   @Override
   public ChannelPipeline addHandlers(ChannelPipeline pipeline) {
     auth.unrollStage(pipeline);
-    chunkedLCorACL.unrollStage(pipeline);
+    metadataAggregator.unrollStage(pipeline);
     bind.unrollStage(pipeline);
     out.unrollStage(pipeline);
     exHandler.unrollStage(pipeline);

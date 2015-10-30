@@ -239,6 +239,10 @@ public class ObjectStorageProperties {
     READ, WRITE, READ_ACP, WRITE_ACP, FULL_CONTROL
   }
 
+  public enum Resource {
+    bucket, object
+  }
+
   public enum X_AMZ_GRANT {
     READ("x-amz-grant-read"), WRITE("x-amz-grant-write"), READ_ACP("x-amz-grant-read-acp"), WRITE_ACP("x-amz-grant-write-acp"), FULL_CONTROL(
         "x-amz-grant-full-control");
@@ -315,11 +319,9 @@ public class ObjectStorageProperties {
   }
 
   public enum SubResource {
-    //Per the S3 Dev guide, these must be included in the canonicalized resource:
-    acl, lifecycle, location, logging, notification, partNumber, policy, requestPayment, torrent, uploadId, uploads, versionId, versioning, versions,
-    website, cors, tagging, delete
+    // Per the S3 Dev guide, these must be included in the canonicalized resource:
+    acl, lifecycle, location, logging, notification, partNumber, policy, requestPayment, torrent, uploadId, uploads, versionId, versioning, versions, website, cors, tagging, delete
   }
-
 
   public enum ExtendedGetHeaders {
     IfModifiedSince, IfUnmodifiedSince, IfMatch, IfNoneMatch, Range
@@ -488,8 +490,7 @@ public class ObjectStorageProperties {
   }
 
   public enum BucketParameter {
-    acl, location, prefix, maxkeys, delimiter, marker, torrent, logging, versioning, versions, versionidmarker, keymarker, cors, lifecycle, policy,
-    notification, tagging, requestPayment, website, uploads, maxUploads, uploadIdMarker, delete
+    acl, location, prefix, maxkeys, delimiter, marker, torrent, logging, versioning, versions, versionidmarker, keymarker, cors, lifecycle, policy, notification, tagging, requestPayment, website, uploads, maxUploads, uploadIdMarker, delete
   }
 
   public enum ObjectParameter {

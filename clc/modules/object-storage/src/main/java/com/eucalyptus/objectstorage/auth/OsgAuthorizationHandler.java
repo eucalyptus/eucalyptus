@@ -95,11 +95,13 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
     ObjectStorageProperties.Permission[] requiredBucketACLPermissions = null;
     ObjectStorageProperties.Permission[] requiredObjectACLPermissions = null;
     Boolean allowOwnerOnly = null;
+    ObjectStorageProperties.Resource[] requiredOwnerOf = null;
     RequiresACLPermission requiredACLs = requestAuthzProperties.get(RequiresACLPermission.class);
     if (requiredACLs != null) {
       requiredBucketACLPermissions = requiredACLs.bucket();
       requiredObjectACLPermissions = requiredACLs.object();
       allowOwnerOnly = requiredACLs.ownerOnly();
+      requiredOwnerOf = requiredACLs.ownerOf();
     } else {
       // No ACL annotation is ok, maybe a admin only op
     }
@@ -172,6 +174,7 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
     }
 
     final String resourceOwnerAccountNumber;
+    final String bucketOwnerAccountNumber;
     final PolicyResourceInfo policyResourceInfo;
     if (resourceType == null) {
       LOG.error("No resource type found in request class annotations, cannot process.");
@@ -181,22 +184,31 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
         // Ensure we have the proper resource entities present and get owner info
         switch (resourceType) {
           case PolicySpec.S3_RESOURCE_BUCKET:
-            // Get the bucket owner.
+            // Get the bucket owner. bucket and resource owner are same in this case
             if (bucketResourceEntity == null) {
               LOG.error("Could not check access for operation due to no bucket resource entity found");
               return false;
             } else {
-              resourceOwnerAccountNumber = Accounts.lookupPrincipalByCanonicalId(bucketResourceEntity.getOwnerCanonicalId()).getAccountNumber();
+              bucketOwnerAccountNumber =
+                  resourceOwnerAccountNumber = Accounts.lookupPrincipalByCanonicalId(bucketResourceEntity.getOwnerCanonicalId()).getAccountNumber();
               policyResourceInfo = PolicyResourceContext.resourceInfo(resourceOwnerAccountNumber, bucketResourceEntity);
             }
             break;
           case PolicySpec.S3_RESOURCE_OBJECT:
+            // get the object owner.
             if (objectResourceEntity == null) {
               LOG.error("Could not check access for operation due to no object resource entity found");
               return false;
             } else {
               resourceOwnerAccountNumber = Accounts.lookupPrincipalByCanonicalId(objectResourceEntity.getOwnerCanonicalId()).getAccountNumber();
               policyResourceInfo = PolicyResourceContext.resourceInfo(resourceOwnerAccountNumber, objectResourceEntity);
+            }
+            // get the bucket owner account number as the bucket and object owner may be different
+            if (bucketResourceEntity == null) { // cannot be null as every object is associated with one bucket
+              LOG.error("Could not check access for operation due to no bucket resource entity found");
+              return false;
+            } else {
+              bucketOwnerAccountNumber = Accounts.lookupPrincipalByCanonicalId(bucketResourceEntity.getOwnerCanonicalId()).getAccountNumber();
             }
             break;
           default:
@@ -230,43 +242,63 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
       throw new IllegalArgumentException("No requires-permission actions found in request class annotations, cannot process.");
     }
 
+    /*
+     * Bucket or object owner only? It is expected that ownerOnly flag can be used solely or in combination with ACL checks. If owner checks are
+     * required, evaluate them first before evaluating the ACLs
+     */
+    if (allowOwnerOnly != null && allowOwnerOnly) { // owner checks are in effect
+      if (requiredOwnerOf == null || requiredOwnerOf.length == 0) {
+        LOG.error("Owner only flag does not include resource (bucket, object) that ownership checks should be applied to");
+        return false;
+      }
+
+      Boolean isRequestByOwner = false;
+      for (ObjectStorageProperties.Resource resource : requiredOwnerOf) {
+        if (ObjectStorageProperties.Resource.bucket.equals(resource)) {
+          isRequestByOwner = isRequestByOwner || bucketOwnerAccountNumber.equals(requestAccountNumber);
+        } else {
+          isRequestByOwner = isRequestByOwner || resourceOwnerAccountNumber.equals(requestAccountNumber);
+        }
+      }
+
+      if (!isRequestByOwner) {
+        LOG.debug("Request is rejected by ACL checks due to account ownership requirements");
+        return false;
+      }
+    } else {
+      // owner check does not apply
+    }
+
     /* ACL Checks: Is the user's account allowed? */
     Boolean aclAllow = false;
-    if (requiredBucketACLPermissions != null && requiredBucketACLPermissions.length > 0) {
-      // Check bucket ACLs
+    if ((requiredBucketACLPermissions != null && requiredBucketACLPermissions.length > 0)
+        || (requiredObjectACLPermissions != null && requiredObjectACLPermissions.length > 0)) { // check ACLs if any
 
-      if (bucketResourceEntity == null) {
-        // There are bucket ACL requirements but no bucket entity to check. fail.
-        // Don't bother with other checks, this is an invalid state
-        LOG.error("Null bucket resource, cannot evaluate bucket ACL");
-        return false;
+      // Check bucket ACLs, if any
+      if (requiredBucketACLPermissions != null && requiredBucketACLPermissions.length > 0) {
+
+        // Evaluate the bucket ACL, any matching grant gives permission
+        for (ObjectStorageProperties.Permission permission : requiredBucketACLPermissions) {
+          aclAllow = aclAllow || bucketResourceEntity.can(permission, requestCanonicalId);
+        }
       }
 
-      // Evaluate the bucket ACL, any matching grant gives permission
-      for (ObjectStorageProperties.Permission permission : requiredBucketACLPermissions) {
-        aclAllow = aclAllow || bucketResourceEntity.can(permission, requestCanonicalId);
+      // Check object ACLs, if any
+      if (requiredObjectACLPermissions != null && requiredObjectACLPermissions.length > 0) {
+        if (objectResourceEntity == null) {
+          // There are object ACL requirements but no object entity to check. fail.
+          // Don't bother with other checks, this is an invalid state
+          LOG.error("Null bucket resource, cannot evaluate bucket ACL");
+          return false;
+        }
+        for (ObjectStorageProperties.Permission permission : requiredObjectACLPermissions) {
+          aclAllow = aclAllow || objectResourceEntity.can(permission, requestCanonicalId);
+        }
       }
+    } else { // No ACLs, ownership would have been used to determine privilege
+      aclAllow = true;
     }
 
-    // Check object ACLs, if any
-    if (requiredObjectACLPermissions != null && requiredObjectACLPermissions.length > 0) {
-      if (objectResourceEntity == null) {
-        // There are object ACL requirements but no object entity to check. fail.
-        // Don't bother with other checks, this is an invalid state
-        LOG.error("Null bucket resource, cannot evaluate bucket ACL");
-        return false;
-      }
-      for (ObjectStorageProperties.Permission permission : requiredObjectACLPermissions) {
-        aclAllow = aclAllow || objectResourceEntity.can(permission, requestCanonicalId);
-      }
-    }
-
-    /*
-     * Resource owner only? if so, override any previous acl decisions It is not expected that owneronly is set as well as other ACL permissions,
-     * Regular owner permissions (READ, WRITE, READ_ACP, WRITE_ACP) are handled by the regular acl checks. OwnerOnly should be only used for
-     * operations not covered by the other Permissions (e.g. logging, or versioning)
-     */
-    aclAllow = (allowOwnerOnly ? resourceOwnerAccountNumber.equals(requestAccountNumber) : aclAllow);
     if (isUserAnonymous(requestUser)) {
       // Skip the IAM checks for anonymous access since they will always fail and aren't valid for anonymous users.
       return aclAllow;

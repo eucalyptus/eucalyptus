@@ -36,6 +36,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import org.apache.commons.lang.ObjectUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTimeComparator;
@@ -827,14 +828,17 @@ public class ObjectStorageGateway implements ObjectStorageService {
     ObjectEntity objectEntity;
     try {
       objectEntity = getObjectEntityAndCheckPermissions(request, null);
-    } catch (NoSuchBucketException | NoSuchKeyException | NoSuchEntityException | NoSuchElementException e) {
+    } catch (NoSuchKeyException e) {
       // Nothing to do, object doesn't exist. Return 204 per S3 spec
       DeleteObjectResponseType reply = request.getReply();
       reply.setStatus(HttpResponseStatus.NO_CONTENT);
       reply.setStatusMessage("No Content");
       return reply;
+    } catch (S3Exception e) {
+      LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with: ", e);
+      throw e;
     } catch (Exception e) {
-      LOG.error("Error getting bucket metadata for bucket " + request.getBucket());
+      LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", e);
       throw new InternalErrorException(request.getBucket());
     }
 
@@ -857,8 +861,11 @@ public class ObjectStorageGateway implements ObjectStorageService {
           reply.setIsDeleteMarker(Boolean.TRUE);
       }
       return reply;
+    } catch (S3Exception e) {
+      LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with: ", e);
+      throw e;
     } catch (Exception e) {
-      LOG.error("Transaction error during delete object: " + request.getBucket() + "/" + request.getKey(), e);
+      LOG.warn("Transaction error during delete object: " + request.getBucket() + "/" + request.getKey(), e);
       throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
     }
   }
@@ -1212,7 +1219,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         shortReply = false;
       }
     } else if (ifModifiedSince != null && DATE_TIME_COMPARATOR.compare(objectEntity.getObjectModifiedTimestamp(), ifModifiedSince) <= 0) { // If-None-Match
-                                                                                                                                      // == null
+      // == null
       shortReply = true;
     } else {
       shortReply = false; // return object since If-None-Match and If-Modified are invalid
@@ -1727,19 +1734,41 @@ public class ObjectStorageGateway implements ObjectStorageService {
    */
   @Override
   public DeleteVersionResponseType deleteVersion(final DeleteVersionType request) throws S3Exception {
-    ObjectEntity objectEntity = getObjectEntityAndCheckPermissions(request, request.getVersionId());
-
-    ObjectEntity responseEntity = OsgObjectFactory.getFactory().logicallyDeleteVersion(ospClient, objectEntity, Contexts.lookup().getUser());
-
-    DeleteVersionResponseType reply = request.getReply();
-    reply.setStatus(HttpResponseStatus.NO_CONTENT);
-    reply.setKey(request.getKey());
-    if (responseEntity != null) {
-      reply.setVersionId(responseEntity.getVersionId());
-      if (responseEntity.getIsDeleteMarker() != null && responseEntity.getIsDeleteMarker())
-        reply.setIsDeleteMarker(Boolean.TRUE);
+    ObjectEntity objectEntity;
+    try {
+      objectEntity = getObjectEntityAndCheckPermissions(request, request.getVersionId());
+    } catch (NoSuchKeyException e) {
+      // Version not found, respond to client with 400 Bad request exception
+      LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with: InvalidArgumentException");
+      throw new InvalidArgumentException(request.getBucket() + "/" + request.getKey() + "?versionId=" + request.getVersionId(),
+          "Invalid version id specified").withArgumentName("versionId").withArgumentValue(request.getVersionId());
+    } catch (S3Exception e) {
+      LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with: ", e);
+      throw e;
+    } catch (Exception e) {
+      LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", e);
+      throw new InternalErrorException(request.getBucket());
     }
-    return reply;
+
+    try {
+      ObjectEntity responseEntity = OsgObjectFactory.getFactory().logicallyDeleteVersion(ospClient, objectEntity, Contexts.lookup().getUser());
+
+      DeleteVersionResponseType reply = request.getReply();
+      reply.setStatus(HttpResponseStatus.NO_CONTENT);
+      reply.setKey(request.getKey());
+      if (responseEntity != null) {
+        reply.setVersionId(responseEntity.getVersionId());
+        if (responseEntity.getIsDeleteMarker() != null && responseEntity.getIsDeleteMarker())
+          reply.setIsDeleteMarker(Boolean.TRUE);
+      }
+      return reply;
+    } catch (S3Exception e) {
+      LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with: ", e);
+      throw e;
+    } catch (Exception e) {
+      LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", e);
+      throw new InternalErrorException(request.getBucket() + "/" + request.getKey() + "?versionId=" + request.getVersionId());
+    }
   }
 
   @Override
@@ -1934,7 +1963,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     } catch (NoSuchEntityException | NoSuchElementException e) {
       throw new NoSuchKeyException(keyFullName);
     } catch (Exception e) {
-      LOG.error("Error getting metadata for " + keyFullName);
+      LOG.warn("Error getting metadata for " + keyFullName);
       throw new InternalErrorException(keyFullName);
     }
     if (!OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, object, 0)) {
@@ -1950,7 +1979,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     } catch (NoSuchEntityException | NoSuchElementException e) {
       throw new NoSuchBucketException(bucketName);
     } catch (Exception e) {
-      LOG.error("Error getting metadata for bucket " + bucketName);
+      LOG.warn("Error getting metadata for bucket " + bucketName);
       throw new InternalErrorException(bucketName);
     }
     return bucket;
@@ -2047,6 +2076,16 @@ public class ObjectStorageGateway implements ObjectStorageService {
       throw new MissingContentLengthException(request.getBucket() + "/" + request.getKey());
     }
 
+    ObjectEntity objectEntity;
+    try {
+      objectEntity = ObjectMetadataManagers.getInstance().lookupUpload(bucket, request.getKey(), request.getUploadId());
+    } catch (NoSuchEntityException | NoSuchElementException e) {
+      throw new NoSuchUploadException(request.getUploadId());
+    } catch (Exception e) {
+      throw new InternalErrorException("Error during upload lookup: " + request.getBucket() + "/" + request.getKey() + "?uploadId="
+          + request.getUploadId(), e);
+    }
+
     UserPrincipal requestUser = Contexts.lookup().getUser();
     PartEntity partEntity;
     try {
@@ -2056,7 +2095,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
           + request.getUploadId() + " partNumber: " + partNumber);
       throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
     }
-    if (OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, partEntity, objectSize)) {
+
+    // upload part hast to be authorize based on account that initiated upload
+    if (OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, objectSize)) {
       // Auth worked, check if we need to send a 100-continue
       try {
         if (request.getExpectHeader()) {
@@ -2066,12 +2107,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
         throw new InternalErrorException(e);
       }
 
-      ObjectEntity objectEntity;
-      try {
-        objectEntity = ObjectMetadataManagers.getInstance().lookupUpload(bucket, request.getKey(), request.getUploadId());
-      } catch (Exception e) {
-        throw new NoSuchUploadException(request.getUploadId());
-      }
       try {
         PartEntity updatedEntity =
             OsgObjectFactory.getFactory().createObjectPart(ospClient, objectEntity, partEntity, request.getData(), requestUser);
@@ -2379,87 +2414,97 @@ public class ObjectStorageGateway implements ObjectStorageService {
   @Override
   public DeleteMultipleObjectsResponseType deleteMultipleObjects(DeleteMultipleObjectsType request) throws S3Exception {
     logRequest(request);
+
+    // verify that bucket exists
+    String bucketName = request.getBucket();
+    ensureBucketExists(bucketName);
+
+    // fetch request content
+    DeleteMultipleObjectsMessage message = request.getDelete();
+    boolean quiet = message.getQuiet() == null ? false : message.getQuiet().booleanValue();
+
+    // prep the response
     DeleteMultipleObjectsResponseType reply = request.getReply();
     DeleteMultipleObjectsMessageReply deleted = new DeleteMultipleObjectsMessageReply();
     deleted.setDeleted(Lists.<DeleteMultipleObjectsEntryVersioned>newArrayList());
     deleted.setErrors(Lists.<DeleteMultipleObjectsError>newArrayList());
     reply.setDeleteResult(deleted);
-    DeleteMultipleObjectsMessage message = request.getDelete();
-    Bucket bucket = ensureBucketExists(request.getBucket());
-    boolean quiet = message.getQuiet() == null ? false : message.getQuiet().booleanValue();
-    reply.setQuiet(new Boolean(quiet));
-    if (quiet) {
-      reply.setStatus(HttpResponseStatus.NO_CONTENT);
-      reply.setStatusMessage("No Content");
-    }
+
     if (message.getObjects() != null) {
       for (DeleteMultipleObjectsEntry entry : message.getObjects()) {
         DeleteMultipleObjectsEntryVersioned response = null;
         DeleteMultipleObjectsError error = null;
-        String versionId = entry.getVersionId() != null && !"".equals(entry.getVersionId().trim()) ? entry.getVersionId() : null;
         String key = entry.getKey();
-        ObjectEntity object = null;
-        String keyFullName = bucket.getBucketName() + "/" + key + (versionId == null ? "" : "?versionId=" + versionId);
-        try {
-          object = ObjectMetadataManagers.getInstance().lookupObject(bucket, key, versionId);
-        } catch (NoSuchEntityException | NoSuchElementException e) {
-          // this is okay, the real S3 just happily pretends to delete objects that don't exist
-          // in fact, if the bucket is versioned, a delete marker will be created :/
-          // this was the case as of Feb 6, 2015
-        } catch (Exception e) {
-          if (!quiet) {
-            LOG.error("Error getting metadata for " + keyFullName);
-            error = generateDeleteError(key, versionId, DeleteMultipleObjectsErrorCode.InternalError, "Internal Error");
-          }
-        }
-        if (object != null && error == null && !OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, object, 0)) {
-          error = generateDeleteError(key, versionId, DeleteMultipleObjectsErrorCode.AccessDenied, "Access Denied");
-        }
+        String versionId = StringUtils.isNotBlank(entry.getVersionId()) ? entry.getVersionId() : null;
 
-        if (error == null) {
+        // Copy the original request to a new delete object or delete version request and invoke the delete method. This sets up ACLs and IAM checks
+        // correctly for the authorization part
+
+        if (versionId != null) { // delete version
           try {
-            ObjectEntity responseEntity = null;
-            UserPrincipal currentUser = Contexts.lookup().getUser();
-            if (object != null) {
-              responseEntity = OsgObjectFactory.getFactory().logicallyDeleteObject(ospClient, object, currentUser);
-              try {
-                final User user = Contexts.lookup().getUser();
-                fireObjectUsageEvent(S3ObjectEvent.S3ObjectAction.OBJECTDELETE, bucket.getBucketName(), key, versionId, user.getUserId(),
-                    user.getName(), user.getAccountNumber(), object.getSize());
-              } catch (Exception e) {
-                LOG.warn("caught exception while attempting to fire reporting event, exception message - " + e.getMessage());
+            DeleteVersionType delVerRequest = new DeleteVersionType();
+            delVerRequest.setBucket(bucketName);
+            delVerRequest.setKey(key);
+            delVerRequest.setVersionId(versionId);
+            delVerRequest.setCorrelationId(request.getCorrelationId());
+            delVerRequest.setEffectiveUserId(request.getEffectiveUserId());
+
+            DeleteVersionResponseType delVerResponse = deleteVersion(delVerRequest);
+
+            if (!quiet) { // generate result if not quiet mode
+              response = new DeleteMultipleObjectsEntryVersioned();
+              response.setKey(key);
+              response.setVersionId(versionId);
+              if (delVerResponse.getIsDeleteMarker() != null && delVerResponse.getIsDeleteMarker()) {
+                response.setDeleteMarker(delVerResponse.getIsDeleteMarker());
+                response.setDeleteMarkerVersionId(delVerResponse.getVersionId());
               }
             }
-            response = new DeleteMultipleObjectsEntryVersioned();
-            response.setKey(key);
-            response.setVersionId(versionId);
-            if (responseEntity != null && responseEntity.getIsDeleteMarker() != null && responseEntity.getIsDeleteMarker().booleanValue()) {
-              response.setDeleteMarker(Boolean.TRUE);
-              response.setDeleteMarkerVersionId(responseEntity.getVersionId());
+          } catch (S3Exception e) { // always generate error
+            error = new DeleteMultipleObjectsError();
+            error.setKey(key);
+            error.setVersionId(versionId);
+            error.setCode(DeleteMultipleObjectsErrorCode.AccessDenied.toString().equals(e.getCode()) ? DeleteMultipleObjectsErrorCode.AccessDenied
+                : DeleteMultipleObjectsErrorCode.InternalError);
+            error.setMessage(e.getMessage());
+          }
+        } else { // delete object
+          try {
+
+            DeleteObjectType delObjRequest = new DeleteObjectType();
+            delObjRequest.setBucket(bucketName);
+            delObjRequest.setKey(key);
+            delObjRequest.setCorrelationId(request.getCorrelationId());
+            delObjRequest.setEffectiveUserId(request.getEffectiveUserId());
+
+            DeleteObjectResponseType delObjResponse = deleteObject(delObjRequest);
+
+            if (!quiet) { // generate result if not quiet mode
+              response = new DeleteMultipleObjectsEntryVersioned();
+              response.setKey(key);
+              if (delObjResponse.getIsDeleteMarker() != null && delObjResponse.getIsDeleteMarker()) {
+                response.setDeleteMarker(delObjResponse.getIsDeleteMarker());
+                response.setDeleteMarkerVersionId(delObjResponse.getVersionId());
+              }
             }
-          } catch (Exception e) {
-            error = generateDeleteError(key, versionId, DeleteMultipleObjectsErrorCode.InternalError, "Internal Error");
+          } catch (S3Exception e) { // always generate error
+            error = new DeleteMultipleObjectsError();
+            error.setKey(key);
+            error.setCode(DeleteMultipleObjectsErrorCode.AccessDenied.toString().equals(e.getCode()) ? DeleteMultipleObjectsErrorCode.AccessDenied
+                : DeleteMultipleObjectsErrorCode.InternalError);
+            error.setMessage(e.getMessage());
           }
         }
-        if (!quiet) {
-          if (error != null) {
-            deleted.getErrors().add(error);
-          } else {
-            deleted.getDeleted().add(response);
-          }
+
+        if (error != null) {
+          deleted.getErrors().add(error);
+        } else if (response != null) {
+          deleted.getDeleted().add(response);
+        } else {
+          // this is the case when deletion succeeded but quiet mode is in effect. nothing to do here
         }
       }
     }
     return reply;
   }
-
-  private DeleteMultipleObjectsError generateDeleteError(String key, String versionId, DeleteMultipleObjectsErrorCode code, String message) {
-    DeleteMultipleObjectsError error = new DeleteMultipleObjectsError();
-    error.setKey(key);
-    error.setVersionId(versionId);
-    error.setCode(code);
-    error.setMessage(message);
-    return error;
-  }
-
 }

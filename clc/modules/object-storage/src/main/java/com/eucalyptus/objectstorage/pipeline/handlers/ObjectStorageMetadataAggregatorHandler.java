@@ -75,15 +75,15 @@ import com.eucalyptus.ws.StackConfiguration;
 /*
  *
  */
-public class ObjectStoragePUTLifecycleAndAclAggregatorHandler extends HttpChunkAggregator {
+public class ObjectStorageMetadataAggregatorHandler extends HttpChunkAggregator {
 
   private static final int DEFAULT_MAX_CONTENT_LENGTH = StackConfiguration.CLIENT_HTTP_CHUNK_BUFFER_MAX;
 
-  public ObjectStoragePUTLifecycleAndAclAggregatorHandler() {
+  public ObjectStorageMetadataAggregatorHandler() {
     super(DEFAULT_MAX_CONTENT_LENGTH);
   }
 
-  public ObjectStoragePUTLifecycleAndAclAggregatorHandler(int maxContentLength) {
+  public ObjectStorageMetadataAggregatorHandler(int maxContentLength) {
     super(maxContentLength);
   }
 
