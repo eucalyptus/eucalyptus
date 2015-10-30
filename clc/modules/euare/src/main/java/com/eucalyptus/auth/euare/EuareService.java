@@ -246,9 +246,11 @@ public class EuareService {
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete access key of " + request.getUserName( ) + "by " + ctx.getUser( ).getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete access key of " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.EMPTY_KEY_ID.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_ID, "Empty key id" );
+        } else if ( AuthException.NO_SUCH_KEY.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Access Key with id "+request.getAccessKeyId( )+" not found for user" );
         }
       }
       LOG.error( e, e );
@@ -315,7 +317,7 @@ public class EuareService {
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to upload signing certificate of " + request.getUserName( ) + "by " + ctx.getUser( ).getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to upload signing certificate of " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.QUOTA_EXCEEDED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Signing certificate limit exceeded" );
         } else if ( AuthException.CONFLICT.equals( e.getMessage( ) ) ) {
@@ -463,7 +465,7 @@ public class EuareService {
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update login profile of " + request.getUserName( ) + "by " + ctx.getUser( ).getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update login profile of " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.INVALID_PASSWORD.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, "Invalid password", "Invalid password" );
         }
@@ -577,7 +579,7 @@ public class EuareService {
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update signing certificate of " + request.getUserName( ) + "by " + ctx.getUser( ).getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update signing certificate of " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.NO_SUCH_CERTIFICATE.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find the certificate " + request.getCertificateId( ) );
         } else if ( AuthException.EMPTY_STATUS.equals( e.getMessage( ) ) ) {
@@ -1249,7 +1251,7 @@ public class EuareService {
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update access key of " + request.getUserName( ) + "by " + ctx.getUser( ).getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update access key of " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.EMPTY_KEY_ID.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_ID, "Empty access key id" );
         } else if ( AuthException.EMPTY_STATUS.equals( e.getMessage( ) ) ) {
@@ -1457,7 +1459,7 @@ public class EuareService {
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create signing certificate of " + request.getUserName( ) + "by " + ctx.getUser( ).getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create signing certificate of " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.QUOTA_EXCEEDED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Signing certificate limit exceeded" );
         }
@@ -1523,7 +1525,7 @@ public class EuareService {
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user by " + ctx.getUser( ).getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update user by " + ctx.getUser( ).getName( ) );
         }
       }
       LOG.error( e, e );
@@ -1603,7 +1605,7 @@ public class EuareService {
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to put account policy for " + accountFound.getName( ) + " by " + ctx.getUser( ).getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get account policy for " + accountFound.getName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.EMPTY_POLICY_NAME.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty policy name" );
         }
