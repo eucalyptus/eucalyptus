@@ -80,6 +80,12 @@ public class EventHandlerChainModifyAttributes extends EventHandlerChain<ModifyA
         }catch(final Exception ex) {
           throw new EventHandlerException("Could not verify bucket prefix text string");
         }
+    
+        /// TODO: this condition should be removed when IAM policy evaluation handles case sensitivity
+        ///       (EUCA-11534)
+        final String s3Resource = String.format("%s/%s", accessLog.getS3BucketName(), accessLog.getS3BucketPrefix());
+        if(!s3Resource.equals(s3Resource.toLowerCase()))
+          throw new EventHandlerException("S3 Bucket name and prefix cannot contain upper-case letters");
       }
       /* End verifying AccessLog attributes */
     }

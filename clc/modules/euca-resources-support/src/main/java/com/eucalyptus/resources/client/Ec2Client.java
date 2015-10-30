@@ -26,7 +26,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
+
 import com.eucalyptus.compute.common.*;
+
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.principal.AccountFullName;
@@ -290,6 +292,49 @@ public class Ec2Client {
     @Override
     void dispatchSuccess(ClientContext<ComputeMessage, Compute> context,
         ComputeMessage response) {
+    }
+  }
+
+  private class ComputeDescribeGroupsTask extends EucalyptusClientTask<ComputeMessage, Compute> {
+    List<SecurityGroupItemType> groups = null;
+    List<String> groupNames = null;
+    List<String> groupIds = null;
+    ComputeDescribeGroupsTask() { }
+    
+    private DescribeSecurityGroupsType describeSecurityGroups() {
+      final DescribeSecurityGroupsType req = new DescribeSecurityGroupsType();
+      if(groupNames != null && groupNames.size() > 0)
+        req.setSecurityGroupSet((ArrayList<String>) groupNames);
+      if(groupIds != null && groupIds.size() > 0) 
+        req.setSecurityGroupIdSet((ArrayList<String>) groupIds);
+      return req;
+    }
+    
+    public void setGroupsNames(final List<String> groupNames) {
+      this.groupNames = Lists.newArrayList(groupNames);
+    }
+    
+    public void setGroupIds(final List<String> groupIds) {
+      this.groupIds = Lists.newArrayList(groupIds);
+    }
+    
+    @Override
+    void dispatchInternal(ClientContext<ComputeMessage, Compute> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Compute> client = context
+          .getClient();
+      client.dispatch(describeSecurityGroups(), callback);
+    }
+
+    @Override
+    void dispatchSuccess(ClientContext<ComputeMessage, Compute> context,
+        ComputeMessage response) {
+     final DescribeSecurityGroupsResponseType resp = (DescribeSecurityGroupsResponseType) response;
+     groups = resp.getSecurityGroupInfo();
+    }
+    
+    public List<SecurityGroupItemType> getGroups() {
+      return this.groups;
     }
   }
 
@@ -958,6 +1003,36 @@ public class Ec2Client {
     }
   }
 
+  private class DescribeInstanceTypesTask extends EucalyptusClientTask<ComputeMessage, Compute> {
+    private List<VmTypeDetails> result = null;
+
+    private DescribeInstanceTypesTask() { }
+
+    private DescribeInstanceTypesType describeInstancceTypes() {
+      final DescribeInstanceTypesType req = new DescribeInstanceTypesType();
+      return req;
+    }
+
+    @Override
+    void dispatchInternal(ClientContext<ComputeMessage, Compute> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Compute> client = context
+          .getClient();
+      client.dispatch(describeInstancceTypes(), callback);
+    }
+
+    @Override
+    void dispatchSuccess(ClientContext<ComputeMessage, Compute> context,
+        ComputeMessage response) {
+      final DescribeInstanceTypesResponseType resp = (DescribeInstanceTypesResponseType) response;
+      this.result = resp.getInstanceTypeDetails();
+    }
+
+    public List<VmTypeDetails> getInstanceTypes() {
+      return this.result;
+    }
+  }
+
   public List<String> runInstances(final String userId, final String imageId,
       final ArrayList<String> groupNames, final String userData,
       final String instanceType, final String availabilityZone,
@@ -1398,5 +1473,40 @@ public class Ec2Client {
       throw Exceptions.toUndeclared(ex);
     }
   }
-
+  
+  public List<VmTypeDetails> describeInstanceTypes(final String userId) 
+      throws EucalyptusActivityException {
+    final DescribeInstanceTypesTask task = new DescribeInstanceTypesTask();
+    final CheckedListenableFuture<Boolean> result = task
+        .dispatch(new Ec2Context(userId));
+    try {
+      if (result.get()) {
+        return task.getInstanceTypes();
+      } else
+        throw new EucalyptusActivityException(
+            task.getErrorMessage() != null ? task.getErrorMessage()
+                : "failed to describe instance types");
+    } catch (Exception ex) {
+      throw Exceptions.toUndeclared(ex);
+    }
+  }
+  
+  public List<SecurityGroupItemType> describeSecurityGroups(final String userId, final List<String> groupNames) 
+      throws EucalyptusActivityException {
+    final ComputeDescribeGroupsTask task = new ComputeDescribeGroupsTask();
+    if(groupNames != null)
+      task.setGroupsNames(groupNames);
+    final CheckedListenableFuture<Boolean> result = task
+        .dispatch(new Ec2Context(userId));
+    try {
+      if (result.get()) {
+        return task.getGroups();
+      } else
+        throw new EucalyptusActivityException(
+            task.getErrorMessage() != null ? task.getErrorMessage()
+                : "failed to describe security groups");
+    } catch (Exception ex) {
+      throw Exceptions.toUndeclared(ex);
+    }
+  }
 }
