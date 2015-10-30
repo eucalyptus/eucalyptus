@@ -102,6 +102,7 @@ import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import com.google.common.base.Objects;
 import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
@@ -112,6 +113,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   private String               namespace;
   private final String         namespacePattern;
   private Binding              defaultBinding          = BindingManager.getDefaultBinding( );
+  private String               defaultVersion;
   private Binding              binding;
   private final Class<? extends ComponentId> component;
   
@@ -125,10 +127,11 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
     } catch ( MissingFormatArgumentException ex ) {}
   }
 
-  public RestfulMarshallingHandler( String namespacePattern, String defaultVersion ) {
+  public RestfulMarshallingHandler( final String namespacePattern, final String defaultVersion ) {
     this( namespacePattern );
     final String defaultBindingNamespace = String.format( namespacePattern, defaultVersion );
     this.defaultBinding = BindingManager.getBinding( BindingManager.sanitizeNamespace( defaultBindingNamespace ), component );
+    this.defaultVersion = defaultVersion;
   }
 
   @Override
@@ -136,7 +139,9 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
     if ( event.getMessage( ) instanceof MappingHttpRequest ) {
       MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
       String bindingVersion = httpRequest.getParameters( ).remove( RequiredQueryParams.Version.toString( ) );
-      if ( bindingVersion.matches( "\\d\\d\\d\\d-\\d\\d-\\d\\d" ) ) {
+      if ( Strings.isNullOrEmpty( bindingVersion ) && defaultVersion != null) {
+        this.setNamespaceVersion( defaultVersion );
+      } else if ( bindingVersion != null && bindingVersion.matches( "\\d\\d\\d\\d-\\d\\d-\\d\\d" ) ) {
         this.setNamespaceVersion( bindingVersion );
       } else {
         this.setNamespace( BindingManager.defaultBindingName() );
