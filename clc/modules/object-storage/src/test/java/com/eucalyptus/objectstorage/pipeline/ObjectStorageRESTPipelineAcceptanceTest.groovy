@@ -74,16 +74,8 @@ class ObjectStorageRESTPipelineAcceptanceTest extends GroovyTestCase {
     HttpRequest request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, '/services/objectstorage/bucket/object')
     assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(putDataPipeline))
 
-    // initiate multipart upload
-    request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, '/services/objectstorage/bucket/object?uploads')
-    assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(putDataPipeline))
-
     // upload part
     request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, '/services/objectstorage/bucket/object?uploadId=xyz&partNumber=1')
-    assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(putDataPipeline))
-
-    // complete multipart upload
-    request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, '/services/objectstorage/bucket/object?uploadId=xyz')
     assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(putDataPipeline))
 
     request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, '/services/objectstorage/bucket/object')
@@ -97,6 +89,14 @@ class ObjectStorageRESTPipelineAcceptanceTest extends GroovyTestCase {
     assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(putMetadataPipeline))
 
     request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, '/services/objectstorage/bucket?lifecycle')
+    assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(putMetadataPipeline))
+
+    // initiate multipart upload
+    request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, '/services/objectstorage/bucket/object?uploads')
+    assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(putMetadataPipeline))
+
+    // complete multipart upload
+    request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, '/services/objectstorage/bucket/object?uploadId=xyz')
     assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(putMetadataPipeline))
   }
 
@@ -113,8 +113,6 @@ class ObjectStorageRESTPipelineAcceptanceTest extends GroovyTestCase {
   @Test
   public void testPOSTRequests() {
     HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, '/services/objectstorage/bucket/object')
-    assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(putDataPipeline))
-
     request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, '/services/objectstorage/bucket/object')
     request.addHeader(HttpHeaders.Names.CONTENT_TYPE, 'multipart/form-data; boundary=xxxx')
     assert(pipelines.findAll { return ((FilteredPipeline)it).checkAccepts(request) } == Lists.asList(formPostPipeline))
