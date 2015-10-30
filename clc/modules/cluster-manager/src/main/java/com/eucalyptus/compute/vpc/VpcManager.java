@@ -691,6 +691,9 @@ public class VpcManager {
     if ( !subnetCidr.isPresent( ) ) {
       throw new ClientComputeException( "InvalidParameterValue", "Cidr invalid: " + request.getCidrBlock( ) );
     }
+    if ( !subnetCidr.transform( Cidr.prefix( ) ).transform( Functions.forPredicate( Range.closed( 16, 28 ) ) ).or( false ) ) {
+      throw new ClientComputeException( "InvalidSubnet.Range", "Cidr invalid: " + request.getCidrBlock( ) );
+    }
     if ( !availabilityZone.isPresent( ) ) {
       throw new ClientComputeException( "InvalidParameterValue", "Availability zone invalid: " + request.getAvailabilityZone( ) );
     }
