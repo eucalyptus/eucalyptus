@@ -136,13 +136,13 @@ public class TokensService {
           EucalyptusCloudException.class,
           new Callable<BaseRole>() {
             @Override
-            public BaseRole call() throws EucalyptusCloudException {
+            public BaseRole call() throws TokensException {
               try {
                 return RestrictedTypes.doPrivilegedWithoutOwner(
                     Accounts.getRoleFullName( role ),
                     new RoleResolver( role ) );
               } catch ( final AuthException e ) {
-                throw new EucalyptusCloudException( e.getMessage(), e );
+                throw new TokensException( TokensException.Code.AccessDenied, e.getMessage( ) );
               }
             }
           } );
