@@ -1839,7 +1839,7 @@ public class LoadBalancingBackendService {
 	int healthyTimeoutSec = lb.getHealthCheckInterval() * lb.getHealthyThreshold();
 	final int UPDATE_INTERVAL =Integer.parseInt(LoadBalancingServoCache.BACKEND_INSTANCE_UPDATE_INTERVAL); 
 	healthyTimeoutSec = Math.max(3*healthyTimeoutSec, 3*UPDATE_INTERVAL);
-	long currentTime = System.currentTimeMillis();
+	final long currentTime = System.currentTimeMillis();
 	
  	if(instances != null && instances.getMember()!= null && instances.getMember().size()>0){
  		instancesFound = Lists.newArrayList();
@@ -1859,23 +1859,23 @@ public class LoadBalancingBackendService {
  	final ArrayList<InstanceState> stateList = Lists.newArrayList();
  	for(final LoadBalancerBackendInstanceCoreView instance : instancesFound){
 		boolean outdated = false;
- 		Date lastUpdated;
-		if((lastUpdated = instance.instanceStateLastUpdated()) != null){
-			final int diffSec = (int)((currentTime - lastUpdated.getTime())/1000.0);
-			if(LoadBalancerBackendInstance.STATE.InService.equals(instance.getState()) &&
-					diffSec > healthyTimeoutSec){
-				stateOutdated.add(instance);
-				outdated = true;
-			}
+		Date lastUpdated = instance.instanceStateLastUpdated();
+		if (lastUpdated == null)
+		  lastUpdated = instance.instanceCreationTimestamp();
+		
+		final int diffSec = (int)((currentTime - lastUpdated.getTime())/1000.0);
+		if( diffSec > healthyTimeoutSec ){
+			stateOutdated.add(instance);
+			outdated = true;
 		}
- 		
+	
  		InstanceState state = new InstanceState();
  		state.setInstanceId(instance.getDisplayName());
  		if(outdated){
- 			state.setState(LoadBalancerBackendInstance.STATE.OutOfService.toString());
+ 			state.setState(LoadBalancerBackendInstance.STATE.Unknown.toString());
 			state.setReasonCode("ELB");
- 			state.setDescription("Internal error: instance health not updated for extended period of time");
- 		}else{
+ 			state.setDescription("Internal error: ELB VMs are not reachable. Contact administrator if problem continues");
+ 		} else {
  			state.setState(instance.getState().name());
  			if(instance.getState().equals(LoadBalancerBackendInstance.STATE.OutOfService) && instance.getReasonCode()!=null)
 	 			state.setReasonCode(instance.getReasonCode());
@@ -1891,9 +1891,9 @@ public class LoadBalancingBackendService {
 	 		for(final LoadBalancerBackendInstanceCoreView instanceView : stateOutdated){
 	 			final LoadBalancerBackendInstance sample = LoadBalancerBackendInstanceEntityTransform.INSTANCE.apply(instanceView);
 	 			final LoadBalancerBackendInstance update = Entities.uniqueResult(sample);
-	 			update.setState(LoadBalancerBackendInstance.STATE.OutOfService);
+	 			update.setState(LoadBalancerBackendInstance.STATE.Unknown);
 	 			update.setReasonCode("ELB");
-	 			update.setDescription("Internal error: instance health not updated for extended period of time");
+	 			update.setDescription("Internal error: ELB VMs are not reachable. Contact administrator if problem continues");
 	 			Entities.persist(update);
 	 		}
 	 		db.commit();
