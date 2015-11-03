@@ -612,9 +612,28 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       }
     }
 
+    private void enableInstanceDns( ) {
+      try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
+        try {
+          final StaticDatabasePropertyEntry property = Entities.uniqueResult( new StaticDatabasePropertyEntry( null, "dns.split_horizon.enabled", null ) );
+          final String trueStr = String.valueOf( true );
+          if ( !trueStr.equals( property.getValue( ) ) ) {
+            LOG.info( "Setting property dns.split_horizon.enabled property to true to enable instance dns" );
+            property.setValue( trueStr );
+          }
+        } catch ( NoSuchElementException e ) {
+          //Nothing to do.
+        }
+        db.commit( );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+
     @Override
     public boolean apply( final Class entity ) {
       migrateIdentifierCanonicalizerProperty( );
+      enableInstanceDns( );
       return true;
     }
   }
