@@ -1284,6 +1284,18 @@ public class ComputeService implements Callable {
     return request.getReply( );
   }
 
+  public CreateFlowLogsResponseType createFlowLogs( final CreateFlowLogsType request ) {
+    return request.getReply( );
+  }
+
+  public DeleteFlowLogsResponseType deleteFlowLogs( final DeleteFlowLogsType request ) {
+    return request.getReply( );
+  }
+
+  public DescribeFlowLogsResponseType describeFlowLogs( final DescribeFlowLogsType request ) {
+    return request.getReply( );
+  }
+
   @Override
   public ComputeMessage onCall( final MuleEventContext muleEventContext ) throws EucalyptusCloudException {
     final ComputeMessage request = (ComputeMessage) muleEventContext.getMessage( ).getPayload( );

@@ -21,6 +21,7 @@
 @GroovyAddClassUUID
 package com.eucalyptus.compute.common
 
+import com.google.common.collect.Lists
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 import com.eucalyptus.binding.HttpParameterMapping
@@ -329,6 +330,56 @@ public class DescribePlacementGroupsType extends VmPlacementMessage {
 }
 public class DescribePlacementGroupsResponseType extends VmPlacementMessage {
   ArrayList<PlacementGroupInfo> placementGroupSet = new ArrayList<PlacementGroupInfo>();
+
   public DescribePlacementGroupsResponseType() {
   }
 }
+
+/****** flow logs *****/
+
+class FlowLogMessage extends ComputeMessage {
+
+  public FlowLogMessage( ) {
+    super( );
+  }
+
+  public FlowLogMessage( FlowLogMessage msg ) {
+    super( msg );
+  }
+
+  public FlowLogMessage( String userId ) {
+    super( userId );
+  }
+}
+
+class CreateFlowLogsType extends FlowLogMessage {
+  ArrayList<String> resourceId = Lists.newArrayList( )
+  String resourceType
+  String trafficType
+  String logGroupName
+  String deliverLogsPermissionArn
+  String clientToken
+}
+
+class CreateFlowLogsResponseType extends FlowLogMessage {
+}
+
+class DeleteFlowLogsType extends FlowLogMessage {
+  ArrayList<String> flowLogId = Lists.newArrayList( )
+}
+
+class DeleteFlowLogsResponseType extends FlowLogMessage {
+}
+
+class DescribeFlowLogsType extends FlowLogMessage {
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
+  ArrayList<Filter> filterSet = Lists.newArrayList( )
+  ArrayList<String> flowLogId = Lists.newArrayList( )
+  Integer maxResults
+  String nextToken
+}
+
+class DescribeFlowLogsResponseType extends FlowLogMessage {
+}
+
