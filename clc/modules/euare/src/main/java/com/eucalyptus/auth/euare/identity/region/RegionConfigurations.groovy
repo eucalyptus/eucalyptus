@@ -146,7 +146,11 @@ class RegionConfigurations {
    */
   @Nonnull
   static Optional<String> getRegionName( ) {
-    return Optional.fromNullable( Strings.emptyToNull( REGION_NAME ) )
+    Optional.fromNullable( Strings.emptyToNull( REGION_NAME ) )
+  }
+
+  static String getRegionNameOrDefault( ) {
+    getRegionName( ).or( "eucalyptus" )
   }
 
   public static boolean isUseSsl( ) {
