@@ -97,7 +97,7 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 	}
 	
 	public enum STATE {
-		InService, OutOfService, Error
+		InService, OutOfService, Unknown, Error
 	}
 
 	@ManyToOne()
@@ -523,6 +523,10 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		
 		public Date instanceStateLastUpdated(){
 			return this.instance.instanceUpdateTimestamp;
+		}
+		
+		public Date instanceCreationTimestamp(){
+		  return this.instance.getCreationTimestamp();
 		}
 
 		public static NonNullFunction<LoadBalancerBackendInstanceCoreView,String> instanceId( ) {

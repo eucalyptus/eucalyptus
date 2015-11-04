@@ -190,7 +190,8 @@ public class Upgrades {
     v4_1_2,
     v4_1_3,
     v4_1_4,
-    v4_2_0;
+    v4_2_0,
+    v4_2_1;
 
 
     public String getVersion( ) {
