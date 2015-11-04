@@ -40,10 +40,27 @@ import sys
 
 CONFPATH = 'etc/eucalyptus/eucalyptus.conf'
 
+#This is quick and dirty check
+def check_ip(ipv4):
+    parts = ipv4.split('.')
+    if len(parts) != 4:
+        return False
+    for x in parts:
+        if not x.isdigit():
+            return False
+        i = int(x)
+        if i < 0 or i > 255:
+            return False
+    return True
 
 def modify_node_list(confpath, newnodes, remove=False):
     if not newnodes:
         return
+    for i in newnodes:
+        if not check_ip(i):
+            print 'Use only IPv4 addresses while registering new nodes. ' \
+                  'The {0} is not a valid IP.'.format(i)
+            return
     newconfpath = confpath + '.new'
     try:
         shutil.copy2(confpath, newconfpath)
