@@ -64,6 +64,7 @@ package com.eucalyptus.compute.common.internal.network;
 
 import static com.eucalyptus.upgrade.Upgrades.Version.v4_2_0;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -73,6 +74,7 @@ import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
+import javax.persistence.EntityTransaction;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
@@ -85,12 +87,15 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Index;
+import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.config.ExtendedNetworkingConfiguration;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.AuxiliaryDatabaseObject;
 import com.eucalyptus.entities.AuxiliaryDatabaseObjects;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.upgrade.Upgrades;
 import com.eucalyptus.util.Pair;
 import com.google.common.base.Optional;
@@ -179,7 +184,7 @@ public class NetworkRule extends AbstractPersistent {
   @Enumerated( EnumType.STRING )
   @Column( name = "metadata_network_rule_protocol", updatable = false  )
   private Protocol          protocol;
-  @Column( name = "metadata_network_rule_protocol_number", updatable = false  )
+  @Column( name = "metadata_network_rule_protocol_number" )
   private Integer           protocolNumber;
   @Column( name = "metadata_network_rule_low_port", updatable = false  )
   private Integer           lowPort;
@@ -499,6 +504,38 @@ public class NetworkRule extends AbstractPersistent {
         }
       }
       return true;
+    }
+  }
+
+  @Upgrades.EntityUpgrade( entities = NetworkRule.class, since = Upgrades.Version.v4_2_1, value = Eucalyptus.class)
+  public enum NetworkRuleUpgrade421 implements Predicate<Class> {
+    INSTANCE;
+    private static Logger logger = Logger.getLogger( NetworkRuleUpgrade421.class );
+
+    @Override
+    public boolean apply( Class arg0 ) {
+      addProtocolNumberToRules( );
+      return true;
+    }
+
+    private void addProtocolNumberToRules( ) {
+      try ( final TransactionResource tx = Entities.distinctTransactionFor( NetworkRule.class ) ) {
+        for ( final NetworkRule rule : Entities.query(
+            NetworkRule.named( ),
+            false,
+            Restrictions.and(
+                Restrictions.isNotNull( "protocol" ),
+                Restrictions.isNull( "protocolNumber" )
+            ),
+            Collections.<String,String>emptyMap( ) ) ) {
+          logger.info( "Updating protocol " + rule.getProtocol( ) + " for rule in group " +
+              rule.getGroup( ).getGroupId( ) + "/" + rule.getGroup( ).getDisplayName( ) );
+          rule.setProtocolNumber( rule.getProtocol( ).getNumber( ) );
+        }
+        tx.commit( );
+      } catch (Exception ex) {
+        logger.error( "Error creating network rule indexes", ex );
+      }
     }
   }
 
