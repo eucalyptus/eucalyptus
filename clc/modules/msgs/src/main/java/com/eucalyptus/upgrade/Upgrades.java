@@ -198,8 +198,12 @@ public class Upgrades {
     v4_3_1,
     v4_3_2,
     v4_3_3,
+<<<<<<< HEAD
     v4_4_0,
 
+=======
+    v4_4_0;
+>>>>>>> origin/dev-mmunn-EUCA-11557
 
     public String getVersion( ) {
       return this.name( ).substring( 1 ).replace( "_", "." );
