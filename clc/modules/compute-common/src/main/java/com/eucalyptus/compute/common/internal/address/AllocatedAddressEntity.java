@@ -22,6 +22,7 @@ package com.eucalyptus.compute.common.internal.address;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.Callable;
 
 import javax.annotation.Nullable;
 import javax.persistence.Column;
@@ -53,11 +54,15 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.upgrade.Upgrades;
+import com.eucalyptus.upgrade.Upgrades.PreUpgrade;
 import com.eucalyptus.util.HasFullName;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Sets;
+
+import groovy.sql.Sql;
+import org.apache.log4j.Logger;
 
 /**
  * Entity representing an in-use address
@@ -376,7 +381,32 @@ public class AllocatedAddressEntity extends UserMetadata<AddressState> implement
       }
     },
   }
+  @Upgrades.PreUpgrade( since = Upgrades.Version.v4_2_0, value = Compute.class )
+  public static class AllocatedAddressEntity420PreUpgrade implements Callable<Boolean> {
+    private static final Logger logger = Logger.getLogger( AllocatedAddressEntity420PreUpgrade.class );
 
+    @Override
+    public Boolean call( ) throws Exception {
+      logger.info( "Cleaning up public addresses for instances" );
+      Sql sql = null;
+      try {
+        sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection( "eucalyptus_cloud" );
+        int updated = sql.executeUpdate(
+                "update metadata_instances set metadata_vm_public_address = '0.0.0.0', version = version + 1 where " +
+                        "metadata_vm_public_address != '0.0.0.0' and ( metadata_vm_public_address = '' or " +
+                        "( metadata_vpc_id is null and metadata_state = 'STOPPED' ) )"
+        );
+        logger.info( "Cleared public address for " + updated + " instances" );
+      } catch ( final Exception e ) {
+        logger.error( "Error cleaning up public addresses for instances", e );
+      } finally {
+        if ( sql != null ) {
+          sql.close( );
+        }
+      }
+      return Boolean.TRUE;
+    }
+  }
   @Upgrades.EntityUpgrade( entities = AllocatedAddressEntity.class, since = Upgrades.Version.v4_2_0, value = Compute.class )
   public enum AllocatedAddressEntity420Upgrade implements Predicate<Class> {
     INSTANCE;
