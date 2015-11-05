@@ -442,9 +442,9 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
   }
 
   @EntityUpgrade( entities = StaticPropertyEntry.class, since = Version.v4_2_0, value = Empyrean.class )
-  public enum StaticPropertyEntryUpgrade42 implements Predicate<Class> {
+  public enum StaticPropertyEntryUpgrade420 implements Predicate<Class> {
     INSTANCE;
-    private static Logger LOG = Logger.getLogger( StaticPropertyEntryUpgrade42.class );
+    private static Logger LOG = Logger.getLogger( StaticPropertyEntryUpgrade420.class );
 
     private void updateLdapConfiguration( ) {
       try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
@@ -589,6 +589,52 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
         } catch (Exception e) {
           throw Exceptions.toUndeclared( e );
         }
+    }
+  }
+
+  @EntityUpgrade( entities = StaticDatabasePropertyEntry.class, since = Version.v4_2_1, value = Empyrean.class )
+  public enum StaticPropertyEntryUpgrade421 implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( StaticPropertyEntryUpgrade421.class );
+
+    private void migrateIdentifierCanonicalizerProperty() {
+      try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
+        try {
+          final StaticDatabasePropertyEntry property = Entities.uniqueResult( new StaticDatabasePropertyEntry( null, "cloud.identifier_canonicalizer", null ) );
+          LOG.info( "Updating field for cloud.identifier_canonicalizer property" );
+          property.setFieldName( "com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers.identifier_canonicalizer" );
+        } catch ( NoSuchElementException e ) {
+          //Nothing to do.
+        }
+        db.commit( );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+
+    private void enableInstanceDns( ) {
+      try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
+        try {
+          final StaticDatabasePropertyEntry property = Entities.uniqueResult( new StaticDatabasePropertyEntry( null, "dns.split_horizon.enabled", null ) );
+          final String trueStr = String.valueOf( true );
+          if ( !trueStr.equals( property.getValue( ) ) ) {
+            LOG.info( "Setting property dns.split_horizon.enabled property to true to enable instance dns" );
+            property.setValue( trueStr );
+          }
+        } catch ( NoSuchElementException e ) {
+          //Nothing to do.
+        }
+        db.commit( );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+
+    @Override
+    public boolean apply( final Class entity ) {
+      migrateIdentifierCanonicalizerProperty( );
+      enableInstanceDns( );
+      return true;
     }
   }
 }
