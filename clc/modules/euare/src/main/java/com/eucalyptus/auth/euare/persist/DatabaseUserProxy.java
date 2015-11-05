@@ -396,6 +396,7 @@ public class DatabaseUserProxy implements EuareUser {
   public EuareAccessKey getKey( final String keyId ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( AccessKeyEntity.class ) ) {
       AccessKeyEntity key = DatabaseAuthUtils.getUnique( AccessKeyEntity.class, "accessKey", keyId );
+      checkKeyOwner( key );
       db.commit( );
       return new DatabaseAccessKeyProxy( key );
     } catch ( Exception e ) {
@@ -412,6 +413,7 @@ public class DatabaseUserProxy implements EuareUser {
     try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
       UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, "userId", this.delegate.getUserId( ) );
       AccessKeyEntity keyEntity = DatabaseAuthUtils.getUnique( AccessKeyEntity.class, "accessKey", keyId );
+      checkKeyOwner( keyEntity );
       user.getKeys( ).remove( keyEntity );
       Entities.delete( keyEntity );
       db.commit( );
@@ -460,6 +462,7 @@ public class DatabaseUserProxy implements EuareUser {
   public EuareCertificate getCertificate( final String certificateId ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( CertificateEntity.class ) ) {
       CertificateEntity cert = DatabaseAuthUtils.getUnique( CertificateEntity.class, "certificateId", certificateId );
+      checkCertOwner( cert );
       db.commit( );
       return new DatabaseCertificateProxy( cert );
     } catch ( Exception e ) {
@@ -491,7 +494,9 @@ public class DatabaseUserProxy implements EuareUser {
       throw new AuthException( AuthException.EMPTY_CERT_ID );
     }
     try ( final TransactionResource db = Entities.transactionFor( CertificateEntity.class ) ) {
-      CertificateEntity certificateEntity = DatabaseAuthUtils.getUnique( CertificateEntity.class, "certificateId", certificateId );
+      CertificateEntity certificateEntity =
+          DatabaseAuthUtils.getUnique( CertificateEntity.class, "certificateId", certificateId );
+      checkCertOwner( certificateEntity );
       Entities.delete( certificateEntity );
       db.commit( );
     } catch ( Exception e ) {
@@ -701,6 +706,22 @@ public class DatabaseUserProxy implements EuareUser {
         return results;
       }
     };
+  }
+
+  private void checkKeyOwner( final AccessKeyEntity keyEnt ) throws AuthException {
+    checkOwner( keyEnt.getUser( ), AuthException.NO_SUCH_KEY, "key" );
+  }
+
+  private void checkCertOwner( final CertificateEntity certEnt ) throws AuthException {
+    checkOwner( certEnt.getUser( ), AuthException.NO_SUCH_CERTIFICATE, "certificate" );
+  }
+
+  private void checkOwner( final UserEntity user, final String error, final String type ) throws AuthException {
+    if ( !this.delegate.getUserId( ).equals( user.getUserId( ) ) ) {
+      AuthException ae = new AuthException( error );
+      Debugging.logError( LOG, ae, this.delegate.getName( ) + " is not owner of provided " + type );
+      throw ae;
+    }
   }
 
   private void readObject( ObjectInputStream in) throws IOException, ClassNotFoundException {
