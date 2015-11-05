@@ -3277,8 +3277,16 @@ int ingress_gni_to_iptables_rule(char *scidr, gni_rule *ingress_rule, char *outr
     switch (flags) {
         case 0: // no condition
             break;
-        case 1: // Add condition to the rule to accept the packet if it would be SNATed.
+        case 1: // Add condition to the rule to accept the packet if it would be SNATed (EDGE).
             snprintf(buf, MAX_RULE_LEN, "-m mark ! --mark 0x2a ");
+            strncat(newrule, buf, MAX_RULE_LEN);
+            break;
+        case 2: // Add condition to the rule to accept the packet if it would be SNATed (MANAGED).
+            snprintf(buf, MAX_RULE_LEN, "-m mark --mark 0x15 ");
+            strncat(newrule, buf, MAX_RULE_LEN);
+            break;
+        case 4: // Add condition to the rule to accept the packet if it would NOT be SNATed (MANAGED).
+            snprintf(buf, MAX_RULE_LEN, "-m mark ! --mark 0x15 ");
             strncat(newrule, buf, MAX_RULE_LEN);
             break;
         default:
