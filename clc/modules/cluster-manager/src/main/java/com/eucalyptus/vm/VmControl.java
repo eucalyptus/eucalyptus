@@ -238,10 +238,7 @@ public class VmControl {
         }
       }
 
-      // VerifyMetadata set some data that is used by AdmissionControl so it have to precede AdmissionControl
-      // AdmissionControl sets final partition selection, so some partition related checks has be run after that
-      Predicates.and( VerifyMetadata.getVerifiers( ), AdmissionControl.run( ),
-                      ContractEnforcement.run(), VerifyMetadata.getPostVerifiers()).apply( allocInfo );
+      Predicates.and( VerifyMetadata.get( ), AdmissionControl.run( ), ContractEnforcement.run( ) ).apply( allocInfo );
       allocInfo.commit( );
 
       ReservationInfoType reservation = new ReservationInfoType(

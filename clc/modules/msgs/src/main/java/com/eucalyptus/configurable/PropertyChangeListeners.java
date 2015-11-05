@@ -64,53 +64,32 @@ package com.eucalyptus.configurable;
 
 import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
 import com.google.common.cache.CacheBuilderSpec;
-import com.google.common.collect.Constraint;
+import com.google.common.primitives.Ints;
 import org.apache.log4j.Logger;
 
 
 public class PropertyChangeListeners {
 
   public static final Logger LOG = Logger.getLogger(PropertyChangeListener.class);
-  public static void applyConstraint( final Object newValue, final Constraint<Object>... constraints ) throws ConfigurablePropertyException {
-    for ( final Constraint<Object> testNewValue : constraints ) {
-      try {
-        final Object constraintedValue = testNewValue.checkElement( newValue );
-      } catch ( final Exception ex ) {
-        throw new ConfigurablePropertyException( "Failed to evaluate constraint " + testNewValue + " for new value: " + newValue + " because of: "
-                                                 + ex.getMessage( ) );
-      }
-    }
-  }
 
-  public static PropertyChangeListener withConstraint( final Constraint<Object> testNewValue ) {
-    return new PropertyChangeListener( ) {
-      
-      @Override
-      public void fireChange( final ConfigurableProperty t, final Object newValue ) throws ConfigurablePropertyException {}
-      
-    };
-  }
-  
   public enum IsPositiveInteger implements PropertyChangeListener {
     INSTANCE;
     
     @SuppressWarnings( "unchecked" )
     @Override
     public void fireChange( final ConfigurableProperty t, final Object newValue ) throws ConfigurablePropertyException {
-      applyConstraint( newValue, new Constraint<Object>( ) {
-        @Override
-        public Object checkElement( final Object element ) {
-          if ( Number.class.isAssignableFrom( element.getClass( ) ) ) {
-            final Number numElem = ( Number ) element;
-            if ( numElem.doubleValue( ) < 0d ) {
-              throw new IllegalArgumentException( "Value must be greater than zero" );
-            }
-          }
-          return element;
+      Object numberValue = newValue;
+      if ( numberValue instanceof String ) {
+        numberValue = Ints.tryParse( String.valueOf( numberValue ) );
+      }
+      if ( numberValue != null && Number.class.isAssignableFrom( numberValue.getClass( ) ) ) {
+        final Number numElem = ( Number ) numberValue;
+        if ( numElem.longValue( ) > 0 ) {
+          return;
         }
-      } );
+      }
+      throw new ConfigurablePropertyException( "Value must be an integer greater than zero" );
     }
-    
   }
 
     public enum IsBoolean implements PropertyChangeListener {

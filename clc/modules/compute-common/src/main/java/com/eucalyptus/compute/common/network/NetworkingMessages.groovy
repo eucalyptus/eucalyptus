@@ -117,7 +117,9 @@ class UpdateInstanceResourcesType extends NetworkingMessage {
   InstanceResourceReportType resources
 }
 
-class UpdateInstanceResourcesResponseType extends NetworkingMessage {}
+class UpdateInstanceResourcesResponseType extends NetworkingMessage {
+  Boolean updated
+}
 
 class InstanceResourceReportType extends EucalyptusData {
   ArrayList<String> publicIps = Lists.newArrayList( )

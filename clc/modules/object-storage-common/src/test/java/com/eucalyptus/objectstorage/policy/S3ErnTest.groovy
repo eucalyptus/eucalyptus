@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,9 +21,12 @@
 package com.eucalyptus.objectstorage.policy
 
 import com.eucalyptus.auth.policy.ern.Ern
+import com.google.common.collect.Iterables
+import com.google.common.collect.Lists
 import org.junit.BeforeClass
 import org.junit.Test
 
+import static com.eucalyptus.auth.policy.PolicySpec.S3_RESOURCE_BUCKET
 import static com.eucalyptus.auth.policy.PolicySpec.S3_RESOURCE_OBJECT
 import static com.eucalyptus.auth.policy.PolicySpec.VENDOR_S3
 import static com.eucalyptus.auth.policy.PolicySpec.qualifiedName
@@ -44,6 +47,18 @@ class S3ErnTest {
     final Ern ern = Ern.parse( "arn:aws:s3:::my_corporate_bucket/*" )
     assertEquals( "Resource type", qualifiedName( VENDOR_S3, S3_RESOURCE_OBJECT ), ern.getResourceType( ) );
     assertEquals( "Resource name", "my_corporate_bucket/*", ern.getResourceName( ) );
+  }
+
+  @Test
+  void testWildcardResourceArn( ) {
+    final Ern ern = Ern.parse( "arn:aws:s3:::*" )
+    assertEquals( "Resource type", qualifiedName( VENDOR_S3, S3_RESOURCE_BUCKET ), ern.getResourceType( ) );
+    assertEquals( "Resource name", "*", ern.getResourceName( ) );
+    final Collection<Ern> erns = Lists.newArrayList( ern.explode( ) )
+    erns.remove( ern )
+    assertEquals( "Erns size", 1, erns.size( ) )
+    assertEquals( "Resource type", qualifiedName( VENDOR_S3, S3_RESOURCE_OBJECT ), Iterables.getOnlyElement(erns).getResourceType( ) );
+    assertEquals( "Resource name", "*/*", Iterables.getOnlyElement(erns).getResourceName( ) );
   }
 
   @Test
