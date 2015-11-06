@@ -572,10 +572,10 @@ int main(int argc, char *argv[])
             __debug("Eucalyptus exited with status: %d", status);
             unlink(GETARG(args, pidfile));
             if (status == EUCA_RET_RELOAD) {
-                __debug("Reloading service.");
+                __info("Reloading service.");
                 continue;
             } else if (status == 0) {
-                __debug("Service shut down cleanly.");
+                __info("Service shut down cleanly.");
                 return 0;
             }
             __error("Service exit with a return value of %d.", status);
@@ -973,7 +973,7 @@ int java_init(euca_opts * args, java_home_t * data)
     }
     __debug("Starting JVM.");
     jint ret = 0;
-    while ((ret = (*hotspot_main) (&jvm, &env, &arg) == 123)) ;
+    while ((ret = (*hotspot_main) (&jvm, &env, &arg) == EUCA_RET_RELOAD)) ;
     __die(ret < 0, "Failed to create JVM");
     java_load_bootstrapper();
     dlclose(libjvm_handle);

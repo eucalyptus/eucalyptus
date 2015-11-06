@@ -121,7 +121,7 @@ static int debug = 0;
 #define __abort(r,condition,format,...) do { if(condition) {get_timestamp(ts_buff,sizeof(ts_buff));fprintf(stderr,"%s ERROR %04d ",ts_buff, __LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ ); fflush(stderr); return r;} } while(0)
 #define __debug(format,...) do { if(debug){get_timestamp(ts_buff,sizeof(ts_buff));fprintf(stdout,"%s DEBUG %04d ",ts_buff,__LINE__);fprintf(stdout, format "\n", ##__VA_ARGS__ );fflush(stdout); } } while(0)
 #define __error(format,...) do { get_timestamp(ts_buff,sizeof(ts_buff));fprintf(stderr,"%s ERROR %04d ",ts_buff,__LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ );fflush(stderr); } while(0)
-#define __info(format,...) do { get_timestamp(ts_buff,sizeof(ts_buff));fprintf(stderr,"%s INFO %04d ",ts_buff,__LINE__);fprintf(stdout, format "\n", ##__VA_ARGS__ );fflush(stdout); } while(0)
+#define __info(format,...) do { get_timestamp(ts_buff,sizeof(ts_buff));fprintf(stdout,"%s INFO ",ts_buff);fprintf(stdout, format "\n", ##__VA_ARGS__ );fflush(stdout); } while(0)
 #define EUCA_MAIN "com/eucalyptus/bootstrap/SystemBootstrapper"
 #define EUCA_RET_RELOAD 123
 
