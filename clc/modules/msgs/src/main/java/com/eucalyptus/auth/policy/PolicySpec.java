@@ -416,7 +416,6 @@ public class PolicySpec {
   // Set of vendors with case insensitive resource names
   public static final Set<String> VENDORS_CASE_INSENSITIVE_RESOURCES = new ImmutableSet.Builder<String>()
       .add( VENDOR_EC2 )
-      .add( VENDOR_S3 )
       .build();
 
   // Action syntax

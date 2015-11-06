@@ -83,6 +83,7 @@ import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.blockstorage.Volumes;
+import com.eucalyptus.compute.common.internal.network.NoSuchGroupMetadataException;
 import com.eucalyptus.compute.common.internal.util.IllegalMetadataAccessException;
 import com.eucalyptus.compute.common.internal.util.InvalidParameterCombinationMetadataException;
 import com.eucalyptus.compute.common.internal.util.NoSuchImageIdException;
@@ -277,6 +278,8 @@ public class VmControl {
       if ( e7 != null ) throw new ClientUnauthorizedComputeException( e7.getMessage( ) );
       final SecurityGroupLimitMetadataException e8 = Exceptions.findCause( ex, SecurityGroupLimitMetadataException.class );
       if ( e8 != null ) throw new ClientComputeException( "SecurityGroupLimitExceeded", "Security group limit exceeded" );
+      final NoSuchGroupMetadataException e9 = Exceptions.findCause( ex, NoSuchGroupMetadataException.class );
+      if ( e9 != null ) throw new ClientComputeException( "InvalidGroup.NotFound", e9.getMessage( ) );
       LOG.error( ex, ex );
       throw ex;
     } finally {

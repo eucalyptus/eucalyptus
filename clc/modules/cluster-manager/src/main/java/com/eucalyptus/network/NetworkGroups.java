@@ -86,6 +86,7 @@ import com.eucalyptus.compute.common.internal.network.NetworkGroup;
 import com.eucalyptus.compute.common.internal.network.NetworkGroupTag;
 import com.eucalyptus.compute.common.internal.network.NetworkPeer;
 import com.eucalyptus.compute.common.internal.network.NetworkRule;
+import com.eucalyptus.compute.common.internal.network.NoSuchGroupMetadataException;
 import com.eucalyptus.compute.common.internal.util.MetadataConstraintException;
 import com.eucalyptus.compute.common.internal.util.MetadataException;
 import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
@@ -310,7 +311,7 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
       throw new NoSuchMetadataException( "Failed to find security group: " + groupId, ex );
     }
   }
-  
+
   public static NetworkGroup lookupByNaturalId( final String uuid ) throws NoSuchMetadataException {
     try ( final TransactionResource db = Entities.transactionFor( NetworkGroup.class ) ) {
       NetworkGroup entity = Entities.uniqueResult( NetworkGroup.withNaturalId( uuid ) );
@@ -348,7 +349,8 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
       return ret;
     } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
-      throw new NoSuchMetadataException( "Failed to find security group: " + groupName + " for " + ownerFullName, ex );
+      LOG.debug( "Failed to find security group: " + groupName + " for " + ownerFullName, ex );
+      throw new NoSuchGroupMetadataException( "The security group '" + groupName + "' does not exist" );
     }
   }
 
