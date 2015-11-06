@@ -900,9 +900,31 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
   }
 
   static void sendTerminate( final String instanceId, final String partition ) {
-    try {
-      final TerminateCallback cb = new TerminateCallback( instanceId );
-      AsyncRequests.newRequest(  cb ).dispatch( partition );
+    if ( Partitions.exists( partition ) ) try {
+      // Thread pool with size 4 and synchronous send ensures termination
+      // requests do not back up and prevent other cluster communication
+      Threads.enqueue(
+          Topology.lookup( ClusterController.class, Partitions.lookupByName( partition ) ),
+          VmInstances.class,
+          4,
+          new Callable<Void>( ) {
+            private final long requested = System.currentTimeMillis( );
+            @Override
+            public Void call( ) throws Exception {
+              if ( System.currentTimeMillis( ) > requested + ( VmInstances.VOLATILE_STATE_TIMEOUT_SEC * 1000l ) ) {
+                LOG.info( "Attempted terminate timed out in queue for " + instanceId );
+              } else if ( Partitions.exists( partition )  ) try {
+                final TerminateCallback cb = new TerminateCallback( instanceId );
+                AsyncRequests.newRequest(  cb ).sendSync(
+                    Topology.lookup( ClusterController.class, Partitions.lookupByName( partition ) ) );
+              } catch ( Exception ex ) {
+                LOG.error( ex );
+                Logs.extreme( ).error( ex, ex );
+              }
+              return null;
+            }
+          }
+      );
     } catch ( Exception ex ) {
       LOG.error( ex );
       Logs.extreme( ).error( ex, ex );
