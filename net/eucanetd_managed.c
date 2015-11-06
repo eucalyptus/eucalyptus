@@ -1116,16 +1116,18 @@ boolean managed_has_sg_changed(globalNetworkInfo * pGni, lni_t * pLni) {
                                     EUCA_FREE(pStra);
                                 }
                             }
+                            ingress_gni_to_iptables_rule(NULL, &(pSecGroup->ingress_rules[j]), sRule, 4);
+                            pStra = strdup(sRule);
+                            snprintf(sRule, MAX_RULE_LEN, "-A %s -d %s/%u %s -j ACCEPT", pSecGroup->name, gaManagedSubnets[subnetIdx].sSubnet,
+                                    gaManagedSubnets[subnetIdx].slashNet, pStra);
+                            EUCA_FREE(pStra);
+                        } else {
+                            ingress_gni_to_iptables_rule(NULL, &(pSecGroup->ingress_rules[j]), sRule, 0);
+                            pStra = strdup(sRule);
+                            snprintf(sRule, MAX_RULE_LEN, "-A %s -d %s/%u %s -j ACCEPT", pSecGroup->name, gaManagedSubnets[subnetIdx].sSubnet,
+                                    gaManagedSubnets[subnetIdx].slashNet, pStra);
+                            EUCA_FREE(pStra);
                         }
-                        ingress_gni_to_iptables_rule(NULL, &(pSecGroup->ingress_rules[j]), sRule, 0);
-                        pStra = strdup(sRule);
-                        snprintf(sRule, MAX_RULE_LEN, "-A %s -d %s/%u %s -m mark ! --mark 0x15 -j ACCEPT", pSecGroup->name, gaManagedSubnets[subnetIdx].sSubnet,
-                                gaManagedSubnets[subnetIdx].slashNet, pStra);
-                        EUCA_FREE(pStra);
-                        /*
-                        snprintf(sRule, MAX_RULE_LEN, "-A %s -d %s/%u %s -j ACCEPT", pSecGroup->name, gaManagedSubnets[subnetIdx].sSubnet,
-                                gaManagedSubnets[subnetIdx].slashNet, pSecGroup->grouprules[j].name);
-                         */
                         ret |= ((ipt_chain_find_rule(config->ipt, IPT_TABLE_FILTER, pSecGroup->name, sRule) == NULL) ? 1 : 0);
                     } else if (gni_find_secgroup(pGni, pSecGroup->ingress_rules[j].groupId, &pPeerGroup) == 0) {
                         // Now find the subnet for this security group
@@ -1659,10 +1661,6 @@ int managed_setup_sg_filters(globalNetworkInfo * pGni) {
                                     gaManagedSubnets[networkIdx].slashNet, pStra);
                             EUCA_FREE(pStra);
                         }
-                        /*
-                                                snprintf(sRule, MAX_RULE_LEN, "-A %s -d %s/%u %s -j ACCEPT", pSecGroup->name, gaManagedSubnets[networkIdx].sSubnet,
-                                                         gaManagedSubnets[networkIdx].slashNet, pSecGroup->grouprules[j].name);
-                         */
                         ipt_chain_add_rule(config->ipt, IPT_TABLE_FILTER, pSecGroup->name, sRule);
                     } else if (gni_find_secgroup(pGni, pSecGroup->ingress_rules[j].groupId, &pPeerGroup) == 0) {
                         // Now find the subnet for this security group
