@@ -196,7 +196,8 @@
 \*----------------------------------------------------------------------------*/
 
 //! Array containing information about each one of our private subnets
-managed_subnet gaManagedSubnets[NB_VLAN_802_1Q] = { {0}
+managed_subnet gaManagedSubnets[NB_VLAN_802_1Q] = {
+    {0}
 };
 
 //! Attach tunnel function pointer so the proper Managed or Managed-NoVlan API equivalent is called
@@ -239,7 +240,7 @@ static boolean gInitialized = FALSE;
 //! @name MANAGED Mode Network Driver APIs
 static int network_driver_init(eucanetdConfig * pConfig);
 static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush);
-static int network_driver_upgrade(globalNetworkInfo * pGni);    // TODO: Needed for 4.2.0 and remove in 4.3.0
+static int network_driver_upgrade(globalNetworkInfo * pGni); // TODO: Needed for 4.2.0 and remove in 4.3.0
 static int network_driver_system_flush(globalNetworkInfo * pGni);
 static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni);
 static int network_driver_implement_network(globalNetworkInfo * pGni, lni_t * pLni);
@@ -333,8 +334,8 @@ struct driver_handler_t managedDriverHandler = {
 //!         - Validate both Public and Private interfaces were provided and valid
 //!         - Setup the IP Table Preload file to use
 //!
-static int network_driver_init(eucanetdConfig * pConfig)
-{
+
+static int network_driver_init(eucanetdConfig * pConfig) {
     LOGINFO("Initializing '%s' network driver.\n", DRIVER_NAME());
 
     // Make sure our given pointer is valid
@@ -417,8 +418,8 @@ static int network_driver_init(eucanetdConfig * pConfig)
 //!
 //! @note
 //!
-static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush)
-{
+
+static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush) {
     int ret = 0;
 
     LOGINFO("Cleaning up '%s' network driver.\n", DRIVER_NAME());
@@ -461,8 +462,8 @@ static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush)
 //! @TODO:
 //!     Remove this code for 4.2.0+ releases
 //!
-static int network_driver_upgrade(globalNetworkInfo * pGni)
-{
+
+static int network_driver_upgrade(globalNetworkInfo * pGni) {
 #define OLD_BRIDGE_NAME_PREFIX         "eucabr"
 
     int i = 0;
@@ -587,7 +588,7 @@ static int network_driver_upgrade(globalNetworkInfo * pGni)
         return (1);
     }
 
-   return (0);
+    return (0);
 
 #undef OLD_BRIDGE_NAME_PREFIX
 }
@@ -616,8 +617,8 @@ static int network_driver_upgrade(globalNetworkInfo * pGni)
 //!     with any of the security-groups. These bridge devices are identified by their name starting with
 //!     "sg-". Finally, all tunnels will be teared down.
 //!
-static int network_driver_system_flush(globalNetworkInfo * pGni)
-{
+
+static int network_driver_system_flush(globalNetworkInfo * pGni) {
     int i = 0;
     int rc = 0;
     int ret = 0;
@@ -711,8 +712,8 @@ static int network_driver_system_flush(globalNetworkInfo * pGni)
 //!
 //! @note
 //!
-static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni)
-{
+
+static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni) {
     int i = 0;
     int rc = 0;
     u32 ret = EUCANETD_RUN_NO_API;
@@ -810,8 +811,8 @@ static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni)
 //!     - On NC only
 //!         - Setup of the security-groups bridges devices
 //!
-static int network_driver_implement_network(globalNetworkInfo * pGni, lni_t * pLni)
-{
+
+static int network_driver_implement_network(globalNetworkInfo * pGni, lni_t * pLni) {
     int rc = 0;
 
     LOGINFO("Implementing network artifacts for '%s' network driver.\n", DRIVER_NAME());
@@ -878,8 +879,8 @@ static int network_driver_implement_network(globalNetworkInfo * pGni, lni_t * pL
 //!     For MANAGED on the CC only, this means the following needs to occur:
 //!     - Setup of the security-groups filters
 //!
-static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni)
-{
+
+static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni) {
     LOGINFO("Implementing security-group artifacts for '%s' network driver.\n", DRIVER_NAME());
 
     // Is the driver initialized?
@@ -927,8 +928,8 @@ static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni)
 //!     - Setup of the instance's private to public IP mapping as necessary
 //!     - Setup of the elastic IPs on the public interface
 //!
-static int network_driver_implement_addressing(globalNetworkInfo * pGni, lni_t * pLni)
-{
+
+static int network_driver_implement_addressing(globalNetworkInfo * pGni, lni_t * pLni) {
     int rc = 0;
 
     LOGINFO("Implementing addressing artifacts for '%s' network driver.\n", DRIVER_NAME());
@@ -993,8 +994,8 @@ static int network_driver_implement_addressing(globalNetworkInfo * pGni, lni_t *
 //!
 //! @note TODO: Implement
 //!
-static boolean managed_has_network_changed(globalNetworkInfo * pGni, lni_t * pLni)
-{
+
+static boolean managed_has_network_changed(globalNetworkInfo * pGni, lni_t * pLni) {
     LOGTRACE("Scrubbing network for changes.\n");
     return (TRUE);
 }
@@ -1019,24 +1020,30 @@ static boolean managed_has_network_changed(globalNetworkInfo * pGni, lni_t * pLn
 //!
 //! @note
 //!
-boolean managed_has_sg_changed(globalNetworkInfo * pGni, lni_t * pLni)
-{
+
+boolean managed_has_sg_changed(globalNetworkInfo * pGni, lni_t * pLni) {
 #define MAX_RULE_LEN      1024
 
     int i = 0;
     int j = 0;
+    int k = 0;
+    int l = 0;
     int rc = 0;
     int ret = 0;
     int nbGroups = 0;
     int subnetIdx = 0;
     int nbInstances = 0;
     char sRule[MAX_RULE_LEN] = "";
+    char *pStra = NULL;
     boolean found = FALSE;
     ipt_table *pTable = NULL;
     gni_cluster *pCluster = NULL;
     gni_secgroup *pSecGroup = NULL;
+    gni_secgroup *pPeerGroup = NULL;
     gni_secgroup *pSecGroups = NULL;
     gni_instance *pInstances = NULL;
+    managed_subnet *pPeerSubnet = NULL;
+    u32 cidrnm = 0;
 
     LOGTRACE("Scrubbing security-groups for changes.\n");
 
@@ -1061,15 +1068,12 @@ boolean managed_has_sg_changed(globalNetworkInfo * pGni, lni_t * pLni)
             LOGERROR("Cannot retrieve instances for security-group '%s'\n", pSecGroup->name);
             return (TRUE);
         }
-        // We have to count how many instances in this group have a valid private IP
+        // For an instance in this SG with a valid private IP, find the subnet index
         for (j = 0, subnetIdx = -1; ((j < nbInstances) && (subnetIdx == -1)); j++) {
             if (pInstances[j].privateIp) {
                 subnetIdx = managed_find_subnet_idx(pInstances[j].privateIp);
             }
         }
-
-        // We're done with the instances
-        EUCA_FREE(pInstances);
 
         // Now, did we find a network for this group?
         if (subnetIdx >= 0) {
@@ -1079,24 +1083,79 @@ boolean managed_has_sg_changed(globalNetworkInfo * pGni, lni_t * pLni)
 
             // Check the in-private subnet forwarding rule
             snprintf(sRule, MAX_RULE_LEN, "-A FORWARD -s %s/%u -d %s/%u -j ACCEPT", gaManagedSubnets[subnetIdx].sSubnet,
-                     gaManagedSubnets[subnetIdx].slashNet, gaManagedSubnets[subnetIdx].sSubnet, gaManagedSubnets[subnetIdx].slashNet);
+                    gaManagedSubnets[subnetIdx].slashNet, gaManagedSubnets[subnetIdx].sSubnet, gaManagedSubnets[subnetIdx].slashNet);
             ret |= ((ipt_chain_find_rule(pLni->pIpTables, IPT_TABLE_FILTER, IPT_CHAIN_FORWARD, sRule) == NULL) ? 1 : 0);
 
             // then check the group specific IPT rules (temporary one here)
             if (pSecGroup->max_grouprules) {
                 for (j = 0; j < pSecGroup->max_grouprules; j++) {
-                    snprintf(sRule, MAX_RULE_LEN, "-A %s -d %s/%u %s -j ACCEPT", pSecGroup->name, gaManagedSubnets[subnetIdx].sSubnet,
-                             gaManagedSubnets[subnetIdx].slashNet, pSecGroup->grouprules[j].name);
-                    ret |= ((ipt_chain_find_rule(pLni->pIpTables, IPT_TABLE_FILTER, pSecGroup->name, sRule) == NULL) ? 1 : 0);
+                    // are we authorizing 1 group into another?
+                    if (strlen(pSecGroup->ingress_rules[j].groupId) == 0) {
+                        // This is CIDR-based rule
+                        cidrnm = (u32) 0xffffffff << (32 - pSecGroup->ingress_rules[j].cidrSlashnet);
+                        if (pSecGroup->ingress_rules[j].cidrSlashnet != 0) {
+                            // Search for public IPs affected by EUCA-11476
+                            for (k = 0; k < pGni->max_instances; k++) {
+                                for (l = 0, found = 0; (l < nbInstances) && !found; l++) {
+                                    // Skip instances in this security group
+                                    if (pInstances[l].publicIp == pGni->instances[k].publicIp) {
+                                        found = 1;
+                                    }
+                                }
+                                if (!found && ((pGni->instances[k].publicIp & cidrnm) == (pSecGroup->ingress_rules[j].cidrNetaddr & cidrnm)) &&
+                                        ((pGni->instances[k].privateIp & cidrnm) != (pSecGroup->ingress_rules[j].cidrNetaddr & cidrnm))) {
+                                    pStra = hex2dot(pGni->instances[k].privateIp);
+                                    LOGTRACE("Found instance private IP (%s) affected by EUCA-11476.\n", pStra);
+                                    ingress_gni_to_iptables_rule(pStra, &(pSecGroup->ingress_rules[j]), sRule, 2);
+                                    EUCA_FREE(pStra);
+                                    pStra = strdup(sRule);
+                                    snprintf(sRule, MAX_RULE_LEN, "-A %s -d %s/%u %s -j ACCEPT", pSecGroup->name, gaManagedSubnets[subnetIdx].sSubnet,
+                                            gaManagedSubnets[subnetIdx].slashNet, pStra);
+                                    LOGTRACE("Checking iptables rule: %s\n", sRule);
+                                    ret |= ((ipt_chain_find_rule(config->ipt, IPT_TABLE_FILTER, pSecGroup->name, sRule) == NULL) ? 1 : 0);
+                                    EUCA_FREE(pStra);
+                                }
+                            }
+                            ingress_gni_to_iptables_rule(NULL, &(pSecGroup->ingress_rules[j]), sRule, 4);
+                            pStra = strdup(sRule);
+                            snprintf(sRule, MAX_RULE_LEN, "-A %s -d %s/%u %s -j ACCEPT", pSecGroup->name, gaManagedSubnets[subnetIdx].sSubnet,
+                                    gaManagedSubnets[subnetIdx].slashNet, pStra);
+                            EUCA_FREE(pStra);
+                        } else {
+                            ingress_gni_to_iptables_rule(NULL, &(pSecGroup->ingress_rules[j]), sRule, 0);
+                            pStra = strdup(sRule);
+                            snprintf(sRule, MAX_RULE_LEN, "-A %s -d %s/%u %s -j ACCEPT", pSecGroup->name, gaManagedSubnets[subnetIdx].sSubnet,
+                                    gaManagedSubnets[subnetIdx].slashNet, pStra);
+                            EUCA_FREE(pStra);
+                        }
+                        ret |= ((ipt_chain_find_rule(config->ipt, IPT_TABLE_FILTER, pSecGroup->name, sRule) == NULL) ? 1 : 0);
+                    } else if (gni_find_secgroup(pGni, pSecGroup->ingress_rules[j].groupId, &pPeerGroup) == 0) {
+                        // Now find the subnet for this security group
+                        if ((pPeerSubnet = managed_find_subnet(pGni, pPeerGroup)) != NULL) {
+                            // Private IPs of this security group are authorized, so EUCA-11476 does not manifest
+                            ingress_gni_to_iptables_rule(NULL, &(pSecGroup->ingress_rules[j]), sRule, 0);
+                            pStra = strdup(sRule);
+                            snprintf(sRule, MAX_RULE_LEN, "-A %s -s %s/%u -d %s/%u %s -j ACCEPT", pSecGroup->name, pPeerSubnet->sSubnet, pPeerSubnet->slashNet,
+                                    gaManagedSubnets[subnetIdx].sSubnet, gaManagedSubnets[subnetIdx].slashNet, pStra);
+                            EUCA_FREE(pStra);
+                            /*
+                            snprintf(sRule, MAX_RULE_LEN, "-A %s -s %s/%u -d %s/%u %s -j ACCEPT", pSecGroup->name, pPeerSubnet->sSubnet, pPeerSubnet->slashNet,
+                                    gaManagedSubnets[subnetIdx].sSubnet, gaManagedSubnets[subnetIdx].slashNet, pSecGroup->grouprules[j].name);
+                             */
+                            ret |= ((ipt_chain_find_rule(config->ipt, IPT_TABLE_FILTER, pSecGroup->name, sRule) == NULL) ? 1 : 0);
+                        }
+                    }
                 }
             }
             // Do we have any missing rules?
             if (ret) {
                 LOGTRACE("Security-Group change detected!. Missing IPT rules for group '%s'.\n", pSecGroup->name);
                 EUCA_FREE(pSecGroups);
+                EUCA_FREE(pInstances);
                 return (TRUE);
             }
         }
+        EUCA_FREE(pInstances);
     }
 
     // Get the filter table
@@ -1146,8 +1205,8 @@ boolean managed_has_sg_changed(globalNetworkInfo * pGni, lni_t * pLni)
 //!
 //! @note
 //!
-boolean managed_has_addressing_changed(globalNetworkInfo * pGni, lni_t * pLni)
-{
+
+boolean managed_has_addressing_changed(globalNetworkInfo * pGni, lni_t * pLni) {
 #define DHCP_ENTRY_LEN    1024
 #define MAX_RULE_LEN      1024
 
@@ -1203,7 +1262,7 @@ boolean managed_has_addressing_changed(globalNetworkInfo * pGni, lni_t * pLni)
     //
     for (i = 0; i < nbInstances; i++) {
         snprintf(sDhcp, DHCP_ENTRY_LEN, "\n  host node-%s {\n    hardware ethernet %s;\n    fixed-address %s;\n  }\n",
-                 euca_ntoa(pInstances[i].privateIp), euca_etoa(pInstances[i].macAddress), euca_ntoa(pInstances[i].privateIp));
+                euca_ntoa(pInstances[i].privateIp), euca_etoa(pInstances[i].macAddress), euca_ntoa(pInstances[i].privateIp));
 
         if (strstr(psDhcpConfig, sDhcp) == NULL) {
             LOGTRACE("Network addressing change detected!. Missing DHCP configuration for host %s/%s.\n", euca_ntoa(pInstances[i].privateIp), euca_etoa(pInstances[i].macAddress));
@@ -1217,7 +1276,7 @@ boolean managed_has_addressing_changed(globalNetworkInfo * pGni, lni_t * pLni)
 
             pStr = sDhcp;
             pStr += snprintf(pStr, (DHCP_ENTRY_LEN - (pStr - sDhcp)), "  subnet %s netmask %s {\n    option subnet-mask %s;\n    option broadcast-address %s;\n",
-                             pSubnet->sSubnet, pSubnet->sNetmask, pSubnet->sNetmask, pSubnet->sBroadcast);
+                    pSubnet->sSubnet, pSubnet->sNetmask, pSubnet->sNetmask, pSubnet->sBroadcast);
 
             if (strlen(pGni->instanceDNSDomain)) {
                 pStr += snprintf(pStr, (DHCP_ENTRY_LEN - (pStr - sDhcp)), "    option domain-name \"%s\";\n", pGni->instanceDNSDomain);
@@ -1385,8 +1444,8 @@ boolean managed_has_addressing_changed(globalNetworkInfo * pGni, lni_t * pLni)
 //!
 //! @note
 //!
-int managed_setup_metadata_ip(globalNetworkInfo * pGni, const char *psDevName)
-{
+
+int managed_setup_metadata_ip(globalNetworkInfo * pGni, const char *psDevName) {
     int rc = 0;
 
     // Are our pointers valid?
@@ -1443,12 +1502,15 @@ int managed_setup_metadata_ip(globalNetworkInfo * pGni, const char *psDevName)
 //!
 //! @note
 //!
-int managed_setup_sg_filters(globalNetworkInfo * pGni)
-{
+
+int managed_setup_sg_filters(globalNetworkInfo * pGni) {
 #define MAX_RULE_LEN      1024
 
     int i = 0;
     int j = 0;
+    int k = 0;
+    int l = 0;
+    int found = 0;
     int rc = 0;
     int ret = 0;
     int slashnet = 0;
@@ -1463,6 +1525,8 @@ int managed_setup_sg_filters(globalNetworkInfo * pGni)
     gni_secgroup *pSecGroups = NULL;
     gni_instance *pInstances = NULL;
     managed_subnet *pPeerSubnet = NULL;
+    u32 cidrnm = 0;
+    char *pStra = NULL;
 
     LOGINFO("Implementing security-group artifacts\n");
 
@@ -1533,15 +1597,12 @@ int managed_setup_sg_filters(globalNetworkInfo * pGni)
             LOGERROR("Fail to get instances for security group '%s'. Look at above log errors for more details.\n", ((pSecGroup == NULL) ? "NULL" : SP(pSecGroup->name)));
             continue;
         }
-        // We have to count how many instances in this group have a valid private IP
+        // For an instance in this SG with a valid private IP, find its subnet index
         for (j = 0, networkIdx = -1; ((j < nbInstances) && (networkIdx == -1)); j++) {
             if (pInstances[j].privateIp) {
                 networkIdx = managed_find_subnet_idx(pInstances[j].privateIp);
             }
         }
-
-        // We're done with the instances
-        EUCA_FREE(pInstances);
 
         // Now, did we find a network for this group?
         if (networkIdx >= 0) {
@@ -1555,7 +1616,7 @@ int managed_setup_sg_filters(globalNetworkInfo * pGni)
 
             // add the in-private subnet forwarding rule
             snprintf(sRule, MAX_RULE_LEN, "-A FORWARD -s %s/%u -d %s/%u -j ACCEPT", gaManagedSubnets[networkIdx].sSubnet,
-                     gaManagedSubnets[networkIdx].slashNet, gaManagedSubnets[networkIdx].sSubnet, gaManagedSubnets[networkIdx].slashNet);
+                    gaManagedSubnets[networkIdx].slashNet, gaManagedSubnets[networkIdx].sSubnet, gaManagedSubnets[networkIdx].slashNet);
             ipt_chain_add_rule(config->ipt, IPT_TABLE_FILTER, IPT_CHAIN_FORWARD, sRule);
 
             // then put all the group specific IPT rules (temporary one here)
@@ -1563,14 +1624,57 @@ int managed_setup_sg_filters(globalNetworkInfo * pGni)
                 for (j = 0; j < pSecGroup->max_grouprules; j++) {
                     // are we authorizing 1 group into another?
                     if (strlen(pSecGroup->ingress_rules[j].groupId) == 0) {
-                        snprintf(sRule, MAX_RULE_LEN, "-A %s -d %s/%u %s -j ACCEPT", pSecGroup->name, gaManagedSubnets[networkIdx].sSubnet,
-                                 gaManagedSubnets[networkIdx].slashNet, pSecGroup->grouprules[j].name);
+                        // This is CIDR-based rule
+                        cidrnm = (u32) 0xffffffff << (32 - pSecGroup->ingress_rules[j].cidrSlashnet);
+                        if (pSecGroup->ingress_rules[j].cidrSlashnet != 0) {
+                            // Search for public IPs affected by EUCA-11476
+                            for (k = 0; k < pGni->max_instances; k++) {
+                                for (l = 0, found = 0; (l < nbInstances) && !found; l++) {
+                                    // Skip instances in this security group
+                                    if (pInstances[l].publicIp == pGni->instances[k].publicIp) {
+                                        found = 1;
+                                    }
+                                }
+                                if (!found && ((pGni->instances[k].publicIp & cidrnm) == (pSecGroup->ingress_rules[j].cidrNetaddr & cidrnm)) &&
+                                        ((pGni->instances[k].privateIp & cidrnm) != (pSecGroup->ingress_rules[j].cidrNetaddr & cidrnm))) {
+                                    pStra = hex2dot(pGni->instances[k].privateIp);
+                                    LOGTRACE("Found instance private IP (%s) affected by EUCA-11476.\n", pStra);
+                                    ingress_gni_to_iptables_rule(pStra, &(pSecGroup->ingress_rules[j]), sRule, 2);
+                                    EUCA_FREE(pStra);
+                                    pStra = strdup(sRule);
+                                    snprintf(sRule, MAX_RULE_LEN, "-A %s -d %s/%u %s -j ACCEPT", pSecGroup->name, gaManagedSubnets[networkIdx].sSubnet,
+                                            gaManagedSubnets[networkIdx].slashNet, pStra);
+                                    LOGTRACE("Created new iptables rule: %s\n", sRule);
+                                    ipt_chain_add_rule(config->ipt, IPT_TABLE_FILTER, pSecGroup->name, sRule);
+                                    EUCA_FREE(pStra);
+                                }
+                            }
+                            ingress_gni_to_iptables_rule(NULL, &(pSecGroup->ingress_rules[j]), sRule, 4);
+                            pStra = strdup(sRule);
+                            snprintf(sRule, MAX_RULE_LEN, "-A %s -d %s/%u %s -j ACCEPT", pSecGroup->name, gaManagedSubnets[networkIdx].sSubnet,
+                                    gaManagedSubnets[networkIdx].slashNet, pStra);
+                            EUCA_FREE(pStra);
+                        } else {
+                            ingress_gni_to_iptables_rule(NULL, &(pSecGroup->ingress_rules[j]), sRule, 0);
+                            pStra = strdup(sRule);
+                            snprintf(sRule, MAX_RULE_LEN, "-A %s -d %s/%u %s -j ACCEPT", pSecGroup->name, gaManagedSubnets[networkIdx].sSubnet,
+                                    gaManagedSubnets[networkIdx].slashNet, pStra);
+                            EUCA_FREE(pStra);
+                        }
                         ipt_chain_add_rule(config->ipt, IPT_TABLE_FILTER, pSecGroup->name, sRule);
                     } else if (gni_find_secgroup(pGni, pSecGroup->ingress_rules[j].groupId, &pPeerGroup) == 0) {
                         // Now find the subnet for this security group
                         if ((pPeerSubnet = managed_find_subnet(pGni, pPeerGroup)) != NULL) {
+                            // Private IPs of this security group are authorized, so EUCA-11476 does not manifest
+                            ingress_gni_to_iptables_rule(NULL, &(pSecGroup->ingress_rules[j]), sRule, 0);
+                            pStra = strdup(sRule);
                             snprintf(sRule, MAX_RULE_LEN, "-A %s -s %s/%u -d %s/%u %s -j ACCEPT", pSecGroup->name, pPeerSubnet->sSubnet, pPeerSubnet->slashNet,
-                                     gaManagedSubnets[networkIdx].sSubnet, gaManagedSubnets[networkIdx].slashNet, pSecGroup->grouprules[j].name);
+                                    gaManagedSubnets[networkIdx].sSubnet, gaManagedSubnets[networkIdx].slashNet, pStra);
+                            EUCA_FREE(pStra);
+                            /*
+                                                        snprintf(sRule, MAX_RULE_LEN, "-A %s -s %s/%u -d %s/%u %s -j ACCEPT", pSecGroup->name, pPeerSubnet->sSubnet, pPeerSubnet->slashNet,
+                                                                 gaManagedSubnets[networkIdx].sSubnet, gaManagedSubnets[networkIdx].slashNet, pSecGroup->grouprules[j].name);
+                             */
                             ipt_chain_add_rule(config->ipt, IPT_TABLE_FILTER, pSecGroup->name, sRule);
                         }
                     }
@@ -1579,6 +1683,8 @@ int managed_setup_sg_filters(globalNetworkInfo * pGni)
         } else if (ipt_table_find_chain(config->ipt, IPT_TABLE_FILTER, pSecGroup->name)) {
             ipt_table_deletechainmatch(config->ipt, IPT_TABLE_FILTER, pSecGroup->name);
         }
+        // We're done with the instances
+        EUCA_FREE(pInstances);
     }
 
     EUCA_FREE(pSecGroups);
@@ -1622,8 +1728,8 @@ int managed_setup_sg_filters(globalNetworkInfo * pGni)
 //!
 //! @note
 //!
-int managed_setup_addressing(globalNetworkInfo * pGni)
-{
+
+int managed_setup_addressing(globalNetworkInfo * pGni) {
 #define MAX_RULE_LEN      1024
 
     int i = 0;
@@ -1771,8 +1877,8 @@ int managed_setup_addressing(globalNetworkInfo * pGni)
 //!
 //! @note
 //!
-int managed_setup_elastic_ips(globalNetworkInfo * pGni)
-{
+
+int managed_setup_elastic_ips(globalNetworkInfo * pGni) {
     int i = 0;
     int j = 0;
     int k = 0;
@@ -1835,7 +1941,7 @@ int managed_setup_elastic_ips(globalNetworkInfo * pGni)
                         // Make sure the device is up
                         if ((rc = dev_up(config->pubInterface)) != 0) {
                             LOGERROR("Failed to enable network device '%s'.\n", config->pubInterface)
-                                ret = 1;
+                            ret = 1;
                         }
                     } else {
                         LOGERROR("Failed to install elastic IP %s/32 on network device '%s'.\n", euca_ntoa(pInstances[j].publicIp), config->pubInterface);
@@ -1870,8 +1976,8 @@ int managed_setup_elastic_ips(globalNetworkInfo * pGni)
 //!
 //! @note
 //!
-int managed_initialize_private_subnets(globalNetworkInfo * pGni)
-{
+
+int managed_initialize_private_subnets(globalNetworkInfo * pGni) {
     int rc = 0;
     int netIdx = 0;
     u32 numNetworks = 0;
@@ -1893,7 +1999,7 @@ int managed_initialize_private_subnets(globalNetworkInfo * pGni)
         return (1);
     }
     // Reset our structure
-    bzero(gaManagedSubnets, (NB_VLAN_802_1Q * sizeof(managed_subnet)));
+    bzero(gaManagedSubnets, (NB_VLAN_802_1Q * sizeof (managed_subnet)));
 
     // What are the size of our sub-networks? It must not exceed what we can handle maximum
     numNetworks = (((0xFFFFFFFF - pGni->managedSubnet->netmask) + 1) / pGni->managedSubnet->segmentSize);
@@ -1913,15 +2019,15 @@ int managed_initialize_private_subnets(globalNetworkInfo * pGni)
         gaManagedSubnets[netIdx].gateway = (newSubnet + 1);
         gaManagedSubnets[netIdx].broadcast = (newSubnet + broadcastOffset);
 
-        euca_strncpy(gaManagedSubnets[netIdx].sSubnet, euca_ntoa(gaManagedSubnets[netIdx].subnet), sizeof(gaManagedSubnets[netIdx].sSubnet));
-        euca_strncpy(gaManagedSubnets[netIdx].sNetmask, euca_ntoa(gaManagedSubnets[netIdx].netmask), sizeof(gaManagedSubnets[netIdx].sNetmask));
-        euca_strncpy(gaManagedSubnets[netIdx].sGateway, euca_ntoa(gaManagedSubnets[netIdx].gateway), sizeof(gaManagedSubnets[netIdx].sGateway));
-        euca_strncpy(gaManagedSubnets[netIdx].sBroadcast, euca_ntoa(gaManagedSubnets[netIdx].broadcast), sizeof(gaManagedSubnets[netIdx].sBroadcast));
+        euca_strncpy(gaManagedSubnets[netIdx].sSubnet, euca_ntoa(gaManagedSubnets[netIdx].subnet), sizeof (gaManagedSubnets[netIdx].sSubnet));
+        euca_strncpy(gaManagedSubnets[netIdx].sNetmask, euca_ntoa(gaManagedSubnets[netIdx].netmask), sizeof (gaManagedSubnets[netIdx].sNetmask));
+        euca_strncpy(gaManagedSubnets[netIdx].sGateway, euca_ntoa(gaManagedSubnets[netIdx].gateway), sizeof (gaManagedSubnets[netIdx].sGateway));
+        euca_strncpy(gaManagedSubnets[netIdx].sBroadcast, euca_ntoa(gaManagedSubnets[netIdx].broadcast), sizeof (gaManagedSubnets[netIdx].sBroadcast));
 
         newSubnet += pGni->managedSubnet->segmentSize;
 
         LOGEXTREME("subnet %s netmask %s (%u) broadcast %s gateway %s\n", gaManagedSubnets[netIdx].sSubnet, gaManagedSubnets[netIdx].sNetmask,
-                   gaManagedSubnets[netIdx].slashNet, gaManagedSubnets[netIdx].sGateway, gaManagedSubnets[netIdx].sBroadcast)
+                gaManagedSubnets[netIdx].slashNet, gaManagedSubnets[netIdx].sGateway, gaManagedSubnets[netIdx].sBroadcast)
     }
     return (0);
 }
@@ -1943,8 +2049,8 @@ int managed_initialize_private_subnets(globalNetworkInfo * pGni)
 //!
 //! @note
 //!
-int managed_find_subnet_idx(in_addr_t instanceAddress)
-{
+
+int managed_find_subnet_idx(in_addr_t instanceAddress) {
     int networkIdx = 0;
 
     // Scan our subnet structure to find which one will fit this address within its netmask
@@ -1975,8 +2081,8 @@ int managed_find_subnet_idx(in_addr_t instanceAddress)
 //!
 //! @note
 //!
-int managed_find_subnet_idx_from_gateway(in_addr_t gatewayAddress)
-{
+
+int managed_find_subnet_idx_from_gateway(in_addr_t gatewayAddress) {
     int networkIdx = 0;
 
     // Scan our subnet structure to find which one will fit this address within its netmask
@@ -1995,7 +2101,7 @@ int managed_find_subnet_idx_from_gateway(in_addr_t gatewayAddress)
 //! @param[in] pGni a pointer to the Global Network Information structure
 //! @param[in] pSecGroup a pointer to the security group
 //!
-//! @return A pointer to the managed subnet if found otherwize FALSE is returned.
+//! @return A pointer to the managed subnet if found otherwise FALSE is returned.
 //!
 //! @see initialize_private_subnets(), managed_find_subnet_idx(), managed_find_subnet_idx_from_gateway()
 //!
@@ -2007,8 +2113,8 @@ int managed_find_subnet_idx_from_gateway(in_addr_t gatewayAddress)
 //!
 //! @note
 //!
-managed_subnet *managed_find_subnet(globalNetworkInfo * pGni, gni_secgroup * pSecGroup)
-{
+
+managed_subnet *managed_find_subnet(globalNetworkInfo * pGni, gni_secgroup * pSecGroup) {
     int k = 0;
     int rc = 0;
     u32 subnetIdx = 0;
@@ -2075,8 +2181,8 @@ managed_subnet *managed_find_subnet(globalNetworkInfo * pGni, gni_secgroup * pSe
 //! @note
 //!     By now, we assume any caller would have validated we are running on a CC component...
 //!
-int managed_initialize_tunnels(eucanetdConfig * pConfig)
-{
+
+int managed_initialize_tunnels(eucanetdConfig * pConfig) {
     int rc = 0;
     char *pChar = NULL;
     char *psPassword = NULL;
@@ -2174,8 +2280,8 @@ int managed_initialize_tunnels(eucanetdConfig * pConfig)
 //!     tunnel unless the "initialize()" function is called again. This is better
 //!     called when the system is terminating and we want to cleanup the system.
 //!
-int managed_cleanup_tunnels(globalNetworkInfo * pGni)
-{
+
+int managed_cleanup_tunnels(globalNetworkInfo * pGni) {
     LOGINFO("Cleaning up tunneling.\n");
 
     // Make sure our parameter isn't NULL
@@ -2212,8 +2318,8 @@ int managed_cleanup_tunnels(globalNetworkInfo * pGni)
 //!
 //! @note
 //!
-boolean managed_has_tunnel_changed(globalNetworkInfo * pGni, gni_secgroup * pSecGroups, int nbGroups)
-{
+
+boolean managed_has_tunnel_changed(globalNetworkInfo * pGni, gni_secgroup * pSecGroups, int nbGroups) {
     int i = 0;
     int nbTunnels = 0;
     int nbTunnelCalc = 0;
@@ -2290,8 +2396,8 @@ boolean managed_has_tunnel_changed(globalNetworkInfo * pGni, gni_secgroup * pSec
 //!
 //! @note
 //!
-int managed_save_tunnel_id(int tunnelId)
-{
+
+int managed_save_tunnel_id(int tunnelId) {
     char sTunnelConfFile[EUCA_MAX_PATH] = "";
     FILE *pFh = NULL;
 
@@ -2331,8 +2437,8 @@ int managed_save_tunnel_id(int tunnelId)
 //!
 //! @note
 //!
-int managed_get_current_tunnel_id(void)
-{
+
+int managed_get_current_tunnel_id(void) {
     int tunnelId = -1;
     char *psTunnelId = NULL;
     char sTunnelConfFile[EUCA_MAX_PATH] = "";
@@ -2371,8 +2477,8 @@ int managed_get_current_tunnel_id(void)
 //!
 //! @note
 //!
-int managed_get_new_tunnel_id(globalNetworkInfo * pGni, gni_cluster * pCluster)
-{
+
+int managed_get_new_tunnel_id(globalNetworkInfo * pGni, gni_cluster * pCluster) {
     int i = 0;
 
     // Make sure our pointers aren't NULL
@@ -2413,8 +2519,8 @@ int managed_get_new_tunnel_id(globalNetworkInfo * pGni, gni_cluster * pCluster)
 //!
 //! @note
 //!
-static int managed_create_tunnel(gni_cluster * pCluster, const char *psPidFile, const char *psConfigPath, int localId, int remoteId)
-{
+
+static int managed_create_tunnel(gni_cluster * pCluster, const char *psPidFile, const char *psConfigPath, int localId, int remoteId) {
 #define SESSION_STRING_LEN        16
 
     int rc = 0;
@@ -2550,8 +2656,8 @@ static int managed_create_tunnel(gni_cluster * pCluster, const char *psPidFile, 
 //!
 //! @note
 //!
-int managed_setup_tunnels(globalNetworkInfo * pGni)
-{
+
+int managed_setup_tunnels(globalNetworkInfo * pGni) {
 #define SESSION_STRING_LEN        16
 
     int i = 0;
@@ -2649,7 +2755,7 @@ int managed_setup_tunnels(globalNetworkInfo * pGni)
             if ((rc = managed_create_tunnel(&pClusters[i], sPidFile, sConfigPath, newLocalId, i)) != 0) {
                 // Log it and go to the next one
                 LOGERROR("Cannot create tunnel session 'tun-%d-%d' for endpoint '%s'. Look at above error logs for more details.\n", newLocalId, i,
-                         euca_ntoa(pClusters[i].enabledCCIp));
+                        euca_ntoa(pClusters[i].enabledCCIp));
             } else {
                 LOGTRACE("Created tunnel session 'tun-%d-%d' for endpoint '%s'.\n", newLocalId, i, euca_ntoa(pClusters[i].enabledCCIp));
             }
@@ -2740,8 +2846,8 @@ int managed_setup_tunnels(globalNetworkInfo * pGni)
 //!
 //! @note
 //!
-int managed_unset_tunnels(globalNetworkInfo * pGni)
-{
+
+int managed_unset_tunnels(globalNetworkInfo * pGni) {
     int i = 0;
     int rc = 0;
     int ret = 0;
@@ -2878,8 +2984,8 @@ int managed_unset_tunnels(globalNetworkInfo * pGni)
 //!
 //! @note
 //!
-int managed_attach_tunnel(dev_entry * pBridge, managed_subnet * pSubnet, int localId, int remoteId)
-{
+
+int managed_attach_tunnel(dev_entry * pBridge, managed_subnet * pSubnet, int localId, int remoteId) {
     int i = 0;
     int j = 0;
     int left = 0;
@@ -2936,7 +3042,7 @@ int managed_attach_tunnel(dev_entry * pBridge, managed_subnet * pSubnet, int loc
             // Retrieve our assigned interfaces so we can analyze
             if (dev_get_bridge_interfaces(pBridge->sDevName, &pDevices, &nbDevices)) {
                 LOGERROR("Fail to attach tunnel device '%s' to bridge device '%s'. Failed to retrieve interfaces assigned to bridge device '%s'.\n",
-                         sTapName, pBridge->sDevName, pBridge->sDevName);
+                        sTapName, pBridge->sDevName, pBridge->sDevName);
                 return (1);
             }
             // Check if we have this interface in our bridge interfaces already
@@ -2998,8 +3104,8 @@ int managed_attach_tunnel(dev_entry * pBridge, managed_subnet * pSubnet, int loc
 //!
 //! @note
 //!
-static int managed_attach_tunnels(globalNetworkInfo * pGni, gni_cluster * pCluster, gni_secgroup * pSecGroups, int nbGroups)
-{
+
+static int managed_attach_tunnels(globalNetworkInfo * pGni, gni_cluster * pCluster, gni_secgroup * pSecGroups, int nbGroups) {
     int i = 0;
     int j = 0;
     int ret = 0;
@@ -3091,8 +3197,8 @@ static int managed_attach_tunnels(globalNetworkInfo * pGni, gni_cluster * pClust
 //!
 //! @note
 //!
-int managed_detach_tunnel(dev_entry * pBridge, dev_entry * pTunnel)
-{
+
+int managed_detach_tunnel(dev_entry * pBridge, dev_entry * pTunnel) {
     // Make sure our pointers are valid
     if (!pBridge || !pTunnel) {
         LOGERROR("Fail to detach tunnel. Invalid parameters provided.\n");
@@ -3147,8 +3253,8 @@ int managed_detach_tunnel(dev_entry * pBridge, dev_entry * pTunnel)
 //!
 //! @note
 //!
-static int managed_detach_tunnels(globalNetworkInfo * pGni, gni_cluster * pCluster, gni_secgroup * pSecGroups, int nbGroups, dev_entry * pTunnels, int nbTunnels)
-{
+
+static int managed_detach_tunnels(globalNetworkInfo * pGni, gni_cluster * pCluster, gni_secgroup * pSecGroups, int nbGroups, dev_entry * pTunnels, int nbTunnels) {
     int i = 0;
     int j = 0;
     int ret = 0;
@@ -3196,7 +3302,7 @@ static int managed_detach_tunnels(globalNetworkInfo * pGni, gni_cluster * pClust
                         LOGDEBUG("Detaching tunnel device '%s' from bridge device '%s'.\n", pTunnels[i].sDevName, pBridges[0].sDevName);
                         if (managed_detach_tunnel(&pBridges[0], &pTunnels[i]) != 0) {
                             LOGERROR("Failed to detach tunnel device '%s' from bridge device '%s'. Look at above log errors for more details.\n",
-                                     pTunnels[i].sDevName, pBridges[0].sDevName);
+                                    pTunnels[i].sDevName, pBridges[0].sDevName);
                             ret = 1;
                         }
 
@@ -3242,7 +3348,7 @@ static int managed_detach_tunnels(globalNetworkInfo * pGni, gni_cluster * pClust
                             LOGDEBUG("Detaching tunnel device '%s' from bridge device '%s'.\n", pTunnels[i].sDevName, pBridges[0].sDevName);
                             if (managed_detach_tunnel(&pBridges[0], &pTunnels[i]) != 0) {
                                 LOGERROR("Failed to detach tunnel device '%s' from bridge device '%s'. Look at above log errors for more details.\n",
-                                         pTunnels[i].sDevName, pBridges[0].sDevName);
+                                        pTunnels[i].sDevName, pBridges[0].sDevName);
                                 ret = 1;
                             }
 
@@ -3286,8 +3392,8 @@ static int managed_detach_tunnels(globalNetworkInfo * pGni, gni_cluster * pClust
 //!
 //! @note
 //!
-static boolean managed_is_bridge_setup(dev_entry * pBridge)
-{
+
+static boolean managed_is_bridge_setup(dev_entry * pBridge) {
     int i = 0;
     int nbDevices = 0;
     dev_entry *pDevice = NULL;
@@ -3359,8 +3465,8 @@ static boolean managed_is_bridge_setup(dev_entry * pBridge)
 //!
 //! @note
 //!
-static int managed_remove_bridge(dev_entry * pBridge)
-{
+
+static int managed_remove_bridge(dev_entry * pBridge) {
     int i = 0;
     int ret = 0;
     int nbDevices = 0;
@@ -3456,8 +3562,8 @@ static int managed_remove_bridge(dev_entry * pBridge)
 //!
 //! @note
 //!
-static int managed_create_bridge(const char *psBridgeName, managed_subnet * pSubnet)
-{
+
+static int managed_create_bridge(const char *psBridgeName, managed_subnet * pSubnet) {
     const char *psStpState = BRIDGE_STP_OFF;
     dev_entry *pBridge = NULL;
     dev_entry *pVlanDev = NULL;
@@ -3556,8 +3662,8 @@ static int managed_create_bridge(const char *psBridgeName, managed_subnet * pSub
 //!
 //! @note
 //!
-static int managed_setup_bridges(globalNetworkInfo * pGni)
-{
+
+static int managed_setup_bridges(globalNetworkInfo * pGni) {
     int i = 0;
     int j = 0;
     int rc = 0;
@@ -3703,8 +3809,8 @@ static int managed_setup_bridges(globalNetworkInfo * pGni)
 //!
 //! @note
 //!
-int managed_generate_dhcpd_config(globalNetworkInfo * pGni)
-{
+
+int managed_generate_dhcpd_config(globalNetworkInfo * pGni) {
     int i = 0;
     int j = 0;
     int k = 0;
