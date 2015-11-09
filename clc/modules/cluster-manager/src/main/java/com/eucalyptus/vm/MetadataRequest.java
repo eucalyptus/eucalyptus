@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -80,31 +80,29 @@ public class MetadataRequest {
   private final String     vmId;
 
   public MetadataRequest( String requestIp, String requestUrl, Optional<String> vmId ) {
-    try {
-      this.requestIp = requestIp;
-      requestUrl = requestUrl.replaceAll( "[/]+", "/" );
-      String[] path = requestUrl.split( "/", 2 );
-      if ( path.length > 0 ) {
-        this.metadataName = path[0];
-        if ( path.length > 1 ) {
-          this.localPath = path[1].replaceFirst( "^[/]*", "" );
-        } else {
-          this.localPath = "";
-        }
+    this.requestIp = requestIp;
+    requestUrl = requestUrl.replaceAll( "[/]+", "/" );
+    String[] path = requestUrl.split( "/", 2 );
+    if ( path.length > 0 ) {
+      this.metadataName = path[0];
+      if ( path.length > 1 ) {
+        this.localPath = path[1].replaceFirst( "^[/]*", "" );
       } else {
-        this.metadataName = "";
         this.localPath = "";
       }
-      this.vmId = vmId.orNull( );
-    } finally {
-      LOG.debug( ( this.vmId != null
-                                  ? "Instance"
-                                  : "External" )
-                 + " Metadata: requestIp=" + this.requestIp
-                 + " metadataName=" + this.metadataName
-                 + " metadataPath=" + this.localPath
-                 + " requestUrl=" + requestUrl );
+    } else {
+      this.metadataName = "";
+      this.localPath = "";
     }
+    this.vmId = vmId.orNull( );
+
+    LOG.debug( ( this.vmId != null
+                                ? "Instance"
+                                : "External" )
+               + " Metadata: requestIp=" + this.requestIp
+               + " metadataName=" + this.metadataName
+               + " metadataPath=" + this.localPath
+               + " requestUrl=" + requestUrl );
   }
 
   public boolean isInstance( ) {

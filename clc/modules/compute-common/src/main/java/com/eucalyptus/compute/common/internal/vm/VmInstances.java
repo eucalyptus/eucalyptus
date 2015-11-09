@@ -216,15 +216,18 @@ public class VmInstances {
                                        final Map<String,String> aliases,
                                        @Nullable final Predicate<? super VmInstance> predicate,
                                        final boolean outerJoins ) {
-    return list( new Supplier<List<VmInstance>>() {
-      @Override
-      public List<VmInstance> get() {
-        return Entities.query( VmInstance.named( ownerFullName, null ), false, criterion, aliases, outerJoins );
-      }
-    }, Predicates.and(
-        RestrictedTypes.filterByOwner( ownerFullName ),
-        checkPredicate( predicate )
-    ) );
+    return list(
+        new Supplier<List<VmInstance>>( ) {
+          @Override
+          public List<VmInstance> get() {
+            return Entities.query( VmInstance.named( ownerFullName, null ), false, criterion, aliases, outerJoins );
+          }
+        },
+        Predicates.<VmInstance>and(
+          RestrictedTypes.filterByOwner( ownerFullName ),
+          checkPredicate( predicate )
+        )
+    );
   }
 
   /**
