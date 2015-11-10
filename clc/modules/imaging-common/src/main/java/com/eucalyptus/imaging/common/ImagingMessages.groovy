@@ -185,7 +185,6 @@ public class DiskImageConversionTask extends EucalyptusData {
     }
   }
   
-  @Override
   public JSONObject toJSON() {
     JSONObject obj = new JSONObject();
     obj.put("conversionTaskId", conversionTaskId);

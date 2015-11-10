@@ -219,13 +219,15 @@ class NetworkInfoBroadcasts {
         if ( internetGateway.vpcId ) map.put( internetGateway.vpcId, internetGateway.id )
         map
     }).asMap( )
-    info.vpcs.addAll( vpcs.findAll{ VpcNetworkView vpc -> activeVpcs.contains(vpc.id) }.collect{ VpcNetworkView vpc ->
+    info.vpcs.addAll( vpcs.findAll{ VpcNetworkView vpc -> activeVpcs.contains(vpc.id) }.collect{ Object vpcViewObj ->
+      final VpcNetworkView vpc = vpcViewObj as VpcNetworkView
       new NIVpc(
           vpc.id,
           vpc.ownerAccountNumber,
           vpc.cidr,
           vpc.dhcpOptionSetId,
-          subnets.findAll{ SubnetNetworkView subnet -> subnet.vpcId == vpc.id }.collect{ SubnetNetworkView subnet ->
+          subnets.findAll{ SubnetNetworkView subnet -> subnet.vpcId == vpc.id }.collect{ Object subnetViewObj ->
+            SubnetNetworkView subnet = subnetViewObj as SubnetNetworkView
             new NIVpcSubnet(
                 name: subnet.id,
                 ownerId: subnet.ownerAccountNumber,
@@ -237,7 +239,8 @@ class NetworkInfoBroadcasts {
                         Iterables.find( routeTables, { RouteTableNetworkView routeTable -> routeTable.main && routeTable.vpcId == vpc.id } as Predicate<RouteTableNetworkView> ) ).id
             )
           },
-          networkAcls.findAll{ NetworkAclNetworkView networkAcl -> networkAcl.vpcId == vpc.id }.collect { NetworkAclNetworkView networkAcl ->
+          networkAcls.findAll{ NetworkAclNetworkView networkAcl -> networkAcl.vpcId == vpc.id }.collect { Object networkAclObj ->
+            NetworkAclNetworkView networkAcl = networkAclObj as NetworkAclNetworkView
             new NINetworkAcl(
                 name: networkAcl.id,
                 ownerId: networkAcl.ownerAccountNumber,
@@ -245,7 +248,8 @@ class NetworkInfoBroadcasts {
                 egressEntries: Lists.transform( networkAcl.egressRules, TypeMappers.lookup( NetworkAclEntryNetworkView, NINetworkAclEntry ) ) as List<NINetworkAclEntry>
             )
           },
-          routeTables.findAll{ RouteTableNetworkView routeTable -> routeTable.vpcId == vpc.id }.collect { RouteTableNetworkView routeTable ->
+          routeTables.findAll{ RouteTableNetworkView routeTable -> routeTable.vpcId == vpc.id }.collect { Object routeTableObj ->
+            RouteTableNetworkView routeTable = routeTableObj as RouteTableNetworkView
             new NIRouteTable(
                 name: routeTable.id,
                 ownerId: routeTable.ownerAccountNumber,
@@ -305,9 +309,11 @@ class NetworkInfoBroadcasts {
     } )
 
     // populate internet gateways
-    info.internetGateways.addAll( internetGateways.findAll{ InternetGatewayNetworkView gateway ->
+    info.internetGateways.addAll( internetGateways.findAll{ Object gatewayObj ->
+      InternetGatewayNetworkView gateway = gatewayObj as InternetGatewayNetworkView
       activeVpcs.contains(gateway.vpcId)
-    }.collect { InternetGatewayNetworkView internetGateway ->
+    }.collect { Object internetGatewayObj ->
+      InternetGatewayNetworkView internetGateway = internetGatewayObj as InternetGatewayNetworkView
       new NIInternetGateway(
           name: internetGateway.id,
           ownerId: internetGateway.ownerAccountNumber,
@@ -319,7 +325,8 @@ class NetworkInfoBroadcasts {
       Set<String> groups, VmInstanceNetworkView instance -> groups.addAll( instance.securityGroupIds ); groups
     }
     Iterable<NetworkGroupNetworkView> groups = networkInfoSource.securityGroups
-    info.securityGroups.addAll( groups.findAll{  NetworkGroupNetworkView group -> activeSecurityGroups.contains( group.id ) }.collect{ NetworkGroupNetworkView group ->
+    info.securityGroups.addAll( groups.findAll{  NetworkGroupNetworkView group -> activeSecurityGroups.contains( group.id ) }.collect{ Object groupObj ->
+      NetworkGroupNetworkView group = (NetworkGroupNetworkView) groupObj
       new NISecurityGroup(
           name: group.id,
           ownerId: group.ownerAccountNumber,

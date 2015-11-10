@@ -233,7 +233,7 @@ abstract class TypedValidator<T> implements Validator {
 class NetworkConfigurationValidator extends TypedValidator<NetworkConfiguration> {
   public static final Pattern MAC_PREFIX_PATTERN = Pattern.compile( '[0-9a-fA-F]{2}:[0-9a-fA-F]{2}' )
   public static final Pattern MODE_PATTERN = Pattern.compile(
-      Joiner.on('|').join( Iterables.transform( Arrays.asList( NetworkMode.values( ) ), Functions.toStringFunction( ) ) )
+      Joiner.on('|').join( Iterables.transform( Arrays.<NetworkMode>asList( NetworkMode.values( ) ), Functions.toStringFunction( ) ) )
   )
 
   Errors errors

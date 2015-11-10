@@ -703,8 +703,8 @@ class VmInstanceLifecycleHelpers {
         final PrepareNetworkResourcesType prepareNetworkResourcesType
     ) {
       if ( !prepareFromTokenResources( allocation, prepareNetworkResourcesType, SecurityGroupResource ) ) {
-        prepareNetworkResourcesType.getResources( ).addAll( allocation.networkGroups*.groupId?.
-            collect( SecurityGroupResource.&forId ) ?: [ ] as List<SecurityGroupResource> )
+        prepareNetworkResourcesType.getResources( ).addAll( ( allocation.networkGroups*.groupId?.
+            collect( SecurityGroupResource.&forId ) ?: [ ] ) as List<SecurityGroupResource> )
       }
     }
 
