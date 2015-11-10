@@ -354,19 +354,19 @@ public class NetworkInfoBroadcaster {
     final Funnel<VersionedNetworkView> versionedItemFunnel = new Funnel<VersionedNetworkView>() {
       @Override
       public void funnel( final VersionedNetworkView o, final PrimitiveSink primitiveSink ) {
-        primitiveSink.putString( o.getId( ) );
+        primitiveSink.putString( o.getId( ), StandardCharsets.UTF_8 );
         primitiveSink.putChar( '=' );
         primitiveSink.putInt( o.getVersion( ) );
       }
     };
     for ( final Map.Entry<String,Iterable<? extends VersionedNetworkView>> entry : source.getView( ).entrySet( ) ) {
-      hasher.putString( entry.getKey( ) );
+      hasher.putString( entry.getKey( ), StandardCharsets.UTF_8 );
       for ( final VersionedNetworkView item : entry.getValue( ) ) {
         hasher.putObject( item, versionedItemFunnel );
       }
     }
-    hasher.putString( Joiner.on( ',' ).join( Sets.newTreeSet( Iterables.transform( clusters, HasName.GET_NAME ) ) ) );
-    hasher.putString( Joiner.on( ',' ).join( Sets.newTreeSet( dirtyPublicAddresses ) ) );
+    hasher.putString( Joiner.on( ',' ).join( Sets.newTreeSet( Iterables.transform( clusters, HasName.GET_NAME ) ) ), StandardCharsets.UTF_8 );
+    hasher.putString( Joiner.on( ',' ).join( Sets.newTreeSet( dirtyPublicAddresses ) ), StandardCharsets.UTF_8 );
     hasher.putInt( networkConfiguration.hashCode( ) );
     return hasher.hash( ).asInt( );
   }

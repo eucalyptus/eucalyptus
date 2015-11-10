@@ -89,12 +89,12 @@ import com.eucalyptus.network.PublicAddresses;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.compute.common.internal.tags.Filters;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.compute.common.internal.vm.VmNetworkConfig;
-import com.google.common.base.Enums;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
@@ -134,7 +134,7 @@ public class AddressManager {
     try {
       final String defaultVpcId = getDefaultVpcId( );
       final AddressDomain domain = Optional.fromNullable( request.getDomain( ) )
-          .transform( Enums.valueOfFunction( AddressDomain.class ) )
+          .transform( FUtils.valueOfFunction( AddressDomain.class ) )
           .or( defaultVpcId != null ? AddressDomain.vpc : AddressDomain.standard );
       final Addresses.Allocator allocator = addresses.allocator( domain );
       final Address address = RestrictedTypes.allocateNamedUnitlessResources( 1, allocator, allocator ).get( 0 );

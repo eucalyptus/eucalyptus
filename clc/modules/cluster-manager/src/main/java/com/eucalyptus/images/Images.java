@@ -126,12 +126,12 @@ import com.eucalyptus.compute.common.internal.tags.FilterSupport;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
-import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Objects;
@@ -1072,23 +1072,23 @@ public class Images extends com.eucalyptus.compute.common.internal.images.Images
           .withStringProperty( "virtualization-type", FilterStringFunctions.VIRTUALIZATION_TYPE )
           .withUnsupportedProperty( "hypervisor" )
           .withPersistenceAlias( "deviceMappings", "deviceMappings" )
-          .withPersistenceFilter( "architecture", "architecture", Enums.valueOfFunction( ImageMetadata.Architecture.class ) )
+          .withPersistenceFilter( "architecture", "architecture", FUtils.valueOfFunction( ImageMetadata.Architecture.class ) )
           .withPersistenceFilter( "block-device-mapping.delete-on-termination", "deviceMappings.delete", PersistenceFilter.Type.Boolean )
           .withPersistenceFilter( "block-device-mapping.device-name", "deviceMappings.deviceName" )
           .withPersistenceFilter( "block-device-mapping.snapshot-id", "deviceMappings.snapshotId" )
           .withPersistenceFilter( "block-device-mapping.volume-size", "deviceMappings.size", PersistenceFilter.Type.Integer )
           .withPersistenceFilter( "description" )
           .withPersistenceFilter( "image-id", "displayName" )
-          .withPersistenceFilter( "image-type", "imageType", Enums.valueOfFunction( ImageMetadata.Type.class ) )
+          .withPersistenceFilter( "image-type", "imageType", FUtils.valueOfFunction( ImageMetadata.Type.class ) )
           .withPersistenceFilter( "is-public", "imagePublic", PersistenceFilter.Type.Boolean )
           .withPersistenceFilter( "kernel-id", "kernelId" )
           .withPersistenceFilter( "manifest-location", "manifestLocation" )
           .withPersistenceFilter( "name", "imageName" )
           .withLikeExplodingPersistenceFilter( "owner-alias", "ownerAccountNumber", accountAliasExploder() )
           .withPersistenceFilter( "owner-id", "ownerAccountNumber" )
-          .withPersistenceFilter( "platform", "platform", Enums.valueOfFunction( ImageMetadata.Platform.class ) )
+          .withPersistenceFilter( "platform", "platform", FUtils.valueOfFunction( ImageMetadata.Platform.class ) )
           .withPersistenceFilter( "ramdisk-id", "ramdiskId" )
-          .withPersistenceFilter( "state", "state", Enums.valueOfFunction( ImageMetadata.State.class ) )
+          .withPersistenceFilter( "state", "state", FUtils.valueOfFunction( ImageMetadata.State.class ) )
           .withPersistenceFilter( "virtualization-type", "virtType", ImageMetadata.VirtualizationType.fromString( ) )
       );
     }

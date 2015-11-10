@@ -42,10 +42,10 @@ import com.eucalyptus.compute.common.internal.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
-import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
@@ -215,7 +215,7 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
               .withPersistenceFilter( "attachment.instance-id", "attachment.instanceId", Collections.<String>emptySet() )
               .withPersistenceFilter( "attachment.instance-owner-id", "attachment.instanceOwnerId", Collections.<String>emptySet() )
               .withPersistenceFilter( "attachment.device-index", "attachment.deviceIndex", Collections.<String>emptySet(), Type.Integer )
-              .withPersistenceFilter( "attachment.status", "attachment.status", Collections.<String>emptySet(), Enums.valueOfFunction( NetworkInterfaceAttachment.Status.class ) )
+              .withPersistenceFilter( "attachment.status", "attachment.status", Collections.<String>emptySet(), FUtils.valueOfFunction( NetworkInterfaceAttachment.Status.class ) )
               .withPersistenceFilter( "attachment.attach.time", "attachment.attachTime", Collections.<String>emptySet(), Type.Date )
               .withPersistenceFilter( "attachment.delete-on-termination", "attachment.deleteOnTerminate", Collections.<String>emptySet(), Type.Boolean )
               .withPersistenceFilter( "availability-zone", "availabilityZone" )
@@ -230,7 +230,7 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
               .withPersistenceFilter( "requester-id", "requesterId" )
               .withPersistenceFilter( "requester-managed", "requesterManaged", Collections.<String>emptySet(), Type.Boolean )
               .withPersistenceFilter( "source-dest-check", "sourceDestCheck", Collections.<String>emptySet(), Type.Boolean )
-              .withPersistenceFilter( "status", "state", Enums.valueOfFunction( NetworkInterface.State.class ) )
+              .withPersistenceFilter( "status", "state", FUtils.valueOfFunction( NetworkInterface.State.class ) )
               .withPersistenceFilter( "subnet-id", "subnet.displayName" )
               .withPersistenceFilter( "vpc-id", "vpc.displayName" )
       );

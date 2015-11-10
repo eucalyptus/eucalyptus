@@ -64,9 +64,9 @@ package com.eucalyptus.auth.login;
 
 import static org.junit.Assert.*;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URLEncoder;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -99,7 +99,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
 import com.google.common.io.ByteStreams;
-import com.google.common.io.Files;
 import com.google.common.io.Resources;
 
 /**
@@ -551,7 +550,7 @@ public class HmacLoginModuleTest {
   public void testSignatureV4TestSuite() throws Exception {
     final File tempZipFile = File.createTempFile( "aws4_testsuite", ".zip" );
     tempZipFile.deleteOnExit();
-    Files.copy( Resources.newInputStreamSupplier( HmacLoginModuleTest.class.getResource("aws4_testsuite.zip") ), tempZipFile );    
+    ByteStreams.copy( Resources.asByteSource( HmacLoginModuleTest.class.getResource( "aws4_testsuite.zip" ) ).openStream( ), new FileOutputStream( tempZipFile ) );
     final ZipFile testSuiteZip = new ZipFile( tempZipFile );
 
     final Set<String> testNames = Sets.newTreeSet();

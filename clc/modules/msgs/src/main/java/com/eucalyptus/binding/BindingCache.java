@@ -64,10 +64,12 @@ package com.eucalyptus.binding;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.Writer;
@@ -130,9 +132,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.hash.Hashing;
+import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
-import com.google.common.io.InputSupplier;
 import com.google.common.io.Resources;
 
 public class BindingCache {
@@ -275,11 +277,14 @@ public class BindingCache {
               final String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" );
               final Class candidate = ClassLoader.getSystemClassLoader( ).loadClass( classGuess );
               if ( MSG_BASE_CLASS.isAssignableFrom( candidate ) || MSG_DATA_CLASS.isAssignableFrom( candidate ) ) {
-                InputSupplier<InputStream> classSupplier = Resources.newInputStreamSupplier( ClassLoader.getSystemResource( j.getName( ) ) );
+                ByteSource classSupplier = Resources.asByteSource( ClassLoader.getSystemResource( j.getName( ) ) );
                 File destClassFile = SubDirectory.CLASSCACHE.getChildFile( j.getName( ) );
                 if ( !destClassFile.exists( ) ) {
                   Files.createParentDirs( destClassFile );
-                  Files.copy( classSupplier, destClassFile );
+                  try ( final InputStream in = classSupplier.openBufferedStream( );
+                        final OutputStream out = new FileOutputStream( destClassFile ) ) {
+                    ByteStreams.copy( in, out );
+                  }
                   Logs.extreme( ).debug( "Caching: " + j.getName( ) + " => " + destClassFile.getAbsolutePath( ) );
                 }
                 BINDING_CLASS_MAP.putIfAbsent( classGuess, candidate );
@@ -325,11 +330,14 @@ public class BindingCache {
                   MappingElementBase mapping = ( MappingElementBase ) child;
                   ClassFile classFile = mapping.getHandledClass( ).getClassFile( );
                   String classFileName = classFile.getName( ).replace( ".", "/" ) + ".class";
-                  InputSupplier<InputStream> classSupplier = Resources.newInputStreamSupplier( ClassLoader.getSystemResource( classFileName ) );
+                  ByteSource classSupplier = Resources.asByteSource( ClassLoader.getSystemResource( classFileName ) );
                   File destClassFile = SubDirectory.CLASSCACHE.getChildFile( classFileName );
                   if ( !destClassFile.exists( ) ) {
                     Files.createParentDirs( destClassFile );
-                    Files.copy( classSupplier, destClassFile );
+                    try ( final InputStream in = classSupplier.openBufferedStream( );
+                          final OutputStream out = new FileOutputStream( destClassFile ) ) {
+                      ByteStreams.copy( in, out );
+                    }
                   }
                   ClassFile.getClassFile( classFile.getName( ) );
                   Logs.extreme( ).debug( "Caching: " + classFile.getName( ) + " => " + destClassFile.getAbsolutePath( ) );

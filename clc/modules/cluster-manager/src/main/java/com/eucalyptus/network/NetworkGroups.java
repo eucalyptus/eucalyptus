@@ -105,15 +105,14 @@ import com.eucalyptus.compute.common.internal.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
-import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
-import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -656,7 +655,7 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
           .withPersistenceFilter( "group-id", "groupId" )
           .withPersistenceFilter( "group-name", "displayName" )
           .withPersistenceFilter( "ip-permission.from-port", "networkRules.lowPort", PersistenceFilter.Type.Integer )
-          .withPersistenceFilter( "ip-permission.protocol", "networkRules.protocol", Enums.valueOfFunction( NetworkRule.Protocol.class ) )
+          .withPersistenceFilter( "ip-permission.protocol", "networkRules.protocol", FUtils.valueOfFunction( NetworkRule.Protocol.class ) )
           .withPersistenceFilter( "ip-permission.to-port", "networkRules.highPort", PersistenceFilter.Type.Integer )
           .withPersistenceFilter( "owner-id", "ownerAccountNumber" )
           .withPersistenceFilter( "vpc-id", "vpcId" )

@@ -177,12 +177,12 @@ import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Consumers;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.Numbers;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMappers;
-import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Objects;
@@ -300,7 +300,7 @@ public class AutoScalingBackendService {
               metricsToEnable.clear();
               Iterables.addAll( metricsToEnable, Iterables.transform(
                   request.getMetrics().getMember(),
-                  Enums.valueOfFunction(MetricCollectionType.class) ) );
+                  FUtils.valueOfFunction( MetricCollectionType.class ) ) );
             }
             autoScalingGroup.getEnabledMetrics().addAll( metricsToEnable );
           }
@@ -335,7 +335,7 @@ public class AutoScalingBackendService {
               processesToResume.clear();
               Iterables.addAll( processesToResume, Iterables.transform(
                   request.getScalingProcesses().getMember(),
-                  Enums.valueOfFunction(ScalingProcessType.class) ) );
+                  FUtils.valueOfFunction(ScalingProcessType.class) ) );
             }
             for ( final ScalingProcessType scalingProcessType : processesToResume ) {
               autoScalingGroup.getSuspendedProcesses().remove(
@@ -505,7 +505,7 @@ public class AutoScalingBackendService {
               .withLoadBalancerNames( request.loadBalancerNames() )
               .withTerminationPolicyTypes( request.terminationPolicies() == null ? null :
                   Collections2.filter( Collections2.transform(
-                          request.terminationPolicies(), Enums.valueOfFunction( TerminationPolicyType.class ) ),
+                          request.terminationPolicies(), FUtils.valueOfFunction( TerminationPolicyType.class ) ),
                       Predicates.not( Predicates.isNull() ) ) )
               .withTags( request.getTags() == null ?
                   null :
@@ -762,8 +762,8 @@ public class AutoScalingBackendService {
         public void fire( final ScalingPolicy scalingPolicy ) {
           if ( RestrictedTypes.filterPrivileged().apply( scalingPolicy ) ) {
             if ( request.getAdjustmentType() != null )
-              scalingPolicy.setAdjustmentType( 
-                  Enums.valueOfFunction( AdjustmentType.class ).apply( request.getAdjustmentType() ) );
+              scalingPolicy.setAdjustmentType(
+                  FUtils.valueOfFunction( AdjustmentType.class ).apply( request.getAdjustmentType() ) );
             if ( request.getScalingAdjustment() != null ) {
               if ( AdjustmentType.ExactCapacity == scalingPolicy.getAdjustmentType() &&
                   request.getScalingAdjustment() < 0 ) {
@@ -790,7 +790,7 @@ public class AutoScalingBackendService {
         public ScalingPolicy get( ) {
           try {
             final AdjustmentType adjustmentType =
-                Enums.valueOfFunction( AdjustmentType.class ).apply( request.getAdjustmentType() );
+                FUtils.valueOfFunction( AdjustmentType.class ).apply( request.getAdjustmentType() );
 
             if ( request.getMinAdjustmentStep() != null &&
                 AdjustmentType.PercentChangeInCapacity != adjustmentType ) {
@@ -886,7 +886,7 @@ public class AutoScalingBackendService {
           if ( RestrictedTypes.filterPrivileged().apply( instance ) ) {
             if ( !Objects.firstNonNull( request.getShouldRespectGracePeriod(), Boolean.FALSE ) ||
                 instance.healthStatusGracePeriodExpired() ) {
-              instance.setHealthStatus( Enums.valueOfFunction( HealthStatus.class ).apply( request.getHealthStatus( ) ) );
+              instance.setHealthStatus( FUtils.valueOfFunction( HealthStatus.class ).apply( request.getHealthStatus( ) ) );
             }
           } else {
             throw Exceptions.toUndeclared( new AutoScalingMetadataNotFoundException("Instance not found") );
@@ -991,7 +991,7 @@ public class AutoScalingBackendService {
               processesToSuspend.clear();
               Iterables.addAll( processesToSuspend, Iterables.transform(
                   request.getScalingProcesses().getMember(),
-                  Enums.valueOfFunction(ScalingProcessType.class) ) );
+                  FUtils.valueOfFunction(ScalingProcessType.class) ) );
             }
             for ( final ScalingProcessType scalingProcessType : processesToSuspend ) {
               if ( scalingProcessType.apply( autoScalingGroup ) ) {
@@ -1162,7 +1162,7 @@ public class AutoScalingBackendService {
               metricsToDisable.clear();
               Iterables.addAll( metricsToDisable, Iterables.transform(
                   request.getMetrics().getMember(),
-                  Enums.valueOfFunction(MetricCollectionType.class) ) );
+                  FUtils.valueOfFunction(MetricCollectionType.class) ) );
             }
             autoScalingGroup.getEnabledMetrics().removeAll( metricsToDisable );
           }
@@ -1197,7 +1197,7 @@ public class AutoScalingBackendService {
             if ( request.getHealthCheckGracePeriod( ) != null )
               autoScalingGroup.setHealthCheckGracePeriod( Numbers.intValue( request.getHealthCheckGracePeriod( ) ) );
             if ( request.getHealthCheckType( ) != null )
-              autoScalingGroup.setHealthCheckType( Enums.valueOfFunction( HealthCheckType.class ).apply( request.getHealthCheckType( ) ) );
+              autoScalingGroup.setHealthCheckType( FUtils.valueOfFunction( HealthCheckType.class ).apply( request.getHealthCheckType( ) ) );
             if ( request.getLaunchConfigurationName( ) != null )
               try {
                 autoScalingGroup.setLaunchConfiguration( verifyOwnership(
@@ -1215,7 +1215,7 @@ public class AutoScalingBackendService {
             if ( request.terminationPolicies() != null && !request.terminationPolicies().isEmpty() )
               autoScalingGroup.setTerminationPolicies( Lists.newArrayList(
                   Sets.newLinkedHashSet( Iterables.filter(
-                      Iterables.transform( request.terminationPolicies( ), Enums.valueOfFunction( TerminationPolicyType.class ) ),
+                      Iterables.transform( request.terminationPolicies( ), FUtils.valueOfFunction( TerminationPolicyType.class ) ),
                       Predicates.not( Predicates.isNull( ) ) ) ) ) );
             if ( request.getDesiredCapacity() != null ) {
               Integer updatedDesiredCapacity = Numbers.intValue( request.getDesiredCapacity( ) );

@@ -87,8 +87,6 @@ import com.google.common.base.Function;
  * human readable name for the property.
  * 
  * @note {@link ConfigurableIdentifier} is replaced by {@link Configurables.Identifier}
- * @note {@link ConfigurableField#readonly()} is replaced by checking whether
- *       the field is {@link Modifier#FINAL} or is enforced by a {@link Configurables.Constraint}.
  * @note {@link ConfigurableFieldType} is replaced by {@link Configurables.Restricted}.
  * @note {@link ConfigurableClass#root()} is replaced by {@link Configurables.Namespace}
  * @note {@link ConfigurableClass#singleton()} is replaced by {@link Configurables.Singleton}
@@ -96,7 +94,6 @@ import com.google.common.base.Function;
  * @see {@link Configurable}
  * @see ConfigurableIdentifier
  * @see ChangeListener
- * @see Constraint
  */
 public class Configurables {
   
@@ -134,12 +131,6 @@ public class Configurables {
     boolean internal( ) default false;
     
     boolean hidden( ) default false;
-  }
-  
-  @Target( { ElementType.TYPE } )
-  @Retention( RetentionPolicy.RUNTIME )
-  public @interface Constraint {
-    Class<? extends com.google.common.collect.Constraint<?>> value( );
   }
   
   @Target( { ElementType.TYPE } )

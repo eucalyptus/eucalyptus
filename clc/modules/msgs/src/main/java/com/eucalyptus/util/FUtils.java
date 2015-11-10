@@ -22,6 +22,7 @@ package com.eucalyptus.util;
 import java.util.concurrent.Callable;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 
@@ -59,4 +60,20 @@ public class FUtils {
     return Optional.absent( );
   }
 
+  /**
+   * Replacement for the removed guava Enums#valueOfFunction
+   *
+   * @param enumClass
+   * @param <T>
+   * @return
+   */
+  public static <T extends Enum<T>> Function<String,T> valueOfFunction( final Class<T> enumClass ) {
+    return new Function<String,T>( ){
+      @Nullable
+      @Override
+      public T apply( @Nullable final String value ) {
+        return value == null ? null : Enums.getIfPresent( enumClass, value ).orNull( );
+      }
+    };
+  }
 }

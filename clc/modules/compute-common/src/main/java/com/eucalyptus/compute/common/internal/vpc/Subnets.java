@@ -35,9 +35,9 @@ import com.eucalyptus.compute.common.internal.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMapper;
-import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 
@@ -134,7 +134,7 @@ public interface Subnets extends Lister<Subnet> {
           .withPersistenceFilter( "cidrBlock", "cidr" )
           .withPersistenceFilter( "default-for-az", "defaultForAz", Collections.<String>emptySet(), PersistenceFilter.Type.Boolean )
           .withPersistenceFilter( "defaultForAz", "defaultForAz", Collections.<String>emptySet(), PersistenceFilter.Type.Boolean )
-          .withPersistenceFilter( "state", "state", Enums.valueOfFunction( Subnet.State.class ) )
+          .withPersistenceFilter( "state", "state", FUtils.valueOfFunction( Subnet.State.class ) )
           .withPersistenceFilter( "subnet-id", "displayName" )
           .withPersistenceFilter( "vpc-id", "vpc.displayName" )
           .withPersistenceFilter( "vpcId", "vpc.displayName" )
