@@ -21,7 +21,7 @@ package com.eucalyptus.cloudformation.workflow.steps
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise
 import com.eucalyptus.cloudformation.resources.ResourceAction
-import com.eucalyptus.cloudformation.workflow.StackActivity
+import com.eucalyptus.cloudformation.workflow.StackActivityClient
 import com.eucalyptus.cloudformation.workflow.ValidationFailedException
 import com.eucalyptus.simpleworkflow.common.workflow.WorkflowUtils
 import com.netflix.glisten.WorkflowOperations
@@ -39,12 +39,12 @@ import java.util.concurrent.TimeUnit
 abstract class MultiStepPromise {
 
   @Delegate
-  private final WorkflowOperations<StackActivity> workflowOperations;
+  private final WorkflowOperations<StackActivityClient> workflowOperations;
   private final WorkflowUtils workflowUtils;
   private final List<String> stepIds;
   protected final ResourceAction resourceAction;
 
-  MultiStepPromise( WorkflowOperations<StackActivity> workflowOperations,
+  MultiStepPromise( WorkflowOperations<StackActivityClient> workflowOperations,
                     Collection<String> stepIds,
                     ResourceAction resourceAction
   ) {
@@ -56,14 +56,14 @@ abstract class MultiStepPromise {
 
   protected abstract Step getStep( String stepId );
 
-  protected Promise<String> getPromise( final String failureError, final Closure<Boolean> stepClosure ) {
+  protected Promise<String> getPromise( final String failureError, final Closure<Promise<Boolean>> stepClosure ) {
     Promise<String> previousPromise = promiseFor(""); // this value is a placeholder
     for ( String stepId : stepIds ) {
       final String stepIdLocal = new String(stepId); // If you access "stepId" from the wait for, it is executed after the for loop is finished.  You need the value during this iteration
       final Step step = getStep( stepIdLocal );
       previousPromise = waitFor( previousPromise ) {
         Promise<Boolean> stepPromise = invokeOrPoll( step.timeout ) {
-          promiseFor( stepClosure.call( stepIdLocal ) )
+          stepClosure.call( stepIdLocal )
         }
         waitFor( stepPromise ) { Boolean result ->
           if ( !result ) {

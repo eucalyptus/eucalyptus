@@ -22,9 +22,8 @@ package com.eucalyptus.cloudformation.resources;
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.cloudformation.entity.StackEntity;
-import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowImpl;
-import com.eucalyptus.cloudformation.workflow.DeleteStackWorkflowImpl;
 import com.eucalyptus.cloudformation.workflow.StackActivity;
+import com.eucalyptus.cloudformation.workflow.StackActivityClient;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.google.common.collect.Maps;
 import com.netflix.glisten.WorkflowOperations;
@@ -70,9 +69,9 @@ public abstract class ResourceAction {
     return deleteSteps.get(stepId);
   }
 
-  public abstract Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId);
+  public abstract Promise<String> getCreatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId);
 
-  public abstract Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId);
+  public abstract Promise<String> getDeletePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId);
 
   public void refreshAttributes() throws Exception {
     return; // Most resources will not support this action

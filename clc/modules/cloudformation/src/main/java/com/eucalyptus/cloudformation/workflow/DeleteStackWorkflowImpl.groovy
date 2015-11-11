@@ -36,18 +36,18 @@ import org.apache.log4j.Logger
 public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
   private static final Logger LOG = Logger.getLogger(DeleteStackWorkflowImpl.class);
   @Delegate
-  WorkflowOperations<StackActivity> workflowOperations = SwfWorkflowOperations.of(StackActivity);
+  WorkflowOperations<StackActivityClient> workflowOperations = SwfWorkflowOperations.of(StackActivityClient);
 
   @Override
   public void deleteStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId) {
     try {
       // cancel existing creae/monitor workflows...
       ExponentialRetryPolicy retryPolicy = new ExponentialRetryPolicy(10L).withMaximumRetryIntervalSeconds(10L).withExceptionsToRetry([ValidationFailedException.class])
-      Promise<String> cancelWorkflowsPromise = promiseFor(activities.cancelCreateAndMonitorWorkflows(stackId));
+      Promise<String> cancelWorkflowsPromise = activities.cancelCreateAndMonitorWorkflows(stackId);
       waitFor(cancelWorkflowsPromise) {
         waitFor(
           retry(retryPolicy) {
-            promiseFor(activities.verifyCreateAndMonitorWorkflowsClosed(stackId));
+            activities.verifyCreateAndMonitorWorkflowsClosed(stackId);
           }
         ) {
           new CommonDeleteRollbackPromises(workflowOperations,

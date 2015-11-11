@@ -22,9 +22,7 @@ package com.eucalyptus.cloudformation.workflow
 import com.amazonaws.services.simpleworkflow.flow.core.AndPromise
 import com.amazonaws.services.simpleworkflow.flow.core.Promise
 import com.amazonaws.services.simpleworkflow.flow.core.Settable
-import com.eucalyptus.cloudformation.entity.StackEntity
 import com.eucalyptus.cloudformation.entity.StackEntityHelper
-import com.eucalyptus.cloudformation.entity.StackResourceEntity
 import com.eucalyptus.cloudformation.resources.ResourceAction
 import com.eucalyptus.cloudformation.resources.ResourceResolverManager
 import com.eucalyptus.cloudformation.template.dependencies.DependencyManager
@@ -32,7 +30,6 @@ import com.google.common.base.Throwables
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.netflix.glisten.WorkflowOperations
-import com.netflix.glisten.impl.swf.SwfWorkflowOperations
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
 import org.apache.log4j.Logger
@@ -44,14 +41,14 @@ import org.apache.log4j.Logger
 public class CommonDeleteRollbackPromises {
   private static final Logger LOG = Logger.getLogger(CommonDeleteRollbackPromises.class);
   @Delegate
-  WorkflowOperations<StackActivity> workflowOperations;
+  WorkflowOperations<StackActivityClient> workflowOperations;
   String stackOperationInProgressStatus;
   String stackOperationInProgressStatusReason;
   String stackOperationFailedStatus;
   String stackOperationCompleteStatus;
   boolean deleteStackRecordsWhenSuccessful;
 
-  CommonDeleteRollbackPromises(WorkflowOperations<StackActivity> workflowOperations, String stackOperationInProgressStatus,
+  CommonDeleteRollbackPromises(WorkflowOperations<StackActivityClient> workflowOperations, String stackOperationInProgressStatus,
                                String stackOperationInProgressStatusReason, String stackOperationFailedStatus, String stackOperationCompleteStatus,
                                boolean deleteStackRecordsWhenSuccessful) {
     this.workflowOperations = workflowOperations
@@ -63,14 +60,12 @@ public class CommonDeleteRollbackPromises {
   }
 
   public Promise<?> getPromise(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId) {
-    Promise<String> deleteInitialStackPromise = promiseFor(
-      activities.createGlobalStackEvent(
+    Promise<String> deleteInitialStackPromise = activities.createGlobalStackEvent(
         stackId,
         accountId,
         stackOperationInProgressStatus,
         stackOperationInProgressStatusReason
-      )
-    );
+      ) ;
     waitFor(deleteInitialStackPromise) {
       DependencyManager resourceDependencyManager = StackEntityHelper.jsonToResourceDependencyManager(
         resourceDependencyManagerJson
@@ -108,23 +103,23 @@ public class CommonDeleteRollbackPromises {
             }
           }
           if (resourceFailure) {
-            return waitFor(promiseFor(activities.determineDeleteResourceFailures(stackId, accountId))) { String errorMessage ->
-              promiseFor(activities.createGlobalStackEvent(
+            return waitFor(activities.determineDeleteResourceFailures(stackId, accountId)) { String errorMessage ->
+              activities.createGlobalStackEvent(
                 stackId,
                 accountId,
                 stackOperationFailedStatus,
-                errorMessage)
+                errorMessage
               );
             }
           } else {
             return waitFor(
-              promiseFor(activities.createGlobalStackEvent(stackId, accountId,
+              activities.createGlobalStackEvent(stackId, accountId,
                 stackOperationCompleteStatus,
-                ""))
+                "")
             ) {
 
               if (deleteStackRecordsWhenSuccessful) {
-                promiseFor(activities.deleteAllStackRecords(stackId, accountId));
+                activities.deleteAllStackRecords(stackId, accountId);
               } else {
                 promiseFor("");
               }
@@ -137,14 +132,14 @@ public class CommonDeleteRollbackPromises {
         Throwable cause = Throwables.getRootCause(t);
         Promise<String> errorMessagePromise = Promise.asPromise((cause != null) && (cause.getMessage() != null) ? cause.getMessage() : "");
         if (cause != null && cause instanceof ResourceFailureException) {
-          errorMessagePromise = promiseFor(activities.determineDeleteResourceFailures(stackId, accountId));
+          errorMessagePromise = activities.determineDeleteResourceFailures(stackId, accountId);
         }
         waitFor(errorMessagePromise) { String errorMessage ->
-          promiseFor(activities.createGlobalStackEvent(
+          activities.createGlobalStackEvent(
             stackId,
             accountId,
             stackOperationFailedStatus,
-            errorMessage)
+            errorMessage
           );
         }
       }.getResult()
@@ -155,21 +150,21 @@ public class CommonDeleteRollbackPromises {
                                    String stackId,
                                    String accountId,
                                    String effectiveUserId) {
-    Promise<String> getResourceTypePromise = promiseFor(activities.getResourceType(stackId, accountId, resourceId));
+    Promise<String> getResourceTypePromise = activities.getResourceType(stackId, accountId, resourceId);
     waitFor(getResourceTypePromise) { String resourceType ->
       ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceType);
-      Promise<String> initPromise = promiseFor(activities.initDeleteResource(resourceId, stackId, accountId, effectiveUserId));
+      Promise<String> initPromise = activities.initDeleteResource(resourceId, stackId, accountId, effectiveUserId);
       waitFor(initPromise) { String result ->
         if ("SKIP".equals(result)) {
           return promiseFor("SUCCESS");
         } else {
           return doTry {
-            waitFor(promiseFor(resourceAction.getDeletePromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId))) {
-              return promiseFor(activities.finalizeDeleteResource(resourceId, stackId, accountId, effectiveUserId));
+            waitFor(resourceAction.getDeletePromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId)) {
+              return activities.finalizeDeleteResource(resourceId, stackId, accountId, effectiveUserId);
             }
           }.withCatch { Throwable t->
             Throwable rootCause = Throwables.getRootCause(t);
-            return promiseFor(activities.failDeleteResource(resourceId, stackId, accountId, effectiveUserId, rootCause.getMessage()));
+            return activities.failDeleteResource(resourceId, stackId, accountId, effectiveUserId, rootCause.getMessage());
           }.getResult();
         }
       }

@@ -38,7 +38,7 @@ import com.eucalyptus.cloudformation.resources.standard.info.AWSCloudFormationWa
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSCloudFormationWaitConditionProperties;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.workflow.ResourceFailureException;
-import com.eucalyptus.cloudformation.workflow.StackActivity;
+import com.eucalyptus.cloudformation.workflow.StackActivityClient;
 import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
 import com.eucalyptus.cloudformation.workflow.steps.AWSCloudFormationWaitConditionCreatePromise;
 import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
@@ -228,12 +228,12 @@ public class AWSCloudFormationWaitConditionResourceAction extends ResourceAction
   }
 
   @Override
-  public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+  public Promise<String> getCreatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
     return new AWSCloudFormationWaitConditionCreatePromise(workflowOperations, CreateSteps.CREATE_WAIT_CONDITION.name()).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
   @Override
-  public Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+  public Promise<String> getDeletePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
     List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
     return new DeleteMultiStepPromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
   }
