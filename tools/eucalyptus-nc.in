@@ -112,14 +112,6 @@ fi
 export EUCALYPTUS
 RUNDIR=$EUCALYPTUS/var/run/eucalyptus
 
-# check selinux status
-selinux_enabled() {
-
-    $(/usr/sbin/selinuxenabled)
-
-    return $?
-}
-
 create_httpd_config() {
 	IPS="all"
 
@@ -144,8 +136,7 @@ create_httpd_config() {
 
 # crude way to start the axis2c services
 do_start() {
-        if selinux_enabled ; then
-            # selinuxenabled should exit with rc 1 if disabled
+        if [ "$(getenforce)" == "Enforcing" ]; then
             echo
             echo
             echo "SELinux is enabled on this NC host. Disable SELinux before starting NC."
