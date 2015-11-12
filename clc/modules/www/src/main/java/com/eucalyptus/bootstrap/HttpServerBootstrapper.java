@@ -101,7 +101,7 @@ public class HttpServerBootstrapper extends Bootstrapper {
   private static Server jettyServer;
   @ConfigurableField( description = "SSL ciphers for HTTPS listener.",
                       displayName = "euca.https.ciphers" )
-  public static String  HTTPS_CIPHERS = "RSA:DSS:ECDSA:+3DES:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES:!RC4";
+  public static String  HTTPS_CIPHERS = "RSA:DSS:ECDSA:+3DES:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES:!RC4:!GCM";
   @ConfigurableField( description = "SSL protocols for HTTPS listener.",
                       displayName = "euca.https.protocols" )
   public static String  HTTPS_PROTOCOLS = "SSLv2Hello,TLSv1,TLSv1.1,TLSv1.2";
