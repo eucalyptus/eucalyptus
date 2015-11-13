@@ -196,11 +196,14 @@ extern const char *asPeerRoleName[];
 //! Macro to determine if we are on a CLC
 #define PEER_IS_CLC(_peer)               ((_peer) == PEER_CLC)
 
-//! Macro to determine if we are on a CLC
+//! Macro to determine if we are on a CC
 #define PEER_IS_CC(_peer)                ((_peer) == PEER_CC)
 
-//! Macro to determine if we are on a CLC
+//! Macro to determine if we are on a NC
 #define PEER_IS_NC(_peer)                ((_peer) == PEER_NC)
+
+//! Macro to determine if we are not either NC, CC, and CLC
+#define PEER_IS_NONE(_peer)                ((_peer) == PEER_NONE)
 
 //! Macro to convert a peer enumeration to a string representation
 #define PEER2STR(_peer)                  ((((unsigned)(_peer)) > PEER_MAX) ? asPeerRoleName[PEER_MAX] : asPeerRoleName[(_peer)])
