@@ -437,6 +437,16 @@ int main(int argc, char **argv)
 
         if (eucanetdPeer == PEER_INVALID) {
             eucanetdPeer = eucanetd_detect_peer(globalnetworkinfo);
+            if (PEER_IS_NONE(eucanetdPeer)) {
+                // PEER_NONE should be only valid for VPCMIDO
+                if (strcmp(config->netMode, NETMODE_VPCMIDO)) {
+                    LOGDEBUG("eucanetd in mode %s should have a CC or NC service peer - instead of PEER_NONE.", config->netMode);
+                    update_globalnet = FALSE;
+                    update_globalnet_failed = TRUE;
+                    sleep(1);
+                    continue;
+                }
+            }
             if (!PEER_IS_VALID(eucanetdPeer)) {
                 LOGERROR("cannot find which service peer (CC/NC) is running alongside eucanetd.\n");
                 update_globalnet = FALSE;
