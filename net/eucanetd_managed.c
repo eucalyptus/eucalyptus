@@ -1346,14 +1346,14 @@ boolean managed_has_addressing_changed(globalNetworkInfo * pGni, lni_t * pLni) {
             ret |= ((ipt_chain_find_rule(pLni->pIpTables, IPT_TABLE_NAT, IPT_CHAIN_OUTPUT, sRule) == NULL) ? 1 : 0);
 
             // SNAT private to public on the post-routing chain
-            snprintf(sRule, MAX_RULE_LEN, "-I POSTROUTING -s %s/32 ! -d %s/%d -j SNAT --to-source %s", psPrivateIp, psSubnetIp, slashnet, psPublicIp);
+            snprintf(sRule, MAX_RULE_LEN, "-A POSTROUTING -s %s/32 ! -d %s/%d -j SNAT --to-source %s", psPrivateIp, psSubnetIp, slashnet, psPublicIp);
             ret |= ((ipt_chain_find_rule(pLni->pIpTables, IPT_TABLE_NAT, IPT_CHAIN_POSTROUTING, sRule) == NULL) ? 1 : 0);
-            snprintf(sRule, MAX_RULE_LEN, "-I POSTROUTING -s %s/32 -m mark --mark 0x15 -j SNAT --to-source %s",
+            snprintf(sRule, MAX_RULE_LEN, "-A POSTROUTING -s %s/32 -m mark --mark 0x15 -j SNAT --to-source %s",
                     psPrivateIp, psPublicIp);
             ret |= ((ipt_chain_find_rule(pLni->pIpTables, IPT_TABLE_NAT, IPT_CHAIN_POSTROUTING, sRule) == NULL) ? 1 : 0);
 
             // SNAT for the instance itself
-            snprintf(sRule, MAX_RULE_LEN, "-I POSTROUTING -s %s/32 -d %s/32 -j SNAT --to-source %s", psPrivateIp, psPrivateIp, psPublicIp);
+            snprintf(sRule, MAX_RULE_LEN, "-A POSTROUTING -s %s/32 -d %s/32 -j SNAT --to-source %s", psPrivateIp, psPrivateIp, psPublicIp);
             ret |= ((ipt_chain_find_rule(pLni->pIpTables, IPT_TABLE_NAT, IPT_CHAIN_POSTROUTING, sRule) == NULL) ? 1 : 0);
         }
         // Only install COUNTERs rules if we have a valid private IP
@@ -1788,10 +1788,7 @@ int managed_setup_addressing(globalNetworkInfo * pGni) {
         ipt_chain_add_rule(config->ipt, IPT_TABLE_NAT, IPT_CHAIN_PREROUTING, sRule);
         EUCA_FREE(psClcIp);
     }
-    // Add our post-routing masquerade rules
     psSubnetIp = hex2dot(network);
-    snprintf(sRule, MAX_RULE_LEN, "-A POSTROUTING ! -d %s/%u -s %s/%u -j MASQUERADE", psSubnetIp, slashnet, psSubnetIp, slashnet);
-    ipt_chain_add_rule(config->ipt, IPT_TABLE_NAT, IPT_CHAIN_POSTROUTING, sRule);
 
     if ((rc = gni_cluster_get_nodes(pGni, pCluster, NULL, 0, NULL, 0, &pNodes, &nbNodes)) == 0) {
         for (i = 0; i < nbNodes; i++) {
@@ -1819,14 +1816,14 @@ int managed_setup_addressing(globalNetworkInfo * pGni) {
                         ipt_chain_add_rule(config->ipt, IPT_TABLE_NAT, IPT_CHAIN_OUTPUT, sRule);
 
                         // SNAT private to public on the post-routing chain
-                        snprintf(sRule, MAX_RULE_LEN, "-I POSTROUTING -s %s/32 ! -d %s/%d -j SNAT --to-source %s", psPrivateIp, psSubnetIp, slashnet, psPublicIp);
+                        snprintf(sRule, MAX_RULE_LEN, "-A POSTROUTING -s %s/32 ! -d %s/%d -j SNAT --to-source %s", psPrivateIp, psSubnetIp, slashnet, psPublicIp);
                         ipt_chain_add_rule(config->ipt, IPT_TABLE_NAT, IPT_CHAIN_POSTROUTING, sRule);
-                        snprintf(sRule, MAX_RULE_LEN, "-I POSTROUTING -s %s/32 -m mark --mark 0x15 -j SNAT --to-source %s",
+                        snprintf(sRule, MAX_RULE_LEN, "-A POSTROUTING -s %s/32 -m mark --mark 0x15 -j SNAT --to-source %s",
                                 psPrivateIp, psPublicIp);
                         ipt_chain_add_rule(config->ipt, IPT_TABLE_NAT, IPT_CHAIN_POSTROUTING, sRule);
 
                         // SNAT for the instance itself
-                        snprintf(sRule, MAX_RULE_LEN, "-I POSTROUTING -s %s/32 -d %s/32 -j SNAT --to-source %s", psPrivateIp, psPrivateIp, psPublicIp);
+                        snprintf(sRule, MAX_RULE_LEN, "-A POSTROUTING -s %s/32 -d %s/32 -j SNAT --to-source %s", psPrivateIp, psPrivateIp, psPublicIp);
                         ipt_chain_add_rule(config->ipt, IPT_TABLE_NAT, IPT_CHAIN_POSTROUTING, sRule);
                     }
                     // Only install COUNTERs rules if we have a valid private IP
@@ -1847,6 +1844,9 @@ int managed_setup_addressing(globalNetworkInfo * pGni) {
             EUCA_FREE(pInstances);
         }
     }
+    // Add our post-routing masquerade rules
+    snprintf(sRule, MAX_RULE_LEN, "-A POSTROUTING ! -d %s/%u -s %s/%u -j MASQUERADE", psSubnetIp, slashnet, psSubnetIp, slashnet);
+    ipt_chain_add_rule(config->ipt, IPT_TABLE_NAT, IPT_CHAIN_POSTROUTING, sRule);
     EUCA_FREE(psSubnetIp);
     EUCA_FREE(pNodes);
 
