@@ -164,6 +164,8 @@ typedef struct mido_vpc_secgroup_t {
     gni_secgroup *gniSecgroup;
     char name[16];
     midoname midos[VPCSG_END];
+    midoname *ingress_rules, *egress_rules;
+    int max_ingress_rules, max_egress_rules;
     int gnipresent;
 
 } mido_vpc_secgroup;
@@ -195,8 +197,12 @@ typedef struct mido_vpc_t {
     int rtid;
     midoname midos[VPCEND];
     midoname *rtports;
+    midoname *rtpostchain_rules;
+    midoname *rtpreelipchain_rules;
     mido_vpc_subnet *subnets;
     int max_rtports;
+    int max_rtpostchain_rules;
+    int max_rtpreelipchain_rules;
     int max_subnets;
     int gnipresent;
 } mido_vpc;
@@ -300,6 +306,8 @@ int isMidoVpcPlusTwo(mido_config *mido, char *iptocheck);
 
 int initialize_mido(mido_config * mido, char *eucahome, int flushmode, int disable_l2_isolation, char *ext_eucanetdhostname, char *ext_rthosts, char *ext_pubnw,
                     char *ext_pubgwip, char *int_rtnetwork, char *int_rtslashnet);
+int reinitialize_mido(mido_config *mido);
+
 int discover_mido_resources(mido_config * mido);
 
 int populate_mido_core(mido_config * mido, mido_core * midocore);
@@ -334,6 +342,9 @@ int connect_mido_vpc_instance(mido_vpc_subnet * vpcsubnet, mido_vpc_instance * i
 int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mido_vpc * vpc, mido_vpc_subnet * vpcsubnet, mido_vpc_instance * inst);
 int disconnect_mido_vpc_instance_elip(mido_vpc_instance * vpcinstance);
 
+int clear_mido_config(mido_config *mido);
+
+int free_mido_config_v(mido_config * mido, int mode);
 int free_mido_config(mido_config * mido);
 int free_mido_core(mido_core * midocore);
 int free_mido_vpc(mido_vpc * vpc);

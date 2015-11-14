@@ -579,11 +579,14 @@ int main(int argc, char **argv)
 
         epoch_timer += config->polling_frequency;        
         
+        
         /*
-        if (counter  >= 3) {
+        if (counter  >= 10) {
+            exit(0);
             gIsRunning=FALSE;
         }
         */
+        
     }
 
     LOGINFO("EUCANETD going down.\n");

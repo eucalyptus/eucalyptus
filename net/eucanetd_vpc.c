@@ -171,6 +171,7 @@
 \*----------------------------------------------------------------------------*/
 
 /* Should preferably be handled in header file */
+extern int midonet_api_dirty_cache;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -420,17 +421,23 @@ static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni)
     }
 
     //    if (PEER_IS_NC(eucanetdPeer)) {
-        if (pMidoConfig) {
-            free_mido_config(pMidoConfig);
-            bzero(pMidoConfig, sizeof(mido_config));
-        }
+        if (0) {
+            if (pMidoConfig) {
+                free_mido_config(pMidoConfig);
+                bzero(pMidoConfig, sizeof(mido_config));
+            }
 
-        rc = initialize_mido(pMidoConfig, config->eucahome, config->flushmode, config->disable_l2_isolation, config->midoeucanetdhost, config->midogwhosts,
-                             config->midopubnw, config->midopubgwip, "169.254.0.0", "17");
+            rc = initialize_mido(pMidoConfig, config->eucahome, config->flushmode, config->disable_l2_isolation, config->midoeucanetdhost, config->midogwhosts,
+                                 config->midopubnw, config->midopubgwip, "169.254.0.0", "17");
+        } else {
+            LOGDEBUG("WTF: pMidoConfig->eucanetdhost: %s\n", pMidoConfig->ext_eucanetdhostname);
+            rc = 0;
+        }
         if (rc) {
             LOGERROR("could not initialize mido config\n");
             ret = EUCANETD_RUN_ERROR_API;
         } else {
+            LOGDEBUG("HELLO: dirty cache: %d\n", midonet_api_dirty_cache);
             if ((rc = do_midonet_update(pGni, pMidoConfig)) != 0) {
                 LOGERROR("could not update midonet: check log for details\n");
                 ret = EUCANETD_RUN_ERROR_API;

@@ -147,6 +147,8 @@ struct mem_params_t {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+int midonet_api_dirty_cache = 0;
+
 //!
 //!
 //!
@@ -1723,6 +1725,11 @@ int mido_link_host_port(midoname * host, char *interface, midoname * device, mid
     // check to see if the port is already mapped
     rc = mido_getel_midoname(port, "hostInterfacePort", &hinterface);
     if (!rc) {
+        if (strstr(hinterface, host->uuid) && strstr(hinterface, port->uuid)) {
+            LOGDEBUG("HELLO: port already connected\n");
+            found=1;
+        }
+        //        LOGDEBUG("HELLO: %s | %s | %s\n", SP(hinterface), host->jsonbuf, port->jsonbuf);
     }
     EUCA_FREE(hinterface);
 
@@ -1811,7 +1818,18 @@ int mido_update_resource(char *resource_type, char *content_type, char *vers, mi
     int rc = 0, ret = 0;
     char *key = NULL, *val = NULL, *payload=NULL;
     struct json_object *jobj = NULL, *el = NULL;
-    va_list ala = { {0} };
+    va_list ala = { {0} }, alb = { {0} };
+
+    // check to see if resource needs updating
+    va_copy(alb, *al);
+    rc = mido_cmp_midoname_to_input_json_v(name, &alb);
+    LOGDEBUG("YELLOW: cmp return: %d\n", rc);
+    va_end(alb);
+
+    if (!rc) {
+        LOGDEBUG("resource to update matches in place resource - skipping update\n");
+        //        return(ret);
+    }
 
     va_copy(ala, *al);
     payload = mido_jsonize(name->tenant, &ala);
@@ -2180,7 +2198,6 @@ int mido_create_resource_v(midoname * parents, int max_parents, midoname * newna
         }
 
         // perform the create
-        LOGDEBUG("POST PAYLOAD: %s\n", payload);
         rc = midonet_http_post(url, newname->content_type, newname->vers, payload, &outloc);
         if (rc) {
             LOGERROR("midonet_http_post(%s, ...) failed\n", url);
@@ -2746,7 +2763,7 @@ int midonet_http_put(char *url, char *resource_type, char *vers, char *payload)
     headers = curl_slist_append(headers, hbuf);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
-    LOGTRACE("PUT PAYLOAD: %s\n", SP(payload));
+    LOGDEBUG("PUT PAYLOAD: %s\n", SP(payload));
     curlret = curl_easy_perform(curl);
     if (curlret != CURLE_OK) {
         LOGERROR("ERROR: curl_easy_perform(): %s\n", curl_easy_strerror(curlret));
@@ -2755,6 +2772,7 @@ int midonet_http_put(char *url, char *resource_type, char *vers, char *payload)
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcode);
     if (httpcode == 200L || httpcode == 204L) {
         ret = 0;
+        midonet_api_dirty_cache = 1;
     } else {
         ret = 1;
     }
@@ -2858,10 +2876,13 @@ int midonet_http_post(char *url, char *resource_type, char *vers, char *payload,
     //    headers = curl_slist_append(headers, "Content-Type: application/vnd.org.midonet");
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
+    LOGDEBUG("POST PAYLOAD: %s\n", payload);
     curlret = curl_easy_perform(curl);
     if (curlret != CURLE_OK) {
         LOGERROR("ERROR: curl_easy_perform(): %s\n", curl_easy_strerror(curlret));
         ret = 1;
+    } else {
+        midonet_api_dirty_cache = 1;
     }
 
     curl_slist_free_all(headers);
@@ -2908,10 +2929,14 @@ int midonet_http_delete(char *url)
     curl = curl_easy_init();
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+
+    LOGDEBUG("DELETE PAYLOAD: %s\n", SP(url));
     curlret = curl_easy_perform(curl);
     if (curlret != CURLE_OK) {
         LOGERROR("ERROR: curl_easy_perform(): %s\n", curl_easy_strerror(curlret));
         ret = 1;
+    } else {
+        midonet_api_dirty_cache = 1;
     }
     curl_easy_cleanup(curl);
     curl_global_cleanup();
