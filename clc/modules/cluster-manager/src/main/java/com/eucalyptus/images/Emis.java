@@ -62,6 +62,7 @@
 
 package com.eucalyptus.images;
 
+import java.security.PublicKey;
 import java.util.NoSuchElementException;
 
 import javax.annotation.Nonnull;
@@ -110,6 +111,7 @@ import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Strings;
 
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
@@ -284,7 +286,7 @@ public class Emis {
     }
     
     public RamdiskImageInfo getRamdisk( ) {
-      throw new NoSuchElementException( "BootableSet:machine=" + this.getMachine( ) + " does not have a kernel." );
+      throw new NoSuchElementException( "BootableSet:machine=" + this.getMachine( ) + " does not have a ramdisk." );
     }
     
     public KernelImageInfo getKernel( ) {
@@ -308,6 +310,37 @@ public class Emis {
         return false;
       }
     }
+
+    public String getRamdiskDownloadManifest(PublicKey signingKey, String partitionName ) throws MetadataException {
+      throw new NoSuchElementException( "BootableSet:machine=" + this.getMachine( ) + " does not have a ramdisk." );
+    }
+
+    public String getKernelDownloadManifest(PublicKey signingKey, String partitionName ) throws MetadataException {
+      throw new NoSuchElementException( "BootableSet:machine=" + this.getMachine( ) + " does not have a kernel." );
+    }
+
+    public String getImageDownloadManifest(PublicKey signingKey, String partitionName) throws MetadataException {
+      if(! (this.getMachine() instanceof StaticDiskImage)) {
+        throw new NoSuchElementException("BootableSet:machine=" + this.getMachine() + " does not have a bundled-type image.");
+      }
+
+      StaticDiskImage img = (StaticDiskImage)this.getMachine();
+      try {
+        if (!Strings.isNullOrEmpty(img.getManifestHash())
+            && !img.getManifestHash().equals(
+            ImageManifests.getManifestHash(img.getManifestLocation())))
+          throw new MetadataException("Image manifest was changed after registration for: " + img.getDisplayName());
+        return DownloadManifestFactory.generateDownloadManifest(
+            new ImageManifestFile(img.getManifestLocation(),
+                                  BundleImageManifest.INSTANCE,
+                                  ImageConfiguration.getInstance().getMaxManifestSizeBytes()),
+            signingKey,
+            img.getDisplayName() + "-" + partitionName, true);
+      } catch (Exception ex){
+        throw new MetadataException(ex);
+      }
+    }
+
     
     public boolean isBlockStorage( ) {
       return this.getMachine( ) instanceof BlockStorageImageInfo;
@@ -339,63 +372,31 @@ public class Emis {
       try {
         if ( this.isLinux( ) ) {
           if ( this.hasKernel( ) ) {
-            if ( !isEmptyString( this.getKernel().getManifestHash() )
-                 && !this.getKernel().getManifestHash().equals(
-               ImageManifests.getManifestHash( this.getKernel( ).getManifestLocation( ) )) )
-              throw new MetadataException("Kernel manifest was changed after registration");
-            String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
-                new ImageManifestFile(
-                  this.getKernel( ).getManifestLocation( ),
-                  BundleImageManifest.INSTANCE,
-                  ImageConfiguration.getInstance( ).getMaxManifestSizeBytes( ) ),
-                partition.getNodeCertificate().getPublicKey(),
-                this.getKernel( ).getDisplayName( ) + "-" + partition.getName(), true);
-            vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), manifestLocation,
+            String manifestLocation = this.getKernelDownloadManifest(partition.getNodeCertificate().getPublicKey(), partition.getName());
+            vmTypeInfo.setKernel( this.getKernel().getDisplayName(), manifestLocation,
                                   this.getKernel( ).getImageSizeBytes() );
           }
           if ( this.hasRamdisk( ) ) {
-            if ( !isEmptyString( this.getRamdisk().getManifestHash() )
-                 && !this.getRamdisk().getManifestHash().equals(
-                ImageManifests.getManifestHash( this.getRamdisk().getManifestLocation( ) )) )
-              throw new MetadataException("Ramdisk manifest was changed after registration");
-            String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
-                new ImageManifestFile( 
-                  this.getRamdisk( ).getManifestLocation( ),
-                  BundleImageManifest.INSTANCE,
-                  ImageConfiguration.getInstance( ).getMaxManifestSizeBytes( )),
-                partition.getNodeCertificate().getPublicKey(),
-                this.getRamdisk( ).getDisplayName( ) + "-" + partition.getName(), true);
+            String manifestLocation = this.getRamdiskDownloadManifest(partition.getNodeCertificate().getPublicKey(), partition.getName());
             vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), manifestLocation,
                                    this.getRamdisk( ).getImageSizeBytes() );
           }
         }
         if ( this.getMachine( ) instanceof StaticDiskImage ) { // BootableImage+StaticDiskImage = MachineImageInfo
           StaticDiskImage diskImage = (StaticDiskImage) this.getMachine( );
-          if (!isEmptyString( diskImage.getManifestHash() )
+          if (!Strings.isNullOrEmpty( diskImage.getManifestHash() )
               && !diskImage.getManifestHash().equals( ImageManifests.getManifestHash(
                                                       diskImage.getManifestLocation() )) )
             throw new MetadataException("Instance manifest was changed after registration");
-          String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
-                new ImageManifestFile(
-                  diskImage.getManifestLocation( ),
-                  BundleImageManifest.INSTANCE,
-                  ImageConfiguration.getInstance( ).getMaxManifestSizeBytes( ) ),
-                  partition.getNodeCertificate( ).getPublicKey( ),
-                  diskImage.getDisplayName() + "-" + partition.getName(), true);
+            String manifestLocation = this.getImageDownloadManifest(partition.getNodeCertificate().getPublicKey(), partition.getName());
           vmTypeInfo.setRoot( diskImage.getDisplayName( ), manifestLocation,
                               this.getMachine( ).getImageSizeBytes() );
         }
-      } catch (DownloadManifestException ex) {
-        throw new MetadataException(ex);
       } catch (Exception ex){
         throw new MetadataException(ex);
       }
       return vmTypeInfo;
     }
-  }
-  
-  private static boolean isEmptyString(String string) {
-    return (string == null || "".equals(string));
   }
 
   static class NoRamdiskBootableSet extends BootableSet {
@@ -410,6 +411,24 @@ public class Emis {
     public KernelImageInfo getKernel( ) {
       return this.kernel;
     }
+
+    public String getKernelDownloadManifest(PublicKey signingKey, String partitionName)  throws MetadataException {
+      try {
+        if (!Strings.isNullOrEmpty(this.kernel.getManifestHash())
+            && !kernel.getManifestHash().equals(
+            ImageManifests.getManifestHash(this.kernel.getManifestLocation())))
+          throw new MetadataException("Image manifest was changed after registration for: " + this.kernel.getDisplayName());
+        return DownloadManifestFactory.generateDownloadManifest(
+            new ImageManifestFile(this.kernel.getManifestLocation(),
+                                  BundleImageManifest.INSTANCE,
+                                  ImageConfiguration.getInstance().getMaxManifestSizeBytes()),
+            signingKey,
+            this.kernel.getDisplayName() + "-" + partitionName, true);
+      } catch (Exception ex){
+        throw new MetadataException(ex);
+      }
+    }
+
   }
   
   static class TrifectaBootableSet extends NoRamdiskBootableSet {
@@ -424,6 +443,24 @@ public class Emis {
     public RamdiskImageInfo getRamdisk( ) {
       return this.ramdisk;
     }
+
+    public String getRamdiskDownloadManifest(PublicKey signingKey, String partitionName) throws MetadataException {
+        try {
+          if (!Strings.isNullOrEmpty(this.ramdisk.getManifestHash())
+              && !ramdisk.getManifestHash().equals(
+              ImageManifests.getManifestHash(ramdisk.getManifestLocation())))
+            throw new MetadataException("Image manifest was changed after registration for: " + ramdisk.getDisplayName());
+          return DownloadManifestFactory.generateDownloadManifest(
+              new ImageManifestFile(ramdisk.getManifestLocation(),
+                                    BundleImageManifest.INSTANCE,
+                                    ImageConfiguration.getInstance().getMaxManifestSizeBytes()),
+              signingKey,
+              this.ramdisk.getDisplayName() + "-" + partitionName, true);
+        } catch (Exception ex){
+          throw new MetadataException(ex);
+        }
+    }
+
   }
   
   public static BootableSet recreateBootableSet( final VmInstance vm ) {

@@ -62,15 +62,16 @@
   -->
 
 <binding force-classes="true" add-constructors="true">
-  <mapping name="MigrateInstances" class="edu.ucsb.eucalyptus.msgs.ClusterMigrateInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="sourceHost" field="sourceHost" usage="optional" />
-    <value name="instanceId" field="instanceId" usage="optional" />
-    <structure usage="optional">
+    <mapping name="MigrateInstances" class="edu.ucsb.eucalyptus.msgs.ClusterMigrateInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+        <value name="sourceHost" field="sourceHost" usage="optional" />
+        <value name="instanceId" field="instanceId" usage="optional" />
       <collection field="destinationHosts" factory="org.jibx.runtime.Utility.arrayListFactory">
         <value name="destinationHost" type="java.lang.String" />
       </collection>
-    </structure>
+      <collection field="resourceLocations" factory="org.jibx.runtime.Utility.arrayListFactory">
+          <value name="resourceLocation" type="java.lang.String" />
+      </collection>
     <value name="allowHosts" field="allowHosts" usage="optional" />
   </mapping>
   <mapping name="MigrateInstancesResponse" class="edu.ucsb.eucalyptus.msgs.ClusterMigrateInstancesResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">

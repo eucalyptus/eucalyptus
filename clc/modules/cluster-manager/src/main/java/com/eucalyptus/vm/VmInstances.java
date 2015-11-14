@@ -515,8 +515,8 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
   public static final Integer ABSOLUTE_USER_DATA_MAX_SIZE_KB = 64; // This may need to be related to chunk size in the future
 
   @ConfigurableField( description = "Number of times to retry transactions in the face of potential concurrent update conflicts.",
-                      initial = "10" )
-  public static final int TX_RETRIES                    = 10;
+                      initial = "10", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
+  public static volatile int TX_RETRIES                 = 10;
 
   @ConfigurableField( description = "Amount of time (default unit minutes) before a previously running instance which is not reported will be marked as terminated.",
                       initial = "180d" )

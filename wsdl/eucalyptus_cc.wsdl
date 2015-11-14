@@ -902,6 +902,7 @@
 	      <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
 	      <xs:element minOccurs="0" maxOccurs="unbounded" name="destinationHost" type="xs:string"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="allowHosts" type="xs:boolean"/>
+	      <xs:element minOccurs="0" maxOccurs="unbounded" name="resourceLocation" type="xs:string"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>

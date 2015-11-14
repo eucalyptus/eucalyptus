@@ -244,10 +244,15 @@ public class OSGUtil {
   }
 
   /**
-   * Utility method to determine type of PUT request. Returns true if the request is trying to upload an S3 object or S3 part, and false otherwise
+   * Utility method to determine if the inbound request is for uploading data using the OSG PUT mechanism
+   * 
+   * @param request
+   * @return true if the request is of type S3 PUT object or upload part. false for all other requests
    */
   public static boolean isPUTDataRequest(HttpRequest request) {
     MappingHttpRequest mappingRequest = null;
+
+    // put data and upload part only
     if (request.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.PUT.toString())
         && request instanceof MappingHttpRequest
         && ((mappingRequest = ((MappingHttpRequest) request)).getParameters() == null || mappingRequest.getParameters().isEmpty()
@@ -257,15 +262,22 @@ public class OSGUtil {
             .getParameters().containsKey(ObjectStorageProperties.SubResource.partNumber.toString().toLowerCase()))) {
       return true;
     }
+
     return false;
   }
 
   /**
-   * Utility method to determine type of PUT request. Returns true if the request is trying to set S3 metadata such as acl, lifecycle, tagging,
-   * notification, versioning etc
+   * Utility method to determine if the inbound request is for updating the metadata of buckets or objects
+   * 
+   * @param request
+   * @return true if the request is of type S3 PUT acl, versioning, lifecycle, tagging, notification, initiate mpu - POST uploads, complete mpu - POST
+   *         uploadId, mult delete - POST delete. false for all other requests
    */
   public static boolean isPUTMetadataRequest(HttpRequest request) {
     MappingHttpRequest mappingRequest = null;
+    String contentType = null;
+
+    // put metadata only
     if (request.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.PUT.toString()) && request instanceof MappingHttpRequest
         && (mappingRequest = ((MappingHttpRequest) request)).getParameters() != null && !mappingRequest.getParameters().isEmpty()
         && !mappingRequest.getParameters().containsKey(ObjectStorageProperties.SubResource.uploadId.toString())
@@ -274,6 +286,33 @@ public class OSGUtil {
         && !mappingRequest.getParameters().containsKey(ObjectStorageProperties.SubResource.partNumber.toString().toLowerCase())) {
       return true;
     }
+
+    // post for initiate mpu, complete mpu and multi delete
+    if (request.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.POST.toString())
+        && ((contentType = request.getHeader(HttpHeaders.Names.CONTENT_TYPE)) == null || !contentType.startsWith("multipart/form-data;"))
+        && request instanceof MappingHttpRequest && (mappingRequest = ((MappingHttpRequest) request)).getParameters() != null
+        && !mappingRequest.getParameters().isEmpty()) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Utility method to determine if the inbound request is for uploading form data using the OSG POST mechanism
+   * 
+   * @param request
+   * @return true if the request of type S3 form POST. false for all other requests
+   */
+  public static boolean isFormPOSTRequest(HttpRequest request) {
+    String contentType = null;
+
+    // post form upload only
+    if (request.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.POST.toString())
+        && (contentType = request.getHeader(HttpHeaders.Names.CONTENT_TYPE)) != null && contentType.startsWith("multipart/form-data;")) {
+      return true;
+    }
+
     return false;
   }
 

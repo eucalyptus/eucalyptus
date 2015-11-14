@@ -1499,10 +1499,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return this.getBootRecord().isMonitoring( );
   }
 
-  public VmMigrationTask getMigrationTask( ) {
-    return this.runtimeState.getMigrationTask( );
-  }
-
   @PrePersist
   @PreUpdate
   private void updateGroups( ) {

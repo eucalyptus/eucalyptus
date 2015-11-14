@@ -19,12 +19,12 @@
  ************************************************************************/
 package com.eucalyptus.imaging.backend;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 import com.eucalyptus.resources.client.Ec2Client;
+
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.principal.AccountFullName;
@@ -36,25 +36,25 @@ import com.eucalyptus.compute.common.DiskImageVolume;
 import com.eucalyptus.compute.common.ImportInstanceLaunchSpecification;
 import com.eucalyptus.compute.common.ImportInstanceVolumeDetail;
 import com.eucalyptus.compute.common.InstancePlacement;
+import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.compute.common.SubnetType;
+import com.eucalyptus.compute.common.VmTypeDetails;
 import com.eucalyptus.compute.common.backend.ImportInstanceType;
 import com.eucalyptus.compute.common.backend.ImportVolumeType;
-import com.eucalyptus.config.Property;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.imaging.common.ConvertedImageDetail;
-import com.eucalyptus.imaging.common.ImportDiskImageDetail;
-import com.eucalyptus.imaging.common.backend.msgs.ImportImageType;
 import com.eucalyptus.imaging.ImagingServiceProperties;
 import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMappers;
+import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 public class ImagingTasks {
   private static Logger    LOG                           = Logger.getLogger( ImagingTasks.class );
@@ -137,8 +137,25 @@ public class ImagingTasks {
     if(launchSpec.getArchitecture()==null || 
         !("i386".equals(launchSpec.getArchitecture()) || "x86_64".equals(launchSpec.getArchitecture())))
         throw new ImagingServiceException("Architecture should be either i386 or x86_64");
+    int vmTypeDiskSize = -1;
     if(launchSpec.getInstanceType()==null)
       throw new ImagingServiceException("Instance type is required");
+    else{
+      try{
+        final List<VmTypeDetails> vmTypes = 
+            Ec2Client.getInstance().describeInstanceTypes(Contexts.lookup().getUser().getUserId());
+        for(final VmTypeDetails type : vmTypes) {
+            if (launchSpec.getInstanceType().equals(type.getName())) {
+              vmTypeDiskSize = type.getDisk();
+              break;
+            }
+        }
+        if (vmTypeDiskSize < 0)
+          throw new Exception();
+      }catch(final Exception ex) {
+        throw new ImagingServiceException("Instance type " + launchSpec.getInstanceType()+" is not found");
+      }
+    }
     
     if(launchSpec.getKeyName()!=null && launchSpec.getKeyName().length() > 0){
       try{
@@ -149,6 +166,21 @@ public class ImagingTasks {
           throw new Exception();
       }catch(final Exception ex){
         throw new ImagingServiceException("Key "+launchSpec.getKeyName()+" is not found");
+      }
+    }
+    
+    if(launchSpec.getGroupName()!=null && launchSpec.getGroupName().size()>0){
+      final Set<String> requestedGroups = Sets.newHashSet(launchSpec.getGroupName());
+      try{
+        final List<SecurityGroupItemType> groups =
+            Ec2Client.getInstance().describeSecurityGroups(Contexts.lookup().getUser().getUserId(), launchSpec.getGroupName());
+        for(final SecurityGroupItemType group : groups) {
+          requestedGroups.remove(group.getGroupName());
+        }
+        if(requestedGroups.size()>0)
+          throw new Exception();
+      }catch(final Exception ex) {
+        throw new ImagingServiceException("Security groups are not found: " + Joiner.on(",").join(requestedGroups));
       }
     }
 
@@ -222,6 +254,8 @@ public class ImagingTasks {
       try{
         /// TODO: should we assume the converted image is always larger than or equal to the uploaded image
         final int volumeSize = volumeDetail.getSize();
+        if (volumeSize > vmTypeDiskSize) 
+          throw new ImagingServiceException("Requested volume size exceeds max disk size of instance type '" + launchSpec.getInstanceType()+"'");
         if (getMaxVolumeSize(availabilityZone) < volumeSize)
           throw new ImagingServiceException("Requested volume size exceeds max allowed volume size");
         final long imageBytes = imageDetail.getBytes();

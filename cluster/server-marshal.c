@@ -2102,6 +2102,8 @@ adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t *
     char **destinationNodes = NULL;
     int destinationNodeCount = 0;
     int allowHosts;
+    char **resourceLocations = NULL;
+    int resourceLocationCount = 0;
     ncMetadata ccMeta = { 0 };
     long long call_time = time_ms();
 
@@ -2121,10 +2123,16 @@ adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t *
         destinationNodes[i] = adb_migrateInstancesType_get_destinationHost_at(mit, env, i);
     }
 
+    resourceLocationCount = adb_migrateInstancesType_sizeof_resourceLocation(mit, env);
+    resourceLocations = EUCA_ZALLOC(resourceLocationCount, sizeof(char *));
+    for (int i = 0; i < resourceLocationCount; i++) {
+        resourceLocations[i] = adb_migrateInstancesType_get_resourceLocation_at(mit, env, i);
+    }
+
     status = AXIS2_TRUE;
     if (!DONOTHING) {
         threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
-        rc = doMigrateInstances(&ccMeta, sourceNode, instanceId, destinationNodes, destinationNodeCount, allowHosts, "prepare");
+        rc = doMigrateInstances(&ccMeta, sourceNode, instanceId, destinationNodes, destinationNodeCount, allowHosts, "prepare", resourceLocations, resourceLocationCount);
         unset_corrid(corr_id);
         if (rc) {
             LOGERROR("doMigrateInstances() failed: %d (%s, %s, %d)\n", rc, sourceNode, instanceId, destinationNodeCount);
@@ -2150,6 +2158,7 @@ adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t *
     adb_MigrateInstancesResponse_set_MigrateInstancesResponse(ret, env, mirt);
 
     EUCA_FREE(destinationNodes);
+    EUCA_FREE(resourceLocations);
 
     //update stats and return
     call_time = time_ms() - call_time;

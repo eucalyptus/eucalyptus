@@ -188,11 +188,11 @@ public class CreateImageTask {
 			try{
 				for(final VmInstance candidate : candidates){
 					if(!createImageTasks.containsKey(candidate.getInstanceId())){
-						LOG.info(String.format("Restoring create image task for %s", candidate.getInstanceId()));
+						LOG.debug(String.format("Restoring create image task for %s", candidate.getInstanceId()));
 						final CreateImageTask task = RESTORE.apply(candidate);
 						if(task!=null){
 							createImageTasks.put(candidate.getInstanceId(), task);
-							LOG.info(String.format("craete image task for %s restored", candidate.getInstanceId()));
+							LOG.info(String.format("create image task for %s restored", candidate.getInstanceId()));
 						}
 					}
 				}
@@ -265,7 +265,7 @@ public class CreateImageTask {
 				if(!task.noReboot){
 					try{
 						task.stopInstance();
-						LOG.info(String.format("Stopping instance %s", task.instanceId));
+						LOG.debug(String.format("Stopping instance %s", task.instanceId));
 					}catch(final Exception ex){
 						LOG.error(String.format("failed to stop instance %s", task.instanceId), ex);
 						task.setVmCreateImageTaskState(CreateImageState.failed);
@@ -335,7 +335,7 @@ public class CreateImageTask {
 					
 					if(allDone){
 						task.registerImage();
-						LOG.info(String.format("Image %s is available", task.getImageId()));
+						LOG.debug(String.format("Image %s is available", task.getImageId()));
 						if(task.noReboot)
 							task.setVmCreateImageTaskState(CreateImageState.complete);
 					}else
@@ -349,7 +349,7 @@ public class CreateImageTask {
 						final VmInstance vm = task.getVmInstance();
 						if(vm.getRuntimeState()!=null && "poweredOff".equals(vm.getRuntimeState().getGuestState())){
 							task.startInstance();
-							LOG.info(String.format("Restarting instance %s", vm.getInstanceId()));
+							LOG.debug(String.format("Restarting instance %s", vm.getInstanceId()));
 						}
 					}catch(final Exception ex){
 						LOG.error(String.format("failed to start the instance %s", task.instanceId), ex);
@@ -594,7 +594,7 @@ public class CreateImageTask {
 				final List<Snapshot> snapshots = task.getSnapshots();
 				final List<String> status = Lists.newArrayList();
 				for(final Snapshot s : snapshots){
-					LOG.info(String.format("snapshot creating - %s", s.getProgress()));
+					LOG.debug(String.format("snapshot creating - %s", s.getProgress()));
 					status.add(s.getStatus());
 				}
 				return status;
@@ -643,7 +643,7 @@ public class CreateImageTask {
 			}catch(final Exception ex){
 				throw Exceptions.toUndeclared(ex);
 			}
-			LOG.info(String.format("Created snapshot %s from volume %s for device %s", snapshotId, volumeId, deviceName));
+			LOG.debug(String.format("Created snapshot %s from volume %s for device %s", snapshotId, volumeId, deviceName));
 			try ( TransactionResource db =
 			          Entities.transactionFor( VmInstance.class ) ) {
 				final VmInstance vm = Entities.uniqueResult(VmInstance.named(this.instanceId));
