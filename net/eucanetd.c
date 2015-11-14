@@ -435,6 +435,7 @@ int main(int argc, char **argv)
                     LOGDEBUG("eucanetd in mode %s should have a CC or NC service peer - instead of PEER_NONE.", config->netMode);
                     update_globalnet = FALSE;
                     update_globalnet_failed = TRUE;
+                    eucanetdPeer = PEER_INVALID;
                     sleep(1);
                     continue;
                 }
