@@ -427,14 +427,6 @@ int main(int argc, char **argv)
         }
         update_globalnet_failed = FALSE;
 
-        // whether or not updates have occurred due to remote content being updated, read local networking info
-        rc = eucanetd_read_latest_network();
-        if (rc) {
-            LOGWARN("eucanetd_read_latest_network failed, skipping update: check above errors for details\n");
-            // if the local read failed for some reason, skip any attempt to update (leave current state in place)
-            update_globalnet = FALSE;
-        }
-
         if (eucanetdPeer == PEER_INVALID) {
             eucanetdPeer = eucanetd_detect_peer(globalnetworkinfo);
             if (PEER_IS_NONE(eucanetdPeer)) {
@@ -461,6 +453,15 @@ int main(int argc, char **argv)
                 exit(1);
             }
         }
+
+        // whether or not updates have occurred due to remote content being updated, read local networking info
+        rc = eucanetd_read_latest_network();
+        if (rc) {
+            LOGWARN("eucanetd_read_latest_network failed, skipping update: check above errors for details\n");
+            // if the local read failed for some reason, skip any attempt to update (leave current state in place)
+            update_globalnet = FALSE;
+        }
+
         // Do we need to run the network upgrade stuff?
         if (pDriverHandler->upgrade) {
             if (pDriverHandler->upgrade(globalnetworkinfo) == 0) {
