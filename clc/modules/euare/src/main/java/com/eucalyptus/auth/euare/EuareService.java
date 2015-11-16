@@ -2126,7 +2126,7 @@ public class EuareService {
     }
     try{
       // access control based on iam policy
-      final ServerCertificateEntity cert = RestrictedTypes.doPrivileged(certArn, ServerCertificates.Lookup.INSTANCE);
+      final ServerCertificateEntity cert = RestrictedTypes.doPrivilegedWithoutOwner(certArn, ServerCertificates.Lookup.INSTANCE);
     }catch(final AuthException ex){
       throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,"The user not authorized to download certificate"); 
     }catch(final NoSuchElementException ex){

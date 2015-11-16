@@ -427,16 +427,19 @@ int main(int argc, char **argv)
         }
         update_globalnet_failed = FALSE;
 
-        // whether or not updates have occurred due to remote content being updated, read local networking info
-        rc = eucanetd_read_latest_network();
-        if (rc) {
-            LOGWARN("eucanetd_read_latest_network failed, skipping update: check above errors for details\n");
-            // if the local read failed for some reason, skip any attempt to update (leave current state in place)
-            update_globalnet = FALSE;
-        }
-
         if (eucanetdPeer == PEER_INVALID) {
             eucanetdPeer = eucanetd_detect_peer(globalnetworkinfo);
+            if (PEER_IS_NONE(eucanetdPeer)) {
+                // PEER_NONE should be only valid for VPCMIDO
+                if (strcmp(config->netMode, NETMODE_VPCMIDO)) {
+                    LOGDEBUG("eucanetd in mode %s should have a CC or NC service peer - instead of PEER_NONE.", config->netMode);
+                    update_globalnet = FALSE;
+                    update_globalnet_failed = TRUE;
+                    eucanetdPeer = PEER_INVALID;
+                    sleep(1);
+                    continue;
+                }
+            }
             if (!PEER_IS_VALID(eucanetdPeer)) {
                 LOGERROR("cannot find which service peer (CC/NC) is running alongside eucanetd.\n");
                 update_globalnet = FALSE;
@@ -451,6 +454,15 @@ int main(int argc, char **argv)
                 exit(1);
             }
         }
+
+        // whether or not updates have occurred due to remote content being updated, read local networking info
+        rc = eucanetd_read_latest_network();
+        if (rc) {
+            LOGWARN("eucanetd_read_latest_network failed, skipping update: check above errors for details\n");
+            // if the local read failed for some reason, skip any attempt to update (leave current state in place)
+            update_globalnet = FALSE;
+        }
+
         // Do we need to run the network upgrade stuff?
         if (pDriverHandler->upgrade) {
             if (pDriverHandler->upgrade(globalnetworkinfo) == 0) {
