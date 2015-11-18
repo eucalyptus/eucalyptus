@@ -250,8 +250,8 @@ class NIRouteTable {
 @CompileStatic
 @XmlAccessorType( XmlAccessType.NONE )
 class NIRoute {
-  @XmlElement String gatewayId
   @XmlElement String destinationCidr
+  @XmlElement String gatewayId
 }
 
 @Canonical
