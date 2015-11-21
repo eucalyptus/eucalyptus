@@ -24,6 +24,7 @@ import com.eucalyptus.cluster.ClusterConfiguration
 import com.eucalyptus.cluster.NICluster
 import com.eucalyptus.cluster.NIClusters
 import com.eucalyptus.cluster.NIConfiguration
+import com.eucalyptus.cluster.NIInternetGateway
 import com.eucalyptus.cluster.NIMidonetGateway
 import com.eucalyptus.cluster.NIMidonetGateways
 import com.eucalyptus.cluster.NIInstance
@@ -33,8 +34,12 @@ import com.eucalyptus.cluster.NIMidonet
 import com.eucalyptus.cluster.NINode
 import com.eucalyptus.cluster.NINodes
 import com.eucalyptus.cluster.NIProperty
+import com.eucalyptus.cluster.NIRoute
+import com.eucalyptus.cluster.NIRouteTable
 import com.eucalyptus.cluster.NISubnet
 import com.eucalyptus.cluster.NISubnets
+import com.eucalyptus.cluster.NIVpc
+import com.eucalyptus.cluster.NIVpcSubnet
 import com.eucalyptus.cluster.NetworkInfo
 import com.eucalyptus.network.config.Cluster as ConfigCluster
 import com.eucalyptus.network.config.EdgeSubnet
@@ -398,16 +403,16 @@ class NetworkInfoBroadcasterTest {
         ) ),
         new NetworkInfoBroadcasts.NetworkInfoSource( ) {
           @Override Iterable<NetworkInfoBroadcasts.VmInstanceNetworkView> getInstances() {
-            [ instance( 'i-00000001', 'cluster1', 'node1', '000000000002', '00:00:00:00:00:00', '2.0.0.0', '10.0.0.0' ) ]
+            [ instance( 'i-00000001', 'cluster1', 'node1', '000000000002', '00:00:00:00:00:00', '2.0.0.0', '10.0.0.0', 'vpc-00000001', 'subnet-00000001' ) ]
           }
           @Override Iterable<NetworkInfoBroadcasts.NetworkGroupNetworkView> getSecurityGroups() {
             []
           }
           @Override Iterable<NetworkInfoBroadcasts.VpcNetworkView> getVpcs() {
-            []
+            [ vpc( 'vpc-00000001', '000000000002' ) ]
           }
           @Override Iterable<NetworkInfoBroadcasts.SubnetNetworkView> getSubnets() {
-            []
+            [ subnet( 'subnet-00000001', '000000000002', 'cluster1', 'vpc-00000001' ) ]
           }
           @Override Iterable<NetworkInfoBroadcasts.DhcpOptionSetNetworkView> getDhcpOptionSets() {
             []
@@ -416,10 +421,12 @@ class NetworkInfoBroadcasterTest {
             []
           }
           @Override Iterable<NetworkInfoBroadcasts.RouteTableNetworkView> getRouteTables() {
-            []
+            [ routeTable( 'rtb-00000001', '000000000002', 'vpc-00000001', true, [ 'subnet-00000001' ], [
+              route( '192.168.0.0/16', 'igw-00000001' )
+            ] ) ]
           }
           @Override Iterable<NetworkInfoBroadcasts.InternetGatewayNetworkView> getInternetGateways() {
-            []
+            [ internetGateway( 'igw-00000001', '000000000002', 'vpc-00000001' ) ]
           }
           @Override Iterable<NetworkInfoBroadcasts.NetworkInterfaceNetworkView> getNetworkInterfaces() {
             []
@@ -469,6 +476,41 @@ class NetworkInfoBroadcasterTest {
                 )
             ] ),
         ),
+        vpcs: [
+            new NIVpc(
+                name: 'vpc-00000001',
+                ownerId: '000000000002',
+                cidr: '10.0.0.0/16',
+                subnets: [
+                  new NIVpcSubnet(
+                      name:  'subnet-00000001',
+                      ownerId: '000000000002',
+                      cidr: '10.0.0.0/16',
+                      cluster: 'cluster1',
+                      routeTable: 'rtb-00000001'
+                  )
+                ],
+                routeTables: [
+                    new NIRouteTable(
+                        name: 'rtb-00000001',
+                        ownerId: '000000000002',
+                        routes: [
+                          new NIRoute(
+                            destinationCidr: '192.168.0.0/16',
+                            gatewayId: 'igw-00000001',
+                          )
+                        ]
+                    )
+                ],
+                internetGateways: [ 'igw-00000001' ]
+            )
+        ],
+        internetGateways: [
+            new NIInternetGateway(
+                name: 'igw-00000001',
+                ownerId: '000000000002'
+            )
+        ],
         instances: [
             new NIInstance(
                 name: 'i-00000001',
@@ -477,6 +519,8 @@ class NetworkInfoBroadcasterTest {
                 publicIp: '2.0.0.0',
                 privateIp: '10.0.0.0',
                 securityGroups: [],
+                vpc: 'vpc-00000001',
+                subnet: 'subnet-00000001'
             )
         ],
         securityGroups: [ ]
@@ -599,21 +643,71 @@ class NetworkInfoBroadcasterTest {
     cluster
   }
 
-  private static NetworkInfoBroadcasts.VmInstanceNetworkView instance( String id, String partition, String node, String ownerAccountNumber, String mac, String publicAddress, String privateAddress ) {
+  private static NetworkInfoBroadcasts.VmInstanceNetworkView instance( String id, String partition, String node, String ownerAccountNumber, String mac, String publicAddress, String privateAddress, String vpcId = null, String subnetId = null ) {
     new NetworkInfoBroadcasts.VmInstanceNetworkView(
       id,
       1,
       VmState.RUNNING,
       false,
       ownerAccountNumber,
-      null,
-      null,
+      vpcId,
+      subnetId,
       mac,
       privateAddress,
       publicAddress,
       partition,
       node,
       [ ],
+    )
+  }
+
+  private static NetworkInfoBroadcasts.VpcNetworkView vpc( String id, String ownerAccountNumber, String cidr = '10.0.0.0/16', String dhcpOptionSetId = null ) {
+    new NetworkInfoBroadcasts.VpcNetworkView(
+        id,
+        1,
+        ownerAccountNumber,
+        cidr,
+        dhcpOptionSetId
+    )
+  }
+
+  private static NetworkInfoBroadcasts.SubnetNetworkView subnet( String id, String ownerAccountNumber, String partition, String vpcId, String cidr = '10.0.0.0/16', String networkAclId = null ) {
+    new NetworkInfoBroadcasts.SubnetNetworkView(
+        id,
+        1,
+        ownerAccountNumber,
+        vpcId,
+        cidr,
+        partition,
+        networkAclId
+    )
+  }
+
+  private static NetworkInfoBroadcasts.InternetGatewayNetworkView internetGateway( String id, String ownerAccountNumber, String vpcId ) {
+    new NetworkInfoBroadcasts.InternetGatewayNetworkView(
+        id,
+        1,
+        ownerAccountNumber,
+        vpcId
+    )
+  }
+
+  private static NetworkInfoBroadcasts.RouteTableNetworkView routeTable( String id, String ownerAccountNumber, String vpcId, boolean main, List<String> subnetIds, List<NetworkInfoBroadcasts.RouteNetworkView> routes = [] ) {
+    new NetworkInfoBroadcasts.RouteTableNetworkView(
+        id,
+        1,
+        ownerAccountNumber,
+        vpcId,
+        main,
+        subnetIds,
+        routes
+    )
+  }
+
+  private static NetworkInfoBroadcasts.RouteNetworkView route( String cidr, String internetGatewayId ) {
+    new NetworkInfoBroadcasts.RouteNetworkView(
+        cidr,
+        internetGatewayId
     )
   }
 
