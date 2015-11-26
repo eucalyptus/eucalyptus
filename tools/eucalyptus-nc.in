@@ -128,12 +128,8 @@ create_httpd_config() {
             $EUCALYPTUS/etc/eucalyptus/httpd.conf \
             > $RUNDIR/httpd-nc.conf
 
-	# load authz if we have it (ubuntu needs it)
-	if [ -e $HTTPD_HOME/usr/lib/apache2/modules/mod_authz_host.so ]; then
-	    echo "LoadModule authz_host_module /usr/lib/apache2/modules/mod_authz_host.so" >> $RUNDIR/httpd-nc.conf
-	fi
         # load needed modules if we have them
-        for mod in mpm_prefork unixd authn_core authz_core
+        for mod in mpm_prefork unixd authn_core authz_core authz_host
         do
             if [ -e $APACHE2_MODULE_DIR/mod_$mod.so ]; then
                 module=_module

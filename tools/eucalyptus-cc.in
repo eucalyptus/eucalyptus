@@ -135,10 +135,14 @@ create_httpd_config() {
             $EUCALYPTUS/etc/eucalyptus/httpd.conf \
             > $RUNDIR/httpd-cc.conf
 
-	# if we find authz load it (needed by ubuntu)
-	if [ -e $HTTPD_HOME/usr/lib/apache2/modules/mod_authz_host.so ]; then
-		echo "LoadModule authz_host_module /usr/lib/apache2/modules/mod_authz_host.so" >> $RUNDIR/httpd-cc.conf
-	fi
+        # load needed modules if we have them
+        for mod in mpm_prefork unixd authn_core authz_core authz_host
+        do
+            if [ -e $APACHE2_MODULE_DIR/mod_$mod.so ]; then
+                module=_module
+	        sed -i "1iLoadModule $mod$module $APACHE2_MODULE_DIR/mod_$mod.so" $RUNDIR/httpd-cc.conf
+	    fi
+        done
 }
 
 # crude way to start the axis2c services
