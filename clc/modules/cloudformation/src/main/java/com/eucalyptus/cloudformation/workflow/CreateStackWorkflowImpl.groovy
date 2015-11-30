@@ -46,19 +46,18 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
   private static final Logger LOG = Logger.getLogger(CreateStackWorkflowImpl.class);
 
   @Delegate
-  WorkflowOperations<StackActivity> workflowOperations = SwfWorkflowOperations.of(StackActivity);
+  WorkflowOperations<StackActivityClient> workflowOperations = SwfWorkflowOperations.of(StackActivityClient);
 
   @Override
   public void createStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, String onFailure) {
     try {
-      Promise<String> createInitialStackPromise = promiseFor(
+      Promise<String> createInitialStackPromise =
         activities.createGlobalStackEvent(
           stackId,
           accountId,
           StackResourceEntity.Status.CREATE_IN_PROGRESS.toString(),
           "User Initiated"
-        )
-      );
+        );
 
       waitFor(createInitialStackPromise) {
         DependencyManager resourceDependencyManager = StackEntityHelper.jsonToResourceDependencyManager(
@@ -71,7 +70,7 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
         doTry {
           // This is in case any part of setting up the stack fails
           // AWS has added some new parameter types whose values are not validated until now, so we do the same.  (Why?)
-          Promise<String> validateAWSParameterTypesPromise = promiseFor(activities.validateAWSParameterTypes(stackId, accountId, effectiveUserId));
+          Promise<String> validateAWSParameterTypesPromise = activities.validateAWSParameterTypes(stackId, accountId, effectiveUserId);
           waitFor(validateAWSParameterTypesPromise) {
             // Now for each resource, set up the promises and the dependencies they have for each other
             for (String resourceId : resourceDependencyManager.getNodes()) {
@@ -94,10 +93,10 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
             }
             AndPromise allResourcePromises = new AndPromise(createdResourcePromiseMap.values());
             waitFor(allResourcePromises) {
-              waitFor(promiseFor(activities.finalizeCreateStack(stackId, accountId, effectiveUserId))) {
-                promiseFor(activities.createGlobalStackEvent(stackId, accountId,
+              waitFor(activities.finalizeCreateStack(stackId, accountId, effectiveUserId)) {
+                activities.createGlobalStackEvent(stackId, accountId,
                   StackResourceEntity.Status.CREATE_COMPLETE.toString(),
-                  "Complete!"));
+                  "Complete!");
               }
             }
           }
@@ -107,14 +106,14 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
           Throwable cause = Throwables.getRootCause(t);
           Promise<String> errorMessagePromise = Promise.asPromise((cause != null) && (cause.getMessage() != null) ? cause.getMessage() : "");
           if (cause != null && cause instanceof ResourceFailureException) {
-            errorMessagePromise = promiseFor(activities.determineCreateResourceFailures(stackId, accountId));
+            errorMessagePromise = activities.determineCreateResourceFailures(stackId, accountId);
           }
           waitFor(errorMessagePromise) { String errorMessage ->
-            promiseFor(activities.createGlobalStackEvent(
+            activities.createGlobalStackEvent(
               stackId,
               accountId,
               StackResourceEntity.Status.CREATE_FAILED.toString(),
-              errorMessage)
+              errorMessage
             );
           }
         }.getResult()
@@ -130,10 +129,10 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
                                    String accountId,
                                    String effectiveUserId,
                                    String reverseDependentResourcesJson) {
-    Promise<String> getResourceTypePromise = promiseFor(activities.getResourceType(stackId, accountId, resourceId));
+    Promise<String> getResourceTypePromise = activities.getResourceType(stackId, accountId, resourceId);
     waitFor(getResourceTypePromise) { String resourceType ->
       ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceType);
-      Promise<String> initPromise = promiseFor(activities.initCreateResource(resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson));
+      Promise<String> initPromise = activities.initCreateResource(resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson);
       waitFor(initPromise) { String result ->
         if ("SKIP".equals(result)) {
           return promiseFor("");

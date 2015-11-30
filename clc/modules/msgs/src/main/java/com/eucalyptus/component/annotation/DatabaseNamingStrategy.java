@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.component.annotation;
 
-import com.google.common.base.Enums;
+import com.eucalyptus.util.FUtils;
 import com.google.common.base.Objects;
 
 /**
@@ -68,7 +68,7 @@ public enum DatabaseNamingStrategy {
   private static DatabaseNamingStrategy propertyValueIfPresent( final String propertyName,
                                                                 final DatabaseNamingStrategy fallback ) {
     return Objects.firstNonNull(
-        Enums.valueOfFunction( DatabaseNamingStrategy.class ).apply( System.getProperty( propertyName, "" ) ),
+        FUtils.valueOfFunction( DatabaseNamingStrategy.class ).apply( System.getProperty( propertyName, "" ) ),
         fallback );
   }
 

@@ -21,7 +21,7 @@ package com.eucalyptus.cloudformation.workflow.steps
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise
 import com.eucalyptus.cloudformation.resources.ResourceAction
-import com.eucalyptus.cloudformation.workflow.StackActivity
+import com.eucalyptus.cloudformation.workflow.StackActivityClient
 import com.netflix.glisten.WorkflowOperations
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
@@ -33,7 +33,7 @@ import groovy.transform.TypeCheckingMode
 class CreateMultiStepPromise extends MultiStepPromise {
 
   CreateMultiStepPromise(
-      final WorkflowOperations<StackActivity> workflowOperations,
+      final WorkflowOperations<StackActivityClient> workflowOperations,
       final Collection<String> stepIds,
       final ResourceAction resourceAction
   ) {

@@ -34,8 +34,8 @@ import com.eucalyptus.entities.AbstractPersistentSupport;
 import com.eucalyptus.compute.common.internal.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.TypeMapper;
-import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
@@ -172,7 +172,7 @@ public interface NetworkAcls extends Lister<NetworkAcl> {
               .withPersistenceFilter( "entry.port-range.from", "entries.portRangeFrom", PersistenceFilter.Type.Integer )
               .withPersistenceFilter( "entry.port-range.to", "entries.portRangeTo", PersistenceFilter.Type.Integer )
               .withPersistenceFilter( "entry.protocol", "entries.protocol", ProtocolValueFunction.INSTANCE )
-              .withPersistenceFilter( "entry.rule-action", "entries.ruleAction", Enums.valueOfFunction( NetworkAclEntry.RuleAction.class ) )
+              .withPersistenceFilter( "entry.rule-action", "entries.ruleAction", FUtils.valueOfFunction( NetworkAclEntry.RuleAction.class ) )
               .withPersistenceFilter( "entry.rule-number", "entries.ruleNumber", PersistenceFilter.Type.Integer )
               .withPersistenceFilter( "network-acl-id", "displayName" )
               .withPersistenceFilter( "vpc-id", "vpc.displayName" )

@@ -89,13 +89,13 @@ import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.auth.type.RestrictedType;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.dns.DomainNames;
 import com.eucalyptus.vm.VmInstances;
-import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
@@ -451,7 +451,7 @@ public class VpcManager {
                         entry = NetworkAclEntry.createIcmpEntry(
                             networkAcl,
                             request.getRuleNumber(),
-                            Enums.valueOfFunction( NetworkAclEntry.RuleAction.class ).apply( request.getRuleAction() ),
+                            FUtils.valueOfFunction( NetworkAclEntry.RuleAction.class ).apply( request.getRuleAction() ),
                             request.getEgress(),
                             cidr,
                             request.getIcmpTypeCode().getCode(),
@@ -463,7 +463,7 @@ public class VpcManager {
                             networkAcl,
                             request.getRuleNumber(),
                             protocolOptional.get(),
-                            Enums.valueOfFunction( NetworkAclEntry.RuleAction.class ).apply( request.getRuleAction() ),
+                            FUtils.valueOfFunction( NetworkAclEntry.RuleAction.class ).apply( request.getRuleAction() ),
                             request.getEgress(),
                             cidr,
                             request.getPortRange().getFrom(),
@@ -474,7 +474,7 @@ public class VpcManager {
                             networkAcl,
                             request.getRuleNumber( ),
                             protocolOptional.get(),
-                            Enums.valueOfFunction( NetworkAclEntry.RuleAction.class ).apply( request.getRuleAction( ) ),
+                            FUtils.valueOfFunction( NetworkAclEntry.RuleAction.class ).apply( request.getRuleAction( ) ),
                             request.getEgress( ),
                             cidr );
                     }
@@ -1517,7 +1517,7 @@ public class VpcManager {
                     entry = NetworkAclEntry.createIcmpEntry(
                         networkAcl,
                         request.getRuleNumber(),
-                        Enums.valueOfFunction( NetworkAclEntry.RuleAction.class ).apply( request.getRuleAction() ),
+                        FUtils.valueOfFunction( NetworkAclEntry.RuleAction.class ).apply( request.getRuleAction() ),
                         request.getEgress(),
                         cidr,
                         request.getIcmpTypeCode().getCode(),
@@ -1529,7 +1529,7 @@ public class VpcManager {
                         networkAcl,
                         request.getRuleNumber(),
                         protocolOptional.get(),
-                        Enums.valueOfFunction( NetworkAclEntry.RuleAction.class ).apply( request.getRuleAction() ),
+                        FUtils.valueOfFunction( NetworkAclEntry.RuleAction.class ).apply( request.getRuleAction() ),
                         request.getEgress(),
                         cidr,
                         request.getPortRange().getFrom(),
@@ -1540,7 +1540,7 @@ public class VpcManager {
                         networkAcl,
                         request.getRuleNumber( ),
                         protocolOptional.get(),
-                        Enums.valueOfFunction( NetworkAclEntry.RuleAction.class ).apply( request.getRuleAction( ) ),
+                        FUtils.valueOfFunction( NetworkAclEntry.RuleAction.class ).apply( request.getRuleAction( ) ),
                         request.getEgress( ),
                         cidr );
                 }

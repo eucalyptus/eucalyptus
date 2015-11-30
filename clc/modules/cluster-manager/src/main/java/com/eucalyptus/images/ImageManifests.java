@@ -309,13 +309,15 @@ public class ImageManifests {
           this.platform = ImageMetadata.Platform.linux;
           this.virtualizationType = ImageMetadata.VirtualizationType.paravirtualized;
           if ( CloudMetadatas.isKernelImageIdentifier( kId ) ) {
-            ImageManifests.checkPrivileges( this.kernelId );
+            //TODO EUCA-3109
+            //ImageManifests.checkPrivileges( this.kernelId );
             this.kernelId = kId;
           } else {
             this.kernelId = null;
           }
           if ( CloudMetadatas.isRamdiskImageIdentifier( rId ) ) {
-            ImageManifests.checkPrivileges( this.ramdiskId );
+            //TODO EUCA-3109
+            //ImageManifests.checkPrivileges( this.ramdiskId );
             this.ramdiskId = rId;
           } else {
             this.ramdiskId = null;

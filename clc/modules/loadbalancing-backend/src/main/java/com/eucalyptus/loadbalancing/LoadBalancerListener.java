@@ -61,7 +61,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ContiguousSet;
-import com.google.common.collect.DiscreteDomains;
+import com.google.common.collect.DiscreteDomain;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.common.collect.Sets;
@@ -112,7 +112,7 @@ public class LoadBalancerListener extends AbstractPersistent
 					final int endPort = Integer.parseInt(tokens[1]);
 					if(beginPort < 1 || endPort > 65535 || beginPort > endPort)
 						throw new Exception("invald range");
-					return ContiguousSet.create(Range.closed(beginPort, endPort), DiscreteDomains.integers());
+					return ContiguousSet.create(Range.closed(beginPort, endPort), DiscreteDomain.integers( ));
 				}else if(input.contains(",")){
 					final String[] tokens = input.split(",");
 					if(tokens.length != StringUtils.countMatches(input, ",")+1)

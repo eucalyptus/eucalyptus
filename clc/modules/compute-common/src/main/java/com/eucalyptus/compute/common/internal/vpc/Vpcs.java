@@ -35,9 +35,9 @@ import com.eucalyptus.compute.common.internal.tags.FilterSupport;
 import com.eucalyptus.compute.common.internal.tags.Tag;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMapper;
-import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 
@@ -115,7 +115,7 @@ public interface Vpcs extends Lister<Vpc> {
           .withPersistenceFilter( "dhcp-options-id", "dhcpOptionSet.displayName" )
           .withPersistenceFilter( "dhcpOptionsId", "dhcpOptionSet.displayName" )
           .withPersistenceFilter( "isDefault", "defaultVpc", Collections.<String>emptySet(), PersistenceFilter.Type.Boolean )
-          .withPersistenceFilter( "state", "state", Enums.valueOfFunction( Vpc.State.class ) )
+          .withPersistenceFilter( "state", "state", FUtils.valueOfFunction( Vpc.State.class ) )
           .withPersistenceFilter( "vpc-id", "displayName" )
       );
     }

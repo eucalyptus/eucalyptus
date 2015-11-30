@@ -34,8 +34,8 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.Intervals;
-import com.google.common.base.Enums;
 import com.google.common.base.Predicates;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
@@ -155,7 +155,7 @@ public class AutoScalingConfiguration {
     final List<E> values = Lists.newArrayList( Iterables.filter(
         Iterables.transform(
             Splitter.on( "," ).omitEmptyStrings().trimResults().split( text ),
-            Enums.valueOfFunction( enumClass ) ),
+            FUtils.valueOfFunction( enumClass ) ),
         Predicates.notNull() ) );
     return values.isEmpty() ?
       EnumSet.noneOf( enumClass ) :

@@ -42,7 +42,7 @@ public class MonitorCreateStackWorkflowImpl implements MonitorCreateStackWorkflo
   private static final Logger LOG = Logger.getLogger(MonitorCreateStackWorkflowImpl.class);
 
   @Delegate
-  WorkflowOperations<StackActivity> workflowOperations = SwfWorkflowOperations.of(StackActivity)
+  WorkflowOperations<StackActivityClient> workflowOperations = SwfWorkflowOperations.of(StackActivityClient)
   WorkflowUtils workflowUtils = new WorkflowUtils( workflowOperations )
 
   @Override
@@ -50,14 +50,14 @@ public class MonitorCreateStackWorkflowImpl implements MonitorCreateStackWorkflo
     try {
       Promise<String> closeStatusPromise = workflowUtils.fixedPollWithTimeout( (int)TimeUnit.DAYS.toSeconds( 365 ), 30 ) {
         retry( new ExponentialRetryPolicy( 2L ).withMaximumAttempts( 6 ) ){
-          promiseFor( activities.getWorkflowExecutionCloseStatus( stackId ) )
+          activities.getWorkflowExecutionCloseStatus( stackId )
         }
       }
       waitFor( closeStatusPromise ) { String closedStatus ->
         if ( !closedStatus ) {
           throw new InternalFailureException( "Stack create timeout stack id ${stackId}" );
         }
-        waitFor( promiseFor( activities.getStackStatus( stackId, accountId ) ) ) { String stackStatus ->
+        waitFor( activities.getStackStatus( stackId, accountId ) ) { String stackStatus ->
           determineRollbackAction( closedStatus, stackStatus, stackId, accountId, resourceDependencyManagerJson, effectiveUserId, onFailure );
         }
       }
@@ -89,14 +89,14 @@ public class MonitorCreateStackWorkflowImpl implements MonitorCreateStackWorkflo
       } else {
         throw new InternalFailureException("Unsupported close status for workflow " + closedStatus);
       }
-      Promise<String> cancelOutstandingResources = promiseFor(activities.cancelOutstandingCreateResources(stackId, accountId, "Resource creation cancelled"));
+      Promise<String> cancelOutstandingResources = activities.cancelOutstandingCreateResources(stackId, accountId, "Resource creation cancelled");
       Promise<String> setStackStatusPromise = waitFor(cancelOutstandingResources) {
-        promiseFor(activities.setStackStatus(stackId, accountId,
-          StackEntity.Status.CREATE_FAILED.toString(), statusReason))
+        activities.setStackStatus(stackId, accountId,
+          StackEntity.Status.CREATE_FAILED.toString(), statusReason)
       };
       return waitFor(setStackStatusPromise) {
-        Promise<String> createGlobalStackEventPromise = promiseFor(activities.createGlobalStackEvent(stackId,
-          accountId, StackResourceEntity.Status.CREATE_FAILED.toString(), statusReason));
+        Promise<String> createGlobalStackEventPromise = activities.createGlobalStackEvent(stackId,
+          accountId, StackResourceEntity.Status.CREATE_FAILED.toString(), statusReason);
         waitFor(createGlobalStackEventPromise) {
           performRollback(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, onFailure);
         }

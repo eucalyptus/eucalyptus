@@ -176,7 +176,7 @@ public class BillOfMaterials {
         final List<URL> propFiles = Collections.list( ClassLoader.getSystemResources( "version.properties" ) );
         for ( final URL u : propFiles ) {
           final Properties temp = new Properties( );
-          final InputStream in = Resources.newInputStreamSupplier( u ).getInput( );
+          final InputStream in = Resources.asByteSource( u ).openStream( );
           try {
             temp.load( in );
           } finally {

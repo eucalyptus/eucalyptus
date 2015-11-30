@@ -108,7 +108,6 @@
 
 package com.eucalyptus.bootstrap;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -129,7 +128,6 @@ import org.jibx.binding.classes.ClassFile;
 import org.jibx.binding.classes.MungedClass;
 import org.jibx.binding.def.BindingBuilder;
 import org.jibx.binding.def.BindingDefinition;
-import org.jibx.binding.def.MappingBase;
 import org.jibx.binding.model.BindingElement;
 import org.jibx.binding.model.IncludeElement;
 import org.jibx.binding.model.MappingElement;
@@ -141,8 +139,7 @@ import org.jibx.util.ClasspathUrlExtender;
 import com.eucalyptus.system.SubDirectory;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.io.ByteStreams;
-import com.google.common.io.InputSupplier;
+import com.google.common.io.ByteSource;
 import com.google.common.io.Resources;
 
 public class BootstrapClassLoader extends URLClassLoader {
@@ -234,58 +231,54 @@ public class BootstrapClassLoader extends URLClassLoader {
       throw new IllegalStateException( "Call not allowed after bindings compiled" );
     } else {
       URL url = Resources.getResource( path );
-      InputSupplier<InputStream> inSupplier = Resources.newInputStreamSupplier( url );
-      if ( inSupplier == null ) {
-        throw new IOException( "Resource " + path + " not found" );
-      } else {
-        String fname = path;
-        int split = fname.lastIndexOf( '/' );
-        if ( split >= 0 ) {
-          fname = fname.substring( split + 1 );
-        }
-        String defaultBindingName = Utility.bindingFromFileName( fname );
-        try {
-          ValidationContext vctx = BindingElement.newValidationContext( );
-          BindingElement root = BindingElement.validateBinding( fname, url, inSupplier.getInput( ), vctx );
-          if ( vctx.getErrorCount( ) == 0 && vctx.getFatalCount( ) == 0 ) {
-            ClassFile classFile = findMappedClass( root );
-            String tpack = root.getTargetPackage( );
-            if ( tpack == null && classFile != null ) {
+      ByteSource inSupplier = Resources.asByteSource( url );
+      String fname = path;
+      int split = fname.lastIndexOf( '/' );
+      if ( split >= 0 ) {
+        fname = fname.substring( split + 1 );
+      }
+      String defaultBindingName = Utility.bindingFromFileName( fname );
+      try {
+        ValidationContext vctx = BindingElement.newValidationContext( );
+        BindingElement root = BindingElement.validateBinding( fname, url, inSupplier.openBufferedStream( ), vctx );
+        if ( vctx.getErrorCount( ) == 0 && vctx.getFatalCount( ) == 0 ) {
+          ClassFile classFile = findMappedClass( root );
+          String tpack = root.getTargetPackage( );
+          if ( tpack == null && classFile != null ) {
+            tpack = classFile.getPackage( );
+          }
+          String bindingName = root.getName( );
+          UnmarshallingContext uctx = new UnmarshallingContext( );
+          uctx.setDocument( inSupplier.openBufferedStream( ), fname, null );
+          if ( classFile != null ) {
+            bindingName = ( bindingName == null
+              ? defaultBindingName
+              : bindingName );
+            BoundClass.setModify( classFile.getRoot( ), tpack, bindingName );
+          }
+          BindingDefinition bindingDefinition = BindingBuilder.unmarshalBindingDefinition( uctx, defaultBindingName, url );
+          File rootFile = null;
+          if ( tpack == null ) {
+            tpack = bindingDefinition.getDefaultPackage( );
+          }
+          if ( classFile == null ) {
+            rootFile = ClassCache.getModifiablePath( );
+            if ( root == null ) {
+              throw new IllegalStateException( "Need modifiable directory on classpath for storing generated factory class file" );
+            }
+            if ( tpack == null ) {
+              tpack = "";
+            }
+          } else {
+            rootFile = classFile.getRoot( );
+            if ( tpack == null ) {
               tpack = classFile.getPackage( );
             }
-            String bindingName = root.getName( );
-            UnmarshallingContext uctx = new UnmarshallingContext( );
-            uctx.setDocument( inSupplier.getInput( ), fname, null );
-            if ( classFile != null ) {
-              bindingName = ( bindingName == null
-                ? defaultBindingName
-                : bindingName );
-              BoundClass.setModify( classFile.getRoot( ), tpack, bindingName );
-            }
-            BindingDefinition bindingDefinition = BindingBuilder.unmarshalBindingDefinition( uctx, defaultBindingName, url );
-            File rootFile = null;
-            if ( tpack == null ) {
-              tpack = bindingDefinition.getDefaultPackage( );
-            }
-            if ( classFile == null ) {
-              rootFile = ClassCache.getModifiablePath( );
-              if ( root == null ) {
-                throw new IllegalStateException( "Need modifiable directory on classpath for storing generated factory class file" );
-              }
-              if ( tpack == null ) {
-                tpack = "";
-              }
-            } else {
-              rootFile = classFile.getRoot( );
-              if ( tpack == null ) {
-                tpack = classFile.getPackage( );
-              }
-            }
-            bindingDefinition.setFactoryLocation( tpack, rootFile );
           }
-        } catch ( JiBXException ex ) {
-          LOG.error( "Unable to process binding " + url, ex );
+          bindingDefinition.setFactoryLocation( tpack, rootFile );
         }
+      } catch ( JiBXException ex ) {
+        LOG.error( "Unable to process binding " + url, ex );
       }
     }
   }

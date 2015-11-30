@@ -25,6 +25,7 @@ import com.eucalyptus.bootstrap.Databases
 import com.eucalyptus.bootstrap.Hosts
 import com.eucalyptus.cluster.ClusterConfiguration
 import com.eucalyptus.component.Components
+import com.eucalyptus.component.ServiceConfiguration
 import com.eucalyptus.component.id.ClusterController
 import com.eucalyptus.configurable.ConfigurableProperty
 import com.eucalyptus.configurable.ConfigurablePropertyException
@@ -102,17 +103,17 @@ class NetworkConfigurations {
   static void process( final NetworkConfiguration networkConfiguration ) {
     Addresses.getInstance( ).update( iterateRangesAsString( networkConfiguration.publicIps ) )
     Entities.transaction( ClusterConfiguration.class ) { EntityTransaction db ->
-      Components.lookup(ClusterController.class).services().each { ClusterConfiguration config ->
+      Components.lookup(ClusterController.class).services( ).each { ServiceConfiguration config ->
         (networkConfiguration?.clusters?.find{ Cluster cluster -> cluster.name == config.partition }?:new Cluster()).with {
           boolean managed = ['MANAGED', 'MANAGED-NOVLAN'].contains(networkConfiguration.mode)
-          ClusterConfiguration clusterConfiguration = Entities.uniqueResult(config)
+          ClusterConfiguration clusterConfiguration = Entities.uniqueResult((ClusterConfiguration)config)
           clusterConfiguration.networkMode = GObjects.firstNonNull( networkConfiguration.mode, NetworkMode.EDGE.toString( ) )
           clusterConfiguration.addressesPerNetwork = managed ? ( networkConfiguration?.managedSubnet?.segmentSize ?: ManagedSubnet.DEF_SEGMENT_SIZE ) : -1
           clusterConfiguration.useNetworkTags = managed
           clusterConfiguration.minNetworkTag = networkConfiguration?.managedSubnet?.minVlan ?: ManagedSubnet.MIN_VLAN
           clusterConfiguration.maxNetworkTag = networkConfiguration?.managedSubnet?.maxVlan ?: ManagedSubnet.MAX_VLAN
-          clusterConfiguration.minNetworkIndex = managed ? ManagedSubnet.MIN_INDEX : -1
-          clusterConfiguration.maxNetworkIndex = managed ? ( clusterConfiguration.addressesPerNetwork - 1 ) : -1
+          clusterConfiguration.minNetworkIndex = (managed ? ManagedSubnet.MIN_INDEX : -1) as Long
+          clusterConfiguration.maxNetworkIndex = (managed ? ( clusterConfiguration.addressesPerNetwork - 1 ) : -1) as Long
 
           if ( networkConfiguration?.managedSubnet ) {
             clusterConfiguration.vnetSubnet = networkConfiguration?.managedSubnet?.subnet
@@ -120,7 +121,7 @@ class NetworkConfigurations {
           } else {
             Subnet defaultSubnet = null
             if (subnet && subnet.name) {
-              defaultSubnet = networkConfiguration.subnets?.find { Subnet s -> s.name ?: s.subnet == subnet.name }
+              defaultSubnet = networkConfiguration.subnets?.find { EdgeSubnet s -> s.name ?: s.subnet == subnet.name }
             } else if (!subnet) {
               defaultSubnet = networkConfiguration.subnets?.getAt(0) // must be only one
             }
@@ -254,11 +255,11 @@ class NetworkConfigurations {
     configuration.clusters = clusters
 
     // Ensure required clusters exist
-    clusters.collect{ Cluster cluster -> cluster.name }.with{ Collection<String> names ->
-      clusters.addAll( ((Iterable) clusterNames).findResults{ String requiredName ->
+    clusters.collect{ Cluster cluster -> cluster.name }.with{ List<String> names ->
+      clusters.addAll( ((Iterable) clusterNames).findResults{ Object requiredName ->
         names.contains( requiredName ) ?
             null:
-            new Cluster( name: requiredName )
+            new Cluster( name: requiredName as String )
       } )
     }
 
@@ -293,7 +294,7 @@ class NetworkConfigurations {
     Collection<String> clusterSubnetsAndNetmasks = clusters.collect{ Cluster cluster ->
       "${cluster?.subnet?.subnet}/${cluster?.subnet?.netmask}".toString( )
     }
-    configuration.subnets?.removeAll{ Subnet subnet ->
+    configuration.subnets?.removeAll{ EdgeSubnet subnet ->
       clusterSubnetsAndNetmasks.contains( "${subnet?.subnet}/${subnet?.netmask}".toString( ) )
     }
     if ( configuration.subnets?.isEmpty( ) ) {

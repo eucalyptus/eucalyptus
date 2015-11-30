@@ -34,8 +34,8 @@ import com.eucalyptus.entities.AbstractPersistentSupport;
 import com.eucalyptus.compute.common.internal.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.TypeMapper;
-import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
@@ -160,8 +160,8 @@ public interface RouteTables extends Lister<RouteTable> {
               .withPersistenceFilter( "association.main", "routeTableAssociations.main", PersistenceFilter.Type.Boolean )
               .withPersistenceFilter( "route.destination-cidr-block", "routes.destinationCidr" )
               .withPersistenceFilter( "route.gateway-id", "routes.destinationCidr" )
-              .withPersistenceFilter( "route.origin", "routes.origin", Enums.valueOfFunction( Route.RouteOrigin.class ) )
-              .withPersistenceFilter( "route.state", "routes.state", Enums.valueOfFunction( Route.State.class ) )
+              .withPersistenceFilter( "route.origin", "routes.origin", FUtils.valueOfFunction( Route.RouteOrigin.class ) )
+              .withPersistenceFilter( "route.state", "routes.state", FUtils.valueOfFunction( Route.State.class ) )
               .withPersistenceFilter( "route-table-id", "displayName" )
               .withPersistenceFilter( "vpc-id", "vpc.displayName" )
       );

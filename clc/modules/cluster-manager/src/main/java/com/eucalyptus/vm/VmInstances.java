@@ -198,6 +198,7 @@ import com.eucalyptus.compute.common.internal.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.Intervals;
 import com.eucalyptus.auth.principal.OwnerFullName;
@@ -2663,7 +2664,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
           .withPersistenceAlias( "networkInterfaces.vpc", "vpc" )
           .withPersistenceAlias( "networkInterfaces.subnet", "subnet" )
           .withPersistenceAlias( "networkInterfaces.networkGroups", "networkInterfaceNetworkGroups" )
-          .withPersistenceFilter( "architecture", "image.architecture", Sets.newHashSet( "bootRecord.machineImage" ), Enums.valueOfFunction( ImageMetadata.Architecture.class ) )
+          .withPersistenceFilter( "architecture", "image.architecture", Sets.newHashSet( "bootRecord.machineImage" ), FUtils.valueOfFunction( ImageMetadata.Architecture.class ) )
           .withPersistenceFilter( "availability-zone", "placement.partitionName", Collections.<String>emptySet() )
           .withPersistenceFilter( "client-token", "vmId.clientToken", Collections.<String>emptySet() )
           .withPersistenceFilter( "group-id", "networkGroups.groupId" )
@@ -2689,7 +2690,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
           .withPersistenceFilter( "network-interface.network-interface.id", "networkInterfaces.displayName", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
           .withPersistenceFilter( "network-interface.owner-id", "networkInterfaces.ownerAccountNumber", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
           .withPersistenceFilter( "network-interface.availability-zone", "networkInterfaces.availabilityZone", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
-          .withPersistenceFilter( "network-interface.status", "networkInterfaces.state", Sets.newHashSet( "networkConfig.networkInterfaces" ), Enums.valueOfFunction( NetworkInterface.State.class ) )
+          .withPersistenceFilter( "network-interface.status", "networkInterfaces.state", Sets.newHashSet( "networkConfig.networkInterfaces" ), FUtils.valueOfFunction( NetworkInterface.State.class ) )
           .withPersistenceFilter( "network-interface.mac-address", "networkInterfaces.macAddress", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
           .withPersistenceFilter( "network-interface-private-dns-name", "networkInterfaces.privateDnsName", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
           .withPersistenceFilter( "network-interface.source-destination-check", "networkInterfaces.sourceDestCheck", Sets.newHashSet( "networkConfig.networkInterfaces" ), PersistenceFilter.Type.Boolean )
@@ -2702,7 +2703,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
           .withPersistenceFilter( "network-interface.attachment.instance-id", "networkInterfaces.attachment.instanceId", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
           .withPersistenceFilter( "network-interface.attachment.instance-owner-id", "networkInterfaces.attachment.instanceOwnerId", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
           .withPersistenceFilter( "network-interface.attachment.device-index", "networkInterfaces.attachment.deviceIndex", Sets.newHashSet( "networkConfig.networkInterfaces" ), PersistenceFilter.Type.Integer )
-          .withPersistenceFilter( "network-interface.attachment.status", "networkInterfaces.attachment.status", Sets.newHashSet( "networkConfig.networkInterfaces" ), Enums.valueOfFunction( NetworkInterfaceAttachment.Status.class ) )
+          .withPersistenceFilter( "network-interface.attachment.status", "networkInterfaces.attachment.status", Sets.newHashSet( "networkConfig.networkInterfaces" ), FUtils.valueOfFunction( NetworkInterfaceAttachment.Status.class ) )
           .withPersistenceFilter( "network-interface.attachment.attach-time", "networkInterfaces.attachment.attachTime", Sets.newHashSet( "networkConfig.networkInterfaces" ), PersistenceFilter.Type.Date )
           .withPersistenceFilter( "network-interface.attachment.delete-on-termination", "networkInterfaces.attachment.deleteOnTerminate", Sets.newHashSet( "networkConfig.networkInterfaces" ), PersistenceFilter.Type.Boolean )
           .withPersistenceFilter( "association.public-ip", "networkInterfaces.association.publicIp", Sets.newHashSet( "networkConfig.networkInterfaces" ) )
@@ -2775,7 +2776,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
           .withPersistenceFilter( "s3-bucket", "runtimeState.bundleTask.bucket", Collections.<String>emptySet() )
           .withPersistenceFilter( "s3-prefix", "runtimeState.bundleTask.prefix", Collections.<String>emptySet() )
           .withPersistenceFilter( "start-time", "runtimeState.bundleTask.startTime", Collections.<String>emptySet(), PersistenceFilter.Type.Date )
-          .withPersistenceFilter( "state", "runtimeState.bundleTask.state", Collections.<String>emptySet(), Enums.valueOfFunction( VmBundleTask.BundleState.class ) )
+          .withPersistenceFilter( "state", "runtimeState.bundleTask.state", Collections.<String>emptySet(), FUtils.valueOfFunction( VmBundleTask.BundleState.class ) )
           .withPersistenceFilter( "update-time", "runtimeState.bundleTask.updateTime", Collections.<String>emptySet(), PersistenceFilter.Type.Date )
       );
     }

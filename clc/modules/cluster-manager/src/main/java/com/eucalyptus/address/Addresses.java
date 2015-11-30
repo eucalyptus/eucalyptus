@@ -96,8 +96,8 @@ import com.eucalyptus.reporting.event.AddressEvent;
 import com.eucalyptus.reporting.event.EventActionInfo;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.RestrictedTypes;
-import com.google.common.base.Enums;
 import com.google.common.base.Predicates;
 import com.google.common.base.Suppliers;
 import org.apache.log4j.Logger;
@@ -986,7 +986,7 @@ public class Addresses {
       super( builderFor( AllocatedAddressEntity.class )
           .withPersistenceFilter( "allocation-id", "allocationId" )
           .withPersistenceFilter( "association-id", "associationId" )
-          .withPersistenceFilter( "domain", "domain", Enums.valueOfFunction( AddressDomain.class ) )
+          .withPersistenceFilter( "domain", "domain", FUtils.valueOfFunction( AddressDomain.class ) )
           .withPersistenceFilter( "instance-id", "instanceId" )
           .withPersistenceFilter( "network-interface-id", "networkInterfaceId" )
           .withPersistenceFilter( "network-interface-owner-id", "networkInterfaceOwnerId" )
