@@ -337,7 +337,7 @@ class NetworkConfigurations {
           if ( !configuration.subnets || configuration.subnets.size( ) != 1 ) {
             throw new NetworkConfigurationException('A single subnet must be configured when clusters are not specified.' )
           }
-          validateIPsForSubnet( configuration.subnets[0], configuration.privateIps )
+          validateIPsForSubnet( configuration.subnets[0], configuration.privateIps, '' )
         }
       } else if ( 'VPCMIDO' == configuration.mode ) {
         if ( configuration.clusters ) {
