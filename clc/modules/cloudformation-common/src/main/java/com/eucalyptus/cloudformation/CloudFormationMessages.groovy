@@ -343,6 +343,9 @@ public class Parameter extends EucalyptusData {
   String parameterKey;
   @JsonProperty("ParameterValue")
   String parameterValue;
+  @JsonProperty("UsePreviousValue")
+  Boolean usePreviousValue;
+
   public Parameter() {  }
   public Parameter(String key, String value) {
     this.parameterKey = key;
@@ -791,6 +794,9 @@ public class UpdateStackType extends CloudFormationMessage {
   @JsonProperty("Capabilities")
   @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
   ResourceList capabilities;
+  @JsonProperty("NotificationARNs")
+  @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
+  ResourceList notificationARNs;
   @JsonProperty("Parameters")
   @JsonSerialize(using = ParametersRemoveMemberSerializer.class, as=Parameters.class)
   Parameters parameters;
@@ -808,6 +814,8 @@ public class UpdateStackType extends CloudFormationMessage {
   String templateBody;
   @JsonProperty("TemplateURL")
   String templateURL;
+  @JsonProperty("UsePreviousTemplate")
+  Boolean usePreviousTemplate;
   public UpdateStackType() {  }
 }
 public class UpdateStackResponseType extends CloudFormationMessage {
