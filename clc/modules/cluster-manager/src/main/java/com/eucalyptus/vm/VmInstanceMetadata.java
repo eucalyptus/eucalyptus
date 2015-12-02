@@ -77,6 +77,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
+import org.xbill.DNS.Name;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.ern.Ern;
@@ -102,6 +103,7 @@ import com.eucalyptus.tokens.AssumeRoleType;
 import com.eucalyptus.tokens.CredentialsType;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.util.dns.DomainNames;
 import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -194,6 +196,7 @@ public class VmInstanceMetadata {
       m.put( "ramdisk-id", vm.getRamdiskId() );
     }
     m.put( "security-groups", Joiner.on('\n').join( Sets.newTreeSet( Iterables.transform( vm.getNetworkGroups(), CloudMetadatas.toDisplayName() ) ) ) );
+    m.put( "services/domain", DomainNames.externalSubdomain( ).relativize( Name.root ).toString( ) );
     m.put( "placement/availability-zone", vm.getPartition() );
     return m;
   }
