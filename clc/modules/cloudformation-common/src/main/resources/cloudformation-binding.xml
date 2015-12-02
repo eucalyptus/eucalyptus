@@ -265,6 +265,7 @@
     <structure name="NotificationARNs" field="notificationARNs" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
     <value name="OnFailure" field="onFailure" usage="optional"/>
     <structure name="Parameters" field="parameters" usage="optional" type="com.eucalyptus.cloudformation.Parameters"/>
+    <structure name="ResourceTypes" field="resourceTypes" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
     <value name="StackName" field="stackName" usage="required"/>
     <value name="StackPolicyBody" field="stackPolicyBody" usage="optional"/>
     <value name="StackPolicyURL" field="stackPolicyURL" usage="optional"/>
@@ -415,6 +416,7 @@
     <structure name="Capabilities" field="capabilities" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
     <structure name="NotificationARNs" field="notificationARNs" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
     <structure name="Parameters" field="parameters" usage="optional" type="com.eucalyptus.cloudformation.Parameters"/>
+    <structure name="ResourceTypes" field="resourceTypes" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
     <value name="StackName" field="stackName" usage="required"/>
     <value name="StackPolicyBody" field="stackPolicyBody" usage="optional"/>
     <value name="StackPolicyDuringUpdateBody" field="stackPolicyDuringUpdateBody" usage="optional"/>

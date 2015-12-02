@@ -461,6 +461,8 @@ public class CreateStackType extends CloudFormationMessage {
   String onFailure;
   @JsonSerialize(using = ParametersRemoveMemberSerializer.class, as=Parameters.class)
   Parameters parameters;
+  @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
+  ResourceList resourceTypes;
   String stackName;
   String stackPolicyBody;
   String stackPolicyURL;
@@ -618,6 +620,8 @@ public class UpdateStackType extends CloudFormationMessage {
   ResourceList notificationARNs;
   @JsonSerialize(using = ParametersRemoveMemberSerializer.class, as=Parameters.class)
   Parameters parameters;
+  @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
+  ResourceList resourceTypes;
   String stackName;
   String stackPolicyBody;
   String stackPolicyDuringUpdateBody;
