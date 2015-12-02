@@ -1,7 +1,7 @@
 to run the CCClient program, the steps are:
 
 1.) log into the CC machine (need built source tree available)
-2.) set up environment (EUCALYTPUS, AXIS2C_HOME, LD_LIBRARY_PATH)
+2.) set up environment (EUCALYPTUS, AXIS2C_HOME, LD_LIBRARY_PATH)
 3.) run the program (CCClient) with some arguments
 
 For example, in the typical /opt/eucalyptus case (QA)
