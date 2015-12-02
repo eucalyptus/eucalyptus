@@ -157,7 +157,7 @@ public class StorageManagers extends ServiceJarDiscovery {
 
   public static LogicalStorageManager getInstance() {
     if (lastManager.get() == null || UNSET.equals(lastManager.get())) {
-      throw new NoSuchElementException("SC blockstorageamanger not configured. Found empty or unset manager(" + lastManager
+      throw new NoSuchElementException("SC blockstoragemanager not configured. Found empty or unset manager(" + lastManager
           + ").  Legal values are: " + Joiner.on(",").join(Maps.filterKeys(managers, SUPPORTED_PROVIDER_PREDICATE).keySet()));
     } else {
       return managerInstances.getUnchecked(lastManager.get());
