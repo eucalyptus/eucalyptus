@@ -92,9 +92,11 @@ import com.eucalyptus.component.id.Tokens;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
 import com.eucalyptus.compute.common.internal.images.MachineImageInfo;
+import com.eucalyptus.compute.common.internal.network.NetworkGroup;
 import com.eucalyptus.compute.common.internal.vm.VmEphemeralAttachment;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.images.ImageManager;
@@ -102,6 +104,7 @@ import com.eucalyptus.tokens.AssumeRoleResponseType;
 import com.eucalyptus.tokens.AssumeRoleType;
 import com.eucalyptus.tokens.CredentialsType;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.dns.DomainNames;
 import com.eucalyptus.ws.StackConfiguration;
@@ -198,6 +201,53 @@ public class VmInstanceMetadata {
     m.put( "security-groups", Joiner.on('\n').join( Sets.newTreeSet( Iterables.transform( vm.getNetworkGroups(), CloudMetadatas.toDisplayName() ) ) ) );
     m.put( "services/domain", DomainNames.externalSubdomain( ).relativize( Name.root ).toString( ) );
     m.put( "placement/availability-zone", vm.getPartition() );
+    return m;
+  }
+
+  private static Map<String, String> getNetworkMetadataMap( final VmInstance vm ) {
+    final Map<String, String> m = Maps.newHashMap( );
+    if ( !vm.getNetworkInterfaces( ).isEmpty( ) ) for ( final NetworkInterface networkInterface : vm.getNetworkInterfaces( ) ) {
+      final String prefix = "network/interfaces/macs/" + networkInterface.getMacAddress( ) + "/";
+      m.put( prefix + "device-number", String.valueOf( networkInterface.getAttachment( ).getDeviceIndex( ) ) );
+      m.put( prefix + "interface-id", networkInterface.getDisplayName( ) );
+      if ( networkInterface.isAssociated( ) ) {
+        m.put(
+            prefix + "ipv4-associations/" + networkInterface.getAssociation( ).getPublicIp( ),
+            networkInterface.getPrivateIpAddress( ) );
+      }
+      m.put( prefix + "local-hostname", networkInterface.getPrivateDnsName( ) );
+      m.put( prefix + "local-ipv4s", networkInterface.getPrivateIpAddress( ) );
+      m.put( prefix + "mac", networkInterface.getMacAddress( ) );
+      m.put( prefix + "owner-id", networkInterface.getOwnerAccountNumber( ) );
+      if ( networkInterface.isAssociated( ) ) {
+        m.put( prefix + "public-hostname", networkInterface.getAssociation( ).getPublicDnsName( ) );
+        m.put( prefix + "public-ipv4s", networkInterface.getAssociation( ).getPublicIp( ) );
+      }
+      m.put( prefix + "security-groups", Joiner.on( '\n' ).join( Iterables.transform( networkInterface.getNetworkGroups( ), RestrictedTypes.toDisplayName( ) ) ) );
+      m.put( prefix + "security-group-ids", Joiner.on( '\n' ).join( Iterables.transform( networkInterface.getNetworkGroups( ), NetworkGroup.groupId( ) ) ) );
+      m.put( prefix + "subnet-id", networkInterface.getSubnet( ).getDisplayName( ) );
+      m.put( prefix + "subnet-ipv4-cidr-block", networkInterface.getSubnet( ).getCidr( ) );
+      m.put( prefix + "vpc-id", networkInterface.getVpc( ).getDisplayName( ) );
+      m.put( prefix + "vpc-ipv4-cidr-block", networkInterface.getVpc( ).getCidr( ) );
+    } else { // EC2-Classic instance
+      final boolean dns = StackConfiguration.USE_INSTANCE_DNS && !ComponentIds.lookup( Dns.class ).runLimitedServices( );
+      final String prefix = "network/interfaces/macs/" + vm.getMacAddress( ) + "/";
+      m.put( prefix + "device-number", "0" );
+      if ( dns ) {
+        m.put( prefix + "local-hostname", vm.getPrivateDnsName() );
+      } else {
+        m.put( prefix + "local-hostname", vm.getPrivateAddress() );
+      }
+      m.put( prefix + "local-ipv4s", vm.getPrivateAddress( ) );
+      m.put( prefix + "mac", vm.getMacAddress( ) );
+      m.put( prefix + "owner-id", vm.getOwnerAccountNumber( ) );
+      if ( dns ) {
+        m.put( prefix + "public-hostname", vm.getPublicDnsName() );
+      } else {
+        m.put( prefix + "public-hostname", vm.getPublicAddress() );
+      }
+      m.put( prefix + "public-ipv4s", vm.getPublicAddress( ) );
+    }
     return m;
   }
 
@@ -356,6 +406,12 @@ public class VmInstanceMetadata {
         return addListingEntries( instance, getCoreMetadataMap( instance ), true );
       }
 
+    },
+    Network( "network" ) {
+      @Override
+      public Map<String, String> apply( final VmInstance instance ) {
+        return addListingEntries( getNetworkMetadataMap( instance ) );
+      }
     },
     BlockDeviceMapping( "block-device-mapping" ) {
       @Override
