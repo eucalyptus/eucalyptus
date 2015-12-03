@@ -77,7 +77,7 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
           break
         case PrivateIPResource:
           if ( !vpc ) {
-            resources.addAll( preparePrivateIp( request, (PrivateIPResource) networkResource ) )
+            resources.addAll( preparePrivateIp( request.availabilityZone, null, null, (PrivateIPResource) networkResource ) )
           }
           break
         case VpcNetworkInterfaceResource:
@@ -152,9 +152,15 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
     if ( vpcNetworkInterfaceResource.mac == null ) { // using existing network interface, nothing to do
       resource = vpcNetworkInterfaceResource
     } else {
-      resource = preparePrivateIp( request, new PrivateIPResource(
-          ownerId: vpcNetworkInterfaceResource.ownerId,
-          value: vpcNetworkInterfaceResource.privateIp ) ).getAt( 0 )?.with{
+      resource = preparePrivateIp(
+          null,
+          vpcNetworkInterfaceResource.vpc ?: request.vpc,
+          vpcNetworkInterfaceResource.subnet ?: request.subnet,
+          new PrivateIPResource(
+            ownerId: vpcNetworkInterfaceResource.ownerId,
+            value: vpcNetworkInterfaceResource.privateIp
+          )
+      ).getAt( 0 )?.with{
         vpcNetworkInterfaceResource.privateIp = value
         vpcNetworkInterfaceResource
       }
@@ -165,16 +171,18 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
         [ ]
   }
 
-  private Collection<NetworkResource> preparePrivateIp( final PrepareNetworkResourcesType request,
+  /**
+   * either zone or both vpcId and subnetId must be specified
+   */
+  private Collection<NetworkResource> preparePrivateIp( final String zone,
+                                                        final String vpcId,
+                                                        final String subnetId,
                                                         final PrivateIPResource privateIPResource ) {
     PrivateIPResource resource = null
-    final String zone = request.availabilityZone
-    final String vpcId = request.vpc
-    final String subnetId = request.subnet
     final Iterable<Integer> addresses
     final int addressCount
     final int allocatedCount
-    if ( vpcId != null ) {
+    if ( subnetId != null ) {
       final Pair<Cidr,Integer> cidrAndAvailable = cidrForSubnet( subnetId )
       final IPRange range = IPRange.fromCidr( cidrAndAvailable.getLeft( ) )
       addresses = Iterables.skip( range, 3 )
@@ -186,7 +194,7 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
       addressCount = addressPair.right
       allocatedCount = -1 // unknown
     }
-    final String scopeDescription = vpcId != null ? "subnet ${subnetId}" :  "zone ${zone}"
+    final String scopeDescription = subnetId != null ? "subnet ${subnetId}" :  "zone ${zone}"
     if ( privateIPResource.value ) { // handle restore
       if ( Iterators.contains( addresses.iterator( ), PrivateAddresses.asInteger( privateIPResource.value ) ) ) {
         try {

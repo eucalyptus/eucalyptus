@@ -37,8 +37,19 @@ import groovy.transform.CompileStatic
 @CompileStatic
 interface VmInstanceLifecycleHelper {
 
+  /**
+   * Verify that the allocation is valid.
+   *
+   * Populate verified references in the allocation but do not allocate
+   * resources.
+   */
   void verifyAllocation( Allocation allocation ) throws MetadataException
 
+  /**
+   * Prepare the network resource request for the allocation.
+   *
+   * Request resource allocations, typically for each token.
+   */
   void prepareNetworkAllocation( Allocation allocation,
                                  PrepareNetworkResourcesType prepareNetworkResourcesType )
 
@@ -48,7 +59,11 @@ interface VmInstanceLifecycleHelper {
   void prepareVmRunType( ResourceToken resourceToken,
                          VmRunBuilder builder );
 
-
+  /**
+   * Build the instance based on information from the corresponding token.
+   *
+   * @see VmInstanceBuilder#onBuild
+   */
   void prepareVmInstance( ResourceToken resourceToken,
                           VmInstanceBuilder builder)
 

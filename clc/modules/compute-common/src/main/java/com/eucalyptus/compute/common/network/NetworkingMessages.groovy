@@ -68,7 +68,10 @@ abstract class NetworkResource extends EucalyptusData {
 
 @Canonical class VpcNetworkInterfaceResource extends NetworkResource {
   @Override String getType( ){ "network-interface" }
+  Integer device
   String mac
+  String vpc
+  String subnet
   String privateIp
   String description
   Boolean deleteOnTerminate
