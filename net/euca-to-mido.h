@@ -324,6 +324,9 @@ int delete_mido_vpc_instance(mido_vpc_instance * vpcinstance);
 int find_mido_vpc_instance(mido_vpc_subnet * vpcsubnet, char *instancename, mido_vpc_instance ** outvpcinstance);
 int find_mido_vpc_instance_global(mido_config * mido, char *instancename, mido_vpc_instance ** outvpcinstance);
 
+int find_mido_vpc_chain(mido_config *mido, char *chainname, midoname **outchain);
+int find_mido_vpc_ipaddrgroup(mido_config *mido, char *ipagname, midoname **outipag);
+
 int populate_mido_vpc_secgroup(mido_config * mido, mido_vpc_secgroup * vpcsecgroup);
 int create_mido_vpc_secgroup(mido_config * mido, mido_vpc_secgroup * vpcsecgroup);
 int delete_mido_vpc_secgroup(mido_vpc_secgroup * vpcsecgroup);

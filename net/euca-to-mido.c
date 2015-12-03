@@ -1286,6 +1286,11 @@ int do_midonet_update_pass3_vpcs(globalNetworkInfo * gni, mido_config * mido) {
             if (rc) {
                 LOGERROR("failed to create VPC '%s' subnet '%s': check midonet health\n", gnivpc->name, gnivpc->subnets[j].name);
                 ret = 1;
+                LOGINFO("Trying to cleanup partial artifacts for subnet %s\n", vpcsubnet->name);
+                rc = delete_mido_vpc_subnet(mido, vpcsubnet);
+                if (rc) {
+                    LOGWARN("Failed to delete subnet %s. Check for duplicate midonet artifactrs.\n", vpcsubnet->name);
+                }
             }
             vpcsubnet->gnipresent = 1;
         }
@@ -1687,9 +1692,8 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
 
                     // do instance<->port connection and elip
                     if (vpcinstance->midos[VMHOST].init) {
-                        LOGINFO("connecting gni host '%s' with midonet host '%s' interface for instance '%s'\n", gniinstance->nodehostname, vpcinstance->midos[VMHOST].name,
-                                gniinstance->name);
-                        
+                        LOGDEBUG("connecting gni host '%s' with midonet host '%s' interface for instance '%s'\n",
+                                gniinstance->nodehostname, vpcinstance->midos[VMHOST].name, gniinstance->name);
 
                         rc = connect_mido_vpc_instance(vpcsubnet, vpcinstance, &(vpcinstance->midos[VMHOST]), gni->instanceDNSDomain);
                         if (rc) {
@@ -2327,6 +2331,88 @@ int find_mido_vpc(mido_config * mido, char *vpcname, mido_vpc ** outvpc)
 }
 
 //!
+//! Searches the chains discovered in MidoNet for the given chain.
+//!
+//! @param[in] mido data structure holding all discovered MidoNet resources.
+//! @param[in] chainname name of the chain of interest.
+//! @param[out] outchain reference to midoname data structure of the chain of
+//! interest, if found.
+//!
+//! @return 0 if the chainname in the argument is found among discovered Midonet
+//! resources. 1 otherwise.
+//!
+//! @see
+//!
+//! @pre mido data structure should have been populated.
+//!
+//! @post
+//!
+//! @note
+//!
+int find_mido_vpc_chain(mido_config *mido, char *chainname, midoname **outchain) {
+    int i;
+    midoname *chain = NULL;
+
+    if (!mido || !chainname) {
+        return(1);
+    }
+
+    LOGDEBUG("Searching for chain %s\n", chainname);
+    for (i = 0; i < mido->max_chains; i++) {
+        chain = &(mido->chains[i]);
+        if (!strcmp(chainname, mido->chains[i].name)) {
+            LOGDEBUG("Found chain %s\n", mido->chains[i].name);
+            if (outchain != NULL) {
+                *outchain = &(mido->chains[i]);
+            }
+            return (0);
+        }
+    }
+    return(1);
+}
+
+//!
+//! Searches the ipaddrgroups discovered in MidoNet for the given ipaddrgroup.
+//!
+//! @param[in] mido data structure holding all discovered MidoNet resources.
+//! @param[in] ipagname name of the ipaddrgroup of interest.
+//! @param[out] outipag reference to midoname data structure of the ipaddrgroup of
+//! interest, if found.
+//!
+//! @return 0 if the ipagname in the argument is found among discovered Midonet
+//! resources. 1 otherwise.
+//!
+//! @see
+//!
+//! @pre mido data structure should have been populated.
+//!
+//! @post
+//!
+//! @note
+//!
+int find_mido_vpc_ipaddrgroup(mido_config *mido, char *ipagname, midoname **outipag) {
+    int i;
+    midoname *ipag = NULL;
+
+    if (!mido || !ipagname) {
+        return(1);
+    }
+
+    LOGDEBUG("Searching for ipaddressgroup %s\n", ipagname);
+    for (i = 0; i < mido->max_ipaddrgroups; i++) {
+        ipag = &(mido->ipaddrgroups[i]);
+        if (!strcmp(ipagname, mido->ipaddrgroups[i].name)) {
+            LOGDEBUG("Found ipaddressgroup %s\n", mido->ipaddrgroups[i].name);
+            if (outipag != NULL) {
+                *outipag = &(mido->ipaddrgroups[i]);
+            }
+            return (0);
+        }
+    }
+    return(1);
+}
+
+//!
 //!
 //!
 //! @param[in] mido
@@ -2451,44 +2537,70 @@ int create_mido_vpc_secgroup(mido_config * mido, mido_vpc_secgroup * vpcsecgroup
 {
     int ret = 0, rc = 0;
     char name[32];
+    midoname *tmpmn = NULL;
 
     if (!mido || !vpcsecgroup) {
         return (1);
     }
 
     snprintf(name, 32, "sg_ingress_%11s", vpcsecgroup->name);
-    rc = mido_create_chain("euca_tenant_1", name, &(vpcsecgroup->midos[VPCSG_INGRESS]));
-    if (rc) {
-        // TODO
-        ret = 1;
+    if ((!vpcsecgroup->midos[VPCSG_INGRESS].init) && (!find_mido_vpc_chain(mido, name, &tmpmn))) {
+        LOGINFO("Found chain %s - skipping creation.\n", name);
+        mido_copy_midoname(&(vpcsecgroup->midos[VPCSG_INGRESS]), tmpmn);
+    } else {
+        rc = mido_create_chain("euca_tenant_1", name, &(vpcsecgroup->midos[VPCSG_INGRESS]));
+        if (rc) {
+            LOGWARN("Failed to create chain %s.\n", name);
+            ret = 1;
+        }
     }
 
     snprintf(name, 32, "sg_egress_%11s", vpcsecgroup->name);
-    rc = mido_create_chain("euca_tenant_1", name, &(vpcsecgroup->midos[VPCSG_EGRESS]));
-    if (rc) {
-        // TODO
-        ret = 1;
+    if ((!vpcsecgroup->midos[VPCSG_EGRESS].init) && (!find_mido_vpc_chain(mido, name, &tmpmn))) {
+        LOGINFO("Found chain %s - skipping creation.\n", name);
+        mido_copy_midoname(&(vpcsecgroup->midos[VPCSG_EGRESS]), tmpmn);
+    } else {
+        rc = mido_create_chain("euca_tenant_1", name, &(vpcsecgroup->midos[VPCSG_EGRESS]));
+        if (rc) {
+            LOGWARN("Failed to create chain %s.\n", name);
+            ret = 1;
+        }
     }
 
     snprintf(name, 32, "sg_priv_%11s", vpcsecgroup->name);
-    rc = mido_create_ipaddrgroup("euca_tenant_1", name, &(vpcsecgroup->midos[VPCSG_IAGPRIV]));
-    if (rc) {
-        // TODO
-        ret = 1;
+    if ((!vpcsecgroup->midos[VPCSG_IAGPRIV].init) && (!find_mido_vpc_ipaddrgroup(mido, name, &tmpmn))) {
+        LOGINFO("Found IAG %s - skipping creation.\n", name);
+        mido_copy_midoname(&(vpcsecgroup->midos[VPCSG_IAGPRIV]), tmpmn);
+    } else {
+        rc = mido_create_ipaddrgroup("euca_tenant_1", name, &(vpcsecgroup->midos[VPCSG_IAGPRIV]));
+        if (rc) {
+            LOGWARN("Failed to create IAG %s.\n", name);
+            ret = 1;
+        }
     }
 
     snprintf(name, 32, "sg_pub_%11s", vpcsecgroup->name);
-    rc = mido_create_ipaddrgroup("euca_tenant_1", name, &(vpcsecgroup->midos[VPCSG_IAGPUB]));
-    if (rc) {
-        // TODO
-        ret = 1;
+    if ((!vpcsecgroup->midos[VPCSG_IAGPUB].init) && (!find_mido_vpc_ipaddrgroup(mido, name, &tmpmn))) {
+        LOGINFO("Found IAG %s - skipping creation.\n", name);
+        mido_copy_midoname(&(vpcsecgroup->midos[VPCSG_IAGPUB]), tmpmn);
+    } else {
+        rc = mido_create_ipaddrgroup("euca_tenant_1", name, &(vpcsecgroup->midos[VPCSG_IAGPUB]));
+        if (rc) {
+            LOGWARN("Failed to create IAG %s.\n", name);
+            ret = 1;
+        }
     }
 
     snprintf(name, 32, "sg_all_%11s", vpcsecgroup->name);
-    rc = mido_create_ipaddrgroup("euca_tenant_1", name, &(vpcsecgroup->midos[VPCSG_IAGALL]));
-    if (rc) {
-        // TODO
-        ret = 1;
+    if ((!vpcsecgroup->midos[VPCSG_IAGALL].init) && (!find_mido_vpc_ipaddrgroup(mido, name, &tmpmn))) {
+        LOGINFO("Found IAG %s - skipping creation.\n", name);
+        mido_copy_midoname(&(vpcsecgroup->midos[VPCSG_IAGALL]), tmpmn);
+    } else {
+        rc = mido_create_ipaddrgroup("euca_tenant_1", name, &(vpcsecgroup->midos[VPCSG_IAGALL]));
+        if (rc) {
+            LOGWARN("Failed to create IAG %s.\n", name);
+            ret = 1;
+        }
     }
 
     return (ret);
@@ -2866,7 +2978,8 @@ int populate_mido_vpc_instance(mido_config * mido, mido_core * midocore, mido_vp
 int create_mido_vpc_instance(mido_config * mido, mido_vpc_instance * vpcinstance, char *nodehostname)
 {
     int ret = 0, found = 0, i = 0, rc = 0;
-    char aigname[64], tmp_name[32];
+    char iagname[64], tmp_name[32];
+    midoname *tmpmn = NULL;
 
     // find the interface mapping
     found = 0;
@@ -2878,27 +2991,52 @@ int create_mido_vpc_instance(mido_config * mido, mido_vpc_instance * vpcinstance
     }
 
     // set up elip ipaddrgroups
-    snprintf(aigname, 64, "elip_pre_%s", vpcinstance->name);
-    rc = mido_create_ipaddrgroup("euca_tenant_1", aigname, &(vpcinstance->midos[ELIP_PRE_IPADDRGROUP]));
-    if (rc) {
-        ret = 1;
+    snprintf(iagname, 64, "elip_pre_%s", vpcinstance->name);
+    if ((!vpcinstance->midos[ELIP_PRE_IPADDRGROUP].init) && (!find_mido_vpc_ipaddrgroup(mido, iagname, &tmpmn))) {
+        LOGINFO("Found IAG %s - skipping creation.\n", iagname);
+        mido_copy_midoname(&(vpcinstance->midos[ELIP_PRE_IPADDRGROUP]), tmpmn);
+    } else {
+        rc = mido_create_ipaddrgroup("euca_tenant_1", iagname, &(vpcinstance->midos[ELIP_PRE_IPADDRGROUP]));
+        if (rc) {
+            LOGWARN("Failed to create IAG %s.\n", iagname);
+            ret = 1;
+        }
     }
 
-    snprintf(aigname, 64, "elip_post_%s", vpcinstance->name);
-    rc = mido_create_ipaddrgroup("euca_tenant_1", aigname, &(vpcinstance->midos[ELIP_POST_IPADDRGROUP]));
-    if (rc) {
-        ret = 1;
+    snprintf(iagname, 64, "elip_post_%s", vpcinstance->name);
+    if ((!vpcinstance->midos[ELIP_POST_IPADDRGROUP].init) && (!find_mido_vpc_ipaddrgroup(mido, iagname, &tmpmn))) {
+        LOGINFO("Found IAG %s - skipping creation.\n", iagname);
+        mido_copy_midoname(&(vpcinstance->midos[ELIP_POST_IPADDRGROUP]), tmpmn);
+    } else {
+        rc = mido_create_ipaddrgroup("euca_tenant_1", iagname, &(vpcinstance->midos[ELIP_POST_IPADDRGROUP]));
+        if (rc) {
+            LOGWARN("Failed to create IAG %s.\n", iagname);
+            ret = 1;
+        }
     }
 
     snprintf(tmp_name, 32, "ic_%s_prechain", vpcinstance->name);
-    rc = mido_create_chain("euca_tenant_1", tmp_name, &(vpcinstance->midos[INST_PRECHAIN]));
-    if (rc) {
-        ret = 1;
+    if ((!vpcinstance->midos[INST_PRECHAIN].init) && (!find_mido_vpc_chain(mido, tmp_name, &tmpmn))) {
+        LOGINFO("Found chain %s - skipping creation.\n", tmp_name);
+        mido_copy_midoname(&(vpcinstance->midos[INST_PRECHAIN]), tmpmn);
+    } else {
+        rc = mido_create_chain("euca_tenant_1", tmp_name, &(vpcinstance->midos[INST_PRECHAIN]));
+        if (rc) {
+            LOGWARN("Failed to create chain %s.\n", tmp_name);
+            ret = 1;
+        }
     }
+
     snprintf(tmp_name, 32, "ic_%s_postchain", vpcinstance->name);
-    rc = mido_create_chain("euca_tenant_1", tmp_name, &(vpcinstance->midos[INST_POSTCHAIN]));
-    if (rc) {
-        ret = 1;
+    if ((!vpcinstance->midos[INST_POSTCHAIN].init) && (!find_mido_vpc_chain(mido, tmp_name, &tmpmn))) {
+        LOGINFO("Found chain %s - skipping creation.\n", tmp_name);
+        mido_copy_midoname(&(vpcinstance->midos[INST_POSTCHAIN]), tmpmn);
+    } else {
+        rc = mido_create_chain("euca_tenant_1", tmp_name, &(vpcinstance->midos[INST_POSTCHAIN]));
+        if (rc) {
+            LOGWARN("Failed to create chain %s.\n", tmp_name);
+            ret = 1;
+        }
     }
 
     return (ret);
@@ -3202,6 +3340,7 @@ int populate_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet
         if (!strcmp(mido->bridges[i].name, name)) {
             mido_copy_midoname(&(vpcsubnet->midos[VPCBR]), &(mido->bridges[i]));
             mido_get_ports(&(vpcsubnet->midos[VPCBR]), &(vpcsubnet->brports), &(vpcsubnet->max_brports));
+            LOGINFO("Found bridge %s\n", vpcsubnet->midos[VPCBR].name);
         }
     }
 
@@ -3210,6 +3349,7 @@ int populate_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet
         if (max_dhcps) {
             LOGDEBUG("VPC DHCP SERVERS: %s/%s\n", dhcps[0].uuid, dhcps[0].jsonbuf);
             mido_copy_midoname(&(vpcsubnet->midos[VPCBR_DHCP]), &(dhcps[0]));
+            LOGINFO("Found dhcp %s\n", vpcsubnet->midos[VPCBR_DHCP].name);
         }
     }
     mido_free_midoname_list(dhcps, max_dhcps);
@@ -4128,10 +4268,10 @@ int create_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet *
 //!
 //! @note
 //!
-int create_mido_vpc(mido_config * mido, mido_core * midocore, mido_vpc * vpc)
-{
+int create_mido_vpc(mido_config * mido, mido_core * midocore, mido_vpc * vpc) {
     int rc = 0;
     char name_buf[32], nw[32], sn[32], ip[32], gw[32], *tmpstr = NULL;
+    midoname *tmpmn;
 
     tmpstr = hex2dot(mido->int_rtnw);
     snprintf(nw, 32, "%s", tmpstr);
@@ -4188,25 +4328,41 @@ int create_mido_vpc(mido_config * mido, mido_core * midocore, mido_vpc * vpc)
     }
     // create the chains
     snprintf(name_buf, 32, "vc_%s_prechain", vpc->name);
-    rc = mido_create_chain("euca_tenant_1", name_buf, &(vpc->midos[VPCRT_PRECHAIN]));
-    if (rc) {
-        LOGERROR("cannot create midonet chain: check midonet health\n");
-        return (1);
+    if ((!vpc->midos[VPCRT_PRECHAIN].init) && (!find_mido_vpc_chain(mido, name_buf, &tmpmn))) {
+        LOGINFO("Found chain %s - skipping creation.\n", name_buf);
+        mido_copy_midoname(&(vpc->midos[VPCRT_PRECHAIN]), tmpmn);
+    } else {
+        rc = mido_create_chain("euca_tenant_1", name_buf, &(vpc->midos[VPCRT_PRECHAIN]));
+        if (rc) {
+            LOGWARN("Failed to create chain %s.\n", name_buf);
+            return (1);
+        }
     }
 
     snprintf(name_buf, 32, "vc_%s_preelip", vpc->name);
-    rc = mido_create_chain("euca_tenant_1", name_buf, &(vpc->midos[VPCRT_PREELIPCHAIN]));
-    if (rc) {
-        LOGERROR("cannot create midonet chain: check midonet health\n");
-        return (1);
+    if ((!vpc->midos[VPCRT_PREELIPCHAIN].init) && (!find_mido_vpc_chain(mido, name_buf, &tmpmn))) {
+        LOGINFO("Found chain %s - skipping creation.\n", name_buf);
+        mido_copy_midoname(&(vpc->midos[VPCRT_PREELIPCHAIN]), tmpmn);
+    } else {
+        rc = mido_create_chain("euca_tenant_1", name_buf, &(vpc->midos[VPCRT_PREELIPCHAIN]));
+        if (rc) {
+            LOGWARN("Failed to create chain %s.\n", name_buf);
+            return (1);
+        }
     }
 
     snprintf(name_buf, 32, "vc_%s_postchain", vpc->name);
-    rc = mido_create_chain("euca_tenant_1", name_buf, &(vpc->midos[VPCRT_POSTCHAIN]));
-    if (rc) {
-        LOGERROR("cannot create midonet chain: check midonet health\n");
-        return (1);
+    if ((!vpc->midos[VPCRT_POSTCHAIN].init) && (!find_mido_vpc_chain(mido, name_buf, &tmpmn))) {
+        LOGINFO("Found chain %s - skipping creation.\n", name_buf);
+        mido_copy_midoname(&(vpc->midos[VPCRT_POSTCHAIN]), tmpmn);
+    } else {
+        rc = mido_create_chain("euca_tenant_1", name_buf, &(vpc->midos[VPCRT_POSTCHAIN]));
+        if (rc) {
+            LOGWARN("Failed to create chain %s.\n", name_buf);
+            return (1);
+        }
     }
+
     // add the jump chains
     rc = mido_create_rule(&(vpc->midos[VPCRT_PRECHAIN]), NULL, NULL, 0, NULL, "position", "1", "type", "jump", "jumpChainId", vpc->midos[VPCRT_PREELIPCHAIN].uuid, NULL);
     if (rc) {
@@ -4247,17 +4403,16 @@ int create_mido_vpc(mido_config * mido, mido_core * midocore, mido_vpc * vpc)
 //!
 //! @note
 //!
-int delete_mido_core(mido_config * mido, mido_core * midocore)
-{
+int delete_mido_core(mido_config * mido, mido_core * midocore) {
     int rc = 0, i = 0;
 
     // delete the metadata_ip ipaddrgroup
     rc = mido_delete_ipaddrgroup(&(midocore->midos[METADATA_IPADDRGROUP]));
 
     // delete the host/port links
-    for (i=0; i<midocore->max_gws; i++) {
+    for (i = 0; i < midocore->max_gws; i++) {
         rc = mido_unlink_host_port(&(midocore->gwhosts[i]), &(midocore->gwports[i]));
-        sleep (1);
+        sleep(1);
     }
 
     // delete the port-group
@@ -4268,7 +4423,7 @@ int delete_mido_core(mido_config * mido, mido_core * midocore)
     sleep(1);
 
     // delete the router
-    for (i=0; i<midocore->max_rtports; i++) {
+    for (i = 0; i < midocore->max_rtports; i++) {
         rc = mido_delete_port(&(midocore->rtports[i]));
     }
     rc = mido_delete_router(&(midocore->midos[EUCART]));
@@ -4295,10 +4450,11 @@ int delete_mido_core(mido_config * mido, mido_core * midocore)
 //!
 //! @note
 //!
-int create_mido_core(mido_config * mido, mido_core * midocore)
-{
+
+int create_mido_core(mido_config * mido, mido_core * midocore) {
     int ret = 0, rc = 0, i = 0;
     char nw[32], sn[32], gw[32], *tmpstr = NULL, pubnw[32], pubnm[32];
+    midoname *tmpmn = NULL;
 
     tmpstr = hex2dot(mido->int_rtnw);
     snprintf(nw, 32, "%s", tmpstr);
@@ -4314,93 +4470,107 @@ int create_mido_core(mido_config * mido, mido_core * midocore)
     rc = mido_create_router("euca_tenant_1", "eucart", &(midocore->midos[EUCART]));
     if (rc) {
         LOGERROR("cannot create router: check midonet health\n");
-        return (1);
+        ret = 1;
     }
 
     // core bridge port and addr/route
-    rc = mido_create_port(&(midocore->midos[EUCART]), "Router", gw, nw, sn, &(midocore->midos[EUCART_BRPORT]));
-    if (rc) {
-        LOGERROR("cannot create router port: check midonet health\n");
-        return (1);
-    }
+    if (midocore->midos[EUCART].init) {
+        rc = mido_create_port(&(midocore->midos[EUCART]), "Router", gw, nw, sn, &(midocore->midos[EUCART_BRPORT]));
+        if (rc) {
+            LOGERROR("cannot create router port: check midonet health\n");
+            ret = 1;
+        }
 
-    rc = mido_create_route(&(midocore->midos[EUCART]), &(midocore->midos[EUCART_BRPORT]), "0.0.0.0", "0", nw, sn, "UNSET", "0", NULL);
-    if (rc) {
-        LOGERROR("cannot create router route: check midonet health\n");
-        return (1);
+        rc = mido_create_route(&(midocore->midos[EUCART]), &(midocore->midos[EUCART_BRPORT]), "0.0.0.0", "0", nw, sn, "UNSET", "0", NULL);
+        if (rc) {
+            LOGERROR("cannot create router route: check midonet health\n");
+            ret = 1;
+        }
     }
 
     rc = mido_create_portgroup("euca_tenant_1", "eucapg", &(midocore->midos[GWPORTGROUP]));
     if (rc) {
-        LOGERROR("cannot create portgroup: check midonet health\n");
+        LOGWARN("cannot create portgroup: check midonet health\n");
     }
 
     // conditional here depending on whether we have multi GW or single GW defined in config
     if (mido->ext_rthostarrmax) {
-        for (i=0; i<mido->ext_rthostarrmax; i++) {
+        for (i = 0; i < mido->ext_rthostarrmax; i++) {
             cidr_split(mido->ext_pubnw, pubnw, pubnm, NULL, NULL);
-            rc = mido_create_port(&(midocore->midos[EUCART]), "Router", mido->ext_rthostaddrarr[i], pubnw, pubnm, &(midocore->gwports[i]));
-            if (rc) {
-                LOGERROR("cannot create router port: check midonet health\n");
-                return (1);
-            }
-            
-            // exterior port GW IP
-            rc = mido_create_route(&(midocore->midos[EUCART]), &(midocore->gwports[i]), "0.0.0.0", "0", pubnw, pubnm, "UNSET", "0", NULL);
-            if (rc) {
-                LOGERROR("cannot create router route: check midonet health\n");
-                return (1);
-            }
-            
-            // exterior port default GW
-            rc = mido_create_route(&(midocore->midos[EUCART]), &(midocore->gwports[i]), "0.0.0.0", "0", "0.0.0.0", "0", mido->ext_pubgwip, "0", NULL);
-            if (rc) {
-                LOGERROR("cannot create router route: check midonet health\n");
-                return (1);
-            }
-            
-            // link exterior port 
-            rc = mido_link_host_port(&(midocore->gwhosts[i]), mido->ext_rthostifacearr[i], &(midocore->midos[EUCART]), &(midocore->gwports[i]));
-            if (rc) {
-                LOGERROR("cannot link router port to host interface: check midonet health\n");
-                return (1);
-            }
+            if (midocore->midos[EUCART].init) {
+                rc = mido_create_port(&(midocore->midos[EUCART]), "Router", mido->ext_rthostaddrarr[i], pubnw, pubnm, &(midocore->gwports[i]));
+                if (rc) {
+                    LOGERROR("cannot create router port: check midonet health\n");
+                    ret = 1;
+                }
 
-            rc = mido_create_portgroup_port(&(midocore->midos[GWPORTGROUP]), midocore->gwports[i].uuid, NULL);
-            if (rc) {
-                LOGERROR("cannot add portgroup port: check midonet health\n");
-            }
+                if (midocore->gwports[i].init) {
+                    // exterior port GW IP
+                    rc = mido_create_route(&(midocore->midos[EUCART]), &(midocore->gwports[i]), "0.0.0.0", "0", pubnw, pubnm, "UNSET", "0", NULL);
+                    if (rc) {
+                        LOGERROR("cannot create router route: check midonet health\n");
+                        ret = 1;
+                    }
 
+                    // exterior port default GW
+                    rc = mido_create_route(&(midocore->midos[EUCART]), &(midocore->gwports[i]), "0.0.0.0", "0", "0.0.0.0", "0", mido->ext_pubgwip, "0", NULL);
+                    if (rc) {
+                        LOGERROR("cannot create router route: check midonet health\n");
+                        ret = 1;
+                    }
+
+                    // link exterior port 
+                    rc = mido_link_host_port(&(midocore->gwhosts[i]), mido->ext_rthostifacearr[i], &(midocore->midos[EUCART]), &(midocore->gwports[i]));
+                    if (rc) {
+                        LOGERROR("cannot link router port to host interface: check midonet health\n");
+                        ret = 1;
+                    }
+
+                    rc = mido_create_portgroup_port(&(midocore->midos[GWPORTGROUP]), midocore->gwports[i].uuid, NULL);
+                    if (rc) {
+                        LOGWARN("cannot add portgroup port: check midonet health\n");
+                    }
+                }
+            }
         }
     }
 
     rc = mido_create_bridge("euca_tenant_1", "eucabr", &(midocore->midos[EUCABR]));
     if (rc) {
         LOGERROR("cannot create bridge: check midonet health\n");
-        return (1);
-    }
-
-    rc = mido_create_port(&(midocore->midos[EUCABR]), "Bridge", NULL, NULL, NULL, &(midocore->midos[EUCABR_RTPORT]));
-    if (rc) {
-        LOGERROR("cannot create bridge port: check midonet health\n");
-        return (1);
-    }
-
-    rc = mido_link_ports(&(midocore->midos[EUCART_BRPORT]), &(midocore->midos[EUCABR_RTPORT]));
-    if (rc) {
-        LOGERROR("cannot create router <-> bridge link: check midonet health\n");
-        return (1);
-    }
-
-    rc = mido_create_ipaddrgroup("euca_tenant_1", "metadata_ip", &(midocore->midos[METADATA_IPADDRGROUP]));
-    if (rc) {
-        LOGERROR("cannot create metadata ipaddrgroup: check midonet health\n");
         ret = 1;
+    }
+
+    if (midocore->midos[EUCABR].init) {
+        rc = mido_create_port(&(midocore->midos[EUCABR]), "Bridge", NULL, NULL, NULL, &(midocore->midos[EUCABR_RTPORT]));
+        if (rc) {
+            LOGERROR("cannot create bridge port: check midonet health\n");
+            ret = 1;
+        }
+    }
+
+    if ((midocore->midos[EUCART_BRPORT].init) && (midocore->midos[EUCABR_RTPORT].init)) {
+        rc = mido_link_ports(&(midocore->midos[EUCART_BRPORT]), &(midocore->midos[EUCABR_RTPORT]));
+        if (rc) {
+            LOGERROR("cannot create router <-> bridge link: check midonet health\n");
+            ret = 1;
+        }
+    }
+
+    if ((!midocore->midos[METADATA_IPADDRGROUP].init) && (!find_mido_vpc_ipaddrgroup(mido, "metadata_ip", &tmpmn))) {
+        LOGINFO("Found IAG metadata_ip - skipping creation.\n");
+        mido_copy_midoname(&(midocore->midos[METADATA_IPADDRGROUP]), tmpmn);
+    } else {
+        rc = mido_create_ipaddrgroup("euca_tenant_1", "metadata_ip", &(midocore->midos[METADATA_IPADDRGROUP]));
+        if (rc) {
+            LOGWARN("Failed to create chain metadata_ip.\n");
+            ret = 1;
+        }
     }
 
     rc = mido_create_ipaddrgroup_ip(&(midocore->midos[METADATA_IPADDRGROUP]), "169.254.169.254", NULL);
     if (rc) {
-        // TODO
+        LOGERROR("cannot add metadata IP to metadata ipaddrgroup.\n");
         ret = 1;
     }
 

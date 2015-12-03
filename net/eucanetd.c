@@ -318,7 +318,7 @@ int main(int argc, char **argv)
     int epoch_updates = 0;
     int epoch_failed_updates = 0;
     int epoch_checks = 0;
-    int check_peer_attempts = 100;
+    int check_peer_attempts = 300;
     time_t epoch_timer = 0, loop_start = 0;
     boolean update_globalnet = FALSE;
     boolean update_globalnet_failed = FALSE;
@@ -395,6 +395,7 @@ int main(int argc, char **argv)
     eucanetd_install_signal_handlers();
 
     // spin here until we get the latest config from active CC
+    LOGINFO("eucanetd: starting pre-flight checks\n");
     rc = 1;
     while (rc) {
         rc = eucanetd_read_config();
@@ -426,7 +427,7 @@ int main(int argc, char **argv)
             eucanetdPeer = PEER_INVALID;
         }
     }
-    LOGINFO("eucanetd pre-flight checks complete.\n");
+    LOGINFO("eucanetd: pre-flight checks complete.\n");
 
     // got all config, enter main loop
     while (gIsRunning) {
@@ -1006,7 +1007,7 @@ static int eucanetd_read_config(void)
         if (check_file(sourceuri)) {
             snprintf(sourceuri, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/global_network_info.xml", home);
             if (check_file(sourceuri)) {
-                LOGWARN("cannot find global_network_info.xml state file in $EUCALYPTUS/var/lib/eucalyptus or $EUCALYPTUS/var/run/eucalyptus yet.\n");
+                LOGDEBUG("cannot find global_network_info.xml state file in $EUCALYPTUS/var/lib/eucalyptus or $EUCALYPTUS/var/run/eucalyptus yet.\n");
                 return (1);
             } else {
                 snprintf(sourceuri, EUCA_MAX_PATH, "file://" EUCALYPTUS_STATE_DIR "/global_network_info.xml", home);
@@ -1038,7 +1039,7 @@ static int eucanetd_read_config(void)
 
     rc = gni_populate(globalnetworkinfo, host_info, config->global_network_info_file.dest);
     if (rc) {
-        LOGERROR("could not initialize global network info data structures from XML input\n");
+        LOGDEBUG("could not initialize global network info data structures from XML input\n");
         for (i = 0; i < EUCANETD_CVAL_LAST; i++) {
             EUCA_FREE(cvals[i]);
         }

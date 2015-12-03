@@ -1723,12 +1723,15 @@ int mido_link_host_port(midoname * host, char *interface, midoname * device, mid
     // check to see if the port is already mapped
     rc = mido_getel_midoname(port, "hostInterfacePort", &hinterface);
     if (!rc) {
+        LOGDEBUG("Port %s already mapped to interface %s\n", port->name, hinterface);
+        found = 1;
     }
     EUCA_FREE(hinterface);
 
     if (!found) {
         rc = mido_create_resource(host, 1, &myname, NULL, "bridgeId", device->uuid, "portId", port->uuid, "hostId", host->uuid, "interfaceName", interface, NULL);
         if (rc) {
+            LOGWARN("Failed to link port %s to device %s\n", interface, device->name);
             ret = 1;
         }
     }
@@ -2199,11 +2202,13 @@ int mido_create_resource_v(midoname * parents, int max_parents, midoname * newna
         if (outname && outloc) {
             rc = midonet_http_get(outloc, NULL, &outhttp);
             if (rc) {
+                LOGWARN("Failed to retrieve new resource from %s\n", outloc);
                 ret = 1;
             } else {
                 mido_copy_midoname(outname, newname);
-                if (outhttp)
+                if (outhttp) {
                     outname->jsonbuf = strdup(outhttp);
+                }
 
                 /*
                 if (newname->tenant)
@@ -2672,6 +2677,7 @@ int midonet_http_get(char *url, char *apistr, char **out_payload)
     }
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcode);
     if (httpcode != 200L) {
+        LOGWARN("curl http code: %ld\n", httpcode);
         ret = 1;
     }
     curl_slist_free_all(headers);
@@ -2759,6 +2765,7 @@ int midonet_http_put(char *url, char *resource_type, char *vers, char *payload)
     if (httpcode == 200L || httpcode == 204L) {
         ret = 0;
     } else {
+        LOGWARN("curl http code: %ld\n", httpcode);
         ret = 1;
     }
 
@@ -2832,6 +2839,7 @@ int midonet_http_post(char *url, char *resource_type, char *vers, char *payload,
     char *loc = NULL, hbuf[EUCA_MAX_PATH];
     struct curl_slist *headers = NULL;
     long long timer=0;
+    long httpcode = 0L;
 
     timer = time_usec();
 
@@ -2866,7 +2874,11 @@ int midonet_http_post(char *url, char *resource_type, char *vers, char *payload,
         LOGERROR("ERROR: curl_easy_perform(): %s\n", curl_easy_strerror(curlret));
         ret = 1;
     }
-
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcode);
+    if ((httpcode != 200L) && (httpcode != 201L)) {
+        LOGWARN("curl http code: %ld\n", httpcode);
+        ret = 1;
+    }
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
     curl_global_cleanup();
@@ -2903,6 +2915,7 @@ int midonet_http_delete(char *url)
     CURLcode curlret;
     int ret = 0;
     long long timer=0;
+    long httpcode = 0L;
 
     timer = time_usec();
 
@@ -2916,6 +2929,12 @@ int midonet_http_delete(char *url)
         LOGERROR("ERROR: curl_easy_perform(): %s\n", curl_easy_strerror(curlret));
         ret = 1;
     }
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcode);
+    if ((httpcode != 200L) && (httpcode != 204L)) {
+        LOGWARN("curl http code: %ld\n", httpcode);
+        ret = 1;
+    }
+
     curl_easy_cleanup(curl);
     curl_global_cleanup();
 

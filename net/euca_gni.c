@@ -2654,7 +2654,7 @@ int gni_populate(globalNetworkInfo * gni, gni_hostname_info *host_info, char *xm
 
     rc = gni_validate(gni);
     if (rc) {
-        LOGERROR("could not validate GNI after XML parse: check network config\n");
+        LOGDEBUG("could not validate GNI after XML parse: check network config\n");
         return (1);
     }
 
@@ -3484,7 +3484,11 @@ int gni_validate(globalNetworkInfo * gni)
     }
     // Make sure we have a valid mode
     if (gni_netmode_validate(gni->sMode)) {
-        LOGWARN("Invalid network mode provided: cannot validate XML\n");
+        if (strlen(gni->sMode) > 0) {
+            LOGWARN("Invalid network mode provided: cannot validate XML\n");
+        } else {
+            LOGDEBUG("Empty network mode provided: cannot validate XML\n");
+        }
         return (1);
     }
 
@@ -3639,8 +3643,11 @@ int gni_netmode_validate(const char *psMode)
         }
     }
 
-    // Nope, we don't know jack shit
-    LOGWARN("invalid network mode '%s'\n", psMode);
+    if (strlen(psMode) > 0) {
+        LOGWARN("invalid network mode '%s'\n", psMode);
+    } else {
+        LOGDEBUG("network mode is empty.\n");
+    }
     return (1);
 }
 

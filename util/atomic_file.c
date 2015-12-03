@@ -270,7 +270,7 @@ int atomic_file_get(atomic_file * file, boolean * file_updated)
             file->currhash = hash;
             if (check_file(file->dest) || strcmp(file->currhash, file->lasthash)) {
                 // hashes are different, put new file in place
-                LOGINFO("update triggered due to file update (%s)\n", file->dest);
+                LOGDEBUG("update triggered due to file update (%s)\n", file->dest);
                 LOGDEBUG("source and destination file contents have become different, triggering update of dest (%s)\n", file->dest);
                 LOGDEBUG("renaming file %s -> %s\n", file->tmpfile, file->dest);
                 if (rename(file->tmpfile, file->dest)) {
