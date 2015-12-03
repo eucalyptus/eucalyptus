@@ -224,7 +224,7 @@ public class VmMetadata {
 
 
   public byte[] handle( final String path ) {
-    final String[] parts = path.split( ":" );
+    final String[] parts = path.split( ":", 2 );
     try {
       final String requestIpOrInstanceId = ResourceIdentifiers.tryNormalize( ).apply( parts[0] );
       final boolean isInstanceId = requestIpOrInstanceId.startsWith( "i-" );
