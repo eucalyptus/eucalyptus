@@ -39,6 +39,8 @@ import com.eucalyptus.cloudformation.entity.StackResourceEntityManager;
 import com.eucalyptus.cloudformation.entity.StackWorkflowEntity;
 import com.eucalyptus.cloudformation.entity.StackWorkflowEntityManager;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
+import com.eucalyptus.cloudformation.template.FunctionEvaluation;
+import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.template.PseudoParameterValues;
 import com.eucalyptus.cloudformation.template.Template;
 import com.eucalyptus.cloudformation.template.TemplateParser;
@@ -70,11 +72,17 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.IO;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.dns.DomainNames;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
+import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multiset;
+import com.google.common.collect.Sets;
 import com.google.common.io.ByteStreams;
 import com.netflix.glisten.InterfaceBasedWorkflowClient;
 import com.netflix.glisten.WorkflowClientFactory;
@@ -93,7 +101,10 @@ import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import javax.net.ssl.SSLHandshakeException;
 
@@ -127,6 +138,10 @@ public class CloudFormationService {
       final String stackName = request.getStackName();
       final String templateBody = request.getTemplateBody();
       final String templateUrl = request.getTemplateURL();
+      final String stackPolicyBody = request.getStackPolicyBody();
+      final String stackPolicyUrl = request.getStackPolicyURL();
+      final String stackPolicyText = validateAndGetStackPolicy(user, stackPolicyBody, stackPolicyUrl);
+
       if (stackName == null) throw new ValidationErrorException("Stack name is null");
       if (!stackName.matches("^[\\p{Alpha}][\\p{Alnum}-]*$")) {
         throw new ValidationErrorException("Stack name " + stackName + " must contain only letters, numbers, dashes and start with an alpha character.");
@@ -137,6 +152,8 @@ public class CloudFormationService {
 
       if (templateBody == null && templateUrl == null) throw new ValidationErrorException("Either TemplateBody or TemplateURL must be set.");
       if (templateBody != null && templateUrl != null) throw new ValidationErrorException("Exactly one of TemplateBody or TemplateURL must be set.");
+
+
       List<Parameter> parameters = null;
       if (request.getParameters() != null && request.getParameters().getMember() != null) {
         parameters = request.getParameters().getMember();
@@ -181,7 +198,6 @@ public class CloudFormationService {
       }
 
       final String templateText = (templateBody != null) ? templateBody : extractTemplateTextFromURL(templateUrl, user);
-
       final Template template = new TemplateParser().parse(templateText, parameters, capabilities, pseudoParameterValues, userId);
 
 
@@ -196,6 +212,7 @@ public class CloudFormationService {
             stackEntity.setNaturalId(stackIdLocal);
             stackEntity.setAccountId(accountId);
             stackEntity.setTemplateBody(templateText);
+            stackEntity.setStackPolicy(stackPolicyText);
             stackEntity.setStackStatus(StackEntity.Status.CREATE_IN_PROGRESS);
             stackEntity.setStackStatusReason("User initiated");
             stackEntity.setDisableRollback(request.getDisableRollback() == Boolean.TRUE); // null -> false
@@ -286,36 +303,47 @@ public class CloudFormationService {
     return reply;
   }
 
+  private static String extractStackPolicyDuringUpdateFromURL(String stackPolicyUrl, User user) throws ValidationErrorException {
+    return extractTextFromURL("Stack Policy During Update URL", URL_DOMAIN_WHITELIST, Limits.REQUEST_STACK_POLICY_MAX_CONTENT_LENGTH_BYTES, stackPolicyUrl, user);
+  }
+
+  private static String extractStackPolicyFromURL(String stackPolicyUrl, User user) throws ValidationErrorException {
+    return extractTextFromURL("Stack Policy URL", URL_DOMAIN_WHITELIST, Limits.REQUEST_STACK_POLICY_MAX_CONTENT_LENGTH_BYTES, stackPolicyUrl, user);
+  }
   private static String extractTemplateTextFromURL(String templateUrl, User user) throws ValidationErrorException {
+    return extractTextFromURL("Template URL", URL_DOMAIN_WHITELIST, Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES, templateUrl, user);
+  }
+
+  private static String extractTextFromURL(String urlType, String whitelist, long maxContentLength, String urlStr, User user) throws ValidationErrorException {
     final URL url;
     try {
-      url = new URL(templateUrl);
+      url = new URL(urlStr);
     } catch (MalformedURLException e) {
-      throw new ValidationErrorException("Invalid template url " + templateUrl);
+      throw new ValidationErrorException("Invalid " + urlType + ":" + urlStr);
     }
     // First try straight HTTP GET if url is in whitelist
-    boolean inWhitelist = WhiteListURLMatcher.urlIsAllowed(url, URL_DOMAIN_WHITELIST);
+    boolean inWhitelist = WhiteListURLMatcher.urlIsAllowed(url, whitelist);
     if (inWhitelist) {
       InputStream templateIn = null;
       try {
         final URLConnection connection = SslSetup.configureHttpsUrlConnection( url.openConnection( ) );
         templateIn = connection.getInputStream( );
         long contentLength = connection.getContentLengthLong( );
-        if ( contentLength > Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES) {
-          throw new ValidationErrorException("Template URL exceeds maximum byte count, " + Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES);
+        if ( contentLength > maxContentLength) {
+          throw new ValidationErrorException(urlType + " exceeds maximum byte count, " + maxContentLength);
         }
-        final byte[] templateData = ByteStreams.toByteArray( new BoundedInputStream( templateIn, Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES + 1 ) );
-        if ( templateData.length > Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES) {
-          throw new ValidationErrorException("Template URL exceeds maximum byte count, " + Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES);
+        final byte[] templateData = ByteStreams.toByteArray( new BoundedInputStream( templateIn, maxContentLength + 1 ) );
+        if ( templateData.length > maxContentLength) {
+          throw new ValidationErrorException(urlType + " exceeds maximum byte count, " + maxContentLength);
         }
         return new String( templateData, StandardCharsets.UTF_8 );
       } catch ( UnknownHostException ex ) {
-        throw new ValidationErrorException("Invalid template url " + templateUrl);
+        throw new ValidationErrorException("Invalid " + urlType + ":" + urlStr);
       } catch ( SSLHandshakeException ex ) {
-        throw new ValidationErrorException("HTTPS connection error for " + templateUrl );
+        throw new ValidationErrorException("HTTPS connection error for " + urlStr );
       } catch (IOException ex) {
         if ( Strings.nullToEmpty( ex.getMessage( ) ).startsWith( "HTTPS hostname wrong" ) ) {
-          throw new ValidationErrorException( "HTTPS connection failed hostname verification for " + templateUrl );
+          throw new ValidationErrorException( "HTTPS connection failed hostname verification for " + urlStr );
         }
         LOG.info("Unable to connect to whitelisted URL, trying S3 instead");
         LOG.debug(ex, ex);
@@ -330,17 +358,17 @@ public class CloudFormationService {
     String[] validDomains = new String[]{DomainNames.externalSubdomain().relativize( Name.root ).toString( )};
     S3Helper.BucketAndKey bucketAndKey = S3Helper.getBucketAndKeyFromUrl(url, validServicePaths, validHostBucketSuffixes, validDomains);
     try ( final EucaS3Client eucaS3Client = EucaS3ClientFactory.getEucaS3Client( new SecurityTokenAWSCredentialsProvider( user ) ) ) {
-      if (eucaS3Client.getObjectMetadata(bucketAndKey.getBucket(), bucketAndKey.getKey()).getContentLength() > Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES) {
-        throw new ValidationErrorException("Template URL exceeds maximum byte count, " + Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES);
+      if (eucaS3Client.getObjectMetadata(bucketAndKey.getBucket(), bucketAndKey.getKey()).getContentLength() > maxContentLength) {
+        throw new ValidationErrorException(urlType + " exceeds maximum byte count, " + maxContentLength);
       }
       return eucaS3Client.getObjectContent(
-          bucketAndKey.getBucket( ),
-          bucketAndKey.getKey( ),
-          (int) Limits.REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES );
+        bucketAndKey.getBucket( ),
+        bucketAndKey.getKey( ),
+        (int) maxContentLength );
     } catch (Exception ex) {
       LOG.debug("Error getting s3 object content: " + bucketAndKey.getBucket() + "/" + bucketAndKey.getKey());
       LOG.debug(ex, ex);
-      throw new ValidationErrorException("Template url is an S3 URL to a non-existent or unauthorized bucket/key.  (bucket=" + bucketAndKey.getBucket() + ", key=" + bucketAndKey.getKey());
+      throw new ValidationErrorException(urlType + " is an S3 URL to a non-existent or unauthorized bucket/key.  (bucket=" + bucketAndKey.getBucket() + ", key=" + bucketAndKey.getKey());
     }
   }
 
@@ -811,7 +839,7 @@ public class CloudFormationService {
   }
 
   public SetStackPolicyResponseType setStackPolicy(SetStackPolicyType request)
-      throws CloudFormationException {
+    throws CloudFormationException {
     SetStackPolicyResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
@@ -820,26 +848,52 @@ public class CloudFormationService {
       // TODO: validate policy
       final String stackName = request.getStackName();
       final String stackPolicyBody = request.getStackPolicyBody();
-      if (request.getStackPolicyURL() != null) {
-        throw new ValidationErrorException("StackPolicyURL is not supported");
-      }
+      final String stackPolicyUrl = request.getStackPolicyURL();
+
       if (stackName == null) throw new ValidationErrorException("Stack name is null");
+
+      final String stackPolicyText = validateAndGetStackPolicy(user, stackPolicyBody, stackPolicyUrl);
+
       // body could be null (?) (i.e. remove policy)
       StackEntity stackEntity = StackEntityManager.getAnyStackByNameOrId(
-          stackName,
-          ctx.isAdministrator( ) && stackName.startsWith( STACK_ID_PREFIX ) ? null : accountId );
+        stackName,
+        ctx.isAdministrator( ) && stackName.startsWith( STACK_ID_PREFIX ) ? null : accountId );
       if (stackEntity == null) {
         throw new ValidationErrorException("Stack " + stackName + " does not exist");
       }
       if ( !RestrictedTypes.filterPrivileged( ).apply( stackEntity ) ) {
         throw new AccessDeniedException( "Not authorized." );
       }
-      stackEntity.setStackPolicy(stackPolicyBody);
+      stackEntity.setStackPolicy(stackPolicyText);
       StackEntityManager.updateStack(stackEntity);
     } catch (Exception ex) {
       handleException(ex);
     }
     return reply;
+  }
+
+  private String validateAndGetStackPolicy(User user, String stackPolicyBody, String stackPolicyUrl) throws ValidationErrorException {
+    if (stackPolicyBody != null && stackPolicyUrl != null) throw new ValidationErrorException("You cannot specify both StackPolicyURL and StackPolicyBody");
+
+    if (stackPolicyBody != null) {
+      if (stackPolicyBody.getBytes().length > Limits.REQUEST_STACK_POLICY_MAX_CONTENT_LENGTH_BYTES) {
+        throw new ValidationErrorException("StackPolicy body may not exceed " + Limits.REQUEST_STACK_POLICY_MAX_CONTENT_LENGTH_BYTES + " bytes in a request.");
+      }
+    }
+
+    return (stackPolicyBody != null) ? stackPolicyBody : (stackPolicyUrl != null ? extractStackPolicyFromURL(stackPolicyUrl, user) : null);
+  }
+
+  private String validateAndGetStackPolicyDuringUpdate(User user, String stackPolicyDuringUpdateBody, String stackPolicyDuringUpdateUrl) throws ValidationErrorException {
+    if (stackPolicyDuringUpdateBody != null && stackPolicyDuringUpdateUrl != null) throw new ValidationErrorException("You cannot specify both StackPolicyDuringUpdateURL and StackPolicyDuringUpdateBody");
+
+    if (stackPolicyDuringUpdateBody != null) {
+      if (stackPolicyDuringUpdateBody.getBytes().length > Limits.REQUEST_STACK_POLICY_MAX_CONTENT_LENGTH_BYTES) {
+        throw new ValidationErrorException("StackPolicy body may not exceed " + Limits.REQUEST_STACK_POLICY_MAX_CONTENT_LENGTH_BYTES + " bytes in a request.");
+      }
+    }
+
+    return (stackPolicyDuringUpdateBody != null) ? stackPolicyDuringUpdateBody : (stackPolicyDuringUpdateUrl != null ? extractStackPolicyDuringUpdateFromURL(stackPolicyDuringUpdateUrl, user) : null);
   }
 
   public SignalResourceResponseType signalResource(SignalResourceType request)
@@ -848,8 +902,314 @@ public class CloudFormationService {
   }
 
   public UpdateStackResponseType updateStack(UpdateStackType request)
-      throws CloudFormationException {
-    return request.getReply();
+    throws CloudFormationException {
+    UpdateStackResponseType reply = request.getReply();
+    try {
+      final Context ctx = Contexts.lookup();
+      // IAM Action Check
+      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_UPDATESTACK, ctx);
+      final User user = ctx.getUser();
+      final String userId = user.getUserId();
+      final String accountId = user.getAccountNumber();
+      // TODO: validate policy
+      final String stackName = request.getStackName();
+
+      if (stackName == null) {
+        throw new ValidationErrorException("StackName must not be null");
+      }
+
+      List<Parameter> parameters = null;
+      if (request.getParameters() != null && request.getParameters().getMember() != null) {
+        parameters = request.getParameters().getMember();
+      }
+
+      final ArrayList<String> capabilities = Lists.newArrayList();
+      if (request.getCapabilities() != null && request.getCapabilities().getMember() != null) {
+        capabilities.addAll(request.getCapabilities().getMember());
+      }
+
+      final String stackPolicyBody = request.getStackPolicyBody();
+      final String stackPolicyUrl = request.getStackPolicyURL();
+      final String stackPolicyText = validateAndGetStackPolicy(user, stackPolicyBody, stackPolicyUrl);
+
+      final String stackPolicyDuringUpdateBody = request.getStackPolicyDuringUpdateBody();
+      final String stackPolicyDuringUpdateUrl = request.getStackPolicyDuringUpdateURL();
+      final String stackPolicyDuringUpdateText = validateAndGetStackPolicyDuringUpdate(user, stackPolicyDuringUpdateBody, stackPolicyDuringUpdateUrl);
+
+      if (stackName == null) throw new ValidationErrorException("Stack name is null");
+
+      final String templateBody = request.getTemplateBody();
+      if (templateBody != null) {
+        if (templateBody.getBytes().length > Limits.REQUEST_TEMPLATE_BODY_MAX_LENGTH_BYTES) {
+          throw new ValidationErrorException("Template body may not exceed " + Limits.REQUEST_TEMPLATE_BODY_MAX_LENGTH_BYTES + " bytes in a request.");
+        }
+      }
+
+      final String templateUrl = request.getTemplateURL();
+      final boolean usePreviousTemplate = (request.getUsePreviousTemplate() == null) ? false : request.getUsePreviousTemplate().booleanValue();
+
+      if (usePreviousTemplate && (templateBody != null || templateUrl != null)) {
+        throw new ValidationErrorException("You cannot specify both usePreviousTemplate and Template Body/Template URL");
+      }
+      if (templateBody != null && templateUrl != null) throw new ValidationErrorException("You cannot specify both Template Body and Template URL");
+      if (!usePreviousTemplate && (templateBody == null && templateUrl == null)) {
+        throw new ValidationErrorException("You must specify either Template Body or Template URL");
+      }
+
+      checkStackPermission( ctx, stackName, accountId );
+      // get the original stack (needed for many things)
+      final StackEntity stackEntity = StackEntityManager.getAnyStackByNameOrId(
+        stackName,
+        accountId ); // no administrator check here because update requires user on original account stack.
+      if (stackEntity == null) {
+        throw new ValidationErrorException("Stack " + stackName + " does not exist");
+      }
+      final String stackId = stackEntity.getStackId();
+      final PseudoParameterValues pseudoParameterValues = new PseudoParameterValues();
+      pseudoParameterValues.setAccountId(accountId);
+      pseudoParameterValues.setStackName(stackName);
+      pseudoParameterValues.setStackId(stackId);
+      if (request.getNotificationARNs() != null && request.getNotificationARNs().getMember() != null) {
+        ArrayList<String> notificationArns = Lists.newArrayList();
+        for (String notificationArn: request.getNotificationARNs().getMember()) {
+          notificationArns.add(notificationArn);
+        }
+        pseudoParameterValues.setNotificationArns(notificationArns);
+      }
+      pseudoParameterValues.setRegion(getRegion());
+
+      final String templateText = (usePreviousTemplate ?
+        stackEntity.getTemplateBody() :
+        (templateBody != null) ? templateBody : extractTemplateTextFromURL(templateUrl, user));
+
+      final List<Parameter> oldParameters = convertToParameters(StackEntityHelper.jsonToParameters(stackEntity.getParametersJson()));
+      validateAndUpdateParameters(oldParameters, parameters);
+
+      // check that nothing has changed (within resources)
+      final String oldTemplateText = stackEntity.getTemplateBody();
+      List<String> oldCapabilities = StackEntityHelper.jsonToCapabilities(stackEntity.getCapabilitiesJson());
+      PseudoParameterValues oldPseudoParameterValues = getPseudoParameterValues(stackEntity);
+
+      final Template oldTemplate = new TemplateParser().parse(oldTemplateText, oldParameters, oldCapabilities, oldPseudoParameterValues, userId);
+      final Template template = new TemplateParser().parse(templateText, parameters, capabilities, pseudoParameterValues, userId);
+
+      boolean requiresUpdate = false;
+      // Things that can trigger update.
+      // 1) Changes to Notification ARN.  Experimentation shows order doesn't matter but multiplicity does.  Use Multisets
+      Multiset<String> oldNotificationArnsMS = HashMultiset.create();
+      List<String> oldNotificationArns = StackEntityHelper.jsonToNotificationARNs(stackEntity.getNotificationARNsJson());
+      if (oldNotificationArns != null) {
+        oldNotificationArnsMS.addAll(oldNotificationArns);
+      }
+      Multiset<String> notificationArnsMS = HashMultiset.create();
+      if (pseudoParameterValues.getNotificationArns() != null) {
+        notificationArnsMS.addAll(pseudoParameterValues.getNotificationArns());
+      }
+      if (!oldNotificationArnsMS.equals(notificationArnsMS)) {
+        requiresUpdate = true;
+      }
+      // 2) Changes to Stack Policy (TODO: do something better than this).  Field equivalence appears to not be considered a change.
+      else if (stackPolicyIsDifferent(stackEntity.getStackPolicy(), stackPolicyText)) {
+        requiresUpdate = true;
+      }
+      // 3) Differences in the field names (i.e. new or old fields)
+      else if (!oldTemplate.getResourceInfoMap().keySet().equals(template.getResourceInfoMap().keySet())) {
+        requiresUpdate = true;
+      }
+      // 4) Differences in the metadata or properties for a given field
+      else {
+        // Note: Ref: to resources will not work here, nor will Fn::GetAtt calls.  However, some items can be evaluated
+        // before hand (like Ref: to parameters).  We will attempt to evaluate functions for the metadata and properties
+        // fields.  Presumably, however, if a Ref: (resource) or a Fn::GetAtt value changes, it is because a different
+        // resource has also changed, so we will evaluate where we can, and leave the value raw if we can not evaluate all functions.
+        for (String fieldName:oldTemplate.getResourceInfoMap().keySet()) {
+          LOG.info("fieldName=" + fieldName);
+          JsonNode oldMetadataJson = tryEvaluateFunctionsInMetadata(oldTemplate, fieldName, userId);
+          LOG.info("oldMetadata=" + oldMetadataJson);
+          JsonNode metadataJson = tryEvaluateFunctionsInMetadata(template, fieldName, userId);
+          LOG.info("metadata=" + metadataJson);
+          if (!equalsJson(oldMetadataJson, metadataJson)) {
+            requiresUpdate = true;
+            break;
+          }
+          JsonNode oldPropertiesJson = tryEvaluateFunctionsInProperties(oldTemplate, fieldName, userId);
+          LOG.info("oldProperties=" + oldPropertiesJson);
+          JsonNode propertiesJson = tryEvaluateFunctionsInProperties(template, fieldName, userId);
+          LOG.info("properties=" + propertiesJson);
+          if (!equalsJson(oldMetadataJson, metadataJson)) {
+            requiresUpdate = true;
+            break;
+          }
+        }
+      }
+      if (!requiresUpdate) {
+        throw new ValidationErrorException("No updates are to be performed.");
+      }
+
+      // Finally make sure the stack state is ok
+      if (stackEntity.getStackStatus() != StackEntity.Status.CREATE_COMPLETE && stackEntity.getStackStatus() != StackEntity.Status.UPDATE_COMPLETE &&
+        stackEntity.getStackStatus() != StackEntity.Status.UPDATE_ROLLBACK_COMPLETE) {
+        throw new ValidationErrorException("Stack:" + stackId + " is in " + stackEntity.getStackStatus().toString() + " state and can not be updated.");
+      }
+      UpdateStackResult updateStackResult = new UpdateStackResult();
+      updateStackResult.setStackId(stackId);
+      reply.setUpdateStackResult(updateStackResult);
+
+    } catch (Exception ex) {
+      handleException(ex);
+    }
+    return reply;
+  }
+
+  private JsonNode tryEvaluateFunctionsInProperties(Template template, String fieldName, String userId) throws CloudFormationException {
+    JsonNode metadataJson = JsonHelper.getJsonNodeFromString(template.getResourceInfoMap().get(fieldName).getMetadataJson());
+    try {
+      metadataJson = FunctionEvaluation.evaluateFunctions(metadataJson, template, userId);
+    } catch (ValidationErrorException ex) {
+      ; // in the case we can't evaluate the Ref: or Fn::GetAtt, we leave the string raw
+    }
+    return metadataJson;
+  }
+
+  private JsonNode tryEvaluateFunctionsInMetadata(Template template, String fieldName, String userId) throws CloudFormationException {
+    JsonNode propertiesJson = JsonHelper.getJsonNodeFromString(template.getResourceInfoMap().get(fieldName).getPropertiesJson());
+    try {
+      propertiesJson = FunctionEvaluation.evaluateFunctions(propertiesJson, template, userId);
+    } catch (ValidationErrorException ex) {
+      ; // in the case we can't evaluate the Ref: or Fn::GetAtt, we leave the string raw
+    }
+    return propertiesJson;
+  }
+
+
+  private boolean equalsJson(JsonNode node1, JsonNode node2) {
+    if (node1 == null && node2 == null) return true; // TODO: not sure about this case...
+    if (node1 != null && node2 == null) return false;
+    if (node1 == null && node2 != null) return false;
+    return node1.equals(node2);
+  }
+
+  private boolean stackPolicyIsDifferent(String oldStackPolicy, String newStackPolicy) throws ValidationErrorException {
+    if (newStackPolicy == null) return false;
+    if (oldStackPolicy == null && oldStackPolicy != null) return true;
+    ObjectMapper objectMapper = new ObjectMapper();
+    JsonNode oldStackPolicyNode = null;
+    try {
+      oldStackPolicyNode = objectMapper.readTree(oldStackPolicy);
+    } catch (IOException ex) {
+      throw new ValidationErrorException("Current stack policy is invalid");
+    }
+    if (!oldStackPolicyNode.isObject()) {
+      throw new ValidationErrorException("Current stack policy is invalid");
+    }
+    JsonNode newStackPolicyNode = null;
+    try {
+      newStackPolicyNode = objectMapper.readTree(newStackPolicy);
+    } catch (IOException ex) {
+      throw new ValidationErrorException("stack policy is invalid");
+    }
+    if (!newStackPolicyNode.isObject()) {
+      throw new ValidationErrorException("stack policy is invalid");
+    }
+    return equalsJsonUnorderedLists(oldStackPolicyNode, newStackPolicyNode);
+  }
+
+  private boolean equalsJsonUnorderedLists(JsonNode node1, JsonNode node2) {
+    if (node1 == null && node2 == null) return true; // TODO: not sure about this case...
+    if (node1 != null && node2 == null) return false;
+    if (node1 == null && node2 != null) return false;
+    if (node1.isObject()) {
+      if (!node2.isObject()) return false;
+      Set<String> node1FieldNames = Sets.newHashSet(node1.fieldNames());
+      Set<String> node2FieldNames = Sets.newHashSet(node2.fieldNames());
+      if (node1FieldNames == null && node2FieldNames == null) return true; // TODO: not sure about this case...
+      if (node1FieldNames != null && node2FieldNames == null) return false;
+      if (node1FieldNames == null && node2FieldNames != null) return false;
+      for (String fieldName : node1FieldNames) {
+        if (!equalsJsonUnorderedLists(node1.get(fieldName), node2.get(fieldName))) {
+          return false;
+        }
+      }
+      return true;
+    } else if (node1.isArray()) {
+        if (!node2.isArray()) return false;
+        if (node1.size() != node2.size()) return false;
+        // hard to comare array elements as order doesn't matter but no defined way to sort, and multiplicty also matters.
+        // Let's just check if for each element of the first array, there is a corresponding one in the second
+        // Then we can remove and check again.
+        List<JsonNode> node1Elements = Lists.newArrayList(node1.elements());
+        List<JsonNode> node2Elements = Lists.newArrayList(node2.elements());
+        Iterator<JsonNode> node1ElementsIter = node1Elements.iterator();
+        while (node1ElementsIter.hasNext()) {
+          JsonNode node1Element = node1ElementsIter.next();
+          boolean foundMatchThisTime = false;
+          Iterator<JsonNode> node2ElementsIter = node2Elements.iterator();
+          while (node2ElementsIter.hasNext()) {
+            if (equalsJsonUnorderedLists(node1Element, node2ElementsIter.next())) {
+              foundMatchThisTime = true;
+              node2ElementsIter.remove();  // remove matching element
+              break;
+            }
+          }
+          if (!foundMatchThisTime) return false;
+        }
+        return true;
+      } else {
+      return node1.asText().equals(node2.asText());
+    }
+  }
+
+
+  private PseudoParameterValues getPseudoParameterValues(StackEntity stackEntity) throws CloudFormationException {
+    PseudoParameterValues oldPseudoParameterValues = new PseudoParameterValues();
+    oldPseudoParameterValues.setAccountId(stackEntity.getAccountId());
+    oldPseudoParameterValues.setStackId(stackEntity.getStackId());
+    oldPseudoParameterValues.setStackName(stackEntity.getStackName());
+    oldPseudoParameterValues.setNotificationArns(StackEntityHelper.jsonToNotificationARNs(stackEntity.getNotificationARNsJson()));
+
+    // TODO: make region easier to get?
+    Map<String, String> oldPseudoParameterMap = StackEntityHelper.jsonToPseudoParameterMap(stackEntity.getPseudoParameterMapJson());
+    if (oldPseudoParameterMap.containsKey(TemplateParser.AWS_REGION)) {
+      JsonNode oldRegionJsonNode = JsonHelper.getJsonNodeFromString(oldPseudoParameterMap.get(TemplateParser.AWS_REGION));
+
+      if (oldRegionJsonNode == null || !oldRegionJsonNode.isValueNode()) {
+        throw new ValidationErrorException(TemplateParser.AWS_REGION + " from original stack is not a string.");
+      }
+      oldPseudoParameterValues.setRegion(oldRegionJsonNode.asText());
+    }
+    return oldPseudoParameterValues;
+  }
+
+
+  private void validateAndUpdateParameters(List<Parameter> oldParameters, List<Parameter> newParameters) throws ValidationErrorException {
+    Map<String, String> oldParameterMap = Maps.newHashMap();
+    for (Parameter oldParameter: oldParameters) {
+      oldParameterMap.put(oldParameter.getParameterKey(), oldParameter.getParameterValue());
+    }
+    if (newParameters != null) {
+      for (Parameter newParameter: newParameters) {
+        if (newParameter.getUsePreviousValue() == Boolean.TRUE) {
+          if (Strings.isNullOrEmpty(newParameter.getParameterValue())) {
+            throw new ValidationErrorException("Invalid input for parameter key " + newParameter.getParameterKey() + ". Cannot specify usePreviousValue as true and non empty value for a parameter.");
+          }
+          if (!oldParameterMap.containsKey(newParameter.getParameterKey())) {
+            throw new ValidationErrorException("Invalid input for parameter key " + newParameter.getParameterKey() + ". Cannot specify usePreviousValue as true for a parameter key not in the previous template.");
+          }
+          newParameter.setParameterValue(oldParameterMap.get(newParameter.getParameterKey()));
+        }
+      }
+    }
+  }
+
+
+  private List<Parameter> convertToParameters(ArrayList<StackEntity.Parameter> stackEntityParameters) {
+    List<Parameter> parameters = Lists.newArrayList();
+    if (stackEntityParameters != null) {
+      for (StackEntity.Parameter stackEntityParameter : stackEntityParameters) {
+        parameters.add(new Parameter(stackEntityParameter.getKey(), stackEntityParameter.getStringValue()));
+      }
+    }
+    return parameters;
   }
 
   public ValidateTemplateResponseType validateTemplate(ValidateTemplateType request)
