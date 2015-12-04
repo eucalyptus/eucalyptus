@@ -31,6 +31,7 @@ import com.eucalyptus.cluster.NIInstance
 import com.eucalyptus.cluster.NIManagedSubnet
 import com.eucalyptus.cluster.NIManagedSubnets
 import com.eucalyptus.cluster.NIMidonet
+import com.eucalyptus.cluster.NINetworkInterface
 import com.eucalyptus.cluster.NINode
 import com.eucalyptus.cluster.NINodes
 import com.eucalyptus.cluster.NIProperty
@@ -429,7 +430,7 @@ class NetworkInfoBroadcasterTest {
             [ internetGateway( 'igw-00000001', '000000000002', 'vpc-00000001' ) ]
           }
           @Override Iterable<NetworkInfoBroadcasts.NetworkInterfaceNetworkView> getNetworkInterfaces() {
-            []
+            [ networkInterface( 'eni-00000001', '000000000002', 'i-00000001', '00:00:00:00:00:00', '2.0.0.0', '10.0.0.0', 'vpc-00000001', 'subnet-00000001' ) ]
           }
           @Override Map<String,Iterable<? extends NetworkInfoBroadcasts.VmInstanceNetworkView>> getView() {
             [:]
@@ -520,7 +521,21 @@ class NetworkInfoBroadcasterTest {
                 privateIp: '10.0.0.0',
                 securityGroups: [],
                 vpc: 'vpc-00000001',
-                subnet: 'subnet-00000001'
+                subnet: 'subnet-00000001',
+                networkInterfaces: [
+                    new NINetworkInterface(
+                        name: 'eni-00000001',
+                        ownerId: '000000000002',
+                        deviceIndex: 0,
+                        macAddress: '00:00:00:00:00:00',
+                        publicIp: '2.0.0.0',
+                        privateIp: '10.0.0.0',
+                        sourceDestCheck: true,
+                        vpc: 'vpc-00000001',
+                        subnet: 'subnet-00000001',
+                        securityGroups: []
+                    )
+                ]
             )
         ],
         securityGroups: [ ]
@@ -658,6 +673,23 @@ class NetworkInfoBroadcasterTest {
       partition,
       node,
       [ ],
+    )
+  }
+
+  private static NetworkInfoBroadcasts.NetworkInterfaceNetworkView networkInterface( String id, String ownerAccountNumber, String instanceId, String mac, String publicAddress, String privateAddress, String vpcId, String subnetId ) {
+    new NetworkInfoBroadcasts.NetworkInterfaceNetworkView(
+        id,
+        1,
+        ownerAccountNumber,
+        instanceId,
+        0,
+        mac,
+        privateAddress,
+        publicAddress,
+        true,
+        vpcId,
+        subnetId,
+        [ ],
     )
   }
 

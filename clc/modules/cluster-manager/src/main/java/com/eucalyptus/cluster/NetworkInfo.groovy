@@ -210,6 +210,8 @@ class NINetworkInterface {
   @XmlElement String privateIp
   @XmlElement String publicIp
   @XmlElement Boolean sourceDestCheck
+  @XmlElement String vpc
+  @XmlElement String subnet
   @XmlElementWrapper @XmlElement(name="value") List<String> securityGroups = Lists.newArrayList( )
 }
 

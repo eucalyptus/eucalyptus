@@ -211,8 +211,9 @@ class NetworkInfoBroadcasts {
     Iterable<NetworkAclNetworkView> networkAcls = networkInfoSource.networkAcls
     Iterable<RouteTableNetworkView> routeTables = networkInfoSource.routeTables
     Iterable<InternetGatewayNetworkView> internetGateways = networkInfoSource.internetGateways
-    Set<String> activeVpcs = (Set<String>) instances.inject( Sets.newHashSetWithExpectedSize( 500 ) ){
-      Set<String> vpcIds, VmInstanceNetworkView instance -> instance.vpcId?.with{ String id -> vpcIds.add(id) }; vpcIds
+    Iterable<NetworkInterfaceNetworkView> networkInterfaces = networkInfoSource.networkInterfaces
+    Set<String> activeVpcs = (Set<String>) networkInterfaces.inject( Sets.newHashSetWithExpectedSize( 500 ) ){
+      Set<String> vpcIds, NetworkInterfaceNetworkView networkInterface -> vpcIds.add( networkInterface.vpcId ); vpcIds
     }
     Map<String,Collection<String>> vpcIdToInternetGatewayIds = (Map<String,Collection<String>> ) ((ArrayListMultimap<String,String>)internetGateways.inject(ArrayListMultimap.<String,String>create()){
       ListMultimap<String,String> map, InternetGatewayNetworkView internetGateway ->
@@ -261,7 +262,6 @@ class NetworkInfoBroadcasts {
     } )
 
     // populate instances
-    Iterable<NetworkInterfaceNetworkView> networkInterfaces = networkInfoSource.networkInterfaces
     Map<String,Collection<NetworkInterfaceNetworkView>> instanceIdToNetworkInterfaces = (Map<String,Collection<NetworkInterfaceNetworkView>> ) ((ArrayListMultimap<String,NetworkInterfaceNetworkView>) networkInterfaces.inject(ArrayListMultimap.<String,NetworkInterfaceNetworkView>create()){
       ListMultimap<String,NetworkInterfaceNetworkView> map, NetworkInterfaceNetworkView networkInterface ->
         if ( networkInterface.instanceId ) map.put( networkInterface.instanceId, networkInterface )
@@ -286,6 +286,8 @@ class NetworkInfoBroadcasts {
                 privateIp: networkInterface.privateIp,
                 publicIp: dirtyPublicAddresses.contains(networkInterface.publicIp) ? null : networkInterface.publicIp,
                 sourceDestCheck: networkInterface.sourceDestCheck,
+                vpc: networkInterface.vpcId,
+                subnet: networkInterface.subnetId,
                 securityGroups: networkInterface.securityGroupIds
             )
           } ?: [ ] as List<NINetworkInterface>
@@ -323,6 +325,9 @@ class NetworkInfoBroadcasts {
     // populate security groups
     Set<String> activeSecurityGroups = (Set<String>) instances.inject( Sets.newHashSetWithExpectedSize( 1000 ) ){
       Set<String> groups, VmInstanceNetworkView instance -> groups.addAll( instance.securityGroupIds ); groups
+    }
+    networkInterfaces.inject( activeSecurityGroups ){
+      Set<String> groups, NetworkInterfaceNetworkView networkInterface -> groups.addAll( networkInterface.securityGroupIds ); groups
     }
     Iterable<NetworkGroupNetworkView> groups = networkInfoSource.securityGroups
     info.securityGroups.addAll( groups.findAll{  NetworkGroupNetworkView group -> activeSecurityGroups.contains( group.id ) }.collect{ Object groupObj ->
@@ -962,6 +967,8 @@ class NetworkInfoBroadcasts {
     String privateIp
     String publicIp
     Boolean sourceDestCheck
+    String vpcId
+    String subnetId
     List<String> securityGroupIds
 
     int compareTo( NetworkInterfaceNetworkView o ) {
@@ -985,6 +992,8 @@ class NetworkInfoBroadcasts {
           networkInterface.privateIpAddress,
           networkInterface?.association?.publicIp,
           networkInterface.sourceDestCheck,
+          networkInterface.vpc.displayName,
+          networkInterface.subnet.displayName,
           networkInterface.networkGroups.collect{ NetworkGroup group -> group.groupId }
       )
     }
